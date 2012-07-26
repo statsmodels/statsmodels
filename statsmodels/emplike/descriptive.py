@@ -183,7 +183,7 @@ class _OptFuncts(ELModel):
             The difference between the log likelihood value of mu0 and
             a specified value.
         """
-        return self.hy_test_mean(mu_test)[1] - self.r0
+        return self.test_mean(mu_test)[1] - self.r0
 
     def _find_gamma(self, gamma):
         """
@@ -253,7 +253,7 @@ class _OptFuncts(ELModel):
     def  _ci_limits_var(self, var_test):
         """
         Used to determine the confidence intervals for the variance.
-        It calls hy_test_var and when called by an optimizer,
+        It calls test_var and when called by an optimizer,
         finds the value of sig2_0 that is chi2.ppf(significance-level)
 
         Parameter
@@ -268,11 +268,11 @@ class _OptFuncts(ELModel):
             The difference between the log likelihood ratio at var_test and a
             pre-specified value.
         """
-        return self.hy_test_var(var_test)[1] - self.r0
+        return self.test_var(var_test)[1] - self.r0
 
     def _opt_skew(self, nuis_params):
         """
-        Called by hy_test_skew.  This function is optimized over
+        Called by test_skew.  This function is optimized over
         nuisance parameters mu and sigma
 
         Parameters
@@ -306,7 +306,7 @@ class _OptFuncts(ELModel):
 
     def _opt_kurt(self, nuis_params):
         """
-        Called by hy_test_kurt.  This function is optimized over
+        Called by test_kurt.  This function is optimized over
         nuisance parameters mu and sigma
 
         Parameters
@@ -340,7 +340,7 @@ class _OptFuncts(ELModel):
 
     def _opt_skew_kurt(self, nuis_params):
         """
-        Called by hy_test_joint_skew_kurt.  This function is optimized over
+        Called by test_joint_skew_kurt.  This function is optimized over
         nuisance parameters mu and sigma
 
         Parameters
@@ -388,7 +388,7 @@ class _OptFuncts(ELModel):
             The difference between the log likelihood ratio at skew0 and a
             pre-specified value.
         """
-        return self.hy_test_skew(skew0, var_min=self.var_l,
+        return self.test_skew(skew0, var_min=self.var_l,
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[1] - self.r0
@@ -406,7 +406,7 @@ class _OptFuncts(ELModel):
             The difference between the log likelihood ratio at kurt0 and a
             pre-specified value.
         """
-        return self.hy_test_kurt(kurt0, var_min=self.var_l,
+        return self.test_kurt(kurt0, var_min=self.var_l,
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[1] - self.r0
@@ -467,7 +467,7 @@ class _OptFuncts(ELModel):
             Difference between log-likelihood of corr0 and a pre-specified
             value.
         """
-        return self.hy_test_corr(corr0, nuis0=None, mu1_min=self.mu1_lb,
+        return self.test_corr(corr0, nuis0=None, mu1_min=self.mu1_lb,
                        mu1_max=self.mu1_ub, mu2_min=self.mu2_lb,
                        mu2_max=self.mu2_ub,
                        var1_min=self.var1_lb, var1_max=self.var1_ub,
@@ -494,7 +494,7 @@ class DescStatUV(_OptFuncts):
     def __init__(self, endog):
         super(DescStatUV, self).__init__(endog)
 
-    def hy_test_mean(self, mu0, print_weights=False):
+    def test_mean(self, mu0, print_weights=False):
         """
         Returns the p-value, -2 * log-likelihood ratio and weights
         for a hypothesis test of the means.
@@ -626,26 +626,26 @@ class DescStatUV(_OptFuncts):
             self.r0 = chi2.ppf(sig, 1)
             self.mu_high = endog.mean()
             mu_hmax = max(endog)
-            while abs(self.hy_test_mean(self.mu_high)[1]
+            while abs(self.test_mean(self.mu_high)[1]
                  - self.r0) > tol:
                 self.mu_test = (self.mu_high + mu_hmax) / 2
-                if self.hy_test_mean(self.mu_test)[1] - self.r0 < 0:
+                if self.test_mean(self.mu_test)[1] - self.r0 < 0:
                     self.mu_high = self.mu_test
                 else:
                     mu_hmax = self.mu_test
 
             self.mu_low = endog.mean()
             mu_lmin = min(endog)
-            while abs(self.hy_test_mean(self.mu_low)[1]
+            while abs(self.test_mean(self.mu_low)[1]
                  - self.r0) > tol:
                 self.mu_test = (self.mu_low + mu_lmin) / 2
-                if self.hy_test_mean(self.mu_test)[1] - self.r0 < 0:
+                if self.test_mean(self.mu_test)[1] - self.r0 < 0:
                     self.mu_low = self.mu_test
                 else:
                     mu_lmin = self.mu_test
             return self.mu_low, self.mu_high
 
-    def hy_test_var(self, sig2_0, print_weights=False):
+    def test_var(self, sig2_0, print_weights=False):
         """
         Returns the p-value and -2 ``*`` log-likelihoog ratio for the
             hypothesized variance.
@@ -673,7 +673,7 @@ class DescStatUV(_OptFuncts):
         -------
         random_numbers = np.random.standard_normal(1000)*100
         el_analysis = el.DescStat(random_numbers)
-        hyp_test = el_analysis.hy_test_var(9500)
+        hyp_test = el_analysis.test_var(9500)
         """
         self.sig2_0 = sig2_0
         mu_max = max(self.endog)
@@ -695,14 +695,14 @@ class DescStatUV(_OptFuncts):
 
         lower_bound: float
             The minimum value the lower confidence interval can
-            take on. The p-value from hy_test_var(lower_l) must be lower
+            take on. The p-value from test_var(lower_l) must be lower
             than 1 - significance level. Default is calibrated at the .01
             significance level, asusming normality.
 
 
         upper_bound: float
             The maximum value the upper confidence interval
-            can take. The p-value from hy_test_var(upper_h) must be lower
+            can take. The p-value from test_var(upper_h) must be lower
             than 1 - significance level.  Default is calibrated at the .01
             significance level, asusming normality.
 
@@ -778,7 +778,7 @@ class DescStatUV(_OptFuncts):
         sig = 1 - sig
         p_vals = []
         for test in np.arange(lower, upper, step):
-            p_vals.append(self.hy_test_var(test)[0])
+            p_vals.append(self.test_var(test)[0])
         p_vals = np.asarray(p_vals)
         plt.plot(np.arange(lower, upper, step), p_vals)
         plt.plot(np.arange(lower, upper, step), (1 - sig) * \
@@ -836,7 +836,7 @@ class DescStatUV(_OptFuncts):
     ## TODO: Use non-nested optimization to optimize over nuisance
     ## parameters.  See Owen pgs 234- 241
 
-    def hy_test_skew(self, skew0, nuis0=None, mu_min=None,
+    def test_skew(self, skew0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
                      print_weights=False):
         """
@@ -905,7 +905,7 @@ class DescStatUV(_OptFuncts):
             return p_val, llr, self.new_weights.T
         return p_val, llr
 
-    def hy_test_kurt(self, kurt0, nuis0=None, mu_min=None,
+    def test_kurt(self, kurt0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
                      print_weights=False):
         """
@@ -974,7 +974,7 @@ class DescStatUV(_OptFuncts):
             return p_val, llr, self.new_weights.T
         return p_val, llr
 
-    def hy_test_joint_skew_kurt(self, skew0, kurt0, nuis0=None, mu_min=None,
+    def test_joint_skew_kurt(self, skew0, kurt0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
                      print_weights=False):
         """
@@ -1167,7 +1167,7 @@ class DescStatUV(_OptFuncts):
         successful optimization.
 
         For small n, upper_bound and lower_bound will likely have to be
-        provided.  Consider using hy_test_kurt to find values close to
+        provided.  Consider using test_kurt to find values close to
         the desired significance level.
 
         If function returns f(a) and f(b) must have different signs, consider
@@ -1242,7 +1242,7 @@ class DescStatMV(_OptFuncts):
     def __init__(self, endog):
         super(DescStatMV, self).__init__(endog)
 
-    def mv_hy_test_mean(self, mu_array, print_weights=False):
+    def mv_test_mean(self, mu_array, print_weights=False):
         """
         Returns the -2 ``*`` log likelihood and the p_value
         for a multivariate hypothesis test of the mean
@@ -1348,7 +1348,7 @@ class DescStatMV(_OptFuncts):
         pairs = itertools.product(x, y)
         z = []
         for i in pairs:
-            z.append(self.mv_hy_test_mean(np.asarray(i))[0])
+            z.append(self.mv_test_mean(np.asarray(i))[0])
         X, Y = np.meshgrid(x, y)
         z = np.asarray(z)
         z = z.reshape(X.shape[1], Y.shape[0])
@@ -1358,7 +1358,7 @@ class DescStatMV(_OptFuncts):
             plt.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
         return 'Type plt.show to see the figure'
 
-    def hy_test_corr(self, corr0, nuis0=None, mu1_min=None,
+    def test_corr(self, corr0, nuis0=None, mu1_min=None,
                        mu1_max=None, mu2_min=None, mu2_max=None,
                        var1_min=None, var1_max=None,
                        var2_min=None, var2_max=None, print_weights=0):
