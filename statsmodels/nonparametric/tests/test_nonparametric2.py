@@ -227,25 +227,6 @@ class TestCKDE(MyTest):
 
 
 class TestReg(MyTest):
-    def gen_data(self):
-        N = 120
-        np.random.seed(123)
-        self.O = np.random.binomial(2, 0.5, size=(N, ))
-        self.C1 = np.random.normal(size=(N, ))
-        self.C2 = np.random.normal(2, 1, size=(N, ))
-        self.noise = np.random.normal(size=(N, ))
-        b0 = 3
-        b1 = 1.2
-        b2 = 3.7  # regression coefficients
-        b3 = 2.3
-        self.Y = b0 + b1 * self.C1 + b2 * self.C2 + b3 * self.O + self.noise
-
-    def create_data_file(self, file_name):
-        data_file = csv.writer(open(file_name, "w"))
-        data_file.writerow(["Y", "C1", "C2", "O"])
-        for i in range(len(self.Y)):
-            data_file.writerow([self.Y[i], self.C1[i], self.C2[i], self.O[i]])
-
         
     def test_ordered_lc_cvls(self):
         model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
@@ -312,11 +293,36 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
         print "test_continuousdata_ll_cvls - successful"
 
+    
     def test_continuous_mfx_ll_cvls(self, file_name='RegData.csv'):
-            # Code to reproduce results in R
-            # Neets RegData.csv file
-            # library(np)
-            # data <- read.csv('reg_data.csv'
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+                            reg_type='ll', var_type='ccc', bw='cv_ls')
+        sm_bw = model.bw
+        print "Bandwidth: ", sm_bw
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_R2 = model.r_squared()
+        print "R2: ", sm_R2
+        print "test_continuous_mfx_ll_cvls - successful"
+        print model
+        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        self.write2file(file_name, (Y, C1, C2, C3))
+
+
+    def test_mixed_mfx_ll_cvls(self, file_name='RegData.csv'):
         N = 200
         np.random.seed(1234)
         O = np.random.binomial(2, 0.5, size=(N, ))
@@ -332,62 +338,54 @@ class TestReg(MyTest):
         Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
         model = nparam.Reg(tydat=[Y], txdat=[C1, C2, O],
                             reg_type='ll', var_type='cco', bw='cv_ls')
-        #print Y
-        print np.shape(Y)
         sm_bw = model.bw
-        print "Bandwidth: ", sm_bw
-        R_bw = [1.334422, 2.463736]
-        #npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
-
         sm_mean, sm_mfx = model.fit()
-
-        sm_mean = sm_mean[0:5]
-        R_mean = [32.71392, 38.73567, 46.01541, 42.16839, 37.61633]
-        #npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-
         sm_R2 = model.r_squared()
-        print "R2: ", sm_R2
-        R_R2 =  0.9218472
-        print "sm_mfx", sm_mfx[0:5,:]
-        print "mean", sm_mean
-            #npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
-
-            #print sm_mfx
-            #sm_mfx = sm_mfx[0:5]
-            #R_mfx = 
- 
         print "test_continuous_mfx_ll_cvls - successful"
-        print model
-        self.write2file(file_name, (Y, C1, C2, O))
+        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        #self.write2file(file_name, (Y, C1, C2, C3))
 
 
-    def test_continuous_mfx_ll_cvls2(self):
-            # Code to reproduce results in R
-            # Neets RegData.csv file
-            # library(np)
-            # data <- read.csv('reg_data.csv'
-            model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.growth, self.Italy_year],
-                            reg_type='ll', var_type='cu', bw='cv_ls')
-            #print model.g_ll_fast(model.bw, model.tydat, model.txdat, model.txdat[0, :])
-            #print model.g_ll(model.bw, model.tydat, model.txdat, model.txdat[0, :])
-            sm_bw = model.bw
-            print sm_bw
-            R_bw = [1.334422, 2.463736]
-            #npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+    def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+                            reg_type='ll', var_type='ccc', bw='cv_ls')
+        sm_bw = model.bw
+        sm_mean, sm_mfx = model.fit()
+        sm_R2 = model.r_squared()
+        # Theoretical marginal effects
+        mfx1 = b1 * C2
+        mfx2 = b1 * C1
+        #npt.assert_allclose(sm_mfx[:,0], mfx1, rtol=2e-1)
+        #npt.assert_allclose(sm_mfx[0:10,1], mfx2[0:10], rtol=2e-1)
+        npt.assert_allclose(sm_mean, Y, rtol = 2e-1)
+        #self.write2file(file_name, (Y, C1, C2, C3))
+        print "test_continuous_mfx_ll_cvls - successful"
 
-            sm_mean, sm_mfx = model.fit()
+    def test_censored_ll_cvls(self):
+        N = 200
+        np.random.seed(1234)
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
+        Y[Y>0] = 0  # censor the data
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2],
+                            reg_type='ll', var_type='cc', bw='cv_ls', censor_var=0)
+        sm_mean, sm_mfx = model.fit()
+        npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)
 
-            sm_mean = sm_mean[0:5]
-            R_mean = [32.71392, 38.73567, 46.01541, 42.16839, 37.61633]
-            #npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
-
-            sm_R2 = model.r_squared()
-            R_R2 =  0.9218472
-            #npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
-
-            print sm_mfx
-            #sm_mfx = sm_mfx[0:5]
-            #R_mfx = 
- 
-            print "test_continuous_mfx_ll_cvls - successful"
-    
+       
