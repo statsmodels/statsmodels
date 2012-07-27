@@ -361,7 +361,7 @@ class LTLikelihood(LTS):
         endog, exog = self.endog, self.exog
         nobs = self.nobs
 
-        res_trimmed = self.est_model(endog[iin], exog[iin]).fit()
+        res_trimmed = self.est_model(endog[iin], exog[iin]).fit(disp=False)
         self.temp.n_est_calls += 1
         #print np.nonzero(~iin)[0] + 1, res_t_ols.params, res_t_ols.ssr
         #r = endog - res_trimmed.predict(exog)
