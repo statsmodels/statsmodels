@@ -95,6 +95,9 @@ class LTS(object):
     est_model : model class
         default is OLS, needs to have fit and predict methods and attribute
         ssr
+    fit_options : None or dict
+        If fit_options are not None, then they will be used in the call to the
+        fit method of the estimation model, ``est_model``
 
 
     TODO: variation: trim based on likelihood contribution, loglike_obs,
@@ -114,6 +117,7 @@ class LTS(object):
         self.temp.n_refine_steps = []
 
         self.target_attr = 'ssr'
+        self.fit_options = {}
 
     def _refine_step(self, iin, k_accept):
         endog, exog = self.endog, self.exog
@@ -175,7 +179,8 @@ class LTS(object):
         return res_trimmed, ii2, ssr_new, converged
 
 
-    def fit_random(self, k_trimmed, max_nstarts=10, k_start=None, n_keep=10):
+    def fit_random(self, k_trimmed, max_nstarts=10, k_start=None, n_keep=30,
+                         max_nrefine_st1=1, max_nrefine_st2=100):
         '''find k_trimmed outliers with a 2-stage random search
 
         Parameters
@@ -192,6 +197,12 @@ class LTS(object):
         n_keep : int
             number of first stage results to use for the second stage, the
             concentration or refinement.
+        max_nrefine_st1 : int
+            maximum number of concentration or refinement steps in first stage.
+            see Notes.
+        max_nrefine_st2 : int
+            maximum number of concentration or refinement steps in second stage.
+            see Notes.
 
         Returns
         -------
@@ -241,12 +252,12 @@ class LTS(object):
         could be the case if there are categorical variables.
         My guess is that it doesn't matter for the search process with OLS, but
         the final result could have a singular design matrix if the trimming
-        is large enough.
+        is large enough. However this currently breaks with Poisson in subclass
+        if the selected exog matrix is singular.
 
         '''
+        #terminology in code: uses ssr, but this is nllf in LTLikelihood
 
-        #currently random only,
-        #TODO: where does exact, full enumeration go
         endog, exog = self.endog, self.exog
         nobs, k_vars = exog.shape  #instead of using attributes?
 
@@ -265,7 +276,8 @@ class LTS(object):
 
         for ii in iterator:
             iin = ii.copy()   #TODO: do I still need a copy
-            res_trimmed, ii2, ssr_new, converged = self.refine(iin, k_accept, max_nrefine=1)
+            res = self.refine(iin, k_accept, max_nrefine=max_nrefine_st1)
+            res_trimmed, ii2, ssr_new, converged = res
             #if res_trimmed.ssr < ssr_keep[n_keep-1]:
                 #best_stage1.append((res_trimmed.ssr, ii2))
             if ssr_new < ssr_keep[n_keep-1]:
@@ -280,8 +292,8 @@ class LTS(object):
         ssr_best = np.inf
         for (ssr, start_mask) in best_stage1:
             if ssr > ssr_keep[n_keep-1]: continue
-            res_trimmed, ii2, ssr_new, converged = self.refine(start_mask, k_accept,
-                                                      max_nrefine=100)
+            res = self.refine(start_mask, k_accept, max_nrefine=max_nrefine_st2)
+            res_trimmed, ii2, ssr_new, converged = res
             if not converged:
                 #warning ?
                 print "refine step did not converge, max_nrefine limit reached"
@@ -295,6 +307,30 @@ class LTS(object):
         self.temp.ssr_keep = ssr_keep
 
         return res_best
+
+    def fit_exact(self, k_trimmed=None):
+        endog, exog = self.endog, self.exog
+        nobs = self.nobs
+        k_accept = nobs - k_trimmed
+        iterator = itertools.combinations(range(nobs), k_accept)
+
+        value_best = np.inf
+        for keep_idx in iterator:
+            #indexing with list
+            keep_idx = list(keep_idx)
+            endog_ = endog.take(keep_idx)
+            exog_ = exog.take(keep_idx, axis=0)
+            res_trimmed = self.est_model(endog_, exog_).fit(**self.fit_options)
+            self.temp.n_est_calls += 1
+
+            value_current = getattr(res_trimmed, self.target_attr)
+            if value_current < value_best:
+                value_best = value_current
+                res_best = (res_trimmed, keep_idx)
+
+        ii2 =  np.zeros(nobs, bool)
+        ii2[list(res_best[1])] = True
+        return (res_best[0], ii2)
 
     def fit(self, k_trimmed=None, max_exact=100, random_search_options=None):
         '''find k_trimmed outliers with a 2-stage random search
@@ -351,17 +387,22 @@ from statsmodels.discrete.discrete_model import DiscreteResults
 
 class LTLikelihood(LTS):
 
-    def __init__(self, endog, exog, est_model=Poisson):
+    def __init__(self, endog, exog, est_model=Poisson, fit_options=None):
         super(LTLikelihood, self).__init__(endog, exog, est_model=est_model)
         #patching model doesn't help
         #self.est_model.nllf =
         self.target_attr = 'nllf'
+        fit_options_ = dict(disp=False)
+        if not fit_options is None:
+            fit_options_.update(fit_options)
+        self.fit_options = fit_options_
 
     def _refine_step(self, iin, k_accept):
         endog, exog = self.endog, self.exog
         nobs = self.nobs
 
-        res_trimmed = self.est_model(endog[iin], exog[iin]).fit(disp=False)
+        res_trimmed = self.est_model(endog[iin], exog[iin]).fit(
+                                                            **self.fit_options)
         self.temp.n_est_calls += 1
         #print np.nonzero(~iin)[0] + 1, res_t_ols.params, res_t_ols.ssr
         #r = endog - res_trimmed.predict(exog)
