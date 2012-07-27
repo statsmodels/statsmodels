@@ -758,42 +758,34 @@ class Reg(object):
         repr += "Estimator type: " + self.reg_type + "\n"
         return repr
 
-    def g_ll_slow_v1(self, bw, tydat, txdat, edat):
-        Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
-                            #ukertype='aitchison_aitken_reg',
-                            #okertype='wangryzin_reg', 
-                            tosum=False)
-        # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
-        # See also p. 38 in [2]
-        iscontinuous = tools._get_type_pos(self.var_type)[0]
-        Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
-        N, Qc = np.shape(txdat[:, iscontinuous])
-        Ker = Ker / float(N)
-        L = 0
-        R = 0
-        for i in xrange(N):
-            M12 = (txdat[i, iscontinuous] - edat[:, iscontinuous])
-            M12 = np.reshape(M12, (1, Qc))
-            M21 = M12.T
-            M22 = np.dot(M12.T, M12)
-            M22 = np.reshape(M22, (Qc, Qc))
-            M11 = np.ones((1,1))
-            M_1 = np.concatenate((M11, M12), axis=1)
-            M_2 = np.concatenate((M21, M22), axis=1)
-            M = np.concatenate((M_1, M_2), axis=0)
-            V1 = np.ones((1,1))
-            V2 = (txdat[i, iscontinuous] - edat[:, iscontinuous])
-            V2 = np.reshape(V2, (Qc, 1))
-            V = np.concatenate((V1, V2), axis=0)
-            assert np.shape(M) == (Qc + 1, Qc + 1)
-            assert np.shape(V) == (Qc + 1, 1)
-            L += M * Ker[i, :]
-            R += V * Ker[i, :] * tydat[i, :]
-        mean_mfx = np.dot(np.linalg.pinv(L), R)
-        mean = mean_mfx[0]
-        mfx = mean_mfx[1::, :]
-        return mean, mfx
     def g_ll(self, bw, tydat, txdat, edat):
+        """
+        Local linear estimator of g(x) in the regression
+        y = g(x) + e
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth value(s)
+        tydat: 1D array_like
+            The dependent variable
+        txdat: 1D or 2D array_like
+            The independent variable(s)
+        edat: 1D array_like of length K, where K is
+            the number of variables. The point at which
+            the density is estimated
+
+        Returns
+        -------
+        D_x: array_like
+            The value of the conditional mean at edat
+
+        Notes
+        -----
+        See p. 81 in [1] and p.38 in [2] for the formulas
+        Unlike other methods, this one requires that edat be 1D
+        """
+
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
                             ukertype='aitchison_aitken_reg',
                             okertype='wangryzin_reg', 
@@ -801,7 +793,7 @@ class Reg(object):
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
         iscontinuous = tools._get_type_pos(self.var_type)[0]
-        iscontinuous = xrange(self.K)
+        iscontinuous = xrange(self.K)  # Use all vars instead of continuous only
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
@@ -831,58 +823,6 @@ class Reg(object):
         mean = mean_mfx[0]
         mfx = mean_mfx[1::, :]
         return mean, mfx
-
-    def g_ll_(self, bw, tydat, txdat, edat):
-        """
-        Local linear estimator of g(x) in the regression
-        y = g(x) + e
-
-        Parameters
-        ----------
-        bw: array_like
-            Vector of bandwidth value(s)
-        tydat: 1D array_like
-            The dependent variable
-        txdat: 1D or 2D array_like
-            The independent variable(s)
-        edat: 1D array_like of length K, where K is
-            the number of variables. The point at which
-            the density is estimated
-
-        Returns
-        -------
-        D_x: array_like
-            The value of the conditional mean at edat
-
-        Notes
-        -----
-        See p. 81 in [1] and p.38 in [2] for the formulas
-        Unlike other methods, this one requires that edat be 1D
-        """
-        edat = tools.adjust_shape(edat, self.K)
-        N_edat = np.shape(edat)[0]
-        D_x = []
-        B_x = []
-        for i in range(N_edat):
-            x = edat[i, :]
-            Y = tydat
-            n = len(Y)
-            q = self.K
-            X = (txdat - x)
-            X = np.column_stack((np.ones(n), X))
-            Kx = tools.gpke(bw, tdat=txdat, edat=x,
-                            var_type=self.var_type, 
-                            #ukertype='aitchison_aitken_reg',
-                            #okertype='wangryzin_reg', 
-                            tosum=False)
-            Kx = np.diag(np.squeeze(Kx))
-            xtk = np.dot(X.T, Kx)
-            a1 = np.linalg.pinv(np.dot(xtk, X))
-            a2 = np.dot(xtk, Y)
-            d_x = np.dot(a1, a2)
-            D_x.append(d_x[0])
-            B_x.append(d_x[1::])
-        return np.squeeze(np.asarray(D_x)), np.squeeze(np.asarray(B_x))
 
     def g_lc(self, bw, tydat, txdat, edat):
         """
@@ -981,7 +921,7 @@ class Reg(object):
         and :math:`h` is the vector of bandwidths
 
         """
-        print "Running"
+        #print "Running"
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         i = 0
@@ -1045,36 +985,9 @@ class Reg(object):
         N_edat = np.shape(edat)[0]
         mean = np.empty((N_edat,))
         mfx = np.empty((N_edat, self.K))
-        iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
         for i in xrange(N_edat):
             mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
-            #print "mfx_c: ", mfx_c
-            #mfx_d = self.get_discrete_mfx(edat=edat[i, :])
             mfx[i, :] = mfx_c
-            #mfx[i, isordered] = mfx_d
         return mean, mfx
-
-    def get_discrete_mfx(self, edat=None):
-        func = self.est[self.reg_type]
-
-        isocontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
-        Dom_x = [sorted(np.unique(self.txdat[:, i])) for i in range(self.K)]
-        
-        mfx = []
-        for i in isordered:
-            g_old = func(self.bw, self.tydat, self.txdat,edat = edat)[0]
-            edat_new = edat
-            val = edat[i]
-            j = np.where(Dom_x[i] == val)
-            j = np.squeeze(j)
-            if j == len(Dom_x[i])-1:
-                l = j -1
-            else:
-                l = j + 1
-            edat_new[i] = Dom_x[i][l]
-            g = func(self.bw, self.tydat, self.txdat,edat = edat_new)[0]
-            d_g = np.abs(g - g_old)
-            mfx.append(d_g)
-        return np.squeeze(mfx)
