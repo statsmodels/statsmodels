@@ -2223,6 +2223,17 @@ class LikelihoodModelResults(Results):
             upper = upper[cols]
         return np.asarray(lzip(lower, upper))
 
+
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+
+    @property
+    def nllf(self):
+        return - self.llf
+
+
     def save(self, fname, remove_data=False):
         """
         Save a pickle of this instance.
