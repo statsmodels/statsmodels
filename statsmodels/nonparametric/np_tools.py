@@ -13,7 +13,8 @@ kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
                  aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
                    gaussian_cdf=kf.Gaussian_cdf,
                    aitchisonaitken_cdf=kf.AitchisonAitken_cdf,
-                   wangryzin_cdf=kf.WangRyzin_cdf)
+                   wangryzin_cdf=kf.WangRyzin_cdf,
+                    d_gaussian=kf.D_Gaussian)
 
 
 class LeaveOneOut(object):

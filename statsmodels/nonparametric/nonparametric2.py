@@ -801,6 +801,7 @@ class Reg(object):
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
         iscontinuous = tools._get_type_pos(self.var_type)[0]
+        iscontinuous = xrange(self.K)
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
@@ -920,6 +921,29 @@ class Reg(object):
                             tosum=False), axis=0)
         G = G_numer / G_denom
         B_x = np.ones((self.K))
+        N, K = np.shape(txdat)
+        f_x = np.sum(KX, axis=0) / float(N)
+        iscontinuous = tools._get_type_pos(self.var_type)[0]
+        txdat_c = txdat[:, iscontinuous]
+        edat_c = edat[:, iscontinuous]
+        #Kc = len(edat_c)
+        #KX_c = tools.gpke(bw[:, iscontinuous], tdat=txdat_c, edat=edat_c,
+        #                var_type='c' * Kc,
+        #                    ckertype='d_gaussian',
+        #                    tosum=False)
+        KX_c = tools.gpke(bw, tdat=txdat, edat=edat,
+                        var_type=self.var_type,
+                            ckertype='d_gaussian',
+                            #okertype='wangryzin_reg', 
+                            tosum=False)
+
+        KX_c = np.reshape(KX_c, (N, 1))
+        d_mx = - np.sum(tydat * KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
+        d_fx = - np.sum(KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
+        B_x = d_mx / f_x - G * d_fx / f_x
+        m_x = G_numer
+        B_x = (G_numer * d_fx - G_denom * d_mx)/(G_denom**2)
+        #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
         return G, B_x
 
     def aic_hurvich(self):
@@ -1020,11 +1044,37 @@ class Reg(object):
             edat = tools.adjust_shape(edat, self.K)
         N_edat = np.shape(edat)[0]
         mean = np.empty((N_edat,))
-        Qc = len(tools._get_type_pos(self.var_type)[0])
-        mfx = np.empty((N_edat, Qc))
+        mfx = np.empty((N_edat, self.K))
+        iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
         for i in xrange(N_edat):
             mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :])
             mean[i] = mean_mfx[0]
-            mfx[i, :] = np.squeeze(mean_mfx[1])
+            mfx_c = np.squeeze(mean_mfx[1])
+            #print "mfx_c: ", mfx_c
+            #mfx_d = self.get_discrete_mfx(edat=edat[i, :])
+            mfx[i, :] = mfx_c
+            #mfx[i, isordered] = mfx_d
         return mean, mfx
 
+    def get_discrete_mfx(self, edat=None):
+        func = self.est[self.reg_type]
+
+        isocontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
+        Dom_x = [sorted(np.unique(self.txdat[:, i])) for i in range(self.K)]
+        
+        mfx = []
+        for i in isordered:
+            g_old = func(self.bw, self.tydat, self.txdat,edat = edat)[0]
+            edat_new = edat
+            val = edat[i]
+            j = np.where(Dom_x[i] == val)
+            j = np.squeeze(j)
+            if j == len(Dom_x[i])-1:
+                l = j -1
+            else:
+                l = j + 1
+            edat_new[i] = Dom_x[i][l]
+            g = func(self.bw, self.tydat, self.txdat,edat = edat_new)[0]
+            d_g = np.abs(g - g_old)
+            mfx.append(d_g)
+        return np.squeeze(mfx)

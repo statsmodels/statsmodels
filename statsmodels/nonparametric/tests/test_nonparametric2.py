@@ -2,9 +2,9 @@ import numpy as np
 import numpy.testing as npt
 import matplotlib.pyplot as plt
 import scipy.stats as stats
-import statsmodels.nonparametric as nparam
-#import nonparametric2 as nparam
-#reload(nparam)
+#import statsmodels.nonparametric as nparam
+import nonparametric2 as nparam
+reload(nparam)
 import csv
 
 class MyTest(object):
@@ -320,17 +320,19 @@ class TestReg(MyTest):
         N = 200
         np.random.seed(1234)
         O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         b3 = 2.3
-        Y = b0 + b1 * C1 + b2 * C2 + b3 * O + noise
+        Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
         model = nparam.Reg(tydat=[Y], txdat=[C1, C2, O],
-                            reg_type='ll', var_type='cco', bw=[0.9746465, 1.014284, 0.04184517])
-        print Y
+                            reg_type='ll', var_type='cco', bw='cv_ls')
+        #print Y
         print np.shape(Y)
         sm_bw = model.bw
         print "Bandwidth: ", sm_bw
