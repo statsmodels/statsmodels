@@ -1367,6 +1367,10 @@ class LikelihoodModelResults(Results):
     def llf(self):
         return self.model.loglike(self.params)
 
+    @property
+    def nllf(self):
+        return - self.llf
+
     def save(self, fname, remove_data=False):
         '''
         save a pickle of this instance

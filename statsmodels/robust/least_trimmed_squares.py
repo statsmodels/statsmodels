@@ -12,6 +12,7 @@ import numpy as np
 from scipy.misc import comb
 
 from statsmodels.regression.linear_model import OLS
+from statsmodels.discrete.discrete_model import Poisson
 
 class Holder(object):
     pass
@@ -111,6 +112,8 @@ class LTS(object):
         self.temp = Holder()
         self.temp.n_est_calls = 0
         self.temp.n_refine_steps = []
+
+        self.target_attr = 'ssr'
 
     def _refine_step(self, iin, k_accept):
         endog, exog = self.endog, self.exog
@@ -282,8 +285,10 @@ class LTS(object):
             if not converged:
                 #warning ?
                 print "refine step did not converge, max_nrefine limit reached"
-            if res_trimmed.ssr < ssr_best:
-                ssr_best = res_trimmed.ssr
+
+            ssr_current = getattr(res_trimmed, self.target_attr)  #res_trimmed.ssr
+            if ssr_current < ssr_best:
+                ssr_best = ssr_current
                 res_best = (res_trimmed, ii2)
 
         self.temp.best_stage1 = best_stage1
@@ -337,3 +342,43 @@ class LTS(object):
             if not random_search_options is None:
                 options.update(random_search_options)
             return self.fit_random(k_trimmed, **options)
+
+
+#monkey
+
+from statsmodels.discrete.discrete_model import DiscreteResults
+#DiscreteResults.nllf = lambda : - DiscreteResults.llf
+
+class LTLikelihood(LTS):
+
+    def __init__(self, endog, exog, est_model=Poisson):
+        super(LTLikelihood, self).__init__(endog, exog, est_model=est_model)
+        #patching model doesn't help
+        #self.est_model.nllf =
+        self.target_attr = 'nllf'
+
+    def _refine_step(self, iin, k_accept):
+        endog, exog = self.endog, self.exog
+        nobs = self.nobs
+
+        res_trimmed = self.est_model(endog[iin], exog[iin]).fit()
+        self.temp.n_est_calls += 1
+        #print np.nonzero(~iin)[0] + 1, res_t_ols.params, res_t_ols.ssr
+        #r = endog - res_trimmed.predict(exog)
+
+        #TODO: more monkey, need loglike for all observations
+        res_trimmed.model.endog = endog
+        res_trimmed.model.exog = exog
+
+        r = res_trimmed.model.loglikeobs(res_trimmed.params)
+        #ii2 = np.argsort(np.argsort(np.abs(r))) < k_accept
+        #partial sort would be enough: need only the smallest k_outlier
+        #values
+        #TODO: another version: use resid_se and outlier test to determin
+        #k_outliers
+        idx3 = np.argsort(np.abs(r))[k_accept:] #idx of outliers
+
+        ii2 = np.ones(nobs, bool)
+        ii2[idx3] = False
+        ssr_new = np.dot(r*r, ii2)
+        return res_trimmed, ii2, ssr_new
