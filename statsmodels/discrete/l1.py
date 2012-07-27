@@ -14,6 +14,8 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
 
     if callback:
         print "Callback will be ignored with l1"
+    if hess: 
+        print "Hessian not used with l1, since l1 uses fmin_slsqp"
 
     ### Extract values
     fargs += (f,score) 
@@ -58,7 +60,7 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
         x = np.array(x)
         params = x[:K]
         fopt = fx
-        converged = smode
+        converged = 'True' if imode == 0 else smode
         iterations = its
         # TODO Should gopt be changed to accomidate the regularization term?
         gopt = score(params)  
@@ -93,7 +95,7 @@ def QA_results(x, params, K, constant, acc):
 
 def trim_params(results, full_output, K, func, fargs, acc, offset):
     """
-    Trims params that are within max(10*acc, 1e-10) of zero.
+    Trims (sets = 0) params that are within max(10*acc, 1e-10) of zero.
     """
     ## Extract params from the results
     trim_tol = min(max(100*acc, 1e-10), 1e-3)
@@ -193,7 +195,6 @@ def modified_bic(results, model, constant):
     """
     df_model = modified_df_model(results, model, constant)
     return -2*results.llf + np.log(results.nobs)*(df_model+model.J-1)
-
 
 def modified_aic(results, model, constant):
     """
