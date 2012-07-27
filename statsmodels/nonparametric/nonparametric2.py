@@ -734,7 +734,7 @@ class Reg(object):
     mean(): Calculates the conditiona mean
     """
 
-    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls'):
+    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls', censor_var=None):
 
         #self.tydat = np.column_stack(tydat)
         #self.txdat = np.column_stack(txdat)
@@ -746,7 +746,33 @@ class Reg(object):
         self.N = np.shape(self.txdat)[0] 
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self.g_lc, ll=self.g_ll)
+        self.censor_var = censor_var
+        if self.censor_var is not None:
+            self.censored(censor_var)
+        else:
+            self.W_in = np.ones((self.N, 1))
+        #print self.W_in
         self.bw = self.compute_bw(bw)
+
+    def censored(self, censor_var):
+        # see pp. 341-344 in [1]
+        self.d = (self.tydat != censor_var) * 1.
+        ix = np.argsort(np.squeeze(self.tydat))
+        self.tydat = np.squeeze(self.tydat[ix])
+        self.tydat = tools.adjust_shape(self.tydat, 1)
+        self.txdat = np.squeeze(self.txdat[ix])
+        self.d = np.squeeze(self.d[ix])
+        #print self.txdat
+        #print self.d
+        self.W_in = np.empty((self.N, 1))
+        for i in xrange(1, self.N+1):
+            P=1
+            for j in xrange(1, i):
+                P *= ((self.N - j)/(float(self.N)-j+1))**self.d[j-1]
+            self.W_in[i-1,0] = P * self.d[i-1] / (float(self.N) - i + 1 )
+
+        
+        
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -793,7 +819,7 @@ class Reg(object):
         mean = mean_mfx[0]
         mfx = mean_mfx[1::, :]
         return mean, mfx
-    def g_ll(self, bw, tydat, txdat, edat):
+    def g_ll(self, bw, tydat, txdat, edat, W):
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
                             ukertype='aitchison_aitken_reg',
                             okertype='wangryzin_reg', 
@@ -803,6 +829,9 @@ class Reg(object):
         iscontinuous = tools._get_type_pos(self.var_type)[0]
         iscontinuous = xrange(self.K)
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
+        Ker = Ker * W
+
+ 
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
         L = 0
@@ -884,7 +913,7 @@ class Reg(object):
             B_x.append(d_x[1::])
         return np.squeeze(np.asarray(D_x)), np.squeeze(np.asarray(B_x))
 
-    def g_lc(self, bw, tydat, txdat, edat):
+    def g_lc(self, bw, tydat, txdat, edat, W=None):
         """
         Local constant estimator of g(x) in the regression
         y = g(x) + e
@@ -984,11 +1013,13 @@ class Reg(object):
         print "Running"
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        LOO_W = tools.LeaveOneOut(self.W_in).__iter__()
         i = 0
         L = 0
         for X_j in LOO_X:
             Y = LOO_Y.next()
-            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :])[0]
+            w = LOO_W.next()
+            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :], W=w)[0]
             L += (self.tydat[i] - G) ** 2
             i += 1
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -1047,7 +1078,7 @@ class Reg(object):
         mfx = np.empty((N_edat, self.K))
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
         for i in xrange(N_edat):
-            mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :])
+            mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :], W = self.W_in)
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             #print "mfx_c: ", mfx_c
