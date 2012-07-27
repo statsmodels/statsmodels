@@ -16,6 +16,9 @@ statsmodels/base/model.py
     Likelihoodmodel.fit() :
         3 lines modified to allow for importing and calling of l1.py:_fit_l1()
 
+l1_demo/demo.py
+    $ python demo.py does a quick demo of the regularization.
+
 
 
 What Statsmodels is
