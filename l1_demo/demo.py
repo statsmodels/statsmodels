@@ -3,42 +3,43 @@ import scipy as sp
 import statsmodels.discrete.l1 as l1
 import pdb
 from scipy.optimize import fmin_slsqp
-
 # pdb.set_trace()
 
+
+
 def main():
-    N = 100
-    num_nonconst_params = 10 # Not including the leading constant
+    """
+    Demonstrates L1 regularization for MNLogit model.
+    """
+    ## Commonly adjusted params
+    N = 10000  # Number of data points
+    alpha = 0.005 * N  # Regularization parameter
+    num_nonconst_params = 2 
     num_targets = 3
     prepend_constant = True
+    ## Make the arrays
     exog = sp.rand(N, num_nonconst_params)
     if prepend_constant:
         exog = sm.add_constant(exog, prepend=True)
     true_params = sp.rand(exog.shape[1], num_targets)
-    endog = get_endog(num_targets, true_params, exog)
-
-    #endog = sp.random.randint(0, num_targets, size=N)
-    #endog = 2*sp.ones(N)
-    #endog[-1] = 0
-    #endog[-2] = 1
-    sp.save('exog.npy', exog)
-    sp.save('endog.npy', endog)
-    exog = sp.load('exog.npy')
-    endog = sp.load('endog.npy')
-
+    endog = get_multinomial_endog(num_targets, true_params, exog)
+    ## Use these lines to save results and try again with new alpha
+    #sp.save('endog.npy', endog)
+    #sp.save('exog.npy', exog)
+    #endog = sp.load('endog.npy')
+    #exog = sp.load('exog.npy')
+    ## Train the models
     model = sm.MNLogit(endog, exog)
-    results = model.fit(method='newton')
-    print "Newton results"
-    print results.summary()
-    x0 = results.params.reshape((exog.shape[1])*(num_targets-1), order='F')
-    results = model.fit(method='l1', alpha=0.5, epsilon=1.5e-8, maxiter=70, constant=True, trim_params=True, start_params=x0)
-    bic = l1.modified_bic(results, model, prepend_constant)
-    pdb.set_trace()
-    print "l1 results"
-    print results.summary()
+    results_ML = model.fit(method='newton')
+    results_l1 = model.fit(method='l1', alpha=alpha, maxiter=70, 
+            constant=prepend_constant, trim_params=True)
+    ## Prints results
+    print "The true parameters are \n%s"%true_params
+    print "The ML fit parameters are \n%s"%results_ML.params
+    print "The l1 fit parameters are \n%s"%results_l1.params
 
 
-def get_endog(num_targets, true_params, exog):
+def get_multinomial_endog(num_targets, true_params, exog):
     N = exog.shape[0]
     ### Create the probability of entering the different classes, 
     ### given exog and true_params

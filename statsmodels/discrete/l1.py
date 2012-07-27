@@ -1,5 +1,5 @@
 """
-Holds files for the l1 regularization
+Holds files for l1 regularization of LikelihoodModel
 """
 import numpy as np
 from scipy.optimize import fmin_slsqp
@@ -10,6 +10,16 @@ import pdb
 def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100, 
         callback=None, retall=False, full_output=False, hess=None):
     """
+    Called by base.LikelihoodModel.fit.  Call structure is similar to e.g. 
+        _fit_mle_newton().
+
+    The optimization is done by scipy.optimize.fmin_slsqp()
+
+    Special Parameters
+    ------------------
+    alpha : Float.  The regularization parameter.
+    do_not_regularize_first_param : Boolean.  If the first covariate is a 
+        constant, then you almost never regularize it.  
     """
 
     if callback:
@@ -23,16 +33,15 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
     K = len(start_params)  
     fargs += (K,)
     # offset determines which parts of x are used for the dummy variables 'u'
-    constant = kwargs.setdefault('constant', False)
-    offset = 1 if constant else 0
+    do_not_regularize_first_param = kwargs.setdefault(
+            'do_not_regularize_first_param', False)
+    offset = 1 if do_not_regularize_first_param else 0
     fargs += (offset,)
     # The start point
     x0 = np.append(start_params, np.fabs(start_params[offset:]))
     # alpha is the regularization parameter
     alpha = kwargs['alpha']
     fargs += (alpha,)
-    # Epsilon is used for approximating derivatives
-    epsilon = kwargs.setdefault('epsilon', 1.49e-8)
     # Convert display parameters to scipy.optimize form
     if disp or retall:
         if disp:
@@ -47,10 +56,10 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
     ### Call the optimization
     results = fmin_slsqp(func, x0, f_ieqcons=f_ieqcons, fprime=fprime, acc=acc,
             args=fargs, iter=maxiter, disp=disp_slsqp, full_output=full_output, 
-            fprime_ieqcons=fprime_ieqcons, epsilon=epsilon)
+            fprime_ieqcons=fprime_ieqcons)
 
     ### Post-process 
-    #QA_results(x, params, K, constant, acc) 
+    #QA_results(x, params, K, do_not_regularize_first_param, acc) 
     if kwargs.get('trim_params'):
         results = trim_params(results, full_output, K, func, fargs, acc, offset)
 
@@ -77,7 +86,7 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
     else:
         return params
 
-def QA_results(x, params, K, constant, acc):
+def QA_results(x, params, K, do_not_regularize_first_param, acc):
     """
     Raises exception if:
         The dummy variables u are not equal to absolute value of params to within
@@ -85,7 +94,7 @@ def QA_results(x, params, K, constant, acc):
     """
     u = x[K:]
     decimal = min(int(-np.log10(10*acc)), 10)
-    offset = 1 if constant else 0
+    offset = 1 if do_not_regularize_first_param else 0
     abs_params = np.fabs(params[offset:])
     try:
         np.testing.assert_array_almost_equal(abs_params, u, decimal=decimal)
@@ -141,6 +150,9 @@ def fprime(x, *fargs):
     return np.append(score(params, *args), alpha * np.ones(K-offset))
 
 def f_ieqcons(x, *fargs):
+    """
+    The inequality constraints.
+    """
     args = fargs[:-5]
     f, score, K, offset, alpha = fargs[-5:]
     params = x[:K]
@@ -150,6 +162,9 @@ def f_ieqcons(x, *fargs):
     return np.append(nonconst_params + u, u - nonconst_params)
 
 def fprime_ieqcons(x, *fargs):
+    """
+    Derivative of the inequality constraints
+    """
     args = fargs[:-5]
     f, score, K, offset, alpha = fargs[-5:]
     params = x[:K]
@@ -168,10 +183,16 @@ def fprime_ieqcons(x, *fargs):
         return np.concatenate((one_column, C), axis=1)
 
 def nnz_params(results):
+    """
+    Returns the number of nonzero parameters
+    """
     return len(np.nonzero(np.fabs(results.params.ravel())>0)[0]) 
 
-def modified_df_model(results, model, constant):
+def modified_df_model(results, model):
     """
+    TODO: Not sure if this is done right since I'm not sure what df_model 
+        is supposed to be.
+
     In statsmodels, df_model is set first in 
         DiscreteModel.initialize() with  
             self.df_model = float(tools.rank(self.exog) - 1) 
@@ -179,30 +200,26 @@ def modified_df_model(results, model, constant):
             self.df_model *= (self.J-1)
     """
     number_nonzero_params = nnz_params(results)
-
-    if constant:
-        df_model = number_nonzero_params - (model.J - 1)
-    else:
-        df_model = number_nonzero_params 
+    df_model = number_nonzero_params - (model.J - 1)
 
     return df_model
 
-def modified_bic(results, model, constant):
+def modified_bic(results, model):
     """
     Replacement for the "call" results.bic 
         (in discrete_model.py:MultinomialResults).  This version uses 
         modified_df_model rather than the built in df_model.
     """
-    df_model = modified_df_model(results, model, constant)
+    df_model = modified_df_model(results, model)
     return -2*results.llf + np.log(results.nobs)*(df_model+model.J-1)
 
-def modified_aic(results, model, constant):
+def modified_aic(results, model):
     """
     Replacement for the "call" results.aic 
         (in discrete_model.py:MultinomialResults).  This version uses 
         modified_df_model rather than the built in df_model.
     """
-    df_model = modified_df_model(results, model, constant)
+    df_model = modified_df_model(results, model)
     return -2*(results.llf - (df_model+model.J-1))
 
 
