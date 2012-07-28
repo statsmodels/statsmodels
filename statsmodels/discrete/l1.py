@@ -13,7 +13,18 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
     Called by base.LikelihoodModel.fit.  Call structure is similar to e.g. 
         _fit_mle_newton().
 
-    The optimization is done by scipy.optimize.fmin_slsqp()
+        .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        :math:`d_{ij}=1`
+
+
+    The optimization is done by scipy.optimize.fmin_slsqp().  With :math:`L` 
+    the log-likelihood, we solve the convex but non-smooth problem
+    .. math:: \\min_\\beta -\\ln L + \\alpha \\sum_k|\\beta_k|
+    via the transformation to the smooth, convex, constrained problem in twice
+    as many variables
+    .. math:: \\min_{\\beta,u} -\\ln L + \\alpha \\sum_ku_k,
+    subject to
+    .. math:: -u_k \\leq \\beta_k \\leq u_k.
 
     Special Parameters
     ------------------
