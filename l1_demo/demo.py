@@ -31,6 +31,7 @@ def main():
     ## Train the models
     model = sm.MNLogit(endog, exog)
     results_ML = model.fit(method='newton')
+    pdb.set_trace()
     results_l1 = model.fit(method='l1', alpha=alpha, maxiter=70, 
             constant=prepend_constant, trim_params=True)
     ## Prints results
