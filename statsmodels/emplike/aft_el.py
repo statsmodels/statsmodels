@@ -34,7 +34,7 @@ Regression." Scandanavian Journal of Statistics. Vol 28. Iss. 4. 661-673.
 """
 
 import numpy as np
-from statsmodels.api import OLS, WLS
+from statsmodels.api import OLS, WLS, add_constant
 
 
 class emplikeAFT(object):
@@ -184,8 +184,6 @@ class emplikeAFT(object):
         self.modif_censors = np.copy(self.censors)
         if last_uncensored:
             self.modif_censors[-1] = 1
-        else:
-            self.modif_censors[-1] = self.censors[-1]
         wts = self._make_km(self.endog, self.modif_censors)
         if wt_method == 'koul':
             res = OLS(self.endog * wts, self.exog).fit()
@@ -198,3 +196,6 @@ class emplikeAFT(object):
         res.f_test = None
         res.fvalue = None
         return res
+
+
+
