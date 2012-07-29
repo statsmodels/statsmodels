@@ -12,10 +12,10 @@ def main():
     Demonstrates L1 regularization for MNLogit model.
     """
     ## Commonly adjusted params
-    N = 10000  # Number of data points
+    N = 1000  # Number of data points
     alpha = 0.005 * N  # Regularization parameter
     num_nonconst_params = 2 
-    num_targets = 3
+    num_targets = 2
     prepend_constant = True
     ## Make the arrays
     exog = sp.rand(N, num_nonconst_params)
@@ -34,6 +34,7 @@ def main():
     pdb.set_trace()
     results_l1 = model.fit(method='l1', alpha=alpha, maxiter=70, 
             constant=prepend_constant, trim_params=True)
+    bse = results_l1.bse
     ## Prints results
     print "The true parameters are \n%s"%true_params
     print "The ML fit parameters are \n%s"%results_ML.params
