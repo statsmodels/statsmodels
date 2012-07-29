@@ -271,7 +271,10 @@ class LikelihoodModel(Model):
                 Hinv = None
 
         #TODO: add Hessian approximation and change the above if needed
-        mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
+        if method == 'l1':
+            mlefit = l1ModelResults(self, xopt, Hinv, scale=1.)
+        else:
+            mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
 
         #TODO: hardcode scale?
         if isinstance(retvals, dict):
@@ -859,6 +862,562 @@ class LikelihoodModelResults(Results):
     @cache_readonly
     def bse(self):
         return np.sqrt(np.diag(self.cov_params()))
+
+    def t(self, column=None):
+        """
+        deprecated: Return the t-statistic for a given parameter estimate.
+
+        FutureWarning: use attribute tvalues instead, t will be removed
+        in the next release
+
+        Parameters
+        ----------
+        column : array-like
+            The columns for which you would like the t-value.
+            Note that this uses Python's indexing conventions.
+
+        See also
+        ---------
+        Use t_test for more complicated t-statistics.
+
+        Examples
+        --------
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.longley.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> results.tvalues
+        array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
+        4.01588981, -3.91080292])
+        >>> results.tvalues[[1,2,4]]
+        array([-1.06951632, -4.13642736, -0.22605114])
+        >>> import numpy as np
+        >>> results.tvalues[np.array([1,2,4]]
+        array([-1.06951632, -4.13642736, -0.22605114])
+
+        """
+        import warnings
+        warnings.warn("`t` will be removed in the next release, use attribute"
+                      "`tvalues` instead", FutureWarning)
+
+        if self.normalized_cov_params is None:
+            raise ValueError('need covariance of parameters for computing T '
+                             'statistics')
+
+        if column is None:
+            column = range(self.params.shape[0])
+
+        column = np.asarray(column)
+        _params = self.params[column]
+        _cov = self.cov_params(column=column)
+        if _cov.ndim == 2:
+            _cov = np.diag(_cov)
+        _t = _params * recipr(np.sqrt(_cov))
+    # repicr drops precision for MNLogit?
+        _t = _params / np.sqrt(_cov)
+        return _t
+
+    @cache_readonly
+    def tvalues(self):
+        """
+        Return the t-statistic for a given parameter estimate.
+        """
+        return self.params / self.bse
+
+    @cache_readonly
+    def pvalues(self):
+        return stats.norm.sf(np.abs(self.tvalues)) * 2
+
+    def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
+                   other=None):
+        """
+        Returns the variance/covariance matrix.
+
+        The variance/covariance matrix can be of a linear contrast
+        of the estimates of params or all params multiplied by scale which
+        will usually be an estimate of sigma^2.  Scale is assumed to be
+        a scalar.
+
+        Parameters
+        ----------
+        r_matrix : array-like
+            Can be 1d, or 2d.  Can be used alone or with other.
+        column :  array-like, optional
+            Must be used on its own.  Can be 0d or 1d see below.
+        scale : float, optional
+            Can be specified or not.  Default is None, which means that
+            the scale argument is taken from the model.
+        other : array-like, optional
+            Can be used when r_matrix is specified.
+
+        Returns
+        -------
+        (The below are assumed to be in matrix notation.)
+
+        cov : ndarray
+
+        If no argument is specified returns the covariance matrix of a model
+        (scale)*(X.T X)^(-1)
+
+        If contrast is specified it pre and post-multiplies as follows
+        (scale) * r_matrix (X.T X)^(-1) r_matrix.T
+
+        If contrast and other are specified returns
+        (scale) * r_matrix (X.T X)^(-1) other.T
+
+        If column is specified returns
+        (scale) * (X.T X)^(-1)[column,column] if column is 0d
+
+        OR
+
+        (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
+
+        """
+        if cov_p is None and self.normalized_cov_params is None:
+            raise ValueError('need covariance of parameters for computing '
+                             '(unnormalized) covariances')
+        if column is not None and (r_matrix is not None or other is not None):
+            raise ValueError('Column should be specified without other '
+                             'arguments.')
+        if other is not None and r_matrix is None:
+            raise ValueError('other can only be specified with r_matrix')
+
+        if cov_p is None:
+            if scale is None:
+                scale = self.scale
+            cov_p = self.normalized_cov_params * scale
+
+        if column is not None:
+            column = np.asarray(column)
+            if column.shape == ():
+                return cov_p[column, column]
+            else:
+                #return cov_p[column][:, column]
+                return cov_p[column[:, None], column]
+        elif r_matrix is not None:
+            r_matrix = np.asarray(r_matrix)
+            if r_matrix.shape == ():
+                raise ValueError("r_matrix should be 1d or 2d")
+            if other is None:
+                other = r_matrix
+            else:
+                other = np.asarray(other)
+            tmp = np.dot(r_matrix, np.dot(cov_p, np.transpose(other)))
+            return tmp
+        else:  #if r_matrix is None and column is None:
+            return cov_p
+
+    #TODO: make sure this works as needed for GLMs
+    def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None):
+        """
+        Compute a tcontrast/t-test for a row vector array of the form Rb = q
+
+        where R is r_matrix, b = the parameter vector, and q is q_matrix.
+
+        Parameters
+        ----------
+        r_matrix : array-like
+            A length p row vector specifying the linear restrictions.
+        q_matrix : array-like or scalar, optional
+            Either a scalar or a length p row vector.
+        scale : float, optional
+            An optional `scale` to use.  Default is the scale specified
+            by the model fit.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.longley.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> r = np.zeros_like(results.params)
+        >>> r[4:6] = [1,-1]
+        >>> print r
+        [ 0.  0.  0.  0.  1. -1.  0.]
+
+        r tests that the coefficients on the 5th and 6th independent
+        variable are the same.
+
+        >>>T_Test = results.t_test(r)
+        >>>print T_test
+        <T contrast: effect=-1829.2025687192481, sd=455.39079425193762,
+        t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
+        >>> T_test.effect
+        -1829.2025687192481
+        >>> T_test.sd
+        455.39079425193762
+        >>> T_test.t
+        -4.0167754636411717
+        >>> T_test.p
+        0.0015163772380899498
+
+        See also
+        ---------
+        t : method to get simpler t values
+        f_test : for f tests
+
+        """
+        r_matrix = np.atleast_2d(np.asarray(r_matrix))
+        num_ttests = r_matrix.shape[0]
+        num_params = r_matrix.shape[1]
+
+        if cov_p is None and self.normalized_cov_params is None:
+            raise ValueError('Need covariance of parameters for computing '
+                             'T statistics')
+        if num_params != self.params.shape[0]:
+            raise ValueError('r_matrix and params are not aligned')
+        if q_matrix is None:
+            q_matrix = np.zeros(num_ttests)
+        else:
+            q_matrix = np.asarray(q_matrix)
+        if q_matrix.size > 1:
+            if q_matrix.shape[0] != num_ttests:
+                raise ValueError("r_matrix and q_matrix must have the same "
+                                 "number of rows")
+
+        _t = _sd = None
+
+        _effect = np.dot(r_matrix, self.params)
+        if num_ttests > 1:
+            _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix,
+                                                  cov_p=cov_p)))
+        else:
+            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
+        _t = (_effect - q_matrix) * recipr(_sd)
+        return ContrastResults(effect=_effect, t=_t, sd=_sd,
+                               df_denom=self.model.df_resid)
+
+    #TODO: untested for GLMs?
+    def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
+               invcov=None):
+        """
+        Compute an Fcontrast/F-test for a contrast matrix.
+
+        Here, matrix `r_matrix` is assumed to be non-singular. More precisely,
+
+        r_matrix (pX pX.T) r_matrix.T
+
+        is assumed invertible. Here, pX is the generalized inverse of the
+        design matrix of the model. There can be problems in non-OLS models
+        where the rank of the covariance of the noise is not full.
+
+        Parameters
+        ----------
+        r_matrix : array-like
+            q x p array where q is the number of restrictions to test and
+            p is the number of regressors in the full model fit.
+            If q is 1 then f_test(r_matrix).fvalue is equivalent to
+            the square of t_test(r_matrix).t
+        q_matrix : array-like
+            q x 1 array, that represents the sum of each linear restriction.
+            Default is all zeros for each restriction.
+        scale : float, optional
+            Default is 1.0 for no scaling.
+        invcov : array-like, optional
+            A qxq matrix to specify an inverse covariance
+            matrix based on a restrictions matrix.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.longley.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> A = np.identity(len(results.params))
+        >>> A = A[:-1,:]
+
+        This tests that each coefficient is jointly statistically
+        significantly different from zero.
+
+        >>> print results.f_test(A)
+        <F contrast: F=330.28533923463488, p=4.98403052872e-10,
+         df_denom=9, df_num=6>
+
+        Compare this to
+
+        >>> results.F
+        330.2853392346658
+        >>> results.F_p
+        4.98403096572e-10
+
+        >>> B = np.array(([0,1,-1,0,0,0,0],[0,0,0,0,1,-1,0]))
+
+        This tests that the coefficient on the 2nd and 3rd regressors are
+        equal and jointly that the coefficient on the 5th and 6th regressors
+        are equal.
+
+        >>> print results.f_test(B)
+        <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9,
+         df_num=2>
+
+        See also
+        --------
+        statsmodels.contrasts
+        statsmodels.model.t_test
+
+        """
+        r_matrix = np.asarray(r_matrix)
+        r_matrix = np.atleast_2d(r_matrix)
+
+        if (self.normalized_cov_params is None and cov_p is None and
+            invcov is None):
+            raise ValueError('need covariance of parameters for computing '
+                             'F statistics')
+
+        cparams = np.dot(r_matrix, self.params[:, None])
+        J = float(r_matrix.shape[0])  # number of restrictions
+        if q_matrix is None:
+            q_matrix = np.zeros(J)
+        else:
+            q_matrix = np.asarray(q_matrix)
+        if q_matrix.ndim == 1:
+            q_matrix = q_matrix[:, None]
+            if q_matrix.shape[0] != J:
+                raise ValueError("r_matrix and q_matrix must have the same "
+                                 "number of rows")
+        Rbq = cparams - q_matrix
+        if invcov is None:
+            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
+                                                   cov_p=cov_p))
+        F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
+        return ContrastResults(F=F, df_denom=self.model.df_resid,
+                    df_num=invcov.shape[0])
+
+    def conf_int(self, alpha=.05, cols=None, method='default'):
+        """
+        Returns the confidence interval of the fitted parameters.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The `alpha` level for the confidence interval.
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+        cols : array-like, optional
+            `cols` specifies which confidence intervals to return
+        method : string
+            Not Implemented Yet
+            Method to estimate the confidence_interval.
+            "Default" : uses self.bse which is based on inverse Hessian for MLE
+            "jhj" :
+            "jac" :
+            "boot-bse"
+            "boot_quant"
+            "profile"
+
+
+        Returns
+        --------
+        conf_int : array
+            Each row contains [lower, upper] confidence interval
+
+        Examples
+        --------
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.longley.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> results = sm.OLS(data.endog, data.exog).fit()
+        >>> results.conf_int()
+        array([[ -1.77029035e+02,   2.07152780e+02],
+        [ -1.11581102e-01,   3.99427438e-02],
+        [ -3.12506664e+00,  -9.15392966e-01],
+        [ -1.51794870e+00,  -5.48505034e-01],
+        [ -5.62517214e-01,   4.60309003e-01],
+        [  7.98787515e+02,   2.85951541e+03],
+        [ -5.49652948e+06,  -1.46798779e+06]])
+
+        >>> results.conf_int(cols=(1,2))
+        array([[-0.1115811 ,  0.03994274],
+        [-3.12506664, -0.91539297]])
+
+        Notes
+        -----
+        The confidence interval is based on the standard normal distribution.
+        Models wish to use a different distribution should overwrite this
+        method.
+        """
+        bse = self.bse
+        dist = stats.norm
+        q = dist.ppf(1 - alpha / 2)
+
+        if cols is None:
+            lower = self.params - q * bse
+            upper = self.params + q * bse
+        else:
+            cols = np.asarray(cols)
+            lower = self.params[cols] - q * bse[cols]
+            upper = self.params[cols] + q * bse[cols]
+        return np.asarray(zip(lower, upper))
+
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+    def save(self, fname, remove_data=False):
+        '''
+        save a pickle of this instance
+
+        Parameters
+        ----------
+        fname : string or filehandle
+            fname can be a string to a file path or filename, or a filehandle.
+        remove_data : bool
+            If False (default), then the instance is pickled without changes.
+            If True, then all arrays with length nobs are set to None before
+            pickling. See the remove_data method.
+            In some cases not all arrays will be set to None.
+
+        Notes
+        -----
+        If remove_data is true and the model result does not implement a
+        remove_data method then this will raise an exception.
+
+        '''
+
+        from statsmodels.iolib.smpickle import save_pickle
+
+        if remove_data:
+            self.remove_data()
+
+        save_pickle(self, fname)
+
+    @classmethod
+    def load(cls, fname):
+        '''
+        load a pickle, (class method)
+
+        Parameters
+        ----------
+        fname : string or filehandle
+            fname can be a string to a file path or filename, or a filehandle.
+
+        Returns
+        -------
+        unpickled instance
+
+        '''
+
+        from statsmodels.iolib.smpickle import load_pickle
+        return load_pickle(fname)
+
+    def remove_data(self):
+        '''remove data arrays, all nobs arrays from result and model
+
+        This reduces the size of the instance, so it can be pickled with less
+        memory. Currently tested for use with predict from an unpickled
+        results and model instance.
+
+        .. warning:: Since data and some intermediate results have been removed
+           calculating new statistics that require them will raise exceptions.
+           The exception will occur the first time an attribute is accessed that
+           has been set to None.
+
+        Not fully tested for time series models, tsa, and might delete too much
+        for prediction or not all that would be possible.
+
+        The list of arrays to delete is maintained as an attribute of the
+        result and model instance, except for cached values. These lists could
+        be changed before calling remove_data.
+
+        '''
+        def wipe(obj, att):
+            #get to last element in attribute path
+            p = att.split('.')
+            att_ = p.pop(-1)
+            try:
+                obj_ = reduce(getattr, [obj] + p)
+
+                #print repr(obj), repr(att)
+                #print hasattr(obj_, att_)
+                if hasattr(obj_, att_):
+                    #print 'removing3', att_
+                    setattr(obj_, att_, None)
+            except AttributeError:
+                pass
+
+        model_attr = ['model.'+ i for i in self.model._data_attr]
+        for att in self._data_attr + model_attr:
+            #print 'removing', att
+            wipe(self, att)
+
+        data_in_cache = getattr(self, 'data_in_cache', [])
+        data_in_cache += ['fittedvalues', 'resid', 'wresid']
+        for key in data_in_cache:
+            try:
+                self._cache[key] = None
+            except (AttributeError, KeyError):
+                pass
+
+
+class l1ModelResults(LikelihoodModelResults):
+    """
+    Class to contain results from likelihood models fit with an l1 penalty.  
+    This class truncates some results due to non-normality in some directions.
+
+    Parameters
+    -----------
+    model : LikelihoodModel instance or subclass instance
+        LikelihoodModelResults holds a reference to the model that is fit.
+    params : 1d array_like
+        parameter estimates from estimated model
+    normalized_cov_params : 2d array
+       Normalized (before scaling) covariance of params. (dot(X.T,X))**-1
+    scale : float
+        For (some subset of models) scale will typically be the
+        mean square error from the estimated model (sigma^2)
+
+    Returns
+    -------
+    **Attributes**
+    mle_retvals : dict
+        Contains the values returned from the chosen optimization method if
+        full_output is True during the fit.  Available only if the model
+        is fit by maximum likelihood.  See notes below for the output from
+        the different methods.
+    mle_settings : dict
+        Contains the arguments passed to the chosen optimization method.
+        Available if the model is fit by maximum likelihood.  See
+        LikelihoodModel.fit for more information.
+    model : model instance
+        LikelihoodResults contains a reference to the model that is fit.
+    params : ndarray
+        The parameters estimated for the model.
+    scale : float
+        The scaling factor of the model given during instantiation.
+    tvalues : array
+        The t-values of the standard errors.
+
+
+    Notes
+    --------
+    The covariance of params is given by scale times normalized_cov_params.
+
+    Return values by solver if full_ouput is True during fit:
+    
+    TODO: Fill in with l1 solver full_output.
+        """
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
+        super(LikelihoodModelResults, self).__init__(model, params)
+        self.normalized_cov_params = normalized_cov_params
+        self.scale = scale
+        self.zero_param_idx = np.nonzero(params == 0)[0]
+        # This call makes sure self.bse is populated by self.bse()
+        temp = self.bse  
+
+    def normalized_cov_params(self):
+        raise NotImplementedError
+
+    #JP: add methods that are valid generically higher up in class hierarchy
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
+    @cache_readonly
+    def bse(self):
+        bse = super(l1ModelResults, self).bse
+        bse[self.zero_param_idx] = float('nan')
+        return bse
 
     def t(self, column=None):
         """

@@ -78,7 +78,7 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
         fopt = fx
         converged = 'True' if imode == 0 else smode
         iterations = its
-        # TODO Should gopt be changed to accomidate the regularization term?
+        # TODO Possibly get rid of gopt, hopt altogether?
         gopt = score(params)  
         hopt = hess(params)
         retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations, 
@@ -228,15 +228,4 @@ def modified_aic(results, model):
     """
     df_model = modified_df_model(results, model)
     return -2*(results.llf - (df_model+model.J-1))
-
-
-
-
-
-
-
-
-
-
-
 
