@@ -31,6 +31,8 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
+import pdb  # pdb.set_trace
+
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
 
@@ -360,7 +362,10 @@ class MultinomialModel(BinaryModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
-        mnfit = MultinomialResults(self, mnfit)
+        if method == 'l1':
+            mnfit = L1MultinomialResults(self, mnfit)
+        else:
+            mnfit = MultinomialResults(self, mnfit)
         return MultinomialResultsWrapper(mnfit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
@@ -1740,7 +1745,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         #                   title="")
         return smry
 
-
 class CountResults(DiscreteResults):
     pass
 
@@ -1856,6 +1860,35 @@ class MultinomialResults(DiscreteResults):
                                                             cols=cols)
         return confint.transpose(2,0,1)
 
+class L1MultinomialResults(MultinomialResults):
+    """
+    Special version of MultinomialResults for use with a model that was fit
+    with L1 penalized regression.
+
+    New Attributes
+    --------------
+    nnz_params : Integer
+        The number of nonzero parameters in the model.  Train with 
+        trim_parms==True or else numerical error will distort this.
+    """
+    def __init__(self, model, mlefit):
+        super(L1MultinomialResults, self).__init__(model, mlefit)
+        self.zero_param_idx = np.nonzero(self.params.ravel(order='F') == 0)
+        self.nnz_params = len(np.nonzero(self.params != 0)[0]) 
+
+    @cache_readonly
+    def bse(self):
+        bse = np.sqrt(np.diag(self.cov_params()))
+        bse[self.zero_param_idx] = float('nan')
+        return bse.reshape(self.params.shape, order='F')
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - self.nnz_params)
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 #### Results Wrappers ####
 

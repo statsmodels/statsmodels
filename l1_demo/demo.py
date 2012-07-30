@@ -12,7 +12,7 @@ def main():
     Demonstrates L1 regularization for MNLogit model.
     """
     ## Commonly adjusted params
-    N = 1000  # Number of data points
+    N = 10000  # Number of data points
     alpha = 0.005 * N  # Regularization parameter
     num_nonconst_params = 2 
     num_targets = 2
@@ -22,6 +22,7 @@ def main():
     if prepend_constant:
         exog = sm.add_constant(exog, prepend=True)
     true_params = sp.rand(exog.shape[1], num_targets)
+    true_params[-1:] = 0
     endog = get_multinomial_endog(num_targets, true_params, exog)
     ## Use these lines to save results and try again with new alpha
     #sp.save('endog.npy', endog)
@@ -31,10 +32,11 @@ def main():
     ## Train the models
     model = sm.MNLogit(endog, exog)
     results_ML = model.fit(method='newton')
-    pdb.set_trace()
     results_l1 = model.fit(method='l1', alpha=alpha, maxiter=70, 
             constant=prepend_constant, trim_params=True)
+    pdb.set_trace()
     bse = results_l1.bse
+    conf_int = results_l1.conf_int()
     ## Prints results
     print "The true parameters are \n%s"%true_params
     print "The ML fit parameters are \n%s"%results_ML.params
