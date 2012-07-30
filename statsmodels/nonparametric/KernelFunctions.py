@@ -35,7 +35,7 @@ def _get_shape_and_transform(h, Xi, x=None):
     else:  # ndim ==0 so Xi is a single point (number)
         K = 1
         N = 1
-    assert N >= K  # Need more observations than variables
+    #assert N >= K  # Need more observations than variables
     Xi = Xi.reshape([N, K])
     return h, Xi, x, N, K
 

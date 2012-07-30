@@ -886,9 +886,36 @@ class Reg(object):
         #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
         return G, B_x
 
-    def aic_hurvich(self):
-        pass
+    def aic_hurvich(self, bw, func=None):
+        print "running"
+        H = np.empty((self.N, self.N))
+        for i in range(self.N):
+            for j in range(self.N):
+                txdat=np.reshape(self.txdat[i, :], (1, self.K))
+                exdat = np.reshape(self.txdat[j,:], (1, self.K))
+                H[i,j] = tools.gpke(bw, tdat=txdat, edat=exdat,
+                                var_type=self.var_type,
+                                #ukertype='aitchison_aitken_reg',
+                                #okertype='wangryzin_reg', 
+                                tosum=True)
+                denom = tools.gpke(bw, tdat=-self.txdat, edat=-txdat,
+                                var_type=self.var_type,
+                                #ukertype='aitchison_aitken_reg',
+                                #okertype='wangryzin_reg', 
+                                tosum=True)
+                H[i,j] = H[i,j]/denom
+ 
+        I = np.eye(self.N)
+        sig = np.dot(np.dot(self.tydat.T,(I - H).T), (I - H)) * self.tydat / float(self.N)
+        frac = (1 + np.trace(H)/float(self.N)) / (1 - (np.trace(H) +2)/float(self.N))
+        aic = np.log(sig) + frac
 
+    def aic_hurvich_fast(self, bw, func=None):
+        H = np.empty((self.N, self.N))
+        for j in range(self.N):
+            H[:, j] = tools.gpke(bw, tdat=self.txdat, edat=self.txdat[j,:],
+                            var_type=self.var_type, tosum=False)
+        
     def cv_loo(self, bw, func):
         """
         The cross-validation function with leave-one-out
