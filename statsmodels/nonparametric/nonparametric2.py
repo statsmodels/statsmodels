@@ -33,7 +33,7 @@ class GenericKDE (object):
     """
     Generic KDE class with methods shared by both UKDE and CKDE
     """
-    def compute_bw(self, bw):
+    def _compute_bw(self, bw):
         """
         Computes the bandwidth of the data
 
@@ -208,7 +208,7 @@ class UKDE(GenericKDE):
         self.N, self.K = np.shape(self.tdat)
         assert self.K == len(self.var_type)
         assert self.N > self.K  # Num of obs must be > than num of vars
-        self.bw = self.compute_bw(bw)
+        self.bw = self._compute_bw(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -247,12 +247,10 @@ class UKDE(GenericKDE):
         """
 
         LOO = tools.LeaveOneOut(self.tdat)
-        i = 0
         L = 0
-        for X_j in LOO:
+        for i, X_j in enumerate(LOO):
             f_i = tools.gpke(bw, tdat=-X_j, edat=-self.tdat[i, :],
                              var_type=self.var_type)
-            i += 1
             L += func(f_i)
         return -L
 
@@ -449,7 +447,7 @@ class CKDE(GenericKDE):
         self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
         assert len(self.dep_type) == self.K_dep
         assert len(self.indep_type) == np.shape(self.txdat)[1]
-        self.bw = self.compute_bw(bw)
+        self.bw = self._compute_bw(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -487,16 +485,14 @@ class CKDE(GenericKDE):
         """
         yLOO = tools.LeaveOneOut(self.all_vars)
         xLOO = tools.LeaveOneOut(self.txdat).__iter__()
-        i = 0
         L = 0
-        for Y_j in yLOO:
+        for i, Y_j in enumerate(yLOO):
             X_j = xLOO.next()
             f_yx = tools.gpke(bw, tdat=-Y_j, edat=-self.all_vars[i, :],
                               var_type=(self.dep_type + self.indep_type))
             f_x = tools.gpke(bw[self.K_dep::], tdat=-X_j,
                              edat=-self.txdat[i, :], var_type=self.indep_type)
             f_i = f_yx / f_x
-            i += 1
             L += func(f_i)
         return - L
 
@@ -659,9 +655,8 @@ class CKDE(GenericKDE):
         """
 
         zLOO = tools.LeaveOneOut(self.all_vars)
-        l = 0
         CV = 0
-        for Z in zLOO:
+        for l, Z in enumerate(zLOO):
             X = Z[:, self.K_dep::]
             Y = Z[:, 0:self.K_dep]
             Expander = np.ones((self.N - 1, 1))
@@ -688,6 +683,5 @@ class CKDE(GenericKDE):
                                          self.indep_type)) / float(self.N)
             m_x = tools.gpke(bw[self.K_dep::], tdat=-X, edat=-self.txdat[l, :],
                              var_type=self.indep_type) / float(self.N)
-            l += 1
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
         return CV / float(self.N)

@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.testing as npt
+import numpy.testing.decorators as dec
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 import statsmodels.nonparametric as nparam
@@ -59,7 +60,7 @@ class MyTest(object):
 
 
 class TestUKDE(MyTest):
-
+    @dec.slow
     def test_pdf_mixeddata_CV_LS(self):
         dens_u = nparam.UKDE(tdat=[self.c1, self.o, self.o2], var_type='coo',
                              bw='cv_ls')
@@ -91,6 +92,7 @@ class TestUKDE(MyTest):
         dens_ml = nparam.UKDE(tdat=[self.c1, self.o, self.c2], var_type='coc',
                              bw='cv_ml')
 
+    @dec.slow
     def test_pdf_continuous(self):
         # Test for only continuous data
         dens = nparam.UKDE(tdat=[self.growth, self.Italy_gdp],
@@ -117,6 +119,7 @@ class TestUKDE(MyTest):
         # lower tol here. only 2nd decimal
         npt.assert_allclose(sm_result, R_result, atol=1e-1)
 
+    @dec.slow
     def test_unordered_CV_LS(self):
         dens = nparam.UKDE(tdat=[self.growth, self.oecd],
                            var_type='cu', bw='cv_ls')
@@ -140,7 +143,7 @@ class TestUKDE(MyTest):
 
 
 class TestCKDE(MyTest):
-
+    @dec.slow
     def test_mixeddata_CV_LS(self):
         dens_ls = nparam.CKDE(tydat=[self.Italy_gdp],
                               txdat=[self.Italy_year],
@@ -155,6 +158,7 @@ class TestCKDE(MyTest):
         # Results from R
         npt.assert_allclose(dens_ml.bw, [0.5341164, 0.04510836], atol=1e-3)
 
+    @dec.slow
     def test_unordered_CV_LS(self):
         dens_ls = nparam.CKDE(tydat=[self.oecd],
                               txdat=[self.growth],
@@ -169,6 +173,7 @@ class TestCKDE(MyTest):
         R_result = [11.97964, 12.73290, 13.23037, 13.46438, 12.22779]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
+    @dec.slow
     def test_pdf_mixeddata(self):
         dens = nparam.CKDE(tydat=[self.Italy_gdp],
                            txdat=[self.Italy_year], dep_type='c',
@@ -204,6 +209,7 @@ class TestCKDE(MyTest):
         R_result = [0.81304920, 0.95046942, 0.86878727, 0.71961748, 0.38685423]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
+    @dec.slow
     def test_mixeddata_cdf(self):
         dens = nparam.CKDE(tydat=[self.Italy_gdp],
                            txdat=[self.Italy_year],

@@ -1,11 +1,9 @@
-#import nonparametric2 as nparam
 import statsmodels.nonparametric as nparam
 import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 
 """
