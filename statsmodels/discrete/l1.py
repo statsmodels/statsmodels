@@ -172,7 +172,7 @@ def fprime_ieqcons(x, *fargs):
     """
     Derivative of the inequality constraints
     """
-    args = fargs[:-5]
+    args = fargs[:-4]
     f, score, K, alpha = fargs[-4:]
     params = x[:K]
     nonconst_params = x[:K]
