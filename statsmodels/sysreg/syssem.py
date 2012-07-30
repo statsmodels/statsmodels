@@ -118,3 +118,11 @@ class Sys2SLS(SysSEM):
             return s / self._div_dfk1
         else:
             return s / self._div_dfk2
+
+class Sys3SLS(SysSEM):
+    def __init__(self, sys, instruments=None, dfk=None):
+        super(Sys3SLS, self).__init__(sys, instruments=instruments, dfk=dfk)
+
+        # Estimate sigma with a first-step 2SLS
+        sigma = Sys2SLS(self.sys, self.instruments, self.dfk).fit().cov_resids
+        self.sigma = sigma
