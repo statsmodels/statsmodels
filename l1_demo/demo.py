@@ -9,7 +9,7 @@ from scipy.optimize import fmin_slsqp
 
 def main():
     """
-    Demonstrates L1 regularization for MNLogit model.
+    Demonstrates l1 regularization for MNLogit model.
     """
     ## Commonly adjusted params
     N = 10000  # Number of data points
@@ -34,13 +34,15 @@ def main():
     results_ML = model.fit(method='newton')
     results_l1 = model.fit(method='l1', alpha=alpha, maxiter=70, 
             constant=prepend_constant, trim_params=True)
-    pdb.set_trace()
-    bse = results_l1.bse
-    conf_int = results_l1.conf_int()
     ## Prints results
     print "The true parameters are \n%s"%true_params
     print "The ML fit parameters are \n%s"%results_ML.params
     print "The l1 fit parameters are \n%s"%results_l1.params
+    print "\n"
+    print "The ML fit results are"
+    print results_ML.summary()
+    print "The l1 fit results are"
+    print results_l1.summary()
 
 
 def get_multinomial_endog(num_targets, true_params, exog):
