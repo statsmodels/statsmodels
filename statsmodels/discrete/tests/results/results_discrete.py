@@ -250,7 +250,7 @@ class Spector():
         self.margeff_dummy_dydxmean = [.53385885781692,.01797548988961,
                 .4564984096959]
         self.margeff_dummy_dydxmean_se = [.237038, .0262369, .1810537]
-#        self.margeff_dummy_dydxmedian
+        #self.margeff_dummy_dydxmedian
         # from margeff
         self.margeff_dummy_count_dydx_median = [0.250110487483923,
                                 0.008426867847905,  0.441897738279663]
