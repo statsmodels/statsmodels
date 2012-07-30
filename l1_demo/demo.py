@@ -12,17 +12,17 @@ def main():
     Demonstrates l1 regularization for MNLogit model.
     """
     ## Commonly adjusted params
-    N = 10000  # Number of data points
-    alpha = 0.005 * N  # Regularization parameter
-    num_nonconst_params = 2 
-    num_targets = 2
-    prepend_constant = True
+    N = 100000  # Number of data points
+    num_targets = 3  # Targets are the dependent variables
+    num_nonconst_covariates = 4 # For every target
+    num_zero_params = 2 # For every target
     ## Make the arrays
-    exog = sp.rand(N, num_nonconst_params)
-    if prepend_constant:
-        exog = sm.add_constant(exog, prepend=True)
+    exog = sp.rand(N, num_nonconst_covariates)
+    exog = sm.add_constant(exog, prepend=True)
     true_params = sp.rand(exog.shape[1], num_targets)
-    true_params[-1:] = 0
+    true_params[-num_zero_params:, :] = 0
+    alpha = 0.0005 * N * sp.ones(true_params.shape) # Regularization parameter
+    alpha[0,:] = 0  # Don't regularize the intercept
     endog = get_multinomial_endog(num_targets, true_params, exog)
     ## Use these lines to save results and try again with new alpha
     #sp.save('endog.npy', endog)
@@ -32,17 +32,18 @@ def main():
     ## Train the models
     model = sm.MNLogit(endog, exog)
     results_ML = model.fit(method='newton')
+    start_params = results_ML.params.ravel(order='F')
     results_l1 = model.fit(method='l1', alpha=alpha, maxiter=70, 
-            constant=prepend_constant, trim_params=True)
+            start_params=start_params, trim_params=True)
     ## Prints results
     print "The true parameters are \n%s"%true_params
     print "The ML fit parameters are \n%s"%results_ML.params
     print "The l1 fit parameters are \n%s"%results_l1.params
-    print "\n"
-    print "The ML fit results are"
-    print results_ML.summary()
-    print "The l1 fit results are"
-    print results_l1.summary()
+    #print "\n"
+    #print "\nThe ML fit results are"
+    #print results_ML.summary()
+    #print "\nThe l1 fit results are"
+    #print results_l1.summary()
 
 
 def get_multinomial_endog(num_targets, true_params, exog):

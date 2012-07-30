@@ -24,9 +24,14 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
 
     Special Parameters
     ------------------
-    alpha : Float.  The regularization parameter.
-    do_not_regularize_first_param : Boolean.  If the first covariate is a 
-        constant, then you almost never regularize it.  
+    alpha : Float or array like.
+        The regularization parameter.  If a float, then all covariates (even
+        the constant) are regularized with alpha.  If array-like, then we use
+        np.array(alpha).ravel(order='F').  
+
+    TODO: alpha is currently passed through by calling function and reshaped
+        here.  This is not consistent with the previous practice of having
+        e.g. MNLogit reshape passed parameters.
     """
 
     if callback:
@@ -39,15 +44,10 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
     # P is total number of covariates, possibly including a leading constant.
     K = len(start_params)  
     fargs += (K,)
-    # offset determines which parts of x are used for the dummy variables 'u'
-    do_not_regularize_first_param = kwargs.setdefault(
-            'do_not_regularize_first_param', False)
-    offset = 1 if do_not_regularize_first_param else 0
-    fargs += (offset,)
     # The start point
-    x0 = np.append(start_params, np.fabs(start_params[offset:]))
+    x0 = np.append(start_params, np.fabs(start_params))
     # alpha is the regularization parameter
-    alpha = kwargs['alpha']
+    alpha = np.array(kwargs['alpha']).ravel(order='F')
     fargs += (alpha,)
     # Convert display parameters to scipy.optimize form
     if disp or retall:
@@ -66,9 +66,9 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
             fprime_ieqcons=fprime_ieqcons)
 
     ### Post-process 
-    #QA_results(x, params, K, do_not_regularize_first_param, acc) 
+    #QA_results(x, params, K, acc) 
     if kwargs.get('trim_params'):
-        results = trim_params(results, full_output, K, func, fargs, acc, offset)
+        results = trim_params(results, full_output, K, func, fargs, acc, alpha)
 
     ### Pack up return values for statsmodels optimizers
     if full_output:
@@ -93,7 +93,7 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
     else:
         return params
 
-def QA_results(x, params, K, do_not_regularize_first_param, acc):
+def QA_results(x, params, K, acc):
     """
     Raises exception if:
         The dummy variables u are not equal to absolute value of params to within
@@ -101,17 +101,17 @@ def QA_results(x, params, K, do_not_regularize_first_param, acc):
     """
     u = x[K:]
     decimal = min(int(-np.log10(10*acc)), 10)
-    offset = 1 if do_not_regularize_first_param else 0
-    abs_params = np.fabs(params[offset:])
+    abs_params = np.fabs(params)
     try:
         np.testing.assert_array_almost_equal(abs_params, u, decimal=decimal)
     except AssertionError:
         print "abs_params = \n%s\nu = %s"%(abs_params, u)
         raise
 
-def trim_params(results, full_output, K, func, fargs, acc, offset):
+def trim_params(results, full_output, K, func, fargs, acc, alpha):
     """
-    Trims (sets = 0) params that are within max(10*acc, 1e-10) of zero.
+    Trims (sets = 0) params that are within min(max(10*acc, 1e-10), 1e-3)
+    of zero.  If alpha[i] == 0, then don't trim the ith param.
     """
     ## Extract params from the results
     trim_tol = min(max(100*acc, 1e-10), 1e-3)
@@ -120,10 +120,10 @@ def trim_params(results, full_output, K, func, fargs, acc, offset):
     else:
         x = results
     ## Trim the small params
-    # If we have a constant column, then don't trim the constant param,
-    # since this param was not meant to be regularized.
-    for i in xrange(offset, len(x)):
-        if abs(x[i]) < trim_tol:
+    # Don't bother triming the dummy variables 'u'
+    # TODO Vectorize this
+    for i in xrange(len(x) / 2):
+        if abs(x[i]) < trim_tol and alpha[i] != 0:
             x[i] = 0.0
     ## Recompute things
     if full_output:
@@ -136,34 +136,34 @@ def func(x, *fargs):
     """
     The regularized objective function
     """
-    args = fargs[:-5]
-    f, score, K, offset, alpha = fargs[-5:]
+    args = fargs[:-4]
+    f, score, K, alpha = fargs[-4:]
     params = x[:K]
-    nonconst_params = x[offset:K]
+    nonconst_params = x[:K]
     u = x[K:]
 
-    return f(params, *args) + alpha * u.sum()
+    return f(params, *args) + (alpha * u).sum()
 
 def fprime(x, *fargs):
     """
     The regularized derivative
     """
-    args = fargs[:-5]
-    f, score, K, offset, alpha = fargs[-5:]
+    args = fargs[:-4]
+    f, score, K, alpha = fargs[-4:]
     params = x[:K]
-    nonconst_params = x[offset:K]
+    nonconst_params = x[:K]
     u = x[K:]
     # The derivative just appends a vector of constants
-    return np.append(score(params, *args), alpha * np.ones(K-offset))
+    return np.append(score(params, *args), alpha * np.ones(K))
 
 def f_ieqcons(x, *fargs):
     """
     The inequality constraints.
     """
-    args = fargs[:-5]
-    f, score, K, offset, alpha = fargs[-5:]
+    args = fargs[:-4]
+    f, score, K, alpha = fargs[-4:]
     params = x[:K]
-    nonconst_params = x[offset:K]
+    nonconst_params = x[:K]
     u = x[K:]
     # All entries in this vector must be \geq 0 in a feasible solution
     return np.append(nonconst_params + u, u - nonconst_params)
@@ -173,19 +173,14 @@ def fprime_ieqcons(x, *fargs):
     Derivative of the inequality constraints
     """
     args = fargs[:-5]
-    f, score, K, offset, alpha = fargs[-5:]
+    f, score, K, alpha = fargs[-4:]
     params = x[:K]
-    nonconst_params = x[offset:K]
+    nonconst_params = x[:K]
     u = x[K:]
 
-    I = np.eye(K-offset)
+    I = np.eye(K)
     A = np.concatenate((I,I), axis=1)
     B = np.concatenate((-I,I), axis=1)
     C = np.concatenate((A,B), axis=0)
 
-    if offset == 0:
-        return C
-    elif offset == 1:
-        one_column = np.zeros((2*K-2, 1))
-        return np.concatenate((one_column, C), axis=1)
-
+    return C
