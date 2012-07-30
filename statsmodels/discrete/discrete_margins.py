@@ -524,8 +524,8 @@ class DiscreteMargins(object):
         # reshape for multi-equation
         if J > 1:
             K = model.K - np.any(ind) # subtract constant
-            self.margeff = effects.reshape(J, K, order='F')
-            self.margeff_se = margeff_se[ind].reshape(J, K, order='F')
+            self.margeff = effects.reshape(K, J, order='F')
+            self.margeff_se = margeff_se[ind].reshape(K, J, order='F')
             self.margeff_cov = margeff_cov[ind][:, ind]
         else:
 
