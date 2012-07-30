@@ -418,7 +418,9 @@ class SysResults(LikelihoodModelResults):
     def summary(self, yname=None, xname=None, title=None):
         mod_names = {'SysGLS' : 'System GLS', 'SysWLS' : 'System WLS',
                      'SysOLS' : 'System OLS', 'SysSUR' : 'System SUR',
-                     'SysSURI' : 'Multivariate FGLS', 'Sys2SLS' : 'System Two Stage Least Square'}
+                     'SysSURI' : 'Multivariate FGLS', 
+                     'Sys2SLS' : 'System Two Stage Least Square',
+                     'Sys3SLS' : 'System Three Stage Least Square'}
         if title is None:
             title = mod_names[self.model.__class__.__name__] + ' ' + 'Regression Results'
 
