@@ -161,20 +161,29 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     return fig
 
 def getAxisProbabilities(N):
+    """
+    Determine probabilities to show on a qqplot based on the number of 
+    observations.
+
+    Parameters
+    ----------
+    N : The number of observations in a sample set
+
+    Returns
+    -------
+    prob : A numpy array of probabilities for the axis tick labels of a qq plot.
+    """
     if N < 50:
-        y_prob = np.array([1,2,5,10,20,30,40,50,60,
-                           70,80,90,95,98,99,])/100.0
+        prob = np.array([1,2,5,10,20,30,40,50,60,
+                         70,80,90,95,98,99,])/100.0
     elif N < 500:
-        y_prob = np.array([0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
-                           80,90,95,98,99,99.5,99.8,99.9])/100.0
+        prob = np.array([0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
+                         80,90,95,98,99,99.5,99.8,99.9])/100.0
     else:
-        y_prob = np.array([0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,
-                           20,30,40,50,60,70,80,90,95,98,99,99.5,
-                           99.8,99.9,99.95,99.98,99.99])/100.0
-
-    return y_prob
-
-
+        prob = np.array([0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,
+                         20,30,40,50,60,70,80,90,95,98,99,99.5,
+                         99.8,99.9,99.95,99.98,99.99])/100.0
+    return prob
 
 def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     """
