@@ -82,7 +82,7 @@ class _ElRegOpts(_ElRegSetup):
     def __init__(self, endog, exog):
             super(_ElRegOpts, self).__init__(endog, exog)
 
-    def _opt_nuis_regress(self, nuisance_params):
+    def _opt_nuis_regress(self, nuisance_params,weights=None):
         """
         A function that is optimized over nuisance parameters to conduct a
         hypothesis test for the parameters of interest
@@ -102,6 +102,8 @@ class _ElRegOpts(_ElRegSetup):
             hypothesized value of the parameter(s) of interest.
 
         """
+        if weights == None:
+            weights = np.ones(nobs).reshape(nobs,1)
         params = np.copy(self.params)
         params[self.param_nums] = self.b0_vals
         nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
@@ -120,7 +122,7 @@ class _ElRegOpts(_ElRegSetup):
                                                 axis=1)
             self.est_vect = np.concatenate((self.est_vect, regressor_est_vect),
                                            axis=1)
-
+        self.est_vect = weights * est_vect
         eta_star = self._modif_newton(self.start_lbda)
         self.eta_star = eta_star
         denom = 1. + np.dot(eta_star, self.est_vect.T)
