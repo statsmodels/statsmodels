@@ -444,12 +444,35 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
     def setupClass(cls):
         from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
+        cls.data = data
         exog = data.exog
         exog = sm.add_constant(exog)
         cls.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
         res2 = Anes()
         res2.mnlogit_basezero()
         cls.res2 = res2
+
+    def test_margeff_overall(self):
+        me = self.res1.get_margeff()
+        assert_almost_equal(me.margeff, self.res2.margeff_dydx_overall, 6)
+        assert_almost_equal(me.margeff_se, self.res2.margeff_dydx_overall_se, 6)
+
+    def test_margeff_mean(self):
+        me = self.res1.get_margeff(at='mean')
+        assert_almost_equal(me.margeff, self.res2.margeff_dydx_mean, 7)
+        assert_almost_equal(me.margeff_se, self.res2.margeff_dydx_mean_se, 7)
+
+    def test_margeff_dummy(self):
+        data = self.data
+        vote = data.data['vote']
+        exog = np.column_stack((data.exog, vote))
+        exog = sm.add_constant(exog)
+        res = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+        me = res.get_margeff(dummy=True)
+        assert_almost_equal(me.margeff, self.res2.margeff_dydx_dummy_overall,
+                6)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_dydx_dummy_overall_se, 6)
 
     def test_j(self):
         assert_equal(self.res1.model.J, self.res2.J)
