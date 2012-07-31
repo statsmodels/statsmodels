@@ -10,7 +10,7 @@ __all__ = ['qqplot']
 
 
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
-                line=False, prob=False, ax=None):
+           line=False, prob=False, ax=None):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
 
@@ -147,7 +147,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
 
     ax.set_ylabel("Sample Quantiles")
     if prob:
-        probabilities = getAxisProbabilities(nobs)
+        probabilities = _get_axis_probability(nobs)
         axis_quantiles= dist.ppf(probabilities)
         ax.set_xticks(axis_quantiles)
         ax.set_xticklabels(probabilities*100, ha='right', va='center',
@@ -160,23 +160,23 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
 
     return fig
 
-def getAxisProbabilities(N):
+def _get_axis_probability(nobs):
     """
-    Determine probabilities to show on a qqplot based on the number of 
+    Determine probabilities to show on a qqplot based on the number of
     observations.
 
     Parameters
     ----------
-    N : The number of observations in a sample set
+    nobs : The number of observations in a sample set
 
     Returns
     -------
     prob : A numpy array of probabilities for the axis tick labels of a qq plot.
     """
-    if N < 50:
+    if nobs < 50:
         prob = np.array([1,2,5,10,20,30,40,50,60,
                          70,80,90,95,98,99,])/100.0
-    elif N < 500:
+    elif nobs < 500:
         prob = np.array([0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
                          80,90,95,98,99,99.5,99.8,99.9])/100.0
     else:
@@ -197,8 +197,9 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         Options for the reference line to which the data is compared.:
 
         - '45' - 45-degree line
-        - 's'  - standardized line, the expected order statistics are scaled by          the standard deviation of the given sample and have the mean added
-          to them
+        - 's'  - standardized line, the expected order statistics are scaled by
+                 the standard deviation of the given sample and have the mean
+                 added to them
         - 'r'  - A regression line is fit
         - 'q'  - A line is fit through the quartiles.
         - None - By default no reference line is added to the plot.
