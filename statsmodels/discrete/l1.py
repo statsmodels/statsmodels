@@ -7,20 +7,24 @@ import pdb
 # pdb.set_trace
 
 
-def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100, 
-        callback=None, retall=False, full_output=False, hess=None):
+def _fit_l1_slsqp(f, score, start_params, fargs, kwargs, disp=None, 
+        maxiter=100, callback=None, retall=False, full_output=False, hess=None
+        ):
     """
-    Called by base.LikelihoodModel.fit.  Call structure is similar to e.g. 
-        _fit_mle_newton().
+    Solve the l1 regularized problem using scipy.optimize.fmin_slsqp().  
 
-    The optimization is done by scipy.optimize.fmin_slsqp().  With :math:`L` 
-    the log-likelihood, we solve the convex but non-smooth problem
-    .. math:: \\min_\\beta -\\ln L + \\alpha \\sum_k|\\beta_k|
+    Specifically:  We solve the convex but non-smooth problem
+    .. math:: \\min_\\beta f(\\beta) + \\sum_k\\alpha_k |\\beta_k|
     via the transformation to the smooth, convex, constrained problem in twice
     as many variables
-    .. math:: \\min_{\\beta,u} -\\ln L + \\alpha \\sum_ku_k,
+    .. math:: \\min_{\\beta,u} f(\\beta) + \\sum_k\\alpha_k u_k,
     subject to
     .. math:: -u_k \\leq \\beta_k \\leq u_k.
+
+    Parameters
+    ----------
+    Call structure is similar to e.g. 
+        _fit_mle_newton().
 
     Special Parameters
     ------------------
@@ -39,9 +43,10 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
     if hess: 
         print "Hessian not used with l1, since l1 uses fmin_slsqp"
 
+    # TODO fargs should be passed to f, another name for all the args
     ### Extract values
     fargs += (f,score) 
-    # P is total number of covariates, possibly including a leading constant.
+    # K is total number of covariates, possibly including a leading constant.
     K = len(start_params)  
     fargs += (K,)
     # The start point
@@ -85,6 +90,97 @@ def _fit_l1(f, score, start_params, fargs, kwargs, disp=None, maxiter=100,
                 'gopt':gopt, 'hopt':hopt}
     else:
         x = np.array(results)
+        params = x[:K]
+
+    ### Return results
+    if full_output:
+        return params, retvals
+    else:
+        return params
+
+def _fit_l1_cvxopt_cp(f, score, start_params, fargs, kwargs, disp=None, 
+        maxiter=100, callback=None, retall=False, full_output=False, hess=None
+        ):
+    """
+    Solve the l1 regularized problem using cvxopt.solvers.cp
+
+    Cut and paste docstring from _fit_l1_slsqp???
+    """
+    from cvxopt import solvers, matrix
+
+    if callback:
+        print "Callback will be ignored with l1"
+    if hess: 
+        print "Hessian not used with l1 methods"
+
+    ### Extract arguments
+    fargs += (f,score) 
+    # K is total number of covariates, possibly including a leading constant.
+    K = len(start_params)  
+    fargs += (K,)
+    # The regularization parameter
+    alpha = np.array(kwargs['alpha']).ravel(order='F')
+    fargs += (alpha,)
+    # The start point
+    x0 = np.append(start_params, np.fabs(start_params))
+    x0 = matrix(x0, (2*K, 1))
+    # Wrap up functions to be used by cvxopt
+    f_0 = lambda x : matrix(func(np.array(x), *fargs))
+    Df = lambda x : matrix(fprime(np.array(x), *fargs), (1, 2*K))
+    def H(x,z):
+        zh_x = np.array(z[0]) * hess(np.array(x))
+        zero_mat = np.zeros(zh_x.shape)
+        A = np.concatenate((zh_x, zero_mat), axis=1)
+        B = np.concatenate((zero_mat, zero_mat), axis=1)
+        zh_x_ext = np.concatenate((A,B), axis=0)
+        return matrix(zh_x_ext, (2*K, 2*K))
+    G = matrix(-1*fprime_ieqcons(x0, *fargs))
+    h = matrix(0.0, (2*K, 1))
+    ## Define the optimization function
+    def F(x=None, z=None):
+        if x is None: 
+            return 0, x0
+        elif z is None: 
+            return f_0(x), Df(x)
+        else:
+            return f_0(x), Df(x), H(x,z)
+
+    ## Convert optimization settings to cvxopt form
+    solvers.options['show_progress'] = retall
+    solvers.options['maxiters'] = maxiter
+    if 'abstol' in kwargs:
+        solvers.options['abstol'] = kwargs['abstol']
+    if 'reltol' in kwargs:
+        solvers.options['reltol'] = kwargs['reltol']
+    if 'feastol' in kwargs:
+        solvers.options['feastol'] = kwargs['feastol']
+    if 'refinement' in kwargs:
+        solvers.options['refinement'] = kwargs['refinement']
+
+    ### Call the optimization
+    results = solvers.cp(F, G, h)
+
+    ### Post-process 
+    #QA_results(x, params, K, acc) 
+    #if kwargs.get('trim_params'):
+    #    results = trim_params(results, full_output, K, func, fargs, acc, alpha)
+
+    ### Pack up return values for statsmodels optimizers
+    if full_output:
+        x = np.array(results['x'])
+        params = x[:K]
+        # TODO How is fopt used?  Is it expected to be neg-log-like?
+        # TODO Possibly get rid of gopt, hopt altogether?
+        args = fargs[:-4]
+        fopt = f(params, *args)
+        gopt = score(params)
+        hopt = hess(params)
+        iterations = float('nan')
+        converged = 'True' if results['status'] == 'optimal' else results['status']
+        retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations, 
+                'gopt':gopt, 'hopt':hopt}
+    else:
+        x = np.array(results['x'])
         params = x[:K]
 
     ### Return results
@@ -154,7 +250,7 @@ def fprime(x, *fargs):
     nonconst_params = x[:K]
     u = x[K:]
     # The derivative just appends a vector of constants
-    return np.append(score(params, *args), alpha * np.ones(K))
+    return np.append(score(params), alpha * np.ones(K))
 
 def f_ieqcons(x, *fargs):
     """
