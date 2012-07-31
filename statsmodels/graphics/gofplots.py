@@ -147,12 +147,12 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
 
     ax.set_ylabel("Sample Quantiles")
     if prob:
-        probabilities = __getAxisProbabilities(nobs)
-        axis_values = dist.ppf(probabilities)
-        ax.set_xticks(axis_vals)
+        probabilities = getAxisProbabilities(nobs)
+        axis_quantiles= dist.ppf(probabilities)
+        ax.set_xticks(axis_quantiles)
         ax.set_xticklabels(probabilities*100, ha='right', va='center',
                            rotation=45, rotation_mode='anchor')
-        axes.set_xlim([axis_vals.min(), axis_vals.max()])
+        ax.set_xlim([axis_quantiles.min(), axis_quantiles.max()])
         ax.set_xlabel("Non-exceedance Probabilities (%)")
 
     else:
@@ -160,7 +160,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
 
     return fig
 
-def __getAxisProbabilities(N):
+def getAxisProbabilities(N):
     if N < 50:
         y_prob = np.array([1,2,5,10,20,30,40,50,60,
                            70,80,90,95,98,99,])/100.0
@@ -168,8 +168,9 @@ def __getAxisProbabilities(N):
         y_prob = np.array([0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
                            80,90,95,98,99,99.5,99.8,99.9])/100.0
     else:
-        y_prob = np.array([0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
-                           80,90,95,98,99,99.5,99.8,99.9,99.95,99.98,99.99])/100.0
+        y_prob = np.array([0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,
+                           20,30,40,50,60,70,80,90,95,98,99,99.5,
+                           99.8,99.9,99.95,99.98,99.99])/100.0
 
     return y_prob
 
