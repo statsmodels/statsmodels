@@ -22,6 +22,7 @@ def test_qqplot():
     data.exog = sm.add_constant(data.exog)
     mod_fit = sm.OLS(data.endog, data.exog).fit()
     res = mod_fit.resid
-    fig = sm.qqplot(res)
+    fig1 = sm.qqplot(res)
+    fig2 = sm.qqplot(res, prob=True)
 
-    plt.close(fig)
+    plt.close('all')
