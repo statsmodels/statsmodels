@@ -55,12 +55,12 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
         solvers.options['feastol'] = kwargs['feastol']
     if 'refinement' in kwargs:
         solvers.options['refinement'] = kwargs['refinement']
-    trim_tol = kwargs.setdefault('trim_tol', 1e-4)
 
-    ### Call the optimization
+    ### Call the optimizer
     results = solvers.cp(F, G, h)
 
     ### Post-process 
+    trim_tol = kwargs.setdefault('trim_tol', 1e-4)
     if kwargs.get('trim_params'):
         results = trim_params(results, K, alpha, trim_tol)
 

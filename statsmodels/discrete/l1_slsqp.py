@@ -8,7 +8,7 @@ import pdb
 # pdb.set_trace
 
 
-def _fit_l1_slsqp(f, score, start_params, fargs, kwargs, disp=None, 
+def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None, 
         maxiter=100, callback=None, retall=False, full_output=False, hess=None
         ):
     """
@@ -46,15 +46,12 @@ def _fit_l1_slsqp(f, score, start_params, fargs, kwargs, disp=None,
 
     # TODO fargs should be passed to f, another name for all the args
     ### Extract values
-    fargs += (f,score) 
     # K is total number of covariates, possibly including a leading constant.
     K = len(start_params)  
-    fargs += (K,)
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
     # alpha is the regularization parameter
     alpha = np.array(kwargs['alpha']).ravel(order='F')
-    fargs += (alpha,)
     # Convert display parameters to scipy.optimize form
     if disp or retall:
         if disp:
@@ -66,25 +63,32 @@ def _fit_l1_slsqp(f, score, start_params, fargs, kwargs, disp=None,
     # Set/retrieve the desired accuracy
     acc = kwargs.setdefault('acc', 1e-6)
 
+    ### Wrap up for use in fmin_slsqp
+    func = lambda x : objective_func(f, x, K, alpha, *args)
+    f_ieqcons_wrap = lambda x : f_ieqcons(x, K)
+    fprime_wrap = lambda x : fprime(score, x, K, alpha)
+    fprime_ieqcons_wrap = lambda x : fprime_ieqcons(x, K)
+
     ### Call the optimization
-    results = fmin_slsqp(func, x0, f_ieqcons=f_ieqcons, fprime=fprime, acc=acc,
-            args=fargs, iter=maxiter, disp=disp_slsqp, full_output=full_output, 
-            fprime_ieqcons=fprime_ieqcons)
+    results = fmin_slsqp(func, x0, f_ieqcons=f_ieqcons_wrap, 
+            fprime=fprime_wrap, acc=acc, iter=maxiter, 
+            disp=disp_slsqp, full_output=full_output, 
+            fprime_ieqcons=fprime_ieqcons_wrap)
 
     ### Post-process 
-    #QA_results(x, params, K, acc) 
+    trim_tol = kwargs.setdefault('trim_tol', 1e-4)
     if kwargs.get('trim_params'):
-        results = trim_params(results, full_output, K, func, fargs, acc, alpha)
+        results = trim_params(results, full_output, K, alpha, trim_tol)
 
     ### Pack up return values for statsmodels optimizers
+    # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
     if full_output:
         x, fx, its, imode, smode = results
         x = np.array(x)
         params = x[:K]
-        fopt = fx
+        fopt = f(params, *args)
         converged = 'True' if imode == 0 else smode
         iterations = its
-        # TODO Possibly get rid of gopt, hopt altogether?
         gopt = score(params)  
         hopt = hess(params)
         retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations, 
@@ -99,94 +103,61 @@ def _fit_l1_slsqp(f, score, start_params, fargs, kwargs, disp=None,
     else:
         return params
 
-def QA_results(x, params, K, acc):
+def trim_params(results, full_output, K, alpha, trim_tol):
     """
-    Raises exception if:
-        The dummy variables u are not equal to absolute value of params to within
-        min(-log10(10*acc), 10) decimal places
+    Trims (sets = 0) params that are within trim_tol of zero.  
+    If alpha[i] == 0, then don't trim the ith param.
     """
-    u = x[K:]
-    decimal = min(int(-np.log10(10*acc)), 10)
-    abs_params = np.fabs(params)
-    try:
-        np.testing.assert_array_almost_equal(abs_params, u, decimal=decimal)
-    except AssertionError:
-        print "abs_params = \n%s\nu = %s"%(abs_params, u)
-        raise
-
-def trim_params(results, full_output, K, func, fargs, acc, alpha):
-    """
-    Trims (sets = 0) params that are within min(max(10*acc, 1e-10), 1e-3)
-    of zero.  If alpha[i] == 0, then don't trim the ith param.
-    """
-    ## Extract params from the results
-    trim_tol = min(max(100*acc, 1e-10), 1e-3)
+    ## Extract x from the results
     if full_output:
         x, fx, its, imode, smode = results
     else:
         x = results
     ## Trim the small params
     # Don't bother triming the dummy variables 'u'
-    # TODO Vectorize this
-    for i in xrange(len(x) / 2):
+    for i in xrange(K):
         if abs(x[i]) < trim_tol and alpha[i] != 0:
             x[i] = 0.0
-    ## Recompute things
+    ## Pack back up
     if full_output:
-        fx = func(np.array(x), *fargs)
         return x, fx, its, imode, smode
     else:
         return x
 
-def func(x, *fargs):
+def objective_func(f, x, K, alpha, *args):
     """
     The regularized objective function
     """
-    args = fargs[:-4]
-    f, score, K, alpha = fargs[-4:]
     params = x[:K]
-    nonconst_params = x[:K]
     u = x[K:]
-
+    ## Return
     return f(params, *args) + (alpha * u).sum()
 
-def fprime(x, *fargs):
+def fprime(score, x, K, alpha):
     """
     The regularized derivative
     """
-    args = fargs[:-4]
-    f, score, K, alpha = fargs[-4:]
     params = x[:K]
-    nonconst_params = x[:K]
-    u = x[K:]
     # The derivative just appends a vector of constants
     return np.append(score(params), alpha * np.ones(K))
 
-def f_ieqcons(x, *fargs):
+def f_ieqcons(x, K):
     """
     The inequality constraints.
     """
-    args = fargs[:-4]
-    f, score, K, alpha = fargs[-4:]
     params = x[:K]
     nonconst_params = x[:K]
     u = x[K:]
     # All entries in this vector must be \geq 0 in a feasible solution
     return np.append(nonconst_params + u, u - nonconst_params)
 
-def fprime_ieqcons(x, *fargs):
+def fprime_ieqcons(x, K):
     """
     Derivative of the inequality constraints
     """
-    args = fargs[:-4]
-    f, score, K, alpha = fargs[-4:]
-    params = x[:K]
-    nonconst_params = x[:K]
-    u = x[K:]
-
     I = np.eye(K)
     A = np.concatenate((I,I), axis=1)
     B = np.concatenate((-I,I), axis=1)
     C = np.concatenate((A,B), axis=0)
-
+    ## Return
     return C
