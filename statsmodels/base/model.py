@@ -9,7 +9,8 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
-import statsmodels.discrete.l1 as l1
+import statsmodels.discrete.l1_slsqp as l1_slsqp
+import statsmodels.discrete.l1_cvxopt as l1_cvxopt
 import pdb  # pdb.set_trace
 
 
@@ -295,8 +296,8 @@ class LikelihoodModel(Model):
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
-            'l1_slsqp': l1._fit_l1_slsqp,
-            'l1_cvxopt_cp': l1._fit_l1_cvxopt_cp
+            'l1_slsqp': l1_slsqp._fit_l1_slsqp,
+            'l1_cvxopt_cp': l1_cvxopt._fit_l1_cvxopt_cp
         }
 
         if method == 'newton':
