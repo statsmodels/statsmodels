@@ -13,7 +13,7 @@ def main():
     Demonstrates l1 regularization for MNLogit model.
     """
     ## Commonly adjusted params
-    N = 1000000  # Number of data points
+    N = 10000 # Number of data points
     num_targets = 2  # Targets are the dependent variables
     num_nonconst_covariates = 3 # For every target
     num_zero_params = 1 # For every target
