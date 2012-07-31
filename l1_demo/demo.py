@@ -13,7 +13,7 @@ def main():
     Demonstrates l1 regularization for MNLogit model.
     """
     ## Commonly adjusted params
-    N = 10000  # Number of data points
+    N = 1000000  # Number of data points
     num_targets = 2  # Targets are the dependent variables
     num_nonconst_covariates = 3 # For every target
     num_zero_params = 1 # For every target
@@ -42,7 +42,7 @@ def main():
             start_params=start_params, trim_params=True)
     results_l1_cvxopt_cp = model.fit(method='l1_cvxopt_cp', alpha=alpha, 
             maxiter=70, start_params=start_params, trim_params=True, 
-            retall=True, abstol=1e-2, reltol=1e-2, feastol=1e-2)
+            retall=True)
     ## Compute MSE
     MSE_ML = sp.sqrt(((results_ML.params - true_params)**2).sum())
     MSE_l1_slsqp = sp.sqrt(((results_l1_slsqp.params - true_params)**2).sum())
