@@ -103,7 +103,8 @@ class _ElRegOpts(_ElRegSetup):
 
         """
         if weights == None:
-            weights = np.ones(nobs).reshape(nobs,1)
+            weights = np.ones(self.nobs)
+        weights = weights.reshape(self.nobs, 1)
         params = np.copy(self.params)
         params[self.param_nums] = self.b0_vals
         nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
