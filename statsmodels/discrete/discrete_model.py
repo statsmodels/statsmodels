@@ -103,7 +103,8 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def _derivative_exog(self, params, exog=None):
+    def _derivative_exog(self, params, exog=None, dummy_idx=None,
+            count_idx=None):
         """
         This should implement the derivative of the non-linear function
         """
@@ -164,7 +165,8 @@ class BinaryModel(DiscreteModel):
             dF /= self.predict(params, exog)[:,None]
         return dF
 
-    def _derivative_exog(self, params, exog=None, transform='dydx'):
+    def _derivative_exog(self, params, exog=None, transform='dydx',
+            dummy_idx=None, count_idx=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -184,6 +186,16 @@ class BinaryModel(DiscreteModel):
             margeff *= exog
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None]
+        if count_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_count_effects)
+            margeff = _get_count_effects(margeff, exog, count_idx, transform,
+                    self, params)
+        if dummy_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_dummy_effects)
+            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
+                    self, params)
         return margeff
 
 class MultinomialModel(BinaryModel):
@@ -255,8 +267,42 @@ class MultinomialModel(BinaryModel):
         return MultinomialResultsWrapper(mnfit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
+    def _derivative_predict(self, params, exog=None, transform='dydx'):
+        """
+        For computing marginal effects standard errors.
+
+        This is used only in the case of discrete and count regressors to
+        get the variance-covariance of the marginal effects. It returns
+        [d F / d params] where F is the predict.
+
+        Transform can be 'dydx' or 'eydx'. Checking is done in margeff
+        computations for appropriate transform.
+        """
+        if exog is None:
+            exog = self.exog
+        if params.ndim == 1: # will get flatted from approx_fprime
+            params = params.reshape(self.K, self.J-1, order='F')
+        X = np.dot(exog, params)
+        eXB = np.exp(X)
+        sum_eXB = eXB.sum(1)[:,None]
+        J, K = map(int, [self.J, self.K])
+
+        # should be of shape J*K x nobs x (J-1)*K
+        #dFdZ = np.zeros((eXB.shape[0], K * (J-1)))
+        dFdZ = np.repeat(eXB / sum_eXB**2, J, axis=1)
+        #dF_i/dZ_j
+        # overwritten below for dF_i / dZ_i
+        dFdZ *= np.tile(-eXB, J)
+        # offset by -1 because we don't have base equation and fortran order
+        own_equation_idx = np.eye(K, J-1, k=-1, dtype=bool).ravel(order='F')
+        dFdZ[:,own_equation_idx] *= (sum_eXB - eXB) #dF_i/dZ_i
+
+        if 'ey' in transform:
+            dFdZ /= np.tile(self.predict(params, exog), J)
+        return dFdZ
+
     def _derivative_exog(self, params, exog=None, transform='dydx',
-                         flatten=False):
+            dummy_idx=None, count_idx=None):
         """
         For computing marginal effects returns dF(XB) / dX where F(.) is
         the predicted probabilities
@@ -296,6 +342,17 @@ class MultinomialModel(BinaryModel):
             margeff *= exog
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,:,None]
+
+        if count_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_count_effects)
+            margeff = _get_count_effects(margeff, exog, count_idx, transform,
+                    self, params)
+        if dummy_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_dummy_effects)
+            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
+                    self, params)
         return margeff.reshape(len(exog), -1, order='F')
 
 class CountModel(DiscreteModel):
@@ -366,7 +423,8 @@ class CountModel(DiscreteModel):
             dF /= self.predict(params, exog)[:,None]
         return dF
 
-    def _derivative_exog(self, params, exog=None, transform="dydx"):
+    def _derivative_exog(self, params, exog=None, transform="dydx",
+            dummy_idx=None, count_idx=None):
         """
         For computing marginal effects. These are the marginal effects
         d F(XB) / dX
@@ -386,6 +444,17 @@ class CountModel(DiscreteModel):
             margeff *= exog
         if 'ey' in transform:
             margeff /= self.predict(params, exog)[:,None]
+
+        if count_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_count_effects)
+            margeff = _get_count_effects(margeff, exog, count_idx, transform,
+                    self, params)
+        if dummy_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_dummy_effects)
+            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
+                    self, params)
         return margeff
 
     def fit(self, start_params=None, method='newton', maxiter=35,
@@ -1035,11 +1104,11 @@ class MNLogit(MultinomialModel):
     -----
     See developer notes for further information on `MNLogit` internals.
     """
-    def pdf(self, eXB):
+    def pdf(self, X):
         """
         NotImplemented
         """
-        pass
+        raise NotImplementedError
 
     def cdf(self, X):
         """
