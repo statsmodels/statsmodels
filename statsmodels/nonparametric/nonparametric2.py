@@ -28,7 +28,7 @@ import np_tools as tools
 import scipy.optimize as opt
 import KernelFunctions as kf
 import copy
-
+from scipy.stats.mstats import mquantiles
 
 __all__ = ['UKDE', 'CKDE', 'Reg']
 
@@ -217,21 +217,31 @@ class UKDE(GenericKDE):
         else: 
             self.bw = self.compute_efficient(bw)
 
-    def compute_efficient(self, bw, n_sub=50, n_res=50):
+    def compute_efficient(self, bw, n_sub=50, n_res=25):
         sample_scale = np.empty((n_res, self.K))
         tdat = copy.deepcopy(self.tdat)
         l = self.var_type.count('c')
-        do = 2  # 2 times order of discrete kernel TODO: check the order of discrete kernels
+        do = 4  # 2 times order of discrete kernel TODO: check the order of discrete kernels
         #l = self.K
         co = 4  # 2 times order of continuous kernel
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
         print "Running Block by block efficient bandwidth estimation"
         for i in xrange(n_res):
-            print "Estimating sample ", i + 1, " ..."
+            #print "Estimating sample ", i + 1, " ..."
             np.random.shuffle(tdat)
-            sub_tdat = tdat[0 : n_sub]
+            sub_tdat = tdat[0 : n_sub, :]
             sub_model = UKDE(sub_tdat, self.var_type, bw, efficient=False)
-            s = np.std(sub_tdat, axis=0)
+            s1 = np.std(sub_tdat, axis=0)
+            q75 = mquantiles(sub_tdat,0.75, axis=0).data[0]
+            q25 = mquantiles(sub_tdat,0.25, axis=0).data[0]
+            s2 = (q75-q25) / 1.349
+            s = [min(s1[z], s2[z]) for z in range(len(s1))]
+            s = np.asarray(s)
+            #s = s1
+            #print np.std(sub_tdat, axis=0)
+            #print s2
+            #print s
+            #print '----'*10
             fct = s * n_sub ** (-1./(l + co))
             fct[isunordered] = n_sub ** (-2. / (l + do))
             fct[isordered] = n_sub ** (-2. / (l + do))
@@ -239,16 +249,24 @@ class UKDE(GenericKDE):
             sample_scale[i, :] = c
         median_scale = np.median(sample_scale, axis=0)
         mean_scale = np.mean(sample_scale, axis=0)
-        s = np.std(self.tdat, axis=0)
-        print "shape s", np.shape(s)
-        print "mean_scale shape", np.shape(mean_scale)
-        
+        s1 = np.std(self.tdat, axis=0)
+        q75 = mquantiles(self.tdat, 0.75, axis=0).data[0]
+        q25 = mquantiles(self.tdat, 0.25, axis=0).data[0]
+        s2 = (q75 - q25) / 1.349
+        s = [min(s1[z], s2[z]) for z in range(len(s1))]
+        s = np.asarray(s)
+        #s=s1
+        #print np.std(self.tdat, axis=0)
+        #print s2
+        #print s
+        #print '----'*10
+ 
         median_bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Chekc if correct!
         median_bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
         median_bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
         mean_bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if correct!
         mean_bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
-        median_bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+        mean_bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
   
         return median_bw
 
@@ -509,7 +527,7 @@ class CKDE(GenericKDE):
         repr += "BW selection method: " + self._bw_method + "\n"
         return repr
 
-    def compute_efficient(self, bw, n_sub=50, n_res=50):
+    def compute_efficient(self, bw, n_sub=50, n_res=25):
         sample_scale = np.empty((n_res, self.K_dep + self.K_indep))
         all_vars= copy.deepcopy(self.all_vars)
         all_var_type = self.dep_type + self.indep_type
@@ -538,7 +556,7 @@ class CKDE(GenericKDE):
         median_bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
         mean_bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
         mean_bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
-        median_bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+        mean_bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
   
         return median_bw
 
@@ -832,7 +850,7 @@ class Reg(object):
         sample_scale = np.empty((n_res, self.K))
         all_vars = copy.deepcopy(np.concatenate((self.tydat, self.txdat), axis=1))
         l = self.var_type.count('c')
-        do = 2  # 2 times order of discrete kernel TODO: check the order of discrete kernels
+        do = 4  # 2 times order of discrete kernel TODO: check the order of discrete kernels
         #l = self.K
         co = 4  # 2 times order of continuous kernel
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
