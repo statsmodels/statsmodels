@@ -17,8 +17,7 @@ except:
     def np_slogdet(x):
         return 1, np.log(np.linalg.det(x))
 
-from statsmodels.sandbox.regression.numdiff import (approx_hess,
-                                                        approx_fprime)
+from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
 
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, \

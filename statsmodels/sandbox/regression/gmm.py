@@ -52,7 +52,7 @@ License: BSD (3-clause)
 
 import numpy as np
 from scipy import optimize, stats
-from statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
+from statsmodels.tools.numdiff import approx_fprime1, approx_hess
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import RegressionResults, OLS
 import statsmodels.tools.tools as tools

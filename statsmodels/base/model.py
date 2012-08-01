@@ -6,7 +6,7 @@ from statsmodels.stats.contrast import ContrastResults
 from statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
 import statsmodels.base.wrapper as wrap
-from statsmodels.sandbox.regression.numdiff import approx_fprime1
+from statsmodels.tools.numdiff import approx_fprime1
 from statsmodels.formula import handle_formula_data
 
 
@@ -645,7 +645,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         Hessian of log-likelihood evaluated at params
         '''
-        from statsmodels.sandbox.regression.numdiff import approx_hess
+        from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)[0]
 

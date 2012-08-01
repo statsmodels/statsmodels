@@ -10,8 +10,9 @@ Should Hessian also work per observation, if fun returns 2d
 import numpy as np
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
-import numdiff
-from numdiff import approx_fprime, approx_fprime_cs, approx_hess_cs
+from statsmodels.tools import numdiff
+from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
+                                       approx_hess_cs)
 
 DEC3 = 3
 DEC4 = 4

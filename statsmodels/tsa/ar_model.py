@@ -13,8 +13,7 @@ import statsmodels.base.model as base
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 from statsmodels.tools.compatibility import np_slogdet
-from statsmodels.sandbox.regression.numdiff import approx_fprime
-from statsmodels.sandbox.regression.numdiff import (approx_hess,
+from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
         approx_hess_cs)
 from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap

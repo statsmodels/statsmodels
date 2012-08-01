@@ -63,7 +63,7 @@ class NonlinearDeltaCov(object):
         if params is None:
             params = self.params
         kwds.setdefault('epsilon', 1e-4)
-        from statsmodels.sandbox.regression.numdiff import approx_fprime1
+        from statsmodels.tools.numdiff import approx_fprime1
         return approx_fprime1(params, self.fun, **kwds)
 
     def cov(self):
