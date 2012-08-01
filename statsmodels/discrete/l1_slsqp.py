@@ -86,11 +86,11 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
         x, fx, its, imode, smode = results
         x = np.array(x)
         params = x[:K]
-        fopt = f(params, *args)
+        fopt = func(x)
         converged = 'True' if imode == 0 else smode
         iterations = its
-        gopt = score(params)  
-        hopt = hess(params)
+        gopt = float('nan')     # Objective is non-differentiable
+        hopt = float('nan') 
         retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations, 
                 'gopt':gopt, 'hopt':hopt}
     else:
