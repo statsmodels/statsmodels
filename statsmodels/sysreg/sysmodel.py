@@ -99,8 +99,8 @@ class SysModel(LikelihoodModel):
         div_dfk2 = np.zeros((self.neqs, self.neqs))
         for i in range(self.neqs):
             for j in range(self.neqs):
-                div_dfk1[i,j] = (self.df_model[i] + 1)*(self.df_model[j] + 1) \
-                                ** (1/2)
+                div_dfk1[i,j] = np.sqrt( (self.nobs - self.df_model[i] - 1) *
+                                         (self.nobs - self.df_model[j] - 1) )
                 div_dfk2[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
                                                     self.df_model[j] + 1))
  
@@ -408,8 +408,8 @@ class SysResults(LikelihoodModelResults):
         self.cov_resids_est = model.sigma
         # Compute sigma with final residuals
         self.fittedvalues = model.predict(params=params, exog=None)
-        resids = model.endog.T - self.fittedvalues.reshape(model.neqs,-1).T
-        self.cov_resids = self._compute_sigma(resids)
+        self.resids = model.endog.T - self.fittedvalues.reshape(model.neqs,-1).T
+        self.cov_resids = self._compute_sigma(self.resids)
 
         self.nobs = model.nobs
         self.df_resid = model.df_resid
