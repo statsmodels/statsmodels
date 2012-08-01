@@ -133,7 +133,7 @@ class _OptFuncts(ELModel):
         See Owen pg. 64
         """
         x0 = x0.reshape(est_vect.shape[1], 1)
-        f = lambda x0: np.sum(self._log_star(x0.T, est_vect))
+        f = lambda x0: - np.sum(self._log_star(x0.T, est_vect))
         grad = lambda x0: - np.dot((self._get_j_y(x0.T, est_vect)[0]).T, \
                               (self._get_j_y(x0.T, est_vect)[1]))
         hess = lambda x0: np.dot((self._get_j_y(x0.T, est_vect)[0]).T,
