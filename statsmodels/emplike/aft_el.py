@@ -25,6 +25,9 @@ Zhou, Kim And Bathke. "Empirical Likelihood Analysis for the Heteroskedastic
 Accelerated Failure Time Model." Manuscript:
 URL: www.ms.uky.edu/~mai/research/CasewiseEL20080724.pdf
 
+Zhou, M. (2005). Empirical Likelihood Ratio with Arbitrarily Censored/
+Truncated Data by EM Algorithm.  Journal of Computational and Graphical
+Statistics. 14:3, 643-656.
 
 Li, G and Wang, Q.(2003). "Empirical Likelihood Regression Analysis for Right
 Censored Data." Statistica Sinica 13. 51-68.
@@ -35,13 +38,13 @@ Regression." Scandanavian Journal of Statistics. Vol 28. Iss. 4. 661-673.
 
 import numpy as np
 from statsmodels.api import OLS, WLS, add_constant
-
+from elregress import ElLinReg
 
 class emplikeAFT(object):
     def __init__(self, endog, exog, censors):
         self.nobs = float(np.shape(exog)[0])
         self.endog = endog.reshape(self.nobs, 1)
-        self.exog = exog
+        self.exog = exog.reshape(self.nobs, -1)
         self.censors = censors.reshape(self.nobs, 1)
         self.idx = np.lexsort((-self.censors[:, 0], self.endog[:, 0]))
         self.endog = self.endog[self.idx]
@@ -190,12 +193,68 @@ class emplikeAFT(object):
         if wt_method == 'stute':
             res = WLS(self.endog, self.exog, wts).fit()
             res.bse = None      # Inference will be done with EL.
+        res.km = wts
         res.conf_int = None
         res.t = None
         res.pvalues = None
         res.f_test = None
         res.fvalue = None
         return res
+
+    def test_beta(self, value, param_num, ftol=10 **-5, maxiter=1,
+                  print_weights=1 ):
+        """
+        Some notes:
+
+        Censored Observations have weight 0.
+        """
+        censors = self.censors
+        endog = self.endog
+        exog = self.exog
+        censors[-1] = 1
+        uncensored = (censors == 1).flatten()
+        censored = (censors == 0).flatten()
+        uncens_endog = endog[uncensored]
+        cens_endog = endog[censored]
+        uncens_exog = exog[uncensored, :]
+        cens_exog = exog[censored, :]
+        reg_model = ElLinReg(uncens_endog, uncens_exog)
+        uncens_nobs = reg_model.nobs
+        reg_model.hy_test_beta(value, param_num)
+        init_F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
+        # init_F is step 0 in Zhou (2005)
+        iters=1
+        #while iters < maxiter
+        survidx = np.where(censors==0)
+        survidx = survidx[0] - np.arange(len(survidx[0])) #Zhou's K
+        numcensbelow =  np.int_(np.cumsum(1-censors))
+        death = np.cumsum(init_F[::-1])
+        survivalprob = death[::-1]
+        surv_point_mat = np.dot(init_F.reshape(-1, 1),
+                                1./survivalprob[survidx].reshape(1,-1))
+        surv_point_mat = add_constant(surv_point_mat, prepend=1)
+        summed_wts = np.cumsum(surv_point_mat, axis=1)
+        wts = summed_wts[np.int_(np.arange(uncens_nobs)),
+                         numcensbelow[uncensored]]
+        new_model = ElLinReg(uncens_endog, uncens_exog)
+        new_F = np.asarray(new_model.hy_test_beta(value, param_num,
+                                fit_weights=wts, print_weights=1, is_censored=1)[2])
+        return new_F, wts, new_model.est_vect
+
+
+
+
+koul_data = np.genfromtxt('/home/justin/rverify.csv', delimiter=';')
+# ^ Change path to where file is located.
+koul_y = np.log10(koul_data[:, 0])
+#koul_x = sm.add_constant(koul_data[:, 2], prepend=2)
+koul_x = koul_data[:,2]
+koul_censors = koul_data[:, 1]
+koul_model = emplikeAFT(koul_y, koul_x, koul_censors,).fit(km_est = 'li', wt_method='stute', last_uncensored=1)
+koul_censors[14] =1
+newky = koul_y[koul_censors==1]
+newkx = koul_x[koul_censors==1]
+
 
 
 
