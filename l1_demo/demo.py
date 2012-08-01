@@ -26,23 +26,25 @@ def main():
         the data size is large.
     The l1_cvxopt_cp solver is part of CVXOPT.  It works well even for larger
         data sizes.
-    Both l1 solvers run into issues when the number of data points is very 
-        small.  Ironically...the solvers run into issues precisely when the 
-        number of data points is small enough that regularization helps...
+    Both l1 solvers run into issues when the number of data points is  small.  
+    Ironically...the solvers run into issues precisely when the number of 
+    data points is small enough that regularization helps...
     """
     #### Commonly adjusted params
-    N = 500 # Number of data points
-    num_targets = 4  # Targets are the dependent variables
+    N = 5000 # Number of data points
+    num_targets = 3  # Targets are the dependent variables
     num_nonconst_covariates = 20 # For every target
-    num_zero_params = 3 # For every target
+    num_zero_params = 5 # For every target
     # The regularization parameter
-    alpha = 0.003 * N * sp.ones((num_nonconst_covariates+1, num_targets))
+    # Here we scale it with N for simplicity.  In practice, you should
+    # use cross validation to pick alpha
+    alpha = 0.0005 * N * sp.ones((num_nonconst_covariates+1, num_targets))
     alpha[0,:] = 0  # Don't regularize the intercept
     # Correlation length for the independent variables
     # Higher makes the problem more ill-posed, and easier to screw
     # up with noise.
     cor_length = 10 
-    noise_level = 0.3  # As a fraction of the "signal"
+    noise_level = 0.2  # As a fraction of the "signal"
 
     #### Make the arrays
     exog = get_exog(N, num_nonconst_covariates, cor_length) 
