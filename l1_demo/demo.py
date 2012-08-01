@@ -11,6 +11,24 @@ from scipy.optimize import fmin_slsqp
 def main():
     """
     Demonstrates l1 regularization for MNLogit model.
+
+    The Story
+    ---------
+    The maximum likelihood (ML) solution works well when the number of data 
+    points is large and the noise is small.  When the ML solution starts 
+    "breaking", the regularized solution will do better.
+
+    The l1 Solvers
+    --------------
+    The solvers often converge with errors.  Nonetheless, the final solution
+        makes sense and is often (see above) better than the ML solution.
+    The l1_slsqp solver is included with scipy.  It sometimes has trouble when
+        the data size is large.
+    The l1_cvxopt_cp solver is part of CVXOPT.  It works well even for larger
+        data sizes.
+    Both l1 solvers run into issues when the number of data points is very 
+        small.  Ironically...the solvers run into issues precisely when the 
+        number of data points is small enough that regularization helps...
     """
     #### Commonly adjusted params
     N = 500 # Number of data points
@@ -23,8 +41,8 @@ def main():
     # Correlation length for the independent variables
     # Higher makes the problem more ill-posed, and easier to screw
     # up with noise.
-    cor_length = 5 
-    noise_level = 0.1  # As a fraction of the "signal"
+    cor_length = 10 
+    noise_level = 0.3  # As a fraction of the "signal"
 
     #### Make the arrays
     exog = get_exog(N, num_nonconst_covariates, cor_length) 
