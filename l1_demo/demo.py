@@ -26,9 +26,6 @@ def main():
         the data size is large.
     The l1_cvxopt_cp solver is part of CVXOPT.  It works well even for larger
         data sizes.
-    Both l1 solvers run into issues when the number of data points is  small.  
-    Ironically...the solvers run into issues precisely when the number of 
-    data points is small enough that regularization helps...
     """
     #### Commonly adjusted params
     N = 500 # Number of data points
