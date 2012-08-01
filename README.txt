@@ -5,19 +5,28 @@ A slight modification that allows l1 regularized multinomial logistic regression
 Main Files
 ==========
 
-statsmodels/discrete/l1.py
-    _fit_l1() 
-        Similar call structure to e.g. _fit_mle_newton()
-    Lots of small functions supporting _fit_l1
-    modified_bic(), modified_aic(), modified_df_model 
-        Modifications because a number of parameters will be set to zero by the l1 regularization
+l1_demo/demo.py
+    $ python demo.py does a quick demo of the regularization.
+
+statsmodels/discrete/l1_cvxopt.py
+    _fit_l1_cvxopt_cp() 
+        Fit likelihood model using l1 regularization.  Use the CVXOPT package.
+    Lots of small functions supporting _fit_l1_cvxopt_cp
+
+statsmodels/discrete/l1_slsqp.py
+    _fit_l1_slsqp() 
+        Fit likelihood model using l1 regularization.  Use scipy.optimize
+    Lots of small functions supporting _fit_l1_slsqp
 
 statsmodels/base/model.py
     Likelihoodmodel.fit() 
-        3 lines modified to allow for importing and calling of l1.py:_fit_l1()
+        3 lines modified to allow for importing and calling of l1 fitting functions
 
-l1_demo/demo.py
-    $ python demo.py does a quick demo of the regularization.
+statsmodels/discrete/discrete_model.py
+    L1MultinomialResults class
+        Child of MultinomialResults
+    MultinomialModel.fit()
+        3 lines re-directing l1 fit results to the L1MultinomialResults class
 
 
 
