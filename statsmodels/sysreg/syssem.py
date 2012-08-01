@@ -3,6 +3,7 @@ import scipy as sp
 from statsmodels.sysreg.sysmodel import SysModel, SysResults
 from statsmodels.compatnp.sparse import block_diag as sp_block_diag
 import statsmodels.tools.tools as tools
+import scipy.sparse as sparse
 
 def unique_rows(a):
     unique_a = np.unique(a.view([('', a.dtype)]*a.shape[1]))
@@ -25,22 +26,36 @@ class SysSEM(SysModel):
     dkf :
     sigma : 
 
-    Notes
-    -----
-    The larger set of instruments is used for estimation, including
-    all of the exogenous variables in the system and the others instruments
-    provided in 'instruments' parameters. 
+    Attributes
+    ----------
+    fullexog : ndarray
+        The larger set of instruments is used for estimation, including
+        all of the exogenous variables in the system and the others instruments
+        provided in 'instruments' parameters. 
     """
 
-    def __init__(self, sys, instruments=None, dfk=None, sigma=None):
-        super(SysSEM, self).__init__(sys, dfk)
-        self.instruments = instruments
-        self.sigma = sigma
-        self.initialize()
+    def __init__(self, sys, instruments=None, sigma=None, dfk=None):
+        super(SysSEM, self).__init__(sys, dfk=dfk)
 
-    def initialize(self):
-        # Build the instruments design, including all exogs in the system
-        # and 'self.instruments' as additionnal instruments.
+        ## Handle sigma
+        if sigma is None:
+            self.sigma = np.diag(np.ones(self.neqs))
+        # sigma = scalar
+        elif sigma.shape == ():
+            self.sigma = np.diag(np.ones(self.neqs)*sigma)
+        # sigma = 1d vector
+        elif (sigma.ndim == 1) and sigma.size == self.neqs:
+            self.sigma = np.diag(sigma)
+        # sigma = GxG matrix
+        elif sigma.shape == (self.neqs,self.neqs):
+            self.sigma = sigma
+        else:
+            raise ValueError("sigma is not correctly specified")
+        
+        ## Handle restrictions: TODO
+
+        ## Handle instruments design
+        self.instruments = instruments # TODO: check instruments
         exogs = []
         for eq in self.sys:
             id_exog = list(set(range(eq['exog'].shape[1])).difference(
@@ -52,35 +67,48 @@ class SysSEM(SysModel):
             # Note : the constant is not in the first column. 
             # Does this matter?
         # Delete reoccuring cols
-        self.fullexog = unique_cols(fullexog)
+        self.fullexog = z = unique_cols(fullexog)
 
-    def fit(self):
-        z = self.fullexog
+        ## Handle first-step
         ztzinv = np.linalg.inv(np.dot(z.T, z))
         Pz = np.dot(np.dot(z, ztzinv), z.T)
-       
         xhats = [np.dot(Pz, eq['exog']) for eq in self.sys]
-        xhat = x = sp_block_diag(xhats)
-
+        self.sp_xhat = sp_block_diag(xhats)
         # Identification conditions
         xhats_ranks = [tools.rank(cur_xhat) for cur_xhat in xhats]
         nexogs = [eq['exog'].shape[1] for eq in self.sys]
         if not(xhats_ranks == nexogs):
             raise ValueError('identification conditions are not statisfied')
 
-        # Parameters
-        omegainv = np.kron(np.linalg.inv(self.sigma), np.identity(self.nobs))
-        xtomegainv = x.T * omegainv
-        w = np.linalg.inv(xtomegainv * x)
-        ww = np.dot(w, xtomegainv)
-        params = np.squeeze(np.dot(ww, self.endog.reshape(-1, 1)))
-        
-        # Covariance matrix of the parameters
-        fittedvalues = self.predict(params=params, exog=None)
-        resids = self.endog.T - fittedvalues.reshape(self.neqs,-1).T
-        cov_resids = self._compute_sigma(resids)
-        omegainv = np.kron(np.linalg.inv(cov_resids), np.identity(self.nobs))
-        normalized_cov_params = np.linalg.inv((xhat.T * omegainv) * xhat)
+        self.initialize()
+
+    def initialize(self):
+        self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(self.sigma)).T
+        self.wxhat = self.whiten(self.sp_xhat)
+        self.wendog = self.whiten(self.endog.reshape(-1,1))
+        self.pinv_wxhat = np.linalg.pinv(self.wxhat)
+    
+    def whiten(self, X):
+        '''
+        SysSEM whiten method
+
+        Parameters
+        ----------
+        X : ndarray
+            Data to be whitened
+        '''
+        if sparse.issparse(X):
+            return np.asarray((sparse.kron(self.cholsigmainv, 
+                sparse.eye(self.nobs, self.nobs))*X).todense())
+        else:
+            return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
+ 
+    def fit(self):
+        params = np.squeeze(np.dot(self.pinv_wxhat, self.wendog))
+        normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
+
+        #omegainv = np.kron(np.linalg.inv(cov_resids), np.identity(self.nobs))
+        #normalized_cov_params = np.linalg.inv((xhat.T * omegainv) * xhat)
 
         return SysResults(self, params, normalized_cov_params)
 
@@ -100,9 +128,17 @@ class SysSEM(SysModel):
 
 class Sys2SLS(SysSEM):
     def __init__(self, sys, instruments=None, dfk=None):
-        neqs = len(sys)
         super(Sys2SLS, self).__init__(sys, instruments=instruments,
-                sigma=np.identity(neqs), dfk=dfk)
+                sigma=None, dfk=dfk)
+    
+    def fit(self):
+        res_fit = super(Sys2SLS, self).fit()
+        params = res_fit.params
+        # Covariance matrix of the parameters computed using new residuals as in systemfit
+        self.sigma = np.diag(np.diag(res_fit.cov_resids))
+        self.initialize()
+        normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
+        return SysResults(self, params, normalized_cov_params)
 
     def _compute_sigma(self, resids):
         '''
@@ -121,9 +157,12 @@ class Sys2SLS(SysSEM):
 
 class Sys3SLS(SysSEM):
     def __init__(self, sys, instruments=None, dfk=None):
-        super(Sys3SLS, self).__init__(sys, instruments=instruments, dfk=dfk)
+        super(Sys3SLS, self).__init__(sys, instruments=instruments,
+                sigma=None, dfk=dfk)
 
         # Estimate sigma with a first-step 2SLS
         sigma = Sys2SLS(self.sys, self.instruments, self.dfk).fit().cov_resids
         self.sigma = sigma
+
+        self.initialize()
 

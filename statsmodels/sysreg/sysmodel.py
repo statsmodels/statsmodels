@@ -99,10 +99,17 @@ class SysModel(LikelihoodModel):
         div_dfk2 = np.zeros((self.neqs, self.neqs))
         for i in range(self.neqs):
             for j in range(self.neqs):
+<<<<<<< HEAD
                 div_dfk1[i,j] = np.sqrt(((self.nobs - (self.df_model[i]+1)) * 
                                         (self.nobs - (self.df_model[j]+1))))
                 div_dfk2[i,j] = self.nobs - np.max(((self.df_model[i]+1), 
                                                     (self.df_model[j]+1)))
+=======
+                div_dfk1[i,j] = np.sqrt( (self.nobs - self.df_model[i] - 1) *
+                                         (self.nobs - self.df_model[j] - 1) )
+                div_dfk2[i,j] = self.nobs - np.max((self.df_model[i] + 1, 
+                                                    self.df_model[j] + 1))
+>>>>>>> new-syssem
  
         self._div_dfk1 = div_dfk1
         self._div_dfk2 = div_dfk2

@@ -8,6 +8,7 @@ from statsmodels.sysreg.syssem import Sys2SLS
 class CheckSysregResults(object):
     # TODO : adjust better rtol/atol
     rtol = 1e-2
+    atol = 1e-4
     def test_params(self):
         assert_allclose(self.res1.params, self.res2.params, rtol=self.rtol)
 
@@ -17,7 +18,7 @@ class CheckSysregResults(object):
 
     def test_normalized_cov_params(self):
         assert_allclose(self.res1.normalized_cov_params, 
-                self.res2.cov_params, rtol=self.rtol)
+                self.res2.cov_params, rtol=self.rtol, atol=self.atol)
 
     def test_cov_resids_est(self):
         assert_allclose(self.res1.cov_resids_est, self.res2.cov_resids_est,
