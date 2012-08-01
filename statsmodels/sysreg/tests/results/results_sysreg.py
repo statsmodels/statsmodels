@@ -448,7 +448,7 @@ R2SLS.fittedvalues = np.array([
      102.7475, 99.67725, 95.36613, 93.82181, 95.64862, 97.58861, 102.3105, 
      104.0535, 102.8427, 102.7003, 102.5562, 105.6085
     ])
-R2SLS.cov_resids_est = np.identity(2)
+R2SLS.cov_resids_est = np.diag(np.diag(R2SLS.cov_resids))
 R2SLS.df_model = np.array([2, 3])
 R2SLS.df_resid = np.array([17, 16])
 
