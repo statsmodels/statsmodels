@@ -54,7 +54,6 @@ def main():
     true_params = sp.rand(num_nonconst_covariates+1, num_targets)
     if num_zero_params:
         true_params[-num_zero_params:, :] = 0
-    # TODO Add noise to endog
     endog = get_multinomial_endog(num_targets, true_params, exog, noise_level)
     #### Use these lines to save results and try again with new alpha
     #sp.save('endog.npy', endog)
