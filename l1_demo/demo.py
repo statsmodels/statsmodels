@@ -31,19 +31,21 @@ def main():
     data points is small enough that regularization helps...
     """
     #### Commonly adjusted params
-    N = 5000 # Number of data points
+    N = 500 # Number of data points
     num_targets = 3  # Targets are the dependent variables
-    num_nonconst_covariates = 20 # For every target
-    num_zero_params = 5 # For every target
+    num_nonconst_covariates = 10 # For every target
+    num_zero_params = 8 # For every target
     # The regularization parameter
     # Here we scale it with N for simplicity.  In practice, you should
     # use cross validation to pick alpha
-    alpha = 0.0005 * N * sp.ones((num_nonconst_covariates+1, num_targets))
+    alpha = 0.01 * N * sp.ones((num_nonconst_covariates+1, num_targets))
     alpha[0,:] = 0  # Don't regularize the intercept
     # Correlation length for the independent variables
     # Higher makes the problem more ill-posed, and easier to screw
     # up with noise.
-    cor_length = 10 
+    # BEWARE:  With long correlation lengths, you often get a singular KKT
+    # matrix (during the l1_cvxopt_cp fit)
+    cor_length = 2 
     noise_level = 0.2  # As a fraction of the "signal"
 
     #### Make the arrays
@@ -65,25 +67,27 @@ def main():
     model = sm.MNLogit(endog, exog)
     results_ML = model.fit(method='newton')
     start_params = results_ML.params.ravel(order='F')
-    results_l1_slsqp = model.fit(method='l1_slsqp', alpha=alpha, maxiter=70, 
-            start_params=start_params, trim_params=True, retall=True)
+    #results_l1_slsqp = model.fit(method='l1_slsqp', alpha=alpha, maxiter=70, 
+    #        start_params=start_params, trim_params=True, retall=True)
     results_l1_cvxopt_cp = model.fit(method='l1_cvxopt_cp', alpha=alpha, 
-            maxiter=70, start_params=start_params, trim_params=True, 
-            retall=True)
+            maxiter=50, start_params=start_params, trim_params=True, 
+            retall=True, feastol=1e-5)
     #### Compute MSE
     MSE_ML = get_MSE(results_ML, true_params)
-    MSE_l1_slsqp = get_MSE(results_l1_slsqp, true_params)
+    #MSE_l1_slsqp = get_MSE(results_l1_slsqp, true_params)
     MSE_l1_cvxopt_cp = get_MSE(results_l1_cvxopt_cp, true_params)
     #### Prints results
-    print "MSEs:  ML = %.4f,  l1_slsqp = %.4f,  l1_cvxopt_cp = %.4f"%(
-            MSE_ML, MSE_l1_slsqp, MSE_l1_cvxopt_cp)
-    #print "The true parameters are \n%s"%true_params
+    #print "MSEs:  ML = %.4f,  l1_slsqp = %.4f,  l1_cvxopt_cp = %.4f"%(
+    #        MSE_ML, MSE_l1_slsqp, MSE_l1_cvxopt_cp)
+    print "MSEs:  ML = %.4f,  l1_cvxopt_cp = %.4f"%(
+            MSE_ML, MSE_l1_cvxopt_cp)
+    print "The true parameters are \n%s"%true_params
     #print "\nML had a MSE of %f and the parameters are \n%s"%(
     #        MSE_ML, results_ML.params)
     #print "\nl1_slsqp had a MSE of %f and the parameters are \n%s"%(
     #        MSE_l1_slsqp, results_l1_slsqp.params)
-    #print "\nl1_cvxopt_cp had a MSE of %f and the parameters are \n%s"%(
-    #        MSE_l1_cvxopt_cp, results_l1_cvxopt_cp.params)
+    print "\nl1_cvxopt_cp had a MSE of %f and the parameters are \n%s"%(
+            MSE_l1_cvxopt_cp, results_l1_cvxopt_cp.params)
     #print "\n"
     #print "\nThe ML fit results are"
     #print results_ML.summary()
