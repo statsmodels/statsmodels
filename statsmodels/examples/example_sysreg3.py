@@ -16,13 +16,8 @@ eq1 = {'endog' : y, 'exog' : x1, 'indep_endog' : [1]}
 eq2 = {'endog' : y, 'exog' : x2, 'indep_endog' : [1]}
 sys = [eq1, eq2]
 
-<<<<<<< HEAD
-#mod2sls = Sys2SLS(sys, dfk="dfk1")
-#res2sls = mod2sls.fit()
-=======
 mod2sls = Sys2SLS(sys, dfk='dfk1')
 res2sls = mod2sls.fit()
->>>>>>> new-syssem
 #print res2sls.summary()
 
 mod3sls = Sys3SLS(sys)
