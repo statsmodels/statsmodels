@@ -12,63 +12,81 @@ def main():
     """
     Demonstrates l1 regularization for MNLogit model.
     """
-    ## Commonly adjusted params
-    N = 10000 # Number of data points
-    num_targets = 2  # Targets are the dependent variables
-    num_nonconst_covariates = 3 # For every target
-    num_zero_params = 1 # For every target
-    cor_length = 1 # Correlation length for the independent variables
-    noise_level = 0.05  # As a fraction of the "signal"
-    ## Make the arrays
+    #### Commonly adjusted params
+    N = 500 # Number of data points
+    num_targets = 4  # Targets are the dependent variables
+    num_nonconst_covariates = 20 # For every target
+    num_zero_params = 3 # For every target
+    # The regularization parameter
+    alpha = 0.003 * N * sp.ones((num_nonconst_covariates+1, num_targets))
+    alpha[0,:] = 0  # Don't regularize the intercept
+    # Correlation length for the independent variables
+    # Higher makes the problem more ill-posed, and easier to screw
+    # up with noise.
+    cor_length = 5 
+    noise_level = 0.1  # As a fraction of the "signal"
+
+    #### Make the arrays
     exog = get_exog(N, num_nonconst_covariates, cor_length) 
     exog = sm.add_constant(exog, prepend=True)
-    true_params = sp.rand(exog.shape[1], num_targets)
+    true_params = sp.rand(num_nonconst_covariates+1, num_targets)
     if num_zero_params:
         true_params[-num_zero_params:, :] = 0
-    alpha = 0.005 * N * sp.ones(true_params.shape) # Regularization parameter
-    alpha[0,:] = 0  # Don't regularize the intercept
     # TODO Add noise to endog
-    endog = get_multinomial_endog(num_targets, true_params, exog)
-    ## Use these lines to save results and try again with new alpha
+    endog = get_multinomial_endog(num_targets, true_params, exog, noise_level)
+    #### Use these lines to save results and try again with new alpha
     #sp.save('endog.npy', endog)
     #sp.save('exog.npy', exog)
+    #sp.save('true_params.npy', true_params)
     #endog = sp.load('endog.npy')
     #exog = sp.load('exog.npy')
-    ## Train the models
+    #true_params = sp.load('true_params.npy')
+    #### Train the models
     model = sm.MNLogit(endog, exog)
     results_ML = model.fit(method='newton')
     start_params = results_ML.params.ravel(order='F')
     results_l1_slsqp = model.fit(method='l1_slsqp', alpha=alpha, maxiter=70, 
-            start_params=start_params, trim_params=True)
+            start_params=start_params, trim_params=True, retall=True)
     results_l1_cvxopt_cp = model.fit(method='l1_cvxopt_cp', alpha=alpha, 
             maxiter=70, start_params=start_params, trim_params=True, 
             retall=True)
-    ## Compute MSE
-    MSE_ML = sp.sqrt(((results_ML.params - true_params)**2).sum())
-    MSE_l1_slsqp = sp.sqrt(((results_l1_slsqp.params - true_params)**2).sum())
-    MSE_l1_cvxopt_cp = sp.sqrt(((results_l1_cvxopt_cp.params - true_params)**2).sum())
-    ## Prints results
-    print "The true parameters are \n%s"%true_params
-    print "\nML had a MSE of %f and the parameters are \n%s"%(
-            MSE_ML, results_ML.params)
-    print "\nl1_slsqp had a MSE of %f and the parameters are \n%s"%(
-            MSE_l1_slsqp, results_l1_slsqp.params)
-    print "\nl1_cvxopt_cp had a MSE of %f and the parameters are \n%s"%(
-            MSE_l1_cvxopt_cp, results_l1_cvxopt_cp.params)
+    #### Compute MSE
+    MSE_ML = get_MSE(results_ML, true_params)
+    MSE_l1_slsqp = get_MSE(results_l1_slsqp, true_params)
+    MSE_l1_cvxopt_cp = get_MSE(results_l1_cvxopt_cp, true_params)
+    #### Prints results
+    print "MSEs:  ML = %.4f,  l1_slsqp = %.4f,  l1_cvxopt_cp = %.4f"%(
+            MSE_ML, MSE_l1_slsqp, MSE_l1_cvxopt_cp)
+    #print "The true parameters are \n%s"%true_params
+    #print "\nML had a MSE of %f and the parameters are \n%s"%(
+    #        MSE_ML, results_ML.params)
+    #print "\nl1_slsqp had a MSE of %f and the parameters are \n%s"%(
+    #        MSE_l1_slsqp, results_l1_slsqp.params)
+    #print "\nl1_cvxopt_cp had a MSE of %f and the parameters are \n%s"%(
+    #        MSE_l1_cvxopt_cp, results_l1_cvxopt_cp.params)
     #print "\n"
     #print "\nThe ML fit results are"
     #print results_ML.summary()
-    #print "\nThe l1 fit results are"
-    #print results_l1.summary()
+    #print "\nThe l1_slsqp fit results are"
+    #print results_l1_slsqp.summary()
+    #print "\nThe l1_cvxopt_cp fit results are"
+    #print results_l1_cvxopt_cp.summary()
 
-def get_multinomial_endog(num_targets, true_params, exog):
+def get_MSE(results, true_params):
+    raw_MSE = sp.sqrt(((results.params - true_params)**2).sum()) 
+    param_norm = sp.sqrt((true_params**2).sum())
+    return raw_MSE / param_norm
+
+def get_multinomial_endog(num_targets, true_params, exog, noise_level):
     N = exog.shape[0]
     ### Create the probability of entering the different classes, 
     ### given exog and true_params
     # Create a model just to access its cdf method
     temp_endog = sp.random.randint(0, num_targets, size=N)
     model = sm.MNLogit(temp_endog, exog)
-    class_probabilities = model.cdf(sp.dot(exog, true_params))
+    Xdotparams = sp.dot(exog, true_params)
+    noise = noise_level * sp.randn(*Xdotparams.shape)
+    class_probabilities = model.cdf(Xdotparams + noise)
     
     ### Create the endog 
     cdf = class_probabilities.cumsum(axis=1) 

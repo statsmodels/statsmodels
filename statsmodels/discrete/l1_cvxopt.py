@@ -31,9 +31,9 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
     ## Wrap up functions for cvxopt
     f_0 = lambda x : objective_func(f, x, K, alpha, *args)
     Df = lambda x : fprime(score, x, K, alpha)
-    G = get_G(K)
-    h = matrix(0.0, (2*K, 1))
-    H = lambda x,z : hessian_wrapper(hess, x, z, K)
+    G = get_G(K)  # Inequality constraint matrix, Gx \leq h
+    h = matrix(0.0, (2*K, 1))  # RHS in inequality constraint
+    H = lambda x,z : hessian_wrapper(hess, x, z, K)  
 
     ## Define the optimization function
     def F(x=None, z=None):
@@ -64,14 +64,14 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
     if kwargs.get('trim_params'):
         results = trim_params(results, K, alpha, trim_tol)
 
-    ### Pack up return values for statsmodels optimizers
+    ### Pack up return values for statsmodels 
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
     if full_output:
         x = np.array(results['x'])
         params = x[:K]
-        fopt = f(params, *args)
-        gopt = score(params)
-        hopt = hess(params)
+        fopt = f_0(x)
+        gopt = float('nan')  # Objective is non-differentiable
+        hopt = float('nan') 
         iterations = float('nan')
         converged = 'True' if results['status'] == 'optimal' else results['status']
         retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations, 
