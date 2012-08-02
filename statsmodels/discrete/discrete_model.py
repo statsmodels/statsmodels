@@ -289,7 +289,7 @@ class MultinomialModel(BinaryModel):
         sum_eXB = (1 + eXB.sum(1))[:,None]
         J, K = map(int, [self.J, self.K])
         repeat_eXB = np.repeat(eXB, J, axis=1)
-        X = np.tile(exog, J-1) # might be able to use broadcasting
+        X = np.tile(exog, J-1)
         # this is the derivative wrt the base level
         F0 = -repeat_eXB * X / sum_eXB ** 2
         # this is the derivative wrt the other levels when
@@ -300,7 +300,8 @@ class MultinomialModel(BinaryModel):
 
         # other equation index
         other_idx = ~np.kron(np.eye(J-1), np.ones(K)).astype(bool)
-        F1[:, other_idx] = (-eXB.T[:,:,None]*X*repeat_eXB / (sum_eXB**2)).transpose((1,0,2))[:, other_idx]
+        F1[:, other_idx] = (-eXB.T[:,:,None]*X*repeat_eXB / \
+                           (sum_eXB**2)).transpose((1,0,2))[:, other_idx]
         dFdX = np.concatenate((F0[:, None,:], F1), axis=1)
 
         if 'ey' in transform:
