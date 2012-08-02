@@ -1,63 +1,62 @@
-'''numerical differentiation function, gradient, Jacobian, and Hessian
-
-These are simple forward differentiation, so that we have them available
-without dependencies.
-
-* Jacobian should be faster than numdifftools because it doesn't use loop over observations.
-* numerical precision will vary and depend on the choice of stepsizes
-
-Todo:
-* some cleanup
-* check numerical accuracy (and bugs) with numdifftools and analytical derivatives
-  - linear least squares case: (hess - 2*X'X) is 1e-8 or so
-  - gradient and Hessian agree with numdifftools when evaluated away from minimum
-  - forward gradient, Jacobian evaluated at minimum is inaccurate, centered (+/- epsilon) is ok
-* dot product of Jacobian is different from Hessian, either wrong example or a bug (unlikely),
-  or a real difference
-
-
-What are the conditions that Jacobian dotproduct and Hessian are the same?
-see also:
-BHHH: Greene p481 17.4.6,  MLE Jacobian = d loglike / d beta , where loglike is vector for each observation
-   see also example 17.4 when J'J is very different from Hessian
-   also does it hold only at the minimum, what's relationship to covariance of Jacobian matrix
-http://projects.scipy.org/scipy/ticket/1157
-http://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
-   objective: sum((y-f(beta,x)**2),   Jacobian = d f/d beta   and not d objective/d beta as in MLE Greene
-   similar: http://crsouza.blogspot.com/2009/11/neural-network-learning-by-levenberg_18.html#hessian
-
-in example: if J = d x*beta / d beta then J'J == X'X
-   similar to http://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
+"""numerical differentiation function, gradient, Jacobian, and Hessian
 
 Author : josef-pkt
 License : BSD
+"""
 
-'''
+#These are simple forward differentiation, so that we have them available
+#without dependencies.
+#
+#* Jacobian should be faster than numdifftools because it doesn't use loop over observations.
+#* numerical precision will vary and depend on the choice of stepsizes
+#
+#Todo:
+#* some cleanup
+#* check numerical accuracy (and bugs) with numdifftools and analytical derivatives
+#  - linear least squares case: (hess - 2*X'X) is 1e-8 or so
+#  - gradient and Hessian agree with numdifftools when evaluated away from minimum
+#  - forward gradient, Jacobian evaluated at minimum is inaccurate, centered (+/- epsilon) is ok
+#* dot product of Jacobian is different from Hessian, either wrong example or a bug (unlikely),
+#  or a real difference
+#
+#
+#What are the conditions that Jacobian dotproduct and Hessian are the same?
+#see also:
+#BHHH: Greene p481 17.4.6,  MLE Jacobian = d loglike / d beta , where loglike is vector for each observation
+#   see also example 17.4 when J'J is very different from Hessian
+#   also does it hold only at the minimum, what's relationship to covariance of Jacobian matrix
+#http://projects.scipy.org/scipy/ticket/1157
+#http://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
+#   objective: sum((y-f(beta,x)**2),   Jacobian = d f/d beta   and not d objective/d beta as in MLE Greene
+#   similar: http://crsouza.blogspot.com/2009/11/neural-network-learning-by-levenberg_18.html#hessian
+#
+#in example: if J = d x*beta / d beta then J'J == X'X
+#   similar to http://en.wikipedia.org/wiki/Levenberg%E2%80%93Marquardt_algorithm
 import numpy as np
 
-#TODO: do not hard-code this
-EPS = 2.2204460492503131e-016
+#NOTE: we only do double precision internally so far
+EPS = np.MachAr().eps
 
-def approx_fprime(xk, f, epsilon=1e-8, *args):
-    f0 = f(*((xk,)+args))
-    grad = np.zeros((len(xk),), float)
-    ei = np.zeros((len(xk),), float)
-    for k in range(len(xk)):
+def approx_fprime(x, f, epsilon=1e-8, *args):
+    f0 = f(*((x,)+args))
+    grad = np.zeros((len(x),), float)
+    ei = np.zeros((len(x),), float)
+    for k in range(len(x)):
         ei[k] = epsilon
-        grad[k] = (f(*((xk+ei,)+args)) - f0)/epsilon
+        grad[k] = (f(*((x+ei,)+args)) - f0)/epsilon
         ei[k] = 0.0
     return grad
 
-def approx_fprime1(xk, f, epsilon=1e-12, args=(), centered=False):
+def approx_fprime1(x, f, epsilon=1e-12, args=(), centered=False):
     '''
     Gradient of function, or Jacobian if function f returns 1d array
 
     Parameters
     ----------
-    xk : array
+    x : array
         parameters at which the derivative is evaluated
     f : function
-        `*((xk,)+args)` returning either one value or 1d array
+        `*((x,)+args)` returning either one value or 1d array
     epsilon : float
         stepsize
     args : tuple
@@ -72,73 +71,76 @@ def approx_fprime1(xk, f, epsilon=1e-12, args=(), centered=False):
         gradient or Jacobian, evaluated with single step forward differencing
     '''
     #TODO:  add scaled stepsize
-    f0 = f(*((xk,)+args))
+    f0 = f(*((x,)+args))
     nobs = len(np.atleast_1d(f0)) # it could be a scalar
-    grad = np.zeros((nobs,len(xk)), float)
-    ei = np.zeros((len(xk),), float)
+    grad = np.zeros((nobs,len(x)), float)
+    ei = np.zeros((len(x),), float)
     if not centered:
-        for k in range(len(xk)):
+        for k in range(len(x)):
             ei[k] = epsilon
-            grad[:,k] = (f(*((xk+ei,)+args)) - f0)/epsilon
+            grad[:,k] = (f(*((x+ei,)+args)) - f0)/epsilon
             ei[k] = 0.0
     else:
-        for k in range(len(xk)):
+        for k in range(len(x)):
             ei[k] = epsilon/2.
-            grad[:,k] = (f(*((xk+ei,)+args)) - f(*((xk-ei,)+args)))/epsilon
+            grad[:,k] = (f(*((x+ei,)+args)) - f(*((x-ei,)+args)))/epsilon
             ei[k] = 0.0
     return grad.squeeze()
 
-def approx_hess(xk, f, epsilon=None, args=()):#, returngrad=True):
+def approx_hess(x, f, epsilon=None, args=(), retgrad=True):
     '''
     Calculate Hessian and Gradient by forward differentiation
 
-    todo: cleanup args and options
+    Parameters
+    ----------
+    x
+    f
+    epsilon
+    args
+    retgrad
+
+    Returns
+    -------
     '''
-    returngrad=True
     if epsilon is None:  #check
-        #eps = 1e-5
-        eps = 2.2204460492503131e-016 #np.MachAr().eps
         step = None
     else:
         step = epsilon  #TODO: shouldn't be here but I need to figure out args
 
-    #x = xk  #alias drop this
-
-
     # Compute the stepsize (h)
     if step is None:  #check
-        h = eps**(1/3.)*np.maximum(np.abs(xk),1e-2)
+        h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2)
     else:
         h = step
-    xh = xk + h
-    h = xh - xk
+    xh = x + h
+    h = xh - x
     ee = np.diag(h.ravel())
 
-    f0 = f(*((xk,)+args))
+    f0 = f(*((x,)+args))
     # Compute forward step
-    n = len(xk)
+    n = len(x)
     g = np.zeros(n);
     for i in range(n):
-        g[i] = f(*((xk+ee[i,:],)+args))
+        g[i] = f(*((x+ee[i,:],)+args))
 
     hess = np.outer(h,h)
     # Compute "double" forward step
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((xk+ee[i,:]+ee[j,:],)+args))-g[i]-g[j]+f0)/hess[i,j]
+            hess[i,j] = (f(*((x+ee[i,:]+ee[j,:],)+args))-g[i]-g[j]+f0)/hess[i,j]
             hess[j,i] = hess[i,j]
-    if returngrad:
+    if retgrad:
         grad = (g - f0)/h
         return hess, grad
     else:
         return hess
 
-def approx_hess3(x0, f, epsilon=None, args=()):
+def approx_hess3(x, f, epsilon=None, args=()):
     '''calculate Hessian with finite difference derivative approximation
 
     Parameters
     ----------
-    x0 : array_like
+    x : array_like
        value at which function derivative is evaluated
     f : function
        function of one array f(x)
@@ -160,34 +162,34 @@ def approx_hess3(x0, f, epsilon=None, args=()):
     '''
 
     if epsilon is None:
-        h = EPS**(1/5.)*np.maximum(np.abs(x0),1e-2) # 1/4 from ...
+        h = EPS**(1/5.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
     else:
         h = epsilon
-    xh = x0 + h
-    h = xh - x0
+    xh = x + h
+    h = xh - x
     ee = np.diag(h)
     hess = np.outer(h,h)
 
-    n = dim = np.size(x0) #TODO: What's the assumption on the shape here?
+    n = dim = np.size(x) #TODO: What's the assumption on the shape here?
 
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((x0 + ee[i,:] + ee[j,:],)+args))
-                            - f(*((x0 + ee[i,:] - ee[j,:],)+args))
-                         - (f(*((x0 - ee[i,:] + ee[j,:],)+args))
-                            - f(*((x0 - ee[i,:] - ee[j,:],)+args)))
+            hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],)+args))
+                            - f(*((x + ee[i,:] - ee[j,:],)+args))
+                         - (f(*((x - ee[i,:] + ee[j,:],)+args))
+                            - f(*((x - ee[i,:] - ee[j,:],)+args)))
                          )/4./hess[i,j]
             hess[j,i] = hess[i,j]
 
     return hess
 
-def approx_fhess_p(x0, p, fprime, epsilon, *args):
+def approx_fhess_p(x, p, fprime, epsilon, *args):
     """
     Approximate the Hessian when the Jacobian is available.
 
     Parameters
     ----------
-    x0 : array-like
+    x : array-like
         Point at which to evaluate the Hessian
     p : array-like
         Point
@@ -196,11 +198,11 @@ def approx_fhess_p(x0, p, fprime, epsilon, *args):
     epsilon : float
 
     """
-    f2 = fprime(*((x0+epsilon*p,)+args))
-    f1 = fprime(*((x0,)+args))
+    f2 = fprime(*((x+epsilon*p,)+args))
+    f1 = fprime(*((x,)+args))
     return (f2 - f1)/epsilon
 
-def approx_fprime_cs(x0, f, args=(), h=1.0e-20):
+def approx_fprime_cs(x, f, args=(), h=1.0e-20):
     '''
     Calculate gradient or Jacobian with complex step derivative approximation
 
@@ -219,27 +221,27 @@ def approx_fprime_cs(x0, f, args=(), h=1.0e-20):
     #From Guilherme P. de Freitas, numpy mailing list
     #May 04 2010 thread "Improvement of performance"
     #http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
-    dim = np.size(x0) #TODO: What's the assumption on the shape here?
+    dim = np.size(x) #TODO: What's the assumption on the shape here?
     increments = np.identity(dim) * 1j * h
     #TODO: see if this can be vectorized, but usually dim is small
-    partials = [f(x0+ih, *args).imag / h for ih in increments]
+    partials = [f(x+ih, *args).imag / h for ih in increments]
     return np.array(partials).T
 
-def approx_hess_cs(x0, func, args=(), h=1.0e-20, epsilon=1e-6):
-    def grad(x0):
-        return approx_fprime_cs(x0, func, args=args, h=1.0e-20)
+def approx_hess_cs(x, func, args=(), h=1.0e-20, epsilon=1e-6):
+    def grad(x):
+        return approx_fprime_cs(x, func, args=args, h=1.0e-20)
 
     #Hessian from gradient:
-    return (approx_fprime1(x0, grad, epsilon)
-            + approx_fprime1(x0, grad, -epsilon))/2.
+    return (approx_fprime1(x, grad, epsilon)
+            + approx_fprime1(x, grad, -epsilon))/2.
 
 
-def approx_hess_cs2(x0, f, epsilon=None, args=()):
+def approx_hess_cs2(x, f, epsilon=None, args=()):
     '''calculate Hessian with complex step (and fd) derivative approximation
 
     Parameters
     ----------
-    x0 : array_like
+    x : array_like
        value at which function derivative is evaluated
     f : function
        function of one array f(x)
@@ -261,28 +263,26 @@ def approx_hess_cs2(x0, f, epsilon=None, args=()):
     '''
 
     if epsilon is None:
-        h = EPS**(1/5.)*np.maximum(np.abs(x0),1e-2) # 1/4 from ...
+        h = EPS**(1/5.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
     else:
         h = epsilon
-    xh = x0 + h
-    h = xh - x0
+    xh = x + h
+    h = xh - x
     ee = np.diag(h)
     hess = np.outer(h,h)
 
-    n = dim = np.size(x0) #TODO: What's the assumption on the shape here?
+    n = dim = np.size(x) #TODO: What's the assumption on the shape here?
 
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((x0 + 1j*ee[i,:] + ee[j,:],)+args))
-                - f(*((x0 + 1j*ee[i,:] - ee[j,:],)+args))).imag/2./hess[i,j]
+            hess[i,j] = (f(*((x + 1j*ee[i,:] + ee[j,:],)+args))
+                - f(*((x + 1j*ee[i,:] - ee[j,:],)+args))).imag/2./hess[i,j]
             hess[j,i] = hess[i,j]
 
     return hess
 
 
-if __name__ == '__main__':
-
-
+if __name__ == '__main__': #pragma : no cover
     import statsmodels.api as sm
     from scipy.optimize.optimize import approx_fhess_p
     import numpy as np
