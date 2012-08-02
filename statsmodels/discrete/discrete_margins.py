@@ -299,7 +299,13 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
     if callable(derivative):
         from statsmodels.sandbox.regression.numdiff import approx_fprime_cs
         params = params.ravel(order='F') # for Multinomial
-        jacobian_mat = approx_fprime_cs(params, derivative, args=(exog,method))
+        try:
+            jacobian_mat = approx_fprime_cs(params, derivative,
+                                            args=(exog,method))
+        except TypeError, err: #norm.cdf doesn't take complex values
+            from statsmodels.sandbox.regression.numdiff import approx_fprime1
+            jacobian_mat = approx_fprime1(params, derivative,
+                                            args=(exog,method))
         if at == 'overall':
             jacobian_mat = np.mean(jacobian_mat, axis=1)
         else:
@@ -427,6 +433,18 @@ class DiscreteMargins(object):
 
     def summary(self, alpha=.05):
         """
+        Returns a summary table for marginal effects
+
+        Parameters
+        ----------
+        alpha : float
+            Number between 0 and 1. The confidence intervals have the
+            probability 1-alpha.
+
+        Returns
+        -------
+        Summary : SummaryTable
+            A SummaryTable instance
         """
         results = self.results
         model = results.model
