@@ -140,16 +140,16 @@ TypeError: object of type 'numpy.float64' has no len()
 res_bfgs = mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None,
 maxiter = 500, retall=0)
 
-from statsmodels.tools.numdiff import approx_fprime1, approx_hess
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 hb=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)[0]
 hf=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)[0]
 hh = (hf+hb)/2.
 print np.linalg.eigh(hh)
 
-grad = -approx_fprime1(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
+grad = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
 print grad
-gradb = -approx_fprime1(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
-gradf = -approx_fprime1(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
+gradb = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
+gradf = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
 print (gradb+gradf)/2.
 
 print res_norm3.model.score(res_norm3.params)

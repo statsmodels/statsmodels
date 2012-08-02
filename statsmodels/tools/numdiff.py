@@ -37,17 +37,7 @@ import numpy as np
 #NOTE: we only do double precision internally so far
 EPS = np.MachAr().eps
 
-def approx_fprime(x, f, epsilon=1e-8, *args):
-    f0 = f(*((x,)+args))
-    grad = np.zeros((len(x),), float)
-    ei = np.zeros((len(x),), float)
-    for k in range(len(x)):
-        ei[k] = epsilon
-        grad[k] = (f(*((x+ei,)+args)) - f0)/epsilon
-        ei[k] = 0.0
-    return grad
-
-def approx_fprime1(x, f, epsilon=1e-12, args=(), centered=False):
+def approx_fprime(x, f, epsilon=1e-12, args=(), centered=False):
     '''
     Gradient of function, or Jacobian if function f returns 1d array
 
@@ -239,8 +229,8 @@ def approx_hess_cs(x, func, args=(), h=1.0e-20, epsilon=1e-6):
         return approx_fprime_cs(x, func, args=args, h=1.0e-20)
 
     #Hessian from gradient:
-    return (approx_fprime1(x, grad, epsilon)
-            + approx_fprime1(x, grad, -epsilon))/2.
+    return (approx_fprime(x, grad, epsilon)
+            + approx_fprime(x, grad, -epsilon))/2.
 
 
 def approx_hess_cs2(x, f, epsilon=None, args=()):
@@ -335,8 +325,8 @@ if __name__ == '__main__': #pragma : no cover
     from scipy import optimize
     xfmin = optimize.fmin(fun2, (0,0,0), args)
     print approx_fprime((1,2,3),fun,epsilon,x)
-    jac = approx_fprime1(xk,fun1,epsilon,args)
-    jacmin = approx_fprime1(xk,fun1,-epsilon,args)
+    jac = approx_fprime(xk,fun1,epsilon,args)
+    jacmin = approx_fprime(xk,fun1,-epsilon,args)
     #print jac
     print jac.sum(0)
     print '\nnp.dot(jac.T, jac)'

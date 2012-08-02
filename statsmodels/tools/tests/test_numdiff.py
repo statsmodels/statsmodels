@@ -43,7 +43,7 @@ class CheckGradLoglike(object):
     def test_score(self):
         for test_params in self.params:
             sc = self.mod.score(test_params)
-            scfd = numdiff.approx_fprime1(test_params.ravel(),
+            scfd = numdiff.approx_fprime(test_params.ravel(),
                                                       self.mod.loglike)
             assert_almost_equal(sc, scfd, decimal=1)
 
@@ -127,9 +127,9 @@ class CheckDerivative(object):
             gtrue = self.gradtrue(test_params)
             fun = self.fun()
             epsilon = 1e-6
-            gfd = numdiff.approx_fprime1(test_params, fun, epsilon=epsilon,
+            gfd = numdiff.approx_fprime(test_params, fun, epsilon=epsilon,
                                          args=self.args)
-            gfd += numdiff.approx_fprime1(test_params, fun, epsilon=-epsilon,
+            gfd += numdiff.approx_fprime(test_params, fun, epsilon=-epsilon,
                                           args=self.args)
             gfd /= 2.
             assert_almost_equal(gtrue, gfd, decimal=DEC6)
@@ -141,7 +141,7 @@ class CheckDerivative(object):
             fun = self.fun()
 
             epsilon = 1e-6  #default epsilon 1e-6 is not precise enough
-            gfd = numdiff.approx_fprime1(test_params, fun, epsilon=1e-8,
+            gfd = numdiff.approx_fprime(test_params, fun, epsilon=1e-8,
                                          args=self.args, centered=True)
             assert_almost_equal(gtrue, gfd, decimal=DEC5)
 
@@ -253,7 +253,7 @@ if __name__ == '__main__':
 
     gt = (-x*2*(y-np.dot(x, [1,2,3]))[:,None])
     g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)#.T   #this shouldn't be transposed
-    gd = numdiff.approx_fprime1((1,2,3),fun1,epsilon,(y,x))
+    gd = numdiff.approx_fprime((1,2,3),fun1,epsilon,(y,x))
     print maxabs(g, gt)
     print maxabs(gd, gt)
 
@@ -274,10 +274,10 @@ if __name__ == '__main__':
     #maybe calculating ndtr for real and imag parts separately, if we need it
     #and if it still works in this case
     print 'sm', score(test_params)
-    print 'fd', numdiff.approx_fprime1(test_params,loglike,epsilon)
+    print 'fd', numdiff.approx_fprime(test_params,loglike,epsilon)
     print 'cs', numdiff.approx_fprime_cs(test_params,loglike)
     print 'sm', hess(test_params)
-    print 'fd', numdiff.approx_fprime1(test_params,score,epsilon)
+    print 'fd', numdiff.approx_fprime(test_params,score,epsilon)
     print 'cs', numdiff.approx_fprime_cs(test_params, score)
 
     #print 'fd', numdiff.approx_hess(test_params, loglike, epsilon) #TODO: bug

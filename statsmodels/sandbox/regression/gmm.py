@@ -52,7 +52,7 @@ License: BSD (3-clause)
 
 import numpy as np
 from scipy import optimize, stats
-from statsmodels.tools.numdiff import approx_fprime1, approx_hess
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import RegressionResults, OLS
 import statsmodels.tools.tools as tools
@@ -496,10 +496,10 @@ class GMM(object):
 
         momcond = self.momcond_mean
         if method == 'centered':
-            gradmoms = (approx_fprime1(params, momcond, epsilon=epsilon) +
-                    approx_fprime1(params, momcond, epsilon=-epsilon))/2
+            gradmoms = (approx_fprime(params, momcond, epsilon=epsilon) +
+                    approx_fprime(params, momcond, epsilon=-epsilon))/2
         else:
-            gradmoms = approx_fprime1(params, momcond, epsilon=epsilon)
+            gradmoms = approx_fprime(params, momcond, epsilon=epsilon)
 
         return gradmoms
 
