@@ -304,7 +304,7 @@ class MultinomialModel(BinaryModel):
         dFdX = np.concatenate((F0[:, None,:], F1), axis=1)
 
         if 'ey' in transform:
-            dFdX /= np.tile(self.predict(params, exog), J)
+            dFdX /= self.predict(params, exog)[:, :, None]
         return dFdX
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
@@ -347,7 +347,7 @@ class MultinomialModel(BinaryModel):
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,:,None]
+            margeff /= self.predict(params, exog)[:,None,:]
 
         if count_idx is not None:
             from statsmodels.discrete.discrete_margins import (
