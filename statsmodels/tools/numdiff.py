@@ -68,24 +68,31 @@ def approx_fprime1(x, f, epsilon=1e-12, args=(), centered=False):
     Returns
     -------
     grad : array
-        gradient or Jacobian, evaluated with single step forward differencing
+        gradient or Jacobian
+
+    Notes
+    -----
+    If f returns a 1d array, it returns a Jacobian. If a 2d array is returned
+    by f (e.g., with a value for each observation), it returns a 3d array
+    with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
+    the Jacobian of the first observation would be [:, 0, :]
     '''
     #TODO:  add scaled stepsize
     f0 = f(*((x,)+args))
-    nobs = len(np.atleast_1d(f0)) # it could be a scalar
-    grad = np.zeros((nobs,len(x)), float)
+    dim = np.atleast_1d(f0).shape # it could be a scalar
+    grad = np.zeros((len(x),) + dim, float)
     ei = np.zeros((len(x),), float)
     if not centered:
         for k in range(len(x)):
             ei[k] = epsilon
-            grad[:,k] = (f(*((x+ei,)+args)) - f0)/epsilon
+            grad[k,:] = (f(*((x+ei,)+args)) - f0)/epsilon
             ei[k] = 0.0
     else:
         for k in range(len(x)):
             ei[k] = epsilon/2.
-            grad[:,k] = (f(*((x+ei,)+args)) - f(*((x-ei,)+args)))/epsilon
+            grad[k,:] = (f(*((x+ei,)+args)) - f(*((x-ei,)+args)))/epsilon
             ei[k] = 0.0
-    return grad.squeeze()
+    return grad.squeeze().T
 
 def approx_hess(x, f, epsilon=None, args=(), retgrad=True):
     '''
