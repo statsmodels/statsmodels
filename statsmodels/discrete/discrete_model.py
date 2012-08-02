@@ -1897,7 +1897,10 @@ class MultinomialResults(DiscreteResults):
             pass
         return ynames
 
-    def _get_endog_name(self, yname, yname_list):
+    def _get_endog_name(self, yname, yname_list, all=False):
+        """
+        If all is False, the first variable name is dropped
+        """
         model = self.model
         if yname is None:
             yname = model.endog_names
@@ -1907,7 +1910,10 @@ class MultinomialResults(DiscreteResults):
             # use range below to ensure sortedness
             ynames = [ynames[key] for key in range(int(model.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
-            yname_list = ynames[1:] # assumes first variable is dropped
+            if not all:
+                yname_list = ynames[1:] # assumes first variable is dropped
+            else:
+                yname_list = ynames
         return yname, yname_list
 
     def pred_table(self):
