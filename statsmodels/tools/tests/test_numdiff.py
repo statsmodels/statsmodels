@@ -41,31 +41,29 @@ def fun2(beta, y, x):
 #ravel() added because of MNLogit 2d params
 class CheckGradLoglike(object):
     def test_score(self):
-        pass
-        #assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
-
         for test_params in self.params:
             sc = self.mod.score(test_params)
-            scfd = numdiff.approx_fprime1(test_params.ravel(), self.mod.loglike)
+            scfd = numdiff.approx_fprime1(test_params.ravel(),
+                                                      self.mod.loglike)
             assert_almost_equal(sc, scfd, decimal=1)
 
-            sccs = numdiff.approx_fprime_cs(test_params.ravel(), self.mod.loglike)
+            sccs = numdiff.approx_fprime_cs(test_params.ravel(),
+                                                      self.mod.loglike)
             assert_almost_equal(sc, sccs, decimal=13)
 
     def test_hess(self):
-        pass
-        #assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
-
         for test_params in self.params:
             he = self.mod.hessian(test_params)
             #TODO: bug
 ##            hefd = numdiff.approx_hess(test_params, self.mod.score)
 ##            assert_almost_equal(he, hefd, decimal=DEC8)
 
-            hescs = numdiff.approx_fprime_cs(test_params.ravel(), self.mod.score)
+            hescs = numdiff.approx_fprime_cs(test_params.ravel(),
+                                                        self.mod.score)
             assert_almost_equal(he, hescs, decimal=DEC8)
 
-            hecs = numdiff.approx_hess_cs(test_params.ravel(), self.mod.loglike)
+            hecs = numdiff.approx_hess_cs(test_params.ravel(),
+                                                        self.mod.loglike)
             assert_almost_equal(he, hecs, decimal=DEC6)
 
 
@@ -96,9 +94,9 @@ class TestGradLogit(CheckGradLoglike):
         self.mod = sm.Logit(data.endog, data.exog)
         #res = mod.fit(method="newton")
         self.params = [np.array([1,0.25,1.4,-7])]
-##        loglike = mod.loglike
-##        score = mod.score
-##        hess = mod.hessian
+        ##loglike = mod.loglike
+        ##score = mod.score
+        ##hess = mod.hessian
 
 
 class CheckDerivative(object):
@@ -164,7 +162,8 @@ class CheckDerivative(object):
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
                 hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
-                                             args=self.args)[0] #TODO:should be kwds
+                                             args=self.args)[0]
+                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 #TODO: I reduced precision to DEC3 from DEC4 because of
                 #    TestDerivativeFun
