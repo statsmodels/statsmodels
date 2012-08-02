@@ -273,7 +273,9 @@ class MultinomialModel(BinaryModel):
 
         This is used only in the case of discrete and count regressors to
         get the variance-covariance of the marginal effects. It returns
-        [d F / d params] where F is the predict.
+        [d F / d params] where F is the predicted probabilities for each
+        choice. dFdparams is of shape nobs x (J*K) x (J-1)*K.
+        The zero derivatives for the base category are not included.
 
         Transform can be 'dydx' or 'eydx'. Checking is done in margeff
         computations for appropriate transform.
@@ -282,24 +284,28 @@ class MultinomialModel(BinaryModel):
             exog = self.exog
         if params.ndim == 1: # will get flatted from approx_fprime
             params = params.reshape(self.K, self.J-1, order='F')
-        X = np.dot(exog, params)
-        eXB = np.exp(X)
-        sum_eXB = eXB.sum(1)[:,None]
-        J, K = map(int, [self.J, self.K])
 
-        # should be of shape J*K x nobs x (J-1)*K
-        #dFdZ = np.zeros((eXB.shape[0], K * (J-1)))
-        dFdZ = np.repeat(eXB / sum_eXB**2, J, axis=1)
-        #dF_i/dZ_j
-        # overwritten below for dF_i / dZ_i
-        dFdZ *= np.tile(-eXB, J)
-        # offset by -1 because we don't have base equation and fortran order
-        own_equation_idx = np.eye(K, J-1, k=-1, dtype=bool).ravel(order='F')
-        dFdZ[:,own_equation_idx] *= (sum_eXB - eXB) #dF_i/dZ_i
+        eXB = np.exp(np.dot(exog, params))
+        sum_eXB = (1 + eXB.sum(1))[:,None]
+        J, K = map(int, [self.J, self.K])
+        repeat_eXB = np.repeat(eXB, J, axis=1)
+        X = np.tile(exog, J-1) # might be able to use broadcasting
+        # this is the derivative wrt the base level
+        F0 = -repeat_eXB * X / sum_eXB ** 2
+        # this is the derivative wrt the other levels when
+        # dF_j / dParams_j (ie., own equation)
+        #NOTE: this computes too much, any easy way to cut down?
+        F1 = eXB.T[:,:,None]*X * (sum_eXB - repeat_eXB) / (sum_eXB**2)
+        F1 = F1.transpose((1,0,2)) # put the nobs index first
+
+        # other equation index
+        other_idx = ~np.kron(np.eye(J-1), np.ones(K)).astype(bool)
+        F1[:, other_idx] = (-eXB.T[:,:,None]*X*repeat_eXB / (sum_eXB**2)).transpose((1,0,2))[:, other_idx]
+        dFdX = np.concatenate((F0[:, None,:], F1), axis=1)
 
         if 'ey' in transform:
-            dFdZ /= np.tile(self.predict(params, exog), J)
-        return dFdZ
+            dFdX /= np.tile(self.predict(params, exog), J)
+        return dFdX
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
             dummy_idx=None, count_idx=None):

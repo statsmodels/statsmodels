@@ -212,13 +212,14 @@ def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
         if dfdb.ndim >= 2: # for overall
             dfdb = dfdb.mean(0)
         if J > 1:
-            cov_margins[i::J, :] = dfdb
+            K = dfdb.shape[1] / (J-1) # assumes there's a constant
+            cov_margins[i::K, :] = dfdb
         else:
             cov_margins[i, :] = dfdb # how each F changes with change in B
     return cov_margins
 
 def margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
-                             method):
+                             method, J):
     """
     For discrete regressors the marginal effect is
 
@@ -237,7 +238,11 @@ def margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
         dfdb = (dfdb1 - dfdb0)
         if dfdb.ndim >= 2: # for overall
             dfdb = dfdb.mean(0) / 2
-        cov_margins[i, :] = dfdb # how each F changes with change in B
+        if J > 1:
+            K = dfdb.shape[1] / (J-1) # assumes there's a constant
+            cov_margins[i::K, :] = dfdb
+        else:
+            cov_margins[i, :] = dfdb # how each F changes with change in B
     return cov_margins
 
 def margeff_cov_params(model, params, exog, cov_params, at, derivative,
@@ -304,7 +309,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
                                 exog, dummy_ind, method, J)
         if count_ind is not None:
             jacobian_mat = margeff_cov_params_count(model, jacobian_mat, params,
-                                exog, count_ind, method)
+                                exog, count_ind, method, J)
     else:
         jacobian_mat = derivative
 
