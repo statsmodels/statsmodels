@@ -647,7 +647,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
-        return approx_hess(params, self.loglike)[0]
+        return approx_hess(params, self.loglike)
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):

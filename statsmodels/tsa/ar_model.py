@@ -385,7 +385,7 @@ class AR(tsbase.TimeSeriesModel):
         Returns numerical hessian for now.
         """
         loglike = self.loglike
-        return approx_hess(params, loglike)[0]
+        return approx_hess(params, loglike)
 
     def _stackX(self, k_ar, trend):
         """
@@ -731,7 +731,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
             return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
         else:
             hess = approx_hess(self.params, self.model.loglike)
-            return np.sqrt(np.diag(-np.linalg.inv(hess[0])))
+            return np.sqrt(np.diag(-np.linalg.inv(hess)))
 
     @cache_readonly
     def pvalues(self):

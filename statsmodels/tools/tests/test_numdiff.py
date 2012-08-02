@@ -162,7 +162,7 @@ class CheckDerivative(object):
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
                 hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
-                                             args=self.args)[0]
+                                             args=self.args)
                                              #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 #TODO: I reduced precision to DEC3 from DEC4 because of

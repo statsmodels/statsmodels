@@ -84,55 +84,7 @@ def approx_fprime(x, f, epsilon=1e-12, args=(), centered=False):
             ei[k] = 0.0
     return grad.squeeze().T
 
-def approx_hess(x, f, epsilon=None, args=(), retgrad=True):
-    '''
-    Calculate Hessian and Gradient by forward differentiation
-
-    Parameters
-    ----------
-    x
-    f
-    epsilon
-    args
-    retgrad
-
-    Returns
-    -------
-    '''
-    if epsilon is None:  #check
-        step = None
-    else:
-        step = epsilon  #TODO: shouldn't be here but I need to figure out args
-
-    # Compute the stepsize (h)
-    if step is None:  #check
-        h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2)
-    else:
-        h = step
-    xh = x + h
-    h = xh - x
-    ee = np.diag(h.ravel())
-
-    f0 = f(*((x,)+args))
-    # Compute forward step
-    n = len(x)
-    g = np.zeros(n);
-    for i in range(n):
-        g[i] = f(*((x+ee[i,:],)+args))
-
-    hess = np.outer(h,h)
-    # Compute "double" forward step
-    for i in range(n):
-        for j in range(i,n):
-            hess[i,j] = (f(*((x+ee[i,:]+ee[j,:],)+args))-g[i]-g[j]+f0)/hess[i,j]
-            hess[j,i] = hess[i,j]
-    if retgrad:
-        grad = (g - f0)/h
-        return hess, grad
-    else:
-        return hess
-
-def approx_hess3(x, f, epsilon=None, args=()):
+def approx_hess(x, f, epsilon=None, args=()):
     '''calculate Hessian with finite difference derivative approximation
 
     Parameters
@@ -295,6 +247,55 @@ if __name__ == '__main__': #pragma : no cover
 
     # below is Josef's scratch work
 
+    #NOTE: this is the old version of approx_hess here for posterity
+    def approx_hess_old(x, f, epsilon=None, args=(), retgrad=True):
+        '''
+        Calculate Hessian and Gradient by forward differentiation
+
+        Parameters
+        ----------
+        x
+        f
+        epsilon
+        args
+        retgrad
+
+        Returns
+        -------
+        '''
+        if epsilon is None:  #check
+            step = None
+        else:
+            step = epsilon  #TODO: shouldn't be here but I need to figure out args
+
+        # Compute the stepsize (h)
+        if step is None:  #check
+            h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2)
+        else:
+            h = step
+        xh = x + h
+        h = xh - x
+        ee = np.diag(h.ravel())
+
+        f0 = f(*((x,)+args))
+        # Compute forward step
+        n = len(x)
+        g = np.zeros(n);
+        for i in range(n):
+            g[i] = f(*((x+ee[i,:],)+args))
+
+        hess = np.outer(h,h)
+        # Compute "double" forward step
+        for i in range(n):
+            for j in range(i,n):
+                hess[i,j] = (f(*((x+ee[i,:]+ee[j,:],)+args))-g[i]-g[j]+f0)/hess[i,j]
+                hess[j,i] = hess[i,j]
+        if retgrad:
+            grad = (g - f0)/h
+            return hess, grad
+        else:
+            return hess
+
 
     def fun(beta, x):
         return np.dot(x, beta).sum(0)
@@ -337,8 +338,8 @@ if __name__ == '__main__': #pragma : no cover
     print np.dot(jac2.T, jac2)
 
     #he = approx_hess(xk,fun2,epsilon,*args)
-    print approx_hess(xk,fun2,1e-3,args)
-    he = approx_hess(xk,fun2,None,args)
+    print approx_hess_old(xk,fun2,1e-3,args)
+    he = approx_hess_old(xk,fun2,None,args)
     print 'hessfd'
     print he
     print 'epsilon =', None
@@ -346,13 +347,13 @@ if __name__ == '__main__': #pragma : no cover
 
     for eps in [1e-3,1e-4,1e-5,1e-6]:
         print 'eps =', eps
-        print approx_hess(xk,fun2,eps,args)[0] - 2*np.dot(x.T, x)
+        print approx_hess_old(xk,fun2,eps,args)[0] - 2*np.dot(x.T, x)
 
     hcs2 = approx_hess_cs2(xk,fun2,args=args)
     print 'hcs2'
     print hcs2 - 2*np.dot(x.T, x)
 
-    hfd3 = approx_hess3(xk,fun2,args=args)
+    hfd3 = approx_hess(xk,fun2,args=args)
     print 'hfd3'
     print hfd3 - 2*np.dot(x.T, x)
 
