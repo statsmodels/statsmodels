@@ -473,6 +473,11 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
                 6)
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dydx_dummy_overall_se, 6)
+        me = res.get_margeff(dummy=True, method="eydx")
+        assert_almost_equal(me.margeff, self.res2.margeff_eydx_dummy_overall,
+                5)
+        assert_almost_equal(me.margeff_se,
+                self.res2.margeff_eydx_dummy_overall_se, 6)
 
     def test_j(self):
         assert_equal(self.res1.model.J, self.res2.J)
