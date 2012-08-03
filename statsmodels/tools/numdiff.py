@@ -176,16 +176,7 @@ def approx_fprime_cs(x, f, args=(), h=1.0e-20):
     partials = [f(x+ih, *args).imag / h for ih in increments]
     return np.array(partials).T
 
-def approx_hess_cs(x, func, args=(), h=1.0e-20, epsilon=1e-6):
-    def grad(x):
-        return approx_fprime_cs(x, func, args=args, h=1.0e-20)
-
-    #Hessian from gradient:
-    return (approx_fprime(x, grad, epsilon)
-            + approx_fprime(x, grad, -epsilon))/2.
-
-
-def approx_hess_cs2(x, f, epsilon=None, args=()):
+def approx_hess_cs(x, f, epsilon=None, args=()):
     '''calculate Hessian with complex step (and fd) derivative approximation
 
     Parameters
@@ -211,7 +202,7 @@ def approx_hess_cs2(x, f, epsilon=None, args=()):
     The stepsize is the same for the complex and the finite difference part.
     '''
 
-    if epsilon is None:
+    if epsilon is None: #NOTE: isn't the recomendation 1/3.?
         h = EPS**(1/5.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
     else:
         h = epsilon
@@ -297,6 +288,15 @@ if __name__ == '__main__': #pragma : no cover
             return hess
 
 
+    def approx_hess_cs_old(x, func, args=(), h=1.0e-20, epsilon=1e-6):
+        def grad(x):
+            return approx_fprime_cs(x, func, args=args, h=1.0e-20)
+
+        #Hessian from gradient:
+        return (approx_fprime(x, grad, epsilon)
+                + approx_fprime(x, grad, -epsilon))/2.
+
+
     def fun(beta, x):
         return np.dot(x, beta).sum(0)
 
@@ -349,7 +349,7 @@ if __name__ == '__main__': #pragma : no cover
         print 'eps =', eps
         print approx_hess_old(xk,fun2,eps,args)[0] - 2*np.dot(x.T, x)
 
-    hcs2 = approx_hess_cs2(xk,fun2,args=args)
+    hcs2 = approx_hess_cs(xk,fun2,args=args)
     print 'hcs2'
     print hcs2 - 2*np.dot(x.T, x)
 
