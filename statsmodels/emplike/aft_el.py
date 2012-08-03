@@ -10,10 +10,6 @@ observation is censored and 1 otherwise.
 AFT References
 --------------
 
-Koul, Susarla and Ryzin. (1981).  "Regression Analysis with Randomly
-Right-Censored Data." Ann. Statistics. Vol. 9. N. 6. 1276-1288
-
-
 Stute, W. (1993). "Consistent Estimation Under Random Censorship when
 Covariables are Present." Journal of Multivariate Analysis.
 Vol. 45. Iss. 1. 89-103
@@ -29,15 +25,11 @@ Zhou, M. (2005). Empirical Likelihood Ratio with Arbitrarily Censored/
 Truncated Data by EM Algorithm.  Journal of Computational and Graphical
 Statistics. 14:3, 643-656.
 
-Li, G and Wang, Q.(2003). "Empirical Likelihood Regression Analysis for Right
-Censored Data." Statistica Sinica 13. 51-68.
 
-Qin, G and Jing, B. (2001). "Empirical Likelihood for Censored Linear
-Regression." Scandanavian Journal of Statistics. Vol 28. Iss. 4. 661-673.
 """
 
 import numpy as np
-from statsmodels.api import OLS, WLS, add_constant
+from statsmodels.api import WLS, add_constant
 from elregress import ElLinReg
 from statsmodels.base.model import _fit_mle_newton
 
@@ -48,14 +40,12 @@ class OptAFT:
 
     def _wtd_grad(self, eta1, est_vect, wts):
         """
-        Calculates J and y via the log*' and log*''.
+        Calculates the gradient of a weighted empirical likelihood
+        problem.
 
-        Maximizing log* is done via sequential regression of
-        y on J.
 
         Parameters
         ----------
-
         eta1: 1xm array.
 
         This is the value of lamba used to write the
@@ -64,13 +54,8 @@ class OptAFT:
 
         Returns
         -------
-        J: n x m matrix
-            J'J is the hessian for optimizing
-
-        y: n x 1 array
-            -J'y is the gradient for maximizing
-
-        See Owen pg. 63
+        gradient: m x 1 array
+            The gradient used in _wtd_modif_newton
         """
         wts = wts.reshape(-1,1)
         nobs = self.uncens_nobs
@@ -84,6 +69,23 @@ class OptAFT:
         return np.dot(data, wts*data_star_prime)
 
     def _wtd_hess(self, eta1, est_vect, wts):
+        """
+        Calculates the hessian of a weighted empirical likelihood
+        provlem.
+
+        Parameters
+        ----------
+        eta1: 1xm array.
+
+        This is the value of lamba used to write the
+        empirical likelihood probabilities in terms of the lagrangian
+        multiplier.
+
+        Returns
+        -------
+        hess: m x m array
+            Weighted hessian used in _wtd_modif_newton
+        """
         nobs = self.uncens_nobs
         data = est_vect.T
         wts = wts.reshape(-1, 1)
@@ -108,18 +110,17 @@ class OptAFT:
         ------
 
         data_star: array
-            The logstar of the estimting equations
+            The weighted logstar of the estimting equations
 
         Note
         ----
 
-        This function is really only a flaceholder for the _fit_mle_Newton.
+        This function is really only a placeholder for the _fit_mle_Newton.
         The function value is not used in optimization and the optimal value
         is disregarded when computng the log likelihood ratio.
         """
         nobs = self.uncens_nobs
         data = est_vect.T
-        print eta1
         data_star = np.log(wts).reshape(-1,1)\
            + (np.sum(wts) + np.dot(eta1, data)).reshape(-1,1)
         idx = data_star < 1. / nobs
@@ -132,7 +133,7 @@ class OptAFT:
 
     def _wtd_modif_newton(self,  x0, est_vect, wts):
         """
-        Modified Newton's method for maximizing the log* equation.
+        Weighted Modified Newton's method for maximizing the log* equation.
 
         Parameters
         ----------
@@ -157,7 +158,7 @@ class OptAFT:
         return res[0].T
 
 
-    def _opt_wtd_nuis_regress(self, nuisance_params,weights=None):
+    def _opt_wtd_nuis_regress(self, nuisance_params):
         """
         A function that is optimized over nuisance parameters to conduct a
         hypothesis test for the parameters of interest
@@ -177,7 +178,6 @@ class OptAFT:
             hypothesized value of the parameter(s) of interest.
 
         """
-
         params = np.copy(self.params())
         params[self.param_nums] = self.b0_vals
         nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
@@ -192,9 +192,7 @@ class OptAFT:
         self.eta_star = eta_star
         denom = np.sum(self._fit_weights) + np.dot(eta_star, self.est_vect.T)
         self.new_weights = self._fit_weights / denom
-        return self.new_weights
-        #llr = np.sum(np.log(self.nobs * self.new_weights))
-        #return -2 * llr
+        return np.sum(np.log(self.new_weights))
 
 
 
@@ -212,6 +210,7 @@ class emplikeAFT(OptAFT):
         self.uncens_nobs = np.sum(censors)
         self.uncens_endog = self.endog[np.bool_(self.censors)].reshape(-1,1)
         self.uncens_exog = self.exog[np.bool_(self.censors)].reshape(-1,1)
+        self.nvar = self.exog.shape[1]
 
     def _is_tied(self, endog, censors):
         """
@@ -308,97 +307,65 @@ class emplikeAFT(OptAFT):
         wtd_km = self._km_w_ties(tied, km)
         return  (censors / wtd_km).reshape(nobs, 1)
 
-    def params(self, km_est='li', wt_method='stute', last_uncensored=True):
+    def params(self):
         """
 
-        Fits an AFT model and returns results instance.
+        Fits an AFT model and returns parameters.
 
         Parameters
         ---------
+        None
 
-        km: string, optional
-            Version of Kaplan-Meier estimate to use.  If 'koul', uses the
-            estimator in Koul (1981).  This ensures no divide by 0 errors.
-            If 'li,' uses the estimate in Qin (2001) and Li (2003).
-            If max(endog)  is censored and km='Qin', estimation and inference
-            is impossible.  See Owen (2001). Default is 'koul'
-
-        wt_method: string, optional
-            If 'koul', estimation is conducted using synthetic data of
-            Koul et al (1981). If 'stute', inference is conducted by WLS
-            as in Stute (1993).  If wt_method is 'kout' and max(endog) is
-            censored and km='koul', estimation andinference is impossible.
-            Default is 'koul.'
-
-        last_uncensored: bool, optional
-            If True, the model assumes that max(endog) is uncensored,
-            regardless of value in censors.  This prevents divide by 0 errors.
-            Default is False.
 
         Returns
         -------
+        Fitted params
 
-        Fitted results instance.  See also RegressionResults.
-
+        Notes
+        -----
+        To avoid dividing by zero, max(endog) is assumed to be uncensored.
         """
-        self.km_est = km_est
         self.modif_censors = np.copy(self.censors)
-        if last_uncensored:
-            self.modif_censors[-1] = 1
+        self.modif_censors[-1] = 1
         wts = self._make_km(self.endog, self.modif_censors)
-        if wt_method == 'koul':
-            res = OLS(self.endog * wts, self.exog).fit()
-        if wt_method == 'stute':
-            res = WLS(self.endog, self.exog, wts).fit()
-            res.bse = None      # Inference will be done with EL.
-        res.km = wts
-        res.conf_int = None
-        res.t = None
-        res.pvalues = None
-        res.f_test = None
-        res.fvalue = None
+        res = WLS(self.endog, self.exog, wts).fit()
         params = res.params
         return params
 
     def test_beta(self, value, param_num, ftol=10 **-5, maxiter=100,
-                  print_weights=1 ):
+                  print_weights=1, start_lbda=None ):
         """
         Some notes:
 
-        Censored Observations have weight 0.
+        Censored Observations have weight 0.rt
         """
+        if start_lbda is None:
+            self.start_lbda = np.zeros(self.nvar)
+        else:
+            self.start_lbda = start_lbda
         censors = self.censors
         endog = self.endog
         exog = self.exog
         censors[-1] = 1
         uncensored = (censors == 1).flatten()
-        self.uncensored = uncensored
         censored = (censors == 0).flatten()
         uncens_endog = endog[uncensored]
-        cens_endog = endog[censored]
         uncens_exog = exog[uncensored, :]
-        cens_exog = exog[censored, :]
         reg_model = ElLinReg(uncens_endog, uncens_exog)
         reg_model.hy_test_beta(value, param_num)
         km = self._make_km(self.endog, self.censors).flatten()
-        self.km = km
         uncens_nobs = self.uncens_nobs
         init_F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
         self.init_F = init_F
         # init_F is step 0 in Zhou (2005)
         iters=1
-        self.b0_vals = [value]
-        self.param_nums =[param_num]
-        self.nvar=self.uncens_exog.shape[1]
-        self.start_lbda= np.array([0])
-        params=self.params(km_est= 'li', wt_method ='stute',
-                                last_uncensored=1)
+        self.b0_vals = value
+        self.param_nums =param_num
+        params=self.params()
         F = init_F
         survidx = np.where(censors==0)
         survidx = survidx[0] - np.arange(len(survidx[0])) #Zhou's K
         numcensbelow =  np.int_(np.cumsum(1-censors))
-        init_death = np.cumsum(F[::-1])
-        init_survivalprob = init_death[::-1]
         while iters < maxiter:
             F = F.flatten()
             death=np.cumsum(F[::-1])
@@ -408,16 +375,17 @@ class emplikeAFT(OptAFT):
             surv_point_mat = add_constant(surv_point_mat, prepend=1)
             summed_wts = np.cumsum(surv_point_mat, axis=1)
             wts = summed_wts[np.int_(np.arange(uncens_nobs)),
-                         numcensbelow[uncensored]]
+                             numcensbelow[uncensored]]
+            # See Zhou 2005, section 3.
             self._fit_weights = wts
             if len(self.param_nums) == len(params):
-                F = self._opt_wtd_nuis_regress(self.b0_vals)
-                #init_F = self._opt_wtd_nuis_regress(self.)
-                #init_F = self.new_weights
+                opt_res = self._opt_wtd_nuis_regress(self.b0_vals)
+                # ^ Uncensored weights' contribution to likelihood value.
+                F = self.new_weights
             iters = iters+1
         death = np.cumsum(F.flatten()[::-1])
         survivalprob = death[::-1]
-        llike = np.sum(np.log(F)) + np.sum(np.log(survivalprob[survidx]))
+        llike = opt_res + np.sum(np.log(survivalprob[survidx]))
         wtd_km = km.flatten()/np.sum(km)
         survivalmax = np.cumsum(wtd_km[::-1])[::-1]
         llikemax = np.sum(np.log(wtd_km[uncensored])) + \
@@ -433,11 +401,14 @@ koul_y = np.log10(koul_data[:, 0])
 #koul_x = sm.add_constant(koul_data[:, 2], prepend=2)
 koul_x = koul_data[:,2]
 koul_censors = koul_data[:, 1]
-koul_model = emplikeAFT(koul_y, koul_x, koul_censors,).params(km_est = 'li', wt_method='stute', last_uncensored=1)
+koul_model = emplikeAFT(koul_y, koul_x, koul_censors,).params()
 koul_censors[14] =1
 newky = koul_y[koul_censors==1]
 newkx = koul_x[koul_censors==1]
 
 
+def f(x=1, y=2):
+    return x +y
 
-
+def outerf(afunc, scale, *args):
+    return afunc(*args)*2
