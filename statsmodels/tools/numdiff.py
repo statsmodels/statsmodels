@@ -203,7 +203,7 @@ def approx_hess_cs(x, f, epsilon=None, args=()):
     '''
 
     if epsilon is None: #NOTE: isn't the recomendation 1/3.?
-        h = EPS**(1/5.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
+        h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
     else:
         h = epsilon
     xh = x + h
