@@ -37,6 +37,61 @@ import numpy as np
 #NOTE: we only do double precision internally so far
 EPS = np.MachAr().eps
 
+_hessian_docs = """
+    Calculate Hessian with finite difference derivative approximation
+
+    Parameters
+    ----------
+    x : array_like
+       value at which function derivative is evaluated
+    f : function
+       function of one array f(x, *args, **kwargs)
+    epsilon : float or array-like, optional
+       Stepsize used, if None, then stepsize is automatically chosen
+       according to EPS**(1/%s)*x.
+    args : tuple
+        Arguments for function `f`.
+    kwargs : dict
+        Keyword arguments for function `f`.
+    %s
+
+    Returns
+    -------
+    hess : ndarray
+       array of partial second derivatives, Hessian
+    %s
+
+    Notes
+    -----
+    Equation (%s) in Ridout. Computes the Hessian as::
+
+    %s
+
+    where e[j] is a vector with element j == 1 and the rest are zero and
+    d[i] is epsilon[i].
+
+    References
+    ----------:
+
+    Ridout, M.S. (2009) Statistical applications of the complex-step method
+        of numerical differentiation. The American Statistician, 63, 66-74
+"""
+
+def _get_epsilon(x, s, epsilon, n):
+    if epsilon is None:
+        h = EPS**(1./s)*x
+    else:
+        if np.isscalar(epsilon):
+            h = np.array([epsilon]*n)
+        else:
+            h = np.asarray(epsilon)
+            try:
+                assert h.shape == x.shape
+            except:
+                raise ValueError("If h is not a scalar it must have the same"
+                        " shape as x.")
+    return h
+
 def approx_fprime(x, f, epsilon=1e-12, args=(), kwargs={}, centered=False):
     '''
     Gradient of function, or Jacobian if function f returns 1d array
@@ -130,7 +185,7 @@ def approx_fprime_cs(x, f, epsilon=1.0e-20, args=(), kwargs={}):
     return np.array(partials).T
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
-    '''calculate Hessian with complex step (and fd) derivative approximation
+    '''Calculate Hessian with complex-step derivative approximation
 
     Parameters
     ----------
@@ -154,17 +209,13 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
 
     The stepsize is the same for the complex and the finite difference part.
     '''
-
-    if epsilon is None: #NOTE: isn't the recomendation 1/3.?
-        h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
-    else:
-        h = epsilon
-    xh = x + h
-    h = xh - x
+    #TODO: might want to consider lowering the step for pure derivatives
+    n = len(x)
+    h = _get_epsilon(x, 3, epsilon, n)
     ee = np.diag(h)
     hess = np.outer(h,h)
 
-    n = dim = np.size(x) #TODO: What's the assumption on the shape here?
+    n = len(x)
 
     for i in range(n):
         for j in range(i,n):
@@ -174,33 +225,18 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
             hess[j,i] = hess[i,j]
 
     return hess
+approx_hess_cs.__doc__ = "Calculate Hessian with complex-step derivative " +\
+                         "approximation\n" +\
+                         "\n".join(_hessian_docs.split("\n")[1:]) % ("3", "",
+                                 "", "10",
+"""1/(2*d_j*d_k) * imag(f(x + i*d[j]*e[j] + d[k]*e[k]) -
+                     f(x + i*d[j]*e[j] - d[k]*e[k]))
+""")
 
-def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=True):
-    '''
-    Calculate Hessian and Gradient by forward differentiation
-
-    Parameters
-    ----------
-    x
-    f
-    epsilon
-    args
-    retgrad
-
-    Returns
-    -------
-
-    Notes
-    -----
-    Ridout equation 7
-    '''
-    if epsilon is None: # check
-        h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2)
-    else:
-        h = epsilon
+def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
     n = len(x)
-    h = np.array([h] * n) # does this need to allow 2d?
-    ee = np.diag(h.ravel())
+    h = _get_epsilon(x, 3, epsilon, n)
+    ee = np.diag(h)
 
     f0 = f(*((x,)+args), **kwargs)
     # Compute forward step
@@ -221,33 +257,23 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=True):
     else:
         return hess
 
-def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=True):
-    '''
-    Calculate Hessian and Gradient by forward differentiation
+approx_hess1.__doc__ = _hessian_docs % ("3",
+"""    retgrad : bool
+        Whether or not to also return the gradient
+""",
+"""    grad : nparray
+        Gradient if retgrad == True
+""",
+    "7",
+"""1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
+""")
 
-    Parameters
-    ----------
-    x
-    f
-    epsilon
-    args
-    retgrad
-
-    Returns
-    -------
-
-    Notes
-    -----
-    Ridout equation 8. Centered difference.
-    '''
-    if epsilon is None: # check
-        h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2)
-    else:
-        h = epsilon
+def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
+    #
     n = len(x)
-    h = np.array([h] * n) # does this need to allow 2d?
-    ee = np.diag(h.ravel())
-
+    #NOTE: ridout suggesting using eps**(1/4)*theta
+    h = _get_epsilon(x, 3, epsilon, n)
+    ee = np.diag(h)
     f0 = f(*((x,)+args), **kwargs)
     # Compute forward step
     g = np.zeros(n)
@@ -271,55 +297,42 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=True):
         return hess, grad
     else:
         return hess
+approx_hess2.__doc__ = _hessian_docs % ("3",
+"""    retgrad : bool
+        Whether or not to also return the gradient
+""",
+"""    grad : nparray
+        Gradient if retgrad == True
+""",
+    "8",
+"""1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
+                 (f(x + d[k]*e[k]) - f(x)) +
+                 (f(x - d[j]*e[j] - d[k]*e[k]) - f(x + d[j]*e[j])) -
+                 (f(x - d[k]*e[k]) - f(x)))
+""")
 
 def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
-    '''calculate Hessian with finite difference derivative approximation
-
-    Parameters
-    ----------
-    x : array_like
-       value at which function derivative is evaluated
-    f : function
-       function of one array f(x)
-    epsilon : float
-       stepsize, if None, then stepsize is automatically chosen
-
-    Returns
-    -------
-    hess : ndarray
-       array of partial second derivatives, Hessian
-
-    Notes
-    -----
-    based on equation 9 in
-    M. S. RIDOUT: Statistical Applications of the Complex-step Method
-    of Numerical Differentiation, University of Kent, Canterbury, Kent, U.K.
-
-    The stepsize is the same for the complex and the finite difference part.
-    '''
-
-    if epsilon is None:
-        h = EPS**(1/5.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
-    else:
-        h = epsilon
-    xh = x + h
-    h = xh - x
+    n = len(x)
+    h = _get_epsilon(x, 4, epsilon, n)
     ee = np.diag(h)
     hess = np.outer(h,h)
-
-    n = dim = np.size(x) #TODO: What's the assumption on the shape here?
 
     for i in range(n):
         for j in range(i,n):
             hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],)+args), **kwargs)
-                            - f(*((x + ee[i,:] - ee[j,:],)+args), **kwargs)
-                         - (f(*((x - ee[i,:] + ee[j,:],)+args), **kwargs)
-                            - f(*((x - ee[i,:] - ee[j,:],)+args), **kwargs),)
-                         )/(4.*hess[i,j])
+                             - f(*((x + ee[i,:] - ee[j,:],)+args), **kwargs)
+                          - (f(*((x - ee[i,:] + ee[j,:],)+args), **kwargs)
+                          - f(*((x - ee[i,:] - ee[j,:],)+args), **kwargs),)
+                          )/(4.*hess[i,j])
             hess[j,i] = hess[i,j]
-
     return hess
 
+approx_hess3.__doc__ = _hessian_docs % ("4", "", "",
+    "9",
+"""1/(4*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j]
+                                                     - d[k]*e[k])) -
+                 (f(x - d[j]*e[j] + d[k]*e[k]) - f(x - d[j]*e[j]
+                                                     - d[k]*e[k]))""")
 approx_hess = approx_hess3
 
 if __name__ == '__main__': #pragma : no cover
