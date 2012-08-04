@@ -92,7 +92,7 @@ def _get_epsilon(x, s, epsilon, n):
                         " shape as x.")
     return h
 
-def approx_fprime(x, f, epsilon=1e-12, args=(), kwargs={}, centered=False):
+def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
     '''
     Gradient of function, or Jacobian if function f returns 1d array
 
@@ -101,11 +101,14 @@ def approx_fprime(x, f, epsilon=1e-12, args=(), kwargs={}, centered=False):
     x : array
         parameters at which the derivative is evaluated
     f : function
-        `*((x,)+args)` returning either one value or 1d array
-    epsilon : float
-        stepsize
+        `f(*((x,)+args), **kwargs)` returning either one value or 1d array
+    epsilon : float, optional
+        Stepsize, if None, optimal stepsize is used. This is EPS**(1/2) for
+        `centered` == False and EPS**(1/3) for `centered` == True.
     args : tuple
-        tuple of additional arguments for function f
+        Tuple of additional arguments for function `f`.
+    kwargs : dict
+        Dictionary of additional keyword arguments for function `f`.
     centered : bool
         Whether central difference should be returned. If not, does forward
         differencing.
@@ -122,21 +125,24 @@ def approx_fprime(x, f, epsilon=1e-12, args=(), kwargs={}, centered=False):
     with the Jacobian of each observation with shape xk x nobs x xk. I.e.,
     the Jacobian of the first observation would be [:, 0, :]
     '''
+    n = len(x)
     #TODO:  add scaled stepsize
     f0 = f(*((x,)+args), **kwargs)
     dim = np.atleast_1d(f0).shape # it could be a scalar
-    grad = np.zeros((len(x),) + dim, float)
-    ei = np.zeros((len(x),), float)
+    grad = np.zeros((n,) + dim, float)
+    ei = np.zeros((n,), float)
     if not centered:
-        for k in range(len(x)):
-            ei[k] = epsilon
-            grad[k,:] = (f(*((x+ei,)+args), **kwargs) - f0)/epsilon
+        epsilon = _get_epsilon(x, 2, epsilon, n)
+        for k in range(n):
+            ei[k] = epsilon[k]
+            grad[k,:] = (f(*((x+ei,)+args), **kwargs) - f0)/epsilon[k]
             ei[k] = 0.0
     else:
+        epsilon = _get_epsilon(x, 3, epsilon, n)
         for k in range(len(x)):
-            ei[k] = epsilon/2.
+            ei[k] = epsilon[k]/2.
             grad[k,:] = (f(*((x+ei,)+args), **kwargs) - \
-                         f(*((x-ei,)+args), **kwargs))/epsilon
+                         f(*((x-ei,)+args), **kwargs))/epsilon[k]
             ei[k] = 0.0
     return grad.squeeze().T
 
@@ -153,35 +159,51 @@ def approx_fhess_p(x, p, fprime, epsilon, *args, **kwargs):
     fprime : func
         The Jacobian function
     epsilon : float
-
+        Stepsize
     """
     f2 = fprime(*((x+epsilon*p,)+args), **kwargs)
     f1 = fprime(*((x,)+args), **kwargs)
     return (f2 - f1)/epsilon
 
-def approx_fprime_cs(x, f, epsilon=1.0e-20, args=(), kwargs={}):
+def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
     '''
     Calculate gradient or Jacobian with complex step derivative approximation
 
     Parameters
     ----------
+    x : array
+        parameters at which the derivative is evaluated
     f : function
-       function of one array f(x)
-    x : array_like
-       value at which function derivative is evaluated
+        `f(*((x,)+args), **kwargs)` returning either one value or 1d array
+    epsilon : float, optional
+        Stepsize, if None, optimal stepsize is used. Optimal step-size is
+        EPS*x. See note.
+    args : tuple
+        Tuple of additional arguments for function `f`.
+    kwargs : dict
+        Dictionary of additional keyword arguments for function `f`.
 
     Returns
     -------
     partials : ndarray
        array of partial derivatives, Gradient or Jacobian
+
+    Notes
+    -----
+    The complex-step derivative has truncation error O(epsilon**2), so
+    truncation error can be eliminated by choosing epsilon to be very small.
+    The complex-step derivative avoids the problem of round-off error with
+    small epsilon because there is no subtraction.
     '''
     #From Guilherme P. de Freitas, numpy mailing list
     #May 04 2010 thread "Improvement of performance"
     #http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
-    dim = np.size(x) #TODO: What's the assumption on the shape here?
-    increments = np.identity(dim) * 1j * epsilon
+    n = len(x)
+    epsilon = _get_epsilon(x, 1, epsilon, n)
+    increments = np.identity(n) * 1j * epsilon
     #TODO: see if this can be vectorized, but usually dim is small
-    partials = [f(x+ih, *args, **kwargs).imag / epsilon for ih in increments]
+    partials = [f(x+ih, *args, **kwargs).imag / epsilon[i]
+                for i,ih in enumerate(increments)]
     return np.array(partials).T
 
 def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
