@@ -85,56 +85,6 @@ def approx_fprime(x, f, epsilon=1e-12, args=(), kwargs={}, centered=False):
             ei[k] = 0.0
     return grad.squeeze().T
 
-def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
-    '''calculate Hessian with finite difference derivative approximation
-
-    Parameters
-    ----------
-    x : array_like
-       value at which function derivative is evaluated
-    f : function
-       function of one array f(x)
-    epsilon : float
-       stepsize, if None, then stepsize is automatically chosen
-
-    Returns
-    -------
-    hess : ndarray
-       array of partial second derivatives, Hessian
-
-    Notes
-    -----
-    based on equation 9 in
-    M. S. RIDOUT: Statistical Applications of the Complex-step Method
-    of Numerical Differentiation, University of Kent, Canterbury, Kent, U.K.
-
-    The stepsize is the same for the complex and the finite difference part.
-    '''
-
-    if epsilon is None:
-        h = EPS**(1/5.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
-    else:
-        h = epsilon
-    xh = x + h
-    h = xh - x
-    ee = np.diag(h)
-    hess = np.outer(h,h)
-
-    n = dim = np.size(x) #TODO: What's the assumption on the shape here?
-
-    for i in range(n):
-        for j in range(i,n):
-            hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],)+args), **kwargs)
-                            - f(*((x + ee[i,:] - ee[j,:],)+args), **kwargs)
-                         - (f(*((x - ee[i,:] + ee[j,:],)+args), **kwargs)
-                            - f(*((x - ee[i,:] - ee[j,:],)+args), **kwargs),)
-                         )/4./hess[i,j]
-            hess[j,i] = hess[i,j]
-
-    return hess
-
-approx_hess = approx_hess3
-
 def approx_fhess_p(x, p, fprime, epsilon, *args, **kwargs):
     """
     Approximate the Hessian when the Jacobian is available.
@@ -322,6 +272,55 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=True):
     else:
         return hess
 
+def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
+    '''calculate Hessian with finite difference derivative approximation
+
+    Parameters
+    ----------
+    x : array_like
+       value at which function derivative is evaluated
+    f : function
+       function of one array f(x)
+    epsilon : float
+       stepsize, if None, then stepsize is automatically chosen
+
+    Returns
+    -------
+    hess : ndarray
+       array of partial second derivatives, Hessian
+
+    Notes
+    -----
+    based on equation 9 in
+    M. S. RIDOUT: Statistical Applications of the Complex-step Method
+    of Numerical Differentiation, University of Kent, Canterbury, Kent, U.K.
+
+    The stepsize is the same for the complex and the finite difference part.
+    '''
+
+    if epsilon is None:
+        h = EPS**(1/5.)*np.maximum(np.abs(x),1e-2) # 1/4 from ...
+    else:
+        h = epsilon
+    xh = x + h
+    h = xh - x
+    ee = np.diag(h)
+    hess = np.outer(h,h)
+
+    n = dim = np.size(x) #TODO: What's the assumption on the shape here?
+
+    for i in range(n):
+        for j in range(i,n):
+            hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],)+args), **kwargs)
+                            - f(*((x + ee[i,:] - ee[j,:],)+args), **kwargs)
+                         - (f(*((x - ee[i,:] + ee[j,:],)+args), **kwargs)
+                            - f(*((x - ee[i,:] - ee[j,:],)+args), **kwargs),)
+                         )/4./hess[i,j]
+            hess[j,i] = hess[i,j]
+
+    return hess
+
+approx_hess = approx_hess3
 
 if __name__ == '__main__': #pragma : no cover
     import statsmodels.api as sm
