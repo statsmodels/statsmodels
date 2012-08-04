@@ -1,32 +1,30 @@
 import numpy as np
 import KernelFunctions as kf
-import scipy.optimize as opt
-from scipy.integrate import *
 
 
-kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
-                 gaussian=kf.Gaussian,
+kernel_func = dict(wangryzin=kf.WangRyzin,
+                   aitchisonaitken=kf.AitchisonAitken,
+                   gaussian=kf.Gaussian,
                    gauss_convolution=kf.Gaussian_Convolution,
-                 wangryzin_convolution=kf.WangRyzin_Convolution,
-                 aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
+                   wangryzin_convolution=kf.WangRyzin_Convolution,
+                   aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
                    gaussian_cdf=kf.Gaussian_cdf,
                    aitchisonaitken_cdf=kf.AitchisonAitken_cdf,
                    wangryzin_cdf=kf.WangRyzin_cdf)
 
 
 class LeaveOneOut(object):
-    # Written by Skipper
     """
-    Generator to give leave one out views on X
+    Generator to give leave-one-out views on X.
 
     Parameters
     ----------
     X : array-like
-        2d array
+        2-D array.
 
     Examples
     --------
-    >>> X = np.random.normal(0,1,[10,2])
+    >>> X = np.random.normal(0, 1, [10,2])
     >>> loo = LeaveOneOut(X)
     >>> for x in loo:
     ...    print x
@@ -58,10 +56,7 @@ def _get_type_pos(var_type):
 
 
 def adjust_shape(dat, K):
-    """
-    Returns NxK array so that it can be used
-    with gpke()
-    """
+    """ Returns NxK array so that it can be used with gpke()."""
     dat = np.asarray(dat)
     if dat.ndim > 2:
         dat = np.squeeze(dat)
@@ -74,6 +69,7 @@ def adjust_shape(dat, K):
             dat = dat.T
         N = np.shape(dat)[0]  # ndim >1 so many obs many vars
         assert np.shape(dat)[1] == K
+
     dat = np.reshape(dat, (N, K))
     return dat
 
@@ -86,46 +82,44 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
     Parameters
     ----------
     bw: array-like
-        The user-specified bandwdith parameters
-    tdat: 1D or 2d array
-        The training data
-    edat: 1d array
-        The evaluation points at which the kernel
-        estimation is performed
-    var_type: str
-        The variable type (continuous, ordered, unordered)
-    ckertype: str
-        The kernel used for the continuous variables
-    okertype: str
-        The kernel used for the ordered discrete variables
-    ukertype: str
-        The kernel used for the unordered discrete variables
+        The user-specified bandwidth parameters.
+    tdat: 1D or 2-D ndarray
+        The training data.
+    edat: 1-D ndarray
+        The evaluation points at which the kernel estimation is performed.
+    var_type: str, optional
+        The variable type (continuous, ordered, unordered).
+    ckertype: str, optional
+        The kernel used for the continuous variables.
+    okertype: str, optional
+        The kernel used for the ordered discrete variables.
+    ukertype: str, optional
+        The kernel used for the unordered discrete variables.
+    tosum : bool, optional
+        Whether or not to sum the calculated array of densities.  Default is
+        True.
 
     Returns
     -------
     dens: array-like
-        The dens estimator
+        The generalized product kernel density estimator.
 
     Notes
     -----
-
     The formula for the multivariate kernel estimator for the pdf is:
 
     .. math:: f(x)=\frac{1}{nh_{1}...h_{q}}\sum_{i=1}^
-    {n}K\left(\frac{X_{i}-x}{h}\right)
+                        {n}K\left(\frac{X_{i}-x}{h}\right)
 
     where
 
-    .. math:: K\left(\frac{X_{i}-x}{h}\right)=k\left(
-    \frac{X_{i1}-x_{1}}{h_{1}}\right)\times k\left(
-    \frac{X_{i2}-x_{2}}{h_{2}}\right)\times...\times
-    k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
-
+    .. math:: K\left(\frac{X_{i}-x}{h}\right) =
+                k\left( \frac{X_{i1}-x_{1}}{h_{1}}\right)\times
+                k\left( \frac{X_{i2}-x_{2}}{h_{2}}\right)\times...\times
+                k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
     """
     iscontinuous, isordered, isunordered = _get_type_pos(var_type)
     K = len(var_type)
-    #tdat = adjust_shape(tdat, K)
-    #edat = adjust_shape(edat, K)
     N = np.shape(tdat)[0]
     # must remain 1-D for indexing to work
     bw = np.reshape(np.asarray(bw), (K,))

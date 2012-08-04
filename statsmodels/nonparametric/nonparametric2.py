@@ -21,9 +21,8 @@ References
 """
 
 import numpy as np
-from scipy import optimize, integrate, stats
+from scipy import optimize
 import np_tools as tools
-import KernelFunctions as kf
 
 
 __all__ = ['UKDE', 'CKDE']
