@@ -161,12 +161,20 @@ class CheckDerivative(object):
             if not hetrue is None: #Hessian doesn't work for 2d return of fun
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
-                hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
+                hefd = numdiff.approx_hess1(test_params, fun, #epsilon=1e-8,
                                              args=self.args)
                                              #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 #TODO: I reduced precision to DEC3 from DEC4 because of
                 #    TestDerivativeFun
+                hefd = numdiff.approx_hess2(test_params, fun, #epsilon=1e-8,
+                                             args=self.args)
+                                             #TODO:should be kwds
+                assert_almost_equal(hetrue, hefd, decimal=DEC3)
+                hefd = numdiff.approx_hess3(test_params, fun, #epsilon=1e-8,
+                                             args=self.args)
+                                             #TODO:should be kwds
+                assert_almost_equal(hetrue, hefd, decimal=DEC3)
 
     def test_hess_fun1_cs(self):
         for test_params in self.params:
