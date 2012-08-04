@@ -241,7 +241,7 @@ if __name__ == '__main__': #pragma : no cover
     # below is Josef's scratch work
 
     #NOTE: this is the old version of approx_hess here for posterity
-    def approx_hess_old(x, f, epsilon=None, args=(), retgrad=True):
+    def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=True):
         '''
         Calculate Hessian and Gradient by forward differentiation
 
@@ -255,33 +255,31 @@ if __name__ == '__main__': #pragma : no cover
 
         Returns
         -------
-        '''
-        if epsilon is None:  #check
-            step = None
-        else:
-            step = epsilon  #TODO: shouldn't be here but I need to figure out args
 
-        # Compute the stepsize (h)
-        if step is None:  #check
+        Notes
+        -----
+        Ridout equation 7
+        '''
+        if epsilon is None: # check
             h = EPS**(1/3.)*np.maximum(np.abs(x),1e-2)
         else:
-            h = step
-        xh = x + h
-        h = xh - x
+            h = epsilon
+        n = len(x)
+        h = np.array([h] * n) # does this need to allow 2d?
         ee = np.diag(h.ravel())
 
-        f0 = f(*((x,)+args))
+        f0 = f(*((x,)+args), **kwargs)
         # Compute forward step
-        n = len(x)
         g = np.zeros(n);
         for i in range(n):
-            g[i] = f(*((x+ee[i,:],)+args))
+            g[i] = f(*((x+ee[i,:],)+args), **kwargs)
 
-        hess = np.outer(h,h)
+        hess = np.outer(h,h) # this is now epsilon**2
         # Compute "double" forward step
         for i in range(n):
             for j in range(i,n):
-                hess[i,j] = (f(*((x+ee[i,:]+ee[j,:],)+args))-g[i]-g[j]+f0)/hess[i,j]
+                hess[i,j] = (f(*((x+ee[i,:]+ee[j,:],)+args), **kwargs) - \
+                             g[i]-g[j]+f0)/hess[i,j]
                 hess[j,i] = hess[i,j]
         if retgrad:
             grad = (g - f0)/h
