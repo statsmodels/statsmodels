@@ -54,9 +54,17 @@ class CheckGradLoglike(object):
     def test_hess(self):
         for test_params in self.params:
             he = self.mod.hessian(test_params)
-            #TODO: bug
-##            hefd = numdiff.approx_hess(test_params, self.mod.score)
-##            assert_almost_equal(he, hefd, decimal=DEC8)
+            hefd = numdiff.approx_fprime_cs(test_params, self.mod.score)
+            assert_almost_equal(he, hefd, decimal=DEC8)
+
+            #NOTE: notice the accuracy below
+            assert_almost_equal(he, hefd, decimal=7)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score,
+                                         centered=True)
+            assert_almost_equal(he, hefd, decimal=7)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score,
+                                         centered=False)
+            assert_almost_equal(he, hefd, decimal=4)
 
             hescs = numdiff.approx_fprime_cs(test_params.ravel(),
                                                         self.mod.score)
