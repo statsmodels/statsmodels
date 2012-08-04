@@ -362,10 +362,10 @@ class UKDE(_GenericKDE):
         F = 0
         for i in range(self.N):
             k_bar_sum = tools.gpke(bw, tdat=-self.tdat, edat=-self.tdat[i, :],
-                                    var_type=self.var_type,
+                                   var_type=self.var_type,
                                    ckertype='gauss_convolution',
                                    okertype='wangryzin_convolution',
-                                    ukertype='aitchisonaitken_convolution')
+                                   ukertype='aitchisonaitken_convolution')
             F += k_bar_sum
         # there is a + because loo_likelihood returns the negative
         return (F / (self.N ** 2) + self.loo_likelihood(bw) *\
