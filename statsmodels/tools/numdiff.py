@@ -146,25 +146,6 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
             ei[k] = 0.0
     return grad.squeeze().T
 
-def approx_fhess_p(x, p, fprime, epsilon, *args, **kwargs):
-    """
-    Approximate the Hessian when the Jacobian is available.
-
-    Parameters
-    ----------
-    x : array-like
-        Point at which to evaluate the Hessian
-    p : array-like
-        Point
-    fprime : func
-        The Jacobian function
-    epsilon : float
-        Stepsize
-    """
-    f2 = fprime(*((x+epsilon*p,)+args), **kwargs)
-    f1 = fprime(*((x,)+args), **kwargs)
-    return (f2 - f1)/epsilon
-
 def approx_fprime_cs(x, f, epsilon=None, args=(), kwargs={}):
     '''
     Calculate gradient or Jacobian with complex step derivative approximation
