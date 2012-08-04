@@ -37,7 +37,7 @@ import numpy as np
 #NOTE: we only do double precision internally so far
 EPS = np.MachAr().eps
 
-def approx_fprime(x, f, epsilon=1e-12, args=(), centered=False):
+def approx_fprime(x, f, epsilon=1e-12, args=(), kwargs={}, centered=False):
     '''
     Gradient of function, or Jacobian if function f returns 1d array
 
@@ -68,23 +68,24 @@ def approx_fprime(x, f, epsilon=1e-12, args=(), centered=False):
     the Jacobian of the first observation would be [:, 0, :]
     '''
     #TODO:  add scaled stepsize
-    f0 = f(*((x,)+args))
+    f0 = f(*((x,)+args), **kwargs)
     dim = np.atleast_1d(f0).shape # it could be a scalar
     grad = np.zeros((len(x),) + dim, float)
     ei = np.zeros((len(x),), float)
     if not centered:
         for k in range(len(x)):
             ei[k] = epsilon
-            grad[k,:] = (f(*((x+ei,)+args)) - f0)/epsilon
+            grad[k,:] = (f(*((x+ei,)+args), **kwargs) - f0)/epsilon
             ei[k] = 0.0
     else:
         for k in range(len(x)):
             ei[k] = epsilon/2.
-            grad[k,:] = (f(*((x+ei,)+args)) - f(*((x-ei,)+args)))/epsilon
+            grad[k,:] = (f(*((x+ei,)+args), **kwargs) - \
+                         f(*((x-ei,)+args), **kwargs))/epsilon
             ei[k] = 0.0
     return grad.squeeze().T
 
-def approx_hess(x, f, epsilon=None, args=()):
+def approx_hess(x, f, epsilon=None, args=(), kwargs={}):
     '''calculate Hessian with finite difference derivative approximation
 
     Parameters
@@ -123,16 +124,16 @@ def approx_hess(x, f, epsilon=None, args=()):
 
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],)+args))
-                            - f(*((x + ee[i,:] - ee[j,:],)+args))
-                         - (f(*((x - ee[i,:] + ee[j,:],)+args))
-                            - f(*((x - ee[i,:] - ee[j,:],)+args)))
+            hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],)+args), **kwargs)
+                            - f(*((x + ee[i,:] - ee[j,:],)+args), **kwargs)
+                         - (f(*((x - ee[i,:] + ee[j,:],)+args), **kwargs)
+                            - f(*((x - ee[i,:] - ee[j,:],)+args), **kwargs),)
                          )/4./hess[i,j]
             hess[j,i] = hess[i,j]
 
     return hess
 
-def approx_fhess_p(x, p, fprime, epsilon, *args):
+def approx_fhess_p(x, p, fprime, epsilon, *args, **kwargs):
     """
     Approximate the Hessian when the Jacobian is available.
 
@@ -147,11 +148,11 @@ def approx_fhess_p(x, p, fprime, epsilon, *args):
     epsilon : float
 
     """
-    f2 = fprime(*((x+epsilon*p,)+args))
-    f1 = fprime(*((x,)+args))
+    f2 = fprime(*((x+epsilon*p,)+args), **kwargs)
+    f1 = fprime(*((x,)+args), **kwargs)
     return (f2 - f1)/epsilon
 
-def approx_fprime_cs(x, f, args=(), h=1.0e-20):
+def approx_fprime_cs(x, f, epsilon=1.0e-20, args=(), kwargs={}):
     '''
     Calculate gradient or Jacobian with complex step derivative approximation
 
@@ -171,12 +172,12 @@ def approx_fprime_cs(x, f, args=(), h=1.0e-20):
     #May 04 2010 thread "Improvement of performance"
     #http://mail.scipy.org/pipermail/numpy-discussion/2010-May/050250.html
     dim = np.size(x) #TODO: What's the assumption on the shape here?
-    increments = np.identity(dim) * 1j * h
+    increments = np.identity(dim) * 1j * epsilon
     #TODO: see if this can be vectorized, but usually dim is small
-    partials = [f(x+ih, *args).imag / h for ih in increments]
+    partials = [f(x+ih, *args, **kwargs).imag / epsilon for ih in increments]
     return np.array(partials).T
 
-def approx_hess_cs(x, f, epsilon=None, args=()):
+def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
     '''calculate Hessian with complex step (and fd) derivative approximation
 
     Parameters
@@ -215,8 +216,9 @@ def approx_hess_cs(x, f, epsilon=None, args=()):
 
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((x + 1j*ee[i,:] + ee[j,:],)+args))
-                - f(*((x + 1j*ee[i,:] - ee[j,:],)+args))).imag/2./hess[i,j]
+            hess[i,j] = (f(*((x + 1j*ee[i,:] + ee[j,:],)+args), **kwargs)
+                    - f(*((x + 1j*ee[i,:] - ee[j,:],)+args), **kwargs)).imag/\
+                       2./hess[i,j]
             hess[j,i] = hess[i,j]
 
     return hess
