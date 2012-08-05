@@ -49,7 +49,7 @@ class CheckGradLoglike(object):
 
             sccs = numdiff.approx_fprime_cs(test_params.ravel(),
                                                       self.mod.loglike)
-            assert_almost_equal(sc, sccs, decimal=13)
+            assert_almost_equal(sc, sccs, decimal=12)
 
     def test_hess(self):
         for test_params in self.params:
@@ -75,8 +75,7 @@ class CheckGradLoglike(object):
             assert_almost_equal(he, hecs, decimal=DEC6)
 
 
-class estGradMNLogit(CheckGradLoglike):
-    #doesn't work yet because params is 2d and loglike doesn't take raveled
+class TestGradMNLogit(CheckGradLoglike):
     def __init__(self):
         #from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
@@ -87,12 +86,39 @@ class estGradMNLogit(CheckGradLoglike):
         exog = sm.add_constant(exog)
         self.mod = sm.MNLogit(data.endog, exog)
 
-        def loglikeflat(self, params):
+        #def loglikeflat(self, params):
             #reshapes flattened params
-            return self.loglike(params.reshape(6,6))
-        self.mod.loglike = loglikeflat  #need instance method
-        self.params = [np.ones((6,6))]
+        #    return self.loglike(params.reshape(6,6))
+        #self.mod.loglike = loglikeflat  #need instance method
+        #self.params = [np.ones((6,6)).ravel()]
+        res = self.mod.fit(disp=-1)
+        self.params = [res.params.ravel(order='F')]
 
+    def test_hess(self):
+        #NOTE: I had to overwrite this to lessen the tolerance
+        for test_params in self.params:
+            he = self.mod.hessian(test_params)
+            hefd = numdiff.approx_fprime_cs(test_params, self.mod.score)
+            assert_almost_equal(he, hefd, decimal=DEC8)
+
+            #NOTE: notice the accuracy below and the epsilon changes
+            # this doesn't work well for score -> hessian with non-cs step
+            # it's a little better around the optimum
+            assert_almost_equal(he, hefd, decimal=7)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score,
+                                         centered=True)
+            assert_almost_equal(he, hefd, decimal=5)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score, 1e-9,
+                                         centered=False)
+            assert_almost_equal(he, hefd, decimal=2)
+
+            hescs = numdiff.approx_fprime_cs(test_params.ravel(),
+                                                        self.mod.score)
+            assert_almost_equal(he, hescs, decimal=DEC8)
+
+            hecs = numdiff.approx_hess_cs(test_params.ravel(),
+                                                        self.mod.loglike)
+            assert_almost_equal(he, hecs, decimal=5)
 
 class TestGradLogit(CheckGradLoglike):
     def __init__(self):
