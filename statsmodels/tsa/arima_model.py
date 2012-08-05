@@ -339,7 +339,7 @@ class ARMA(tsbase.TimeSeriesModel):
         loglike = self.loglike
         #if self.transparams:
         #    params = self._invtransparams(params)
-        return approx_hess_cs(params, loglike, epsilon=1e-5)
+        return approx_hess_cs(params, loglike)
 
     def _transparams(self, params):
         """
