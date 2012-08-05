@@ -91,7 +91,7 @@ class TestGradMNLogit(CheckGradLoglike):
         #    return self.loglike(params.reshape(6,6))
         #self.mod.loglike = loglikeflat  #need instance method
         #self.params = [np.ones((6,6)).ravel()]
-        res = self.mod.fit(disp=-1)
+        res = self.mod.fit(disp=0)
         self.params = [res.params.ravel(order='F')]
 
     def test_hess(self):
@@ -112,13 +112,18 @@ class TestGradMNLogit(CheckGradLoglike):
                                          centered=False)
             assert_almost_equal(he, hefd, decimal=2)
 
-            hescs = numdiff.approx_fprime_cs(test_params.ravel(),
-                                                        self.mod.score)
+            hescs = numdiff.approx_fprime_cs(test_params, self.mod.score)
             assert_almost_equal(he, hescs, decimal=DEC8)
 
-            hecs = numdiff.approx_hess_cs(test_params.ravel(),
-                                                        self.mod.loglike)
+            hecs = numdiff.approx_hess_cs(test_params, self.mod.loglike)
             assert_almost_equal(he, hecs, decimal=5)
+            #NOTE: these just don't work well
+            #hecs = numdiff.approx_hess1(test_params, self.mod.loglike, 1e-3)
+            #assert_almost_equal(he, hecs, decimal=1)
+            #hecs = numdiff.approx_hess2(test_params, self.mod.loglike, 1e-4)
+            #assert_almost_equal(he, hecs, decimal=0)
+            hecs = numdiff.approx_hess3(test_params, self.mod.loglike, 1e-4)
+            assert_almost_equal(he, hecs, decimal=0)
 
 class TestGradLogit(CheckGradLoglike):
     def __init__(self):
