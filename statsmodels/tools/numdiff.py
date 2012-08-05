@@ -45,7 +45,7 @@ _hessian_docs = """
     x : array_like
        value at which function derivative is evaluated
     f : function
-       function of one array f(x, *args, **kwargs)
+       function of one array f(x, `*args`, `**kwargs`)
     epsilon : float or array-like, optional
        Stepsize used, if None, then stepsize is automatically chosen
        according to EPS**(1/%s)*x.
@@ -65,7 +65,7 @@ _hessian_docs = """
     -----
     Equation (%s) in Ridout. Computes the Hessian as::
 
-    %s
+      %s
 
     where e[j] is a vector with element j == 1 and the rest are zero and
     d[i] is epsilon[i].
@@ -261,7 +261,7 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
         return hess
 
 approx_hess1.__doc__ = _hessian_docs % ("3",
-"""    retgrad : bool
+"""retgrad : bool
         Whether or not to also return the gradient
 """,
 """    grad : nparray
@@ -301,7 +301,7 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
     else:
         return hess
 approx_hess2.__doc__ = _hessian_docs % ("3",
-"""    retgrad : bool
+"""retgrad : bool
         Whether or not to also return the gradient
 """,
 """    grad : nparray
