@@ -195,11 +195,13 @@ def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
     """
     For discrete regressors the marginal effect is
 
-    \Delta F = cdf(XB) | d = 1 - cdf(XB) | d = 0
+    \Delta F = F(XB) | d = 1 - F(XB) | d = 0
 
     The row of the Jacobian for this variable is given by
 
-    pdf(XB)*X | d = 1 - pdf(XB)*X | d = 0
+    f(XB)*X | d = 1 - f(XB)*X | d = 0
+
+    Where F is the default prediction of the model
     """
     for i in dummy_ind:
         exog0 = exog.copy()
@@ -223,11 +225,13 @@ def margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
     """
     For discrete regressors the marginal effect is
 
-    \Delta F = cdf(XB) | d += 1 - cdf(XB) | d -= 1
+    \Delta F = F(XB) | d += 1 - F(XB) | d -= 1
 
     The row of the Jacobian for this variable is given by
 
-    (pdf(XB)*X | d += 1 - pdf(XB)*X | d -= 1) / 2
+    (f(XB)*X | d += 1 - f(XB)*X | d -= 1) / 2
+
+    where F is the default prediction for the model.
     """
     for i in count_ind:
         exog0 = exog.copy()
