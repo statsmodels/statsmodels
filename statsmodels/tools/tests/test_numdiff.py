@@ -74,6 +74,20 @@ class CheckGradLoglike(object):
                                                         self.mod.loglike)
             assert_almost_equal(he, hecs, decimal=DEC6)
 
+            #NOTE: Look at the lack of precision - default epsilon not always
+            #best
+            grad = self.mod.score(test_params)
+            hecs, gradcs = numdiff.approx_hess1(test_params, self.mod.loglike,
+                                              1e-6, return_grad=True)
+            assert_almost_equal(he, hecs, decimal=1)
+            assert_almost_equal(grad, gradcs, decimal=1)
+            hecs, gradcs = numdiff.approx_hess2(test_params, self.mod.loglike,
+                                1e-4, return_grad=True)
+            assert_almost_equal(he, hecs, decimal=3)
+            assert_almost_equal(grad, gradcs, decimal=1)
+            hecs = numdiff.approx_hess3(test_params, self.mod.loglike, 1e-5)
+            assert_almost_equal(he, hecs, decimal=4)
+
 
 class TestGradMNLogit(CheckGradLoglike):
     def __init__(self):
