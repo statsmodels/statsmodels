@@ -27,6 +27,8 @@ from scipy import integrate, stats
 import np_tools as tools
 import scipy.optimize as opt
 import KernelFunctions as kf
+import copy
+from scipy.stats.mstats import mquantiles
 
 __all__ = ['UKDE', 'CKDE', 'Reg']
 
@@ -70,6 +72,136 @@ class GenericKDE (object):
             res = bwfunc()
         return res
 
+    def _compute_dispersion(self, all_vars):
+        if self.__class__.__name__ == "Reg":
+            all_vars = all_vars[:, 1::]
+        s1 = np.std(all_vars, axis=0)
+        q75 = mquantiles(all_vars,0.75, axis=0).data[0]
+        q25 = mquantiles(all_vars,0.25, axis=0).data[0]
+        s2 = (q75-q25) / 1.349
+        s = [min(s1[z], s2[z]) for z in range(len(s1))]
+        s = np.asarray(s)
+        #s = s1
+        return s
+ 
+        
+    def _compute_efficient_randomize(self, bw):
+        sample_scale = np.empty((self.n_res, self.K))
+        only_bw = np.empty((self.n_res, self.K))
+        all_vars = copy.deepcopy(self.all_vars)
+        l = self.all_vars_type.count('c')
+        co = 4
+        do = 4
+        iscontinuous, isordered, isunordered = \
+                tools._get_type_pos(self.all_vars_type)
+        print "Running Block by block efficient bandwidth estimation"
+        for i in xrange(self.n_res):
+            print "Estimating sample ", i + 1, " ..."
+            np.random.shuffle(all_vars)
+            sub_all_vars = all_vars[0 : self.n_sub, :]
+            sub_model = self._call_self(sub_all_vars, bw)
+            s = self._compute_dispersion(sub_all_vars)
+            fct = s * self.n_sub ** (-1./(l + co))
+            fct[isunordered] = self.n_sub ** (-2. / (l + do))
+            fct[isordered] = self.n_sub ** (-2. / (l + do))
+            c = sub_model.bw / fct  #  TODO: Check if this is correct!
+            sample_scale[i, :] = c
+            only_bw[i, :] = sub_model.bw
+            print sub_model.bw
+            
+        s = self._compute_dispersion(all_vars)
+        if self.return_median:
+            median_scale = np.median(sample_scale, axis=0)
+            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Chekc if 1/5 is correct!
+            bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
+        else:
+            mean_scale = np.mean(sample_scale, axis=0)
+            bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
+            bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+        if self.return_only_bw:
+            bw = np.median(only_bw, axis=0)
+
+        return bw 
+
+    def _compute_efficient_all(self, bw):
+        all_vars = copy.deepcopy(self.all_vars)
+        l = self.all_vars_type.count('c')
+        co = 4
+        do = 4
+        iscontinuous, isordered, isunordered = \
+                tools._get_type_pos(self.all_vars_type)
+ 
+        slices = np.arange(0, self.N, self.n_sub)
+        n_slice = len(slices)
+        bounds = [(slices[0:-1][i], slices[1::][i]) for i in range(n_slice - 1)]
+        bounds.append((slices[-1], self.N))
+        sample_scale = np.empty((len(bounds), self.K))
+        only_bw = np.empty((len(bounds), self.K))
+        i = 0
+        for b in bounds:
+            print "Estimating slice ", b, " ..."
+
+            sub_all_vars = all_vars[b[0] : b[1], :]
+            sub_model = self._call_self(sub_all_vars, bw)
+            s = self._compute_dispersion(sub_all_vars)
+            fct = s * self.n_sub ** (-1./(l + co))
+            fct[isunordered] = self.n_sub ** (-2. / (l + do))
+            fct[isordered] = self.n_sub ** (-2. / (l + do))
+            c = sub_model.bw / fct  #  TODO: Check if this is correct!
+            sample_scale[i, :] = c
+            only_bw[i, :] = sub_model.bw
+            i += 1
+            print sub_model.bw
+        s = self._compute_dispersion(all_vars) 
+        if self.return_median:
+            median_scale = np.median(sample_scale, axis=0)
+            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Chekc if 1/5 is correct!
+            bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
+        else:
+            mean_scale = np.mean(sample_scale, axis=0)
+            bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
+            bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+            print "the mean is", bw
+
+        if self.return_only_bw:
+            bw = np.median(only_bw, axis=0)
+
+        return bw 
+
+
+    def _call_self(self, all_vars, bw):
+
+        if self.__class__.__name__ == 'UKDE':
+            model = UKDE(all_vars, self.var_type, bw=bw, 
+                        defaults=SetDefaults(efficient=False))
+
+        if self.__class__.__name__ == 'CKDE':
+            tydat = all_vars[:, 0 : self.K_dep]
+            txdat = all_vars[:, self.K_dep ::]
+            model = CKDE(tydat, txdat, self.dep_type, 
+                        self.indep_type, bw=bw, 
+                        defaults=SetDefaults(efficient=False))
+        if self.__class__.__name__ == 'Reg':
+            tydat = tools.adjust_shape(all_vars[:, 0], 1)
+            txdat = tools.adjust_shape(all_vars[:, 1::], self.K)
+            model = Reg(tydat=tydat, txdat=txdat, reg_type=self.reg_type, 
+                        var_type=self.var_type, bw=bw, 
+                        defaults=SetDefaults(efficient=False))
+  
+        return model
+ 
+    def _set_defaults(self, defaults):
+        self.n_res = defaults.n_res
+        self.n_sub = defaults.n_sub
+        self.randomize = defaults.randomize
+        self.return_median = defaults.return_median
+        self.efficient = defaults.efficient
+        self.return_only_bw = defaults.return_only_bw
+
     def _normal_reference(self):
         """
         Returns Scott's normal reference rule of thumb bandwidth parameter
@@ -89,6 +221,17 @@ class GenericKDE (object):
         c = 1.06
         X = np.std(self.all_vars, axis=0)
         return c * X * self.N ** (- 1. / (4 + np.size(self.all_vars, axis=1)))
+
+    def _set_bw_bounds(self, bw):
+        unit = np.ones((self.K, ))
+        ind0 = np.where(bw < 0)
+        bw[ind0] = 0.
+        iscontinuous, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
+        for i in isordered:
+            bw[i] = min(bw[i], 1.)
+        for i in isunordered:
+            bw[i] = min(bw[i], 1.)
+        return bw
 
     def _cv_ml(self):
         """
@@ -119,6 +262,7 @@ class GenericKDE (object):
         h0 = self._normal_reference()
         bw = opt.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
                       maxiter=1e3, maxfun=1e3, disp=0)
+        bw = self._set_bw_bounds(bw)
         return bw
 
     def _cv_ls(self):
@@ -143,10 +287,22 @@ class GenericKDE (object):
         h0 = self._normal_reference()
         bw = opt.fmin(self.imse, x0=h0, maxiter=1e3,
                       maxfun=1e3, disp=0)
+        bw = self._set_bw_bounds(bw)
         return np.abs(bw)
 
     def loo_likelihood(self):
         pass
+
+
+class SetDefaults(object):
+    def __init__(self, n_res=25, n_sub=50, randomize=True, return_median=True,
+                 efficient=False, return_only_bw=False):
+        self.n_res = n_res
+        self.n_sub = n_sub
+        self.randomize = randomize
+        self.return_median = return_median
+        self.efficient = efficient
+        self.return_only_bw = return_only_bw
 
 
 class UKDE(GenericKDE):
@@ -200,17 +356,26 @@ class UKDE(GenericKDE):
     array([ 0.39967419,  0.38423292])
     """
 
-    def __init__(self, tdat, var_type, bw=None):
+    def __init__(self, tdat, var_type, bw=None, 
+                                defaults = SetDefaults()):
 
         #self.tdat = np.column_stack(tdat)
         self.var_type = var_type
         self.K = len(self.var_type)
         self.tdat = tools.adjust_shape(tdat, self.K)
         self.all_vars = self.tdat
+        self.all_vars_type = var_type
         self.N, self.K = np.shape(self.tdat)
         assert self.K == len(self.var_type)
         assert self.N > self.K  # Num of obs must be > than num of vars
-        self.bw = self.compute_bw(bw)
+        self._set_defaults(defaults)
+        if not self.efficient:
+            self.bw = self.compute_bw(bw)
+        else: 
+            if self.randomize:
+                self.bw = self._compute_efficient_randomize(bw)
+            else:
+                self.bw = self._compute_efficient_all(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -437,21 +602,30 @@ class CKDE(GenericKDE):
     print "The bandwdith is: ", dens_c.bw
     """
 
-    def __init__(self, tydat, txdat, dep_type, indep_type, bw):
+    def __init__(self, tydat, txdat, dep_type, indep_type, bw,
+                            defaults=SetDefaults()):
 
-#        self.tydat = np.column_stack(tydat)
-#        self.txdat = np.column_stack(txdat)
         self.dep_type = dep_type
         self.indep_type = indep_type
+        self.all_vars_type = dep_type + indep_type
         self.K_dep = len(self.dep_type)
         self.K_indep = len(self.indep_type)
         self.tydat = tools.adjust_shape(tydat, self.K_dep)
         self.txdat = tools.adjust_shape(txdat, self.K_indep)
         self.N, self.K_dep = np.shape(self.tydat)
         self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
+        self.K = np.shape(self.all_vars)[1]
         assert len(self.dep_type) == self.K_dep
         assert len(self.indep_type) == np.shape(self.txdat)[1]
-        self.bw = self.compute_bw(bw)
+        self._set_defaults(defaults)
+        if not self.efficient:
+            print "you are here"
+            self.bw = self.compute_bw(bw)
+        else:
+            if self.randomize:
+                self.bw = self._compute_efficient_randomize(bw)
+            else:
+                self.bw = self._compute_efficient_all(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -465,6 +639,7 @@ class CKDE(GenericKDE):
         repr += "Dependent variable types:      " + self.dep_type + "\n"
         repr += "BW selection method: " + self._bw_method + "\n"
         return repr
+
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
@@ -695,7 +870,7 @@ class CKDE(GenericKDE):
         return CV / float(self.N)
 
 
-class Reg(object):
+class Reg(GenericKDE):
     """
     Nonparametric Regression
 
@@ -734,18 +909,24 @@ class Reg(object):
     mean(): Calculates the conditiona mean
     """
 
+<<<<<<< HEAD
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls', censor_var=None):
+=======
+    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
+                defaults=SetDefaults()):
+>>>>>>> nonparametric-reg-block
 
-        #self.tydat = np.column_stack(tydat)
-        #self.txdat = np.column_stack(txdat)
         self.var_type = var_type
+        self.all_vars_type = var_type
         self.reg_type = reg_type
         self.K = len(self.var_type)
         self.tydat = tools.adjust_shape(tydat, 1)
         self.txdat = tools.adjust_shape(txdat, self.K)
+        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
         self.N = np.shape(self.txdat)[0] 
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self.g_lc, ll=self.g_ll)
+<<<<<<< HEAD
         self.censor_var = censor_var
         if self.censor_var is not None:
             self.censored(censor_var)
@@ -753,6 +934,17 @@ class Reg(object):
             self.W_in = np.ones((self.N, 1))
         #print self.W_in
         self.bw = self.compute_bw(bw)
+=======
+        self._set_defaults(defaults)
+        if not self.efficient:
+            self.bw = self.compute_reg_bw(bw)
+        else:
+            
+            if self.randomize:
+                self.bw = self._compute_efficient_randomize(bw)
+            else:
+                self.bw = self._compute_efficient_all(bw)
+>>>>>>> nonparametric-reg-block
 
     def censored(self, censor_var):
         # see pp. 341-344 in [1]
@@ -913,9 +1105,36 @@ class Reg(object):
         #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
         return G, B_x
 
-    def aic_hurvich(self):
-        pass
+    def aic_hurvich(self, bw, func=None):
+        print "running"
+        H = np.empty((self.N, self.N))
+        for i in range(self.N):
+            for j in range(self.N):
+                txdat=np.reshape(self.txdat[i, :], (1, self.K))
+                exdat = np.reshape(self.txdat[j,:], (1, self.K))
+                H[i,j] = tools.gpke(bw, tdat=txdat, edat=exdat,
+                                var_type=self.var_type,
+                                #ukertype='aitchison_aitken_reg',
+                                #okertype='wangryzin_reg', 
+                                tosum=True)
+                denom = tools.gpke(bw, tdat=-self.txdat, edat=-txdat,
+                                var_type=self.var_type,
+                                #ukertype='aitchison_aitken_reg',
+                                #okertype='wangryzin_reg', 
+                                tosum=True)
+                H[i,j] = H[i,j]/denom
+ 
+        I = np.eye(self.N)
+        sig = np.dot(np.dot(self.tydat.T,(I - H).T), (I - H)) * self.tydat / float(self.N)
+        frac = (1 + np.trace(H)/float(self.N)) / (1 - (np.trace(H) +2)/float(self.N))
+        aic = np.log(sig) + frac
 
+    def aic_hurvich_fast(self, bw, func=None):
+        H = np.empty((self.N, self.N))
+        for j in range(self.N):
+            H[:, j] = tools.gpke(bw, tdat=self.txdat, edat=self.txdat[j,:],
+                            var_type=self.var_type, tosum=False)
+        
     def cv_loo(self, bw, func):
         """
         The cross-validation function with leave-one-out
@@ -963,7 +1182,7 @@ class Reg(object):
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N
 
-    def compute_bw(self, bw):
+    def compute_reg_bw(self, bw):
         if not isinstance(bw, basestring):
             self._bw_method = "user-specified"
             return np.asarray(bw)
