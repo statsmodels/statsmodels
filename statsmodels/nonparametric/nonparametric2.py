@@ -931,7 +931,7 @@ class Reg(GenericKDE):
                 self.bw = self._compute_efficient_randomize(bw)
             else:
                 self.bw = self._compute_efficient_all(bw)
-        
+
     def __repr__(self):
         """Provide something sane to print."""
         repr = "Reg instance\n"
@@ -942,7 +942,7 @@ class Reg(GenericKDE):
         repr += "Estimator type: " + self.reg_type + "\n"
         return repr
 
-    def g_ll(self, bw, tydat, txdat, edat, W):
+    def g_ll(self, bw, tydat, txdat, edat):
         """
         Local linear estimator of g(x) in the regression
         y = g(x) + e
@@ -979,9 +979,6 @@ class Reg(GenericKDE):
         iscontinuous = tools._get_type_pos(self.var_type)[0]
         iscontinuous = xrange(self.K)  # Use all vars instead of continuous only
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
-        Ker = Ker * W
-
- 
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
         L = 0
@@ -1011,8 +1008,7 @@ class Reg(GenericKDE):
         mfx = mean_mfx[1::, :]
         return mean, mfx
 
-
-    def g_lc(self, bw, tydat, txdat, edat, W=None):
+    def g_lc(self, bw, tydat, txdat, edat):
         """
         Local constant estimator of g(x) in the regression
         y = g(x) + e
