@@ -82,7 +82,8 @@ def _get_epsilon(x, s, epsilon, n):
         h = EPS**(1./s)*x
     else:
         if np.isscalar(epsilon):
-            h = np.array([epsilon]*n)
+            h = np.empty(n)
+            h.fill(epsilon)
         else:
             h = np.asarray(epsilon)
             if h.shape != x.shape
