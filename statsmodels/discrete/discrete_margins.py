@@ -302,7 +302,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
     """
     if callable(derivative):
         from statsmodels.tools.numdiff import approx_fprime_cs
-        params = params.ravel(order='F') # for Multinomial
+        params = params.ravel('F') # for Multinomial
         try:
             jacobian_mat = approx_fprime_cs(params, derivative,
                                             args=(exog,method))
