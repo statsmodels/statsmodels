@@ -1383,7 +1383,7 @@ class NBin(CountModel):
 
     def hessian(self, params):
         """
-        Hessian of NB2 model.  Currently uses numdifftools
+        Hessian of NB2 model.
         """
         lnalpha = params[-1]
         params = params[:-1]
@@ -1929,7 +1929,7 @@ if __name__=="__main__":
 #    res1 = optimize.fmin_l_bfgs_b(func, np.r_[poiss_res.params,.1],
 #                        approx_grad=True)
     res1 = optimize.fmin_bfgs(func, np.r_[poiss_res.params,.1], fprime=grad)
-    from statsmodels.sandbox.regression.numdiff import approx_hess_cs
+    from statsmodels.tools.numdiff import approx_hess_cs
 #    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
 #NOTE: this is the hessian in terms of alpha _not_ lnalpha
     hess_arr = mod.hessian(res1)

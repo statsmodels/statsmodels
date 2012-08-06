@@ -20,8 +20,8 @@ from statsmodels.tsa.tsatools import (lagmat, add_trend,
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.ar_model import AR
 from statsmodels.tsa.arima_process import arma2ma
-from statsmodels.sandbox.regression.numdiff import (approx_fprime,
-        approx_fprime_cs, approx_hess_cs)
+from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
+        approx_hess_cs)
 from statsmodels.tsa.base.datetools import _index_date
 from statsmodels.tsa.kalmanf import KalmanFilter
 try:
@@ -339,7 +339,7 @@ class ARMA(tsbase.TimeSeriesModel):
         loglike = self.loglike
         #if self.transparams:
         #    params = self._invtransparams(params)
-        return approx_hess_cs(params, loglike, epsilon=1e-5)
+        return approx_hess_cs(params, loglike)
 
     def _transparams(self, params):
         """

@@ -6,7 +6,7 @@ from statsmodels.stats.contrast import ContrastResults
 from statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
 import statsmodels.base.wrapper as wrap
-from statsmodels.sandbox.regression.numdiff import approx_fprime1
+from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
 
@@ -577,7 +577,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     #this is redundant and not used when subclassing
     def initialize(self):
         if not self.score:  # right now score is not optional
-            self.score = approx_fprime1
+            self.score = approx_fprime
             if not self.hessian:
                 pass
         else:   # can use approx_hess_p if we have a gradient
@@ -631,7 +631,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         Gradient of log-likelihood evaluated at params
         '''
-        return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
+        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
 
     def jac(self, params, **kwds):
         '''
@@ -639,15 +639,15 @@ class GenericLikelihoodModel(LikelihoodModel):
         observation.
         '''
         kwds.setdefault('epsilon', 1e-4)
-        return approx_fprime1(params, self.loglikeobs, **kwds)
+        return approx_fprime(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
         '''
         Hessian of log-likelihood evaluated at params
         '''
-        from statsmodels.sandbox.regression.numdiff import approx_hess
+        from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
-        return approx_hess(params, self.loglike)[0]
+        return approx_hess(params, self.loglike)
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):

@@ -13,8 +13,7 @@ import statsmodels.base.model as base
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 from statsmodels.tools.compatibility import np_slogdet
-from statsmodels.sandbox.regression.numdiff import approx_fprime
-from statsmodels.sandbox.regression.numdiff import (approx_hess,
+from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
         approx_hess_cs)
 from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
@@ -386,7 +385,7 @@ class AR(tsbase.TimeSeriesModel):
         Returns numerical hessian for now.
         """
         loglike = self.loglike
-        return approx_hess(params, loglike)[0]
+        return approx_hess(params, loglike)
 
     def _stackX(self, k_ar, trend):
         """
@@ -732,7 +731,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
             return np.sqrt(np.diag(self.cov_params(scale=ols_scale)))
         else:
             hess = approx_hess(self.params, self.model.loglike)
-            return np.sqrt(np.diag(-np.linalg.inv(hess[0])))
+            return np.sqrt(np.diag(-np.linalg.inv(hess)))
 
     @cache_readonly
     def pvalues(self):
