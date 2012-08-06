@@ -101,8 +101,8 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
     f : function
         `f(*((x,)+args), **kwargs)` returning either one value or 1d array
     epsilon : float, optional
-        Stepsize, if None, optimal stepsize is used. This is EPS**(1/2) for
-        `centered` == False and EPS**(1/3) for `centered` == True.
+        Stepsize, if None, optimal stepsize is used. This is EPS**(1/2)*x for
+        `centered` == False and EPS**(1/3)*x for `centered` == True.
     args : tuple
         Tuple of additional arguments for function `f`.
     kwargs : dict
