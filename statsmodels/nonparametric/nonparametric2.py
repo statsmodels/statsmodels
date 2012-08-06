@@ -1020,3 +1020,220 @@ class Reg(object):
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
         return mean, mfx
+
+class CensoredReg(Reg):
+    """
+    Nonparametric Regression
+
+    Calculates the condtional mean E[y|X] where y = g(X) + e
+
+    Parameters
+    ----------
+    tydat: list with one element which is array_like
+        This is the dependent variable.
+    txdat: list
+        The training data for the independent variable(s)
+        Each element in the list is a separate variable
+    dep_type: str
+        The type of the dependent variable(s)
+        c: Continuous
+        u: Unordered (Discrete)
+        o: Ordered (Discrete)
+    reg_type: str
+        Type of regression estimator
+        lc: Local Constant Estimator
+        ll: Local Linear Estimator
+    bw: array-like
+        Either a user-specified bandwidth or
+        the method for bandwidth selection.
+        cv_ls: cross-validaton least squares
+        aic: AIC Hurvich Estimator
+
+    Attributes
+    ---------
+    bw: array-like
+        The bandwidth parameters
+
+    Methods
+    -------
+    r-squared(): Calculates the R-Squared for the model
+    mean(): Calculates the conditiona mean
+    """
+
+    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls', censor_var=None):
+
+        self.var_type = var_type
+        self.reg_type = reg_type
+        self.K = len(self.var_type)
+        self.tydat = tools.adjust_shape(tydat, 1)
+        self.txdat = tools.adjust_shape(txdat, self.K)
+        self.N = np.shape(self.txdat)[0] 
+        self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
+        self.est = dict(lc=self.g_lc, ll=self.g_ll)
+        self.censor_var = censor_var
+        if self.censor_var is not None:
+            self.censored(censor_var)
+        else:
+            self.W_in = np.ones((self.N, 1))
+        self.bw = self.compute_bw(bw)
+
+    def censored(self, censor_var):
+        # see pp. 341-344 in [1]
+        self.d = (self.tydat != censor_var) * 1.
+        ix = np.argsort(np.squeeze(self.tydat))
+        self.tydat = np.squeeze(self.tydat[ix])
+        self.tydat = tools.adjust_shape(self.tydat, 1)
+        self.txdat = np.squeeze(self.txdat[ix])
+        self.d = np.squeeze(self.d[ix])
+        self.W_in = np.empty((self.N, 1))
+        for i in xrange(1, self.N+1):
+            P=1
+            for j in xrange(1, i):
+                P *= ((self.N - j)/(float(self.N)-j+1))**self.d[j-1]
+            self.W_in[i-1,0] = P * self.d[i-1] / (float(self.N) - i + 1 )
+        
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Reg instance\n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: " + self._bw_method + "\n"
+        repr += "Estimator type: " + self.reg_type + "\n"
+        return repr
+
+    def g_ll(self, bw, tydat, txdat, edat, W):
+        """
+        Local linear estimator of g(x) in the regression
+        y = g(x) + e
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth value(s)
+        tydat: 1D array_like
+            The dependent variable
+        txdat: 1D or 2D array_like
+            The independent variable(s)
+        edat: 1D array_like of length K, where K is
+            the number of variables. The point at which
+            the density is estimated
+
+        Returns
+        -------
+        D_x: array_like
+            The value of the conditional mean at edat
+
+        Notes
+        -----
+        See p. 81 in [1] and p.38 in [2] for the formulas
+        Unlike other methods, this one requires that edat be 1D
+        """
+
+        Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
+                            ukertype='aitchison_aitken_reg',
+                            okertype='wangryzin_reg', 
+                            tosum=False)
+        # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
+        # See also p. 38 in [2]
+        iscontinuous = tools._get_type_pos(self.var_type)[0]
+        iscontinuous = xrange(self.K)  # Use all vars instead of continuous only
+        Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
+        Ker = Ker * W
+
+ 
+        N, Qc = np.shape(txdat[:, iscontinuous])
+        Ker = Ker / float(N)
+        L = 0
+        R = 0
+        M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
+        M22 = np.dot(M12.T, M12 * Ker)
+        M22 = np.reshape(M22, (Qc, Qc))
+        M12 = np.sum(M12 * Ker , axis=0)
+        M12 = np.reshape(M12, (1, Qc))
+        M21 = M12.T
+        M11 = np.sum(np.ones((N,1)) * Ker, axis=0)
+        M11 = np.reshape(M11, (1,1))
+        M_1 = np.concatenate((M11, M12), axis=1)
+        M_2 = np.concatenate((M21, M22), axis=1)
+        M = np.concatenate((M_1, M_2), axis=0)
+        V1 = np.sum(np.ones((N,1)) * Ker * tydat, axis=0)
+        V2 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
+        V2 = np.sum(V2 * Ker * tydat , axis=0)
+        V1 = np.reshape(V1, (1,1))
+        V2 = np.reshape(V2, (Qc, 1))
+
+        V = np.concatenate((V1, V2), axis=0)
+        assert np.shape(M) == (Qc + 1, Qc + 1)
+        assert np.shape(V) == (Qc + 1, 1)
+        mean_mfx = np.dot(np.linalg.pinv(M), V)
+        mean = mean_mfx[0]
+        mfx = mean_mfx[1::, :]
+        return mean, mfx
+
+
+    def cv_loo(self, bw, func):
+        """
+        The cross-validation function with leave-one-out
+        estimator
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth values
+        func: callable function
+            Returns the estimator of g(x).
+            Can be either g_lc(local constant) or g_ll(local_linear)
+
+        Returns
+        -------
+        L: float
+            The value of the CV function
+
+        Notes
+        -----
+        Calculates the cross-validation least-squares
+        function. This function is minimized by compute_bw
+        to calculate the optimal value of bw
+
+        For details see p.35 in [2]
+
+        ..math:: CV(h)=n^{-1}\sum_{i=1}^{n}(Y_{i}-g_{-i}(X_{i}))^{2}
+
+        where :math:`g_{-i}(X_{i})` is the leave-one-out estimator of g(X)
+        and :math:`h` is the vector of bandwidths
+
+        """
+        #print "Running"
+        LOO_X = tools.LeaveOneOut(self.txdat)
+        LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        LOO_W = tools.LeaveOneOut(self.W_in).__iter__()
+        i = 0
+        L = 0
+        for X_j in LOO_X:
+            Y = LOO_Y.next()
+            w = LOO_W.next()
+            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :], W=w)[0]
+            L += (self.tydat[i] - G) ** 2
+            i += 1
+        # Note: There might be a way to vectorize this. See p.72 in [1]
+        return L / self.N
+
+    def fit(self, edat=None):
+        """
+        Returns the marginal effects at the edat points
+        """
+        func = self.est[self.reg_type]
+        if edat is None:
+            edat = self.txdat
+        else:
+            edat = tools.adjust_shape(edat, self.K)
+        N_edat = np.shape(edat)[0]
+        mean = np.empty((N_edat,))
+        mfx = np.empty((N_edat, self.K))
+        for i in xrange(N_edat):
+            mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :], W = self.W_in)
+            mean[i] = mean_mfx[0]
+            mfx_c = np.squeeze(mean_mfx[1])
+            mfx[i, :] = mfx_c
+        return mean, mfx
