@@ -297,13 +297,13 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
     derivative is a function.
     """
     if callable(derivative):
-        from statsmodels.sandbox.regression.numdiff import approx_fprime_cs
+        from statsmodels.tools.numdiff import approx_fprime_cs
         params = params.ravel(order='F') # for Multinomial
         try:
             jacobian_mat = approx_fprime_cs(params, derivative,
                                             args=(exog,method))
         except TypeError, err: #norm.cdf doesn't take complex values
-            from statsmodels.sandbox.regression.numdiff import approx_fprime1
+            from statsmodels.tool.numdiff import approx_fprime1
             jacobian_mat = approx_fprime1(params, derivative,
                                             args=(exog,method))
         if at == 'overall':
