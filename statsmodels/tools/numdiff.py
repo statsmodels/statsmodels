@@ -251,8 +251,8 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
     # Compute "double" forward step
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((x+ee[i,:]+ee[j,:],)+args), **kwargs) - \
-                         g[i]-g[j]+f0)/hess[i,j]
+            hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],) + args), **kwargs) - \
+                         g[i] - g[j] + f0)/hess[i,j]
             hess[j,i] = hess[i,j]
     if retgrad:
         grad = (g - f0)/h
@@ -289,9 +289,9 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
     # Compute "double" forward step
     for i in range(n):
         for j in range(i,n):
-            hess[i,j] = (f(*((x+ee[i,:]+ee[j,:],)+args), **kwargs) - \
+            hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],) + args), **kwargs) - \
                          g[i] - g[j] + f0 + \
-                         f(*((x-ee[i,:]-ee[j,:],)+args), **kwargs) - \
+                         f(*((x - ee[i,:] - ee[j,:],) + args), **kwargs) - \
                          gg[i] - gg[j] + f0
                          )/(2*hess[i,j])
             hess[j,i] = hess[i,j]
