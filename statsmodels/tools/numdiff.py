@@ -236,7 +236,7 @@ equation = """1/(2*d_j*d_k) * imag(f(x + i*d[j]*e[j] + d[k]*e[k]) -
                      f(x + i*d[j]*e[j] - d[k]*e[k]))
 """)
 
-def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
+def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, return_grad=False):
     n = len(x)
     h = _get_epsilon(x, 3, epsilon, n)
     ee = np.diag(h)
@@ -254,24 +254,24 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
             hess[i,j] = (f(*((x + ee[i,:] + ee[j,:],) + args), **kwargs) - \
                          g[i] - g[j] + f0)/hess[i,j]
             hess[j,i] = hess[i,j]
-    if retgrad:
+    if return_grad:
         grad = (g - f0)/h
         return hess, grad
     else:
         return hess
 
 approx_hess1.__doc__ = _hessian_docs % dict(scale="3",
-extra_params = """retgrad : bool
+extra_params = """return_grad : bool
         Whether or not to also return the gradient
 """,
 extra_returns = """grad : nparray
-        Gradient if retgrad == True
+        Gradient if return_grad == True
 """,
 equation_number = "7",
 equation = """1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
 """)
 
-def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
+def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, return_grad=False):
     #
     n = len(x)
     #NOTE: ridout suggesting using eps**(1/4)*theta
@@ -295,17 +295,17 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
                          gg[i] - gg[j] + f0
                          )/(2*hess[i,j])
             hess[j,i] = hess[i,j]
-    if retgrad:
+    if return_grad:
         grad = (g - f0)/h
         return hess, grad
     else:
         return hess
 approx_hess2.__doc__ = _hessian_docs % dict(scale="3",
-extra_params = """retgrad : bool
+extra_params = """return_grad : bool
         Whether or not to also return the gradient
 """,
 extra_returns = """grad : nparray
-        Gradient if retgrad == True
+        Gradient if return_grad == True
 """,
 equation_number = "8",
 equation = """1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
