@@ -10,8 +10,9 @@ Should Hessian also work per observation, if fun returns 2d
 import numpy as np
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
-import numdiff
-from numdiff import approx_fprime, approx_fprime_cs, approx_hess_cs
+from statsmodels.tools import numdiff
+from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
+                                       approx_hess_cs)
 
 DEC3 = 3
 DEC4 = 4
@@ -40,36 +41,55 @@ def fun2(beta, y, x):
 #ravel() added because of MNLogit 2d params
 class CheckGradLoglike(object):
     def test_score(self):
-        pass
-        #assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
-
         for test_params in self.params:
             sc = self.mod.score(test_params)
-            scfd = numdiff.approx_fprime1(test_params.ravel(), self.mod.loglike)
+            scfd = numdiff.approx_fprime(test_params.ravel(),
+                                                      self.mod.loglike)
             assert_almost_equal(sc, scfd, decimal=1)
 
-            sccs = numdiff.approx_fprime_cs(test_params.ravel(), self.mod.loglike)
-            assert_almost_equal(sc, sccs, decimal=13)
+            sccs = numdiff.approx_fprime_cs(test_params.ravel(),
+                                                      self.mod.loglike)
+            assert_almost_equal(sc, sccs, decimal=12)
 
     def test_hess(self):
-        pass
-        #assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
-
         for test_params in self.params:
             he = self.mod.hessian(test_params)
-            #TODO: bug
-##            hefd = numdiff.approx_hess(test_params, self.mod.score)
-##            assert_almost_equal(he, hefd, decimal=DEC8)
+            hefd = numdiff.approx_fprime_cs(test_params, self.mod.score)
+            assert_almost_equal(he, hefd, decimal=DEC8)
 
-            hescs = numdiff.approx_fprime_cs(test_params.ravel(), self.mod.score)
+            #NOTE: notice the accuracy below
+            assert_almost_equal(he, hefd, decimal=7)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score,
+                                         centered=True)
+            assert_almost_equal(he, hefd, decimal=7)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score,
+                                         centered=False)
+            assert_almost_equal(he, hefd, decimal=4)
+
+            hescs = numdiff.approx_fprime_cs(test_params.ravel(),
+                                                        self.mod.score)
             assert_almost_equal(he, hescs, decimal=DEC8)
 
-            hecs = numdiff.approx_hess_cs(test_params.ravel(), self.mod.loglike)
+            hecs = numdiff.approx_hess_cs(test_params.ravel(),
+                                                        self.mod.loglike)
             assert_almost_equal(he, hecs, decimal=DEC6)
 
+            #NOTE: Look at the lack of precision - default epsilon not always
+            #best
+            grad = self.mod.score(test_params)
+            hecs, gradcs = numdiff.approx_hess1(test_params, self.mod.loglike,
+                                              1e-6, return_grad=True)
+            assert_almost_equal(he, hecs, decimal=1)
+            assert_almost_equal(grad, gradcs, decimal=1)
+            hecs, gradcs = numdiff.approx_hess2(test_params, self.mod.loglike,
+                                1e-4, return_grad=True)
+            assert_almost_equal(he, hecs, decimal=3)
+            assert_almost_equal(grad, gradcs, decimal=1)
+            hecs = numdiff.approx_hess3(test_params, self.mod.loglike, 1e-5)
+            assert_almost_equal(he, hecs, decimal=4)
 
-class estGradMNLogit(CheckGradLoglike):
-    #doesn't work yet because params is 2d and loglike doesn't take raveled
+
+class TestGradMNLogit(CheckGradLoglike):
     def __init__(self):
         #from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
@@ -80,12 +100,44 @@ class estGradMNLogit(CheckGradLoglike):
         exog = sm.add_constant(exog)
         self.mod = sm.MNLogit(data.endog, exog)
 
-        def loglikeflat(self, params):
+        #def loglikeflat(self, params):
             #reshapes flattened params
-            return self.loglike(params.reshape(6,6))
-        self.mod.loglike = loglikeflat  #need instance method
-        self.params = [np.ones((6,6))]
+        #    return self.loglike(params.reshape(6,6))
+        #self.mod.loglike = loglikeflat  #need instance method
+        #self.params = [np.ones((6,6)).ravel()]
+        res = self.mod.fit(disp=0)
+        self.params = [res.params.ravel(order='F')]
 
+    def test_hess(self):
+        #NOTE: I had to overwrite this to lessen the tolerance
+        for test_params in self.params:
+            he = self.mod.hessian(test_params)
+            hefd = numdiff.approx_fprime_cs(test_params, self.mod.score)
+            assert_almost_equal(he, hefd, decimal=DEC8)
+
+            #NOTE: notice the accuracy below and the epsilon changes
+            # this doesn't work well for score -> hessian with non-cs step
+            # it's a little better around the optimum
+            assert_almost_equal(he, hefd, decimal=7)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score,
+                                         centered=True)
+            assert_almost_equal(he, hefd, decimal=5)
+            hefd = numdiff.approx_fprime(test_params, self.mod.score, 1e-9,
+                                         centered=False)
+            assert_almost_equal(he, hefd, decimal=2)
+
+            hescs = numdiff.approx_fprime_cs(test_params, self.mod.score)
+            assert_almost_equal(he, hescs, decimal=DEC8)
+
+            hecs = numdiff.approx_hess_cs(test_params, self.mod.loglike)
+            assert_almost_equal(he, hecs, decimal=5)
+            #NOTE: these just don't work well
+            #hecs = numdiff.approx_hess1(test_params, self.mod.loglike, 1e-3)
+            #assert_almost_equal(he, hecs, decimal=1)
+            #hecs = numdiff.approx_hess2(test_params, self.mod.loglike, 1e-4)
+            #assert_almost_equal(he, hecs, decimal=0)
+            hecs = numdiff.approx_hess3(test_params, self.mod.loglike, 1e-4)
+            assert_almost_equal(he, hecs, decimal=0)
 
 class TestGradLogit(CheckGradLoglike):
     def __init__(self):
@@ -95,9 +147,9 @@ class TestGradLogit(CheckGradLoglike):
         self.mod = sm.Logit(data.endog, data.exog)
         #res = mod.fit(method="newton")
         self.params = [np.array([1,0.25,1.4,-7])]
-##        loglike = mod.loglike
-##        score = mod.score
-##        hess = mod.hessian
+        ##loglike = mod.loglike
+        ##score = mod.score
+        ##hess = mod.hessian
 
 
 class CheckDerivative(object):
@@ -128,9 +180,9 @@ class CheckDerivative(object):
             gtrue = self.gradtrue(test_params)
             fun = self.fun()
             epsilon = 1e-6
-            gfd = numdiff.approx_fprime1(test_params, fun, epsilon=epsilon,
+            gfd = numdiff.approx_fprime(test_params, fun, epsilon=epsilon,
                                          args=self.args)
-            gfd += numdiff.approx_fprime1(test_params, fun, epsilon=-epsilon,
+            gfd += numdiff.approx_fprime(test_params, fun, epsilon=-epsilon,
                                           args=self.args)
             gfd /= 2.
             assert_almost_equal(gtrue, gfd, decimal=DEC6)
@@ -142,7 +194,7 @@ class CheckDerivative(object):
             fun = self.fun()
 
             epsilon = 1e-6  #default epsilon 1e-6 is not precise enough
-            gfd = numdiff.approx_fprime1(test_params, fun, epsilon=1e-8,
+            gfd = numdiff.approx_fprime(test_params, fun, epsilon=1e-8,
                                          args=self.args, centered=True)
             assert_almost_equal(gtrue, gfd, decimal=DEC5)
 
@@ -162,11 +214,20 @@ class CheckDerivative(object):
             if not hetrue is None: #Hessian doesn't work for 2d return of fun
                 fun = self.fun()
                 #default works, epsilon 1e-6 or 1e-8 is not precise enough
-                hefd = numdiff.approx_hess(test_params, fun, #epsilon=1e-8,
-                                             args=self.args)[0] #TODO:should be kwds
+                hefd = numdiff.approx_hess1(test_params, fun, #epsilon=1e-8,
+                                             args=self.args)
+                                             #TODO:should be kwds
                 assert_almost_equal(hetrue, hefd, decimal=DEC3)
                 #TODO: I reduced precision to DEC3 from DEC4 because of
                 #    TestDerivativeFun
+                hefd = numdiff.approx_hess2(test_params, fun, #epsilon=1e-8,
+                                             args=self.args)
+                                             #TODO:should be kwds
+                assert_almost_equal(hetrue, hefd, decimal=DEC3)
+                hefd = numdiff.approx_hess3(test_params, fun, #epsilon=1e-8,
+                                             args=self.args)
+                                             #TODO:should be kwds
+                assert_almost_equal(hetrue, hefd, decimal=DEC3)
 
     def test_hess_fun1_cs(self):
         for test_params in self.params:
@@ -253,7 +314,7 @@ if __name__ == '__main__':
 
     gt = (-x*2*(y-np.dot(x, [1,2,3]))[:,None])
     g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)#.T   #this shouldn't be transposed
-    gd = numdiff.approx_fprime1((1,2,3),fun1,epsilon,(y,x))
+    gd = numdiff.approx_fprime((1,2,3),fun1,epsilon,(y,x))
     print maxabs(g, gt)
     print maxabs(gd, gt)
 
@@ -274,10 +335,10 @@ if __name__ == '__main__':
     #maybe calculating ndtr for real and imag parts separately, if we need it
     #and if it still works in this case
     print 'sm', score(test_params)
-    print 'fd', numdiff.approx_fprime1(test_params,loglike,epsilon)
+    print 'fd', numdiff.approx_fprime(test_params,loglike,epsilon)
     print 'cs', numdiff.approx_fprime_cs(test_params,loglike)
     print 'sm', hess(test_params)
-    print 'fd', numdiff.approx_fprime1(test_params,score,epsilon)
+    print 'fd', numdiff.approx_fprime(test_params,score,epsilon)
     print 'cs', numdiff.approx_fprime_cs(test_params, score)
 
     #print 'fd', numdiff.approx_hess(test_params, loglike, epsilon) #TODO: bug
