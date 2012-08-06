@@ -168,7 +168,7 @@ class GenericKDE (object):
             print "the mean is", bw
 
         if self.return_only_bw:
-            bw = np.mean(only_bw, axis=0)
+            bw = np.median(only_bw, axis=0)
 
         return bw 
 
