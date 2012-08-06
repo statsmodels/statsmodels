@@ -141,7 +141,7 @@ def approx_fprime(x, f, epsilon=None, args=(), kwargs={}, centered=False):
         for k in range(len(x)):
             ei[k] = epsilon[k]
             grad[k,:] = (f(*((x+ei,)+args), **kwargs) - \
-                         f(*((x-ei,)+args), **kwargs))/epsilon[k]
+                         f(*((x-ei,)+args), **kwargs))/(2 * epsilon[k])
             ei[k] = 0.0
     return grad.squeeze().T
 
