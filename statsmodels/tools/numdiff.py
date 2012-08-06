@@ -85,9 +85,7 @@ def _get_epsilon(x, s, epsilon, n):
             h = np.array([epsilon]*n)
         else:
             h = np.asarray(epsilon)
-            try:
-                assert h.shape == x.shape
-            except:
+            if h.shape != x.shape
                 raise ValueError("If h is not a scalar it must have the same"
                         " shape as x.")
     return h
