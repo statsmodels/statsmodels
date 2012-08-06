@@ -48,24 +48,24 @@ _hessian_docs = """
        function of one array f(x, `*args`, `**kwargs`)
     epsilon : float or array-like, optional
        Stepsize used, if None, then stepsize is automatically chosen
-       according to EPS**(1/%s)*x.
+       according to EPS**(1/%(scale)s)*x.
     args : tuple
         Arguments for function `f`.
     kwargs : dict
         Keyword arguments for function `f`.
-    %s
+    %(extra_params)s
 
     Returns
     -------
     hess : ndarray
        array of partial second derivatives, Hessian
-    %s
+    %(extra_returns)s
 
     Notes
     -----
-    Equation (%s) in Ridout. Computes the Hessian as::
+    Equation (%(equation_number)s) in Ridout. Computes the Hessian as::
 
-      %s
+      %(equation)s
 
     where e[j] is a vector with element j == 1 and the rest are zero and
     d[i] is epsilon[i].
@@ -230,9 +230,10 @@ def approx_hess_cs(x, f, epsilon=None, args=(), kwargs={}):
     return hess
 approx_hess_cs.__doc__ = "Calculate Hessian with complex-step derivative " +\
                          "approximation\n" +\
-                         "\n".join(_hessian_docs.split("\n")[1:]) % ("3", "",
-                                 "", "10",
-"""1/(2*d_j*d_k) * imag(f(x + i*d[j]*e[j] + d[k]*e[k]) -
+                         "\n".join(_hessian_docs.split("\n")[1:]) % dict(
+                                 scale="3", extra_params="",
+                                 extra_returns="", equation_number="10",
+equation = """1/(2*d_j*d_k) * imag(f(x + i*d[j]*e[j] + d[k]*e[k]) -
                      f(x + i*d[j]*e[j] - d[k]*e[k]))
 """)
 
@@ -260,15 +261,15 @@ def approx_hess1(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
     else:
         return hess
 
-approx_hess1.__doc__ = _hessian_docs % ("3",
-"""retgrad : bool
+approx_hess1.__doc__ = _hessian_docs % dict(scale="3",
+extra_params = """retgrad : bool
         Whether or not to also return the gradient
 """,
-"""    grad : nparray
+extra_returns = """grad : nparray
         Gradient if retgrad == True
 """,
-    "7",
-"""1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
+equation_number = "7",
+equation = """1/(d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])))
 """)
 
 def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
@@ -300,15 +301,15 @@ def approx_hess2(x, f, epsilon=None, args=(), kwargs={}, retgrad=False):
         return hess, grad
     else:
         return hess
-approx_hess2.__doc__ = _hessian_docs % ("3",
-"""retgrad : bool
+approx_hess2.__doc__ = _hessian_docs % dict(scale="3",
+extra_params = """retgrad : bool
         Whether or not to also return the gradient
 """,
-"""    grad : nparray
+extra_returns = """grad : nparray
         Gradient if retgrad == True
 """,
-    "8",
-"""1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
+equation_number = "8",
+equation = """1/(2*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j])) -
                  (f(x + d[k]*e[k]) - f(x)) +
                  (f(x - d[j]*e[j] - d[k]*e[k]) - f(x + d[j]*e[j])) -
                  (f(x - d[k]*e[k]) - f(x)))
@@ -330,9 +331,9 @@ def approx_hess3(x, f, epsilon=None, args=(), kwargs={}):
             hess[j,i] = hess[i,j]
     return hess
 
-approx_hess3.__doc__ = _hessian_docs % ("4", "", "",
-    "9",
-"""1/(4*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j]
+approx_hess3.__doc__ = _hessian_docs % dict(scale="4", extra_params="",
+        extra_returns="", equation_number = "9",
+equation = """1/(4*d_j*d_k) * ((f(x + d[j]*e[j] + d[k]*e[k]) - f(x + d[j]*e[j]
                                                      - d[k]*e[k])) -
                  (f(x - d[j]*e[j] + d[k]*e[k]) - f(x - d[j]*e[j]
                                                      - d[k]*e[k]))""")
