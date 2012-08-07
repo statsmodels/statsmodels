@@ -36,10 +36,10 @@ from scipy import optimize
 from scipy.stats import chi2
 import warnings
 
+
 class OptAFT:
     def __init__(self):
         pass
-
 
     def _wtd_grad(self, eta1, est_vect, wts):
         """
@@ -60,7 +60,7 @@ class OptAFT:
         gradient: m x 1 array
             The gradient used in _wtd_modif_newton
         """
-        wts = wts.reshape(-1,1)
+        wts = wts.reshape(-1, 1)
         nobs = self.uncens_nobs
         data = est_vect.T
         data_star_prime = (np.sum(wts) + np.dot(eta1, data))
@@ -68,8 +68,8 @@ class OptAFT:
         not_idx = ~idx
         data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
         data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
-        data_star_prime = data_star_prime.reshape(nobs, 1) # log*'
-        return np.dot(data, wts*data_star_prime)
+        data_star_prime = data_star_prime.reshape(nobs, 1)  # log*'
+        return np.dot(data, wts * data_star_prime)
 
     def _wtd_hess(self, eta1, est_vect, wts):
         """
@@ -99,8 +99,7 @@ class OptAFT:
         data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
         data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
         wtd_dsdp = wts * data_star_doub_prime
-        return np.dot(data, wtd_dsdp*data.T)
-
+        return np.dot(data, wtd_dsdp * data.T)
 
     def _wtd_log_star(self, eta1, est_vect, wts):
         """
@@ -124,8 +123,8 @@ class OptAFT:
         """
         nobs = self.uncens_nobs
         data = est_vect.T
-        data_star = np.log(wts).reshape(-1,1)\
-           + (np.sum(wts) + np.dot(eta1, data)).reshape(-1,1)
+        data_star = np.log(wts).reshape(-1, 1)\
+           + (np.sum(wts) + np.dot(eta1, data)).reshape(-1, 1)
         idx = data_star < 1. / nobs
         not_idx = ~idx
         data_star[idx] = np.log(1 / nobs) - 1.5 +\
@@ -160,7 +159,6 @@ class OptAFT:
                               disp=0)
         return res[0].T
 
-
     def _opt_wtd_nuis_regress(self, test_vals):
         """
         A function that is optimized over nuisance parameters to conduct a
@@ -194,8 +192,8 @@ class OptAFT:
 
     def _EM_test(self, nuisance_params, param_nums=None, b0_vals=None,
                 F=None, survidx=None, uncens_nobs=None,
-                numcensbelow=None, km=None, uncensored=None, censored=None,maxiter=None,
-                ftol=None):
+                numcensbelow=None, km=None, uncensored=None, censored=None,
+                maxiter=None, ftol=None):
         """
         Uses EM algorithm to compute the maximum likelihood of a test
 
@@ -210,14 +208,14 @@ class OptAFT:
 
         Returns
         -------
-        -2 ''*'' log likelihood ratio at hypothesized values and nuisance params
+        -2 ''*'' log likelihood ratio at hypothesized values and
+        nuisance params
 
         Notes
         -----
-        F, survidx, uncens_nobs, numcensbelow, km, uncensored, censored are provided by
-        the test_beta function.
+        Optional parameters are provided by the test_beta function.
         """
-        iters=0
+        iters = 0
         params = np.copy(self.params())
         params[param_nums] = b0_vals
 
@@ -227,12 +225,12 @@ class OptAFT:
         to_test = params.reshape(self.nvar, 1)
         opt_res = np.inf
         diff = np.inf
-        while iters < maxiter and diff>ftol:
+        while iters < maxiter and diff > ftol:
             F = F.flatten()
-            death=np.cumsum(F[::-1])
+            death = np.cumsum(F[::-1])
             survivalprob = death[::-1]
             surv_point_mat = np.dot(F.reshape(-1, 1),
-                                1./survivalprob[survidx].reshape(1,-1))
+                                1. / survivalprob[survidx].reshape(1, - 1))
             surv_point_mat = add_constant(surv_point_mat, prepend=1)
             summed_wts = np.cumsum(surv_point_mat, axis=1)
             wts = summed_wts[np.int_(np.arange(uncens_nobs)),
@@ -246,19 +244,18 @@ class OptAFT:
                 # ^ M step
             diff = np.abs(new_opt_res - opt_res)
             opt_res = new_opt_res
-            iters = iters+1
+            iters = iters + 1
         death = np.cumsum(F.flatten()[::-1])
         survivalprob = death[::-1]
         llike = -opt_res + np.sum(np.log(survivalprob[survidx]))
 
-        wtd_km = km.flatten()/np.sum(km)
+        wtd_km = km.flatten() / np.sum(km)
         survivalmax = np.cumsum(wtd_km[::-1])[::-1]
         llikemax = np.sum(np.log(wtd_km[uncensored])) + \
           np.sum(np.log(survivalmax[censored]))
         if iters == maxiter:
             warnings.warn('The EM reached the maximum number of iterations')
         return -2 * (llike - llikemax)
-
 
 
 class emplikeAFT(OptAFT):
@@ -272,11 +269,11 @@ class emplikeAFT(OptAFT):
         self.endog = self.endog[self.idx]
         self.exog = self.exog[self.idx]
         self.censors = self.censors[self.idx]
-        self.censors[-1]=1 # Sort in init, not in function
+        self.censors[-1] = 1  # Sort in init, not in function
         self.uncens_nobs = np.sum(self.censors)
-        self.uncens_endog = self.endog[np.bool_(self.censors),:].reshape(-1,1)
-        self.uncens_exog = self.exog[np.bool_(self.censors.flatten()),:]
-
+        self.uncens_endog = self.endog[np.bool_(self.censors), :].\
+          reshape(-1, 1)
+        self.uncens_exog = self.exog[np.bool_(self.censors.flatten()), :]
 
     def _is_tied(self, endog, censors):
         """
@@ -398,11 +395,11 @@ class emplikeAFT(OptAFT):
         params = res.params
         return params
 
-    def test_beta(self, b0_vals, param_nums, ftol=10 **-5, maxiter=30,
+    def test_beta(self, b0_vals, param_nums, ftol=10 ** - 5, maxiter=30,
                   print_weights=1):
         """
-        Returns the profile log likelihood for regression parameters 'param_num' and value
-        'value'
+        Returns the profile log likelihood for regression parameters
+        'param_num' at 'b0_vals.'
 
         Parameters
         ----------
@@ -416,11 +413,12 @@ class emplikeAFT(OptAFT):
             How many iterations to use in the EM algorithm.  Default is 30
 
         ftol: float, optional
-            The function tolerance for the EM optimization.  Default is 10''**''-5
+            The function tolerance for the EM optimization.
+            Default is 10''**''-5
 
         print_weights: bool
-            If true, returns the weights tate maximize the profile log likelihood.
-            Default is False
+            If true, returns the weights tate maximize the profile
+            log likelihood. Default is False
 
         Returns
         -------
@@ -431,12 +429,13 @@ class emplikeAFT(OptAFT):
         Notes
         ----
 
-        The function will warn if the EM reaches the maxiter.  However, when optimizing
-        over nuisance parameters, it is possible to reach a maximum number of inner
-        iterations for a specific value for the nuisance parameters while the results
-        of the function are still valid  This usually occurs when the optimization
-        over the nuisance parameters selects paramater values that yield a log-likihood
-        ratio close to infinity.
+        The function will warn if the EM reaches the maxiter.  However, when
+        optimizing over nuisance parameters, it is possible to reach a
+        maximum number of inner iterations for a specific value for the
+        nuisance parameters while the resultsof the function are still valid.
+        This usually occurs when the optimization over the nuisance parameters
+        selects paramater values that yield a log-likihood ratio close to
+        infinity.
 
         Examples
         -------
@@ -479,28 +478,24 @@ class emplikeAFT(OptAFT):
         uncens_nobs = self.uncens_nobs
         F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
         # Step 0 ^
-        params=self.params()
-        survidx = np.where(censors==0)
-        survidx = survidx[0] - np.arange(len(survidx[0])) #Zhou's K
-        numcensbelow =  np.int_(np.cumsum(1-censors))
+        params = self.params()
+        survidx = np.where(censors == 0)
+        survidx = survidx[0] - np.arange(len(survidx[0]))
+        numcensbelow = np.int_(np.cumsum(1 - censors))
         if len(param_nums) == len(params):
-            llr = self._EM_test([], F=F , param_nums=param_nums,
+            llr = self._EM_test([], F=F, param_nums=param_nums,
                                 b0_vals=b0_vals, survidx=survidx,
-                             uncens_nobs=uncens_nobs, numcensbelow=numcensbelow,
-                             km=km, uncensored=uncensored, censored=censored, ftol=ftol,
-                             maxiter=25)
+                             uncens_nobs=uncens_nobs,
+                             numcensbelow=numcensbelow, km=km,
+                             uncensored=uncensored, censored=censored,
+                             ftol=ftol, maxiter=25)
             return llr, chi2.sf(llr, self.nvar)
         else:
             x0 = np.delete(params, param_nums)
             res = optimize.fmin_powell(self._EM_test, x0,
-                                   (param_nums, b0_vals, F, survidx, uncens_nobs,
-                                numcensbelow, km, uncensored, censored, maxiter, ftol),
-                                full_output=1)
+                                   (param_nums, b0_vals, F, survidx,
+                                    uncens_nobs, numcensbelow, km, uncensored,
+                                    censored, maxiter, ftol), full_output=1)
 
             llr = res[1]
             return llr, chi2.sf(llr, len(param_nums))
-
-
-
-
-
