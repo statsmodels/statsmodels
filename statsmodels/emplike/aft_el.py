@@ -34,6 +34,7 @@ from elregress import ElLinReg
 from statsmodels.base.model import _fit_mle_newton
 from scipy import optimize
 from scipy.stats import chi2
+import warnings
 
 class OptAFT:
     def __init__(self):
@@ -184,7 +185,7 @@ class OptAFT:
         self.est_vect = self.uncens_exog * (self.uncens_endog -
                                             np.dot(self.uncens_exog,
                                                          self.new_params))
-        eta_star = self._wtd_modif_newton(self.start_lbda, self.est_vect,
+        eta_star = self._wtd_modif_newton(np.zeros(self.nvar), self.est_vect,
                                          self._fit_weights)
         self.eta_star = eta_star
         denom = np.sum(self._fit_weights) + np.dot(eta_star, self.est_vect.T)
@@ -193,7 +194,8 @@ class OptAFT:
 
     def _EM_test(self, nuisance_params,
                 F=None, survidx=None, uncens_nobs=None,
-                numcensbelow=None, km=None, uncensored=None, censored=None,maxiter=None):
+                numcensbelow=None, km=None, uncensored=None, censored=None,maxiter=None,
+                ftol=None):
         """
         Uses EM algorithm to compute the maximum likelihood of a test
 
@@ -223,7 +225,9 @@ class OptAFT:
                                            self.param_nums))
         params[nuis_param_index] = nuisance_params
         to_test = params.reshape(self.nvar, 1)
-        while iters < maxiter:
+        opt_res = np.inf
+        diff = np.inf
+        while iters < maxiter and diff>ftol:
             F = F.flatten()
             death=np.cumsum(F[::-1])
             survivalprob = death[::-1]
@@ -236,10 +240,12 @@ class OptAFT:
             # ^E step
             # See Zhou 2005, section 3.
             self._fit_weights = wts
-            opt_res = self._opt_wtd_nuis_regress(to_test)
+            new_opt_res = self._opt_wtd_nuis_regress(to_test)
                 # ^ Uncensored weights' contribution to likelihood value.
             F = self.new_weights
                 # ^ M step
+            diff = np.abs(new_opt_res - opt_res)
+            opt_res = new_opt_res
             iters = iters+1
         death = np.cumsum(F.flatten()[::-1])
         survivalprob = death[::-1]
@@ -249,6 +255,8 @@ class OptAFT:
         survivalmax = np.cumsum(wtd_km[::-1])[::-1]
         llikemax = np.sum(np.log(wtd_km[uncensored])) + \
           np.sum(np.log(survivalmax[censored]))
+        if iters == maxiter:
+            warnings.warn('The EM reached the maximum number of iterations')
         return -2 * (llike - llikemax)
 
 
@@ -407,16 +415,28 @@ class emplikeAFT(OptAFT):
         maxiter: int, optional
             How many iterations to use in the EM algorithm.  Default is 30
 
+        ftol: float, optional
+            The function tolerance for the EM optimization.  Default is 10''**''-5
+
         print_weights: bool
-            If true, returns the weights the maximize the profile log likelihood.
+            If true, returns the weights tate maximize the profile log likelihood.
             Default is False
-
-
 
         Returns
         -------
+
         test_results: tuple
             The log-likelihood and p-pvalue of the test.
+
+        Notes
+        ----
+
+        The function will warn if the EM reaches the maxiter.  However, when optimizing
+        over nuisance parameters, it is possible to reach a maximum number of inner
+        iterations for a specific value for the nuisance parameters while the results
+        of the function are still valid  This usually occurs when the optimization
+        over the nuisance parameters selects paramater values that yield a log-likihood
+        ratio close to infinity.
 
         Examples
         -------
@@ -446,9 +466,6 @@ class emplikeAFT(OptAFT):
         >>>(1.4657739632606308, 0.22601365256959183)
 
         """
-
-        self.start_lbda = np.zeros(self.nvar)
-        # Starting value for Newton Optimizer
         censors = self.censors
         endog = self.endog
         exog = self.exog
@@ -472,13 +489,15 @@ class emplikeAFT(OptAFT):
         if len(self.param_nums) == len(params):
             llr = self._EM_test([], F=F , survidx=survidx,
                              uncens_nobs=uncens_nobs, numcensbelow=numcensbelow,
-                             km=km, uncensored=uncensored, censored=censored, maxiter=25)
+                             km=km, uncensored=uncensored, censored=censored, ftol=ftol,
+                             maxiter=25)
             return llr, chi2.sf(llr, self.nvar)
         else:
             x0 = np.delete(params, self.param_nums)
             res = optimize.fmin_powell(self._EM_test, x0,
                                    (F, survidx, uncens_nobs,
-                                numcensbelow, km, uncensored, censored, maxiter), full_output=1)
+                                numcensbelow, km, uncensored, censored, maxiter, ftol),
+                                full_output=1)
 
             llr = res[1]
             return llr, chi2.sf(llr, len(param_num))
