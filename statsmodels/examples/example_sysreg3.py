@@ -21,6 +21,6 @@ res2sls = mod2sls.fit()
 #print res2sls.summary()
 
 mod3sls = Sys3SLS(sys)
-res3sls = mod3sls.fit()
+res3sls = mod3sls.fit(igls=True)
 #print res3sls.summary()
 

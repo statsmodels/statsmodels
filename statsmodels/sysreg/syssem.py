@@ -102,11 +102,37 @@ class SysSEM(SysModel):
                 sparse.eye(self.nobs, self.nobs))*X).todense())
         else:
             return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
- 
-    def fit(self):
+
+    def _compute_res(self):
         params = np.squeeze(np.dot(self.pinv_wxhat, self.wendog))
         normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
-        return SysResults(self, params, normalized_cov_params)
+        return (params, normalized_cov_params)
+
+    def fit(self, igls=False, tol=1e-5, maxiter=100):
+        res = self._compute_res()
+        if not(igls):
+            return SysResults(self, res[0], res[1])
+
+        betas = [res[0], np.inf]
+        iterations = 1
+
+        while np.any(np.abs(betas[0] - betas[1]) > tol) \
+                and iterations < maxiter:
+            # Update sigma
+            fittedvalues = (self.sp_exog*betas[0]).reshape(self.neqs,-1).T
+            resids = self.endog.T - fittedvalues
+            self.sigma = self._compute_sigma(resids)
+            # Update attributes
+            self.initialize()
+            # Next iteration
+            res = self._compute_res()
+            betas = [res[0], betas[0]]
+            iterations += 1
+       
+        self.iterations = iterations
+        beta = betas[0]
+        normalized_cov_params = self._compute_res()[1]
+        return SysResults(self, beta, normalized_cov_params)
 
     def predict(self, params, exog=None):
         '''
