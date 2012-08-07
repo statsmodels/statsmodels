@@ -14,7 +14,7 @@ def unique_cols(a):
 
 class SysSEM(SysModel):
     """
-    Two-Stage Least Squares for Simultaneous equations
+    Least Squares for Simultaneous equations
 
     Parameters
     ----------
@@ -106,10 +106,6 @@ class SysSEM(SysModel):
     def fit(self):
         params = np.squeeze(np.dot(self.pinv_wxhat, self.wendog))
         normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
-
-        #omegainv = np.kron(np.linalg.inv(cov_resids), np.identity(self.nobs))
-        #normalized_cov_params = np.linalg.inv((xhat.T * omegainv) * xhat)
-
         return SysResults(self, params, normalized_cov_params)
 
     def predict(self, params, exog=None):
