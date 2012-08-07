@@ -3,7 +3,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 
 import statsmodels.api as sm
 from statsmodels.sysreg.sysmodel import SysSUR 
-from statsmodels.sysreg.syssem import Sys2SLS
+from statsmodels.sysreg.syssem import Sys2SLS, Sys3SLS
 
 class CheckSysregResults(object):
     # TODO : adjust better rtol/atol
@@ -119,6 +119,15 @@ class Test2SLS(CheckSysregResults):
         from results.results_sysreg import R2SLS
         res2 = R2SLS
         res1 = Sys2SLS(kmenta_sys).fit()
+        cls.res1 = res1
+        cls.res2 = res2
+
+class Test3SLS(CheckSysregResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_sysreg import R3SLS
+        res2 = R3SLS
+        res1 = Sys3SLS(kmenta_sys).fit()
         cls.res1 = res1
         cls.res2 = res2
 
