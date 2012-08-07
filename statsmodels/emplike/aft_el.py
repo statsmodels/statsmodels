@@ -32,6 +32,7 @@ import numpy as np
 from statsmodels.api import WLS, add_constant
 from elregress import ElLinReg
 from statsmodels.base.model import _fit_mle_newton
+from scipy import optimize
 
 class OptAFT:
     def __init__(self):
@@ -187,12 +188,13 @@ class OptAFT:
         self.est_vect = self.uncens_exog * (self.uncens_endog -
                                             np.dot(self.uncens_exog,
                                                          self.new_params))
+        print 'here'
         eta_star = self._wtd_modif_newton(self.start_lbda, self.est_vect,
                                          self._fit_weights)
         self.eta_star = eta_star
         denom = np.sum(self._fit_weights) + np.dot(eta_star, self.est_vect.T)
         self.new_weights = self._fit_weights / denom
-        return np.sum(np.log(self.new_weights))
+        return -1 * np.sum(np.log(self.new_weights))
 
 
 
@@ -202,15 +204,16 @@ class emplikeAFT(OptAFT):
         self.endog = endog.reshape(self.nobs, 1)
         self.exog = exog.reshape(self.nobs, -1)
         self.censors = censors.reshape(self.nobs, 1)
+        self.nvar = self.exog.shape[1]
         self.idx = np.lexsort((-self.censors[:, 0], self.endog[:, 0]))
         self.endog = self.endog[self.idx]
         self.exog = self.exog[self.idx]
         self.censors = self.censors[self.idx]
         self.censors[-1]=1 # Sort in init, not in function
         self.uncens_nobs = np.sum(censors)
-        self.uncens_endog = self.endog[np.bool_(self.censors)].reshape(-1,1)
-        self.uncens_exog = self.exog[np.bool_(self.censors)].reshape(-1,1)
-        self.nvar = self.exog.shape[1]
+        self.uncens_endog = self.endog[np.bool_(self.censors),:].reshape(-1,1)
+        self.uncens_exog = self.exog[np.bool_(self.censors.flatten()),:]
+
 
     def _is_tied(self, endog, censors):
         """
@@ -355,14 +358,12 @@ class emplikeAFT(OptAFT):
         reg_model.hy_test_beta(value, param_num)
         km = self._make_km(self.endog, self.censors).flatten()
         uncens_nobs = self.uncens_nobs
-        init_F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
-        self.init_F = init_F
-        # init_F is step 0 in Zhou (2005)
+        F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
+        # Step 0 ^
         iters=1
         self.b0_vals = value
         self.param_nums =param_num
         params=self.params()
-        F = init_F
         survidx = np.where(censors==0)
         survidx = survidx[0] - np.arange(len(survidx[0])) #Zhou's K
         numcensbelow =  np.int_(np.cumsum(1-censors))
@@ -376,20 +377,32 @@ class emplikeAFT(OptAFT):
             summed_wts = np.cumsum(surv_point_mat, axis=1)
             wts = summed_wts[np.int_(np.arange(uncens_nobs)),
                              numcensbelow[uncensored]]
+            # ^E step
             # See Zhou 2005, section 3.
             self._fit_weights = wts
             if len(self.param_nums) == len(params):
                 opt_res = self._opt_wtd_nuis_regress(self.b0_vals)
                 # ^ Uncensored weights' contribution to likelihood value.
                 F = self.new_weights
+                # ^ M step
+            else:
+                #x0 = np.delete(self.params(), self.param_nums)
+                x0 = np.array([5])
+                print x0
+                opt_res = optimize.fmin_powell(self._opt_wtd_nuis_regress,
+                                               x0, full_output=1)[1]
+                print 'here'
+                F = self.new_weights
             iters = iters+1
         death = np.cumsum(F.flatten()[::-1])
         survivalprob = death[::-1]
-        llike = opt_res + np.sum(np.log(survivalprob[survidx]))
+        llike = -opt_res + np.sum(np.log(survivalprob[survidx]))
+        print llike
         wtd_km = km.flatten()/np.sum(km)
         survivalmax = np.cumsum(wtd_km[::-1])[::-1]
         llikemax = np.sum(np.log(wtd_km[uncensored])) + \
           np.sum(np.log(survivalmax[censored]))
+        print llikemax
         return -2 * (llike - llikemax)
 
 
