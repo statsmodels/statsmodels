@@ -159,7 +159,7 @@ class OptAFT:
         return res[0].T
 
 
-    def _opt_wtd_nuis_regress(self, nuisance_params):
+    def _opt_wtd_nuis_regress(self, test_vals):
         """
         A function that is optimized over nuisance parameters to conduct a
         hypothesis test for the parameters of interest
@@ -179,22 +179,55 @@ class OptAFT:
             hypothesized value of the parameter(s) of interest.
 
         """
-        params = np.copy(self.params())
-        params[self.param_nums] = self.b0_vals
-        nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
-                                             self.param_nums))
-        params[nuis_param_index] = nuisance_params
-        self.new_params = params.reshape(self.nvar, 1)
+        self.new_params = test_vals.reshape(self.nvar, 1)
         self.est_vect = self.uncens_exog * (self.uncens_endog -
                                             np.dot(self.uncens_exog,
                                                          self.new_params))
-        print 'here'
         eta_star = self._wtd_modif_newton(self.start_lbda, self.est_vect,
                                          self._fit_weights)
         self.eta_star = eta_star
         denom = np.sum(self._fit_weights) + np.dot(eta_star, self.est_vect.T)
         self.new_weights = self._fit_weights / denom
         return -1 * np.sum(np.log(self.new_weights))
+
+    def EM_test(self, nuisance_params,
+                F=None, survidx=None, uncens_nobs=None,
+                numcensbelow=None, km=None, uncensored=None, censored=None,maxiter=25):
+        iters=0
+        params = np.copy(self.params())
+        params[self.param_nums] = self.b0_vals
+
+        nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
+                                           self.param_nums))
+        params[nuis_param_index] = nuisance_params
+        to_test = params.reshape(self.nvar, 1)
+        while iters < maxiter:
+            F = F.flatten()
+            death=np.cumsum(F[::-1])
+            survivalprob = death[::-1]
+            surv_point_mat = np.dot(F.reshape(-1, 1),
+                                1./survivalprob[survidx].reshape(1,-1))
+            surv_point_mat = add_constant(surv_point_mat, prepend=1)
+            summed_wts = np.cumsum(surv_point_mat, axis=1)
+            wts = summed_wts[np.int_(np.arange(uncens_nobs)),
+                             numcensbelow[uncensored]]
+            # ^E step
+            # See Zhou 2005, section 3.
+            self._fit_weights = wts
+            opt_res = self._opt_wtd_nuis_regress(to_test)
+                # ^ Uncensored weights' contribution to likelihood value.
+            F = self.new_weights
+                # ^ M step
+            iters = iters+1
+        death = np.cumsum(F.flatten()[::-1])
+        survivalprob = death[::-1]
+        llike = -opt_res + np.sum(np.log(survivalprob[survidx]))
+
+        wtd_km = km.flatten()/np.sum(km)
+        survivalmax = np.cumsum(wtd_km[::-1])[::-1]
+        llikemax = np.sum(np.log(wtd_km[uncensored])) + \
+          np.sum(np.log(survivalmax[censored]))
+        return -2 * (llike - llikemax)
 
 
 
@@ -342,6 +375,7 @@ class emplikeAFT(OptAFT):
 
         Censored Observations have weight 0.rt
         """
+
         if start_lbda is None:
             self.start_lbda = np.zeros(self.nvar)
         else:
@@ -360,50 +394,65 @@ class emplikeAFT(OptAFT):
         uncens_nobs = self.uncens_nobs
         F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
         # Step 0 ^
-        iters=1
         self.b0_vals = value
         self.param_nums =param_num
         params=self.params()
         survidx = np.where(censors==0)
         survidx = survidx[0] - np.arange(len(survidx[0])) #Zhou's K
         numcensbelow =  np.int_(np.cumsum(1-censors))
-        while iters < maxiter:
-            F = F.flatten()
-            death=np.cumsum(F[::-1])
-            survivalprob = death[::-1]
-            surv_point_mat = np.dot(F.reshape(-1, 1),
-                                1./survivalprob[survidx].reshape(1,-1))
-            surv_point_mat = add_constant(surv_point_mat, prepend=1)
-            summed_wts = np.cumsum(surv_point_mat, axis=1)
-            wts = summed_wts[np.int_(np.arange(uncens_nobs)),
-                             numcensbelow[uncensored]]
-            # ^E step
-            # See Zhou 2005, section 3.
-            self._fit_weights = wts
-            if len(self.param_nums) == len(params):
-                opt_res = self._opt_wtd_nuis_regress(self.b0_vals)
-                # ^ Uncensored weights' contribution to likelihood value.
-                F = self.new_weights
-                # ^ M step
-            else:
-                #x0 = np.delete(self.params(), self.param_nums)
-                x0 = np.array([5])
-                print x0
-                opt_res = optimize.fmin_powell(self._opt_wtd_nuis_regress,
-                                               x0, full_output=1)[1]
-                print 'here'
-                F = self.new_weights
-            iters = iters+1
-        death = np.cumsum(F.flatten()[::-1])
-        survivalprob = death[::-1]
-        llike = -opt_res + np.sum(np.log(survivalprob[survidx]))
-        print llike
-        wtd_km = km.flatten()/np.sum(km)
-        survivalmax = np.cumsum(wtd_km[::-1])[::-1]
-        llikemax = np.sum(np.log(wtd_km[uncensored])) + \
-          np.sum(np.log(survivalmax[censored]))
-        print llikemax
-        return -2 * (llike - llikemax)
+        if len(self.param_nums) == len(params):
+            return self.EM_test([], F=F , survidx=survidx,
+                             uncens_nobs=uncens_nobs, numcensbelow=numcensbelow,
+                             km=km, uncensored=uncensored, censored=censored, maxiter=25)
+        else:
+            x0 = np.delete(params, self.param_nums)
+            res = optimize.fmin_powell(self.EM_test, x0,
+                                   (F, survidx, uncens_nobs,
+                                    numcensbelow, km, uncensored, censored, 25), full_output=1)
+
+            llratio = res[1]
+            return llratio
+
+
+
+        # if len(self.param_nums)==len(params):
+            #opt_res = self.
+
+        # while iters < maxiter:
+        #     F = F.flatten()
+        #     death=np.cumsum(F[::-1])
+        #     survivalprob = death[::-1]
+        #     surv_point_mat = np.dot(F.reshape(-1, 1),
+        #                         1./survivalprob[survidx].reshape(1,-1))
+        #     surv_point_mat = add_constant(surv_point_mat, prepend=1)
+        #     summed_wts = np.cumsum(surv_point_mat, axis=1)
+        #     wts = summed_wts[np.int_(np.arange(uncens_nobs)),
+        #                      numcensbelow[uncensored]]
+        #     # ^E step
+        #     # See Zhou 2005, section 3.
+        #     self._fit_weights = wts
+        #     if len(self.param_nums) == len(params):
+        #         opt_res = self._opt_wtd_nuis_regress(self.b0_vals)
+        #         # ^ Uncensored weights' contribution to likelihood value.
+        #         F = self.new_weights
+        #         # ^ M step
+        #     else:
+        #         #x0 = np.delete(self.params(), self.param_nums)
+        #         x0 = np.array([0])
+        #         opt_res = optimize.fmin_powell(self._opt_wtd_nuis_regress,
+        #                                        x0, full_output=1)[1]
+        #         F = self.new_weights
+        #     iters = iters+1
+        # death = np.cumsum(F.flatten()[::-1])
+        # survivalprob = death[::-1]
+        # llike = -opt_res + np.sum(np.log(survivalprob[survidx]))
+        # print llike
+        # wtd_km = km.flatten()/np.sum(km)
+        # survivalmax = np.cumsum(wtd_km[::-1])[::-1]
+        # llikemax = np.sum(np.log(wtd_km[uncensored])) + \
+        #   np.sum(np.log(survivalmax[censored]))
+        # print llikemax
+        #return -2 * (llike - llikemax)
 
 
 
