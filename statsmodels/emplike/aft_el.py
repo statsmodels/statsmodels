@@ -181,18 +181,18 @@ class OptAFT:
             hypothesized value of the parameter(s) of interest.
 
         """
-        self.new_params = test_vals.reshape(self.nvar, 1)
-        self.est_vect = self.uncens_exog * (self.uncens_endog -
+        test_params = test_vals.reshape(self.nvar, 1)
+        est_vect = self.uncens_exog * (self.uncens_endog -
                                             np.dot(self.uncens_exog,
-                                                         self.new_params))
-        eta_star = self._wtd_modif_newton(np.zeros(self.nvar), self.est_vect,
+                                                         test_params))
+        eta_star = self._wtd_modif_newton(np.zeros(self.nvar), est_vect,
                                          self._fit_weights)
         self.eta_star = eta_star
-        denom = np.sum(self._fit_weights) + np.dot(eta_star, self.est_vect.T)
+        denom = np.sum(self._fit_weights) + np.dot(eta_star, est_vect.T)
         self.new_weights = self._fit_weights / denom
         return -1 * np.sum(np.log(self.new_weights))
 
-    def _EM_test(self, nuisance_params,
+    def _EM_test(self, nuisance_params, param_nums=None, b0_vals=None,
                 F=None, survidx=None, uncens_nobs=None,
                 numcensbelow=None, km=None, uncensored=None, censored=None,maxiter=None,
                 ftol=None):
@@ -219,10 +219,10 @@ class OptAFT:
         """
         iters=0
         params = np.copy(self.params())
-        params[self.param_nums] = self.b0_vals
+        params[param_nums] = b0_vals
 
         nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
-                                           self.param_nums))
+                                           param_nums))
         params[nuis_param_index] = nuisance_params
         to_test = params.reshape(self.nvar, 1)
         opt_res = np.inf
@@ -398,7 +398,7 @@ class emplikeAFT(OptAFT):
         params = res.params
         return params
 
-    def test_beta(self, value, param_num, ftol=10 **-5, maxiter=30,
+    def test_beta(self, b0_vals, param_nums, ftol=10 **-5, maxiter=30,
                   print_weights=1):
         """
         Returns the profile log likelihood for regression parameters 'param_num' and value
@@ -406,7 +406,7 @@ class emplikeAFT(OptAFT):
 
         Parameters
         ----------
-        value: list
+        b0_vals: list
             The value of parameters to be tested
 
         param_num: list
@@ -469,38 +469,36 @@ class emplikeAFT(OptAFT):
         censors = self.censors
         endog = self.endog
         exog = self.exog
-        censors[-1] = 1
         uncensored = (censors == 1).flatten()
         censored = (censors == 0).flatten()
         uncens_endog = endog[uncensored]
         uncens_exog = exog[uncensored, :]
         reg_model = ElLinReg(uncens_endog, uncens_exog)
-        reg_model.hy_test_beta(value, param_num)
-        km = self._make_km(self.endog, self.censors).flatten()
+        reg_model.hy_test_beta(b0_vals, param_nums)
+        km = self._make_km(endog, censors).flatten()
         uncens_nobs = self.uncens_nobs
         F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
         # Step 0 ^
-        self.b0_vals = value
-        self.param_nums =param_num
         params=self.params()
         survidx = np.where(censors==0)
         survidx = survidx[0] - np.arange(len(survidx[0])) #Zhou's K
         numcensbelow =  np.int_(np.cumsum(1-censors))
-        if len(self.param_nums) == len(params):
-            llr = self._EM_test([], F=F , survidx=survidx,
+        if len(param_nums) == len(params):
+            llr = self._EM_test([], F=F , param_nums=param_nums,
+                                b0_vals=b0_vals, survidx=survidx,
                              uncens_nobs=uncens_nobs, numcensbelow=numcensbelow,
                              km=km, uncensored=uncensored, censored=censored, ftol=ftol,
                              maxiter=25)
             return llr, chi2.sf(llr, self.nvar)
         else:
-            x0 = np.delete(params, self.param_nums)
+            x0 = np.delete(params, param_nums)
             res = optimize.fmin_powell(self._EM_test, x0,
-                                   (F, survidx, uncens_nobs,
+                                   (param_nums, b0_vals, F, survidx, uncens_nobs,
                                 numcensbelow, km, uncensored, censored, maxiter, ftol),
                                 full_output=1)
 
             llr = res[1]
-            return llr, chi2.sf(llr, len(param_num))
+            return llr, chi2.sf(llr, len(param_nums))
 
 
 
