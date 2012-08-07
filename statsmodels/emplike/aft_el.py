@@ -265,7 +265,7 @@ class emplikeAFT(OptAFT):
         self.exog = self.exog[self.idx]
         self.censors = self.censors[self.idx]
         self.censors[-1]=1 # Sort in init, not in function
-        self.uncens_nobs = np.sum(censors)
+        self.uncens_nobs = np.sum(self.censors)
         self.uncens_endog = self.endog[np.bool_(self.censors),:].reshape(-1,1)
         self.uncens_exog = self.exog[np.bool_(self.censors.flatten()),:]
 
@@ -418,6 +418,32 @@ class emplikeAFT(OptAFT):
         test_results: tuple
             The log-likelihood and p-pvalue of the test.
 
+        Examples
+        -------
+
+        import statsmodels.api as sm
+        import numpy as np
+
+        # Test parameter is .05 in one regressor no intercept model
+        data=sm.datasets.heart.load()
+        y = np.log10(data.endog)
+        x = data.exog
+        cens = data.censors
+        model = sm.emplike.emplikeAFT(y, x, cens)
+        res=model.test_beta([0], [0])
+        >>>res
+        >>>(1.4657739632606308, 0.22601365256959183)
+
+        #Test slope is 0 in  model with intercept
+
+        data=sm.datasets.heart.load()
+        y = np.log10(data.endog)
+        x = data.exog
+        cens = data.censors
+        model = sm.emplike.emplikeAFT(y, sm.add_constant(x, prepend=1), cens)
+        res=model.test_beta([0], [1])
+        >>>res
+        >>>(1.4657739632606308, 0.22601365256959183)
 
         """
 
@@ -460,20 +486,4 @@ class emplikeAFT(OptAFT):
 
 
 
-koul_data = np.genfromtxt('/home/justin/rverify.csv', delimiter=';')
-# ^ Change path to where file is located.
-koul_y = np.log10(koul_data[:, 0])
-#koul_x = sm.add_constant(koul_data[:, 2], prepend=2)
-koul_x = koul_data[:,2]
-koul_censors = koul_data[:, 1]
-koul_model = emplikeAFT(koul_y, koul_x, koul_censors,).params()
-koul_censors[14] =1
-newky = koul_y[koul_censors==1]
-newkx = koul_x[koul_censors==1]
 
-
-def f(x=1, y=2):
-    return x +y
-
-def outerf(afunc, scale, *args):
-    return afunc(*args)*2
