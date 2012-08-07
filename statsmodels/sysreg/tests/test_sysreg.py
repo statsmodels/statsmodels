@@ -131,3 +131,12 @@ class Test3SLS(CheckSysregResults):
         cls.res1 = res1
         cls.res2 = res2
 
+class TestI3SLS(CheckSysregResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_sysreg import RI3SLS
+        res2 = RI3SLS
+        res1 = Sys3SLS(kmenta_sys).fit(igls=True)
+        cls.res1 = res1
+        cls.res2 = res2
+
