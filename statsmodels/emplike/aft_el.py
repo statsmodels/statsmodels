@@ -33,6 +33,7 @@ from statsmodels.api import WLS, add_constant
 from elregress import ElLinReg
 from statsmodels.base.model import _fit_mle_newton
 from scipy import optimize
+from scipy.stats import chi2
 
 class OptAFT:
     def __init__(self):
@@ -190,9 +191,30 @@ class OptAFT:
         self.new_weights = self._fit_weights / denom
         return -1 * np.sum(np.log(self.new_weights))
 
-    def EM_test(self, nuisance_params,
+    def _EM_test(self, nuisance_params,
                 F=None, survidx=None, uncens_nobs=None,
-                numcensbelow=None, km=None, uncensored=None, censored=None,maxiter=25):
+                numcensbelow=None, km=None, uncensored=None, censored=None,maxiter=None):
+        """
+        Uses EM algorithm to compute the maximum likelihood of a test
+
+        Parameters
+        ---------
+
+        Nuisance Params: array
+            Vector of values to be used as nuisance params.
+
+        maxiter: int
+            Number of iterations in the EM algorithm for a parameter vector
+
+        Returns
+        -------
+        -2 ''*'' log likelihood ratio at hypothesized values and nuisance params
+
+        Notes
+        -----
+        F, survidx, uncens_nobs, numcensbelow, km, uncensored, censored are provided by
+        the test_beta function.
+        """
         iters=0
         params = np.copy(self.params())
         params[self.param_nums] = self.b0_vals
@@ -368,18 +390,39 @@ class emplikeAFT(OptAFT):
         params = res.params
         return params
 
-    def test_beta(self, value, param_num, ftol=10 **-5, maxiter=100,
-                  print_weights=1, start_lbda=None ):
+    def test_beta(self, value, param_num, ftol=10 **-5, maxiter=30,
+                  print_weights=1):
         """
-        Some notes:
+        Returns the profile log likelihood for regression parameters 'param_num' and value
+        'value'
 
-        Censored Observations have weight 0.rt
+        Parameters
+        ----------
+        value: list
+            The value of parameters to be tested
+
+        param_num: list
+            Which parameters to be tested
+
+        maxiter: int, optional
+            How many iterations to use in the EM algorithm.  Default is 30
+
+        print_weights: bool
+            If true, returns the weights the maximize the profile log likelihood.
+            Default is False
+
+
+
+        Returns
+        -------
+        test_results: tuple
+            The log-likelihood and p-pvalue of the test.
+
+
         """
 
-        if start_lbda is None:
-            self.start_lbda = np.zeros(self.nvar)
-        else:
-            self.start_lbda = start_lbda
+        self.start_lbda = np.zeros(self.nvar)
+        # Starting value for Newton Optimizer
         censors = self.censors
         endog = self.endog
         exog = self.exog
@@ -401,58 +444,18 @@ class emplikeAFT(OptAFT):
         survidx = survidx[0] - np.arange(len(survidx[0])) #Zhou's K
         numcensbelow =  np.int_(np.cumsum(1-censors))
         if len(self.param_nums) == len(params):
-            return self.EM_test([], F=F , survidx=survidx,
+            llr = self._EM_test([], F=F , survidx=survidx,
                              uncens_nobs=uncens_nobs, numcensbelow=numcensbelow,
                              km=km, uncensored=uncensored, censored=censored, maxiter=25)
+            return llr, chi2.sf(llr, self.nvar)
         else:
             x0 = np.delete(params, self.param_nums)
-            res = optimize.fmin_powell(self.EM_test, x0,
+            res = optimize.fmin_powell(self._EM_test, x0,
                                    (F, survidx, uncens_nobs,
-                                    numcensbelow, km, uncensored, censored, 25), full_output=1)
+                                numcensbelow, km, uncensored, censored, maxiter), full_output=1)
 
-            llratio = res[1]
-            return llratio
-
-
-
-        # if len(self.param_nums)==len(params):
-            #opt_res = self.
-
-        # while iters < maxiter:
-        #     F = F.flatten()
-        #     death=np.cumsum(F[::-1])
-        #     survivalprob = death[::-1]
-        #     surv_point_mat = np.dot(F.reshape(-1, 1),
-        #                         1./survivalprob[survidx].reshape(1,-1))
-        #     surv_point_mat = add_constant(surv_point_mat, prepend=1)
-        #     summed_wts = np.cumsum(surv_point_mat, axis=1)
-        #     wts = summed_wts[np.int_(np.arange(uncens_nobs)),
-        #                      numcensbelow[uncensored]]
-        #     # ^E step
-        #     # See Zhou 2005, section 3.
-        #     self._fit_weights = wts
-        #     if len(self.param_nums) == len(params):
-        #         opt_res = self._opt_wtd_nuis_regress(self.b0_vals)
-        #         # ^ Uncensored weights' contribution to likelihood value.
-        #         F = self.new_weights
-        #         # ^ M step
-        #     else:
-        #         #x0 = np.delete(self.params(), self.param_nums)
-        #         x0 = np.array([0])
-        #         opt_res = optimize.fmin_powell(self._opt_wtd_nuis_regress,
-        #                                        x0, full_output=1)[1]
-        #         F = self.new_weights
-        #     iters = iters+1
-        # death = np.cumsum(F.flatten()[::-1])
-        # survivalprob = death[::-1]
-        # llike = -opt_res + np.sum(np.log(survivalprob[survidx]))
-        # print llike
-        # wtd_km = km.flatten()/np.sum(km)
-        # survivalmax = np.cumsum(wtd_km[::-1])[::-1]
-        # llikemax = np.sum(np.log(wtd_km[uncensored])) + \
-        #   np.sum(np.log(survivalmax[censored]))
-        # print llikemax
-        #return -2 * (llike - llikemax)
+            llr = res[1]
+            return llr, chi2.sf(llr, len(param_num))
 
 
 
