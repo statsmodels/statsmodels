@@ -47,16 +47,13 @@ class _OptFuncts(ELModel):
     def __init__(self, endog):
         super(_OptFuncts, self).__init__(endog)
 
-    def _get_j_y(self, eta1, est_vect):
+    def _wtd_hess(self, eta1, est_vect, wts):
         """
-        Calculates J and y via the log*' and log*''.
-
-        Maximizing log* is done via sequential regression of
-        y on J.
+        Calculates the hessian of a weighted empirical likelihood
+        provlem.
 
         Parameters
         ----------
-
         eta1: 1xm array.
 
         This is the value of lamba used to write the
@@ -65,57 +62,52 @@ class _OptFuncts(ELModel):
 
         Returns
         -------
-        J: n x m matrix
-            J'J is the hessian for optimizing
-
-        y: n x 1 array
-            -J'y is the gradient for maximizing
-
-        See Owen pg. 63
+        hess: m x m array
+            Weighted hessian used in _wtd_modif_newton
         """
-
-        nobs = self.nobs
+        nobs = est_vect.shape[0]
         data = est_vect.T
-        data_star_prime = (1. + np.dot(eta1, data))
-        data_star_doub_prime = np.copy(1. + np.dot(eta1, data))
+        wts = wts.reshape(-1, 1)
+        data_star_doub_prime = np.copy(np.sum(wts) + np.dot(eta1, data))
+        idx = data_star_doub_prime < 1. / nobs
+        not_idx = ~idx
+        data_star_doub_prime[idx] = - nobs ** 2
+        data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
+        data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
+        wtd_dsdp = wts * data_star_doub_prime
+        return np.dot(data, wtd_dsdp * data.T)
+
+    def _wtd_grad(self, eta1, est_vect, wts):
+        """
+        Calculates the gradient of a weighted empirical likelihood
+        problem.
+
+
+        Parameters
+        ----------
+        eta1: 1xm array.
+
+        This is the value of lamba used to write the
+        empirical likelihood probabilities in terms of the lagrangian
+        multiplier.
+
+        Returns
+        -------
+        gradient: m x 1 array
+            The gradient used in _wtd_modif_newton
+        """
+        wts = wts.reshape(-1, 1)
+        nobs = est_vect.shape[0]
+        data = est_vect.T
+        data_star_prime = (np.sum(wts) + np.dot(eta1, data))
         idx = data_star_prime < 1. / nobs
         not_idx = ~idx
         data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
         data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
-        data_star_doub_prime[idx] = - nobs ** 2
-        data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
-        data_star_prime = data_star_prime.reshape(nobs, 1)
-        data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
-        root_star = np.sqrt(- 1 * data_star_doub_prime).reshape(nobs, 1)
-        JJ = root_star * est_vect
-        yy = data_star_prime / root_star
-        return JJ, yy
+        data_star_prime = data_star_prime.reshape(nobs, 1)  # log*'
+        return np.dot(data, wts * data_star_prime)
 
-    def _log_star(self, eta1, est_vect):
-        """
-        Parameters
-        ---------
-        eta1: float
-            Lagrangian multiplier
-
-        Returns
-        ------
-
-        data_star: array
-            The logstar of the estimting equations
-        """
-        nobs = self.nobs
-        data = est_vect.T
-        data_star = (1 + np.dot(eta1, data))
-        idx = data_star < 1. / nobs
-        not_idx = ~idx
-        data_star[idx] = np.log(1 / nobs) - 1.5 +\
-                  2. * nobs * data_star[idx] -\
-                  ((nobs * data_star[idx]) ** 2.) / 2
-        data_star[not_idx] = np.log(data_star[not_idx])
-        return data_star
-
-    def _modif_newton(self,  x0, est_vect):
+    def _modif_newton(self,  x0, est_vect, wts):
         """
         Modified Newton's method for maximizing the log* equation.
 
@@ -133,11 +125,9 @@ class _OptFuncts(ELModel):
         See Owen pg. 64
         """
         x0 = x0.reshape(est_vect.shape[1], 1)
-        f = lambda x0: - np.sum(self._log_star(x0.T, est_vect))
-        grad = lambda x0: - np.dot((self._get_j_y(x0.T, est_vect)[0]).T, \
-                              (self._get_j_y(x0.T, est_vect)[1]))
-        hess = lambda x0: np.dot((self._get_j_y(x0.T, est_vect)[0]).T,
-                                 (self._get_j_y(x0.T, est_vect)[0]))
+        f = lambda x0: - np.sum(self._wtd_log_star(x0.T, est_vect, wts))
+        grad = lambda x0: - self._wtd_grad(x0.T, est_vect, wts)
+        hess = lambda x0: - self._wtd_hess(x0.T, est_vect, wts)
         kwds = {'tol': 1e-8}
         res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
@@ -241,7 +231,8 @@ class _OptFuncts(ELModel):
         mu_data = (endog - nuisance_mu)
         est_vect = np.concatenate((mu_data, sig_data), axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
-                                               1. / nobs]), est_vect)
+                                               1. / nobs]), est_vect,
+                                                np.ones(nobs)*(1./nobs))
 
         denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
@@ -298,7 +289,8 @@ class _OptFuncts(ELModel):
                                        axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]), est_vect)
+                                               1. / nobs]), est_vect,
+                                               np.ones(nobs)*(1./nobs))
         denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -332,7 +324,8 @@ class _OptFuncts(ELModel):
                                        axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]), est_vect)
+                                               1. / nobs]), est_vect,
+                                               np.ones(nobs)*(1./nobs))
         denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -369,7 +362,8 @@ class _OptFuncts(ELModel):
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]), est_vect)
+                                               1. / nobs]), est_vect,
+                                               np.ones(nobs)*(1./nobs))
         denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -446,7 +440,8 @@ class _OptFuncts(ELModel):
                                                1. / nobs,
                                                1. / nobs,
                                                1. / nobs,
-                                               1. / nobs]), est_vect)
+                                               1. / nobs]), est_vect,
+                                               np.ones(nobs)*(1./nobs))
         denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -1276,7 +1271,8 @@ class DescStatMV(_OptFuncts):
         means = mu_array * means
         est_vect = endog - means
         start_vals = 1 / nobs * np.ones(endog.shape[1])
-        eta_star = self._modif_newton(start_vals, est_vect)
+        eta_star = self._modif_newton(start_vals, est_vect,
+                                      np.ones(nobs)*(1./nobs))
         denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1 / nobs * 1 / denom
         llr = -2 * np.sum(np.log(nobs * self.new_weights))
