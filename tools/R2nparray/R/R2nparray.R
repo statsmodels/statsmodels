@@ -11,12 +11,7 @@ mkarray <- function(X, name) {
 }
 
 R2nparray <- function(..., fname, append=FALSE) {
-    if (!is.list(...)) {
-        to_write <- list(...)
-    }
-    else {
-        to_write <- (...)
-    }
+    to_write<-as.data.frame(...)  
     sink(file=fname, append=append)
     # assumes appended file already imports numpy
     if (file.info(fname)$size == 0) {
