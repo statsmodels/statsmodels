@@ -38,6 +38,34 @@ import warnings
 
 
 class OptAFT:
+    """
+    Provides optimization functions used in estimating and conducting
+    inference in an AFT model.
+
+    Methods
+    ------
+
+    _wtd_grad:
+        Calculates the weighted gradient in the Newton step
+
+    _wtd_hess:
+        Calculates the weighted Hessian in the Newton step
+
+    _wtd_log_star
+        changes the log of the date to the log star.
+
+    _wtd_modif_newton:
+        Conducts Newton's method optimization using weighted data
+
+    _opt_wtd_nuis_regress:
+        Function optimized over nuisance parameters to compute
+        the profile likelihood
+
+    _EM_test:
+        Uses the modified Em algorithm of Zhou 2005 to maximize the
+        likelihood of a parameter vector.
+
+    """
     def __init__(self):
         pass
 
@@ -248,7 +276,6 @@ class OptAFT:
         death = np.cumsum(F.flatten()[::-1])
         survivalprob = death[::-1]
         llike = -opt_res + np.sum(np.log(survivalprob[survidx]))
-
         wtd_km = km.flatten() / np.sum(km)
         survivalmax = np.cumsum(wtd_km[::-1])[::-1]
         llikemax = np.sum(np.log(wtd_km[uncensored])) + \
@@ -259,16 +286,78 @@ class OptAFT:
 
 
 class emplikeAFT(OptAFT):
+    """
+
+    Class for estimating and conducting inference in an AFT model.
+
+    Parameters
+    ---------
+
+    endog: nx1 array
+        Response variables that are subject to random censoring
+
+    exog: nxk array
+        Matrix of covariates
+
+    censors: nx1 array
+        array with entries 0 or 1.  0 indicates a response was
+        censored.
+
+    Attributes
+    ----------
+
+    nobs: float
+        Number of observations
+
+    endog: array
+        Endog attay
+
+    exog: array
+        Exogenous variable matrix
+
+    censors
+        Censors array but sets the max(endog) to uncensored
+
+    nvar: float
+        Number of exogenous variables
+
+    uncens_nobs: float
+        Number of uncensored observations
+
+    uncens_endog: array
+        Uncensored response variables
+
+    uncens_exog: array
+        Exogenous variables of the uncensored observations
+
+    Methods
+    -------
+
+    params:
+        Fits model parameters
+
+    test_beta:
+        Tests if beta = b0 for any vector b0.
+
+    Notes
+    -----
+
+    The data is immediately sorted in order of increasing endogenous
+    variables
+
+    The last observation is assumed to be uncensored which makes
+    estimation and inference possible.
+    """
     def __init__(self, endog, exog, censors):
         self.nobs = float(np.shape(exog)[0])
         self.endog = endog.reshape(self.nobs, 1)
         self.exog = exog.reshape(self.nobs, -1)
         self.censors = censors.reshape(self.nobs, 1)
         self.nvar = self.exog.shape[1]
-        self.idx = np.lexsort((-self.censors[:, 0], self.endog[:, 0]))
-        self.endog = self.endog[self.idx]
-        self.exog = self.exog[self.idx]
-        self.censors = self.censors[self.idx]
+        idx = np.lexsort((-self.censors[:, 0], self.endog[:, 0]))
+        self.endog = self.endog[idx]
+        self.exog = self.exog[idx]
+        self.censors = self.censors[idx]
         self.censors[-1] = 1  # Sort in init, not in function
         self.uncens_nobs = np.sum(self.censors)
         self.uncens_endog = self.endog[np.bool_(self.censors), :].\
@@ -462,7 +551,7 @@ class emplikeAFT(OptAFT):
         model = sm.emplike.emplikeAFT(y, sm.add_constant(x, prepend=1), cens)
         res=model.test_beta([0], [1])
         >>>res
-        >>>(1.4657739632606308, 0.22601365256959183)
+        >>>(4.623487775078047, 0.031537049752572731)
 
         """
         censors = self.censors
