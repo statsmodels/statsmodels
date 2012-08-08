@@ -47,7 +47,45 @@ class _OptFuncts(ELModel):
     def __init__(self, endog):
         super(_OptFuncts, self).__init__(endog)
 
-    def _wtd_hess(self, eta1, est_vect, wts):
+    def _log_star(self, eta1, est_vect, wts):
+        """
+        Parameters
+        ---------
+        eta1: float
+            Lagrangian multiplier
+
+        est_vect: nxk array
+            Estimating equations vector
+
+        wts: nx1 array
+            observation weights
+
+        Returns
+        ------
+
+        data_star: array
+            The weighted logstar of the estimting equations
+
+        Note
+        ----
+
+        This function is really only a placeholder for the _fit_mle_Newton.
+        The function value is not used in optimization and the optimal value
+        is disregarded when computng the log likelihood ratio.
+        """
+        nobs = est_vect.shape[0]
+        data = est_vect.T
+        data_star = np.log(wts).reshape(-1, 1)\
+           + (np.sum(wts) + np.dot(eta1, data)).reshape(-1, 1)
+        idx = data_star < 1. / nobs
+        not_idx = ~idx
+        data_star[idx] = np.log(1 / nobs) - 1.5 +\
+                  2. * nobs * data_star[idx] -\
+                  ((nobs * data_star[idx]) ** 2.) / 2
+        data_star[not_idx] = np.log(data_star[not_idx])
+        return data_star
+
+    def _hess(self, eta1, est_vect, wts):
         """
         Calculates the hessian of a weighted empirical likelihood
         provlem.
@@ -56,9 +94,15 @@ class _OptFuncts(ELModel):
         ----------
         eta1: 1xm array.
 
-        This is the value of lamba used to write the
+        Value of lamba used to write the
         empirical likelihood probabilities in terms of the lagrangian
         multiplier.
+
+        est_vect: nxk array
+            Estimating equations vector
+
+        wts: nx1 array
+            observation weights
 
         Returns
         -------
@@ -77,7 +121,7 @@ class _OptFuncts(ELModel):
         wtd_dsdp = wts * data_star_doub_prime
         return np.dot(data, wtd_dsdp * data.T)
 
-    def _wtd_grad(self, eta1, est_vect, wts):
+    def _grad(self, eta1, est_vect, wts):
         """
         Calculates the gradient of a weighted empirical likelihood
         problem.
@@ -87,9 +131,15 @@ class _OptFuncts(ELModel):
         ----------
         eta1: 1xm array.
 
-        This is the value of lamba used to write the
+        Value of lamba used to write the
         empirical likelihood probabilities in terms of the lagrangian
         multiplier.
+
+        est_vect: nxk array
+            Estimating equations vector
+
+        wts: nx1 array
+            observation weights
 
         Returns
         -------
@@ -116,6 +166,12 @@ class _OptFuncts(ELModel):
         x0: 1x m array
             Iitial guess for the lagrangian multiplier
 
+        est_vect: nxk array
+            Estimating equations vector
+
+        wts: nx1 array
+            observation weights
+
         Returns
         -------
         params: 1xm array
@@ -125,9 +181,9 @@ class _OptFuncts(ELModel):
         See Owen pg. 64
         """
         x0 = x0.reshape(est_vect.shape[1], 1)
-        f = lambda x0: - np.sum(self._wtd_log_star(x0.T, est_vect, wts))
-        grad = lambda x0: - self._wtd_grad(x0.T, est_vect, wts)
-        hess = lambda x0: - self._wtd_hess(x0.T, est_vect, wts)
+        f = lambda x0: - np.sum(self._log_star(x0.T, est_vect, wts))
+        grad = lambda x0: - self._grad(x0.T, est_vect, wts)
+        hess = lambda x0: - self._hess(x0.T, est_vect, wts)
         kwds = {'tol': 1e-8}
         res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
@@ -232,7 +288,7 @@ class _OptFuncts(ELModel):
         est_vect = np.concatenate((mu_data, sig_data), axis=1)
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs]), est_vect,
-                                                np.ones(nobs)*(1./nobs))
+                                                np.ones(nobs) * (1. / nobs))
 
         denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
@@ -290,7 +346,7 @@ class _OptFuncts(ELModel):
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs]), est_vect,
-                                               np.ones(nobs)*(1./nobs))
+                                               np.ones(nobs) * (1. / nobs))
         denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -325,7 +381,7 @@ class _OptFuncts(ELModel):
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs]), est_vect,
-                                               np.ones(nobs)*(1./nobs))
+                                               np.ones(nobs) * (1. / nobs))
         denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -363,7 +419,7 @@ class _OptFuncts(ELModel):
                                                1. / nobs,
                                                1. / nobs,
                                                1. / nobs]), est_vect,
-                                               np.ones(nobs)*(1./nobs))
+                                               np.ones(nobs) * (1. / nobs))
         denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -441,7 +497,7 @@ class _OptFuncts(ELModel):
                                                1. / nobs,
                                                1. / nobs,
                                                1. / nobs]), est_vect,
-                                               np.ones(nobs)*(1./nobs))
+                                               np.ones(nobs) * (1. / nobs))
         denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
@@ -1272,7 +1328,7 @@ class DescStatMV(_OptFuncts):
         est_vect = endog - means
         start_vals = 1 / nobs * np.ones(endog.shape[1])
         eta_star = self._modif_newton(start_vals, est_vect,
-                                      np.ones(nobs)*(1./nobs))
+                                      np.ones(nobs) * (1. / nobs))
         denom = 1 + np.dot(eta_star, est_vect.T)
         self.new_weights = 1 / nobs * 1 / denom
         llr = -2 * np.sum(np.log(nobs * self.new_weights))
