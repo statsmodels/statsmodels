@@ -89,7 +89,7 @@ class OptAFT:
             The gradient used in _wtd_modif_newton
         """
         wts = wts.reshape(-1, 1)
-        nobs = self.uncens_nobs
+        nobs = est_vect.shape[0]
         data = est_vect.T
         data_star_prime = (np.sum(wts) + np.dot(eta1, data))
         idx = data_star_prime < 1. / nobs
@@ -117,7 +117,7 @@ class OptAFT:
         hess: m x m array
             Weighted hessian used in _wtd_modif_newton
         """
-        nobs = self.uncens_nobs
+        nobs = est_vect.shape[0]
         data = est_vect.T
         wts = wts.reshape(-1, 1)
         data_star_doub_prime = np.copy(np.sum(wts) + np.dot(eta1, data))
@@ -149,7 +149,7 @@ class OptAFT:
         The function value is not used in optimization and the optimal value
         is disregarded when computng the log likelihood ratio.
         """
-        nobs = self.uncens_nobs
+        nobs = est_vect.shape[0]
         data = est_vect.T
         data_star = np.log(wts).reshape(-1, 1)\
            + (np.sum(wts) + np.dot(eta1, data)).reshape(-1, 1)
