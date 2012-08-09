@@ -124,7 +124,7 @@ class GLS(base.LikelihoodModel):
 
     """
 
-    def __init__(self, endog, exog, sigma=None):
+    def __init__(self, endog, exog, sigma=None, missing=None):
 #TODO: add options igls, for iterative fgls if sigma is None
 #TODO: default is sigma is none should be two-step GLS
         if sigma is not None:
@@ -154,7 +154,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
             #TODO: avoid cholesky pinv for diag sigma
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
                     self.sigma)).T
-        super(GLS, self).__init__(endog, exog)
+        super(GLS, self).__init__(endog, exog, missing)
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
@@ -385,7 +385,7 @@ class WLS(GLS):
 #mse_model is calculated incorrectly according to R
 #same fixed used for WLS in the tests doesn't work
 #mse_resid is good
-    def __init__(self, endog, exog, weights=1.):
+    def __init__(self, endog, exog, weights=1., missing=None):
         weights = np.array(weights)
         if weights.shape == ():
             self.weights = weights
@@ -396,7 +396,7 @@ class WLS(GLS):
                 raise ValueError(\
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLS, self).__init__(endog, exog)
+        super(WLS, self).__init__(endog, exog, missing)
 
     def whiten(self, X):
         """
@@ -502,8 +502,8 @@ class OLS(WLS):
     OLS, as the other models, assumes that the design matrix contains a constant.
     """
 #TODO: change example to use datasets.  This was the point of datasets!
-    def __init__(self, endog, exog=None):
-        super(OLS, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, missing=None):
+        super(OLS, self).__init__(endog, exog, missing=missing)
 
     def loglike(self, params):
         '''
@@ -580,7 +580,7 @@ class GLSAR(GLS):
     -----
     GLSAR is considered to be experimental.
     """
-    def __init__(self, endog, exog=None, rho=1):
+    def __init__(self, endog, exog=None, rho=1, missing=None):
         #this looks strange, interpreting rho as order if it is int
         if isinstance(rho, np.int):
             self.order = rho
@@ -596,9 +596,10 @@ class GLSAR(GLS):
             #JP this looks wrong, should be a regression on constant
             #results for rho estimate now identical to yule-walker on y
             #super(AR, self).__init__(endog, add_constant(endog))
-            super(GLSAR, self).__init__(endog, np.ones((endog.shape[0],1)))
+            super(GLSAR, self).__init__(endog, np.ones((endog.shape[0],1)),
+                                        missing=missing)
         else:
-            super(GLSAR, self).__init__(endog, exog)
+            super(GLSAR, self).__init__(endog, exog, missing=missing)
 
     def iterative_fit(self, maxiter=3):
         """

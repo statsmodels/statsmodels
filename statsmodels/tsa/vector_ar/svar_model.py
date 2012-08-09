@@ -70,8 +70,8 @@ class SVAR(tsbase.TimeSeriesModel):
     """
 
     def __init__(self, endog, svar_type, names=None, dates=None,
-                freq=None, A=None, B=None):
-        super(SVAR, self).__init__(endog, None, dates, freq)
+                freq=None, A=None, B=None, missing=None):
+        super(SVAR, self).__init__(endog, None, dates, freq, missing=missing)
         if names is not None:
             import warnings
             warnings.warn("The names argument is deprecated and will be "

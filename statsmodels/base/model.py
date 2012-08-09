@@ -22,6 +22,10 @@ class Model(object):
         Endogenous response variable.
     exog : array-like
         Exogenous design.
+    missing : str
+        Available options are None, 'drop', and 'raise'. If None, no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised.
 
     Notes
     -----
@@ -30,8 +34,8 @@ class Model(object):
     will change as well.
     """
 
-    def __init__(self, endog, exog=None):
-        self._data = handle_data(endog, exog)
+    def __init__(self, endog, exog=None, missing=None):
+        self._data = handle_data(endog, exog, missing)
         self.exog = self._data.exog
         self.endog = self._data.endog
         self._data_attr = []
@@ -109,8 +113,8 @@ class LikelihoodModel(Model):
     Likelihood model is a subclass of Model.
     """
 
-    def __init__(self, endog, exog=None):
-        super(LikelihoodModel, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, missing=None):
+        super(LikelihoodModel, self).__init__(endog, exog, missing)
         self.initialize()
 
     def initialize(self):
@@ -555,7 +559,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
-                 hessian=None):
+                 hessian=None, missing=None):
     # let them be none in case user wants to use inheritance
         if loglike:
             self.loglike = loglike
@@ -572,7 +576,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             #try:
             self.nparams = self.df_model = (exog.shape[1]
                                             if np.ndim(exog) == 2 else 1)
-        super(GenericLikelihoodModel, self).__init__(endog, exog)
+        super(GenericLikelihoodModel, self).__init__(endog, exog, missing)
 
     #this is redundant and not used when subclassing
     def initialize(self):

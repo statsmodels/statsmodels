@@ -332,8 +332,9 @@ class VAR(tsbase.TimeSeriesModel):
     -------
     .fit() method returns VARResults object
     """
-    def __init__(self, endog, dates=None, names=None, freq=None):
-        super(VAR, self).__init__(endog, None, dates, freq)
+    def __init__(self, endog, dates=None, names=None, freq=None,
+            missing=None):
+        super(VAR, self).__init__(endog, None, dates, freq, missing=missing)
         if names is not None:
             import warnings
             warnings.warn("The names argument is deprecated and will be "

@@ -113,9 +113,10 @@ class RLM(base.LikelihoodModel):
 
     """
 
-    def __init__(self, endog, exog, M=norms.HuberT()):
+    def __init__(self, endog, exog, M=norms.HuberT(), missing=None):
         self.M = M
-        super(base.LikelihoodModel, self).__init__(endog, exog)
+        super(base.LikelihoodModel, self).__init__(endog, exog,
+                missing=missing)
         self._initialize()
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog'])

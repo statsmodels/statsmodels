@@ -43,8 +43,8 @@ class TimeSeriesModel(base.LikelihoodModel):
     __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
                           "extra" : ""}
 
-    def __init__(self, endog, exog=None, dates=None, freq=None):
-        super(TimeSeriesModel, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, dates=None, freq=None, missing=None):
+        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing)
         self._init_dates(dates, freq)
 
     def _init_dates(self, dates, freq):

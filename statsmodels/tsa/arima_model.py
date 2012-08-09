@@ -217,7 +217,8 @@ class ARMA(tsbase.TimeSeriesModel):
     __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
                     "params" : _arma_params, "extra" : ""}
 
-    def __init__(self, endog, order=None, exog=None, dates=None, freq=None):
+    def __init__(self, endog, order=None, exog=None, dates=None, freq=None,
+                        missing=None):
         super(ARMA, self).__init__(endog, exog, dates, freq)
         exog = self._data.exog # get it after it's gone through processing
         if order is None:
@@ -737,7 +738,8 @@ class ARIMA(ARMA):
     __doc__ = tsbase._tsa_doc % {"model" : _arima_model,
             "params" : _arima_params, "extra" : ""}
 
-    def __init__(self, endog, order, exog=None, dates=None, freq=None):
+    def __init__(self, endog, order, exog=None, dates=None, freq=None,
+                       missing=None):
         p,d,q = order
         super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq)
         self.k_diff = d
