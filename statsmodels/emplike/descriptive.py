@@ -1533,9 +1533,10 @@ class DescStatMV(_OptFuncts):
         """
         endog = self.endog
         nobs = self.nobs
-
         self.r0 = chi2.ppf(1 - sig, 1)
         point_est = np.corrcoef(endog[:, 0], endog[:, 1])[0, 1]
+        mu_hat = np.mean(endog, axis=0)
+        var_hat = np.var(endog, axis=0)
 
         if upper_bound is not None:
             ul = upper_bound
@@ -1554,49 +1555,49 @@ class DescStatMV(_OptFuncts):
         if mu1_lb is not None:
             self.mu1_lb = mu1_lb
         else:
-            self.mu1_lb = endog[:, 0].mean() - np.sqrt((1.96 * \
-              (endog[:, 0].var()) / nobs))
+            self.mu1_lb = mu_hat[0] - (1.96 * \
+              np.sqrt((var_hat[0]) / nobs))
 
         if mu1_ub is not None:
             self.mu1_ub = mu1_ub
         else:
-            self.mu1_ub = endog[:, 0].mean() + (1.96 * \
-              np.sqrt(((endog[:, 0].var()) / nobs)))
+            self.mu1_ub = mu_hat[0] + (1.96 * \
+              np.sqrt(((var_hat[0]) / nobs)))
 
         if mu2_lb is not None:
             self.mu2_lb = mu2_lb
         else:
-            self.mu2_lb = endog[:, 1].mean() - (1.96 * \
-              np.sqrt(((endog[:, 1].var()) / nobs)))
+            self.mu2_lb = mu_hat[1] - (1.96 * \
+              np.sqrt(((var_hat[1]) / nobs)))
 
         if mu2_ub is not None:
             self.mu2_ub = mu2_ub
         else:
-            self.mu2_ub = endog[:, 1].mean() + (1.96 * \
-              np.sqrt(((endog[:, 1].var()) / nobs)))
+            self.mu2_ub = mu_hat[1] + (1.96 * \
+              np.sqrt(((var_hat[1]) / nobs)))
 
         if var1_lb is not None:
             self.var1_lb = var1_lb
         else:
-            self.var1_lb = (endog[:, 0].var() * (nobs - 1)) / \
+            self.var1_lb = (var_hat[0] * (nobs - 1)) / \
               chi2.ppf(.975, nobs)
 
         if var1_ub is not None:
             self.var1_ub = var1_ub
         else:
-            self.var1_ub = (endog[:, 0].var() * (nobs - 1)) / \
+            self.var1_ub = (var_hat[0] * (nobs - 1)) / \
               chi2.ppf(.025, nobs)
 
         if var2_lb is not None:
             self.var2_lb = var2_lb
         else:
-            self.var2_lb = (endog[:, 1].var() * (nobs - 1)) / \
+            self.var2_lb = (var_hat[1] * (nobs - 1)) / \
               chi2.ppf(.975, nobs)
 
         if var2_ub is not None:
             self.var2_ub = var2_ub
         else:
-            self.var2_ub = (endog[:, 1].var() * (nobs - 1)) / \
+            self.var2_ub = (var_hat[1] * (nobs - 1)) / \
               chi2.ppf(.025, nobs)
         ll = optimize.brentq(self._ci_limits_corr, ll, point_est)
         ul = optimize.brentq(self._ci_limits_corr,
