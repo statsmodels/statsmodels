@@ -17,10 +17,9 @@ TODO: Write functions for estimationg equations instead
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2, skew, kurtosis
-from matplotlib import pyplot as plt
 from statsmodels.base.model import _fit_mle_newton
 import itertools
-
+from statsmodels.graphics import utils
 
 class ELModel(object):
     """
@@ -803,40 +802,7 @@ class DescStatUV(_OptFuncts):
         ul = optimize.brentq(self._ci_limits_var, endog.var(), ul)
         return   ll, ul
 
-    def var_p_plot(self, lower, upper, step, sig=.05):
-        """
-        Plots the p-values of the maximum el estimate for the variance
-
-        Parameters
-        ----------
-
-        lower: float
-            Lowest value of variance to be computed and plotted
-
-        upper: float
-            Highest value of the variance to be computed and plotted
-
-        step: float
-            Interval between each plot point.
-
-
-        sig: float
-            Will draw a horizontal line at 1- sig. Default= .05
-
-        This function can be helpful when trying to determine limits
-         in the ci_var function.
-        """
-        sig = 1 - sig
-        p_vals = []
-        for test in np.arange(lower, upper, step):
-            p_vals.append(self.test_var(test)[0])
-        p_vals = np.asarray(p_vals)
-        plt.plot(np.arange(lower, upper, step), p_vals)
-        plt.plot(np.arange(lower, upper, step), (1 - sig) * \
-                 np.ones(len(p_vals)))
-        return  'Type plt.show to see the figure'
-
-    def mean_var_contour(self, mu_l, mu_h, var_l, var_h, mu_step,
+    def plot_contour(self, mu_l, mu_h, var_l, var_h, mu_step,
                         var_step,
                         levs=[.2, .1, .05, .01, .001]):
         """
