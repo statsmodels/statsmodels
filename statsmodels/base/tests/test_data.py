@@ -494,6 +494,101 @@ class TestMultipleEqsDataFrames(TestDataFrames):
                                                  'columns_eq'),
                                 self.col_eq_result)
 
+class TestMissingArray(object):
+    @classmethod
+    def setupClass(cls):
+        X = np.random.random((25,4))
+        y = np.random.random(25)
+        y[10] = np.nan
+        X[2,3] = np.nan
+        X[14,2] = np.nan
+        cls.y, cls.X = y, X
+
+    def test_raise(self):
+        np.testing.assert_raises(Exception, sm_data.handle_data,
+                                            (self.y, self.X, 'raise'))
+
+    def test_drop(self):
+        y = self.y
+        X = self.X
+        combined = np.c_[y, X]
+        idx = ~np.isnan(combined).any(axis=1)
+        y = y[idx]
+        X = X[idx]
+        data = sm_data.handle_data(self.y, self.X, 'drop')
+        np.testing.assert_array_equal(data.endog, y)
+        np.testing.assert_array_equal(data.exog, X)
+
+    def test_none(self):
+        data = sm_data.handle_data(self.y, self.X, None)
+        np.testing.assert_array_equal(data.endog, self.y)
+        np.testing.assert_array_equal(data.exog, self.X)
+
+    def test_endog_only_raise(self):
+        np.testing.assert_raises(Exception, sm_data.handle_data,
+                                            (self.y, None, 'raise'))
+
+    def test_endog_only_drop(self):
+        y = self.y
+        y = y[~np.isnan(y)]
+        data = sm_data.handle_data(self.y, None, 'drop')
+        np.testing.assert_array_equal(data.endog, y)
+
+    def test_mv_endog(self):
+        y = self.X
+        y = y[~np.isnan(y).any(axis=1)]
+        data = sm_data.handle_data(self.X, None, 'drop')
+        np.testing.assert_array_equal(data.endog, y)
+
+class TestMissingPandas(object):
+    @classmethod
+    def setupClass(cls):
+        X = np.random.random((25,4))
+        y = np.random.random(25)
+        y[10] = np.nan
+        X[2,3] = np.nan
+        X[14,2] = np.nan
+        cls.y, cls.X = pandas.Series(y), pandas.DataFrame(X)
+
+    def test_raise(self):
+        np.testing.assert_raises(Exception, sm_data.handle_data,
+                                            (self.y, self.X, 'raise'))
+
+    def test_drop(self):
+        y = self.y
+        X = self.X
+        combined = np.c_[y, X]
+        idx = ~np.isnan(combined).any(axis=1)
+        y = y.ix[idx]
+        X = X.ix[idx]
+        data = sm_data.handle_data(self.y, self.X, 'drop')
+        np.testing.assert_array_equal(data.endog, y.values)
+        ptesting.assert_series_equal(data._orig_endog, self.y)
+        np.testing.assert_array_equal(data.exog, X.values)
+        ptesting.assert_frame_equal(data._orig_exog, self.X)
+
+    def test_none(self):
+        data = sm_data.handle_data(self.y, self.X, None)
+        np.testing.assert_array_equal(data.endog, self.y.values)
+        np.testing.assert_array_equal(data.exog, self.X.values)
+
+    def test_endog_only_raise(self):
+        np.testing.assert_raises(Exception, sm_data.handle_data,
+                                            (self.y, None, 'raise'))
+
+    def test_endog_only_drop(self):
+        y = self.y
+        y = y.dropna()
+        data = sm_data.handle_data(self.y, None, 'drop')
+        np.testing.assert_array_equal(data.endog, y.values)
+
+    def test_mv_endog(self):
+        y = self.X
+        y = y.ix[~np.isnan(y.values).any(axis=1)]
+        data = sm_data.handle_data(self.X, None, 'drop')
+        np.testing.assert_array_equal(data.endog, y.values)
+
+
 if __name__ == "__main__":
     import nose
     #nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],
