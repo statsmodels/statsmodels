@@ -511,12 +511,12 @@ class _OptFuncts():
             Difference between log-likelihood of corr0 and a pre-specified
             value.
         """
-        return self.test_corr(corr0, nuis0=None, mu1_min=self.mu1_lb,
-                       mu1_max=self.mu1_ub, mu2_min=self.mu2_lb,
-                       mu2_max=self.mu2_ub,
-                       var1_min=self.var1_lb, var1_max=self.var1_ub,
-                       var2_min=self.var2_lb, var2_max=self.var2_ub,
-                       print_weights=0)[0] - self.r0
+        return self.test_corr(corr0, nuis0=None, mu1_lb=self.mu1_lb,
+                       mu1_ub=self.mu1_ub, mu2_lb=self.mu2_lb,
+                       mu2_ub=self.mu2_ub,
+                       var1_lb=self.var1_lb, var1_ub=self.var1_ub,
+                       var2_lb=self.var2_lb, var2_ub=self.var2_ub,
+                       print_weights=0, _is_ci=1)[0] - self.r0
 
 
 class DescStatUV(_OptFuncts):
@@ -1390,10 +1390,11 @@ class DescStatMV(_OptFuncts):
             ax.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
         return fig
 
-    def test_corr(self, corr0, nuis0=None, mu1_min=None,
-                       mu1_max=None, mu2_min=None, mu2_max=None,
-                       var1_min=None, var1_max=None,
-                       var2_min=None, var2_max=None, print_weights=0):
+    def test_corr(self, corr0, nuis0=None, mu1_lb=None,
+                       mu1_ub=None, mu2_lb=None, mu2_ub=None,
+                       var1_lb=None, var1_ub=None,
+                       var2_lb=None, var2_ub=None, print_weights=0,
+                       _is_ci=False):
         """
         Returns the -2 * log-likelihood ratio and  p-value for the
         correlation coefficient between 2 variables.
@@ -1434,9 +1435,7 @@ class DescStatMV(_OptFuncts):
         endog = self.endog
         if endog.shape[1] != 2:
             raise Exception('Correlation matrix not yet implemented')
-
         self.corr0 = corr0
-
         if nuis0 is not None:
             start_nuisance = nuis0
         else:
@@ -1445,50 +1444,45 @@ class DescStatMV(_OptFuncts):
                                        endog[:, 1].mean(),
                                        endog[:, 1].var()])
 
-        if mu1_min is not None:
-            mu1_lb = mu1_min
-        else:
+        if _is_ci:
+            llr = optimize.fmin_l_bfgs_b(self._opt_correl, start_nuisance,
+                                     approx_grad=1,
+                                     bounds=[(mu1_lb, mu1_ub),
+                                              (var1_lb, var1_ub),
+                                              (mu2_lb, mu2_ub),
+                                              (var2_lb, var2_ub)])[1]
+            p_val = chi2.sf(llr, 1)
+            return llr, p_val
+
+        if mu1_lb is None:
             mu1_lb = endog[:, 0].mean() - ((1.96 * \
               np.sqrt((endog[:, 0].var()) / nobs)))
 
-        if mu1_max is not None:
-            mu1_ub = mu1_max
-        else:
+        if mu1_ub is None:
             mu1_ub = endog[:, 0].mean() + (1.96 * \
               np.sqrt((((endog[:, 0].var()) / nobs))))
 
-        if mu2_min is not None:
-            mu2_lb = mu2_min
-        else:
+        if mu2_lb is None:
             mu2_lb = endog[:, 1].mean() - (1.96 * \
               np.sqrt((((endog[:, 1].var()) / nobs))))
 
-        if mu2_max is not None:
-            mu2_ub = mu2_max
-        else:
+        if mu2_ub is None:
             mu2_ub = endog[:, 1].mean() + (1.96 * \
               np.sqrt((((endog[:, 1].var()) / nobs))))
 
-        if var1_min is not None:
-            var1_lb = var1_min
-        else:
+        if var1_lb is None:
             var1_lb = (endog[:, 0].var() * (nobs - 1)) / \
               chi2.ppf(.975, nobs)
 
-        if var1_max is not None:
-            var1_ub = var1_max
-        else:
+        if var1_ub is None:
             var1_ub = (endog[:, 0].var() * (nobs - 1)) / \
               chi2.ppf(.025, nobs)
 
-        if var2_min is not None:
-            var2_lb = var2_min
-        else:
+        if var2_lb is None:
             var2_lb = (endog[:, 1].var() * (nobs - 1)) / \
               chi2.ppf(.975, nobs)
-        if var2_max is not None:
-            var2_ub = var2_max
-        else:
+
+        if var2_ub is None:
             var2_ub = (endog[:, 1].var() * (nobs - 1)) / \
               chi2.ppf(.025, nobs)
 
@@ -1505,10 +1499,10 @@ class DescStatMV(_OptFuncts):
         return llr, p_val
 
     def ci_corr(self, sig=.05, upper_bound=None, lower_bound=None,
-                       mu1_min=None,
-                       mu1_max=None, mu2_min=None, mu2_max=None,
-                       var1_min=None, var1_max=None,
-                       var2_min=None, var2_max=None):
+                       mu1_lb=None,
+                       mu1_ub=None, mu2_lb=None, mu2_ub=None,
+                       var1_lb=None, var1_ub=None,
+                       var2_lb=None, var2_ub=None):
         """
         Returns the confidence intervals for the correlation coefficient.
 
@@ -1525,7 +1519,7 @@ class DescStatMV(_OptFuncts):
             Minimum value the lower condidence limit can be.
             Default: 99% confidence assuming normality.
 
-        mu1_max through var2_max: float
+        mu1_ub through var2_ub: float
             Limits of nuisance parameters
             to maximize over.  Default:  95% confidence limits assuming
             normality
@@ -1557,50 +1551,50 @@ class DescStatMV(_OptFuncts):
                           2.5 * (np.sqrt((1. - point_est ** 2.) / \
                           (nobs - 2.))))
 
-        if mu1_min is not None:
-            self.mu1_lb = mu1_min
+        if mu1_lb is not None:
+            self.mu1_lb = mu1_lb
         else:
             self.mu1_lb = endog[:, 0].mean() - np.sqrt((1.96 * \
               (endog[:, 0].var()) / nobs))
 
-        if mu1_max is not None:
-            self.mu1_ub = mu1_max
+        if mu1_ub is not None:
+            self.mu1_ub = mu1_ub
         else:
             self.mu1_ub = endog[:, 0].mean() + (1.96 * \
               np.sqrt(((endog[:, 0].var()) / nobs)))
 
-        if mu2_min is not None:
-            self.mu2_lb = mu2_min
+        if mu2_lb is not None:
+            self.mu2_lb = mu2_lb
         else:
             self.mu2_lb = endog[:, 1].mean() - (1.96 * \
               np.sqrt(((endog[:, 1].var()) / nobs)))
 
-        if mu2_max is not None:
-            self.mu2_ub = mu2_max
+        if mu2_ub is not None:
+            self.mu2_ub = mu2_ub
         else:
             self.mu2_ub = endog[:, 1].mean() + (1.96 * \
               np.sqrt(((endog[:, 1].var()) / nobs)))
 
-        if var1_min is not None:
-            self.var1_lb = var1_min
+        if var1_lb is not None:
+            self.var1_lb = var1_lb
         else:
             self.var1_lb = (endog[:, 0].var() * (nobs - 1)) / \
               chi2.ppf(.975, nobs)
 
-        if var1_max is not None:
-            self.var1_ub = var1_max
+        if var1_ub is not None:
+            self.var1_ub = var1_ub
         else:
             self.var1_ub = (endog[:, 0].var() * (nobs - 1)) / \
               chi2.ppf(.025, nobs)
 
-        if var2_min is not None:
-            self.var2_lb = var2_min
+        if var2_lb is not None:
+            self.var2_lb = var2_lb
         else:
             self.var2_lb = (endog[:, 1].var() * (nobs - 1)) / \
               chi2.ppf(.975, nobs)
 
-        if var2_max is not None:
-            self.var2_ub = var2_max
+        if var2_ub is not None:
+            self.var2_ub = var2_ub
         else:
             self.var2_ub = (endog[:, 1].var() * (nobs - 1)) / \
               chi2.ppf(.025, nobs)
