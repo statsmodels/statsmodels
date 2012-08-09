@@ -3,4 +3,4 @@ api for empirical likelihood
 
 """
 
-from .descriptive import DescStatUV, DescStatMV
+from .descriptive import DescStat, DescStatUV, DescStatMV
