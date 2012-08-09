@@ -5,6 +5,8 @@ from scipy.linalg import block_diag
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import OLS
 from statsmodels.compatnp.sparse import block_diag as sp_block_diag
+from cStringIO import StringIO
+from statsmodels.iolib import SimpleTable
 
 class SysModel(LikelihoodModel):
     '''
@@ -416,21 +418,16 @@ class SysResults(LikelihoodModelResults):
         self.df_model = model.df_model
 
     def summary(self, yname=None, xname=None, title=None):
-        mod_names = {'SysGLS' : 'System GLS', 'SysWLS' : 'System WLS',
-                     'SysOLS' : 'System OLS', 'SysSUR' : 'System SUR',
-                     'SysSURI' : 'Multivariate FGLS', 
-                     'Sys2SLS' : 'System Two Stage Least Square',
-                     'Sys3SLS' : 'System Three Stage Least Square'}
-        if title is None:
-            title = mod_names[self.model.__class__.__name__] + ' ' + 'Regression Results'
+
 
         #create summary table instance
-        from statsmodels.iolib.summary import Summary
-        smry = Summary()
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=True)
+        #from statsmodels.iolib.summary import Summary
+        #smry = Summary()
+        #smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+        #                     use_t=True)
         
-        return smry
+        #return smry
+        return SysSummary(self)
     
     def _compute_sigma(self, resids):
         '''
@@ -446,6 +443,152 @@ class SysResults(LikelihoodModelResults):
             return s / self.model._div_dfk1
         else:
             return s / self.model._div_dfk2
+
+class SysSummary(object):
+    default_fmt = dict(
+        #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+        #data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
+        data_fmts = ["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
+        empty_cell = '',
+        #colwidths = 10,
+        colsep='  ',
+        row_pre = '',
+        row_post = '',
+        table_dec_above='=',
+        table_dec_below='=',
+        header_dec_below='-',
+        header_fmt = '%s',
+        stub_fmt = '%s',
+        title_align='c',
+        header_align = 'r',
+        data_aligns = 'r',
+        stubs_align = 'l',
+        fmt = 'txt'
+    )
+
+    part1_fmt = dict(default_fmt,
+        data_fmts = ["%s"],
+        colwidths = 15,
+        colsep=' ',
+        table_dec_below='',
+        header_dec_below=None,
+    )
+    part2_fmt = dict(default_fmt,
+        data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
+        colwidths = None,
+        colsep='    ',
+        table_dec_above='-',
+        table_dec_below='-',
+        header_dec_below=None,
+    )
+
+    def __init__(self, estimator):
+        self.result = estimator
+        self.summary = self.make()
+
+    def __repr__(self):
+        return self.summary
+
+    def make(self, endog_names=None, exog_names=None):
+        """
+        Summary of system model
+        """
+        buf = StringIO()
+
+        print >> buf, self._header_table()
+        #print >> buf, self._stats_table()
+        print >> buf, self._coef_table()
+        #print >> buf, self._resid_info()
+
+        return buf.getvalue()
+
+    def _header_table(self):
+        import time
+
+        result = self.result
+
+        t = time.localtime()
+
+        # Header information
+        part1title = "Summary of Regression Results"
+        part1data = [["system of equations"],
+                     [result.model.__class__.__name__[3:]],
+                     [time.strftime("%a, %d, %b, %Y", t)],
+                     [time.strftime("%H:%M:%S", t)]]
+        part1header = None
+        part1stubs = ('Model:',
+                     'Method:',
+                     'Date:',
+                     'Time:')
+        part1 = SimpleTable(part1data, part1header, part1stubs,
+                            title=part1title, txt_fmt=self.part1_fmt)
+
+        return str(part1)
+
+    def _stats_table(self):
+        # TODO: do we want individual statistics or should users just
+        # use results if wanted?
+        # Handle overall fit statistics
+
+        result = self.result
+
+
+        part2Lstubs = ('No. of Equations:',
+                       'Nobs:',
+                       'Log likelihood:',
+                       'AIC:')
+        part2Rstubs = ('BIC:',
+                       'HQIC:',
+                       'FPE:',
+                       'Det(Omega_mle):')
+        part2Ldata = [[result.model.neqs], [result.model.nobs], [result.llf], [result.aic]]
+        part2Rdata = [[result.bic], [result.hqic], [result.fpe], [result.detomega]]
+        part2Lheader = None
+        part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
+                             txt_fmt = self.part2_fmt)
+        part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
+                             txt_fmt = self.part2_fmt)
+        part2L.extend_right(part2R)
+
+        return str(part2L)
+
+    def _coef_table(self):
+        result = self.result #model = self.model
+        k = result.model.neqs #k = model.neqs
+
+        Xnames = self.model.coef_names
+
+        data = zip(model.params.T.ravel(),
+                   model.stderr.T.ravel(),
+                   model.tvalues.T.ravel(),
+                   model.pvalues.T.ravel())
+
+        header = ('coefficient','std. error','t-stat','prob')
+
+        buf = StringIO()
+        dim = k * model.k_ar + model.k_trend
+        for i in range(k):
+            section = "Results for equation %s" % model.names[i]
+            print >> buf, section
+
+            table = SimpleTable(data[dim * i : dim * (i + 1)], header,
+                                Xnames, title=None, txt_fmt = self.default_fmt)
+
+            print >> buf, str(table)
+
+            if i < k - 1: buf.write('\n')
+
+        return buf.getvalue()
+
+    def _resid_info(self):
+        buf = StringIO()
+        names = self.model.names
+
+        print >> buf, "Correlation matrix of residuals"
+        print >> buf, pprint_matrix(self.model.resid_corr, names, names)
+
+        return buf.getvalue()
+
 
 # Testing/Debugging
 if __name__ == '__main__':
