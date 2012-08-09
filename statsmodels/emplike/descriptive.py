@@ -21,23 +21,17 @@ from statsmodels.base.model import _fit_mle_newton
 import itertools
 from statsmodels.graphics import utils
 
-class ELModel(object):
-    """
-    Initializes data for empirical likelihood.  Not intended for end user
-    """
 
-    def __init__(self, endog):
-        self.endog = endog
-        self.nobs = float(endog.shape[0])
-        self.weights = np.ones(self.nobs) / float(self.nobs)
-        if endog.ndim == 1:
-            self.endog = self.endog.reshape(self.nobs, 1)
-        # For now, self. weights should always be a vector of 1's and a
-        # variable "new weights" should be created everytime weights are
-        # changed.
+def DescStat(endog):
+    if endog.ndim == 1:
+        endog = endog.reshape(len(endog), 1)
+    if endog.shape[1] == 1:
+        return DescStatUV(endog)
+    if endog.shape[1] > 1:
+        return DescStatMV(endog)
 
 
-class _OptFuncts(ELModel):
+class _OptFuncts():
     """
     A class that holds functions that are optimized/solved.  Not
     intended for the end user.
@@ -542,7 +536,10 @@ class DescStatUV(_OptFuncts):
     """
 
     def __init__(self, endog):
-        super(DescStatUV, self).__init__(endog)
+        self.endog = endog
+        self.nobs = float(endog.shape[0])
+        self.weights = np.ones(self.nobs) / float(self.nobs)
+        self.endog = self.endog.reshape(self.nobs, 1)
 
     def test_mean(self, mu0, print_weights=False):
         """
@@ -837,6 +834,9 @@ class DescStatUV(_OptFuncts):
             At Which values of significance the contour lines will be drawn.
             Default: [.2, .1, .05, .01, .001]
         """
+        fig, ax = utils.create_mpl_ax()
+        ax.set_ylabel('Variance')
+        ax.set_xlabel('Mean')
         mu_vect = list(np.arange(mu_l, mu_h, mu_step))
         var_vect = list(np.arange(var_l, var_h, var_step))
         z = []
@@ -845,9 +845,8 @@ class DescStatUV(_OptFuncts):
             for mu0 in mu_vect:
                 z.append(self._opt_var(mu0, pval=True))
         z = np.asarray(z).reshape(len(var_vect), len(mu_vect))
-        fig = plt.contour(mu_vect, var_vect, z, levels=levs)
-        plt.clabel(fig)
-        return 'Type plt.show to see the figure'
+        ax.contour(mu_vect, var_vect, z, levels=levs)
+        return fig
 
     ## TODO: Use gradient and Hessian to optimize over nuisance params
     ## TODO: Use non-nested optimization to optimize over nuisance
@@ -867,7 +866,6 @@ class DescStatUV(_OptFuncts):
 
         Optional
         --------
-
         mu_min, mu_max, var_min, var_max: float
             Minimum and maximum values
             of the nuisance parameters to be optimized over.  If None,
@@ -880,7 +878,6 @@ class DescStatUV(_OptFuncts):
 
         Returns
         --------
-
         test_results: tuple
             The log-likelihood ratio and p_value  of `skew0`
         """
@@ -1257,7 +1254,9 @@ class DescStatMV(_OptFuncts):
     """
 
     def __init__(self, endog):
-        super(DescStatMV, self).__init__(endog)
+        self.endog = endog
+        self.nobs = float(endog.shape[0])
+        self.weights = np.ones(self.nobs) / float(self.nobs)
 
     def mv_test_mean(self, mu_array, print_weights=False):
         """
@@ -1305,7 +1304,8 @@ class DescStatMV(_OptFuncts):
             return llr, p_val
 
     def mv_mean_contour(self, mu1_l, mu1_u, mu2_l, mu2_u, step1, step2,
-                        levs=[.2, .1, .05, .01, .001], plot_dta=False):
+                        levs=[.2, .1, .05, .01, .001], var1_name=None,
+                        var2_name=None, plot_dta=False):
         """
         Creates confidence region plot for the mean of bivariate data
 
@@ -1341,6 +1341,12 @@ class DescStatMV(_OptFuncts):
             If True, makes a scatter plot of the data on
             top of the contour plot. Default =  False.
 
+        var1_name: str
+            Name of variable 1 to be plotted on the x-axis
+
+        var2_name: str
+            Name of variable 2 to be plotted on the y-axis
+
         Notes
         -----
         The smaller the step size, the more accurate the intervals
@@ -1361,6 +1367,15 @@ class DescStatMV(_OptFuncts):
         """
         if self.endog.shape[1] != 2:
             raise Exception('Data must contain exactly two variables')
+        fig, ax = utils.create_mpl_ax()
+        if var2_name is None:
+            ax.set_ylabel('Variable 2')
+        else:
+            ax.set_ylabel(var2_name)
+        if var1_name is None:
+            ax.set_xlabel('Variable 1')
+        else:
+            ax.set_xlabel(var1_name)
         x = (np.arange(mu1_l, mu1_u, step1))
         y = (np.arange(mu2_l, mu2_u, step2))
         pairs = itertools.product(x, y)
@@ -1370,11 +1385,10 @@ class DescStatMV(_OptFuncts):
         X, Y = np.meshgrid(x, y)
         z = np.asarray(z)
         z = z.reshape(X.shape[1], Y.shape[0])
-        fig = plt.contour(x, y, z.T, levels=levs)
-        plt.clabel(fig)
+        ax.contour(x, y, z.T, levels=levs)
         if plot_dta:
-            plt.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
-        return 'Type plt.show to see the figure'
+            ax.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
+        return fig
 
     def test_corr(self, corr0, nuis0=None, mu1_min=None,
                        mu1_max=None, mu2_min=None, mu2_max=None,
