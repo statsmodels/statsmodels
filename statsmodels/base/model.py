@@ -10,30 +10,35 @@ from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
 
-class Model(object):
-    """
-    A (predictive) statistical model. The class Model itself is not to be used.
-
-    Model lays out the methods expected of any subclass.
-
-    Parameters
+_model_params_doc = """    Parameters
     ----------
     endog : array-like
-        Endogenous response variable.
+        1-d endogenous response variable. The independent variable.
     exog : array-like
-        Exogenous design.
-    missing : str
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An interecept is not included by default
+        and should be added by the user. See `statsmodels.tools.add_constant`.
+    """
+
+_missing_param_doc = """missing : str or None
         Available options are None, 'drop', and 'raise'. If None, no nan
         checking is done. If 'drop', any observations with nans are dropped.
-        If 'raise', an error is raised.
+        If 'raise', an error is raised."""
+
+class Model(object):
+    __doc__ = """
+    A (predictive) statistical model. Intended to be subclassed not used.
+
+    %(params_doc)s
+    %(extra_params_doc)s
 
     Notes
     -----
     `endog` and `exog` are references to any data provided.  So if the data is
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
-    """
-
+    """ % {'params_doc' : _model_params_doc,
+            'extra_params_doc' : _missing_param_doc}}
     def __init__(self, endog, exog=None, missing=None):
         self._data = handle_data(endog, exog, missing)
         self.exog = self._data.exog

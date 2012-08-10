@@ -479,17 +479,11 @@ class OrderedModel(DiscreteModel):
 #### Public Model Classes ####
 
 class Poisson(CountModel):
-    """
+    __doc__ = """
     Poisson model for count data
 
-    Parameters
-    ----------
-    endog : array-like
-        1-d array of the response variable.
-    exog : array-like
-        `exog` is an n x p array where n is the number of observations and p
-        is the number of regressors including the intercept if one is included
-        in the data.
+    %(params)s
+    %(extra_params)s
 
     Attributes
     -----------
@@ -497,7 +491,8 @@ class Poisson(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """
+    """ % {'params' base._model_param_doc,
+           'extra_params' : base._missing_param_doc}
 
     def cdf(self, X):
         """
@@ -691,17 +686,11 @@ class NbReg(DiscreteModel):
     pass
 
 class Logit(BinaryModel):
-    """
+    __doc__ = """
     Binary choice logit model
 
-    Parameters
-    ----------
-    endog : array-like
-        1-d array of the response variable.
-    exog : array-like
-        `exog` is an n x p array where n is the number of observations and p
-        is the number of regressors including the intercept if one is included
-        in the data.
+    %(params)s
+    %(extra_params)s
 
     Attributes
     -----------
@@ -709,7 +698,8 @@ class Logit(BinaryModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """
+    """ % {'params' base._model_param_doc,
+           'extra_params' : base._missing_param_doc}
 
     def cdf(self, X):
         """
@@ -873,17 +863,11 @@ class Logit(BinaryModel):
         return -np.dot(L*(1-L)*X.T,X)
 
 class Probit(BinaryModel):
-    """
+    __doc__ = """
     Binary choice Probit model
 
-    Parameters
-    ----------
-    endog : array-like
-        1-d array of the response variable.
-    exog : array-like
-        `exog` is an n x p array where n is the number of observations and p
-        is the number of regressors including the intercept if one is included
-        in the data.
+    %(params)s
+    %(extra_params)s
 
     Attributes
     -----------
@@ -891,7 +875,8 @@ class Probit(BinaryModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """
+    """ % {'params' base._model_param_doc,
+           'extra_params' : base._missing_param_doc}
 
     def cdf(self, X):
         """
@@ -1071,7 +1056,7 @@ class Probit(BinaryModel):
         return np.dot(-L*(L+XB)*X.T,X)
 
 class MNLogit(MultinomialModel):
-    """
+    __doc__ = """
     Multinomial logit model
 
     Parameters
@@ -1082,9 +1067,10 @@ class MNLogit(MultinomialModel):
         every distinct string will be a category.  No stripping of whitespace
         is done.
     exog : array-like
-        `exog` is an n x p array where n is the number of observations and p
-        is the number of regressors including the intercept if one is included
-        in the data.
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An interecept is not included by default
+        and should be added by the user. See `statsmodels.tools.add_constant`.
+    %(extra_params)s
 
     Attributes
     ----------
@@ -1110,8 +1096,9 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """
-    def pdf(self, X):
+    """ % {'extra_params' : base._missing_param_doc}}
+
+    def pdf(self, eXB):
         """
         NotImplemented
         """

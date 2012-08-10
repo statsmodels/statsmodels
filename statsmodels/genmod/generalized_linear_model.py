@@ -38,7 +38,7 @@ def _check_convergence(criterion, iteration, tol, maxiter):
             and iteration <= maxiter)
 
 class GLM(base.LikelihoodModel):
-    '''
+    __doc__ = '''
     Generalized Linear Models class
 
     GLM inherits from statsmodels.LikelihoodModel
@@ -46,17 +46,19 @@ class GLM(base.LikelihoodModel):
     Parameters
     -----------
     endog : array-like
-        1d array of endogenous response variable.  This array can be
-        1d or 2d.  Binomial family models accept a 2d array with two columns.
-        If supplied, each observation is expected to be [success, failure].
+        1d array of endogenous response variable.  This array can be 1d or 2d.
+        Binomial family models accept a 2d array with two columns. If
+        supplied, each observation is expected to be [success, failure].
     exog : array-like
-        n x p design / exogenous data array
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An interecept is not included by default
+        and should be added by the user. See `statsmodels.tools.add_constant`.
     family : family class instance
         The default is Gaussian.  To specify the binomial distribution
         family = sm.family.Binomial()
         Each family can take a link instance as an argument.  See
         statsmodels.family.family for more information.
-
+    %(extra_params)s
 
     Attributes
     -----------
@@ -182,8 +184,7 @@ class GLM(base.LikelihoodModel):
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
-
-    '''
+    ''' % {'extra_params' = base._missing_param_doc}
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                         missing=None):

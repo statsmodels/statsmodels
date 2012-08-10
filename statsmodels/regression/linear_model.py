@@ -45,17 +45,10 @@ from scipy import optimize
 from scipy.stats import chi2
 
 class GLS(base.LikelihoodModel):
-    """
+    __doc__ = """
     Generalized least squares model with a general covariance structure.
 
-    Parameters
-    ----------
-    endog : array-like
-           endog is a 1-d vector that contains the response/dependent variable
-    exog : array-like
-           exog is a n x p vector where n is the number of observations and p
-           is the number of regressors/independent variables including the
-           intercept if one is included in the data.
+    %(params)s
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -64,6 +57,7 @@ class GLS(base.LikelihoodModel):
            is an n-length vector, then `sigma` is assumed to be a diagonal
            matrix with the given `sigma` on the diagonal.  This should be the
            same as WLS.
+    %(extra_params)s
 
     Attributes
     ----------
@@ -122,7 +116,8 @@ class GLS(base.LikelihoodModel):
     >>> gls_results = gls_model.fit()
     >>> print gls_results.summary()
 
-    """
+    """ % {'params' : base._params_doc,
+           'extra_params' : base._missing_param_doc}
 
     def __init__(self, endog, exog, sigma=None, missing=None):
 #TODO: add options igls, for iterative fgls if sigma is None
@@ -321,7 +316,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
 
 
 class WLS(GLS):
-    """
+    __doc__ """
     A regression model with diagonal but non-identity covariance structure.
 
     The weights are presumed to be (proportional to) the inverse of the
@@ -330,23 +325,12 @@ class WLS(GLS):
     is different than the behavior for GLS with a diagonal Sigma, where you
     would just supply W.
 
-    **Methods**
-
-    whiten
-        Returns the input scaled by sqrt(W)
-
-
-    Parameters
-    ----------
-
-    endog : array-like
-        n length array containing the response variabl
-    exog : array-like
-        n x p array of design / exogenous data
+    %(params)s
     weights : array-like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
         is 1 and WLS reults are the same as OLS.
+    %(extra_params)s
 
     Attributes
     ----------
@@ -354,8 +338,6 @@ class WLS(GLS):
         The stored weights supplied as an argument.
 
     See regression.GLS
-
-
 
     Examples
     ---------
@@ -376,10 +358,12 @@ class WLS(GLS):
 
     Notes
     -----
-    If the weights are a function of the data, then the postestimation statistics
-    such as fvalue and mse_model might not be correct, as the package does not
-    yet support no-constant regression.
-    """
+    If the weights are a function of the data, then the postestimation
+    statistics such as fvalue and mse_model might not be correct, as the
+    package does not yet support no-constant regression.
+    """ % {'params' : base._params_doc,
+           'extra_params' : base._extra_params_doc}
+
 #FIXME: bug in fvalue or f_test for this example?
 #UPDATE the bug is in fvalue, f_test is correct vs. R
 #mse_model is calculated incorrectly according to R
@@ -454,20 +438,11 @@ class WLS(GLS):
         return llf
 
 class OLS(WLS):
-    """
+    __doc__ = """
     A simple ordinary least squares model.
 
-    **Methods**
-
-    inherited from regression.GLS
-
-    Parameters
-    ----------
-    endog : array-like
-         1d vector of response/dependent variable
-    exog: array-like
-        Column ordered (observations in rows) design matrix.
-
+    %(params)s
+    %(extra_params)s
 
     Attributes
     ----------
@@ -500,7 +475,8 @@ class OLS(WLS):
     Notes
     -----
     OLS, as the other models, assumes that the design matrix contains a constant.
-    """
+    """ % {'params' : base._params_doc,
+           'extra_params' : base._missing_param_doc}
 #TODO: change example to use datasets.  This was the point of datasets!
     def __init__(self, endog, exog=None, missing=None):
         super(OLS, self).__init__(endog, exog, missing=missing)
@@ -532,11 +508,13 @@ class OLS(WLS):
         return Y
 
 class GLSAR(GLS):
-    """
+    __doc__ = """
     A regression model with an AR(p) covariance structure.
 
-    The linear autoregressive process of order p--AR(p)--is defined as:
-        TODO
+    %(params)s
+    rho : int
+        Order of the autoregressive covariance
+    %(extra_params)s
 
     Examples
     --------
@@ -579,7 +557,10 @@ class GLSAR(GLS):
     Notes
     -----
     GLSAR is considered to be experimental.
-    """
+    The linear autoregressive process of order p--AR(p)--is defined as:
+        TODO
+    """ % {'params' : base._param_doc,
+           'extra_params' : base._missing_params_doc}
     def __init__(self, endog, exog=None, rho=1, missing=None):
         #this looks strange, interpreting rho as order if it is int
         if isinstance(rho, np.int):

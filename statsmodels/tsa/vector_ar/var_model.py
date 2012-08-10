@@ -317,20 +317,16 @@ class VAR(tsbase.TimeSeriesModel):
 
     Parameters
     ----------
-    endog : np.ndarray (structured or homogeneous) or DataFrame
+    endog : array-like
+        1-d endogenous response variable. The independent variable.
     names : array-like
         must match number of columns of endog
     dates : array-like
         must match number of rows of endog
 
-    Notes
-    -----
-    **References**
+    References
+    ----------
     Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
-
-    Returns
-    -------
-    .fit() method returns VARResults object
     """
     def __init__(self, endog, dates=None, names=None, freq=None,
             missing=None):

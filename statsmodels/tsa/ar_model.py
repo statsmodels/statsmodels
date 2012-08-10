@@ -63,16 +63,10 @@ def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
 
 
 class AR(tsbase.TimeSeriesModel):
-    """
-    Autoregressive AR(p) Model
-
-    Parameters
-    ----------
-    endog : array-like
-        Endogenous response variable.
-    date : array-like
-        Dates of the endogenous variable.
-    """
+    __doc__ = tsbase._tsa_doc % {"model" : "Autoregressive AR(p) model",
+            "params" : """endog : array-like
+        1-d endogenous response variable. The independent variable.""",
+        "extra_params" : base._missing_param_doc}
     def __init__(self, endog, dates=None, freq=None, missing=None):
         super(AR, self).__init__(endog, None, dates, freq, missing=missing)
         endog = self.endog # original might not have been an ndarray
