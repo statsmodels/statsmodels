@@ -120,8 +120,8 @@ class GLS(base.LikelihoodModel):
            'extra_params' : base._missing_param_doc}
 
     def __init__(self, endog, exog, sigma=None, missing=None):
-#TODO: add options igls, for iterative fgls if sigma is None
-#TODO: default is sigma is none should be two-step GLS
+    #TODO: add options igls, for iterative fgls if sigma is None
+    #TODO: default is sigma is none should be two-step GLS
         if sigma is not None:
             self.sigma = np.asarray(sigma)
         else:
@@ -132,10 +132,10 @@ class GLS(base.LikelihoodModel):
             nobs = int(endog.shape[0])
             if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
                 if self.sigma.shape[0] != nobs:
-                    raise ValueError("sigma is not the correct dimension.  \
-Should be of length %s, if sigma is a 1d array" % nobs)
-            elif self.sigma.shape[0] != nobs and \
-                    self.sigma.shape[1] != nobs:
+                    raise ValueError("sigma is not the correct dimension. "
+                                     "Should be of length %s, if sigma is "
+                                     "a 1d array" % nobs)
+            elif self.sigma.shape[0] != nobs and self.sigma.shape[1] != nobs:
                 raise ValueError("expected an %s x %s array for sigma" % \
                         (nobs, nobs))
 
@@ -162,7 +162,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         # overwrite nobs from class Model:
         self.nobs = float(self.wexog.shape[0])
         self.df_resid = self.nobs - rank(self.exog)
-#       Below assumes that we have a constant
+        #Below assumes that we have a constant
         self.df_model = float(rank(self.exog)-1)
 
     def whiten(self, X):
@@ -302,17 +302,16 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Y and Y-hat are whitened.
 
         """
-#TODO: combine this with OLS/WLS loglike and add _det_sigma argument
+        #TODO: combine this with OLS/WLS loglike and add _det_sigma argument
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
         if np.any(self.sigma) and self.sigma.ndim == 2:
-#FIXME: robust-enough check?  unneeded if _det_sigma gets defined
+        #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
             llf -= .5*np.log(np.linalg.det(self.sigma))
             # with error covariance matrix
         return llf
-
 
 
 class WLS(GLS):
@@ -364,11 +363,11 @@ class WLS(GLS):
     """ % {'params' : base._params_doc,
            'extra_params' : base._extra_params_doc}
 
-#FIXME: bug in fvalue or f_test for this example?
-#UPDATE the bug is in fvalue, f_test is correct vs. R
-#mse_model is calculated incorrectly according to R
-#same fixed used for WLS in the tests doesn't work
-#mse_resid is good
+    #FIXME: bug in fvalue or f_test for this example?
+    #UPDATE the bug is in fvalue, f_test is correct vs. R
+    #mse_model is calculated incorrectly according to R
+    #same fixed used for WLS in the tests doesn't work
+    #mse_resid is good
     def __init__(self, endog, exog, weights=1., missing=None):
         weights = np.array(weights)
         if weights.shape == ():
@@ -437,6 +436,7 @@ class WLS(GLS):
             llf -= .5*np.log(np.multiply.reduce(1/self.weights)) # with weights
         return llf
 
+
 class OLS(WLS):
     __doc__ = """
     A simple ordinary least squares model.
@@ -477,7 +477,7 @@ class OLS(WLS):
     OLS, as the other models, assumes that the design matrix contains a constant.
     """ % {'params' : base._params_doc,
            'extra_params' : base._missing_param_doc}
-#TODO: change example to use datasets.  This was the point of datasets!
+    #TODO: change example to use datasets.  This was the point of datasets!
     def __init__(self, endog, exog=None, missing=None):
         super(OLS, self).__init__(endog, exog, missing=missing)
 
@@ -684,9 +684,9 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     16.808022730464351
 
     """
-#TODO: define R better, look back at notes and technical notes on YW.
-#First link here is useful
-#http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
+    #TODO: define R better, look back at notes and technical notes on YW.
+    #First link here is useful
+    #http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
     method = str(method).lower()
     if method not in ["unbiased", "mle"]:
         raise ValueError("ACF estimation method must be 'unbiased' or 'MLE'")
@@ -859,9 +859,6 @@ class RegressionResults(base.LikelihoodModelResults):
     def __str__(self):
         self.summary()
 
-##    def __repr__(self):
-##        print self.summary()
-
     def conf_int(self, alpha=.05, cols=None):
         """
         Returns the confidence interval of the fitted parameters.
@@ -918,19 +915,7 @@ class RegressionResults(base.LikelihoodModelResults):
         return self.model.endog - self.model.predict(self.params,
                 self.model.exog)
 
-#    def _getscale(self):
-#        val = self._cache.get("scale", None)
-#        if val is None:
-#            val = ss(self.wresid) / self.df_resid
-#            self._cache["scale"] = val
-#        return val
-
-#    def _setscale(self, val):
-#        self._cache.setdefault("scale", val)
-
-#    scale = property(_getscale, _setscale)
-
-#TODO: fix writable example
+    #TODO: fix writable example
     @cache_writable()
     def scale(self):
         wresid = self.wresid
@@ -955,10 +940,10 @@ class RegressionResults(base.LikelihoodModelResults):
     def ess(self):
         return self.centered_tss - self.ssr
 
-# Centered R2 for models with intercepts
-# have a look in test_regression.test_wls to see
-# how to compute these stats for a model without intercept,
-# and when the weights are a (linear?) function of the data...
+    # Centered R2 for models with intercepts
+    # have a look in test_regression.test_wls to see
+    # how to compute these stats for a model without intercept,
+    # and when the weights are a (linear?) function of the data...
     @cache_readonly
     def rsquared(self):
         return 1 - self.ssr/self.centered_tss
@@ -1003,12 +988,12 @@ class RegressionResults(base.LikelihoodModelResults):
     def bic(self):
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
 
-# Centered R2 for models with intercepts
-# have a look in test_regression.test_wls to see
-# how to compute these stats for a model without intercept,
-# and when the weights are a (linear?) function of the data...
+    # Centered R2 for models with intercepts
+    # have a look in test_regression.test_wls to see
+    # how to compute these stats for a model without intercept,
+    # and when the weights are a (linear?) function of the data...
 
-#TODO: make these properties reset bse
+    #TODO: make these properties reset bse
     def _HCCM(self, scale):
         H = np.dot(self.model.pinv_wexog,
             scale[:,None]*self.model.pinv_wexog.T)
@@ -1066,7 +1051,7 @@ class RegressionResults(base.LikelihoodModelResults):
             self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
         return self._HC3_se
 
-#TODO: this needs a test
+    #TODO: this needs a test
     def norm_resid(self):
         """
         Residuals, normalized to have unit length and unit variance.
@@ -1155,7 +1140,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         TODO: put into separate function, needs tests
         '''
-#        See mailing list discussion October 17,
+    #        See mailing list discussion October 17,
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
@@ -1213,9 +1198,9 @@ class RegressionResults(base.LikelihoodModelResults):
                           omni=omni, omnipv=omnipv, condno=condno,
                           mineigval=eigvals[0])
 
-#        #TODO not used yet
-#        diagn_left_header = ['Models stats']
-#        diagn_right_header = ['Residual stats']
+        #TODO not used yet
+        #diagn_left_header = ['Models stats']
+        #diagn_right_header = ['Residual stats']
 
         #TODO: requiring list/iterable is a bit annoying
         #need more control over formatting
@@ -1271,15 +1256,18 @@ class RegressionResults(base.LikelihoodModelResults):
         #add warnings/notes, added to text format only
         etext =[]
         if eigvals[0] < 1e-10:
-            wstr = \
-'''The smallest eigenvalue is %6.3g. This might indicate that there are
-strong multicollinearity problems or that the design matrix is singular.''' \
-                    % eigvals[0]
+            wstr = "The smallest eigenvalue is %6.3g. This might indicate "
+            wstr += "that there are\n"
+            wstr = "strong multicollinearity problems or that the design "
+            wstr += "matrix is singular."
+            wstr = wstr % eigvals[0]
             etext.append(wstr)
         elif condno > 1000:  #TODO: what is recommended
-            wstr = \
-'''The condition number is large, %6.3g. This might indicate that there are
-strong multicollinearity or other numerical problems.''' % condno
+            wstr = "The condition number is large, %6.3g. This might "
+            wstr += "indicate that there are\n"
+            wstr += "strong multicollinearity or other numerical "
+            wstr += "problems."
+            wstr = wstr % condno
             etext.append(wstr)
 
         if etext:
@@ -1287,18 +1275,18 @@ strong multicollinearity or other numerical problems.''' % condno
 
         return smry
 
-#        top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
-#                          yname=yname, xname=xname,
-#                          title=self.model.__class__.__name__ + ' ' +
-#                          "Regression Results")
-#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-#                             use_t=False)
-#
-#        diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="Linear Model")
-#
-#        return summary_return([top, par, diagn], return_fmt=return_fmt)
+        #top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
+        #                  yname=yname, xname=xname,
+        #                  title=self.model.__class__.__name__ + ' ' +
+        #                  "Regression Results")
+        #par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+        #                     use_t=False)
+        #
+        #diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
+        #                  yname=yname, xname=xname,
+        #                  title="Linear Model")
+        #
+        #return summary_return([top, par, diagn], return_fmt=return_fmt)
 
 
     def summary_old(self, yname=None, xname=None, returns='text'):
