@@ -149,7 +149,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
             #TODO: avoid cholesky pinv for diag sigma
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
                     self.sigma)).T
-        super(GLS, self).__init__(endog, exog, missing)
+        super(GLS, self).__init__(endog, exog, missing=missing)
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
@@ -380,7 +380,7 @@ class WLS(GLS):
                 raise ValueError(\
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLS, self).__init__(endog, exog, missing)
+        super(WLS, self).__init__(endog, exog, missing=missing)
 
     def whiten(self, X):
         """
