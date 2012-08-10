@@ -4,7 +4,7 @@ results, and doing data cleaning
 """
 
 import numpy as np
-from pandas import DataFrame, Series, TimeSeries
+from pandas import DataFrame, Series, TimeSeries, isnull
 from statsmodels.tools.decorators import (resettable_cache,
                 cache_readonly, cache_writable)
 import statsmodels.tools.data as data_util
@@ -12,38 +12,110 @@ import statsmodels.tools.data as data_util
 class MissingDataError(Exception):
     pass
 
+def _nan_rows(*arrs):
+    """
+    Returns a boolean array which is True where any of the rows in any
+    of the _2d_ arrays in arrs are NaNs. Inputs can be any mixture of Series,
+    DataFrames or array-like.
+    """
+    if len(arrs) == 1:
+        arrs += ([[False]],)
+    #Have to have the asarrays because isnull doesn't account for array-like
+    #input
+    return reduce(lambda x, y:
+                  np.logical_or(np.any(isnull(np.asarray(x)), axis=1)[:,None],
+                      # check for dtype bc dataframes has dtypes
+                            hasattr(x, 'dtype') and x.dtype == bool and x) |
+                  np.any(isnull(np.asarray(y)), axis=1)[:,None],
+                    arrs).squeeze()
+
 class ModelData(object):
     """
     Class responsible for handling input data and extracting metadata into the
     appropriate form
     """
-    def __init__(self, endog, exog=None, missing=None, **kwds):
+    def __init__(self, endog, exog=None, missing=None, **kwargs):
         self._orig_endog = endog
         self._orig_exog = exog
         if missing is not None:
-            endog, exog = self._handle_missing(endog, exog, missing)
-        self.endog, self.exog = self._convert_endog_exog(endog, exog)
+            arrays = self._handle_missing(endog, exog, missing, **kwargs)
+            self.__dict__.update(arrays) # attach all the data arrays
+            self.endog, self.exog = self._convert_endog_exog(self.endog,
+                    self.exog)
+        else:
+            self.__dict__.update(kwargs) # attach the extra arrays anyway
+            self.endog, self.exog = self._convert_endog_exog(endog, exog)
+
         self._check_integrity()
         self._cache = resettable_cache()
 
-    def _handle_missing(self, endog, exog, missing):
+    def _drop_nans(self, x, nan_idx):
+        return x[nan_idx]
+
+    def _drop_nans_2d(self, x, nan_idx):
+        return x[nan_idx][:, nan_idx]
+
+    def _handle_missing(self, endog, exog, missing, **kwargs):
+        """
+        This returns a dictionary with keys endog, exog and the keys of
+        kwargs. It preserves Nones.
+        """
+        none_array_names = []
         if endog.ndim == 1:
             endog = endog[:,None]
-        if exog is not None:
-            combined = np.c_[endog, exog]
-        else:
-            combined = endog
 
-        if missing == 'raise' and np.any(np.isnan(combined)):
+        if exog is not None:
+            combined = (endog, exog)
+            combined_names = ['endog', 'exog']
+        else:
+            combined = (endog,)
+            combined_names = ['endog']
+            none_array_names += ['exog']
+
+        # deal with other arrays
+        combined_2d = ()
+        combined_2d_names = []
+        if len(kwargs):
+            for key, value_array in kwargs.iteritems():
+                if value_array is None:
+                    none_array_names += [key]
+                    continue
+                # grab 1d arrays
+                if value_array.ndim == 1:
+                    combined += (value_array[:,None],)
+                    combined_names += [key]
+                elif value_array.squeeze().ndim == 1:
+                    combined += (value_array,)
+                    combined_names += [key]
+
+                # grab 2d arrays that are _assumed_ to be symmetric
+                elif value_array.ndim == 2:
+                    combined_2d += (value_array,)
+                    combined_2d_names += [key]
+                else:
+                    raise ValueError("Arrays with more than 2 dimensions "
+                            "aren't yet handled")
+
+        nan_idx = _nan_rows(*combined)
+        if combined_2d:
+            nan_idx = _nan_rows(*(nan_idx, combined_2d))
+
+        if missing == 'raise' and np.any(nan_idx):
             raise MissingDataError("NaNs were encountered in the data")
 
         elif missing == 'drop':
-            endog_idx = endog.shape[1]
-            combined = combined[~np.isnan(combined).any(axis=1)]
-            endog = combined[:,:endog_idx].squeeze()
-            if exog is not None:
-                exog = combined[:,endog_idx:]
-            return endog, exog
+            nan_idx = ~nan_idx
+            drop_nans = lambda x : self._drop_nans(x, nan_idx)
+            drop_nans_2d = lambda x : self._drop_nans_2d(x, nan_idx)
+            combined = dict(zip(combined_names, map(drop_nans, combined)))
+            if combined_2d:
+                combined.update(dict(zip(combined_2d_names,
+                                         map(drop_nans_2d, combined_2d))))
+            if none_array_names:
+                combined.update(dict(zip(none_array_names,
+                                         [None]*len(none_array_names)
+                                         )))
+            return combined
         else:
             raise ValueError("missing option %s not understood" % missing)
 
@@ -170,26 +242,17 @@ class PandasData(ModelData):
     Data handling class which knows how to reattach pandas metadata to model
     results
     """
-    def _handle_missing(self, endog, exog, missing):
-        if missing == 'raise':
-            from pandas import isnull
-            if np.any(isnull(endog)) or (exog is not None and
-                                         np.any(isnull(exog))):
-                raise MissingDataError("NaNs were encountered in the data")
+    def _drop_nans(self, x, nan_idx):
+        if hasattr(x, 'ix'):
+            return x.ix[nan_idx]
+        else: # extra arguments could be plain ndarrays
+            return super(PandasData, self)._drop_nans(x, nan_idx)
 
-        elif missing == 'drop':
-            y_index = endog.dropna().index
-            if exog is not None:
-                x_index = exog.dropna().index
-            else:
-                x_index = y_index # just union with itself
-
-            index = y_index.intersection(x_index)
-            if exog is not None:
-                exog = exog.ix[index]
-            return endog.ix[index], exog
-        else:
-            raise ValueError("missing option %s not understood" % missing)
+    def _drop_nans_2d(self, x, nan_idx):
+        if hasattr(x, 'ix'):
+            return x.ix[nan_idx].ix[:, nan_idx]
+        else:  # extra arguments could be plain ndarrays
+            return super(PandasData, self)._drop_nans_2d(x, nan_idx)
 
     def _check_integrity(self):
         try:
@@ -258,7 +321,7 @@ def _make_exog_names(exog):
 
     return exog_names
 
-def handle_data(endog, exog, missing=None):
+def handle_data(endog, exog, missing=None, **kwargs):
     """
     Given inputs
     """
@@ -281,4 +344,4 @@ def handle_data(endog, exog, missing=None):
         raise ValueError('unrecognized data structures: %s / %s' %
                          (type(endog), type(exog)))
 
-    return klass(endog, exog=exog, missing=missing)
+    return klass(endog, exog=exog, missing=missing, **kwargs)
