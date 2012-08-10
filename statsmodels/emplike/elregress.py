@@ -17,12 +17,13 @@ import numpy as np
 from scipy.stats import chi2
 from statsmodels.regression.linear_model import OLS
 from scipy import optimize
-from descriptive import OptFuncts
+from descriptive2 import _OptFuncts
+# When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import RegressionResults
 
 
-class _ElRegSetup(OptFuncts):
+class _ElRegSetup(object, _OptFuncts):
     """
 
     Empirical Likelihood is a method of inference, not estimation.  Therefore,
@@ -69,6 +70,7 @@ class _ElRegSetup(OptFuncts):
         self.resid = self.ols_fit.resid
         self.rsquared = self.ols_fit.rsquared
         self.rsquared_adj = self.ols_fit.rsquared_adj
+        self._normal_ci = self.ols_fit.conf_int
         #All of the above are the same when using EL or OLS
 
 
@@ -82,7 +84,7 @@ class _ElRegOpts(_ElRegSetup):
     def __init__(self, endog, exog):
             super(_ElRegOpts, self).__init__(endog, exog)
 
-    def _opt_nuis_regress(self, nuisance_params, weights=None):
+    def _opt_nuis_regress(self, nuisance_params):
         """
         A function that is optimized over nuisance parameters to conduct a
         hypothesis test for the parameters of interest
@@ -102,41 +104,47 @@ class _ElRegOpts(_ElRegSetup):
             hypothesized value of the parameter(s) of interest.
 
         """
-        if weights is None
-            weights = np.ones(nobs).reshape(nobs,1)
+        nobs = self.nobs
+        exog = self.exog
+        endog = self.endog
+        nvar = self.nvar
         params = np.copy(self.params)
         params[self.param_nums] = self.b0_vals
-        nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
+        nuis_param_index = np.int_(np.delete(np.arange(nvar),
                                              self.param_nums))
         params[nuis_param_index] = nuisance_params
-        self.new_params = params.reshape(self.nvar, 1)
-        self.est_vect = self.exog * (self.endog - np.dot(self.exog,
-                                                         self.new_params))
+        new_params = params.reshape(nvar, 1)
+        est_vect = exog * (endog - np.dot(exog,new_params))
         if not self._stochastic_exog:
-            exog_means = np.mean(self.exog, axis=0)[1:]
-            exog_mom2 = (np.sum(self.exog * self.exog, axis=0))[1:]\
-                          / self.nobs
-            mean_est_vect = self.exog[:, 1:] - exog_means
-            mom2_est_vect = (self.exog * self.exog)[:, 1:] - exog_mom2
+            exog_means = np.mean(exog, axis=0)[1:]
+            exog_mom2 = (np.sum(exog * exog, axis=0))[1:]\
+                          / nobs
+            mean_est_vect = exog[:, 1:] - exog_means
+            mom2_est_vect = (exog * exog)[:, 1:] - exog_mom2
             regressor_est_vect = np.concatenate((mean_est_vect, mom2_est_vect),
                                                 axis=1)
-            self.est_vect = np.concatenate((self.est_vect, regressor_est_vect),
+            est_vect = np.concatenate((est_vect, regressor_est_vect),
                                            axis=1)
-        self.est_vect = weights * self.est_vect
-        eta_star = self._modif_newton(self.start_lbda)
-        self.eta_star = eta_star
-        denom = 1. + np.dot(eta_star, self.est_vect.T)
-        self.new_weights = 1. / self.nobs * 1. / denom
-        llr = np.sum(np.log(self.nobs * self.new_weights))
-        return -2 * llr
+
+        wts = np.ones(nobs)* (1./nobs)
+        try:
+            eta_star = self._modif_newton(self.start_lbda, est_vect, wts)
+            denom = 1. + np.dot(eta_star, est_vect.T)
+            self.new_weights = 1. / nobs * 1. / denom
+            llr = np.sum(np.log(nobs * self.new_weights))
+            return -2 * llr
+        except:
+            return np.inf
 
     def _ci_limits_beta(self, beta):
         self.b0_vals = beta
-        return self.hy_test_beta([beta], [self.param_nums],
+        llr = self.hy_test_beta([beta], [self.param_nums],
                                  method=self.method,
                                  start_int_params=self.start_eta,
                                  stochastic_exog=self._stochastic_exog)[1]\
                                   - self.r0
+
+        return llr
 
     def _ci_limits_beta_origin(self, beta):
         return self.hy_test_beta_origin(beta, self.param_nums,
@@ -239,7 +247,7 @@ class ElLinReg(_ElRegOpts):
         el_analysis.hy_test_beta([2, 3], [12000,50])
         >>> (0.0, 105.64623449375982)
         """
-
+        nvar = self.nvar
         if start_int_params is not None:
             self.start_lbda = start_int_params
         elif stochastic_exog:
@@ -259,7 +267,7 @@ class ElLinReg(_ElRegOpts):
             llr = optimize.fmin(self._opt_nuis_regress, x0, maxfun=10000,
                                  maxiter=10000, full_output=1)[1]
         if method == 'powell':
-            llr = optimize.fmin_powell(self._opt_nuis_regress, x0,
+            llr = optimize.fmin(self._opt_nuis_regress, x0,
                                  full_output=1)[1]
         pval = 1 - chi2.cdf(llr, len(param_nums))
         if ret_params:   # Used only for origin regress
@@ -385,16 +393,16 @@ class ElLinReg(_ElRegOpts):
         if upper_bound is not None:
             beta_high = upper_bound
         else:
-            beta_high = self.ols_fit.conf_int(.001)[self.param_nums][1]
+            beta_high = self.ols_fit.conf_int(.01)[self.param_nums][1]
         if lower_bound is not None:
             beta_low = lower_bound
         else:
-            beta_low = self.ols_fit.conf_int(.001)[self.param_nums][0]
+            beta_low = self.ols_fit.conf_int(.01)[self.param_nums][0]
         print 'Finding Lower Limit'
-        ll = optimize.brentq(self._ci_limits_beta, beta_low,
+        ll = optimize.brenth(self._ci_limits_beta, beta_low,
                              self.params[self.param_nums])
         print 'Finding Upper Limit'
-        ul = optimize.brentq(self._ci_limits_beta,
+        ul = optimize.brenth(self._ci_limits_beta,
                              self.params[self.param_nums], beta_high)
         return (ll, ul)
 
@@ -647,14 +655,15 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         beta_low = lower_bound
         print 'Finding Lower Limit'
         ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
-        self.params[self.param_nums])
+        self.params[self.param_nums], rtol= 10 ** -7)
         print 'Finding Upper Limit'
         ul = optimize.brentq(self._ci_limits_beta_origin,
-                             self.params[self.param_nums], beta_high)
+                             self.params[self.param_nums], beta_high,
+                             rtol=10 ** -7)
         return (ll, ul)
 
 
-class _ANOVAOpt(OptFuncts):
+class _ANOVAOpt(_OptFuncts):
     """
 
     Class containing functions that are optimized over when
@@ -669,10 +678,11 @@ class _ANOVAOpt(OptFuncts):
             empt_array[obs_num: new_obs_num, arr_num] = self.data[arr_num] - \
               mu
             obs_num = new_obs_num
-        self.est_vect = empt_array
-        eta_star = self._modif_newton(np.zeros(self.num_groups))
+        est_vect = empt_array
+        wts = np.ones(est_vect.shape[0]) * (1. / (est_vect.shape[0]))
+        eta_star = self._modif_newton(np.zeros(self.num_groups), est_vect, wts)
         self.eta_star = eta_star
-        denom = 1. + np.dot(eta_star, self.est_vect.T)
+        denom = 1. + np.dot(eta_star, est_vect.T)
         self.new_weights = 1. / self.nobs * 1. / denom
         llr = np.sum(np.log(self.nobs * self.new_weights))
         return -2 * llr
