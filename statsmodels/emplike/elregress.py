@@ -4,8 +4,6 @@ Empirical Likelihood Linear Regression Inference
 Included in this script are functions to conduct hypothesis test of linear
 regression parameters as well as restrictions.
 
-Start Date: 22 June
-Last Updated: 28 June
 
 General References
 -----------------
@@ -114,7 +112,7 @@ class _ElRegOpts(_ElRegSetup):
                                              self.param_nums))
         params[nuis_param_index] = nuisance_params
         new_params = params.reshape(nvar, 1)
-        est_vect = exog * (endog - np.dot(exog,new_params))
+        est_vect = exog * (endog - np.dot(exog, new_params))
         if not self._stochastic_exog:
             exog_means = np.mean(exog, axis=0)[1:]
             exog_mom2 = (np.sum(exog * exog, axis=0))[1:]\
@@ -126,28 +124,29 @@ class _ElRegOpts(_ElRegSetup):
             est_vect = np.concatenate((est_vect, regressor_est_vect),
                                            axis=1)
 
-        wts = np.ones(nobs)* (1./nobs)
+        wts = np.ones(nobs) * (1. / nobs)
+        x0 = np.zeros(est_vect.shape[1]).reshape(-1, 1)
+        self.new_params = new_params  # Used for Origin Regress
         try:
-            eta_star = self._modif_newton(self.start_lbda, est_vect, wts)
+            eta_star = self._modif_newton(x0, est_vect, wts)
             denom = 1. + np.dot(eta_star, est_vect.T)
             self.new_weights = 1. / nobs * 1. / denom
             llr = np.sum(np.log(nobs * self.new_weights))
             return -2 * llr
-        except np.linalg.linalg.LinAlgError :
+        except np.linalg.linalg.LinAlgError:
             return np.inf
 
     def _ci_limits_beta(self, beta):
         self.b0_vals = beta
-        llr = self.hy_test_beta([beta], [self.param_nums],
+        llr = self.test_beta([beta], [self.param_nums],
                                  method=self.method,
-                                 start_int_params=self.start_eta,
                                  stochastic_exog=self._stochastic_exog)[1]\
                                   - self.r0
 
         return llr
 
     def _ci_limits_beta_origin(self, beta):
-        return self.hy_test_beta_origin(beta, self.param_nums,
+        return self.test_beta_origin([beta], [self.param_nums],
                              method=self.method,
                              start_int_params=self.start_eta, only_h0=1,
                              stochastic_exog=self._stochastic_exog) - \
@@ -159,6 +158,9 @@ class ElLinReg(_ElRegOpts):
     """
     Class that conducts hyptheses tests and calculates confidence intervals
     for parameters.
+
+    Note the model does not need to be fitted.  The applicable fitted
+    attributes are inherited from _ElRegSetup.
 
     Parameters
     ----------
@@ -174,18 +176,18 @@ class ElLinReg(_ElRegOpts):
     Methods
     -------
 
-    hy_test_beta:
+    test_beta:
         Conducts hypothesis tests for regression parameters
 
-    ci_veta:
+    ci_beta:
         Finds confidence intervals for regression parameters
 
     """
     def __init__(self, endog, exog):
         super(ElLinReg, self).__init__(endog, exog)
 
-    def hy_test_beta(self, b0_vals, param_nums, print_weights=0,
-                     ret_params=0, method='powell', start_int_params=None,
+    def test_beta(self, b0_vals, param_nums, print_weights=0,
+                     ret_params=0, method='nm',
                      stochastic_exog=1):
         """
         Tests single or joint hypotheses of the regression parameters
@@ -212,10 +214,6 @@ class ElLinReg(_ElRegOpts):
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'
 
-        start_int_params: 1d array, optional
-            The starting values for the interior minimization.  The starting
-            values of lambda as in Owen pg. 63. Default is an array of 0.
-
         stochastic_exog: bool, optional
             When TRUE, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
@@ -236,25 +234,18 @@ class ElLinReg(_ElRegOpts):
         data.exog = sm.add_constant(data.exog[:,:-1], prepend=1)
         el_analysis = El_Lin_Reg(data.endog, data.exog)
         # Test the hypothesis that the intercept is -6000.
-        el_analysis.hy_test_beta([0], [-6000])
+        el_analysis.test_beta([0], [-6000])
         >>> (0.78472652375012586, 0.074619017259285519)
         # Test the hypothesis that the coefficient on the
         #   parameter after the incercept is 0
-        el_analysis.hy_test_beta([1], [0])
+        el_analysis.test_beta([1], [0])
         >>> (0.2224473814889133, 1.4885126021160364)
         # Test the hypothesis that the second parameter after the intercept
         # is 12000 and the third regression parameter is 50
-        el_analysis.hy_test_beta([2, 3], [12000,50])
+        el_analysis.test_beta([2, 3], [12000,50])
         >>> (0.0, 105.64623449375982)
         """
-        nvar = self.nvar
-        if start_int_params is not None:
-            self.start_lbda = start_int_params
-        elif stochastic_exog:
-            self.start_lbda = np.zeros(self.nvar)
-        else:
-            self.start_lbda = np.zeros(self.nvar +
-                                       2 * (self.exog.shape[1] - 1))
+
         self._stochastic_exog = stochastic_exog
         self.param_nums = np.asarray(param_nums)
         self.b0_vals = np.asarray(b0_vals)
@@ -265,10 +256,10 @@ class ElLinReg(_ElRegOpts):
         x0 = np.delete(self.params, self.param_nums)
         if method == 'nm':
             llr = optimize.fmin(self._opt_nuis_regress, x0, maxfun=10000,
-                                 maxiter=10000, full_output=1)[1]
+                                 maxiter=10000, full_output=1, disp=1)[1]
         if method == 'powell':
             llr = optimize.fmin(self._opt_nuis_regress, x0,
-                                 full_output=1)[1]
+                                 full_output=1, disp=1)[1]
         pval = 1 - chi2.cdf(llr, len(param_nums))
         if ret_params:   # Used only for origin regress
             return pval, llr, self.new_weights, self.new_params
@@ -318,13 +309,13 @@ class ElLinReg(_ElRegOpts):
 
         See Also
         --------
-        hy_test_beta
+        test_beta
 
         Notes
         -----
 
         This function uses brentq to find the value of beta where
-        hy_test_beta([beta], param_num)[1] is equal to the critical
+        test_beta([beta], param_num)[1] is equal to the critical
         value.
 
         The function returns the results of each iteration of brentq at
@@ -335,7 +326,7 @@ class ElLinReg(_ElRegOpts):
         For alpha=.05, the value is 3.841459.
 
         To ensure optimization terminated successfully, it is suggested to
-        do hy_test_beta([lower_limit], [param_num])
+        do test_beta([lower_limit], [param_num])
 
         If the optimization does not terminate successfully, consider switching
         optimization algorithms.
@@ -354,35 +345,6 @@ class ElLinReg(_ElRegOpts):
         ci_intercept = el_regression.ci_beta(0)
         ci_intercept
         >>>(-52.771288377249604, -25.21626358895916)
-        el_regression.hy_test_beta([ci_intercept[0]], [0])
-        >>> (0.049999999999999378, 3.8414588206941378)
-        # p-value approx .05 so lower limit is accurate
-        el_regression.hy_test_beta([ci_intercept[1]], [0])
-        Optimization terminated successfully.
-            Current function value: 3.408024
-            Iterations: 113
-            Function evaluations: 200
-        >>>(0.064880108063052777, 3.4080236322591979)
-        # P-value is not .05, indicating that the inner optimization
-        # got stuck on the boundary of the convex hull. Note function value
-        # of 3.40
-        ci_intercept_powell = el_regression.ci_beta(0, method='powell')
-        ...
-        ...
-        # The last optimization result:
-        Optimization terminated successfully.
-            Current function value: 3.841459
-            Iterations: 12
-            Function evaluations: 484
-
-        # Note the function value of 3.84
-        ci_intercept_powell
-        >>>(-52.77091422379838, -24.116074241618467)
-        # Lower limit is the same with relative error<10**-5
-        el_regression.hy_test_beta([ci_intercept_powell[1]], [0],
-                                   method='powell')
-        >>> (0.04999999999999738, 3.8414588206942133)
-        # Note method='powell' in hy_test_beta
 
         """
         self.start_eta = start_int_params
@@ -398,16 +360,15 @@ class ElLinReg(_ElRegOpts):
             beta_low = lower_bound
         else:
             beta_low = self.ols_fit.conf_int(.01)[self.param_nums][0]
-        print 'Finding Lower Limit'
         ll = optimize.brenth(self._ci_limits_beta, beta_low,
                              self.params[self.param_nums])
-        print 'Finding Upper Limit'
         ul = optimize.brenth(self._ci_limits_beta,
                              self.params[self.param_nums], beta_high)
+        #  ^ Seems to be faster than brentq in most cases
         return (ll, ul)
 
 
-class _ElOriginRegresssSetup(ElLinReg):
+class _ElOriginRegresssSetup(_ElRegOpts):
     """
     This class is used to find the parameters of a linear regression model
     with a 0 intercept term
@@ -447,12 +408,12 @@ class _ElOriginRegresssSetup(ElLinReg):
         """
 
         self.new_exog = add_constant(self.exog, prepend=1)
-        self.new_fit = ElLinReg(self.endog, self.new_exog)
+        self._new_fit = ElLinReg(self.endog, self.new_exog)
         # new fit is what all of the inference is drawn on.  it includes
         # a vector of 1's but the coefficient of the ones is restricted
-        # to be 0. self.endog does not contain 1's but self.new_fit.endog does.
-        # The user should not be concerned with self.new_fit
-        results = self.new_fit.hy_test_beta([0], [0], print_weights=1,
+        # to be 0. self.exog does not contain 1's but self.new_fit.exog does.
+        # The user should not be concerned with self._new_fit
+        results = self._new_fit.test_beta([0], [0], print_weights=1,
                                       ret_params=1)
         return results
 
@@ -478,7 +439,7 @@ class ElOriginRegress(_ElOriginRegresssSetup):
     fit:
         Fits the model and adds fitted attributes
 
-    hy_test_beta_origin:
+    test_beta_origin:
         Conducts a hypothesis test for a regression parameter when the
         regression is forced through the origin.
 
@@ -523,9 +484,9 @@ class ElOriginRegress(_ElOriginRegresssSetup):
              Function evaluations: 955
         el_model.params
         >>>array([[ 0.        ],
-                  [ 0.50630858],
-                  [ 1.89804086],
-                  [-0.60254578]])
+                  [ 0.50122897],
+                  [ 1.90456428],
+                  [-0.60036974]])
         el_model.rsquared
         >>>0.81907913157749168
 
@@ -543,7 +504,7 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         self.params = fit_results[3]
         self.llr = fit_results[1]
         ols_model = OLS(self.endog, self.new_exog)
-        results = RegressionResults(ols_model,
+        results = RegressionResults(ols_model,  # Params not same as OLS
                                     self.params.reshape(self.nvar + 1,))
         self.fittedvalues = results.fittedvalues
         self.mse_model = results.mse_model
@@ -552,7 +513,7 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         self.rsquared = results.rsquared
         self.rsquared_adj = results.rsquared_adj
 
-    def hy_test_beta_origin(self, value, param_num, method='powell',
+    def test_beta_origin(self, value, param_num, method='powell',
                             only_h0=False,
                             stochastic_exog=1,
                             start_int_params=None):
@@ -570,8 +531,9 @@ class ElOriginRegress(_ElOriginRegresssSetup):
             The hypothesized value to be tested
 
         param_num: float
-            Which parameter to test.  Note this uses python
-            indexing but the '0' parameter refers to the intercept term.
+            Which parameters to test.  Note this uses python
+            indexing but the '0' parameter refers to the intercept term,
+            which is assumed 0.  Therefore, param_num should be > 0.
 
         Returns
         -------
@@ -582,20 +544,21 @@ class ElOriginRegress(_ElOriginRegresssSetup):
 
         """
 
-        llr_beta0 = self.new_fit.hy_test_beta([0, value], [0, param_num],
+        value.insert(0, 0)
+        param_num.insert(0, 0)
+        llr_beta0 = self._new_fit.test_beta(value, param_num,
                                               method=method,
                                          stochastic_exog=stochastic_exog)[1]
 
         if only_h0:  # Used for confidence intervals
             return llr_beta0
         else:
-            llr_beta_hat = self.new_fit.hy_test_beta([0,
-                                float(self.params[param_num])],
-                                [0, param_num], method=method,
-                                start_int_params=start_int_params,
+            llr_beta_hat = self._new_fit.test_beta(
+                                list(self.params[param_num]),
+                                [param_num], method=method,
                                 stochastic_exog=stochastic_exog)[1]
             llr = llr_beta0 - llr_beta_hat
-            pval = 1 - chi2.cdf(llr, 1)
+            pval = 1 - chi2.cdf(llr, len(param_num) - 1)
             return pval, llr
 
     def ci_beta_origin(self, param_num, upper_bound,
@@ -655,11 +618,10 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         beta_low = lower_bound
         print 'Finding Lower Limit'
         ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
-        self.params[self.param_nums], rtol= 10 ** -7)
+                             self.params[self.param_nums])
         print 'Finding Upper Limit'
         ul = optimize.brentq(self._ci_limits_beta_origin,
-                             self.params[self.param_nums], beta_high,
-                             rtol=10 ** -7)
+                             self.params[self.param_nums], beta_high)
         return (ll, ul)
 
 
