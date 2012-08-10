@@ -184,7 +184,7 @@ class GLM(base.LikelihoodModel):
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
-    ''' % {'extra_params' = base._missing_param_doc}
+    ''' % {'extra_params' : base._missing_param_doc}
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                         missing=None):

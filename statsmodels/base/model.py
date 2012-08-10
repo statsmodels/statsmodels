@@ -38,7 +38,7 @@ class Model(object):
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
     """ % {'params_doc' : _model_params_doc,
-            'extra_params_doc' : _missing_param_doc}}
+            'extra_params_doc' : _missing_param_doc}
     def __init__(self, endog, exog=None, missing=None):
         self._data = handle_data(endog, exog, missing)
         self.exog = self._data.exog

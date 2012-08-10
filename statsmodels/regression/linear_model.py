@@ -116,7 +116,7 @@ class GLS(base.LikelihoodModel):
     >>> gls_results = gls_model.fit()
     >>> print gls_results.summary()
 
-    """ % {'params' : base._params_doc,
+    """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
 
     def __init__(self, endog, exog, sigma=None, missing=None):
@@ -315,7 +315,7 @@ class GLS(base.LikelihoodModel):
 
 
 class WLS(GLS):
-    __doc__ """
+    __doc__ = """
     A regression model with diagonal but non-identity covariance structure.
 
     The weights are presumed to be (proportional to) the inverse of the
@@ -360,8 +360,8 @@ class WLS(GLS):
     If the weights are a function of the data, then the postestimation
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
-    """ % {'params' : base._params_doc,
-           'extra_params' : base._extra_params_doc}
+    """ % {'params' : base._model_params_doc,
+           'extra_params' : base._missing_param_doc}
 
     #FIXME: bug in fvalue or f_test for this example?
     #UPDATE the bug is in fvalue, f_test is correct vs. R
@@ -475,7 +475,7 @@ class OLS(WLS):
     Notes
     -----
     OLS, as the other models, assumes that the design matrix contains a constant.
-    """ % {'params' : base._params_doc,
+    """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
     #TODO: change example to use datasets.  This was the point of datasets!
     def __init__(self, endog, exog=None, missing=None):
@@ -559,8 +559,8 @@ class GLSAR(GLS):
     GLSAR is considered to be experimental.
     The linear autoregressive process of order p--AR(p)--is defined as:
         TODO
-    """ % {'params' : base._param_doc,
-           'extra_params' : base._missing_params_doc}
+    """ % {'params' : base._model_params_doc,
+           'extra_params' : base._missing_param_doc}
     def __init__(self, endog, exog=None, rho=1, missing=None):
         #this looks strange, interpreting rho as order if it is int
         if isinstance(rho, np.int):

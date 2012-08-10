@@ -106,7 +106,7 @@ class RLM(base.LikelihoodModel):
 
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
-    """ % {'params' : base._params_doc,
+    """ % {'params' : base._model_params_doc,
             'extra_params' : base._missing_param_doc}
 
     def __init__(self, endog, exog, M=norms.HuberT(), missing=None):

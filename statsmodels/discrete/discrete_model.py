@@ -491,7 +491,7 @@ class Poisson(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {'params' base._model_param_doc,
+    """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
 
     def cdf(self, X):
@@ -698,7 +698,7 @@ class Logit(BinaryModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {'params' base._model_param_doc,
+    """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
 
     def cdf(self, X):
@@ -875,7 +875,7 @@ class Probit(BinaryModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    """ % {'params' base._model_param_doc,
+    """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
 
     def cdf(self, X):
@@ -1096,7 +1096,7 @@ class MNLogit(MultinomialModel):
     Notes
     -----
     See developer notes for further information on `MNLogit` internals.
-    """ % {'extra_params' : base._missing_param_doc}}
+    """ % {'extra_params' : base._missing_param_doc}
 
     def pdf(self, eXB):
         """
