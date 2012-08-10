@@ -44,6 +44,23 @@ from statsmodels.emplike.elregress import _ELRegOpts
 from scipy import optimize
 from scipy.stats import chi2
 
+def _get_sigma(sigma, nobs):
+    if sigma is None:
+        return None, None
+    sigma = np.asarray(sigma).squeeze()
+    if sigma.ndim == 1:
+        sigma = np.diag(sigma)
+    elif sigma.ndim == 0:
+        sigma = np.diag([sigma] * nobs)
+
+    if sigma.shape != (nobs, nobs):
+        raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
+                        "array of shape %s x %s" % (nobs, nobs))
+
+    cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
+    return sigma, cholsigmainv
+
+
 class GLS(base.LikelihoodModel):
     __doc__ = """
     Generalized least squares model with a general covariance structure.
@@ -122,33 +139,10 @@ class GLS(base.LikelihoodModel):
     def __init__(self, endog, exog, sigma=None, missing=None):
     #TODO: add options igls, for iterative fgls if sigma is None
     #TODO: default is sigma is none should be two-step GLS
-        if sigma is not None:
-            self.sigma = np.asarray(sigma)
-        else:
-            self.sigma = sigma
+        self.sigma, cholsigmainv = _get_sigma(sigma, len(endog))
+        if cholsigmainv is not None:
+            self.cholsigmainv = cholsigmainv
 
-        #check for correct shape of sigma for 1d and 2d
-        if self.sigma is not None and not self.sigma.shape == (): #greedy logic
-            nobs = int(endog.shape[0])
-            if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
-                if self.sigma.shape[0] != nobs:
-                    raise ValueError("sigma is not the correct dimension. "
-                                     "Should be of length %s, if sigma is "
-                                     "a 1d array" % nobs)
-            elif self.sigma.shape[0] != nobs and self.sigma.shape[1] != nobs:
-                raise ValueError("expected an %s x %s array for sigma" % \
-                        (nobs, nobs))
-
-        #convert to 2d sigma and get cholsigmainv
-        if self.sigma is not None:
-            nobs = int(endog.shape[0])
-            if self.sigma.shape == ():
-                self.sigma = np.diag(np.ones(nobs)*self.sigma)
-            if np.squeeze(self.sigma).ndim == 1:
-                self.sigma = np.diag(np.squeeze(self.sigma))
-            #TODO: avoid cholesky pinv for diag sigma
-            self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
-                    self.sigma)).T
         super(GLS, self).__init__(endog, exog, missing=missing)
 
         #store attribute names for data arrays
