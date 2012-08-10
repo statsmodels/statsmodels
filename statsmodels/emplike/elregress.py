@@ -133,7 +133,7 @@ class _ElRegOpts(_ElRegSetup):
             self.new_weights = 1. / nobs * 1. / denom
             llr = np.sum(np.log(nobs * self.new_weights))
             return -2 * llr
-        except:
+        except np.linalg.linalg.LinAlgError :
             return np.inf
 
     def _ci_limits_beta(self, beta):
