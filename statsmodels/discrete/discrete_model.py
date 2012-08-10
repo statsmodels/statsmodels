@@ -45,8 +45,9 @@ class DiscreteModel(base.LikelihoodModel):
     call signature expected of child classes in addition to those of
     statsmodels.model.LikelihoodModel.
     """
-    def __init__(self, endog, exog, missing=None):
-        super(DiscreteModel, self).__init__(endog, exog, missing=missing)
+    def __init__(self, endog, exog, missing=None, **kwargs):
+        super(DiscreteModel, self).__init__(endog, exog, missing=missing,
+                                            **kwargs)
         self.raise_on_perfect_prediction = True
 
     def initialize(self):
@@ -364,21 +365,26 @@ class MultinomialModel(BinaryModel):
 
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing=None):
-        super(CountModel, self).__init__(endog, exog, missing=missing)
-        self._check_inputs(offset, exposure) # attaches if needed
+        self._check_inputs(offset, exposure, endog) # attaches if needed
+        super(CountModel, self).__init__(endog, exog, missing=missing,
+                offset=self.offset, exposure=self.exposure)
+        if offset is None:
+            delattr(self, 'offset')
+        if exposure is None:
+            delattr(self, 'exposure')
 
-    def _check_inputs(self, offset, exposure):
+    def _check_inputs(self, offset, exposure, endog):
         if offset is not None:
             offset = np.asarray(offset)
-            if offset.shape[0] != self.endog.shape[0]:
+            if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
-            self.offset = offset
+        self.offset = offset
 
         if exposure is not None:
             exposure = np.log(exposure)
-            if exposure.shape[0] != self.endog.shape[0]:
+            if exposure.shape[0] != endog.shape[0]:
                 raise ValueError("exposure is not the same length as endog")
-            self.exposure = exposure
+        self.exposure = exposure
 
     #TODO: are these two methods only for Poisson? or also Negative Binomial?
     def predict(self, params, exog=None, exposure=None, offset=None,

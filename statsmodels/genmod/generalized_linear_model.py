@@ -188,8 +188,13 @@ class GLM(base.LikelihoodModel):
 
     def __init__(self, endog, exog, family=None, offset=None, exposure=None,
                         missing=None):
-        super(GLM, self).__init__(endog, exog, missing=missing)
-        self._sanitize_inputs(family, offset, exposure)
+        self._check_inputs(family, offset, exposure, endog)
+        super(GLM, self).__init__(endog, exog, missing=missing,
+                                  offset=self.offset, exposure=self.exposure)
+        if offset is None:
+            delattr(self, 'offset')
+        if exposure is None:
+            delattr(self, 'exposure')
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'data_weights',
                                 ])
@@ -210,22 +215,22 @@ class GLM(base.LikelihoodModel):
         self.df_model = rank(self.exog)-1
         self.df_resid = self.exog.shape[0] - rank(self.exog)
 
-    def _sanitize_inputs(self, family, offset, exposure):
+    def _check_inputs(self, family, offset, exposure, endog):
         if family is None:
             family = families.Gaussian()
         self.family = family
 
         if offset is not None:
             offset = np.asarray(offset)
-            if offset.shape[0] != self.endog.shape[0]:
+            if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
-            self.offset = offset
+        self.offset = offset
 
         if exposure is not None:
             exposure = np.log(exposure)
-            if exposure.shape[0] != self.endog.shape[0]:
+            if exposure.shape[0] != endog.shape[0]:
                 raise ValueError("exposure is not the same length as endog")
-            self.exposure = exposure
+        self.exposure = exposure
 
     def score(self, params):
         """

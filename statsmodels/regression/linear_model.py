@@ -60,8 +60,113 @@ def _get_sigma(sigma, nobs):
     cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
     return sigma, cholsigmainv
 
+class RegressionModel(base.LikelihoodModel):
+    """
+    Base class for linear regression models not used by users.
 
-class GLS(base.LikelihoodModel):
+    Intended for subclassing.
+    """
+    def __init__(self, endog, exog, **kwargs):
+        super(RegressionModel, self).__init__(endog, exog, **kwargs)
+
+    def initialize(self):
+        #print "calling initialize, now whitening"  #for debugging
+        self.wexog = self.whiten(self.exog)
+        self.wendog = self.whiten(self.endog)
+        # overwrite nobs from class Model:
+        self.nobs = float(self.wexog.shape[0])
+        self.df_resid = self.nobs - rank(self.exog)
+        #Below assumes that we have a constant
+        self.df_model = float(rank(self.exog)-1)
+
+    def fit(self, method="pinv", **kwargs):
+        """
+        Full fit of the model.
+
+        The results include an estimate of covariance matrix, (whitened)
+        residuals and an estimate of scale.
+
+        Parameters
+        ----------
+        method : str
+            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
+            to solve the least squares problem. "qr" uses the QR
+            factorization.
+
+        Returns
+        -------
+        A RegressionResults class instance.
+
+        See Also
+        ---------
+        regression.RegressionResults
+
+        Notes
+        -----
+        Currently it is assumed that all models will have an intercept /
+        constant in the design matrix for postestimation statistics.
+
+        The fit method uses the pseudoinverse of the design/exogenous variables
+        to solve the least squares minimization.
+        """
+        exog = self.wexog
+        endog = self.wendog
+
+        if method == "pinv":
+            if ((not hasattr(self, 'pinv_wexog')) or
+                (not hasattr(self, 'normalized_cov_params'))):
+                #print "recalculating pinv"   #for debugging
+                self.pinv_wexog = pinv_wexog = np.linalg.pinv(self.wexog)
+                self.normalized_cov_params = np.dot(pinv_wexog,
+                                                 np.transpose(pinv_wexog))
+            beta = np.dot(self.pinv_wexog, endog)
+
+        elif method == "qr":
+            if ((not hasattr(self, '_exog_Q')) or
+                (not hasattr(self, 'normalized_cov_params'))):
+                Q, R = np.linalg.qr(exog)
+                self._exog_Q, self._exog_R = Q, R
+                self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
+            else:
+                Q, R = self._exog_Q, self._exog_R
+
+            beta = np.linalg.solve(R,np.dot(Q.T,endog))
+
+            # no upper triangular solve routine in numpy/scipy?
+        if isinstance(self, OLS):
+            lfit = OLSResults(self, beta,
+                       normalized_cov_params=self.normalized_cov_params)
+        else:
+            lfit = RegressionResults(self, beta,
+                       normalized_cov_params=self.normalized_cov_params)
+        return RegressionResultsWrapper(lfit)
+
+    def predict(self, params, exog=None):
+        """
+        Return linear predicted values from a design matrix.
+
+        Parameters
+        ----------
+        params : array-like, optional after fit has been called
+            Parameters of a linear model
+        exog : array-like, optional.
+            Design / exogenous data. Model exog is used if None.
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        If the model as not yet been fit, params is not optional.
+        """
+        #JP: this doesn't look correct for GLMAR
+        #SS: it needs its own predict method
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params)
+
+class GLS(RegressionModel):
     __doc__ = """
     Generalized least squares model with a general covariance structure.
 
@@ -143,21 +248,13 @@ class GLS(base.LikelihoodModel):
         if cholsigmainv is not None:
             self.cholsigmainv = cholsigmainv
 
-        super(GLS, self).__init__(endog, exog, missing=missing)
+        super(GLS, self).__init__(endog, exog, missing=missing,
+                                  sigma=self.sigma)
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
                                'wendog', 'wexog', 'weights'])
 
-    def initialize(self):
-        #print "calling initialize, now whitening"  #for debugging
-        self.wexog = self.whiten(self.exog)
-        self.wendog = self.whiten(self.endog)
-        # overwrite nobs from class Model:
-        self.nobs = float(self.wexog.shape[0])
-        self.df_resid = self.nobs - rank(self.exog)
-        #Below assumes that we have a constant
-        self.df_model = float(rank(self.exog)-1)
 
     def whiten(self, X):
         """
@@ -181,93 +278,6 @@ class GLS(base.LikelihoodModel):
             return np.dot(self.cholsigmainv, X)
         else:
             return X
-
-    def fit(self, method="pinv", **kwargs):
-        """
-        Full fit of the model.
-
-        The results include an estimate of covariance matrix, (whitened)
-        residuals and an estimate of scale.
-
-        Parameters
-        ----------
-        method : str
-            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
-            to solve the least squares problem. "qr" uses the QR
-            factorization.
-
-        Returns
-        -------
-        A RegressionResults class instance.
-
-        See Also
-        ---------
-        regression.RegressionResults
-
-        Notes
-        -----
-        Currently it is assumed that all models will have an intercept /
-        constant in the design matrix for postestimation statistics.
-
-        The fit method uses the pseudoinverse of the design/exogenous
-        variables to solve the least squares minimization.
-        """
-        exog = self.wexog
-        endog = self.wendog
-
-        if method == "pinv":
-            if ((not hasattr(self, 'pinv_wexog')) or
-                (not hasattr(self, 'normalized_cov_params'))):
-                #print "recalculating pinv"   #for debugging
-                self.pinv_wexog = pinv_wexog = np.linalg.pinv(self.wexog)
-                self.normalized_cov_params = np.dot(pinv_wexog,
-                                                 np.transpose(pinv_wexog))
-            beta = np.dot(self.pinv_wexog, endog)
-
-        elif method == "qr":
-            if ((not hasattr(self, '_exog_Q')) or
-                (not hasattr(self, 'normalized_cov_params'))):
-                Q, R = np.linalg.qr(exog)
-                self._exog_Q, self._exog_R = Q, R
-                self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
-            else:
-                Q, R = self._exog_Q, self._exog_R
-
-            beta = np.linalg.solve(R,np.dot(Q.T,endog))
-
-            # no upper triangular solve routine in numpy/scipy?
-        if isinstance(self, OLS):
-            lfit = OLSResults(self, beta,
-                       normalized_cov_params=self.normalized_cov_params)
-        else:
-            lfit = RegressionResults(self, beta,
-                       normalized_cov_params=self.normalized_cov_params)
-        return RegressionResultsWrapper(lfit)
-
-    def predict(self, params, exog=None):
-        """
-        Return linear predicted values from a design matrix.
-
-        Parameters
-        ----------
-        params : array-like, optional after fit has been called
-            Parameters of a linear model
-        exog : array-like, optional.
-            Design / exogenous data. Model exog is used if None.
-
-        Returns
-        -------
-        An array of fitted values
-
-        Notes
-        -----
-        If the model as not yet been fit, params is not optional.
-        """
-        #JP: this doesn't look correct for GLMAR
-        #SS: it needs its own predict method
-        if exog is None:
-            exog = self.exog
-        return np.dot(exog, params)
 
     def loglike(self, params):
         """
@@ -307,8 +317,7 @@ class GLS(base.LikelihoodModel):
             # with error covariance matrix
         return llf
 
-
-class WLS(GLS):
+class WLS(RegressionModel):
     __doc__ = """
     A regression model with diagonal but non-identity covariance structure.
 
@@ -373,7 +382,8 @@ class WLS(GLS):
                 raise ValueError(\
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLS, self).__init__(endog, exog, missing=missing)
+        super(WLS, self).__init__(endog, exog, missing=missing,
+                                  weights=self.weights)
 
     def whiten(self, X):
         """
