@@ -137,15 +137,45 @@ class _ElRegOpts(_ElRegSetup):
             return np.inf
 
     def _ci_limits_beta(self, beta):
+        """
+        Returns the likelihood for a parameter vector give a parameter
+        of interest
+
+        Parameters
+        ----------
+        beta: float
+            parameter of interest
+
+        Returns
+        ------
+
+        llr: float
+            log likelihood ratio
+        """
         self.b0_vals = beta
         llr = self.test_beta([beta], [self.param_nums],
                                  method=self.method,
-                                 stochastic_exog=self._stochastic_exog)[1]\
+                                 stochastic_exog=self._stochastic_exog)[0]\
                                   - self.r0
 
         return llr
 
     def _ci_limits_beta_origin(self, beta):
+        """
+        Returns the likelihood for a parameter vector give a parameter
+        of interest
+
+        Parameters
+        ----------
+        beta: float
+            parameter of interest
+
+        Returns
+        ------
+
+        llr: float
+            log likelihood ratio
+        """
         return self.test_beta_origin([beta], [self.param_nums],
                              method=self.method,
                              start_int_params=self.start_eta, only_h0=1,
@@ -181,6 +211,24 @@ class ElLinReg(_ElRegOpts):
 
     ci_beta:
         Finds confidence intervals for regression parameters
+
+    Example
+    -------
+    import statsmodels.api as sm
+    data = sm.datasets.stackloss.load()
+    endog = data.endog
+    exog = sm.add_constant(data.exog, prepend=1)
+    model = ElLinReg(endog, exog)
+    model.params
+    >>> array([-39.91967442,   0.7156402 ,   1.29528612,  -0.15212252])
+    model.rsquared
+    >>> 0.91357690446068196
+    # Test that the slope on the first variable is 0
+    model.test_beta([0], [1])
+    >>> (1.7894660442330235e-07, 27.248146353709153)
+    # Compute the confidence interval for the first slope parameter
+    model.ci_beta(1)
+    >>> (0.41969831751229664, 0.9857167306604057)
 
     """
     def __init__(self, endog, exog):
@@ -256,17 +304,17 @@ class ElLinReg(_ElRegOpts):
         x0 = np.delete(self.params, self.param_nums)
         if method == 'nm':
             llr = optimize.fmin(self._opt_nuis_regress, x0, maxfun=10000,
-                                 maxiter=10000, full_output=1, disp=1)[1]
+                                 maxiter=10000, full_output=1, disp=0)[1]
         if method == 'powell':
             llr = optimize.fmin(self._opt_nuis_regress, x0,
-                                 full_output=1, disp=1)[1]
+                                 full_output=1, disp=0)[1]
         pval = 1 - chi2.cdf(llr, len(param_nums))
         if ret_params:   # Used only for origin regress
-            return pval, llr, self.new_weights, self.new_params
+            return llr, pval, self.new_weights, self.new_params
         elif print_weights:
-            return pval, llr, self.new_weights
+            return llr, pval, self.new_weights
         else:
-            return pval, llr
+            return llr, pval
 
     def ci_beta(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
                 method='powell', start_int_params=None, stochastic_exog=1):
@@ -502,7 +550,7 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         """
         fit_results = self._orig_params()
         self.params = fit_results[3]
-        self.llr = fit_results[1]
+        self.llr = fit_results[0]
         ols_model = OLS(self.endog, self.new_exog)
         results = RegressionResults(ols_model,  # Params not same as OLS
                                     self.params.reshape(self.nvar + 1,))
@@ -540,26 +588,26 @@ class ElOriginRegress(_ElOriginRegresssSetup):
 
         res: tuple
             pvalue and likelihood ratio
-
-
         """
-
-        value.insert(0, 0)
-        param_num.insert(0, 0)
-        llr_beta0 = self._new_fit.test_beta(value, param_num,
+        try:
+            value.insert(0, 0)
+            param_num.insert(0, 0)
+            llr_beta0 = self._new_fit.test_beta(value, param_num,
                                               method=method,
-                                         stochastic_exog=stochastic_exog)[1]
+                                         stochastic_exog=stochastic_exog)[0]
+        except AttributeError:
+            raise Exception('Fit the model before conducting inference')
 
-        if only_h0:  # Used for confidence intervals
-            return llr_beta0
+        if only_h0:
+            return llr_beta0    # Used for confidence intervals
         else:
             llr_beta_hat = self._new_fit.test_beta(
                                 list(self.params[param_num]),
                                 [param_num], method=method,
-                                stochastic_exog=stochastic_exog)[1]
+                                stochastic_exog=stochastic_exog)[0]
             llr = llr_beta0 - llr_beta_hat
             pval = 1 - chi2.cdf(llr, len(param_num) - 1)
-            return pval, llr
+            return llr, pval
 
     def ci_beta_origin(self, param_num, upper_bound,
                        lower_bound, sig=.05, method='powell',
@@ -616,12 +664,13 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         self._stochastic_exog = stochastic_exog
         beta_high = upper_bound
         beta_low = lower_bound
-        print 'Finding Lower Limit'
-        ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
+        try:
+            ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
                              self.params[self.param_nums])
-        print 'Finding Upper Limit'
-        ul = optimize.brentq(self._ci_limits_beta_origin,
+            ul = optimize.brentq(self._ci_limits_beta_origin,
                              self.params[self.param_nums], beta_high)
+        except AttributeError:
+            raise Exception('Fit the model before conducting inference')
         return (ll, ul)
 
 
@@ -675,7 +724,6 @@ class ANOVA(_ANOVAOpt):
     def compute_ANOVA(self, mu=None, mu_start=0, print_weights=0):
 
         """
-
         Returns -2 log likelihood, the pvalue and the maximum likelihood
         estimate for a common mean.
 
@@ -702,17 +750,15 @@ class ANOVA(_ANOVAOpt):
         res: tuple
             The p-vale, log-likelihood and estimate for the common mean.
 
-
-
         """
 
         if mu is not None:
             llr = self._opt_common_mu(mu)
             pval = 1 - chi2.cdf(llr, self.num_groups - 1)
             if print_weights:
-                return pval, llr, mu, self.new_weights
+                return llr, pval, mu, self.new_weights
             else:
-                return pval, llr, mu
+                return llr, pval, mu
         else:
             res = optimize.fmin_powell(self._opt_common_mu, mu_start,
                                        full_output=1)
@@ -720,6 +766,6 @@ class ANOVA(_ANOVAOpt):
             mu_common = res[0]
             pval = 1 - chi2.cdf(llr, self.num_groups - 1)
             if print_weights:
-                return pval, llr, mu_common, self.new_weights
+                return llr, pval, mu_common, self.new_weights
             else:
-                return pval, llr, mu_common
+                return llr, pval, mu_common
