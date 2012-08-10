@@ -1361,9 +1361,7 @@ class DescStatMV(_OptFuncts):
         two_rvs = np.random.standard_normal((20,2))
         el_analysis = el.DescStat(two_rvs)
         contourp = el_analysis.mv_mean_contour(-2, 2, -2, 2, .1, .1)
-        contourp
-        >>>Type plt.show() to see plot
-        plt.show()
+        contourp.show()
         """
         if self.endog.shape[1] != 2:
             raise Exception('Data must contain exactly two variables')
