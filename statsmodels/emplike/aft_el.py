@@ -31,7 +31,6 @@ Statistics. 14:3, 643-656.
 import numpy as np
 from statsmodels.api import WLS, add_constant
 from elregress import ElLinReg
-from statsmodels.base.model import _fit_mle_newton
 from scipy import optimize
 from scipy.stats import chi2
 from descriptive2 import _OptFuncts
@@ -58,7 +57,6 @@ class OptAFT(_OptFuncts):
     """
     def __init__(_OptFuncts):
         pass
-
 
     def _opt_wtd_nuis_regress(self, test_vals):
         """
