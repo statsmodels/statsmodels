@@ -13,7 +13,6 @@ Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 """
 import numpy as np
 from scipy.stats import chi2
-from statsmodels.regression.linear_model import OLS
 from scipy import optimize
 from descriptive2 import _OptFuncts
 # When descriptive merged, this will be changed
@@ -769,3 +768,5 @@ class ANOVA(_ANOVAOpt):
                 return llr, pval, mu_common, self.new_weights
             else:
                 return llr, pval, mu_common
+
+from statsmodels.regression.linear_model import OLS
