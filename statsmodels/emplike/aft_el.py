@@ -34,28 +34,18 @@ from elregress import ElLinReg
 from statsmodels.base.model import _fit_mle_newton
 from scipy import optimize
 from scipy.stats import chi2
+from descriptive2 import _OptFuncts
+# ^ this will change when descriptive gets merged
 import warnings
 
 
-class OptAFT:
+class OptAFT(_OptFuncts):
     """
     Provides optimization functions used in estimating and conducting
     inference in an AFT model.
 
     Methods
     ------
-
-    _wtd_grad:
-        Calculates the weighted gradient in the Newton step
-
-    _wtd_hess:
-        Calculates the weighted Hessian in the Newton step
-
-    _wtd_log_star
-        changes the log of the date to the log star.
-
-    _wtd_modif_newton:
-        Conducts Newton's method optimization using weighted data
 
     _opt_wtd_nuis_regress:
         Function optimized over nuisance parameters to compute
@@ -66,126 +56,9 @@ class OptAFT:
         likelihood of a parameter vector.
 
     """
-    def __init__(self):
+    def __init__(_OptFuncts):
         pass
 
-    def _wtd_grad(self, eta1, est_vect, wts):
-        """
-        Calculates the gradient of a weighted empirical likelihood
-        problem.
-
-
-        Parameters
-        ----------
-        eta1: 1xm array.
-
-        This is the value of lamba used to write the
-        empirical likelihood probabilities in terms of the lagrangian
-        multiplier.
-
-        Returns
-        -------
-        gradient: m x 1 array
-            The gradient used in _wtd_modif_newton
-        """
-        wts = wts.reshape(-1, 1)
-        nobs = est_vect.shape[0]
-        data = est_vect.T
-        data_star_prime = (np.sum(wts) + np.dot(eta1, data))
-        idx = data_star_prime < 1. / nobs
-        not_idx = ~idx
-        data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
-        data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
-        data_star_prime = data_star_prime.reshape(nobs, 1)  # log*'
-        return np.dot(data, wts * data_star_prime)
-
-    def _wtd_hess(self, eta1, est_vect, wts):
-        """
-        Calculates the hessian of a weighted empirical likelihood
-        provlem.
-
-        Parameters
-        ----------
-        eta1: 1xm array.
-
-        This is the value of lamba used to write the
-        empirical likelihood probabilities in terms of the lagrangian
-        multiplier.
-
-        Returns
-        -------
-        hess: m x m array
-            Weighted hessian used in _wtd_modif_newton
-        """
-        nobs = est_vect.shape[0]
-        data = est_vect.T
-        wts = wts.reshape(-1, 1)
-        data_star_doub_prime = np.copy(np.sum(wts) + np.dot(eta1, data))
-        idx = data_star_doub_prime < 1. / nobs
-        not_idx = ~idx
-        data_star_doub_prime[idx] = - nobs ** 2
-        data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
-        data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
-        wtd_dsdp = wts * data_star_doub_prime
-        return np.dot(data, wtd_dsdp * data.T)
-
-    def _wtd_log_star(self, eta1, est_vect, wts):
-        """
-        Parameters
-        ---------
-        eta1: float
-            Lagrangian multiplier
-
-        Returns
-        ------
-
-        data_star: array
-            The weighted logstar of the estimting equations
-
-        Note
-        ----
-
-        This function is really only a placeholder for the _fit_mle_Newton.
-        The function value is not used in optimization and the optimal value
-        is disregarded when computng the log likelihood ratio.
-        """
-        nobs = est_vect.shape[0]
-        data = est_vect.T
-        data_star = np.log(wts).reshape(-1, 1)\
-           + (np.sum(wts) + np.dot(eta1, data)).reshape(-1, 1)
-        idx = data_star < 1. / nobs
-        not_idx = ~idx
-        data_star[idx] = np.log(1 / nobs) - 1.5 +\
-                  2. * nobs * data_star[idx] -\
-                  ((nobs * data_star[idx]) ** 2.) / 2
-        data_star[not_idx] = np.log(data_star[not_idx])
-        return data_star
-
-    def _wtd_modif_newton(self,  x0, est_vect, wts):
-        """
-        Weighted Modified Newton's method for maximizing the log* equation.
-
-        Parameters
-        ----------
-        x0: 1x m array
-            Iitial guess for the lagrangian multiplier
-
-        Returns
-        -------
-        params: 1xm array
-            Lagragian multiplier that maximize the log-likelihood given
-            `x0`.
-
-        See Owen pg. 64
-        """
-        x0 = x0.reshape(est_vect.shape[1], 1)
-        f = lambda x0: - np.sum(self._wtd_log_star(x0.T, est_vect, wts))
-        grad = lambda x0: - self._wtd_grad(x0.T, est_vect, wts)
-        hess = lambda x0: - self._wtd_hess(x0.T, est_vect, wts)
-        kwds = {'tol': 1e-8}
-        res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
-                              disp=0)
-        return res[0].T
 
     def _opt_wtd_nuis_regress(self, test_vals):
         """
@@ -211,7 +84,7 @@ class OptAFT:
         est_vect = self.uncens_exog * (self.uncens_endog -
                                             np.dot(self.uncens_exog,
                                                          test_params))
-        eta_star = self._wtd_modif_newton(np.zeros(self.nvar), est_vect,
+        eta_star = self._modif_newton(np.zeros(self.nvar), est_vect,
                                          self._fit_weights)
         self.eta_star = eta_star
         denom = np.sum(self._fit_weights) + np.dot(eta_star, est_vect.T)
