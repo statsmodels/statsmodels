@@ -40,6 +40,7 @@ from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+# More imports at the end of the module
 
 class GLS(base.LikelihoodModel):
     """
@@ -1523,6 +1524,157 @@ class OLSResults(RegressionResults):
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
 
+    def eltest(self, b0_vals, param_nums, print_weights=0,
+                     ret_params=0, method='nm',
+                     stochastic_exog=1):
+        """
+        Tests single or joint hypotheses of the regression parameters
+
+        Parameters
+        ----------
+
+        b0_vals: list
+            The hypthesized value of the parameter to be tested
+
+        param_nums: list
+            The parameter number to be tested
+
+        print_weights: bool, optional
+            If true, returns the weights that optimize the likelihood
+            ratio at b0_vals.  Default is False
+
+        ret_params: bool, optional
+            If true, returns the parameter vector that maximizes the likelihood
+            ratio at b0_vals.  Also returns the weights.  Default is False
+
+        method: string, optional
+            Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
+            optimization method that optimizes over nuisance parameters.
+            Default is 'nm'
+
+        stochastic_exog: bool, optional
+            When TRUE, the exogenous variables are assumed to be stochastic.
+            When the regressors are nonstochastic, moment conditions are
+            placed on the exogenous variables.  Confidence intervals for
+            stochastic regressors are at least as large as non-stochastic
+            regressors.  Default = TRUE
+
+        Returns
+        -------
+
+        res: tuple
+            The p-value and -2 times the log likelihood ratio for the
+            hypothesized values.
+
+        Examples
+        -------_-
+        data = sm.datasets.longley.load()
+        data.exog = sm.add_constant(data.exog[:,:-1], prepend=1)
+        el_analysis = El_Lin_Reg(data.endog, data.exog)
+        # Test the hypothesis that the intercept is -6000.
+        el_analysis.test_beta([0], [-6000])
+        >>> (0.78472652375012586, 0.074619017259285519)
+        # Test the hypothesis that the coefficient on the
+        #   parameter after the incercept is 0
+        el_analysis.test_beta([1], [0])
+        >>> (0.2224473814889133, 1.4885126021160364)
+        # Test the hypothesis that the second parameter after the intercept
+        # is 12000 and the third regression parameter is 50
+        el_analysis.test_beta([2, 3], [12000,50])
+        >>> (0.0, 105.64623449375982)
+        """
+
+        return ElLinReg(self.model.endog, self.model.exog).test_beta(b0_vals,
+                                      param_nums, print_weights=print_weights,
+                                         ret_params=ret_params, method=method,
+                                           stochastic_exog=stochastic_exog)
+
+    def conf_int_el(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
+                method='powell', start_int_params=None, stochastic_exog=1):
+        """
+
+        Computes the confidence interval for the parameter given by param_num
+
+        Parameters
+        ---------
+
+        param_num: float
+            The parameter thats confidence interval is desired
+
+        sig: float, optional
+            The significance level.  Default is .05
+
+        upper_bound: float, optional
+            Tha mximum value the upper limit can be.  Default is the
+            99.9% confidence value under OLS assumptions.
+
+        lower_bound: float
+            The minimum value the lower limit can be.  Default is the 99.9%
+            confidence value under OLS assumptions.
+
+
+        method: string, optional
+            Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
+            optimization method that optimizes over nuisance parameters.
+            Default is 'nm'
+
+        start_int_params: 1d array, optional
+            The starting values for the interior minimization.  The starting
+            values of lambda as in Owen pg. 63. Default is an array of 0.
+
+        Returns
+        -------
+
+        ci: tuple
+            The confidence interval
+
+        See Also
+        --------
+        test_beta
+
+        Notes
+        -----
+
+        This function uses brentq to find the value of beta where
+        test_beta([beta], param_num)[1] is equal to the critical
+        value.
+
+        The function returns the results of each iteration of brentq at
+        each value of beta.
+
+        The current function value of the last printed optimization
+        should be the critical value at the desired significance level.
+        For alpha=.05, the value is 3.841459.
+
+        To ensure optimization terminated successfully, it is suggested to
+        do test_beta([lower_limit], [param_num])
+
+        If the optimization does not terminate successfully, consider switching
+        optimization algorithms.
+
+        If optimization is still not successful, try changing the values of
+        start_int_params.  If the current function value repeatedly jumps
+        from a number beteween 0 and the critical value and a very large number
+        (>50), the starting parameters of the interior minimization need
+        to be changed.
+
+        Example
+        ------
+        data=sm.datasets.stackloss.load()
+        data.exog= sm.add_constant(data.exog, prepend=1)
+        el_regression = ElLinReg(data.endog, data.exog)
+        ci_intercept = el_regression.ci_beta(0)
+        ci_intercept
+        >>>(-52.771288377249604, -25.21626358895916)
+        """
+
+        return ElLinReg(self.model.endog, self.model.exog).ci_beta(param_num,
+                            sig=sig, upper_bound=upper_bound,
+                            lower_bound=lower_bound,
+                            method=method, start_int_params=start_int_params,
+                            stochastic_exog=stochastic_exog)
+
+
 class RegressionResultsWrapper(wrap.ResultsWrapper):
 
     _attrs = {
@@ -1594,3 +1746,5 @@ if __name__ == "__main__":
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
 """
+
+from statsmodels.emplike.elregress import ElLinReg
