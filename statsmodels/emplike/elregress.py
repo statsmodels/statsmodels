@@ -548,17 +548,32 @@ class ElOriginRegress(_ElOriginRegresssSetup):
 
         """
         fit_results = self._orig_params()
-        self.params = fit_results[3]
-        self.llr = fit_results[0]
+        params = fit_results[3]
+        llr = fit_results[0]
         ols_model = OLS(self.endog, self.new_exog)
         results = RegressionResults(ols_model,  # Params not same as OLS
-                                    self.params.reshape(self.nvar + 1,))
-        self.fittedvalues = results.fittedvalues
-        self.mse_model = results.mse_model
-        self.mse_resid = results.mse_resid
-        self.mse_total = results.mse_total
-        self.rsquared = results.rsquared
-        self.rsquared_adj = results.rsquared_adj
+                                    params.reshape(self.nvar + 1,))
+        fitted = _OriginResults(self.endog, self.exog)
+        fitted.llr = llr
+        fitted.params = params
+        fitted.fittedvalues = results.fittedvalues
+        fitted.mse_model = results.mse_model
+        fitted.mse_resid = results.mse_resid
+        fitted.mse_total = results.mse_total
+        fitted.rsquared = results.rsquared
+        fitted.rsquared_adj = results.rsquared_adj
+        fitted._new_fit = self._new_fit
+        return fitted
+
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+        return np.dot(add_constant(exog, prepend=1), params)
+
+
+class _OriginResults(ElOriginRegress):
+    def __init__(self, endog, exog):
+        super(_OriginResults, self).__init__(endog, exog)
 
     def test_beta_origin(self, value, param_num, method='powell',
                             only_h0=False,
@@ -588,15 +603,14 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         res: tuple
             pvalue and likelihood ratio
         """
-        try:
-            value.insert(0, 0)
-            param_num.insert(0, 0)
-            llr_beta0 = self._new_fit.test_beta(value, param_num,
+
+        value.insert(0, 0)
+        param_num.insert(0, 0)
+        llr_beta0 = self._new_fit.test_beta(value, param_num,
                                               method=method,
                                          stochastic_exog=stochastic_exog)[0]
-        except AttributeError:
-            raise Exception('Fit the model before conducting inference')
 
+        self.new_weights = self._new_fit.new_weights
         if only_h0:
             return llr_beta0    # Used for confidence intervals
         else:
@@ -663,13 +677,10 @@ class ElOriginRegress(_ElOriginRegresssSetup):
         self._stochastic_exog = stochastic_exog
         beta_high = upper_bound
         beta_low = lower_bound
-        try:
-            ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
+        ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
                              self.params[self.param_nums])
-            ul = optimize.brentq(self._ci_limits_beta_origin,
+        ul = optimize.brentq(self._ci_limits_beta_origin,
                              self.params[self.param_nums], beta_high)
-        except AttributeError:
-            raise Exception('Fit the model before conducting inference')
         return (ll, ul)
 
 
