@@ -254,10 +254,10 @@ class ElLinReg(_ElRegOpts):
         x0 = np.delete(self.params, self.param_nums)
         if method == 'nm':
             llr = optimize.fmin(self._opt_nuis_regress, x0, maxfun=10000,
-                                 maxiter=10000, full_output=1)[1]
+                                 maxiter=10000, full_output=1, disp=0)[1]
         if method == 'powell':
             llr = optimize.fmin_powell(self._opt_nuis_regress, x0,
-                                 full_output=1)[1]
+                                 full_output=1, disp=0)[1]
         pval = 1 - chi2.cdf(llr, len(param_nums))
         if ret_params:   # Used only for origin regress
             return pval, llr, self.new_weights, self.new_params
