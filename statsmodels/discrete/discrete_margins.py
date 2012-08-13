@@ -122,11 +122,11 @@ def _get_margeff_exog(exog, at, atexog, ind):
                 exog[:,key] = atexog[key]
         elif isinstance(atexog, np.ndarray): #TODO: handle DataFrames
             if atexog.ndim == 1:
-                nvars = len(atexog)
+                k_vars = len(atexog)
             else:
-                nvars = atexog.shape[1]
+                K_vars = atexog.shape[1]
             try:
-                assert nvars == exog.shape[1]
+                assert k_vars == exog.shape[1]
             except:
                 raise ValueError("atexog does not have the same number "
                         "of variables as exog")
