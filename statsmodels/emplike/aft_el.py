@@ -89,8 +89,8 @@ class OptAFT(_OptFuncts):
         self.new_weights = self._fit_weights / denom
         return -1 * np.sum(np.log(self.new_weights))
 
-    def _EM_test(self, nuisance_params, param_nums=None, b0_vals=None,
-                F=None, survidx=None, uncens_nobs=None,
+    def _EM_test(self, nuisance_params, params=None, param_nums=None,
+                 b0_vals=None, F=None, survidx=None, uncens_nobs=None,
                 numcensbelow=None, km=None, uncensored=None, censored=None,
                 maxiter=None, ftol=None):
         """
@@ -115,7 +115,6 @@ class OptAFT(_OptFuncts):
         Optional parameters are provided by the test_beta function.
         """
         iters = 0
-        params = np.copy(self.params())
         params[param_nums] = b0_vals
 
         nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
@@ -330,6 +329,36 @@ class emplikeAFT(OptAFT):
         wtd_km = self._km_w_ties(tied, km)
         return  (censors / wtd_km).reshape(nobs, 1)
 
+    def fit(self):
+        """
+
+        Fits an AFT model and returns parameters.
+
+        Parameters
+        ---------
+        None
+
+
+        Returns
+        -------
+        Fitted params
+
+        Notes
+        -----
+        To avoid dividing by zero, max(endog) is assumed to be uncensored.
+        """
+        return AFTResults(self)
+
+    def predict(self, params, endog=None):
+        if endog is None:
+            endog = self.endog
+        return np.dot(endog, params)
+
+
+class AFTResults(object):
+    def __init__(self, model):
+        self.model = model
+
     def params(self):
         """
 
@@ -348,10 +377,10 @@ class emplikeAFT(OptAFT):
         -----
         To avoid dividing by zero, max(endog) is assumed to be uncensored.
         """
-        self.modif_censors = np.copy(self.censors)
-        self.modif_censors[-1] = 1
-        wts = self._make_km(self.endog, self.modif_censors)
-        res = WLS(self.endog, self.exog, wts).fit()
+        self.model.modif_censors = np.copy(self.model.censors)
+        self.model.modif_censors[-1] = 1
+        wts = self.model._make_km(self.model.endog, self.model.modif_censors)
+        res = WLS(self.model.endog, self.model.exog, wts).fit()
         params = res.params
         return params
 
@@ -425,17 +454,17 @@ class emplikeAFT(OptAFT):
         >>>(4.623487775078047, 0.031537049752572731)
 
         """
-        censors = self.censors
-        endog = self.endog
-        exog = self.exog
+        censors = self.model.censors
+        endog = self.model.endog
+        exog = self.model.exog
         uncensored = (censors == 1).flatten()
         censored = (censors == 0).flatten()
         uncens_endog = endog[uncensored]
         uncens_exog = exog[uncensored, :]
         reg_model = ElLinReg(uncens_endog, uncens_exog)
         reg_model.hy_test_beta(b0_vals, param_nums)
-        km = self._make_km(endog, censors).flatten()
-        uncens_nobs = self.uncens_nobs
+        km = self.model._make_km(endog, censors).flatten()
+        uncens_nobs = self.model.uncens_nobs
         F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
         # Step 0 ^
         params = self.params()
@@ -443,17 +472,18 @@ class emplikeAFT(OptAFT):
         survidx = survidx[0] - np.arange(len(survidx[0]))
         numcensbelow = np.int_(np.cumsum(1 - censors))
         if len(param_nums) == len(params):
-            llr = self._EM_test([], F=F, param_nums=param_nums,
+            llr = self.model._EM_test([], F=F, params=params,
+                                      param_nums=param_nums,
                                 b0_vals=b0_vals, survidx=survidx,
                              uncens_nobs=uncens_nobs,
                              numcensbelow=numcensbelow, km=km,
                              uncensored=uncensored, censored=censored,
                              ftol=ftol, maxiter=25)
-            return llr, chi2.sf(llr, self.nvar)
+            return llr, chi2.sf(llr, self.model.nvar)
         else:
             x0 = np.delete(params, param_nums)
-            res = optimize.fmin_powell(self._EM_test, x0,
-                                   (param_nums, b0_vals, F, survidx,
+            res = optimize.fmin_powell(self.model._EM_test, x0,
+                                   (params, param_nums, b0_vals, F, survidx,
                                     uncens_nobs, numcensbelow, km, uncensored,
                                     censored, maxiter, ftol), full_output=1)
 
