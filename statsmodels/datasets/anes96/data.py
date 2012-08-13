@@ -81,9 +81,11 @@ Variables name definitions::
             leanings from "Left" to "Right".
         DoleLR  - Respondents impression of Bob Dole's political leanings
             from "Left" to "Right".
+        logpopul - log(popul + .1)
 """
 
-from numpy import recfromtxt, column_stack, array
+from numpy import recfromtxt, column_stack, array, log
+import numpy.lib.recfunctions as nprf
 import statsmodels.tools.datautils as du
 from os.path import dirname, abspath
 
@@ -96,7 +98,8 @@ def load():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray(data, endog_idx=5, dtype=float)
+    return du.process_recarray(data, endog_idx=5, exog_idx=[10,2,6,7,8],
+            dtype=float)
 
 def load_pandas():
     """Load the anes96 data and returns a Dataset class.
@@ -107,10 +110,14 @@ def load_pandas():
         See DATASET_PROPOSAL.txt for more information.
     """
     data = _get_data()
-    return du.process_recarray_pandas(data, endog_idx=5, dtype=float)
+    return du.process_recarray_pandas(data, endog_idx=5, exog_idx=[10,2,6,7,8],
+            dtype=float)
 
 def _get_data():
     filepath = dirname(abspath(__file__))
     data = recfromtxt(open(filepath + '/anes96.csv',"rb"), delimiter="\t",
             names = True, dtype=float)
+    logpopul = log(data['popul'] + .1)
+    data = nprf.append_fields(data, 'logpopul', logpopul, usemask=False,
+                                                          asrecarray=True)
     return data
