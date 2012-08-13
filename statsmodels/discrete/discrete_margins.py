@@ -243,7 +243,7 @@ def margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
         if dfdb.ndim >= 2: # for overall
             dfdb = dfdb.mean(0) / 2
         if J > 1:
-            K = dfdb.shape[1] / (J-1) # assumes there's a constant
+            K = dfdb.shape[1] / (J-1)
             cov_margins[i::K, :] = dfdb
         else:
             cov_margins[i, :] = dfdb # how each F changes with change in B
