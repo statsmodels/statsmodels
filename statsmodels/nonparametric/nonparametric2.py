@@ -1023,6 +1023,36 @@ class Reg(object):
 
 
 class TestRegCoefC(object):
+    """
+    Significance test for continuous variables in a nonparametric
+    regression. Allows for testing of single and joint multivariable
+    tests.
+
+    Parameteres
+    -----------
+    model: Instance of Reg class
+        This is the nonparametric regression model whose elements
+        are tested for significance.
+
+    test_vars: tuple, list of integers
+        index of position of the continuous variables to be tested
+        for significance. E.g. (1,3,5) jointly tests variables at
+        position 1,3 and 5 for significance.
+
+    nboot: Integer
+        Number of bootstrap samples used to determine the distribution
+        of the test statistic in a finite sample. Default is 400
+
+    nested_res: Integer
+        Number of nested resamples used to calculate lambda
+        (See references)
+
+    References
+    ----------
+    See Racine, J.: "Consistent Significance Testing for Nonparametric
+        Regression" Journal of Business & Economics Statistics
+    See chapter 12 in [1]
+    """
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
     # Journal of Business & Economics Statistics
@@ -1123,6 +1153,37 @@ class TestRegCoefD(RegCoef):
 class TestFForm(object):
     """
     Nonparametric test for functional form
+    
+   
+    Parameteres
+    -----------
+    tydat: list
+        Dependent variable (training set)
+
+    txdat: list of array_like objects
+        The independent (right-hand-side) variables
+
+    fform: function
+        The functional form y = g(b, x) to be tested. Takes as inputs
+        the RHS variables txdat and the coefficients b (betas) 
+        and returns a fitted y_hat
+
+    var_type: str
+        The type of the independent txdat variables
+        c: continuous
+        o: ordered
+        u: unordered
+
+    estimator: function
+        Must return the estimated coefficients b (betas). Takes as inputs
+        (tydat, txdat). E.g. least square estimator:
+        lambda (x,y): np.dot(np.pinv(np.dot(x.T, x)), np.dot(x.T, y))
+
+    References
+    ----------
+    See Racine, J.: "Consistent Significance Testing for Nonparametric
+        Regression" Journal of Business & Economics Statistics
+    See chapter 12 in [1]
     """
     # see p.355 in [1]
     def __init__(self, tydat, txdat, bw, var_type fform, estimator):
