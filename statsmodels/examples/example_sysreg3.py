@@ -18,7 +18,8 @@ sys = [eq1, eq2]
 
 mod2sls = Sys2SLS(sys, dfk='dfk1')
 res2sls = mod2sls.fit()
-#print res2sls.summary()
+print res2sls.summary(yname=['consump1', 'consump2'], xname=['const', 'price',
+    'income', 'const', 'price', 'farmPrice', 'trend'])
 
 mod3sls = Sys3SLS(sys)
 res3sls = mod3sls.fit(igls=True)

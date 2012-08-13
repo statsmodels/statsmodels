@@ -418,8 +418,6 @@ class SysResults(LikelihoodModelResults):
         self.df_model = model.df_model
 
     def summary(self, yname=None, xname=None, title=None):
-
-
         #create summary table instance
         #from statsmodels.iolib.summary import Summary
         #smry = Summary()
@@ -427,7 +425,7 @@ class SysResults(LikelihoodModelResults):
         #                     use_t=True)
         
         #return smry
-        return SysSummary(self)
+        return SysSummary(self, yname=yname, xname=xname, title=title)
     
     def _compute_sigma(self, resids):
         '''
@@ -446,11 +444,8 @@ class SysResults(LikelihoodModelResults):
 
 class SysSummary(object):
     default_fmt = dict(
-        #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-        #data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
         data_fmts = ["%#15.6F","%#15.6F","%#15.3F","%#14.3F"],
         empty_cell = '',
-        #colwidths = 10,
         colsep='  ',
         row_pre = '',
         row_post = '',
@@ -482,48 +477,58 @@ class SysSummary(object):
         header_dec_below=None,
     )
 
-    def __init__(self, estimator):
-        self.result = estimator
+    def __init__(self, result, yname=None, xname=None, title=None):
+        self.result = result
+        if yname is None:
+            yname = ['y%d' % (eq,) for eq in range(self.result.model.neqs)]
+        if xname is None:
+            xname = []
+            for eq in range(self.result.model.neqs):
+                name_eq = ['x%d_%d' % (eq, var)
+                            for var in range(self.result.model.df_model[eq]+1)]
+                xname += name_eq
+        self.yname = yname
+        self.xname = xname
         self.summary = self.make()
 
     def __repr__(self):
         return self.summary
 
-    def make(self, endog_names=None, exog_names=None):
+    def make(self):
         """
         Summary of system model
         """
         buf = StringIO()
-
+        
         print >> buf, self._header_table()
         #print >> buf, self._stats_table()
         print >> buf, self._coef_table()
-        #print >> buf, self._resid_info()
+        print >> buf, self._resid_info()
 
         return buf.getvalue()
 
     def _header_table(self):
         import time
+        t = time.localtime()
 
         result = self.result
 
-        t = time.localtime()
-
         # Header information
-        part1title = "Summary of Regression Results"
-        part1data = [["system of equations"],
-                     [result.model.__class__.__name__[3:]],
+        part1title = "Summary of System Regression Results"
+        part1data = [[result.model.__class__.__name__[3:]],
                      [time.strftime("%a, %d, %b, %Y", t)],
-                     [time.strftime("%H:%M:%S", t)]]
+                     [time.strftime("%H:%M:%S", t)],
+                     [str(result.model.nobs)], 
+                     [str(result.model.neqs)]]
         part1header = None
-        part1stubs = ('Model:',
-                     'Method:',
-                     'Date:',
-                     'Time:')
+        part1stubs = ('Model:','Date:','Time:', '#observations:', '#equations:')
         part1 = SimpleTable(part1data, part1header, part1stubs,
                             title=part1title, txt_fmt=self.part1_fmt)
-
-        return str(part1)
+        buf = StringIO()
+        print >> buf, str(part1)
+        buf.write('\n')
+        
+        return buf.getvalue()
 
     def _stats_table(self):
         # TODO: do we want individual statistics or should users just
@@ -553,39 +558,36 @@ class SysSummary(object):
         return str(part2L)
 
     def _coef_table(self):
-        result = self.result #model = self.model
-        k = result.model.neqs #k = model.neqs
+        result = self.result
+        neqs = result.model.neqs
 
-        Xnames = self.model.coef_names
-
-        data = zip(model.params.T.ravel(),
-                   model.stderr.T.ravel(),
-                   model.tvalues.T.ravel(),
-                   model.pvalues.T.ravel())
-
-        header = ('coefficient','std. error','t-stat','prob')
+        data = np.column_stack((result.params, result.bse, 
+                                result.tvalues, result.pvalues,
+                                result.conf_int()))
+        header = ('coefficient','std. error','t-stat','p-value', 'conf int inf',
+                  'conf int sup')
 
         buf = StringIO()
-        dim = k * model.k_ar + model.k_trend
-        for i in range(k):
-            section = "Results for equation %s" % model.names[i]
-            print >> buf, section
-
-            table = SimpleTable(data[dim * i : dim * (i + 1)], header,
-                                Xnames, title=None, txt_fmt = self.default_fmt)
-
+        start_index = 0
+        for eq in range(neqs):
+            offset = result.model.df_model[eq] + 1
+            title = 'Results for equation %s' % (self.yname[eq],)
+            table = SimpleTable(data[start_index:start_index+offset,:], header,
+                                title=title, txt_fmt=self.default_fmt,
+                                stubs=self.xname[start_index:start_index+offset])
             print >> buf, str(table)
-
-            if i < k - 1: buf.write('\n')
+            buf.write('\n')
+            start_index += offset
 
         return buf.getvalue()
 
     def _resid_info(self):
         buf = StringIO()
-        names = self.model.names
+        names = self.yname
 
-        print >> buf, "Correlation matrix of residuals"
-        print >> buf, pprint_matrix(self.model.resid_corr, names, names)
+        print >> buf, "Covariance matrix of residuals"
+        from statsmodels.tsa.vector_ar.output import pprint_matrix
+        print >> buf, pprint_matrix(self.result.cov_resids, names, names)
 
         return buf.getvalue()
 
