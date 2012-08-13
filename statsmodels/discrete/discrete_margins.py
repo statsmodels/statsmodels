@@ -346,6 +346,12 @@ def margeff_cov_with_se(model, params, exog, cov_params, at, derivative,
 def margeff():
     pass
 
+def _check_at_is_all(method):
+    if method['at'] == 'all':
+        raise NotImplementedError("Only margeff are available when `at` is "
+                    "all. Please input specific points if you would like to "
+                    "do inference.")
+
 _transform_names = dict(dydx='dy/dx',
                         eyex='d(lny)/d(lnx)',
                         dyex='dy/d(lnx)',
@@ -400,23 +406,52 @@ class Margins(object):
 
 #class DiscreteMargins(Margins):
 class DiscreteMargins(object):
-    def __init__(self, results, args=()):
+    """Get marginal effects of a Discrete Choice model.
+
+    Parameters
+    ----------
+    results : DiscreteResults instance
+        The results instance of a fitted discrete choice model
+    args : tuple
+        Args are passed to `get_margeff`. This is the same as
+        results.get_margeff. See there for more information.
+    kwargs : dict
+        Keyword args are passed to `get_margeff`. This is the same as
+        results.get_margeff. See there for more information.
+    """
+    def __init__(self, results, args, kwargs={}):
         self._cache = resettable_cache()
         self.results = results
-        self.get_margeff(*args)
+        self.get_margeff(*args, **kwargs)
 
     def _reset(self):
         self._cache = resettable_cache()
 
     def get_margeff(self, *args, **kwargs):
         self._reset()
-        self.margeff = self._get_margeff(*args)
+        self.margeff = self._get_margeff(*args, **kwargs)
 
     @cache_readonly
     def tvalues(self):
+        _check_at_is_all(self.margeff_options)
         return self.margeff / self.margeff_se
 
     def summary_frame(self, alpha=.05):
+        """
+        Returns a DataFrame summarizing the marginal effects.
+
+        Parameters
+        ----------
+        alpha : float
+            Number between 0 and 1. The confidence intervals have the
+            probability 1-alpha.
+
+        Returns
+        -------
+        frame : DataFrames
+            A DataFrame summarizing the marginal effects.
+        """
+        _check_at_is_all(self.margeff_options)
         from pandas import DataFrame
         names = [_transform_names[self.margeff_options['method']],
                                   'Std. Err.', 'z', 'Pr(>|z|)',
@@ -430,9 +465,26 @@ class DiscreteMargins(object):
 
     @cache_readonly
     def pvalues(self):
+        _check_at_is_all(self.margeff_options)
         return norm.sf(np.abs(self.tvalues)) * 2
 
     def conf_int(self, alpha=.05):
+        """
+        Returns the confidence intervals of the marginal effects
+
+        Parameters
+        ----------
+        alpha : float
+            Number between 0 and 1. The confidence intervals have the
+            probability 1-alpha.
+
+        Returns
+        -------
+        conf_int : ndarray
+            An array with lower, upper confidence intervals for the marginal
+            effects.
+        """
+        _check_at_is_all(self.margeff_options)
         me_se = self.margeff_se
         q = norm.ppf(1 - alpha / 2)
         lower = self.margeff - q * me_se
@@ -454,6 +506,7 @@ class DiscreteMargins(object):
         Summary : SummaryTable
             A SummaryTable instance
         """
+        _check_at_is_all(self.margeff_options)
         results = self.results
         model = results.model
         title = model.__class__.__name__ + " Marginal Effects"
@@ -533,7 +586,8 @@ class DiscreteMargins(object):
             - 'mean', The marginal effects at the mean of each regressor.
             - 'median', The marginal effects at the median of each regressor.
             - 'zero', The marginal effects at zero for each regressor.
-            - 'all', The marginal effects at each observation.
+            - 'all', The marginal effects at each observation. If `at` is all
+              only margeff will be available.
 
             Note that if `exog` is specified, then marginal effects for all
             variables not specified by `exog` are calculated using the `at`
@@ -615,23 +669,29 @@ class DiscreteMargins(object):
 
         effects = _effects_at(effects, at)
 
-        # Set standard error of the marginal effects by Delta method.
-        margeff_cov, margeff_se = margeff_cov_with_se(model, params, exog,
+        if at == 'all':
+            if J > 1:
+                K = model.K - np.any(~effects_idx) # subtract constant
+                self.margeff = effects[effects_idx].reshape(K, J, order='F')
+            else:
+                self.margeff = effects[effects_idx]
+        else:
+            # Set standard error of the marginal effects by Delta method.
+            margeff_cov, margeff_se = margeff_cov_with_se(model, params, exog,
                                                 results.cov_params(), at,
                                                 model._derivative_exog,
                                                 dummy_idx, count_idx,
                                                 method, J)
 
-        # reshape for multi-equation
-        if J > 1:
-            K = model.K - np.any(~effects_idx) # subtract constant
-            self.margeff = effects[effects_idx].reshape(K, J, order='F')
-            self.margeff_se = margeff_se[effects_idx].reshape(K, J, order='F')
-            self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
-        else:
-
-            # don't care about at constant
-            self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
-            self.margeff_se = margeff_se[effects_idx]
-            self.margeff = effects[effects_idx]
-
+            # reshape for multi-equation
+            if J > 1:
+                K = model.K - np.any(~effects_idx) # subtract constant
+                self.margeff = effects[effects_idx].reshape(K, J, order='F')
+                self.margeff_se = margeff_se[effects_idx].reshape(K, J,
+                                                                  order='F')
+                self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
+            else:
+                # don't care about at constant
+                self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
+                self.margeff_se = margeff_se[effects_idx]
+                self.margeff = effects[effects_idx]
