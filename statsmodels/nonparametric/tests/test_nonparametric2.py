@@ -463,30 +463,16 @@ class TestReg(MyTest):
         #self.write2file(file_name, (Y, C1, C2, C3))
         print "test_continuous_mfx_ll_cvls - successful"
 
-<<<<<<< HEAD
-    def test_censored_ll_cvls(self):
-        N = 200
-        np.random.seed(1234)
-=======
     @dec.slow
     def test_continuous_cvls_efficient(self):
         N = 1000
         np.random.seed(12345)
         O = np.random.binomial(2, 0.5, size=(N, ))
         O2 = np.random.binomial(2, 0.5, size=(N, ))
->>>>>>> nonparametric-reg-block
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
         C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
-<<<<<<< HEAD
-        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
-        Y[Y>0] = 0  # censor the data
-        model = nparam.Reg(tydat=[Y], txdat=[C1, C2],
-                            reg_type='ll', var_type='cc', bw='cv_ls', censor_var=0)
-        sm_mean, sm_mfx = model.fit()
-        npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)
-=======
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -504,10 +490,4 @@ class TestReg(MyTest):
         #print model_efficient.bw
         print "----"*10
  
-        #npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
-<<<<<<< HEAD
-=======
->>>>>>> nonparametric-reg-block
-
-       
->>>>>>> nonparametric-censored
+        npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)

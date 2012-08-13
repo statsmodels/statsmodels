@@ -30,7 +30,7 @@ import copy
 from scipy.stats.mstats import mquantiles
 
 
-__all__ = ['UKDE', 'CKDE', 'Reg']
+__all__ = ['UKDE', 'CKDE', 'Reg', 'CensoredReg']
 
 
 class _GenericKDE (object):
@@ -1248,10 +1248,10 @@ class Reg(_GenericKDE):
 
 class CensoredReg(Reg):
     """
-    Nonparametric Regression
+    Nonparametric censored regression
 
     Calculates the condtional mean E[y|X] where y = g(X) + e
-    Where y is censored
+    Where y is left-censored
 
     Parameters
     ----------
@@ -1384,8 +1384,6 @@ class CensoredReg(Reg):
         iscontinuous = xrange(self.K)  # Use all vars instead of continuous only
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
         Ker = Ker * W
-
- 
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
         L = 0
