@@ -295,6 +295,41 @@ class GenericKDE (object):
 
 
 class SetDefaults(object):
+    """
+    A helper class that sets the default values for the estimators
+    Sets the default values for the efficient bandwidth estimator
+    Parameteres
+    -----------
+    efficient: Boolean
+        Set to True if the bandwidth estimation is to be performed
+        efficiently -- by taking smaller sub-samples and estimating
+        the scaling factor of each subsample. Use for large samples
+        (N >> 300) and multiple variables (K >> 3). Default is False
+
+    randomize: Boolean
+        Set to True if the bandwidth estimation is to be performed by
+        taking n_res random resamples of size n_sub from the full sample.
+        If set to False, the estimation is performed by slicing the
+        full sample in sub-samples of size n_sub so that the full sample
+        is used fully. 
+
+    n_sub: Integer
+        Size of the subsamples
+
+    n_res: Integer
+        The number of random re-samples used to estimate the bandwidth.
+        Must have randomize set to True. Default value is 25
+
+    return_median: Boolean
+        If True the estimator uses the median of all scaling factors for
+        each sub-sample to estimate the bandwidth of the full sample.
+        If False then the estimator uses the mean. Default is True.
+
+    return_only_bw: Boolean
+        Set to True if the estimator is to use the bandwidth and not the
+        scaling factor. This is *not* theoretically justified. Should be used
+        only for experimenting. 
+    """
     def __init__(self, n_res=25, n_sub=50, randomize=True, return_median=True,
                  efficient=False, return_only_bw=False):
         self.n_res = n_res
@@ -328,6 +363,9 @@ class UKDE(GenericKDE):
         cv_ml: cross validation maximum likelihood
         normal_reference: normal reference rule of thumb
         cv_ls: cross validation least squares
+
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
 
     Attributes
     ----------
@@ -579,6 +617,9 @@ class CKDE(GenericKDE):
         cv_ml: cross validation maximum likelihood
         normal_reference: normal reference rule of thumb
         cv_ls: cross validation least squares
+
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
 
     Attributes
     ---------
@@ -880,23 +921,30 @@ class Reg(GenericKDE):
     ----------
     tydat: list with one element which is array_like
         This is the dependent variable.
+
     txdat: list
         The training data for the independent variable(s)
         Each element in the list is a separate variable
+
     dep_type: str
         The type of the dependent variable(s)
         c: Continuous
         u: Unordered (Discrete)
         o: Ordered (Discrete)
+
     reg_type: str
         Type of regression estimator
         lc: Local Constant Estimator
         ll: Local Linear Estimator
+
     bw: array-like
         Either a user-specified bandwidth or
         the method for bandwidth selection.
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
+
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
 
     Attributes
     ---------
