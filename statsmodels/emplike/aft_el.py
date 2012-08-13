@@ -154,8 +154,23 @@ class OptAFT(_OptFuncts):
             warnings.warn('The EM reached the maximum number of iterations')
         return -2 * (llike - llikemax)
 
+    def _ci_limits_beta(self, b0, param_num=None):
+        """
+        Returns the difference between the log likelihood for a
+        parameter and some critical value.
 
-class emplikeAFT():
+        Parameters
+        ---------
+        b0: float
+            Value of a regression parameter
+
+        param_num: int
+            Parameter index of b0
+        """
+        return self.test_beta([b0], [param_num])[0] - self.r0
+
+
+class emplikeAFT(object):
     """
 
     Class for estimating and conducting inference in an AFT model.
@@ -462,8 +477,8 @@ class AFTResults(OptAFT):
         uncens_endog = endog[uncensored]
         uncens_exog = exog[uncensored, :]
         reg_model = ElLinReg(uncens_endog, uncens_exog)
-        reg_model.hy_test_beta(b0_vals, param_nums)
-        km = self.model._make_km(endog, censors).flatten()
+        reg_model.hy_test_beta(b0_vals, param_nums)  # Needs to be changed
+        km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs
         F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
         # Step 0 ^
@@ -482,10 +497,57 @@ class AFTResults(OptAFT):
             return llr, chi2.sf(llr, self.model.nvar)
         else:
             x0 = np.delete(params, param_nums)
-            res = optimize.fmin_powell(self._EM_test, x0,
+            try:
+                res = optimize.fmin(self._EM_test, x0,
                                    (params, param_nums, b0_vals, F, survidx,
                                     uncens_nobs, numcensbelow, km, uncensored,
                                     censored, maxiter, ftol), full_output=1)
 
-            llr = res[1]
-            return llr, chi2.sf(llr, len(param_nums))
+                llr = res[1]
+                return llr, chi2.sf(llr, len(param_nums))
+            except np.linalg.linalg.LinAlgError:
+                return np.inf, 0
+
+    def ci_beta(self, param_num, beta_high, beta_low, sig=.05):
+        """
+        Returns the confidence interval for a regression
+        parameter in the AFT model.
+
+        Parameters
+        ---------
+
+        param_num: int
+            Parameter number of interest
+
+        beta_high: float
+            Upper bound for the confidence interval
+
+        beta_low:
+            Lower bound for the confidence interval
+
+        sig: float, optional
+            Significance level.  Default is .05
+
+        Notes
+        ----
+        If the function returns f(a) and f(b) must have different signs,
+        consider widening the search area by adjusting beta_low and
+        beta_high.
+
+        Also note that this process is computational intensive.  There
+        are 4 levels of optimization/solving.  From outer to inner:
+
+        1) Solving so that llr-critical value = 0
+        2) maximizing over nuisance parameters
+        3) Using  EM at each value of nuisamce parameters
+        4) Using the _modified_Newton optimizer at each iteration
+           of the EM algorithm.
+
+        """
+        params = self.params()
+        self.r0 = chi2.ppf(1 - sig, 1)
+        ll = optimize.brentq(self._ci_limits_beta, beta_low,
+                             params[param_num], (param_num))
+        ul = optimize.brentq(self._ci_limits_beta,
+                             params[param_num], beta_high, (param_num))
+        return ll, ul
