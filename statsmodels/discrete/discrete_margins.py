@@ -190,9 +190,11 @@ def _effects_at(effects, at):
         effects = effects[0,:]
     return effects
 
-def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
+def _margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
         method, J):
     """
+    Returns the Jacobian for discrete regressors for use in margeff_cov_params.
+
     For discrete regressors the marginal effect is
 
     \Delta F = F(XB) | d = 1 - F(XB) | d = 0
@@ -201,7 +203,7 @@ def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
 
     f(XB)*X | d = 1 - f(XB)*X | d = 0
 
-    Where F is the default prediction of the model
+    Where F is the default prediction of the model.
     """
     for i in dummy_ind:
         exog0 = exog.copy()
@@ -220,9 +222,11 @@ def margeff_cov_params_dummy(model, cov_margins, params, exog, dummy_ind,
             cov_margins[i, :] = dfdb # how each F changes with change in B
     return cov_margins
 
-def margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
+def _margeff_cov_params_count(model, cov_margins, params, exog, count_ind,
                              method, J):
     """
+    Returns the Jacobian for discrete regressors for use in margeff_cov_params.
+
     For discrete regressors the marginal effect is
 
     \Delta F = F(XB) | d += 1 - F(XB) | d -= 1
@@ -276,7 +280,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
         - 'zero', The marginal effects at zero for each regressor.
         - 'all', The marginal effects at each observation.
 
-        Only overall has any effect here.
+        Only overall has any effect here.you
 
     derivative : function or array-like
         If a function, it returns the marginal effects of the model with
@@ -315,11 +319,11 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
         else:
             jacobian_mat = jacobian_mat.squeeze() # exog was 2d row vector
         if dummy_ind is not None:
-            jacobian_mat = margeff_cov_params_dummy(model, jacobian_mat, params,
-                                exog, dummy_ind, method, J)
+            jacobian_mat = _margeff_cov_params_dummy(model, jacobian_mat,
+                                params, exog, dummy_ind, method, J)
         if count_ind is not None:
-            jacobian_mat = margeff_cov_params_count(model, jacobian_mat, params,
-                                exog, count_ind, method, J)
+            jacobian_mat = _margeff_cov_params_count(model, jacobian_mat,
+                                params, exog, count_ind, method, J)
     else:
         jacobian_mat = derivative
 
