@@ -78,15 +78,15 @@ class OptAFT(_OptFuncts):
             hypothesized value of the parameter(s) of interest.
 
         """
-        test_params = test_vals.reshape(self.nvar, 1)
-        est_vect = self.uncens_exog * (self.uncens_endog -
-                                            np.dot(self.uncens_exog,
+        test_params = test_vals.reshape(self.model.nvar, 1)
+        est_vect = self.model.uncens_exog * (self.model.uncens_endog -
+                                            np.dot(self.model.uncens_exog,
                                                          test_params))
-        eta_star = self._modif_newton(np.zeros(self.nvar), est_vect,
-                                         self._fit_weights)
+        eta_star = self._modif_newton(np.zeros(self.model.nvar), est_vect,
+                                         self.model._fit_weights)
         self.eta_star = eta_star
-        denom = np.sum(self._fit_weights) + np.dot(eta_star, est_vect.T)
-        self.new_weights = self._fit_weights / denom
+        denom = np.sum(self.model._fit_weights) + np.dot(eta_star, est_vect.T)
+        self.new_weights = self.model._fit_weights / denom
         return -1 * np.sum(np.log(self.new_weights))
 
     def _EM_test(self, nuisance_params, params=None, param_nums=None,
@@ -117,10 +117,10 @@ class OptAFT(_OptFuncts):
         iters = 0
         params[param_nums] = b0_vals
 
-        nuis_param_index = np.int_(np.delete(np.arange(self.nvar),
+        nuis_param_index = np.int_(np.delete(np.arange(self.model.nvar),
                                            param_nums))
         params[nuis_param_index] = nuisance_params
-        to_test = params.reshape(self.nvar, 1)
+        to_test = params.reshape(self.model.nvar, 1)
         opt_res = np.inf
         diff = np.inf
         while iters < maxiter and diff > ftol:
@@ -135,7 +135,7 @@ class OptAFT(_OptFuncts):
                              numcensbelow[uncensored]]
             # ^E step
             # See Zhou 2005, section 3.
-            self._fit_weights = wts
+            self.model._fit_weights = wts
             new_opt_res = self._opt_wtd_nuis_regress(to_test)
                 # ^ Uncensored weights' contribution to likelihood value.
             F = self.new_weights
@@ -155,7 +155,7 @@ class OptAFT(_OptFuncts):
         return -2 * (llike - llikemax)
 
 
-class emplikeAFT(OptAFT):
+class emplikeAFT():
     """
 
     Class for estimating and conducting inference in an AFT model.
@@ -355,7 +355,7 @@ class emplikeAFT(OptAFT):
         return np.dot(endog, params)
 
 
-class AFTResults(object):
+class AFTResults(OptAFT):
     def __init__(self, model):
         self.model = model
 
@@ -472,7 +472,7 @@ class AFTResults(object):
         survidx = survidx[0] - np.arange(len(survidx[0]))
         numcensbelow = np.int_(np.cumsum(1 - censors))
         if len(param_nums) == len(params):
-            llr = self.model._EM_test([], F=F, params=params,
+            llr = self._EM_test([], F=F, params=params,
                                       param_nums=param_nums,
                                 b0_vals=b0_vals, survidx=survidx,
                              uncens_nobs=uncens_nobs,
@@ -482,7 +482,7 @@ class AFTResults(object):
             return llr, chi2.sf(llr, self.model.nvar)
         else:
             x0 = np.delete(params, param_nums)
-            res = optimize.fmin_powell(self.model._EM_test, x0,
+            res = optimize.fmin_powell(self._EM_test, x0,
                                    (params, param_nums, b0_vals, F, survidx,
                                     uncens_nobs, numcensbelow, km, uncensored,
                                     censored, maxiter, ftol), full_output=1)
