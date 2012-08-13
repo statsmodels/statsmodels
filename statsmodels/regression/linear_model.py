@@ -200,11 +200,9 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Parameters
         ----------
         method : str
-            Can be "pinv", "qr", or "mle".  "pinv" uses the
-            Moore-Penrose pseudoinverse to solve the least squares problem.
-            "svd" uses the Singular Value Decomposition.  "qr" uses the
-            QR factorization.  "mle" fits the model via maximum likelihood.
-            "mle" is not yet implemented.
+            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
+            to solve the least squares problem. "qr" uses the QR
+            factorization.
 
         Returns
         -------
@@ -219,9 +217,8 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Currently it is assumed that all models will have an intercept /
         constant in the design matrix for postestimation statistics.
 
-        The fit method uses the pseudoinverse of the design/exogenous variables
-        to solve the least squares minimization.
-
+        The fit method uses the pseudoinverse of the design/exogenous
+        variables to solve the least squares minimization.
         """
         exog = self.wexog
         endog = self.wendog
