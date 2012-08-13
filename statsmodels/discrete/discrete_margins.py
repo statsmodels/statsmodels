@@ -311,7 +311,7 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
             jacobian_mat = approx_fprime_cs(params, derivative,
                                             args=(exog,method))
         except TypeError, err: #norm.cdf doesn't take complex values
-            from statsmodels.tool.numdiff import approx_fprime1
+            from statsmodels.tools.numdiff import approx_fprime1
             jacobian_mat = approx_fprime1(params, derivative,
                                             args=(exog,method))
         if at == 'overall':
