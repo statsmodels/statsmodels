@@ -134,7 +134,8 @@ def restify(example_file, filehash, fname):
     except IOError as err:
         raise IOError(err.message % fname)
     write_file(rst_file, write_filename)
-    hash_funcs.update_hash_dict(filehash, fname)
+    if filehash is not None:
+        hash_funcs.update_hash_dict(filehash, fname)
 
 if __name__ == "__main__":
     sys.path.insert(0, example_dir)
@@ -146,7 +147,8 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1: # given a file,files to process, no help flag yet
         for example_file in sys.argv[1:]:
-            restify(example_file)
+            whole_file = open(example_file, 'r').read()
+            restify(whole_file, None, example_file)
 
     else: # process the whole directory
         for root, dirnames, filenames in os.walk(example_dir):
