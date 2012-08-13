@@ -332,7 +332,7 @@ class emplikeAFT(OptAFT):
     def fit(self):
         """
 
-        Fits an AFT model and returns parameters.
+        Fits an AFT model and returns results instance
 
         Parameters
         ---------
@@ -341,7 +341,7 @@ class emplikeAFT(OptAFT):
 
         Returns
         -------
-        Fitted params
+        Results instance.
 
         Notes
         -----
