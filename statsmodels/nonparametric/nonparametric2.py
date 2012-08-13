@@ -1479,3 +1479,205 @@ class CensoredReg(Reg):
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
         return mean, mfx
+
+class TestRegCoefC(object):
+    """
+    Significance test for continuous variables in a nonparametric
+    regression. Allows for testing of single and joint multivariable
+    tests.
+
+    Parameteres
+    -----------
+    model: Instance of Reg class
+        This is the nonparametric regression model whose elements
+        are tested for significance.
+
+    test_vars: tuple, list of integers
+        index of position of the continuous variables to be tested
+        for significance. E.g. (1,3,5) jointly tests variables at
+        position 1,3 and 5 for significance.
+
+    nboot: Integer
+        Number of bootstrap samples used to determine the distribution
+        of the test statistic in a finite sample. Default is 400
+
+    nested_res: Integer
+        Number of nested resamples used to calculate lambda
+        (See references)
+
+    References
+    ----------
+    See Racine, J.: "Consistent Significance Testing for Nonparametric
+        Regression" Journal of Business & Economics Statistics
+    See chapter 12 in [1]
+    """
+    # Significance of continuous vars in nonparametric regression
+    # Racine: Consistent Significance Testing for Nonparametric Regression
+    # Journal of Business & Economics Statistics
+    def __init__(self, model, test_vars, nboot=400, nested_res=400):
+        self.nboot = nboot
+        self.nres = nested_res
+        self.test_vars = test_vars
+        self.model = model
+        self.bw = model.bw
+        self.var_type = model.var_type
+        self.K = len(self.var_type)
+        self.tydat = model.tydat
+        self.txdat = model.txdat
+        self.gx = model.est[model.reg_type]
+        self.test_vars = test_vars
+        self.run()
+
+    def run(self):
+        self.test_stat = self.compute_test_stat(self.tydat, self.txdat)
+        sig = self.compute_sig()
+        return sig
+
+    def compute_lambda(self, Y, X):
+        n = np.shape(Z)[0]
+        Y = tools.adjust_shape(Y, 1)
+        X = tools.adjust_shape(X, self.K)
+        b = self.gx(bw, Y, X, edat=X)[1]
+        b = b[:, self.test_vars]
+        lam = np.sum(np.sum(((b / np.std(b)) ** 2), axis=1), axis=0) / float(n)
+        return lam
+
+    def compute_se_lambda(self, Y, X):
+        n = np.size(Y)[0]
+        lam = np.empty(size=(self.nres, ))
+        for i in xrange(self.nres):
+            ind = np.random.random_integers(0, n-1, size=(n,1))
+            Y1 = Y[ind, 0]
+            X1 = X[ind, 1::]
+            lam[i] = self.compute_lambda(Y1, X1)
+        se_lambda = np.std(lam)
+        return se_lambda
+
+    def compute_test_stat(self, Y, X):
+        lam = compute_lambda(Y, X)
+        se_lam = compute_se_lambda(Y, X)
+        t = lam / float(se_lambda)
+        return t
+
+    def compute_sig(self):
+        # Bootstrapping
+        t_dist = np.empty(size=(self.nboot, ))
+        Y = self.tydat
+        X = copy.deepcopy(self.txdat)
+        X[:, test_vars] = np.mean(X[:, test_vars], axis=0)  # fix at mean
+        M = self.gx(self.bw, Y, X, edat=X)[0]  # restricted mean see p. 372
+        e = Y - M
+        e = e - np.mean(e)  # recenter residuals ?
+        n = np.shape(e)[0]
+        for i in xrange(self.nboot):
+            ind = np.random.random_integers(0, n-1, size=(n,1))
+            e_boot = e[ind, :]
+            Y_boot = M + e_boot
+            t_dist[i] = self.compute_test_stat(Y_boot, self.txdat)
+
+        sig = ""
+        if self.test_stat > mquantiles(t_dist, 0.9):
+            sig = "*"
+        if self.test_stat > mquantiles(t_dist, 0,95):
+            sig = "**"
+        if self.test_stat > mquantiles(t_dist, 0.99):
+            sig = "***"
+        return sig
+
+class TestRegCoefD(RegCoef):
+    def __init__(self):
+        pass
+
+    def compute_test_stat(self, Y, X):
+        dom_x = np.unique(self.txdat[:, self.test_var])
+        X1 = copy.deepcopy(X)
+        X1[:, self.test_var] = 0
+        m0 = self.gx(bw, Y, X1, edat=X1)
+        I = np.zeros((n, 1))
+        for i in dom_x:
+            X1[:, self.test_var] = i
+            m1 = self.gx(bw, Y, X1, edat=X1)
+            I += m1 - m0
+        I = np.sum(I, axis=0)
+
+    def compute_sig(self):
+        I_dist = np.empty((self.nboot,1))
+        for i in xrange(self.nboot):
+            ind = np.random.random_integers(0, n-1, size=(n,1))
+            X[:, self.test_var]= self.txdat[ind, self.test_var]
+            I_dist[i] = self.compute_test_stat(Y, X)
+            
+
+class TestFForm(object):
+    """
+    Nonparametric test for functional form
+    
+   
+    Parameteres
+    -----------
+    tydat: list
+        Dependent variable (training set)
+
+    txdat: list of array_like objects
+        The independent (right-hand-side) variables
+
+    fform: function
+        The functional form y = g(b, x) to be tested. Takes as inputs
+        the RHS variables txdat and the coefficients b (betas) 
+        and returns a fitted y_hat
+
+    var_type: str
+        The type of the independent txdat variables
+        c: continuous
+        o: ordered
+        u: unordered
+
+    estimator: function
+        Must return the estimated coefficients b (betas). Takes as inputs
+        (tydat, txdat). E.g. least square estimator:
+        lambda (x,y): np.dot(np.pinv(np.dot(x.T, x)), np.dot(x.T, y))
+
+    References
+    ----------
+    See Racine, J.: "Consistent Significance Testing for Nonparametric
+        Regression" Journal of Business & Economics Statistics
+    See chapter 12 in [1]
+    """
+    # see p.355 in [1]
+    def __init__(self, tydat, txdat, bw, var_type fform, estimator):
+        self.tydat = tydat
+        self.txdat = tdat
+        self.fform = fform
+        self.estimator = estimator
+        self.bw = UKDE(tdat, bw=bwmethod, var_type).bw
+
+
+    def compute_test_stat(self, Y, X):
+        b = self.estimator(Y, X)
+        u = self.tydat - self.fform(b)
+        n = np.shape(u)[0]
+        iscontinuous = tools._get_type_pos(var_type)[0]
+        LOO = tools.LeaveOneOut(X)
+        i = 0
+        I = 0
+        S2 = 0
+        for X_j in LOO:
+            f_i = u * tools.gpke(bw, tdat=-X_j, edat=-X[i, :],
+                             var_type=self.var_type, tosum=False)
+            g_i = (u ** 2) * tools.gpke(bw, tdat=-X_j, edat=-X[i, :],
+                             var_type=self.var_type, tosum=False) ** 2
+            I += u[i] * np.sum(f_i, axis=0)
+            S2 += u[i] ** 2 * np.sum(g_i, axis=0)
+            i += 1
+        I *= 1./(n * (n - 1))
+        hp = np.prod(bw[iscontinuous])
+        S2 *= hp / (n * (n - 1))
+        T = n * (hp ** 0.5) * I / (S2 ** 0.5)
+        return T
+
+    def compute_sig(self): # p. 357 in [1]
+        b = self.estimator(self.tydat, self.X)
+        u = self.tydat - self.fform(b)
+        for i in xrange(self.nboot):
+            pass
+
