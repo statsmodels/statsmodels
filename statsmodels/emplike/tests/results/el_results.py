@@ -74,7 +74,7 @@ class DescStatRes(object):
                                              [0.02174404],
                                              [0.02189933],
                                              [0.02077078],
-                                             [0.02082612]])
+                                             [0.02082612]]).squeeze()
         self.test_var_3 = (.199385, .655218)
         self.ci_var = (2.290077, 4.423634)
         self.test_var_weights = np.array([[0.020965],
@@ -126,7 +126,7 @@ class DescStatRes(object):
                                              [0.016803],
                                              [0.016259],
                                              [0.019939],
-                                             [0.019793]])
+                                             [0.019793]]).squeeze()
         self.mv_test_mean = (.7002663, .7045943)
         self.mv_test_mean_wts = np.array([[0.01877015],
                                              [0.01895746],
@@ -177,7 +177,7 @@ class DescStatRes(object):
                                              [0.02127771],
                                              [0.01961964],
                                              [0.02023756],
-                                             [0.01774807]])
+                                             [0.01774807]]).squeeze()
         self.test_skew = (2.498418, .113961)
         self.test_skew_wts = np.array([[0.016698],
                                         [0.01564],
@@ -228,7 +228,7 @@ class DescStatRes(object):
                                         [0.017376],
                                         [0.014739],
                                         [0.028112],
-                                        [0.02842]])
+                                        [0.02842]]).squeeze()
         self.test_kurt_0 = (1.904269, .167601)
         self.test_corr = (.012025, .912680,)
         self.test_corr_weights = np.array([[0.020037],
@@ -280,5 +280,5 @@ class DescStatRes(object):
                                               [0.02035],
                                               [0.019823],
                                               [0.02005],
-                                              [0.019497]])
+                                              [0.019497]]).squeeze()
         self.test_joint_skew_kurt = (8.753952, .012563)

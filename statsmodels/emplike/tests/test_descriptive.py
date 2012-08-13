@@ -27,7 +27,7 @@ class TestDescriptiveStatistics(GenRes):
                             self.res2.test_mean_14, 4)
 
     def test_test_mean_weights(self):
-        assert_almost_equal(self.res1.test_mean(14, print_weights=1)[2],
+        assert_almost_equal(self.res1.test_mean(14, return_weights=1)[2],
                             self.res2.test_mean_weights, 4)
 
     def test_ci_mean(self):
@@ -38,7 +38,7 @@ class TestDescriptiveStatistics(GenRes):
                             self.res2.test_var_3, 4)
 
     def test_test_var_weights(self):
-        assert_almost_equal(self.res1.test_var(3, print_weights=1)[2],
+        assert_almost_equal(self.res1.test_var(3, return_weights=1)[2],
                             self.res2.test_var_weights, 4)
 
     def test_ci_var(self):
@@ -50,7 +50,7 @@ class TestDescriptiveStatistics(GenRes):
 
     def test_mv_test_mean_weights(self):
         assert_almost_equal(self.mvres1.mv_test_mean(np.array([14, 56]),
-                                        print_weights=1)[2],
+                                        return_weights=1)[2],
                                         self.res2.mv_test_mean_wts, 4)
 
     def test_test_skew(self):
@@ -76,7 +76,7 @@ class TestDescriptiveStatistics(GenRes):
         assert_almost_equal(ll_pval, .050000, 4)
 
     def test_ci_skew_weights(self):
-        assert_almost_equal(self.res1.test_skew(0, print_weights=1)[2],
+        assert_almost_equal(self.res1.test_skew(0, return_weights=1)[2],
                             self.res2.test_skew_wts, 4)
 
     def test_test_kurt(self):
@@ -115,5 +115,5 @@ class TestDescriptiveStatistics(GenRes):
         assert_almost_equal(ll_pval, .050000, 4)
 
     def test_test_corr_weights(self):
-        assert_almost_equal(self.mvres1.test_corr(.5, print_weights=1)[2],
+        assert_almost_equal(self.mvres1.test_corr(.5, return_weights=1)[2],
                             self.res2.test_corr_weights, 4)
