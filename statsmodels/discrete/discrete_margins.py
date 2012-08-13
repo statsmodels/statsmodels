@@ -672,9 +672,10 @@ class DiscreteMargins(object):
         if at == 'all':
             if J > 1:
                 K = model.K - np.any(~effects_idx) # subtract constant
-                self.margeff = effects[effects_idx].reshape(K, J, order='F')
+                self.margeff = effects[:, effects_idx].reshape(-1, K, J,
+                                                                order='F')
             else:
-                self.margeff = effects[effects_idx]
+                self.margeff = effects[:, effects_idx]
         else:
             # Set standard error of the marginal effects by Delta method.
             margeff_cov, margeff_se = margeff_cov_with_se(model, params, exog,

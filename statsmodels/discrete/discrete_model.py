@@ -1798,7 +1798,7 @@ class DiscreteResults(base.LikelihoodModelResults):
         # get base marginal effects, handled by sub-classes
         effects = model._derivative_exog(params, exog, method)
 
-        effects = _effects_at(effects, at, ind)
+        effects = _effects_at(effects, at)
 
         if dummy:
             effects = _get_dummy_effects(effects, exog, dummy_ind, method,
