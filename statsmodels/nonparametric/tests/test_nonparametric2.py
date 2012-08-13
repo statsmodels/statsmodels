@@ -1,10 +1,8 @@
 import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
-import matplotlib.pyplot as plt
-import scipy.stats as stats
 import statsmodels.nonparametric as nparam
-import csv
+
 
 class MyTest(object):
     def setUp(self):
@@ -163,8 +161,6 @@ class TestCKDE(MyTest):
         dens_ls = nparam.CKDE(tydat=[self.oecd],
                               txdat=[self.growth],
                               dep_type='u', indep_type='c', bw='cv_ls')
-        print dens_ls.bw
-        print "Test completed"
 
     def test_pdf_continuous(self):
         dens = nparam.CKDE(tydat=[self.growth], txdat=[self.Italy_gdp],
