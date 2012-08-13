@@ -431,7 +431,7 @@ class CKDE(_GenericKDE):
     >>> c1 = np.random.normal(size=(N,1))
     >>> c2 = np.random.normal(2,1,size=(N,1))
 
-    >>> dens_c = UKDE(tydat=[c1], txdat=[c2], dep_type='c',
+    >>> dens_c = CKDE(tydat=[c1], txdat=[c2], dep_type='c',
     ...               indep_type='c', bwmethod='normal_reference')
 
     >>> print "The bandwidth is: ", dens_c.bw
