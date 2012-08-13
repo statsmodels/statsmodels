@@ -12,6 +12,19 @@ kernel_func = dict(wangryzin=kernels.WangRyzin,
                    gaussian_cdf=kernels.Gaussian_cdf,
                    aitchisonaitken_cdf=kernels.AitchisonAitken_cdf,
                    wangryzin_cdf=kernels.WangRyzin_cdf)
+=======
+kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
+                 gaussian=kf.Gaussian,
+                 aitchison_aitken_reg = kf.aitchison_aitken_reg,
+                 wangryzin_reg = kf.wangryzin_reg,
+                   gauss_convolution=kf.Gaussian_Convolution,
+                 wangryzin_convolution=kf.WangRyzin_Convolution,
+                 aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
+                   gaussian_cdf=kf.Gaussian_cdf,
+                   aitchisonaitken_cdf=kf.AitchisonAitken_cdf,
+                   wangryzin_cdf=kf.WangRyzin_cdf,
+                    d_gaussian=kf.D_Gaussian)
+>>>>>>> nonparametric-reg
 
 
 class LeaveOneOut(object):

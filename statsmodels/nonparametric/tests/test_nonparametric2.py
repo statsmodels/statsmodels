@@ -2,7 +2,11 @@ import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
 import statsmodels.nonparametric as nparam
+<<<<<<< HEAD
 
+=======
+import csv
+>>>>>>> nonparametric-reg
 
 class MyTest(object):
     def setUp(self):
@@ -19,6 +23,10 @@ class MyTest(object):
         b2 = 3.7  # regression coefficients
         self.y = b0 + b1 * self.c1 + b2 * self.c2 + self.noise
         self.y2 = b0 + b1 * self.c1 + b2 * self.c2 + self.o + self.noise
+<<<<<<< HEAD
+=======
+
+>>>>>>> nonparametric-reg
         # Italy data from R's np package (the first 50 obs) R>> data (Italy)
 
         self.Italy_gdp = \
@@ -55,6 +63,16 @@ class MyTest(object):
         [0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
        0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
        0, 0, 0, 0]
+    def write2file(self, file_name, data):
+        data_file = csv.writer(open(file_name, "w"))
+        data = np.column_stack(data)
+        N = max(np.shape(data))
+        K = min(np.shape(data))
+        print "shape is for writing in file is: ", (N,K)
+        data = np.reshape(data, (N,K))
+        for i in range(N):
+            data_file.writerow(list(data[i, :]))
+
 
 
 class TestUKDE(MyTest):
@@ -213,3 +231,157 @@ class TestCKDE(MyTest):
         sm_result = dens.cdf()[0:5]
         R_result = [0.8118257, 0.9724863, 0.8843773, 0.7720359, 0.4361867]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
+<<<<<<< HEAD
+=======
+
+
+class TestReg(MyTest):
+        
+    def test_ordered_lc_cvls(self):
+        model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
+                           reg_type='lc', var_type='o', bw='cv_ls')
+        sm_bw = model.bw
+        R_bw = 0.1390096
+
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_mfx = sm_mfx[0:5]
+        R_mean = 6.190486
+
+        sm_R2 = model.r_squared()
+        R_R2 = 0.1435323
+
+        ## CODE TO REPRODUCE IN R
+        ## library(np)
+        ## data(Italy)
+        ## attach(Italy)
+        ## bw <- npregbw(formula=gdp[1:50]~ordered(year[1:50]))
+        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+
+        print "test_ordered_lc_cvls - successful"
+
+    def test_continuousdata_lc_cvls(self):
+        model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
+                           reg_type='lc', var_type='cc', bw='cv_ls')
+        # Bandwidth
+        sm_bw = model.bw
+        R_bw = [0.6163835, 0.1649656]
+        # Conditional Mean
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_mfx = sm_mfx[0:5]
+        R_mean = [31.49157, 37.29536, 43.72332, 40.58997, 36.80711]
+        # R-Squared
+        sm_R2 = model.r_squared()
+        R_R2 = 0.956381720885
+
+        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        print "test_continuousdata_lc_cvls - successful"
+
+
+    def test_continuousdata_ll_cvls(self):
+        model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
+                           reg_type='ll', var_type='cc', bw='cv_ls')
+
+        sm_bw = model.bw
+        R_bw = [1.717891, 2.449415]
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_mfx = sm_mfx[0:5]
+        R_mean = [31.16003, 37.30323, 44.49870, 40.73704, 36.19083]
+
+        sm_R2 = model.r_squared()
+        R_R2 = 0.9336019
+
+        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        print "test_continuousdata_ll_cvls - successful"
+
+    
+    def test_continuous_mfx_ll_cvls(self, file_name='RegData.csv'):
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+                            reg_type='ll', var_type='ccc', bw='cv_ls')
+        sm_bw = model.bw
+        print "Bandwidth: ", sm_bw
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_R2 = model.r_squared()
+        print "R2: ", sm_R2
+        print "test_continuous_mfx_ll_cvls - successful"
+        print model
+        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        self.write2file(file_name, (Y, C1, C2, C3))
+
+
+    def test_mixed_mfx_ll_cvls(self, file_name='RegData.csv'):
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, O],
+                            reg_type='ll', var_type='cco', bw='cv_ls')
+        sm_bw = model.bw
+        sm_mean, sm_mfx = model.fit()
+        sm_R2 = model.r_squared()
+        print "test_continuous_mfx_ll_cvls - successful"
+        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        #self.write2file(file_name, (Y, C1, C2, C3))
+
+
+    def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+                            reg_type='ll', var_type='ccc', bw='cv_ls')
+        sm_bw = model.bw
+        sm_mean, sm_mfx = model.fit()
+        sm_R2 = model.r_squared()
+        # Theoretical marginal effects
+        mfx1 = b1 * C2
+        mfx2 = b1 * C1
+        #npt.assert_allclose(sm_mfx[:,0], mfx1, rtol=2e-1)
+        #npt.assert_allclose(sm_mfx[0:10,1], mfx2[0:10], rtol=2e-1)
+        npt.assert_allclose(sm_mean, Y, rtol = 2e-1)
+        #self.write2file(file_name, (Y, C1, C2, C3))
+        print "test_continuous_mfx_ll_cvls - successful"
+
+
+>>>>>>> nonparametric-reg
