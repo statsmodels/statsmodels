@@ -24,7 +24,8 @@ print lpm_res.params[:-1]
 logit_mod = sm.Logit(spector_data.endog, spector_data.exog)
 logit_res = logit_mod.fit()
 print logit_res.params
-print logit_res.margeff()
+logit_margeff = logit_res.get_margeff(method='dydx', at='overall')
+print logit_margeff.summary()
 
 # As in all the discrete data models presented below, we can print a nice
 # summary of results:
@@ -35,7 +36,8 @@ print logit_res.summary()
 probit_mod = sm.Probit(spector_data.endog, spector_data.exog)
 probit_res = probit_mod.fit()
 print probit_res.params
-print probit_res.margeff()
+probit_margeff = probit_res.get_margeff()
+print probit_margeff.summary()
 
 #Multinomial Logit
 #-----------------
@@ -52,7 +54,10 @@ anes_data.endog[:5]
 # Fit MNL model
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_res = mlogit_mod.fit()
-mlogit_res.params
+print mlogit_res.params
+mlogit_margeff = mlogit_res.get_margeff()
+print mlogit_margeff.summary()
+
 
 #Poisson model
 #-------------
@@ -68,6 +73,8 @@ rand_exog = sm.add_constant(rand_exog, prepend=False)
 poisson_mod = sm.Poisson(rand_data.endog, rand_exog)
 poisson_res = poisson_mod.fit(method="newton")
 print poisson_res.summary()
+poisson_margeff = poisson_res.get_margeff()
+print poisson_margeff.summary()
 
 #Alternative solvers
 #-------------------
