@@ -501,7 +501,8 @@ class AFTResults(OptAFT):
                 res = optimize.fmin(self._EM_test, x0,
                                    (params, param_nums, b0_vals, F, survidx,
                                     uncens_nobs, numcensbelow, km, uncensored,
-                                    censored, maxiter, ftol), full_output=1)
+                                    censored, maxiter, ftol), full_output=1,
+                                    disp = 0)
 
                 llr = res[1]
                 return llr, chi2.sf(llr, len(param_nums))
@@ -542,6 +543,15 @@ class AFTResults(OptAFT):
         3) Using  EM at each value of nuisamce parameters
         4) Using the _modified_Newton optimizer at each iteration
            of the EM algorithm.
+
+        Also, for very unlikely nuisance parameters, it is possible for
+        the EM algorithm to not converge.  This is not an indicator
+        that the solver did not find the correct solution.  It just means
+        for a specific iteration of the nuisance parameters, the optimizer
+        was unable to converge.
+
+        If the user desires to verify the success of the optimization,
+        it is recommended to test the limits using test_beta.
 
         """
         params = self.params()
