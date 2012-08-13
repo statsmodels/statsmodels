@@ -385,7 +385,7 @@ class Margins(object):
     def margins_se(self):
         raise NotImplementedError
 
-    def get_frame(self):
+    def summary_frame(self):
         raise NotImplementedError
 
     @cache_readonly
@@ -416,7 +416,7 @@ class DiscreteMargins(object):
     def tvalues(self):
         return self.margeff / self.margeff_se
 
-    def get_frame(self, alpha=.05):
+    def summary_frame(self, alpha=.05):
         from pandas import DataFrame
         names = [_transform_names[self.margeff_options['method']],
                                   'Std. Err.', 'z', 'Pr(>|z|)',
