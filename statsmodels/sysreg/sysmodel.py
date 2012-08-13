@@ -416,6 +416,17 @@ class SysResults(LikelihoodModelResults):
         self.nobs = model.nobs
         self.df_resid = model.df_resid
         self.df_model = model.df_model
+        self.ssr = np.array([sum(self.resids[:, eq] ** 2) 
+            for eq in range(self.model.neqs)])
+        self.mse = self.ssr / self.df_resid
+        self.rmse = np.sqrt(self.mse)
+
+        means = np.mean(model.endog.T, axis=0)
+        self.sst = np.array([sum((model.endog.T[:,eq] - means[eq])**2)
+            for eq in range(self.model.neqs)])
+        self.rsquared = 1 - self.ssr / self.sst
+        self.rsquared_adj = 1 - (1 - self.rsquared)*(float(self.model.nobs - 1) /
+                self.model.df_resid)
 
     def summary(self, yname=None, xname=None, title=None):
         #create summary table instance
@@ -469,12 +480,7 @@ class SysSummary(object):
         header_dec_below=None,
     )
     part2_fmt = dict(default_fmt,
-        data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-        colwidths = None,
-        colsep='    ',
-        table_dec_above='-',
-        table_dec_below='-',
-        header_dec_below=None,
+        data_fmts = ["%d","%#12.6g","%#12.6g","%#16.6g","%#12.6g", "%#12.6g"],
     )
 
     def __init__(self, result, yname=None, xname=None, title=None):
@@ -501,7 +507,7 @@ class SysSummary(object):
         buf = StringIO()
         
         print >> buf, self._header_table()
-        #print >> buf, self._stats_table()
+        print >> buf, self._stats_table()
         print >> buf, self._coef_table()
         print >> buf, self._resid_info()
 
@@ -531,31 +537,19 @@ class SysSummary(object):
         return buf.getvalue()
 
     def _stats_table(self):
-        # TODO: do we want individual statistics or should users just
-        # use results if wanted?
-        # Handle overall fit statistics
-
         result = self.result
+        neqs = result.model.neqs
 
+        data = np.column_stack((result.df_resid, result.ssr, result.mse,
+            result.rmse, result.rsquared, result.rsquared_adj))
+        header = ('DoF', 'SSR', 'MSE', 'RMSE', 'R^2', 'Adj. R^2')
 
-        part2Lstubs = ('No. of Equations:',
-                       'Nobs:',
-                       'Log likelihood:',
-                       'AIC:')
-        part2Rstubs = ('BIC:',
-                       'HQIC:',
-                       'FPE:',
-                       'Det(Omega_mle):')
-        part2Ldata = [[result.model.neqs], [result.model.nobs], [result.llf], [result.aic]]
-        part2Rdata = [[result.bic], [result.hqic], [result.fpe], [result.detomega]]
-        part2Lheader = None
-        part2L = SimpleTable(part2Ldata, part2Lheader, part2Lstubs,
-                             txt_fmt = self.part2_fmt)
-        part2R = SimpleTable(part2Rdata, part2Lheader, part2Rstubs,
-                             txt_fmt = self.part2_fmt)
-        part2L.extend_right(part2R)
+        buf = StringIO()
+        table = SimpleTable(data, header, stubs=self.yname, 
+                txt_fmt=self.part2_fmt)
+        print >> buf, str(table)
 
-        return str(part2L)
+        return buf.getvalue()
 
     def _coef_table(self):
         result = self.result
