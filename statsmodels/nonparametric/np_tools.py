@@ -1,18 +1,7 @@
 import numpy as np
-
+import kernels as kf
 from . import kernels
 
-
-kernel_func = dict(wangryzin=kernels.WangRyzin,
-                   aitchisonaitken=kernels.AitchisonAitken,
-                   gaussian=kernels.Gaussian,
-                   gauss_convolution=kernels.Gaussian_Convolution,
-                   wangryzin_convolution=kernels.WangRyzin_Convolution,
-                   aitchisonaitken_convolution=kernels.AitchisonAitken_Convolution,
-                   gaussian_cdf=kernels.Gaussian_cdf,
-                   aitchisonaitken_cdf=kernels.AitchisonAitken_cdf,
-                   wangryzin_cdf=kernels.WangRyzin_cdf)
-=======
 kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
                  gaussian=kf.Gaussian,
                  aitchison_aitken_reg = kf.aitchison_aitken_reg,
@@ -24,7 +13,6 @@ kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
                    aitchisonaitken_cdf=kf.AitchisonAitken_cdf,
                    wangryzin_cdf=kf.WangRyzin_cdf,
                     d_gaussian=kf.D_Gaussian)
->>>>>>> nonparametric-reg
 
 
 class LeaveOneOut(object):

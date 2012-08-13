@@ -25,9 +25,12 @@ References
 import numpy as np
 from scipy import optimize
 import np_tools as tools
+import kernels as kf
+import copy
+from scipy.stats.mstats import mquantiles
 
 
-__all__ = ['UKDE', 'CKDE']
+__all__ = ['UKDE', 'CKDE', 'Reg']
 
 
 class _GenericKDE (object):
@@ -69,6 +72,136 @@ class _GenericKDE (object):
             res = bwfunc()
         return res
 
+    def _compute_dispersion(self, all_vars):
+        if self.__class__.__name__ == "Reg":
+            all_vars = all_vars[:, 1::]
+        s1 = np.std(all_vars, axis=0)
+        q75 = mquantiles(all_vars,0.75, axis=0).data[0]
+        q25 = mquantiles(all_vars,0.25, axis=0).data[0]
+        s2 = (q75-q25) / 1.349
+        s = [min(s1[z], s2[z]) for z in range(len(s1))]
+        s = np.asarray(s)
+        #s = s1
+        return s
+ 
+        
+    def _compute_efficient_randomize(self, bw):
+        sample_scale = np.empty((self.n_res, self.K))
+        only_bw = np.empty((self.n_res, self.K))
+        all_vars = copy.deepcopy(self.all_vars)
+        l = self.all_vars_type.count('c')
+        co = 4
+        do = 4
+        iscontinuous, isordered, isunordered = \
+                tools._get_type_pos(self.all_vars_type)
+        print "Running Block by block efficient bandwidth estimation"
+        for i in xrange(self.n_res):
+            print "Estimating sample ", i + 1, " ..."
+            np.random.shuffle(all_vars)
+            sub_all_vars = all_vars[0 : self.n_sub, :]
+            sub_model = self._call_self(sub_all_vars, bw)
+            s = self._compute_dispersion(sub_all_vars)
+            fct = s * self.n_sub ** (-1./(l + co))
+            fct[isunordered] = self.n_sub ** (-2. / (l + do))
+            fct[isordered] = self.n_sub ** (-2. / (l + do))
+            c = sub_model.bw / fct  #  TODO: Check if this is correct!
+            sample_scale[i, :] = c
+            only_bw[i, :] = sub_model.bw
+            print sub_model.bw
+            
+        s = self._compute_dispersion(all_vars)
+        if self.return_median:
+            median_scale = np.median(sample_scale, axis=0)
+            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Chekc if 1/5 is correct!
+            bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
+        else:
+            mean_scale = np.mean(sample_scale, axis=0)
+            bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
+            bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+        if self.return_only_bw:
+            bw = np.median(only_bw, axis=0)
+
+        return bw 
+
+    def _compute_efficient_all(self, bw):
+        all_vars = copy.deepcopy(self.all_vars)
+        l = self.all_vars_type.count('c')
+        co = 4
+        do = 4
+        iscontinuous, isordered, isunordered = \
+                tools._get_type_pos(self.all_vars_type)
+ 
+        slices = np.arange(0, self.N, self.n_sub)
+        n_slice = len(slices)
+        bounds = [(slices[0:-1][i], slices[1::][i]) for i in range(n_slice - 1)]
+        bounds.append((slices[-1], self.N))
+        sample_scale = np.empty((len(bounds), self.K))
+        only_bw = np.empty((len(bounds), self.K))
+        i = 0
+        for b in bounds:
+            print "Estimating slice ", b, " ..."
+
+            sub_all_vars = all_vars[b[0] : b[1], :]
+            sub_model = self._call_self(sub_all_vars, bw)
+            s = self._compute_dispersion(sub_all_vars)
+            fct = s * self.n_sub ** (-1./(l + co))
+            fct[isunordered] = self.n_sub ** (-2. / (l + do))
+            fct[isordered] = self.n_sub ** (-2. / (l + do))
+            c = sub_model.bw / fct  #  TODO: Check if this is correct!
+            sample_scale[i, :] = c
+            only_bw[i, :] = sub_model.bw
+            i += 1
+            print sub_model.bw
+        s = self._compute_dispersion(all_vars) 
+        if self.return_median:
+            median_scale = np.median(sample_scale, axis=0)
+            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Chekc if 1/5 is correct!
+            bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
+        else:
+            mean_scale = np.mean(sample_scale, axis=0)
+            bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
+            bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
+            bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+            print "the mean is", bw
+
+        if self.return_only_bw:
+            bw = np.median(only_bw, axis=0)
+
+        return bw 
+
+
+    def _call_self(self, all_vars, bw):
+
+        if self.__class__.__name__ == 'UKDE':
+            model = UKDE(all_vars, self.var_type, bw=bw, 
+                        defaults=SetDefaults(efficient=False))
+
+        if self.__class__.__name__ == 'CKDE':
+            tydat = all_vars[:, 0 : self.K_dep]
+            txdat = all_vars[:, self.K_dep ::]
+            model = CKDE(tydat, txdat, self.dep_type, 
+                        self.indep_type, bw=bw, 
+                        defaults=SetDefaults(efficient=False))
+        if self.__class__.__name__ == 'Reg':
+            tydat = tools.adjust_shape(all_vars[:, 0], 1)
+            txdat = tools.adjust_shape(all_vars[:, 1::], self.K)
+            model = Reg(tydat=tydat, txdat=txdat, reg_type=self.reg_type, 
+                        var_type=self.var_type, bw=bw, 
+                        defaults=SetDefaults(efficient=False))
+  
+        return model
+ 
+    def _set_defaults(self, defaults):
+        self.n_res = defaults.n_res
+        self.n_sub = defaults.n_sub
+        self.randomize = defaults.randomize
+        self.return_median = defaults.return_median
+        self.efficient = defaults.efficient
+        self.return_only_bw = defaults.return_only_bw
+
     def _normal_reference(self):
         """
         Returns Scott's normal reference rule of thumb bandwidth parameter.
@@ -86,6 +219,17 @@ class _GenericKDE (object):
         c = 1.06
         X = np.std(self.all_vars, axis=0)
         return c * X * self.N ** (- 1. / (4 + np.size(self.all_vars, axis=1)))
+
+    def _set_bw_bounds(self, bw):
+        unit = np.ones((self.K, ))
+        ind0 = np.where(bw < 0)
+        bw[ind0] = 0.
+        iscontinuous, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
+        for i in isordered:
+            bw[i] = min(bw[i], 1.)
+        for i in isunordered:
+            bw[i] = min(bw[i], 1.)
+        return bw
 
     def _cv_ml(self):
         """
@@ -115,6 +259,7 @@ class _GenericKDE (object):
         h0 = self._normal_reference()
         bw = optimize.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
                            maxiter=1e3, maxfun=1e3, disp=0)
+        bw = self._set_bw_bounds(bw)
         return bw
 
     def _cv_ls(self):
@@ -136,10 +281,57 @@ class _GenericKDE (object):
         """
         h0 = self._normal_reference()
         bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0)
+        bw = self._set_bw_bounds(bw)
         return np.abs(bw)
 
     def loo_likelihood(self):
         raise NotImplementedError
+
+
+class SetDefaults(object):
+    """
+    A helper class that sets the default values for the estimators
+    Sets the default values for the efficient bandwidth estimator
+    Parameteres
+    -----------
+    efficient: Boolean
+        Set to True if the bandwidth estimation is to be performed
+        efficiently -- by taking smaller sub-samples and estimating
+        the scaling factor of each subsample. Use for large samples
+        (N >> 300) and multiple variables (K >> 3). Default is False
+
+    randomize: Boolean
+        Set to True if the bandwidth estimation is to be performed by
+        taking n_res random resamples of size n_sub from the full sample.
+        If set to False, the estimation is performed by slicing the
+        full sample in sub-samples of size n_sub so that the full sample
+        is used fully. 
+
+    n_sub: Integer
+        Size of the subsamples
+
+    n_res: Integer
+        The number of random re-samples used to estimate the bandwidth.
+        Must have randomize set to True. Default value is 25
+
+    return_median: Boolean
+        If True the estimator uses the median of all scaling factors for
+        each sub-sample to estimate the bandwidth of the full sample.
+        If False then the estimator uses the mean. Default is True.
+
+    return_only_bw: Boolean
+        Set to True if the estimator is to use the bandwidth and not the
+        scaling factor. This is *not* theoretically justified. Should be used
+        only for experimenting. 
+    """
+    def __init__(self, n_res=25, n_sub=50, randomize=True, return_median=True,
+                 efficient=False, return_only_bw=False):
+        self.n_res = n_res
+        self.n_sub = n_sub
+        self.randomize = randomize
+        self.return_median = return_median
+        self.efficient = efficient
+        self.return_only_bw = return_only_bw
 
 
 class UKDE(_GenericKDE):
@@ -170,6 +362,9 @@ class UKDE(_GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
+
     Attributes
     ----------
     bw: array_like
@@ -196,15 +391,25 @@ class UKDE(_GenericKDE):
     >>> dens_u.bw
     array([ 0.39967419,  0.38423292])
     """
-    def __init__(self, tdat, var_type, bw=None):
+    def __init__(self, tdat, var_type, bw=None, 
+                                defaults = SetDefaults()):
+
         self.var_type = var_type
         self.K = len(self.var_type)
         self.tdat = tools.adjust_shape(tdat, self.K)
         self.all_vars = self.tdat
+        self.all_vars_type = var_type
         self.N, self.K = np.shape(self.tdat)
         assert self.K == len(self.var_type)
         assert self.N > self.K  # Num of obs must be > than num of vars
-        self.bw = self._compute_bw(bw)
+        self._set_defaults(defaults)
+        if not self.efficient:
+            self.bw = self._compute_bw(bw)
+        else: 
+            if self.randomize:
+                self.bw = self._compute_efficient_randomize(bw)
+            else:
+                self.bw = self._compute_efficient_all(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -411,6 +616,9 @@ class CKDE(_GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
+
     Attributes
     ---------
     bw: array_like
@@ -438,18 +646,30 @@ class CKDE(_GenericKDE):
 
     >>> print "The bandwidth is: ", dens_c.bw
     """
-    def __init__(self, tydat, txdat, dep_type, indep_type, bw=None):
+
+    def __init__(self, tydat, txdat, dep_type, indep_type, bw,
+                            defaults=SetDefaults()):
+
         self.dep_type = dep_type
         self.indep_type = indep_type
+        self.all_vars_type = dep_type + indep_type
         self.K_dep = len(self.dep_type)
         self.K_indep = len(self.indep_type)
         self.tydat = tools.adjust_shape(tydat, self.K_dep)
         self.txdat = tools.adjust_shape(txdat, self.K_indep)
         self.N, self.K_dep = np.shape(self.tydat)
         self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
+        self.K = np.shape(self.all_vars)[1]
         assert len(self.dep_type) == self.K_dep
         assert len(self.indep_type) == np.shape(self.txdat)[1]
-        self.bw = self._compute_bw(bw)
+        self._set_defaults(defaults)
+        if not self.efficient:
+            self.bw = self._compute_bw(bw)
+        else:
+            if self.randomize:
+                self.bw = self._compute_efficient_randomize(bw)
+            else:
+                self.bw = self._compute_efficient_all(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -463,6 +683,7 @@ class CKDE(_GenericKDE):
         repr += "Dependent variable types:      " + self.dep_type + "\n"
         repr += "BW selection method: " + self._bw_method + "\n"
         return repr
+
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
@@ -685,7 +906,7 @@ class CKDE(_GenericKDE):
         return CV / float(self.N)
 
 
-class Reg(object):
+class Reg(_GenericKDE):
     """
     Nonparametric Regression
 
@@ -695,23 +916,30 @@ class Reg(object):
     ----------
     tydat: list with one element which is array_like
         This is the dependent variable.
+
     txdat: list
         The training data for the independent variable(s)
         Each element in the list is a separate variable
+
     dep_type: str
         The type of the dependent variable(s)
         c: Continuous
         u: Unordered (Discrete)
         o: Ordered (Discrete)
+
     reg_type: str
         Type of regression estimator
         lc: Local Constant Estimator
         ll: Local Linear Estimator
+
     bw: array-like
         Either a user-specified bandwidth or
         the method for bandwidth selection.
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
+
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
 
     Attributes
     ---------
@@ -724,19 +952,28 @@ class Reg(object):
     mean(): Calculates the conditiona mean
     """
 
-    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls'):
+    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
+                defaults=SetDefaults()):
 
-        #self.tydat = np.column_stack(tydat)
-        #self.txdat = np.column_stack(txdat)
         self.var_type = var_type
+        self.all_vars_type = var_type
         self.reg_type = reg_type
         self.K = len(self.var_type)
         self.tydat = tools.adjust_shape(tydat, 1)
         self.txdat = tools.adjust_shape(txdat, self.K)
+        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
         self.N = np.shape(self.txdat)[0] 
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self.g_lc, ll=self.g_ll)
-        self.bw = self.compute_bw(bw)
+        self._set_defaults(defaults)
+        if not self.efficient:
+            self.bw = self.compute_reg_bw(bw)
+        else:
+            
+            if self.randomize:
+                self.bw = self._compute_efficient_randomize(bw)
+            else:
+                self.bw = self._compute_efficient_all(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -951,7 +1188,7 @@ class Reg(object):
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N
 
-    def compute_bw(self, bw):
+    def compute_reg_bw(self, bw):
         if not isinstance(bw, basestring):
             self._bw_method = "user-specified"
             return np.asarray(bw)
