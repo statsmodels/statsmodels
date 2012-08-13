@@ -1208,6 +1208,7 @@ class CensoredReg(Reg):
     Nonparametric Regression
 
     Calculates the condtional mean E[y|X] where y = g(X) + e
+    Where y is censored
 
     Parameters
     ----------
@@ -1230,6 +1231,12 @@ class CensoredReg(Reg):
         the method for bandwidth selection.
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
+
+    censor_var: Float
+        Value at which the dependent variable is censored
+        
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
 
     Attributes
     ---------
