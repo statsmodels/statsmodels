@@ -102,17 +102,14 @@ class _OptFuncts():
         hess: m x m array
             Weighted hessian used in _wtd_modif_newton
         """
-        nobs = est_vect.shape[0]
-        data = est_vect.T
-        wts = wts.reshape(-1, 1)
-        data_star_doub_prime = np.copy(np.sum(wts) + np.dot(eta1, data))
+        nobs = len(est_vect)
+        data_star_doub_prime = np.sum(wts) + np.dot(est_vect, eta1)
         idx = data_star_doub_prime < 1. / nobs
         not_idx = ~idx
         data_star_doub_prime[idx] = - nobs ** 2
         data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
-        data_star_doub_prime = data_star_doub_prime.reshape(nobs, 1)
         wtd_dsdp = wts * data_star_doub_prime
-        return np.dot(data, wtd_dsdp * data.T)
+        return np.dot(est_vect.T, wtd_dsdp[:,None] * est_vect)
 
     def _grad(self, eta1, est_vect, wts):
         """
@@ -139,16 +136,13 @@ class _OptFuncts():
         gradient: m x 1 array
             The gradient used in _wtd_modif_newton
         """
-        wts = wts.reshape(-1, 1)
-        nobs = est_vect.shape[0]
-        data = est_vect.T
-        data_star_prime = (np.sum(wts) + np.dot(eta1, data))
+        nobs = len(est_vect)
+        data_star_prime = np.sum(wts) + np.dot(est_vect, eta1)
         idx = data_star_prime < 1. / nobs
         not_idx = ~idx
         data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
         data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
-        data_star_prime = data_star_prime.reshape(nobs, 1)  # log*'
-        return np.dot(data, wts * data_star_prime)
+        return np.dot(est_vect.T, wts * data_star_prime)
 
     def _modif_newton(self,  x0, est_vect, wts):
         """
@@ -173,10 +167,9 @@ class _OptFuncts():
 
         See Owen pg. 64
         """
-        x0 = x0.reshape(est_vect.shape[1], 1)
-        f = lambda x0: - np.sum(self._log_star(x0.T, est_vect, wts))
-        grad = lambda x0: - self._grad(x0.T, est_vect, wts)
-        hess = lambda x0: - self._hess(x0.T, est_vect, wts)
+        f = lambda x0: - np.sum(self._log_star(x0, est_vect, wts))
+        grad = lambda x0: - self._grad(x0, est_vect, wts)
+        hess = lambda x0: - self._hess(x0, est_vect, wts)
         kwds = {'tol': 1e-8}
         res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
@@ -278,7 +271,7 @@ class _OptFuncts():
         sig_data = ((endog - nuisance_mu) ** 2 \
                     - self.sig2_0)
         mu_data = (endog - nuisance_mu)
-        est_vect = np.concatenate((mu_data, sig_data), axis=1)
+        est_vect = np.column_stack((mu_data, sig_data))
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs]), est_vect,
                                                 np.ones(nobs) * (1. / nobs))
@@ -332,10 +325,9 @@ class _OptFuncts():
         nobs = self.nobs
         mu_data = endog - nuis_params[0]
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
-        skew_data = ((((endog - nuis_params[0]) ** 3) / \
+        skew_data = ((((endog - nuis_params[0]) ** 3) /
                     (nuis_params[1] ** 1.5))) - self.skew0
-        est_vect = np.concatenate((mu_data, sig_data, skew_data), \
-                                       axis=1)
+        est_vect = np.column_stack((mu_data, sig_data, skew_data))
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs]), est_vect,
@@ -369,8 +361,7 @@ class _OptFuncts():
         sig_data = ((endog - nuis_params[0]) ** 2) - nuis_params[1]
         kurt_data = (((((endog - nuis_params[0]) ** 4) / \
                     (nuis_params[1] ** 2))) - 3) - self.kurt0
-        est_vect = np.concatenate((mu_data, sig_data, kurt_data), \
-                                       axis=1)
+        est_vect = np.column_stack((mu_data, sig_data, kurt_data))
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs]), est_vect,
@@ -406,8 +397,7 @@ class _OptFuncts():
                     (nuis_params[1] ** 1.5))) - self.skew0
         kurt_data = (((((endog - nuis_params[0]) ** 4) / \
                     (nuis_params[1] ** 2))) - 3) - self.kurt0
-        est_vect = np.concatenate((mu_data, sig_data, skew_data,\
-                                        kurt_data), axis=1)
+        est_vect = np.column_stack((mu_data, sig_data, skew_data, kurt_data))
         eta_star = self._modif_newton(np.array([1. / nobs,
                                                1. / nobs,
                                                1. / nobs,
@@ -516,7 +506,7 @@ class _OptFuncts():
                        mu2_ub=self.mu2_ub,
                        var1_lb=self.var1_lb, var1_ub=self.var1_ub,
                        var2_lb=self.var2_lb, var2_ub=self.var2_ub,
-                       print_weights=0, _is_ci=1)[0] - self.r0
+                       return_weights=0, _is_ci=1)[0] - self.r0
 
 
 class DescStatUV(_OptFuncts):
@@ -536,12 +526,11 @@ class DescStatUV(_OptFuncts):
     """
 
     def __init__(self, endog):
-        self.endog = endog
+        self.endog = np.squeeze(endog)
         self.nobs = float(endog.shape[0])
         self.weights = np.ones(self.nobs) / float(self.nobs)
-        self.endog = self.endog.reshape(self.nobs, 1)
 
-    def test_mean(self, mu0, print_weights=False):
+    def test_mean(self, mu0, return_weights=False):
         """
         Returns -2 * log-likelihood ratio, p-value and weights
         for a hypothesis test of the means.
@@ -551,8 +540,8 @@ class DescStatUV(_OptFuncts):
         mu0: float
             Mean under the null hypothesis
 
-        print_weights: bool, optional
-            If print_weights is True the funtion returns
+        return_weights: bool, optional
+            If return_weights is True the funtion returns
             the weight of the observations under the null hypothesis.
             Default = False
 
@@ -568,10 +557,9 @@ class DescStatUV(_OptFuncts):
         eta_min = (1. - (1. / nobs)) / (self.mu0 - max(endog))
         eta_max = (1. - (1. / nobs)) / (self.mu0 - min(endog))
         eta_star = optimize.brentq(self._find_eta, eta_min, eta_max)
-        new_weights = (1. / nobs) * \
-            1. / (1. + eta_star * (endog - self.mu0))
+        new_weights = (1. / nobs) * 1. / (1. + eta_star * (endog - self.mu0))
         llr = -2 * np.sum(np.log(nobs * new_weights))
-        if print_weights:
+        if return_weights:
             return llr, chi2.sf(llr, 1), new_weights
         else:
             return llr, chi2.sf(llr, 1)
@@ -692,7 +680,7 @@ class DescStatUV(_OptFuncts):
                     mu_lmin = self.mu_test
             return self.mu_low, self.mu_high
 
-    def test_var(self, sig2_0, print_weights=False):
+    def test_var(self, sig2_0, return_weights=False):
         """
         Returns  -2 ``*`` log-likelihoog ratio and the p-value for the
             hypothesized variance.
@@ -706,7 +694,7 @@ class DescStatUV(_OptFuncts):
         Optional
         --------
 
-        print_weights: bool
+        return_weights: bool
             If True, returns the weights that maximize the
             likelihood of observing sig2_0. Default= False.
 
@@ -728,7 +716,7 @@ class DescStatUV(_OptFuncts):
         llr = optimize.fminbound(self._opt_var, mu_min, mu_max, \
                                  full_output=1)[1]
         p_val = chi2.sf(llr, 1)
-        if print_weights:
+        if return_weights:
             return llr, p_val, self.new_weights.T
         else:
             return  llr, p_val
@@ -854,7 +842,7 @@ class DescStatUV(_OptFuncts):
 
     def test_skew(self, skew0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
-                     print_weights=False):
+                     return_weights=False):
         """
         Returns  -2 ``*`` log_likelihood and p_value for the hypothesized
         skewness.
@@ -872,7 +860,7 @@ class DescStatUV(_OptFuncts):
             the function computes the 95% confidence interval for
             the mean and variance and uses the resulting values.
 
-        print_weights: bool
+        return_weights: bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default = False.
 
@@ -915,13 +903,13 @@ class DescStatUV(_OptFuncts):
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
         p_val = chi2.sf(llr, 1)
-        if print_weights:
+        if return_weights:
             return llr, p_val,  self.new_weights.T
         return llr, p_val
 
     def test_kurt(self, kurt0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
-                     print_weights=False):
+                     return_weights=False):
         """
         Returns -2 ``*`` log_likelihood and the p_value for the hypothesized
         kurtosis.
@@ -940,7 +928,7 @@ class DescStatUV(_OptFuncts):
             the function computes the 95% confidence interval for
             the mean and variance and uses the resulting values.
 
-        print_weights: bool
+        return_weights: bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default = False.
 
@@ -984,13 +972,13 @@ class DescStatUV(_OptFuncts):
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
         p_val = chi2.sf(llr, 1)
-        if print_weights:
+        if return_weights:
             return  llr, p_val, self.new_weights.T
         return llr, p_val
 
     def test_joint_skew_kurt(self, skew0, kurt0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
-                     print_weights=False):
+                     return_weights=False):
         """
         Returns -2 ``*`` log_likelihood and the p_value  for the joint
         hypothesesis test for skewness and kurtosis
@@ -1011,7 +999,7 @@ class DescStatUV(_OptFuncts):
             the function computes the 95% confidence interval for
             the mean and variance and uses the resulting values.
 
-        print_weights: bool
+        return_weights: bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default = False.
 
@@ -1056,7 +1044,7 @@ class DescStatUV(_OptFuncts):
                                      bounds=[(mu_lb, mu_ub),
                                               (var_lb, var_ub)])[1]
         p_val = chi2.sf(llr, 2)
-        if print_weights:
+        if return_weights:
             return llr, p_val, self.new_weights.T
         return llr, p_val
 
@@ -1258,7 +1246,7 @@ class DescStatMV(_OptFuncts):
         self.nobs = float(endog.shape[0])
         self.weights = np.ones(self.nobs) / float(self.nobs)
 
-    def mv_test_mean(self, mu_array, print_weights=False):
+    def mv_test_mean(self, mu_array, return_weights=False):
         """
         Returns the -2 ``*`` log likelihood and the p_value
         for a multivariate hypothesis test of the mean
@@ -1272,7 +1260,7 @@ class DescStatMV(_OptFuncts):
         Optional
         --------
 
-        print_weights: bool
+        return_weights: bool
             If True, returns the weights that maximize the
             likelihood of mu_array Default= False.
 
@@ -1298,7 +1286,7 @@ class DescStatMV(_OptFuncts):
         self.new_weights = 1 / nobs * 1 / denom
         llr = -2 * np.sum(np.log(nobs * self.new_weights))
         p_val = chi2.sf(llr, mu_array.shape[1])
-        if print_weights:
+        if return_weights:
             return llr, p_val,  self.new_weights.T
         else:
             return llr, p_val
@@ -1391,7 +1379,7 @@ class DescStatMV(_OptFuncts):
     def test_corr(self, corr0, nuis0=None, mu1_lb=None,
                        mu1_ub=None, mu2_lb=None, mu2_ub=None,
                        var1_lb=None, var1_ub=None,
-                       var2_lb=None, var2_ub=None, print_weights=0,
+                       var2_lb=None, var2_ub=None, return_weights=0,
                        _is_ci=False):
         """
         Returns the -2 * log-likelihood ratio and  p-value for the
@@ -1413,7 +1401,7 @@ class DescStatMV(_OptFuncts):
             to maximize over.  default | 95% confidence limits assuming
             normality
 
-        print_weights: bool
+        return_weights: bool
             If true, returns the weights that maximize
             the log-likelihood at the hypothesized value.
 
@@ -1477,12 +1465,10 @@ class DescStatMV(_OptFuncts):
               chi2.ppf(.025, nobs)
 
         if var2_lb is None:
-            var2_lb = (endog[:, 1].var() * (nobs - 1)) / \
-              chi2.ppf(.975, nobs)
+            var2_lb = (endog[:, 1].var() * (nobs - 1)) / chi2.ppf(.975, nobs)
 
         if var2_ub is None:
-            var2_ub = (endog[:, 1].var() * (nobs - 1)) / \
-              chi2.ppf(.025, nobs)
+            var2_ub = (endog[:, 1].var() * (nobs - 1)) / chi2.ppf(.025, nobs)
 
       ## TODO: IS there a way to condense the above default Parameters?
         llr = optimize.fmin_l_bfgs_b(self._opt_correl, start_nuisance,
@@ -1492,7 +1478,7 @@ class DescStatMV(_OptFuncts):
                                               (mu2_lb, mu2_ub),
                                               (var2_lb, var2_ub)])[1]
         p_val = chi2.sf(llr, 1)
-        if print_weights:
+        if return_weights:
             return llr, p_val, self.new_weights.T
         return llr, p_val
 
