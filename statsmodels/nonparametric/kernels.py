@@ -105,8 +105,8 @@ def WangRyzin(h, Xi, x):
 
     Returns
     -------
-    kernel_value : float
-        The value of the kernel function.
+    kernel_value : ndarray, shape (N, K)
+        The value of the kernel function at each training point for each var.
 
     Notes
     -----
@@ -136,6 +136,23 @@ def WangRyzin(h, Xi, x):
 
 
 def Gaussian(h, Xi, x):
+    """
+    Gaussian Kernel for continuous variables
+    Parameters
+    ----------
+    h : 1-D ndarray, shape (K,)
+        The bandwidths used to estimate the value of the kernel function.
+    Xi : 1-D ndarray, shape (K,)
+        The value of the training set.
+    x : 1-D ndarray, shape (K,)
+        The value at which the kernel density is being estimated.
+
+    Returns
+    -------
+    kernel_value : ndarray, shape (N, K)
+        The value of the kernel function at each training point for each var.
+
+    """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     if K == 0:
         return Xi
