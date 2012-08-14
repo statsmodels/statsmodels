@@ -462,13 +462,13 @@ class MaximumTrimmedLikelihood(LTS):
         ssr_new = np.dot(r*r, ii2)
         return res_trimmed, ii2, ssr_new
 
-def EfficientLTS(endog, exog, breakdown, efficiency,
-                 random_search_options=None, maxiter=10):
+class EfficientLTS(object):
+
     '''efficient least trimmed squares
 
     this follows Doornik 2011
-    experimental function, to see if it works
-    to be converted to class or merged into RLM
+    experimental, to see if it works
+    converted to class to store intermediate results for debugging
 
     Parameters
     ----------
@@ -496,40 +496,56 @@ def EfficientLTS(endog, exog, breakdown, efficiency,
     Notation:
 
     breakdown = alpha1
-    efficiency = alpha2
+    efficiency = 1 - alpha2
 
     '''
+    def __init__(self, endog, exog):
+        self.endog = endog
+        self.exog = exog
 
-    nobs, k_vars = exog.shape
-    k_trimmed = int(nobs * breakdown)   #truncate, round down
-    res_lts, keep_mask = LTS(endog, exog).fit(k_trimmed=k_trimmed,
-                                random_search_options=random_search_options)
-    fittedvalues_all = res_lts.predict(exog)
-    resid = endog - fittedvalues_all
-    scale_adj = scale_lts(res_lts.ssr, (~keep_mask).sum(), nobs, k_vars,
-                      distr='norm')
+    def fit(self, breakdown, efficiency, random_search_options=None, maxiter=10):
+        #check breakdown and efficiency are not completely right
+        #actual efficiency is lower that the efficiency parameter
 
-    from scipy import stats
-    crit = stats.norm.ppf(1 - efficiency/2.)
-    tau = 1 - efficiency - 2 * crit * stats.norm.pdf(crit)  #kept constant
-    correction_factor = (1. - efficiency) / tau
+        endog = self.endog
+        exog = self.exog
+        alpha2 = 1 - efficiency
 
-    keep_mask_old = np.zeros(nobs)   #check structure of loop
-    for it in range(maxiter):
-        resid_scaled = resid / np.sqrt(scale_adj)
-        #outl = np.nonzero[(np.abs(resid_scaled) > crit)] #optional
-        keep_mask = (np.abs(resid_scaled) < crit)
-        if not np.any(keep_mask != keep_mask_old):  #converged
-            break
-
-        keep_mask_old = keep_mask
-        #use WLS with 0-1 weight instead of trimmed OLS
-        #res_wls = WLS(endog, exog, weights=weights).fit()
-        res_ols = OLS(endog[keep_mask], exog[keep_mask]).fit()
-        scale_adj = correction_factor * res_ols.scale
-        #is there ddof correction (nobs-k_vars) in res_ols.scale? I need it
-        fittedvalues_all = res_ols.predict(exog)
+        nobs, k_vars = exog.shape
+        k_trimmed = int(nobs * breakdown)   #truncate, round down
+        res_lts, keep_mask = LTS(endog, exog).fit(k_trimmed=k_trimmed,
+                                    random_search_options=random_search_options)
+        fittedvalues_all = res_lts.predict(exog)
         resid = endog - fittedvalues_all
+        scale_adj = scale_lts(res_lts.ssr, (~keep_mask).sum(), nobs, k_vars,
+                          distr='norm')
 
+        from scipy import stats
+        crit = stats.norm.ppf(1 - alpha2/2.)
+        tau = efficiency - 2 * crit * stats.norm.pdf(crit)  #kept constant
+        correction_factor = (efficiency) / tau
 
-    return res_ols, keep_mask
+        self.crit = crit
+        self.tau = tau
+        self.correction_factor = correction_factor
+
+        keep_mask_old = np.zeros(nobs)   #check structure of loop
+        for it in range(maxiter):
+            resid_scaled = resid / np.sqrt(scale_adj)
+            #outl = np.nonzero[(np.abs(resid_scaled) > crit)] #optional
+            keep_mask = (np.abs(resid_scaled) < crit)
+            if not np.any(keep_mask != keep_mask_old):  #converged
+                break
+
+            keep_mask_old = keep_mask
+            #use WLS with 0-1 weight instead of trimmed OLS
+            #res_wls = WLS(endog, exog, weights=weights).fit()
+            res_ols = OLS(endog[keep_mask], exog[keep_mask]).fit()
+            scale_adj = correction_factor * res_ols.scale
+            #is there ddof correction (nobs-k_vars) in res_ols.scale? I need it
+            fittedvalues_all = res_ols.predict(exog)
+            resid = endog - fittedvalues_all
+
+        self.iterations = it
+        self.scale_adj = scale_adj
+        return res_ols, keep_mask
