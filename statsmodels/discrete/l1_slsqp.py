@@ -40,9 +40,9 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
     """
 
     if callback:
-        print "Callback will be ignored with l1_slsqp"
+        print "Callback will be ignored with l1"
     if hess: 
-        print "Hessian not used with l1_slsqp"
+        print "Hessian not used with l1"
 
     # TODO fargs should be passed to f, another name for all the args
     ### Extract values
