@@ -21,6 +21,7 @@ from statsmodels.base.model import _fit_mle_newton
 import itertools
 from statsmodels.graphics import utils
 
+
 def _test_corr(corr0, self, nuis0, mu1_lb, mu1_ub, mu2_lb, mu2_ub, var1_lb,
                 var1_ub, var2_lb, var2_ub, endog, nobs, x0, weights0, r0):
     """
@@ -39,10 +40,11 @@ def _test_corr(corr0, self, nuis0, mu1_lb, mu1_ub, mu2_lb, mu2_ub, var1_lb,
     """
     bounds = [(mu1_lb, mu1_ub), (var1_lb, var1_ub), (mu2_lb, mu2_ub),
               (var2_lb, var2_ub)]
-    args=(corr0, endog, nobs, x0, weights0)
+    args = (corr0, endog, nobs, x0, weights0)
     llr = optimize.fmin_l_bfgs_b(self._opt_correl, nuis0, approx_grad=1,
                                  bounds=bounds, args=args)[1]
     return llr - r0
+
 
 def _log_star(eta1, est_vect, wts, nobs):
     """
@@ -74,9 +76,10 @@ def _log_star(eta1, est_vect, wts, nobs):
     idx = data_star < 1. / nobs
     not_idx = ~idx
     nx = nobs * data_star[idx]
-    data_star[idx] = np.log(1. / nobs) - 1.5 + nx * ( 2. - nx / 2 )
+    data_star[idx] = np.log(1. / nobs) - 1.5 + nx * (2. - nx / 2)
     data_star[not_idx] = np.log(data_star[not_idx])
     return data_star
+
 
 def DescStat(endog):
     if endog.ndim == 1:
@@ -126,7 +129,7 @@ class _OptFuncts():
         data_star_doub_prime[idx] = - nobs ** 2
         data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
         wtd_dsdp = wts * data_star_doub_prime
-        return np.dot(est_vect.T, wtd_dsdp[:,None] * est_vect)
+        return np.dot(est_vect.T, wtd_dsdp[:, None] * est_vect)
 
     def _grad(self, eta1, est_vect, wts, nobs):
         """
@@ -477,8 +480,8 @@ class _OptFuncts():
             parameters constant
         """
         mu1_data, mu2_data = (endog - nuis_params[::2]).T
-        sig1_data = mu1_data**2 - nuis_params[1]
-        sig2_data = mu2_data**2 - nuis_params[3]
+        sig1_data = mu1_data ** 2 - nuis_params[1]
+        sig2_data = mu2_data ** 2 - nuis_params[3]
         correl_data = correl_data = ((mu1_data * mu2_data) - corr0 *
                     (nuis_params[1] * nuis_params[3]) ** .5)
         est_vect = np.column_stack((mu1_data, sig1_data,
@@ -488,27 +491,6 @@ class _OptFuncts():
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
-
-    def _ci_limits_corr(self, corr0, mu1_lb, mu1_ub, mu2_lb, mu2_ub,
-                        var1_lb, var1_ub, var2_lb, var2_ub):
-        """
-        Parameters
-        ---------
-
-        corr0: float
-            Hypothesized vaalue for the correlation.
-
-        Returns
-        -------
-
-        diff: float
-            Difference between log-likelihood of corr0 and a pre-specified
-            value.
-        """
-
-        return _test_corr(corr0, self, nuis0, mu1_lb, mu1_ub, mu2_lb,
-                              mu2_ub, var1_lb, var1_ub, var2_lb, var2_ub,
-                              endog, nobs, x0, weights0)[0] - self.r0
 
 
 class DescStatUV(_OptFuncts):
@@ -1458,13 +1440,17 @@ class DescStatMV(_OptFuncts):
         if var2_ub is None:
             var2_ub = (endog[:, 1].var() * (nobs - 1)) / chi2.ppf(.025, nobs)
 
+        x0 = np.zeros(5)
+        weights0 = np.array([1. / nobs] * int(nobs))
+        args = (corr0, endog, nobs, x0, weights0)
       ## TODO: IS there a way to condense the above default Parameters?
-        llr = optimize.fmin_l_bfgs_b(self._opt_correl, start_nuisance,
+        llr = optimize.fmin_l_bfgs_b(self._opt_correl, nuis0,
                                      approx_grad=1,
                                      bounds=[(mu1_lb, mu1_ub),
                                               (var1_lb, var1_ub),
                                               (mu2_lb, mu2_ub),
-                                              (var2_lb, var2_ub)])[1]
+                                              (var2_lb, var2_ub)],
+                                              args=args)[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
             return llr, p_val, self.new_weights.T
@@ -1544,8 +1530,8 @@ class DescStatMV(_OptFuncts):
         if var2_ub is None:
             var2_ub = (var_hat[1] * (nobs - 1)) / chi2.ppf(.025, nobs)
 
-        x0 = [1./nobs] * 5
-        weights0 = np.array([1./nobs] * int(nobs))
+        x0 = [1. / nobs] * 5
+        weights0 = np.array([1. / nobs] * int(nobs))
         mu1, mu2 = endog.mean(0)
         var1, var2 = endog.var(0)
         start_nuisance = [mu1, var1, mu2, var2]
