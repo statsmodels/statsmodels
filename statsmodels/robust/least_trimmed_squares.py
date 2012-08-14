@@ -484,10 +484,6 @@ class EfficientLTS(object):
         maximum number of iterations to perform. Iteration will stop before if
         outliers don't change across two consecutive iterations.
 
-    Returns
-    -------
-    ???
-
 
     Notes
     -----
@@ -504,8 +500,47 @@ class EfficientLTS(object):
         self.exog = exog
 
     def fit(self, breakdown, efficiency, random_search_options=None, maxiter=10):
-        #check breakdown and efficiency are not completely right
+        '''
+        #check breakdown and efficiency names are not completely right
         #actual efficiency is lower that the efficiency parameter
+
+        Parameters
+        ----------
+        breakdown : float in (0,1)
+            fraction of outliers in initial LTS
+        efficiency : float in (0, 1)
+            efficiency parameter for final trimming parameters
+            The actual assymptotic efficiency is tau (attached to model
+            instance).
+        maxiter : int
+            maximum number of iterations to perform. Iteration will stop before if
+            outliers don't change across two consecutive iterations.
+        random_search_options : None or dict
+            option for the initial LTS random search, see LTS.fit_random for
+            details
+
+        Returns
+        -------
+        res_ols : OLSResults instance
+            OLS results from last estimation with trimmed endog and exog,
+            not corrected for ELTS, i.e. no scale adjustment yet
+            TODO: add scale adjustment and test
+        keep_mask : ndarray of boolean
+            Mask of observation in the original sample that are included in the
+            final regression.
+
+        Notes
+        -----
+        The asymptotic efficiency based on the efficiency parameter, 1 - alpha2,
+        is given by the attribute tau, see Doornik around equation 4, if the
+        underlying distribution of the errors is assumed to be normal. Normal
+        distribution is the only case that is implemented.
+
+        Asymptotic distribution of parameters of LTS is normal using the
+        adjusted scale. For the ELTS extension this is conjectured
+        (Doornik equation (7)).
+
+        '''
 
         endog = self.endog
         exog = self.exog
