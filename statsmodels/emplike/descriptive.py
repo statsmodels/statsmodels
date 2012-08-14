@@ -21,6 +21,62 @@ from statsmodels.base.model import _fit_mle_newton
 import itertools
 from statsmodels.graphics import utils
 
+def _test_corr(corr0, self, nuis0, mu1_lb, mu1_ub, mu2_lb, mu2_ub, var1_lb,
+                var1_ub, var2_lb, var2_ub, endog, nobs, x0, weights0, r0):
+    """
+    Parameters
+    ---------
+
+    corr0: float
+        Hypothesized vaalue for the correlation.
+
+    Returns
+    -------
+
+    diff: float
+        Difference between log-likelihood of corr0 and a pre-specified
+        value, r0
+    """
+    bounds = [(mu1_lb, mu1_ub), (var1_lb, var1_ub), (mu2_lb, mu2_ub),
+              (var2_lb, var2_ub)]
+    args=(corr0, endog, nobs, x0, weights0)
+    llr = optimize.fmin_l_bfgs_b(self._opt_correl, nuis0, approx_grad=1,
+                                 bounds=bounds, args=args)[1]
+    return llr - r0
+
+def _log_star(eta1, est_vect, wts, nobs):
+    """
+    Parameters
+    ---------
+    eta1: float
+        Lagrangian multiplier
+
+    est_vect: nxk array
+        Estimating equations vector
+
+    wts: nx1 array
+        observation weights
+
+    Returns
+    ------
+
+    data_star: array
+        The weighted logstar of the estimting equations
+
+    Note
+    ----
+
+    This function is really only a placeholder for the _fit_mle_Newton.
+    The function value is not used in optimization and the optimal value
+    is disregarded when computng the log likelihood ratio.
+    """
+    data_star = np.log(wts) + (np.sum(wts) + np.dot(est_vect, eta1))
+    idx = data_star < 1. / nobs
+    not_idx = ~idx
+    nx = nobs * data_star[idx]
+    data_star[idx] = np.log(1. / nobs) - 1.5 + nx * ( 2. - nx / 2 )
+    data_star[not_idx] = np.log(data_star[not_idx])
+    return data_star
 
 def DescStat(endog):
     if endog.ndim == 1:
@@ -40,45 +96,7 @@ class _OptFuncts():
     def __init__(self, endog):
         super(_OptFuncts, self).__init__(endog)
 
-    def _log_star(self, eta1, est_vect, wts):
-        """
-        Parameters
-        ---------
-        eta1: float
-            Lagrangian multiplier
-
-        est_vect: nxk array
-            Estimating equations vector
-
-        wts: nx1 array
-            observation weights
-
-        Returns
-        ------
-
-        data_star: array
-            The weighted logstar of the estimting equations
-
-        Note
-        ----
-
-        This function is really only a placeholder for the _fit_mle_Newton.
-        The function value is not used in optimization and the optimal value
-        is disregarded when computng the log likelihood ratio.
-        """
-        nobs = est_vect.shape[0]
-        data = est_vect.T
-        data_star = np.log(wts).reshape(-1, 1)\
-           + (np.sum(wts) + np.dot(eta1, data)).reshape(-1, 1)
-        idx = data_star < 1. / nobs
-        not_idx = ~idx
-        data_star[idx] = np.log(1 / nobs) - 1.5 +\
-                  2. * nobs * data_star[idx] -\
-                  ((nobs * data_star[idx]) ** 2.) / 2
-        data_star[not_idx] = np.log(data_star[not_idx])
-        return data_star
-
-    def _hess(self, eta1, est_vect, wts):
+    def _hess(self, eta1, est_vect, wts, nobs):
         """
         Calculates the hessian of a weighted empirical likelihood
         provlem.
@@ -102,7 +120,6 @@ class _OptFuncts():
         hess: m x m array
             Weighted hessian used in _wtd_modif_newton
         """
-        nobs = len(est_vect)
         data_star_doub_prime = np.sum(wts) + np.dot(est_vect, eta1)
         idx = data_star_doub_prime < 1. / nobs
         not_idx = ~idx
@@ -111,7 +128,7 @@ class _OptFuncts():
         wtd_dsdp = wts * data_star_doub_prime
         return np.dot(est_vect.T, wtd_dsdp[:,None] * est_vect)
 
-    def _grad(self, eta1, est_vect, wts):
+    def _grad(self, eta1, est_vect, wts, nobs):
         """
         Calculates the gradient of a weighted empirical likelihood
         problem.
@@ -136,13 +153,12 @@ class _OptFuncts():
         gradient: m x 1 array
             The gradient used in _wtd_modif_newton
         """
-        nobs = len(est_vect)
         data_star_prime = np.sum(wts) + np.dot(est_vect, eta1)
         idx = data_star_prime < 1. / nobs
         not_idx = ~idx
-        data_star_prime[idx] = 2. * nobs - (nobs) ** 2 * data_star_prime[idx]
+        data_star_prime[idx] = nobs * (2 - nobs * data_star_prime[idx])
         data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
-        return np.dot(est_vect.T, wts * data_star_prime)
+        return np.dot(wts * data_star_prime, est_vect)
 
     def _modif_newton(self,  x0, est_vect, wts):
         """
@@ -167,13 +183,14 @@ class _OptFuncts():
 
         See Owen pg. 64
         """
-        f = lambda x0: - np.sum(self._log_star(x0, est_vect, wts))
-        grad = lambda x0: - self._grad(x0, est_vect, wts)
-        hess = lambda x0: - self._hess(x0, est_vect, wts)
+        nobs = len(est_vect)
+        f = lambda x0: - np.sum(_log_star(x0, est_vect, wts, nobs))
+        grad = lambda x0: - self._grad(x0, est_vect, wts, nobs)
+        hess = lambda x0: - self._hess(x0, est_vect, wts, nobs)
         kwds = {'tol': 1e-8}
         res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
-        return res[0].T
+        return res[0]
 
     def _find_eta(self, eta):
         """
@@ -444,7 +461,7 @@ class _OptFuncts():
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[0] - self.r0
 
-    def _opt_correl(self, nuis_params):
+    def _opt_correl(self, nuis_params, corr0, endog, nobs, x0, weights0):
         """
         Parameters
         ----------
@@ -459,34 +476,21 @@ class _OptFuncts():
             The log-likelihood of the correlation coefficient holding nuisance
             parameters constant
         """
-        endog = self.endog
-        nobs = self.nobs
-        mu1_data = (endog[:, 0] - nuis_params[0])
-        sig1_data = ((endog[:, 0] - nuis_params[0]) ** 2) - \
-          nuis_params[1]
-        mu2_data = endog[:, 1] - nuis_params[2]
-        sig2_data = ((endog[:, 1] - nuis_params[2]) ** 2) -\
-           nuis_params[3]
-        correl_data = ((endog[:, 0] - nuis_params[0]) * \
-                      (endog[:, 1] - nuis_params[2])) - \
-                      (self.corr0 * (nuis_params[1] ** .5) \
-                       * (nuis_params[3] ** .5))
-        est_vect = np.vstack((mu1_data, sig1_data,
-                                       mu2_data,
-                                       sig2_data, correl_data))
-        est_vect = est_vect.T
-        eta_star = self._modif_newton(np.array([1. / nobs,
-                                               1. / nobs,
-                                               1. / nobs,
-                                               1. / nobs,
-                                               1. / nobs]), est_vect,
-                                               np.ones(nobs) * (1. / nobs))
-        denom = 1. + np.dot(eta_star, est_vect.T)
+        mu1_data, mu2_data = (endog - nuis_params[::2]).T
+        sig1_data = mu1_data**2 - nuis_params[1]
+        sig2_data = mu2_data**2 - nuis_params[3]
+        correl_data = correl_data = ((mu1_data * mu2_data) - corr0 *
+                    (nuis_params[1] * nuis_params[3]) ** .5)
+        est_vect = np.column_stack((mu1_data, sig1_data,
+                                    mu2_data, sig2_data, correl_data))
+        eta_star = self._modif_newton(x0, est_vect, weights0)
+        denom = 1. + np.dot(est_vect, eta_star)
         self.new_weights = 1. / nobs * 1. / denom
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
-    def _ci_limits_corr(self, corr0):
+    def _ci_limits_corr(self, corr0, mu1_lb, mu1_ub, mu2_lb, mu2_ub,
+                        var1_lb, var1_ub, var2_lb, var2_ub):
         """
         Parameters
         ---------
@@ -501,12 +505,10 @@ class _OptFuncts():
             Difference between log-likelihood of corr0 and a pre-specified
             value.
         """
-        return self.test_corr(corr0, nuis0=None, mu1_lb=self.mu1_lb,
-                       mu1_ub=self.mu1_ub, mu2_lb=self.mu2_lb,
-                       mu2_ub=self.mu2_ub,
-                       var1_lb=self.var1_lb, var1_ub=self.var1_ub,
-                       var2_lb=self.var2_lb, var2_ub=self.var2_ub,
-                       return_weights=0, _is_ci=1)[0] - self.r0
+
+        return _test_corr(corr0, self, nuis0, mu1_lb, mu1_ub, mu2_lb,
+                              mu2_ub, var1_lb, var1_ub, var2_lb, var2_ub,
+                              endog, nobs, x0, weights0)[0] - self.r0
 
 
 class DescStatUV(_OptFuncts):
@@ -1379,8 +1381,7 @@ class DescStatMV(_OptFuncts):
     def test_corr(self, corr0, nuis0=None, mu1_lb=None,
                        mu1_ub=None, mu2_lb=None, mu2_ub=None,
                        var1_lb=None, var1_ub=None,
-                       var2_lb=None, var2_ub=None, return_weights=0,
-                       _is_ci=False):
+                       var2_lb=None, var2_ub=None, return_weights=0):
         """
         Returns the -2 * log-likelihood ratio and  p-value for the
         correlation coefficient between 2 variables.
@@ -1421,24 +1422,11 @@ class DescStatMV(_OptFuncts):
         endog = self.endog
         if endog.shape[1] != 2:
             raise Exception('Correlation matrix not yet implemented')
-        self.corr0 = corr0
-        if nuis0 is not None:
-            start_nuisance = nuis0
-        else:
-            start_nuisance = np.array([endog[:, 0].mean(),
-                                       endog[:, 0].var(),
-                                       endog[:, 1].mean(),
-                                       endog[:, 1].var()])
-
-        if _is_ci:
-            llr = optimize.fmin_l_bfgs_b(self._opt_correl, start_nuisance,
-                                     approx_grad=1,
-                                     bounds=[(mu1_lb, mu1_ub),
-                                              (var1_lb, var1_ub),
-                                              (mu2_lb, mu2_ub),
-                                              (var2_lb, var2_ub)])[1]
-            p_val = chi2.sf(llr, 1)
-            return llr, p_val
+        if nuis0 is None:
+            nuis0 = np.array([endog[:, 0].mean(),
+                              endog[:, 0].var(),
+                              endog[:, 1].mean(),
+                              endog[:, 1].var()])
 
         if mu1_lb is None:
             mu1_lb = endog[:, 0].mean() - ((1.96 * \
@@ -1522,68 +1510,51 @@ class DescStatMV(_OptFuncts):
         mu_hat = np.mean(endog, axis=0)
         var_hat = np.var(endog, axis=0)
 
-        if upper_bound is not None:
-            ul = upper_bound
-        else:
-            ul = min(.999, point_est + \
+        if upper_bound is None:
+            upper_bound = min(.999, point_est + \
                           2.5 * ((1. - point_est ** 2.) / \
                           (nobs - 2.)) ** .5)
 
-        if lower_bound is not None:
-            ll = lower_bound
-        else:
-            ll = max(- .999, point_est - \
+        if lower_bound is None:
+            lower_bound = max(- .999, point_est - \
                           2.5 * (np.sqrt((1. - point_est ** 2.) / \
                           (nobs - 2.))))
 
-        if mu1_lb is not None:
-            self.mu1_lb = mu1_lb
-        else:
-            self.mu1_lb = mu_hat[0] - (1.96 * \
-              np.sqrt((var_hat[0]) / nobs))
+        if mu1_lb is None:
+            mu1_lb = mu_hat[0] - (1.96 * np.sqrt((var_hat[0]) / nobs))
 
-        if mu1_ub is not None:
-            self.mu1_ub = mu1_ub
-        else:
-            self.mu1_ub = mu_hat[0] + (1.96 * \
-              np.sqrt(((var_hat[0]) / nobs)))
+        if mu1_ub is None:
+            mu1_ub = mu_hat[0] + (1.96 * np.sqrt(((var_hat[0]) / nobs)))
 
-        if mu2_lb is not None:
-            self.mu2_lb = mu2_lb
-        else:
-            self.mu2_lb = mu_hat[1] - (1.96 * \
-              np.sqrt(((var_hat[1]) / nobs)))
+        if mu2_lb is None:
+            mu2_lb = mu_hat[1] - (1.96 * np.sqrt(((var_hat[1]) / nobs)))
 
-        if mu2_ub is not None:
-            self.mu2_ub = mu2_ub
-        else:
-            self.mu2_ub = mu_hat[1] + (1.96 * \
-              np.sqrt(((var_hat[1]) / nobs)))
+        if mu2_ub is None:
+            mu2_ub = mu_hat[1] + (1.96 * np.sqrt(((var_hat[1]) / nobs)))
 
-        if var1_lb is not None:
-            self.var1_lb = var1_lb
-        else:
-            self.var1_lb = (var_hat[0] * (nobs - 1)) / \
-              chi2.ppf(.975, nobs)
+        if var1_lb is None:
+            var1_lb = (var_hat[0] * (nobs - 1)) / chi2.ppf(.975, nobs)
 
-        if var1_ub is not None:
-            self.var1_ub = var1_ub
-        else:
-            self.var1_ub = (var_hat[0] * (nobs - 1)) / \
-              chi2.ppf(.025, nobs)
+        if var1_ub is None:
+            var1_ub = (var_hat[0] * (nobs - 1)) / chi2.ppf(.025, nobs)
 
-        if var2_lb is not None:
-            self.var2_lb = var2_lb
-        else:
-            self.var2_lb = (var_hat[1] * (nobs - 1)) / \
-              chi2.ppf(.975, nobs)
+        if var2_lb is None:
+            var2_lb = (var_hat[1] * (nobs - 1)) / chi2.ppf(.975, nobs)
 
-        if var2_ub is not None:
-            self.var2_ub = var2_ub
-        else:
-            self.var2_ub = (var_hat[1] * (nobs - 1)) / \
-              chi2.ppf(.025, nobs)
-        ll = optimize.brentq(self._ci_limits_corr, ll, point_est)
-        ul = optimize.brentq(self._ci_limits_corr,
-                             point_est, ul)
+        if var2_ub is None:
+            var2_ub = (var_hat[1] * (nobs - 1)) / chi2.ppf(.025, nobs)
+
+        x0 = [1./nobs] * 5
+        weights0 = np.array([1./nobs] * int(nobs))
+        mu1, mu2 = endog.mean(0)
+        var1, var2 = endog.var(0)
+        start_nuisance = [mu1, var1, mu2, var2]
+        args = (self, start_nuisance, mu1_lb, mu1_ub, mu2_lb, mu2_ub,
+                var1_lb, var1_ub,
+                var2_lb,
+                var2_ub, endog, nobs, x0, weights0, self.r0)
+        ll = optimize.brentq(_test_corr, lower_bound, point_est,
+                        args=args)
+        ul = optimize.brentq(_test_corr, point_est, upper_bound,
+                        args=args)
         return ll, ul
