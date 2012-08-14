@@ -17,7 +17,7 @@ from scipy import optimize
 from descriptive2 import _OptFuncts
 # When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
-from statsmodels.regression.linear_model import RegressionResults
+
 
 
 class _ElRegSetup(object, _OptFuncts):
@@ -53,21 +53,24 @@ class _ElRegSetup(object, _OptFuncts):
     El_Origin_Regress
 
     """
-    def __init__(self, endog, exog):
-        self.exog = exog
-        self.nobs = float(self.exog.shape[0])
-        self.nvar = float(self.exog.shape[1])
-        self.endog = endog.reshape(self.nobs, 1)
-        self.ols_fit = OLS(self.endog, self.exog).fit()
-        self.params = self.ols_fit.params
-        self.fittedvalues = self.ols_fit.fittedvalues
-        self.mse_model = self.ols_fit.mse_model
-        self.mse_resid = self.ols_fit.mse_resid
-        self.mse_total = self.ols_fit.mse_total
-        self.resid = self.ols_fit.resid
-        self.rsquared = self.ols_fit.rsquared
-        self.rsquared_adj = self.ols_fit.rsquared_adj
-        self._normal_ci = self.ols_fit.conf_int
+    def __init__(self, OLSModel, OLSResults):
+        self.model = OLSModel
+        self.results = OLSResults
+
+        # self.exog = exog
+        # self.nobs = float(self.exog.shape[0])
+        # self.nvar = float(self.exog.shape[1])
+        # self.endog = endog.reshape(self.nobs, 1)
+        # self.ols_fit = OLS(self.endog, self.exog).fit()
+        # self.params = self.ols_fit.params
+        # self.fittedvalues = self.ols_fit.fittedvalues
+        # self.mse_model = self.ols_fit.mse_model
+        # self.mse_resid = self.ols_fit.mse_resid
+        # self.mse_total = self.ols_fit.mse_total
+        # self.resid = self.ols_fit.resid
+        # self.rsquared = self.ols_fit.rsquared
+        # self.rsquared_adj = self.ols_fit.rsquared_adj
+        # self._normal_ci = self.ols_fit.conf_int
         #All of the above are the same when using EL or OLS
 
 
@@ -78,8 +81,8 @@ class _ElRegOpts(_ElRegSetup):
     hypothesis tests and calculating confidence intervals.
 
     """
-    def __init__(self, endog, exog):
-            super(_ElRegOpts, self).__init__(endog, exog)
+    def __init__(self, OLSModel, OLSResults):
+            super(_ElRegOpts, self).__init__(OLSModel, OLSResults)
 
     def _opt_nuis_regress(self, nuisance_params):
         """
@@ -101,17 +104,18 @@ class _ElRegOpts(_ElRegSetup):
             hypothesized value of the parameter(s) of interest.
 
         """
-        nobs = self.nobs
-        exog = self.exog
-        endog = self.endog
-        nvar = self.nvar
-        params = np.copy(self.params)
+        nobs = self.model.nobs
+        exog = self.model.exog
+        endog = self.model.endog
+        nvar = self.model.exog.shape[1]
+        params = np.copy(self.results.params)
         params[self.param_nums] = self.b0_vals
         nuis_param_index = np.int_(np.delete(np.arange(nvar),
                                              self.param_nums))
         params[nuis_param_index] = nuisance_params
         new_params = params.reshape(nvar, 1)
-        est_vect = exog * (endog - np.dot(exog, new_params))
+        est_vect = exog * \
+          (endog - np.squeeze(np.dot(exog, new_params))).reshape(nobs, 1)
         if not self._stochastic_exog:
             exog_means = np.mean(exog, axis=0)[1:]
             exog_mom2 = (np.sum(exog * exog, axis=0))[1:]\
@@ -182,7 +186,7 @@ class _ElRegOpts(_ElRegSetup):
                              self.llr - self.r0
 
 
-class ElLinReg(_ElRegOpts):
+class ELReg(_ElRegOpts):
 
     """
     Class that conducts hyptheses tests and calculates confidence intervals
@@ -230,8 +234,8 @@ class ElLinReg(_ElRegOpts):
     >>> (0.41969831751229664, 0.9857167306604057)
 
     """
-    def __init__(self, endog, exog):
-        super(ElLinReg, self).__init__(endog, exog)
+    def __init__(self, OLSModel, OLSResults):
+        super(ELReg, self).__init__(OLSModel, OLSResults)
 
     def test_beta(self, b0_vals, param_nums, print_weights=0,
                      ret_params=0, method='nm',
@@ -296,11 +300,11 @@ class ElLinReg(_ElRegOpts):
         self._stochastic_exog = stochastic_exog
         self.param_nums = np.asarray(param_nums)
         self.b0_vals = np.asarray(b0_vals)
-        if len(param_nums) == len(self.params):
+        if len(param_nums) == len(self.results.params):
             llr = self._opt_nuis_regress(self.b0_vals)
             pval = 1 - chi2.cdf(llr, len(param_nums))
             return (pval, llr)
-        x0 = np.delete(self.params, self.param_nums)
+        x0 = np.delete(self.results.params, self.param_nums)
         if method == 'nm':
             llr = optimize.fmin(self._opt_nuis_regress, x0, maxfun=10000,
                                  maxiter=10000, full_output=1, disp=0)[1]
@@ -315,7 +319,7 @@ class ElLinReg(_ElRegOpts):
         else:
             return llr, pval
 
-    def ci_beta(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
+    def ci_params(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
                 method='powell', start_int_params=None, stochastic_exog=1):
         """
 
@@ -402,15 +406,15 @@ class ElLinReg(_ElRegOpts):
         if upper_bound is not None:
             beta_high = upper_bound
         else:
-            beta_high = self.ols_fit.conf_int(.01)[self.param_nums][1]
+            beta_high = self.results.conf_int(.01)[self.param_nums][1]
         if lower_bound is not None:
             beta_low = lower_bound
         else:
-            beta_low = self.ols_fit.conf_int(.01)[self.param_nums][0]
+            beta_low = self.results.conf_int(.01)[self.param_nums][0]
         ll = optimize.brenth(self._ci_limits_beta, beta_low,
-                             self.params[self.param_nums])
+                             self.results.params[self.param_nums])
         ul = optimize.brenth(self._ci_limits_beta,
-                             self.params[self.param_nums], beta_high)
+                             self.results.params[self.param_nums], beta_high)
         #  ^ Seems to be faster than brentq in most cases
         return (ll, ul)
 
@@ -780,4 +784,4 @@ class ANOVA(_ANOVAOpt):
             else:
                 return llr, pval, mu_common
 
-from statsmodels.regression.linear_model import OLS
+

@@ -4,6 +4,6 @@ api for empirical likelihood
 """
 
 from .descriptive import DescStat
-from .elregress import ElLinReg, ElOriginRegress, ANOVA
+from .elregress import ELReg, ElOriginRegress, ANOVA
 
 
