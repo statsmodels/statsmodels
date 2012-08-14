@@ -335,3 +335,14 @@ class ANOVAResults():
           0.01558 ,  0.015994,  0.017258,  0.017664,  0.017792,  0.017772,
           0.017527,  0.017797,  0.017856,  0.017849,  0.017749,  0.017827,
           0.017381,  0.017902,  0.016557,  0.015522,  0.017455,  0.017248]))
+
+
+class AFTRes(object):
+    """
+    Results for the AFT model from package emplik in R written by Mai Zhou
+    """
+    def __init__(self):
+        self.test_params = np.array([3.77710799, -0.03281745])
+        self.test_beta0 = (.132511, 0.7158323)
+        self.test_beta1 = (.297951, .5851693)
+        self.test_joint = (11.8068, 0.002730147)
