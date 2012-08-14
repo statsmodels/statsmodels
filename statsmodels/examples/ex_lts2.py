@@ -45,7 +45,7 @@ endog, exog, min_outl = endog_salin, exog_salin, min_outl_salin
 endog, exog, min_outl = endog_aircraft, exog_aircraft, min_outl_aircraft
 
 
-expand = 1
+expand = 0
 if expand:
     m = 4
     endog = np.tile(endog, m)
@@ -88,3 +88,18 @@ if expand:
     nobs = len(endog_aircraft)
     bestw = lts(endog, exog, k_trimmed=k_trim, max_nstarts=nstarts, max_nrefine=100, max_exact=0)
     print (np.remainder(np.nonzero(bestw[-1])[0], nobs) == min_outl_aircraft*4).all()
+
+mod_lts_e = LTS(endog, exog)
+best_e = mod_lts.fit_exact(1)
+
+hsal = RLM(endog, exog, M=robust.norms.HuberT()).fit()   # default M
+print hsal.params
+print np.nonzero(hsal.weights < 0.9)[0]
+hsalw = RLM(endog, exog, M=robust.norms.HuberT()).fit(weights=bestw2[-1].astype(float))   # default M
+print hsalw.params
+print np.nonzero(hsalw.weights < 0.9)[0]
+
+hsalt = RLM(endog, exog, M=robust.norms.TrimmedMean()).fit(weights=bestw2[-1].astype(float))   # default M
+print hsalt.params
+print np.nonzero(hsalt.weights < 0.9)[0]
+
