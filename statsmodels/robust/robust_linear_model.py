@@ -256,8 +256,10 @@ class RLM(base.LikelihoodModel):
                 % conv)
         self.scale_est = scale_est
         wls_results = lm.WLS(self.endog, self.exog, weights=weights).fit()
-        if not init:
-            self.scale = self._estimate_scale(wls_results.wresid)
+        if init is None:
+            self.scale = self._estimate_scale(wls_results.resid)
+        else:
+            self.scale = init['scale']
 
         history = dict(params = [np.inf], scale = [])
         if conv == 'coefs':
