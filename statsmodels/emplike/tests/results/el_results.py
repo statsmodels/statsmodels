@@ -316,3 +316,13 @@ class RegressionResults(object):
         0.016752,  0.019585,  0.027467,  0.02957 ,  0.069204,  0.060167,
         0.060189,  0.030007,  0.067371,  0.046862,  0.069814,  0.053041,
         0.053362,  0.041585,  0.033943]]))
+
+class AFTRes(object):
+    """
+    Results for the AFT model from package emplik in R written by Mai Zhou
+    """
+    def __init__(self):
+        self.test_params = np.array([3.77710799, -0.03281745])
+        self.test_beta0 = (.132511, 0.7158323)
+        self.test_beta1 = (.297951, .5851693)
+        self.test_joint = (11.8068, 0.002730147)
