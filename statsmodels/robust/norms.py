@@ -555,7 +555,7 @@ class TrimmedMean(RobustNorm):
         test = self._subset(z)
         return test
 
-    def psi_derive(self, z):
+    def psi_deriv(self, z):
         """
         The derivative of least trimmed mean psi function
 
@@ -563,7 +563,7 @@ class TrimmedMean(RobustNorm):
         -----
         Used to estimate the robust covariance matrix.
         """
-        test = self.subzet(z)
+        test = self._subset(z)
         return test
 
 class Hampel(RobustNorm):
