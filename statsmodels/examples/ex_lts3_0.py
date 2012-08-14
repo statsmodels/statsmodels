@@ -42,7 +42,6 @@ noise = np.hstack((distr1(size=n_outl_mix[1])**2,
 endog = endog_true + noise
 min_outl = range(n_outl_mix[1]) + range(nobs)[nobs-n_outl_mix[0]:]
 
-
 nstarts = 100
 
 np.random.seed(963678)
@@ -116,7 +115,8 @@ restb4 = RLM(endog, exog, M=robust.norms.TukeyBiweight(c=4.685 *0.75)).fit(weigh
 print restb4.params, 'rlm-tb-0.75-w'
 
 breakdown, efficiency = 0.5, 0.9
-elts, elts_mask = EfficientLTS(endog, exog, breakdown, efficiency, random_search_options=None, maxiter=10)
+mod_elts = EfficientLTS(endog, exog)
+elts, elts_mask = mod_elts.fit(breakdown, efficiency, random_search_options=None, maxiter=10)
 print elts.params, 'elts'
 #print np.nonzero(~elts_mask)
 print (~elts_mask).sum()
