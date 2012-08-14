@@ -21,19 +21,22 @@ def main():
     ---------
     The maximum likelihood (ML) solution works well when the number of data 
     points is large and the noise is small.  When the ML solution starts 
-    "breaking", the regularized solution will do better.
+    "breaking", the regularized solution should do better.
 
     The l1 Solvers
     --------------
-    The solvers often converge with errors.  Nonetheless, the final solution
-        makes sense and is often (see above) better than the ML solution.
+    The solvers are slower than standard Newton, and sometimes have 
+        convergence issues Nonetheless, the final solution makes sense and 
+        is often better than the ML solution.
     The standard l1 solver is fmin_slsqp and is included with scipy.  It 
-        sometimes has trouble when the data size is large.
+        sometimes has trouble verifying convergence when the data size is 
+        large.
     The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be 
         installed separately.  It works well even for larger data sizes.
     """
     ##########################################################################
     #### Commonly adjusted params
+    ##########################################################################
     N = 500 # Number of data points
     num_targets = 3  # Targets are the dependent variables
     num_nonconst_covariates = 10 # For every target
@@ -94,7 +97,8 @@ def main():
                 retall=True, feastol=1e-5)
         MSE_l1_cvxopt_cp = get_MSE(results_l1_cvxopt_cp, true_params)
         print_str += '\n The l1_cvxopt_cp fit mean square error = %.4f'%MSE_l1_cvxopt_cp
-    #### Prints results
+
+    #### Print results
     print_str += '\n\n\n============== Parameters ================='
     print_str += "\n\nTrue parameters: \n%s"%true_params
     if print_summaries:
