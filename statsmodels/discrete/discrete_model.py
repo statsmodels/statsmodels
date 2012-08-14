@@ -362,7 +362,7 @@ class MultinomialModel(BinaryModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
-        if method in ['l1_slsqp', 'l1_cvxopt_cp']:
+        if method in ['l1', 'l1_cvxopt_cp']:
             mnfit = L1MultinomialResults(self, mnfit)
         else:
             mnfit = MultinomialResults(self, mnfit)

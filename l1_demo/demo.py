@@ -27,10 +27,10 @@ def main():
     --------------
     The solvers often converge with errors.  Nonetheless, the final solution
         makes sense and is often (see above) better than the ML solution.
-    The l1_slsqp solver is included with scipy.  It sometimes has trouble when
-        the data size is large.
-    The l1_cvxopt_cp solver is part of CVXOPT.  It works well even for larger
-        data sizes.
+    The standard l1 solver is fmin_slsqp and is included with scipy.  It 
+        sometimes has trouble when the data size is large.
+    The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be 
+        installed separately.  It works well even for larger data sizes.
     """
     ##########################################################################
     #### Commonly adjusted params
@@ -38,9 +38,9 @@ def main():
     num_targets = 3  # Targets are the dependent variables
     num_nonconst_covariates = 10 # For every target
     num_zero_params = 8 # For every target
-    print_long_results = False
-    get_l1_slsqp_results = True
-    get_l1_cvxopt_results = True
+    print_summaries = False
+    get_l1_slsqp_results = True  
+    get_l1_cvxopt_results = True  
     save_results = False
     load_old_results = False
     # The regularization parameter
@@ -74,39 +74,41 @@ def main():
         true_params = sp.load('true_params.npy')
 
     #### Train the models
-    print_str = '=========== Brief Result Printout ============'
+    print_str = '\n\n=========== Error Summary ============'
     model = sm.MNLogit(endog, exog)
     # Get ML results
     results_ML = model.fit(method='newton')
     MSE_ML = get_MSE(results_ML, true_params)
-    print_str += '\n ML mean square error = %.4f'%MSE_ML
+    print_str += '\n\n The maximum likelihood fit mean square error = %.4f'%MSE_ML
     # Get l1 results
     start_params = results_ML.params.ravel(order='F')
     if get_l1_slsqp_results:
-        results_l1_slsqp = model.fit(method='l1_slsqp', alpha=alpha, 
+        results_l1_slsqp = model.fit(method='l1', alpha=alpha, 
                 maxiter=70, start_params=start_params, trim_params=True, 
                 retall=True)
         MSE_l1_slsqp = get_MSE(results_l1_slsqp, true_params)
-        print_str += '\n l1_slsqp mean square error = %.4f'%MSE_l1_slsqp
+        print_str += '\n The l1_slsqp fit mean square error = %.4f'%MSE_l1_slsqp
     if get_l1_cvxopt_results:
         results_l1_cvxopt_cp = model.fit(method='l1_cvxopt_cp', alpha=alpha, 
                 maxiter=50, start_params=start_params, trim_params=True, 
                 retall=True, feastol=1e-5)
         MSE_l1_cvxopt_cp = get_MSE(results_l1_cvxopt_cp, true_params)
-        print_str += '\n l1_cvxopt_cp mean square error = %.4f'%MSE_l1_cvxopt_cp
+        print_str += '\n The l1_cvxopt_cp fit mean square error = %.4f'%MSE_l1_cvxopt_cp
     #### Prints results
-    print_str += '\n========== More detail ============='
-    print_str += "\nTrue parameters: \n%s"%true_params
-    if print_long_results:
+    print_str += '\n\n\n============== Parameters ================='
+    print_str += "\n\nTrue parameters: \n%s"%true_params
+    if print_summaries:
+        print_str += '\n' + results_ML.summary().as_text()
         if get_l1_slsqp_results:
             print_str += '\n' + results_l1_slsqp.summary().as_text()
         if get_l1_cvxopt_results:
             print_str += '\n' + results_l1_cvxopt_cp.summary().as_text()
     else:
+        print_str += '\n\nThe maximum likelihood params are \n%s'%results_ML.params
         if get_l1_slsqp_results:
-            print_str += '\nThe l1_slsqp params are %s'%results_l1_slsqp.params
+            print_str += '\n\nThe l1_slsqp params are \n%s'%results_l1_slsqp.params
         if get_l1_cvxopt_results:
-            print_str += '\nThe l1_cvxopt_cp params are %s'%results_l1_cvxopt_cp.params
+            print_str += '\n\nThe l1_cvxopt_cp params are \n%s'%results_l1_cvxopt_cp.params
     print print_str
 
 

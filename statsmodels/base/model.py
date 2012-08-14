@@ -205,7 +205,7 @@ class LikelihoodModel(Model):
                     Initial direction set.
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1_slsqp', \
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1', \
                 'l1_cvxopt_cp']
         if start_params is None:
             if hasattr(self, 'start_params'):
@@ -239,7 +239,7 @@ class LikelihoodModel(Model):
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
-            'l1_slsqp': l1_slsqp._fit_l1_slsqp,
+            'l1': l1_slsqp._fit_l1_slsqp,
             'l1_cvxopt_cp': l1_cvxopt._fit_l1_cvxopt_cp
         }
 
