@@ -114,6 +114,16 @@ print restb3.params, 'rlm-tb-w'
 restb4 = RLM(endog, exog, M=robust.norms.TukeyBiweight(c=4.685 *0.75)).fit(weights=bestw2[-1].astype(float))
 print restb4.params, 'rlm-tb-0.75-w'
 
+print "fixing the scale"
+scale_adj = scale_lts(bestw2[0].ssr, (~bestw2[1]).sum(), len(bestw2[1]), k_vars, distr='norm')
+init = dict(scale=scale_adj)
+restb3b = RLM(endog, exog, M=robust.norms.TukeyBiweight(c=4.685)).fit(
+            weights=bestw2[-1].astype(float), update_scale=False, init=init)
+print restb3b.params
+restb3c = RLM(endog, exog, M=robust.norms.TrimmedMean()).fit(
+            weights=bestw2[-1].astype(float), update_scale=False, init=init)
+print restb3c.params
+
 breakdown, efficiency = 0.5, 0.9
 mod_elts = EfficientLTS(endog, exog)
 elts, elts_mask = mod_elts.fit(breakdown, efficiency, random_search_options=None, maxiter=10)
