@@ -3,15 +3,15 @@ import numpy as np
 from . import kernels
 
 
-kernel_func = dict(wangryzin=kernels.WangRyzin,
-                   aitchisonaitken=kernels.AitchisonAitken,
-                   gaussian=kernels.Gaussian,
-                   gauss_convolution=kernels.Gaussian_Convolution,
-                   wangryzin_convolution=kernels.WangRyzin_Convolution,
-                   aitchisonaitken_convolution=kernels.AitchisonAitken_Convolution,
-                   gaussian_cdf=kernels.Gaussian_cdf,
-                   aitchisonaitken_cdf=kernels.AitchisonAitken_cdf,
-                   wangryzin_cdf=kernels.WangRyzin_cdf)
+kernel_func = dict(wangryzin=kernels.wang_ryzin,
+                   aitchisonaitken=kernels.aitchison_aitken,
+                   gaussian=kernels.gaussian,
+                   gauss_convolution=kernels.gaussian_convolution,
+                   wangryzin_convolution=kernels.wang_ryzin_convolution,
+                   aitchisonaitken_convolution=kernels.aitchison_aitken_convolution,
+                   gaussian_cdf=kernels.gaussian_cdf,
+                   aitchisonaitken_cdf=kernels.aitchison_aitken_cdf,
+                   wangryzin_cdf=kernels.wang_ryzin_cdf)
 
 
 class LeaveOneOut(object):
