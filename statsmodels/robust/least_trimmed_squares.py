@@ -11,7 +11,7 @@ import itertools
 import numpy as np
 from scipy.misc import comb
 
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.discrete.discrete_model import Poisson
 
 class Holder(object):
@@ -80,6 +80,41 @@ def lts(endog, exog, k_trimmed=None, max_nstarts=5, max_nrefine=20, max_exact=10
     best[1].n_est_calls = n_est_calls
     return best
 
+
+def scale_lts(ssr_trimmed, k_trimmed, nobs, k_vars, distr='norm'):
+    '''calculate variance with correction for trimming
+
+    Parameters
+    ----------
+    ssr_trimmed : float
+        sum of squared residuals of observations included in trimmed estimation
+    k_trimmed : int
+        number of outlier candidates trimmed from the regression
+    nobs : int
+        total number of observations, included plus trimmed
+    k_vars : int
+        number of regressors (exog), used for small sample correction
+    distr : string
+        currently only 'norm' is supported
+
+    '''
+
+    if distr != 'norm':
+        raise NotImplementedError('currently only normal distribution available')
+
+    frac_trimmed = k_trimmed * 1.0 / nobs
+
+    from scipy import stats
+    crit = stats.norm.ppf(1 - frac_trimmed * 0.5)
+    tau = 1 - frac_trimmed - 2 * crit * stats.norm.pdf(crit)
+
+    correction_factor = (1 - frac_trimmed) / tau
+    nobs_included = nobs - k_trimmed
+    denom_bias_corrected =  (nobs_included - k_vars)
+
+    return ssr_trimmed * correction_factor / denom_bias_corrected
+
+#def scale_LTS():
 
 
 class LTS(object):
@@ -352,7 +387,10 @@ class LTS(object):
         Returns
         -------
         res_trimmed : results instance
-            The best, lowest ssr, instance of the estimation results class
+            The best, lowest ssr, instance of the estimation results class.
+            Warning: this is just the OLS Results instance with the trimmed
+            set of observations and does not take the trimming into account.
+            TODO: adjust results, especially scale
         ii2 : ndarray
             index of inliers, observations used in the best regression.
 
@@ -370,22 +408,22 @@ class LTS(object):
 
         if comb(nobs, k_accept) <= max_exact:
             #index array
-            raise NotImplementedError
+            self.options_fit_used = ('exact', {})
+            return self.fit_exact(k_trimmed)
             #iterator = itertools.combinations(range(nobs), k_accept)
         else:
             #boolean array
             options = dict(max_nstarts=10, k_start=None, n_keep=10)
             if not random_search_options is None:
                 options.update(random_search_options)
+            self.options_fit_used = ('exact', options)
             return self.fit_random(k_trimmed, **options)
 
-
-#monkey
 
 from statsmodels.discrete.discrete_model import DiscreteResults
 #DiscreteResults.nllf = lambda : - DiscreteResults.llf
 
-class LTLikelihood(LTS):
+class MaximumTrimmedLikelihood(LTS):
 
     def __init__(self, endog, exog, est_model=Poisson, fit_options=None):
         super(LTLikelihood, self).__init__(endog, exog, est_model=est_model)
@@ -423,3 +461,75 @@ class LTLikelihood(LTS):
         ii2[idx3] = False
         ssr_new = np.dot(r*r, ii2)
         return res_trimmed, ii2, ssr_new
+
+def EfficientLTS(endog, exog, breakdown, efficiency,
+                 random_search_options=None, maxiter=10):
+    '''efficient least trimmed squares
+
+    this follows Doornik 2011
+    experimental function, to see if it works
+    to be converted to class or merged into RLM
+
+    Parameters
+    ----------
+    endog : ndarray, 1d
+        independent variable
+    exog : ndarray, (nobs, k_vars)
+        explanatory variables
+    breakdown : float in (0,1)
+        fraction of outliers in initial LTS
+    efficiency : float in (0, 1)
+        efficiency parameter for final trimming parameters
+    maxiter : int
+        maximum number of iterations to perform. Iteration will stop before if
+        outliers don't change across two consecutive iterations.
+
+    Returns
+    -------
+    ???
+
+
+    Notes
+    -----
+    section 3.1 in Doornik
+
+    Notation:
+
+    breakdown = alpha1
+    efficiency = alpha2
+
+    '''
+
+    nobs, k_vars = exog.shape
+    k_trimmed = int(nobs * breakdown)   #truncate, round down
+    res_lts, keep_mask = LTS(endog, exog).fit(k_trimmed=k_trimmed,
+                                random_search_options=random_search_options)
+    fittedvalues_all = res_lts.predict(exog)
+    resid = endog - fittedvalues_all
+    scale_adj = scale_lts(res_lts.ssr, (~keep_mask).sum(), nobs, k_vars,
+                      distr='norm')
+
+    from scipy import stats
+    crit = stats.norm.ppf(1 - efficiency/2.)
+    tau = 1 - efficiency - 2 * crit * stats.norm.pdf(crit)  #kept constant
+    correction_factor = (1. - efficiency) / tau
+
+    keep_mask_old = np.zeros(nobs)   #check structure of loop
+    for it in range(maxiter):
+        resid_scaled = resid / np.sqrt(scale_adj)
+        #outl = np.nonzero[(np.abs(resid_scaled) > crit)] #optional
+        keep_mask = (np.abs(resid_scaled) < crit)
+        if not np.any(keep_mask != keep_mask_old):  #converged
+            break
+
+        keep_mask_old = keep_mask
+        #use WLS with 0-1 weight instead of trimmed OLS
+        #res_wls = WLS(endog, exog, weights=weights).fit()
+        res_ols = OLS(endog[keep_mask], exog[keep_mask]).fit()
+        scale_adj = correction_factor * res_ols.scale
+        #is there ddof correction (nobs-k_vars) in res_ols.scale? I need it
+        fittedvalues_all = res_ols.predict(exog)
+        resid = endog - fittedvalues_all
+
+
+    return res_ols, keep_mask
