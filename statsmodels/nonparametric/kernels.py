@@ -194,8 +194,8 @@ def wang_ryzin_convolution(h, Xi, Xj):
     for i in range(K):
         Sigma_x = 0
         for x in Dom_x[i]:
-            Sigma_x += WangRyzin(h[i], Xi[:, i],
-                                 int(x)) * WangRyzin(h[i], Xj[i], int(x))
+            Sigma_x += wang_ryzin(h[i], Xi[:, i],
+                                 int(x)) * wang_ryzin(h[i], Xj[i], int(x))
 
         Ordered[:, i] = Sigma_x[:, 0]
 
@@ -216,9 +216,9 @@ def aitchison_aitken_convolution(h, Xi, Xj):
     for i in range(K):
         Sigma_x = 0
         for x in Dom_x[i]:
-            Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
+            Sigma_x += aitchison_aitken(h[i], Xi[:, i], int(x),
                                        num_levels=len(Dom_x[i])) * \
-            AitchisonAitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))
+            aitchison_aitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))
 
         Ordered[:, i] = Sigma_x[:, 0]
 
@@ -258,7 +258,7 @@ def aitchison_aitken_cdf(h, Xi, x_u):
         Sigma_x = 0
         for x in Dom_x[i]:
             if x <= x_u:
-                Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
+                Sigma_x += aitchison_aitken(h[i], Xi[:, i], int(x),
                                            num_levels=len(Dom_x[i]))
 
         Ordered[:, i] = Sigma_x[:, 0]
@@ -290,7 +290,7 @@ def wang_ryzin_cdf(h, Xi, x_u):
         Sigma_x = 0
         for x in Dom_x[i]:
             if x <= x_u:
-                Sigma_x += WangRyzin(h[i], Xi[:, i], int(x))
+                Sigma_x += wang_ryzin(h[i], Xi[:, i], int(x))
 
         Ordered[:, i] = Sigma_x[:, 0]
 
