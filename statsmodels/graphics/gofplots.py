@@ -6,7 +6,130 @@ from statsmodels.tools.tools import add_constant
 from . import utils
 
 
-__all__ = ['qqplot']
+__all__ = ['qqplot', 'prob_plot']
+
+
+class prob_plot:
+    def __init__(self, data, dist=stats.norm, fit=False,
+                 distargs=(), a=0, loc=0, scale=1):
+        """
+        qqplot of the quantiles of x versus the quantiles/ppf of a
+            distribution.
+
+        Can take arguments specifying the parameters for dist or fit them
+        automatically. (See fit under kwargs.)
+
+        Parameters
+        ----------
+        data : array-like
+            1d data array
+        dist : A scipy.stats or statsmodels distribution
+            Compare x against dist. The default
+            is scipy.stats.distributions.norm (a standard normal).
+        distargs : tuple
+            A tuple of arguments passed to dist to specify it fully
+            so dist.ppf may be called.
+        loc : float
+            Location parameter for dist
+        a : float
+            Offset for the plotting position of an expected order
+            statistic, for example. The plotting positions are given
+            by (i - a)/(nobs - 2*a + 1) for i in range(0,nobs+1)
+        scale : float
+            Scale parameter for dist
+        fit : boolean
+            If fit is false, loc, scale, and distargs are passed to the
+            distribution. If fit is True then the parameters for dist
+            are fit automatically using dist.fit. The quantiles are formed
+            from the standardized data, after subtracting the fitted loc
+            and dividing by the fitted scale.
+
+            Notes
+        -----
+        Depends on matplotlib. If `fit` is True then the parameters are fit using
+        the distribution's fit() method.
+
+            """
+        if not hasattr(dist, 'ppf'):
+            raise ValueError("distribution must have a ppf method")
+
+        self.data = data
+        self.a = a
+        self.nobs = data.shape[0]
+        self.distargs = distargs
+
+        fit_params = dist.fit(data)
+        if fit:
+            self.loc = fit_params[-2]
+            self.scale = fit_params[-1]
+            if len(fit_params) > 2:
+                self.dist = dist(*fit_params[:-2], **dict(loc = 0, scale = 1))
+            else:
+                self.dist = dist(loc=0, scale=1)
+        elif distargs or loc != 0 or scale != 1:
+            self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
+        else:
+            self.dist = dist
+            self.loc = loc
+            self.scale = scale
+
+        try:
+            self.theoretical_percentiles = plotting_pos(self.nobs, self.a)
+            self.theoretical_quantiles = self.dist.ppf(self.theoretical_percentiles)
+        except:
+            raise ValueError('distribution requires more parameters')
+
+        self.sample_quantiles = np.array(data, copy=True)
+        self.sample_quantiles.sort()
+
+        fit_quantiles = (self.sample_quantiles - fit_params[-2])/fit_params[-1]
+        self.sample_percentiles = self.dist.cdf(fit_quantiles)
+        if fit:
+            self.sample_quantiles = fit_quantiles
+
+    def ppplot(self, ax=None, line=False):
+        fig, ax = utils.create_mpl_ax(ax)
+        ax.set_xmargin(0.02)
+        ax.plot(self.theoretical_percentiles, self.sample_percentiles, 'bo')
+        if line:
+            if line not in ['r','45','s']:
+                msg = "%s option for line not understood for PP plots" % line
+                raise ValueError(msg)
+
+            qqline(ax, line,
+                   self.theoretical_percentiles,
+                   self.sample_percentiles,
+                   self.dist)
+
+        ax.set_ylabel("Sample Probabilities")
+        ax.set_xlabel("Theoretical Probabilities")
+
+        return fig
+
+    def qqplot(self, ax=None, line=False):
+        fig, ax = utils.create_mpl_ax(ax)
+        ax.set_xmargin(0.02)
+        ax.plot(self.theoretical_quantiles, self.sample_quantiles, 'bo')
+        if line:
+            if line not in ['r','q','45','s']:
+                msg = "%s option for line not understood for QQ plots" % line
+                raise ValueError(msg)
+
+            qqline(ax, line,
+                   self.theoretical_quantiles,
+                   self.sample_quantiles,
+                   self.dist)
+
+        ax.set_ylabel("Sample Quantiles")
+        ax.set_xlabel("Theoretical Quantiles")
+
+        return fig
+
+    def probplot(self, ax=None, line=False):
+        fig = self.qqplot(ax=ax, line=line)
+        _fmt_probplot_axis(ax, self.dist, self.nobs)
+        ax.set_xlabel('Non-exceedance Probability (%)')
+        return fig
 
 
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
@@ -105,85 +228,10 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     the distribution's fit() method.
 
     """
-    fig, ax = utils.create_mpl_ax(ax)
-
-    if not hasattr(dist, 'ppf'):
-        raise ValueError("distribution must have a ppf method")
-
-    nobs = data.shape[0]
-
-    if fit:
-        fit_params = dist.fit(data)
-        loc = fit_params[-2]
-        scale = fit_params[-1]
-        if len(fit_params)>2:
-            dist = dist(*fit_params[:-2], **dict(loc = 0, scale = 1))
-        else:
-            dist = dist(loc=0, scale=1)
-    elif distargs or loc != 0 or scale != 1:
-        dist = dist(*distargs, **dict(loc=loc, scale=scale))
-
-
-    try:
-        theoretical_quantiles = dist.ppf(plotting_pos(nobs, a))
-    except:
-        raise ValueError('distribution requires more parameters')
-
-    sample_quantiles = np.array(data, copy=True)
-    sample_quantiles.sort()
-    if fit:
-        sample_quantiles -= loc
-        sample_quantiles /= scale
-
-
-    ax.set_xmargin(0.02)
-    ax.plot(theoretical_quantiles, sample_quantiles, 'bo')
-    if line:
-        if line not in ['r','q','45','s']:
-            msg = "%s option for line not understood" % line
-            raise ValueError(msg)
-
-        qqline(ax, line, theoretical_quantiles, sample_quantiles, dist)
-
-    ax.set_ylabel("Sample Quantiles")
-    if prob:
-        probabilities = _get_axis_probability(nobs)
-        axis_quantiles= dist.ppf(probabilities)
-        ax.set_xticks(axis_quantiles)
-        ax.set_xticklabels(probabilities*100, ha='right', va='center',
-                           rotation=45, rotation_mode='anchor')
-        ax.set_xlim([axis_quantiles.min(), axis_quantiles.max()])
-        ax.set_xlabel("Non-exceedance Probabilities (%)")
-
-    else:
-        ax.set_xlabel("Theoretical Quantiles")
-
+    probplot = prob_plot(data, dist=dist, distargs=distargs,
+                         fit=fit, a=a, loc=loc, scale=scale)
+    fig = probplot.qqplot(ax=ax, line=line)
     return fig
-
-def _get_axis_probability(nobs):
-    """
-    Determine probabilities to show on a qqplot based on the number of
-    observations.
-
-    Parameters
-    ----------
-    nobs : The number of observations in a sample set
-
-    Returns
-    -------
-    prob : A numpy array of probabilities for the axis tick labels of a qq plot.
-    """
-    if nobs < 50:
-        prob = np.array([1,2,5,10,20,30,40,50,60,
-                         70,80,90,95,98,99,])/100.0
-    elif nobs < 500:
-        prob = np.array([0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
-                         80,90,95,98,99,99.5,99.8,99.9])/100.0
-    else:
-        prob = np.array([0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,
-                         20,30,40,50,60,70,80,90,95,98,99,99.5,
-                         99.8,99.9,99.95,99.98,99.99])/100.0
-    return prob
 
 def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     """
@@ -268,3 +316,25 @@ def plotting_pos(nobs, a):
     scipy.stats.mstats.plotting_positions
     """
     return (np.arange(1.,nobs+1) - a)/(nobs- 2*a + 1)
+
+def _fmt_probplot_axis(ax, dist, nobs):
+    '''
+    Formats a theoretical quantile axis to display the corresponding
+    probabilities on the quantiles' scale.
+    '''
+    if nobs < 50:
+        axis_probs = np.array([1,2,5,10,20,30,40,50,60,
+                               70,80,90,95,98,99,])/100.0
+    elif nobs < 500:
+        axis_probs = np.array([0.1,0.2,0.5,1,2,5,10,20,30,40,50,60,70,
+                               80,90,95,98,99,99.5,99.8,99.9])/100.0
+    else:
+        axis_probs = np.array([0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,
+                               20,30,40,50,60,70,80,90,95,98,99,99.5,
+                               99.8,99.9,99.95,99.98,99.99])/100.0
+    axis_qntls = dist.ppf(axis_probs)
+    ax.set_xticks(axis_qntls)
+    ax.set_xticklabels(axis_probs*100, rotation=45,
+                       rotation_mode='anchor',
+                       horizontalalignment='right',
+                       verticalalignment='center')
