@@ -13,6 +13,7 @@ from scipy.misc import comb
 
 from statsmodels.regression.linear_model import OLS, WLS
 from statsmodels.discrete.discrete_model import Poisson
+from robust_linear_model import RLM
 
 class Holder(object):
     pass
@@ -584,3 +585,37 @@ class EfficientLTS(object):
         self.iterations = it
         self.scale_adj = scale_adj
         return res_ols, keep_mask
+
+class LTSRLM(RLM):
+    '''Robust estimation, MM-estimator with LTS as starting value
+
+    '''
+
+
+    def fit(self, breakdown=0.5, random_search_options=None, rlm_args=None):
+        if rlm_args is None:
+            rlm_args = {}
+
+        endog = self.endog
+        exog = self.exog
+
+        nobs, k_vars = exog.shape
+        k_trimmed = int(nobs * breakdown)   #truncate, round down
+        res_lts, keep_mask = LTS(endog, exog).fit(k_trimmed=k_trimmed,
+                                    random_search_options=random_search_options)
+        fittedvalues_all = res_lts.predict(exog)
+        resid = endog - fittedvalues_all
+        scale_adj = scale_lts(res_lts.ssr, (~keep_mask).sum(), nobs, k_vars,
+                          distr='norm')
+
+        # fixed scale during M-estimation
+
+        init = dict(scale=scale_adj)
+        res_rlm = super(LTSRLM, self).fit(weights=keep_mask.astype(float),
+                                          update_scale=False,
+                                          init=init, #for scale
+                                          **rlm_args)
+
+        res_rlm.results_lts = res_lts
+        res_rlm.results_lts_keep_mask = keep_mask
+        return res_rlm

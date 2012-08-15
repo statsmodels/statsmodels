@@ -12,7 +12,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.robust.robust_linear_model import RLM
 from statsmodels import robust
 from statsmodels.robust.least_trimmed_squares import (lts, LTS, subsample,
-                                        scale_lts, EfficientLTS)
+                                        scale_lts, EfficientLTS, LTSRLM)
 #from statsmodels.tools.tools import add_constant
 
 seed = np.random.randint(0, 999999)
@@ -23,7 +23,7 @@ np.random.seed(seed)
 
 nobs, k_vars = 200, 4
 n_outl_mix = 10, 5
-n_outl_mix = 70, 20
+n_outl_mix = 5, 5 #70, 20
 n_outl = sum(n_outl_mix)
 
 beta0 = np.ones(k_vars)
@@ -123,6 +123,10 @@ print restb3b.params
 restb3c = RLM(endog, exog, M=robust.norms.TrimmedMean()).fit(
             weights=bestw2[-1].astype(float), update_scale=False, init=init)
 print restb3c.params
+
+mod_mm = LTSRLM(endog, exog, M=robust.norms.TukeyBiweight(c=4.685))
+res_mm = mod_mm.fit()
+print res_mm.params, 'MM-E, LTSRLM'
 
 breakdown, efficiency = 0.5, 0.9
 mod_elts = EfficientLTS(endog, exog)
