@@ -1201,7 +1201,7 @@ class Reg(_GenericKDE):
             h0 = 1.06 * X * \
                  self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
         func = self.est[self.reg_type]
-        return opt.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
+        return optimize.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
                       maxfun=1e3, disp=0)
 
     def r_squared(self):
@@ -1293,7 +1293,7 @@ class CensoredReg(Reg):
     """
 
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
-                censor_var, defaults=SetDefaults()):
+                censor_var=0, defaults=SetDefaults()):
 
         self.var_type = var_type
         self.all_vars_type = var_type
@@ -1584,7 +1584,7 @@ class TestRegCoefC(object):
             sig = "***"
         return sig
 
-class TestRegCoefD(RegCoef):
+class TestRegCoefD(TestRegCoefC):
     def __init__(self):
         pass
 
@@ -1644,12 +1644,12 @@ class TestFForm(object):
     See chapter 12 in [1]
     """
     # see p.355 in [1]
-    def __init__(self, tydat, txdat, bw, var_type fform, estimator):
+    def __init__(self, tydat, txdat, bw, var_type, fform, estimator):
         self.tydat = tydat
         self.txdat = tdat
         self.fform = fform
         self.estimator = estimator
-        self.bw = UKDE(tdat, bw=bwmethod, var_type).bw
+        self.bw = UKDE(tdat, bw=bwmethod, var_type=var_type).bw
 
 
     def compute_test_stat(self, Y, X):

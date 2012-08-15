@@ -491,3 +491,18 @@ class TestReg(MyTest):
         print "----"*10
  
         npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
+
+    @dec.slow
+    def test_censored_ll_cvls(self):
+        N = 200
+        np.random.seed(1234)
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
+        Y[Y>0] = 0  # censor the data
+        model = nparam.CensoredReg(tydat=[Y], txdat=[C1, C2],
+                            reg_type='ll', var_type='cc', bw='cv_ls', censor_var=0)
+        sm_mean, sm_mfx = model.fit()
+        npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)

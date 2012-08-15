@@ -311,3 +311,31 @@ def D_Gaussian(h, Xi, x):
     value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
     value = 2 * ( x - Xi) * Gaussian(h, Xi, x) / (h ** 2)
     return value
+
+def aitchison_aitken_reg(h, Xi, x):
+    """
+    A version for the atichison_aitken kernel for
+    nonparametric regression
+    Suggested by Li and Rcine
+    """
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
+    if K == 0:
+        return Xi
+    kernel_value = np.ones((N,K))
+    inDom = (Xi != x) * h
+    kernel_value[Xi != x] = inDom[Xi != x]
+    return kernel_value
+
+
+def wangryzin_reg(h, Xi, x):
+    """
+    A version for the wangryzin kernel for 
+    nonparametric regression
+    Suggested by Li and Rcine in [1] ch.4
+    """
+    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
+    if K == 0:
+        return Xi
+    kernel_value = h ** abs(Xi - x)
+    kenrel_value = kernel_value.reshape([N,K])
+    return kernel_value

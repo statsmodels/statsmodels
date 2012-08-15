@@ -1,6 +1,6 @@
 import numpy as np
+#from . import kernels as kf
 import kernels as kf
-from . import kernels
 
 kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
                  gaussian=kf.Gaussian,
