@@ -38,7 +38,7 @@ def _get_shape_and_transform(h, Xi, x=None):
     return h, Xi, x, N, K
 
 
-def AitchisonAitken(h, Xi, x, num_levels=False):
+def aitchison_aitken(h, Xi, x, num_levels=False):
     """
     The Aitchison-Aitken kernel, used for unordered discrete random variables.
 
@@ -90,7 +90,7 @@ def AitchisonAitken(h, Xi, x, num_levels=False):
     return kernel_value
 
 
-def WangRyzin(h, Xi, x):
+def wang_ryzin(h, Xi, x):
     """
     The Wang-Ryzin kernel, used for ordered discrete random variables.
 
@@ -135,7 +135,7 @@ def WangRyzin(h, Xi, x):
     return kernel_value
 
 
-def Gaussian(h, Xi, x):
+def gaussian(h, Xi, x):
     """
     Gaussian Kernel for continuous variables
     Parameters
@@ -163,7 +163,7 @@ def Gaussian(h, Xi, x):
     return kernel_value
 
 
-def Gaussian_Convolution(h, Xi, x):
+def gaussian_convolution(h, Xi, x):
     """ Calculates the Gaussian Convolution Kernel """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     if K == 0:
@@ -175,7 +175,7 @@ def Gaussian_Convolution(h, Xi, x):
     return kernel_value
 
 
-def WangRyzin_Convolution(h, Xi, Xj):
+def wang_ryzin_convolution(h, Xi, Xj):
     # This is the equivalent of the convolution case
     # with the Gaussian Kernel
     # However it is not exactly convolution. Think of a better name
@@ -194,15 +194,15 @@ def WangRyzin_Convolution(h, Xi, Xj):
     for i in range(K):
         Sigma_x = 0
         for x in Dom_x[i]:
-            Sigma_x += WangRyzin(h[i], Xi[:, i],
-                                 int(x)) * WangRyzin(h[i], Xj[i], int(x))
+            Sigma_x += wang_ryzin(h[i], Xi[:, i],
+                                 int(x)) * wang_ryzin(h[i], Xj[i], int(x))
 
         Ordered[:, i] = Sigma_x[:, 0]
 
     return Ordered
 
 
-def AitchisonAitken_Convolution(h, Xi, Xj):
+def aitchison_aitken_convolution(h, Xi, Xj):
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
     Xi = np.abs(np.asarray(Xi, dtype=int))
     Xj = np.abs(np.asarray(Xj, dtype=int))
@@ -216,16 +216,16 @@ def AitchisonAitken_Convolution(h, Xi, Xj):
     for i in range(K):
         Sigma_x = 0
         for x in Dom_x[i]:
-            Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
+            Sigma_x += aitchison_aitken(h[i], Xi[:, i], int(x),
                                        num_levels=len(Dom_x[i])) * \
-            AitchisonAitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))
+            aitchison_aitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))
 
         Ordered[:, i] = Sigma_x[:, 0]
 
     return Ordered
 
 
-def Gaussian_cdf(h, Xi, x):
+def gaussian_cdf(h, Xi, x):
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
     if K == 0:
         return Xi
@@ -235,7 +235,7 @@ def Gaussian_cdf(h, Xi, x):
     return cdf
 
 
-def AitchisonAitken_cdf(h, Xi, x_u):
+def aitchison_aitken_cdf(h, Xi, x_u):
     Xi = np.abs(np.asarray(Xi, dtype=int))
     if Xi.ndim > 1:
         K = np.shape(Xi)[1]
@@ -258,7 +258,7 @@ def AitchisonAitken_cdf(h, Xi, x_u):
         Sigma_x = 0
         for x in Dom_x[i]:
             if x <= x_u:
-                Sigma_x += AitchisonAitken(h[i], Xi[:, i], int(x),
+                Sigma_x += aitchison_aitken(h[i], Xi[:, i], int(x),
                                            num_levels=len(Dom_x[i]))
 
         Ordered[:, i] = Sigma_x[:, 0]
@@ -266,7 +266,7 @@ def AitchisonAitken_cdf(h, Xi, x_u):
     return Ordered
 
 
-def WangRyzin_cdf(h, Xi, x_u):
+def wang_ryzin_cdf(h, Xi, x_u):
     Xi = np.abs(np.asarray(Xi, dtype=int))
     h = np.asarray(h, dtype=float)
     if Xi.ndim > 1:
@@ -290,12 +290,12 @@ def WangRyzin_cdf(h, Xi, x_u):
         Sigma_x = 0
         for x in Dom_x[i]:
             if x <= x_u:
-                Sigma_x += WangRyzin(h[i], Xi[:, i], int(x))
+                Sigma_x += wang_ryzin(h[i], Xi[:, i], int(x))
 
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
 
-def D_Gaussian(h, Xi, x):
+def d_gaussian(h, Xi, x):
     # The derivative of the Gaussian Kernel
     Xi = np.asarray(Xi)
     x = np.asarray(x)
@@ -327,7 +327,7 @@ def aitchison_aitken_reg(h, Xi, x):
     return kernel_value
 
 
-def wangryzin_reg(h, Xi, x):
+def wang_ryzin_reg(h, Xi, x):
     """
     A version for the wangryzin kernel for 
     nonparametric regression

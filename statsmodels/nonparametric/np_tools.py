@@ -1,18 +1,18 @@
 import numpy as np
-#from . import kernels as kf
-import kernels as kf
+import kernels
 
-kernel_func = dict(wangryzin=kf.WangRyzin, aitchisonaitken=kf.AitchisonAitken,
-                 gaussian=kf.Gaussian,
-                 aitchison_aitken_reg = kf.aitchison_aitken_reg,
-                 wangryzin_reg = kf.wangryzin_reg,
-                   gauss_convolution=kf.Gaussian_Convolution,
-                 wangryzin_convolution=kf.WangRyzin_Convolution,
-                 aitchisonaitken_convolution=kf.AitchisonAitken_Convolution,
-                   gaussian_cdf=kf.Gaussian_cdf,
-                   aitchisonaitken_cdf=kf.AitchisonAitken_cdf,
-                   wangryzin_cdf=kf.WangRyzin_cdf,
-                    d_gaussian=kf.D_Gaussian)
+kernel_func = dict(wangryzin=kernels.wang_ryzin,
+                   aitchisonaitken=kernels.aitchison_aitken,
+                   gaussian=kernels.gaussian,
+                   aitchison_aitken_reg = kernels.aitchison_aitken_reg,
+                   wangryzin_reg = kernels.wang_ryzin_reg,
+                   gauss_convolution=kernels.gaussian_convolution,
+                   wangryzin_convolution=kernels.wang_ryzin_convolution,
+                   aitchisonaitken_convolution=kernels.aitchison_aitken_convolution,
+                   gaussian_cdf=kernels.gaussian_cdf,
+                   aitchisonaitken_cdf=kernels.aitchison_aitken_cdf,
+                   wangryzin_cdf=kernels.wang_ryzin_cdf,
+                   d_gaussian=kernels.d_gaussian)
 
 
 class LeaveOneOut(object):
