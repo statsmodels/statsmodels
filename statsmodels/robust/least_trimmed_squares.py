@@ -589,12 +589,43 @@ class EfficientLTS(object):
 class LTSRLM(RLM):
     '''Robust estimation, MM-estimator with LTS as starting value
 
+
+    TODO:
+    check location of arguments: in __init__ or in fit
+       what causes state in model (that is not overwritten)?
+    any adjustments to the results, e.g. cov_params ?  guess not
+
     '''
 
 
-    def fit(self, breakdown=0.5, random_search_options=None, rlm_args=None):
-        if rlm_args is None:
-            rlm_args = {}
+    def fit(self, breakdown=0.5, random_search_options=None, rlm_options=None):
+        '''MM-estimation, LTS followed by M-estimation
+
+        LTS with given breakdown level, i.e. fraction of trimmed observations, is
+        used for initial weights and for scale. Scale remains fixed during
+        the M-estimation.
+
+        Parameters
+        ----------
+        breakdown : float in (0, 1)
+           fraction of outliers (truncated to give an integer) in LTS-estimation
+        random_search_options : None or dict
+           options for the LTS random search
+        rlm_options : None or dict
+           options for the RLM fit.
+           weights, update_scale and init will be overwritten with the values
+           from the LTS estimation
+
+        Returns
+        -------
+        res_rlm : RLMResults instance
+            The instance of the estimation results as returned by RLM.fit with
+            two additional attributes, results_lts, results_lts_keep_mask,
+            from the LTS estimation.
+
+        '''
+        if rlm_options is None:
+            rlm_options = {}
 
         endog = self.endog
         exog = self.exog
@@ -608,13 +639,15 @@ class LTSRLM(RLM):
         scale_adj = scale_lts(res_lts.ssr, (~keep_mask).sum(), nobs, k_vars,
                           distr='norm')
 
-        # fixed scale during M-estimation
-
+        #options to use LTS as starting value
+        #fixed scale during M-estimation
         init = dict(scale=scale_adj)
-        res_rlm = super(LTSRLM, self).fit(weights=keep_mask.astype(float),
-                                          update_scale=False,
-                                          init=init, #for scale
-                                          **rlm_args)
+        options = dict(weights=keep_mask.astype(float),
+                       update_scale=False,
+                       init=init)
+        rlm_options.update(options)  #overwrites 3 keywords
+
+        res_rlm = super(LTSRLM, self).fit(**rlm_options)
 
         res_rlm.results_lts = res_lts
         res_rlm.results_lts_keep_mask = keep_mask
