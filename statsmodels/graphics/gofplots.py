@@ -302,7 +302,7 @@ def _do_plot(x, y, dist, ax=None, line=False):
         qqline(ax, line, x, y, dist)
     return fig, ax
 
-def qqplot(data_y, data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
+def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
            line=False, prob=False, ax=None):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
