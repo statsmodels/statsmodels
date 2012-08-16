@@ -6,10 +6,10 @@ from statsmodels.tools.tools import add_constant
 from . import utils
 
 
-__all__ = ['qqplot', 'prob_plot']
+__all__ = ['qqplot', 'ProbPlot']
 
 
-class prob_plot:
+class ProbPlot(object):
     def __init__(self, data, dist=stats.norm, fit=False,
                  distargs=(), a=0, loc=0, scale=1):
         """
@@ -46,8 +46,8 @@ class prob_plot:
         Plotting Methods
         ----------------
         All plotting methods listed below have the same call signatures which
-        accept `line` and `ax` keyword arguments. See individual docstrings for
-        more info.
+        accept `line` and `ax` keyword arguments. See individual docstrings
+        for more info.
 
         ppplot : Probability-Probability plot
             Compares the sample and theoretical probabilities (percentiles).
@@ -58,12 +58,54 @@ class prob_plot:
             the theoretical distribution (x-axis) and the y-axis contains
             unscaled quantiles of the sample data.
 
+        Examples
+        --------
+        >>> import statsmodels.api as sm
+        >>> from matplotlib import pyplot as plt
+
+        >>> data = sm.datasets.longley.load()
+        >>> data.exog = sm.add_constant(data.exog)
+        >>> model = sm.OLS(data.endog, data.exog)
+        >>> mod_fit = model.fit()
+        >>> res = mod_fit.resid # residuals
+        >>> probplot = sm.ProbPlot(res)
+        >>> probplot.qqplot()
+        >>> plt.show()
+
+        qqplot of the residuals against quantiles of t-distribution with 4
+        degrees of freedom:
+
+        >>> import scipy.stats as stats
+        >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,))
+        >>> fig = probplot.qqplot()
+        >>> plt.show()
+
+        qqplot against same as above, but with mean 3 and std 10:
+
+        >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,), loc=3, scale=10)
+        >>> fig = probplot.qqplot()
+        >>> plt.show()
+
+        Automatically determine parameters for t distribution including the
+        loc and scale:
+
+        >>> probplot = sm.ProbPlot(res, stats.t, fit=True)
+        >>> fig = sm.qqplot(line='45')
+        >>> plt.show()
+
+        The following plot displays some options, follow the link to see the
+        code.
+
+        .. plot:: plots/graphics_gofplots_qqplot.py
+
         Notes
         -----
-        Depends on matplotlib. If `fit` is True then the parameters are fit using
-        the distribution's fit() method.
+        Depends on matplotlib. If `fit` is True then the parameters are fit
+        using the distribution's fit() method. The call signatures for the
+        `qqplot`, `ppplot`, and `probplot` methods are all identical, so the
+        example above applies to all three methods.
+        """
 
-            """
         if not hasattr(dist, 'ppf'):
             raise ValueError("distribution must have a ppf method")
 
@@ -109,8 +151,8 @@ class prob_plot:
         Parameters
         ----------
         ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure being
-            created.
+            If given, this subplot is used to plot in instead of a new
+            figure being created.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared.:
 
@@ -123,6 +165,12 @@ class prob_plot:
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+
+        Returns
+        -------
+        fig : Matplotlib figure instance
+            If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
         '''
         fig, ax = _do_plot(self.theoretical_percentiles,
                            self.sample_percentiles,
@@ -136,13 +184,14 @@ class prob_plot:
 
     def qqplot(self, ax=None, line=False):
         '''
-        Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution.
+        Q-Q plot of the quantiles of x versus the quantiles/ppf of a
+        distribution.
 
         Parameters
         ----------
         ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure being
-            created.
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared.:
 
@@ -155,6 +204,12 @@ class prob_plot:
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+
+        Returns
+        -------
+        fig : Matplotlib figure instance
+            If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
         '''
         fig, ax = _do_plot(self.theoretical_quantiles,
                            self.sample_quantiles,
@@ -177,8 +232,8 @@ class prob_plot:
         Parameters
         ----------
         ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure being
-            created.
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared.:
 
@@ -191,6 +246,12 @@ class prob_plot:
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+
+        Returns
+        -------
+        fig : Matplotlib figure instance
+            If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
         '''
         fig, ax = _do_plot(self.theoretical_quantiles,
                            self.raw_sample_quantiles,
@@ -205,8 +266,8 @@ class prob_plot:
 
 def _do_plot(x, y, dist, ax=None, line=False):
     '''
-    Bioler plate plotting function for the `ppplot`, `qqplot`, and `probplot` methods
-    of the `prob_plot` class
+    Boiler plate plotting function for the `ppplot`, `qqplot`, and
+    `probplot` methods of the `ProbPlot` class
     '''
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
@@ -225,7 +286,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
 
     Can take arguments specifying the parameters for dist or fit them
-    automatically. (See fit under kwargs.)
+    automatically. (See fit under Parameters.)
 
     Parameters
     ----------
@@ -281,11 +342,12 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
-    >>> res = mod_fit.resid
+    >>> res = mod_fit.resid # residuals
     >>> fig = sm.qqplot(res)
     >>> plt.show()
 
-    qqplot against quantiles of t-distribution with 4 degrees of freedom:
+    qqplot of the residuals against quantiles of t-distribution with 4 degrees
+    of freedom:
 
     >>> import scipy.stats as stats
     >>> fig = sm.qqplot(res, stats.t, distargs=(4,))
@@ -312,7 +374,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     the distribution's fit() method.
 
     """
-    probplot = prob_plot(data, dist=dist, distargs=distargs,
+    probplot = ProbPlot(data, dist=dist, distargs=distargs,
                          fit=fit, a=a, loc=loc, scale=scale)
     fig = probplot.qqplot(ax=ax, line=line)
     return fig
