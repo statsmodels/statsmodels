@@ -6,7 +6,7 @@ from statsmodels.tools.tools import add_constant
 from . import utils
 
 
-__all__ = ['qqplot', 'ProbPlot']
+__all__ = ['qqplot', 'qqline', 'ProbPlot']
 
 
 class ProbPlot(object):
@@ -63,6 +63,7 @@ class ProbPlot(object):
         >>> import statsmodels.api as sm
         >>> from matplotlib import pyplot as plt
 
+        >>> # example 1
         >>> data = sm.datasets.longley.load()
         >>> data.exog = sm.add_constant(data.exog)
         >>> model = sm.OLS(data.endog, data.exog)
@@ -75,6 +76,7 @@ class ProbPlot(object):
         qqplot of the residuals against quantiles of t-distribution with 4
         degrees of freedom:
 
+        >>> # example 2
         >>> import scipy.stats as stats
         >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,))
         >>> fig = probplot.qqplot()
@@ -82,6 +84,7 @@ class ProbPlot(object):
 
         qqplot against same as above, but with mean 3 and std 10:
 
+        >>> # example 3
         >>> probplot = sm.ProbPlot(res, stats.t, distargs=(4,), loc=3, scale=10)
         >>> fig = probplot.qqplot()
         >>> plt.show()
@@ -89,9 +92,26 @@ class ProbPlot(object):
         Automatically determine parameters for t distribution including the
         loc and scale:
 
+        >>> # example 4
         >>> probplot = sm.ProbPlot(res, stats.t, fit=True)
-        >>> fig = sm.qqplot(line='45')
+        >>> fig = probplot.qqplot(line='45')
         >>> plt.show()
+
+        Sometimes Q-Q plots can be applied to two-sample problems to test the
+        equality of the distributions between to sample sets. In that case,
+        it's best to create a `ProbPlot` instance for each sample and then to
+        plot each instance's `sample_quantiles` attributes:
+
+        >>> import numpy as np
+        >>> x = np.random.normal(loc=8.5, scale=2.5, size=37)
+        >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
+        >>> pp_x = sm.ProbPlot(x)
+        >>> pp_y = sm.ProbPlot(y)
+        >>> fig, ax = plt.subplots(nrows=1, ncols=1)
+        >>> ax.plot(pp_x.sample_quantiles, pp_y.sample_quantiles, 'bo')
+        >>> qqline(ax, line='45') # best-choice when evaluating equality
+        >>> ax.set_xlabel('Quantiles of $x$')
+        >>> ax.set_ylabel('Quantiles of $y$')
 
         The following plot displays some options, follow the link to see the
         code.
@@ -100,10 +120,12 @@ class ProbPlot(object):
 
         Notes
         -----
-        Depends on matplotlib. If `fit` is True then the parameters are fit
-        using the distribution's fit() method. The call signatures for the
-        `qqplot`, `ppplot`, and `probplot` methods are all identical, so the
-        example above applies to all three methods.
+        1) Depends on matplotlib.
+        2) If `fit` is True then the parameters are fit using the
+            distribution's `fit()` method.
+        3) The call signatures for the `qqplot`, `ppplot`, and `probplot`
+            methods are all identical, so examples 1 through 4 apply to all
+            three methods.
         """
 
         if not hasattr(dist, 'ppf'):
@@ -280,7 +302,7 @@ def _do_plot(x, y, dist, ax=None, line=False):
         qqline(ax, line, x, y, dist)
     return fig, ax
 
-def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
+def qqplot(data_y, data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
            line=False, prob=False, ax=None):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
@@ -413,6 +435,8 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         end_pts[0] = max(end_pts[0])
         end_pts[1] = min(end_pts[1])
         ax.plot(end_pts, end_pts, fmt)
+        ax.set_xlim(end_pts)
+        ax.set_ylim(end_pts)
         return # does this have any side effects?
     if x is None and y is None:
         raise ValueError("If line is not 45, x and y cannot be None.")
