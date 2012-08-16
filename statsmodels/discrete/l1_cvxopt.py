@@ -13,7 +13,26 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
     """
     Solve the l1 regularized problem using cvxopt.solvers.cp
 
-    Cut and paste docstring from _fit_l1_slsqp???
+    Parameters
+    ----------
+    All the usual parameters from LikelhoodModel.fit
+
+    Special kwargs
+    ----------
+    alpha : non-negative scalar or numpy array (same size as parameters)
+        The weight multiplying the l1 penalty term
+    trim_params : boolean
+        Set small parameters to zero
+    trim_tol : float
+        Set parameters whose absolute value < trim_tol to zero
+    abstol : float
+        absolute accuracy (default: 1e-7).
+    reltol : float
+        relative accuracy (default: 1e-6).
+    feastol : float
+        tolerance for feasibility conditions (default: 1e-7).
+    refinement : int
+        number of iterative refinement steps when solving KKT equations (default: 1).
     """
 
     if callback:
@@ -24,6 +43,7 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
     K = len(start_params)  
     # The regularization parameter
     alpha = np.array(kwargs['alpha']).ravel(order='F')
+    assert alpha.min() >= 0
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
     x0 = matrix(x0, (2*K, 1))

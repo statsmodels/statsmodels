@@ -116,9 +116,9 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=100,
-            full_output=True, disp=True, fargs=(), callback=None, retall=False,
-            **kwargs):
+    def fit(self, start_params=None, method='newton', penalty='none', 
+            l1_solver='l1_slsqp', maxiter=100, full_output=True, disp=True, 
+            fargs=(), callback=None, retall=False, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -128,6 +128,7 @@ class LikelihoodModel(Model):
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
         method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
+            Used when penalty == 'none'
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
@@ -136,6 +137,10 @@ class LikelihoodModel(Model):
             to the solver.  Each solver has several optional arguments that are
             not the same across solvers.  See the notes section below (or
             scipy.optimize) for the available arguments.
+        penalty : str {'none', 'l1'}
+            Penalize the negative log likelihood when fitting.
+        l1_solver : str {'l1_slsqp', 'l1_cvxopt_cp'}
+            Solver to use when penalty == 'l1'
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -207,6 +212,30 @@ class LikelihoodModel(Model):
                     Maximum number of function evaluations to make.
                 start_direc : ndarray
                     Initial direction set.
+            'l1_slsqp'
+                alpha : non-negative scalar or numpy array (same size as parameters)
+                    The weight multiplying the l1 penalty term
+                trim_params : boolean
+                    Set small parameters to zero
+                trim_tol : float
+                    Set parameters whose absolute value < trim_tol to zero
+                acc : float (default 1e-6)
+                    Requested accuracy
+            'l1_cvxopt_cp'
+                alpha : non-negative scalar or numpy array (same size as parameters)
+                    The weight multiplying the l1 penalty term
+                trim_params : boolean
+                    Set small parameters to zero
+                trim_tol : float
+                    Set parameters whose absolute value < trim_tol to zero
+                abstol : float
+                    absolute accuracy (default: 1e-7).
+                reltol : float
+                    relative accuracy (default: 1e-6).
+                feastol : float
+                    tolerance for feasibility conditions (default: 1e-7).
+                refinement : int
+                    number of iterative refinement steps when solving KKT equations (default: 1).
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1']
