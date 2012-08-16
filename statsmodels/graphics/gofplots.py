@@ -165,16 +165,13 @@ class ProbPlot(object):
         if fit and loc != 0 and scale != 1:
             self.sample_quantiles = fit_quantiles
 
-    def ppplot(self, ax=None, line=False):
+    def ppplot(self, line=None, ax=None):
         """
         P-P plot of the percentiles (probabilities) of x versus the
         probabilities (percetiles) of a distribution.
 
         Parameters
         ----------
-        ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new
-            figure being created.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared.:
 
@@ -187,6 +184,9 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
 
         Returns
         -------
@@ -204,16 +204,13 @@ class ProbPlot(object):
 
         return fig
 
-    def qqplot(self, ax=None, line=False):
+    def qqplot(self, line=None, ax=None):
         """
         Q-Q plot of the quantiles of x versus the quantiles/ppf of a
         distribution.
 
         Parameters
         ----------
-        ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure
-            being created.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared.:
 
@@ -226,6 +223,9 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
 
         Returns
         -------
@@ -243,7 +243,7 @@ class ProbPlot(object):
 
         return fig
 
-    def probplot(self, ax=None, line=False):
+    def probplot(self, line=None, ax=None):
         """
         Probability plot of the unscaled quantiles of x versus the
         probabilities of a distibution (not to be confused with a P-P plot).
@@ -253,9 +253,6 @@ class ProbPlot(object):
 
         Parameters
         ----------
-        ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure
-            being created.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared.:
 
@@ -268,6 +265,9 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
 
         Returns
         -------
@@ -303,7 +303,7 @@ def _do_plot(x, y, dist, ax=None, line=False):
     return fig, ax
 
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
-           line=False, prob=False, ax=None):
+           line=False, ax=None):
     """
     qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
 
