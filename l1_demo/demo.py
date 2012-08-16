@@ -3,7 +3,6 @@ import scipy as sp
 from scipy import linalg
 import statsmodels.discrete.l1 as l1
 import pdb
-from scipy.optimize import fmin_slsqp
 # pdb.set_trace()
 
 
@@ -49,7 +48,7 @@ def main():
     # The regularization parameter
     # Here we scale it with N for simplicity.  In practice, you should
     # use cross validation to pick alpha
-    alpha = 0.01 * N * sp.ones((num_nonconst_covariates+1, num_targets))
+    alpha = 0.01 * N * sp.ones((num_nonconst_covariates+1, num_targets-1))
     alpha[0,:] = 0  # Don't regularize the intercept
     # Correlation length for the independent variables
     # Higher makes the problem more ill-posed, and easier to screw
@@ -63,7 +62,7 @@ def main():
     #### Make the arrays
     exog = get_exog(N, num_nonconst_covariates, cor_length) 
     exog = sm.add_constant(exog, prepend=True)
-    true_params = sp.rand(num_nonconst_covariates+1, num_targets)
+    true_params = sp.rand(num_nonconst_covariates+1, num_targets-1)
     if num_zero_params:
         true_params[-num_zero_params:, :] = 0
     endog = get_multinomial_endog(num_targets, true_params, exog, noise_level)
@@ -124,7 +123,7 @@ def get_RMSE(results, true_params):
     param_norm = sp.sqrt((true_params**2).sum())
     return raw_RMSE / param_norm
 
-def get_multinomial_endog(num_targets, true_params, exog, noise_level):
+def get_multinomial_endog(true_params, exog, noise_level):
     """
     Gets an endogenous response that is consistent with the true_params,
         perturbed by noise at noise_level.
@@ -132,12 +131,10 @@ def get_multinomial_endog(num_targets, true_params, exog, noise_level):
     N = exog.shape[0]
     ### Create the probability of entering the different classes, 
     ### given exog and true_params
-    # Create a model just to access its cdf method
-    temp_endog = sp.random.randint(0, num_targets, size=N)
-    model = sm.MNLogit(temp_endog, exog)
     Xdotparams = sp.dot(exog, true_params)
     noise = noise_level * sp.randn(*Xdotparams.shape)
-    class_probabilities = model.cdf(Xdotparams + noise)
+    eXB = sp.column_stack((sp.ones(len(Xdotparams)), sp.exp(Xdotparams)))
+    class_probabilities = eXB / eXB.sum(1)[:, None]
     
     ### Create the endog 
     cdf = class_probabilities.cumsum(axis=1) 
