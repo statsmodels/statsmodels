@@ -2,8 +2,8 @@ import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
 import scipy.stats as stats
-#import statsmodels.nonparametric as nparam
-import nonparametric2 as nparam
+import statsmodels.nonparametric as nparam
+#import nonparametric2 as nparam
 reload(nparam)
 import csv
 

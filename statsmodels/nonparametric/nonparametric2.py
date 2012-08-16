@@ -73,6 +73,15 @@ class _GenericKDE (object):
         return res
 
     def _compute_dispersion(self, all_vars):
+        """ 
+        Computes the measure of dispersion
+        The minimum of the standard deviation and interquartile range / 1.349
+        References
+        ----------
+        See the user guide for the np package in R. 
+        In the notes on bwscaling option in npreg, npudens, npcdens there is
+        a discussion on the measure of dispersion
+        """
         if self.__class__.__name__ == "Reg":
             all_vars = all_vars[:, 1::]
         s1 = np.std(all_vars, axis=0)
@@ -86,6 +95,14 @@ class _GenericKDE (object):
  
         
     def _compute_efficient_randomize(self, bw):
+        """
+        Computes the bandwidth by estimating the scaling factor (c)
+        in n_res resamples of size n_sub
+
+        References
+        ----------
+        See p.9 in socserv.mcmaster.ca/racine/np_faq.pdf
+        """
         sample_scale = np.empty((self.n_res, self.K))
         only_bw = np.empty((self.n_res, self.K))
         all_vars = copy.deepcopy(self.all_vars)
@@ -126,6 +143,11 @@ class _GenericKDE (object):
         return bw 
 
     def _compute_efficient_all(self, bw):
+        """
+        Computes the bandiwdth by breaking down the full sample
+        into however many sub_samples of size n_sub and calculates
+        the scaling factor of the bandiwdth
+        """
         all_vars = copy.deepcopy(self.all_vars)
         l = self.all_vars_type.count('c')
         co = 4
@@ -174,7 +196,8 @@ class _GenericKDE (object):
 
 
     def _call_self(self, all_vars, bw):
-
+        """ Calls the class itself with the proper input parameters"""
+        # only used with the efficient=True estimation option
         if self.__class__.__name__ == 'UKDE':
             model = UKDE(all_vars, self.var_type, bw=bw, 
                         defaults=SetDefaults(efficient=False))
@@ -195,6 +218,7 @@ class _GenericKDE (object):
         return model
  
     def _set_defaults(self, defaults):
+        """Sets the default values for the efficient estimation"""
         self.n_res = defaults.n_res
         self.n_sub = defaults.n_sub
         self.randomize = defaults.randomize
@@ -221,6 +245,10 @@ class _GenericKDE (object):
         return c * X * self.N ** (- 1. / (4 + np.size(self.all_vars, axis=1)))
 
     def _set_bw_bounds(self, bw):
+        """
+        Sets bandwidth lower bound to zero and
+        for discrete values upper bound of one
+        """ 
         unit = np.ones((self.K, ))
         ind0 = np.where(bw < 0)
         bw[ind0] = 0.
@@ -259,7 +287,7 @@ class _GenericKDE (object):
         h0 = self._normal_reference()
         bw = optimize.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
                            maxiter=1e3, maxfun=1e3, disp=0)
-        bw = self._set_bw_bounds(bw)
+        bw = self._set_bw_bounds(bw)  # bound bw if necessary
         return bw
 
     def _cv_ls(self):
@@ -281,8 +309,8 @@ class _GenericKDE (object):
         """
         h0 = self._normal_reference()
         bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0)
-        bw = self._set_bw_bounds(bw)
-        return np.abs(bw)
+        bw = self._set_bw_bounds(bw)  # bound bw if necessary
+        return bw
 
     def loo_likelihood(self):
         raise NotImplementedError
