@@ -81,22 +81,22 @@ def main():
     model = sm.MNLogit(endog, exog)
     # Get ML results
     results_ML = model.fit(method='newton')
-    MSE_ML = get_MSE(results_ML, true_params)
-    print_str += '\n\n The maximum likelihood fit mean square error = %.4f'%MSE_ML
+    RMSE_ML = get_RMSE(results_ML, true_params)
+    print_str += '\n\n The maximum likelihood fit RMS error = %.4f'%RMSE_ML
     # Get l1 results
     start_params = results_ML.params.ravel(order='F')
     if get_l1_slsqp_results:
         results_l1_slsqp = model.fit(method='l1', alpha=alpha, 
                 maxiter=70, start_params=start_params, trim_params=True, 
                 retall=True)
-        MSE_l1_slsqp = get_MSE(results_l1_slsqp, true_params)
-        print_str += '\n The l1_slsqp fit mean square error = %.4f'%MSE_l1_slsqp
+        RMSE_l1_slsqp = get_RMSE(results_l1_slsqp, true_params)
+        print_str += '\n The l1_slsqp fit RMS error = %.4f'%RMSE_l1_slsqp
     if get_l1_cvxopt_results:
         results_l1_cvxopt_cp = model.fit(method='l1_cvxopt_cp', alpha=alpha, 
                 maxiter=50, start_params=start_params, trim_params=True, 
                 retall=True, feastol=1e-5)
-        MSE_l1_cvxopt_cp = get_MSE(results_l1_cvxopt_cp, true_params)
-        print_str += '\n The l1_cvxopt_cp fit mean square error = %.4f'%MSE_l1_cvxopt_cp
+        RMSE_l1_cvxopt_cp = get_RMSE(results_l1_cvxopt_cp, true_params)
+        print_str += '\n The l1_cvxopt_cp fit RMS error = %.4f'%RMSE_l1_cvxopt_cp
 
     #### Print results
     print_str += '\n\n\n============== Parameters ================='
@@ -116,13 +116,13 @@ def main():
     print print_str
 
 
-def get_MSE(results, true_params):
+def get_RMSE(results, true_params):
     """
-    Gets the (normalized) mean square error.
+    Gets the (normalized) root mean square error.
     """
-    raw_MSE = sp.sqrt(((results.params - true_params)**2).sum()) 
+    raw_RMSE = sp.sqrt(((results.params - true_params)**2).sum()) 
     param_norm = sp.sqrt((true_params**2).sum())
-    return raw_MSE / param_norm
+    return raw_RMSE / param_norm
 
 def get_multinomial_endog(num_targets, true_params, exog, noise_level):
     """
