@@ -66,7 +66,7 @@ class prob_plot:
                 self.dist = dist(*fit_params[:-2], **dict(loc = 0, scale = 1))
             else:
                 self.dist = dist(loc=0, scale=1)
-        elif distargs or loc != 0 or scale != 1:
+        elif distargs or loc == 0 or scale == 1:
             self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
         else:
             self.dist = dist
@@ -84,7 +84,7 @@ class prob_plot:
 
         fit_quantiles = (self.sample_quantiles - fit_params[-2])/fit_params[-1]
         self.sample_percentiles = self.dist.cdf(fit_quantiles)
-        if fit:
+        if fit and loc != 0 and scale != 1:
             self.sample_quantiles = fit_quantiles
 
     def ppplot(self, ax=None, line=False):
@@ -338,3 +338,4 @@ def _fmt_probplot_axis(ax, dist, nobs):
                        rotation_mode='anchor',
                        horizontalalignment='right',
                        verticalalignment='center')
+    ax.set_xlim([axis_qntls.min(), axis_qntls.max()])
