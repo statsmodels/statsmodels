@@ -13,7 +13,7 @@ import distributions
 from __init__ import test
 from . import version
 from info import __doc__
-from graphics.gofplots import qqplot, ProbPlot
+from graphics.gofplots import qqplot, qqline, ProbPlot
 from .graphics import api as graphics
 from .stats import api as stats
 
