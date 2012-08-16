@@ -70,8 +70,7 @@ def adjust_shape(dat, K):
         if np.shape(dat)[0] == K and np.shape(dat)[1] != K:
             dat = dat.T
         N = np.shape(dat)[0]  # ndim >1 so many obs many vars
-        assert np.shape(dat)[1] == K
-
+        #assert np.shape(dat)[1] == K
     dat = np.reshape(dat, (N, K))
     return dat
 

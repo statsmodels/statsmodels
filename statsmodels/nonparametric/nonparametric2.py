@@ -992,7 +992,7 @@ class Reg(_GenericKDE):
         self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
         self.N = np.shape(self.txdat)[0] 
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
-        self.est = dict(lc=self.g_lc, ll=self.g_ll)
+        self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         self._set_defaults(defaults)
         if not self.efficient:
             self.bw = self.compute_reg_bw(bw)
@@ -1003,17 +1003,23 @@ class Reg(_GenericKDE):
             else:
                 self.bw = self._compute_efficient_all(bw)
 
-    def __repr__(self):
-        """Provide something sane to print."""
-        repr = "Reg instance\n"
-        repr += "Number of variables: K = " + str(self.K) + "\n"
-        repr += "Number of samples:   N = " + str(self.N) + "\n"
-        repr += "Variable types:      " + self.var_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        repr += "Estimator type: " + self.reg_type + "\n"
-        return repr
+    def compute_reg_bw(self, bw):
+        if not isinstance(bw, basestring):
+            self._bw_method = "user-specified"
+            return np.asarray(bw)
+        else:
+            # The user specified a bandwidth selection
+            # method e.g. 'cv_ls'
+            self._bw_method = bw
+            res = self.bw_func[bw]
+            X = np.std(self.txdat, axis=0)
+            h0 = 1.06 * X * \
+                 self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
+        func = self.est[self.reg_type]
+        return optimize.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
+                      maxfun=1e3, disp=0)
 
-    def g_ll(self, bw, tydat, txdat, edat):
+    def _est_loc_linear(self, bw, tydat, txdat, edat):
         """
         Local linear estimator of g(x) in the regression
         y = g(x) + e
@@ -1079,7 +1085,7 @@ class Reg(_GenericKDE):
         mfx = mean_mfx[1::, :]
         return mean, mfx
 
-    def g_lc(self, bw, tydat, txdat, edat):
+    def _est_loc_constant(self, bw, tydat, txdat, edat):
         """
         Local constant estimator of g(x) in the regression
         y = g(x) + e
@@ -1170,6 +1176,13 @@ class Reg(_GenericKDE):
         for j in range(self.N):
             H[:, j] = tools.gpke(bw, tdat=self.txdat, edat=self.txdat[j,:],
                             var_type=self.var_type, tosum=False)
+        denom = np.sum(H, axis=1)
+        I = np.eye(self.N)
+        sig = np.dot(np.dot(self.tydat.T,(I - H).T), (I - H)) * self.tydat / float(self.N)
+        frac = (1 + np.trace(H)/float(self.N)) / (1 - (np.trace(H) +2)/float(self.N))
+        aic = np.log(sig) + frac
+
+
         
     def cv_loo(self, bw, func):
         """
@@ -1182,7 +1195,7 @@ class Reg(_GenericKDE):
             Vector of bandwidth values
         func: callable function
             Returns the estimator of g(x).
-            Can be either g_lc(local constant) or g_ll(local_linear)
+            Can be either _est_loc_constant(local constant) or _est_loc_linear(local_linear)
 
         Returns
         -------
@@ -1215,22 +1228,6 @@ class Reg(_GenericKDE):
             i += 1
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N
-
-    def compute_reg_bw(self, bw):
-        if not isinstance(bw, basestring):
-            self._bw_method = "user-specified"
-            return np.asarray(bw)
-        else:
-            # The user specified a bandwidth selection
-            # method e.g. 'cv_ls'
-            self._bw_method = bw
-            res = self.bw_func[bw]
-            X = np.std(self.txdat, axis=0)
-            h0 = 1.06 * X * \
-                 self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
-        func = self.est[self.reg_type]
-        return optimize.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
-                      maxfun=1e3, disp=0)
 
     def r_squared(self):
         """
@@ -1274,6 +1271,17 @@ class Reg(_GenericKDE):
             mfx[i, :] = mfx_c
         return mean, mfx
 
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Reg instance\n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: " + self._bw_method + "\n"
+        repr += "Estimator type: " + self.reg_type + "\n"
+        return repr
+
+
 class CensoredReg(Reg):
     """
     Nonparametric censored regression
@@ -1303,7 +1311,7 @@ class CensoredReg(Reg):
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
 
-    censor_var: Float
+    censor_val: Float
         Value at which the dependent variable is censored
         
     defaults: Instance of class SetDefaults
@@ -1321,7 +1329,7 @@ class CensoredReg(Reg):
     """
 
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
-                censor_var=0, defaults=SetDefaults()):
+                censor_val=0, defaults=SetDefaults()):
 
         self.var_type = var_type
         self.all_vars_type = var_type
@@ -1332,11 +1340,11 @@ class CensoredReg(Reg):
         self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
         self.N = np.shape(self.txdat)[0] 
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
-        self.est = dict(lc=self.g_lc, ll=self.g_ll)
+        self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         self._set_defaults(defaults)
-        self.censor_var = censor_var
-        if self.censor_var is not None:
-            self.censored(censor_var)
+        self.censor_val = censor_val
+        if self.censor_val is not None:
+            self.censored(censor_val)
         else:
             self.W_in = np.ones((self.N, 1))
 
@@ -1349,9 +1357,9 @@ class CensoredReg(Reg):
             else:
                 self.bw = self._compute_efficient_all(bw)
  
-    def censored(self, censor_var):
+    def censored(self, censor_val):
         # see pp. 341-344 in [1]
-        self.d = (self.tydat != censor_var) * 1.
+        self.d = (self.tydat != censor_val) * 1.
         ix = np.argsort(np.squeeze(self.tydat))
         self.tydat = np.squeeze(self.tydat[ix])
         self.tydat = tools.adjust_shape(self.tydat, 1)
@@ -1374,7 +1382,7 @@ class CensoredReg(Reg):
         repr += "Estimator type: " + self.reg_type + "\n"
         return repr
 
-    def g_ll(self, bw, tydat, txdat, edat, W):
+    def _est_loc_linear(self, bw, tydat, txdat, edat, W):
         """
         Local linear estimator of g(x) in the regression
         y = g(x) + e
@@ -1453,7 +1461,7 @@ class CensoredReg(Reg):
             Vector of bandwidth values
         func: callable function
             Returns the estimator of g(x).
-            Can be either g_lc(local constant) or g_ll(local_linear)
+            Can be either _est_loc_constant(local constant) or _est_loc_linear(local_linear)
 
         Returns
         -------
@@ -1557,53 +1565,70 @@ class TestRegCoefC(object):
         self.run()
 
     def run(self):
-        self.test_stat = self.compute_test_stat(self.tydat, self.txdat)
-        sig = self.compute_sig()
-        return sig
+        self.test_stat = self._compute_test_stat(self.tydat, self.txdat)
+        self.sig = self._compute_sig()
 
-    def compute_lambda(self, Y, X):
-        n = np.shape(Z)[0]
+    def _compute_test_stat(self, Y, X):
+        lam = self._compute_lambda(Y, X)
+        se_lam = self._compute_se_lambda(Y, X)
+        t = lam / float(se_lam)
+        return t
+
+    def _compute_lambda(self, Y, X):
+        n = np.shape(X)[0]
         Y = tools.adjust_shape(Y, 1)
         X = tools.adjust_shape(X, self.K)
-        b = self.gx(bw, Y, X, edat=X)[1]
+        b = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                        defaults = SetDefaults(efficient=False)).fit()[1]
+        #b = np.empty(shape=(n, self.K))
+        #for z in xrange(n):
+        #    mean_mfx = self.gx(self.bw, Y, X, edat=X[z, :])
+        #    mfx = np.squeeze(mean_mfx[1])
+        #    b[z, :] = mfx
+        
+
         b = b[:, self.test_vars]
+        b = np.reshape(b, (n, len(self.test_vars)))
+
         lam = np.sum(np.sum(((b / np.std(b)) ** 2), axis=1), axis=0) / float(n)
         return lam
 
-    def compute_se_lambda(self, Y, X):
-        n = np.size(Y)[0]
-        lam = np.empty(size=(self.nres, ))
+    def _compute_se_lambda(self, Y, X):
+        n = np.shape(Y)[0]
+        lam = np.empty(shape=(self.nres, ))
         for i in xrange(self.nres):
             ind = np.random.random_integers(0, n-1, size=(n,1))
             Y1 = Y[ind, 0]
-            X1 = X[ind, 1::]
-            lam[i] = self.compute_lambda(Y1, X1)
+            X1 = X[ind, 0::]
+            lam[i] = self._compute_lambda(Y1, X1)
         se_lambda = np.std(lam)
         return se_lambda
 
-    def compute_test_stat(self, Y, X):
-        lam = compute_lambda(Y, X)
-        se_lam = compute_se_lambda(Y, X)
-        t = lam / float(se_lambda)
-        return t
-
-    def compute_sig(self):
+    def _compute_sig(self):
         # Bootstrapping
-        t_dist = np.empty(size=(self.nboot, ))
+        t_dist = np.empty(shape=(self.nboot, ))
         Y = self.tydat
         X = copy.deepcopy(self.txdat)
-        X[:, test_vars] = np.mean(X[:, test_vars], axis=0)  # fix at mean
-        M = self.gx(self.bw, Y, X, edat=X)[0]  # restricted mean see p. 372
+        n = np.shape(Y)[0]
+
+        X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)  # fix at mean
+        M = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                defaults = SetDefaults(efficient=False)).fit()[0]  # restricted mean see p. 372
+        M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals ?
-        n = np.shape(e)[0]
         for i in xrange(self.nboot):
+            print "Bootstrap sample ", i
             ind = np.random.random_integers(0, n-1, size=(n,1))
-            e_boot = e[ind, :]
+            e_boot = e[ind, 0]
             Y_boot = M + e_boot
-            t_dist[i] = self.compute_test_stat(Y_boot, self.txdat)
+            t_dist[i] = self._compute_test_stat(Y_boot, self.txdat)
 
-        sig = ""
+        sig = "Not Significant"
+        print "Test statistic is", self.test_stat
+        print  "0.9 quantile is ", mquantiles(t_dist, 0.9)
+        print sorted(t_dist)
+
         if self.test_stat > mquantiles(t_dist, 0.9):
             sig = "*"
         if self.test_stat > mquantiles(t_dist, 0,95):
@@ -1613,10 +1638,8 @@ class TestRegCoefC(object):
         return sig
 
 class TestRegCoefD(TestRegCoefC):
-    def __init__(self):
-        pass
 
-    def compute_test_stat(self, Y, X):
+    def _compute_test_stat(self, Y, X):
         dom_x = np.unique(self.txdat[:, self.test_var])
         X1 = copy.deepcopy(X)
         X1[:, self.test_var] = 0
@@ -1625,15 +1648,32 @@ class TestRegCoefD(TestRegCoefC):
         for i in dom_x:
             X1[:, self.test_var] = i
             m1 = self.gx(bw, Y, X1, edat=X1)
-            I += m1 - m0
+            I += (m1 - m0) ** 2
         I = np.sum(I, axis=0)
 
-    def compute_sig(self):
+    def _compute_sig(self):
+        Y = self.tydat
+        X = self.txdat
         I_dist = np.empty((self.nboot,1))
         for i in xrange(self.nboot):
             ind = np.random.random_integers(0, n-1, size=(n,1))
-            X[:, self.test_var]= self.txdat[ind, self.test_var]
-            I_dist[i] = self.compute_test_stat(Y, X)
+            X1[:, self.test_var]= copy.deepcopy(X[ind, self.test_var])
+            I_dist[i] = self._compute_test_stat(Y, X1)
+        sig = "Not Significant"
+        print self.test_stat
+        print  mquantiles(t_dist, 0.9)
+        print  mquantiles(t_dist, 0.95)
+        print t_dist
+
+        if self.test_stat > mquantiles(I_dist, 0.9):
+            sig = "*"
+        if self.test_stat > mquantiles(I_dist, 0,95):
+            sig = "**"
+        if self.test_stat > mquantiles(I_dist, 0.99):
+            sig = "***"
+        return sig
+
+
             
 
 class TestFForm(object):
