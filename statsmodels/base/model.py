@@ -9,8 +9,12 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.sandbox.regression.numdiff import approx_fprime1
 
 import statsmodels.discrete.l1_slsqp as l1_slsqp
-import statsmodels.discrete.l1_cvxopt as l1_cvxopt
 import pdb  # pdb.set_trace
+try:
+    import cvxopt
+    have_cvxopt = True
+except ImportError:
+    have_cvxopt = False
 
 
 class Model(object):
@@ -205,8 +209,9 @@ class LikelihoodModel(Model):
                     Initial direction set.
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1', \
-                'l1_cvxopt_cp']
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1']
+        if have_cvxopt:
+            methods.append('l1_cvxopt_cp')
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
@@ -218,7 +223,12 @@ class LikelihoodModel(Model):
                                  "be specified")
 
         if method.lower() not in methods:
-            raise ValueError("Unknown fit method %s" % method)
+            if method == 'l1_cvxopt_cp' and not have_cvxopt:
+                message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
+                could not be imported"""
+            else:
+                message = "Unknown fit method %s" % method
+            raise ValueError(message)
         method = method.lower()
 
         # TODO: separate args from nonarg taking score and hessian, ie.,
@@ -239,9 +249,11 @@ class LikelihoodModel(Model):
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
-            'l1': l1_slsqp._fit_l1_slsqp,
-            'l1_cvxopt_cp': l1_cvxopt._fit_l1_cvxopt_cp
+            'l1': l1_slsqp._fit_l1_slsqp
         }
+        if have_cvxopt:
+            from statsmodels.discrete.l1_cvxopt import _fit_l1_cvxopt_cp
+            fit_funcs['l1_cvxopt_cp'] = _fit_l1_cvxopt_cp
 
         if method == 'newton':
             score = lambda params: self.score(params)
