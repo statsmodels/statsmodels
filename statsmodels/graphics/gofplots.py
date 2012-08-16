@@ -144,7 +144,7 @@ class ProbPlot(object):
             self.sample_quantiles = fit_quantiles
 
     def ppplot(self, ax=None, line=False):
-        '''
+        """
         P-P plot of the percentiles (probabilities) of x versus the
         probabilities (percetiles) of a distribution.
 
@@ -170,8 +170,8 @@ class ProbPlot(object):
         -------
         fig : Matplotlib figure instance
             If `ax` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
-        '''
+            `ax` is connected.
+        """
         fig, ax = _do_plot(self.theoretical_percentiles,
                            self.sample_percentiles,
                            self.dist,
@@ -183,7 +183,7 @@ class ProbPlot(object):
         return fig
 
     def qqplot(self, ax=None, line=False):
-        '''
+        """
         Q-Q plot of the quantiles of x versus the quantiles/ppf of a
         distribution.
 
@@ -209,8 +209,8 @@ class ProbPlot(object):
         -------
         fig : Matplotlib figure instance
             If `ax` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
-        '''
+            `ax` is connected.
+        """
         fig, ax = _do_plot(self.theoretical_quantiles,
                            self.sample_quantiles,
                            self.dist,
@@ -222,7 +222,7 @@ class ProbPlot(object):
         return fig
 
     def probplot(self, ax=None, line=False):
-        '''
+        """
         Probability plot of the unscaled quantiles of x versus the
         probabilities of a distibution (not to be confused with a P-P plot).
 
@@ -251,8 +251,8 @@ class ProbPlot(object):
         -------
         fig : Matplotlib figure instance
             If `ax` is None, the created figure.  Otherwise the figure to which
-        `ax` is connected.
-        '''
+            `ax` is connected.
+        """
         fig, ax = _do_plot(self.theoretical_quantiles,
                            self.raw_sample_quantiles,
                            self.dist,
@@ -265,10 +265,10 @@ class ProbPlot(object):
         return fig
 
 def _do_plot(x, y, dist, ax=None, line=False):
-    '''
+    """
     Boiler plate plotting function for the `ppplot`, `qqplot`, and
     `probplot` methods of the `ProbPlot` class
-    '''
+    """
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
     ax.plot(x, y, 'bo')
@@ -464,10 +464,10 @@ def plotting_pos(nobs, a):
     return (np.arange(1.,nobs+1) - a)/(nobs- 2*a + 1)
 
 def _fmt_probplot_axis(ax, dist, nobs):
-    '''
+    """
     Formats a theoretical quantile axis to display the corresponding
     probabilities on the quantiles' scale.
-    '''
+    """
     if nobs < 50:
         axis_probs = np.array([1,2,5,10,20,30,40,50,60,
                                70,80,90,95,98,99,])/100.0
