@@ -13,8 +13,7 @@ class prob_plot:
     def __init__(self, data, dist=stats.norm, fit=False,
                  distargs=(), a=0, loc=0, scale=1):
         """
-        qqplot of the quantiles of x versus the quantiles/ppf of a
-            distribution.
+        Class for convenient construction of Q-Q, P-P, and probability plots.
 
         Can take arguments specifying the parameters for dist or fit them
         automatically. (See fit under kwargs.)
@@ -44,7 +43,22 @@ class prob_plot:
             from the standardized data, after subtracting the fitted loc
             and dividing by the fitted scale.
 
-            Notes
+        Plotting Methods
+        ----------------
+        All plotting methods listed below have the same call signatures which
+        accept `line` and `ax` keyword arguments. See individual docstrings for
+        more info.
+
+        ppplot : Probability-Probability plot
+            Compares the sample and theoretical probabilities (percentiles).
+        qqplot : Quantile-Quantile plot
+            Compares the sample and theoretical quantiles
+        probplot : Probability plot
+            Same as a Q-Q plot, however probabilities are shown in the scale of
+            the theoretical distribution (x-axis) and the y-axis contains
+            unscaled quantiles of the sample data.
+
+        Notes
         -----
         Depends on matplotlib. If `fit` is True then the parameters are fit using
         the distribution's fit() method.
@@ -81,25 +95,39 @@ class prob_plot:
 
         self.sample_quantiles = np.array(data, copy=True)
         self.sample_quantiles.sort()
-
+        self.raw_sample_quantiles = self.sample_quantiles.copy()
         fit_quantiles = (self.sample_quantiles - fit_params[-2])/fit_params[-1]
         self.sample_percentiles = self.dist.cdf(fit_quantiles)
         if fit and loc != 0 and scale != 1:
             self.sample_quantiles = fit_quantiles
 
     def ppplot(self, ax=None, line=False):
-        fig, ax = utils.create_mpl_ax(ax)
-        ax.set_xmargin(0.02)
-        ax.plot(self.theoretical_percentiles, self.sample_percentiles, 'bo')
-        if line:
-            if line not in ['r','45','s']:
-                msg = "%s option for line not understood for PP plots" % line
-                raise ValueError(msg)
+        '''
+        P-P plot of the percentiles (probabilities) of x versus the
+        probabilities (percetiles) of a distribution.
 
-            qqline(ax, line,
-                   self.theoretical_percentiles,
-                   self.sample_percentiles,
-                   self.dist)
+        Parameters
+        ----------
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure being
+            created.
+        line : str {'45', 's', 'r', q'} or None
+            Options for the reference line to which the data is compared.:
+
+            - '45' - 45-degree line
+            - 's' - standardized line, the expected order statistics are scaled
+              by the standard deviation of the given sample and have the mean
+              added to them
+            - 'r' - A regression line is fit
+            - 'q' - A line is fit through the quartiles.
+            - None - by default no reference line is added to the plot.
+            - If True a reference line is drawn on the graph. The default is to
+              fit a line via OLS regression.
+        '''
+        fig, ax = _do_plot(self.theoretical_percentiles,
+                           self.sample_percentiles,
+                           self.dist,
+                           ax=ax, line=line)
 
         ax.set_ylabel("Sample Probabilities")
         ax.set_xlabel("Theoretical Probabilities")
@@ -107,18 +135,31 @@ class prob_plot:
         return fig
 
     def qqplot(self, ax=None, line=False):
-        fig, ax = utils.create_mpl_ax(ax)
-        ax.set_xmargin(0.02)
-        ax.plot(self.theoretical_quantiles, self.sample_quantiles, 'bo')
-        if line:
-            if line not in ['r','q','45','s']:
-                msg = "%s option for line not understood for QQ plots" % line
-                raise ValueError(msg)
+        '''
+        Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution.
 
-            qqline(ax, line,
-                   self.theoretical_quantiles,
-                   self.sample_quantiles,
-                   self.dist)
+        Parameters
+        ----------
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure being
+            created.
+        line : str {'45', 's', 'r', q'} or None
+            Options for the reference line to which the data is compared.:
+
+            - '45' - 45-degree line
+            - 's' - standardized line, the expected order statistics are scaled
+              by the standard deviation of the given sample and have the mean
+              added to them
+            - 'r' - A regression line is fit
+            - 'q' - A line is fit through the quartiles.
+            - None - by default no reference line is added to the plot.
+            - If True a reference line is drawn on the graph. The default is to
+              fit a line via OLS regression.
+        '''
+        fig, ax = _do_plot(self.theoretical_quantiles,
+                           self.sample_quantiles,
+                           self.dist,
+                           ax=ax, line=line)
 
         ax.set_ylabel("Sample Quantiles")
         ax.set_xlabel("Theoretical Quantiles")
@@ -126,11 +167,57 @@ class prob_plot:
         return fig
 
     def probplot(self, ax=None, line=False):
-        fig = self.qqplot(ax=ax, line=line)
-        _fmt_probplot_axis(ax, self.dist, self.nobs)
+        '''
+        Probability plot of the unscaled quantiles of x versus the
+        probabilities of a distibution (not to be confused with a P-P plot).
+
+        The x-axis is scaled linearly with the quantiles, but the probabilities
+        are used to label the axis.
+
+        Parameters
+        ----------
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure being
+            created.
+        line : str {'45', 's', 'r', q'} or None
+            Options for the reference line to which the data is compared.:
+
+            - '45' - 45-degree line
+            - 's' - standardized line, the expected order statistics are scaled
+              by the standard deviation of the given sample and have the mean
+              added to them
+            - 'r' - A regression line is fit
+            - 'q' - A line is fit through the quartiles.
+            - None - by default no reference line is added to the plot.
+            - If True a reference line is drawn on the graph. The default is to
+              fit a line via OLS regression.
+        '''
+        fig, ax = _do_plot(self.theoretical_quantiles,
+                           self.raw_sample_quantiles,
+                           self.dist,
+                           ax=ax, line=line)
+
+        ax.set_ylabel("Sample Quantiles")
         ax.set_xlabel('Non-exceedance Probability (%)')
+        _fmt_probplot_axis(ax, self.dist, self.nobs)
+
         return fig
 
+def _do_plot(x, y, dist, ax=None, line=False):
+    '''
+    Bioler plate plotting function for the `ppplot`, `qqplot`, and `probplot` methods
+    of the `prob_plot` class
+    '''
+    fig, ax = utils.create_mpl_ax(ax)
+    ax.set_xmargin(0.02)
+    ax.plot(x, y, 'bo')
+    if line:
+        if line not in ['r','q','45','s']:
+            msg = "%s option for line not understood" % line
+            raise ValueError(msg)
+
+        qqline(ax, line, x, y, dist)
+    return fig, ax
 
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
            line=False, prob=False, ax=None):
@@ -176,9 +263,6 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         - None - by default no reference line is added to the plot.
         - If True a reference line is drawn on the graph. The default is to
           fit a line via OLS regression.
-    prob : boolean
-        If prob is false, theoretical quantiles are returned. If prob is True,
-        then no-exceedance probabilities are computed using dist.
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
