@@ -24,19 +24,18 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
 
     Parameters
     ----------
-    Call structure is similar to e.g. 
-        _fit_mle_newton().
+    All the usual parameters from LikelhoodModel.fit
 
-    Special Parameters
+    Special kwargs
     ------------------
-    alpha : Float or array like.
-        The regularization parameter.  If a float, then all covariates (even
-        the constant) are regularized with alpha.  If array-like, then we use
-        np.array(alpha).ravel(order='F').  
-
-    TODO: alpha is currently passed through by calling function and reshaped
-        here.  This is not consistent with the previous practice of having
-        e.g. MNLogit reshape passed parameters.
+    alpha : non-negative scalar or numpy array (same size as parameters)
+        The weight multiplying the l1 penalty term
+    trim_params : boolean
+        Set small parameters to zero
+    trim_tol : float
+        Set parameters whose absolute value < trim_tol to zero
+    acc : float (default 1e-6)
+        Requested accuracy
     """
 
     if callback:
@@ -52,6 +51,7 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
     x0 = np.append(start_params, np.fabs(start_params))
     # alpha is the regularization parameter
     alpha = np.array(kwargs['alpha']).ravel(order='F')
+    assert alpha.min() >= 0
     # Convert display parameters to scipy.optimize form
     if disp or retall:
         if disp:

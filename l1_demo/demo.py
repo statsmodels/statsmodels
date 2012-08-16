@@ -1,3 +1,4 @@
+from optparse import OptionParser
 import statsmodels.api as sm
 import scipy as sp
 from scipy import linalg
@@ -6,45 +7,62 @@ import pdb
 # pdb.set_trace()
 
 
+docstr = """
+Demonstrates l1 regularization for MNLogit model.  Runs either from the 
+    command line or by importing demo and then calling demo.run_demo
+
+Example
+-------
+$ python demo.py --get_l1_slsqp_results
+
+The Story
+---------
+The maximum likelihood (ML) solution works well when the number of data 
+points is large and the noise is small.  When the ML solution starts 
+"breaking", the regularized solution should do better.
+
+The l1 Solvers
+--------------
+The solvers are slower than standard Newton, and sometimes have 
+    convergence issues Nonetheless, the final solution makes sense and 
+    is often better than the ML solution.
+The standard l1 solver is fmin_slsqp and is included with scipy.  It 
+    sometimes has trouble verifying convergence when the data size is 
+    large.
+The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be 
+    installed separately.  It works well even for larger data sizes.
+"""
 
 def main():
     """
-    Demonstrates l1 regularization for MNLogit model.
-
-    How to use this demo
-    --------------------
-    Adjust the "Commonly adjusted params" at the top, then run with 
-        $ python demo.py
-
-    The Story
-    ---------
-    The maximum likelihood (ML) solution works well when the number of data 
-    points is large and the noise is small.  When the ML solution starts 
-    "breaking", the regularized solution should do better.
-
-    The l1 Solvers
-    --------------
-    The solvers are slower than standard Newton, and sometimes have 
-        convergence issues Nonetheless, the final solution makes sense and 
-        is often better than the ML solution.
-    The standard l1 solver is fmin_slsqp and is included with scipy.  It 
-        sometimes has trouble verifying convergence when the data size is 
-        large.
-    The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be 
-        installed separately.  It works well even for larger data sizes.
+    Provides a CLI for the demo.
     """
-    ##########################################################################
-    #### Commonly adjusted params
-    ##########################################################################
-    N = 500 # Number of data points
-    num_targets = 3  # Targets are the dependent variables
-    num_nonconst_covariates = 10 # For every target
-    num_zero_params = 8 # For every target
-    print_summaries = False
-    get_l1_slsqp_results = True  
-    get_l1_cvxopt_results = True  
-    save_results = False
-    load_old_results = False
+    usage = "usage: %prog [options]" 
+    usage += '\n'+docstr
+    parser = OptionParser(usage=usage)
+    parser.add_option("-N", "--num_samples", help="Number of data points to generate [default: %default]", dest='N', action='store', type='int', default=500)
+    parser.add_option("-m", "--mode", help="Either logit or mnogit.  [default: %default]", dest='mode', default='mnlogit')
+    parser.add_option("-J", "--num_targets", help="Number of choices for the endogenous response [default: %default]", dest='num_targets', action='store', type='int', default=3)
+    parser.add_option("--num_nonconst_covariates", help="Number of covariates that are not constant (a constant will be preappended) [default: %default]", dest='num_nonconst_covariates', action='store', type='int', default=10)
+    parser.add_option("--num_zero_params", help="Number of parameters equal to zero for every target.  [default: %default]", dest='num_zero_params', action='store', type='int', default=8)
+    parser.add_option("-s", "--print_summaries", help="Print the full fit summary. [default: %default] ", action="store_true",dest='print_summaries', default=False)
+    parser.add_option("--get_l1_slsqp_results", help="Do an l1 fit using slsqp. [default: %default] ", action="store_true",dest='get_l1_slsqp_results', default=False)
+    parser.add_option("--get_l1_cvxopt_results", help="Do an l1 fit using cvxopt. [default: %default] ", action="store_true",dest='get_l1_cvxopt_results', default=False)
+    parser.add_option("--save_arrays", help="Save exog/endog/true_params to disk for future use.  [default: %default] ", action="store_true",dest='save_arrays', default=False)
+    parser.add_option("--load_old_arrays", help="Load exog/endog/true_params arrays from disk.  [default: %default] ", action="store_true",dest='load_old_arrays', default=False)
+        
+    (options, args) = parser.parse_args()
+
+    run_func = {'mnlogit': run_demo_mnlogit}
+    mode = options.mode
+    options.__dict__.pop('mode')
+    run_func[mode](**options.__dict__)
+
+
+def run_demo_mnlogit(N=500, num_targets=3, num_nonconst_covariates=10, 
+        num_zero_params=8, print_summaries=False, get_l1_slsqp_results=False, 
+        get_l1_cvxopt_results=False, save_arrays=False, load_old_arrays=False
+        ):
     # The regularization parameter
     # Here we scale it with N for simplicity.  In practice, you should
     # use cross validation to pick alpha
@@ -57,26 +75,31 @@ def main():
     # matrix (during the l1_cvxopt_cp fit)
     cor_length = 2 
     noise_level = 0.2  # As a fraction of the "signal"
-    ##########################################################################
 
     #### Make the arrays
-    exog = get_exog(N, num_nonconst_covariates, cor_length) 
+    exog = get_multinomial_exog(N, num_nonconst_covariates, cor_length) 
     exog = sm.add_constant(exog, prepend=True)
     true_params = sp.rand(num_nonconst_covariates+1, num_targets-1)
     if num_zero_params:
         true_params[-num_zero_params:, :] = 0
-    endog = get_multinomial_endog(num_targets, true_params, exog, noise_level)
-    if save_results:
-        sp.save('endog.npy', endog)
-        sp.save('exog.npy', exog)
-        sp.save('true_params.npy', true_params)
-    if load_old_results:
-        endog = sp.load('endog.npy')
-        exog = sp.load('exog.npy')
-        true_params = sp.load('true_params.npy')
+    endog = get_multinomial_endog(true_params, exog, noise_level)
 
+    endog, exog, true_params = save_andor_load_arrays(
+            endog, exog, true_params, save_arrays, load_old_arrays)
+
+    result_str = get_results(endog, exog, true_params, alpha, 
+            get_l1_slsqp_results, get_l1_cvxopt_results, print_summaries)
+    print result_str
+
+
+def get_results(endog, exog, true_params, alpha, get_l1_slsqp_results, 
+        get_l1_cvxopt_results, print_summaries):
+    """
+    Runs the solvers using the specified settings.  
+    Works the same for any l1 penalized likelihood model.
+    """
     #### Train the models
-    print_str = '\n\n=========== Error Summary ============'
+    print_str = '\n\n=========== Short Error Summary ============'
     model = sm.MNLogit(endog, exog)
     # Get ML results
     results_ML = model.fit(method='newton')
@@ -97,7 +120,7 @@ def main():
         RMSE_l1_cvxopt_cp = get_RMSE(results_l1_cvxopt_cp, true_params)
         print_str += '\n The l1_cvxopt_cp fit RMS error = %.4f'%RMSE_l1_cvxopt_cp
 
-    #### Print results
+    #### Format summaries
     print_str += '\n\n\n============== Parameters ================='
     print_str += "\n\nTrue parameters: \n%s"%true_params
     if print_summaries:
@@ -112,7 +135,21 @@ def main():
             print_str += '\n\nThe l1_slsqp params are \n%s'%results_l1_slsqp.params
         if get_l1_cvxopt_results:
             print_str += '\n\nThe l1_cvxopt_cp params are \n%s'%results_l1_cvxopt_cp.params
-    print print_str
+    # Return
+    return print_str
+
+
+def save_andor_load_arrays(
+        endog, exog, true_params, save_arrays, load_old_arrays):
+    if save_arrays:
+        sp.save('endog.npy', endog)
+        sp.save('exog.npy', exog)
+        sp.save('true_params.npy', true_params)
+    if load_old_arrays:
+        endog = sp.load('endog.npy')
+        exog = sp.load('exog.npy')
+        true_params = sp.load('true_params.npy')
+    return endog, exog, true_params
 
 
 def get_RMSE(results, true_params):
@@ -122,6 +159,7 @@ def get_RMSE(results, true_params):
     raw_RMSE = sp.sqrt(((results.params - true_params)**2).sum()) 
     param_norm = sp.sqrt((true_params**2).sum())
     return raw_RMSE / param_norm
+
 
 def get_multinomial_endog(true_params, exog, noise_level):
     """
@@ -144,7 +182,8 @@ def get_multinomial_endog(true_params, exog, noise_level):
 
     return endog
 
-def get_exog(N, num_nonconst_covariates, cor_length):
+
+def get_multinomial_exog(N, num_nonconst_covariates, cor_length):
     """
     Returns an exog array with correlations determined by cor_length.
     The covariance matrix of exog will have (asymptotically, as 
