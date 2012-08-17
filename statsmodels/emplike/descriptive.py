@@ -72,12 +72,12 @@ class _OptFuncts():
     np.dot(p, (est_vect))=0 where p is the weight on each
     observation as a 1 x n array and est_vect is n x k.  Then _modif_Newton is
     called to determine the optimal p.  In the presence of nuisance parameters,
-    these are optimized over to also determine the optimal values for the nuisance
-    parameter.
+    these are optimized over to also determine the optimal values for the
+    nuisance parameter.
 
     Any method starting with _ci_limits calculates the log likelihood
-    ratio for a specific value of a parameter and then subtracts a pre-specified
-    critical value.  This is solved so that llr - crit = 0.
+    ratio for a specific value of a parameter and then subtracts a
+    pre-specified critical value.  This is solved so that llr - crit = 0.
 
     """
 
@@ -482,8 +482,8 @@ class _OptFuncts():
 
 class DescStatUV(_OptFuncts):
     """
-    A class to compute confidence intervals and hypothesis tests involving mean,
-    variance, kurtosis and skewness of a univariate random variable.
+    A class to compute confidence intervals and hypothesis tests involving
+    mean, variance, kurtosis and skewness of a univariate random variable.
 
     Parameters
     ----------
@@ -502,7 +502,6 @@ class DescStatUV(_OptFuncts):
     def __init__(self, endog):
         self.endog = np.squeeze(endog)
         self.nobs = float(endog.shape[0])
-
 
     def test_mean(self, mu0, return_weights=False):
         """
@@ -538,8 +537,7 @@ class DescStatUV(_OptFuncts):
             return llr, chi2.sf(llr, 1)
 
     def ci_mean(self, sig=.05, method='gamma', epsilon=10 ** -8,
-                 gamma_low=-10 ** 10, gamma_high=10 ** 10, \
-                 tol=10 ** -8):
+                 gamma_low=-10 ** 10, gamma_high=10 ** 10):
         """
         Returns the confidence interval for the mean.
 
@@ -551,8 +549,8 @@ class DescStatUV(_OptFuncts):
         Optional
         --------
 
-        method: Root finding method,  Can be 'nested-brent' ' gamma'.
-            or 'bisect.' Default is 'gamma'
+        method: Root finding method,  Can be 'nested-brent' or
+        ' gamma'.  Default is 'gamma'
 
             'gamma' Tries to solve for the gamma parameter in the
             Lagrangian (see Owen pg 22) and then determine the weights.
@@ -560,9 +558,6 @@ class DescStatUV(_OptFuncts):
             'nested brent' uses brents method to find the confidence
             intervals but must maximize the likelihhod ratio on every
             iteration.
-
-            'bisect' is similar to the nested-brent but instead it
-            is a brent nested in a bisection algorithm.
 
             gamma is much faster.  If the optimizations does not,
             converge, try expanding the gamma_high and gamma_low
@@ -586,22 +581,16 @@ class DescStatUV(_OptFuncts):
             value of the data.  If data is very small in absolute value
             (<10 ``**`` -6) consider shrinking epsilon
 
-            When using 'gamma' amount to decrease (increase) the
+            When using 'gamma', amount to decrease (increase) the
             minimum (maximum) by to start the search for gamma.
             If fucntion returns f(a) and f(b) must have differnt signs,
-            consider lowering epsilon.
+            consider lowering epsilon.  Default=10``**``-6
 
-            Default=10``**``-6
-
-        tol: float
-            Tolerance for the likelihood ratio in the bisect method.
-            Default=10``**``-6
 
         Returns
-        ------
-
+        -------
         Interval: tuple
-            Lower and Upper confidence limit
+            Confidence interval
         """
         endog = self.endog
         sig = 1 - sig
@@ -637,22 +626,19 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-
         sig2_0: float
             Hypothesized value to be tested
 
         Optional
         --------
-
         return_weights: bool
             If True, returns the weights that maximize the
-            likelihood of observing sig2_0. Default= False.
+            likelihood of observing sig2_0. Default is False
 
         Returns
         --------
-
         test_results: tuple
-            The  log-likelihood ratio and the p_value  of `sig2_0`
+            The  log-likelihood ratio and the p_value  of sig2_0
 
         Example
         -------
@@ -677,20 +663,17 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-
         lower_bound: float
             The minimum value the lower confidence interval can
-            take on. The p-value from test_var(lower_l) must be lower
+            take. The p-value from test_var(lower_bound) must be lower
             than 1 - significance level. Default is calibrated at the .01
-            significance level, asusming normality.
-
+            significance level, assuming normality.
 
         upper_bound: float
             The maximum value the upper confidence interval
-            can take. The p-value from test_var(upper_h) must be lower
+            can take. The p-value from test_var(upper_bound) must be lower
             than 1 - significance level.  Default is calibrated at the .01
-            significance level, asusming normality.
-
+            significance level, assuming normality.
 
         sig: float
             The significance level for the conficence interval.
@@ -698,15 +681,13 @@ class DescStatUV(_OptFuncts):
 
         Returns
         --------
-
         Interval: tuple
-            Lower and Upper confidence limit
-
+            Confidence interval
 
         Example
         -------
         random_numbers = np.random.standard_normal(100)
-        el_analysis = el.DescStat(random_numbers)
+        el_analysis = emplike.DescStat(random_numbers)
         # Initialize El
         el_analysis.ci_var()
         >>>f(a) and f(b) must have different signs
@@ -716,7 +697,6 @@ class DescStatUV(_OptFuncts):
 
         Troubleshooting Tips
         --------------------
-
         If the function returns the error f(a) and f(b) must have
         different signs, consider lowering lower_bound and raising
         upper_bound.
@@ -746,7 +726,6 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-
         mu_l: float
             Lowest value of the mean to plot
 
@@ -767,10 +746,9 @@ class DescStatUV(_OptFuncts):
 
         Optional
         --------
-
-        levs list
+        levs: list
             At Which values of significance the contour lines will be drawn.
-            Default: [.2, .1, .05, .01, .001]
+            Default is [.2, .1, .05, .01, .001]
         """
         fig, ax = utils.create_mpl_ax()
         ax.set_ylabel('Variance')
@@ -785,10 +763,6 @@ class DescStatUV(_OptFuncts):
         z = np.asarray(z).reshape(len(var_vect), len(mu_vect))
         ax.contour(mu_vect, var_vect, z, levels=levs)
         return fig
-
-    ## TODO: Use gradient and Hessian to optimize over nuisance params
-    ## TODO: Use non-nested optimization to optimize over nuisance
-    ## parameters.  See Owen pgs 234- 241
 
     def test_skew(self, skew0, nuis0=None, mu_min=None,
                      mu_max=None, var_min=None, var_max=None,
@@ -807,7 +781,7 @@ class DescStatUV(_OptFuncts):
         mu_min, mu_max, var_min, var_max: float
             Minimum and maximum values
             of the nuisance parameters to be optimized over.  If None,
-            the function computes the 95% confidence interval for
+            the function computes the 95% EL confidence interval for
             the mean and variance and uses the resulting values.
 
         return_weights: bool
@@ -817,7 +791,7 @@ class DescStatUV(_OptFuncts):
         Returns
         --------
         test_results: tuple
-            The log-likelihood ratio and p_value  of `skew0`
+            The log-likelihood ratio and p_value  of skew0
         """
         self.skew0 = skew0
         if nuis0 is not None:
@@ -871,7 +845,6 @@ class DescStatUV(_OptFuncts):
 
         Optional
         --------
-
         mu_min, mu_max, var_min, var_max: float
             Minimum and maximum values
             of the nuisance parameters to be optimized over.  If None,
