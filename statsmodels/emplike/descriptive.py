@@ -430,10 +430,7 @@ class _OptFuncts():
             The difference between the log likelihood ratio at skew0 and a
             pre-specified value.
         """
-        return self.test_skew(skew, var_min=self.var_l,
-                                 var_max=self.var_u,
-                                 mu_min=self.mu_l,
-                                 mu_max=self.mu_u)[0] - self.r0
+        return self.test_skew(skew)[0] - self.r0
 
     def _ci_limits_kurt(self, kurt):
         """
@@ -448,10 +445,7 @@ class _OptFuncts():
             The difference between the log likelihood ratio at kurt and a
             pre-specified value.
         """
-        return self.test_kurt(kurt, var_min=self.var_l,
-                                 var_max=self.var_u,
-                                 mu_min=self.mu_l,
-                                 mu_max=self.mu_u)[0] - self.r0
+        return self.test_kurt(kurt)[0] - self.r0
 
     def _opt_correl(self, nuis_params, corr0, endog, nobs, x0, weights0):
         """
@@ -479,6 +473,8 @@ class _OptFuncts():
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
+    def _ci_limits_corr(self, corr):
+        return self.test_corr(corr)[0] - self.r0
 
 class DescStatUV(_OptFuncts):
     """
@@ -764,9 +760,7 @@ class DescStatUV(_OptFuncts):
         ax.contour(mu_vect, var_vect, z, levels=levs)
         return fig
 
-    def test_skew(self, skew0, nuis0=None, mu_min=None,
-                     mu_max=None, var_min=None, var_max=None,
-                     return_weights=False):
+    def test_skew(self, skew0, nuis0=None, return_weights=False):
         """
         Returns  -2 ``*`` log_likelihood and p_value for the hypothesized
         skewness.
@@ -799,40 +793,15 @@ class DescStatUV(_OptFuncts):
         else:
             start_nuisance = np.array([self.endog.mean(),
                                        self.endog.var()])
-        if mu_min is not None:
-            mu_lb = mu_min
-        else:
-            mu_lb = self.ci_mean()[0]
 
-        if mu_max is not None:
-            mu_ub = mu_max
-        else:
-            mu_ub = self.ci_mean()[1]
-
-        if var_min is None or var_max is None:
-            var_ci = self.ci_var()
-
-        if var_min is not None:
-            var_lb = var_min
-        else:
-            var_lb = var_ci[0]
-
-        if var_max is not None:
-            var_ub = var_max
-        else:
-            var_ub = var_ci[1]
-
-        llr = optimize.fmin_l_bfgs_b(self._opt_skew, start_nuisance,
-                                     approx_grad=1,
-                                     bounds=[(mu_lb, mu_ub),
-                                              (var_lb, var_ub)])[1]
+        llr = optimize.fmin_powell(self._opt_skew, start_nuisance,
+                                     full_output=1, disp=0)[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
             return llr, p_val,  self.new_weights.T
         return llr, p_val
 
-    def test_kurt(self, kurt0, nuis0=None, mu_min=None,
-                     mu_max=None, var_min=None, var_max=None,
+    def test_kurt(self, kurt0, nuis0=None,
                      return_weights=False):
         """
         Returns -2 ``*`` log_likelihood and the p_value for the hypothesized
@@ -857,7 +826,6 @@ class DescStatUV(_OptFuncts):
 
         Returns
         --------
-
         test_results: tuple
             The log-likelihood ratio and p_value of `kurt0`
         """
@@ -867,33 +835,9 @@ class DescStatUV(_OptFuncts):
         else:
             start_nuisance = np.array([self.endog.mean(),
                                        self.endog.var()])
-        if mu_min is not None:
-            mu_lb = mu_min
-        else:
-            mu_lb = self.ci_mean()[0]
 
-        if mu_max is not None:
-            mu_ub = mu_max
-        else:
-            mu_ub = self.ci_mean()[1]
-
-        if var_min is None or var_max is None:
-            var_ci = self.ci_var()
-
-        if var_min is not None:
-            var_lb = var_min
-        else:
-            var_lb = var_ci[0]
-
-        if var_max is not None:
-            var_ub = var_max
-        else:
-            var_ub = var_ci[1]
-
-        llr = optimize.fmin_l_bfgs_b(self._opt_kurt, start_nuisance,
-                                     approx_grad=1,
-                                     bounds=[(mu_lb, mu_ub),
-                                              (var_lb, var_ub)])[1]
+        llr = optimize.fmin_powell(self._opt_kurt, start_nuisance,
+                                     full_output=1, disp=0)[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
             return  llr, p_val, self.new_weights.T
@@ -971,8 +915,7 @@ class DescStatUV(_OptFuncts):
             return llr, p_val, self.new_weights.T
         return llr, p_val
 
-    def ci_skew(self, sig=.05, upper_bound=None, lower_bound=None,
-                var_min=None, var_max=None, mu_min=None, mu_max=None):
+    def ci_skew(self, sig=.05, upper_bound=None, lower_bound=None):
         """
         Returns the confidence interval for skewness.
 
@@ -1029,35 +972,12 @@ class DescStatUV(_OptFuncts):
             2.5 * ((6. * nobs * (nobs - 1.)) / \
               ((nobs - 2.) * (nobs + 1.) * \
                (nobs + 3.))) ** .5
-        # Need to calculate variance and mu limits here to avoid
-        # recalculating at every iteration in the maximization.
-        if (var_max is None) or (var_min is None):
-            var_lims = self.ci_var(sig=sig)
-        if (mu_max is None) or (mu_max is None):
-            mu_lims = self.ci_mean(sig=sig)
-        if var_min is not None:
-            self.var_l = var_min
-        else:
-            self.var_l = var_lims[0]
-        if var_max is not None:
-            self.var_u = var_max
-        else:
-            self.var_u = var_lims[1]
-        if mu_min is not None:
-            self.mu_l = mu_min
-        else:
-            self.mu_l = mu_lims[0]
-        if mu_max is not None:
-            self.mu_u = mu_max
-        else:
-            self.mu_u = mu_lims[1]
         self.r0 = chi2.ppf(1 - sig, 1)
         ll = optimize.brentq(self._ci_limits_skew, ll, skew(endog))
         ul = optimize.brentq(self._ci_limits_skew, skew(endog), ul)
         return   ll, ul
 
-    def ci_kurt(self, sig=.05, upper_bound=None, lower_bound=None,
-                var_min=None, var_max=None, mu_min=None, mu_max=None):
+    def ci_kurt(self, sig=.05, upper_bound=None, lower_bound=None):
         """
         Returns the confidence interval for kurtosis.
 
@@ -1118,28 +1038,6 @@ class DescStatUV(_OptFuncts):
                (nobs + 3.))) ** .5) * \
                (((nobs ** 2.) - 1.) / ((nobs - 3.) *\
                  (nobs + 5.))) ** .5)
-        # Need to calculate variance and mu limits here to avoid
-        # recalculating at every iteration in the maximization.
-        if (var_max is None) or (var_min is None):
-            var_lims = self.ci_var(sig=sig)
-        if (mu_max is None) or (mu_min is None):
-            mu_lims = self.ci_mean(sig=sig)
-        if var_min is not None:
-            self.var_l = var_min
-        else:
-            self.var_l = var_lims[0]
-        if var_max is not None:
-            self.var_u = var_max
-        else:
-            self.var_u = var_lims[1]
-        if mu_min is not None:
-            self.mu_l = mu_min
-        else:
-            self.mu_l = mu_lims[0]
-        if mu_max is not None:
-            self.mu_u = mu_max
-        else:
-            self.mu_u = mu_lims[1]
         self.r0 = chi2.ppf(1 - sig, 1)
         ll = optimize.brentq(self._ci_limits_kurt, ll, \
                              kurtosis(endog))
@@ -1299,10 +1197,7 @@ class DescStatMV(_OptFuncts):
             ax.plot(self.endog[:, 0], self.endog[:, 1], 'bo')
         return fig
 
-    def test_corr(self, corr0, nuis0=None, mu1_lb=None,
-                       mu1_ub=None, mu2_lb=None, mu2_ub=None,
-                       var1_lb=None, var1_ub=None,
-                       var2_lb=None, var2_ub=None, return_weights=0):
+    def test_corr(self, corr0, nuis0=None, return_weights=0):
         """
         Returns the -2 * log-likelihood ratio and  p-value for the
         correlation coefficient between 2 variables.
@@ -1349,57 +1244,18 @@ class DescStatMV(_OptFuncts):
                               endog[:, 1].mean(),
                               endog[:, 1].var()])
 
-        if mu1_lb is None:
-            mu1_lb = endog[:, 0].mean() - ((1.96 * \
-              np.sqrt((endog[:, 0].var()) / nobs)))
-
-        if mu1_ub is None:
-            mu1_ub = endog[:, 0].mean() + (1.96 * \
-              np.sqrt((((endog[:, 0].var()) / nobs))))
-
-        if mu2_lb is None:
-            mu2_lb = endog[:, 1].mean() - (1.96 * \
-              np.sqrt((((endog[:, 1].var()) / nobs))))
-
-        if mu2_ub is None:
-            mu2_ub = endog[:, 1].mean() + (1.96 * \
-              np.sqrt((((endog[:, 1].var()) / nobs))))
-
-        if var1_lb is None:
-            var1_lb = (endog[:, 0].var() * (nobs - 1)) / \
-              chi2.ppf(.975, nobs)
-
-        if var1_ub is None:
-            var1_ub = (endog[:, 0].var() * (nobs - 1)) / \
-              chi2.ppf(.025, nobs)
-
-        if var2_lb is None:
-            var2_lb = (endog[:, 1].var() * (nobs - 1)) / chi2.ppf(.975, nobs)
-
-        if var2_ub is None:
-            var2_ub = (endog[:, 1].var() * (nobs - 1)) / chi2.ppf(.025, nobs)
-
         x0 = np.zeros(5)
         weights0 = np.array([1. / nobs] * int(nobs))
         args = (corr0, endog, nobs, x0, weights0)
       ## TODO: IS there a way to condense the above default Parameters?
-        llr = optimize.fmin_l_bfgs_b(self._opt_correl, nuis0,
-                                     approx_grad=1,
-                                     bounds=[(mu1_lb, mu1_ub),
-                                              (var1_lb, var1_ub),
-                                              (mu2_lb, mu2_ub),
-                                              (var2_lb, var2_ub)],
-                                              args=args)[1]
+        llr = optimize.fmin_powell(self._opt_correl, nuis0, args=args,
+                                     full_output=1, disp=0)[1]
         p_val = chi2.sf(llr, 1)
         if return_weights:
             return llr, p_val, self.new_weights.T
         return llr, p_val
 
-    def ci_corr(self, sig=.05, upper_bound=None, lower_bound=None,
-                       mu1_lb=None,
-                       mu1_ub=None, mu2_lb=None, mu2_ub=None,
-                       var1_lb=None, var1_ub=None,
-                       var2_lb=None, var2_ub=None):
+    def ci_corr(self, sig=.05, upper_bound=None, lower_bound=None):
         """
         Returns the confidence intervals for the correlation coefficient.
 
@@ -1416,14 +1272,8 @@ class DescStatMV(_OptFuncts):
             Minimum value the lower condidence limit can be.
             Default: 99% confidence assuming normality.
 
-        mu1_ub through var2_ub: float
-            Limits of nuisance parameters
-            to maximize over.  Default:  95% confidence limits assuming
-            normality
-
         Returns
         --------
-
         Interval: tuple
             Lower and Upper confidence limit
 
@@ -1432,9 +1282,6 @@ class DescStatMV(_OptFuncts):
         nobs = self.nobs
         self.r0 = chi2.ppf(1 - sig, 1)
         point_est = np.corrcoef(endog[:, 0], endog[:, 1])[0, 1]
-        mu_hat = np.mean(endog, axis=0)
-        var_hat = np.var(endog, axis=0)
-
         if upper_bound is None:
             upper_bound = min(.999, point_est + \
                           2.5 * ((1. - point_est ** 2.) / \
@@ -1445,41 +1292,6 @@ class DescStatMV(_OptFuncts):
                           2.5 * (np.sqrt((1. - point_est ** 2.) / \
                           (nobs - 2.))))
 
-        if mu1_lb is None:
-            mu1_lb = mu_hat[0] - (1.96 * np.sqrt((var_hat[0]) / nobs))
-
-        if mu1_ub is None:
-            mu1_ub = mu_hat[0] + (1.96 * np.sqrt(((var_hat[0]) / nobs)))
-
-        if mu2_lb is None:
-            mu2_lb = mu_hat[1] - (1.96 * np.sqrt(((var_hat[1]) / nobs)))
-
-        if mu2_ub is None:
-            mu2_ub = mu_hat[1] + (1.96 * np.sqrt(((var_hat[1]) / nobs)))
-
-        if var1_lb is None:
-            var1_lb = (var_hat[0] * (nobs - 1)) / chi2.ppf(.975, nobs)
-
-        if var1_ub is None:
-            var1_ub = (var_hat[0] * (nobs - 1)) / chi2.ppf(.025, nobs)
-
-        if var2_lb is None:
-            var2_lb = (var_hat[1] * (nobs - 1)) / chi2.ppf(.975, nobs)
-
-        if var2_ub is None:
-            var2_ub = (var_hat[1] * (nobs - 1)) / chi2.ppf(.025, nobs)
-
-        x0 = [1. / nobs] * 5
-        weights0 = np.array([1. / nobs] * int(nobs))
-        mu1, mu2 = endog.mean(0)
-        var1, var2 = endog.var(0)
-        start_nuisance = [mu1, var1, mu2, var2]
-        args = (self, start_nuisance, mu1_lb, mu1_ub, mu2_lb, mu2_ub,
-                var1_lb, var1_ub,
-                var2_lb,
-                var2_ub, endog, nobs, x0, weights0, self.r0)
-        ll = optimize.brentq(_test_corr, lower_bound, point_est,
-                        args=args)
-        ul = optimize.brentq(_test_corr, point_est, upper_bound,
-                        args=args)
+        ll = optimize.brenth(self._ci_limits_corr, lower_bound, point_est)
+        ul = optimize.brenth(self._ci_limits_corr, point_est, upper_bound)
         return ll, ul
