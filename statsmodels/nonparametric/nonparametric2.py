@@ -20,6 +20,12 @@ References
     with Categorical and Continuous Data." Working Paper
 [7] Li, Q., Racine, J. "Cross-validated local linear nonparametric
     regression" Statistica Sinica 14(2004), pp. 485-512
+[8] Racine, J.: "Consistent Significance Testing for Nonparametric
+        Regression" Journal of Business & Economics Statistics
+[9] Racine, J., Hart, J., Li, Q., "Testing the Significance of 
+        Categorical Predictor Variables in Nonparametric Regression
+        Models", 2006, Econometric Reviews 25, 523-544
+
 """
 
 import numpy as np
@@ -252,6 +258,7 @@ class _GenericKDE (object):
         #unit = np.ones((self.K, ))
         ind0 = np.where(bw < 0)
         bw[ind0] = 0.
+        print "here"
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
         for i in isordered:
             bw[i] = min(bw[i], 1.)
@@ -1527,8 +1534,10 @@ class CensoredReg(Reg):
 class TestRegCoefC(object):
     """
     Significance test for continuous variables in a nonparametric
-    regression. Allows for testing of single and joint multivariable
-    tests.
+    regression. 
+
+    Null Hypothesis dE(Y|X)/dX_j = 0
+    Alternative Hypothesis dE(Y|X)/dX_j != 0
 
     Parameteres
     -----------
@@ -1536,18 +1545,39 @@ class TestRegCoefC(object):
         This is the nonparametric regression model whose elements
         are tested for significance.
 
-    test_vars: tuple, list of integers
+    test_vars: tuple, list of integers, array_like
         index of position of the continuous variables to be tested
         for significance. E.g. (1,3,5) jointly tests variables at
         position 1,3 and 5 for significance.
 
-    nboot: Integer
+    nboot: int
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
 
-    nested_res: Integer
-        Number of nested resamples used to calculate lambda
+    nested_res: int
+        Number of nested resamples used to calculate lambda.
+        Must enable the pivot option
+
+    pivot: bool
+        Pivot the test statistic by dividing by its standard error
+        Significantly increases computational time. But pivot statistics
+        have more desirable properties
         (See references)
+
+    Attributes
+    ----------
+    sig: str
+        The significance level of the variable(s) tested
+        "Not Significant": Not significant at the 90% confidence level
+                            Fails to reject the null
+        "*": Significant at the 90% confidence level
+        "**": Significant at the 95% confidence level
+        "***": Significant at the 99% confidence level
+
+    Notes
+    -----
+    This class allows testing of joint hypothesis as long as all variables
+    are continuous. 
 
     References
     ----------
@@ -1578,6 +1608,10 @@ class TestRegCoefC(object):
         self.sig = self._compute_sig()
 
     def _compute_test_stat(self, Y, X):
+        """
+        Computes the test statistic
+        See p.371 in [8]
+        """
         lam = self._compute_lambda(Y, X)
         t = lam
         if self.pivot:
@@ -1586,17 +1620,12 @@ class TestRegCoefC(object):
         return t
 
     def _compute_lambda(self, Y, X):
+        """Computes only lambda -- the main part of the test statistic"""
         n = np.shape(X)[0]
         Y = tools.adjust_shape(Y, 1)
         X = tools.adjust_shape(X, self.K)
         b = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
                         defaults = SetDefaults(efficient=False)).fit()[1]
-        #b = np.empty(shape=(n, self.K))
-        #for z in xrange(n):
-        #    mean_mfx = self.gx(self.bw, Y, X, edat=X[z, :])
-        #    mfx = np.squeeze(mean_mfx[1])
-        #    b[z, :] = mfx
-        
 
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
@@ -1609,7 +1638,8 @@ class TestRegCoefC(object):
         """ 
         Calculates the SE of lambda by nested resampling
         Used to pivot the statistic.
-        Bootstrapping works better with estimating pivotal statistics.
+        Bootstrapping works better with estimating pivotal statistics
+        but slows down computation significantly.
         """
         n = np.shape(Y)[0]
         lam = np.empty(shape=(self.nres, ))
@@ -1622,18 +1652,25 @@ class TestRegCoefC(object):
         return se_lambda
 
     def _compute_sig(self):
-        # Bootstrapping
+        """
+        Computes the significance value for the variable(s) tested.
+        The empirical distribution of the test statistic is obtained
+        through bootstrapping the sample.
+        The null hypothesis is rejected if the test statistic is larger
+        than the 90, 95, 99 percentiles  
+        """
         t_dist = np.empty(shape=(self.nboot, ))
         Y = self.tydat
         X = copy.deepcopy(self.txdat)
         n = np.shape(Y)[0]
 
-        X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)  # fix at mean
+        X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
+        # Calculate the restricted mean. See p. 372 in [8]
         M = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                defaults = SetDefaults(efficient=False)).fit()[0]  # restricted mean see p. 372
+                defaults = SetDefaults(efficient=False)).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
-        e = e - np.mean(e)  # recenter residuals ?
+        e = e - np.mean(e)  # recenter residuals
         for i in xrange(self.nboot):
             print "Bootstrap sample ", i
             ind = np.random.random_integers(0, n-1, size=(n,1))
@@ -1642,8 +1679,8 @@ class TestRegCoefC(object):
             t_dist[i] = self._compute_test_stat(Y_boot, self.txdat)
 
         sig = "Not Significant"
-        print "Test statistic is", self.test_stat
-        print  "0.9 quantile is ", mquantiles(t_dist, 0.9)
+        #print "Test statistic is", self.test_stat
+        #print  "0.9 quantile is ", mquantiles(t_dist, 0.9)
         #print sorted(t_dist)
 
         if self.test_stat > mquantiles(t_dist, 0.9):
@@ -1654,10 +1691,51 @@ class TestRegCoefC(object):
             sig = "***"
         return sig
 
+
 class TestRegCoefD(TestRegCoefC):
-    axe =3
+    """
+    Significance test for the categorical variables in a 
+    nonparametric regression
+
+    Parameteres
+    -----------
+    model: Instance of Reg class
+        This is the nonparametric regression model whose elements
+        are tested for significance.
+
+    test_vars: tuple, list of one element
+        index of position of the discrete variable to be tested
+        for significance. E.g. (3) tests variable at
+        position 3 for significance.
+
+    nboot: int
+        Number of bootstrap samples used to determine the distribution
+        of the test statistic in a finite sample. Default is 400
+
+    Attributes
+    ----------
+    sig: str
+        The significance level of the variable(s) tested
+        "Not Significant": Not significant at the 90% confidence level
+                            Fails to reject the null
+        "*": Significant at the 90% confidence level
+        "**": Significant at the 95% confidence level
+        "***": Significant at the 99% confidence level
+
+    Notes
+    -----
+    This class currently doesn't allow joint hypothesis.
+    Only one variable can be tested at a time
+
+    References
+    ----------
+    See [9]
+    See chapter 12 in [1]
+    """
 
     def _compute_test_stat(self, Y, X):
+        """Computes the test statistic"""
+
         dom_x = np.sort(np.unique(self.txdat[:, self.test_vars]))
 
         n = np.shape(X)[0]
@@ -1678,6 +1756,8 @@ class TestRegCoefD(TestRegCoefC):
         return I
 
     def _compute_sig(self):
+        """Calculates the significance level of the variable tested"""
+
         m = self._est_cond_mean()
         Y = self.tydat
         X = self.txdat
@@ -1701,8 +1781,8 @@ class TestRegCoefD(TestRegCoefC):
             I_dist[j] = self._compute_test_stat(Y_boot, X)
 
         sig = "Not Significant"
-        print "Test statistic is: ", self.test_stat
-        print  "0.9 quantile is: ", mquantiles(I_dist, 0.9)
+        #print "Test statistic is: ", self.test_stat
+        #print  "0.9 quantile is: ", mquantiles(I_dist, 0.9)
         #print  mquantiles(I_dist, 0.95)
         #print mquantiles(I_dist, 0.99)
         #print I_dist
@@ -1716,6 +1796,10 @@ class TestRegCoefD(TestRegCoefC):
         return sig
 
     def _est_cond_mean(self):
+        """
+        Calculates the expected conditional mean
+        m(X, Z=l) for all possible l
+        """ 
         self.dom_x = np.sort(np.unique(self.txdat[:, self.test_vars]))
         X = copy.deepcopy(self.txdat)
         m=0
@@ -1726,9 +1810,7 @@ class TestRegCoefD(TestRegCoefC):
         m = np.reshape(m, (np.shape(self.txdat)[0], 1))
         return m
  
-
             
-
 class TestFForm(object):
     """
     Nonparametric test for functional form
@@ -1804,8 +1886,41 @@ class TestFForm(object):
 
 class SingleIndexModel(Reg):
     """
-    Single index semiparametric models
-    y_i = g(X_i'*b) + e_i
+    Single index semiparametric model
+    y = g(X * b) + e
+    Parameters
+    ----------
+    tydat: array_like
+        The dependent variable
+    txdat: array_like
+        The independent variable(s)
+    var_type: str
+        The type of variables in X
+        c: continuous
+        o: ordered
+        u: unordered
+
+    Attributes
+    ----------
+    b: array_like
+        The linear coefficients b (betas)
+    bw: array_like
+        Bandwidths
+
+    Methods
+    -------
+    fit(): Computes the fitted values E[Y|X] = g(X * b)
+            and the marginal effects dY/dX
+    References
+    ----------
+    See chapter on semiparametric models in [1]
+
+    Notes
+    -----
+    This model resembles the binary choice models. The user knows
+    that X and b interact linearly, but g(X*b) is unknown.
+    In the parametric binary choice models the user usually assumes
+    some distribution of g() such as normal or logistic    
     """
 
     def __init__(self, tydat, txdat, var_type):
@@ -1814,8 +1929,8 @@ class SingleIndexModel(Reg):
         self.tydat = tools.adjust_shape(tydat, 1)
         self.txdat = tools.adjust_shape(txdat, self.K)
         self.N = np.shape(self.txdat)[0]
-        self.b, self.bw = self._est_b_bw()
         self.all_vars_type = self.var_type
+        self.b, self.bw = self._est_b_bw()
 
     def _est_b_bw(self):
         params0 = np.random.uniform(size=(2*self.K, ))
@@ -1871,6 +1986,43 @@ class SingleIndexModel(Reg):
         return repr
 
 class SemiLinear(Reg):
+    """
+    Semiparametric partially linear model
+    Y = Xb + g(Z) + e
+    Parameters
+    ----------
+    tydat: array_like
+        The dependent variable
+    txdat: array_like
+        The linear component in the regression
+    tzdat: array_like
+        The nonparametric component in the regression
+    var_type: str
+        The type of the variables in the nonparametric component
+        c: continuous
+        o: ordered
+        u: unordered
+    l_K: int
+        The number of the variables that comprise the linear component
+
+    Attributes
+    ----------
+    bw: array_like
+        Bandwidths for the nonparametric component tzdat
+    b: array_like
+        Coefficients in the linear component
+
+    Methods
+    -------
+    fit(): Returns the fitted mean and marginal effects dy/dz
+
+    References
+    ----------
+    See chapter on Semiparametric Models in [1]
+    Notes
+    -----
+    This model uses only the local constant regression estimator
+    """
     
     def __init__(self, tydat, txdat, tzdat, var_type, l_K):
         self.tydat = tools.adjust_shape(tydat, 1)
@@ -1880,20 +2032,40 @@ class SemiLinear(Reg):
         self.l_K = l_K
         self.N = np.shape(self.txdat)[0]
         self.var_type = var_type
-        self.b, self.bw = self._est_b_bw()
         self.all_vars_type = self.var_type
 
+        self.b, self.bw = self._est_b_bw()
+
     def _est_b_bw(self):
+        """
+        Computes the (beta) coefficients and the bandwidths
+        Minimizes cv_loo with respect to b and bw
+        """
         params0 = np.random.uniform(size=(self.l_K + self.K, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0 : self.l_K]
         bw = b_bw[self.l_K::]
-        #bw = self._set_bw_bounds(np.asarray(bw))
+        bw = self._set_bw_bounds(np.asarray(bw))
         return b, bw
 
     def cv_loo(self, params):
-        #print "Running"
-        # See p. 254 in Textbook
+        """
+        Similar to the cross validation leave-one-out estimator
+        Modified to reflect the linear components
+        Parameters
+        ----------
+        params: array_like
+            Vector consisting of the coefficients (b) and the bandwidths (bw)
+            The first l_K elements are the coefficients
+        Returns
+        -------
+        L: float
+            The value of the objective function
+
+        References
+        ----------
+        See p.254 in [1]
+        """
         params = np.asarray(params)
         b = params[0 : self.l_K]
         bw = params[self.l_K::]
@@ -1915,6 +2087,8 @@ class SemiLinear(Reg):
         return L
 
     def fit(self, exdat=None, ezdat=None):
+        """Computes fitted values and marginal effects"""
+        
         if exdat is None:
             exdat = self.txdat
         else:
