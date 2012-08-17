@@ -9,7 +9,7 @@ import pdb
 
 docstr = """
 Demonstrates l1 regularization for likelihood models.  
-Use different models by setting mode = mnlogit, or logit
+Use different models by setting mode = mnlogit, logit, or probit.
 
 Example
 -------
@@ -40,41 +40,78 @@ def main():
     usage = "usage: %prog [options] mode" 
     usage += '\n'+docstr
     parser = OptionParser(usage=usage)
-    parser.add_option("-N", "--num_samples", help="Number of data points to generate [default: %default]", dest='N', action='store', type='int', default=500)
-    parser.add_option("-J", "--num_targets", help="Number of choices for the endogenous response in multinomial logit example [default: %default]", dest='num_targets', action='store', type='int', default=3)
-    parser.add_option("-s", "--print_summaries", help="Print the full fit summary. [default: %default] ", action="store_true",dest='print_summaries', default=False)
-    parser.add_option("--get_l1_slsqp_results", help="Do an l1 fit using slsqp. [default: %default] ", action="store_true",dest='get_l1_slsqp_results', default=False)
-    parser.add_option("--get_l1_cvxopt_results", help="Do an l1 fit using cvxopt. [default: %default] ", action="store_true",dest='get_l1_cvxopt_results', default=False)
-    parser.add_option("--save_arrays", help="Save exog/endog/true_params to disk for future use.  [default: %default] ", action="store_true",dest='save_arrays', default=False)
-    parser.add_option("--load_old_arrays", help="Load exog/endog/true_params arrays from disk.  [default: %default] ", action="store_true",dest='load_old_arrays', default=False)
-    parser.add_option("--num_nonconst_covariates", help="Number of covariates that are not constant (a constant will be preappended) [default: %default]", dest='num_nonconst_covariates', action='store', type='int', default=10)
-    parser.add_option("--num_zero_params", help="Number of parameters equal to zero for every target in logistic regression examples.  [default: %default]", dest='num_zero_params', action='store', type='int', default=8)
+    # base_alpha
+    parser.add_option("-a", "--base_alpha", 
+            help="Size of regularization param (will automatically scale with "\
+                    "data size in this demo) [default: %default]", 
+            dest='base_alpha', action='store', type='float', default=0.01)
+    # num_samples
+    parser.add_option("-N", "--num_samples", 
+            help="Number of data points to generate [default: %default]", 
+            dest='N', action='store', type='int', default=500)
+    # print_summaries
+    parser.add_option("-s", "--print_summaries",
+            help="Print the full fit summary. [default: %default]", \
+            action="store_true",dest='print_summaries', default=False)
+    # get_l1_slsqp_results
+    parser.add_option("--get_l1_slsqp_results", 
+            help="Do an l1 fit using slsqp. [default: %default]", \
+            action="store_true",dest='get_l1_slsqp_results', default=False)
+    # get_l1_cvxopt_results
+    parser.add_option("--get_l1_cvxopt_results",
+            help="Do an l1 fit using cvxopt. [default: %default]", \
+            action="store_true",dest='get_l1_cvxopt_results', default=False)
+    # save_arrays
+    parser.add_option("--save_arrays", 
+            help="Save exog/endog/true_params to disk for future use. "\
+                    "[default: %default]", 
+                    action="store_true",dest='save_arrays', default=False)
+    # load_old_arrays
+    parser.add_option("--load_old_arrays", 
+            help="Load exog/endog/true_params arrays from disk.  "\
+                    "[default: %default]", 
+                    action="store_true",dest='load_old_arrays', default=False)
+    # num_nonconst_covariates
+    parser.add_option("--num_nonconst_covariates", 
+            help="Number of covariates that are not constant "\
+                    "(a constant will be preappended) [default: %default]", 
+                    dest='num_nonconst_covariates', action='store', 
+                    type='int', default=10)
+    # num_zero_params
+    parser.add_option("--num_zero_params", 
+            help="Number of parameters equal to zero for every target in "\
+                    "logistic regression examples.  [default: %default]", 
+                    dest='num_zero_params', action='store', type='int', 
+                    default=8)
+    # num_targets
+    parser.add_option("-J", "--num_targets", 
+            help="Number of choices for the endogenous response in "\
+                    "multinomial logit example [default: %default]", 
+                    dest='num_targets', action='store', type='int', default=3)
         
     (options, args) = parser.parse_args()
 
-    run_func = {'mnlogit': run_demo_logistic, 'logit': run_demo_logistic}
     assert len(args) == 1
     mode = args[0].lower()
 
-    run_func[mode](mode, **options.__dict__)
+    run_demo(mode, **options.__dict__)
 
 
-def run_demo_logistic(mode, N=500, num_targets=3, num_nonconst_covariates=10, 
+def run_demo(mode, base_alpha=0.01, N=500, num_targets=3, num_nonconst_covariates=10, 
         num_zero_params=8, print_summaries=False, get_l1_slsqp_results=False, 
         get_l1_cvxopt_results=False, save_arrays=False, load_old_arrays=False):
     """ 
     Run the demo for either multinomial or ordinary logistic regression.
     """
-    if mode == 'logit':
-        print "Setting num_targets to 2 since mode = 'logit'"
+    if mode != 'mnlogit':
+        print "Setting num_targets to 2 since mode != 'mnlogit'"
         num_targets = 2
-        model_type = sm.Logit
-    elif mode == 'mnlogit':
-        model_type = sm.MNLogit
+    models= {
+            'logit': sm.Logit, 'mnlogit': sm.MNLogit, 'probit': sm.Probit}
     # The regularization parameter
     # Here we scale it with N for simplicity.  In practice, you should
     # use cross validation to pick alpha
-    alpha = 0.01 * N * sp.ones((num_nonconst_covariates+1, num_targets-1))
+    alpha = base_alpha * N * sp.ones((num_nonconst_covariates+1, num_targets-1))
     alpha[0,:] = 0  # Don't regularize the intercept
     # Correlation length for the independent variables
     # Higher makes the problem more ill-posed, and easier to screw
@@ -94,18 +131,18 @@ def run_demo_logistic(mode, N=500, num_targets=3, num_nonconst_covariates=10,
 
     endog, exog, true_params = save_andor_load_arrays(
             endog, exog, true_params, save_arrays, load_old_arrays)
-    model = model_type(endog, exog)
+    model = models[mode](endog, exog)
 
     #### Get the results and print
-    result_str = get_results(model, true_params, alpha, 
+    result_str = run_solvers(model, true_params, alpha, 
             get_l1_slsqp_results, get_l1_cvxopt_results, print_summaries)
     print result_str
 
 
-def get_results(model, true_params, alpha, get_l1_slsqp_results, 
+def run_solvers(model, true_params, alpha, get_l1_slsqp_results, 
         get_l1_cvxopt_results, print_summaries):
     """
-    Runs the solvers using the specified settings.  
+    Runs the solvers using the specified settings and returns a result string.  
     Works the same for any l1 penalized likelihood model.
     """
     #### Train the models
