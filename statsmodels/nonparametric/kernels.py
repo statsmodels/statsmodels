@@ -309,7 +309,7 @@ def d_gaussian(h, Xi, x):
         return Xi
     z = (Xi - x) / h
     value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
-    value = 2 * ( x - Xi) * Gaussian(h, Xi, x) / (h ** 2)
+    value = 2 * ( x - Xi) * gaussian(h, Xi, x) / (h ** 2)
     return value
 
 def aitchison_aitken_reg(h, Xi, x):

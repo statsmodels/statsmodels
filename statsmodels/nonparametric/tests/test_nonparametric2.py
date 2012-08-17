@@ -506,3 +506,83 @@ class TestReg(MyTest):
                             reg_type='ll', var_type='cc', bw='cv_ls', censor_var=0)
         sm_mean, sm_mfx = model.fit()
         npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)
+
+    @dec.slow
+    def test_continuous_lc_aic(self):   
+        N = 200
+        np.random.seed(1234)
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
+        #self.write2file('RegData.csv', (Y, C1, C2))
+
+        #CODE TO PRODUCE BANDWIDTH ESTIMATION IN R
+        #library(np)
+        #data <- read.csv('RegData.csv', header=FALSE)
+        #bw <- npregbw(formula=data$V1 ~ data$V2 + data$V3, 
+        #                bwmethod='cv.aic', regtype='lc')
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2],
+                            reg_type='lc', var_type='cc', bw='aic')
+        R_bw = [0.4017893, 0.4943397]  # Bandwidth obtained in R
+        npt.assert_allclose(model.bw, R_bw, rtol = 1e-3)
+
+
+    @dec.slow
+    def test_significance_continuous(self):
+        N = 250
+        np.random.seed(12345)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b1 * C1 + b2 * C2 + noise
+
+        bw=[11108137.1087194, 1333821.85150218]  # This is the cv_ls bandwidth estimated earlier
+
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C3],
+                            reg_type='ll', var_type='cc', bw=bw)
+        nboot = 45  # Number of bootstrap samples
+        sig_var12 = model.sig_test([0,1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        npt.assert_equal(sig_var12 == 'Not Significant', False)
+        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        npt.assert_equal(sig_var1 == 'Not Significant', False)
+        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        npt.assert_equal(sig_var2 == 'Not Significant', True)
+        print "test_significance_continuous ran successfully"
+
+    @dec.slow
+    def test_significance_discrete(self):
+        
+        N = 200
+        np.random.seed(12345)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b1 * O + b2 * C2 + noise
+
+        bw= [3.63473198e+00, 1.21404803e+06]
+                 # This is the cv_ls bandwidth estimated earlier
+        # The cv_ls bandwidth was estimated earlier to save time
+        model = nparam.Reg(tydat=[Y], txdat=[O, C3],
+                            reg_type='ll', var_type='oc', bw=bw)
+        # This was also tested with local constant estimator
+        nboot = 45  # Number of bootstrap samples
+        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        npt.assert_equal(sig_var1 == 'Not Significant', False)
+        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        npt.assert_equal(sig_var2 == 'Not Significant', True)

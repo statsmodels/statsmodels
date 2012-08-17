@@ -1048,8 +1048,8 @@ class Reg(_GenericKDE):
         """
 
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
-                            ukertype='aitchison_aitken_reg',
-                            okertype='wangryzin_reg', 
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg', 
                             tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
@@ -1127,11 +1127,6 @@ class Reg(_GenericKDE):
         iscontinuous = tools._get_type_pos(self.var_type)[0]
         txdat_c = txdat[:, iscontinuous]
         edat_c = edat[:, iscontinuous]
-        #Kc = len(edat_c)
-        #KX_c = tools.gpke(bw[:, iscontinuous], tdat=txdat_c, edat=edat_c,
-        #                var_type='c' * Kc,
-        #                    ckertype='d_gaussian',
-        #                    tosum=False)
         KX_c = tools.gpke(bw, tdat=txdat, edat=edat,
                         var_type=self.var_type,
                             ckertype='d_gaussian',
@@ -1147,40 +1142,28 @@ class Reg(_GenericKDE):
         #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
         return G, B_x
 
-    def aic_hurvich(self, bw, func=None):
-        print "running"
-        H = np.empty((self.N, self.N))
-        for i in range(self.N):
-            for j in range(self.N):
-                txdat=np.reshape(self.txdat[i, :], (1, self.K))
-                exdat = np.reshape(self.txdat[j,:], (1, self.K))
-                H[i,j] = tools.gpke(bw, tdat=txdat, edat=exdat,
-                                var_type=self.var_type,
-                                #ukertype='aitchison_aitken_reg',
-                                #okertype='wangryzin_reg', 
-                                tosum=True)
-                denom = tools.gpke(bw, tdat=-self.txdat, edat=-txdat,
-                                var_type=self.var_type,
-                                #ukertype='aitchison_aitken_reg',
-                                #okertype='wangryzin_reg', 
-                                tosum=True)
-                H[i,j] = H[i,j]/denom
- 
-        I = np.eye(self.N)
-        sig = np.dot(np.dot(self.tydat.T,(I - H).T), (I - H)) * self.tydat / float(self.N)
-        frac = (1 + np.trace(H)/float(self.N)) / (1 - (np.trace(H) +2)/float(self.N))
-        aic = np.log(sig) + frac
 
-    def aic_hurvich_fast(self, bw, func=None):
+    def aic_hurvich(self, bw, func=None):
+        #print "Running aic"
         H = np.empty((self.N, self.N))
         for j in range(self.N):
             H[:, j] = tools.gpke(bw, tdat=self.txdat, edat=self.txdat[j,:],
                             var_type=self.var_type, tosum=False)
         denom = np.sum(H, axis=1)
+        H = H / denom
         I = np.eye(self.N)
-        sig = np.dot(np.dot(self.tydat.T,(I - H).T), (I - H)) * self.tydat / float(self.N)
+        gx = Reg(tydat=self.tydat, txdat=self.txdat, var_type=self.var_type, 
+                reg_type=self.reg_type, bw=bw, defaults=SetDefaults(efficient=False)).fit()[0]
+        gx = np.reshape(gx, (self.N, 1))
+        sigma = np.sum((self.tydat - gx) ** 2, axis=0) / float(self.N)
+        
         frac = (1 + np.trace(H)/float(self.N)) / (1 - (np.trace(H) +2)/float(self.N))
-        aic = np.log(sig) + frac
+        #siga = np.dot(self.tydat.T, (I - H).T)
+        #sigb = np.dot((I - H), self.tydat)
+        #sigma = np.dot(siga, sigb) / float(self.N)
+        aic = np.log(sigma) + frac
+
+        return aic
 
 
         
@@ -1221,6 +1204,7 @@ class Reg(_GenericKDE):
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         i = 0
         L = 0
+        
         for X_j in LOO_X:
             Y = LOO_Y.next()
             G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :])[0]
@@ -1270,6 +1254,32 @@ class Reg(_GenericKDE):
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
         return mean, mfx
+
+    def sig_test(self, var_pos, nboot=50, nested_res=25, pivot=False):
+        """
+        Significance test for the variables in the regression
+        Parameters
+        ----------
+        var_pos: tuple, list
+            The position of the variable in txdat to be tested
+        Returns
+        -------
+        sig: str
+            The level of significance
+            * : at 90% confidence level
+            ** : at 95% confidence level
+            *** : at 99* confidence level
+            "Not Significant" : if not significant
+            """
+        var_pos = np.asarray(var_pos)
+        iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
+        if (iscontinuous == var_pos).any():  # continuous variable
+            print "------CONTINUOUS---------"
+            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot)
+        else:
+            print "------DISCRETE-----------"
+            Sig = TestRegCoefD(self, var_pos, nboot)         
+        return Sig.sig
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -1516,6 +1526,7 @@ class CensoredReg(Reg):
             mfx[i, :] = mfx_c
         return mean, mfx
 
+
 class TestRegCoefC(object):
     """
     Significance test for continuous variables in a nonparametric
@@ -1550,7 +1561,7 @@ class TestRegCoefC(object):
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
     # Journal of Business & Economics Statistics
-    def __init__(self, model, test_vars, nboot=400, nested_res=400):
+    def __init__(self, model, test_vars, nboot=400, nested_res=400, pivot=False):
         self.nboot = nboot
         self.nres = nested_res
         self.test_vars = test_vars
@@ -1562,6 +1573,7 @@ class TestRegCoefC(object):
         self.txdat = model.txdat
         self.gx = model.est[model.reg_type]
         self.test_vars = test_vars
+        self.pivot = pivot
         self.run()
 
     def run(self):
@@ -1570,8 +1582,10 @@ class TestRegCoefC(object):
 
     def _compute_test_stat(self, Y, X):
         lam = self._compute_lambda(Y, X)
-        se_lam = self._compute_se_lambda(Y, X)
-        t = lam / float(se_lam)
+        t = lam
+        if self.pivot:
+            se_lam = self._compute_se_lambda(Y, X)
+            t = lam / float(se_lam)
         return t
 
     def _compute_lambda(self, Y, X):
@@ -1589,11 +1603,17 @@ class TestRegCoefC(object):
 
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
-
-        lam = np.sum(np.sum(((b / np.std(b)) ** 2), axis=1), axis=0) / float(n)
+        #fct = np.std(b)  # Pivot the statistic by dividing by SE
+        fct = 1.  # Don't Pivot -- Bootstrapping works better if Pivot
+        lam = np.sum(np.sum(((b / fct) ** 2), axis=1), axis=0) / float(n)
         return lam
 
     def _compute_se_lambda(self, Y, X):
+        """ 
+        Calculates the SE of lambda by nested resampling
+        Used to pivot the statistic.
+        Bootstrapping works better with estimating pivotal statistics.
+        """
         n = np.shape(Y)[0]
         lam = np.empty(shape=(self.nres, ))
         for i in xrange(self.nres):
@@ -1627,52 +1647,88 @@ class TestRegCoefC(object):
         sig = "Not Significant"
         print "Test statistic is", self.test_stat
         print  "0.9 quantile is ", mquantiles(t_dist, 0.9)
-        print sorted(t_dist)
+        #print sorted(t_dist)
 
         if self.test_stat > mquantiles(t_dist, 0.9):
             sig = "*"
-        if self.test_stat > mquantiles(t_dist, 0,95):
+        if self.test_stat > mquantiles(t_dist, 0.95):
             sig = "**"
         if self.test_stat > mquantiles(t_dist, 0.99):
             sig = "***"
         return sig
 
 class TestRegCoefD(TestRegCoefC):
+    axe =3
 
     def _compute_test_stat(self, Y, X):
-        dom_x = np.unique(self.txdat[:, self.test_var])
+        dom_x = np.sort(np.unique(self.txdat[:, self.test_vars]))
+
+        n = np.shape(X)[0]
+        model = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                        defaults = SetDefaults(efficient=False))
         X1 = copy.deepcopy(X)
-        X1[:, self.test_var] = 0
-        m0 = self.gx(bw, Y, X1, edat=X1)
+        X1[:, self.test_vars] = 0
+
+        m0 = model.fit(edat=X1)[0]
+        m0 = np.reshape(m0, (n, 1))
         I = np.zeros((n, 1))
-        for i in dom_x:
-            X1[:, self.test_var] = i
-            m1 = self.gx(bw, Y, X1, edat=X1)
+        for i in dom_x[1::] :
+            X1[:, self.test_vars] = i
+            m1 = model.fit(edat=X1)[0]
+            m1 = np.reshape(m1, (n, 1))
             I += (m1 - m0) ** 2
-        I = np.sum(I, axis=0)
+        I = np.sum(I, axis=0) / float(n)
+        return I
 
     def _compute_sig(self):
+        m = self._est_cond_mean()
         Y = self.tydat
         X = self.txdat
+        n = np.shape(X)[0]
+        u = Y - m
+        u = u - np.mean(u)  # center
+        fct1 = (1 - 5**0.5) / 2.
+        fct2 = (1 + 5**0.5) / 2.
+        u1 = fct1 * u
+        u2 = fct2 * u
+        r = fct2 / (5 ** 0.5)
         I_dist = np.empty((self.nboot,1))
-        for i in xrange(self.nboot):
-            ind = np.random.random_integers(0, n-1, size=(n,1))
-            X1[:, self.test_var]= copy.deepcopy(X[ind, self.test_var])
-            I_dist[i] = self._compute_test_stat(Y, X1)
+        for j in xrange(self.nboot):
+            print "Bootstrap sample ", j
+            u_boot = copy.deepcopy(u2)
+
+            prob = np.random.uniform(0,1, size = (n,1))
+            ind = prob < r
+            u_boot[ind] = u1[ind]
+            Y_boot = m + u_boot 
+            I_dist[j] = self._compute_test_stat(Y_boot, X)
+
         sig = "Not Significant"
-        print self.test_stat
-        print  mquantiles(t_dist, 0.9)
-        print  mquantiles(t_dist, 0.95)
-        print t_dist
+        print "Test statistic is: ", self.test_stat
+        print  "0.9 quantile is: ", mquantiles(I_dist, 0.9)
+        #print  mquantiles(I_dist, 0.95)
+        #print mquantiles(I_dist, 0.99)
+        #print I_dist
 
         if self.test_stat > mquantiles(I_dist, 0.9):
             sig = "*"
-        if self.test_stat > mquantiles(I_dist, 0,95):
+        if self.test_stat > mquantiles(I_dist, 0.95):
             sig = "**"
         if self.test_stat > mquantiles(I_dist, 0.99):
             sig = "***"
         return sig
 
+    def _est_cond_mean(self):
+        self.dom_x = np.sort(np.unique(self.txdat[:, self.test_vars]))
+        X = copy.deepcopy(self.txdat)
+        m=0
+        for i in self.dom_x:
+            X[:, self.test_vars]  = i
+            m += self.model.fit(edat = X)[0]
+        m = m / float(len(self.dom_x))
+        m = np.reshape(m, (np.shape(self.txdat)[0], 1))
+        return m
+ 
 
             
 
@@ -1749,3 +1805,66 @@ class TestFForm(object):
         for i in xrange(self.nboot):
             pass
 
+class SingleIndexModel(Reg):
+
+    def __init__(self, tydat, txdat, var_type):
+        self.var_type = var_type
+        self.K = len(var_type)
+        self.tydat = tools.adjust_shape(tydat, 1)
+        self.txdat = tools.adjust_shape(txdat, self.K)
+        self.N = np.shape(self.txdat)[0]
+        self.b, self.bw = self._est_b_bw()
+
+    def _est_b_bw(self):
+        params0 = np.random.uniform(size=(2*self.K, ))
+        b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
+        b = b_bw[0:self.K]
+        bw = b_bw[self.K::]
+        return b, bw
+
+    def cv_loo(self, params):
+        print "Running"
+        # See p. 254 in Textbook
+        params = np.asarray(params)
+        b = params[0 : self.K]
+        bw = params[self.K::]
+        LOO_X = tools.LeaveOneOut(self.txdat)
+        LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        i = 0
+        L = 0
+        for X_j in LOO_X:
+            Y = LOO_Y.next()
+            G = self._est_loc_constant(bw, tydat=Y, txdat=-b*X_j, edat=-b*self.txdat[i, :])[0]
+            L += (self.tydat[i] - G) ** 2
+            i += 1
+        # Note: There might be a way to vectorize this. See p.72 in [1]
+        return L / self.N
+
+    def fit(self, edat=None):
+        if edat is None:
+            edat = self.txdat
+        else:
+            edat = tools.adjust_shape(edat, self.K)
+        N_edat = np.shape(edat)[0]
+        mean = np.empty((N_edat,))
+        mfx = np.empty((N_edat, self.K))
+        for i in xrange(N_edat):
+            mean_mfx = self._est_loc_constant(self.bw, self.tydat, 
+                    self.b*self.txdat, edat=self.b*edat[i, :])
+            mean[i] = mean_mfx[0]
+            mfx_c = np.squeeze(mean_mfx[1])
+            mfx[i, :] = mfx_c
+        return mean, mfx
+
+
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Single Index Model \n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: cv_ls" + "\n"
+        repr += "Estimator type: local constant" + "\n"
+        return repr
+
+        
