@@ -2,6 +2,7 @@ from optparse import OptionParser
 import statsmodels.api as sm
 import scipy as sp
 from scipy import linalg
+from scipy import stats
 import statsmodels.discrete.l1 as l1
 import pdb
 # pdb.set_trace()
@@ -49,10 +50,6 @@ def main():
     parser.add_option("-N", "--num_samples", 
             help="Number of data points to generate [default: %default]", 
             dest='N', action='store', type='int', default=500)
-    # print_summaries
-    parser.add_option("-s", "--print_summaries",
-            help="Print the full fit summary. [default: %default]", \
-            action="store_true",dest='print_summaries', default=False)
     # get_l1_slsqp_results
     parser.add_option("--get_l1_slsqp_results", 
             help="Do an l1 fit using slsqp. [default: %default]", \
@@ -61,22 +58,23 @@ def main():
     parser.add_option("--get_l1_cvxopt_results",
             help="Do an l1 fit using cvxopt. [default: %default]", \
             action="store_true",dest='get_l1_cvxopt_results', default=False)
-    # save_arrays
-    parser.add_option("--save_arrays", 
-            help="Save exog/endog/true_params to disk for future use. "\
-                    "[default: %default]", 
-                    action="store_true",dest='save_arrays', default=False)
-    # load_old_arrays
-    parser.add_option("--load_old_arrays", 
-            help="Load exog/endog/true_params arrays from disk.  "\
-                    "[default: %default]", 
-                    action="store_true",dest='load_old_arrays', default=False)
     # num_nonconst_covariates
     parser.add_option("--num_nonconst_covariates", 
             help="Number of covariates that are not constant "\
                     "(a constant will be preappended) [default: %default]", 
                     dest='num_nonconst_covariates', action='store', 
                     type='int', default=10)
+    # noise_level
+    parser.add_option("--noise_level", 
+            help="Level of the noise relative to signal [default: %default]",
+                    dest='noise_level', action='store', type='float', 
+                    default=0.2)
+    # cor_length
+    parser.add_option("--cor_length", 
+            help="Correlation length of the (Gaussian) independent variables"\
+                    "[default: %default]",
+                    dest='cor_length', action='store', type='float', 
+                    default=2)
     # num_zero_params
     parser.add_option("--num_zero_params", 
             help="Number of parameters equal to zero for every target in "\
@@ -88,6 +86,20 @@ def main():
             help="Number of choices for the endogenous response in "\
                     "multinomial logit example [default: %default]", 
                     dest='num_targets', action='store', type='int', default=3)
+    # print_summaries
+    parser.add_option("-s", "--print_summaries",
+            help="Print the full fit summary. [default: %default]", \
+            action="store_true",dest='print_summaries', default=False)
+    # save_arrays
+    parser.add_option("--save_arrays", 
+            help="Save exog/endog/true_params to disk for future use. "\
+                    "[default: %default]", 
+                    action="store_true",dest='save_arrays', default=False)
+    # load_old_arrays
+    parser.add_option("--load_old_arrays", 
+            help="Load exog/endog/true_params arrays from disk.  "\
+                    "[default: %default]", 
+                    action="store_true",dest='load_old_arrays', default=False)
         
     (options, args) = parser.parse_args()
 
@@ -97,17 +109,21 @@ def main():
     run_demo(mode, **options.__dict__)
 
 
-def run_demo(mode, base_alpha=0.01, N=500, num_targets=3, num_nonconst_covariates=10, 
-        num_zero_params=8, print_summaries=False, get_l1_slsqp_results=False, 
-        get_l1_cvxopt_results=False, save_arrays=False, load_old_arrays=False):
+def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False, 
+        get_l1_cvxopt_results=False, num_nonconst_covariates=10, 
+        noise_level=0.2, cor_length=2, num_zero_params=8, num_targets=3, 
+        print_summaries=False, save_arrays=False, load_old_arrays=False):
     """ 
     Run the demo for either multinomial or ordinary logistic regression.
     """
     if mode != 'mnlogit':
         print "Setting num_targets to 2 since mode != 'mnlogit'"
         num_targets = 2
-    models= {
+    models = {
             'logit': sm.Logit, 'mnlogit': sm.MNLogit, 'probit': sm.Probit}
+    endog_funcs = {
+            'logit': get_logit_endog, 'mnlogit': get_logit_endog, 
+            'probit': get_probit_endog}
     # The regularization parameter
     # Here we scale it with N for simplicity.  In practice, you should
     # use cross validation to pick alpha
@@ -118,8 +134,6 @@ def run_demo(mode, base_alpha=0.01, N=500, num_targets=3, num_nonconst_covariate
     # up with noise.
     # BEWARE:  With long correlation lengths, you often get a singular KKT
     # matrix (during the l1_cvxopt_cp fit)
-    cor_length = 2 
-    noise_level = 0.2  # As a fraction of the "signal"
 
     #### Make the arrays
     exog = get_exog(N, num_nonconst_covariates, cor_length) 
@@ -127,7 +141,7 @@ def run_demo(mode, base_alpha=0.01, N=500, num_targets=3, num_nonconst_covariate
     true_params = sp.rand(num_nonconst_covariates+1, num_targets-1)
     if num_zero_params:
         true_params[-num_zero_params:, :] = 0
-    endog = get_logit_endog(true_params, exog, noise_level)
+    endog = endog_funcs[mode](true_params, exog, noise_level)
 
     endog, exog, true_params = save_andor_load_arrays(
             endog, exog, true_params, save_arrays, load_old_arrays)
@@ -224,8 +238,28 @@ def get_logit_endog(true_params, exog, noise_level):
     ### Create the endog 
     cdf = class_probabilities.cumsum(axis=1) 
     endog = sp.zeros(N)
-    for n in xrange(N):
-        endog[n] = sp.searchsorted(cdf[n, :], sp.rand())
+    for i in xrange(N):
+        endog[i] = sp.searchsorted(cdf[i, :], sp.rand())
+
+    return endog
+
+
+def get_probit_endog(true_params, exog, noise_level):
+    """
+    Gets an endogenous response that is consistent with the true_params,
+        perturbed by noise at noise_level.
+    """
+    N = exog.shape[0]
+    ### Create the probability of entering the different classes, 
+    ### given exog and true_params
+    Xdotparams = sp.dot(exog, true_params)
+    noise = noise_level * sp.randn(*Xdotparams.shape)
+    
+    ### Create the endog 
+    cdf = stats.norm._cdf(-Xdotparams)
+    endog = sp.zeros(N)
+    for i in xrange(N):
+        endog[i] = sp.searchsorted(cdf[i, :], sp.rand())
 
     return endog
 
