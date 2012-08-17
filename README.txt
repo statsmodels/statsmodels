@@ -1,12 +1,13 @@
 What the l1 addition is
 =======================
-A slight modification that allows l1 regularized multinomial logistic regression.  The functionality should be compatible with the existing base.LikelihoodModel.
+A slight modification that allows l1 regularized LikelihoodModel .  
 
 Main Files
 ==========
 
 l1_demo/demo.py
-    $ python demo.py does a quick demo of the regularization.
+    $ python demo.py logit
+    does a quick demo of the regularization using logistic regression.
 
 statsmodels/discrete/l1_cvxopt.py
     _fit_l1_cvxopt_cp() 
