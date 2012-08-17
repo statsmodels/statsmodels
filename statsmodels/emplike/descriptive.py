@@ -1,8 +1,5 @@
 """
-Empirical Likelihood Implementation
-
-Start: 21 May 2012
-Last Updated: 25 July 2012
+Empirical likelihood inference on descriptive statistics
 
 General References:
 ------------------
@@ -10,9 +7,7 @@ General References:
 Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 
 
-TODO: Write functions for estimationg equations instead
-                    of generating the data every time a hypothesis
-                    test is called.
+
 """
 import numpy as np
 from scipy import optimize
@@ -26,10 +21,10 @@ def _test_corr(corr0, self, nuis0, mu1_lb, mu1_ub, mu2_lb, mu2_ub, var1_lb,
                 var1_ub, var2_lb, var2_ub, endog, nobs, x0, weights0, r0):
     """
     Parameters
-    ---------
+    ----------
 
     corr0: float
-        Hypothesized vaalue for the correlation.
+        Hypothesized value for the correlation.
 
     Returns
     -------
@@ -46,42 +41,20 @@ def _test_corr(corr0, self, nuis0, mu1_lb, mu1_ub, mu2_lb, mu2_ub, var1_lb,
     return llr - r0
 
 
-def _log_star(eta1, est_vect, wts, nobs):
-    """
-    Parameters
-    ---------
-    eta1: float
-        Lagrangian multiplier
-
-    est_vect: nxk array
-        Estimating equations vector
-
-    wts: nx1 array
-        observation weights
-
-    Returns
-    ------
-
-    data_star: array
-        The weighted logstar of the estimting equations
-
-    Note
-    ----
-
-    This function is really only a placeholder for the _fit_mle_Newton.
-    The function value is not used in optimization and the optimal value
-    is disregarded when computng the log likelihood ratio.
-    """
-    data_star = np.log(wts) + (np.sum(wts) + np.dot(est_vect, eta1))
-    idx = data_star < 1. / nobs
-    not_idx = ~idx
-    nx = nobs * data_star[idx]
-    data_star[idx] = np.log(1. / nobs) - 1.5 + nx * (2. - nx / 2)
-    data_star[not_idx] = np.log(data_star[not_idx])
-    return data_star
-
-
 def DescStat(endog):
+    """
+    Returns an instance to conduct inference on descriptive statistics
+    via empirical likelihood.
+
+    Parameters
+    ----------
+    endog: ndarray (n,k)
+        array of data to perform inference on
+
+    Returns: DescStat instance
+        If k=1, the function returns a univariate instance, DescStatUV.
+        If k>1, the function returns a multivariate instance, DescStatMV.
+    """
     if endog.ndim == 1:
         endog = endog.reshape(len(endog), 1)
     if endog.shape[1] == 1:
@@ -92,30 +65,76 @@ def DescStat(endog):
 
 class _OptFuncts():
     """
-    A class that holds functions that are optimized/solved.  Not
-    intended for the end user.
+    A class that holds functions that are optimized/solved.
+
+    The general setup of the class is simple.  Any method that starts with
+    _opt_ creates a vector of estimating equations named est_vect such that
+    np.dot(p, (est_vect))=0 where p is the weight on each
+    observation as a 1 x n array and est_vect is n x k.  Then _modif_Newton is
+    called to determine the optimal p.  In the presence of nuisance parameters,
+    these are optimized over to also determine the optimal values for the nuisance
+    parameter.
+
+    Any method starting with _ci_limits calculates the log likelihood
+    ratio for a specific value of a parameter and then subtracts a pre-specified
+    critical value.  This is solved so that llr - crit = 0.
+
     """
 
     def __init__(self, endog):
         super(_OptFuncts, self).__init__(endog)
 
-    def _hess(self, eta1, est_vect, wts, nobs):
+    def _log_star(self, eta, est_vect, weights, nobs):
         """
-        Calculates the hessian of a weighted empirical likelihood
-        provlem.
+        Transforms the log of observation probabilities in terms of the
+        Lagrange multiplier to the log 'star' of the probabilities.
 
         Parameters
         ----------
-        eta1: 1xm array.
+        eta: float
+            Lagrange multiplier
 
-        Value of lamba used to write the
-        empirical likelihood probabilities in terms of the lagrangian
-        multiplier.
-
-        est_vect: nxk array
+        est_vect: ndarray (n,k)
             Estimating equations vector
 
         wts: nx1 array
+            observation weights
+
+        Returns
+        ------
+
+        data_star: array
+            The weighted logstar of the estimting equations
+
+        Notes
+        -----
+        This function is only a placeholder for the _fit_mle_Newton.
+        The function value is not used in optimization and the optimal value
+        is disregarded when computng the log likelihood ratio.
+        """
+        data_star = np.log(weights) + (np.sum(weights) +\
+                                       np.dot(est_vect, eta))
+        idx = data_star < 1. / nobs
+        not_idx = ~idx
+        nx = nobs * data_star[idx]
+        data_star[idx] = np.log(1. / nobs) - 1.5 + nx * (2. - nx / 2)
+        data_star[not_idx] = np.log(data_star[not_idx])
+        return data_star
+
+    def _hess(self, eta, est_vect, weights, nobs):
+        """
+        Calculates the hessian of a weighted empirical likelihood
+        problem.
+
+        Parameters
+        ----------
+        eta: ndarray, (1,m)
+            Lagrange multiplier in the profile likelihood maximization
+
+        est_vect: ndarray (n,k)
+            estimating equations vector
+
+        weights: 1darray
             observation weights
 
         Returns
@@ -123,141 +142,124 @@ class _OptFuncts():
         hess: m x m array
             Weighted hessian used in _wtd_modif_newton
         """
-        data_star_doub_prime = np.sum(wts) + np.dot(est_vect, eta1)
+        data_star_doub_prime = np.sum(weights) + np.dot(est_vect, eta)
         idx = data_star_doub_prime < 1. / nobs
         not_idx = ~idx
         data_star_doub_prime[idx] = - nobs ** 2
         data_star_doub_prime[not_idx] = - (data_star_doub_prime[not_idx]) ** -2
-        wtd_dsdp = wts * data_star_doub_prime
+        wtd_dsdp = weights * data_star_doub_prime
         return np.dot(est_vect.T, wtd_dsdp[:, None] * est_vect)
 
-    def _grad(self, eta1, est_vect, wts, nobs):
+    def _grad(self, eta, est_vect, weights, nobs):
         """
         Calculates the gradient of a weighted empirical likelihood
-        problem.
-
+        problem
 
         Parameters
         ----------
-        eta1: 1xm array.
+        eta: ndarray, (1,m)
+            Lagrange multiplier in the profile likelihood maximization
 
-        Value of lamba used to write the
-        empirical likelihood probabilities in terms of the lagrangian
-        multiplier.
-
-        est_vect: nxk array
+        est_vect: ndarray, (n,k)
             Estimating equations vector
 
-        wts: nx1 array
+        weights: 1darray
             observation weights
 
         Returns
         -------
-        gradient: m x 1 array
+        gradient: ndarray (m,1)
             The gradient used in _wtd_modif_newton
         """
-        data_star_prime = np.sum(wts) + np.dot(est_vect, eta1)
+        data_star_prime = np.sum(weights) + np.dot(est_vect, eta)
         idx = data_star_prime < 1. / nobs
         not_idx = ~idx
         data_star_prime[idx] = nobs * (2 - nobs * data_star_prime[idx])
         data_star_prime[not_idx] = 1. / data_star_prime[not_idx]
-        return np.dot(wts * data_star_prime, est_vect)
+        return np.dot(weights * data_star_prime, est_vect)
 
-    def _modif_newton(self,  x0, est_vect, wts):
+    def _modif_newton(self,  eta, est_vect, weights):
         """
-        Modified Newton's method for maximizing the log* equation.
+        Modified Newton's method for maximizing the log 'star' equation.
 
         Parameters
         ----------
-        x0: 1x m array
-            Iitial guess for the lagrangian multiplier
+        eta: ndarray, (1,m)
+            Lagrange multiplier in the profile likelihood maximization
 
-        est_vect: nxk array
+        est_vect: ndarray, (n,k)
             Estimating equations vector
 
-        wts: nx1 array
+        weights: 1darray
             observation weights
 
         Returns
         -------
         params: 1xm array
-            Lagragian multiplier that maximize the log-likelihood given
-            `x0`.
-
-        See Owen pg. 64
+            Lagragian multiplier that maximizes the log-likelihood
         """
         nobs = len(est_vect)
-        f = lambda x0: - np.sum(_log_star(x0, est_vect, wts, nobs))
-        grad = lambda x0: - self._grad(x0, est_vect, wts, nobs)
-        hess = lambda x0: - self._hess(x0, est_vect, wts, nobs)
+        f = lambda x0: - np.sum(self._log_star(x0, est_vect, weights, nobs))
+        grad = lambda x0: - self._grad(x0, est_vect, weights, nobs)
+        hess = lambda x0: - self._hess(x0, est_vect, weights, nobs)
         kwds = {'tol': 1e-8}
-        res = _fit_mle_newton(f, grad, x0, (), kwds, hess=hess, maxiter=50, \
+        res = _fit_mle_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
         return res[0]
 
     def _find_eta(self, eta):
         """
         Finding the root of sum(xi-h0)/(1+eta(xi-mu)) solves for
-       `eta` when computing ELR for univariate mean.
+        eta when computing ELR for univariate mean.
 
         Parameters
         ----------
-
         eta: float
-            Lagrangian multiplier
+            Lagrangian multiplier in the profile likelihood maximization
 
         Returns
         -------
-
         llr: float
-            n times the Log likelihood value for a given value of eta
-
-        See Owen (2001) pg 22.  (eta is his lambda to avoid confusion
-        with the built-in lambda).
-
-        Not intended for end user
+            n times the log likelihood value for a given value of eta
         """
         return np.sum((self.endog - self.mu0) / \
               (1. + eta * (self.endog - self.mu0)))
 
-    def _ci_limits_mu(self, mu_test):
+    def _ci_limits_mu(self, mu):
         """
+        Calculates the difference between the log likelihood of mu_test and a
+        specified critical value.
+
         Parameters
         ----------
-
-        mu0: float
+        mu: float
             a hypothesized value of mu
 
         Returns
         -------
-
         diff: float
             The difference between the log likelihood value of mu0 and
             a specified value.
         """
-        return self.test_mean(mu_test)[0] - self.r0
+        return self.test_mean(mu)[0] - self.r0
 
     def _find_gamma(self, gamma):
         """
         Finds gamma that satisfies
         sum(log(n * w(gamma))) - log(r0) = 0
 
-        Used for confidence intervals for the mean.
+        Used for confidence intervals for the mean
 
         Parameters
         ----------
-
         gamma: float
             LaGrangian multiplier when computing confidence interval
 
         Returns
         -------
-
         diff: float
             The difference between the log-liklihood when the Lagrangian
-            multiplier is gamma and a pre-specified value.
-
-        See Owen (2001) pg. 23.
+            multiplier is gamma and a pre-specified value
         """
         denom = np.sum((self.endog - gamma) ** -1)
         new_weights = (self.endog - gamma) ** -1 / denom
@@ -267,24 +269,18 @@ class _OptFuncts():
     def _opt_var(self, nuisance_mu, pval=False):
         """
         This is the function to be optimized over a nuisance mean parameter
-        to determine the likelihood ratio for the variance.  In this function
-        is the Newton optimization that finds the optimal weights given
-        a mu parameter and sig2_0.
+        to determine the likelihood ratio for the variance
 
-        Also, it contains the creating of self.est_vect (short for estimating
-        equations vector).  That then gets read by the log-star equations.
-
-        Parameter
-        --------
+        Parameters
+        ----------
         nuisance_mu: float
-            Value of a nuisance mean parameter.
+            Value of a nuisance mean parameter
 
         Returns
         -------
-
         llr: float:
             Log likelihood of a pre-specified variance holding the nuisance
-            parameter constant.
+            parameter constant
         """
         endog = self.endog
         nobs = self.nobs
@@ -303,7 +299,7 @@ class _OptFuncts():
             return chi2.sf(-2 * llr, 1)
         return -2 * llr
 
-    def  _ci_limits_var(self, var_test):
+    def  _ci_limits_var(self, var):
         """
         Used to determine the confidence intervals for the variance.
         It calls test_var and when called by an optimizer,
@@ -316,12 +312,11 @@ class _OptFuncts():
 
         Returns
         -------
-
         diff: float
             The difference between the log likelihood ratio at var_test and a
             pre-specified value.
         """
-        return self.test_var(var_test)[0] - self.r0
+        return self.test_var(var)[0] - self.r0
 
     def _opt_skew(self, nuis_params):
         """
@@ -330,15 +325,13 @@ class _OptFuncts():
 
         Parameters
         ----------
-
-        nuis_params: 1x2 array
-            A nuisance mean and variance parameter
+        nuis_params: 1darray
+            An array with a  nuisance mean and variance parameter
 
         Returns
         -------
-
         llr: float
-            The log likelihood ratio of a prespeified skewness holding
+            The log likelihood ratio of a pre-specified skewness holding
             the nuisance parameters constant.
         """
         endog = self.endog
@@ -363,17 +356,15 @@ class _OptFuncts():
         nuisance parameters mu and sigma
 
         Parameters
-        -----------
-
-        nuis_params: 1x2 array
-            A nuisance mean and variance parameter
+        ----------
+        nuis_params: 1darray
+            An array with a nuisance mean and variance parameter
 
         Returns
-        ------
-
+        -------
         llr: float
             The log likelihood ratio of a pre-speified kurtosis holding the
-            nuisance parameters constant.
+            nuisance parameters constant
         """
         endog = self.endog
         nobs = self.nobs
@@ -398,13 +389,11 @@ class _OptFuncts():
 
         Parameters
         -----------
-
-        nuis_params: 1x2 array
-            A nuisance mean and variance parameter
+        nuis_params: 1darray
+            An array with a nuisance mean and variance parameter
 
         Returns
         ------
-
         llr: float
             The log likelihood ratio of a pre-speified skewness and
             kurtosis holding the nuisance parameters constant.
@@ -428,10 +417,10 @@ class _OptFuncts():
         llr = np.sum(np.log(nobs * self.new_weights))
         return -2 * llr
 
-    def _ci_limits_skew(self, skew0):
+    def _ci_limits_skew(self, skew):
         """
         Parameters
-        ---------
+        ----------
         skew0: float
             Hypothesized value of skewness
 
@@ -441,12 +430,12 @@ class _OptFuncts():
             The difference between the log likelihood ratio at skew0 and a
             pre-specified value.
         """
-        return self.test_skew(skew0, var_min=self.var_l,
+        return self.test_skew(skew, var_min=self.var_l,
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[0] - self.r0
 
-    def _ci_limits_kurt(self, kurt0):
+    def _ci_limits_kurt(self, kurt):
         """
         Parameters
         ---------
@@ -456,10 +445,10 @@ class _OptFuncts():
         Returns
         -------
         diff: float
-            The difference between the log likelihood ratio at kurt0 and a
+            The difference between the log likelihood ratio at kurt and a
             pre-specified value.
         """
-        return self.test_kurt(kurt0, var_min=self.var_l,
+        return self.test_kurt(kurt, var_min=self.var_l,
                                  var_max=self.var_u,
                                  mu_min=self.mu_l,
                                  mu_max=self.mu_u)[0] - self.r0
@@ -468,13 +457,11 @@ class _OptFuncts():
         """
         Parameters
         ----------
-
-        nuis_params: 4x1 array
+        nuis_params: 1darray
             array containing two nuisance means and two nuisance variances
 
         Returns
         -------
-
         llr: float
             The log-likelihood of the correlation coefficient holding nuisance
             parameters constant
@@ -495,28 +482,31 @@ class _OptFuncts():
 
 class DescStatUV(_OptFuncts):
     """
-    A class for confidence intervals and hypothesis tests involving mean,
+    A class to compute confidence intervals and hypothesis tests involving mean,
     variance, kurtosis and skewness of a univariate random variable.
 
     Parameters
     ----------
-    endog: nx1 array
+    endog: 1darray
         Data to be analyzed
 
-    See Also
-    --------
+    Attributes
+    ----------
+    endog: 1darray
+        data to be analyzed
 
-    Method docstring for explicit instructions and uses.
+    nobs: float
+        number of observations
     """
 
     def __init__(self, endog):
         self.endog = np.squeeze(endog)
         self.nobs = float(endog.shape[0])
-        self.weights = np.ones(self.nobs) / float(self.nobs)
+
 
     def test_mean(self, mu0, return_weights=False):
         """
-        Returns -2 * log-likelihood ratio, p-value and weights
+        Returns - 2 x log-likelihood ratio, p-value and weights
         for a hypothesis test of the means.
 
         Parameters
