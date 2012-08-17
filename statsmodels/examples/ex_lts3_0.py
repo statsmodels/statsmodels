@@ -23,7 +23,7 @@ np.random.seed(seed)
 
 nobs, k_vars = 200, 4
 n_outl_mix = 10, 5
-n_outl_mix = 5, 5 #70, 20
+n_outl_mix = 70, 20 #5, 5 #
 n_outl = sum(n_outl_mix)
 
 beta0 = np.ones(k_vars)
@@ -145,14 +145,92 @@ plt.figure()
 plt.plot(noise)
 #plt.show()
 
-for ii in range(5):
+mc_ols = []
+mc_lts = []
+mc_rlmd = []
+mc_rlm = []
+mc_mm  = []
+mc_elts = []
+
+verbose = False
+
+import time
+t0 = time.time()
+
+for ii in range(200):
+    if verbose:
+        print
+    else:
+        print '.',
     noise = np.hstack((distr1(size=n_outl_mix[1])**2,
                        distr0(size=nobs - n_outl_mix[1]) ))
     endog = endog_true + noise
+
+    res_ols = OLS(endog, exog).fit()
+    if verbose:
+        print res_ols.params, 'ols'
+    mc_ols.append(np.concatenate((res_ols.params, res_ols.bse)))
+
     mod_lts = LTS(endog, exog)
-    bestwt = mod_lts.fit(k_trimmed=k_trimmed, random_search_options=so)
+    res_lts, lts_mask = mod_lts.fit(k_trimmed=k_trimmed, random_search_options=so)
     #bestwt_outl = np.nonzero(~bestwt[-1])[0]
-    print bestwt[0].params, 'bestwt',
-    hsalt = RLM(endog, exog, M=robust.norms.TrimmedMean()).fit(weights=bestwt[-1].astype(float))   # default M
-    print hsalt.params, 'rlm-tm-w'
+    if verbose:
+        print res_lts.params, 'bestwt'
+    mc_lts.append(np.concatenate((res_lts.params, res_lts.bse)))
+
+    res_rlmd = RLM(endog, exog).fit()
+    if verbose:
+        print res_rlmd.params, 'rlm-d'
     #print np.nonzero(hsalt.weights < 0.9)[0]
+    mc_rlmd.append(np.concatenate((res_rlmd.params, res_rlmd.bse)))
+
+    res_tm = RLM(endog, exog, M=robust.norms.TrimmedMean()).fit(weights=bestwt[-1].astype(float))   # default M
+    if verbose:
+        print res_tm.params, 'rlm-tm-w'
+    #print np.nonzero(hsalt.weights < 0.9)[0]
+    mc_rlm.append(np.concatenate((res_tm.params, res_tm.bse)))
+
+    mod_mm = LTSRLM(endog, exog, M=robust.norms.TukeyBiweight(c=4.685))
+    res_mm = mod_mm.fit()
+    if verbose:
+        print res_mm.params, 'MM-E, LTSRLM'
+    mc_mm.append(np.concatenate((res_mm.params, res_mm.bse)))
+
+    mod_elts = EfficientLTS(endog, exog)
+    res_elts, elts_mask = mod_elts.fit(breakdown, efficiency, random_search_options=None, maxiter=10)
+    if verbose:
+        print res_elts.params, 'elts'
+    mc_elts.append(np.concatenate((res_elts.params, res_elts.bse)))
+
+t1 = time.time()
+print
+
+(mc_ols, mc_rlmd, mc_rlm, mc_lts, mc_elts, mc_mm) = map(np.array,
+                     [mc_ols, mc_rlmd, mc_rlm, mc_lts, mc_elts, mc_mm])
+
+estimators = zip(['mc_ols', 'mc_rlmd', 'mc_rlm', 'mc_lts', 'mc_elts', 'mc_mm'],
+                 [mc_ols, mc_rlmd, mc_rlm, mc_lts, mc_elts, mc_mm])
+
+for name, est in estimators:
+    est = np.array(est)
+    print name
+    print est.mean(0)
+
+beta_true_inliers = np.ones(k_vars)
+
+print '\nbias'
+for name, est in estimators:     print est.mean(0)[:k_vars] - beta_true_inliers, name
+
+print '\nmean squared error'
+for name, est in estimators: print ((est[:, :k_vars] - beta_true_inliers)**2).mean(0), name
+
+
+print '\nmean absolute error'
+for name, est in estimators: print np.abs(est[:, :k_vars] - beta_true_inliers).mean(0), name
+
+
+print '\nmeadian absolute error'
+for name, est in estimators: print np.median((est[:, :k_vars] - beta_true_inliers), 0), name
+
+
+print '\time form MC:', t1 - t0
