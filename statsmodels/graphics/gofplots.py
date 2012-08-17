@@ -5,9 +5,7 @@ from statsmodels.tools.tools import add_constant
 
 from . import utils
 
-
 __all__ = ['qqplot', 'qqplot_2samples', 'qqline', 'ProbPlot']
-
 
 class ProbPlot(object):
     def __init__(self, data, dist=stats.norm, fit=False,
@@ -23,8 +21,8 @@ class ProbPlot(object):
         data : array-like
             1d data array
         dist : A scipy.stats or statsmodels distribution
-            Compare x against dist. The default
-            is scipy.stats.distributions.norm (a standard normal).
+            Compare x against dist. The default is 
+            scipy.stats.distributions.norm (a standard normal).
         distargs : tuple
             A tuple of arguments passed to dist to specify it fully
             so dist.ppf may be called.
@@ -97,6 +95,18 @@ class ProbPlot(object):
         >>> fig = probplot.qqplot(line='45')
         >>> plt.show()
 
+        A second `ProbPlot` object can be used to compare two seperate sample
+        sets by using the `other` kwarg in the `qqplot` method.
+
+        >>> # example 5
+        >>> import numpy as np
+        >>> x = np.random.normal(loc=8.25, scale=2.75, size=37)
+        >>> y = np.random.normal(loc=8.75, scale=3.25, size=37)
+        >>> pp_x = sm.ProbPlot(x, fit=True)
+        >>> pp_y = sm.ProbPlot(y, fit=True)
+        >>> fig = pp_x.qqplot(line='45', other=pp_y)
+        >>> plt.show()
+
         The following plot displays some options, follow the link to see the
         code.
 
@@ -157,8 +167,7 @@ class ProbPlot(object):
         Parameters
         ----------
         line : str {'45', 's', 'r', q'} or None
-            Options for the reference line to which the data is compared.:
-
+            Options for the reference line to which the data is compared:
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -199,8 +208,7 @@ class ProbPlot(object):
             User-provided lables for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None
-            Options for the reference line to which the data is compared.:
-
+            Options for the reference line to which the data is compared:
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -210,11 +218,12 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
-        other : `ProbPlot` instance or None
+        other : `ProbPlot` instance, array-like, or None
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
-            instance. If not provided (defualt), the theoretical quantiles are
-            used.
+            instance. If an array-like object is provided, it will be turned 
+            into a `ProbPlot` instance using default parameters. If not provided
+            (defualt), the theoretical quantiles are used.
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -264,8 +273,7 @@ class ProbPlot(object):
         Parameters
         ----------
         line : str {'45', 's', 'r', q'} or None
-            Options for the reference line to which the data is compared.:
-
+            Options for the reference line to which the data is compared:
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -343,7 +351,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         from the standardized data, after subtracting the fitted loc
         and dividing by the fitted scale.
     line : str {'45', 's', 'r', q'} or None
-        Options for the reference line to which the data is compared.:
+        Options for the reference line to which the data is compared:
         - '45' - 45-degree line
         - 's' - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
@@ -367,7 +375,6 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     --------
     >>> import statsmodels.api as sm
     >>> from matplotlib import pyplot as plt
-
     >>> data = sm.datasets.longley.load()
     >>> data.exog = sm.add_constant(data.exog)
     >>> mod_fit = sm.OLS(data.endog, data.exog).fit()
@@ -424,8 +431,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
         User-provided lables for the x-axis and y-axis. If None (default),
         other values are used.
     line : str {'45', 's', 'r', q'} or None
-        Options for the reference line to which the data is compared.:
-
+        Options for the reference line to which the data is compared:
         - '45' - 45-degree line
         - 's' - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
@@ -458,6 +464,10 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     Notes
     -----
     1) Depends on matplotlib.
+    2) If `data1` and `data2` are not `ProbPlot` instances, instances will be
+    created using the default parameters. Therefore, it is recommended to use
+    `ProbPlot` instance if fine-grained control is needed in the computation
+    of the quantiles.
     """
     check_data1 = isinstance(data1, ProbPlot)
     check_data2 = isinstance(data2, ProbPlot)
