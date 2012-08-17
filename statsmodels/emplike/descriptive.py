@@ -507,7 +507,7 @@ class DescStatUV(_OptFuncts):
     def test_mean(self, mu0, return_weights=False):
         """
         Returns - 2 x log-likelihood ratio, p-value and weights
-        for a hypothesis test of the means.
+        for a hypothesis test of the mean.
 
         Parameters
         ----------
@@ -516,14 +516,13 @@ class DescStatUV(_OptFuncts):
 
         return_weights: bool, optional
             If return_weights is True the funtion returns
-            the weight of the observations under the null hypothesis.
-            Default = False
+            the weights of the observations under the null hypothesis.
+            Default is False
 
         Returns
         -------
-
         test_results: tuple
-            The log-likelihood ratio and p-value of `mu0`
+            The log-likelihood ratio and p-value of mu0
         """
         self.mu0 = mu0
         endog = self.endog
@@ -547,13 +546,13 @@ class DescStatUV(_OptFuncts):
         Parameters
         ----------
         sig: float
-            Significance level. Default=.05
+            Significance level. Default is .05
 
         Optional
         --------
 
         method: Root finding method,  Can be 'nested-brent' ' gamma'.
-            or 'bisect.' Default= 'gamma'
+            or 'bisect.' Default is 'gamma'
 
             'gamma' Tries to solve for the gamma parameter in the
             Lagrangian (see Owen pg 22) and then determine the weights.
@@ -630,29 +629,6 @@ class DescStatUV(_OptFuncts):
             mu_low = np.sum(weights_low * endog)
             mu_high = np.sum(weights_high * endog)
             return mu_low,  mu_high
-
-        if method == 'bisect':
-            self.r0 = chi2.ppf(sig, 1)
-            self.mu_high = endog.mean()
-            mu_hmax = max(endog)
-            while abs(self.test_mean(self.mu_high)[1]
-                 - self.r0) > tol:
-                self.mu_test = (self.mu_high + mu_hmax) / 2
-                if self.test_mean(self.mu_test)[1] - self.r0 < 0:
-                    self.mu_high = self.mu_test
-                else:
-                    mu_hmax = self.mu_test
-
-            self.mu_low = endog.mean()
-            mu_lmin = min(endog)
-            while abs(self.test_mean(self.mu_low)[1]
-                 - self.r0) > tol:
-                self.mu_test = (self.mu_low + mu_lmin) / 2
-                if self.test_mean(self.mu_test)[1] - self.r0 < 0:
-                    self.mu_low = self.mu_test
-                else:
-                    mu_lmin = self.mu_test
-            return self.mu_low, self.mu_high
 
     def test_var(self, sig2_0, return_weights=False):
         """
