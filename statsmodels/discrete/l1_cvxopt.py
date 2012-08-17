@@ -88,7 +88,7 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
     ### Pack up return values for statsmodels 
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
     if full_output:
-        x = np.array(results['x'])
+        x = np.array(results['x']).ravel()
         params = x[:K]
         fopt = f_0(x)
         gopt = float('nan')  # Objective is non-differentiable
@@ -98,7 +98,7 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
         retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations, 
                 'gopt':gopt, 'hopt':hopt}
     else:
-        x = np.array(results['x'])
+        x = np.array(results['x']).ravel()
         params = x[:K]
 
     ### Return results
