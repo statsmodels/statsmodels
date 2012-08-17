@@ -199,8 +199,8 @@ class ProbPlot(object):
                            self.dist,
                            ax=ax, line=line)
 
-        ax.set_ylabel("Sample Probabilities")
         ax.set_xlabel("Theoretical Probabilities")
+        ax.set_ylabel("Sample Probabilities")
 
         return fig
 
@@ -238,12 +238,12 @@ class ProbPlot(object):
                            self.dist,
                            ax=ax, line=line)
 
-        ax.set_ylabel("Sample Quantiles")
         ax.set_xlabel("Theoretical Quantiles")
+        ax.set_ylabel("Sample Quantiles")
 
         return fig
 
-    def probplot(self, line=None, ax=None):
+    def probplot(self, line=None, ax=None, exceed=False):
         """
         Probability plot of the unscaled quantiles of x versus the
         probabilities of a distibution (not to be confused with a P-P plot).
@@ -268,6 +268,13 @@ class ProbPlot(object):
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
+        excced : boolean
+             - If False (default) the raw sample quantiles are plotted against
+               the theoretical quantiles, show the probability that a sample
+               will not exceed a given value
+             - If True, the theoretical quantiles are flipped such that the
+               figure displays the probability that a sample will exceed a
+               given value.
 
         Returns
         -------
@@ -275,13 +282,21 @@ class ProbPlot(object):
             If `ax` is None, the created figure.  Otherwise the figure to which
             `ax` is connected.
         """
-        fig, ax = _do_plot(self.theoretical_quantiles,
-                           self.raw_sample_quantiles,
-                           self.dist,
-                           ax=ax, line=line)
+        if exceed:
+            fig, ax = _do_plot(self.theoretical_quantiles[::-1],
+                               self.raw_sample_quantiles,
+                               self.dist,
+                               ax=ax, line=line)
+            ax.set_xlabel('Probability of Exceedance (%)')
+
+        else:
+            fig, ax = _do_plot(self.theoretical_quantiles,
+                               self.raw_sample_quantiles,
+                               self.dist,
+                               ax=ax, line=line)
+            ax.set_xlabel('Non-exceedance Probability (%)')
 
         ax.set_ylabel("Sample Quantiles")
-        ax.set_xlabel('Non-exceedance Probability (%)')
         _fmt_probplot_axis(ax, self.dist, self.nobs)
 
         return fig
