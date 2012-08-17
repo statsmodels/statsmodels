@@ -6,7 +6,7 @@ from statsmodels.tools.tools import add_constant
 from . import utils
 
 
-__all__ = ['qqplot', 'qqline', 'ProbPlot']
+__all__ = ['qqplot', 'qqplot_2samples', 'qqline', 'ProbPlot']
 
 
 class ProbPlot(object):
@@ -96,22 +96,6 @@ class ProbPlot(object):
         >>> probplot = sm.ProbPlot(res, stats.t, fit=True)
         >>> fig = probplot.qqplot(line='45')
         >>> plt.show()
-
-        Sometimes Q-Q plots can be applied to two-sample problems to test the
-        equality of the distributions between to sample sets. In that case,
-        it's best to create a `ProbPlot` instance for each sample and then to
-        plot each instance's `sample_quantiles` attributes:
-
-        >>> import numpy as np
-        >>> x = np.random.normal(loc=8.5, scale=2.5, size=37)
-        >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
-        >>> pp_x = sm.ProbPlot(x)
-        >>> pp_y = sm.ProbPlot(y)
-        >>> fig, ax = plt.subplots(nrows=1, ncols=1)
-        >>> ax.plot(pp_x.sample_quantiles, pp_y.sample_quantiles, 'bo')
-        >>> qqline(ax, line='45') # best-choice when evaluating equality
-        >>> ax.set_xlabel('Quantiles of $x$')
-        >>> ax.set_ylabel('Quantiles of $y$')
 
         The following plot displays some options, follow the link to see the
         code.
@@ -204,13 +188,16 @@ class ProbPlot(object):
 
         return fig
 
-    def qqplot(self, line=None, ax=None):
+    def qqplot(self, xlabel=None, ylabel=None, line=None, other=None, ax=None):
         """
         Q-Q plot of the quantiles of x versus the quantiles/ppf of a
-        distribution.
+        distribution or the quantiles of another `ProbPlot` instance.
 
         Parameters
         ----------
+        xlabel, ylabel : str or None
+            User-provided lables for the x-axis and y-axis. If None (default),
+            other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared.:
 
@@ -223,6 +210,11 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+        other : `ProbPlot` instance or None
+            If provided, the sample quantiles of this `ProbPlot` instance are
+            plotted against the sample quantiles of the `other` `ProbPlot`
+            instance. If not provided (defualt), the theoretical quantiles are
+            used.
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -233,13 +225,31 @@ class ProbPlot(object):
             If `ax` is None, the created figure.  Otherwise the figure to which
             `ax` is connected.
         """
-        fig, ax = _do_plot(self.theoretical_quantiles,
-                           self.sample_quantiles,
-                           self.dist,
-                           ax=ax, line=line)
+        if other is not None:
+            check_other = isinstance(other, ProbPlot)
+            if not check_other:
+                other = ProbPlot(other)
 
-        ax.set_xlabel("Theoretical Quantiles")
-        ax.set_ylabel("Sample Quantiles")
+            fig, ax = _do_plot(other.sample_quantiles,
+                               self.sample_quantiles,
+                               self.dist, ax=ax, line=line)
+
+            if xlabel is None:
+                xlabel = 'Quantiles of 2nd Sample'
+            if ylabel is None:
+                ylabel = 'Quantiles of 1st Sample'
+
+        else:
+            fig, ax = _do_plot(self.theoretical_quantiles,
+                               self.sample_quantiles,
+                               self.dist, ax=ax, line=line)
+            if xlabel is None:
+                xlabel = "Theoretical Quantiles"
+            if ylabel is None:
+                ylabel = "Sample Quantiles"
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
 
         return fig
 
@@ -285,42 +295,25 @@ class ProbPlot(object):
         if exceed:
             fig, ax = _do_plot(self.theoretical_quantiles[::-1],
                                self.raw_sample_quantiles,
-                               self.dist,
-                               ax=ax, line=line)
-            ax.set_xlabel('Probability of Exceedance (%)')
+                               self.dist, ax=ax, line=line)
+            xlabel = 'Probability of Exceedance (%)'
 
         else:
             fig, ax = _do_plot(self.theoretical_quantiles,
                                self.raw_sample_quantiles,
-                               self.dist,
-                               ax=ax, line=line)
-            ax.set_xlabel('Non-exceedance Probability (%)')
+                               self.dist, ax=ax, line=line)
+            xlabel = 'Non-exceedance Probability (%)'
 
+        ax.set_xlabel(xlabel)
         ax.set_ylabel("Sample Quantiles")
         _fmt_probplot_axis(ax, self.dist, self.nobs)
 
         return fig
 
-def _do_plot(x, y, dist, ax=None, line=False):
-    """
-    Boiler plate plotting function for the `ppplot`, `qqplot`, and
-    `probplot` methods of the `ProbPlot` class
-    """
-    fig, ax = utils.create_mpl_ax(ax)
-    ax.set_xmargin(0.02)
-    ax.plot(x, y, 'bo')
-    if line:
-        if line not in ['r','q','45','s']:
-            msg = "%s option for line not understood" % line
-            raise ValueError(msg)
-
-        qqline(ax, line, x, y, dist)
-    return fig, ax
-
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
            line=False, ax=None):
     """
-    qqplot of the quantiles of x versus the quantiles/ppf of a distribution.
+    Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution.
 
     Can take arguments specifying the parameters for dist or fit them
     automatically. (See fit under Parameters.)
@@ -351,7 +344,6 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         and dividing by the fitted scale.
     line : str {'45', 's', 'r', q'} or None
         Options for the reference line to which the data is compared.:
-
         - '45' - 45-degree line
         - 's' - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
@@ -416,6 +408,69 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     fig = probplot.qqplot(ax=ax, line=line)
     return fig
 
+def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
+    """
+    Q-Q Plot of two samples' quantiles.
+
+    Can take either two `ProbPlot` instances or two array-like objects. In the
+    case of the latter, both inputs will be converted to `ProbPlot` instances
+    using only the default values - so use `ProbPlot` instances if
+    finer-grained control of the quantile computations is required.
+
+    Parameters
+    ----------
+    data1, data2 : array-like (1d) or `ProbPlot` instances
+    xlabel, ylabel : str or None
+        User-provided lables for the x-axis and y-axis. If None (default),
+        other values are used.
+    line : str {'45', 's', 'r', q'} or None
+        Options for the reference line to which the data is compared.:
+
+        - '45' - 45-degree line
+        - 's' - standardized line, the expected order statistics are scaled
+          by the standard deviation of the given sample and have the mean
+          added to them
+        - 'r' - A regression line is fit
+        - 'q' - A line is fit through the quartiles.
+        - None - by default no reference line is added to the plot.
+        - If True a reference line is drawn on the graph. The default is to
+          fit a line via OLS regression.
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
+
+    Returns
+    -------
+    fig : Matplotlib figure instance
+        If `ax` is None, the created figure.  Otherwise the figure to which
+        `ax` is connected.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> import statsmodels.api as sm
+    >>> x = np.random.normal(loc=8.5, scale=2.5, size=37)
+    >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
+    >>> pp_x = sm.ProbPlot(x)
+    >>> pp_y = sm.ProbPlot(y)
+    >>> qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
+
+    Notes
+    -----
+    1) Depends on matplotlib.
+    """
+    check_data1 = isinstance(data1, ProbPlot)
+    check_data2 = isinstance(data2, ProbPlot)
+
+    if not check_data1 and not check_data2:
+        data1 = ProbPlot(data1)
+        data2 = ProbPlot(data2)
+
+    fig = data1.qqplot(xlabel=xlabel, ylabel=ylabel,
+                       line=line, other=data2, ax=ax)
+
+    return fig
+
 def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     """
     Plot a reference line for a qqplot.
@@ -450,8 +505,8 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         end_pts[0] = max(end_pts[0])
         end_pts[1] = min(end_pts[1])
         ax.plot(end_pts, end_pts, fmt)
-        ax.set_xlim(end_pts)
-        ax.set_ylim(end_pts)
+        #ax.set_xlim(end_pts)
+        #ax.set_ylim(end_pts)
         return # does this have any side effects?
     if x is None and y is None:
         raise ValueError("If line is not 45, x and y cannot be None.")
@@ -506,6 +561,20 @@ def _fmt_probplot_axis(ax, dist, nobs):
     """
     Formats a theoretical quantile axis to display the corresponding
     probabilities on the quantiles' scale.
+
+    Parameteters
+    ------------
+    ax : Matplotlib AxesSubplot instance, optional
+        The axis to be formatted
+    nobs : scalar
+        Numbero of observations in the sample
+    dist : scipy.stats.distribution
+        A scipy.stats distribution sufficiently specified to impletment its
+        ppf() method.
+
+    Returns
+    -------
+    There is no return value. This operates on `ax` in place
     """
     if nobs < 50:
         axis_probs = np.array([1,2,5,10,20,30,40,50,60,
@@ -524,3 +593,40 @@ def _fmt_probplot_axis(ax, dist, nobs):
                        horizontalalignment='right',
                        verticalalignment='center')
     ax.set_xlim([axis_qntls.min(), axis_qntls.max()])
+
+def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
+    """
+    Boiler plate plotting function for the `ppplot`, `qqplot`, and
+    `probplot` methods of the `ProbPlot` class
+
+    Parameteters
+    ------------
+    x, y : array-like
+        Data to be plotted
+    dist : scipy.stats.distribution
+        A scipy.stats distribution, needed if `line` is 'q'.
+    line : str {'45', 's', 'r', q'} or None
+        Options for the reference line to which the data is compared.
+    ax : Matplotlib AxesSubplot instance, optional
+        If given, this subplot is used to plot in instead of a new figure being
+        created.
+    fmt : str, optional
+        matplotlib-compatible formatting string for the data markers
+
+    Returns
+    -------
+    fig : Matplotlib Figure instance
+    ax : Matplotlib AxesSubplot instance (see Parameters)
+
+    """
+    fig, ax = utils.create_mpl_ax(ax)
+    ax.set_xmargin(0.02)
+    ax.plot(x, y, fmt)
+    if line:
+        if line not in ['r','q','45','s']:
+            msg = "%s option for line not understood" % line
+            raise ValueError(msg)
+
+        qqline(ax, line, x=x, y=y, dist=dist)
+
+    return fig, ax
