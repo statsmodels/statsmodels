@@ -37,6 +37,7 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
 
     if callback:
         print "Callback will be ignored with l1_cvxopt_cp"
+    start_params = start_params.ravel(order='F')
 
     ## Extract arguments
     # K is total number of covariates, possibly including a leading constant.
@@ -128,7 +129,7 @@ def objective_func(f, x, K, alpha, *args):
     The regularized objective function.
     """
     x_arr = np.array(x)
-    params = x_arr[:K]
+    params = x_arr[:K].ravel()
     u = x_arr[K:]
     # Call the numpy version
     objective_func_arr = f(params, *args) + (alpha * u).sum()
@@ -140,7 +141,7 @@ def fprime(score, x, K, alpha):
     The regularized derivative.
     """
     x_arr = np.array(x)
-    params = x_arr[:K]
+    params = x_arr[:K].ravel()
     # Call the numpy version
     # The derivative just appends a vector of constants
     fprime_arr = np.append(score(params), alpha * np.ones(K))
@@ -163,7 +164,7 @@ def hessian_wrapper(hess, x, z, K):
     Wraps the hessian up in the form for cvxopt.
     """
     x_arr = np.array(x)
-    params = x_arr[:K]
+    params = x_arr[:K].ravel()
     zh_x = np.array(z[0]) * hess(params)
     zero_mat = np.zeros(zh_x.shape)
     A = np.concatenate((zh_x, zero_mat), axis=1)
