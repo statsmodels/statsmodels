@@ -249,7 +249,7 @@ class _GenericKDE (object):
         Sets bandwidth lower bound to zero and
         for discrete values upper bound of one
         """ 
-        unit = np.ones((self.K, ))
+        #unit = np.ones((self.K, ))
         ind0 = np.where(bw < 0)
         bw[ind0] = 0.
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
@@ -1124,9 +1124,6 @@ class Reg(_GenericKDE):
         B_x = np.ones((self.K))
         N, K = np.shape(txdat)
         f_x = np.sum(KX, axis=0) / float(N)
-        iscontinuous = tools._get_type_pos(self.var_type)[0]
-        txdat_c = txdat[:, iscontinuous]
-        edat_c = edat[:, iscontinuous]
         KX_c = tools.gpke(bw, tdat=txdat, edat=edat,
                         var_type=self.var_type,
                             ckertype='d_gaussian',
@@ -1806,6 +1803,10 @@ class TestFForm(object):
             pass
 
 class SingleIndexModel(Reg):
+    """
+    Single index semiparametric models
+    y_i = g(X_i'*b) + e_i
+    """
 
     def __init__(self, tydat, txdat, var_type):
         self.var_type = var_type
@@ -1814,16 +1815,18 @@ class SingleIndexModel(Reg):
         self.txdat = tools.adjust_shape(txdat, self.K)
         self.N = np.shape(self.txdat)[0]
         self.b, self.bw = self._est_b_bw()
+        self.all_vars_type = self.var_type
 
     def _est_b_bw(self):
         params0 = np.random.uniform(size=(2*self.K, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0:self.K]
         bw = b_bw[self.K::]
+        #bw = self._set_bw_bounds(bw)
         return b, bw
 
     def cv_loo(self, params):
-        print "Running"
+        #print "Running"
         # See p. 254 in Textbook
         params = np.asarray(params)
         b = params[0 : self.K]
@@ -1867,4 +1870,79 @@ class SingleIndexModel(Reg):
         repr += "Estimator type: local constant" + "\n"
         return repr
 
-        
+class SemiLinear(Reg):
+    
+    def __init__(self, tydat, txdat, tzdat, var_type, l_K):
+        self.tydat = tools.adjust_shape(tydat, 1)
+        self.txdat = tools.adjust_shape(txdat, l_K)
+        self.K = len(var_type)
+        self.tzdat = tools.adjust_shape(tzdat, self.K)
+        self.l_K = l_K
+        self.N = np.shape(self.txdat)[0]
+        self.var_type = var_type
+        self.b, self.bw = self._est_b_bw()
+        self.all_vars_type = self.var_type
+
+    def _est_b_bw(self):
+        params0 = np.random.uniform(size=(self.l_K + self.K, ))
+        b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
+        b = b_bw[0 : self.l_K]
+        bw = b_bw[self.l_K::]
+        #bw = self._set_bw_bounds(np.asarray(bw))
+        return b, bw
+
+    def cv_loo(self, params):
+        #print "Running"
+        # See p. 254 in Textbook
+        params = np.asarray(params)
+        b = params[0 : self.l_K]
+        bw = params[self.l_K::]
+        LOO_X = tools.LeaveOneOut(self.txdat)
+        LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        LOO_Z = tools.LeaveOneOut(self.tzdat).__iter__()
+        Xb = b * self.txdat
+        i = 0
+        L = 0
+        for X_j in LOO_X:
+            Y = LOO_Y.next()
+            Z = LOO_Z.next()
+            Xb_j = b * X_j 
+            Yx = Y - Xb_j
+            G = self._est_loc_constant(bw, tydat=Yx, txdat=-Z, edat=-self.tzdat[i, :])[0]
+            lt = np.sum(Xb[i, :])  # linear term
+            L += (self.tydat[i] - lt - G) ** 2
+            i += 1
+        return L
+
+    def fit(self, exdat=None, ezdat=None):
+        if exdat is None:
+            exdat = self.txdat
+        else:
+            exdat = tools.adjust_shape(exdat, self.l_K)
+        if ezdat is None:
+            ezdat = self.tzdat
+        else:
+            ezdat = tools.adjust_shape(ezdat, self.K)
+
+        N_edat = np.shape(ezdat)[0]
+        mean = np.empty((N_edat,))
+        mfx = np.empty((N_edat, self.K))
+        Y = self.tydat - self.b * exdat
+        for i in xrange(N_edat):
+            mean_mfx = self._est_loc_constant(self.bw, Y, 
+                    self.tzdat, edat=ezdat[i, :])
+            mean[i] = mean_mfx[0]
+            mfx_c = np.squeeze(mean_mfx[1])
+            mfx[i, :] = mfx_c
+        return mean, mfx
+
+
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Semiparamateric Paritally Linear Model \n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: cv_ls" + "\n"
+        repr += "Estimator type: local constant" + "\n"
+        return repr
