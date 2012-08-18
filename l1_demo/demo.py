@@ -129,13 +129,8 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
     # use cross validation to pick alpha
     alpha = base_alpha * N * sp.ones((num_nonconst_covariates+1, num_targets-1))
     alpha[0,:] = 0  # Don't regularize the intercept
-    # Correlation length for the independent variables
-    # Higher makes the problem more ill-posed, and easier to screw
-    # up with noise.
-    # BEWARE:  With long correlation lengths, you often get a singular KKT
-    # matrix (during the l1_cvxopt_cp fit)
 
-    #### Make the arrays
+    #### Make the data and model
     exog = get_exog(N, num_nonconst_covariates, cor_length) 
     exog = sm.add_constant(exog, prepend=True)
     true_params = sp.rand(num_nonconst_covariates+1, num_targets-1)
@@ -148,9 +143,13 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
     model = models[mode](endog, exog)
 
     #### Get the results and print
-    result_str = run_solvers(model, true_params, alpha, 
+    results = run_solvers(model, true_params, alpha, 
             get_l1_slsqp_results, get_l1_cvxopt_results, print_summaries)
-    print result_str
+    
+    summary_str = get_summary_str(results, true_params, get_l1_slsqp_results, 
+            get_l1_cvxopt_results, print_summaries)
+
+    print summary_str
 
 
 def run_solvers(model, true_params, alpha, get_l1_slsqp_results, 
@@ -159,30 +158,51 @@ def run_solvers(model, true_params, alpha, get_l1_slsqp_results,
     Runs the solvers using the specified settings and returns a result string.  
     Works the same for any l1 penalized likelihood model.
     """
+    results = {}
     #### Train the models
-    print_str = '\n\n=========== Short Error Summary ============'
     # Get ML results
-    results_ML = model.fit(method='newton')
-    RMSE_ML = get_RMSE(results_ML, true_params)
-    print_str += '\n\n The maximum likelihood fit RMS error = %.4f'%RMSE_ML
+    results['results_ML'] = model.fit(method='newton')
     # Get l1 results
-    start_params = results_ML.params.ravel(order='F')
+    start_params = results['results_ML'].params.ravel(order='F')
     if get_l1_slsqp_results:
-        results_l1_slsqp = model.fit(method='l1', alpha=alpha, 
+        results['results_l1_slsqp'] = model.fit(method='l1', alpha=alpha, 
                 maxiter=70, start_params=start_params, trim_params=True, 
                 retall=True)
+    if get_l1_cvxopt_results:
+        results['results_l1_cvxopt_cp'] = model.fit(method='l1_cvxopt_cp',
+                alpha=alpha, maxiter=50, start_params=start_params, 
+                trim_params=True, retall=True, feastol=1e-5)
+
+    return results
+
+
+def get_summary_str(results, true_params, get_l1_slsqp_results, 
+        get_l1_cvxopt_results, print_summaries):
+    """
+    Gets a string summarizing the results.
+    """
+    #### Extract specific results
+    results_ML = results['results_ML']
+    RMSE_ML = get_RMSE(results_ML, true_params)
+    if get_l1_slsqp_results:
+        results_l1_slsqp = results['results_l1_slsqp']
+    if get_l1_cvxopt_results:
+        results_l1_cvxopt_cp = results['results_l1_cvxopt_cp']
+
+    #### Format summaries
+    # Short summary
+    print_str = '\n\n=========== Short Error Summary ============'
+    print_str += '\n\n The maximum likelihood fit RMS error = %.4f'%RMSE_ML
+    if get_l1_slsqp_results:
         RMSE_l1_slsqp = get_RMSE(results_l1_slsqp, true_params)
         print_str += '\n The l1_slsqp fit RMS error = %.4f'%RMSE_l1_slsqp
     if get_l1_cvxopt_results:
-        results_l1_cvxopt_cp = model.fit(method='l1_cvxopt_cp', alpha=alpha, 
-                maxiter=50, start_params=start_params, trim_params=True, 
-                retall=True, feastol=1e-5)
         RMSE_l1_cvxopt_cp = get_RMSE(results_l1_cvxopt_cp, true_params)
         print_str += '\n The l1_cvxopt_cp fit RMS error = %.4f'%RMSE_l1_cvxopt_cp
-
-    #### Format summaries
+    # Parameters
     print_str += '\n\n\n============== Parameters ================='
     print_str += "\n\nTrue parameters: \n%s"%true_params
+    # Full summary
     if print_summaries:
         print_str += '\n' + results_ML.summary().as_text()
         if get_l1_slsqp_results:
@@ -194,7 +214,8 @@ def run_solvers(model, true_params, alpha, get_l1_slsqp_results,
         if get_l1_slsqp_results:
             print_str += '\n\nThe l1_slsqp params are \n%s'%results_l1_slsqp.params
         if get_l1_cvxopt_results:
-            print_str += '\n\nThe l1_cvxopt_cp params are \n%s'%results_l1_cvxopt_cp.params
+            print_str += '\n\nThe l1_cvxopt_cp params are \n%s'%\
+                    results_l1_cvxopt_cp.params
     # Return
     return print_str
 
@@ -270,6 +291,11 @@ def get_exog(N, num_nonconst_covariates, cor_length):
     The covariance matrix of exog will have (asymptotically, as 
     :math:'N\\to\\inf')
     .. math:: Cov[i,j] = \\exp(-|i-j| / cor_length)
+
+    Higher cor_length makes the problem more ill-posed, and easier to screw
+        up with noise.
+    BEWARE:  With very long correlation lengths, you often get a singular KKT
+        matrix (during the l1_cvxopt_cp fit)
     """
     ## Create the noiseless exog
     uncorrelated_exog = sp.randn(N, num_nonconst_covariates) 
