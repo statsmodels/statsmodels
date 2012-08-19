@@ -112,9 +112,9 @@ class _GenericKDE (object):
         sample_scale = np.empty((self.n_res, self.K))
         only_bw = np.empty((self.n_res, self.K))
         all_vars = copy.deepcopy(self.all_vars)
-        l = self.all_vars_type.count('c')
-        co = 4
-        do = 4
+        l = self.all_vars_type.count('c')  # number of continuous variables
+        co = 4  # 2*order of continuous kernel
+        do = 4  # 2*order of discrete kernel
         iscontinuous, isordered, isunordered = \
                 tools._get_type_pos(self.all_vars_type)
         print "Running Block by block efficient bandwidth estimation"
@@ -130,7 +130,7 @@ class _GenericKDE (object):
             c = sub_model.bw / fct  #  TODO: Check if this is correct!
             sample_scale[i, :] = c
             only_bw[i, :] = sub_model.bw
-            print sub_model.bw
+            #print sub_model.bw
             
         s = self._compute_dispersion(all_vars)
         if self.return_median:
@@ -155,9 +155,9 @@ class _GenericKDE (object):
         the scaling factor of the bandiwdth
         """
         all_vars = copy.deepcopy(self.all_vars)
-        l = self.all_vars_type.count('c')
-        co = 4
-        do = 4
+        l = self.all_vars_type.count('c')  # number of continuous vars
+        co = 4  # 2 * order of continuous kernel
+        do = 4  # 2 * order of discrete kernel
         iscontinuous, isordered, isunordered = \
                 tools._get_type_pos(self.all_vars_type)
  
@@ -181,7 +181,7 @@ class _GenericKDE (object):
             sample_scale[i, :] = c
             only_bw[i, :] = sub_model.bw
             i += 1
-            print sub_model.bw
+            #print sub_model.bw
         s = self._compute_dispersion(all_vars) 
         if self.return_median:
             median_scale = np.median(sample_scale, axis=0)
@@ -193,7 +193,7 @@ class _GenericKDE (object):
             bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
             bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
             bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
-            print "the mean is", bw
+            #print "the mean is", bw
 
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)
