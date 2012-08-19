@@ -3,7 +3,7 @@
 Created on Sun May 06 05:32:15 2012
 
 Author: Josef Perktold
-
+editted by: Paul Hobson (2012-08-19)
 """
 from scipy import stats
 from matplotlib import pyplot as plt
@@ -49,3 +49,22 @@ txt.set_bbox(dict(facecolor='k', alpha=0.1))
 fig.tight_layout()
 
 plt.gcf()
+
+
+# example with the new ProbPlot class
+import numpy as np
+x = np.random.normal(loc=8.25, scale=3.5, size=37)
+y = np.random.normal(loc=8.00, scale=3.25, size=37)
+pp_x = sm.ProbPlot(x, fit=True)
+pp_y = sm.ProbPlot(y, fit=True)
+
+# probability of exceedance
+fig2 = pp_x.probplot(exceed=True)
+
+# compare x quantiles to y quantiles
+fig3 = pp_x.qqplot(other=pp_y, line='45')
+
+# same as above with probabilities/percentiles
+fig4 = pp_x.ppplot(other=pp_y, line='45')
+
+
