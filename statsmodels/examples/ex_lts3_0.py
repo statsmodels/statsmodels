@@ -224,13 +224,15 @@ for name, est in estimators:     print est.mean(0)[:k_vars] - beta_true_inliers,
 print '\nmean squared error'
 for name, est in estimators: print ((est[:, :k_vars] - beta_true_inliers)**2).mean(0), name
 
+print '\nvariance'
+for name, est in estimators: print est[:, :k_vars].var(0), name
 
 print '\nmean absolute error'
 for name, est in estimators: print np.abs(est[:, :k_vars] - beta_true_inliers).mean(0), name
 
 
-print '\nmeadian absolute error'
+print '\nmedian absolute error'
 for name, est in estimators: print np.median((est[:, :k_vars] - beta_true_inliers), 0), name
 
 
-print '\time form MC:', t1 - t0
+print '\ntime form MC:', t1 - t0
