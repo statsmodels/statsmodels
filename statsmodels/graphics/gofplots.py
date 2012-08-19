@@ -41,18 +41,6 @@ class ProbPlot(object):
 
     Plotting Methods
     ----------------
-    All plotting methods listed below have the same call signatures which
-    accept `line` and `ax` keyword arguments. See individual docstrings
-    for more info.
-
-    ppplot : Probability-Probability plot
-        Compares the sample and theoretical probabilities (percentiles).
-    qqplot : Quantile-Quantile plot
-        Compares the sample and theoretical quantiles
-    probplot : Probability plot
-        Same as a Q-Q plot, however probabilities are shown in the scale of
-        the theoretical distribution (x-axis) and the y-axis contains
-        unscaled quantiles of the sample data.
 
     Examples
     --------
@@ -116,8 +104,17 @@ class ProbPlot(object):
     2) If `fit` is True then the parameters are fit using the
         distribution's `fit()` method.
     3) The call signatures for the `qqplot`, `ppplot`, and `probplot`
-        methods are all identical, so examples 1 through 4 apply to all
+        methods are similar, so examples 1 through 4 apply to all
         three methods.
+    4) The three plotting methods are summaruized below:
+        ppplot : Probability-Probability plot
+            Compares the sample and theoretical probabilities (percentiles).
+        qqplot : Quantile-Quantile plot
+            Compares the sample and theoretical quantiles
+        probplot : Probability plot
+            Same as a Q-Q plot, however probabilities are shown in the scale of
+            the theoretical distribution (x-axis) and the y-axis contains
+            unscaled quantiles of the sample data.
     """
 
     def __init__(self, data, dist=stats.norm, fit=False,
@@ -481,7 +478,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
-    Example
+    Examples
     -------
     >>> import numpy as np
     >>> import statsmodels.api as sm
@@ -540,14 +537,13 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     -----
     There is no return value. The line is plotted on the given `ax`.
     """
-    import pdb
     if line == '45':
         end_pts = zip(ax.get_xlim(), ax.get_ylim())
-        end_pts[0] = max(end_pts[0])
-        end_pts[1] = min(end_pts[1])
+        end_pts[0] = min(end_pts[0])
+        end_pts[1] = max(end_pts[1])
         ax.plot(end_pts, end_pts, fmt)
-        #ax.set_xlim(end_pts)
-        #ax.set_ylim(end_pts)
+        ax.set_xlim(end_pts)
+        ax.set_ylim(end_pts)
         return # does this have any side effects?
     if x is None and y is None:
         raise ValueError("If line is not 45, x and y cannot be None.")
