@@ -586,3 +586,21 @@ class TestReg(MyTest):
         npt.assert_equal(sig_var1 == 'Not Significant', False)
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         npt.assert_equal(sig_var2 == 'Not Significant', True)
+
+    @dec.slow
+    def test_semi_linear_model(self):
+        N = 800
+        np.random.seed(1234)
+        C1 = np.random.normal(0,2, size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        e = np.random.normal(size=(N, ))
+        b1 = 1.3
+        b2 = -0.7
+        Y = b1 * C1 + np.exp(b2 * C2) + e
+        model = nparam.SemiLinear(tydat=[Y], txdat=[C1], tzdat=[C2], 
+                        var_type='c', l_K=1)
+        b_hat = np.squeeze(model.b)
+        # Only tests for the linear part of the regression
+        # Currently doesn't work well with the nonparametric part
+        # Needs some more work
+        npt.assert_allclose(b1, b_hat, rtol=0.1)
