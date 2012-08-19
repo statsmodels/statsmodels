@@ -110,20 +110,36 @@ res.aic
 #As usual, you can obtain a full list of available information by typing
 #``dir(res)``. 
 # 
-#To be sure that the above results are sound, compare to an equivalent model
-#estimated with R::
+#To ensure that the above results are sound, we compare them to results
+# obtained using the MASS implementation for R:: 
 #
-#    > library(MASS)
-#    > library(COUNT)
-#    > data(medpar)
-#    > f <- los~factor(type)+hmo+white
-#    > ml.nb2(f, medpar)
-#    Estimate         SE         Z        LCL         UCL
-#    (Intercept)    2.31214519 0.06794358 34.030372  2.1789758 2.445314604
-#    factor(type)2  0.22049993 0.05056730  4.360524  0.1213880 0.319611832
-#    factor(type)3  0.70437929 0.07606068  9.260754  0.5553003 0.853458232
-#    hmo           -0.06809686 0.05323976 -1.279060 -0.1724468 0.036253069
-#    white         -0.13052184 0.06853619 -1.904422 -0.2648528 0.003809104
-#    alpha          0.44522693 0.01978011 22.508817  0.4064579 0.483995950
+#    url = 'http://vincentarelbundock.github.com/Rdatasets/csv/medpar.csv'
+#    medpar = read.csv(url)
+#    f = los~factor(type)+hmo+white
+#    
+#    library(MASS)
+#    mod = glm.nb(f, medpar)
+#    coef(summary(mod))
+#                     Estimate Std. Error   z value      Pr(>|z|)
+#    (Intercept)    2.31027893 0.06744676 34.253370 3.885556e-257
+#    factor(type)2  0.22124898 0.05045746  4.384861  1.160597e-05
+#    factor(type)3  0.70615882 0.07599849  9.291748  1.517751e-20
+#    hmo           -0.06795522 0.05321375 -1.277024  2.015939e-01
+#    white         -0.12906544 0.06836272 -1.887951  5.903257e-02
+
+#Numerical precision
+#^^^^^^^^^^^^^^^^^^^
+#The ``statsmodels`` and ``R`` parameter estimates agree up to the
+#fourth decimal. The standard errors, however, agree only up to the
+#second decimal. This discrepancy may be the result of numerical
+#imprecision in our Hessian numerical estimates. In the current
+#context, the difference between ``MASS`` and ``statsmodels`` standard
+#error estimates is substantively irrelevant, but it highlights the
+#fact that users may not always want to rely on default settings when
+#using numerical derivatives. ``GenericLikelihoodModel`` is useful for
+#prototyping, but for production work, users would do well to use
+#analytical derivatives with the `LikelihoodModel
+#<../../dev/generated/statsmodels.base.model.GenericLikelihoodModel.html#statsmodels.base.model.GenericLikelihoodModel>`_
+#class. 
 
 
