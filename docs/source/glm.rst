@@ -1,32 +1,49 @@
 .. currentmodule:: statsmodels.genmod.generalized_linear_model
 
-
 .. _glm:
-
 
 Generalized Linear Models
 =========================
 
-Introduction
-------------
+Generalized linear models currently supports estimation using the one-parameter
+exponential families
 
-.. automodule:: statsmodels.genmod.generalized_linear_model
-
+See `Module Reference`_ for commands and arguments.
 
 Examples
 --------
-    >>> import statsmodels.api as sm
-    >>> data = sm.datasets.scotland.load()
-    >>> data.exog = sm.add_constant(data.exog)
 
-    Instantiate a gamma family model with the default link function.
+::
 
-    >>> gamma_model = sm.GLM(data.endog, data.exog,
-                             family=sm.families.Gamma())
-    >>> gamma_results = gamma_model.fit()
+    # Load modules and data
+    import statsmodels.api as sm
+    data = sm.datasets.scotland.load()
+    data.exog = sm.add_constant(data.exog)
 
-see also the `examples` and the `tests` folders
+    # Instantiate a gamma family model with the default link function.
+    gamma_model = sm.GLM(data.endog, data.exog, family=sm.families.Gamma())
+    gamma_results = gamma_model.fit()
 
+Detailed examples can be found here: 
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/generated/example_glm
+
+Technical Documentation
+-----------------------
+
+..   ..glm_techn1
+..   ..glm_techn2
+
+References
+^^^^^^^^^^
+
+* Gill, Jeff. 2000. Generalized Linear Models: A Unified Approach. SAGE QASS Series.
+* Green, PJ. 1984. “Iteratively reweighted least squares for maximum likelihood estimation, and some robust and resistant alternatives.” Journal of the Royal Statistical Society, Series B, 46, 149-192.
+* Hardin, J.W. and Hilbe, J.M. 2007. “Generalized Linear Models and Extensions.” 2nd ed. Stata Press, College Station, TX.
+* McCullagh, P. and Nelder, J.A. 1989. “Generalized Linear Models.” 2nd ed. Chapman & Hall, Boca Rotan. 
 
 Module Reference
 ----------------
@@ -101,11 +118,4 @@ available link functions can be obtained by
    nbinom
    probit
 
-Technical Documentation
------------------------
 
-.. toctree::
-   :maxdepth: 1
-
-   glm_techn1
-   glm_techn2

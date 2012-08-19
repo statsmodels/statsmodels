@@ -6,17 +6,12 @@
 Statistics :mod:`stats`
 =======================
 
-Introduction
-------------
-
 This section collects various statistical tests and tools.
 Some can be used independently of any models, some are intended as extension to the
 models and model results.
 
 API Warning: The functions and objects in this category are spread out in various modules
 and might still be moved around.
-
-
 
 .. _stattools:
 

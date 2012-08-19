@@ -3,15 +3,44 @@
 
 .. _regression:
 
-Regression
-==========
+Linear Regression
+=================
 
+Linear models with independently and identically distributed errors, and for
+errors with heteroscedasticity or autocorrelation. This module allows
+estimation by ordinary least squares (OLS), weighted least squares (WLS),
+generalized least squares (GLS), and feasible generalized least squares with
+autocorrelated AR(p) errors. 
 
-Introduction
-------------
+See `Module Reference`_ for commands and arguments.
 
-Regression contains linear models with independently and identically
-distributed errors and for errors with heteroscedasticity or autocorrelation
+Examples
+--------
+
+::
+
+    # Load modules and data
+    import numpy as np
+    import statsmodels.api as sm
+    spector_data = sm.datasets.spector.load()
+    spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
+    
+    # Fit and summarize OLS model
+    mod = sm.OLS(spector_data.endog, spector_data.exog)
+    res = mod.fit()
+    print res.summary()
+    
+Detailed examples can be found here: 
+
+.. toctree::
+   :maxdepth: 1
+
+   examples/generated/example_ols 
+   examples/generated/example_wls 
+   examples/generated/example_gls 
+
+Technical Documentation
+-----------------------
 
 The statistical model is assumed to be
 
@@ -31,21 +60,38 @@ specific methods and attributes.
 
 GLS is the superclass of the other regression classes.
 
-Class hierachy: TODO
+.. Class hierachy: TODO
 
-yule_walker is not a full model class, but a function that estimate the
-parameters of a univariate autoregressive process, AR(p). It is used in GLSAR,
-but it can also be used independently of any models. yule_walker only
-calculates the estimates and the standard deviation of the lag parameters but
-not the additional regression statistics. We hope to include yule-walker in
-future in a separate univariate time series class. A similar result can be
-obtained with GLSAR if only the constant is included as regressors. In this
-case the parameter estimates of the lag estimates are not reported, however
-additional statistics, for example aic, become available.
+.. yule_walker is not a full model class, but a function that estimate the
+.. parameters of a univariate autoregressive process, AR(p). It is used in GLSAR,
+.. but it can also be used independently of any models. yule_walker only
+.. calculates the estimates and the standard deviation of the lag parameters but
+.. not the additional regression statistics. We hope to include yule-walker in
+.. future in a separate univariate time series class. A similar result can be
+.. obtained with GLSAR if only the constant is included as regressors. In this
+.. case the parameter estimates of the lag estimates are not reported, however
+.. additional statistics, for example aic, become available.
 
+References
+^^^^^^^^^^
+
+General reference for regression models:
+
+* D.C. Montgomery and E.A. Peck. "Introduction to Linear Regression Analysis." 2nd. Ed., Wiley, 1992.
+
+Econometrics references for regression models:
+
+* R.Davidson and J.G. MacKinnon. "Econometric Theory and Methods," Oxford, 2004.
+* W.Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
+
+.. toctree::
+..   :maxdepth: 1
+..
+..   regression_techn1
 
 Attributes
 ^^^^^^^^^^
+
 The following is more verbose description of the attributes which is mostly common to all
 regression classes
 
@@ -83,29 +129,6 @@ wendog : array
     | The whitened response variable.
     | :math:`\Psi^{T}Y`
 
-
-
-References
-^^^^^^^^^^
-
-General reference for regression models::
-
-    D.C. Montgomery and E.A. Peck. "Introduction to Linear Regression
-        Analysis." 2nd. Ed., Wiley, 1992.
-
-Econometrics references for regression models::
-
-    R. Davidson and J.G. MacKinnon. "Econometric Theory and Methods," Oxford,
-        2004.
-
-    W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
-
-Examples
---------
-
-see also the `examples` and the `tests` folders
-
-
 Module Reference
 ----------------
 
@@ -119,7 +142,7 @@ Model Classes
    GLS
    WLS
    GLSAR
-   yule_walker
+   ..yule_walker
 
 Results Class
 ^^^^^^^^^^^^^
@@ -129,11 +152,3 @@ Results Class
 
    RegressionResults
 
-
-Technical Documentation
------------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   regression_techn1
