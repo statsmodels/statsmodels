@@ -49,7 +49,7 @@ class NBin(GenericLikelihoodModel):
         super(NBin, self).__init__(endog, exog, **kwds)
     def nloglikeobs(self, params):
         alph = params[-1]
-        beta = params[:self.exog.shape[1]]
+        beta = params[:-1]
         ll = _ll_nb2(self.endog, self.exog, beta, alph)
         return -ll 
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
