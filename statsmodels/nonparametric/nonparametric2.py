@@ -257,8 +257,7 @@ class _GenericKDE (object):
         """ 
         #unit = np.ones((self.K, ))
         ind0 = np.where(bw < 0)
-        bw[ind0] = 0.
-        print "here"
+        bw[ind0] = 1e-10
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
         for i in isordered:
             bw[i] = min(bw[i], 1.)
@@ -1053,7 +1052,6 @@ class Reg(_GenericKDE):
         See p. 81 in [1] and p.38 in [2] for the formulas
         Unlike other methods, this one requires that edat be 1D
         """
-
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
                             #ukertype='aitchison_aitken_reg',
                             #okertype='wangryzin_reg', 
@@ -1148,6 +1146,13 @@ class Reg(_GenericKDE):
 
 
     def aic_hurvich(self, bw, func=None):
+        """
+        Computes the AIC Hurvich criteria for the estimation of the bandwidth
+        References
+        ----------
+        See ch.2 in [1]
+        See p.35 in [2]
+        """
         #print "Running aic"
         H = np.empty((self.N, self.N))
         for j in range(self.N):
@@ -1278,6 +1283,8 @@ class Reg(_GenericKDE):
         var_pos = np.asarray(var_pos)
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
         if (iscontinuous == var_pos).any():  # continuous variable
+            if (isordered == var_pos).any() or (isunordered == var_pos).any():
+                raise "Discrete variable in hypothesis. Must be continuous"
             print "------CONTINUOUS---------"
             Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot)
         else:
@@ -1930,6 +1937,8 @@ class SingleIndexModel(Reg):
         self.txdat = tools.adjust_shape(txdat, self.K)
         self.N = np.shape(self.txdat)[0]
         self.all_vars_type = self.var_type
+        self.func = self._est_loc_linear
+
         self.b, self.bw = self._est_b_bw()
 
     def _est_b_bw(self):
@@ -1937,7 +1946,7 @@ class SingleIndexModel(Reg):
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0:self.K]
         bw = b_bw[self.K::]
-        #bw = self._set_bw_bounds(bw)
+        bw = self._set_bw_bounds(bw)
         return b, bw
 
     def cv_loo(self, params):
@@ -1950,9 +1959,10 @@ class SingleIndexModel(Reg):
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         i = 0
         L = 0
+        func = self._est_loc_linear
         for X_j in LOO_X:
             Y = LOO_Y.next()
-            G = self._est_loc_constant(bw, tydat=Y, txdat=-b*X_j, edat=-b*self.txdat[i, :])[0]
+            G = self.func(bw, tydat=Y, txdat=-b*X_j, edat=-b*self.txdat[i, :])[0]
             L += (self.tydat[i] - G) ** 2
             i += 1
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -1967,7 +1977,7 @@ class SingleIndexModel(Reg):
         mean = np.empty((N_edat,))
         mfx = np.empty((N_edat, self.K))
         for i in xrange(N_edat):
-            mean_mfx = self._est_loc_constant(self.bw, self.tydat, 
+            mean_mfx = self.func(self.bw, self.tydat, 
                     self.b*self.txdat, edat=self.b*edat[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
@@ -2033,6 +2043,7 @@ class SemiLinear(Reg):
         self.N = np.shape(self.txdat)[0]
         self.var_type = var_type
         self.all_vars_type = self.var_type
+        self.func = self._est_loc_linear
 
         self.b, self.bw = self._est_b_bw()
 
@@ -2045,7 +2056,7 @@ class SemiLinear(Reg):
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0 : self.l_K]
         bw = b_bw[self.l_K::]
-        bw = self._set_bw_bounds(np.asarray(bw))
+        #bw = self._set_bw_bounds(np.asarray(bw))
         return b, bw
 
     def cv_loo(self, params):
@@ -2080,7 +2091,7 @@ class SemiLinear(Reg):
             Z = LOO_Z.next()
             Xb_j = b * X_j 
             Yx = Y - Xb_j
-            G = self._est_loc_constant(bw, tydat=Yx, txdat=-Z, edat=-self.tzdat[i, :])[0]
+            G = self.func(bw, tydat=Yx, txdat=-Z, edat=-self.tzdat[i, :])[0]
             lt = np.sum(Xb[i, :])  # linear term
             L += (self.tydat[i] - lt - G) ** 2
             i += 1
@@ -2103,7 +2114,7 @@ class SemiLinear(Reg):
         mfx = np.empty((N_edat, self.K))
         Y = self.tydat - self.b * exdat
         for i in xrange(N_edat):
-            mean_mfx = self._est_loc_constant(self.bw, Y, 
+            mean_mfx = self.func(self.bw, Y, 
                     self.tzdat, edat=ezdat[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
