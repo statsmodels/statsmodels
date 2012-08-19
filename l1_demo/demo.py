@@ -12,9 +12,12 @@ docstr = """
 Demonstrates l1 regularization for likelihood models.  
 Use different models by setting mode = mnlogit, logit, or probit.
 
-Example
+Examples
 -------
-$ python demo.py --get_l1_slsqp_results  mnlogit
+$ python demo.py --get_l1_slsqp_results  logit
+
+>>> import demo
+>>> demo.run_demo('logit')
 
 The Story
 ---------
@@ -43,12 +46,14 @@ def main():
     parser = OptionParser(usage=usage)
     # base_alpha
     parser.add_option("-a", "--base_alpha", 
-            help="Size of regularization param (will automatically scale with "\
-                    "data size in this demo) [default: %default]", 
+            help="Size of regularization param (the param actully used will "\
+                    "automatically scale with data size in this demo) "\
+                    "[default: %default]", 
             dest='base_alpha', action='store', type='float', default=0.01)
     # num_samples
     parser.add_option("-N", "--num_samples", 
-            help="Number of data points to generate [default: %default]", 
+            help="Number of data points to generate for fit "\
+                    "[default: %default]", 
             dest='N', action='store', type='int', default=500)
     # get_l1_slsqp_results
     parser.add_option("--get_l1_slsqp_results", 
@@ -61,7 +66,7 @@ def main():
     # num_nonconst_covariates
     parser.add_option("--num_nonconst_covariates", 
             help="Number of covariates that are not constant "\
-                    "(a constant will be preappended) [default: %default]", 
+                    "(a constant will be prepended) [default: %default]", 
                     dest='num_nonconst_covariates', action='store', 
                     type='int', default=10)
     # noise_level
@@ -114,7 +119,40 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
         noise_level=0.2, cor_length=2, num_zero_params=8, num_targets=3, 
         print_summaries=False, save_arrays=False, load_old_arrays=False):
     """ 
-    Run the demo for either multinomial or ordinary logistic regression.
+    Run the demo and print results.
+
+    Parameters
+    ----------
+    mode : String
+        either 'logit', 'mnlogit', or 'probit'
+    base_alpha :  Float
+        Size of regularization param (the param actually used will 
+        automatically scale with data size in this demo)
+    N :  Integer 
+        Number of data points to generate for fit
+    get_l1_slsqp_results : boolean, 
+        Do an l1 fit using slsqp.
+    get_l1_cvxopt_results : boolean
+        Do an l1 fit using cvxopt
+    num_nonconst_covariates : Integer
+        Number of covariates that are not constant 
+        (a constant will be prepended)
+    noise_level : Float (non-negative)
+        Level of the noise relative to signal
+    cor_length : Float (non-negative)
+        Correlation length of the (Gaussian) independent variables
+    num_zero_params : Integer
+        Number of parameters equal to zero for every target in logistic 
+        regression examples.
+    num_targets : Integer
+        Number of choices for the endogenous response in multinomial logit 
+        example 
+    print_summaries : Boolean
+        print the full fit summary.
+    save_arrays : Boolean
+        Save exog/endog/true_params to disk for future use.
+    load_old_arrays
+        Load exog/endog/true_params arrays from disk. 
     """
     if mode != 'mnlogit':
         print "Setting num_targets to 2 since mode != 'mnlogit'"
