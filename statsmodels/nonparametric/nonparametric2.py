@@ -36,12 +36,12 @@ import copy
 from scipy.stats.mstats import mquantiles
 
 
-__all__ = ['UKDE', 'CKDE', 'Reg', 'CensoredReg']
+__all__ = ['KDE', 'ConditionalKDE', 'Reg', 'CensoredReg']
 
 
 class _GenericKDE (object):
     """
-    Generic KDE class with methods shared by both UKDE and CKDE
+    Generic KDE class with methods shared by both KDE and ConditionalKDE
     """
     def _compute_bw(self, bw):
         """
@@ -204,14 +204,14 @@ class _GenericKDE (object):
     def _call_self(self, all_vars, bw):
         """ Calls the class itself with the proper input parameters"""
         # only used with the efficient=True estimation option
-        if self.__class__.__name__ == 'UKDE':
-            model = UKDE(all_vars, self.var_type, bw=bw, 
+        if self.__class__.__name__ == 'KDE':
+            model = KDE(all_vars, self.var_type, bw=bw, 
                         defaults=SetDefaults(efficient=False))
 
-        if self.__class__.__name__ == 'CKDE':
+        if self.__class__.__name__ == 'ConditionalKDE':
             tydat = all_vars[:, 0 : self.K_dep]
             txdat = all_vars[:, self.K_dep ::]
-            model = CKDE(tydat, txdat, self.dep_type, 
+            model = ConditionalKDE(tydat, txdat, self.dep_type, 
                         self.indep_type, bw=bw, 
                         defaults=SetDefaults(efficient=False))
         if self.__class__.__name__ == 'Reg':
@@ -311,7 +311,7 @@ class _GenericKDE (object):
         .. math:: \int\left[\hat{f}(x)-f(x)\right]^{2}dx
 
         This is the general formula for the IMSE.  The IMSE differs for
-        conditional (CKDE) and unconditional (UKDE) kernel density estimation.
+        conditional (ConditionalKDE) and unconditional (KDE) kernel density estimation.
         """
         h0 = self._normal_reference()
         bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0)
@@ -368,7 +368,7 @@ class SetDefaults(object):
         self.return_only_bw = return_only_bw
 
 
-class UKDE(_GenericKDE):
+class KDE(_GenericKDE):
     """
     Unconditional Kernel Density Estimator
 
@@ -413,7 +413,7 @@ class UKDE(_GenericKDE):
 
     Examples
     --------
-    >>> from statsmodels.nonparametric import UKDE
+    >>> from statsmodels.nonparametric import KDE
     >>> N = 300
     >>> np.random.seed(1234)  # Seed random generator
     >>> c1 = np.random.normal(size=(N,1))
@@ -421,7 +421,7 @@ class UKDE(_GenericKDE):
 
     Estimate a bivariate distribution and display the bandwidth found:
 
-    >>> dens_u = UKDE(tdat=[c1,c2], var_type='cc', bw='normal_reference')
+    >>> dens_u = KDE(tdat=[c1,c2], var_type='cc', bw='normal_reference')
     >>> dens_u.bw
     array([ 0.39967419,  0.38423292])
     """
@@ -447,7 +447,7 @@ class UKDE(_GenericKDE):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "UKDE instance\n"
+        repr = "KDE instance\n"
         repr += "Number of variables: K = " + str(self.K) + "\n"
         repr += "Number of samples:   N = " + str(self.N) + "\n"
         repr += "Variable types:      " + self.var_type + "\n"
@@ -613,7 +613,7 @@ class UKDE(_GenericKDE):
                 2 / ((self.N) * (self.N - 1)))
 
 
-class CKDE(_GenericKDE):
+class ConditionalKDE(_GenericKDE):
     """
     Conditional Kernel Density Estimator.
 
@@ -675,7 +675,7 @@ class CKDE(_GenericKDE):
     >>> c1 = np.random.normal(size=(N,1))
     >>> c2 = np.random.normal(2,1,size=(N,1))
 
-    >>> dens_c = CKDE(tydat=[c1], txdat=[c2], dep_type='c',
+    >>> dens_c = ConditionalKDE(tydat=[c1], txdat=[c2], dep_type='c',
     ...               indep_type='c', bw='normal_reference')
 
     >>> print "The bandwidth is: ", dens_c.bw
@@ -707,7 +707,7 @@ class CKDE(_GenericKDE):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "CKDE instance\n"
+        repr = "ConditionalKDE instance\n"
         repr += "Number of independent variables: K_indep = " + \
                 str(self.K_indep) + "\n"
         repr += "Number of dependent variables: K_dep = " + \
@@ -738,7 +738,7 @@ class CKDE(_GenericKDE):
 
         Notes
         -----
-        Similar to ``UKDE.loo_likelihood`, but substitute
+        Similar to ``KDE.loo_likelihood`, but substitute
         ``f(x|y)=f(x,y)/f(y)`` for f(x).
         """
         yLOO = tools.LeaveOneOut(self.all_vars)
@@ -1859,7 +1859,7 @@ class TestFForm(object):
         self.txdat = tdat
         self.fform = fform
         self.estimator = estimator
-        self.bw = UKDE(tdat, bw=bwmethod, var_type=var_type).bw
+        self.bw = KDE(tdat, bw=bwmethod, var_type=var_type).bw
 
 
     def compute_test_stat(self, Y, X):
