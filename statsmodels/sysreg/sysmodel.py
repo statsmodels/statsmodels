@@ -429,13 +429,7 @@ class SysResults(LikelihoodModelResults):
                 self.model.df_resid)
 
     def summary(self, yname=None, xname=None, title=None):
-        #create summary table instance
-        #from statsmodels.iolib.summary import Summary
-        #smry = Summary()
-        #smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-        #                     use_t=True)
-        
-        #return smry
+        #TODO: handle variable names in SysModel
         return SysSummary(self, yname=yname, xname=xname, title=title)
     
     def _compute_sigma(self, resids):

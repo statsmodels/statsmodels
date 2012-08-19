@@ -34,6 +34,7 @@ class CheckSysregResults(object):
     def test_df_resid(self):
         assert_array_equal(self.res1.df_resid, self.res2.df_resid)
 
+
 ## SUR tests
 # Build system
 grun_data = sm.datasets.grunfeld.load()
