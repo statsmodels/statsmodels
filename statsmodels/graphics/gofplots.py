@@ -96,7 +96,7 @@ class ProbPlot(object):
         >>> plt.show()
 
         A second `ProbPlot` object can be used to compare two seperate sample
-        sets by using the `other` kwarg in the `qqplot` method.
+        sets by using the `other` kwarg in the `qqplot` and `ppplot` methods.
 
         >>> # example 5
         >>> import numpy as np
