@@ -28,6 +28,7 @@
 #Using the ``nbinom`` distribution from ``scipy``, we can write this likelihood
 #simply as:
 
+import numpy as np
 from scipy.stats import nbinom
 def _ll_nb2(y, X, beta, alph):
     mu = np.exp(np.dot(X, beta))
@@ -43,7 +44,6 @@ def _ll_nb2(y, X, beta, alph):
 #We create a new model class which inherits from ``GenericLikelihoodModel``:
 
 from statsmodels.base.model import GenericLikelihoodModel
-import numpy as np
 class NBin(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
         super(NBin, self).__init__(endog, exog, **kwds)
