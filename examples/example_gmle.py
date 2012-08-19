@@ -127,18 +127,17 @@ res.aic
 #    hmo           -0.06795522 0.05321375 -1.277024  2.015939e-01
 #    white         -0.12906544 0.06836272 -1.887951  5.903257e-02
 
-#Numerical precision
-#^^^^^^^^^^^^^^^^^^^
-#The ``statsmodels`` and ``R`` parameter estimates agree up to the
-#fourth decimal. The standard errors, however, agree only up to the
-#second decimal. This discrepancy may be the result of numerical
-#imprecision in our Hessian numerical estimates. In the current
-#context, the difference between ``MASS`` and ``statsmodels`` standard
-#error estimates is substantively irrelevant, but it highlights the
-#fact that users may not always want to rely on default settings when
-#using numerical derivatives. ``GenericLikelihoodModel`` is useful for
-#prototyping, but for production work, users would do well to use
-#analytical derivatives with the `LikelihoodModel
+#Numerical precision 
+#^^^^^^^^^^^^^^^^^^^ 
+
+#The ``statsmodels`` and ``R`` parameter estimates agree up to the fourth
+#decimal. The standard errors, however, agree only up to the second decimal.
+#This discrepancy may be the result of imprecision in our Hessian numerical
+#estimates. In the current context, the difference between ``MASS`` and
+#``statsmodels`` standard error estimates is substantively irrelevant, but it
+#highlights the fact that users who need very precise estimates may not always
+#want to rely on default settings when using numerical derivatives. In such
+#cases, it may be better to use analytical derivatives with the `LikelihoodModel
 #<../../dev/generated/statsmodels.base.model.GenericLikelihoodModel.html#statsmodels.base.model.GenericLikelihoodModel>`_
 #class. 
 
