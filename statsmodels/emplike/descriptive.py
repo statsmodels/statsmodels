@@ -93,7 +93,7 @@ class _OptFuncts():
         -----
         This function is only a placeholder for the _fit_mle_Newton.
         The function value is not used in optimization and the optimal value
-        is disregarded when computng the log likelihood ratio.
+        is disregarded when computing the log likelihood ratio.
         """
         data_star = np.log(weights) + (np.sum(weights) +\
                                        np.dot(est_vect, eta))
@@ -180,7 +180,7 @@ class _OptFuncts():
         Returns
         -------
         params: 1xm array
-            Lagragian multiplier that maximizes the log-likelihood
+            Lagrange multiplier that maximizes the log-likelihood
         """
         nobs = len(est_vect)
         f = lambda x0: - np.sum(self._log_star(x0, est_vect, weights, nobs))
@@ -217,7 +217,7 @@ class _OptFuncts():
         Parameters
         ----------
         mu: float
-           Hypothesized value of mu
+           Hypothesized value of the mean.
 
         Returns
         -------
