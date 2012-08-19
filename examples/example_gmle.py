@@ -47,17 +47,19 @@ import numpy as np
 class NBin(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
         super(NBin, self).__init__(endog, exog, **kwds)
-        # Reasonable starting values
-        self.start_params = np.append(np.zeros(self.exog.shape[1]), .5)
-        self.start_params[0] = np.log(self.endog.mean())
     def nloglikeobs(self, params):
         alph = params[-1]
         beta = params[:self.exog.shape[1]]
         ll = _ll_nb2(self.endog, self.exog, beta, alph)
         return -ll 
-    def fit(self, **kwds):
-        return super(NBin, self).fit(start_params=self.start_params, 
-                                     maxiter=10000, maxfun=5000, **kwds) 
+    def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
+        if start_params == None:
+            # Reasonable starting values
+            start_params = np.append(np.zeros(self.exog.shape[1]), .5)
+            start_params[0] = np.log(self.endog.mean())
+        return super(NBin, self).fit(start_params=start_params, 
+                                     maxiter=maxiter, maxfun=maxfun, 
+                                     **kwds) 
 
 #Two important things to notice: 
 
