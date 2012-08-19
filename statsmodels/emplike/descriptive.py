@@ -31,10 +31,10 @@ def DescStat(endog):
 
     Parameters
     ----------
-    endog: ndarray (n,k)
+    endog : ndarray (n,k)
         Array of data to perform inference on
 
-    Returns: DescStat instance
+    Returns : DescStat instance
         If k=1, the function returns a univariate instance, DescStatUV.
         If k>1, the function returns a multivariate instance, DescStatMV.
     """
@@ -75,18 +75,18 @@ class _OptFuncts():
 
         Parameters
         ----------
-        eta: float
+        eta : float
             Lagrange multiplier
 
-        est_vect: ndarray (n,k)
+        est_vect : ndarray (n,k)
             Estimating equations vector
 
-        wts: nx1 array
+        wts : nx1 array
             Observation weights
 
         Returns
         ------
-        data_star: array
+        data_star : array
             The weighted logstar of the estimting equations
 
         Notes
@@ -111,18 +111,18 @@ class _OptFuncts():
 
         Parameters
         ----------
-        eta: ndarray, (1,m)
+        eta : ndarray, (1,m)
             Lagrange multiplier in the profile likelihood maximization
 
-        est_vect: ndarray (n,k)
+        est_vect : ndarray (n,k)
             Estimating equations vector
 
-        weights: 1darray
+        weights : 1darray
             Observation weights
 
         Returns
         -------
-        hess: m x m array
+        hess : m x m array
             Weighted hessian used in _wtd_modif_newton
         """
         data_star_doub_prime = np.sum(weights) + np.dot(est_vect, eta)
@@ -140,18 +140,18 @@ class _OptFuncts():
 
         Parameters
         ----------
-        eta: ndarray, (1,m)
+        eta : ndarray, (1,m)
             Lagrange multiplier in the profile likelihood maximization
 
-        est_vect: ndarray, (n,k)
+        est_vect : ndarray, (n,k)
             Estimating equations vector
 
-        weights: 1darray
+        weights : 1darray
             Observation weights
 
         Returns
         -------
-        gradient: ndarray (m,1)
+        gradient : ndarray (m,1)
             The gradient used in _wtd_modif_newton
         """
         data_star_prime = np.sum(weights) + np.dot(est_vect, eta)
@@ -168,18 +168,18 @@ class _OptFuncts():
 
         Parameters
         ----------
-        eta: ndarray, (1,m)
+        eta : ndarray, (1,m)
             Lagrange multiplier in the profile likelihood maximization
 
-        est_vect: ndarray, (n,k)
+        est_vect : ndarray, (n,k)
             Estimating equations vector
 
-        weights: 1darray
+        weights : 1darray
             Observation weights
 
         Returns
         -------
-        params: 1xm array
+        params : 1xm array
             Lagrange multiplier that maximizes the log-likelihood
         """
         nobs = len(est_vect)
@@ -198,12 +198,12 @@ class _OptFuncts():
 
         Parameters
         ----------
-        eta: float
-            Lagrangian multiplier in the empirical likelihood maximization
+        eta : float
+            Lagrange multiplier in the empirical likelihood maximization
 
         Returns
         -------
-        llr: float
+        llr : float
             n times the log likelihood value for a given value of eta
         """
         return np.sum((self.endog - self.mu0) / \
@@ -216,12 +216,12 @@ class _OptFuncts():
 
         Parameters
         ----------
-        mu: float
+        mu : float
            Hypothesized value of the mean.
 
         Returns
         -------
-        diff: float
+        diff : float
             The difference between the log likelihood value of mu0 and
             a specified value.
         """
@@ -236,13 +236,13 @@ class _OptFuncts():
 
         Parameters
         ----------
-        gamma: float
+        gamma : float
             Lagrange multiplier when computing confidence interval
 
         Returns
         -------
-        diff: float
-            The difference between the log-liklihood when the Lagrangian
+        diff : float
+            The difference between the log-liklihood when the Lagrange
             multiplier is gamma and a pre-specified value
         """
         denom = np.sum((self.endog - gamma) ** -1)
@@ -257,12 +257,12 @@ class _OptFuncts():
 
         Parameters
         ----------
-        nuisance_mu: float
+        nuisance_mu : float
             Value of a nuisance mean parameter
 
         Returns
         -------
-        llr: float:
+        llr : float
             Log likelihood of a pre-specified variance holding the nuisance
             parameter constant
         """
@@ -291,12 +291,12 @@ class _OptFuncts():
 
         Parameter
         --------
-        var_test: float
+        var_test : float
             Hypothesized value of the variance
 
         Returns
         -------
-        diff: float
+        diff : float
             The difference between the log likelihood ratio at var_test and a
             pre-specified value.
         """
@@ -309,12 +309,12 @@ class _OptFuncts():
 
         Parameters
         ----------
-        nuis_params: 1darray
+        nuis_params : 1darray
             An array with a  nuisance mean and variance parameter
 
         Returns
         -------
-        llr: float
+        llr : float
             The log likelihood ratio of a pre-specified skewness holding
             the nuisance parameters constant.
         """
@@ -341,12 +341,12 @@ class _OptFuncts():
 
         Parameters
         ----------
-        nuis_params: 1darray
+        nuis_params : 1darray
             An array with a nuisance mean and variance parameter
 
         Returns
         -------
-        llr: float
+        llr : float
             The log likelihood ratio of a pre-speified kurtosis holding the
             nuisance parameters constant
         """
@@ -373,12 +373,12 @@ class _OptFuncts():
 
         Parameters
         -----------
-        nuis_params: 1darray
+        nuis_params : 1darray
             An array with a nuisance mean and variance parameter
 
         Returns
         ------
-        llr: float
+        llr : float
             The log likelihood ratio of a pre-speified skewness and
             kurtosis holding the nuisance parameters constant.
         """
@@ -405,12 +405,12 @@ class _OptFuncts():
         """
         Parameters
         ----------
-        skew0: float
+        skew0 : float
             Hypothesized value of skewness
 
         Returns
         -------
-        diff: float
+        diff : float
             The difference between the log likelihood ratio at skew and a
             pre-specified value.
         """
@@ -420,12 +420,12 @@ class _OptFuncts():
         """
         Parameters
         ---------
-        skew0: float
+        skew0 : float
             Hypothesized value of kurtosis
 
         Returns
         -------
-        diff: float
+        diff : float
             The difference between the log likelihood ratio at kurt and a
             pre-specified value.
         """
@@ -435,12 +435,12 @@ class _OptFuncts():
         """
         Parameters
         ----------
-        nuis_params: 1darray
+        nuis_params : 1darray
             Array containing two nuisance means and two nuisance variances
 
         Returns
         -------
-        llr: float
+        llr : float
             The log-likelihood of the correlation coefficient holding nuisance
             parameters constant
         """
@@ -468,15 +468,15 @@ class DescStatUV(_OptFuncts):
 
     Parameters
     ----------
-    endog: 1darray
+    endog : 1darray
         Data to be analyzed
 
     Attributes
     ----------
-    endog: 1darray
+    endog : 1darray
         Data to be analyzed
 
-    nobs: float
+    nobs : float
         Number of observations
     """
 
@@ -491,17 +491,17 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        mu0: float
+        mu0 : float
             Mean under the null hypothesis
 
-        return_weights: bool, optional
+        return_weights : bool
             If return_weights is True the funtion returns
             the weights of the observations under the null hypothesis.
             Default is False
 
         Returns
         -------
-        test_results: tuple
+        test_results : tuple
             The log-likelihood ratio and p-value of mu0
         """
         self.mu0 = mu0
@@ -524,18 +524,15 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        sig: float
+        sig : float
             significance level. Default is .05
 
-        Optional
-        --------
-
-        method: str
+        method : str
             Root finding method,  Can be 'nested-brent' or
             'gamma'.  Default is 'gamma'
 
             'gamma' Tries to solve for the gamma parameter in the
-            Lagrangian (see Owen pg 22) and then determine the weights.
+            Lagrange (see Owen pg 22) and then determine the weights.
 
             'nested brent' uses brents method to find the confidence
             intervals but must maximize the likelihhod ratio on every
@@ -545,17 +542,17 @@ class DescStatUV(_OptFuncts):
             converge, try expanding the gamma_high and gamma_low
             variable.
 
-        gamma_low: float
+        gamma_low : float
             lower bound for gamma when finding lower limit.
             If function returns f(a) and f(b) must have different signs,
             consider lowering gamma_low. Default =-(10``**``10)
 
-        gamma_high: float
+        gamma_high : float
             upper bound for gamma when finding upper limit.
             If function returns f(a) and f(b) must have different signs,
             consider raising gamma_high. Default=10``**``10
 
-        epsilon: float
+        epsilon : float
             When using 'nested-brent', amount to decrease (increase)
             from the maximum (minimum) of the data when
             starting the search.  This is to protect against the
@@ -568,10 +565,9 @@ class DescStatUV(_OptFuncts):
             If fucntion returns f(a) and f(b) must have differnt signs,
             consider lowering epsilon.  Default=10``**``-6
 
-
         Returns
         -------
-        Interval: tuple
+        Interval : tuple
             Confidence interval for the mean
         """
         endog = self.endog
@@ -608,22 +604,20 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        sig2_0: float
+        sig2_0 : float
             Hypothesized value to be tested
 
-        Optional
-        --------
-        return_weights: bool
+        return_weights : bool
             If True, returns the weights that maximize the
             likelihood of observing sig2_0. Default is False
 
         Returns
         --------
-        test_results: tuple
+        test_results : tuple
             The  log-likelihood ratio and the p_value  of sig2_0
 
-        Example
-        -------
+        Examples
+        --------
         random_numbers = np.random.standard_normal(1000)*100
         el_analysis = emplike.DescStat(random_numbers)
         hyp_test = el_analysis.test_var(9500)
@@ -645,29 +639,29 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        lower_bound: float
+        lower_bound : float
             The minimum value the lower confidence interval can
             take. The p-value from test_var(lower_bound) must be lower
             than 1 - significance level. Default is calibrated at the .01
             significance level, assuming normality.
 
-        upper_bound: float
+        upper_bound : float
             The maximum value the upper confidence interval
             can take. The p-value from test_var(upper_bound) must be lower
             than 1 - significance level.  Default is calibrated at the .01
             significance level, assuming normality.
 
-        sig: float
+        sig : float
             The significance level for the conficence interval.
             Default= .05
 
         Returns
         --------
-        Interval: tuple
+        Interval : tuple
             Confidence interval
 
-        Example
-        -------
+        Examples
+        --------
         random_numbers = np.random.standard_normal(100)
         el_analysis = emplike.DescStat(random_numbers)
         # Initialize El
@@ -704,27 +698,25 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        mu_low: float
+        mu_low : float
             Lowest value of the mean to plot
 
-        mu_high: float
+        mu_high : float
             Highest value of the mean to plot
 
-        var_low: float
+        var_low : float
             Lowest value of the variance to plot
 
-        var_high: float
+        var_high : float
             Highest value of the variance to plot
 
-        mu_step: float
+        mu_step : float
             Increments to evaluate the mean
 
-        var_step: float
+        var_step : float
             Increments to evaluate the mean
 
-        Optional
-        --------
-        levs: list
+        levs : list
             Which values of significance the contour lines will be drawn.
             Default is [.2, .1, .05, .01, .001]
         """
@@ -749,18 +741,16 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        skew0: float
+        skew0 : float
             Skewness value to be tested
 
-        Optional
-        --------
-        return_weights: bool
+        return_weights : bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default = False.
 
         Returns
         --------
-        test_results: tuple
+        test_results : tuple
             The log-likelihood ratio and p_value of skew0
         """
         self.skew0 = skew0
@@ -781,18 +771,16 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        kurt0: float
+        kurt0 : float
             Kurtosis value to be tested
 
-        Optional
-        --------
-        return_weights: bool
+        return_weights : bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default = False.
 
         Returns
         -------
-        test_results: tuple
+        test_results : tuple
             The log-likelihood ratio and p_value of kurt0
         """
         self.kurt0 = kurt0
@@ -813,21 +801,18 @@ class DescStatUV(_OptFuncts):
 
         Parameters
         ----------
-        skew0: float
+        skew0 : float
             Skewness value to be tested
-        kurt0: float
+        kurt0 : float
             Kurtosis value to be tested
 
-        Optional
-        --------
-        return_weights: bool
+        return_weights : bool
             If True, function also returns the weights that
             maximize the likelihood ratio. Default = False.
 
         Returns
-        --------
-
-        test_results: tuple
+        -------
+        test_results : tuple
             The log-likelihood ratio and p_value  of the joint hypothesis test.
         """
         self.skew0 = skew0
@@ -846,22 +831,22 @@ class DescStatUV(_OptFuncts):
         """
         Returns the confidence interval for skewness.
 
-        Optional
-        --------
-        sig: float
+        Parameters
+        ----------
+        sig : float
             The significance level.  Default is .05
 
-        upper_bound: float
+        upper_bound : float
             Maximum Vale of Skewness the upper limit can be.
             Default is .99 confidence assuming normality.
 
-        lower_bound: float
+        lower_bound : float
             Minimum value of skewness the lower limit can be.
             Default is .99 confidence level assuming normality.
 
         Returns
         -------
-        Interval: tuple
+        Interval : tuple
             Confidence Interval
 
         Notes
@@ -890,23 +875,23 @@ class DescStatUV(_OptFuncts):
         """
         Returns the confidence interval for kurtosis.
 
-        Optional
-        --------
+        Parameters
+        ----------
 
-        sig: float
+        sig : float
             The significance level.  Default is .05
 
-        upper_bound: float
+        upper_bound : float
             Maximum Vale of Kurtosis the upper limit can be.
             Default: .99 confidence assuming normality.
 
-        lower_bound: float
+        lower_bound : float
             Minimum value of Kurtosis the lower limit can be.
-            Default: .99 confidence level assuming normality.
+            Default : .99 confidence level assuming normality.
 
         Returns
         --------
-        Interval: tuple
+        Interval : tuple
             Lower and Upper confidence limit
 
         Notes
@@ -944,20 +929,19 @@ class DescStatUV(_OptFuncts):
 
 class DescStatMV(_OptFuncts):
     """
-    A class for conducting inference on multivariate means and
-    correlation.
+    A class for conducting inference on multivariate means and correlation.
 
     Parameters
     ----------
-    endog: nxk array
+    endog : nxk array
         Data to be analyzed
 
     Attributes
     ----------
-    endog: 1darray
+    endog : 1darray
         Data to be analyzed
 
-    nobs: float
+    nobs : float
         Number of observations
 
     See Also
@@ -976,19 +960,17 @@ class DescStatMV(_OptFuncts):
 
         Parameters
         ----------
-        mu_array : 1d array
+        mu_array  : 1d array
             Hypothesized values for the mean.  Must have same number of
             elements as columns in endog.
 
-        Optional
-        --------
-        return_weights: bool
+        return_weights : bool
             If True, returns the weights that maximize the
             likelihood of mu_array Default= False.
 
         Returns
         -------
-        test_results: tuple
+        test_results : tuple
             The log-likelihood ratio and p_value for mu_array
         """
         endog = self.endog
@@ -1020,38 +1002,36 @@ class DescStatMV(_OptFuncts):
 
         Parameters
         ----------
-        m1_low: float
+        m1_low : float
             Minimum value of the mean for variable 1
 
-        m1_upp: float
+        m1_upp : float
             Maximum value of the mean for variable 1
 
-        mu2_low: float
+        mu2_low : float
             Minimum value of the mean for variable 2
 
-        mu2_upp: float
+        mu2_upp : float
             Maximum value of the mean for variable 2
 
-        step1: float
+        step1 : float
             Increment of evaluations for variable 1
 
-        step2: float
+        step2 : float
             Increment of evaluations for variable 2
 
-        Optional
-        --------
-        levs: list
+        levs : list
             Levels to be drawn on the contour plot.
             Default =  [.2, .1 .05, .01, .001]
 
-        plot_dta: bool
+        plot_dta : bool
             If True, makes a scatter plot of the data on
             top of the contour plot. Default =  False.
 
-        var1_name: str
+        var1_name : str
             Name of variable 1 to be plotted on the x-axis
 
-        var2_name: str
+        var2_name : str
             Name of variable 2 to be plotted on the y-axis
 
         Notes
@@ -1100,13 +1080,11 @@ class DescStatMV(_OptFuncts):
         correlation coefficient between 2 variables
 
         Parameters
-        ---------
-        corr0: float
+        ----------
+        corr0 : float
             Hypothesized value to be tested
 
-        Optional
-        --------
-        return_weights: bool
+        return_weights : bool
             If true, returns the weights that maximize
             the log-likelihood at the hypothesized value.
 
@@ -1136,20 +1114,20 @@ class DescStatMV(_OptFuncts):
 
         Parameters
         ----------
-        sig: float
+        sig : float
             The significance level.  Default is .05
 
-        upper_bound: float
+        upper_bound : float
             Maximum value the upper confidence limit can be.
             Default is  99% confidence limit assuming normality.
 
-        lower_bound: float
+        lower_bound : float
             Minimum value the lower condidence limit can be.
             Default is 99% confidence limit assuming normality.
 
         Returns
         -------
-        interval: tuple
+        interval : tuple
             Confidence Interval
 
         """
