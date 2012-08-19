@@ -162,7 +162,7 @@ def mnc2mvsk(args):
     #TODO: no return, did it get lost in cut-paste?
 
 
-def cov2corr(cov):
+def cov2corr(cov, return_std=False):
     '''convert covariance matrix to correlation matrix
 
     Parameters
@@ -184,7 +184,34 @@ def cov2corr(cov):
     cov = np.asanyarray(cov)
     std_ = np.sqrt(np.diag(cov))
     corr = cov / np.outer(std_, std_)
-    return corr
+    if return_std:
+        return corr, std_
+    else:
+        return corr
+
+def corr2cov(corr, std):
+    '''convert covariance matrix to correlation matrix
+
+    Parameter
+    ---------
+    cov : array_like, 2d
+        covariance matrix, see Notes
+
+    Returns
+    -------
+    corr : ndarray (subclass)
+        correlation matrix
+
+    Notes
+    -----
+    This function does not convert subclasses of ndarrays. This requires
+    that division is defined elementwise. np.ma.array and np.matrix are allowed.
+
+    '''
+    corr = np.asanyarray(corr)
+    std_ = np.asanyarray(std)
+    cov = corr * np.outer(std_, std_)
+    return cov
 
 def se_cov(cov):
     '''get standard deviation from covariance matrix
