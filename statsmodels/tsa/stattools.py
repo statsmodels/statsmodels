@@ -18,7 +18,7 @@ class ResultsStore(object):
         return self._str
 
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
-        fitargs=()):
+        fitargs=(), regresults=False):
     """
     Returns the results for the lag length that maximimizes the info criterion.
 
@@ -60,19 +60,19 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
 
     results = {}
     method = method.lower()
-    for lag in range(startlag,maxlag+1):
+    for lag in range(startlag, startlag+maxlag+1):
         mod_instance = mod(endog, exog[:,:lag], *modargs)
         results[lag] = mod_instance.fit()
 
     if method == "aic":
-        icbest, bestlag = max((v.aic,k) for k,v in results.iteritems())
+        icbest, bestlag = min((v.aic,k) for k,v in results.iteritems())
     elif method == "bic":
-        icbest, bestlag = max((v.bic,k) for k,v in results.iteritems())
+        icbest, bestlag = min((v.bic,k) for k,v in results.iteritems())
     elif method == "t-stat":
         lags = sorted(results.keys())[::-1]
 #        stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
-        for lag in range(maxlag,startlag-1,-1):
+        for lag in range(startlag + maxlag, startlag - 1, -1):
             icbest = np.abs(results[lag].tvalues[-1])
             if np.abs(icbest) >= stop:
                 bestlag = lag
@@ -80,7 +80,11 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
                 break
     else:
         raise ValueError("Information Criterion %s not understood.") % method
-    return icbest, bestlag
+
+    if not regresults:
+        return icbest, bestlag
+    else:
+        return icbest, bestlag, results
 
 #this needs to be converted to a class like HetGoldfeldQuandt, 3 different returns are a mess
 # See:
@@ -153,6 +157,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     If the p-value is close to significant, then the critical values should be
     used to judge whether to accept or reject the null.
 
+    The autolag option and maxlag for it are described in Greene.
+
     Examples
     --------
     see example script
@@ -172,7 +178,12 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
     MacKinnon, J.G. 2010. "Critical Values for Cointegration Tests."  Queen's
     University, Dept of Economics, Working Papers.  Available at
     http://ideas.repec.org/p/qed/wpaper/1227.html
+
     '''
+
+    if regresults:
+        store = True
+
     trenddict = {None:'nc', 0:'c', 1:'ct', 2:'ctt'}
     if regression is None or isinstance(regression, int):
         regression = trenddict[regression]
@@ -184,7 +195,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     if maxlag is None:
         #from Greene referencing Schwert 1989
-        maxlag = int(round(12. * np.power(nobs/100., 1/4.)))
+        maxlag = int(np.ceil(12. * np.power(nobs/100., 1/4.)))
 
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
@@ -201,11 +212,19 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         else:
             fullRHS = xdall
         startlag = fullRHS.shape[1] - xdall.shape[1] + 1 # 1 for level
-
-        #search for lag length with highest information criteria
+        #search for lag length with smallest information criteria
         #Note: use the same number of observations to have comparable IC
-        icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
-                maxlag, autolag)
+        #aic and bic: smaller is better
+
+        if not regresults:
+            icbest, bestlag = _autolag(OLS, xdshort, fullRHS, startlag,
+                                       maxlag, autolag)
+        else:
+            icbest, bestlag, alres = _autolag(OLS, xdshort, fullRHS, startlag,
+                                        maxlag, autolag, regresults=regresults)
+            resstore.autolag_results = alres
+
+        bestlag -= startlag  #convert to lag not column index
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
@@ -220,6 +239,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         resols = OLS(xdshort, add_trend(xdall[:,:usedlag+1], regression)).fit()
     else:
         resols = OLS(xdshort, xdall[:,:usedlag+1]).fit()
+
     adfstat = resols.tvalues[0]
 #    adfstat = (resols.params[0]-1.0)/resols.bse[0]
     # the "asymptotically correct" z statistic is obtained as
@@ -234,12 +254,13 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             "10%" : critvalues[2]}
     if store:
         resstore.resols = resols
+        resstore.maxlag = maxlag
         resstore.usedlag = usedlag
         resstore.adfstat = adfstat
         resstore.critvalues = critvalues
         resstore.nobs = nobs
-        resstore.H0 = "The coefficient on the lagged level equals 1"
-        resstore.HA = "The coefficient on the lagged level < 1"
+        resstore.H0 = "The coefficient on the lagged level equals 1 - unit root"
+        resstore.HA = "The coefficient on the lagged level < 1 - stationary"
         resstore.icbest = icbest
         return adfstat, pvalue, critvalues, resstore
     else:
@@ -318,7 +339,8 @@ def q_stat(x,nobs, type="ljungbox"):
 #NOTE: Changed unbiased to False
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
-def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
+def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
+        alpha=None):
     '''
     Autocorrelation function for 1d arrays.
 
@@ -330,14 +352,22 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
        If True, then denominators for autocovariance are n-k, otherwise n
     nlags: int, optional
         Number of lags to return autocorrelation for.
-    confint : float or None, optional
-        If True, the confidence intervals for the given level are returned.
-        For instance if confint=95, 95 % confidence intervals are returned.
+    confint : scalar, optional
+        The use of confint is deprecated. See `alpha`.
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if confint=95, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        Bartlett\'s formula.
     qstat : bool, optional
         If True, returns the Ljung-Box q statistic for each autocorrelation
         coefficient.  See q_stat for more information.
     fft : bool, optional
         If True, computes the ACF via FFT.
+    alpha : scalar, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if alpha=.05, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        Bartlett\'s formula.
 
     Returns
     -------
@@ -377,27 +407,35 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False):
         acf /= acf[0]
         #acf = np.take(np.real(acf), range(1,nlags+1))
         acf = np.real(acf[:nlags+1])   #keep lag 0
-    if not (confint or qstat):
+    if not (confint or qstat or alpha):
         return acf
-# Based on Bartlett's formula for MA(q) processes
-#NOTE: not sure if this is correct, or needs to be centered or what.
-
     if not confint is None:
+        import warnings
+        warnings.warn("confint is deprecated. Please use the alpha keyword",
+                      FutureWarning)
         varacf = np.ones(nlags+1)/nobs
-        #varacf[1:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
-        #TODO: test this, are my changes correct
         varacf[0] = 0
-        varacf[1:] *= 1 + 2*np.cumsum(acf[1:]**2)
+        varacf[1] = 1./nobs
+        varacf[2:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1-(100-confint)/200.)*np.sqrt(varacf)
+        confint = np.array(zip(acf-interval, acf+interval))
+        if not qstat:
+            return acf, confint
+    if alpha is not None:
+        varacf = np.ones(nlags+1)/nobs
+        varacf[0] = 0
+        varacf[1] = 1./nobs
+        varacf[2:] *= 1 + 2*np.cumsum(acf[1:-1]**2)
+        interval = stats.norm.ppf(1-alpha/2.)*np.sqrt(varacf)
         confint = np.array(zip(acf-interval, acf+interval))
         if not qstat:
             return acf, confint
     if qstat:
         qstat, pvalue = q_stat(acf[1:], nobs=nobs)  #drop lag 0
-        if confint is not None:
+        if (confint is not None or alpha is not None):
             return acf, confint, qstat, pvalue
         else:
-            return acf, qstat
+            return acf, qstat, pvalue
 
 def pacf_yw(x, nlags=40, method='unbiased'):
     '''Partial autocorrelation estimated with non-recursive yule_walker
@@ -406,7 +444,7 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     ----------
     x : 1d array
         observations of time series for which pacf is calculated
-    maxlag : int
+    nlags : int
         largest lag for which pacf is returned
     method : 'unbiased' (default) or 'mle'
         method for the autocovariance calculations in yule walker
@@ -462,27 +500,37 @@ def pacf_ols(x, nlags=40):
         pacf.append(res.params[-1])
     return np.array(pacf)
 
-def pacf(x, nlags=40, method='ywunbiased'):
+def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     '''Partial autocorrelation estimated
 
     Parameters
     ----------
     x : 1d array
         observations of time series for which pacf is calculated
-    maxlag : int
+    nlags : int
         largest lag for which pacf is returned
     method : 'ywunbiased' (default) or 'ywmle' or 'ols'
-        specifies which method for the calculations to use,
-        - yw or ywunbiased : yule walker with bias correction in denominator for acovf
+        specifies which method for the calculations to use:
+
+        - yw or ywunbiased : yule walker with bias correction in denominator
+          for acovf
         - ywm or ywmle : yule walker without bias correction
         - ols - regression of time series on lags of it and on constant
         - ld or ldunbiased : Levinson-Durbin recursion with bias correction
         - ldb or ldbiased : Levinson-Durbin recursion without bias correction
 
+    alpha : scalar, optional
+        If a number is given, the confidence intervals for the given level are
+        returned. For instance if alpha=.05, 95 % confidence intervals are
+        returned where the standard deviation is computed according to
+        1/sqrt(len(x))
+
     Returns
     -------
     pacf : 1d array
         partial autocorrelations, nlags elements, including lag zero
+    confint : array, optional
+        Confidence intervals for the PACF. Returned if confint is not None.
 
     Notes
     -----
@@ -491,22 +539,29 @@ def pacf(x, nlags=40, method='ywunbiased'):
     '''
 
     if method == 'ols':
-        return pacf_ols(x, nlags=nlags)
+        ret = pacf_ols(x, nlags=nlags)
     elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
-        return pacf_yw(x, nlags=nlags, method='unbiased')
+        ret = pacf_yw(x, nlags=nlags, method='unbiased')
     elif method in ['ywm', 'ywmle', 'yw_mle']:
-        return pacf_yw(x, nlags=nlags, method='mle')
+        ret = pacf_yw(x, nlags=nlags, method='mle')
     elif method in ['ld', 'ldu', 'ldunbiase', 'ld_unbiased']:
         acv = acovf(x, unbiased=True)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
         #print 'ld', ld_
-        return ld_[2]
+        ret = ld_[2]
     elif method in ['ldb', 'ldbiased', 'ld_biased']: #inconsistent naming with ywmle
         acv = acovf(x, unbiased=False)
         ld_ = levinson_durbin(acv, nlags=nlags, isacov=True)
-        return ld_[2]
+        ret = ld_[2]
     else:
         raise ValueError('method not available')
+    if alpha is not None:
+        varacf = 1./len(x)
+        interval = stats.norm.ppf(1. - alpha/2.) * np.sqrt(varacf)
+        confint = np.array(zip(ret-interval, ret+interval))
+        return ret, confint
+    else:
+        return ret
 
 
 
@@ -665,17 +720,17 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
     sigma_v = sig[-1]
     arcoefs = phi[1:,-1]
-    pacf_ = np.diag(phi)
+    pacf_ = np.diag(phi).copy()
     pacf_[0] = 1.
     return sigma_v, arcoefs, pacf_, sig, phi  #return everything
 
 
 
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
-    '''four tests for granger causality of 2 timeseries
+    '''four tests for granger non causality of 2 timeseries
 
     all four tests give similar results
-    `params_ftest` and `ssr_ftest` are equivalent based of F test which is
+    `params_ftest` and `ssr_ftest` are equivalent based on F test which is
     identical to lmtest:grangertest in R
 
     Parameters
@@ -703,15 +758,24 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     TODO: convert to class and attach results properly
 
     The Null hypothesis for grangercausalitytests is that the time series in
-    the second column, x2, Granger causes the time series in the first column,
-    x1. This means that past values of x2 have a statistically significant
-    effect on the current value of x1, taking also past values of x1 into
-    account, as regressors. We reject the null hypothesis of x2 Granger
-    causing x1 if the pvalues are below a desired size of the test.
+    the second column, x2, does NOT Granger cause the time series in the first
+    column, x1. Grange causality means that past values of x2 have a
+    statistically significant effect on the current value of x1, taking past
+    values of x1 into account as regressors. We reject the null hypothesis
+    that x2 does not Granger cause x1 if the pvalues are below a desired size
+    of the test.
 
-    'params_ftest', 'ssr_ftest' are based on F test
+    The null hypothesis for all four test is that the coefficients
+    corresponding to past values of the second time series are zero.
 
-    'ssr_chi2test', 'lrtest' are based on chi-square test
+    'params_ftest', 'ssr_ftest' are based on F distribution
+
+    'ssr_chi2test', 'lrtest' are based on chi-square distribution
+
+    References
+    ----------
+    http://en.wikipedia.org/wiki/Granger_causality
+    Greene: Econometric Analysis
 
     '''
     from scipy import stats # lazy import

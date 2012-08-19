@@ -48,11 +48,11 @@ class GLS(base.LikelihoodModel):
     Parameters
     ----------
     endog : array-like
-           endog is a 1-d vector that contains the response/independent variable
+           endog is a 1-d vector that contains the response/dependent variable
     exog : array-like
-           exog is a n x p vector where n is the number of observations and p is
-           the number of regressors/dependent variables including the intercept
-           if one is included in the data.
+           exog is a n x p vector where n is the number of observations and p
+           is the number of regressors/independent variables including the
+           intercept if one is included in the data.
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -128,6 +128,8 @@ class GLS(base.LikelihoodModel):
             self.sigma = np.asarray(sigma)
         else:
             self.sigma = sigma
+
+        #check for correct shape of sigma for 1d and 2d
         if self.sigma is not None and not self.sigma.shape == (): #greedy logic
             nobs = int(endog.shape[0])
             if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
@@ -138,12 +140,15 @@ Should be of length %s, if sigma is a 1d array" % nobs)
                     self.sigma.shape[1] != nobs:
                 raise ValueError("expected an %s x %s array for sigma" % \
                         (nobs, nobs))
+
+        #convert to 2d sigma and get cholsigmainv
         if self.sigma is not None:
             nobs = int(endog.shape[0])
             if self.sigma.shape == ():
                 self.sigma = np.diag(np.ones(nobs)*self.sigma)
             if np.squeeze(self.sigma).ndim == 1:
                 self.sigma = np.diag(np.squeeze(self.sigma))
+            #TODO: avoid cholesky pinv for diag sigma
             self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
                     self.sigma)).T
         super(GLS, self).__init__(endog, exog)
@@ -180,7 +185,7 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         regression.GLS
         """
         X = np.asarray(X)
-        if np.any(self.sigma) and not self.sigma==():
+        if np.any(self.sigma) and not self.sigma.shape == ():
             return np.dot(self.cholsigmainv, X)
         else:
             return X
@@ -195,11 +200,9 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Parameters
         ----------
         method : str
-            Can be "pinv", "qr", or "mle".  "pinv" uses the
-            Moore-Penrose pseudoinverse to solve the least squares problem.
-            "svd" uses the Singular Value Decomposition.  "qr" uses the
-            QR factorization.  "mle" fits the model via maximum likelihood.
-            "mle" is not yet implemented.
+            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
+            to solve the least squares problem. "qr" uses the QR
+            factorization.
 
         Returns
         -------
@@ -214,9 +217,8 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Currently it is assumed that all models will have an intercept /
         constant in the design matrix for postestimation statistics.
 
-        The fit method uses the pseudoinverse of the design/exogenous variables
-        to solve the least squares minimization.
-
+        The fit method uses the pseudoinverse of the design/exogenous
+        variables to solve the least squares minimization.
         """
         exog = self.wexog
         endog = self.wendog
@@ -541,33 +543,35 @@ class GLSAR(GLS):
     >>> Y = [1,3,4,5,8,10,9]
     >>> model = sm.GLSAR(Y, X, rho=2)
     >>> for i in range(6):
-    ...    results = model.fit()
-    ...    print "AR coefficients:", model.rho
-    ...    rho, sigma = sm.regression.yule_walker(results.resid,
-    ...                 order=model.order)
-    ...    model = sm.GLSAR(Y, X, rho)
+    ...     results = model.fit()
+    ...     print "AR coefficients:", model.rho
+    ...     rho, sigma = sm.regression.yule_walker(results.resid,
+    ...                                            order=model.order)
+    ...     model = sm.GLSAR(Y, X, rho)
+    ...
     AR coefficients: [ 0.  0.]
     AR coefficients: [-0.52571491 -0.84496178]
-    AR coefficients: [-0.620642   -0.88654567]
-    AR coefficients: [-0.61887622 -0.88137957]
-    AR coefficients: [-0.61894058 -0.88152761]
-    AR coefficients: [-0.61893842 -0.88152263]
+    AR coefficients: [-0.6104153  -0.86656458]
+    AR coefficients: [-0.60439494 -0.857867  ]
+    AR coefficients: [-0.6048218  -0.85846157]
+    AR coefficients: [-0.60479146 -0.85841922]
     >>> results.params
-    array([ 1.58747943, -0.56145497])
+    array([ 1.60850853, -0.66661205])
     >>> results.tvalues
-    array([ 30.796394  ,  -2.66543144])
+    array([ 21.8047269 ,  -2.10304127])
     >>> print results.t_test([0,1])
-    <T test: effect=-0.56145497223945595, sd=0.21064318655324663, t=-2.6654314408481032, p=0.022296117189135045, df_denom=5>
-    >>> import numpy as np
+    <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]),
+    t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
     >>> print(results.f_test(np.identity(2)))
-    <F test: F=2762.4281271616205, p=2.4583312696e-08, df_denom=5, df_num=2>
+    <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3,
+                                                             df_num=2>
 
     Or, equivalently
 
     >>> model2 = sm.GLSAR(Y, X, rho=2)
     >>> res = model2.iterative_fit(maxiter=6)
     >>> model2.rho
-    array([-0.61893842, -0.88152263])
+    array([-0.60479146, -0.85841922])
 
     Notes
     -----
@@ -598,14 +602,14 @@ class GLSAR(GLS):
         Perform an iterative two-stage procedure to estimate a GLS model.
 
         The model is assumed to have AR(p) errors, AR(p) parameters and
-        regression coefficients are estimated simultaneously.
+        regression coefficients are estimated iteratively.
 
         Parameters
         ----------
         maxiter : integer, optional
             the number of iterations
         """
-#TODO: update this after going through example.
+        #TODO: update this after going through example.
         for i in range(maxiter-1):
             if hasattr(self, 'pinv_wexog'):
                 del self.pinv_wexog
@@ -623,30 +627,27 @@ class GLSAR(GLS):
     def whiten(self, X):
         """
         Whiten a series of columns according to an AR(p)
-        covariance structure.
+        covariance structure. This drops initial p observations.
 
         Parameters
         ----------
         X : array-like
-            The data to be whitened
+            The data to be whitened,
 
         Returns
         -------
-        TODO
+        whitened array
+
         """
-#TODO: notation for AR process
+        #TODO: notation for AR process
         X = np.asarray(X, np.float64)
         _X = X.copy()
-        #dimension handling is not DRY
-        # I think previous code worked for 2d because of single index rows in np
-        if X.ndim == 1:
-            for i in range(self.order):
-                _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
-            return _X[self.order:]
-        elif X.ndim == 2:
-            for i in range(self.order):
-                _X[(i+1):,:] = _X[(i+1):,:] - self.rho[i] * X[0:-(i+1),:]
-                return _X[self.order:,:]
+
+        #the following loops over the first axis,  works for 1d and nd
+        for i in range(self.order):
+            _X[(i+1):] = _X[(i+1):] - self.rho[i] * X[0:-(i+1)]
+        return _X[self.order:]
+
 
 def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     """
@@ -689,7 +690,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     >>> import statsmodels.api as sm
     >>> from statsmodels.datasets.sunspots import load
     >>> data = load()
-    >>> rho, sigma = sm.regression.yule_walker(data.endog,       \
+    >>> rho, sigma = sm.regression.yule_walker(data.endog,
                                        order=4, method="mle")
 
     >>> rho
@@ -1522,6 +1523,41 @@ class OLSResults(RegressionResults):
         '''
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
+
+    def outlier_test(self, method='bonf', alpha=.05):
+        """
+        Test observations for outliers according to method
+
+        Parameters
+        ----------
+        method : str
+            - `bonferroni` : one-step correction
+            - `sidak` : one-step correction
+            - `holm-sidak` :
+            - `holm` :
+            - `simes-hochberg` :
+            - `hommel` :
+            - `fdr_bh` : Benjamini/Hochberg
+            - `fdr_by` : Benjamini/Yekutieli
+            See `statsmodels.stats.multitest.multipletests` for details.
+        alpha : float
+            familywise error rate
+
+        Returns
+        -------
+        table : ndarray or DataFrame
+            Returns either an ndarray or a DataFrame if labels is not None.
+            Will attempt to get labels from model_results if available. The
+            columns are the Studentized residuals, the unadjusted p-value,
+            and the corrected p-value according to method.
+
+        Notes
+        -----
+        The unadjusted p-value is stats.t.sf(abs(resid), df) where
+        df = df_resid - 1.
+        """
+        from statsmodels.stats.outliers_influence import outlier_test
+        return outlier_test(self, method, alpha)
 
 class RegressionResultsWrapper(wrap.ResultsWrapper):
 

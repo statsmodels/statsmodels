@@ -62,7 +62,8 @@ Time Series Plots
 .. autosummary::
    :toctree: generated/
 
-   tsaplots.plotacf
+   tsaplots.plot_acf
+   tsaplots.plot_pacf
 
 Other Plots
 -----------

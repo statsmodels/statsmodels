@@ -10,6 +10,7 @@ from scipy.linalg import svdvals
 from statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
 from statsmodels.tools.data import _is_using_pandas
+from statsmodels.compatnp.py3k import asstr2
 from pandas import DataFrame
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -132,8 +133,14 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
 
     >>> design2 = sm.tools.categorical(struct_ar, col='str_instr', drop=True)
     '''
+    if isinstance(col, (list, tuple)):
+        try:
+            assert len(col) == 1
+            col = col[0]
+        except:
+            raise ValueError("Can only convert one column at a time")
 
-#TODO: add a NameValidator function
+    #TODO: add a NameValidator function
     # catch recarrays and structured arrays
     if data.dtype.names or data.__class__ is np.recarray:
         if not col and np.squeeze(data).ndim > 1:
@@ -154,10 +161,10 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
         if _swap:
             tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
 
-        if not tmp_arr.dtype.names:
-            tmp_arr = np.squeeze(tmp_arr).astype('str').tolist()
+        if not tmp_arr.dtype.names: # how do we get to this code path?
+            tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr)]
         elif tmp_arr.dtype.names:
-            tmp_arr = np.squeeze(tmp_arr.tolist()).astype('str').tolist()
+            tmp_arr = [asstr2(item) for item in np.squeeze(tmp_arr.tolist())]
 
 # prepend the varname and underscore, if col is numeric attribute lookup
 # is lost for recarrays...
@@ -172,8 +179,6 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
 #TODO: test this for rec and structured arrays!!!
 
         if drop is True:
-            # if len(data.dtype) is 1 then we have a 1 column array
-#            if len(data.dtype) == 1:
             if len(data.dtype) <= 1:
                 if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
                     tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
@@ -323,18 +328,47 @@ def add_constant(data, prepend=False):
                     usemask=False, asrecarray = return_rec)
     return data
 
+
 def isestimable(C, D):
+    """ True if (Q, P) contrast `C` is estimable for (N, P) design `D`
+
+    From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
+    the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
+    and verifying it is the same as the rank of `D`.
+
+    Parameters
+    ----------
+    C : (Q, P) array-like
+        contrast matrix. If `C` has is 1 dimensional assume shape (1, P)
+    D: (N, P) array-like
+        design matrix
+
+    Returns
+    -------
+    tf : bool
+        True if the contrast `C` is estimable on design `D`
+
+    Examples
+    --------
+    >>> D = np.array([[1, 1, 1, 0, 0, 0],
+    ...               [0, 0, 0, 1, 1, 1],
+    ...               [1, 1, 1, 1, 1, 1]]).T
+    >>> isestimable([1, 0, 0], D)
+    False
+    >>> isestimable([1, -1, 0], D)
+    True
     """
-    From an q x p contrast matrix C and an n x p design matrix D, checks
-    if the contrast C is estimable by looking at the rank of vstack([C,D]) and
-    verifying it is the same as the rank of D.
-    """
+    C = np.asarray(C)
+    D = np.asarray(D)
     if C.ndim == 1:
-        C.shape = (C.shape[0], 1)
+        C = C[None, :]
+    if C.shape[1] != D.shape[1]:
+        raise ValueError('Contrast should have %d columns' % D.shape[1])
     new = np.vstack([C, D])
     if rank(new) != rank(D):
         return False
     return True
+
 
 def recipr(X):
     """
@@ -450,12 +484,16 @@ def chain_dot(*arrs):
     """
     return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
-def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
+def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     """
     Parameters
     ----------
     data : str
         Name of dataset to fetch.
+    baseurl : str
+        The base URL to the stata datasets.
+    as_df : bool
+        If True, returns a `pandas.DataFrame`
 
     Returns
     -------
@@ -472,7 +510,6 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     error checking in response URLs.
     """
     # lazy imports
-    import pandas
     from statsmodels.iolib import genfromdta
     from urllib2 import urlopen
     from urlparse import urljoin
@@ -480,5 +517,10 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
 
     url = urljoin(baseurl, data+'.dta')
     dta = urlopen(url)
+    #TODO: this isn't Python 3 compatibile since urlopen returns bytes?
     dta = StringIO(dta.read()) # make it truly file-like
-    return genfromdta(dta)
+    if as_df: # could make this faster if we don't process dta twice?
+        from pandas import DataFrame
+        return DataFrame.from_records(genfromdta(dta))
+    else:
+        return genfromdta(dta)

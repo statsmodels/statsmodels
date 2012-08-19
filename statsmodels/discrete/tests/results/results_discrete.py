@@ -88,6 +88,123 @@ class Anes():
             0.1584829], [-14.1832200, -10.0282800]]]
         self.conf_int = np.asarray(conf_int)
 
+        # margins, dydx(*) predict(outcome(#))
+        self.margeff_dydx_overall = np.array([
+            [0.00868085993550, -0.09779854015456, 0.00272556969847,
+                -0.01992376579372, -0.00603133322764],
+            [0.00699386733148, -0.05022430802614, -0.00211003909752,
+                -0.00536980000265, -0.00554366741814],
+            [-0.00391040848820, -0.02824717135857, -0.00100551299310,
+                0.00664337806861, 0.00097987356999],
+            [-0.00182580888015, -0.00573744730031, -0.00004249256428,
+                -0.00546669558488, 0.00054101121854],
+            [-0.00098558129923, 0.01985550937033, 0.00047972250012,
+                0.00172605778905, 0.00211291403209],
+            [-0.00153469551647, 0.03755346502013, -0.00068531143399,
+                0.00472471794347, 0.00254733486106],
+            [-0.00741820702809, 0.12459834487569, 0.00063806819375,
+                0.01766610701188, 0.00539385283759]
+                ]).T
+        self.margeff_dydx_overall_se = np.array([
+            [.0038581061, .0080471125, .0007068488, .0082318967, .0020261706],
+            [.003904378, .0073600286, .000756431, .0084381578, .0020482238],
+            [.003137126, .0056813182, .0006601377, .0068932588, .0018481806],
+            [.0019427783, .0031904763, .0003865411, .004361789, .0011523221],
+            [.0029863227, .0054076092, .0005886612, .0064426365, .0018886818],
+            [.0035806552, .0069497362, .000722511, .0078287717, .0022352393],
+            [.0033641608, .008376629, .0006774697, .0073505286, .0021660086]
+                ]).T
+
+        self.margeff_dydx_mean = np.array([
+            [0.01149887431225, -0.13784207091973, 0.00273313385873,
+                -0.02542974260540, -0.00855346837482],
+            [0.01114846831102, -0.09864273512889, -0.00222435063712,
+                -0.01214617126321, -0.00903581444579],
+            [-0.00381702868421, -0.05132297961269, -0.00116763216994,
+                0.00624203027060, 0.00021912081810],
+            [-0.00233455327258, -0.00928554037343, -0.00000206561214,
+                -0.00775415690571, 0.00060004460394],
+            [-0.00352579921274, 0.06412187169362, 0.00073938948643,
+                0.00747778063206, 0.00459965010365],
+            [-0.00574308219449, 0.11126535089794, -0.00057337915464,
+                0.01467424346725, 0.00641760846097],
+            [-0.00722687818452, 0.12170608820238, 0.00049490419675,
+                0.01693601418978, 0.00575285798725]]).T
+        self.margeff_dydx_mean_se = np.array([
+            [.0043729758, .0110343353, .0008149907, .0092551389, .0023752071],
+            [.004875051, .0124746358, .0009613152, .0105665812, .0026524426],
+            [.0040718954, .0103613938, .0008554615, .0089931297, .0024374625],
+            [.0026430804, .0070845916, .0005364369, .0057654258, .0015988838],
+            [.0037798151, .0103849291, .0007393481, .0082021938, .0023489261],
+            [.0045654631, .0130329403, .0009128134, .0100053262, .0028048602],
+            [.0027682389, .0113292677, .0005325113, .0061289353, .0017330763]
+            ]).T
+
+        self.margeff_dydx_dummy_overall = np.array([
+            [0.00549149574321, -0.05348235321783, 0.00298963549049,
+                -0.01479461677951, -0.00332167981255, -0.26502967041815],
+            [0.00345677928276, -0.00950322030929, -0.00189456107189,
+                0.00033893662061, -0.00314690167350, -0.21040878091828],
+            [-0.00645089013284, 0.00401746940204, -0.00083948249351,
+                0.01114202556889, 0.00277069841472, -0.15967397659686],
+            [-0.00215436802341, -0.00366545199370, -0.00000002297812,
+                -0.00457368049644, 0.00065303026027, -0.00094772782001],
+            [0.00058038428936, -0.00369080100124, 0.00035948233235,
+                -0.00018863693013, 0.00079351293461, 0.12640653743480],
+            [0.00217597030999, -0.01279456622853, -0.00091882392767,
+                0.00001651192759, -0.00037998290789, 0.27175070356670],
+            [-0.00309932483642, 0.07911868907484, 0.00030378521102,
+                0.00805941631677, 0.00263129901425, 0.23790291475181]]).T
+        self.margeff_dydx_dummy_overall_se = np.array([
+            [.0037314453, .0094102332, .000688838, .0079744554, .0019365971,
+                .0243914836],
+            [.0038215262, .0095938828, .0007410885, .008259353, .0019984087,
+                .0317628806],
+            [.0031045718, .00785814, .0006504353, .0067892866, .0018060332,
+                0.0262803561],
+            [.0019756086, .0051031194, .0003862449, .0043621673, .0011796953,
+                .0219999601],
+            [.0029714074, .0081732018, .0005715192, .0064742872, .0019130195,
+                .0331694192],
+            [.0034443743, .0097296187, .0006774867, .0075996454, .0021993881,
+                .038600835],
+            [.0032003518, .0098741227, .0006335772, .0070902078, .0021003227,
+                .0255727127]]).T
+
+        self.margeff_eydx_dummy_overall = np.array([
+            [.03939188, -.65758371, .01750922, -.12131806, -.03613241,
+                -3.2132513],
+            [.02752366, -.383165, -.00830021, -.03652935, -.03286046,
+                -1.8741853],
+            [-.05006681, -.2719659, -.00626481, .06525323, .01012554,
+                -2.0058029],
+            [-.05239558, -.22549142, .00025015, -.13104416, .01114517,
+                -.27052009],
+            [-.00296374, .25627809, .00140513, .03358712, .02296041,
+                1.3302701],
+            [.00328283, .2800168, -.0083912, .04332782, .01575863,
+                1.8441023],
+            [-.03257068, .98346111, -.00122118, .10847807, .0406456,
+                2.9119099]]).T
+
+        self.margeff_eydx_dummy_overall_se = np.array([
+            [.0272085605, .0777760394, .0052427952, .0584011446, .0148618012,
+                .5796921383],
+            [.0262290023, .0724479385, .005174736, .0567743614, .0144447083,
+                .3015738731],
+            [.0321415498, .0895589422, .0067480662, .0701460193, .0190451865,
+                .3904138447],
+            [.0511305319, .1420904068, .0102342163, .1129912244, .0308618233,
+                .3693799595],
+            [.0340186217, .0991711703, .0065812158, .0737441012, .0212966336,
+                .2346982385],
+            [.0289250212, .0840662279, .0056743561, .0631772185, .0177278895,
+                .2089516714],
+            [.0318251305, .1085637405, .0062400589, .0699123044, .0201045606,
+                .3727166284]]).T
+
+
+
 class Spector():
     """
     Results are from Stata 11
@@ -182,68 +299,147 @@ class Spector():
         self.conf_int = [[.3507938,5.301432],[-.1822835,.3725988],[.29218,
                 4.465195],[-22.68657,-3.35613]]
         self.pvalues = [.0252390974, .5014342039, .0254552063, .0082774596]
+
+        # taken from margins command
         self.margeff_nodummy_dydx = [.36258084688424,.01220841099085,
                 .30517768382304]
+        self.margeff_nodummy_dydx_se = [.1094412, .0177942, .0923796]
         self.margeff_nodummy_dydxmean = [.53385885781692,.01797548988961,
                 .44933926079386]
+        self.margeff_nodummy_dydxmean_se = [.237038, .0262369, .1967626]
         self.margeff_nodummy_dydxmedian = [.25009492465091,.00842091261329,
                 .2105003352955]
-
+        self.margeff_nodummy_dydxmedian_se = [.1546708, .0134314, .0928183]
         self.margeff_nodummy_dydxzero = [6.252993785e-06,2.105437138e-07,
                 5.263030788e-06]
+        self.margeff_nodummy_dydxzero_se = [.0000288,  9.24e-07, .000025]
         self.margeff_nodummy_dyex = [1.1774000792198,.27896245178384,
                 .16960002159996]
+        self.margeff_nodummy_dyex_se = [.3616481, .4090679, .0635583]
         self.margeff_nodummy_dyexmean = [1.6641381583512,.39433730945339,
                 .19658592659731]
+        self.margeff_nodummy_dyexmean_se = [.7388917, .5755722, .0860836]
+        #NOTE: PSI at median should be a NaN or 'omitted'
         self.margeff_nodummy_dyexmedian = [.76654095836557,.18947053379898,0]
+        self.margeff_nodummy_dyexmedian_se = [ .4740659, .302207, 0]
+        #NOTE: all should be NaN
         self.margeff_nodummy_dyexzero = [0,0,0]
+        self.margeff_nodummy_dyexzero_se = [0,0,0]
+
         self.margeff_nodummy_eydx = [1.8546366266779,.06244722072812,
                 1.5610138123033]
+        self.margeff_nodummy_eydx_se = [.847903, .0930901, .7146715]
         self.margeff_nodummy_eydxmean = [2.1116143062702,.0710998816585,
                 1.7773072368626]
+        self.margeff_nodummy_eydxmean_se = [ 1.076109, .1081501, .9120842]
         self.margeff_nodummy_eydxmedian = [2.5488082240624,.0858205793373,
                 2.1452853812126]
+        self.margeff_nodummy_eydxmedian_se = [1.255377, .1283771, 1.106872]
         self.margeff_nodummy_eydxzero = [2.8261067189993,.0951574597115,
                 2.3786824653103]
+        self.margeff_nodummy_eydxzero_se = [1.262961, .1415544, 1.064574]
         self.margeff_nodummy_eyex = [5.4747106798973,1.3173389907576,
                 .44600395466634]
+        self.margeff_nodummy_eyex_se = [2.44682, 1.943525, .1567618]
         self.margeff_nodummy_eyexmean = [6.5822977203268,1.5597536538833,
                 .77757191612739]
+        self.margeff_nodummy_eyexmean_se = [3.354433, 2.372543, .3990368]
         self.margeff_nodummy_eyexmedian = [7.8120973525952,1.9309630350892,0]
+        self.margeff_nodummy_eyexmedian_se = [3.847731951, 2.888485089, 0]
+
         self.margeff_nodummy_eyexzero = [0,0,0]
+        self.margeff_nodummy_eyexzero_se = [0,0,0]
+
         # for below GPA = 2.0, psi = 1
         self.margeff_nodummy_atexog1 = [.1456333017086,.00490359933927,
                 .12257689308426]
+        self.margeff_nodummy_atexog1_se = [.145633, .0111226, .1777101]
         # for below GPA at mean, tuce = 21, psi = 0
         self.margeff_nodummy_atexog2 = [.25105129214546,.00845311433473,
                 .2113052923675]
+        self.margeff_nodummy_atexog2_se = [.1735778, .012017, .0971515]
+
+        # must get this from older margeff or i.psi then margins
         self.margeff_dummy_dydx = [.36258084688424,.01220841099085,
                 .35751515254729]
+        self.margeff_dummy_dydx_se = [.1094412, .0177942, .1420034]
         self.margeff_dummy_dydxmean = [.53385885781692,.01797548988961,
                 .4564984096959]
-#        self.margeff_dummy_dydxmedian
-#        self.margeff_dummy_dydxzero
+        self.margeff_dummy_dydxmean_se = [.237038, .0262369, .1810537]
+        #self.margeff_dummy_dydxmedian
+        # from margeff
+        self.margeff_dummy_count_dydx_median = [0.250110487483923,
+                                0.008426867847905,  0.441897738279663]
+        self.margeff_dummy_count_dydx_median_se = [.1546736661, .0134551951,
+                                                   .1792363708]
+
+        # estimate with i.psi for the below then use margins
         self.margeff_dummy_eydx = [1.8546366266779,.06244722072812,
                 1.5549034398832]
+        self.margeff_dummy_eydx_se = [.847903, .0930901, .7283702]
+        # ie
+        #  margins, eydx(*) at((mean) _all)
         self.margeff_dummy_eydxmean = [2.1116143062702,.0710998816585,
                 1.6631775707188]
-#        self.margeff_dummy_eydxmedian
-#        self.margeff_dummy_eydxzero
-# Factor variables not allowed in below
-#        self.margeff_dummy_dyex
-#        self.margeff_dummy_dyexmean
-#        self.margeff_dummy_dyexmedian
-#        self.margeff_dummy_dyexzero
-#        self.margeff_dummy_eyex
-#        self.margeff_dummy_eyex
-#        self.margeff_dummy_eyex
-#        self.margeff_dummy_eyex
+        self.margeff_dummy_eydxmean_se = [1.076109, .1081501, .801205]
+
+        # Factor variables not allowed in below
+        # test raises
+        #self.margeff_dummy_dydxzero
+        #self.margeff_dummy_eydxmedian
+        #self.margeff_dummy_eydxzero
+        #self.margeff_dummy_dyex
+        #self.margeff_dummy_dyexmean
+        #self.margeff_dummy_dyexmedian
+        #self.margeff_dummy_dyexzero
+        #self.margeff_dummy_eyex
+        #self.margeff_count_dummy_dydx_median
+        #self.margeff_count_dummy_dydx_median_se
+
+        #NOTE: need old version of margeff for nodisc but at option is broken
+        # stata command is margeff, count nodisc
+        # this can be replicated with the new results by margeff
+        # and then using margins for the last value
+        self.margeff_count_dydx = [.3625767598018,  .0122068569914, .3051777]
+        self.margeff_count_dydx_se = [.1094379569, .0177869773, .0923796]
+
+        # middle value taken from margeff rest from margins
+        self.margeff_count_dydxmean = [.5338588,  0.01797186545386,
+                                .4493393 ]
+        self.margeff_count_dydxmean_se = [.237038, .0262211, .1967626]
+
+        # with new version of margeff this is just a call to
+        # margeff
+        # mat list e(margeff_b), nonames format(%17.16g)
+        self.margeff_count_dummy_dydxoverall = [.362576759801767,
+                                        .012206856991439,  .357515163621704]
+        # AFAICT, an easy way to get se is
+        # mata
+        # V = st_matrix("e(margeff_V)")
+        # se = diagonal(cholesky(diag(V)))
+        # last SE taken from margins with i.psi, don't know how they
+        # don't know why margeff is different, but trust official results
+        self.margeff_count_dummy_dydxoverall_se = [.1094379569,   .0177869773,
+                                                    .1420034]
+                #.1574340751 ]
+
+        # from new margeff
+        self.margeff_count_dummy_dydxmean = [0.533849340033768,
+                        0.017971865453858,  0.456498405282412]
+        self.margeff_count_dummy_dydxmean_se = [.2370202503, .0262210796,
+                                            .1810536852 ]
+
         # for below GPA = 2.0, psi = 1
         self.margeff_dummy_atexog1 = [.1456333017086,.00490359933927,
                 .0494715429937]
+        self.margeff_dummy_atexog1_se = [.145633, .0111226, .0731368]
         # for below GPA at mean, tuce = 21, psi = 0
         self.margeff_dummy_atexog2 = [.25105129214546,.00845311433473,
                 .44265645632553]
+        self.margeff_dummy_atexog2_se = [.1735778, .012017, .1811925]
+        #The test for the prediction table was taken from Gretl
+        #Gretl Output matched the Stata output here for params and SE
+        self.pred_table = np.array([[18, 3], [3, 8]])
 
     def probit(self):
         self.params = [1.62581025407, .051728948442, 1.42633236818,
@@ -313,6 +509,7 @@ class Spector():
                       -.3575735, .447951, -.7988633, -1.939208, .6021435,
                       1.196623, .9407793, -.8927477, .59048, .3128364,
                       -1.246147, 2.045071]
+        self.pred_table = np.array([[18, 3], [3, 8]])
 
 
 class RandHIE():
@@ -354,3 +551,27 @@ class RandHIE():
                 [0.6784745, 0.7222313]]
         self.pvalues = [3.84415e-74, 8.4800e-120, 5.18652e-83, 5.8116e-102,
                 3.4028e-109, 0, .1719830562, .0004142808, 4.39014e-15, 0]
+
+        # from stata
+        # use margins and put i. in front of dummies
+        self.margeff_dummy_overall = [-0.15027280560599, -0.66568074771099,
+                                 0.10094500919706, -0.09890639687842,
+                                 0.77721770295360,  0.09708707452600,
+                                -0.03608195237609, 0.15804581481115,
+                                0.65104087597053]
+        self.margeff_dummy_overall_se = [.008273103,  .0269856266,
+                            .0052466639, .0046317555, .0351582169, .0016652181,
+                            .0263736472,   .0457480115,  .0913901155]
+
+        # just use margins
+        self.margeff_nodummy_overall = [-0.15027280560599, -0.70677348928158,
+                                         0.10094500919705, -0.09890639687842,
+                                         0.77721770295359, 0.09708707452600,
+                                         -0.03614158359367, 0.15462412033340,
+                                         0.58957704430148]
+        self.margeff_nodummy_overall_se = [.008273103, .0305119343,
+                                           .0052466639, .0046317555,
+                                           .0351582168, .0016652181,
+                                           .0264611158, .0437974779,
+                                           .0752099666]
+

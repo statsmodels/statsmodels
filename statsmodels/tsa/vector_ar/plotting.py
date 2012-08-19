@@ -62,18 +62,19 @@ def plot_var_forc(prior, forc, err_upper, err_lower,
     for j in range(k):
         ax = plt.subplot(rows, cols, j+1)
 
-        p1 = ax.plot(prange, prior[:, j], 'k')
-        p2 = ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], 'k--')
+        p1 = ax.plot(prange, prior[:, j], 'k', label='Observed')
+        p2 = ax.plot(rng_f, np.r_[prior[-1:, j], forc[:, j]], 'k--',
+                        label='Forecast')
 
         if plot_stderr:
-            p3 = ax.plot(rng_err, err_upper[:, j], 'k-.')
+            p3 = ax.plot(rng_err, err_upper[:, j], 'k-.',
+                            label='Forc 2 STD err')
             ax.plot(rng_err, err_lower[:, j], 'k-.')
 
         if names is not None:
             ax.set_title(names[j])
 
-    fig.legend((p1, p2, p3), ('Observed', 'Forecast', 'Forc 2 STD err'),
-               'upper right')
+        ax.legend(loc='upper right')
 
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
                     error_fmt='k--', alpha=0.05, stderr_type = 'asym'):

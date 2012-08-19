@@ -22,7 +22,10 @@ exclude_list = ['run_all.py',
                 # these need to be cleaned up
                 'example_ols_tftest.py',
                 'example_glsar.py',
-                'example_ols_table.py']
+                'example_ols_table.py',
+                #not finished yet
+                'example_arima.py',
+                'try_wls.py']
 
 file_path = os.path.dirname(__file__)
 docs_rst_dir = os.path.realpath(os.path.join(file_path,
@@ -117,28 +120,22 @@ def write_file(outfile, rst_file_pth):
     write_file.writelines(outfile)
     write_file.close()
 
-def restify(example_file):
+def restify(example_file, filehash, fname):
     """
-    Open the file
-    Check the hash
-    If needs updating, update the hash and
-        Parse the file
-        Write the new .rst
-        Update the hash_dict
+    Takes a whole file ie., the result of file.read(), its md5 hash, and
+        the filename
+    Parse the file
+    Write the new .rst
+    Update the hash_dict
     """
-    filename = os.path.basename(example_file)
-    write_filename = os.path.join(docs_rst_dir,filename[:-2] + 'rst')
-    fname = example_file
-    example_file = open(example_file, 'r').read()
-    #to_write, filehash = hash_funcs.check_hash(example_file, filename)
-    to_write = True
-    if to_write:
-        try:
-            rst_file = parse_file(example_file)
-        except IOError as err:
-            raise IOError(err.message % fname)
-        write_file(rst_file, write_filename)
-        #hash_funcs.update_hash_dict(filehash, filename)
+    write_filename = os.path.join(docs_rst_dir, fname[:-2] + 'rst')
+    try:
+        rst_file = parse_file(example_file)
+    except IOError as err:
+        raise IOError(err.message % fname)
+    write_file(rst_file, write_filename)
+    if filehash is not None:
+        hash_funcs.update_hash_dict(filehash, fname)
 
 if __name__ == "__main__":
     sys.path.insert(0, example_dir)
@@ -150,13 +147,20 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1: # given a file,files to process, no help flag yet
         for example_file in sys.argv[1:]:
-            restify(example_file)
+            whole_file = open(example_file, 'r').read()
+            restify(whole_file, None, example_file)
 
     else: # process the whole directory
         for root, dirnames, filenames in os.walk(example_dir):
             for example in filenames:
                 example_file = os.path.join(root, example)
-                if (not example.endswith('.py') or example in exclude_list
-                    or not check_script(example_file)):
+                whole_file = open(example_file, 'r').read()
+                to_write, filehash = hash_funcs.check_hash(whole_file,
+                                                           example)
+                if not to_write:
+                    print "Hash has not changed for file %s" % example
                     continue
-                restify(example_file)
+                elif (not example.endswith('.py') or example in exclude_list or
+                      not check_script(example_file)):
+                    continue
+                restify(whole_file, filehash, example)

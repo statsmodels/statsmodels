@@ -11,13 +11,14 @@ License: BSD-3
 import os
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_approx_equal
+from numpy.testing import (assert_almost_equal, assert_equal,
+                           assert_approx_equal, assert_array_less)
 
 from statsmodels.regression.linear_model import OLS, GLSAR
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
-import statsmodels.sandbox.panel.sandwich_covariance as sw
+import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
 #import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
@@ -352,7 +353,8 @@ class TestGLSARGretl(object):
 
         res = res_ols #for easier copying
 
-        cov_hac, bse_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        cov_hac = sw.cov_hac_simple(res, nlags=4, use_correction=False)
+        bse_hac =  sw.se_cov(cov_hac)
 
         assert_almost_equal(res.params, partable[:,0], 5)
         assert_almost_equal(bse_hac, partable[:,1], 5)
@@ -403,6 +405,31 @@ class TestGLSARGretl(object):
         assert_almost_equal(lev['DFFITS'], infl.dffits[0], decimal=3)
         assert_almost_equal(lev['leverage'], infl.hat_matrix_diag, decimal=3)
         assert_almost_equal(lev['influence'], infl.influence, decimal=4)
+
+def test_GLSARlag():
+    #test that results for lag>1 is close to lag=1, and smaller ssr
+
+    from statsmodels.datasets import macrodata
+    d2 = macrodata.load().data
+    g_gdp = 400*np.diff(np.log(d2['realgdp']))
+    g_inv = 400*np.diff(np.log(d2['realinv']))
+    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)
+
+    mod1 = GLSAR(g_inv, exogg, 1)
+    res1 = mod1.iterative_fit(5)
+
+    mod4 = GLSAR(g_inv, exogg, 4)
+    res4 = mod4.iterative_fit(10)
+
+    assert_array_less(np.abs(res1.params / res4.params - 1), 0.03)
+    assert_array_less(res4.ssr, res1.ssr)
+    assert_array_less(np.abs(res4.bse / res1.bse) - 1, 0.015)
+    assert_array_less(np.abs((res4.fittedvalues / res1.fittedvalues - 1).mean()),
+                      0.015)
+    assert_equal(len(mod4.rho), 4)
+
+
+
 
 if __name__ == '__main__':
     t = TestGLSARGretl()

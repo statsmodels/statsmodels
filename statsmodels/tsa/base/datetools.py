@@ -4,12 +4,41 @@ from pandas import datetools as pandas_datetools
 import numpy as np
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
-_freq_to_pandas = {'B' : pandas_datetools.BDay(1),
-                   'D' : pandas_datetools.day,
-                   'W' : pandas_datetools.Week(weekday=6),
-                   'M' : pandas_datetools.monthEnd,
-                   'A' : pandas_datetools.yearEnd,
-                   'Q' : pandas_datetools.quarterEnd}
+try:
+    from pandas.tseries.frequencies import get_offset
+    class _freq_to_pandas_class(object):
+        # being lazy, don't want to replace dictionary below
+        def __getitem__(self, key):
+            return get_offset(key)
+    _freq_to_pandas = _freq_to_pandas_class()
+except ImportError, err:
+    _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
+                       'D' : pandas_datetools.day,
+                       'W' : pandas_datetools.Week(weekday=6),
+                       'M' : pandas_datetools.monthEnd,
+                       'A' : pandas_datetools.yearEnd,
+                       'Q' : pandas_datetools.quarterEnd}
+
+def _index_date(date, dates):
+    """
+    Gets the index number of a date in a date index.
+
+    Works in-sample and will return one past the end of the dates since
+    prediction can start one out.
+
+    Currently used to validate prediction start dates.
+    """
+    if isinstance(date, basestring):
+        date = date_parser(date)
+    try:
+        return dates.get_loc(date)
+    except KeyError, err:
+        freq = _infer_freq(dates)
+        # we can start prediction at the end of endog
+        if _idx_from_dates(dates[-1], date, freq) == 1:
+            return len(dates)
+
+        raise ValueError("date %s not in date index" % date)
 
 def _date_from_idx(d1, idx, freq):
     """
@@ -36,8 +65,13 @@ def _idx_from_dates(d1, d2, freq):
     Does not check the start date to see whether it is on the offest but
     assumes that it is.
     """
-    from pandas import DateRange
-    return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
+    try: # pandas 0.8.x
+        from pandas import DatetimeIndex
+        return len(DatetimeIndex(start=d1, end=d2,
+                                 freq = _freq_to_pandas[freq])) - 1
+    except ImportError, err:
+        from pandas import DateRange
+        return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
 
 _quarter_to_day = {
         "1" : (3, 31),
@@ -229,6 +263,8 @@ def _infer_freq(dates):
     nobs = min(len(dates), 6)
     if nobs == 1:
         raise ValueError("Cannot infer frequency from one date")
+    if hasattr(dates, 'values'):
+        dates = dates.values # can't do a diff on a DateIndex
     diff = np.diff(dates[:nobs])
     delta = _add_datetimes(diff)
     nobs -= 1 # after diff
@@ -250,6 +286,7 @@ def _infer_freq(dates):
 _pandas_mapping = {
     'A-DEC': 'A',
     'Q-DEC': 'Q',
-    'W-SUN': 'W'
+    'W-SUN': 'W',
+    'Q-MAR' : 'Q'
 }
 

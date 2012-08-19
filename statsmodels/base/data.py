@@ -135,11 +135,25 @@ class ModelData(object):
     def attach_dates(self, result):
         return result
 
+class PatsyData(ModelData):
+    def _get_names(self, arr):
+        return arr.column_info.column_names
+
 class PandasData(ModelData):
     """
     Data handling class which knows how to reattach pandas metadata to model
     results
     """
+    def _check_integrity(self):
+        try:
+            endog, exog = self._orig_endog, self._orig_exog
+            # exog can be None and we could be upcasting one or the other
+            if exog is not None and (hasattr(endog, 'index') and
+                    hasattr(exog, 'index')):
+                assert self._orig_endog.index.equals(self._orig_exog.index)
+        except AssertionError:
+            raise ValueError("The indices for endog and exog are not aligned")
+        super(PandasData, self)._check_integrity()
 
     def _get_row_labels(self, arr):
         try:
@@ -290,12 +304,16 @@ def handle_data(endog, exog):
     if isinstance(exog, (list, tuple)):
         exog = np.asarray(exog)
 
-    if data_util._is_using_pandas(endog, exog):
+    if data_util._is_using_ndarray_type(endog, exog):
+        klass = ModelData
+    elif data_util._is_using_pandas(endog, exog):
         klass = PandasData
     elif data_util._is_using_larry(endog, exog):
         klass = LarryData
     elif data_util._is_using_timeseries(endog, exog):
         klass = TimeSeriesData
+    elif data_util._is_using_patsy(endog, exog):
+        klass = PatsyData
     # keep this check last
     elif data_util._is_using_ndarray(endog, exog):
         klass = ModelData

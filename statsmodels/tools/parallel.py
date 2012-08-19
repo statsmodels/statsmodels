@@ -55,7 +55,7 @@ def parallel_func(func, n_jobs, verbose=5):
             try:
                 import multiprocessing
                 n_jobs = multiprocessing.cpu_count()
-            except ImportError:
+            except (ImportError, NotImplementedError):
                 print "multiprocessing not installed. Cannot run in parallel."
                 n_jobs = 1
 

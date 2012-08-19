@@ -1445,7 +1445,7 @@ class VARResults(VARProcess):
 
         results = {
             'statistic' : lam_omni,
-            'crit_omni' : crit_omni,
+            'crit_value' : crit_omni,
             'pvalue' : omni_pvalue,
             'df' : self.neqs * 2,
             'conclusion' : conclusion,

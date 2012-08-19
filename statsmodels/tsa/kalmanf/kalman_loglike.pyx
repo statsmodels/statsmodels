@@ -136,6 +136,6 @@ def kalman_loglike_complex(ndarray[COMPLEX128, ndim=1] y,
     """
     v,F,loglikelihood = kalman_filter_complex(y,k,p,q,r,nobs,Z_mat,R_mat,T_mat)
     sigma2 = 1./nobs * sum(v**2 / F)
-    loglike = -.5 *(loglikelihood + nobs*log(sigma2))
+    loglike = -.5 *(loglikelihood + nobs*nplog(sigma2))
     loglike -= nobs/2. * (log(2*pi) + 1)
     return loglike, sigma2

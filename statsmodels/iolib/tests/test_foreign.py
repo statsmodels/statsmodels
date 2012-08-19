@@ -27,6 +27,16 @@ def test_genfromdta():
     #res1 = res1.view((float,len(res1[0])))
     assert_array_equal(res1 == res2, True)
 
+def test_genfromdta_pandas():
+    from pandas.util.testing import assert_frame_equal
+    dta = sm.datasets.macrodata.load_pandas().data
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    res1 = sm.iolib.genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta',
+                        pandas=True)
+    res1 = res1.astype(float)
+    assert_frame_equal(res1, dta)
+
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],

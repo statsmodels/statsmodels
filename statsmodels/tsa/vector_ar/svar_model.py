@@ -17,8 +17,7 @@ except:
     def np_slogdet(x):
         return 1, np.log(np.linalg.det(x))
 
-from statsmodels.sandbox.regression.numdiff import (approx_hess,
-                                                        approx_fprime)
+from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
 
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, \
@@ -342,7 +341,7 @@ class SVAR(tsbase.TimeSeriesModel):
         Returns numerical hessian.
         """
         loglike = self.loglike
-        return approx_hess(AB_mask, loglike)[0]
+        return approx_hess(AB_mask, loglike)
 
     def _solve_AB(self, start_params, maxiter, maxfun, override=False,
             solver='bfgs'):
