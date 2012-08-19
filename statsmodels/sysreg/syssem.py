@@ -21,8 +21,8 @@ class SysSEM(SysModel):
     sys : list of dict
         cf. SysModel. Each equation has now an 'indep_endog' key which is a list
         of the column numbers of the independent endogenous regressors.
-    instruments : array
-        Array of the exogenous independent variables.
+    instruments : array, optional
+        Array of additional instruments.
     dkf :
     sigma : 
 
@@ -55,7 +55,9 @@ class SysSEM(SysModel):
         ## Handle restrictions: TODO
 
         ## Handle instruments design
-        self.instruments = instruments # TODO: check instruments
+        if (instruments is not None) and (instruments.shape[0] != self.nobs):
+            raise ValueError("instruments is not correctly specified")
+        self.instruments = instruments
         exogs = []
         for eq in self.sys:
             id_exog = list(set(range(eq['exog'].shape[1])).difference(
@@ -65,13 +67,16 @@ class SysSEM(SysModel):
         if not(self.instruments is None):
             fullexog = np.hstack((self.instruments, fullexog))
             # Note : the constant is not in the first column. 
-            # Does this matter?
         # Delete reoccuring cols
         self.fullexog = z = unique_cols(fullexog)
 
         ## Handle first-step
         ztzinv = np.linalg.inv(np.dot(z.T, z))
-        Pz = np.dot(np.dot(z, ztzinv), z.T)
+        #TODO: Josef: "some streamlining in the linear algebra is necessary. 
+        #For example the projection matrix Pz, as you use it in the 1st stage 
+        #regression is (nobs, nobs), which is large and inefficient for 
+        #larger samples."
+        Pz = np.dot(np.dot(z, ztzinv), z.T) 
         xhats = [np.dot(Pz, eq['exog']) for eq in self.sys]
         self.sp_xhat = sp_block_diag(xhats)
         # Identification conditions
