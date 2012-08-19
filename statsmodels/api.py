@@ -27,9 +27,5 @@ if os.path.exists(chmpath):
         from subprocess import Popen
         p = Popen(chmpath, shell=True)
 
-
 del os
 del chmpath
-
-
-
