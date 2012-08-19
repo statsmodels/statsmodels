@@ -21,7 +21,7 @@ class ProbPlot(object):
         data : array-like
             1d data array
         dist : A scipy.stats or statsmodels distribution
-            Compare x against dist. The default is 
+            Compare x against dist. The default is
             scipy.stats.distributions.norm (a standard normal).
         distargs : tuple
             A tuple of arguments passed to dist to specify it fully
@@ -159,13 +159,16 @@ class ProbPlot(object):
         if fit and loc != 0 and scale != 1:
             self.sample_quantiles = fit_quantiles
 
-    def ppplot(self, line=None, ax=None):
+    def ppplot(self, xlabel=None, ylabel=None, line=None, other=None, ax=None):
         """
         P-P plot of the percentiles (probabilities) of x versus the
         probabilities (percetiles) of a distribution.
 
         Parameters
         ----------
+        xlabel, ylabel : str or None
+            User-provided lables for the x-axis and y-axis. If None (default),
+            other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared:
             - '45' - 45-degree line
@@ -177,6 +180,12 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+        other : `ProbPlot` instance, array-like, or None
+            If provided, the sample quantiles of this `ProbPlot` instance are
+            plotted against the sample quantiles of the `other` `ProbPlot`
+            instance. If an array-like object is provided, it will be turned
+            into a `ProbPlot` instance using default parameters. If not provided
+            (defualt), the theoretical quantiles are used.
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -187,13 +196,33 @@ class ProbPlot(object):
             If `ax` is None, the created figure.  Otherwise the figure to which
             `ax` is connected.
         """
-        fig, ax = _do_plot(self.theoretical_percentiles,
-                           self.sample_percentiles,
-                           self.dist,
-                           ax=ax, line=line)
+        if other is not None:
+            check_other = isinstance(other, ProbPlot)
+            if not check_other:
+                other = ProbPlot(other)
 
-        ax.set_xlabel("Theoretical Probabilities")
-        ax.set_ylabel("Sample Probabilities")
+            fig, ax = _do_plot(other.sample_percentiles,
+                               self.sample_percentiles,
+                               self.dist, ax=ax, line=line)
+
+            if xlabel is None:
+                xlabel = 'Probabilities of 2nd Sample'
+            if ylabel is None:
+                ylabel = 'Probabilities of 1st Sample'
+
+        else:
+            fig, ax = _do_plot(self.theoretical_percentiles,
+                               self.sample_percentiles,
+                               self.dist, ax=ax, line=line)
+            if xlabel is None:
+                xlabel = "Theoretical Probabilities"
+            if ylabel is None:
+                ylabel = "Sample Probabilities"
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        return fig
 
         return fig
 
@@ -221,7 +250,7 @@ class ProbPlot(object):
         other : `ProbPlot` instance, array-like, or None
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
-            instance. If an array-like object is provided, it will be turned 
+            instance. If an array-like object is provided, it will be turned
             into a `ProbPlot` instance using default parameters. If not provided
             (defualt), the theoretical quantiles are used.
         ax : Matplotlib AxesSubplot instance, optional
@@ -510,6 +539,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     -----
     There is no return value. The line is plotted on the given `ax`.
     """
+    import pdb
     if line == '45':
         end_pts = zip(ax.get_xlim(), ax.get_ylim())
         end_pts[0] = max(end_pts[0])
