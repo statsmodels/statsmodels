@@ -283,7 +283,10 @@ class BinaryModel(DiscreteModel):
         bnryfit = super(BinaryModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
-        discretefit = BinaryResults(self, bnryfit)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1BinaryResults(self, bnryfit)
+        else:
+            discretefit = BinaryResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
@@ -1802,6 +1805,36 @@ class BinaryResults(DiscreteResults):
             smry.add_extra_txt(etext)
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
+
+class L1BinaryResults(BinaryResults):
+    """
+    Special version of BinaryResults for use with a model that was fit
+    with L1 penalized regression.
+
+    New Attributes
+    --------------
+    nnz_params : Integer
+        The number of nonzero parameters in the model.  Train with 
+        trim_parms==True or else numerical error will distort this.
+    """
+    def __init__(self, model, bnryfit):
+        super(L1BinaryResults, self).__init__(model, bnryfit)
+        self.zero_param_idx = np.nonzero(self.params.ravel(order='F') == 0)
+        self.nnz_params = len(np.nonzero(self.params != 0)[0]) 
+
+    @cache_readonly
+    def bse(self):
+        bse = np.sqrt(np.diag(self.cov_params()))
+        bse[self.zero_param_idx] = float('nan')
+        return bse.reshape(self.params.shape, order='F')
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - self.nnz_params)
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 class MultinomialResults(DiscreteResults):
     def _maybe_convert_ynames_int(self, ynames):
