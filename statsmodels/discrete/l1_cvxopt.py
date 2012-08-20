@@ -37,7 +37,7 @@ def _fit_l1_cvxopt_cp(f, score, start_params, args, kwargs, disp=None,
 
     if callback:
         print "Callback will be ignored with l1_cvxopt_cp"
-    start_params = start_params.ravel(order='F')
+    start_params = np.array(start_params).ravel(order='F')
 
     ## Extract arguments
     # K is total number of covariates, possibly including a leading constant.
