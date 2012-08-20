@@ -79,7 +79,7 @@ class TestSURR(CheckSysregResults):
         R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
                       [2, 0, 1, 1, 0, 0, 0, 3, 1, 1, 1, 0, 0, 1, 0]])
         q = np.array([0, 0])
-        res1 = SysSUR(grun_sys, restrictMatrix=R, restrictVect=q).fit()
+        res1 = SysSUR(grun_sys, restrict_matrix=R, restrict_vect=q).fit()
 
         cls.res1 = res1
         cls.res2 = res2
@@ -93,7 +93,7 @@ class TestSURIR(CheckSysregResults):
         R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
                       [2, 0, 1, 1, 0, 0, 0, 3, 1, 1, 1, 0, 0, 1, 0]])
         q = np.array([0, 0])
-        res1 = SysSUR(grun_sys, restrictMatrix=R, restrictVect=q).fit(igls=True)
+        res1 = SysSUR(grun_sys, restrict_matrix=R, restrict_vect=q).fit(igls=True)
 
         cls.res1 = res1
         cls.res2 = res2

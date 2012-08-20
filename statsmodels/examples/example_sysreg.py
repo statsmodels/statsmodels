@@ -12,7 +12,6 @@ from statsmodels.sysreg.sysmodel import *
 
 grun_data = sm.datasets.grunfeld.load()
 
-# Lexical order as R
 firms = ['General Motors', 'Chrysler', 'General Electric', 'Westinghouse',
         'US Steel']
 firms.sort()
@@ -47,7 +46,7 @@ grun_ires = grun_imod.fit(igls=True)
 R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
               [2, 0, 1, 1, 0, 0, 0, 3, 1, 1, 1, 0, 0, 1, 0]])
 q = np.array([0, 0])
-grun_rimod = SysSUR(sys, restrictMatrix=R, restrictVect=q)
+grun_rimod = SysSUR(sys, restrict_matrix=R, restrict_vect=q)
 grun_rires = grun_rimod.fit(igls=True)
 
 # Regression results

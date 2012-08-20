@@ -6,7 +6,7 @@ COPYRIGHT   = """This is public domain."""
 TITLE       = """Munnell Productivity Data"""
 SOURCE      = """This is the Munnell (1990) and Baltagi (2005) Productivity Data.
 
-This dataset is used in Greene's Econometrics Analysis in Example 10.1 (and others).
+This dataset is used in Greene's Econometrics Analysis (7th ed) in Example 10.1 (and others).
 
 Data are available at : http://www.wiley.com/legacy/wileychi/baltagi/supp/PRODUC.prn
 """
