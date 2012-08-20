@@ -116,9 +116,9 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', penalty='none', 
-            l1_solver='l1_slsqp', maxiter=100, full_output=True, disp=True, 
-            fargs=(), callback=None, retall=False, **kwargs):
+    def fit(self, start_params=None, method='newton', maxiter=100, 
+            full_output=True, disp=True, fargs=(), callback=None, 
+            retall=False, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -137,10 +137,6 @@ class LikelihoodModel(Model):
             to the solver.  Each solver has several optional arguments that are
             not the same across solvers.  See the notes section below (or
             scipy.optimize) for the available arguments.
-        penalty : str {'none', 'l1'}
-            Penalize the negative log likelihood when fitting.
-        l1_solver : str {'l1_slsqp', 'l1_cvxopt_cp'}
-            Solver to use when penalty == 'l1'
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -252,7 +248,7 @@ class LikelihoodModel(Model):
                                  "be specified")
 
         if method.lower() not in methods:
-            if method == 'l1_cvxopt_cp' and not have_cvxopt:
+            if method.lower() == 'l1_cvxopt_cp' and not have_cvxopt:
                 message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
                 could not be imported"""
             else:
