@@ -39,8 +39,23 @@ class ProbPlot(object):
         from the standardized data, after subtracting the fitted loc
         and dividing by the fitted scale.
 
-    Plotting Methods
-    ----------------
+    Notes
+    -----
+    1) Depends on matplotlib.
+    2) If `fit` is True then the parameters are fit using the
+        distribution's `fit()` method.
+    3) The call signatures for the `qqplot`, `ppplot`, and `probplot`
+        methods are similar, so examples 1 through 4 apply to all
+        three methods.
+    4) The three plotting methods are summarized below:
+        ppplot : Probability-Probability plot
+            Compares the sample and theoretical probabilities (percentiles).
+        qqplot : Quantile-Quantile plot
+            Compares the sample and theoretical quantiles
+        probplot : Probability plot
+            Same as a Q-Q plot, however probabilities are shown in the scale of
+            the theoretical distribution (x-axis) and the y-axis contains
+            unscaled quantiles of the sample data.
 
     Examples
     --------
@@ -97,24 +112,6 @@ class ProbPlot(object):
     code.
 
     .. plot:: plots/graphics_gofplots_qqplot.py
-
-    Notes
-    -----
-    1) Depends on matplotlib.
-    2) If `fit` is True then the parameters are fit using the
-        distribution's `fit()` method.
-    3) The call signatures for the `qqplot`, `ppplot`, and `probplot`
-        methods are similar, so examples 1 through 4 apply to all
-        three methods.
-    4) The three plotting methods are summaruized below:
-        ppplot : Probability-Probability plot
-            Compares the sample and theoretical probabilities (percentiles).
-        qqplot : Quantile-Quantile plot
-            Compares the sample and theoretical quantiles
-        probplot : Probability plot
-            Same as a Q-Q plot, however probabilities are shown in the scale of
-            the theoretical distribution (x-axis) and the y-axis contains
-            unscaled quantiles of the sample data.
     """
 
     def __init__(self, data, dist=stats.norm, fit=False,
@@ -480,8 +477,6 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
 
     Examples
     -------
-    >>> import numpy as np
-    >>> import statsmodels.api as sm
     >>> x = np.random.normal(loc=8.5, scale=2.5, size=37)
     >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
     >>> pp_x = sm.ProbPlot(x)
