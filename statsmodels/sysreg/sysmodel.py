@@ -144,7 +144,7 @@ class SysGLS(SysModel):
     sys : list of dict
         cf. SysModel
     sigma : scalar or array
-        `sigma` the contemporaneous matrix covariance.
+        `sigma` the contemporaneous covariance matrix.
         The default is None for no scaling (<=> OLS).  If `sigma` is a scalar, it is
         assumed that `sigma` is an (neqs, neqs) diagonal matrix with the given
         scalar, `sigma` as the value of each diagonal element.  If `sigma`
@@ -154,10 +154,10 @@ class SysGLS(SysModel):
         Default is None.  Correction for the degrees of freedom
         should be specified for small samples.  See the notes for more
         information.
-    restrictMatrix : ndarray, (M, sum(K_i))
+    restrict_matrix : ndarray, (M, sum(K_i))
         The restriction matrix on parameters. M represents the number of linear
         constraints on parameters. See Notes.
-    restrictVect : ndarray, (M, 1)
+    restrict_vect : ndarray, (M, 1)
         The RHS restriction vector. See Notes.
 
     Attributes
@@ -177,10 +177,10 @@ class SysGLS(SysModel):
     Notes
     -----
     Linear restrictions on parameters are specified with the following equation:
-        restrictMatrix * beta = restrictVect
+        restrict_matrix * beta = restrict_vect
     '''
 
-    def __init__(self, sys, sigma=None, restrictMatrix=None, restrictVect=None):
+    def __init__(self, sys, sigma=None, restrict_matrix=None, restrict_vect=None):
         super(SysGLS, self).__init__(sys)
 
         ## Handle sigma
@@ -199,17 +199,17 @@ class SysGLS(SysModel):
             raise ValueError("sigma is not correctly specified")
 
         ## Handle restrictions
-        self.isrestricted = not(restrictMatrix == None and restrictVect == None)
+        self.isrestricted = not(restrict_matrix == None and restrict_vect == None)
         if self.isrestricted:
-            if not(restrictVect.shape[0] == restrictMatrix.shape[0]):
-                raise ValueError('restrictVect and restrictMatrix must have the \
+            if not(restrict_vect.shape[0] == restrict_matrix.shape[0]):
+                raise ValueError('restrict_vect and restrict_matrix must have the \
                     same number of rows')
-            self.nconstraints = restrictVect.shape[0]
+            self.nconstraints = restrict_vect.shape[0]
             if self.nconstraints >= self.k_exog_all:
                 raise ValueError('total number of regressors must be greater than \
                     the number of constraints')
-            self.restrictMatrix = restrictMatrix
-            self.restrictVect = restrictVect
+            self.restrict_matrix = restrict_matrix
+            self.restrict_vect = restrict_vect
 
         self.initialize()
 
@@ -222,15 +222,15 @@ class SysGLS(SysModel):
         if self.isrestricted:
             rwendog = np.zeros((self.k_exog_all + self.nconstraints,))
             rwendog[:self.k_exog_all] = np.squeeze(np.dot(self.wexog.T,self.wendog))
-            rwendog[self.k_exog_all:] = self.restrictVect
+            rwendog[self.k_exog_all:] = self.restrict_vect
             self.rwendog = rwendog
 
             rwexog = np.zeros((self.k_exog_all + self.nconstraints,
                 self.k_exog_all + self.nconstraints))
             rwexog[:self.k_exog_all, :self.k_exog_all] = np.dot(self.wexog.T, 
                     self.wexog)
-            rwexog[:self.k_exog_all, self.k_exog_all:] = self.restrictMatrix.T
-            rwexog[self.k_exog_all:, :self.k_exog_all] = self.restrictMatrix
+            rwexog[:self.k_exog_all, self.k_exog_all:] = self.restrict_matrix.T
+            rwexog[self.k_exog_all:, :self.k_exog_all] = self.restrict_matrix
             rwexog[self.k_exog_all:, self.k_exog_all:] = np.zeros((self.nconstraints,
                 self.nconstraints))
             self.rwexog = rwexog
@@ -305,10 +305,10 @@ class SysWLS(SysGLS):
         Variances of each equation. If weights is a scalar then homoscedasticity
         is assumed. Default is None and uses a feasible WLS.
     '''
-    def __init__(self, sys, weights=None, dfk=None, restrictMatrix=None,
-            restrictVect=None):
-        super(SysWLS, self).__init__(sys, sigma=None, restrictMatrix=
-                restrictMatrix, restrictVect=restrictVect)
+    def __init__(self, sys, weights=None, dfk=None, restrict_matrix=None,
+            restrict_vect=None):
+        super(SysWLS, self).__init__(sys, sigma=None, restrict_matrix=
+                restrict_matrix, restrict_vect=restrict_vect)
 
         self.dfk = dfk
         
@@ -350,14 +350,14 @@ class SysWLS(SysGLS):
             return s / self._div_dfk2
 
 class SysOLS(SysWLS):
-    def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
+    def __init__(self, sys, dfk=None, restrict_matrix=None, restrict_vect=None):
         super(SysOLS, self).__init__(sys, weights=1.0, dfk=dfk,
-                restrictMatrix=restrictMatrix, restrictVect=restrictVect)
+                restrict_matrix=restrict_matrix, restrict_vect=restrict_vect)
 
 class SysSUR(SysGLS):
-    def __init__(self, sys, dfk=None, restrictMatrix=None, restrictVect=None):
+    def __init__(self, sys, dfk=None, restrict_matrix=None, restrict_vect=None):
         super(SysSUR, self).__init__(sys, sigma=None, 
-                restrictMatrix=restrictMatrix, restrictVect=restrictVect)
+                restrict_matrix=restrict_matrix, restrict_vect=restrict_vect)
 
         self.dfk = dfk
 
@@ -600,6 +600,6 @@ if __name__ == '__main__':
 
     R = np.asarray([[0,1,2,0,0,1,3,0,0],[0,1,0,3,1,2,0,1,0]])
     q = np.asarray([0,1]) 
-    modr = SysSUR(sys, restrictMatrix=R, restrictVect=q)
+    modr = SysSUR(sys, restrict_matrix=R, restrict_vect=q)
     resr = modr.fit()
 

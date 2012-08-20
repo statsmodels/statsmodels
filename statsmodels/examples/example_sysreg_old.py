@@ -4,7 +4,7 @@
 
 import numpy as np
 import statsmodels.api as sm
-from statsmodels.sysreg.sysreg import *
+from statsmodels.sysreg.sysreg_old import SUR, Sem2SLS
 
 #for Python 3 compatibility
 from statsmodels.compatnp.py3k import asbytes

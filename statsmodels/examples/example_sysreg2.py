@@ -12,6 +12,7 @@ from statsmodels.sysreg.sysmodel import *
 
 munnell_data = sm.datasets.munnell.load()
 
+# Aggregate states into regions
 regions = {'GF' : ['AL','FL','LA','MS'],
           'MW' : ['IL','IN','KY','MI','MN','OH','WI'],
           'MA' : ['DE','MD','NJ','NY','PA','VA'],
@@ -49,4 +50,6 @@ for m in regions:
     munnell_sys.append(eq_m)
 
 munnell_mod = SysSUR(munnell_sys)
+munnell_res = munnell_mod.fit()
+print munnell_res.summary()
 
