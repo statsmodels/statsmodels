@@ -3,7 +3,6 @@ import statsmodels.api as sm
 import scipy as sp
 from scipy import linalg
 from scipy import stats
-import statsmodels.discrete.l1 as l1
 import pdb
 # pdb.set_trace()
 
