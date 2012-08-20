@@ -7,25 +7,23 @@ TITLE       = """Partly Artificial Data on the U. S. Economy"""
 SOURCE      = """Kmenta, J. (1986) Elements of Econometrics, Second Edition, Macmillan.
 
 CSV file is extracted from R package systemfit.
+
+The data are available from Table ̃13-1 (p. ̃687), and the results are presented in Table ̃13-2 (p. ̃712) of this book.
 """
 
-DESCRSHORT  = """Munnell Productivity Data, 48 Continental U.S. States, 17 years (1970-1986)"""
+DESCRSHORT  = """Kmenta dataset on food market (example on page 685)"""
 
 DESCRLONG   = DESCRSHORT
 
-#suggested notes
 NOTE        = """
-Number of observations: 816 (48 States, 17 years)
-Number of variables: 7
+Number of observations: 20
+Number of variables: 5
 Variable name definitions:
-   gsp = gross state product
-   pc = private capital
-   hwy = highway capital
-   water = water utility capital
-   util = utility capital
-   emp = employment (labor) 
-   unemp = unemployment rate
-   p_cap = ?
+    consump = 
+    price = 
+    income = 
+    farmPrice =
+    trend = 
 """
 
 import numpy as np
