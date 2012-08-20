@@ -90,7 +90,7 @@ class SysSEM(SysModel):
     def initialize(self):
         self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(self.sigma)).T
         self.wxhat = self.whiten(self.sp_xhat)
-        self.wendog = self.whiten(self.endog.reshape(-1,1))
+        self.wendog = self.whiten(self.endog.T.reshape(-1,1))
         self.pinv_wxhat = np.linalg.pinv(self.wxhat)
     
     def whiten(self, X):
@@ -125,7 +125,7 @@ class SysSEM(SysModel):
                 and iterations < maxiter:
             # Update sigma
             fittedvalues = (self.sp_exog*betas[0]).reshape(self.neqs,-1).T
-            resids = self.endog.T - fittedvalues
+            resids = self.endog - fittedvalues
             self.sigma = self._compute_sigma(resids)
             # Update attributes
             self.initialize()

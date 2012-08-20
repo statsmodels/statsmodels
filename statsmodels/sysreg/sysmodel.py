@@ -16,20 +16,18 @@ class SysModel(LikelihoodModel):
 
     Notations
     ---------
-    G : number of equations
-    N : number of observations (same for each equation)
+    neqs : number of equations
+    nobs : number of observations (same for each equation)
     K_i : number of regressors in equation i including the intercept if one is
     included in the data.
 
     Parameters
     ----------
     sys : list of dict
-        [eq_1,...,eq_G]
+        [eq_1,...,eq_neqs]
     
-    eq_i['endog'] : ndarray (N x 1)
-    eq_i['exog'] : ndarray (N x K_i)
-    # For SEM classes
-    eq_i['instruments'] : ndarray (N x L_i)
+    eq_i['endog'] : ndarray, (nobs, 1) or (nobs,)
+    eq_i['exog'] : ndarray, (nobs, K_i)
 
     Attributes
     ----------
@@ -37,28 +35,26 @@ class SysModel(LikelihoodModel):
         Number of equations
     nobs : int
         Number of observations
-    endog : ndarray (G x N)
-        LHS variables for each equation stacked next to each other in row.
-    exog : ndarray (N x sum(K_i))
-        RHS variables for each equation stacked next to each other in column.
+    endog : ndarray, (nobs, neqs)
+        LHS variables stacked so that each column is one endogenous variable.
     sp_exog : sparse matrix
         Contains a block diagonal sparse matrix of the design so that
         eq_i['exog'] are on the diagonal.
-    df_model : ndarray (G x 1)
+    df_model : ndarray, (neqs, 1)
         Model degrees of freedom of each equation. K_i - 1 where K_i is
         the number of regressors for equation i and one is subtracted
         for the constant.
-    df_resid : ndarray (G x 1)
+    df_resid : ndarray, (neqs, 1)
         Residual degrees of freedom of each equation. Number of observations
         less the number of parameters.
     '''
 
     def __init__(self, sys, dfk=None):
         # Check if sys is correctly specified
-        issystem = isinstance(sys, (list, tuple)) and \
-            all([isinstance(eq, dict) for eq in sys])
-        if not issystem:
-            raise ValueError('systems must be list (or tuple) of dict')
+        #issystem = isinstance(sys, (list, tuple)) and \
+        #    all([isinstance(eq, dict) for eq in sys])
+        #if not issystem:
+        #    raise ValueError('systems must be list (or tuple) of dict')
 
         isregression = all(['endog' in eq for eq in sys]) and \
             all(['exog' in eq for eq in sys])
@@ -74,25 +70,28 @@ class SysModel(LikelihoodModel):
                 be identical')
 
         # Others checks
-        if not(dfk in (None, 'dfk1', 'dfk2')):
+        if not dfk in (None, 'dfk1', 'dfk2'):
             raise ValueError('dfk is not correctly specified')
         
         self.sys = sys
         self.neqs = len(sys)
         self.nobs = sys[0]['endog'].shape[0]
-        self.nexogs = sum([eq['exog'].shape[1] for eq in sys])
+        self.k_exog_all = sum([eq['exog'].shape[1] for eq in sys])
         self.dfk = dfk
 
         # Degrees of Freedom
-        (df_model, df_resid) = ([], [])
+        df_model, df_resid = [], []
         for eq in sys:
             rank = tools.rank(eq['exog'])
             df_model.append(rank - 1)
             df_resid.append(self.nobs - rank)
-        (self.df_model, self.df_resid) = (np.asarray(df_model), np.asarray(df_resid))
+        self.df_model, self.df_resid = np.asarray(df_model), np.asarray(df_resid)
+        #TODO: check for singular exog here
  
-        self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys)).T
-        self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
+        self.endog = np.column_stack((np.asarray(eq['endog']) for eq in sys))
+        #self.exog = np.column_stack((np.asarray(eq['exog']) for eq in sys))
+        #self.exog : ndarray, (nobs, sum(K_i))
+        #RHS variables stacked so that each column is one regressor.
         self.sp_exog = sp_block_diag([np.asarray(eq['exog']) 
             for eq in sys])
 
@@ -127,7 +126,7 @@ class SysModel(LikelihoodModel):
         '''
         Parameters
         ----------
-        resids : ndarray (N x G)
+        resids : ndarray, (nobs, neqs)
             Residuals for each equation stacked in column.
         '''
         s = np.dot(resids.T, resids)
@@ -147,32 +146,32 @@ class SysGLS(SysModel):
     sigma : scalar or array
         `sigma` the contemporaneous matrix covariance.
         The default is None for no scaling (<=> OLS).  If `sigma` is a scalar, it is
-        assumed that `sigma` is an G x G diagonal matrix with the given
+        assumed that `sigma` is an (neqs, neqs) diagonal matrix with the given
         scalar, `sigma` as the value of each diagonal element.  If `sigma`
-        is an G-length vector, then `sigma` is assumed to be a diagonal
+        is an neqs-length vector, then `sigma` is assumed to be a diagonal
         matrix with the given `sigma` on the diagonal (<=> WLS).
     dfk : None, 'dfk1', or 'dfk2'
         Default is None.  Correction for the degrees of freedom
         should be specified for small samples.  See the notes for more
         information.
-    restrictMatrix : matrix (M x sum(K_i))
+    restrictMatrix : ndarray, (M, sum(K_i))
         The restriction matrix on parameters. M represents the number of linear
         constraints on parameters. See Notes.
-    restrictVect : column vector (M x 1)
+    restrictVect : ndarray, (M, 1)
         The RHS restriction vector. See Notes.
 
     Attributes
     ----------
-    cholsigmainv : array
+    cholsigmainv : ndarray
         The transpose of the Cholesky decomposition of the pseudoinverse of
         the contemporaneous covariance matrix.
-    wendog : ndarray (G*N) x 1
-        endogenous variables whitened by cholsigmainv and stacked into a singlei
+    wendog : ndarray, (neqs*nobs, 1)
+        Endogenous variables whitened by cholsigmainv and stacked into a single
         column.
-    wexog : matrix (is sparse?)
-        whitened exogenous variables sp_exog.
-    pinv_wexog : array
-        `pinv_wexog` is the Moore-Penrose pseudoinverse of `wexog`.
+    wexog : ndarray
+        Whitened exogenous variables sp_exog.
+    pinv_wexog : ndarray
+        Moore-Penrose pseudoinverse of `wexog`.
     normalized_cov_params : array
 
     Notes
@@ -206,7 +205,7 @@ class SysGLS(SysModel):
                 raise ValueError('restrictVect and restrictMatrix must have the \
                     same number of rows')
             self.nconstraints = restrictVect.shape[0]
-            if self.nconstraints >= self.nexogs:
+            if self.nconstraints >= self.k_exog_all:
                 raise ValueError('total number of regressors must be greater than \
                     the number of constraints')
             self.restrictMatrix = restrictMatrix
@@ -217,22 +216,22 @@ class SysGLS(SysModel):
     def initialize(self):
         self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(self.sigma)).T
         self.wexog = self.whiten(self.sp_exog)
-        self.wendog = self.whiten(self.endog.reshape(-1,1))
+        self.wendog = self.whiten(self.endog.T.reshape(-1,1))
         self.pinv_wexog = np.linalg.pinv(self.wexog)
         
         if self.isrestricted:
-            rwendog = np.zeros((self.nexogs + self.nconstraints,))
-            rwendog[:self.nexogs] = np.squeeze(np.dot(self.wexog.T,self.wendog))
-            rwendog[self.nexogs:] = self.restrictVect
+            rwendog = np.zeros((self.k_exog_all + self.nconstraints,))
+            rwendog[:self.k_exog_all] = np.squeeze(np.dot(self.wexog.T,self.wendog))
+            rwendog[self.k_exog_all:] = self.restrictVect
             self.rwendog = rwendog
 
-            rwexog = np.zeros((self.nexogs + self.nconstraints,
-                self.nexogs + self.nconstraints))
-            rwexog[:self.nexogs, :self.nexogs] = np.dot(self.wexog.T, 
+            rwexog = np.zeros((self.k_exog_all + self.nconstraints,
+                self.k_exog_all + self.nconstraints))
+            rwexog[:self.k_exog_all, :self.k_exog_all] = np.dot(self.wexog.T, 
                     self.wexog)
-            rwexog[:self.nexogs, self.nexogs:] = self.restrictMatrix.T
-            rwexog[self.nexogs:, :self.nexogs] = self.restrictMatrix
-            rwexog[self.nexogs:, self.nexogs:] = np.zeros((self.nconstraints,
+            rwexog[:self.k_exog_all, self.k_exog_all:] = self.restrictMatrix.T
+            rwexog[self.k_exog_all:, :self.k_exog_all] = self.restrictMatrix
+            rwexog[self.k_exog_all:, self.k_exog_all:] = np.zeros((self.nconstraints,
                 self.nconstraints))
             self.rwexog = rwexog
 
@@ -264,8 +263,8 @@ class SysGLS(SysModel):
         '''
         if self.isrestricted:
             betaLambda = np.dot(self.pinv_rwexog, self.rwendog)
-            params = betaLambda[:self.nexogs]
-            normalized_cov_params = self.pinv_rwexog[:self.nexogs, :self.nexogs]
+            params = betaLambda[:self.k_exog_all]
+            normalized_cov_params = self.pinv_rwexog[:self.k_exog_all, :self.k_exog_all]
         else:
             params = np.squeeze(np.dot(self.pinv_wexog, self.wendog))
             normalized_cov_params = np.dot(self.pinv_wexog, self.pinv_wexog.T)
@@ -284,7 +283,7 @@ class SysGLS(SysModel):
                 and iterations < maxiter:
             # Update sigma
             fittedvalues = (self.sp_exog*betas[0]).reshape(self.neqs,-1).T
-            resids = self.endog.T - fittedvalues
+            resids = self.endog - fittedvalues
             self.sigma = self._compute_sigma(resids)
             # Update attributes
             self.initialize()
@@ -339,7 +338,7 @@ class SysWLS(SysGLS):
         '''
         Parameters
         ----------
-        resids : ndarray (N x G)
+        resids : ndarray, (nobs, neqs)
             Residuals for each equation stacked in column.
         '''
         s = np.diag(np.diag(np.dot(resids.T, resids)))
@@ -410,7 +409,7 @@ class SysResults(LikelihoodModelResults):
         self.cov_resids_est = model.sigma
         # Compute sigma with final residuals
         self.fittedvalues = model.predict(params=params, exog=None)
-        self.resids = model.endog.T - self.fittedvalues.reshape(model.neqs,-1).T
+        self.resids = model.endog - self.fittedvalues.reshape(model.neqs,-1).T
         self.cov_resids = self._compute_sigma(self.resids)
 
         self.nobs = model.nobs
@@ -421,8 +420,8 @@ class SysResults(LikelihoodModelResults):
         self.mse = self.ssr / self.df_resid
         self.rmse = np.sqrt(self.mse)
 
-        means = np.mean(model.endog.T, axis=0)
-        self.sst = np.array([sum((model.endog.T[:,eq] - means[eq])**2)
+        means = np.mean(model.endog, axis=0)
+        self.sst = np.array([sum((model.endog[:,eq] - means[eq])**2)
             for eq in range(self.model.neqs)])
         self.rsquared = 1 - self.ssr / self.sst
         self.rsquared_adj = 1 - (1 - self.rsquared)*(float(self.model.nobs - 1) /
@@ -436,7 +435,7 @@ class SysResults(LikelihoodModelResults):
         '''
         Parameters
         ----------
-        resids : ndarray (N x G)
+        resids : ndarray, (nobs, neqs)
             Residuals for each equation stacked in column.
         '''
         s = np.dot(resids.T, resids)
