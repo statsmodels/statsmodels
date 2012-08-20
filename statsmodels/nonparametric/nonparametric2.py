@@ -1831,6 +1831,9 @@ class TestFForm(object):
     txdat: list of array_like objects
         The independent (right-hand-side) variables
 
+    bw: array_like, str
+        Bandwidths for txdat or specify method for bandwidth selection
+
     fform: function
         The functional form y = g(b, x) to be tested. Takes as inputs
         the RHS variables txdat and the coefficients b (betas) 
@@ -1851,45 +1854,80 @@ class TestFForm(object):
     ----------
     See Racine, J.: "Consistent Significance Testing for Nonparametric
         Regression" Journal of Business & Economics Statistics
-    See chapter 12 in [1]
+    See chapter 12 in [1]  pp. 355-357
     """
-    # see p.355 in [1]
     def __init__(self, tydat, txdat, bw, var_type, fform, estimator):
         self.tydat = tydat
-        self.txdat = tdat
+        self.txdat = txdat
         self.fform = fform
         self.estimator = estimator
-        self.bw = KDE(tdat, bw=bwmethod, var_type=var_type).bw
+        self.bw = KDE(txdat, bw=bw, var_type=var_type).bw
+        self.sig = self._compute_sig()
 
-
-    def compute_test_stat(self, Y, X):
+    def _compute_sig(self):
+        Y = self.tydat
+        X = self.txdat
         b = self.estimator(Y, X)
-        u = self.tydat - self.fform(b)
+        m = self.fform(X, b)
+        n = np.shape(X)[0]
+        u = Y - m
+        u = u - np.mean(u)  # center residuals
+        self.test_stat = self._compute_test_stat(u)
+        fct1 = (1 - 5**0.5) / 2.
+        fct2 = (1 + 5**0.5) / 2.
+        u1 = fct1 * u
+        u2 = fct2 * u
+        r = fct2 / (5 ** 0.5)
+        I_dist = np.empty((self.nboot,1))
+        for j in xrange(self.nboot):
+            print "Bootstrap sample ", j
+            u_boot = copy.deepcopy(u2)
+
+            prob = np.random.uniform(0,1, size = (n,1))
+            ind = prob < r
+            u_boot[ind] = u1[ind]
+            Y_boot = m + u_boot
+            b_hat = self.estimator(Y_boot, X)
+            m_hat = self.fform(X, b_hat) 
+            u_boot_hat = Y_boot - m_hat
+            I_dist[j] = self._compute_test_stat(u_boot_hat)
+        sig = "Not Significant"
+        #print "Test statistic is: ", self.test_stat
+        #print  "0.9 quantile is: ", mquantiles(I_dist, 0.9)
+        #print  mquantiles(I_dist, 0.95)
+        #print mquantiles(I_dist, 0.99)
+        #print I_dist
+
+        if self.test_stat > mquantiles(I_dist, 0.9):
+            sig = "*"
+        if self.test_stat > mquantiles(I_dist, 0.95):
+            sig = "**"
+        if self.test_stat > mquantiles(I_dist, 0.99):
+            sig = "***"
+        return sig
+
+    def _compute_test_stat(self, u):
         n = np.shape(u)[0]
-        iscontinuous = tools._get_type_pos(var_type)[0]
-        LOO = tools.LeaveOneOut(X)
-        i = 0
+        XLOO = tools.LeaveOneOut(self.txdat)    
+        uLOO = tools.LeaveOneOut(u).__iter__()
         I = 0
         S2 = 0
-        for X_j in LOO:
-            f_i = u * tools.gpke(bw, tdat=-X_j, edat=-X[i, :],
+        iscontinuous = tools._get_type_pos(self.var_type)[0]
+        for i, X_j in enumerate(XLOO):
+            u_j = uLOO.next()
+            # See Bootstrapping procedure on p. 357 in [1]
+            K = tools.gpke(self.bw, tdat=-X_j, edat=-X[i, :],
                              var_type=self.var_type, tosum=False)
-            g_i = (u ** 2) * tools.gpke(bw, tdat=-X_j, edat=-X[i, :],
-                             var_type=self.var_type, tosum=False) ** 2
-            I += u[i] * np.sum(f_i, axis=0)
-            S2 += u[i] ** 2 * np.sum(g_i, axis=0)
-            i += 1
-        I *= 1./(n * (n - 1))
-        hp = np.prod(bw[iscontinuous])
-        S2 *= hp / (n * (n - 1))
+            f_i = u[i] * u_j * K
+            I += f_i  # See eq. 12.7 on p. 355 in [1]
+            S2 += f_i ** 2  # See Theorem 12.1 on p.356 in [1]
+
+        I *= 1. / (n * (n - 1))
+        hp = np.prod(self.bw[iscontinuous])
+        S2 *= 2 * hp / (n * (n - 1))
         T = n * (hp ** 0.5) * I / (S2 ** 0.5)
         return T
 
-    def compute_sig(self): # p. 357 in [1]
-        b = self.estimator(self.tydat, self.X)
-        u = self.tydat - self.fform(b)
-        for i in xrange(self.nboot):
-            pass
 
 class SingleIndexModel(Reg):
     """
