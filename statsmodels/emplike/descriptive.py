@@ -31,8 +31,8 @@ def DescStat(endog):
 
     Parameters
     ----------
-    endog : ndarray (n,k)
-        Array of data to perform inference on
+    endog : ndarray
+         Array of data
 
     Returns : DescStat instance
         If k=1, the function returns a univariate instance, DescStatUV.
@@ -492,7 +492,7 @@ class DescStatUV(_OptFuncts):
         Parameters
         ----------
         mu0 : float
-            Mean under the null hypothesis
+            Mean value to be tested
 
         return_weights : bool
             If return_weights is True the funtion returns
@@ -538,19 +538,19 @@ class DescStatUV(_OptFuncts):
             intervals but must maximize the likelihhod ratio on every
             iteration.
 
-            gamma is generally much faster.  If the optimizations does not,
+            gamma is generally much faster.  If the optimizations does not
             converge, try expanding the gamma_high and gamma_low
             variable.
 
         gamma_low : float
-            lower bound for gamma when finding lower limit.
+            Lower bound for gamma when finding lower limit.
             If function returns f(a) and f(b) must have different signs,
-            consider lowering gamma_low. Default =-(10``**``10)
+            consider lowering gamma_low.
 
         gamma_high : float
-            upper bound for gamma when finding upper limit.
+            Upper bound for gamma when finding upper limit.
             If function returns f(a) and f(b) must have different signs,
-            consider raising gamma_high. Default=10``**``10
+            consider raising gamma_high.
 
         epsilon : float
             When using 'nested-brent', amount to decrease (increase)
@@ -563,7 +563,7 @@ class DescStatUV(_OptFuncts):
             When using 'gamma', amount to decrease (increase) the
             minimum (maximum) by to start the search for gamma.
             If fucntion returns f(a) and f(b) must have differnt signs,
-            consider lowering epsilon.  Default=10``**``-6
+            consider lowering epsilon.
 
         Returns
         -------
@@ -600,12 +600,12 @@ class DescStatUV(_OptFuncts):
     def test_var(self, sig2_0, return_weights=False):
         """
         Returns  -2 x log-likelihoog ratio and the p-value for the
-            hypothesized variance.
+        hypothesized variance
 
         Parameters
         ----------
         sig2_0 : float
-            Hypothesized value to be tested
+            Hypothesized variance to be tested
 
         return_weights : bool
             If True, returns the weights that maximize the
@@ -618,9 +618,9 @@ class DescStatUV(_OptFuncts):
 
         Examples
         --------
-        random_numbers = np.random.standard_normal(1000)*100
-        el_analysis = emplike.DescStat(random_numbers)
-        hyp_test = el_analysis.test_var(9500)
+        >>> random_numbers = np.random.standard_normal(1000)*100
+        >>> el_analysis = sm.emplike.DescStat(random_numbers)
+        >>> hyp_test = el_analysis.test_var(9500)
         """
         self.sig2_0 = sig2_0
         mu_max = max(self.endog)
@@ -642,34 +642,30 @@ class DescStatUV(_OptFuncts):
         lower_bound : float
             The minimum value the lower confidence interval can
             take. The p-value from test_var(lower_bound) must be lower
-            than 1 - significance level. Default is calibrated at the .01
-            significance level, assuming normality.
+            than 1 - significance level. Default is .99 confidence
+            limit assuming normality
 
         upper_bound : float
             The maximum value the upper confidence interval
             can take. The p-value from test_var(upper_bound) must be lower
-            than 1 - significance level.  Default is calibrated at the .01
-            significance level, assuming normality.
+            than 1 - significance level.  Default is .99 confidence
+            limit assuming normality
 
         sig : float
-            The significance level for the conficence interval.
-            Default= .05
+            The significance level. Default is .05
 
         Returns
         --------
         Interval : tuple
-            Confidence interval
+            Confidence interval for the variance
 
         Examples
         --------
-        random_numbers = np.random.standard_normal(100)
-        el_analysis = emplike.DescStat(random_numbers)
-        # Initialize El
-        el_analysis.ci_var()
-        >>>f(a) and f(b) must have different signs
-        el_analysis.ci_var(.5, 2)
-        # Searches for confidence limits where the lower limit > .5
-        # and the upper limit <2.
+        >>> random_numbers = np.random.standard_normal(100)
+        >>> el_analysis = sm.emplike.DescStat(random_numbers)
+        >>> el_analysis.ci_var()
+        >>> 'f(a) and f(b) must have different signs'
+        >>> el_analysis.ci_var(.5, 2)
 
         Notes
         -----
@@ -719,6 +715,11 @@ class DescStatUV(_OptFuncts):
         levs : list
             Which values of significance the contour lines will be drawn.
             Default is [.2, .1, .05, .01, .001]
+
+        Returns
+        -------
+        fig : matplotlib figure instance
+            The contour plot
         """
         fig, ax = utils.create_mpl_ax()
         ax.set_ylabel('Variance')
@@ -736,7 +737,7 @@ class DescStatUV(_OptFuncts):
 
     def test_skew(self, skew0, return_weights=False):
         """
-        Returns  -2 x log_likelihood and p_value for the hypothesized
+        Returns  -2 x log-likelihood and p-value for the hypothesized
         skewness.
 
         Parameters
@@ -746,7 +747,7 @@ class DescStatUV(_OptFuncts):
 
         return_weights : bool
             If True, function also returns the weights that
-            maximize the likelihood ratio. Default = False.
+            maximize the likelihood ratio. Default is False.
 
         Returns
         --------
@@ -766,7 +767,7 @@ class DescStatUV(_OptFuncts):
 
     def test_kurt(self, kurt0, return_weights=False):
         """
-        Returns -2 x log likelihood and the p_value for the hypothesized
+        Returns -2 x log-likelihood and the p-value for the hypothesized
         kurtosis.
 
         Parameters
@@ -776,12 +777,12 @@ class DescStatUV(_OptFuncts):
 
         return_weights : bool
             If True, function also returns the weights that
-            maximize the likelihood ratio. Default = False.
+            maximize the likelihood ratio. Default is False.
 
         Returns
         -------
         test_results : tuple
-            The log-likelihood ratio and p_value of kurt0
+            The log-likelihood ratio and p-value of kurt0
         """
         self.kurt0 = kurt0
         start_nuisance = np.array([self.endog.mean(),
@@ -796,7 +797,7 @@ class DescStatUV(_OptFuncts):
 
     def test_joint_skew_kurt(self, skew0, kurt0, return_weights=False):
         """
-        Returns - 2 x log_likelihood and the p_value  for the joint
+        Returns - 2 x log-likelihood and the p-value for the joint
         hypothesis test for skewness and kurtosis
 
         Parameters
@@ -808,12 +809,12 @@ class DescStatUV(_OptFuncts):
 
         return_weights : bool
             If True, function also returns the weights that
-            maximize the likelihood ratio. Default = False.
+            maximize the likelihood ratio. Default is False.
 
         Returns
         -------
         test_results : tuple
-            The log-likelihood ratio and p_value  of the joint hypothesis test.
+            The log-likelihood ratio and p-value  of the joint hypothesis test.
         """
         self.skew0 = skew0
         self.kurt0 = kurt0
@@ -837,8 +838,8 @@ class DescStatUV(_OptFuncts):
             The significance level.  Default is .05
 
         upper_bound : float
-            Maximum Vale of Skewness the upper limit can be.
-            Default is .99 confidence assuming normality.
+            Maximum value of skewness the upper limit can be.
+            Default is .99 confidence limit assuming normality.
 
         lower_bound : float
             Minimum value of skewness the lower limit can be.
@@ -847,7 +848,7 @@ class DescStatUV(_OptFuncts):
         Returns
         -------
         Interval : tuple
-            Confidence Interval
+            Confidence interval for the skewness
 
         Notes
         -----
@@ -882,26 +883,26 @@ class DescStatUV(_OptFuncts):
             The significance level.  Default is .05
 
         upper_bound : float
-            Maximum Vale of Kurtosis the upper limit can be.
-            Default: .99 confidence assuming normality.
+            Maximum value of kurtosis the upper limit can be.
+            Default is .99 confidence limit assuming normality.
 
         lower_bound : float
-            Minimum value of Kurtosis the lower limit can be.
-            Default : .99 confidence level assuming normality.
+            Minimum value of kurtosis the lower limit can be.
+            Default is .99 confidence limit assuming normality.
 
         Returns
         --------
         Interval : tuple
-            Lower and Upper confidence limit
+            Lower and upper confidence limit
 
         Notes
         -----
-        For small n, upper_bound and lower_bound will likely have to be
-        provided.  Consider using test_kurt to find values close to
-        the desired significance level.
+        For small n, upper_bound and lower_bound may have to be
+        provided by the user.  Consider using test_kurt to find
+        values close to the desired significance level.
 
         If function returns f(a) and f(b) must have different signs, consider
-        expanding lower and upper bound.
+        expanding the bounds.
         """
         endog = self.endog
         nobs = self.nobs
@@ -933,20 +934,17 @@ class DescStatMV(_OptFuncts):
 
     Parameters
     ----------
-    endog : nxk array
+    endog : ndarray
         Data to be analyzed
 
     Attributes
     ----------
-    endog : 1darray
+    endog : ndarray
         Data to be analyzed
 
     nobs : float
         Number of observations
 
-    See Also
-    --------
-    Method docstring for explicit instructions and uses.
     """
 
     def __init__(self, endog):
@@ -955,23 +953,23 @@ class DescStatMV(_OptFuncts):
 
     def mv_test_mean(self, mu_array, return_weights=False):
         """
-        Returns the -2 x log likelihood and the p_value
+        Returns -2 x log likelihood and the p-value
         for a multivariate hypothesis test of the mean
 
         Parameters
         ----------
         mu_array  : 1d array
             Hypothesized values for the mean.  Must have same number of
-            elements as columns in endog.
+            elements as columns in endog
 
         return_weights : bool
             If True, returns the weights that maximize the
-            likelihood of mu_array Default= False.
+            likelihood of mu_array. Default is False.
 
         Returns
         -------
         test_results : tuple
-            The log-likelihood ratio and p_value for mu_array
+            The log-likelihood ratio and p-value for mu_array
         """
         endog = self.endog
         nobs = self.nobs
@@ -998,7 +996,7 @@ class DescStatMV(_OptFuncts):
                         levs=[.2, .1, .05, .01, .001], var1_name=None,
                         var2_name=None, plot_dta=False):
         """
-        Creates confidence region plot for the mean of bivariate data
+        Creates a confidence region plot for the mean of bivariate data
 
         Parameters
         ----------
@@ -1026,7 +1024,7 @@ class DescStatMV(_OptFuncts):
 
         plot_dta : bool
             If True, makes a scatter plot of the data on
-            top of the contour plot. Default =  False.
+            top of the contour plot. Defaultis False.
 
         var1_name : str
             Name of variable 1 to be plotted on the x-axis
@@ -1037,17 +1035,17 @@ class DescStatMV(_OptFuncts):
         Notes
         -----
         The smaller the step size, the more accurate the intervals
-        will be.
+        will be
 
         If the function returns optimization failed, consider narrowing
-        the boundaries of the plot.
+        the boundaries of the plot
 
-        Example
-        -------
-        two_rvs = np.random.standard_normal((20,2))
-        el_analysis = empllike.DescStat(two_rvs)
-        contourp = el_analysis.mv_mean_contour(-2, 2, -2, 2, .1, .1)
-        contourp.show()
+        Examples
+        --------
+        >>> two_rvs = np.random.standard_normal((20,2))
+        >>> el_analysis = sm.empllike.DescStat(two_rvs)
+        >>> contourp = el_analysis.mv_mean_contour(-2, 2, -2, 2, .1, .1)
+        >>> contourp.show()
         """
         if self.endog.shape[1] != 2:
             raise Exception('Data must contain exactly two variables')
@@ -1076,7 +1074,7 @@ class DescStatMV(_OptFuncts):
 
     def test_corr(self, corr0, return_weights=0):
         """
-        Returns the -2 x log-likelihood ratio and  p-value for the
+        Returns -2 x log-likelihood ratio and  p-value for the
         correlation coefficient between 2 variables
 
         Parameters
@@ -1086,8 +1084,7 @@ class DescStatMV(_OptFuncts):
 
         return_weights : bool
             If true, returns the weights that maximize
-            the log-likelihood at the hypothesized value.
-
+            the log-likelihood at the hypothesized value
         """
         nobs = self.nobs
         endog = self.endog
@@ -1128,7 +1125,7 @@ class DescStatMV(_OptFuncts):
         Returns
         -------
         interval : tuple
-            Confidence Interval
+            Confidence interval for the correlation
 
         """
         endog = self.endog
