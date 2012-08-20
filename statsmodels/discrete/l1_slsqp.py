@@ -42,6 +42,7 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
         print "Callback will be ignored with l1"
     if hess: 
         print "Hessian not used with l1"
+    start_params = np.array(start_params).ravel(order='F')
 
     # TODO fargs should be passed to f, another name for all the args
     ### Extract values
