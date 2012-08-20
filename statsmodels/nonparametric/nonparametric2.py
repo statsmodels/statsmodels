@@ -1309,6 +1309,9 @@ class CensoredReg(Reg):
 
     Calculates the condtional mean E[y|X] where y = g(X) + e
     Where y is left-censored
+    Left censored variable Y is deined as
+    Y = min {Y', L} where L is the value at which Y is censored
+    and Y' is the true value of the variable
 
     Parameters
     ----------
