@@ -19,70 +19,22 @@ from descriptive2 import _OptFuncts
 from statsmodels.tools.tools import add_constant
 
 
-
-class _ElRegSetup(object, _OptFuncts):
-    """
-
-    Empirical Likelihood is a method of inference, not estimation.  Therefore,
-    all of the estimates for EL regression are the same as OLS since both
-    methods set the estimating equation X(Y-XB) = 0.  to obtain parameter
-    estimates.
-
-    This class fits the data using OLS and initializes the OLS results that are
-    the same when using Empirical Likelihood.  Note that estimates are
-    different when the regression is forced through the origin.
-
-    Attributes
-    ----------
-    exog
-    nobs
-    nvar
-    endog
-    params
-    fittedvalues
-    mse_model
-    mse_resid
-    mse_total
-    resid
-    rsquared
-    rsquared_adj
-
-    See Also
-    --------
-    OLS documentation
-    El_Origin_Regress
-
-    """
-    def __init__(self, OLSModel, OLSResults):
-        self.model = OLSModel
-        self.results = OLSResults
-
-        # self.exog = exog
-        # self.nobs = float(self.exog.shape[0])
-        # self.nvar = float(self.exog.shape[1])
-        # self.endog = endog.reshape(self.nobs, 1)
-        # self.ols_fit = OLS(self.endog, self.exog).fit()
-        # self.params = self.ols_fit.params
-        # self.fittedvalues = self.ols_fit.fittedvalues
-        # self.mse_model = self.ols_fit.mse_model
-        # self.mse_resid = self.ols_fit.mse_resid
-        # self.mse_total = self.ols_fit.mse_total
-        # self.resid = self.ols_fit.resid
-        # self.rsquared = self.ols_fit.rsquared
-        # self.rsquared_adj = self.ols_fit.rsquared_adj
-        # self._normal_ci = self.ols_fit.conf_int
-        #All of the above are the same when using EL or OLS
-
-
-class _ElRegOpts(_ElRegSetup):
+class _ElRegOpts(object):
     """
 
     A class that holds functions to be optimized over when conducting
     hypothesis tests and calculating confidence intervals.
 
+    Parameters
+    ----------
+
+    OLSResults : Results instance
+        A fitted OLS result
+
     """
-    def __init__(self, OLSModel, OLSResults):
-            super(_ElRegOpts, self).__init__(OLSModel, OLSResults)
+    def __init__(self, OLSResults):
+        self.model = OLSResults.model
+        self.results = OLSResults
 
     def _opt_nuis_regress(self, nuisance_params):
         """
@@ -91,18 +43,14 @@ class _ElRegOpts(_ElRegSetup):
 
         Parameters
         ----------
-
-        params: 1d array
-            The regression coefficients of the model.  This includes the
-            nuisance and parameters of interests.
+        nuisance_params: 1darray
+            Parameters to be optimized over
 
         Returns
         -------
-
-        llr: float
-            -2 times the log likelihood of the nuisance parameters and the
+        llr : float
+            -2 x the log-likelihood of the nuisance parameters and the
             hypothesized value of the parameter(s) of interest.
-
         """
         nobs = self.model.nobs
         exog = self.model.exog
@@ -129,7 +77,7 @@ class _ElRegOpts(_ElRegSetup):
 
         wts = np.ones(nobs) * (1. / nobs)
         x0 = np.zeros(est_vect.shape[1]).reshape(-1, 1)
-        self.new_params = new_params  # Used for Origin Regress
+        #self.new_params = new_params  # Used for Origin Regress
         try:
             eta_star = self._modif_newton(x0, est_vect, wts)
             denom = 1. + np.dot(eta_star, est_vect.T)
@@ -146,13 +94,12 @@ class _ElRegOpts(_ElRegSetup):
 
         Parameters
         ----------
-        beta: float
-            parameter of interest
+        beta : float
+            Parameter of interest
 
         Returns
-        ------
-
-        llr: float
+        -------
+        llr : float
             log likelihood ratio
         """
         self.b0_vals = beta
@@ -192,80 +139,62 @@ class ELReg(_ElRegOpts):
     Class that conducts hyptheses tests and calculates confidence intervals
     for parameters.
 
-    Note the model does not need to be fitted.  The applicable fitted
-    attributes are inherited from _ElRegSetup.
-
     Parameters
     ----------
+    OLSResults: Results instance
+       A fitted OLS model
 
-    endog: nx1 array
-        Dependent variable
-
-    exog: nxk array
-        X matrix of independent variables.  El_Lin_Reg assumes that there is a
-        constant included in X.  For regression through the origin, see
-        El_Origin_Regress
-
-    Methods
-    -------
-
-    test_beta:
-        Conducts hypothesis tests for regression parameters
-
-    ci_beta:
-        Finds confidence intervals for regression parameters
-
-    Example
-    -------
-    import statsmodels.api as sm
-    data = sm.datasets.stackloss.load()
-    endog = data.endog
-    exog = sm.add_constant(data.exog, prepend=1)
-    model = ElLinReg(endog, exog)
-    model.params
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.stackloss.load()
+    >>> endog = data.endog
+    >>> exog = sm.add_constant(data.exog, prepend=1)
+    >>> model = sm.OLS(endog, exog)
+    >>> fitted = model.fit()
+    >>> fitted.params
     >>> array([-39.91967442,   0.7156402 ,   1.29528612,  -0.15212252])
-    model.rsquared
+    >>> fitted.rsquared
     >>> 0.91357690446068196
-    # Test that the slope on the first variable is 0
-    model.test_beta([0], [1])
+    >>> # Test that the slope on the first variable is 0
+    >>> fitted.eltest([0], [1])
     >>> (1.7894660442330235e-07, 27.248146353709153)
-    # Compute the confidence interval for the first slope parameter
-    model.ci_beta(1)
+    >>> # Compute the confidence interval for the first slope parameter
+    >>> fitted.conf_int_el(1)
     >>> (0.41969831751229664, 0.9857167306604057)
-
     """
-    def __init__(self, OLSModel, OLSResults):
-        super(ELReg, self).__init__(OLSModel, OLSResults)
+    def __init__(self, OLSResults):
+        super(ELReg, self).__init__(OLSResults)
 
     def test_beta(self, b0_vals, param_nums, print_weights=0,
                      ret_params=0, method='nm',
                      stochastic_exog=1):
         """
-        Tests single or joint hypotheses of the regression parameters
+        Tests single or joint hypotheses of the regression parameters.
 
         Parameters
         ----------
 
-        b0_vals: list
+        b0_vals : list
             The hypthesized value of the parameter to be tested
 
-        param_nums: list
+        param_nums : list
             The parameter number to be tested
 
-        print_weights: bool, optional
+        print_weights : bool, optional
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False
 
-        ret_params: bool, optional
+        ret_params : bool, optional
             If true, returns the parameter vector that maximizes the likelihood
             ratio at b0_vals.  Also returns the weights.  Default is False
 
-        method: string, optional
+        method : string, optional
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'
 
-        stochastic_exog: bool, optional
+        stochastic_exog : bool, optional
             When TRUE, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
@@ -275,26 +204,25 @@ class ELReg(_ElRegOpts):
         Returns
         -------
 
-        res: tuple
+        res : tuple
             The p-value and -2 times the log likelihood ratio for the
             hypothesized values.
 
         Examples
-        -------_-
-        data = sm.datasets.longley.load()
-        data.exog = sm.add_constant(data.exog[:,:-1], prepend=1)
-        el_analysis = El_Lin_Reg(data.endog, data.exog)
-        # Test the hypothesis that the intercept is -6000.
-        el_analysis.test_beta([0], [-6000])
-        >>> (0.78472652375012586, 0.074619017259285519)
-        # Test the hypothesis that the coefficient on the
-        #   parameter after the incercept is 0
-        el_analysis.test_beta([1], [0])
-        >>> (0.2224473814889133, 1.4885126021160364)
-        # Test the hypothesis that the second parameter after the intercept
-        # is 12000 and the third regression parameter is 50
-        el_analysis.test_beta([2, 3], [12000,50])
-        >>> (0.0, 105.64623449375982)
+        --------
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.stackloss.load()
+        >>> endog = data.endog
+        >>> exog = sm.add_constant(data.exog, prepend=1)
+        >>> model = sm.OLS(endog, exog)
+        >>> fitted = model.fit()
+        >>> fitted.params
+        >>> array([-39.91967442,   0.7156402 ,   1.29528612,  -0.15212252])
+        >>> fitted.rsquared
+        >>> 0.91357690446068196
+        >>> # Test that the slope on the first variable is 0
+        >>> fitted.test_beta([0], [1])
+        >>> (1.7894660442330235e-07, 27.248146353709153)
         """
 
         self._stochastic_exog = stochastic_exog
@@ -326,24 +254,23 @@ class ELReg(_ElRegOpts):
         Computes the confidence interval for the parameter given by param_num
 
         Parameters
-        ---------
+        ----------
 
-        param_num: float
+        param_num : float
             The parameter thats confidence interval is desired
 
-        sig: float, optional
+        sig : float
             The significance level.  Default is .05
 
-        upper_bound: float, optional
+        upper_bound : float
             Tha mximum value the upper limit can be.  Default is the
             99.9% confidence value under OLS assumptions.
 
-        lower_bound: float
+        lower_bound : float
             The minimum value the lower limit can be.  Default is the 99.9%
             confidence value under OLS assumptions.
 
-
-        method: string, optional
+        method : string
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'
@@ -355,7 +282,7 @@ class ELReg(_ElRegOpts):
         Returns
         -------
 
-        ci: tuple
+        ci : tuple
             The confidence interval
 
         See Also
@@ -387,16 +314,6 @@ class ELReg(_ElRegOpts):
         from a number beteween 0 and the critical value and a very large number
         (>50), the starting parameters of the interior minimization need
         to be changed.
-
-        Example
-        ------
-        data=sm.datasets.stackloss.load()
-        data.exog= sm.add_constant(data.exog, prepend=1)
-        el_regression = ElLinReg(data.endog, data.exog)
-        ci_intercept = el_regression.ci_beta(0)
-        ci_intercept
-        >>>(-52.771288377249604, -25.21626358895916)
-
         """
         self.start_eta = start_int_params
         self.method = method
