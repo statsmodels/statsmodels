@@ -262,8 +262,8 @@ class SysGLS(SysModel):
         [1] http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
         '''
         if self.isrestricted:
-            betaLambda = np.dot(self.pinv_rwexog, self.rwendog)
-            params = betaLambda[:self.k_exog_all]
+            beta_lambda = np.dot(self.pinv_rwexog, self.rwendog)
+            params = beta_lambda[:self.k_exog_all]
             normalized_cov_params = self.pinv_rwexog[:self.k_exog_all, :self.k_exog_all]
         else:
             params = np.squeeze(np.dot(self.pinv_wexog, self.wendog))
