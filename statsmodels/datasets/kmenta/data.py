@@ -8,10 +8,10 @@ SOURCE      = """Kmenta, J. (1986) Elements of Econometrics, Second Edition, Mac
 
 CSV file is extracted from R package systemfit.
 
-The data are available from Table ̃13-1 (p. ̃687), and the results are presented in Table ̃13-2 (p. ̃712) of this book.
+The data are available from Table 13-1 (p.687), and the results are presented in Table 13-2 (p.712) of this book.
 """
 
-DESCRSHORT  = """Kmenta dataset on food market (example on page 685)"""
+DESCRSHORT  = """Kmenta dataset on food market (example on p.685)"""
 
 DESCRLONG   = DESCRSHORT
 

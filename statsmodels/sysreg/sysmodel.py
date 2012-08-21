@@ -177,7 +177,7 @@ class SysGLS(SysModel):
     Notes
     -----
     Linear restrictions on parameters are specified with the following equation:
-        restrict_matrix * beta = restrict_vect
+        restrict_matrix * params = restrict_vect
     '''
 
     def __init__(self, sys, sigma=None, restrict_matrix=None, restrict_vect=None):
@@ -199,7 +199,7 @@ class SysGLS(SysModel):
             raise ValueError("sigma is not correctly specified")
 
         ## Handle restrictions
-        self.isrestricted = not(restrict_matrix == None and restrict_vect == None)
+        self.isrestricted = not (restrict_matrix is None and restrict_vect is None)
         if self.isrestricted:
             if not(restrict_vect.shape[0] == restrict_matrix.shape[0]):
                 raise ValueError('restrict_vect and restrict_matrix must have the \
