@@ -66,7 +66,7 @@ class TestSURI(CheckSysregResults):
     def setupClass(cls):
         from results.results_sysreg import RSURI
         res2 = RSURI
-        res1 = SysSUR(grun_sys).fit(igls=True)
+        res1 = SysSUR(grun_sys).fit(iterative=True)
         cls.res1 = res1
         cls.res2 = res2
 
@@ -93,7 +93,7 @@ class TestSURIR(CheckSysregResults):
         R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
                       [2, 0, 1, 1, 0, 0, 0, 3, 1, 1, 1, 0, 0, 1, 0]])
         q = np.array([0, 0])
-        res1 = SysSUR(grun_sys, restrict_matrix=R, restrict_vect=q).fit(igls=True)
+        res1 = SysSUR(grun_sys, restrict_matrix=R, restrict_vect=q).fit(iterative=True)
 
         cls.res1 = res1
         cls.res2 = res2
@@ -137,7 +137,7 @@ class TestI3SLS(CheckSysregResults):
     def setupClass(cls):
         from results.results_sysreg import RI3SLS
         res2 = RI3SLS
-        res1 = Sys3SLS(kmenta_sys).fit(igls=True)
+        res1 = Sys3SLS(kmenta_sys).fit(iterative=True)
         cls.res1 = res1
         cls.res2 = res2
 

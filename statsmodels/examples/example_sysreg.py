@@ -33,14 +33,14 @@ grun_res = grun_mod.fit()
 
 # Iterated SUR estimation
 grun_imod = SysSUR(sys)
-grun_ires = grun_imod.fit(igls=True)
+grun_ires = grun_imod.fit(iterative=True)
 
 # Restricted and iterated SUR estimation
 R = np.array([[1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0],
               [2, 0, 1, 1, 0, 0, 0, 3, 1, 1, 1, 0, 0, 1, 0]])
 q = np.array([0, 0]) 
 grun_rimod = SysSUR(sys, restrict_matrix=R, restrict_vect=q)
-grun_rires = grun_rimod.fit(igls=True)
+grun_rires = grun_rimod.fit(iterative=True)
 
 # Regression results
 params_names = ['f%d_%s'%(fn,en) for fn in range(4) 
