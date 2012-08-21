@@ -442,6 +442,8 @@ class SysResults(LikelihoodModelResults):
         self.rsquared = 1 - self.ssr / self.sst
         self.rsquared_adj = 1 - (1 - self.rsquared)*(float(self.model.nobs - 1) /
                 self.model.df_resid)
+        if hasattr(model, 'iterations'):
+            self.iterations = model.iterations
 
     def summary(self, yname=None, xname=None, title=None):
         #TODO: handle variable names in SysModel
