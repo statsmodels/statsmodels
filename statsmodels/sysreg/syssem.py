@@ -108,7 +108,7 @@ class SysSEM(SysModel):
         else:
             return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
-    def _compute_res(self):
+    def _estimate(self):
         params = np.squeeze(np.dot(self.pinv_wxhat, self.wendog))
         normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
         return (params, normalized_cov_params)
@@ -130,7 +130,7 @@ class SysSEM(SysModel):
         ------
         A SysResults class instance.
         """
-        res = self._compute_res()
+        res = self._estimate()
         if not iterative:
             return SysResults(self, res[0], res[1])
 
@@ -146,13 +146,13 @@ class SysSEM(SysModel):
             # Update attributes
             self.initialize()
             # Next iteration
-            res = self._compute_res()
+            res = self._estimate()
             betas = [res[0], betas[0]]
             iterations += 1
        
         self.iterations = iterations
         beta = betas[0]
-        normalized_cov_params = self._compute_res()[1]
+        normalized_cov_params = self._estimate()[1]
         return SysResults(self, beta, normalized_cov_params)
 
     def predict(self, params, exog=None):

@@ -253,7 +253,7 @@ class SysGLS(SysModel):
         else:
             return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
-    def _compute_res(self):
+    def _estimate(self):
         '''
         Notes
         -----
@@ -288,7 +288,7 @@ class SysGLS(SysModel):
         ------
         A SysResults class instance.
         """
-        res = self._compute_res()
+        res = self._estimate()
         if not iterative:
             return SysResults(self, res[0], res[1])
         
@@ -304,13 +304,13 @@ class SysGLS(SysModel):
             # Update attributes
             self.initialize()
             # Next iteration
-            res = self._compute_res()
+            res = self._estimate()
             betas = [res[0], betas[0]]
             iterations += 1
        
         self.iterations = iterations
         beta = betas[0]
-        normalized_cov_params = self._compute_res()[1]
+        normalized_cov_params = self._estimate()[1]
         return SysResults(self, beta, normalized_cov_params)
  
 class SysWLS(SysGLS):
