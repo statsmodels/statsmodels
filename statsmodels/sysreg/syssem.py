@@ -114,6 +114,22 @@ class SysSEM(SysModel):
         return (params, normalized_cov_params)
 
     def fit(self, iterative=False, tol=1e-5, maxiter=100):
+        """
+        Full fit of the model.
+        
+        Parameters
+        ----------
+        iterative : bool
+            If True the estimation procedure is iterated.
+        tol : float
+            Convergence threshold.
+        maxiter : int
+            Maximum number of iteration.
+
+        Return
+        ------
+        A SysResults class instance.
+        """
         res = self._compute_res()
         if not iterative:
             return SysResults(self, res[0], res[1])
