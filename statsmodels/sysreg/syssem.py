@@ -113,9 +113,9 @@ class SysSEM(SysModel):
         normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
         return (params, normalized_cov_params)
 
-    def fit(self, igls=False, tol=1e-5, maxiter=100):
+    def fit(self, iterative=False, tol=1e-5, maxiter=100):
         res = self._compute_res()
-        if not(igls):
+        if not iterative:
             return SysResults(self, res[0], res[1])
 
         betas = [res[0], np.inf]

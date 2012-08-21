@@ -24,6 +24,6 @@ res2sls = mod2sls.fit()
 print res2sls.summary(yname=yname, xname=xname)
 
 mod3sls = Sys3SLS(sys)
-res3sls = mod3sls.fit(igls=True)
+res3sls = mod3sls.fit(iterative=True)
 print res3sls.summary(yname=yname, xname=xname)
 
