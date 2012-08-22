@@ -41,7 +41,9 @@ from statsmodels.tools.decorators import (resettable_cache,
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 # More imports at the end of the module
-from statsmodels.emplike.elregress import ELReg
+from statsmodels.emplike.elregress import _ELRegOpts
+from scipy import optimize
+from scipy.stats import chi2
 
 class GLS(base.LikelihoodModel):
     """
@@ -1510,7 +1512,7 @@ strong multicollinearity or other numerical problems.''' % condno
         elif returns == 'html':
             print('not available yet')
 
-class OLSResults(RegressionResults, ELReg):
+class OLSResults(RegressionResults):
 
     def get_influence(self):
         '''get an instance of Influence with influence and outlier measures
@@ -1524,6 +1526,180 @@ class OLSResults(RegressionResults, ELReg):
         '''
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
+
+    def test_beta(self, b0_vals, param_nums, print_weights=0,
+                     ret_params=0, method='nm',
+                     stochastic_exog=1):
+        """
+        Tests single or joint hypotheses of the regression parameters.
+
+        Parameters
+        ----------
+
+        b0_vals : 1darray
+            The hypthesized value of the parameter to be tested
+
+        param_nums : 1darray
+            The parameter number to be tested
+
+        print_weights : bool, optional
+            If true, returns the weights that optimize the likelihood
+            ratio at b0_vals.  Default is False
+
+        ret_params : bool, optional
+            If true, returns the parameter vector that maximizes the likelihood
+            ratio at b0_vals.  Also returns the weights.  Default is False
+
+        method : string, optional
+            Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
+            optimization method that optimizes over nuisance parameters.
+            Default is 'nm'
+
+        stochastic_exog : bool, optional
+            When TRUE, the exogenous variables are assumed to be stochastic.
+            When the regressors are nonstochastic, moment conditions are
+            placed on the exogenous variables.  Confidence intervals for
+            stochastic regressors are at least as large as non-stochastic
+            regressors.  Default = TRUE
+
+        Returns
+        -------
+
+        res : tuple
+            The p-value and -2 times the log likelihood ratio for the
+            hypothesized values.
+
+        Examples
+        --------
+        >>> import statsmodels.api as sm
+        >>> data = sm.datasets.stackloss.load()
+        >>> endog = data.endog
+        >>> exog = sm.add_constant(data.exog, prepend=1)
+        >>> model = sm.OLS(endog, exog)
+        >>> fitted = model.fit()
+        >>> fitted.params
+        >>> array([-39.91967442,   0.7156402 ,   1.29528612,  -0.15212252])
+        >>> fitted.rsquared
+        >>> 0.91357690446068196
+        >>> # Test that the slope on the first variable is 0
+        >>> fitted.test_beta([0], [1])
+        >>> (1.7894660442330235e-07, 27.248146353709153)
+        """
+        params = np.copy(self.params)
+        opt_fun_inst = _ELRegOpts() # to store weights
+        if len(param_nums) == len(params):
+            llr = opt_fun_inst._opt_nuis_regress(b0_vals,
+                                    param_nums=param_nums,
+                                    endog=self.model.endog,
+                                    exog=self.model.exog,
+                                    nobs=self.model.nobs,
+                                    nvar=self.model.exog.shape[1],
+                                    params=params,
+                                    b0_vals=b0_vals,
+                                    stochastic_exog=stochastic_exog)
+            pval = 1 - chi2.cdf(llr, len(param_nums))
+            return (llr, pval)
+        x0 = np.delete(params, param_nums)
+        args = (param_nums, self.model.endog, self.model.exog,
+                self.model.nobs, self.model.exog.shape[1], params,
+                b0_vals, stochastic_exog)
+        if method == 'nm':
+            llr = optimize.fmin(opt_fun_inst._opt_nuis_regress, x0, maxfun=10000,
+                                 maxiter=10000, full_output=1, disp=0,
+                                 args=args)[1]
+        if method == 'powell':
+            llr = optimize.fmin_powell(opt_fun_inst._opt_nuis_regress, x0,
+                                 full_output=1, disp=0,
+                                 args=args)[1]
+
+        pval = 1 - chi2.cdf(llr, len(param_nums))
+        if ret_params:   # Used only for origin regress
+            return llr, pval, opt_fun_inst.new_weights
+        elif print_weights:
+            return llr, pval, opt_fun_inst.new_weights
+        else:
+            return llr, pval
+
+    def ci_params(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
+                method='nm', stochastic_exog=1):
+        """
+
+        Computes the confidence interval for the parameter given by param_num
+
+        Parameters
+        ----------
+
+        param_num : float
+            The parameter thats confidence interval is desired
+
+        sig : float
+            The significance level.  Default is .05
+
+        upper_bound : float
+            Tha mximum value the upper limit can be.  Default is the
+            99.9% confidence value under OLS assumptions.
+
+        lower_bound : float
+            The minimum value the lower limit can be.  Default is the 99.9%
+            confidence value under OLS assumptions.
+
+        method : string
+            Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
+            optimization method that optimizes over nuisance parameters.
+            Default is 'nm'
+
+        Returns
+        -------
+
+        ci : tuple
+            The confidence interval
+
+        See Also
+        --------
+        test_beta
+
+        Notes
+        -----
+
+        This function uses brentq to find the value of beta where
+        test_beta([beta], param_num)[1] is equal to the critical
+        value.
+
+        The function returns the results of each iteration of brentq at
+        each value of beta.
+
+        The current function value of the last printed optimization
+        should be the critical value at the desired significance level.
+        For alpha=.05, the value is 3.841459.
+
+        To ensure optimization terminated successfully, it is suggested to
+        do test_beta([lower_limit], [param_num])
+
+        If the optimization does not terminate successfully, consider switching
+        optimization algorithms.
+
+        If optimization is still not successful, try changing the values of
+        start_int_params.  If the current function value repeatedly jumps
+        from a number between 0 and the critical value and a very large number
+        (>50), the starting parameters of the interior minimization need
+        to be changed.
+        """
+        r0 = chi2.ppf(1 - sig, 1)
+        if upper_bound is None:
+            upper_bound = self.conf_int(.01)[param_num][1]
+        if lower_bound is None:
+            lower_bound = self.conf_int(.01)[param_num][0]
+        f = lambda b0: self.test_beta(np.array([b0]), np.array([param_num]),
+                                      method=method,
+                                      stochastic_exog=stochastic_exog)[0]-r0
+        lowerl = optimize.brenth(f, lower_bound,
+                             self.params[param_num])
+        upperl = optimize.brenth(f, self.params[param_num],
+                             upper_bound)
+        #  ^ Seems to be faster than brentq in most cases
+        return (lowerl, upperl)
+
+
 
 class RegressionResultsWrapper(wrap.ResultsWrapper):
 
