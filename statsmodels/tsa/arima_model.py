@@ -124,7 +124,7 @@ def _arma_predict_out_of_sample(params, steps, errors, p, q, k_trend, k_exog,
 
     for i in range(min(q,steps-1)):
         fcast = mu[i] + np.dot(arparams,endog[i:i+p]) + \
-                      np.dot(maparams,resid[i:i+q])
+                np.dot(maparams[:q-i],resid[i:i+q])
         forecast[i] = fcast
         endog[i+p] = fcast
 
