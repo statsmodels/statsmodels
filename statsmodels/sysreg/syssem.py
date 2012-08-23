@@ -28,7 +28,7 @@ class SysSEM(SysModel):
 
     Attributes
     ----------
-    fullexog : ndarray
+    exog_full : ndarray
         The larger set of instruments is used for estimation, including
         all of the exogenous variables in the system and the others instruments
         provided in 'instruments' parameters. 
@@ -63,12 +63,12 @@ class SysSEM(SysModel):
             id_exog = list(set(range(eq['exog'].shape[1])).difference(
                     eq['indep_endog']))
             exogs.append(eq['exog'][:, id_exog])
-        fullexog = np.column_stack(exogs)
+        exog_full = np.column_stack(exogs)
         if not(self.instruments is None):
-            fullexog = np.hstack((self.instruments, fullexog))
+            exog_full = np.hstack((self.instruments, exog_full))
             # Note : the constant is not in the first column. 
         # Delete reoccuring cols
-        self.fullexog = z = unique_cols(fullexog)
+        self.exog_full = z = unique_cols(exog_full)
 
         ## Handle first-step
         ztzinv = np.linalg.inv(np.dot(z.T, z))
@@ -93,21 +93,6 @@ class SysSEM(SysModel):
         self.wendog = self.whiten(self.endog.T.reshape(-1,1))
         self.pinv_wxhat = np.linalg.pinv(self.wxhat)
     
-    def whiten(self, X):
-        '''
-        SysSEM whiten method
-
-        Parameters
-        ----------
-        X : ndarray
-            Data to be whitened
-        '''
-        if sparse.issparse(X):
-            return np.asarray((sparse.kron(self.cholsigmainv, 
-                sparse.eye(self.nobs, self.nobs))*X).todense())
-        else:
-            return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
-
     def _estimate(self):
         params = np.squeeze(np.dot(self.pinv_wxhat, self.wendog))
         normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
@@ -122,7 +107,8 @@ class SysSEM(SysModel):
         iterative : bool
             If True the estimation procedure is iterated.
         tol : float
-            Convergence threshold.
+            Convergence threshold which is compared with difference of 
+            parameters between iterations.
         maxiter : int
             Maximum number of iteration.
 
@@ -177,35 +163,19 @@ class Sys2SLS(SysSEM):
     def fit(self):
         res_fit = super(Sys2SLS, self).fit()
         params = res_fit.params
-        # Covariance matrix of the parameters computed using new residuals as in systemfit
+        # The covariance matrix of the parameters is computed using new
+        # residuals as in systemfit.
         self.sigma = np.diag(np.diag(res_fit.cov_resids))
         self.initialize()
         normalized_cov_params = np.dot(self.pinv_wxhat, self.pinv_wxhat.T)
         return SysResults(self, params, normalized_cov_params)
 
-    def _compute_sigma(self, resids):
-        '''
-        Parameters
-        ----------
-        resids : ndarray (N x G)
-            Residuals for each equation stacked in column.
-        '''
-        s = np.diag(np.diag(np.dot(resids.T, resids)))
-        if self.dfk is None:
-            return s / self.nobs
-        elif self.dfk == 'dfk1':
-            return s / self._div_dfk1
-        else:
-            return s / self._div_dfk2
-
 class Sys3SLS(SysSEM):
     def __init__(self, sys, instruments=None, dfk=None):
         super(Sys3SLS, self).__init__(sys, instruments=instruments,
                 sigma=None, dfk=dfk)
-
         # Estimate sigma with a first-step 2SLS
         sigma = Sys2SLS(self.sys, self.instruments, self.dfk).fit().cov_resids
         self.sigma = sigma
-
         self.initialize()
 

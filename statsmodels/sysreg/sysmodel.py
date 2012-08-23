@@ -124,10 +124,13 @@ class SysModel(LikelihoodModel):
 
     def _compute_sigma(self, resids):
         '''
+        Compute the estimated covariance matrix of the residuals which is used
+        for estimation.
+
         Parameters
         ----------
         resids : ndarray, (nobs, neqs)
-            Residuals for each equation stacked in column.
+            Residuals for each equation stacked by columns.
         '''
         s = np.dot(resids.T, resids)
         if self.dfk is None:
@@ -136,6 +139,21 @@ class SysModel(LikelihoodModel):
             return s / self._div_dfk1
         else:
             return s / self._div_dfk2
+
+    def whiten(self, X):
+        '''
+        SysGLS whiten method
+
+        Parameters
+        ----------
+        X : ndarray
+            Data to be whitened
+        '''
+        if sparse.issparse(X):
+            return np.asarray((sparse.kron(self.cholsigmainv, 
+                sparse.eye(self.nobs, self.nobs))*X).todense())
+        else:
+            return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
 
 class SysGLS(SysModel):
     '''
@@ -238,21 +256,6 @@ class SysGLS(SysModel):
             pinv_rwexog = np.linalg.pinv(rwexog)
             self.pinv_rwexog = pinv_rwexog
     
-    def whiten(self, X):
-        '''
-        SysGLS whiten method
-
-        Parameters
-        ----------
-        X : ndarray
-            Data to be whitened
-        '''
-        if sparse.issparse(X):
-            return np.asarray((sparse.kron(self.cholsigmainv, 
-                sparse.eye(self.nobs, self.nobs))*X).todense())
-        else:
-            return np.dot(np.kron(self.cholsigmainv,np.eye(self.nobs)), X)
-
     def _estimate(self):
         '''
         Notes
@@ -280,7 +283,8 @@ class SysGLS(SysModel):
         iterative : bool
             If True the estimation procedure is iterated.
         tol : float
-            Convergence threshold.
+            Convergence threshold which is compared with difference of 
+            parameters between iterations.
         maxiter : int
             Maximum number of iteration.
 
@@ -335,7 +339,9 @@ class SysWLS(SysGLS):
                 res = OLS(eq['endog'], eq['exog']).fit()
                 resids.append(res.resid)
             resids = np.column_stack(resids)
-            sigma = self._compute_sigma(resids)
+            #sigma = self._compute_sigma(resids)
+            # This should work but it's untested.
+            sigma = np.diag(np.diag(self._compute_sigma(resids)))
         else:
             weights = np.asarray(weights)
             # weights = scalar
@@ -349,21 +355,6 @@ class SysWLS(SysGLS):
 
         self.sigma = sigma
         self.initialize()
-
-    def _compute_sigma(self, resids):
-        '''
-        Parameters
-        ----------
-        resids : ndarray, (nobs, neqs)
-            Residuals for each equation stacked in column.
-        '''
-        s = np.diag(np.diag(np.dot(resids.T, resids)))
-        if self.dfk is None:
-            return s / self.nobs
-        elif self.dfk == 'dfk1':
-            return s / self._div_dfk1
-        else:
-            return s / self._div_dfk2
 
 class SysOLS(SysWLS):
     def __init__(self, sys, dfk=None, restrict_matrix=None, restrict_vect=None):
@@ -395,9 +386,9 @@ class SysSURI(SysOLS):
 
     Parameters
     ----------
-    endogs : list of array
-        List endog variable for each equation.
-    exog : ndarray
+    endogs : list of ndarray, (nobs,)
+        List of endogenous variable for each equation.
+    exog : ndarray, (nobs, k_vars)
         Common exog variables in each equation.
     '''
     def __init__(self, endogs, exog):
@@ -426,7 +417,7 @@ class SysResults(LikelihoodModelResults):
         # Compute sigma with final residuals
         self.fittedvalues = model.predict(params=params, exog=None)
         self.resids = model.endog - self.fittedvalues.reshape(model.neqs,-1).T
-        self.cov_resids = self._compute_sigma(self.resids)
+        self.cov_resids = self._compute_cov_resids(self.resids)
 
         self.nobs = model.nobs
         self.df_resid = model.df_resid
@@ -449,8 +440,10 @@ class SysResults(LikelihoodModelResults):
         #TODO: handle variable names in SysModel
         return SysSummary(self, yname=yname, xname=xname, title=title)
     
-    def _compute_sigma(self, resids):
+    def _compute_cov_resids(self, resids):
         '''
+        Compute covariance matrix of residuals corrected by DoF.
+
         Parameters
         ----------
         resids : ndarray, (nobs, neqs)
