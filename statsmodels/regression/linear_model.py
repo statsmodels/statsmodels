@@ -1513,9 +1513,13 @@ strong multicollinearity or other numerical problems.''' % condno
             print('not available yet')
 
 class OLSResults(RegressionResults):
+    """
+    Results class for for an OLS model.
+    """
 
     def get_influence(self):
-        '''get an instance of Influence with influence and outlier measures
+        """
+        get an instance of Influence with influence and outlier measures
 
         Returns
         -------
@@ -1523,11 +1527,11 @@ class OLSResults(RegressionResults):
             the instance has methods to calculate the main influence and
             outlier measures for the OLS regression
 
-        '''
+        """
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
 
-    def test_beta(self, b0_vals, param_nums, print_weights=0,
+    def el_test(self, b0_vals, param_nums, print_weights=0,
                      ret_params=0, method='nm',
                      stochastic_exog=1):
         """
@@ -1542,20 +1546,20 @@ class OLSResults(RegressionResults):
         param_nums : 1darray
             The parameter number to be tested
 
-        print_weights : bool, optional
+        print_weights : bool
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False
 
-        ret_params : bool, optional
+        ret_params : bool
             If true, returns the parameter vector that maximizes the likelihood
             ratio at b0_vals.  Also returns the weights.  Default is False
 
-        method : string, optional
+        method : string
             Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
             optimization method that optimizes over nuisance parameters.
             Default is 'nm'
 
-        stochastic_exog : bool, optional
+        stochastic_exog : bool
             When TRUE, the exogenous variables are assumed to be stochastic.
             When the regressors are nonstochastic, moment conditions are
             placed on the exogenous variables.  Confidence intervals for
@@ -1620,7 +1624,7 @@ class OLSResults(RegressionResults):
         else:
             return llr, pval
 
-    def ci_params(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
+    def conf_int_el(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
                 method='nm', stochastic_exog=1):
         """
 
@@ -1656,7 +1660,8 @@ class OLSResults(RegressionResults):
 
         See Also
         --------
-        test_beta
+
+        el_test
 
         Notes
         -----
@@ -1689,7 +1694,7 @@ class OLSResults(RegressionResults):
             upper_bound = self.conf_int(.01)[param_num][1]
         if lower_bound is None:
             lower_bound = self.conf_int(.01)[param_num][0]
-        f = lambda b0: self.test_beta(np.array([b0]), np.array([param_num]),
+        f = lambda b0: self.el_test(np.array([b0]), np.array([param_num]),
                                       method=method,
                                       stochastic_exog=stochastic_exog)[0]-r0
         lowerl = optimize.brenth(f, lower_bound,
