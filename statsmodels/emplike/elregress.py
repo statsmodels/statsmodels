@@ -58,7 +58,6 @@ class _ELRegOpts(_OptFuncts):
                                              param_nums))
         params[nuis_param_index] = nuisance_params
         new_params = params.reshape(nvar, 1)
-        print new_params
         est_vect = exog * \
           (endog - np.squeeze(np.dot(exog, new_params))).reshape(nobs, 1)
         if not stochastic_exog:

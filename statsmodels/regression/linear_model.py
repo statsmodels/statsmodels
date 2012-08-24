@@ -1531,7 +1531,7 @@ class OLSResults(RegressionResults):
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
 
-    def el_test(self, b0_vals, param_nums, print_weights=0,
+    def el_test(self, b0_vals, param_nums, return_weights=0,
                      ret_params=0, method='nm',
                      stochastic_exog=1):
         """
@@ -1619,15 +1619,14 @@ class OLSResults(RegressionResults):
         pval = 1 - chi2.cdf(llr, len(param_nums))
         if ret_params:   # Used only for origin regress
             return llr, pval, opt_fun_inst.new_weights
-        elif print_weights:
+        elif return_weights:
             return llr, pval, opt_fun_inst.new_weights
         else:
             return llr, pval
 
     def conf_int_el(self, param_num, sig=.05, upper_bound=None, lower_bound=None,
-                method='nm', stochastic_exog=1):
+                    method='nm', stochastic_exog=1):
         """
-
         Computes the confidence interval for the parameter given by param_num
 
         Parameters
