@@ -121,13 +121,27 @@ Model Classes
    GLSAR
    yule_walker
 
-Results Class
-^^^^^^^^^^^^^
+General Results Class
+^^^^^^^^^^^^^^^^^^^^^
+
+These results are shared by all linear regression models.
 
 .. autosummary::
    :toctree: generated/
 
    RegressionResults
+
+
+Specific Results
+^^^^^^^^^^^^^^^^
+
+These results are specific to a certain linear model.  They also include RegressionResults,
+whice are common to all linear models.
+
+.. autosummary::
+   :toctree: generated/
+
+   OLSResults
 
 
 Technical Documentation
