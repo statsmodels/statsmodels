@@ -1,80 +1,88 @@
+"""
+This module implements empirical likelihood regression that is forced through
+the origin.
+
+This is different than regression not forced through the origin because the
+maximum empirical likelihood estimate is calculated with a vector of ones in
+the exogenous matrix but restricts the intercept parameter to be 0.  This
+results in significantly more narrow confidence intervals and different
+parameter estimates.
+
+For notes on regression not forced through the origin, see empirical likelihood
+methods in the OLSResults class.
+
+General References
+------------------
+Owen, A.B. (2001). Empirical Likelihood.  Chapman and Hall. p. 82.
+
+"""
+
 import numpy as np
 from scipy.stats import chi2
 from scipy import optimize
-from statsmodels.emplike.descriptive2 import _OptFuncts
 # When descriptive merged, this will be changed
 from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS, RegressionResults
 
+
 class ElOriginRegress(object):
     """
-
     Empirical Likelihood inference and estimation for linear regression
-    through the origin.
+    through the origin
 
     Parameters
     ----------
-
     endog: nx1 array
         Array of response variables
 
     exog: nxk array
-        Array of exogenous variables.  Assumes no array of ones.
+        Array of exogenous variables.  Assumes no array of ones
 
-    """
+    Attributes
+    ----------
+    endog : nx1 array
+        Array of response variables
+
+    exog : nxk array
+        Array of exogenous variables.  Assumes no array of ones
+
+    nobs : float
+        Number of observations
+
+    nvar : float
+        Number of exogenous regressors
+
+     """
     def __init__(self, endog, exog):
         self.endog = endog
         self.exog = exog
-        self.nobs = self.exog.shape[0]
+        self.nobs = float(self.exog.shape[0])
         try:
-            self.nvar = exog.shape[1]
+            self.nvar = float(exog.shape[1])
         except IndexError:
-            self.nvar = 1
+            self.nvar = 1.
 
     def fit(self):
         """
         Fits the model and provides regression results.
 
-        Example
+        Returns
         -------
-
-        data = sm.datasets.stackloss.load()
-        el_model = ElOriginRegress(data.endog, data.exog)
-        el_model.fit()
-            Optimization terminated successfully.
-             Current function value: 16.055419
-             Iterations: 23
-             Function evaluations: 955
-        el_model.params
-        >>>array([[ 0.        ],
-                  [ 0.50122897],
-                  [ 1.90456428],
-                  [-0.60036974]])
-        el_model.rsquared
-        >>>0.81907913157749168
-
-
-        Notes
-        -----
-        Since EL estimation does not drop the intercept parameter but instead
-        estimates the slope parameters conditional on the slope parameter being
-        0, the first element for fitted.params will be the intercept
-        parameter (0).
-
+        Results: class
+            Empirical likelihood regression class
 
         """
-        exog_with = add_constant(self.exog, prepend =1)
+        exog_with = add_constant(self.exog, prepend=1)
         unrestricted_fit = OLS(self.endog, self.exog).fit()
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
         restricted_el = restricted_fit.el_test(
         np.array([0]), np.array([0]), ret_params=1)
-        params  = np.squeeze(restricted_el[3])
+        params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
         ls_params = np.hstack((0, unrestricted_fit.params))
-        ls_llr =  restricted_fit.el_test(ls_params, np.arange(self.nvar+1))[0]
+        ls_llr = restricted_fit.el_test(ls_params, np.arange(self.nvar + 1))[0]
         return OriginResults(restricted_model, params, beta_hat_llr, ls_llr)
-
 
     def predict(self, params, exog=None):
         if exog is None:
@@ -82,39 +90,104 @@ class ElOriginRegress(object):
         return np.dot(add_constant(exog, prepend=1), params)
 
 
-class OriginResults():
+class OriginResults(RegressionResults):
+    """
+    A Results class for empirical likelihood regression through the origin
+
+    Parameters
+    ----------
+    model : class
+        An OLS model with an intercept
+
+    params : 1darray
+        Fitted parameters
+
+    est_llr : float
+        The log likelihood of model with the intercept restricted to 0 at the
+        maximum likelihood estimates of the parameters
+
+    Attributes
+    ----------
+    model : class
+        An OLS model with an intercept
+
+    params : 1darray
+        Fitted parameter
+
+    llr : float
+        The log likelihood ratio of the maximum likelihood estimate
+
+    Notes
+    -----
+    IMPORTANT.  Since EL estimation does not drop the intercept parameter but
+    instead estimates the slope parameters conditional on the slope parameter
+    being 0, the first element for params will be the intercept, which is
+    restricted to 0.
+
+    IMPORTANT.  This class inherits from RegressionResults but inference is
+    conducted via empirical likelihood.  Therefore, any methods that
+    require an estimate of the covariance matrix will not function.  Instead
+    use el_test and conf_int_el to conduct inference.
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> import numpy as np
+    >>> data = sm.datasets.bc.load()
+    >>> model = sm.emplike.OriginRegress(data.endog, data.exog)
+    >>> fitted = model.fit()
+    >>> fitted.params
+    >>> array([ 0.        ,  0.00351813])
+    >>> #  The 0 is the intercept term.
+    >>> fitted.el_test(np.array([.0034]), np.array([1]))
+    >>> (3.6696503297979302, 0.055411808127497755)
+    >>> fitted.conf_int_el(1)
+    >>> (0.0033971871114706867, 0.0036373150174892847
+    >>> fitted.conf_int()
+    >>> TypeError: unsupported operand type(s) for *: 'instancemethod' and 'float'
+    >>> # No covariance matrix so normal inference is not valid
+
+    """
     def __init__(self, model, params, est_llr, ls_llr):
         self.model = model
         self.params = np.squeeze(params)
-        self.ls_llr = ls_llr - est_llr
         self.llr = est_llr
 
-
-
-    def test_params(self, b0_vals, param_nums, method='nm',
+    def el_test(self, b0_vals, param_nums, method='nm',
                             stochastic_exog=1, return_weights=0):
         """
-
-        Returns the pvalue and the llr for a hypothesized parameter value
-        for a regression that goes through the origin.
-
-        Note, must call orig_params first.
+        Returns the llr and p-value for a hypothesized parameter value
+        for a regression that goes through the origin
 
         Parameters
         ----------
-
-        value: float
+        b0_vals : 1darray
             The hypothesized value to be tested
 
-        param_num: float
+        param_num : 1darray
             Which parameters to test.  Note this uses python
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
 
+        print_weights : bool
+            If true, returns the weights that optimize the likelihood
+            ratio at b0_vals.  Default is False
+
+        method : string
+            Can either be 'nm' for Nelder-Mead or 'powell' for Powell.  The
+            optimization method that optimizes over nuisance parameters.
+            Default is 'nm'
+
+        stochastic_exog : bool
+            When TRUE, the exogenous variables are assumed to be stochastic.
+            When the regressors are nonstochastic, moment conditions are
+            placed on the exogenous variables.  Confidence intervals for
+            stochastic regressors are at least as large as non-stochastic
+            regressors.  Default is TRUE
+
         Returns
         -------
-
-        res: tuple
+        res : tuple
             pvalue and likelihood ratio
         """
         b0_vals = np.hstack((0, b0_vals))
@@ -130,67 +203,51 @@ class OriginResults():
         else:
             return llr_res, pval
 
-
-    def ci_beta_origin(self, param_num, upper_bound,
-                       lower_bound, sig=.05, method='powell',
-                       stochastic_exog=1,
-                       start_int_params=None):
+    def conf_int_el(self, param_num, upper_bound=None,
+                       lower_bound=None, sig=.05, method='nm',
+                       stochastic_exog=1):
         """
-
         Returns the confidence interval for a regression parameter when the
-        regression is forced through the origin.
+        regression is forced through the origin
 
         Parameters
         ----------
-
-        param_num: int
+        param_num : int
             The parameter number to be tested.  Note this uses python
-            indexing but the '0' parameter refers to the intercept term.
+            indexing but the '0' parameter refers to the intercept term
 
-        upper_bound: float
+        upper_bound : float
             The maximum value the upper confidence limit can be.  The
             closer this is to the confidence limit, the quicker the
-            computation.
+            computation.  Default is .00001 confidence limit under normality
 
-        lower_bound: float
+        lower_bound : float
             The minimum value the lower confidence limit can be.
+            Default is .00001 confidence limit under normality
 
-        sig: float, optional
+        sig : float, optional
             The significance level.  Default .05
 
-        method: str, optional
-            Algorithm to optimize of nuisance params.  Can be 'nm' or
-            'powell'.  Default is 'powell'.
-
-        start_int_params: n x k array, optional
-            starting array of parameters that optimize the log star equation.
-            See also, ElLinReg.ci_beta.
+        method : str, optional
+             Algorithm to optimize of nuisance params.  Can be 'nm' or
+            'powell'.  Default is 'nm'.
 
         Returns
         -------
-
-        CI: tuple
+        ci: tuple
             The confidence interval for the parameter 'param_num'
-
-        See Also
-        -------
-
-        ElLinReg.ci_beta for tips and examples of successful
-        optimization
-
         """
-        self.start_eta = start_int_params
-        self.method = method
-        self.r0 = chi2.ppf(1 - sig, 1)
-        self.param_nums = param_num
-        self._stochastic_exog = stochastic_exog
-        beta_high = upper_bound
-        beta_low = lower_bound
-        ll = optimize.brentq(self._ci_limits_beta_origin, beta_low,
-                             self.params[self.param_nums])
-        ul = optimize.brentq(self._ci_limits_beta_origin,
-                             self.params[self.param_nums], beta_high)
+        r0 = chi2.ppf(1 - sig, 1)
+        param_num = np.array([param_num])
+        if upper_bound is None:
+            upper_bound = (np.squeeze(self.model.fit().
+                                      conf_int(.0001)[param_num])[1])
+        if lower_bound is None:
+            lower_bound = (np.squeeze(self.model.fit().conf_int(.00001)
+                                      [param_num])[0])
+        f = lambda b0:  self.el_test(np.array([b0]), param_num,
+                                     method=method,
+                                 stochastic_exog=stochastic_exog)[0] - r0
+        ll = optimize.brentq(f, lower_bound, self.params[param_num])
+        ul = optimize.brentq(f, self.params[param_num], upper_bound)
         return (ll, ul)
-
-
-
