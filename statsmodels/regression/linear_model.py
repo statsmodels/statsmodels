@@ -40,7 +40,6 @@ from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-# More imports at the end of the module
 from statsmodels.emplike.elregress import _ELRegOpts
 from scipy import optimize
 from scipy.stats import chi2
@@ -1533,7 +1532,7 @@ class OLSResults(RegressionResults):
 
     def el_test(self, b0_vals, param_nums, return_weights=0,
                      ret_params=0, method='nm',
-                     stochastic_exog=1):
+                     stochastic_exog=1, return_params=0):
         """
         Tests single or joint hypotheses of the regression parameters.
 
@@ -1602,7 +1601,10 @@ class OLSResults(RegressionResults):
                                     b0_vals=b0_vals,
                                     stochastic_exog=stochastic_exog)
             pval = 1 - chi2.cdf(llr, len(param_nums))
-            return (llr, pval)
+            if return_weights:
+                return llr, pval, opt_fun_inst.new_weights
+            else:
+                return llr, pval
         x0 = np.delete(params, param_nums)
         args = (param_nums, self.model.endog, self.model.exog,
                 self.model.nobs, self.model.exog.shape[1], params,
@@ -1617,8 +1619,8 @@ class OLSResults(RegressionResults):
                                  args=args)[1]
 
         pval = 1 - chi2.cdf(llr, len(param_nums))
-        if ret_params:   # Used only for origin regress
-            return llr, pval, opt_fun_inst.new_weights
+        if ret_params:
+            return llr, pval, opt_fun_inst.new_weights, opt_fun_inst.new_params
         elif return_weights:
             return llr, pval, opt_fun_inst.new_weights
         else:
