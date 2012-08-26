@@ -128,9 +128,55 @@ print_mod(modcauchy, true)
 
 xt = stats.t.rvs(2, loc=5, scale=7, size=200)
 modt = LocScaleQEst(xt, dist=stats.t, distargs=(2,))
-print '\nChi'
+print '\nt'
 print_mod(modt, true)
 
+for df in range(1,6):
+    xt = stats.t.rvs(df, loc=5, scale=7, size=200)
+    modt = LocScaleQEst(xt, dist=stats.t, distargs=(df,))
+    print '\nt'
+    print_mod(modt, true)
+
+use_dist = ['cauchy', 'norm'][0]
+n_models = 4
+nobs = 100
+n_repl = 500
+print '\n%s, nobs=%d, n_repl=%d' % (use_dist, nobs, n_repl)
+print 'estimator: OLS, GLS, G-RLM, RLM'
+res_mc = []
+for i in xrange(n_repl):
+    if use_dist == 'cauchy':
+        xmc = stats.cauchy.rvs(loc=5, scale=7, size=nobs)
+        mod = LocScaleQEst(xmc, dist=stats.cauchy, distargs=())
+    else:
+        xmc = stats.norm.rvs(loc=5, scale=7, size=nobs)
+        mod = LocScaleQEst(xmc, dist=stats.norm, distargs=())
+
+    p0 = mod.fit(method='OLS').params
+    p1 = mod.fit().params
+    p2 = mod.fit(method='G-RLM').params
+    #p2a = mod.fit(method='G-RLM2').params #for checking only
+    p3 = mod.fit(method='RLM').params
+    #print xcauchy.mean(), p0, p1, p2
+    res_mc.append(np.concatenate((p0, p1, p2, p3)))
+
+res_mc = np.asarray(res_mc)
+
+true_ = np.tile(true, n_models)
+print '\nbias'
+print (res_mc - true_).mean(0).reshape(-1,2)
+print 'mse'
+print ((res_mc - true_)**2).mean(0).reshape(-1,2)
+print 'var'
+print res_mc.var(0).reshape(-1,2)
+print 'median bias'
+print np.median(res_mc - true_, 0).reshape(-1,2)
+print 'mean absolute bias'
+print (np.abs(res_mc - true_)).mean(0).reshape(-1,2)
+
+#G-RLM looks seriously biased for the constant
+
+print
 res_gls = mod.fit()
 print res_gls.model.wendog[:5]
 wend = mod.whiten(mod.endog)
