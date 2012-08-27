@@ -25,7 +25,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS, RegressionResults
 
 
-class ElOriginRegress(object):
+class ELOriginRegress(object):
     """
     Empirical Likelihood inference and estimation for linear regression
     through the origin
@@ -81,7 +81,7 @@ class ElOriginRegress(object):
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
         ls_params = np.hstack((0, unrestricted_fit.params))
-        ls_llr = restricted_fit.el_test(ls_params, np.arange(self.nvar + 1))[0]
+        ls_llr = restricted_fit.el_test(ls_params, np.arange(self.nvar + 1, dtype=int))[0]
         return OriginResults(restricted_model, params, beta_hat_llr, ls_llr)
 
     def predict(self, params, exog=None):
@@ -248,6 +248,6 @@ class OriginResults(RegressionResults):
         f = lambda b0:  self.el_test(np.array([b0]), param_num,
                                      method=method,
                                  stochastic_exog=stochastic_exog)[0] - r0
-        ll = optimize.brentq(f, lower_bound, self.params[param_num])
-        ul = optimize.brentq(f, self.params[param_num], upper_bound)
-        return (ll, ul)
+        lowerl = optimize.brentq(f, lower_bound, self.params[param_num])
+        upperl = optimize.brentq(f, self.params[param_num], upper_bound)
+        return (lowerl, upperl)
