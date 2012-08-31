@@ -117,42 +117,83 @@ class ProbPlot(object):
     def __init__(self, data, dist=stats.norm, fit=False,
                  distargs=(), a=0, loc=0, scale=1):
 
-        if not hasattr(dist, 'ppf'):
-            raise ValueError("distribution must have a ppf method")
 
         self.data = data
         self.a = a
         self.nobs = data.shape[0]
         self.distargs = distargs
+        self.fit = fit
 
-        fit_params = dist.fit(data)
+        if isinstance(dist, basestring):
+            dist = getattr(stats, dist)
+
+        if not hasattr(dist, 'ppf'):
+            raise ValueError("distribution must have a ppf method")
+
+        self.fit_params = dist.fit(data)
         if fit:
-            self.loc = fit_params[-2]
-            self.scale = fit_params[-1]
-            if len(fit_params) > 2:
-                self.dist = dist(*fit_params[:-2], **dict(loc = 0, scale = 1))
+            self.loc = self.fit_params[-2]
+            self.scale = self.fit_params[-1]
+            if len(self.fit_params) > 2:
+                self.dist = dist(*self.fit_params[:-2],
+                                 **dict(loc = 0, scale = 1))
             else:
                 self.dist = dist(loc=0, scale=1)
         elif distargs or loc == 0 or scale == 1:
             self.dist = dist(*distargs, **dict(loc=loc, scale=scale))
+            self.loc = loc
+            self.scale = scale
         else:
             self.dist = dist
             self.loc = loc
             self.scale = scale
 
-        try:
-            self.theoretical_percentiles = plotting_pos(self.nobs, self.a)
-            self.theoretical_quantiles = self.dist.ppf(self.theoretical_percentiles)
-        except:
-            raise ValueError('distribution requires more parameters')
 
-        self.sample_quantiles = np.array(data, copy=True)
-        self.sample_quantiles.sort()
-        self.raw_sample_quantiles = self.sample_quantiles.copy()
-        fit_quantiles = (self.sample_quantiles - fit_params[-2])/fit_params[-1]
-        self.sample_percentiles = self.dist.cdf(fit_quantiles)
-        if fit and loc != 0 and scale != 1:
-            self.sample_quantiles = fit_quantiles
+    def theoretical_percentiles(self):
+        return plotting_pos(self.nobs, self.a)
+
+    def theoretical_quantiles(self):
+        try:
+            return self.dist.ppf(self.theoretical_percentiles())
+        except TypeError, err:
+            print('%s requires more parameters to compute ppf' % \
+                    (self.dist.name,))
+        except:
+            print('distribution requires more parameters')
+
+    def sorted_data(self):
+        sorted_data = np.array(self.data, copy=True)
+        sorted_data.sort()
+        return sorted_data
+
+    def sample_quantiles(self):
+        if self.fit and self.loc != 0 and self.scale != 1:
+            return (self.sorted_data() - self.loc)/self.scale
+        else:
+            return self.sorted_data()
+
+    def sample_percentiles(self):
+        qntls = (self.sorted_data() - self.fit_params[-2])/self.fit_params[-1]
+        return self.dist.cdf(qntls)
+
+
+
+
+
+
+        #try:
+        #    self.theoretical_percentiles = plotting_pos(self.nobs, self.a)
+        #    self.theoretical_quantiles = self.dist.ppf(self.theoretical_percentiles)
+        #except Type Error:
+        #    raise ValueError('distribution requires more parameters')
+
+        #self.sample_quantiles = np.array(data, copy=True)
+        #self.sample_quantiles.sort()
+        #self.raw_sample_quantiles = self.sample_quantiles.copy()
+        #fit_quantiles = (self.sample_quantiles - fit_params[-2])/fit_params[-1]
+        #self.sample_percentiles = self.dist.cdf(fit_quantiles)
+        #if fit and loc != 0 and scale != 1:
+        #    self.sample_quantiles = fit_quantiles
 
     def ppplot(self, xlabel=None, ylabel=None, line=None, other=None, ax=None):
         """
@@ -196,8 +237,8 @@ class ProbPlot(object):
             if not check_other:
                 other = ProbPlot(other)
 
-            fig, ax = _do_plot(other.sample_percentiles,
-                               self.sample_percentiles,
+            fig, ax = _do_plot(other.sample_percentiles(),
+                               self.sample_percentiles(),
                                self.dist, ax=ax, line=line)
 
             if xlabel is None:
@@ -206,8 +247,8 @@ class ProbPlot(object):
                 ylabel = 'Probabilities of 1st Sample'
 
         else:
-            fig, ax = _do_plot(self.theoretical_percentiles,
-                               self.sample_percentiles,
+            fig, ax = _do_plot(self.theoretical_percentiles(),
+                               self.sample_percentiles(),
                                self.dist, ax=ax, line=line)
             if xlabel is None:
                 xlabel = "Theoretical Probabilities"
@@ -216,6 +257,9 @@ class ProbPlot(object):
 
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
+
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.0])
 
         return fig
 
@@ -263,8 +307,8 @@ class ProbPlot(object):
             if not check_other:
                 other = ProbPlot(other)
 
-            fig, ax = _do_plot(other.sample_quantiles,
-                               self.sample_quantiles,
+            fig, ax = _do_plot(other.sample_quantiles(),
+                               self.sample_quantiles(),
                                self.dist, ax=ax, line=line)
 
             if xlabel is None:
@@ -273,8 +317,8 @@ class ProbPlot(object):
                 ylabel = 'Quantiles of 1st Sample'
 
         else:
-            fig, ax = _do_plot(self.theoretical_quantiles,
-                               self.sample_quantiles,
+            fig, ax = _do_plot(self.theoretical_quantiles(),
+                               self.sample_quantiles(),
                                self.dist, ax=ax, line=line)
             if xlabel is None:
                 xlabel = "Theoretical Quantiles"
@@ -325,14 +369,14 @@ class ProbPlot(object):
             `ax` is connected.
         """
         if exceed:
-            fig, ax = _do_plot(self.theoretical_quantiles[::-1],
-                               self.raw_sample_quantiles,
+            fig, ax = _do_plot(self.theoretical_quantiles()[::-1],
+                               self.sorted_data(),
                                self.dist, ax=ax, line=line)
             xlabel = 'Probability of Exceedance (%)'
 
         else:
-            fig, ax = _do_plot(self.theoretical_quantiles,
-                               self.raw_sample_quantiles,
+            fig, ax = _do_plot(self.theoretical_quantiles(),
+                               self.sorted_data(),
                                self.dist, ax=ax, line=line)
             xlabel = 'Non-exceedance Probability (%)'
 
