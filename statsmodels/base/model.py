@@ -127,16 +127,17 @@ class LikelihoodModel(Model):
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
-            Used when penalty == 'none'
+        method : str {'newton','nm','bfgs','powell','cg', 'ncg', 'l1', or 
+                'l1_cvxopt_cp'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient. `method` determines which solver from
-            scipy.optimize is used.  The explicit arguments in `fit` are passed
-            to the solver.  Each solver has several optional arguments that are
-            not the same across solvers.  See the notes section below (or
-            scipy.optimize) for the available arguments.
+            conjugate gradient.  For l1 regularized solves, use either 'l1' or
+            (if cvxopt is available) 'l1_cvxopt_cp'.  `method` determines which
+            solver from scipy.optimize is used.  The explicit arguments in 
+            `fit` are passed to the solver.  Each solver has several optional 
+            arguments that are not the same across solvers.  See the notes 
+            section below (or scipy.optimize) for the available arguments.
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -208,7 +209,7 @@ class LikelihoodModel(Model):
                     Maximum number of function evaluations to make.
                 start_direc : ndarray
                     Initial direction set.
-            'l1_slsqp'
+            'l1'
                 alpha : non-negative scalar or numpy array (same size as parameters)
                     The weight multiplying the l1 penalty term
                 trim_params : boolean
