@@ -176,25 +176,6 @@ class ProbPlot(object):
         qntls = (self.sorted_data() - self.fit_params[-2])/self.fit_params[-1]
         return self.dist.cdf(qntls)
 
-
-
-
-
-
-        #try:
-        #    self.theoretical_percentiles = plotting_pos(self.nobs, self.a)
-        #    self.theoretical_quantiles = self.dist.ppf(self.theoretical_percentiles)
-        #except Type Error:
-        #    raise ValueError('distribution requires more parameters')
-
-        #self.sample_quantiles = np.array(data, copy=True)
-        #self.sample_quantiles.sort()
-        #self.raw_sample_quantiles = self.sample_quantiles.copy()
-        #fit_quantiles = (self.sample_quantiles - fit_params[-2])/fit_params[-1]
-        #self.sample_percentiles = self.dist.cdf(fit_quantiles)
-        #if fit and loc != 0 and scale != 1:
-        #    self.sample_quantiles = fit_quantiles
-
     def ppplot(self, xlabel=None, ylabel=None, line=None, other=None, ax=None):
         """
         P-P plot of the percentiles (probabilities) of x versus the
