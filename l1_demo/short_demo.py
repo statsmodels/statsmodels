@@ -26,14 +26,14 @@ import numpy as np
 
 # Load the data from Spector and Mazzeo (1980)
 spector_data = sm.datasets.spector.load()
-spector_data.exog = sm.add_constant(spector_data.exog)
+spector_data.exog = sm.add_constant(spector_data.exog, prepend=True)
 N = len(spector_data.endog)
 K = spector_data.exog.shape[1]
 
 ### Logit Model
 logit_mod = sm.Logit(spector_data.endog, spector_data.exog)
 ## Standard logistic regression
-logit_l1_res = logit_mod.fit()
+logit_res = logit_mod.fit()
 ## Regularized regression
 # Set the reularization parameter to something reasonable
 alpha = 0.01 * N * np.ones(K)
@@ -42,5 +42,6 @@ logit_l1_res = logit_mod.fit(method='l1', alpha=alpha)
 # Use l1_cvxopt_cp, which solves with a CVXOPT solver
 logit_l1_cvxopt_res = logit_mod.fit(method='l1_cvxopt_cp', alpha=alpha)
 ## Print results
+print logit_res.summary()
 print logit_l1_res.summary()
 print logit_l1_cvxopt_res.summary()
