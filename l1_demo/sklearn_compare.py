@@ -1,5 +1,9 @@
 """
 For comparison with sklearn.linear_model.LogisticRegression
+
+Computes a regularzation path with both packages.  The coefficient values in
+    either path are related by a constant.  We find the reparameterization of
+    the statsmodels path that makes the paths match up.
 """
 from sklearn import linear_model
 from sklearn import datasets
@@ -7,46 +11,61 @@ import statsmodels.api as sm
 import numpy as np
 import matplotlib.pyplot as plt
 plt.ion()
-
-data_to_use = 'spector'
+import pdb
 
 #### Load data
-## The iris dataset from sklearn is perfectly separating...
-## so not good for this comparison
-
 ## The Spector and Mazzeo (1980) data from statsmodels
-## The Spector data gives very different results for statsmodels/sklearn
-if data_to_use == 'spector':
-    spector_data = sm.datasets.spector.load()
-    X = spector_data.exog
-    Y = spector_data.endog
+spector_data = sm.datasets.spector.load()
+X = spector_data.exog
+Y = spector_data.endog
 
-## The Digits data from sklearn 
-## The Digits data gives very different results for statsmodels/sklearn
-if data_to_use == 'digits':
-    digits = datasets.load_digits()
-    X = digits.data
-    Y = digits.target
-    ## We are doing binary logistic regression, so don't include all targets
-    X = X[Y<2]
-    ## Keeping all of (this subset of) X leads to a singular hessian...so take
-    ## some out.
-    sigma = np.dot(X.T, X)
-    nonconst_inds = np.nonzero(sigma.diagonal() > 0)[0]
-    X = X[:, nonconst_inds[1:10]]
-    Y = Y[Y<2]
+#### Fit and plot results
+N = 200  # number of points to solve at
 
-
-#### Fit and print results
 ## Statsmodels
 logit_mod = sm.Logit(Y, X)
-## Standard logistic regression
-logit_res = logit_mod.fit(method='newton', tol=1e-6)
-print "\nStatsmodels coefficients"
-print logit_res.params
+sm_coeff = np.zeros((N, 3))  # Holds the coefficients
+#for n, alpha in enumerate(np.linspace(0, 3, N)):
+alphas = 1 / np.logspace(-1, 2, N)
+for n, alpha in enumerate(alphas):
+    logit_res = logit_mod.fit(method='l1', alpha=alpha)
+    sm_coeff[n,:] = logit_res.params
+# The sm_coeff order needs to be reversed to match up with sk_coeff
+sm_coeff = sm_coeff[::-1, :]
 
 ## Sklearn
-clf = linear_model.LogisticRegression(C=100000.0, penalty='l1', tol=1e-6)
-clf.fit(X, Y)
-print "\nsklearn coefficients"
-print clf.coef_
+sk_coeff = np.zeros((N, 3))
+for n, C in enumerate(np.logspace(-0.45, 2, N)):
+    clf = linear_model.LogisticRegression(
+            C=C, penalty='l1', fit_intercept=False)
+    clf.fit(X, Y)
+    sk_coeff[n, :] = clf.coef_
+
+## Get the reparametrization of sm_coeff that makes the paths equal
+# Do this by finding one single re-parameterization of the second coefficient
+# that makes the path for the second coefficient (almost) identical.  This
+# same parameterization will work for the other two coefficients since the
+# the regularization coefficients (in sk and sm) are related by a constant.
+#
+# X2 is chosen since this coefficient becomes non-zero before the other two.
+sk_X2 = sk_coeff[:,2]
+sm_X2 = sm_coeff[:,2]
+s = np.zeros(N)
+s = np.searchsorted(sk_X2, sm_X2)
+
+## Plot
+plt.figure(1);plt.clf();plt.grid()
+plt.xlabel('Index in sklearn simulation')
+plt.ylabel('Coefficient value')
+plt.title('Regularization Paths')
+colors = ['b', 'r', 'k']
+for coeff, name in [(sm_coeff, 'sm'), (sk_coeff, 'sk')]:
+    if name == 'sk':
+        ltype = 'x'  # linetype
+        t = range(N)  # The 'time' parameter
+    else:
+        ltype = 'o'
+        t = s
+    for i in xrange(3):
+        plt.plot(t, coeff[:,i], ltype+colors[i], label=name+'-X'+str(i))
+plt.legend(loc='best')
