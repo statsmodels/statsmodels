@@ -127,9 +127,6 @@ class ProbPlot(object):
         if isinstance(dist, basestring):
             dist = getattr(stats, dist)
 
-        if not hasattr(dist, 'ppf'):
-            raise ValueError("distribution must have a ppf method")
-
         self.fit_params = dist.fit(data)
         if fit:
             self.loc = self.fit_params[-2]
@@ -155,11 +152,12 @@ class ProbPlot(object):
     def theoretical_quantiles(self):
         try:
             return self.dist.ppf(self.theoretical_percentiles())
-        except TypeError, err:
+        except TypeError:
             print('%s requires more parameters to compute ppf' % \
                     (self.dist.name,))
         except:
-            print('distribution requires more parameters')
+            print('failed to compute the ppf of %s' % \
+                    (self.dist.name,))
 
     def sorted_data(self):
         sorted_data = np.array(self.data, copy=True)
@@ -577,9 +575,10 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         ref_line = x*m + b
         ax.plot(x, ref_line, fmt)
     elif line == 'q':
+        _check_for_ppf(dist)
         q25 = stats.scoreatpercentile(y, 25)
         q75 = stats.scoreatpercentile(y, 75)
-        theoretical_quartiles = dist.ppf([.25,.75])
+        theoretical_quartiles = dist.ppf([0.25, 0.75])
         m = (q75 - q25) / np.diff(theoretical_quartiles)
         b = q25 - m*theoretical_quartiles[0]
         ax.plot(x, m*x + b, fmt)
@@ -633,6 +632,7 @@ def _fmt_probplot_axis(ax, dist, nobs):
     -------
     There is no return value. This operates on `ax` in place
     """
+    _check_for_ppf(dist)
     if nobs < 50:
         axis_probs = np.array([1,2,5,10,20,30,40,50,60,
                                70,80,90,95,98,99,])/100.0
@@ -687,3 +687,7 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
         qqline(ax, line, x=x, y=y, dist=dist)
 
     return fig, ax
+
+def _check_for_ppf(dist):
+    if not hasattr(dist, 'ppf'):
+        raise ValueError("distribution must have a ppf method")
