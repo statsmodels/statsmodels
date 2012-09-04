@@ -21,7 +21,6 @@ from sklearn import datasets
 import statsmodels.api as sm
 import numpy as np
 import matplotlib.pyplot as plt
-plt.ion()
 import pdb
 
 ## Decide which dataset to use
@@ -96,3 +95,4 @@ for coeff, name in [(sm_coeff, 'sm'), (sk_coeff, 'sk')]:
     for i in xrange(K):
         plt.plot(t, coeff[:,i], ltype+colors[i], label=name+'-X'+str(i))
 plt.legend(loc='best')
+plt.show()
