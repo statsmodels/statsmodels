@@ -9,6 +9,11 @@ l1_demo/demo.py
     $ python demo.py logit
     does a quick demo of the regularization using logistic regression.
 
+l1_demo/sklearn_compare.py
+    $ python sklearn_compare.py
+    Plots a comparison of regularization paths.  Modify the source to use
+    different datasets.
+
 statsmodels/discrete/l1_cvxopt.py
     _fit_l1_cvxopt_cp() 
         Fit likelihood model using l1 regularization.  Use the CVXOPT package.
