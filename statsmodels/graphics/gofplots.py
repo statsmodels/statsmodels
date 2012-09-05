@@ -39,6 +39,10 @@ class ProbPlot(object):
         from the standardized data, after subtracting the fitted loc
         and dividing by the fitted scale.
 
+    See Also
+    --------
+    `scipy.stats.probplot`
+
     Notes
     -----
     1) Depends on matplotlib.
@@ -116,7 +120,6 @@ class ProbPlot(object):
 
     def __init__(self, data, dist=stats.norm, fit=False,
                  distargs=(), a=0, loc=0, scale=1):
-
 
         self.data = data
         self.a = a
@@ -412,6 +415,10 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         If given, this subplot is used to plot in instead of a new figure being
         created.
 
+    See Also
+    --------
+    `scipy.stats.probplot`
+
     Returns
     -------
     fig : Matplotlib figure instance
@@ -491,6 +498,10 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+
+    See Also
+    --------
+    `scipy.stats.probplot`
 
     Returns
     -------
