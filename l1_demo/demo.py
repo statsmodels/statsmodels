@@ -8,7 +8,7 @@ import pdb
 
 
 docstr = """
-Demonstrates l1 regularization for likelihood models.  
+Demonstrates l1 regularization for likelihood models.
 Use different models by setting mode = mnlogit, logit, or probit.
 
 Examples
@@ -20,42 +20,43 @@ $ python demo.py --get_l1_slsqp_results  logit
 
 The Story
 ---------
-The maximum likelihood (ML) solution works well when the number of data 
-points is large and the noise is small.  When the ML solution starts 
+The maximum likelihood (ML) solution works well when the number of data
+points is large and the noise is small.  When the ML solution starts
 "breaking", the regularized solution should do better.
 
 The l1 Solvers
 --------------
-The solvers are slower than standard Newton, and sometimes have 
-    convergence issues Nonetheless, the final solution makes sense and 
+The solvers are slower than standard Newton, and sometimes have
+    convergence issues Nonetheless, the final solution makes sense and
     is often better than the ML solution.
-The standard l1 solver is fmin_slsqp and is included with scipy.  It 
-    sometimes has trouble verifying convergence when the data size is 
+The standard l1 solver is fmin_slsqp and is included with scipy.  It
+    sometimes has trouble verifying convergence when the data size is
     large.
-The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be 
+The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
+
 
 def main():
     """
     Provides a CLI for the demo.
     """
-    usage = "usage: %prog [options] mode" 
+    usage = "usage: %prog [options] mode"
     usage += '\n'+docstr
     parser = OptionParser(usage=usage)
     # base_alpha
-    parser.add_option("-a", "--base_alpha", 
+    parser.add_option("-a", "--base_alpha",
             help="Size of regularization param (the param actully used will "\
                     "automatically scale with data size in this demo) "\
-                    "[default: %default]", 
+                    "[default: %default]",
             dest='base_alpha', action='store', type='float', default=0.01)
     # num_samples
-    parser.add_option("-N", "--num_samples", 
+    parser.add_option("-N", "--num_samples",
             help="Number of data points to generate for fit "\
-                    "[default: %default]", 
+                    "[default: %default]",
             dest='N', action='store', type='int', default=500)
     # get_l1_slsqp_results
-    parser.add_option("--get_l1_slsqp_results", 
+    parser.add_option("--get_l1_slsqp_results",
             help="Do an l1 fit using slsqp. [default: %default]", \
             action="store_true",dest='get_l1_slsqp_results', default=False)
     # get_l1_cvxopt_results
