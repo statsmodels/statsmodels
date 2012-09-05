@@ -36,6 +36,7 @@ The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
 
+
 def main():
     """
     Provides a CLI for the demo.

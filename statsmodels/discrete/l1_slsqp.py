@@ -8,9 +8,9 @@ import pdb
 # pdb.set_trace
 
 
-def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
-        maxiter=100, callback=None, retall=False, full_output=False, hess=None
-        ):
+def _fit_l1_slsqp(
+        f, score, start_params, args, kwargs, disp=None, maxiter=100,
+        callback=None, retall=False, full_output=False, hess=None):
     """
     Solve the l1 regularized problem using scipy.optimize.fmin_slsqp().
 
@@ -65,16 +65,16 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
     acc = kwargs.setdefault('acc', 1e-6)
 
     ### Wrap up for use in fmin_slsqp
-    func = lambda x : objective_func(f, x, K, alpha, *args)
-    f_ieqcons_wrap = lambda x : f_ieqcons(x, K)
-    fprime_wrap = lambda x : fprime(score, x, K, alpha)
-    fprime_ieqcons_wrap = lambda x : fprime_ieqcons(x, K)
+    func = lambda x: objective_func(f, x, K, alpha, *args)
+    f_ieqcons_wrap = lambda x: f_ieqcons(x, K)
+    fprime_wrap = lambda x: fprime(score, x, K, alpha)
+    fprime_ieqcons_wrap = lambda x: fprime_ieqcons(x, K)
 
     ### Call the optimization
-    results = fmin_slsqp(func, x0, f_ieqcons=f_ieqcons_wrap,
-            fprime=fprime_wrap, acc=acc, iter=maxiter,
-            disp=disp_slsqp, full_output=full_output,
-            fprime_ieqcons=fprime_ieqcons_wrap)
+    results = fmin_slsqp(
+        func, x0, f_ieqcons=f_ieqcons_wrap, fprime=fprime_wrap, acc=acc,
+        iter=maxiter, disp=disp_slsqp, full_output=full_output,
+        fprime_ieqcons=fprime_ieqcons_wrap)
 
     ### Post-process
     trim_tol = kwargs.setdefault('trim_tol', 1e-4)
@@ -92,8 +92,9 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
         iterations = its
         gopt = float('nan')     # Objective is non-differentiable
         hopt = float('nan')
-        retvals = {'fopt':fopt, 'converged':converged, 'iterations':iterations,
-                'gopt':gopt, 'hopt':hopt}
+        retvals = {
+            'fopt': fopt, 'converged': converged, 'iterations': iterations,
+            'gopt': gopt, 'hopt': hopt}
     else:
         x = np.array(results)
         params = x[:K]
@@ -103,6 +104,7 @@ def _fit_l1_slsqp(f, score, start_params, args, kwargs, disp=None,
         return params, retvals
     else:
         return params
+
 
 def trim_params(results, full_output, K, alpha, trim_tol):
     """
@@ -125,6 +127,7 @@ def trim_params(results, full_output, K, alpha, trim_tol):
     else:
         return x
 
+
 def objective_func(f, x, K, alpha, *args):
     """
     The regularized objective function
@@ -134,6 +137,7 @@ def objective_func(f, x, K, alpha, *args):
     ## Return
     return f(params, *args) + (alpha * u).sum()
 
+
 def fprime(score, x, K, alpha):
     """
     The regularized derivative
@@ -141,6 +145,7 @@ def fprime(score, x, K, alpha):
     params = x[:K]
     # The derivative just appends a vector of constants
     return np.append(score(params), alpha * np.ones(K))
+
 
 def f_ieqcons(x, K):
     """
@@ -152,13 +157,14 @@ def f_ieqcons(x, K):
     # All entries in this vector must be \geq 0 in a feasible solution
     return np.append(nonconst_params + u, u - nonconst_params)
 
+
 def fprime_ieqcons(x, K):
     """
     Derivative of the inequality constraints
     """
     I = np.eye(K)
-    A = np.concatenate((I,I), axis=1)
-    B = np.concatenate((-I,I), axis=1)
-    C = np.concatenate((A,B), axis=0)
+    A = np.concatenate((I, I), axis=1)
+    B = np.concatenate((-I, I), axis=1)
+    C = np.concatenate((A, B), axis=0)
     ## Return
     return C
