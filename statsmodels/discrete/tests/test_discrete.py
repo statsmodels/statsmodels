@@ -269,21 +269,11 @@ class TestProbitNCG(CheckBinaryResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
             disp=0, avextol=1e-8)
 
-class TestLikelihoodModelL1(object):
+
+class CheckLikelihoodModelL1(object):
     """
     For testing results generated with L1 regularization
     """
-    @classmethod
-    def setupClass(cls):
-        cls.data = sm.datasets.spector.load()
-        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
-        cls.alpha = 3 * np.array([0, 1, 1, 1])
-        cls.res1 = Logit(cls.data.endog, cls.data.exog).fit(
-            method="l1", alpha=cls.alpha, disp=0, trim_params=True)
-        res2 = DiscreteL1()
-        res2.logit()
-        cls.res2 = res2
-
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
@@ -295,9 +285,28 @@ class TestLikelihoodModelL1(object):
         """
         Compares resutls from csxopt to the standard slsqp
         """
-        self.res3 = Logit(self.data.endog, self.data.exog).fit(
-            method="l1_cvxopt_cp", alpha=self.alpha, disp=0, trim_params=True)
-        assert_almost_equal(self.res1.params, self.res3.params, DECIMAL_2)
+        try:
+            import cvxopt
+            self.res3 = Logit(self.data.endog, self.data.exog).fit(
+                method="l1_cvxopt_cp", alpha=self.alpha, disp=0,
+                trim_params=True)
+            assert_almost_equal(self.res1.params, self.res3.params, DECIMAL_2)
+        except ImportError:
+            raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
+
+
+class TestLogitL1(CheckLikelihoodModelL1):
+    @classmethod
+    def setupClass(cls):
+        cls.data = sm.datasets.spector.load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
+        cls.alpha = 3 * np.array([0, 1, 1, 1])
+        cls.res1 = Logit(cls.data.endog, cls.data.exog).fit(
+            method="l1", alpha=cls.alpha, disp=0, trim_params=True)
+        res2 = DiscreteL1()
+        res2.logit()
+        cls.res2 = res2
+
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
