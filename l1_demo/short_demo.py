@@ -36,9 +36,9 @@ logit_mod = sm.Logit(spector_data.endog, spector_data.exog)
 logit_res = logit_mod.fit()
 ## Regularized regression
 # Set the reularization parameter to something reasonable
-alpha = 0.01 * N * np.ones(K)
+alpha = 0.05 * N * np.ones(K)
 # Use l1, which solves via a built-in (scipy.optimize) solver
-logit_l1_res = logit_mod.fit(method='l1', alpha=alpha)
+logit_l1_res = logit_mod.fit(method='l1', alpha=alpha, trim_params=True)
 # Use l1_cvxopt_cp, which solves with a CVXOPT solver
 logit_l1_cvxopt_res = logit_mod.fit(method='l1_cvxopt_cp', alpha=alpha)
 ## Print results
