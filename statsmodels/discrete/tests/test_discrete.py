@@ -16,6 +16,11 @@ from sys import platform
 from nose import SkipTest
 from results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+try:
+    import cvxopt
+    has_cvxopt = True
+except ImportError:
+    has_cvxopt = False
 
 DECIMAL_14 = 14
 DECIMAL_10 = 10
@@ -285,13 +290,12 @@ class CheckLikelihoodModelL1(object):
         """
         Compares resutls from csxopt to the standard slsqp
         """
-        try:
-            import cvxopt
+        if has_cvxopt:
             self.res3 = Logit(self.data.endog, self.data.exog).fit(
                 method="l1_cvxopt_cp", alpha=self.alpha, disp=0,
                 trim_params=True)
             assert_almost_equal(self.res1.params, self.res3.params, DECIMAL_2)
-        except ImportError:
+        else:
             raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
 
 
