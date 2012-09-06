@@ -45,3 +45,20 @@ logit_l1_cvxopt_res = logit_mod.fit(method='l1_cvxopt_cp', alpha=alpha)
 print logit_res.summary()
 print logit_l1_res.summary()
 print logit_l1_cvxopt_res.summary()
+
+### Multinomial Logit Example using American National Election Studies Data
+anes_data = sm.datasets.anes96.load()
+anes_exog = anes_data.exog
+anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
+anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
+anes_exog = sm.add_constant(anes_exog, prepend=False)
+mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
+mlogit_res = mlogit_mod.fit()
+## Set the regularization parameter.  
+alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+# Don't regularize the constant
+alpha[-1,:] = 0
+mlogit_l1_res = mlogit_mod.fit(method='l1', alpha=alpha, trim_params=True)
+## Print results
+print mlogit_res.summary()
+print mlogit_l1_res.summary()
