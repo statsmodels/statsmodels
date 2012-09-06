@@ -89,6 +89,28 @@ class Anes():
         self.conf_int = np.asarray(conf_int)
 
 
+class DiscreteL1(object):
+    def __init__(self):
+        """
+        Special results for L1 models
+        Uses the Spector data and a script to generate the baseline results
+        """
+        pass
+
+    def logit(self):
+        """
+        Results generated with:
+            data = sm.datasets.spector.load()
+            data.exog = sm.add_constant(data.exog, prepend=True)
+            alpha = 3 * np.array([0, 1, 1, 1])
+            res2 = sm.Logit(data.endog, data.exog).fit(
+                method="l1", alpha=alpha, disp=0, trim_params=True)
+        """
+        self.params = [-4.10198076,  0.,  0.15492006,  0.]
+        self.conf_int = [[-10.21412678,   2.01016525], [np.nan, np.nan], 
+                [ -0.08555133,   0.39539146], [np.nan, np.nan]]
+
+
 class Spector():
     """
     Results are from Stata 11

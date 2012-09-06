@@ -5,6 +5,10 @@ A slight modification that allows l1 regularized LikelihoodModel .
 Main Files
 ==========
 
+l1_demo/generate_test_results.py
+    $ python generate_test_results.py
+    will print out results that can be cut and paste into tests/results/results_discrete.py
+
 l1_demo/demo.py
     $ python demo.py logit
     does a quick demo of the regularization using logistic regression.

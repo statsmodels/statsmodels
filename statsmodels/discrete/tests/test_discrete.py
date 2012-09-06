@@ -14,7 +14,7 @@ from statsmodels.discrete.discrete_model import *
 import statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
-from results.results_discrete import Spector
+from results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 DECIMAL_14 = 14
@@ -268,6 +268,36 @@ class TestProbitNCG(CheckBinaryResults):
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
             disp=0, avextol=1e-8)
+
+class TestLikelihoodModelL1(object):
+    """
+    For testing results generated with L1 regularization
+    """
+    @classmethod
+    def setupClass(cls):
+        cls.data = sm.datasets.spector.load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
+        cls.alpha = 3 * np.array([0, 1, 1, 1])
+        cls.res1 = Logit(cls.data.endog, cls.data.exog).fit(
+            method="l1", alpha=cls.alpha, disp=0, trim_params=True)
+        res2 = DiscreteL1()
+        res2.logit()
+        cls.res2 = res2
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(
+                self.res1.conf_int(), self.res2.conf_int, DECIMAL_4)
+
+    def test_cvxopt(self):
+        """
+        Compares resutls from csxopt to the standard slsqp
+        """
+        self.res3 = Logit(self.data.endog, self.data.exog).fit(
+            method="l1_cvxopt_cp", alpha=self.alpha, disp=0, trim_params=True)
+        assert_almost_equal(self.res1.params, self.res3.params, DECIMAL_2)
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
