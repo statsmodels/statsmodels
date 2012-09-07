@@ -42,7 +42,7 @@ def _fit_l1_slsqp(
         print "Callback will be ignored with l1"
     if hess:
         print "Hessian not used with l1"
-    start_params = np.array(start_params).ravel(order='F')
+    start_params = np.array(start_params).ravel('F')
 
     # TODO fargs should be passed to f, another name for all the args
     ### Extract values
@@ -51,7 +51,7 @@ def _fit_l1_slsqp(
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
     # alpha is the regularization parameter
-    alpha = np.array(kwargs['alpha']).ravel(order='F')
+    alpha = np.array(kwargs['alpha']).ravel('F')
     assert alpha.min() >= 0
     # Convert display parameters to scipy.optimize form
     if disp or retall:
