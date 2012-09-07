@@ -23,8 +23,9 @@ def _fit_l1_cvxopt_cp(
         The weight multiplying the l1 penalty term
     trim_params : boolean (default True)
         Set small parameters to zero
-    trim_tol : float
-        Set parameters whose absolute value < trim_tol to zero
+    trim_tol : float or 'auto' (default = 'auto')
+        If auto, trim params based on the optimality condition
+        If float, trim params whose absolute value < trim_tol to zero
     abstol : float
         absolute accuracy (default: 1e-7).
     reltol : float
@@ -84,8 +85,9 @@ def _fit_l1_cvxopt_cp(
     ### Post-process
     trim_params = kwargs.setdefault('trim_params', True)
     if trim_params:
-        trim_tol = kwargs.setdefault('trim_tol', 1e-4)
-        results = do_trim_params(results, K, alpha, trim_tol)
+        trim_tol = kwargs.setdefault('trim_tol', 'auto')
+        results = do_trim_params(
+                results, K, alpha, trim_tol, score)
 
     ### Pack up return values for statsmodels
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
@@ -100,7 +102,7 @@ def _fit_l1_cvxopt_cp(
             else results['status']
         retvals = {
             'fopt': fopt, 'converged': converged, 'iterations': iterations,
-            'gopt': gopt, 'hopt': hopt}
+            'gopt': gopt, 'hopt': hopt, 'trimmed': results['trimmed']}
     else:
         x = np.array(results['x']).ravel()
         params = x[:K]
@@ -112,20 +114,45 @@ def _fit_l1_cvxopt_cp(
         return params
 
 
-def do_trim_params(results, K, alpha, trim_tol):
+def do_trim_params(results, K, alpha, trim_tol, score):
     """
-    Trims (sets = 0) params that are within trim_tol of zero.
-    If alpha[i] == 0, then don't trim the ith param.
+    If trim_tol == 'auto', then trim params if the derivative in that direction
+        is significantly smaller than alpha.  Theory says the nonzero params
+        should have magnitude equal to alpha at a minimum.
+
+    If trim_tol is a float, then trim (set = 0) params that are within trim_tol
+        of zero.  
+
+    In all cases, if alpha[i] == 0, then don't trim the ith param.  
+    In all cases, do nothing with the dummy variables.
     """
     ## Extract params from the results
     x_arr = np.array(results['x'])
     ## Trim the small params
+    trimmed = [False] * K  
     # Don't bother triming the dummy variables 'u'
-    for i in xrange(K):
-        if abs(x_arr[i]) < trim_tol and alpha[i] != 0:
-            x_arr[i] = 0.0
+    if trim_tol == 'auto':
+        fprime = score(x_arr[:K].ravel())
+        for i in xrange(K):
+            if alpha[i] != 0:
+                # TODO Magic number !!
+                magic_tol = 0.03
+                if alpha[i] - abs(fprime[i]) > magic_tol:
+                    x_arr[i] = 0.0
+                    trimmed[i] = True
+                elif alpha[i] - abs(fprime[i]) < -magic_tol:
+                    raise Exception(
+                        "Unable to trim params automatically with "\
+                        "this low optimization accuracy")
+    else:
+        for i in xrange(K):
+            if alpha[i] != 0:
+                if abs(x_arr[i]) < trim_tol:
+                    x_arr[i] = 0.0
+                    trimmed[i] = True
     ## Replenish results
     results['x'] = matrix(x_arr)
+    results['trimmed'] = np.array(trimmed)
     ## Return
     return results
 
