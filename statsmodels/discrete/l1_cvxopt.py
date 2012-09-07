@@ -38,13 +38,13 @@ def _fit_l1_cvxopt_cp(
 
     if callback:
         print "Callback will be ignored with l1_cvxopt_cp"
-    start_params = np.array(start_params).ravel(order='F')
+    start_params = np.array(start_params).ravel('F')
 
     ## Extract arguments
     # K is total number of covariates, possibly including a leading constant.
     K = len(start_params)
     # The regularization parameter
-    alpha = np.array(kwargs['alpha']).ravel(order='F')
+    alpha = np.array(kwargs['alpha']).ravel('F')
     assert alpha.min() >= 0
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
