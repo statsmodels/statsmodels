@@ -1819,7 +1819,7 @@ class L1BinaryResults(BinaryResults):
     """
     def __init__(self, model, bnryfit):
         super(L1BinaryResults, self).__init__(model, bnryfit)
-        self.zero_param_idx = np.nonzero(self.params.ravel(order='F') == 0)
+        self.zero_param_idx = np.nonzero(self.params.ravel('F') == 0)
         self.nnz_params = len(np.nonzero(self.params != 0)[0]) 
 
     @cache_readonly
