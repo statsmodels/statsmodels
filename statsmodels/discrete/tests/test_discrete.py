@@ -286,15 +286,24 @@ class CheckLikelihoodModelL1(object):
         assert_almost_equal(
                 self.res1.conf_int(), self.res2.conf_int, DECIMAL_4)
 
+
+class TestsCVXOPT(object):
+    @classmethod
+    def setupClass(self):
+        self.data = sm.datasets.spector.load()
+        self.data.exog = sm.add_constant(self.data.exog, prepend=True)
+        self.alpha = 3 * np.array([0, 1, 1, 1])
+        self.res1 = Logit(self.data.endog, self.data.exog).fit(
+            method="l1", alpha=self.alpha, disp=0)
+
     def test_cvxopt(self):
         """
         Compares resutls from csxopt to the standard slsqp
         """
         if has_cvxopt:
-            self.res3 = Logit(self.data.endog, self.data.exog).fit(
-                method="l1_cvxopt_cp", alpha=self.alpha, disp=0,
-                trim_params=True)
-            assert_almost_equal(self.res1.params, self.res3.params, DECIMAL_2)
+            res3 = Logit(self.data.endog, self.data.exog).fit(
+                method="l1_cvxopt_cp", alpha=self.alpha, disp=0)
+            assert_almost_equal(self.res1.params, res3.params, DECIMAL_2)
         else:
             raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
 
@@ -302,14 +311,26 @@ class CheckLikelihoodModelL1(object):
 class TestLogitL1(CheckLikelihoodModelL1):
     @classmethod
     def setupClass(cls):
-        cls.data = sm.datasets.spector.load()
-        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
         cls.alpha = 3 * np.array([0, 1, 1, 1])
-        cls.res1 = Logit(cls.data.endog, cls.data.exog).fit(
+        cls.res1 = Logit(data.endog, data.exog).fit(
             method="l1", alpha=cls.alpha, disp=0, trim_params=True)
         res2 = DiscreteL1()
         res2.logit()
         cls.res2 = res2
+
+class TestLogitL1AlphaZero(object):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.res1 = Logit(data.endog, data.exog).fit(
+                method="l1", alpha=0, disp=0, acc=1e-15)
+        cls.res2 = Logit(data.endog, data.exog).fit(disp=0, tol=1e-15)
+
+    def test_logit_l1_alpha_zero(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
