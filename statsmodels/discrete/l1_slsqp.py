@@ -32,8 +32,9 @@ def _fit_l1_slsqp(
         The weight multiplying the l1 penalty term
     trim_params : boolean (default True)
         Set small parameters to zero
-    trim_tol : float
-        Set parameters whose absolute value < trim_tol to zero
+    trim_tol : float or 'auto' (default = 'auto')
+        If auto, trim params based on the optimality condition
+        If float, trim params whose absolute value < trim_tol to zero
     acc : float (default 1e-6)
         Requested accuracy
     """
@@ -79,13 +80,14 @@ def _fit_l1_slsqp(
     ### Post-process
     trim_params = kwargs.setdefault('trim_params', True)
     if trim_params:
-        trim_tol = kwargs.setdefault('trim_tol', 1e-4)
-        results = do_trim_params(results, full_output, K, alpha, trim_tol)
+        trim_tol = kwargs.setdefault('trim_tol', 'auto')
+        results = do_trim_params(
+                results, full_output, K, alpha, trim_tol, score)
 
     ### Pack up return values for statsmodels optimizers
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
     if full_output:
-        x, fx, its, imode, smode = results
+        x, fx, its, imode, smode, trimmed = results
         x = np.array(x)
         params = x[:K]
         fopt = func(x)
@@ -95,7 +97,7 @@ def _fit_l1_slsqp(
         hopt = float('nan')
         retvals = {
             'fopt': fopt, 'converged': converged, 'iterations': iterations,
-            'gopt': gopt, 'hopt': hopt}
+            'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed}
     else:
         x = np.array(results)
         params = x[:K]
@@ -107,10 +109,17 @@ def _fit_l1_slsqp(
         return params
 
 
-def do_trim_params(results, full_output, K, alpha, trim_tol):
+def do_trim_params(results, full_output, K, alpha, trim_tol, score):
     """
-    Trims (sets = 0) params that are within trim_tol of zero.
-    If alpha[i] == 0, then don't trim the ith param.
+    If trim_tol == 'auto', then trim params if the derivative in that direction
+        is significantly smaller than alpha.  Theory says the nonzero params
+        should have magnitude equal to alpha at a minimum.
+
+    If trim_tol is a float, then trim (set = 0) params that are within trim_tol
+        of zero.  
+
+    In all cases, if alpha[i] == 0, then don't trim the ith param.  
+    In all cases, do nothing with the dummy variables.
     """
     ## Extract x from the results
     if full_output:
@@ -118,13 +127,25 @@ def do_trim_params(results, full_output, K, alpha, trim_tol):
     else:
         x = results
     ## Trim the small params
+    trimmed = [False] * K  
     # Don't bother triming the dummy variables 'u'
-    for i in xrange(K):
-        if abs(x[i]) < trim_tol and alpha[i] != 0:
-            x[i] = 0.0
+    if trim_tol == 'auto':
+        fprime = score(x[:K])
+        for i in xrange(K):
+            if alpha[i] != 0:
+                # TODO Magic number !!
+                if abs(abs(fprime[i]) - alpha[i]) > 0.01:
+                    x[i] = 0.0
+                    trimmed[i] = True
+    else:
+        for i in xrange(K):
+            if alpha[i] != 0:
+                if abs(x[i]) < trim_tol:
+                    x[i] = 0.0
+                    trimmed[i] = True
     ## Pack back up
     if full_output:
-        return x, fx, its, imode, smode
+        return x, fx, its, imode, smode, trimmed
     else:
         return x
 

@@ -214,8 +214,10 @@ class LikelihoodModel(Model):
                     The weight multiplying the l1 penalty term
                 trim_params : boolean (default True)
                     Set small parameters to zero
-                trim_tol : float
-                    Set parameters whose absolute value < trim_tol to zero
+                trim_tol : float or 'auto' (default = 'auto')
+                    If auto, trim params based on the optimality condition
+                    If float, trim params whose absolute value < trim_tol to
+                        zero
                 acc : float (default 1e-6)
                     Requested accuracy
             'l1_cvxopt_cp'
@@ -223,8 +225,10 @@ class LikelihoodModel(Model):
                     The weight multiplying the l1 penalty term
                 trim_params : boolean (default True)
                     Set small parameters to zero
-                trim_tol : float
-                    Set parameters whose absolute value < trim_tol to zero
+                trim_tol : float or 'auto' (default = 'auto')
+                    If auto, trim params based on the optimality condition
+                    If float, trim params whose absolute value < trim_tol to
+                        zero
                 abstol : float
                     absolute accuracy (default: 1e-7).
                 reltol : float
