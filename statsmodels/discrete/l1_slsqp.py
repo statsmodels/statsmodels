@@ -130,7 +130,7 @@ def do_trim_params(results, full_output, K, alpha, trim_tol, score):
     trimmed = [False] * K  
     # Don't bother triming the dummy variables 'u'
     if trim_tol == 'auto':
-        fprime = score(x[:K])
+        fprime = score(np.array(x[:K]))
         for i in xrange(K):
             if alpha[i] != 0:
                 # TODO Magic number !!
