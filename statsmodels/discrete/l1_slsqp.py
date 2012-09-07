@@ -134,14 +134,14 @@ def do_trim_params(results, full_output, K, alpha, trim_tol, score):
         for i in xrange(K):
             if alpha[i] != 0:
                 # TODO Magic number !!
-                magic_tol = 0.01
+                magic_tol = 0.03
                 if alpha[i] - abs(fprime[i]) > magic_tol:
                     x[i] = 0.0
                     trimmed[i] = True
                 elif alpha[i] - abs(fprime[i]) < -magic_tol:
                     raise Exception(
-                        "Unable to trim params with this optimization accuracy"
-                        )
+                        "Unable to trim params automatically with "\
+                        "this low optimization accuracy")
     else:
         for i in xrange(K):
             if alpha[i] != 0:
