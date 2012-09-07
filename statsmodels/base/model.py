@@ -256,7 +256,7 @@ class LikelihoodModel(Model):
             'l1'
                 alpha : non-negative scalar or numpy array (same size as parameters)
                     The weight multiplying the l1 penalty term
-                trim_params : boolean
+                trim_params : boolean (default True)
                     Set small parameters to zero
                 trim_tol : float
                     Set parameters whose absolute value < trim_tol to zero
@@ -265,7 +265,7 @@ class LikelihoodModel(Model):
             'l1_cvxopt_cp'
                 alpha : non-negative scalar or numpy array (same size as parameters)
                     The weight multiplying the l1 penalty term
-                trim_params : boolean
+                trim_params : boolean (default True)
                     Set small parameters to zero
                 trim_tol : float
                     Set parameters whose absolute value < trim_tol to zero
