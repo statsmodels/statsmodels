@@ -1955,7 +1955,7 @@ class L1BinaryResults(BinaryResults):
     --------------
     nnz_params : Integer
         The number of nonzero parameters in the model.  Train with
-        trim_parms==True or else numerical error will distort this.
+        trim_params==True or else numerical error will distort this.
     """
     def __init__(self, model, bnryfit):
         super(L1BinaryResults, self).__init__(model, bnryfit)
@@ -2048,7 +2048,7 @@ class L1MultinomialResults(MultinomialResults):
     --------------
     nnz_params : Integer
         The number of nonzero parameters in the model.  Train with
-        trim_parms==True or else numerical error will distort this.
+        trim_params==True or else numerical error will distort this.
     """
     def __init__(self, model, mlefit):
         super(L1MultinomialResults, self).__init__(model, mlefit)
