@@ -1831,11 +1831,10 @@ class L1BinaryResults(BinaryResults):
         # Indices of nonzero params
         nz_idx = np.nonzero(self.trimmed == False)[0]
         # Covariance of nonzero params
-        cov_nz_params = self.cov_params()
         num_params = len(self.trimmed)
         bse = np.nan * np.ones(num_params)
         for new_i, old_i in enumerate(nz_idx):
-            bse[old_i] = cov_nz_params.diagonal()[new_i]
+            bse[old_i] = np.sqrt(self.cov_params().diagonal()[new_i])
         return bse.reshape(self.params.shape, order='F')
 
     @cache_readonly
@@ -1916,13 +1915,20 @@ class L1MultinomialResults(MultinomialResults):
     """
     def __init__(self, model, mlefit):
         super(L1MultinomialResults, self).__init__(model, mlefit)
-        self.zero_param_idx = np.nonzero(self.params.ravel(order='F') == 0)
-        self.nnz_params = len(np.nonzero(self.params != 0)[0]) 
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = mlefit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
 
     @cache_readonly
     def bse(self):
-        bse = np.sqrt(np.diag(self.cov_params()))
-        bse[self.zero_param_idx] = float('nan')
+        # Indices of nonzero params
+        nz_idx = np.nonzero(self.trimmed == False)[0]
+        # Covariance of nonzero params
+        num_params = len(self.trimmed)
+        bse = np.nan * np.ones(num_params)
+        for new_i, old_i in enumerate(nz_idx):
+            bse[old_i] = np.sqrt(self.cov_params().diagonal()[new_i])
         return bse.reshape(self.params.shape, order='F')
 
     @cache_readonly
