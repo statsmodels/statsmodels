@@ -1816,16 +1816,26 @@ class L1BinaryResults(BinaryResults):
     nnz_params : Integer
         The number of nonzero parameters in the model.  Train with 
         trim_params==True or else numerical error will distort this.
+    trimmed : Boolean array
+        trimmed[i] == True if the ith parameter was trimmed from the model.
     """
     def __init__(self, model, bnryfit):
         super(L1BinaryResults, self).__init__(model, bnryfit)
-        self.zero_param_idx = np.nonzero(self.params.ravel('F') == 0)
-        self.nnz_params = len(np.nonzero(self.params != 0)[0]) 
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = bnryfit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
 
     @cache_readonly
     def bse(self):
-        bse = np.sqrt(np.diag(self.cov_params()))
-        bse[self.zero_param_idx] = float('nan')
+        # Indices of nonzero params
+        nz_idx = np.nonzero(self.trimmed == False)[0]
+        # Covariance of nonzero params
+        cov_nz_params = self.cov_params()
+        num_params = len(self.trimmed)
+        bse = np.nan * np.ones(num_params)
+        for new_i, old_i in enumerate(nz_idx):
+            bse[old_i] = cov_nz_params.diagonal()[new_i]
         return bse.reshape(self.params.shape, order='F')
 
     @cache_readonly

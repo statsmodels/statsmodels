@@ -302,6 +302,18 @@ class LikelihoodModel(Model):
         # isn't great
 #        if method == 'bfgs' and full_output:
 #            Hinv = retvals.setdefault('Hinv', 0)
+        elif method in ['l1', 'l1_cvxopt_cp']:
+            H = self.hessian(xopt)
+            trimmed = retvals['trimmed']
+            nz_idx = np.nonzero(trimmed == False)[0]
+            nnz_params = (trimmed == False).sum()
+            H_restricted = np.zeros((nnz_params, nnz_params))
+            for new_i, old_i in enumerate(nz_idx):
+                for new_j, old_j in enumerate(nz_idx):
+                    H_restricted[new_i, new_j] = H[old_i, old_j]
+            # Covariance estimate for the nonzero params
+            Hinv = np.linalg.inv(-H_restricted)
+
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian'])
         else:
