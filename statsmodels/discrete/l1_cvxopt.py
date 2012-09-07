@@ -21,7 +21,7 @@ def _fit_l1_cvxopt_cp(
     ----------
     alpha : non-negative scalar or numpy array (same size as parameters)
         The weight multiplying the l1 penalty term
-    trim_params : boolean
+    trim_params : boolean (default True)
         Set small parameters to zero
     trim_tol : float
         Set parameters whose absolute value < trim_tol to zero
@@ -82,9 +82,10 @@ def _fit_l1_cvxopt_cp(
     results = solvers.cp(F, G, h)
 
     ### Post-process
-    trim_tol = kwargs.setdefault('trim_tol', 1e-4)
-    if kwargs.get('trim_params'):
-        results = trim_params(results, K, alpha, trim_tol)
+    trim_params = kwargs.setdefault('trim_params', True)
+    if trim_params:
+        trim_tol = kwargs.setdefault('trim_tol', 1e-4)
+        results = do_trim_params(results, K, alpha, trim_tol)
 
     ### Pack up return values for statsmodels
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
@@ -111,7 +112,7 @@ def _fit_l1_cvxopt_cp(
         return params
 
 
-def trim_params(results, K, alpha, trim_tol):
+def do_trim_params(results, K, alpha, trim_tol):
     """
     Trims (sets = 0) params that are within trim_tol of zero.
     If alpha[i] == 0, then don't trim the ith param.
