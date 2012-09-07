@@ -150,7 +150,7 @@ def do_trim_params(results, full_output, K, alpha, trim_tol, score):
                     trimmed[i] = True
     ## Pack back up
     if full_output:
-        return x, fx, its, imode, smode, trimmed
+        return x, fx, its, imode, smode, np.array(trimmed)
     else:
         return x
 
