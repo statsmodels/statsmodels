@@ -53,6 +53,8 @@ def _fit_l1_slsqp(
     x0 = np.append(start_params, np.fabs(start_params))
     # alpha is the regularization parameter
     alpha = np.array(kwargs['alpha']).ravel('F')
+    # Make sure it's a vector
+    alpha = alpha * np.ones(K)
     assert alpha.min() >= 0
     # Convert display parameters to scipy.optimize form
     if disp or retall:
@@ -171,7 +173,7 @@ def fprime(score, x, K, alpha):
     """
     params = x[:K]
     # The derivative just appends a vector of constants
-    return np.append(score(params), alpha * np.ones(K))
+    return np.append(score(params), alpha)
 
 
 def f_ieqcons(x, K):

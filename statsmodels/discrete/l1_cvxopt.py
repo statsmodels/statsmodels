@@ -46,6 +46,8 @@ def _fit_l1_cvxopt_cp(
     K = len(start_params)
     # The regularization parameter
     alpha = np.array(kwargs['alpha']).ravel('F')
+    # Make sure it's a vector
+    alpha = alpha * np.ones(K)
     assert alpha.min() >= 0
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
@@ -178,7 +180,7 @@ def fprime(score, x, K, alpha):
     params = x_arr[:K].ravel()
     # Call the numpy version
     # The derivative just appends a vector of constants
-    fprime_arr = np.append(score(params), alpha * np.ones(K))
+    fprime_arr = np.append(score(params), alpha)
     # Return
     return matrix(fprime_arr, (1, 2 * K))
 
