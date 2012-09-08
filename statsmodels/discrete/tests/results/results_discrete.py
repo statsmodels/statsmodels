@@ -106,9 +106,10 @@ class DiscreteL1(object):
             res2 = sm.Logit(data.endog, data.exog).fit(
                 method="l1", alpha=alpha, disp=0, trim_params=True)
         """
-        self.params = [-4.10198076,  0.,  0.15492006,  0.]
-        self.conf_int = [[-10.21412678,   2.01016525], [np.nan, np.nan], 
-                [ -0.08555133,   0.39539146], [np.nan, np.nan]]
+        self.params = [-4.10271595,  0., 0.15493781, 0.]
+        self.conf_int = [[-9.15205122,  0.94661932], [np.nan, np.nan], [-0.06539482,  0.37527044], [ np.nan, np.nan]]
+        self.bse = [ 2.5762388 , np.nan,  0.11241668, np.nan]
+        self.nnz_params = 2
 
 
 class Spector():

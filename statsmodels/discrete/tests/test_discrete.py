@@ -16,6 +16,7 @@ from sys import platform
 from nose import SkipTest
 from results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+import pdb  # pdb.set_trace
 try:
     import cvxopt
     has_cvxopt = True
@@ -286,6 +287,13 @@ class CheckLikelihoodModelL1(object):
         assert_almost_equal(
                 self.res1.conf_int(), self.res2.conf_int, DECIMAL_4)
 
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
+
+    def test_nnz_params(self):
+        assert_almost_equal(
+                self.res1.nnz_params, self.res2.nnz_params, DECIMAL_4)
+
 
 class TestsCVXOPT(object):
     @classmethod
@@ -294,7 +302,7 @@ class TestsCVXOPT(object):
         self.data.exog = sm.add_constant(self.data.exog, prepend=True)
         self.alpha = 3 * np.array([0, 1, 1, 1])
         self.res1 = Logit(self.data.endog, self.data.exog).fit(
-            method="l1", alpha=self.alpha, disp=0)
+            method="l1", alpha=self.alpha, disp=0, acc=1e-10)
 
     def test_cvxopt(self):
         """
@@ -302,8 +310,8 @@ class TestsCVXOPT(object):
         """
         if has_cvxopt:
             res3 = Logit(self.data.endog, self.data.exog).fit(
-                method="l1_cvxopt_cp", alpha=self.alpha, disp=0)
-            assert_almost_equal(self.res1.params, res3.params, DECIMAL_2)
+                method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10)
+            assert_almost_equal(self.res1.params, res3.params, DECIMAL_4)
         else:
             raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
 
@@ -315,10 +323,12 @@ class TestLogitL1(CheckLikelihoodModelL1):
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.alpha = 3 * np.array([0, 1, 1, 1])
         cls.res1 = Logit(data.endog, data.exog).fit(
-            method="l1", alpha=cls.alpha, disp=0, trim_params=True)
+            method="l1", alpha=cls.alpha, disp=0, trim_params=True, 
+            trim_tol=1e-5, acc=1e-10)
         res2 = DiscreteL1()
         res2.logit()
         cls.res2 = res2
+
 
 class TestLogitL1AlphaZero(object):
     @classmethod
