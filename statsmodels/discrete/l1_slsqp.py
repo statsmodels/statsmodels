@@ -4,6 +4,7 @@ scipy.optimize.slsqp
 """
 import numpy as np
 from scipy.optimize import fmin_slsqp
+import l1_solvers_common
 import pdb
 # pdb.set_trace
 
@@ -17,10 +18,14 @@ def _fit_l1_slsqp(
     Specifically:  We solve the convex but non-smooth problem
     .. math:: \\min_\\beta f(\\beta) + \\sum_k\\alpha_k |\\beta_k|
     via the transformation to the smooth, convex, constrained problem in twice
-    as many variables
+    as many variables (adding the "added variables" u_k)
     .. math:: \\min_{\\beta,u} f(\\beta) + \\sum_k\\alpha_k u_k,
     subject to
     .. math:: -u_k \\leq \\beta_k \\leq u_k.
+
+    Theory dictates that one of two conditions holds:
+        i) abs(score[i]) == alpha[i]  and  params[i] != 0
+        ii) abs(score[i]) <= alpha[i]  and  params[i] == 0
 
     Parameters
     ----------
@@ -30,71 +35,66 @@ def _fit_l1_slsqp(
     ------------------
     alpha : non-negative scalar or numpy array (same size as parameters)
         The weight multiplying the l1 penalty term
-    trim_params : boolean (default True)
-        Set small parameters to zero
-    trim_tol : float or 'auto' (default = 'auto')
-        If auto, trim params based on the optimality condition
-        If float, trim params whose absolute value < trim_tol to zero
+    trim_mode : 'auto, 'size', or 'off'
+        If not 'off', trim (set to zero) parameters that would have been zero
+            if the solver reached the theoretical minimum.
+        If 'auto', trim params using the Theory above.
+        If 'size', trim params if they have very small absolute value
+    size_trim_tol : float or 'auto' (default = 'auto')
+        For use when trim_mode === 'size'
+    auto_trim_tol : float
+        For sue when trim_mode == 'auto'.  Use
+    QC_tol : float
+        Print warning and don't allow auto trim when (ii) in "Theory" (above)
+        is violated by this much.
     acc : float (default 1e-6)
-        Requested accuracy
+        Requested accuracy as used by slsqp
     """
-
-    if callback:
-        print "Callback will be ignored with l1"
-    if hess:
-        print "Hessian not used with l1"
     start_params = np.array(start_params).ravel('F')
 
-    # TODO fargs should be passed to f, another name for all the args
     ### Extract values
-    # K is total number of covariates, possibly including a leading constant.
-    K = len(start_params)
+    # k_params is total number of covariates,
+    # possibly including a leading constant.
+    k_params = len(start_params)
     # The start point
     x0 = np.append(start_params, np.fabs(start_params))
     # alpha is the regularization parameter
     alpha = np.array(kwargs['alpha']).ravel('F')
     # Make sure it's a vector
-    alpha = alpha * np.ones(K)
+    alpha = alpha * np.ones(k_params)
     assert alpha.min() >= 0
     # Convert display parameters to scipy.optimize form
-    if disp or retall:
-        if disp:
-            disp_slsqp = 1
-        if retall:
-            disp_slsqp = 2
-    else:
-        disp_slsqp = 0
+    disp_slsqp = get_disp_slsqp(disp, retall)
     # Set/retrieve the desired accuracy
     acc = kwargs.setdefault('acc', 1e-6)
 
     ### Wrap up for use in fmin_slsqp
-    func = lambda x: objective_func(f, x, K, alpha, *args)
-    f_ieqcons_wrap = lambda x: f_ieqcons(x, K)
-    fprime_wrap = lambda x: fprime(score, x, K, alpha)
-    fprime_ieqcons_wrap = lambda x: fprime_ieqcons(x, K)
+    func = lambda x_full: objective_func(f, x_full, k_params, alpha, *args)
+    f_ieqcons_wrap = lambda x_full: f_ieqcons(x_full, k_params)
+    fprime_wrap = lambda x_full: fprime(score, x_full, k_params, alpha)
+    fprime_ieqcons_wrap = lambda x_full: fprime_ieqcons(x_full, k_params)
 
-    ### Call the optimization
+    ### Call the solver
     results = fmin_slsqp(
         func, x0, f_ieqcons=f_ieqcons_wrap, fprime=fprime_wrap, acc=acc,
         iter=maxiter, disp=disp_slsqp, full_output=full_output,
         fprime_ieqcons=fprime_ieqcons_wrap)
 
     ### Post-process
-    trim_params = kwargs.setdefault('trim_params', True)
-    if trim_params:
-        trim_tol = kwargs.setdefault('trim_tol', 'auto')
-        results = do_trim_params(
-                results, full_output, K, alpha, trim_tol, score)
-    else:
-        results = results, np.array([False] * K)
+    # QC
+    params = np.asarray(results[0][:k_params])
+    passed, QC_dict = l1_solvers_common.QC_results(
+        params, alpha, score, kwargs)
+    # Possibly trim
+    params, trimmed = l1_solvers_common.do_trim_params(
+        params, k_params, alpha, score, passed, kwargs)
 
     ### Pack up return values for statsmodels optimizers
-    # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
+    # TODO These retvals are returned as mle_retvals...but the fit wasn't ML.
+    # This could be confusing someday.
     if full_output:
-        x, fx, its, imode, smode, trimmed = results
-        x = np.array(x)
-        params = x[:K]
-        fopt = func(x)
+        x_full, fx, its, imode, smode = results
+        fopt = func(np.asarray(x_full))
         converged = 'True' if imode == 0 else smode
         iterations = its
         gopt = float('nan')     # Objective is non-differentiable
@@ -102,100 +102,59 @@ def _fit_l1_slsqp(
         retvals = {
             'fopt': fopt, 'converged': converged, 'iterations': iterations,
             'gopt': gopt, 'hopt': hopt, 'trimmed': trimmed}
-    else:
-        x = np.array(results)
-        params = x[:K]
 
-    ### Return results
+    ### Return
     if full_output:
         return params, retvals
     else:
         return params
 
 
-def do_trim_params(results, full_output, K, alpha, trim_tol, score):
-    """
-    If trim_tol == 'auto', then trim params if the derivative in that direction
-        is significantly smaller than alpha.  Theory says the nonzero params
-        should have magnitude equal to alpha at a minimum.
-
-    If trim_tol is a float, then trim (set = 0) params that are within trim_tol
-        of zero.  
-
-    In all cases, if alpha[i] == 0, then don't trim the ith param.  
-    In all cases, do nothing with the dummy variables.
-    """
-    ## Extract x from the results
-    if full_output:
-        x, fx, its, imode, smode = results
+def get_disp_slsqp(disp, retall):
+    if disp or retall:
+        if disp:
+            disp_slsqp = 1
+        if retall:
+            disp_slsqp = 2
     else:
-        x = results
-    ## Trim the small params
-    trimmed = [False] * K  
-    # Don't bother triming the dummy variables 'u'
-    if trim_tol == 'auto':
-        fprime = score(np.array(x[:K]))
-        for i in xrange(K):
-            if alpha[i] != 0:
-                # TODO Magic number !!
-                magic_tol = 0.03
-                if alpha[i] - abs(fprime[i]) > magic_tol:
-                    x[i] = 0.0
-                    trimmed[i] = True
-                # If fprime is too big, then we didn't converge properly 
-                # and we shouldn't trust the automatic trimming
-                elif alpha[i] - abs(fprime[i]) < -magic_tol:
-                    raise Exception(
-                        "Unable to trim params automatically with "\
-                        "this low optimization accuracy")
-    else:
-        for i in xrange(K):
-            if alpha[i] != 0:
-                if abs(x[i]) < trim_tol:
-                    x[i] = 0.0
-                    trimmed[i] = True
-    ## Pack back up
-    if full_output:
-        return x, fx, its, imode, smode, np.array(trimmed)
-    else:
-        return x
+        disp_slsqp = 0
+    return disp_slsqp
 
 
-def objective_func(f, x, K, alpha, *args):
+def objective_func(f, x_full, k_params, alpha, *args):
     """
     The regularized objective function
     """
-    params = x[:K]
-    u = x[K:]
+    x_params = x_full[:k_params]
+    x_added = x_full[k_params:]
     ## Return
-    return f(params, *args) + (alpha * u).sum()
+    return f(x_params, *args) + (alpha * x_added).sum()
 
 
-def fprime(score, x, K, alpha):
+def fprime(score, x_full, k_params, alpha):
     """
     The regularized derivative
     """
-    params = x[:K]
+    x_params = x_full[:k_params]
     # The derivative just appends a vector of constants
-    return np.append(score(params), alpha)
+    return np.append(score(x_params), alpha)
 
 
-def f_ieqcons(x, K):
+def f_ieqcons(x_full, k_params):
     """
     The inequality constraints.
     """
-    params = x[:K]
-    nonconst_params = x[:K]
-    u = x[K:]
+    x_params = x_full[:k_params]
+    x_added = x_full[k_params:]
     # All entries in this vector must be \geq 0 in a feasible solution
-    return np.append(nonconst_params + u, u - nonconst_params)
+    return np.append(x_params + x_added, x_added - x_params)
 
 
-def fprime_ieqcons(x, K):
+def fprime_ieqcons(x_full, k_params):
     """
     Derivative of the inequality constraints
     """
-    I = np.eye(K)
+    I = np.eye(k_params)
     A = np.concatenate((I, I), axis=1)
     B = np.concatenate((-I, I), axis=1)
     C = np.concatenate((A, B), axis=0)

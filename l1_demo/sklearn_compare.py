@@ -21,7 +21,8 @@ from sklearn import datasets
 import statsmodels.api as sm
 import numpy as np
 import matplotlib.pyplot as plt
-import pdb
+import pdb  # pdb.set_trace
+import sys
 
 ## Decide which dataset to use
 # Use either spector or anes96
@@ -50,9 +51,9 @@ if use_spector:
 else:
     alphas = 1 / np.logspace(-4, 2, N)  # for anes96_data
 for n, alpha in enumerate(alphas):
-    logit_res = logit_mod.fit(method='l1', alpha=alpha, trim_tol=1e-2)
+    logit_res = logit_mod.fit(
+        method='l1', alpha=alpha, acc=1e-15, maxiter=1000, disp=False)
     sm_coeff[n,:] = logit_res.params
-
 ## Sklearn
 sk_coeff = np.zeros((N, K))
 if use_spector:

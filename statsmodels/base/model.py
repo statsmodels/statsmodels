@@ -210,34 +210,9 @@ class LikelihoodModel(Model):
                 start_direc : ndarray
                     Initial direction set.
             'l1'
-                alpha : non-negative scalar or numpy array (same size as parameters)
-                    The weight multiplying the l1 penalty term
-                trim_params : boolean (default True)
-                    Set small parameters to zero
-                trim_tol : float or 'auto' (default = 'auto')
-                    If auto, trim params based on the optimality condition
-                    If float, trim params whose absolute value < trim_tol to
-                        zero
-                acc : float (default 1e-6)
-                    Requested accuracy
+                TODO Cut-and-paste from l1_slsqp when ready
             'l1_cvxopt_cp'
-                alpha : non-negative scalar or numpy array (same size as parameters)
-                    The weight multiplying the l1 penalty term
-                trim_params : boolean (default True)
-                    Set small parameters to zero
-                trim_tol : float or 'auto' (default = 'auto')
-                    If auto, trim params based on the optimality condition
-                    If float, trim params whose absolute value < trim_tol to
-                        zero
-                abstol : float
-                    absolute accuracy (default: 1e-7).
-                reltol : float
-                    relative accuracy (default: 1e-6).
-                feastol : float
-                    tolerance for feasibility conditions (default: 1e-7).
-                refinement : int
-                    number of iterative refinement steps when solving KKT
-                    equations (default: 1).
+                TODO Cut-and-paste from l1_cvxopt when ready
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1']
