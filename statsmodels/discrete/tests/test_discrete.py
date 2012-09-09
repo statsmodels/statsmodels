@@ -302,7 +302,8 @@ class TestsCVXOPT(object):
         self.data.exog = sm.add_constant(self.data.exog, prepend=True)
         self.alpha = 3 * np.array([0, 1, 1, 1])
         self.res1 = Logit(self.data.endog, self.data.exog).fit(
-            method="l1", alpha=self.alpha, disp=0, acc=1e-10)
+            method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=500, 
+            trim_params=True, trim_tol='auto')
 
     def test_cvxopt(self):
         """
@@ -310,7 +311,8 @@ class TestsCVXOPT(object):
         """
         if has_cvxopt:
             res3 = Logit(self.data.endog, self.data.exog).fit(
-                method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10)
+                method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
+                trim_params=True, trim_tol='auto', maxiter=100)
             assert_almost_equal(self.res1.params, res3.params, DECIMAL_4)
         else:
             raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
@@ -324,7 +326,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
         cls.alpha = 3 * np.array([0, 1, 1, 1])
         cls.res1 = Logit(data.endog, data.exog).fit(
             method="l1", alpha=cls.alpha, disp=0, trim_params=True, 
-            trim_tol=1e-5, acc=1e-10)
+            trim_tol=1e-5, acc=1e-10, maxiter=500)
         res2 = DiscreteL1()
         res2.logit()
         cls.res2 = res2
@@ -336,7 +338,8 @@ class TestLogitL1AlphaZero(object):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.res1 = Logit(data.endog, data.exog).fit(
-                method="l1", alpha=0, disp=0, acc=1e-15)
+                method="l1", alpha=0, disp=0, acc=1e-15, maxiter=100,
+                trim_params=True, trim_tol='auto')
         cls.res2 = Logit(data.endog, data.exog).fit(disp=0, tol=1e-15)
 
     def test_logit_l1_alpha_zero(self):
