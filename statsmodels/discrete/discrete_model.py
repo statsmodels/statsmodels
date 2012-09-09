@@ -283,7 +283,7 @@ class BinaryModel(DiscreteModel):
         bnryfit = super(BinaryModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
-        if method in ['l1', 'l1_cvxopt_cp']:
+        if method in ['l1', 'l1_cvxopt_cp', 'l1_nm']:
             discretefit = L1BinaryResults(self, bnryfit)
         else:
             discretefit = BinaryResults(self, bnryfit)
@@ -365,7 +365,7 @@ class MultinomialModel(BinaryModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
-        if method in ['l1', 'l1_cvxopt_cp']:
+        if method in ['l1', 'l1_cvxopt_cp', 'l1_nm']:
             mnfit = L1MultinomialResults(self, mnfit)
         else:
             mnfit = MultinomialResults(self, mnfit)

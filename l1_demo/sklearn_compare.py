@@ -50,7 +50,7 @@ if use_spector:
 else:
     alphas = 1 / np.logspace(-4, 2, N)  # for anes96_data
 for n, alpha in enumerate(alphas):
-    logit_res = logit_mod.fit(method='l1', alpha=alpha)
+    logit_res = logit_mod.fit(method='l1', alpha=alpha, trim_tol=1e-2)
     sm_coeff[n,:] = logit_res.params
 
 ## Sklearn
