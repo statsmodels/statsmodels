@@ -85,6 +85,8 @@ def _fit_l1_slsqp(
         trim_tol = kwargs.setdefault('trim_tol', 'auto')
         results = do_trim_params(
                 results, full_output, K, alpha, trim_tol, score)
+    else:
+        results = results, np.array([False] * K)
 
     ### Pack up return values for statsmodels optimizers
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
