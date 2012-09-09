@@ -21,6 +21,7 @@ The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -42,7 +43,10 @@ logit_l1_res = logit_mod.fit(method='l1', alpha=alpha, acc=1e-6)
 # Use l1_cvxopt_cp, which solves with a CVXOPT solver
 logit_l1_cvxopt_res = logit_mod.fit(method='l1_cvxopt_cp', alpha=alpha)
 ## Print results
+print "============ Results for Logit ================="
+print "ML results"
 print logit_res.summary()
+print "l1 results"
 print logit_l1_res.summary()
 print logit_l1_cvxopt_res.summary()
 
@@ -58,7 +62,37 @@ mlogit_res = mlogit_mod.fit()
 alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
 # Don't regularize the constant
 alpha[-1,:] = 0
-mlogit_l1_res = mlogit_mod.fit(method='l1', alpha=alpha, trim_params=True)
+#mlogit_l1_res = mlogit_mod.fit(
+#        method='l1', alpha=alpha, acc=1e-15, trim_tol=1e-6)
+mlogit_l1_res = mlogit_mod.fit(
+        method='l1_nm', alpha=alpha, trim_tol=1e-6)
+#mlogit_l1_res = mlogit_mod.fit(
+#        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-15)
+print mlogit_l1_res.params
 ## Print results
-print mlogit_res.summary()
-print mlogit_l1_res.summary()
+#print "============ Results for MNLogit ================="
+#print "ML results"
+#print mlogit_res.summary()
+#print "l1 results"
+#print mlogit_l1_res.summary()
+#
+#### Logit example with many params, sweeping alpha
+#anes96_data = sm.datasets.anes96.load_pandas()
+#X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
+#Y = anes96_data.exog.vote
+### Fit 
+#N = 200  # number of points to solve at
+#K = X.shape[1]
+#logit_mod = sm.Logit(Y, X)
+#sm_coeff = np.zeros((N, K))  # Holds the coefficients
+#alphas = np.logspace(-2, 4, N) 
+## Sweep alpha and store the coefficients
+#for n, alpha in enumerate(alphas):
+#    logit_res = logit_mod.fit(method='l1', alpha=alpha, trim_tol=1e-2)
+#    sm_coeff[n,:] = logit_res.params
+### Plot
+#plt.figure(1);plt.clf();plt.grid()
+#for i in xrange(K):
+#    plt.plot(alphas, coeff[:,i], label='-X'+str(i))
+#plt.legend(loc='best')
+#plt.show()
