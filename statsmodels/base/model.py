@@ -9,7 +9,6 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.sandbox.regression.numdiff import approx_fprime1
 
 import statsmodels.discrete.l1_slsqp as l1_slsqp
-import statsmodels.discrete.l1_nm as l1_nm
 import pdb  # pdb.set_trace
 try:
     import cvxopt
@@ -129,12 +128,11 @@ class LikelihoodModel(Model):
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
         method : str {'newton','nm','bfgs','powell','cg', 'ncg', 'l1', or 
-                'l1_cvxopt_cp', 'l1_nm'}
+                'l1_cvxopt_cp'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient.  For l1 regularized solves, use either 'l1', 
-            'l1_nm' or
+            conjugate gradient.  For l1 regularized solves, use either 'l1', or
             (if cvxopt is available) 'l1_cvxopt_cp'.  `method` determines which
             solver from scipy.optimize is used.  The explicit arguments in 
             `fit` are passed to the solver.  Each solver has several optional 
@@ -240,21 +238,9 @@ class LikelihoodModel(Model):
                 refinement : int
                     number of iterative refinement steps when solving KKT
                     equations (default: 1).
-            'l1_nm'
-                alpha : non-negative scalar or numpy array (same size as parameters)
-                    The weight multiplying the l1 penalty term
-                trim_params : boolean (default True)
-                    Set small parameters to zero
-                trim_tol : float or 'auto' (default = 'auto')
-                    If auto, trim params based on the optimality condition
-                    If float, trim params whose absolute value < trim_tol to zero
-                xtol : float (default = 1e-4)
-                    Tolerance for the parameters
-                ftol : float (default = 1e-4)
-                    Tolerance for the objective function
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1', 'l1_nm']
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1']
         if have_cvxopt:
             methods.append('l1_cvxopt_cp')
         if start_params is None:
@@ -294,8 +280,7 @@ class LikelihoodModel(Model):
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
-            'l1': l1_slsqp._fit_l1_slsqp,
-            'l1_nm': l1_nm._fit_l1_nm
+            'l1': l1_slsqp._fit_l1_slsqp
         }
         if have_cvxopt:
             from statsmodels.discrete.l1_cvxopt import _fit_l1_cvxopt_cp
@@ -318,7 +303,7 @@ class LikelihoodModel(Model):
         # isn't great
 #        if method == 'bfgs' and full_output:
 #            Hinv = retvals.setdefault('Hinv', 0)
-        elif method in ['l1', 'l1_cvxopt_cp', 'l1_nm']:
+        elif method in ['l1', 'l1_cvxopt_cp']:
             H = self.hessian(xopt)
             trimmed = retvals['trimmed']
             nz_idx = np.nonzero(trimmed == False)[0]
