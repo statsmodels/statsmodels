@@ -90,6 +90,8 @@ def _fit_l1_cvxopt_cp(
         trim_tol = kwargs.setdefault('trim_tol', 'auto')
         results = do_trim_params(
                 results, K, alpha, trim_tol, score)
+    else:
+        results['trimmed'] = np.array([False] * K)
 
     ### Pack up return values for statsmodels
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
