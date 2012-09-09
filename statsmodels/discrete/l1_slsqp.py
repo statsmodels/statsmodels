@@ -140,6 +140,8 @@ def do_trim_params(results, full_output, K, alpha, trim_tol, score):
                 if alpha[i] - abs(fprime[i]) > magic_tol:
                     x[i] = 0.0
                     trimmed[i] = True
+                # If fprime is too big, then we didn't converge properly 
+                # and we shouldn't trust the automatic trimming
                 elif alpha[i] - abs(fprime[i]) < -magic_tol:
                     raise Exception(
                         "Unable to trim params automatically with "\
