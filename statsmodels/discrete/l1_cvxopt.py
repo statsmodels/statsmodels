@@ -22,7 +22,7 @@ def _fit_l1_cvxopt_cp(
     alpha : non-negative scalar or numpy array (same size as parameters)
         The weight multiplying the l1 penalty term
     trim_params : boolean (default True)
-        Set small parameters to zero
+        If true, set small parameters to zero
     trim_tol : float or 'auto' (default = 'auto')
         If auto, trim params based on the optimality condition
         If float, trim params whose absolute value < trim_tol to zero
@@ -36,9 +36,6 @@ def _fit_l1_cvxopt_cp(
         number of iterative refinement steps when solving KKT equations
         (default: 1).
     """
-
-    if callback:
-        print "Callback will be ignored with l1_cvxopt_cp"
     start_params = np.array(start_params).ravel('F')
 
     ## Extract arguments
@@ -89,14 +86,14 @@ def _fit_l1_cvxopt_cp(
     if trim_params:
         trim_tol = kwargs.setdefault('trim_tol', 'auto')
         results = do_trim_params(
-                results, K, alpha, trim_tol, score)
+            results, K, alpha, trim_tol, score)
     else:
-        results['trimmed'] = np.array([False] * K)
+        results['trimmed'] = np.asarray([False] * K)
 
     ### Pack up return values for statsmodels
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML
     if full_output:
-        x = np.array(results['x']).ravel()
+        x = np.asarray(results['x']).ravel()
         params = x[:K]
         fopt = f_0(x)
         gopt = float('nan')  # Objective is non-differentiable
@@ -167,7 +164,7 @@ def objective_func(f, x, K, alpha, *args):
     """
     The regularized objective function.
     """
-    x_arr = np.array(x)
+    x_arr = np.asarray(x)
     params = x_arr[:K].ravel()
     u = x_arr[K:]
     # Call the numpy version
@@ -180,7 +177,7 @@ def fprime(score, x, K, alpha):
     """
     The regularized derivative.
     """
-    x_arr = np.array(x)
+    x_arr = np.asarray(x)
     params = x_arr[:K].ravel()
     # Call the numpy version
     # The derivative just appends a vector of constants
@@ -204,10 +201,13 @@ def get_G(K):
 def hessian_wrapper(hess, x, z, K):
     """
     Wraps the hessian up in the form for cvxopt.
+
+    cvxopt wants the hessian of the objective function and the constraints.  
+        Since our constraints are linear, this part is all zeros.
     """
-    x_arr = np.array(x)
+    x_arr = np.asarray(x)
     params = x_arr[:K].ravel()
-    zh_x = np.array(z[0]) * hess(params)
+    zh_x = np.asarray(z[0]) * hess(params)
     zero_mat = np.zeros(zh_x.shape)
     A = np.concatenate((zh_x, zero_mat), axis=1)
     B = np.concatenate((zero_mat, zero_mat), axis=1)
