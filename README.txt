@@ -1,6 +1,8 @@
 What the l1 addition is
 =======================
-A slight modification that allows l1 regularized LikelihoodModel .  
+A slight modification that allows l1 regularized LikelihoodModel.
+
+Regularization is handled by a fit_regularized method.
 
 Main Files
 ==========
@@ -27,6 +29,9 @@ statsmodels/discrete/l1_slsqp.py
     _fit_l1_slsqp() 
         Fit likelihood model using l1 regularization.  Use scipy.optimize
     Lots of small functions supporting _fit_l1_slsqp
+
+statsmodels/discrete/l1_solvers_common.py
+    Common methods used by l1 solvers
 
 statsmodels/base/model.py
     Likelihoodmodel.fit() 
