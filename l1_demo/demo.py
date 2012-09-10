@@ -203,12 +203,13 @@ def run_solvers(model, true_params, alpha, get_l1_slsqp_results,
     # Get l1 results
     start_params = results['results_ML'].params.ravel(order='F')
     if get_l1_slsqp_results:
-        results['results_l1_slsqp'] = model.fit(method='l1', alpha=alpha, 
-                maxiter=1000, start_params=start_params, retall=True)
+        results['results_l1_slsqp'] = model.fit_regularized(
+                method='l1', alpha=alpha, maxiter=1000,
+                start_params=start_params, retall=True)
     if get_l1_cvxopt_results:
-        results['results_l1_cvxopt_cp'] = model.fit(method='l1_cvxopt_cp',
-                alpha=alpha, maxiter=50, start_params=start_params, 
-                retall=True, feastol=1e-5)
+        results['results_l1_cvxopt_cp'] = model.fit_regularized(
+                method='l1_cvxopt_cp', alpha=alpha, maxiter=50,
+                start_params=start_params, retall=True, feastol=1e-5)
 
     return results
 
