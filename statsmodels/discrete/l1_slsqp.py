@@ -82,12 +82,17 @@ def _fit_l1_slsqp(
 
     ### Post-process
     # QC
+    QC_tol = kwargs['QC_tol']
     params = np.asarray(results[0][:k_params])
     passed, QC_dict = l1_solvers_common.QC_results(
-        params, alpha, score, kwargs)
+        params, alpha, score, QC_tol)
     # Possibly trim
+    trim_mode = kwargs['trim_mode']
+    size_trim_tol = kwargs['size_trim_tol']
+    auto_trim_tol = kwargs['auto_trim_tol']
     params, trimmed = l1_solvers_common.do_trim_params(
-        params, k_params, alpha, score, passed, kwargs)
+        params, k_params, alpha, score, passed, trim_mode, size_trim_tol,
+        auto_trim_tol)
 
     ### Pack up return values for statsmodels optimizers
     # TODO These retvals are returned as mle_retvals...but the fit wasn't ML.
