@@ -8,13 +8,7 @@ from statsmodels.tools.decorators import (resettable_cache,
 import statsmodels.base.wrapper as wrap
 from statsmodels.sandbox.regression.numdiff import approx_fprime1
 
-import statsmodels.discrete.l1_slsqp as l1_slsqp
 import pdb  # pdb.set_trace
-try:
-    import cvxopt
-    have_cvxopt = True
-except ImportError:
-    have_cvxopt = False
 
 
 class Model(object):
@@ -118,7 +112,8 @@ class LikelihoodModel(Model):
 
     def fit(self, start_params=None, method='newton', maxiter=100, 
             full_output=True, disp=True, fargs=(), callback=None, 
-            retall=False, **kwargs):
+            retall=False, extra_fit_funcs=None, Hinv_func=None, 
+            **kwargs):
         """
         Fit method for likelihood based models
 
@@ -127,17 +122,15 @@ class LikelihoodModel(Model):
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg', 'ncg', 'l1', or 
-                'l1_cvxopt_cp'}
+        method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient.  For l1 regularized solves, use either 'l1', or
-            (if cvxopt is available) 'l1_cvxopt_cp'.  `method` determines which
-            solver from scipy.optimize is used.  The explicit arguments in 
-            `fit` are passed to the solver.  Each solver has several optional 
-            arguments that are not the same across solvers.  See the notes 
-            section below (or scipy.optimize) for the available arguments.
+            conjugate gradient.  `method` determines which solver from 
+            scipy.optimize is used.  The explicit arguments in `fit` are
+            passed to the solver.  Each solver has several optional arguments
+            that are not the same across solvers.  See the notes section below
+            (or scipy.optimize) for the available arguments.
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -155,6 +148,11 @@ class LikelihoodModel(Model):
         retall : bool
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
+        extra_fit_funcs : Dictionary
+            Keys are methods and values are fit functions to use.  Populating
+            this dictionary has the effect of adding new methods
+        Hinv_func : Function
+            Used to compute the inverse Hessian
 
         Notes
         -----
@@ -209,15 +207,11 @@ class LikelihoodModel(Model):
                     Maximum number of function evaluations to make.
                 start_direc : ndarray
                     Initial direction set.
-            'l1'
-                TODO Cut-and-paste from l1_slsqp when ready
-            'l1_cvxopt_cp'
-                TODO Cut-and-paste from l1_cvxopt when ready
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'l1']
-        if have_cvxopt:
-            methods.append('l1_cvxopt_cp')
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
+        if extra_fit_funcs:
+            methods += extra_fit_funcs.keys()
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
@@ -229,11 +223,7 @@ class LikelihoodModel(Model):
                                  "be specified")
 
         if method.lower() not in methods:
-            if method.lower() == 'l1_cvxopt_cp' and not have_cvxopt:
-                message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
-                could not be imported"""
-            else:
-                message = "Unknown fit method %s" % method
+            message = "Unknown fit method %s" % method
             raise ValueError(message)
         method = method.lower()
 
@@ -254,12 +244,10 @@ class LikelihoodModel(Model):
             'bfgs': _fit_mle_bfgs,
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
-            'powell': _fit_mle_powell,
-            'l1': l1_slsqp._fit_l1_slsqp
+            'powell': _fit_mle_powell
         }
-        if have_cvxopt:
-            from statsmodels.discrete.l1_cvxopt import _fit_l1_cvxopt_cp
-            fit_funcs['l1_cvxopt_cp'] = _fit_l1_cvxopt_cp
+        if extra_fit_funcs:
+            fit_funcs.update(extra_fit_funcs)
 
         if method == 'newton':
             score = lambda params: self.score(params)
@@ -278,21 +266,9 @@ class LikelihoodModel(Model):
         # isn't great
 #        if method == 'bfgs' and full_output:
 #            Hinv = retvals.setdefault('Hinv', 0)
-        elif method in ['l1', 'l1_cvxopt_cp']:
-            H = self.hessian(xopt)
-            trimmed = retvals['trimmed']
-            nz_idx = np.nonzero(trimmed == False)[0]
-            nnz_params = (trimmed == False).sum()
-            if nnz_params > 0:
-                H_restricted = np.zeros((nnz_params, nnz_params))
-                for new_i, old_i in enumerate(nz_idx):
-                    for new_j, old_j in enumerate(nz_idx):
-                        H_restricted[new_i, new_j] = H[old_i, old_j]
-                # Covariance estimate for the nonzero params
-                Hinv = np.linalg.inv(-H_restricted)
-            else:
-                Hinv = np.nan
-
+        # If we have full_output, then compute the inverse Hessian
+        elif Hinv_func:
+            Hinv = Hinv_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian'])
         else:

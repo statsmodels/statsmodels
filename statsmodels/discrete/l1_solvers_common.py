@@ -4,7 +4,7 @@ Holds common functions for l1 solvers.
 import numpy as np
 
 
-def QC_results(params, alpha, score, kwargs):
+def QC_results(params, alpha, score, QC_tol):
     """
     Theory dictates that one of two conditions holds:
         i) abs(score[i]) == alpha[i]  and  params[i] != 0
@@ -21,8 +21,8 @@ def QC_results(params, alpha, score, kwargs):
         regularization coefficients
     score : function
         Gradient of unregularized objective function
-    kwargs : Dictionary
-        The usual **kwargs passed to calling function.
+    QC_tol : float
+        Tolerance to hold conditions (i) and (ii) to for QC check.
 
     Returns
     -------
@@ -35,9 +35,6 @@ def QC_results(params, alpha, score, kwargs):
     ------
     Warning message if QC check fails.
     """
-    ## Extract kwargs
-    QC_tol = kwargs.setdefault('QC_tol', 0.03)
-
     ## Check for fatal errors
     assert not np.isnan(params).max()
     assert (params == params.ravel('F')).min(), \
@@ -67,7 +64,8 @@ def QC_results(params, alpha, score, kwargs):
     return passed, QC_dict
 
 
-def do_trim_params(params, k_params, alpha, score, passed, kwargs):
+def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
+        size_trim_tol, auto_trim_tol):
     """
     Trims (set to zero) params that are zero at the theoretical minimum.
     Uses heuristics to account for the solver not actually finding the minimum.
@@ -88,8 +86,18 @@ def do_trim_params(params, k_params, alpha, score, passed, kwargs):
         unpenalized objective function.
     passed : Boolean
         True if the QC check passed
-    kwargs : Dictionary
-        The usual **kwargs passed to calling function.
+    trim_mode : 'auto, 'size', or 'off'
+        If not 'off', trim (set to zero) parameters that would have been zero
+            if the solver reached the theoretical minimum.
+        If 'auto', trim params using the Theory above.
+        If 'size', trim params if they have very small absolute value
+    size_trim_tol : float or 'auto' (default = 'auto')
+        For use when trim_mode === 'size'
+    auto_trim_tol : float
+        For sue when trim_mode == 'auto'.  Use
+    QC_tol : float
+        Print warning and don't allow auto trim when (ii) in "Theory" (above)
+        is violated by this much.
 
     Returns
     -------
@@ -98,11 +106,6 @@ def do_trim_params(params, k_params, alpha, score, passed, kwargs):
     trimmed : np.ndarray of Booleans
         trimmed[i] == True if the ith parameter was trimmed.
     """
-    ## Extract kwargs
-    trim_mode = kwargs.setdefault('trim_mode', 'auto')
-    size_trim_tol = kwargs.setdefault('size_trim_tol', 1e-4)
-    auto_trim_tol = kwargs.setdefault('auto_trim_tol', 0.01)
-
     ## Trim the small params
     trimmed = [False] * k_params
 

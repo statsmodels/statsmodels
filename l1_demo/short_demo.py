@@ -39,9 +39,10 @@ logit_res = logit_mod.fit()
 # Set the reularization parameter to something reasonable
 alpha = 0.05 * N * np.ones(K)
 # Use l1, which solves via a built-in (scipy.optimize) solver
-logit_l1_res = logit_mod.fit(method='l1', alpha=alpha, acc=1e-6)
+logit_l1_res = logit_mod.fit_regularized(method='l1', alpha=alpha, acc=1e-6)
 # Use l1_cvxopt_cp, which solves with a CVXOPT solver
-logit_l1_cvxopt_res = logit_mod.fit(method='l1_cvxopt_cp', alpha=alpha)
+logit_l1_cvxopt_res = logit_mod.fit_regularized(
+        method='l1_cvxopt_cp', alpha=alpha)
 ## Print results
 print "============ Results for Logit ================="
 print "ML results"
@@ -62,13 +63,14 @@ mlogit_res = mlogit_mod.fit()
 alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
 # Don't regularize the constant
 alpha[-1,:] = 0
-mlogit_l1_res = mlogit_mod.fit(
+mlogit_l1_res = mlogit_mod.fit_regularized(
         method='l1', alpha=alpha, trim_tol=1e-6, 
         start_params=0.0*np.ones(alpha.shape), maxiter=5000)
 print mlogit_l1_res.params
-mlogit_l1_res = mlogit_mod.fit(
-        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
-print mlogit_l1_res.params
+# CVXOPT isn't up to date
+#mlogit_l1_res = mlogit_mod.fit_regularized(
+#        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
+#print mlogit_l1_res.params
 ## Print results
 print "============ Results for MNLogit ================="
 print "ML results"
@@ -76,23 +78,23 @@ print mlogit_res.summary()
 print "l1 results"
 print mlogit_l1_res.summary()
 
-### Logit example with many params, sweeping alpha
-anes96_data = sm.datasets.anes96.load_pandas()
-X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
-Y = anes96_data.exog.vote
-## Fit 
-N = 100  # number of points to solve at
-K = X.shape[1]
-logit_mod = sm.Logit(Y, X)
-coeff = np.zeros((N, K))  # Holds the coefficients
-alphas = np.logspace(-2, 4, N) 
-# Sweep alpha and store the coefficients
-for n, alpha in enumerate(alphas):
-    logit_res = logit_mod.fit(method='l1', alpha=alpha)
-    coeff[n,:] = logit_res.params
-## Plot
-plt.figure(1);plt.clf();plt.grid()
-for i in xrange(K):
-    plt.plot(alphas, coeff[:,i], label='-X'+str(i))
-plt.legend(loc='best')
-plt.show()
+#### Logit example with many params, sweeping alpha
+#anes96_data = sm.datasets.anes96.load_pandas()
+#X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
+#Y = anes96_data.exog.vote
+### Fit 
+#N = 100  # number of points to solve at
+#K = X.shape[1]
+#logit_mod = sm.Logit(Y, X)
+#coeff = np.zeros((N, K))  # Holds the coefficients
+#alphas = np.logspace(-2, 4, N) 
+## Sweep alpha and store the coefficients
+#for n, alpha in enumerate(alphas):
+#    logit_res = logit_mod.fit_regularized(method='l1', alpha=alpha)
+#    coeff[n,:] = logit_res.params
+### Plot
+#plt.figure(1);plt.clf();plt.grid()
+#for i in xrange(K):
+#    plt.plot(alphas, coeff[:,i], label='-X'+str(i))
+#plt.legend(loc='best')
+#plt.show()

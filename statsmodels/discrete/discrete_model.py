@@ -31,6 +31,13 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
+from statsmodels.discrete.l1_slsqp import _fit_l1_slsqp
+try:
+    import cvxopt
+    have_cvxopt = True
+except ImportError:
+    have_cvxopt = False
+
 import pdb  # pdb.set_trace
 
 #TODO: add options for the parameter covariance/variance
@@ -238,6 +245,130 @@ class DiscreteModel(base.LikelihoodModel):
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            QC_tol=0.03, **kwargs):
+        """
+        Fit the model using a regularized maximum likelihood.  
+        The regularization method AND the solver used is determined by the
+        argument method.
+
+        Replacment Parameters
+        ---------------------
+        method : 'l1' or 'l1_cvxopt_cp'
+            See notes for details.
+        maxiter : Integer or 'defined_by_method'
+            Maximum number of iterations to allow the solver to use.
+            If 'defined_by_method', then use method defaults (see notes).
+
+
+        New Parameters
+        ------------------
+        alpha : non-negative scalar or numpy array (same size as parameters)
+            The weight multiplying the l1 penalty term
+        trim_mode : 'auto, 'size', or 'off'
+            If not 'off', trim (set to zero) parameters that would have been zero
+                if the solver reached the theoretical minimum.
+            If 'auto', trim params using the Theory above.
+            If 'size', trim params if they have very small absolute value
+        size_trim_tol : float or 'auto' (default = 'auto')
+            For use when trim_mode === 'size'
+        auto_trim_tol : float
+            For sue when trim_mode == 'auto'.  Use
+        QC_tol : float
+            Print warning and don't allow auto trim when (ii) in "Theory" (above)
+            is violated by this much.
+
+        Notes
+        -----
+        Optional arguments for the solvers (available in Results.mle_settings):
+            'l1'
+                TODO Cut-and-paste from l1_slsqp when ready
+            'l1_cvxopt_cp'
+                TODO Cut-and-paste from l1_cvxopt when ready
+
+        TODO: The docstring won't be right since it will include all the
+        solvers for LikelihoodModel.fit
+
+        The rest of the docstring is from
+        statsmodels.LikelihoodModel.fit
+        """
+        ### Bundle up extra kwargs for the dictionary kwargs.  These are 
+        ### passed through super(...).fit() as kwargs and unpacked at 
+        ### appropriate times
+        alpha = np.array(alpha)
+        assert alpha.min() >= 0
+        try:
+            kwargs['alpha'] = alpha
+        except TypeError:
+            kwargs = dict(alpha=alpha)
+        kwargs['trim_mode'] = trim_mode
+        kwargs['size_trim_tol'] = size_trim_tol
+        kwargs['auto_trim_tol'] = auto_trim_tol
+        kwargs['QC_tol'] = QC_tol
+
+        ### Define default keyword arguments to be passed to super(...).fit()
+        if maxiter == 'defined_by_method':
+            if method == 'l1':
+                maxiter = 1000
+            elif method == 'l1_cvxopt_cp':
+                maxiter = 70
+
+        ## Parameters to pass to super(...).fit()
+        # For the 'extra' parameters, pass all that are available,
+        # even if we know (at this point) we will only use one.
+        extra_fit_funcs = {'l1': _fit_l1_slsqp}
+        if have_cvxopt:
+            from statsmodels.discrete.l1_cvxopt import _fit_l1_cvxopt_cp
+            extra_fit_funcs['l1_cvxopt_cp'] = _fit_l1_cvxopt_cp
+        elif method.lower() == 'l1_cvxopt_cp':
+            message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
+            could not be imported"""
+
+        if method in ['l1', 'l1_cvxopt_cp']:
+            Hinv_func = self.Hinv_func_l1
+ 
+        # TODO Depending on alpha, perfect separation may or may not be a
+        # problem.  In a nutshell, if a separating hyperplane is given by
+        # x\cdot w = a, then if alpha \cdot w \neq 0 the regularization 
+        # will prevent infinite parameter values even with perfect separation.
+        if callback is None:
+            callback = self._check_perfect_pred
+        else:
+            pass # make a function factory to have multiple call-backs
+
+        mlefit = super(DiscreteModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, extra_fit_funcs=extra_fit_funcs,
+                Hinv_func=Hinv_func, **kwargs)
+        return mlefit # up to subclasses to wrap results
+
+    fit_regularized.__doc__ += base.LikelihoodModel.fit.__doc__
+
+    def Hinv_func_l1(self, likelihood_model, xopt, retvals):
+        """
+        Computes the inverse Hessian on a reduced parameter space
+        corresponding to the nonzero parameters resulting from the
+        l1 regularized fit.
+        """
+        H = likelihood_model.hessian(xopt)
+        trimmed = retvals['trimmed']
+        nz_idx = np.nonzero(trimmed == False)[0]
+        nnz_params = (trimmed == False).sum()
+        if nnz_params > 0:
+            H_restricted = np.zeros((nnz_params, nnz_params))
+            for new_i, old_i in enumerate(nz_idx):
+                for new_j, old_j in enumerate(nz_idx):
+                    H_restricted[new_i, new_j] = H[old_i, old_j]
+            # Covariance estimate for the nonzero params
+            Hinv = np.linalg.inv(-H_restricted)
+        else:
+            Hinv = np.nan
+
+        return Hinv
+
+
     def predict(self, params, exog=None, linear=False):
         """
         Predict response variable of a model given exogenous variables.
@@ -283,12 +414,26 @@ class BinaryModel(DiscreteModel):
         bnryfit = super(BinaryModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
+        discretefit = BinaryResults(self, bnryfit)
+        return BinaryResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            QC_tol=0.03, **kwargs):
+        bnryfit = super(BinaryModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, QC_tol=QC_tol, **kwargs)
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = L1BinaryResults(self, bnryfit)
         else:
-            discretefit = BinaryResults(self, bnryfit)
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
         return BinaryResultsWrapper(discretefit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
+    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
 
     def _derivative_exog(self, params, exog=None):
         """
@@ -365,12 +510,28 @@ class MultinomialModel(BinaryModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
+        mnfit = MultinomialResults(self, mnfit)
+        return MultinomialResultsWrapper(mnfit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            QC_tol=0.03, **kwargs):
+        mnfit = DiscreteModel.fit_regularized(
+                self, start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, QC_tol=QC_tol, **kwargs)
+        mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
         if method in ['l1', 'l1_cvxopt_cp']:
             mnfit = L1MultinomialResults(self, mnfit)
         else:
-            mnfit = MultinomialResults(self, mnfit)
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
         return MultinomialResultsWrapper(mnfit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
+    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
+
 
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None):

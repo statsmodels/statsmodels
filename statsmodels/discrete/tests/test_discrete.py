@@ -295,24 +295,24 @@ class CheckLikelihoodModelL1(object):
                 self.res1.nnz_params, self.res2.nnz_params, DECIMAL_4)
 
 
-class TestsCVXOPT(object):
+class TestCVXOPT(object):
     @classmethod
     def setupClass(self):
         self.data = sm.datasets.spector.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=True)
         self.alpha = 3 * np.array([0, 1, 1, 1])
-        self.res1 = Logit(self.data.endog, self.data.exog).fit(
-            method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=500, 
-            trim_params=True, trim_tol='auto')
+        self.res1 = Logit(self.data.endog, self.data.exog).fit_regularized(
+            method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000, 
+            trim_mode='auto')
 
     def test_cvxopt(self):
         """
-        Compares resutls from csxopt to the standard slsqp
+        Compares resutls from cvxopt to the standard slsqp
         """
         if has_cvxopt:
-            res3 = Logit(self.data.endog, self.data.exog).fit(
+            res3 = Logit(self.data.endog, self.data.exog).fit_regularized(
                 method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
-                trim_params=True, trim_tol='auto', maxiter=100)
+                trim_mode='auto', auto_trim_tol=0.01, maxiter=1000)
             assert_almost_equal(self.res1.params, res3.params, DECIMAL_4)
         else:
             raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
@@ -324,9 +324,9 @@ class TestLogitL1(CheckLikelihoodModelL1):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.alpha = 3 * np.array([0, 1, 1, 1])
-        cls.res1 = Logit(data.endog, data.exog).fit(
-            method="l1", alpha=cls.alpha, disp=0, trim_params=True, 
-            trim_tol=1e-5, acc=1e-10, maxiter=500)
+        cls.res1 = Logit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=cls.alpha, disp=0, trim_mode='size', 
+            size_trim_tol=1e-5, acc=1e-10, maxiter=1000)
         res2 = DiscreteL1()
         res2.logit()
         cls.res2 = res2
@@ -337,9 +337,9 @@ class TestLogitL1AlphaZero(object):
     def setupClass(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
-        cls.res1 = Logit(data.endog, data.exog).fit(
-                method="l1", alpha=0, disp=0, acc=1e-15, maxiter=100,
-                trim_params=True, trim_tol='auto')
+        cls.res1 = Logit(data.endog, data.exog).fit_regularized(
+                method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1000,
+                trim_mode='auto', auto_trim_tol=0.01)
         cls.res2 = Logit(data.endog, data.exog).fit(disp=0, tol=1e-15)
 
     def test_logit_l1_alpha_zero(self):
