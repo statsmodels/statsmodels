@@ -31,7 +31,7 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
-from statsmodels.discrete.l1_slsqp import _fit_l1_slsqp
+from statsmodels.base.l1_slsqp import _fit_l1_slsqp
 try:
     import cvxopt
     have_cvxopt = True
@@ -320,7 +320,7 @@ class DiscreteModel(base.LikelihoodModel):
         # even if we know (at this point) we will only use one.
         extra_fit_funcs = {'l1': _fit_l1_slsqp}
         if have_cvxopt:
-            from statsmodels.discrete.l1_cvxopt import _fit_l1_cvxopt_cp
+            from statsmodels.base.l1_cvxopt import _fit_l1_cvxopt_cp
             extra_fit_funcs['l1_cvxopt_cp'] = _fit_l1_cvxopt_cp
         elif method.lower() == 'l1_cvxopt_cp':
             message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
