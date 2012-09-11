@@ -10,7 +10,7 @@ import pdb
 
 
 def _fit_l1_slsqp(
-        f, score, start_params, args, kwargs, disp=None, maxiter=100,
+        f, score, start_params, args, kwargs, disp=False, maxiter=1000,
         callback=None, retall=False, full_output=False, hess=None):
     """
     Solve the l1 regularized problem using scipy.optimize.fmin_slsqp().
@@ -66,7 +66,7 @@ def _fit_l1_slsqp(
     # Convert display parameters to scipy.optimize form
     disp_slsqp = get_disp_slsqp(disp, retall)
     # Set/retrieve the desired accuracy
-    acc = kwargs.setdefault('acc', 1e-6)
+    acc = kwargs.setdefault('acc', 1e-10)
 
     ### Wrap up for use in fmin_slsqp
     func = lambda x_full: objective_func(f, x_full, k_params, alpha, *args)
