@@ -64,8 +64,8 @@ alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
 # Don't regularize the constant
 alpha[-1,:] = 0
 mlogit_l1_res = mlogit_mod.fit_regularized(
-        method='l1', alpha=alpha, trim_tol=1e-6, 
-        start_params=0.0*np.ones(alpha.shape), maxiter=5000)
+    method='l1', alpha=alpha, trim_tol=1e-6, 
+    start_params=0.0*np.ones(alpha.shape))
 print mlogit_l1_res.params
 # CVXOPT isn't up to date
 #mlogit_l1_res = mlogit_mod.fit_regularized(
@@ -88,15 +88,21 @@ K = X.shape[1]
 logit_mod = sm.Logit(Y, X)
 coeff = np.zeros((N, K))  # Holds the coefficients
 alphas = 1 / np.logspace(-2.65, 2, N)
-# Sweep alpha and store the coefficients
-# When alpha is very high, QC check doesn't always pass
+## Sweep alpha and store the coefficients
+# QC check doesn't always pass with the default options.  
+# Use the options QC_verbose=True and disp=True
+# to to see what is happening.  It just barely doesn't pass, so I decreased
+# acc and increased QC_tol to make it pass
 for n, alpha in enumerate(alphas):
     logit_res = logit_mod.fit_regularized(
-            method='l1', alpha=alpha, trim_mode='off', disp=False, acc=1e-15)
+        method='l1', alpha=alpha, trim_mode='off', QC_tol=0.1, disp=False,
+        QC_verbose=True, acc=1e-15)
     coeff[n,:] = logit_res.params
 ## Plot
 plt.figure(1);plt.clf();plt.grid()
-plt.title('Regularization Path'); plt.xlabel('alpha'); plt.ylabel('Parameter value');
+plt.title('Regularization Path');
+plt.xlabel('alpha');
+plt.ylabel('Parameter value');
 for i in xrange(K):
     plt.plot(alphas, coeff[:,i], label='-X'+str(i), lw=3)
 plt.legend(loc='best')
