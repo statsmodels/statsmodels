@@ -51,59 +51,59 @@ print "l1 results"
 print logit_l1_res.summary()
 print logit_l1_cvxopt_res.summary()
 
-### Multinomial Logit Example using American National Election Studies Data
-anes_data = sm.datasets.anes96.load()
-anes_exog = anes_data.exog
-anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
-anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
-anes_exog = sm.add_constant(anes_exog, prepend=False)
-mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
-mlogit_res = mlogit_mod.fit()
-## Set the regularization parameter.  
-alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
-# Don't regularize the constant
-alpha[-1,:] = 0
-mlogit_l1_res = mlogit_mod.fit_regularized(
-    method='l1', alpha=alpha, trim_tol=1e-6, 
-    start_params=0.0*np.ones(alpha.shape))
-print mlogit_l1_res.params
-# CVXOPT isn't up to date
+#### Multinomial Logit Example using American National Election Studies Data
+#anes_data = sm.datasets.anes96.load()
+#anes_exog = anes_data.exog
+#anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
+#anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
+#anes_exog = sm.add_constant(anes_exog, prepend=False)
+#mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
+#mlogit_res = mlogit_mod.fit()
+### Set the regularization parameter.  
+#alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+## Don't regularize the constant
+#alpha[-1,:] = 0
 #mlogit_l1_res = mlogit_mod.fit_regularized(
-#        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
+#    method='l1', alpha=alpha, trim_tol=1e-6, 
+#    start_params=0.0*np.ones(alpha.shape))
 #print mlogit_l1_res.params
-## Print results
-print "============ Results for MNLogit ================="
-print "ML results"
-print mlogit_res.summary()
-print "l1 results"
-print mlogit_l1_res.summary()
-
-### Logit example with many params, sweeping alpha
-anes96_data = sm.datasets.anes96.load_pandas()
-X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
-Y = anes96_data.exog.vote
-## Fit 
-N = 100  # number of points to solve at
-K = X.shape[1]
-logit_mod = sm.Logit(Y, X)
-coeff = np.zeros((N, K))  # Holds the coefficients
-alphas = 1 / np.logspace(-2.65, 2, N)
-## Sweep alpha and store the coefficients
-# QC check doesn't always pass with the default options.  
-# Use the options QC_verbose=True and disp=True
-# to to see what is happening.  It just barely doesn't pass, so I decreased
-# acc and increased QC_tol to make it pass
-for n, alpha in enumerate(alphas):
-    logit_res = logit_mod.fit_regularized(
-        method='l1', alpha=alpha, trim_mode='off', QC_tol=0.1, disp=False,
-        QC_verbose=True, acc=1e-15)
-    coeff[n,:] = logit_res.params
-## Plot
-plt.figure(1);plt.clf();plt.grid()
-plt.title('Regularization Path');
-plt.xlabel('alpha');
-plt.ylabel('Parameter value');
-for i in xrange(K):
-    plt.plot(alphas, coeff[:,i], label='-X'+str(i), lw=3)
-plt.legend(loc='best')
-plt.show()
+## CVXOPT isn't up to date
+##mlogit_l1_res = mlogit_mod.fit_regularized(
+##        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
+##print mlogit_l1_res.params
+### Print results
+#print "============ Results for MNLogit ================="
+#print "ML results"
+#print mlogit_res.summary()
+#print "l1 results"
+#print mlogit_l1_res.summary()
+#
+#### Logit example with many params, sweeping alpha
+#anes96_data = sm.datasets.anes96.load_pandas()
+#X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
+#Y = anes96_data.exog.vote
+### Fit 
+#N = 100  # number of points to solve at
+#K = X.shape[1]
+#logit_mod = sm.Logit(Y, X)
+#coeff = np.zeros((N, K))  # Holds the coefficients
+#alphas = 1 / np.logspace(-2.65, 2, N)
+### Sweep alpha and store the coefficients
+## QC check doesn't always pass with the default options.  
+## Use the options QC_verbose=True and disp=True
+## to to see what is happening.  It just barely doesn't pass, so I decreased
+## acc and increased QC_tol to make it pass
+#for n, alpha in enumerate(alphas):
+#    logit_res = logit_mod.fit_regularized(
+#        method='l1', alpha=alpha, trim_mode='off', QC_tol=0.1, disp=False,
+#        QC_verbose=True, acc=1e-15)
+#    coeff[n,:] = logit_res.params
+### Plot
+#plt.figure(1);plt.clf();plt.grid()
+#plt.title('Regularization Path');
+#plt.xlabel('alpha');
+#plt.ylabel('Parameter value');
+#for i in xrange(K):
+#    plt.plot(alphas, coeff[:,i], label='X'+str(i), lw=3)
+#plt.legend(loc='best')
+#plt.show()

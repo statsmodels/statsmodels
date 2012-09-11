@@ -248,7 +248,7 @@ class DiscreteModel(base.LikelihoodModel):
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            QC_tol=0.03, **kwargs):
+            QC_tol=0.03, QC_verbose=False, **kwargs):
         """
         Fit the model using a regularized maximum likelihood.  
         The regularization method AND the solver used is determined by the
@@ -279,6 +279,8 @@ class DiscreteModel(base.LikelihoodModel):
         QC_tol : float
             Print warning and don't allow auto trim when (ii) in "Theory" (above)
             is violated by this much.
+        QC_verbose : Boolean
+            If true, print out a full QC report upon failure
 
         Notes
         -----
@@ -307,6 +309,7 @@ class DiscreteModel(base.LikelihoodModel):
         kwargs['size_trim_tol'] = size_trim_tol
         kwargs['auto_trim_tol'] = auto_trim_tol
         kwargs['QC_tol'] = QC_tol
+        kwargs['QC_verbose'] = QC_verbose
 
         ### Define default keyword arguments to be passed to super(...).fit()
         if maxiter == 'defined_by_method':
@@ -327,7 +330,7 @@ class DiscreteModel(base.LikelihoodModel):
             could not be imported"""
 
         if method in ['l1', 'l1_cvxopt_cp']:
-            Hinv_func = self.Hinv_func_l1
+            cov_params_func = self.cov_params_func_l1
  
         if callback is None:
             callback = self._check_perfect_pred
@@ -337,16 +340,19 @@ class DiscreteModel(base.LikelihoodModel):
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, extra_fit_funcs=extra_fit_funcs,
-                Hinv_func=Hinv_func, **kwargs)
+                cov_params_func=cov_params_func, **kwargs)
         return mlefit # up to subclasses to wrap results
 
     fit_regularized.__doc__ += base.LikelihoodModel.fit.__doc__
 
-    def Hinv_func_l1(self, likelihood_model, xopt, retvals):
+    def cov_params_func_l1(self, likelihood_model, xopt, retvals):
         """
-        Computes the inverse Hessian on a reduced parameter space
+        Computes cov_params on a reduced parameter space
         corresponding to the nonzero parameters resulting from the
         l1 regularized fit.
+
+        Returns a full cov_params matrix, with entries corresponding
+        to zero'd values set to np.nan.
         """
         H = likelihood_model.hessian(xopt)
         trimmed = retvals['trimmed']
@@ -358,11 +364,14 @@ class DiscreteModel(base.LikelihoodModel):
                 for new_j, old_j in enumerate(nz_idx):
                     H_restricted[new_i, new_j] = H[old_i, old_j]
             # Covariance estimate for the nonzero params
-            Hinv = np.linalg.inv(-H_restricted)
-        else:
-            Hinv = np.nan
+            H_restricted_inv = np.linalg.inv(-H_restricted)
 
-        return Hinv
+        cov_params = np.nan * np.ones(H.shape)
+        for new_i, old_i in enumerate(nz_idx):
+            for new_j, old_j in enumerate(nz_idx):
+                cov_params[old_i, old_j] = H_restricted_inv[new_i, new_j]
+
+        return cov_params
 
 
     def predict(self, params, exog=None, linear=False):
@@ -1984,17 +1993,6 @@ class L1BinaryResults(BinaryResults):
         self.nnz_params = (self.trimmed == False).sum()
 
     @cache_readonly
-    def bse(self):
-        # Indices of nonzero params
-        nz_idx = np.nonzero(self.trimmed == False)[0]
-        # Covariance of nonzero params
-        num_params = len(self.trimmed)
-        bse = np.nan * np.ones(num_params)
-        for new_i, old_i in enumerate(nz_idx):
-            bse[old_i] = np.sqrt(self.cov_params().diagonal()[new_i])
-        return bse.reshape(self.params.shape, order='F')
-
-    @cache_readonly
     def aic(self):
         return -2*(self.llf - self.nnz_params)
 
@@ -2076,17 +2074,6 @@ class L1MultinomialResults(MultinomialResults):
         # entry in params has been set zero'd out.
         self.trimmed = mlefit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
-
-    @cache_readonly
-    def bse(self):
-        # Indices of nonzero params
-        nz_idx = np.nonzero(self.trimmed == False)[0]
-        # Covariance of nonzero params
-        num_params = len(self.trimmed)
-        bse = np.nan * np.ones(num_params)
-        for new_i, old_i in enumerate(nz_idx):
-            bse[old_i] = np.sqrt(self.cov_params().diagonal()[new_i])
-        return bse.reshape(self.params.shape, order='F')
 
     @cache_readonly
     def aic(self):
