@@ -49,10 +49,10 @@ sm_coeff = np.zeros((N, K))  # Holds the coefficients
 if use_spector:
     alphas = 1 / np.logspace(-1, 2, N)  # for spector_data
 else:
-    alphas = 1 / np.logspace(-4, 2, N)  # for anes96_data
+    alphas = 1 / np.logspace(-3, 2, N)  # for anes96_data
 for n, alpha in enumerate(alphas):
-    logit_res = logit_mod.fit(
-        method='l1', alpha=alpha, acc=1e-15, maxiter=1000, disp=False)
+    logit_res = logit_mod.fit_regularized(
+            method='l1', alpha=alpha, disp=False, trim_mode='off')
     sm_coeff[n,:] = logit_res.params
 ## Sklearn
 sk_coeff = np.zeros((N, K))
@@ -81,7 +81,7 @@ s = np.zeros(N)
 s = np.searchsorted(sk_special_X, sm_special_X)
 
 ## Plot
-plt.figure(1);plt.clf();plt.grid()
+plt.figure(2);plt.clf();plt.grid()
 plt.xlabel('Index in sklearn simulation')
 plt.ylabel('Coefficient value')
 plt.title('Regularization Paths')
