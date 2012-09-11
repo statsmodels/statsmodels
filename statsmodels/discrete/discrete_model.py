@@ -329,10 +329,6 @@ class DiscreteModel(base.LikelihoodModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             Hinv_func = self.Hinv_func_l1
  
-        # TODO Depending on alpha, perfect separation may or may not be a
-        # problem.  In a nutshell, if a separating hyperplane is given by
-        # x\cdot w = a, then if alpha \cdot w \neq 0 the regularization 
-        # will prevent infinite parameter values even with perfect separation.
         if callback is None:
             callback = self._check_perfect_pred
         else:
