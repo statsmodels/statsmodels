@@ -47,6 +47,8 @@ def _fit_l1_slsqp(
     QC_tol : float
         Print warning and don't allow auto trim when (ii) in "Theory" (above)
         is violated by this much.
+    QC_verbose : Boolean
+        If true, print out a full QC report upon failure
     acc : float (default 1e-6)
         Requested accuracy as used by slsqp
     """
@@ -83,9 +85,10 @@ def _fit_l1_slsqp(
     ### Post-process
     # QC
     QC_tol = kwargs['QC_tol']
+    QC_verbose = kwargs['QC_verbose']
     params = np.asarray(results[0][:k_params])
     passed, QC_dict = l1_solvers_common.QC_results(
-        params, alpha, score, QC_tol)
+        params, alpha, score, QC_tol, QC_verbose)
     # Possibly trim
     trim_mode = kwargs['trim_mode']
     size_trim_tol = kwargs['size_trim_tol']
