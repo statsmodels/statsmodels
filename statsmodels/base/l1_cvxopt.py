@@ -21,11 +21,20 @@ def _fit_l1_cvxopt_cp(
     ----------
     alpha : non-negative scalar or numpy array (same size as parameters)
         The weight multiplying the l1 penalty term
-    trim_params : boolean (default True)
-        If true, set small parameters to zero
-    trim_tol : float or 'auto' (default = 'auto')
-        If auto, trim params based on the optimality condition
-        If float, trim params whose absolute value < trim_tol to zero
+    trim_mode : 'auto, 'size', or 'off'
+        If not 'off', trim (set to zero) parameters that would have been zero
+            if the solver reached the theoretical minimum.
+        If 'auto', trim params using the Theory above.
+        If 'size', trim params if they have very small absolute value
+    size_trim_tol : float or 'auto' (default = 'auto')
+        For use when trim_mode === 'size'
+    auto_trim_tol : float
+        For sue when trim_mode == 'auto'.  Use
+    QC_tol : float
+        Print warning and don't allow auto trim when (ii) in "Theory" (above)
+        is violated by this much.
+    QC_verbose : Boolean
+        If true, print out a full QC report upon failure
     abstol : float
         absolute accuracy (default: 1e-7).
     reltol : float
