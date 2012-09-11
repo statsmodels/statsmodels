@@ -156,7 +156,7 @@ class LikelihoodModel(Model):
 
     def fit(self, start_params=None, method='newton', maxiter=100, 
             full_output=True, disp=True, fargs=(), callback=None, 
-            retall=False, extra_fit_funcs=None, Hinv_func=None, 
+            retall=False, extra_fit_funcs=None, cov_params_func=None, 
             **kwargs):
         """
         Fit method for likelihood based models
@@ -195,8 +195,8 @@ class LikelihoodModel(Model):
         extra_fit_funcs : Dictionary
             Keys are methods and values are fit functions to use.  Populating
             this dictionary has the effect of adding new methods
-        Hinv_func : Function
-            Used to compute the inverse Hessian
+        cov_params_func : Function
+            Used to compute the cov_params
 
         Notes
         -----
@@ -311,8 +311,8 @@ class LikelihoodModel(Model):
 #        if method == 'bfgs' and full_output:
 #            Hinv = retvals.setdefault('Hinv', 0)
         # If we have full_output, then compute the inverse Hessian
-        elif Hinv_func:
-            Hinv = Hinv_func(self, xopt, retvals)
+        elif cov_params_func:
+            Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian'])
         else:
@@ -1166,8 +1166,10 @@ class LikelihoodModelResults(Results):
         if cov_p is None and self.normalized_cov_params is None:
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
-        if num_params != self.params.shape[0]:
-            raise ValueError('r_matrix and params are not aligned')
+        # leftoff
+        # TODO two lines below commented out for debug
+        #if num_params != self.params.shape[0]:
+        #    raise ValueError('r_matrix and params are not aligned')
         if q_matrix is None:
             q_matrix = np.zeros(num_ttests)
         else:
