@@ -23,6 +23,9 @@ since the estimates for the standard deviation will be based on the ddof that
 the user chooses.
 - fixed ddof for the meandiff ttest, now matches scipy.stats.ttest_ind
 
+Note: scipy has now a separate, pooled variance option in ttest, but I haven't
+compared yet.
+
 '''
 
 
@@ -33,17 +36,27 @@ from statsmodels.tools.decorators import OneTimeProperty
 
 
 class DescrStatsW(object):
-    '''descriptive statistics with weights for simple case
+    '''descriptive statistics with weights for case weights
 
-    assumes that the data is 1d or 2d with (nobs,nvars) ovservations in rows,
+    assumes that the data is 1d or 2d with (nobs,nvars) observations in rows,
     variables in columns, and that the same weight apply to each column.
 
-    If degrees of freedom correction is used than weights should add up to the
+    If degrees of freedom correction is used, then weights should add up to the
     number of observations. ttest also assumes that the sum of weights
     corresponds to the sample size.
 
-    This is essentially the same as replicating each observations by it's weight,
-    if the weights are integers.
+    This is essentially the same as replicating each observations by it's
+    weight, if the weights are integers, often called case weights.
+
+    Parameters
+    ----------
+    data : array_like, 1-D or 2-D
+        dataset
+    weights : None or 1-D ndarray
+        weights for each observation, with same length as zero axis of data
+    ddof : int
+        default ddof=0, degrees of freedom correction used for second moments,
+        var, std, cov, corrcoef
 
 
     Examples
@@ -74,7 +87,7 @@ class DescrStatsW(object):
     array([  1.58414212e-12,   3.87842808e-02,   6.02752170e-01])
     44.0
 
-    #if weithts are integers, then asrepeats can be used
+    #if weiqhts are integers, then asrepeats can be used
 
     >>> x1r = d1.asrepeats()
     >>> x1r.shape
@@ -88,9 +101,10 @@ class DescrStatsW(object):
 
         self.data = np.asarray(data)
         if weights is None:
-           self.weights = np.ones(self.data.shape[0])
+            self.weights = np.ones(self.data.shape[0])
         else:
-           self.weights = np.asarray(weights).squeeze().astype(float)
+            #why squeeze?
+            self.weights = np.asarray(weights).squeeze().astype(float)
         self.ddof = ddof
 
 
@@ -141,20 +155,29 @@ class DescrStatsW(object):
     def cov(self):
         '''covariance
         '''
-        return np.dot(self.demeaned.T, self.demeaned) / self.sum_weights
+        cov_ = np.dot(self.weights * self.demeaned.T, self.demeaned)
+        cov_ /= (self.sum_weights - self.ddof)
+        return cov_
 
     @OneTimeProperty
     def corrcoef(self):
         '''correlation coefficient with default ddof for standard deviation
         '''
-        return self.cov / self.std() / self.std()[:,None]
+        return self.cov / self.std / self.std[:,None]
 
     @OneTimeProperty
     def std_mean(self):
         '''standard deviation of mean
 
+        TODO: this might assume self.ddof=0
+
         '''
-        return self.std / np.sqrt(self.sum_weights - 1)
+        std = self.std
+        if self.ddof != 0:
+            #ddof correction
+            std *= np.sqrt((self.sum_weights - self.ddof) / self.sum_weights)
+
+        return std / np.sqrt(self.sum_weights - 1)
 
 
     def std_var(self):
@@ -162,7 +185,7 @@ class DescrStatsW(object):
 
     def confint_mean(self, alpha=0.05):
         dof = self.sum_weights - 1
-        tcrit = stats.t.ppf((1+alpha)/2, dof)
+        tcrit = stats.t.ppf((1+alpha)/2., dof)
         lower = self.mean - tcrit * self.std_mean
         upper = self.mean + tcrit * self.std_mean
         return lower, upper
