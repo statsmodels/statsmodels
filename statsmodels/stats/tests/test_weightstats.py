@@ -155,6 +155,18 @@ class CheckWeightstats1d(object):
         assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
                             stats.ttest_ind(x1r, x2r), 14)
 
+    def test_confint_mean(self):
+        #compare confint_mean with ttest
+        d1w = self.d1w
+        alpha = 0.95
+        low, upp = d1w.confint_mean()
+        t, p, d = d1w.ttest_mean(low)
+        assert_almost_equal(p, alpha * np.ones(p.shape), 10)
+        t, p, d = d1w.ttest_mean(upp)
+        assert_almost_equal(p, alpha * np.ones(p.shape), 10)
+        t, p, d = d1w.ttest_mean(np.vstack((low, upp)))
+        assert_almost_equal(p, alpha * np.ones(p.shape), 10)
+
 class CheckWeightstats2d(CheckWeightstats1d):
 
     def test_corr(self):
@@ -223,4 +235,21 @@ class TestWeightstats2d_ddof(CheckWeightstats2d):
         self.d2w = DescrStatsW(x2, weights=w2, ddof=1)
         self.x1r = self.d1w.asrepeats()
         self.x2r = self.d2w.asrepeats()
+
+def test_ttest_ind_with_uneq_var():
+
+    #from scipy
+    # check vs. R
+    a = (1, 2, 3)
+    b = (1.1, 2.9, 4.2)
+    pr = 0.53619490753126731
+    tr = -0.68649512735572582
+    t, p, df = ttest_ind(a, b, usevar='separate')
+    assert_almost_equal([t,p], [tr, pr], 13)
+
+    a = (1, 2, 3, 4)
+    pr = 0.84354139131608286
+    tr = -0.2108663315950719
+    t, p, df = ttest_ind(a, b, usevar='separate')
+    assert_almost_equal([t,p], [tr, pr], 13)
 
