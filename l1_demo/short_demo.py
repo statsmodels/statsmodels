@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# Load the data from Spector and Mazzeo (1980)
+## Load the data from Spector and Mazzeo (1980)
 spector_data = sm.datasets.spector.load()
 spector_data.exog = sm.add_constant(spector_data.exog, prepend=True)
 N = len(spector_data.endog)
@@ -78,23 +78,26 @@ print mlogit_res.summary()
 print "l1 results"
 print mlogit_l1_res.summary()
 
-#### Logit example with many params, sweeping alpha
-#anes96_data = sm.datasets.anes96.load_pandas()
-#X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
-#Y = anes96_data.exog.vote
-### Fit 
-#N = 100  # number of points to solve at
-#K = X.shape[1]
-#logit_mod = sm.Logit(Y, X)
-#coeff = np.zeros((N, K))  # Holds the coefficients
-#alphas = np.logspace(-2, 4, N) 
-## Sweep alpha and store the coefficients
-#for n, alpha in enumerate(alphas):
-#    logit_res = logit_mod.fit_regularized(method='l1', alpha=alpha)
-#    coeff[n,:] = logit_res.params
-### Plot
-#plt.figure(1);plt.clf();plt.grid()
-#for i in xrange(K):
-#    plt.plot(alphas, coeff[:,i], label='-X'+str(i))
-#plt.legend(loc='best')
-#plt.show()
+### Logit example with many params, sweeping alpha
+anes96_data = sm.datasets.anes96.load_pandas()
+X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
+Y = anes96_data.exog.vote
+## Fit 
+N = 100  # number of points to solve at
+K = X.shape[1]
+logit_mod = sm.Logit(Y, X)
+coeff = np.zeros((N, K))  # Holds the coefficients
+alphas = 1 / np.logspace(-2.65, 2, N)
+# Sweep alpha and store the coefficients
+# When alpha is very high, QC check doesn't always pass
+for n, alpha in enumerate(alphas):
+    logit_res = logit_mod.fit_regularized(
+            method='l1', alpha=alpha, trim_mode='off', disp=False, acc=1e-15)
+    coeff[n,:] = logit_res.params
+## Plot
+plt.figure(1);plt.clf();plt.grid()
+plt.title('Regularization Path'); plt.xlabel('alpha'); plt.ylabel('Parameter value');
+for i in xrange(K):
+    plt.plot(alphas, coeff[:,i], label='-X'+str(i), lw=3)
+plt.legend(loc='best')
+plt.show()
