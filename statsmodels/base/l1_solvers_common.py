@@ -2,9 +2,10 @@
 Holds common functions for l1 solvers.
 """
 import numpy as np
+import pdb  # pdb.set_trace()
 
 
-def QC_results(params, alpha, score, QC_tol):
+def QC_results(params, alpha, score, QC_tol, QC_verbose=False):
     """
     Theory dictates that one of two conditions holds:
         i) abs(score[i]) == alpha[i]  and  params[i] != 0
@@ -23,6 +24,8 @@ def QC_results(params, alpha, score, QC_tol):
         Gradient of unregularized objective function
     QC_tol : float
         Tolerance to hold conditions (i) and (ii) to for QC check.
+    QC_verbose : Boolean
+        If true, print out a full QC report upon failure
 
     Returns
     -------
@@ -59,9 +62,27 @@ def QC_results(params, alpha, score, QC_tol):
             num_failed, k_params)
         message += '\nTry increasing solver accuracy or number of iterations'\
             ', decreasing alpha, or switch solvers'
+        if QC_verbose:
+            message += get_verbose_addon(QC_dict)
         print message
 
     return passed, QC_dict
+
+
+def get_verbose_addon(QC_dict):
+    alpha = QC_dict['alpha']
+    params = QC_dict['params']
+    fprime = QC_dict['fprime']
+    passed_array = QC_dict['passed_array']
+
+    addon = '\n------ verbose QC printout -----------------'
+    addon += '\n|%-10s|%-10s|%-10s|%-10s|' % (
+        'passed', 'alpha', 'fprime', 'param')
+    addon += '\n--------------------------------------------'
+    for i in xrange(len(alpha)):
+        addon += '\n|%-10s|%-10.3e|%-10.3e|%-10.3e|' % (
+                passed_array[i], alpha[i], fprime[i], params[i])
+    return addon
 
 
 def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
