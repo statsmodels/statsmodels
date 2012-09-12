@@ -487,3 +487,33 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     dta = urlopen(url)
     dta = StringIO(dta.read()) # make it truly file-like
     return genfromdta(dta)
+
+def nan_dot(A, B):
+    """
+    Returns np.dot(left_matrix, right_matrix) with the convention that
+    nan * 0 = 0 and nan * x = nan if x != 0.
+
+    Parameters
+    ----------
+    A, B : np.ndarrays
+    """
+    m = A.shape[0]
+    n = B.shape[1]
+    K = A.shape[1]
+    assert K == B.shape[0], "Matrices must be aligned"
+
+    C = np.zeros((m, n))
+    for i in xrange(m):
+        for j in xrange(n):
+            for k in xrange(K):
+                a = A[i, k]
+                b = B[k, j]
+                if np.isnan(a) and b == 1 or a == 1 and np.isnan(b):
+                    C[i, j] = np.nan
+                    break
+                elif np.isnan(a) and b == 0 or a == 0 and np.isnan(b):
+                    value = 0.
+                else:
+                    value = a * b
+                C[i, j] += value
+    return C
