@@ -68,9 +68,9 @@ print 'using Newton'
 print resp2.params
 print resp2.bse
 
-from statsmodels.tools.numdiff import approx_fprime, approx_hess
+from statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
 
-hb=-approx_hess(modp.start_params, modp.loglike, epsilon=-1e-4)
+hb=-approx_hess(modp.start_params, modp.loglike, epsilon=-1e-4)[0]
 tmp = modp.loglike(modp.start_params)
 print tmp.shape
 print 'eigenvalues of numerical Hessian'

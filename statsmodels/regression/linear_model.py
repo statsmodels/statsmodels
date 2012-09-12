@@ -48,11 +48,11 @@ class GLS(base.LikelihoodModel):
     Parameters
     ----------
     endog : array-like
-           endog is a 1-d vector that contains the response/dependent variable
+           endog is a 1-d vector that contains the response/independent variable
     exog : array-like
-           exog is a n x p vector where n is the number of observations and p
-           is the number of regressors/independent variables including the
-           intercept if one is included in the data.
+           exog is a n x p vector where n is the number of observations and p is
+           the number of regressors/dependent variables including the intercept
+           if one is included in the data.
     sigma : scalar or array
            `sigma` is the weighting matrix of the covariance.
            The default is None for no scaling.  If `sigma` is a scalar, it is
@@ -200,9 +200,11 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Parameters
         ----------
         method : str
-            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
-            to solve the least squares problem. "qr" uses the QR
-            factorization.
+            Can be "pinv", "qr", or "mle".  "pinv" uses the
+            Moore-Penrose pseudoinverse to solve the least squares problem.
+            "svd" uses the Singular Value Decomposition.  "qr" uses the
+            QR factorization.  "mle" fits the model via maximum likelihood.
+            "mle" is not yet implemented.
 
         Returns
         -------
@@ -217,8 +219,9 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Currently it is assumed that all models will have an intercept /
         constant in the design matrix for postestimation statistics.
 
-        The fit method uses the pseudoinverse of the design/exogenous
-        variables to solve the least squares minimization.
+        The fit method uses the pseudoinverse of the design/exogenous variables
+        to solve the least squares minimization.
+
         """
         exog = self.wexog
         endog = self.wendog
@@ -1523,41 +1526,6 @@ class OLSResults(RegressionResults):
         '''
         from statsmodels.stats.outliers_influence import OLSInfluence
         return OLSInfluence(self)
-
-    def outlier_test(self, method='bonf', alpha=.05):
-        """
-        Test observations for outliers according to method
-
-        Parameters
-        ----------
-        method : str
-            - `bonferroni` : one-step correction
-            - `sidak` : one-step correction
-            - `holm-sidak` :
-            - `holm` :
-            - `simes-hochberg` :
-            - `hommel` :
-            - `fdr_bh` : Benjamini/Hochberg
-            - `fdr_by` : Benjamini/Yekutieli
-            See `statsmodels.stats.multitest.multipletests` for details.
-        alpha : float
-            familywise error rate
-
-        Returns
-        -------
-        table : ndarray or DataFrame
-            Returns either an ndarray or a DataFrame if labels is not None.
-            Will attempt to get labels from model_results if available. The
-            columns are the Studentized residuals, the unadjusted p-value,
-            and the corrected p-value according to method.
-
-        Notes
-        -----
-        The unadjusted p-value is stats.t.sf(abs(resid), df) where
-        df = df_resid - 1.
-        """
-        from statsmodels.stats.outliers_influence import outlier_test
-        return outlier_test(self, method, alpha)
 
 class RegressionResultsWrapper(wrap.ResultsWrapper):
 

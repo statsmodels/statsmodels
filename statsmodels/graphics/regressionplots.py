@@ -15,7 +15,7 @@ import numpy as np
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
-from statsmodels.graphics import utils
+from . import utils
 
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
@@ -217,18 +217,17 @@ def plot_partregress_ax(endog, exog_i, exog_others, varname='',
     return fig
 
 
-def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
+def plot_partregress(endog, exog, exog_idx=None, grid=None, fig=None):
     """Plot partial regression for a set of regressors.
 
     Parameters
     ----------
-    results : results instance
-        A regression model results instance
+    endog : ndarray
+        endogenous or response variable
+    exog : ndarray
+        exogenous, regressor variables
     exog_idx : None or list of int
-        (column) indices of the exog used in the plot, default is all.
-    xnames : None or list of strings
-        Names for the numbers given in exog_idx. Default is
-        results.model.exog_names.
+        (column) indices of the exog used in the plot
     grid : None or tuple of int (nrows, ncols)
         If grid is given, then it is used for the arrangement of the subplots.
         If grid is None, then ncol is one, if there are only 2 subplots, and
@@ -262,24 +261,10 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
     fig = utils.create_mpl_fig(fig)
 
     #maybe add option for using wendog, wexog instead
-    y = results.model.endog
-    exog = results.model.exog
-
-    k_vars = exog.shape[1]
-    #this function doesn't make sense if k_vars=1
-
-    if xnames is None:
-        exog_idx = range(k_vars)
-        xnames = results.model.exog_names
-    else:
-        exog_idx = []
-        for name in xnames:
-            exog_idx.append(results.model.exog_names.index(name))
-
+    y = endog
 
     if not grid is None:
         nrows, ncols = grid
-
     else:
         if len(exog_idx) > 2:
             nrows = int(np.ceil(len(exog_idx)/2.))
@@ -290,14 +275,15 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
             ncols = 1
             title_fontsize = None
 
+    k_vars = exog.shape[1]
+    #this function doesn't make sense if k_vars=1
 
     for i,idx in enumerate(exog_idx):
         others = range(k_vars)
         others.pop(idx)
         exog_others = exog[:, others]
         ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_partregress_ax(y, exog[:, idx], exog_others, ax=ax,
-                               varname=xnames[i])
+        plot_partregress_ax(y, exog[:, idx], exog_others, ax=ax)
 
     return fig
 
@@ -448,28 +434,23 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
     """
-    if ax is not None: # get axis limits first thing, don't change these
-        x = ax.get_xlim()
-        y = ax.get_ylim()
-    else:
-        x = None
-
     fig,ax = utils.create_mpl_ax(ax)
 
     if model_results:
         intercept, slope = model_results.params
-        if x is None:
-            x = [model_results.model.exog[:,1].min(),
-                 model_results.model.exog[:,1].max()]
+        x = [model_results.model.exog[:,1].min(),
+             model_results.model.exog[:,1].max()]
     else:
+        x = None
         if not (intercept is not None and slope is not None):
             raise ValueError("specify slope and intercepty or model_results")
-        if x is None:
-            x = ax.get_xlim()
 
-    data_y = [x[0]*slope+intercept, x[1]*slope+intercept]
+    if not x: # can't infer x limits
+        x = ax.get_xlim()
+
+    y = [x[0]*slope+intercept, x[1]*slope+intercept]
     ax.set_xlim(x)
-    #ax.set_ylim(y)
+    ax.set_ylim(y)
 
     from matplotlib.lines import Line2D
 
@@ -486,7 +467,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
             abline.set_data(x,y)
             ax.figure.canvas.draw()
 
-    line = ABLine2D(x, data_y, **kwargs)
+    line = ABLine2D(x, y, **kwargs)
     ax.add_line(line)
     ax.callbacks.connect('xlim_changed', line.update_datalim)
     ax.callbacks.connect('ylim_changed', line.update_datalim)
