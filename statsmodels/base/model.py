@@ -1074,10 +1074,8 @@ class LikelihoodModelResults(Results):
         if cov_p is None and self.normalized_cov_params is None:
             raise ValueError('Need covariance of parameters for computing '
                              'T statistics')
-        # leftoff
-        # TODO two lines below commented out for debug
-        #if num_params != self.params.shape[0]:
-        #    raise ValueError('r_matrix and params are not aligned')
+        if num_params != self.params.shape[0]:
+            raise ValueError('r_matrix and params are not aligned')
         if q_matrix is None:
             q_matrix = np.zeros(num_ttests)
         else:
@@ -1583,3 +1581,34 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.nobs = model.endog.shape[0]
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
+
+
+def nan_dot(left_matrix, right_matrix, nan_side):
+    """
+    Returns np.dot(left_matrix, right_matrix) with the convention that
+    nan * 0 = 0 for nan in the "nan_side" and 0 in the other side.
+
+    If nan * nonzero is encountered, an exception is raised.
+
+    Parameters
+    ----------
+    left_matrix, right_matrix : np.ndarrays
+    nan_side : 'left' or 'right'
+        If 'left', nan in left_matrix times zero in right_matrix equals zero
+    """
+    ## Assign the "nan matrix" to A, and the "zero matrix" to B
+    if nan_side == 'left':
+        A = left_matrix
+        B = right_matrix
+    elif nan_side == 'right':
+        A = right_matrix
+        B = left_matrix
+
+    ## Compute A B with the convention that nan in A times zero in B = zero
+    A_nan = np.isnan(A)
+    B_nonzero = (B != 0)
+    if np.dot(A_nan, B_nonzero).max():
+        raise ValueError("Attempt to multiply nan * nonzero")
+    else:
+        A_nan_replaced = np.nan_to_num(A)
+        return np.dot(A_nan_replaced, B)    
