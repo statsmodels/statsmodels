@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import optimize, stats
 from statsmodels.base.data import handle_data
-from statsmodels.tools.tools import recipr
+from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import ContrastResults
 from statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
@@ -938,7 +938,7 @@ class LikelihoodModelResults(Results):
         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
-                   other=None):
+                   other=None, use_nan_dot=False):
         """
         Returns the variance/covariance matrix.
 
@@ -958,6 +958,8 @@ class LikelihoodModelResults(Results):
             the scale argument is taken from the model.
         other : array-like, optional
             Can be used when r_matrix is specified.
+        use_nan_dot : Boolean, optional
+            Use tools.nan_dot, which is np.dot with the convention nan * 0 = 0.
 
         Returns
         -------
@@ -982,6 +984,11 @@ class LikelihoodModelResults(Results):
         (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
+        if use_nan_dot:
+            dot_fun = nan_dot
+        else:
+            dot_fun = np.dot
+
         if cov_p is None and self.normalized_cov_params is None:
             raise ValueError('need covariance of parameters for computing '
                              '(unnormalized) covariances')
@@ -1011,7 +1018,7 @@ class LikelihoodModelResults(Results):
                 other = r_matrix
             else:
                 other = np.asarray(other)
-            tmp = np.dot(r_matrix, np.dot(cov_p, np.transpose(other)))
+            tmp = dot_fun(r_matrix, dot_fun(cov_p, np.transpose(other)))
             return tmp
         else:  #if r_matrix is None and column is None:
             return cov_p
@@ -1088,15 +1095,46 @@ class LikelihoodModelResults(Results):
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
-        if num_ttests > 1:
-            _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix,
-                                                  cov_p=cov_p)))
+        # If self.cov_params contains nan, we have to make sure this contrast
+        # is valid.
+        pdb.set_trace()
+        if np.isnan(self.cov_params().diagonal()).any():
+            self.t_test_check_valid(r_matrix)
+            use_nan_dot = True
         else:
-            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
+            use_nan_dot = False
+        # Perform the test
+        if num_ttests > 1:
+            _sd = np.sqrt(np.diag(self.cov_params(
+                r_matrix=r_matrix, cov_p=cov_p, use_nan_dot=use_nan_dot)))
+        else:
+            _sd = np.sqrt(self.cov_params(
+                r_matrix=r_matrix, cov_p=cov_p, use_nan_dot=use_nan_dot))
         _t = (_effect - q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
 
+    def t_test_check_valid(self, r_matrix):
+        """
+        Raises exception if the t_test with r_matrix will be invalid.
+        The test is valid if r_matrix will not involve tests of nan entries
+        in self.cov_params
+
+        If the t_test is invalid, raises an exception and prints a warning.
+        """
+        params_with_nan_cov = np.isnan(self.cov_params().diagonal())
+        r_matrix_nonzeros = (r_matrix != 0)
+        # invalid[i] = True if the ith test is invalid due to the ith test
+        # involving some param whose covariance is nan
+        invalid = np.dot(r_matrix_nonzeros, params_with_nan_cov)
+        if invalid.any():
+            raise ValueError(
+                "Invalid t_test attempted to use parameters for which we "\
+                        "we only have nan covariance.  The params "\
+                        "with/without nan covariance are \n%s" % 
+                        params_with_nan_cov)
+                        
+            
     #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None):
@@ -1583,32 +1621,3 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.__dict__.update(mlefit.__dict__)
 
 
-def nan_dot(left_matrix, right_matrix, nan_side):
-    """
-    Returns np.dot(left_matrix, right_matrix) with the convention that
-    nan * 0 = 0 for nan in the "nan_side" and 0 in the other side.
-
-    If nan * nonzero is encountered, an exception is raised.
-
-    Parameters
-    ----------
-    left_matrix, right_matrix : np.ndarrays
-    nan_side : 'left' or 'right'
-        If 'left', nan in left_matrix times zero in right_matrix equals zero
-    """
-    ## Assign the "nan matrix" to A, and the "zero matrix" to B
-    if nan_side == 'left':
-        A = left_matrix
-        B = right_matrix
-    elif nan_side == 'right':
-        A = right_matrix
-        B = left_matrix
-
-    ## Compute A B with the convention that nan in A times zero in B = zero
-    A_nan = np.isnan(A)
-    B_nonzero = (B != 0)
-    if np.dot(A_nan, B_nonzero).max():
-        raise ValueError("Attempt to multiply nan * nonzero")
-    else:
-        A_nan_replaced = np.nan_to_num(A)
-        return np.dot(A_nan_replaced, B)    
