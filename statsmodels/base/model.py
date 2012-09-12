@@ -1203,9 +1203,7 @@ class LikelihoodModelResults(Results):
         _effect = np.dot(r_matrix, self.params)
         # If self.cov_params contains nan, we have to make sure this contrast
         # is valid.
-        pdb.set_trace()
         if np.isnan(self.cov_params().diagonal()).any():
-            self.t_test_check_valid(r_matrix)
             use_nan_dot = True
         else:
             use_nan_dot = False
@@ -1219,26 +1217,6 @@ class LikelihoodModelResults(Results):
         _t = (_effect - q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
-
-    def t_test_check_valid(self, r_matrix):
-        """
-        Raises exception if the t_test with r_matrix will be invalid.
-        The test is valid if r_matrix will not involve tests of nan entries
-        in self.cov_params
-
-        If the t_test is invalid, raises an exception and prints a warning.
-        """
-        params_with_nan_cov = np.isnan(self.cov_params().diagonal())
-        r_matrix_nonzeros = (r_matrix != 0)
-        # invalid[i] = True if the ith test is invalid due to the ith test
-        # involving some param whose covariance is nan
-        invalid = np.dot(r_matrix_nonzeros, params_with_nan_cov)
-        if invalid.any():
-            raise ValueError(
-                "Invalid t_test attempted to use parameters for which we "\
-                        "we only have nan covariance.  The params "\
-                        "with/without nan covariance are \n%s" %
-                        params_with_nan_cov)
 
 
     #TODO: untested for GLMs?
