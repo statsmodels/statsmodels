@@ -244,8 +244,7 @@ class NonlinearLS(Model):  #or subclass a model
         but is designed to do so.
 
         '''
-        from statsmodels.sandbox.regression.numdiff \
-             import approx_fprime_cs
+        from statsmodels.tools.numdiff import approx_fprime_cs
 
         jaccs_err = approx_fprime_cs(params, self._predict)
         return jaccs_err

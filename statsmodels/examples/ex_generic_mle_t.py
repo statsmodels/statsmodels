@@ -91,9 +91,9 @@ resp = modp.fit(start_params = modp.start_value)
 print resp.params
 print resp.bse
 
-from statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
-hb=-approx_hess(modp.start_value, modp.loglike, epsilon=-1e-4)[0]
+hb=-approx_hess(modp.start_value, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_value)
 print tmp.shape
 
@@ -249,11 +249,11 @@ array([ 0.14111302,  1.02146375,  0.07187597,  0.16256686,  0.49732154,
 >>> np.sqrt(np.diag(np.linalg.inv(hess)))
 array([ 231.3823423 ,  117.79508218,   31.46595143,   53.44753106,
         132.4855704 ,           NaN,    5.47881705,   90.75332693])
->>> hb=-approx_hess(resp.params, modp.loglike, epsilon=-1e-4)[0]
+>>> hb=-approx_hess(resp.params, modp.loglike, epsilon=-1e-4)
 >>> np.sqrt(np.diag(np.linalg.inv(hb)))
 array([ 31.93524822,  22.0333515 ,          NaN,  29.90198792,
         38.82615785,          NaN,          NaN,          NaN])
->>> hb=-approx_hess(resp.params, modp.loglike, epsilon=-1e-8)[0]
+>>> hb=-approx_hess(resp.params, modp.loglike, epsilon=-1e-8)
 >>> np.sqrt(np.diag(np.linalg.inv(hb)))
 Traceback (most recent call last):
   File "<stdin>", line 1, in <module>

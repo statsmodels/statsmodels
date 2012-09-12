@@ -181,7 +181,7 @@ class ARResultsMLE(object):
             predictresults = np.loadtxt(filename, delimiter=",")
             year = predictresults[:,0]
             pv = predictresults[:,1]
-            dynamicpv = np.genfromtxt(filename2, delimiter=",", skiprows=1)
+            dynamicpv = np.genfromtxt(filename2, delimiter=",", skip_header=1)
 
             # cases - in sample predict
             # start = 0 (fitted values)

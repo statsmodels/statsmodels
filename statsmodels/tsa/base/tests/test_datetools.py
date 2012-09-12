@@ -51,7 +51,7 @@ def test_regex_matching_quarter():
 try:
     from pandas import DatetimeIndex
     _pandas_08x = True
-except ImportError as err:
+except ImportError, err:
     _pandas_08x = False
     d1 = datetime(2008, 12, 31)
     d2 = datetime(2012, 9, 30)

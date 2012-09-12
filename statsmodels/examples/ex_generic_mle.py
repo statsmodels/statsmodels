@@ -140,16 +140,16 @@ TypeError: object of type 'numpy.float64' has no len()
 res_bfgs = mod_norm2.fit(start_params=start_params, method="bfgs", fprime=None,
 maxiter = 500, retall=0)
 
-from statsmodels.sandbox.regression.numdiff import approx_fprime1, approx_hess
-hb=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)[0]
-hf=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)[0]
+from statsmodels.tools.numdiff import approx_fprime, approx_hess
+hb=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
+hf=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
 hh = (hf+hb)/2.
 print np.linalg.eigh(hh)
 
-grad = -approx_fprime1(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
+grad = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
 print grad
-gradb = -approx_fprime1(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
-gradf = -approx_fprime1(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
+gradb = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
+gradf = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
 print (gradb+gradf)/2.
 
 print res_norm3.model.score(res_norm3.params)
@@ -311,8 +311,8 @@ array([   5.51471653,   80.36595035,    7.46933695,   82.92232357,
 >>> bse_bfgs = np.sqrt(np.diag(np.linalg.inv(-res_norm3.model.hessian(res_bfgs.params))))
 >>> (bse_bfgs[:-1] / res2.bse)*100. - 100
 array([ -7.51422527,  -7.4858335 ,  -6.74913633,  -7.49275094, -14.8179759 ])
->>> hb=-approx_hess(res_bfgs.params, mod_norm2.loglike, epsilon=-1e-4)[0]
->>> hf=-approx_hess(res_bfgs.params, mod_norm2.loglike, epsilon=1e-4)[0]
+>>> hb=-approx_hess(res_bfgs.params, mod_norm2.loglike, epsilon=-1e-4)
+>>> hf=-approx_hess(res_bfgs.params, mod_norm2.loglike, epsilon=1e-4)
 >>> hh = (hf+hb)/2.
 >>> bse_bfgs = np.sqrt(np.diag(np.linalg.inv(-hh)))
 >>> bse_bfgs

@@ -149,7 +149,7 @@ def parse_lutkepohl_data(path): # pragma: no cover
     try:
         from pandas import DatetimeIndex
         date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
-    except ImportError as err:
+    except ImportError, err:
         from pandas import DateRange
         date_range = DateRange(start_date, offset=offset, periods=n)
 

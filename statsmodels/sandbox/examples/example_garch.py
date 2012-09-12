@@ -1,6 +1,3 @@
-
-
-
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -16,7 +13,7 @@ from statsmodels.sandbox.tsa.garch import *  # local import
 
 #print dta2
 
-aa=np.genfromtxt(r'gspc_table.csv',skiprows=0, delimiter=',',names=True)
+aa=np.genfromtxt(r'gspc_table.csv', skip_header=0, delimiter=',', names=True)
 
 cl = aa['Close']
 ret = np.diff(np.log(cl))[-2000:]*1000.
@@ -25,7 +22,8 @@ ggmod = Garch(ret - ret.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
 ggmod.nar = 1
 ggmod.nma = 1
 ggmod._start_params = np.array([-0.1, 0.1, 0.1, 0.1])
-ggres = ggmod.fit(start_params=np.array([-0.1, 0.1, 0.1, 0.0]), maxiter=1000,method='bfgs')
+ggres = ggmod.fit(start_params=np.array([-0.1, 0.1, 0.1, 0.0]),
+                  maxiter=1000,method='bfgs')
 print 'ggres.params', ggres.params
 garchplot(ggmod.errorsest, ggmod.h, title='Garch estimated')
 

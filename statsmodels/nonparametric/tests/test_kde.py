@@ -1,7 +1,7 @@
 import os
 import numpy.testing as npt
 import numpy as np
-from statsmodels.sandbox.distributions.mixture_rvs import mixture_rvs
+from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDE
 from scipy import stats
 

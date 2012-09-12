@@ -43,7 +43,10 @@ def check_dependency_versions(min_versions):
     try:
         from scipy.version import short_version as spversion
     except ImportError:
-        raise ImportError("statsmodels requires scipy")
+        try: # scipy 0.7.0
+            from scipy.version import version as spversion
+        except ImportError:
+            raise ImportError("statsmodels requires scipy")
     try:
         from pandas.version import version as pversion
     except:

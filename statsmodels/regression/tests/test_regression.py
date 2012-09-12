@@ -2,13 +2,13 @@
 Test functions for models.regression
 """
 import numpy as np
-from numpy.testing import *
+from numpy.testing import (assert_almost_equal, assert_, assert_approx_equal,
+                            assert_raises, assert_equal)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
         yule_walker)
 from statsmodels.datasets import longley
-#from check_for_rpy import skip_rpy
 from nose import SkipTest
 from scipy.stats import t as student_t
 
@@ -18,10 +18,6 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_7 = 7
 DECIMAL_0 = 0
-#skipR = skip_rpy()
-#if not skipR:
-#    from rpy import r, RPyRException
-#    from rmodelwrap import RModel
 
 
 class CheckRegressionResults(object):
@@ -42,11 +38,6 @@ class CheckRegressionResults(object):
 
     decimal_confidenceintervals = DECIMAL_4
     def test_confidenceintervals(self):
-#        if hasattr(self.res2, 'conf_int'):
-#            self.check_confidenceintervals(self.res1.conf_int(),
-#                self.res2.conf_int)
-#        else:
-#            raise SkipTest, "Results from Rpy"
 #NOTE: stata rounds residuals (at least) to sig digits so approx_equal
         conf1 = self.res1.conf_int()
         conf2 = self.res2.conf_int()
@@ -236,18 +227,11 @@ class TestFTest2(object):
         res1 = OLS(data.endog, data.exog).fit()
         R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
         cls.Ftest1 = res1.f_test(R2)
-#        if skipR:
-#            raise SkipTest, "Rpy not installed"
-#        try:
-#            r.library('car')
-#        except RPyRException:
-#            raise SkipTest, "car library not installed for R"
-#        self.R2 = [[0,1,-1,0,0,0,0],[0, 0, 0, 0, 1, -1, 0]]
-#        self.Ftest2 = self.res1.f_test(self.R2)
-#        self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
-#        self.F = r.linear_hypothesis(self.R_Results,
-#                r.c('x.2 = x.3', 'x.5 = x.6'))
+        hyp = 'x2 = x3, x5 = x6'
+        cls.NewFtest1 = res1.f_test(hyp)
 
+    def test_new_ftest(self):
+        assert_equal(self.NewFtest1.fvalue, self.Ftest1.fvalue)
 
     def test_fvalue(self):
         assert_almost_equal(self.Ftest1.fvalue, 9.7404618732968196, DECIMAL_4)
@@ -278,7 +262,7 @@ class TestFtestQ(object):
               [0,0,0,0,1,0,0],
               [0,0,0,0,0,1,0]])
         q = np.array([0,0,0,1,0])
-        cls.Ftest1 = res1.f_test(R,q)
+        cls.Ftest1 = res1.f_test((R,q))
 
     def test_fvalue(self):
         assert_almost_equal(self.Ftest1.fvalue, 70.115557, 5)
@@ -306,12 +290,11 @@ class TestTtest(object):
         cls.res1 = OLS(data.endog, data.exog).fit()
         R = np.identity(7)
         cls.Ttest = cls.res1.t_test(R)
+        hyp = 'x1 = 0, x2 = 0, x3 = 0, x4 = 0, x5 = 0, x6 = 0, const = 0'
+        cls.NewTTest = cls.res1.t_test(hyp)
 
-#    def setup(self):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed"
-#        else:
-#        self.R_Results = RModel(data.endog, data.exog, r.lm).robj
+    def test_new_tvalue(self):
+        assert_equal(self.NewTTest.tvalue, self.Ttest.tvalue)
 
     def test_tvalue(self):
         assert_almost_equal(self.Ttest.tvalue, self.res1.tvalues, DECIMAL_4)
@@ -339,25 +322,12 @@ class TestTtest2(object):
     '''
     @classmethod
     def setupClass(cls):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed"
-#        try:
-#            r.library('car')
-#        except RPyRException:
-#            raise SkipTest, "car library not installed for R"
         R = np.zeros(7)
         R[4:6] = [1,-1]
-#        self.R = R
         data = longley.load()
         data.exog = add_constant(data.exog)
         res1 = OLS(data.endog, data.exog).fit()
         cls.Ttest1 = res1.t_test(R)
-#        self.R_Results = RModel(self.data.endog, self.data.exog, r.lm).robj
-#        self.Ttest2 = r.linear_hypothesis(self.R_Results, 'x.5 = x.6')
-#        t = np.sign(np.inner(R, self.res1.params))*\
-#            np.sqrt(self.Ttest2['F'][1])
-#        self.t = t
-#        self.effect = np.sum(R * self.res1.params)
 
     def test_tvalue(self):
         assert_almost_equal(self.Ttest1.tvalue, -4.0167754636397284,
@@ -461,14 +431,6 @@ class TestGLS_nosigma(CheckRegressionResults):
 #        self.res1.rsquared_adj = 1 -(self.res1.nobs)/(self.res1.df_resid)*\
 #                (1-self.res1.rsquared)
 
-#    def setup(self):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed"
-#        self.res2 = RModel(self.data.endog, self.data.exog, r.lm,
-#                        weights=1/self.data.exog[:,2])
-#        self.res2.wresid = self.res2.rsum['residuals']
-#        self.res2.scale = self.res2.scale**2 # R has sigma not sigma**2
-
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
@@ -532,13 +494,6 @@ class TestYuleWalker(object):
                 method="mle")
         cls.R_params = [1.2831003105694765, -0.45240924374091945,
                 -0.20770298557575195, 0.047943648089542337]
-
-#    def setup(self):
-#        if skipR:
-#            raise SkipTest, "Rpy not installed."
-#
-#        R_results = r.ar(self.data.endog, aic="FALSE", order_max=4)
-#        self.R_params = R_results['ar']
 
     def test_params(self):
         assert_almost_equal(self.rho, self.R_params, DECIMAL_4)

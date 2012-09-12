@@ -77,7 +77,8 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 #from scipy.stats import t, norm
-from scipy import optimize, signal, derivative
+from scipy import optimize, signal
+from scipy.misc import derivative
 from scipy.stats import ss as sumofsq
 
 import matplotlib.pyplot as plt

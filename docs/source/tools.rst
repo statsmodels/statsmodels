@@ -44,6 +44,18 @@ insufficiently tested.
    tools.recipr0
    tools.unsqueeze
 
+Numerical Differentiation
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autosummary::
+   :toctree: generated/
+
+   numdiff.approx_fprime
+   numdiff.approx_fprime_cs
+   numdiff.approx_hess1
+   numdiff.approx_hess2
+   numdiff.approx_hess3
+   numdiff.approx_hess_cs
 
 Measure for fit performance :mod:`eval_measures`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

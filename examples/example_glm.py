@@ -5,81 +5,69 @@ import statsmodels.api as sm
 from scipy import stats
 from matplotlib import pyplot as plt
 
-#Example for using GLM on binomial response data
-#the input response vector in this case is N by 2 (success, failure)
-#This data is taken with permission from
-#Jeff Gill (2000) Generalized linear models: A unified approach
+#GLM: Binomial response data
+#---------------------------
 
-#The response variable is
-#(of students above the math national median, # of students below)
+#Load data
+#^^^^^^^^^
+# In this example, we use the Star98 dataset which was taken with permission
+# from Jeff Gill (2000) Generalized linear models: A unified approach. Codebook
+# information can be obtained by typing: 
+print sm.datasets.star98.NOTE
 
-#| The explanatory variables are (in column order)
-#| The proportion of low income families "LOWINC"
-#| The proportions of minority students,"PERASIAN","PERBLACK","PERHISP"
-#| The percentage of minority teachers "PERMINTE",
-#| The median teacher salary including benefits in 1000s "AVSALK"
-#| The mean teacher experience in years "AVYRSEXP",
-#| The per-pupil expenditures in thousands "PERSPENK"
-#| The pupil-teacher ratio "PTRATIO"
-#| The percent of students taking college credit courses "PCTAF",
-#| The percentage of charter schools in the districut "PCTCHRT"
-#| The percent of schools in the district operating year round "PCTYRRND"
-#| The following are interaction terms "PERMINTE_AVYRSEXP","PERMINTE_AVSAL",
-#| "AVYRSEXP_AVSAL","PERSPEN_PTRATIO","PERSPEN_PCTAF","PTRATIO_PCTAF",
-#| "PERMINTE_AVYRSEXP_AVSAL","PERSPEN_PTRATIO_PCTAF"
-
+# Load the data and add a constant to the exogenous (independent) variables:
 data = sm.datasets.star98.load()
 data.exog = sm.add_constant(data.exog)
 
-#The response variable is (success, failure).  Eg., the first
-#observation is
-print data.endog[0]
-#Giving a total number of trials for this observation of
-#print data.endog[0].sum()
+# The dependent variable is N by 2 (Success: NABOVE, Failure: NBELOW): 
+print data.endog[:5,:]
 
+# The independent variables include all the other variables described above, as
+# well as the interaction terms:
+print data.exog[:2,:]
+
+#Fit and summary
+#^^^^^^^^^^^^^^^
 glm_binom = sm.GLM(data.endog, data.exog, family=sm.families.Binomial())
+res = glm_binom.fit()
+print res.summary()
 
-binom_results = glm_binom.fit()
-#The fitted values are
-print binom_results.params
-#The corresponding t-values are
-print binom_results.tvalues
+#Quantities of interest
+#^^^^^^^^^^^^^^^^^^^^^^
+# Total number of trials: 
+print data.endog[0].sum()
 
-#It is common in GLMs with interactions to compare first differences.
-#We are interested in the difference of the impact of the explanatory variable
-#on the response variable.  This example uses interquartile differences for
-#the percentage of low income households while holding the other values
-#constant at their mean.
+# Parameter estimates:
+print res.params
 
+# The corresponding t-values:
+print res.tvalues
+
+# First differences: We hold all explanatory variables constant at their means
+# and manipulate the percentage of low income households to assess its impact
+# on the response variables: 
 means = data.exog.mean(axis=0)
 means25 = means.copy()
 means25[0] = stats.scoreatpercentile(data.exog[:,0], 25)
 means75 = means.copy()
 means75[0] = lowinc_75per = stats.scoreatpercentile(data.exog[:,0], 75)
-resp_25 = binom_results.predict(means25)
-resp_75 = binom_results.predict(means75)
+resp_25 = res.predict(means25)
+resp_75 = res.predict(means75)
 diff = resp_75 - resp_25
-#.. print """The interquartile first difference for the percentage of low income
-#.. households in a school district is %2.4f %%""" % (diff*100)
 
-#The interquartile first difference for the percentage of low income
-#households in a school district is
-print diff*100
+# The interquartile first difference for the percentage of low income
+# households in a school district is:
+print "%2.4f%%" % (diff*100)
 
-means0 = means.copy()
-means100 = means.copy()
-means0[0] = data.exog[:,0].min()
-means100[0] = data.exog[:,0].max()
-resp_0 = binom_results.predict(means0)
-resp_100 = binom_results.predict(means100)
-diff_full = resp_100 - resp_0
-print """The full range difference is %2.4f %%""" % (diff_full*100)
+#Plots
+#^^^^^
 
-nobs = binom_results.nobs
+# We extract information that will be used to draw some interesting plots: 
+nobs = res.nobs
 y = data.endog[:,0]/data.endog.sum(1)
-yhat = binom_results.mu
+yhat = res.mu
 
-#Plot of yhat vs y
+# Plot yhat vs y:
 plt.figure()
 plt.scatter(yhat, y)
 line_fit = sm.OLS(y, sm.add_constant(yhat)).fit().params
@@ -90,9 +78,9 @@ plt.ylabel('Observed values')
 #@savefig glm_fitted.png
 plt.xlabel('Fitted values')
 
-#Plot of yhat vs. Pearson residuals
+# Plot yhat vs. Pearson residuals:
 plt.figure()
-plt.scatter(yhat, binom_results.resid_pearson)
+plt.scatter(yhat, res.resid_pearson)
 plt.plot([0.0, 1.0],[0.0, 0.0], 'k-')
 plt.title('Residual Dependence Plot')
 plt.ylabel('Pearson Residuals')
@@ -101,53 +89,53 @@ plt.xlabel('Fitted values')
 
 #Histogram of standardized deviance residuals
 plt.figure()
-res = binom_results.resid_deviance.copy()
-stdres = (res - res.mean())/res.std()
-plt.hist(stdres, bins=25)
+resid = res.resid_deviance.copy()
+resid_std = (resid - resid.mean())/resid.std()
+plt.hist(resid_std, bins=25)
 #@savefig glm_hist_res.png
 plt.title('Histogram of standardized deviance residuals')
 
 #QQ Plot of Deviance Residuals
-plt.figure()
-res.sort()
-p = np.linspace(0 + 1./(nobs-1), 1-1./(nobs-1), nobs)
-quants = np.zeros_like(res)
-for i in range(nobs):
-    quants[i] = stats.scoreatpercentile(res, p[i]*100)
-mu = res.mean()
-sigma = res.std()
-y = stats.norm.ppf(p, loc=mu, scale=sigma)
-plt.scatter(y, quants)
-plt.plot([y.min(),y.max()],[y.min(),y.max()],'r--')
-plt.title('Normal - Quantile Plot')
-plt.ylabel('Deviance Residuals Quantiles')
-plt.xlabel('Quantiles of N(0,1)')
-
 from statsmodels import graphics
 #@savefig glm_qqplot.png
-img = graphics.gofplots.qqplot(res, line='r')
+graphics.gofplots.qqplot(resid, line='r')
 
-#.. plt.show()
-#.. plt.close('all')
-
-
-#Example for using GLM Gamma for a proportional count response
-#Brief description of the data and design
+#GLM: Gamma for proportional count response
+#------------------------------------------
+#Load data
+#^^^^^^^^^
+# In the example above, we printed the ``NOTE`` attribute to learn about the
+# Star98 dataset. Statsmodels datasets ships with other useful information. For
+# example: 
 print sm.datasets.scotland.DESCRLONG
+
+# Load the data and add a constant to the exogenous variables:
 data2 = sm.datasets.scotland.load()
 data2.exog = sm.add_constant(data2.exog)
+print data2.exog[:5,:]
+print data2.endog[:5]
+
+#Fit and summary
+#^^^^^^^^^^^^^^^
 glm_gamma = sm.GLM(data2.endog, data2.exog, family=sm.families.Gamma())
 glm_results = glm_gamma.fit()
+print glm_results.summary()
 
-##Example for Gaussian distribution with a noncanonical link
+#GLM: Gaussian distribution with a noncanonical link
+#---------------------------------------------------
+#Artificial data
+#^^^^^^^^^^^^^^^
 nobs2 = 100
 x = np.arange(nobs2)
 np.random.seed(54321)
 X = np.column_stack((x,x**2))
 X = sm.add_constant(X)
 lny = np.exp(-(.03*x + .0001*x**2 - 1.0)) + .001 * np.random.rand(nobs2)
+
+#Fit and summary
+#^^^^^^^^^^^^^^^
 gauss_log = sm.GLM(lny, X, family=sm.families.Gaussian(sm.families.links.log))
 gauss_log_results = gauss_log.fit()
+print gauss_log_results.summary()
 
-#check summary
-print binom_results.summary()
+

@@ -67,7 +67,7 @@ class TestPlot(object):
         exog = res.model.exog
 
         plot_fit(res, 0, y_true=None)
-        plot_partregress(endog, exog, exog_idx=[0,1])
+        plot_partregress(res, exog_idx=[0,1])
         plot_regress_exog(res, exog_idx=0)
         plot_ccpr(res, exog_idx=[0])
         plot_ccpr(res, exog_idx=[0,1])

@@ -435,7 +435,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         if (confint is not None or alpha is not None):
             return acf, confint, qstat, pvalue
         else:
-            return acf, qstat
+            return acf, qstat, pvalue
 
 def pacf_yw(x, nlags=40, method='unbiased'):
     '''Partial autocorrelation estimated with non-recursive yule_walker
@@ -720,7 +720,7 @@ def levinson_durbin(s, nlags=10, isacov=False):
 
     sigma_v = sig[-1]
     arcoefs = phi[1:,-1]
-    pacf_ = np.diag(phi)
+    pacf_ = np.diag(phi).copy()
     pacf_[0] = 1.
     return sigma_v, arcoefs, pacf_, sig, phi  #return everything
 

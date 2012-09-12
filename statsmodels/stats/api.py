@@ -30,3 +30,5 @@ from .sandwich_covariance import (
 from weightstats import DescrStatsW
 
 from descriptivestats import Describe
+
+from anova import anova_lm
