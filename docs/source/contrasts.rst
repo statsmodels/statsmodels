@@ -1,7 +1,7 @@
 Patsy: Contrast Coding Systems for categorical variables
 ===========================================================
 
-.. note:: This document is based heavily on `this excellent resource from UCLA <http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm>__`.
+.. note:: This document is based heavily on `this excellent resource from UCLA <http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm>`__.
 
 A categorical variable of K categories, or levels, usually enters a regression as a sequence of K-1 dummy variables. This amounts to a linear hypothesis on the level means. That is, each test statistic for these variables amounts to testing whether the mean for that level is statistically significantly different from the mean of the base category. This dummy coding is called Treatment coding in R parlance, and we will follow this convention. There are, however, different coding methods that amount to different sets of linear hypotheses. 
 
