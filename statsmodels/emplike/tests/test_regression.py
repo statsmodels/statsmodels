@@ -175,17 +175,3 @@ class TestRegressionNM(GenRes):
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
 
-
-class TestANOVA(GenRes):
-    def __init__(self):
-        self.data = sm.datasets.star98.load().exog[:30, 1:3]
-        self.res1 = sm.emplike.ANOVA([self.data[:, 0], self.data[:, 1]])
-        self.res2 = ANOVAResults()
-
-    def test_anova(self):
-        assert_almost_equal(self.res1.compute_ANOVA()[:2],
-                            self.res2.compute_ANOVA[:2], 4)
-        assert_almost_equal(self.res1.compute_ANOVA()[2],
-                            self.res2.compute_ANOVA[2], 4)
-        assert_almost_equal(self.res1.compute_ANOVA(return_weights=1)[3],
-                            self.res2.compute_ANOVA[3], 4)
