@@ -1,8 +1,9 @@
 """
 Empirical Likelihood Linear Regression Inference
 
-Included in this script are functions to conduct hypothesis test of linear
-regression parameters as well as restrictions.
+The script contains the function that is optimized over nuisance parameters to
+ conduct inference on linear regression parameters.  It is called by eltest
+in OLSResults.
 
 
 General References
@@ -12,11 +13,9 @@ Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 
 """
 import numpy as np
-from scipy.stats import chi2
-from scipy import optimize
 from statsmodels.emplike.descriptive2 import _OptFuncts
 # When descriptive merged, this will be changed
-from statsmodels.tools.tools import add_constant
+
 
 class _ELRegOpts(_OptFuncts):
     """
