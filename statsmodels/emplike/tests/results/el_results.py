@@ -317,6 +317,12 @@ class RegressionResults(object):
         0.060189,  0.030007,  0.067371,  0.046862,  0.069814,  0.053041,
         0.053362,  0.041585,  0.033943]]))
 
+class ANOVAResults():
+    """
+    Results for ANOVA
+    """
+    def __init__(self):
+        self.source = 'Matlab'
         self.compute_ANOVA = (.426163, .51387,  np.array([9.582371]),
         np.matrix([[ 0.018494,  0.01943 ,  0.016624,  0.0172  ,  0.016985,  0.01922 ,
           0.016532,  0.015985,  0.016769,  0.017631,  0.017677,  0.017984,
