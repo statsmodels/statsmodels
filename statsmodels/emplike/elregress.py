@@ -84,28 +84,6 @@ class _ELRegOpts(_OptFuncts):
             return np.inf
 
 
-    def _ci_limits_beta_origin(self, beta):
-        """
-        Returns the likelihood for a parameter vector give a parameter
-        of interest
-
-        Parameters
-        ----------
-        beta: float
-            parameter of interest
-
-        Returns
-        ------
-
-        llr: float
-            log likelihood ratio
-        """
-        return self.test_beta_origin([beta], [self.param_nums],
-                             method=self.method,
-                             start_int_params=self.start_eta, only_h0=1,
-                             stochastic_exog=self._stochastic_exog) - \
-                             self.llr - self.r0
-
 
 # class _ANOVAOpt(_OptFuncts):
 #     """
