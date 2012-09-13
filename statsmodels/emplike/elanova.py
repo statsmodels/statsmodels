@@ -1,8 +1,8 @@
 """
 This script contains empirical likelihood ANOVA.
 
-Currently the script only contains one feature that allows the user to compare means of
-multiple groups
+Currently the script only contains one feature that allows the user to compare
+means of multiple groups
 
 General References
 ------------------
@@ -15,6 +15,7 @@ from descriptive2 import _OptFuncts
 from scipy import optimize
 from scipy.stats import chi2
 
+
 class _ANOVAOpt(_OptFuncts):
     """
 
@@ -24,7 +25,8 @@ class _ANOVAOpt(_OptFuncts):
     """
     def _opt_common_mu(self, mu):
         """
-        Optimizes the likelihood under the null hypothesis that all groups have mean mu
+        Optimizes the likelihood under the null hypothesis that all groups have
+        mean mu
 
         Parameters
         ----------
@@ -102,9 +104,7 @@ class ANOVA(_ANOVAOpt):
 
         res: tuple
             The log-likelihood, p-value and estimate for the common mean.
-
         """
-
         if mu is not None:
             llr = self._opt_common_mu(mu)
             pval = 1 - chi2.cdf(llr, self.num_groups - 1)
