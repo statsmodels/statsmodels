@@ -107,7 +107,7 @@ class DiscreteModel(base.LikelihoodModel):
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
-            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            maxiter='defined_by_method', full_output=1, disp=True, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             QC_tol=0.03, QC_verbose=False, **kwargs):
         """
@@ -426,6 +426,10 @@ class MultinomialModel(BinaryModel):
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             QC_tol=0.03, **kwargs):
+        if start_params is None:
+            start_params = np.zeros((self.K * (self.J-1)))
+        else:
+            start_params = np.asarray(start_params)
         mnfit = DiscreteModel.fit_regularized(
                 self, start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
