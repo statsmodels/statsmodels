@@ -13,8 +13,8 @@ Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 
 """
 import numpy as np
-from statsmodels.emplike.descriptive2 import _OptFuncts
-# When descriptive merged, this will be changed
+from statsmodels.emplike.descriptive import _OptFuncts
+
 
 
 class _ELRegOpts(_OptFuncts):
