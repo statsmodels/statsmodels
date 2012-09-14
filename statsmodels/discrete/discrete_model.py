@@ -1285,7 +1285,7 @@ class MNLogit(MultinomialModel):
     -----
     See developer notes for further information on `MNLogit` internals.
     """
-    def pdf(self, eXB):
+    def pdf(self, X):
         """
         NotImplemented
         """
@@ -2210,6 +2210,9 @@ class MultinomialResults(DiscreteResults):
         confint = super(DiscreteResults, self).conf_int(alpha=alpha,
                                                             cols=cols)
         return confint.transpose(2,0,1)
+
+    def margeff(self):
+        raise NotImplementedError("Use get_margeff instead")
 
 class L1MultinomialResults(MultinomialResults):
     """

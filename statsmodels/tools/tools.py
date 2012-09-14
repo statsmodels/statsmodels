@@ -519,7 +519,11 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     dta = urlopen(url)
     #TODO: this isn't Python 3 compatibile since urlopen returns bytes?
     dta = StringIO(dta.read()) # make it truly file-like
-    return genfromdta(dta)
+    if as_df: # could make this faster if we don't process dta twice?
+        from pandas import DataFrame
+        return DataFrame.from_records(genfromdta(dta))
+    else:
+        return genfromdta(dta)
 
 def nan_dot(A, B):
     """
