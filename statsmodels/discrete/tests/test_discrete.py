@@ -381,25 +381,57 @@ class CheckLikelihoodModelL1(object):
                 self.res1.nnz_params, self.res2.nnz_params, DECIMAL_4)
 
 
+class TestProbitL1(CheckLikelihoodModelL1):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        alpha = np.array([0.1, 0.2, 0.3, 10])
+        cls.res1 = Probit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=alpha, disp=0, trim_mode='auto', 
+            auto_trim_tol=0.02, acc=1e-10, maxiter=1000)
+        res2 = DiscreteL1()
+        res2.probit()
+        cls.res2 = res2
+
+class TestMNLogitL1(CheckLikelihoodModelL1):
+    @classmethod
+    def setupClass(cls):
+        anes_data = sm.datasets.anes96.load()
+        anes_exog = anes_data.exog
+        anes_exog = sm.add_constant(anes_exog, prepend=False)
+        mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
+        alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+        alpha[-1,:] = 0
+        cls.res1 = mlogit_mod.fit_regularized(
+                method='l1', alpha=alpha, trim_mode='auto', auto_trim_tol=0.02,
+                acc=1e-10)
+        res2 = DiscreteL1()
+        res2.mnlogit()
+        cls.res2 = res2
+
+
+
+
 class TestCVXOPT(object):
     @classmethod
     def setupClass(self):
         self.data = sm.datasets.spector.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=True)
-        self.alpha = 3 * np.array([0, 1, 1, 1])
-        self.res1 = Logit(self.data.endog, self.data.exog).fit_regularized(
-            method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000, 
-            trim_mode='auto')
 
-    def test_cvxopt(self):
+    def test_cvxopt_versus_slsqp(self):
         """
         Compares resutls from cvxopt to the standard slsqp
         """
         if has_cvxopt:
-            res3 = Logit(self.data.endog, self.data.exog).fit_regularized(
+            self.alpha = 3 * np.array([0, 1, 1, 1])
+            res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
+                method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000, 
+                trim_mode='auto')
+            res_cvxopt = Logit(self.data.endog, self.data.exog).fit_regularized(
                 method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
                 trim_mode='auto', auto_trim_tol=0.01, maxiter=1000)
-            assert_almost_equal(self.res1.params, res3.params, DECIMAL_4)
+            assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
         else:
             raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
 
@@ -416,6 +448,52 @@ class TestLogitL1(CheckLikelihoodModelL1):
         res2 = DiscreteL1()
         res2.logit()
         cls.res2 = res2
+
+class TestSweepAlphaL1(object):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.model = Logit(data.endog, data.exog)
+        cls.alphas = np.array(
+                [[0.1, 0.1, 0.1, 0.1],
+                    [0.4, 0.4, 0.5, 0.5], [0.5, 0.5, 1, 1]])
+        cls.res1 = DiscreteL1()
+        cls.res1.sweep()
+
+    def sweep_alpha_and_test(self):
+        for i in range(3):
+            alpha = self.alphas[i, :]
+            res2 = self.model.fit_regularized(
+                    method="l1", alpha=alpha, disp=0, acc=1e-10,
+                    trim_mode='off', maxiter=1000)
+            assert_almost_equal(res2.params, self.res1.params[i], DECIMAL_4)
+
+
+class TestL1Compatability(object):
+    """
+    Tests compatability between l1 and unregularized.
+    """
+    @classmethod
+    def setupClass(cls):
+        cls.data = sm.datasets.spector.load()
+        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
+
+    def l1_compatability_test(self):
+        # Do a regularized fit with alpha effectively dropping the last column
+        alpha = np.array([0, 0, 0, 10])
+        res_reg = Logit(self.data.endog, self.data.exog).fit_regularized(
+            method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=500,
+            trim_mode='off')
+        # Actually drop the last columnand do an unregularized fit
+        exog_no_PSI = self.data.exog[:, :3]
+        res_unreg = Logit(self.data.endog, exog_no_PSI).fit(disp=0, tol=1e-25)
+        ## Compare arrays
+        # The first three params should be equal
+        assert_almost_equal(res_unreg.params, res_reg.params[:3], DECIMAL_4)
+        # The last entry should be close to zero
+        assert_almost_equal(0, res_reg.params[3], DECIMAL_4)
+
 
 
 class TestLogitL1AlphaZero(object):
