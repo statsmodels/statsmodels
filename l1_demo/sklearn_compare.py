@@ -35,8 +35,10 @@ if use_spector:
     X = spector_data.exog
     Y = spector_data.endog
 else:
+    raise Exception(
+        "The anes96 dataset is now loaded in as a short version that cannot "\
+        "be used here")
     anes96_data = sm.datasets.anes96.load_pandas()
-    X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
     Y = anes96_data.exog.vote
 
 #### Fit and plot results

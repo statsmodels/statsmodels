@@ -1,14 +1,14 @@
 import statsmodels.api as sm
 import scipy as sp
+import numpy as np
 import pdb  # pdb.set_trace()
 
-data = sm.datasets.spector.load()
-data.exog = sm.add_constant(data.exog, prepend=True)
-alpha = 3 * sp.array([0, 1, 1, 1])
-res1 = sm.Logit(data.endog, data.exog).fit(disp=0, tol=1e-15)
-res2 = sm.Logit(data.endog, data.exog).fit(method="l1", alpha=alpha, disp=0, acc=1e-10)
+anes_data = sm.datasets.anes96.load()
+anes_exog = anes_data.exog
+anes_exog = sm.add_constant(anes_exog, prepend=False)
+mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 
-print res1.params
-print res2.params
-#print "params = \n" + str(res1.params)
-#print "conf_int = \n" + str(res1.conf_int())
+alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+alpha[-1,:] = 0
+mlogit_l1_res = mlogit_mod.fit_regularized(method='l1', alpha=alpha, trim_mode='auto', auto_trim_tol=0.02, acc=1e-10)
+print mlogit_l1_res.summary()

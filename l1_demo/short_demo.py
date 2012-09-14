@@ -55,8 +55,6 @@ print logit_l1_cvxopt_res.summary()
 ### Multinomial Logit Example using American National Election Studies Data
 anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
-anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
-anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_res = mlogit_mod.fit()
@@ -64,11 +62,8 @@ mlogit_res = mlogit_mod.fit()
 alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
 # Don't regularize the constant
 alpha[-1,:] = 0
-mlogit_l1_res = mlogit_mod.fit_regularized(
-    method='l1', alpha=alpha, trim_tol=1e-6,
-    start_params=0.0*np.ones(alpha.shape))
+mlogit_l1_res = mlogit_mod.fit_regularized(method='l1', alpha=alpha)
 print mlogit_l1_res.params
-# CVXOPT isn't up to date
 #mlogit_l1_res = mlogit_mod.fit_regularized(
 #        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
 #print mlogit_l1_res.params
@@ -80,15 +75,15 @@ print "l1 results"
 print mlogit_l1_res.summary()
 #
 #### Logit example with many params, sweeping alpha
-anes96_data = sm.datasets.anes96.load_pandas()
-X = anes96_data.exog.drop(['vote', 'selfLR'], axis=1)
-Y = anes96_data.exog.vote
+spector_data = sm.datasets.spector.load()
+X = spector_data.exog
+Y = spector_data.endog
 ## Fit
 N = 50  # number of points to solve at
 K = X.shape[1]
 logit_mod = sm.Logit(Y, X)
 coeff = np.zeros((N, K))  # Holds the coefficients
-alphas = 1 / np.logspace(-2.65, 2, N)
+alphas = 1 / np.logspace(-0.5, 2, N)
 ## Sweep alpha and store the coefficients
 # QC check doesn't always pass with the default options.
 # Use the options QC_verbose=True and disp=True
