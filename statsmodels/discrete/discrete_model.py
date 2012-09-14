@@ -2203,6 +2203,9 @@ class MultinomialResults(DiscreteResults):
                                                             cols=cols)
         return confint.transpose(2,0,1)
 
+    def margeff(self):
+        raise NotImplementedError("Use get_margeff instead")
+
 class L1MultinomialResults(MultinomialResults):
     """
     Special version of MultinomialResults for use with a model that was fit
