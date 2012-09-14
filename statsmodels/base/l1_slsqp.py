@@ -23,7 +23,7 @@ def _fit_l1_slsqp(
     subject to
     .. math:: -u_k \\leq \\beta_k \\leq u_k.
 
-    Theory dictates that one of two conditions holds:
+    Theory dictates that, at the minimum, one of two conditions holds:
         i) abs(score[i]) == alpha[i]  and  params[i] != 0
         ii) abs(score[i]) <= alpha[i]  and  params[i] == 0
 
@@ -81,12 +81,12 @@ def _fit_l1_slsqp(
         func, x0, f_ieqcons=f_ieqcons_wrap, fprime=fprime_wrap, acc=acc,
         iter=maxiter, disp=disp_slsqp, full_output=full_output,
         fprime_ieqcons=fprime_ieqcons_wrap)
+    params = np.asarray(results[0][:k_params])
 
     ### Post-process
     # QC
     QC_tol = kwargs['QC_tol']
     QC_verbose = kwargs['QC_verbose']
-    params = np.asarray(results[0][:k_params])
     passed, QC_dict = l1_solvers_common.QC_results(
         params, alpha, score, QC_tol, QC_verbose)
     # Possibly trim
