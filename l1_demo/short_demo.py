@@ -51,32 +51,32 @@ print "l1 results"
 print logit_l1_res.summary()
 print logit_l1_cvxopt_res.summary()
 
-#### Multinomial Logit Example using American National Election Studies Data
-#anes_data = sm.datasets.anes96.load()
-#anes_exog = anes_data.exog
-#anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
-#anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
-#anes_exog = sm.add_constant(anes_exog, prepend=False)
-#mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
-#mlogit_res = mlogit_mod.fit()
-### Set the regularization parameter.  
-#alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
-## Don't regularize the constant
-#alpha[-1,:] = 0
+### Multinomial Logit Example using American National Election Studies Data
+anes_data = sm.datasets.anes96.load()
+anes_exog = anes_data.exog
+anes_exog[:,0] = np.log(anes_exog[:,0] + .1)
+anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
+anes_exog = sm.add_constant(anes_exog, prepend=False)
+mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
+mlogit_res = mlogit_mod.fit()
+## Set the regularization parameter.  
+alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+# Don't regularize the constant
+alpha[-1,:] = 0
+mlogit_l1_res = mlogit_mod.fit_regularized(
+    method='l1', alpha=alpha, trim_tol=1e-6, 
+    start_params=0.0*np.ones(alpha.shape))
+print mlogit_l1_res.params
+# CVXOPT isn't up to date
 #mlogit_l1_res = mlogit_mod.fit_regularized(
-#    method='l1', alpha=alpha, trim_tol=1e-6, 
-#    start_params=0.0*np.ones(alpha.shape))
+#        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
 #print mlogit_l1_res.params
-## CVXOPT isn't up to date
-##mlogit_l1_res = mlogit_mod.fit_regularized(
-##        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
-##print mlogit_l1_res.params
-### Print results
-#print "============ Results for MNLogit ================="
-#print "ML results"
-#print mlogit_res.summary()
-#print "l1 results"
-#print mlogit_l1_res.summary()
+## Print results
+print "============ Results for MNLogit ================="
+print "ML results"
+print mlogit_res.summary()
+print "l1 results"
+print mlogit_l1_res.summary()
 #
 #### Logit example with many params, sweeping alpha
 #anes96_data = sm.datasets.anes96.load_pandas()
