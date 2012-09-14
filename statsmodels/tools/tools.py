@@ -328,47 +328,18 @@ def add_constant(data, prepend=False):
                     usemask=False, asrecarray = return_rec)
     return data
 
-
 def isestimable(C, D):
-    """ True if (Q, P) contrast `C` is estimable for (N, P) design `D`
-
-    From an Q x P contrast matrix `C` and an N x P design matrix `D`, checks if
-    the contrast `C` is estimable by looking at the rank of ``vstack([C,D])``
-    and verifying it is the same as the rank of `D`.
-
-    Parameters
-    ----------
-    C : (Q, P) array-like
-        contrast matrix. If `C` has is 1 dimensional assume shape (1, P)
-    D: (N, P) array-like
-        design matrix
-
-    Returns
-    -------
-    tf : bool
-        True if the contrast `C` is estimable on design `D`
-
-    Examples
-    --------
-    >>> D = np.array([[1, 1, 1, 0, 0, 0],
-    ...               [0, 0, 0, 1, 1, 1],
-    ...               [1, 1, 1, 1, 1, 1]]).T
-    >>> isestimable([1, 0, 0], D)
-    False
-    >>> isestimable([1, -1, 0], D)
-    True
     """
-    C = np.asarray(C)
-    D = np.asarray(D)
+    From an q x p contrast matrix C and an n x p design matrix D, checks
+    if the contrast C is estimable by looking at the rank of vstack([C,D]) and
+    verifying it is the same as the rank of D.
+    """
     if C.ndim == 1:
-        C = C[None, :]
-    if C.shape[1] != D.shape[1]:
-        raise ValueError('Contrast should have %d columns' % D.shape[1])
+        C.shape = (C.shape[0], 1)
     new = np.vstack([C, D])
     if rank(new) != rank(D):
         return False
     return True
-
 
 def recipr(X):
     """
@@ -484,16 +455,12 @@ def chain_dot(*arrs):
     """
     return reduce(lambda x, y: np.dot(y, x), arrs[::-1])
 
-def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
+def webuse(data, baseurl='http://www.stata-press.com/data/r11/'):
     """
     Parameters
     ----------
     data : str
         Name of dataset to fetch.
-    baseurl : str
-        The base URL to the stata datasets.
-    as_df : bool
-        If True, returns a `pandas.DataFrame`
 
     Returns
     -------
@@ -510,6 +477,7 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     error checking in response URLs.
     """
     # lazy imports
+    import pandas
     from statsmodels.iolib import genfromdta
     from urllib2 import urlopen
     from urlparse import urljoin
@@ -517,10 +485,35 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
 
     url = urljoin(baseurl, data+'.dta')
     dta = urlopen(url)
-    #TODO: this isn't Python 3 compatibile since urlopen returns bytes?
     dta = StringIO(dta.read()) # make it truly file-like
-    if as_df: # could make this faster if we don't process dta twice?
-        from pandas import DataFrame
-        return DataFrame.from_records(genfromdta(dta))
-    else:
-        return genfromdta(dta)
+    return genfromdta(dta)
+
+def nan_dot(A, B):
+    """
+    Returns np.dot(left_matrix, right_matrix) with the convention that
+    nan * 0 = 0 and nan * x = nan if x != 0.
+
+    Parameters
+    ----------
+    A, B : np.ndarrays
+    """
+    m = A.shape[0]
+    n = B.shape[1]
+    K = A.shape[1]
+    assert K == B.shape[0], "Matrices must be aligned"
+
+    C = np.zeros((m, n))
+    for i in xrange(m):
+        for j in xrange(n):
+            for k in xrange(K):
+                a = A[i, k]
+                b = B[k, j]
+                if np.isnan(a) and b == 1 or a == 1 and np.isnan(b):
+                    C[i, j] = np.nan
+                    break
+                elif np.isnan(a) and b == 0 or a == 0 and np.isnan(b):
+                    value = 0.
+                else:
+                    value = a * b
+                C[i, j] += value
+    return C

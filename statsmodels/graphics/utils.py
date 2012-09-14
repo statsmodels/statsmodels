@@ -61,7 +61,7 @@ def create_mpl_ax(ax=None):
     return fig, ax
 
 
-def create_mpl_fig(fig=None, figsize=None):
+def create_mpl_fig(fig=None):
     """Helper function for when multiple plot axes are needed.
 
     Those axes should be created in the functions they are used in, with
@@ -86,6 +86,6 @@ def create_mpl_fig(fig=None, figsize=None):
     """
     if fig is None:
         plt = _import_mpl()
-        fig = plt.figure(figsize=figsize)
+        fig = plt.figure()
 
     return fig

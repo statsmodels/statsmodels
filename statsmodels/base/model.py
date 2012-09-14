@@ -1,13 +1,14 @@
 import numpy as np
 from scipy import optimize, stats
 from statsmodels.base.data import handle_data
-from statsmodels.tools.tools import recipr
+from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import ContrastResults
 from statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
 import statsmodels.base.wrapper as wrap
-from statsmodels.tools.numdiff import approx_fprime
-from statsmodels.formula import handle_formula_data
+from statsmodels.sandbox.regression.numdiff import approx_fprime1
+
+import pdb  # pdb.set_trace
 
 
 class Model(object):
@@ -37,49 +38,6 @@ class Model(object):
         self._data_attr = []
         self._data_attr.extend(['exog', 'endog', '_data.exog', '_data.endog',
                                 '_data._orig_endog', '_data._orig_exog'])
-
-    @classmethod
-    def from_formula(cls, formula, df, subset=None, *args, **kwargs):
-        """
-        Create a Model from a formula and dataframe.
-
-        Parameters
-        ----------
-        formula : str or generic Formula object
-            The formula specifying the model
-        df : array-like
-            The data for the model. See Notes.
-        subset : array-like
-            An array-like object of booleans, integers, or index values that
-            indicate the subset of df to use in the model. Assumes df is a
-            `pandas.DataFrame`
-        args : extra arguments
-            These are passed to the model
-        kwargs : extra keyword arguments
-            These are passed to the model.
-
-        Returns
-        -------
-        model : Model instance
-
-        Notes
-        ------
-        df must define __getitem__ with the keys in the formula terms
-        args and kwargs are passed on to the model instantiation. E.g.,
-        a numpy structured or rec array, a dictionary, or a pandas DataFrame.
-        """
-        #TODO: provide a template for args/kwargs from child models
-        #TODO: only accept DataFrames?
-        if subset is not None:
-            df= df.ix[subset]
-        endog, exog = handle_formula_data(df, None, formula)
-        mod = cls(endog, exog, *args, **kwargs)
-        mod.formula = formula
-
-        # since we got a dataframe, attach the original
-        mod._data.frame = df
-        return mod
-
 
     @property
     def endog_names(self):
@@ -152,8 +110,9 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=100,
-            full_output=True, disp=True, fargs=(), callback=None, retall=False,
+    def fit(self, start_params=None, method='newton', maxiter=100, 
+            full_output=True, disp=True, fargs=(), callback=None, 
+            retall=False, extra_fit_funcs=None, cov_params_func=None, 
             **kwargs):
         """
         Fit method for likelihood based models
@@ -167,11 +126,11 @@ class LikelihoodModel(Model):
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient. `method` determines which solver from
-            scipy.optimize is used.  The explicit arguments in `fit` are passed
-            to the solver.  Each solver has several optional arguments that are
-            not the same across solvers.  See the notes section below (or
-            scipy.optimize) for the available arguments.
+            conjugate gradient.  `method` determines which solver from 
+            scipy.optimize is used.  The explicit arguments in `fit` are
+            passed to the solver.  Each solver has several optional arguments
+            that are not the same across solvers.  See the notes section below
+            (or scipy.optimize) for the available arguments.
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -189,6 +148,11 @@ class LikelihoodModel(Model):
         retall : bool
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
+        extra_fit_funcs : Dictionary
+            Keys are methods and values are fit functions to use.  Populating
+            this dictionary has the effect of adding new methods
+        cov_params_func : Function
+            Used to compute the cov_params
 
         Notes
         -----
@@ -246,6 +210,8 @@ class LikelihoodModel(Model):
                 """
         Hinv = None  # JP error if full_output=0, Hinv not defined
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
+        if extra_fit_funcs:
+            methods += extra_fit_funcs.keys()
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
@@ -257,7 +223,8 @@ class LikelihoodModel(Model):
                                  "be specified")
 
         if method.lower() not in methods:
-            raise ValueError("Unknown fit method %s" % method)
+            message = "Unknown fit method %s" % method
+            raise ValueError(message)
         method = method.lower()
 
         # TODO: separate args from nonarg taking score and hessian, ie.,
@@ -279,6 +246,8 @@ class LikelihoodModel(Model):
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell
         }
+        if extra_fit_funcs:
+            fit_funcs.update(extra_fit_funcs)
 
         if method == 'newton':
             score = lambda params: self.score(params)
@@ -297,6 +266,9 @@ class LikelihoodModel(Model):
         # isn't great
 #        if method == 'bfgs' and full_output:
 #            Hinv = retvals.setdefault('Hinv', 0)
+        # If we have full_output, then compute the inverse Hessian
+        elif cov_params_func:
+            Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
             Hinv = np.linalg.inv(-retvals['Hessian'])
         else:
@@ -577,7 +549,7 @@ class GenericLikelihoodModel(LikelihoodModel):
     #this is redundant and not used when subclassing
     def initialize(self):
         if not self.score:  # right now score is not optional
-            self.score = approx_fprime
+            self.score = approx_fprime1
             if not self.hessian:
                 pass
         else:   # can use approx_hess_p if we have a gradient
@@ -631,7 +603,7 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         Gradient of log-likelihood evaluated at params
         '''
-        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
+        return approx_fprime1(params, self.loglike, epsilon=1e-4).ravel()
 
     def jac(self, params, **kwds):
         '''
@@ -639,15 +611,15 @@ class GenericLikelihoodModel(LikelihoodModel):
         observation.
         '''
         kwds.setdefault('epsilon', 1e-4)
-        return approx_fprime(params, self.loglikeobs, **kwds)
+        return approx_fprime1(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
         '''
         Hessian of log-likelihood evaluated at params
         '''
-        from statsmodels.tools.numdiff import approx_hess
+        from statsmodels.sandbox.regression.numdiff import approx_hess
         # need options for hess (epsilon)
-        return approx_hess(params, self.loglike)
+        return approx_hess(params, self.loglike)[0]
 
     def fit(self, start_params=None, method='nm', maxiter=500, full_output=1,
             disp=1, callback=None, retall=0, **kwargs):
@@ -739,31 +711,9 @@ class Results(object):
         self.params = params
         self.model = model
 
-    def predict(self, exog=None, transform=True, *args, **kwargs):
-        """
-        Call self.model.predict with self.params as the first argument.
-
-        Parameters
-        ----------
-        exog : array-like, optional
-            The values for which you want to predict.
-        transform : bool, optional
-            If the model was fit via a formula, do you want to pass
-            exog through the formula. Default is True. E.g., if you fit
-            a model y ~ log(x1) + log(x2), and transform is True, then
-            you can pass a data structure that contains x1 and x2 in
-            their original form. Otherwise, you'd need to log the data
-            first.
-
-        Returns
-        -------
-        See self.model.predict
-        """
-        if transform and hasattr(self.model, 'formula') and exog is not None:
-            from patsy import dmatrix
-            exog = dmatrix(self.model._data._orig_exog.design_info.builder,
-                    exog)
+    def predict(self, exog=None, *args, **kwargs):
         return self.model.predict(self.params, exog, *args, **kwargs)
+
 
 #TODO: public method?
 class LikelihoodModelResults(Results):
@@ -988,7 +938,7 @@ class LikelihoodModelResults(Results):
         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
-                   other=None):
+                   other=None, use_nan_dot=False):
         """
         Returns the variance/covariance matrix.
 
@@ -1008,6 +958,8 @@ class LikelihoodModelResults(Results):
             the scale argument is taken from the model.
         other : array-like, optional
             Can be used when r_matrix is specified.
+        use_nan_dot : Boolean, optional
+            Use tools.nan_dot, which is np.dot with the convention nan * 0 = 0.
 
         Returns
         -------
@@ -1032,6 +984,11 @@ class LikelihoodModelResults(Results):
         (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
+        if use_nan_dot:
+            dot_fun = nan_dot
+        else:
+            dot_fun = np.dot
+
         if cov_p is None and self.normalized_cov_params is None:
             raise ValueError('need covariance of parameters for computing '
                              '(unnormalized) covariances')
@@ -1061,7 +1018,7 @@ class LikelihoodModelResults(Results):
                 other = r_matrix
             else:
                 other = np.asarray(other)
-            tmp = np.dot(r_matrix, np.dot(cov_p, np.transpose(other)))
+            tmp = dot_fun(r_matrix, dot_fun(cov_p, np.transpose(other)))
             return tmp
         else:  #if r_matrix is None and column is None:
             return cov_p
@@ -1069,25 +1026,16 @@ class LikelihoodModelResults(Results):
     #TODO: make sure this works as needed for GLMs
     def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None):
         """
-        Compute a t-test for a joint linear hypothesis of the form Rb = q
+        Compute a tcontrast/t-test for a row vector array of the form Rb = q
+
+        where R is r_matrix, b = the parameter vector, and q is q_matrix.
 
         Parameters
         ----------
-        r_matrix : array-like, str, tuple
-            - array : If an array is given, a p x k 2d array or length k 1d
-              array specifying the linear restrictions.
-            - str : The full hypotheses to test can be given as a string.
-              See the examples.
-            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
-              deprecated.
+        r_matrix : array-like
+            A length p row vector specifying the linear restrictions.
         q_matrix : array-like or scalar, optional
-            This is deprecated. See `r_matrix` and the examples for more
-            information on new usage. Can be either a scalar or a length p
-            row vector. If omitted and r_matrix is an array, `q_matrix` is
-            assumed to be a conformable array of zeros.
-        cov_p : array-like, optional
-            An alternative estimate for the parameter covariance matrix.
-            If None is given, self.normalized_cov_params is used.
+            Either a scalar or a length p row vector.
         scale : float, optional
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
@@ -1120,30 +1068,13 @@ class LikelihoodModelResults(Results):
         >>> T_test.p
         0.0015163772380899498
 
-        Alternatively, you can specify the hypothesis tests using a string
-
-        >>> dta = sm.datasets.longley.load_pandas().data
-        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
-        >>> results = ols(formula, dta).fit()
-        >>> hypotheses = 'GNPDEFL = GNP, UNEMP = 2, YEAR/1829 = 1'
-        >>> t_test = results.new_t_test(hypotheses)
-        >>> print t_test
-
         See also
         ---------
-        tvalues : individual t statistics
-        f_test : for F tests
-        patsy.DesignInfo.linear_constraint
+        t : method to get simpler t values
+        f_test : for f tests
+
         """
-        from patsy import DesignInfo
-        if q_matrix is not None:
-            from warnings import warn
-            warn("The `q_matrix` keyword is deprecated and will be removed "
-                 "in 0.6.0. See the documentation for the new API",
-                 FutureWarning)
-            r_matrix = (r_matrix, q_matrix)
-        LC = DesignInfo(self.model.exog_names).linear_constraint(r_matrix)
-        r_matrix, q_matrix = LC.coefs, LC.constants
+        r_matrix = np.atleast_2d(np.asarray(r_matrix))
         num_ttests = r_matrix.shape[0]
         num_params = r_matrix.shape[1]
 
@@ -1156,7 +1087,6 @@ class LikelihoodModelResults(Results):
             q_matrix = np.zeros(num_ttests)
         else:
             q_matrix = np.asarray(q_matrix)
-            q_matrix = q_matrix.squeeze()
         if q_matrix.size > 1:
             if q_matrix.shape[0] != num_ttests:
                 raise ValueError("r_matrix and q_matrix must have the same "
@@ -1165,43 +1095,53 @@ class LikelihoodModelResults(Results):
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
-        if num_ttests > 1:
-            _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix,
-                                                  cov_p=cov_p)))
+        # If self.cov_params contains nan, we have to make sure this contrast
+        # is valid.
+        if np.isnan(self.cov_params().diagonal()).any():
+            use_nan_dot = True
         else:
-            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
+            use_nan_dot = False
+        # Perform the test
+        if num_ttests > 1:
+            _sd = np.sqrt(np.diag(self.cov_params(
+                r_matrix=r_matrix, cov_p=cov_p, use_nan_dot=use_nan_dot)))
+        else:
+            _sd = np.sqrt(self.cov_params(
+                r_matrix=r_matrix, cov_p=cov_p, use_nan_dot=use_nan_dot))
         _t = (_effect - q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
 
+            
     #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None):
         """
-        Compute an F-test for a joint linear hypothesis.
+        Compute an Fcontrast/F-test for a contrast matrix.
+
+        Here, matrix `r_matrix` is assumed to be non-singular. More precisely,
+
+        r_matrix (pX pX.T) r_matrix.T
+
+        is assumed invertible. Here, pX is the generalized inverse of the
+        design matrix of the model. There can be problems in non-OLS models
+        where the rank of the covariance of the noise is not full.
 
         Parameters
         ----------
-        r_matrix : array-like, str, or tuple
-            - array : An r x k array where r is the number of restrictions to
-              test and k is the number of regressors.
-            - str : The full hypotheses to test can be given as a string.
-              See the examples.
-            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
-              deprecated.
+        r_matrix : array-like
+            q x p array where q is the number of restrictions to test and
+            p is the number of regressors in the full model fit.
+            If q is 1 then f_test(r_matrix).fvalue is equivalent to
+            the square of t_test(r_matrix).t
         q_matrix : array-like
-            This is deprecated. See `r_matrix` and the examples for more
-            information on new usage. Can be either a scalar or a length p
-            row vector. If omitted and r_matrix is an array, `q_matrix` is
-            assumed to be a conformable array of zeros.
-        cov_p : array-like, optional
-            An alternative estimate for the parameter covariance matrix.
-            If None is given, self.normalized_cov_params is used.
+            q x 1 array, that represents the sum of each linear restriction.
+            Default is all zeros for each restriction.
         scale : float, optional
             Default is 1.0 for no scaling.
         invcov : array-like, optional
-            A q x q array to specify an inverse covariance matrix based on a
-            restrictions matrix.
+            A qxq matrix to specify an inverse covariance
+            matrix based on a restrictions matrix.
 
         Examples
         --------
@@ -1237,42 +1177,14 @@ class LikelihoodModelResults(Results):
         <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9,
          df_num=2>
 
-        Alternatively, you can specify the hypothesis tests using a string
-
-        >>> from statsmodels.datasets import longley
-        >>> from statsmodels.formula.api import ols
-        >>> dta = longley.load_pandas().data
-        >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
-        >>> results = ols(formula, dta).fit()
-        >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
-        >>> f_test = results.new_f_test(hypotheses)
-        >>> print f_test
-
         See also
         --------
         statsmodels.contrasts
         statsmodels.model.t_test
-        patsy.DesignInfo.linear_constraint
 
-        Notes
-        -----
-        The matrix `r_matrix` is assumed to be non-singular. More precisely,
-
-        r_matrix (pX pX.T) r_matrix.T
-
-        is assumed invertible. Here, pX is the generalized inverse of the
-        design matrix of the model. There can be problems in non-OLS models
-        where the rank of the covariance of the noise is not full.
         """
-        from patsy import DesignInfo
-        if q_matrix is not None:
-            from warnings import warn
-            warn("The `q_matrix` keyword is deprecated and will be removed "
-                 "in 0.6.0. See the documentation for the new API",
-                 FutureWarning)
-            r_matrix = (r_matrix, q_matrix)
-        LC = DesignInfo(self.model.exog_names).linear_constraint(r_matrix)
-        r_matrix, q_matrix = LC.coefs, LC.constants
+        r_matrix = np.asarray(r_matrix)
+        r_matrix = np.atleast_2d(r_matrix)
 
         if (self.normalized_cov_params is None and cov_p is None and
             invcov is None):
@@ -1685,3 +1597,5 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.nobs = model.endog.shape[0]
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
+
+

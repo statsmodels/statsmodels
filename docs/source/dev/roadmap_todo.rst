@@ -54,7 +54,9 @@ Existing Implementations:
 * `Jonathan Taylor's Formula <https://github.com/jonathan-taylor/formula>`__
 
   * `Forked to statsmodels repository <https://github.com/statsmodels/formula>`__
-* `Nathaniel Smith's Patsy <https://github.com/pydata/patsy>`__
+* `Nathaniel Smith's Charlton <https://github.com/charlton>`__
+
+  * `Forked to statsmodels repository <https://github.com/statsmodels/charlton>`__
 
 Open questions:
 

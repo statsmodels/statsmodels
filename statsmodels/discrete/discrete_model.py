@@ -31,8 +31,156 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
+from statsmodels.base.l1_slsqp import _fit_l1_slsqp
+try:
+    import cvxopt
+    have_cvxopt = True
+except ImportError:
+    have_cvxopt = False
+
+import pdb  # pdb.set_trace
+
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
+
+#### margeff helper functions ####
+#NOTE: todo marginal effects for group 2
+# group 2 oprobit, ologit, gologit, mlogit, biprobit
+
+def _check_margeff_args(at, method):
+    """
+    Checks valid options for margeff
+    """
+    if at not in ['overall','mean','median','zero','all']:
+        raise ValueError("%s not a valid option for `at`." % at)
+    if method not in ['dydx','eyex','dyex','eydx']:
+        raise ValueError("method is not understood.  Got %s" % method)
+
+def _check_discrete_args(at, method):
+    """
+    Checks the arguments for margeff if the exogenous variables are discrete.
+    """
+    if method in ['dyex','eyex']:
+        raise ValueError("%s not allowed for discrete variables" % method)
+    if at in ['median', 'zero']:
+        raise ValueError("%s not allowed for discrete variables" % at)
+
+def _isdummy(X):
+    """
+    Given an array X, returns a boolean column index for the dummy variables.
+
+    Parameters
+    ----------
+    X : array-like
+        A 1d or 2d array of numbers
+
+    Examples
+    --------
+    >>> X = np.random.randint(0, 2, size=(15,5)).astype(float)
+    >>> X[:,1:3] = np.random.randn(15,2)
+    >>> ind = _isdummy(X)
+    >>> ind
+    array([ True, False, False,  True,  True], dtype=bool)
+    """
+    X = np.asarray(X)
+    if X.ndim > 1:
+        ind = np.zeros(X.shape[1]).astype(bool)
+    max = (np.max(X, axis=0) == 1)
+    min = (np.min(X, axis=0) == 0)
+    remainder = np.all(X % 1. == 0, axis=0)
+    ind = min & max & remainder
+    if X.ndim == 1:
+        ind = np.asarray([ind])
+    return ind
+
+def _iscount(X):
+    """
+    Given an array X, returns a boolean column index for count variables.
+
+    Parameters
+    ----------
+    X : array-like
+        A 1d or 2d array of numbers
+
+    Examples
+    --------
+    >>> X = np.random.randint(0, 10, size=(15,5)).astype(float)
+    >>> X[:,1:3] = np.random.randn(15,2)
+    >>> ind = _iscount(X)
+    >>> ind
+    array([ True, False, False,  True,  True], dtype=bool)
+    """
+    X = np.asarray(X)
+    remainder = np.logical_and(np.all(X % 1. == 0, axis = 0),
+                               X.var(0) != 0)
+    dummy = _isdummy(X)
+    remainder -= dummy
+    return remainder
+
+def _get_margeff_exog(exog, at, atexog, ind):
+    if atexog is not None: # user supplied
+        if not isinstance(atexog, dict):
+            raise ValueError("atexog should be a dict not %s"\
+                    % type(atexog))
+        for key in atexog:
+            exog[:,key] = atexog[key]
+    if at == 'mean':
+        exog = np.atleast_2d(exog.mean(0))
+    elif at == 'median':
+        exog = np.atleast_2d(np.median(exog, axis=0))
+    elif at == 'zero':
+        exog = np.zeros((1,exog.shape[1]))
+        exog[0,~ind] = 1
+    return exog
+
+def _get_count_effects(effects, exog, count_ind, method, model, params):
+    for i, tf in enumerate(count_ind):
+        if tf == True:
+            exog0 = exog.copy()
+            effect0 = model.predict(params, exog0)
+            wf1 = model.predict
+            exog0[:,i] += 1
+            effect1 = model.predict(params, exog0)
+    #TODO: compute discrete elasticity correctly
+    #Stata doesn't use the midpoint method or a weighted average.
+    #Check elsewhere
+            if 'ey' in method:
+                pass
+                ##TODO: don't know if this is theoretically correct
+                #fittedvalues0 = np.dot(exog0,params)
+                #fittedvalues1 = np.dot(exog1,params)
+                #weight1 = model.exog[:,i].mean()
+                #weight0 = 1 - weight1
+                #wfv = (.5*model.cdf(fittedvalues1) + \
+                        #        .5*model.cdf(fittedvalues0))
+                #effects[i] = ((effect1 - effect0)/wfv).mean()
+            effects[i] = (effect1 - effect0).mean()
+    return effects
+
+
+def _get_dummy_effects(effects, exog, dummy_ind, method, model, params):
+    for i, tf in enumerate(dummy_ind):
+        if tf == True:
+            exog0 = exog.copy() # only copy once, can we avoid a copy?
+            exog0[:,i] = 0
+            effect0 = model.predict(params, exog0)
+            #fittedvalues0 = np.dot(exog0,params)
+            exog0[:,i] = 1
+            effect1 = model.predict(params, exog0)
+            if 'ey' in method:
+                effect0 = np.log(effect0)
+                effect1 = np.log(effect1)
+            effects[i] = (effect1 - effect0).mean() # mean for overall
+    return effects
+
+def _effects_at(effects, at, ind):
+    if at == 'all':
+        effects = effects[:,ind]
+    elif at == 'overall':
+        effects = effects.mean(0)[ind]
+    else:
+        effects = effects[0,ind]
+    return effects
 
 
 #### Private Model Classes ####
@@ -97,14 +245,142 @@ class DiscreteModel(base.LikelihoodModel):
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            QC_tol=0.03, QC_verbose=False, **kwargs):
+        """
+        Fit the model using a regularized maximum likelihood.  
+        The regularization method AND the solver used is determined by the
+        argument method.
+
+        Replacment Parameters
+        ---------------------
+        method : 'l1' or 'l1_cvxopt_cp'
+            See notes for details.
+        maxiter : Integer or 'defined_by_method'
+            Maximum number of iterations to allow the solver to use.
+            If 'defined_by_method', then use method defaults (see notes).
+
+
+        New Parameters
+        ------------------
+        alpha : non-negative scalar or numpy array (same size as parameters)
+            The weight multiplying the l1 penalty term
+        trim_mode : 'auto, 'size', or 'off'
+            If not 'off', trim (set to zero) parameters that would have been zero
+                if the solver reached the theoretical minimum.
+            If 'auto', trim params using the Theory above.
+            If 'size', trim params if they have very small absolute value
+        size_trim_tol : float or 'auto' (default = 'auto')
+            For use when trim_mode === 'size'
+        auto_trim_tol : float
+            For sue when trim_mode == 'auto'.  Use
+        QC_tol : float
+            Print warning and don't allow auto trim when (ii) in "Theory" (above)
+            is violated by this much.
+        QC_verbose : Boolean
+            If true, print out a full QC report upon failure
+
+        Notes
+        -----
+        Optional arguments for the solvers (available in Results.mle_settings):
+            'l1'
+                TODO Cut-and-paste from l1_slsqp when ready
+            'l1_cvxopt_cp'
+                TODO Cut-and-paste from l1_cvxopt when ready
+
+        TODO: The docstring won't be right since it will include all the
+        solvers for LikelihoodModel.fit
+
+        The rest of the docstring is from
+        statsmodels.LikelihoodModel.fit
+        """
+        ### Bundle up extra kwargs for the dictionary kwargs.  These are 
+        ### passed through super(...).fit() as kwargs and unpacked at 
+        ### appropriate times
+        alpha = np.array(alpha)
+        assert alpha.min() >= 0
+        try:
+            kwargs['alpha'] = alpha
+        except TypeError:
+            kwargs = dict(alpha=alpha)
+        kwargs['trim_mode'] = trim_mode
+        kwargs['size_trim_tol'] = size_trim_tol
+        kwargs['auto_trim_tol'] = auto_trim_tol
+        kwargs['QC_tol'] = QC_tol
+        kwargs['QC_verbose'] = QC_verbose
+
+        ### Define default keyword arguments to be passed to super(...).fit()
+        if maxiter == 'defined_by_method':
+            if method == 'l1':
+                maxiter = 1000
+            elif method == 'l1_cvxopt_cp':
+                maxiter = 70
+
+        ## Parameters to pass to super(...).fit()
+        # For the 'extra' parameters, pass all that are available,
+        # even if we know (at this point) we will only use one.
+        extra_fit_funcs = {'l1': _fit_l1_slsqp}
+        if have_cvxopt:
+            from statsmodels.base.l1_cvxopt import _fit_l1_cvxopt_cp
+            extra_fit_funcs['l1_cvxopt_cp'] = _fit_l1_cvxopt_cp
+        elif method.lower() == 'l1_cvxopt_cp':
+            message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
+            could not be imported"""
+
+        if method in ['l1', 'l1_cvxopt_cp']:
+            cov_params_func = self.cov_params_func_l1
+ 
+        if callback is None:
+            callback = self._check_perfect_pred
+        else:
+            pass # make a function factory to have multiple call-backs
+
+        mlefit = super(DiscreteModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, extra_fit_funcs=extra_fit_funcs,
+                cov_params_func=cov_params_func, **kwargs)
+        return mlefit # up to subclasses to wrap results
+
+    fit_regularized.__doc__ += base.LikelihoodModel.fit.__doc__
+
+    def cov_params_func_l1(self, likelihood_model, xopt, retvals):
+        """
+        Computes cov_params on a reduced parameter space
+        corresponding to the nonzero parameters resulting from the
+        l1 regularized fit.
+
+        Returns a full cov_params matrix, with entries corresponding
+        to zero'd values set to np.nan.
+        """
+        H = likelihood_model.hessian(xopt)
+        trimmed = retvals['trimmed']
+        nz_idx = np.nonzero(trimmed == False)[0]
+        nnz_params = (trimmed == False).sum()
+        if nnz_params > 0:
+            H_restricted = np.zeros((nnz_params, nnz_params))
+            for new_i, old_i in enumerate(nz_idx):
+                for new_j, old_j in enumerate(nz_idx):
+                    H_restricted[new_i, new_j] = H[old_i, old_j]
+            # Covariance estimate for the nonzero params
+            H_restricted_inv = np.linalg.inv(-H_restricted)
+
+        cov_params = np.nan * np.ones(H.shape)
+        for new_i, old_i in enumerate(nz_idx):
+            for new_j, old_j in enumerate(nz_idx):
+                cov_params[old_i, old_j] = H_restricted_inv[new_i, new_j]
+
+        return cov_params
+
+
     def predict(self, params, exog=None, linear=False):
         """
         Predict response variable of a model given exogenous variables.
         """
         raise NotImplementedError
 
-    def _derivative_exog(self, params, exog=None, dummy_idx=None,
-            count_idx=None):
+    def _derivative_exog(self, params, exog=None):
         """
         This should implement the derivative of the non-linear function
         """
@@ -147,56 +423,32 @@ class BinaryModel(DiscreteModel):
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
-    def _derivative_predict(self, params, exog=None, transform='dydx'):
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            QC_tol=0.03, **kwargs):
+        bnryfit = super(BinaryModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, QC_tol=QC_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1BinaryResults(self, bnryfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+        return BinaryResultsWrapper(discretefit)
+    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
+
+    def _derivative_exog(self, params, exog=None):
         """
-        For computing marginal effects standard errors.
-
-        This is used only in the case of discrete and count regressors to
-        get the variance-covariance of the marginal effects. It returns
-        [d F / d params] where F is the predict.
-
-        Transform can be 'dydx' or 'eydx'. Checking is done in margeff
-        computations for appropriate transform.
-        """
-        if exog is None:
-            exog = self.exog
-        dF = self.pdf(np.dot(exog, params))[:,None] * exog
-        if 'ey' in transform:
-            dF /= self.predict(params, exog)[:,None]
-        return dF
-
-    def _derivative_exog(self, params, exog=None, transform='dydx',
-            dummy_idx=None, count_idx=None):
-        """
-        For computing marginal effects returns dF(XB) / dX where F(.) is
-        the predicted probabilities
-
-        transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
-
-        Not all of these make sense in the presence of discrete regressors,
-        but checks are done in the results in get_margeff.
+        For computing marginal effects.
         """
         #note, this form should be appropriate for
         ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
         if exog == None:
             exog = self.exog
-        margeff = np.dot(self.pdf(np.dot(exog, params))[:,None],
-                                                          params[None,:])
-        if 'ex' in transform:
-            margeff *= exog
-        if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,None]
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
-        return margeff
+        return np.dot(self.pdf(np.dot(exog, params))[:,None], params[None,:])
 
 class MultinomialModel(BinaryModel):
     def initialize(self):
@@ -267,100 +519,24 @@ class MultinomialModel(BinaryModel):
         return MultinomialResultsWrapper(mnfit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
-    def _derivative_predict(self, params, exog=None, transform='dydx'):
-        """
-        For computing marginal effects standard errors.
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            QC_tol=0.03, **kwargs):
+        mnfit = DiscreteModel.fit_regularized(
+                self, start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, QC_tol=QC_tol, **kwargs)
+        mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
+        if method in ['l1', 'l1_cvxopt_cp']:
+            mnfit = L1MultinomialResults(self, mnfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+        return MultinomialResultsWrapper(mnfit)
+    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
 
-        This is used only in the case of discrete and count regressors to
-        get the variance-covariance of the marginal effects. It returns
-        [d F / d params] where F is the predicted probabilities for each
-        choice. dFdparams is of shape nobs x (J*K) x (J-1)*K.
-        The zero derivatives for the base category are not included.
-
-        Transform can be 'dydx' or 'eydx'. Checking is done in margeff
-        computations for appropriate transform.
-        """
-        if exog is None:
-            exog = self.exog
-        if params.ndim == 1: # will get flatted from approx_fprime
-            params = params.reshape(self.K, self.J-1, order='F')
-
-        eXB = np.exp(np.dot(exog, params))
-        sum_eXB = (1 + eXB.sum(1))[:,None]
-        J, K = map(int, [self.J, self.K])
-        repeat_eXB = np.repeat(eXB, J, axis=1)
-        X = np.tile(exog, J-1)
-        # this is the derivative wrt the base level
-        F0 = -repeat_eXB * X / sum_eXB ** 2
-        # this is the derivative wrt the other levels when
-        # dF_j / dParams_j (ie., own equation)
-        #NOTE: this computes too much, any easy way to cut down?
-        F1 = eXB.T[:,:,None]*X * (sum_eXB - repeat_eXB) / (sum_eXB**2)
-        F1 = F1.transpose((1,0,2)) # put the nobs index first
-
-        # other equation index
-        other_idx = ~np.kron(np.eye(J-1), np.ones(K)).astype(bool)
-        F1[:, other_idx] = (-eXB.T[:,:,None]*X*repeat_eXB / \
-                           (sum_eXB**2)).transpose((1,0,2))[:, other_idx]
-        dFdX = np.concatenate((F0[:, None,:], F1), axis=1)
-
-        if 'ey' in transform:
-            dFdX /= self.predict(params, exog)[:, :, None]
-        return dFdX
-
-    def _derivative_exog(self, params, exog=None, transform='dydx',
-            dummy_idx=None, count_idx=None):
-        """
-        For computing marginal effects returns dF(XB) / dX where F(.) is
-        the predicted probabilities
-
-        transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
-
-        Not all of these make sense in the presence of discrete regressors,
-        but checks are done in the results in get_margeff.
-
-        For Multinomial models the marginal effects are
-
-        P[j] * (params[j] - sum_k P[k]*params[k])
-
-        It is returned unshaped, so that each row contains each of the J
-        equations. This makes it easier to take derivatives of this for
-        standard errors. If you want average marginal effects you can do
-        margeff.reshape(nobs, K, J, order='F).mean(0) and the marginal effects
-        for choice J are in column J
-        """
-        J = int(self.J) # number of alternative choices
-        K = int(self.K) # number of variables
-        #note, this form should be appropriate for
-        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if exog == None:
-            exog = self.exog
-        if params.ndim == 1: # will get flatted from approx_fprime
-            params = params.reshape(K, J-1, order='F')
-        zeroparams = np.c_[np.zeros(K), params] # add base in
-
-        cdf = self.cdf(np.dot(exog, params))
-        margeff = np.array([cdf[:,[j]]* (zeroparams[:,j]-np.array([cdf[:,[i]]*
-            zeroparams[:,i] for i in range(int(J))]).sum(0))
-                          for j in range(J)])
-        margeff = np.transpose(margeff, (1,2,0))
-        # swap the axes to make sure margeff are in order nobs, K, J
-        if 'ex' in transform:
-            margeff *= exog
-        if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,None,:]
-
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
-        return margeff.reshape(len(exog), -1, order='F')
 
 class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None):
@@ -411,58 +587,13 @@ class CountModel(DiscreteModel):
             return np.dot(exog, params) + exposure + offset
             return super(CountModel, self).predict(params, exog, linear)
 
-    def _derivative_predict(self, params, exog=None, transform='dydx'):
+    def _derivative_exog(self, params, exog=None):
         """
-        For computing marginal effects standard errors.
-
-        This is used only in the case of discrete and count regressors to
-        get the variance-covariance of the marginal effects. It returns
-        [d F / d params] where F is the predict.
-
-        Transform can be 'dydx' or 'eydx'. Checking is done in margeff
-        computations for appropriate transform.
-        """
-        if exog is None:
-            exog = self.exog
-        #NOTE: this handles offset and exposure
-        dF = self.predict(params, exog)[:,None] * exog
-        if 'ey' in transform:
-            dF /= self.predict(params, exog)[:,None]
-        return dF
-
-    def _derivative_exog(self, params, exog=None, transform="dydx",
-            dummy_idx=None, count_idx=None):
-        """
-        For computing marginal effects. These are the marginal effects
-        d F(XB) / dX
-        For the Poisson model F(XB) is the predicted counts rather than
-        the probabilities.
-
-        transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
-
-        Not all of these make sense in the presence of discrete regressors,
-        but checks are done in the results in get_margeff.
         """
         # group 3 poisson, nbreg, zip, zinb
         if exog == None:
             exog = self.exog
-        margeff = self.predict(params, exog)[:,None] * params[None,:]
-        if 'ex' in transform:
-            margeff *= exog
-        if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,None]
-
-        if count_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_count_effects)
-            margeff = _get_count_effects(margeff, exog, count_idx, transform,
-                    self, params)
-        if dummy_idx is not None:
-            from statsmodels.discrete.discrete_margins import (
-                    _get_dummy_effects)
-            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
-                    self, params)
-        return margeff
+        return self.predict(params, exog)[:,None] * params[None,:]
 
     def fit(self, start_params=None, method='newton', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
@@ -1111,11 +1242,11 @@ class MNLogit(MultinomialModel):
     -----
     See developer notes for further information on `MNLogit` internals.
     """
-    def pdf(self, X):
+    def pdf(self, eXB):
         """
         NotImplemented
         """
-        raise NotImplementedError
+        pass
 
     def cdf(self, X):
         """
@@ -1428,7 +1559,7 @@ class NBin(CountModel):
 
     def hessian(self, params):
         """
-        Hessian of NB2 model.
+        Hessian of NB2 model.  Currently uses numdifftools
         """
         lnalpha = params[-1]
         params = params[:-1]
@@ -1604,71 +1735,6 @@ class DiscreteResults(base.LikelihoodModelResults):
             yname_list = self.model.endog_names
         return yname, yname_list
 
-    def get_margeff(self, at='overall', method='dydx', atexog=None,
-            dummy=False, count=False):
-        """Get marginal effects of the fitted model.
-
-        Parameters
-        ----------
-        at : str, optional
-            Options are:
-
-            - 'overall', The average of the marginal effects at each
-              observation.
-            - 'mean', The marginal effects at the mean of each regressor.
-            - 'median', The marginal effects at the median of each regressor.
-            - 'zero', The marginal effects at zero for each regressor.
-            - 'all', The marginal effects at each observation. If `at` is all
-              only margeff will be available from the returned object.
-
-            Note that if `exog` is specified, then marginal effects for all
-            variables not specified by `exog` are calculated using the `at`
-            option.
-        method : str, optional
-            Options are:
-
-            - 'dydx' - dy/dx - No transformation is made and marginal effects
-              are returned.  This is the default.
-            - 'eyex' - estimate elasticities of variables in `exog` --
-              d(lny)/d(lnx)
-            - 'dyex' - estimate semielasticity -- dy/d(lnx)
-            - 'eydx' - estimate semeilasticity -- d(lny)/dx
-
-            Note that tranformations are done after each observation is
-            calculated.  Semi-elasticities for binary variables are computed
-            using the midpoint method. 'dyex' and 'eyex' do not make sense
-            for discrete variables.
-        atexog : array-like, optional
-            Optionally, you can provide the exogenous variables over which to
-            get the marginal effects.  This should be a dictionary with the key
-            as the zero-indexed column number and the value of the dictionary.
-            Default is None for all independent variables less the constant.
-        dummy : bool, optional
-            If False, treats binary variables (if present) as continuous.  This
-            is the default.  Else if True, treats binary variables as
-            changing from 0 to 1.  Note that any variable that is either 0 or 1
-            is treated as binary.  Each binary variable is treated separately
-            for now.
-        count : bool, optional
-            If False, treats count variables (if present) as continuous.  This
-            is the default.  Else if True, the marginal effect is the
-            change in probabilities when each observation is increased by one.
-
-        Returns
-        -------
-        DiscreteMargins : marginal effects instance
-            Returns an object that holds the marginal effects, standard
-            errors, confidence intervals, etc. See
-            `statsmodels.discrete.discrete_margins.DiscreteMargins` for more
-            information.
-
-        Notes
-        -----
-        When using after Poisson, returns the expected number of events
-        per period, assuming that the model is loglinear.
-        """
-        from statsmodels.discrete.discrete_margins import DiscreteMargins
-        return DiscreteMargins(self, (at, method, atexog, dummy, count))
 
 
     def margeff(self, at='overall', method='dydx', atexog=None, dummy=False,
@@ -1736,16 +1802,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         #    of type float), then `factor` may be a dict with the zero-indexed
         #    column of the factor and the value should be the base-outcome.
 
-        from statsmodels.discrete.discrete_margins import (_check_margeff_args,
-                        _check_discrete_args, _isdummy, _iscount,
-                        _get_margeff_exog, _get_count_effects,
-                        _get_dummy_effects, _effects_at)
-
-        import warnings
-        warnings.warn("This method is deprecated and will be removed in 0.6.0."
-                " Use get_margeff instead", FutureWarning)
-        from statsmodels.discrete.discrete_margins import margeff_cov_with_se
-
         # get local variables
         model = self.model
         params = self.params
@@ -1756,67 +1812,37 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         _check_margeff_args(at, method)
 
-        if np.any(~ind):
-            const_idx = np.where(~ind)[0]
-        else:
-            const_idx = None
-
         # handle discrete exogenous variables
         if dummy:
             _check_discrete_args(at, method)
             dummy_ind = _isdummy(exog)
-            exog_ind = dummy_ind.copy()
-            # adjust back for a constant because effects doesn't have one
-            if const_idx is not None:
-                dummy_ind[dummy_ind > const_idx] -= 1
-            if dummy_ind.size == 0: # don't waste your time
-                dummy = False
-                dummy_ind = None # this gets passed to stand err func
-            else:
-                dummy_ind = zip(dummy_ind, exog_ind[:])
-        else:
-            dummy_ind = None
-
         if count:
             _check_discrete_args(at, method)
             count_ind = _iscount(exog)
-            exog_ind = count_ind.copy()
-            # adjust back for a constant because effects doesn't have one
-            if const_idx is not None:
-                count_ind[count_ind > const_idx] -= 1
-            if count_ind.size == 0: # don't waste your time
-                count = False
-                count_ind = None # for stand err func
-            else:
-                count_ind = zip(count_ind, exog_ind)
-        else:
-            count_ind = None
 
         # get the exogenous variables
         exog = _get_margeff_exog(exog, at, atexog, ind)
 
         # get base marginal effects, handled by sub-classes
-        effects = model._derivative_exog(params, exog, method)
+        effects = model._derivative_exog(params, exog)
 
-        effects = _effects_at(effects, at)
+        if 'ex' in method:
+            effects *= exog
+        if 'ey' in method:
+            effects /= model.predict(params, exog)[:,None]
 
-        if dummy:
+        effects = _effects_at(effects, at, ind)
+
+        if dummy == True:
             effects = _get_dummy_effects(effects, exog, dummy_ind, method,
                                          model, params)
 
-        if count:
+        if count == True:
             effects = _get_count_effects(effects, exog, count_ind, method,
                                          model, params)
 
         # Set standard error of the marginal effects by Delta method.
-        margeff_cov, margeff_se = margeff_cov_with_se(model, params, exog,
-                                                self.cov_params(), at,
-                                                self.model._derivative_exog,
-                                                dummy_ind, count_ind,
-                                                method)
-        # don't care about at constant
-        self.margeff_cov = margeff_cov[ind][:, ind]
-        self.margeff_se = margeff_se[ind]
+        self.margfx_se = None
         self.margfx = effects
         return effects
 
@@ -1888,7 +1914,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         #                   title="")
         return smry
 
-
 class CountResults(DiscreteResults):
     pass
 
@@ -1947,6 +1972,34 @@ class BinaryResults(DiscreteResults):
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
 
+class L1BinaryResults(BinaryResults):
+    """
+    Special version of BinaryResults for use with a model that was fit
+    with L1 penalized regression.
+
+    New Attributes
+    --------------
+    nnz_params : Integer
+        The number of nonzero parameters in the model.  Train with 
+        trim_params==True or else numerical error will distort this.
+    trimmed : Boolean array
+        trimmed[i] == True if the ith parameter was trimmed from the model.
+    """
+    def __init__(self, model, bnryfit):
+        super(L1BinaryResults, self).__init__(model, bnryfit)
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = bnryfit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - self.nnz_params)
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*self.nnz_params
+
 class MultinomialResults(DiscreteResults):
     def _maybe_convert_ynames_int(self, ynames):
         # see if they're integers
@@ -1958,10 +2011,7 @@ class MultinomialResults(DiscreteResults):
             pass
         return ynames
 
-    def _get_endog_name(self, yname, yname_list, all=False):
-        """
-        If all is False, the first variable name is dropped
-        """
+    def _get_endog_name(self, yname, yname_list):
         model = self.model
         if yname is None:
             yname = model.endog_names
@@ -1971,10 +2021,7 @@ class MultinomialResults(DiscreteResults):
             # use range below to ensure sortedness
             ynames = [ynames[key] for key in range(int(model.J))]
             ynames = ['='.join([yname, name]) for name in ynames]
-            if not all:
-                yname_list = ynames[1:] # assumes first variable is dropped
-            else:
-                yname_list = ynames
+            yname_list = ynames[1:] # assumes first variable is dropped
         return yname, yname_list
 
     def pred_table(self):
@@ -2010,9 +2057,31 @@ class MultinomialResults(DiscreteResults):
                                                             cols=cols)
         return confint.transpose(2,0,1)
 
-    def margeff(self):
-        raise NotImplementedError("Use get_margeff instead")
+class L1MultinomialResults(MultinomialResults):
+    """
+    Special version of MultinomialResults for use with a model that was fit
+    with L1 penalized regression.
 
+    New Attributes
+    --------------
+    nnz_params : Integer
+        The number of nonzero parameters in the model.  Train with 
+        trim_params==True or else numerical error will distort this.
+    """
+    def __init__(self, model, mlefit):
+        super(L1MultinomialResults, self).__init__(model, mlefit)
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = mlefit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - self.nnz_params)
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 #### Results Wrappers ####
 
@@ -2081,7 +2150,7 @@ if __name__=="__main__":
 #    res1 = optimize.fmin_l_bfgs_b(func, np.r_[poiss_res.params,.1],
 #                        approx_grad=True)
     res1 = optimize.fmin_bfgs(func, np.r_[poiss_res.params,.1], fprime=grad)
-    from statsmodels.tools.numdiff import approx_hess_cs
+    from statsmodels.sandbox.regression.numdiff import approx_hess_cs
 #    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
 #NOTE: this is the hessian in terms of alpha _not_ lnalpha
     hess_arr = mod.hessian(res1)

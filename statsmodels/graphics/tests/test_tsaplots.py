@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import dec
 
 import statsmodels.api as sm
-from statsmodels.graphics.tsaplots import plot_acf
+from statsmodels.graphics.tsaplots import plotacf
 import statsmodels.tsa.arima_process as tsp
 
 
@@ -14,7 +14,7 @@ except:
 
 
 @dec.skipif(not have_matplotlib)
-def test_plot_acf():
+def test_plotacf():
     # Just test that it runs.
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -23,7 +23,7 @@ def test_plot_acf():
     ma = np.r_[1.,  0.9]
     armaprocess = tsp.ArmaProcess(ar, ma)
     acf = armaprocess.acf(20)[:20]
-    plot_acf(acf, ax=ax)
+    plotacf(acf, ax=ax)
 
     plt.close(fig)
 
