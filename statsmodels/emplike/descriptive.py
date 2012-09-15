@@ -46,7 +46,7 @@ def DescStat(endog):
         return DescStatMV(endog)
 
 
-class _OptFuncts():
+class _OptFuncts(object):
     """
     A class that holds functions that are optimized/solved.
 
@@ -125,6 +125,7 @@ class _OptFuncts():
         hess : m x m array
             Weighted hessian used in _wtd_modif_newton
         """
+        #eta = np.squeeze(eta)
         data_star_doub_prime = np.sum(weights) + np.dot(est_vect, eta)
         idx = data_star_doub_prime < 1. / nobs
         not_idx = ~idx
@@ -154,6 +155,7 @@ class _OptFuncts():
         gradient : ndarray (m,1)
             The gradient used in _wtd_modif_newton
         """
+        #eta = np.squeeze(eta)
         data_star_prime = np.sum(weights) + np.dot(est_vect, eta)
         idx = data_star_prime < 1. / nobs
         not_idx = ~idx
@@ -187,6 +189,7 @@ class _OptFuncts():
         grad = lambda x0: - self._grad(x0, est_vect, weights, nobs)
         hess = lambda x0: - self._hess(x0, est_vect, weights, nobs)
         kwds = {'tol': 1e-8}
+        eta = eta.squeeze()
         res = _fit_mle_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
         return res[0]
