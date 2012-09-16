@@ -189,6 +189,7 @@ class ProbPlot(object):
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared:
+
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -198,12 +199,13 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+
         other : `ProbPlot` instance, array-like, or None
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
             instance. If an array-like object is provided, it will be turned
             into a `ProbPlot` instance using default parameters. If not provided
-            (defualt), the theoretical quantiles are used.
+            (default), the theoretical quantiles are used.
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -259,6 +261,7 @@ class ProbPlot(object):
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared:
+
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -268,6 +271,7 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+
         other : `ProbPlot` instance, array-like, or None
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
@@ -324,6 +328,7 @@ class ProbPlot(object):
         ----------
         line : str {'45', 's', 'r', q'} or None
             Options for the reference line to which the data is compared:
+
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -333,6 +338,7 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -402,6 +408,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         and dividing by the fitted scale.
     line : str {'45', 's', 'r', q'} or None
         Options for the reference line to which the data is compared:
+
         - '45' - 45-degree line
         - 's' - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
@@ -411,19 +418,20 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         - None - by default no reference line is added to the plot.
         - If True a reference line is drawn on the graph. The default is to
           fit a line via OLS regression.
+
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-
-    See Also
-    --------
-    scipy.stats.probplot
 
     Returns
     -------
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
+
+    See Also
+    --------
+    scipy.stats.probplot
 
     Examples
     --------
@@ -482,10 +490,11 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     ----------
     data1, data2 : array-like (1d) or `ProbPlot` instances
     xlabel, ylabel : str or None
-        User-provided lables for the x-axis and y-axis. If None (default),
+        User-provided labels for the x-axis and y-axis. If None (default),
         other values are used.
     line : str {'45', 's', 'r', q'} or None
         Options for the reference line to which the data is compared:
+
         - '45' - 45-degree line
         - 's' - standardized line, the expected order statistics are scaled
           by the standard deviation of the given sample and have the mean
@@ -495,13 +504,10 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
         - None - by default no reference line is added to the plot.
         - If True a reference line is drawn on the graph. The default is to
           fit a line via OLS regression.
+
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
-
-    See Also
-    --------
-    scipy.stats.probplot
 
     Returns
     -------
@@ -509,8 +515,12 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
 
+    See Also
+    --------
+    scipy.stats.probplot
+
     Examples
-    -------
+    --------
     >>> x = np.random.normal(loc=8.5, scale=2.5, size=37)
     >>> y = np.random.normal(loc=8.0, scale=3.0, size=37)
     >>> pp_x = sm.ProbPlot(x)
@@ -521,9 +531,10 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     -----
     1) Depends on matplotlib.
     2) If `data1` and `data2` are not `ProbPlot` instances, instances will be
-    created using the default parameters. Therefore, it is recommended to use
-    `ProbPlot` instance if fine-grained control is needed in the computation
-    of the quantiles.
+       created using the default parameters. Therefore, it is recommended to use
+       `ProbPlot` instance if fine-grained control is needed in the computation
+       of the quantiles.
+
     """
     check_data1 = isinstance(data1, ProbPlot)
     check_data2 = isinstance(data2, ProbPlot)
@@ -555,6 +566,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
         - 'r'  - A regression line is fit
         - 'q'  - A line is fit through the quartiles.
         - None - By default no reference line is added to the plot.
+
     x : array
         X data for plot. Not needed if line is '45'.
     y : array
