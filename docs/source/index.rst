@@ -3,7 +3,7 @@
 Welcome to Statsmodels's Documentation
 ======================================
 
-:mod:`statsmodels` is a Python module that provides classes and functions for the estimation 
+:mod:`statsmodels` is a Python module that provides classes and functions for the estimation
 of many different statistical models, as well as for conducting statistical tests, and statistical
 data exploration. An extensive list of result statistics are avalable for each estimator.
 The results are tested against existing statistical packages to ensure that they are correct. The
@@ -35,7 +35,7 @@ For example, here is a minimal ordinary least squares example
   # look at the results
   print results.summary()
 
-Have a look at `dir(results)` to see available results. Attributes are 
+Have a look at `dir(results)` to see available results. Attributes are
 described in `results.__doc__` and results methods have their own docstrings.
 
 
@@ -65,11 +65,13 @@ Table of Contents
    miscmodels
    dev/internal
    gmm
+   emplike
    distributions
    graphics
    iolib
    datasets/index
    sandbox
+
 
 Related Projects
 ----------------
