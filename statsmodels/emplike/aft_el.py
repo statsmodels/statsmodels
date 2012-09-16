@@ -29,11 +29,11 @@ Statistics. 14:3, 643-656.
 """
 
 import numpy as np
-from statsmodels.api import WLS, add_constant
-from elregress import ElLinReg
+from statsmodels.api import OLS, WLS, add_constant
+#from elregress import ElReg
 from scipy import optimize
 from scipy.stats import chi2
-from descriptive2 import _OptFuncts
+from descriptive import _OptFuncts
 # ^ this will change when descriptive gets merged
 import warnings
 
@@ -476,11 +476,11 @@ class AFTResults(OptAFT):
         censored = (censors == 0).flatten()
         uncens_endog = endog[uncensored]
         uncens_exog = exog[uncensored, :]
-        reg_model = ElLinReg(uncens_endog, uncens_exog)
-        reg_model.hy_test_beta(b0_vals, param_nums)  # Needs to be changed
+        reg_model = OLS(uncens_endog, uncens_exog).fit()
+        llr, pval, new_weights = reg_model.el_test(b0_vals, param_nums, return_weights=True)  # Needs to be changed
         km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs
-        F = np.asarray(reg_model.new_weights).reshape(uncens_nobs)
+        F = np.asarray(new_weights).reshape(uncens_nobs)
         # Step 0 ^
         params = self.params()
         survidx = np.where(censors == 0)
