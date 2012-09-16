@@ -103,7 +103,7 @@ class TestGradMNLogit(CheckGradLoglike):
         #self.mod.loglike = loglikeflat  #need instance method
         #self.params = [np.ones((6,6)).ravel()]
         res = self.mod.fit(disp=0)
-        self.params = [res.params.ravel(order='F')]
+        self.params = [res.params.ravel('F')]
 
     def test_hess(self):
         #NOTE: I had to overwrite this to lessen the tolerance
