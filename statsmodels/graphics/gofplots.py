@@ -41,7 +41,7 @@ class ProbPlot(object):
 
     See Also
     --------
-    `scipy.stats.probplot`
+    scipy.stats.probplot
 
     Notes
     -----
@@ -417,7 +417,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
 
     See Also
     --------
-    `scipy.stats.probplot`
+    scipy.stats.probplot
 
     Returns
     -------
@@ -501,7 +501,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
 
     See Also
     --------
-    `scipy.stats.probplot`
+    scipy.stats.probplot
 
     Returns
     -------
