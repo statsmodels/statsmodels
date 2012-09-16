@@ -109,7 +109,7 @@ class DiscreteModel(base.LikelihoodModel):
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=True, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            QC_tol=0.03, QC_verbose=False, **kwargs):
+            qc_tol=0.03, qc_verbose=False, **kwargs):
         """
         Fit the model using a regularized maximum likelihood.
         The regularization method AND the solver used is determined by the
@@ -137,10 +137,10 @@ class DiscreteModel(base.LikelihoodModel):
             For use when trim_mode === 'size'
         auto_trim_tol : float
             For sue when trim_mode == 'auto'.  Use
-        QC_tol : float
+        qc_tol : float
             Print warning and don't allow auto trim when (ii) in "Theory" (above)
             is violated by this much.
-        QC_verbose : Boolean
+        qc_verbose : Boolean
             If true, print out a full QC report upon failure
 
         Notes
@@ -169,8 +169,8 @@ class DiscreteModel(base.LikelihoodModel):
         kwargs['trim_mode'] = trim_mode
         kwargs['size_trim_tol'] = size_trim_tol
         kwargs['auto_trim_tol'] = auto_trim_tol
-        kwargs['QC_tol'] = QC_tol
-        kwargs['QC_verbose'] = QC_verbose
+        kwargs['qc_tol'] = qc_tol
+        kwargs['qc_verbose'] = qc_verbose
 
         ### Define default keyword arguments to be passed to super(...).fit()
         if maxiter == 'defined_by_method':
@@ -288,12 +288,12 @@ class BinaryModel(DiscreteModel):
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            QC_tol=0.03, **kwargs):
+            qc_tol=0.03, **kwargs):
         bnryfit = super(BinaryModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, QC_tol=QC_tol, **kwargs)
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
         if method in ['l1', 'l1_cvxopt_cp']:
             discretefit = L1BinaryResults(self, bnryfit)
         else:
@@ -425,7 +425,7 @@ class MultinomialModel(BinaryModel):
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            QC_tol=0.03, **kwargs):
+            qc_tol=0.03, **kwargs):
         if start_params is None:
             start_params = np.zeros((self.K * (self.J-1)))
         else:
@@ -434,7 +434,7 @@ class MultinomialModel(BinaryModel):
                 self, start_params=start_params, method=method, maxiter=maxiter,
                 full_output=full_output, disp=disp, callback=callback,
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
-                size_trim_tol=size_trim_tol, QC_tol=QC_tol, **kwargs)
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
         if method in ['l1', 'l1_cvxopt_cp']:
             mnfit = L1MultinomialResults(self, mnfit)

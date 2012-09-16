@@ -5,14 +5,14 @@ import numpy as np
 import pdb  # pdb.set_trace()
 
 
-def QC_results(params, alpha, score, QC_tol, QC_verbose=False):
+def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     """
     Theory dictates that one of two conditions holds:
         i) abs(score[i]) == alpha[i]  and  params[i] != 0
         ii) abs(score[i]) <= alpha[i]  and  params[i] == 0
-    QC_results checks to see that (ii) holds, within QC_tol
+    qc_results checks to see that (ii) holds, within qc_tol
 
-    QC_results also checks for nan or results of the wrong shape.
+    qc_results also checks for nan or results of the wrong shape.
 
     Parameters
     ----------
@@ -22,16 +22,16 @@ def QC_results(params, alpha, score, QC_tol, QC_verbose=False):
         regularization coefficients
     score : function
         Gradient of unregularized objective function
-    QC_tol : float
+    qc_tol : float
         Tolerance to hold conditions (i) and (ii) to for QC check.
-    QC_verbose : Boolean
+    qc_verbose : Boolean
         If true, print out a full QC report upon failure
 
     Returns
     -------
     passed : Boolean
         True if QC check passed
-    QC_dict : Dictionary
+    qc_dict : Dictionary
         Keys are fprime, alpha, params, passed_array
 
     Prints
@@ -51,9 +51,9 @@ def QC_results(params, alpha, score, QC_tol, QC_verbose=False):
     for i in xrange(k_params):
         if alpha[i] > 0:
             # If |fprime| is too big, then something went wrong
-            if (abs(fprime[i]) - alpha[i]) / alpha[i] > QC_tol:
+            if (abs(fprime[i]) - alpha[i]) / alpha[i] > qc_tol:
                 passed_array[i] = False
-    QC_dict = dict(
+    qc_dict = dict(
         fprime=fprime, alpha=alpha, params=params, passed_array=passed_array)
     passed = passed_array.min()
     if not passed:
@@ -62,18 +62,18 @@ def QC_results(params, alpha, score, QC_tol, QC_verbose=False):
             num_failed, k_params)
         message += '\nTry increasing solver accuracy or number of iterations'\
             ', decreasing alpha, or switch solvers'
-        if QC_verbose:
-            message += get_verbose_addon(QC_dict)
+        if qc_verbose:
+            message += get_verbose_addon(qc_dict)
         print message
 
-    return passed, QC_dict
+    return passed
 
 
-def get_verbose_addon(QC_dict):
-    alpha = QC_dict['alpha']
-    params = QC_dict['params']
-    fprime = QC_dict['fprime']
-    passed_array = QC_dict['passed_array']
+def get_verbose_addon(qc_dict):
+    alpha = qc_dict['alpha']
+    params = qc_dict['params']
+    fprime = qc_dict['fprime']
+    passed_array = qc_dict['passed_array']
 
     addon = '\n------ verbose QC printout -----------------'
     addon += '\n|%-10s|%-10s|%-10s|%-10s|' % (
@@ -116,7 +116,7 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
         For use when trim_mode === 'size'
     auto_trim_tol : float
         For sue when trim_mode == 'auto'.  Use
-    QC_tol : float
+    qc_tol : float
         Print warning and don't allow auto trim when (ii) in "Theory" (above)
         is violated by this much.
 
