@@ -472,7 +472,9 @@ class TestSweepAlphaL1(object):
 
 class TestL1Compatability(object):
     """
-    Tests compatability between l1 and unregularized.
+    Tests compatability between l1 and unregularized by setting alpha such
+    that certain parameters should be effectively unregularized, and others
+    should be ignored by the model.
     """
     @classmethod
     def setupClass(cls):
@@ -480,7 +482,7 @@ class TestL1Compatability(object):
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 
     def l1_compatability_test(self):
-        # Do a regularized fit with alpha effectively dropping the last column
+        # Do a regularized fit with alpha, effectively dropping the last column
         alpha = np.array([0, 0, 0, 10])
         res_reg = Logit(self.data.endog, self.data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=500,
@@ -497,6 +499,9 @@ class TestL1Compatability(object):
 
 
 class TestLogitL1AlphaZero(object):
+    """
+    Compares l1 model with alpha = 0 to the unregularized model.
+    """
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
@@ -508,6 +513,13 @@ class TestLogitL1AlphaZero(object):
 
     def test_logit_l1_alpha_zero(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_tests(self):
+        restrictmat = np.eye(len(self.res1.params))
+        assert_almost_equal(self.res1.t_test(restrictmat).pvalue,
+                            self.res2.t_test(restrictmat).pvalue, DECIMAL_4)
+        assert_almost_equal(self.res1.f_test(restrictmat).pvalue,
+                            self.res2.f_test(restrictmat).pvalue, DECIMAL_4)
 
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
