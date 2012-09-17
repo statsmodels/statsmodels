@@ -1515,6 +1515,19 @@ strong multicollinearity or other numerical problems.''' % condno
 class OLSResults(RegressionResults):
     """
     Results class for for an OLS model.
+
+    Most of the methods and attributes are inherited from RegressionResults.
+    The special methods that are only available for OLS are:
+
+    - get_influence
+    - outlier_test
+    - el_test
+    - conf_int_el
+
+    See Also
+    --------
+    RegressionResults
+
     """
 
     def get_influence(self):
@@ -1538,6 +1551,7 @@ class OLSResults(RegressionResults):
         Parameters
         ----------
         method : str
+
             - `bonferroni` : one-step correction
             - `sidak` : one-step correction
             - `holm-sidak` :
@@ -1546,6 +1560,7 @@ class OLSResults(RegressionResults):
             - `hommel` :
             - `fdr_bh` : Benjamini/Hochberg
             - `fdr_by` : Benjamini/Yekutieli
+
             See `statsmodels.stats.multitest.multipletests` for details.
         alpha : float
             familywise error rate
