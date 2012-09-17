@@ -1,6 +1,50 @@
 Release History
 ===============
 
+0.5.0-dev
+---------
+
+*Compatibility and Deprecation*
+
+* cleanup of import paths (lowess)
+*
+
+*Bug Fixes*
+
+* input shapes of tools.isestimable
+*
+
+*Enhancements and Additions*
+
+* formula integration based on patsy (new dependency)
+* Time series analysis
+  - ARIMA modeling
+  - enhanced forecasting based on pandas datetime handling
+* expanded margins for discrete models
+* OLS outlier test
+
+* empirical likelihood - Google Summer of Code 2012 project
+  - inference for descriptive statistics
+  - inference for regression models
+  - accelerated failure time models
+
+* expanded probability plots
+* improved graphics
+  - plotcorr
+  - acf and pacf
+* new datasets
+* new and improved tools
+  - numdiff numerical differentiation
+
+
+
+0.4.3
+-----
+
+The only change compared to 0.4.2 is for compatibility with python 3.2.3
+(changed behavior of 2to3)
+
+
 0.4.2
 -----
 
@@ -57,10 +101,10 @@ bug fixes and code cleanup.
 * Support for pandas Series and DataFrame objects. Results instances return
   pandas objects if the models are fit using pandas objects.
 * Full Python 3 compatibility
-* Fix bugs in genfromdta. Convert Stata .dta format to structured array 
+* Fix bugs in genfromdta. Convert Stata .dta format to structured array
   preserving all types. Conversion is much faster now.
 * Improved documentation
-* Models and results are pickleable via save/load, optionally saving the model 
+* Models and results are pickleable via save/load, optionally saving the model
   data.
 * Kernel Density Estimation now uses Cython and is considerably faster.
 * Diagnostics for outlier and influence statistics in OLS
