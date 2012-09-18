@@ -219,13 +219,21 @@ class DiscreteL1(object):
             data = sm.datasets.spector.load()
             data.exog = sm.add_constant(data.exog, prepend=True)
             alpha = 3 * np.array([0, 1, 1, 1])
-            res2 = sm.Logit(data.endog, data.exog).fit(
-                method="l1", alpha=alpha, disp=0, trim_params=True)
+            res2 = sm.Logit(data.endog, data.exog).fit_regularized(
+                method="l1", alpha=alpha, disp=0, trim_mode='size', 
+                size_trim_tol=1e-5, acc=1e-10, maxiter=1000)
         """
+        nan = np.nan
         self.params = [-4.10271595,  0., 0.15493781, 0.]
-        self.conf_int = [[-9.15205122,  0.94661932], [np.nan, np.nan], [-0.06539482,  0.37527044], [ np.nan, np.nan]]
-        self.bse = [ 2.5762388 , np.nan,  0.11241668, np.nan]
+        self.conf_int = [[-9.15205122,  0.94661932], [nan, nan],
+                [-0.06539482,  0.37527044], [ nan, nan]]
+        self.bse = [ 2.5762388 ,         nan,  0.11241668,         nan]
         self.nnz_params = 2
+        self.aic = 42.091439368583671
+        self.bic =  45.022911174183122
+        self.cov_params = [[ 6.63700638, nan, -0.28636261, nan],
+                [nan, nan, nan, nan], [-0.28636261, nan,  0.01263751, nan],
+                [nan, nan, nan, nan]]
 
     def sweep(self):
         """
@@ -249,11 +257,14 @@ class DiscreteL1(object):
     def probit(self):
         """
         Results generated with
+            data = sm.datasets.spector.load()
+            data.exog = sm.add_constant(data.exog, prepend=True)
             alpha = np.array([0.1, 0.2, 0.3, 10])
-            res1 = sm.Probit(data.endog, data.exog).fit_regularized(
+            res2 = sm.Probit(data.endog, data.exog).fit_regularized(
                 method="l1", alpha=alpha, disp=0, trim_mode='auto', 
                 auto_trim_tol=0.02, acc=1e-10, maxiter=1000)
         """
+        nan = np.nan
         self.params = [-5.40476992,  1.25018458,  0.04744558,  0.        ]
         self.conf_int = [[-9.44077951, -1.36876033],
        [ 0.03716721,  2.46320194],
@@ -261,6 +272,12 @@ class DiscreteL1(object):
        [        np.nan,         np.nan]]
         self.bse = [ 2.05922641,  0.61889778,  0.07383875,         np.nan]
         self.nnz_params = 3
+        self.aic = 38.399773877542927
+        self.bic = 42.796981585942106
+        self.cov_params = [[ 4.24041339, -0.83432592, -0.06827915, nan],
+       [-0.83432592,  0.38303447, -0.01700249,         nan],
+       [-0.06827915, -0.01700249,  0.00545216,         nan],
+       [        nan,         nan,         nan,         nan]]
 
     def mnlogit(self):
         """
@@ -344,6 +361,8 @@ class DiscreteL1(object):
                  0.91267567]]
 
         self.nnz_params = 32
+        self.aic = 3019.4391360294126
+        self.bic = 3174.6431733460686
 
 
 class Spector():
