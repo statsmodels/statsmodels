@@ -15,6 +15,8 @@ Goodness of Fit Plots
 
    gofplots.qqplot
    gofplots.qqline
+   gofplots.qqplot_2samples
+   gofplots.ProbPlot
 
 Boxplots
 --------

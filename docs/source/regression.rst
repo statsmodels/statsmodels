@@ -130,6 +130,7 @@ These results are shared by all linear regression models.
    :toctree: generated/
 
    RegressionResults
+   OLSResults
 
 
 Specific Results

@@ -93,11 +93,22 @@ The specific model classes are:
    Poisson
 
 :class:`DiscreteModel` is a superclass of all discrete regression models. The
-estimation results are returned as an instance of :class:`DiscreteResults`
+estimation results are returned as an instance of one of the subclasses of
+:class:`DiscreteResults`. Each category of models, binary, count and
+multinomial, have their own intermediate level of model and results classes.
+This intermediate classes are mostly to facilitate the implementation of the
+methods and attributes defined by :class:`DiscreteModel` and
+:class:`DiscreteResults`.
 
 .. autosummary::
    :toctree: generated/
 
    DiscreteModel
    DiscreteResults
+   BinaryModel
+   BinaryResults
+   CountModel
+   CountResults
+   MultinomialModel
+   MultinomialResults
 
