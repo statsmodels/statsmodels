@@ -126,7 +126,7 @@ plt.ylabel('standardized resids');
 
 drop_idx = abs(resid).argmax()
 print drop_idx # zero-based index
-idx = salary_table.index.drop(drop_idx)
+idx = salary_table.index.drop([drop_idx])
 
 lm32 = ols('S ~ C(E) + X + C(M)', df=salary_table, subset=idx).fit()
 
@@ -196,6 +196,8 @@ try:
     minority_table = pandas.read_table('minority.table')
 except: # don't have data already
     url = 'http://stats191.stanford.edu/data/minority.table'
+    #the next line is not necessary with recent version of pandas
+    url = urlopen(url)
     minority_table = pandas.read_table(url)
 
 factor_group = minority_table.groupby(['ETHN'])
@@ -293,6 +295,8 @@ try:
     rehab_table = pandas.read_csv('rehab.table')
 except:
     url = 'http://stats191.stanford.edu/data/rehab.csv'
+    #the next line is not necessary with recent version of pandas
+    url = urlopen(url)
     rehab_table = pandas.read_table(url, delimiter=",")
     rehab_table.to_csv('rehab.table')
 
@@ -315,6 +319,8 @@ try:
     kidney_table = pandas.read_table('./kidney.table')
 except:
     url = 'http://stats191.stanford.edu/data/kidney.table'
+    #the next line is not necessary with recent version of pandas
+    url = urlopen(url)
     kidney_table = pandas.read_table(url, delimiter=" *")
 
 # Explore the dataset
