@@ -7,7 +7,7 @@ Welcome to Statsmodels's Documentation
 of many different statistical models, as well as for conducting statistical tests, and statistical
 data exploration. An extensive list of result statistics are avalable for each estimator.
 The results are tested against existing statistical packages to ensure that they are correct. The
-package is released under the open source Modified BSD (3-clause) license. 
+package is released under the open source Modified BSD (3-clause) license.
 The online documentation is hosted at `sourceforge <http://statsmodels.sourceforge.net/>`__.
 
 
@@ -41,17 +41,25 @@ described in `results.__doc__` and results methods have their own docstrings.
 Basic Documentation
 -------------------
 
-* `Introduction <introduction.html>`_
-* `Getting Started <gettingstarted.html>`_
-* `Installation <install.html>`_
-* `Related Projects <related.html>`_
-* `Developer Page <dev/index.html>`_
+.. toctree::
+   :maxdepth: 1
+
+   introduction
+   gettingstarted
+   install
+   related
+
+The following provide more information about the structure and development of
+statsmodels:
 
 .. toctree::
    :maxdepth: 1
 
    importpaths
    pitfalls
+   dev/index
+   dev/internal
+
 
 
 Table of Contents
@@ -77,17 +85,6 @@ Table of Contents
    datasets/index
    sandbox
 
-
-.. toctree::
-   :maxdepth: 1
-
-   introduction
-   gettingstarted
-   related
-   dev/index
-   dev/internal
-   importpaths
-   pitfalls
 
 Indices and tables
 ------------------
