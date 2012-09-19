@@ -142,28 +142,18 @@ Model Classes
    GLS
    WLS
    GLSAR
-   ..yule_walker
+   yule_walker
 
-General Results Class
-^^^^^^^^^^^^^^^^^^^^^
+Results Classes
+^^^^^^^^^^^^^^^
 
-These results are shared by all linear regression models.
+Fitting a linear regression model returns a results class. OLS has a
+specific results class with some additional methods compared to the
+results class of the other linear models.
 
 .. autosummary::
    :toctree: generated/
 
    RegressionResults
-   OLSResults
-
-
-Specific Results
-^^^^^^^^^^^^^^^^
-
-These results are specific to a certain linear model.  They also include RegressionResults,
-whice are common to all linear models.
-
-.. autosummary::
-   :toctree: generated/
-
    OLSResults
 

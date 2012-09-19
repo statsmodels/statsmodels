@@ -38,12 +38,20 @@ For example, here is a minimal ordinary least squares example
 Have a look at `dir(results)` to see available results. Attributes are
 described in `results.__doc__` and results methods have their own docstrings.
 
-Basic Documentation:
+Basic Documentation
+-------------------
 
 * `Introduction <introduction.html>`_
 * `Getting Started <gettingstarted.html>`_
+* `Installation <install.html>`_
 * `Related Projects <related.html>`_
 * `Developer Page <dev/index.html>`_
+
+.. toctree::
+   :maxdepth: 1
+
+   importpaths
+   pitfalls
 
 
 Table of Contents

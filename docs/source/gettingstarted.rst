@@ -44,6 +44,9 @@ We could download the file locally and then load it using ``read_csv``, but
 .. ipython:: python
 
     url = "http://vincentarelbundock.github.com/Rdatasets/csv/Guerry.csv"
+    #the next two lines are not necessary with a recent version of pandas
+    from urllib2 import urlopen
+    url = urlopen(url)
     df = pandas.read_csv(url)
 
 The `Input/Output doc page <iolib.html>`_ shows how to import from various
