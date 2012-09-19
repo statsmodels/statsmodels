@@ -6,17 +6,8 @@
 Distributions
 =============
 
-Introduction
-------------
-
 This section collects various additional functions and methods for statistical
 distributions.
-
-
-Sandbox Warning: The functions and objects in this category are still in the sandbox.
-Many functions or classes have been tested on individual examples, but don't have a
-(consistent or complete) test suite yet.
-
 
 Distribution Extras
 -------------------
