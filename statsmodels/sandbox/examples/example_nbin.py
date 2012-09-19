@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 '''
 Author: Vincent Arel-Bundock <varel@umich.edu>
 Date: 2012-08-25
@@ -228,11 +229,12 @@ def _score_nbp(y, X, beta, thet, Q):
     return sc
 
 #### Tests ####
-#from numpy.testing import assert_almost_equal
-#import pandas
-#import patsy
-#medpar = pandas.read_csv('http://vincentarelbundock.github.com/Rdatasets/csv/medpar.csv')
-#mdvis = pandas.read_csv('http://vincentarelbundock.github.com/Rdatasets/csv/mdvis.csv')
+from numpy.testing import assert_almost_equal
+import pandas
+import patsy
+from urllib2 import urlopen
+medpar = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/medpar.csv'))
+mdvis = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/mdvis.csv'))
 
 # NB-2
 '''
@@ -276,14 +278,14 @@ Number of Fisher Scoring iterations: 1
  2 x log-likelihood:  -9594.9530
 '''
 
-#def test_nb2():
-    #y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
-    #y = np.array(y)[:,0]
-    #nb2 = NBin(y,X,'nb2').fit(maxiter=10000, maxfun=5000)
-    #assert_almost_equal(nb2.params,
-                        #[2.31027893349935, 0.221248978197356, 0.706158824346228,
-                         #-0.067955221930748, -0.129065442248951, 0.4457567],
-                        #decimal=2)
+def test_nb2():
+    y, X = patsy.dmatrices('los ~ C(type) + hmo + white', medpar)
+    y = np.array(y)[:,0]
+    nb2 = NBin(y,X,'nb2').fit(maxiter=10000, maxfun=5000)
+    assert_almost_equal(nb2.params,
+                        [2.31027893349935, 0.221248978197356, 0.706158824346228,
+                         -0.067955221930748, -0.129065442248951, 0.4457567],
+                        decimal=2)
 
 # NB-1
 '''
@@ -357,3 +359,5 @@ Number of Fisher Scoring iterations: 5
 						#[2.3084850946241, 0.221206159108742, 0.705986369841159,
                          #-0.0677871843613577, -0.127088772164963],
 						#decimal=4)
+
+test_nb2()
