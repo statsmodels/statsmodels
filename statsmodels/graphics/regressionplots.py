@@ -299,6 +299,12 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
         plot_partregress_ax(y, exog[:, idx], exog_others, ax=ax,
                                varname=xnames[i])
 
+    import matplotlib as mpl
+    if mpl.__version__ >= '1.1':
+        # The tight_layout feature is not available before version 1.1
+        # It automatically pads the figure so labels do not get clipped.
+        fig.tight_layout()
+
     return fig
 
 
