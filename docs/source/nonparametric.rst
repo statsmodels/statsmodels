@@ -6,9 +6,6 @@
 Nonparametric Methods :mod:`nonparametric`
 ==========================================
 
-Introduction
-------------
-
 This section collects various methods in nonparametric statistics. This
 includes currently kernel density estimation for univariate data, and
 lowess.

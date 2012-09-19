@@ -24,9 +24,6 @@ consistent with these assumptions.
 The following briefly summarizes specification and diagnostics tests for
 linear regression.
 
-Note: Not all statistical tests in the sandbox are fully tested, and the API
-will still change. Some of the tests are still on the wishlist.
-
 Heteroscedasticity Tests
 ------------------------
 
