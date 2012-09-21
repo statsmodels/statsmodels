@@ -8,6 +8,12 @@ by submitting patches, statistical tests, new models, or examples.
 <https://github.com/statsmodels/statsmodels>`_ using the `Git
 <http://git-scm.com/>`_ version control system. 
 
+License
+~~~~~~~
+
+Statsmodels is released under
+the `Modified (3-clause) BSD license <http://www.opensource.org/licenses/BSD-3-Clause>`_.
+
 Submitting a Patch
 ~~~~~~~~~~~~~~~~~~~
 
@@ -20,8 +26,8 @@ steps you need to take.
     + Patches must always include tests. See our `notes on testing <test_notes.html>`_.
 3. `Submit a pull request <https://help.github.com/articles/using-pull-requests>`_ 
 
-Discussing Development
-~~~~~~~~~~~~~~~~~~~~~~
+Mailing List
+~~~~~~~~~~~~
 
 Conversations about development take place on the `statsmodels mailing list <http://groups.google.com/group/pystatsmodels?hl=en>`__.
 
@@ -31,7 +37,6 @@ Contents
 .. toctree::
    :maxdepth: 3
 
-   package_overview
    git_notes
    maintainer_notes
    test_notes
@@ -39,3 +44,4 @@ Contents
    dataset_notes
    examples
    roadmap_todo
+   internal
