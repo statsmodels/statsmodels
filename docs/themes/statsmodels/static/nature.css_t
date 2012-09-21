@@ -48,7 +48,7 @@ div.related {
     background-color: #dbe0ea;
     line-height: 32px;
     color: #272A2D;
-    font-size: 0.9em;
+    font-size: 100%;
     border-top: 1px solid white;
     border-bottom: 1px solid white;
     min-width: 1030px;
@@ -92,7 +92,7 @@ div.document {
 div.body {
     min-width: 740px;
     padding: 0 30px 30px 30px;
-    font-size: 0.9em;
+    /*font-size: 0.9em;*/
 }
 
 /* -------------- Footer -------------- */
@@ -109,7 +109,7 @@ div.footer {
 div.sphinxsidebar {
     /*background-color: #dbe0ea;*/
     /*background-color: #ffffff;*/
-    font-size: 0.75em;
+    font-size: 0.85em;
     line-height: 1.5em;
     word-wrap: break-word;
 }
@@ -144,6 +144,10 @@ div.sphinxsidebar input {
     font-family: sans-serif;
     font-size: 1em;
 }
+div.sphinxsidebar a{
+    text-decoration: none
+}
+
 div.sphinxsidebar input[type=text]{
     margin-left: 15px;
 }
@@ -175,6 +179,10 @@ div.body h3 { font-size: 142%}
 div.body h4 { font-size: 125%}
 div.body h5 { font-size: 100%}
 div.body h6 { font-size: 100%}
+
+div.body a{
+    text-decoration: none
+}
 
 /* --------- Header links ---------- */
 a.headerlink {
