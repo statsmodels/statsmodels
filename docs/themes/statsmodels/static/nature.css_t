@@ -14,7 +14,8 @@
 /* -- header -- */
 
 div.header {
-    background-color: #1162f6;
+    background-color: #9DBCBC;
+    /*background-color: #1162f6;*/
 }
 
 div.headerwrap {
@@ -28,6 +29,7 @@ div.headerwrap {
 /*div.navbar ul { 
     list-style-type: none;
     background-color: #ffffff;
+    color: #272A2D;
     margin-left: 230px;
     text-align: right;
     position: absolute;
@@ -37,8 +39,10 @@ div.headerwrap {
 
 /*div.navbar li {
     display: inline;
-    background-color: #1162fc;
-    color: #ffffff;
+    background-color: #9DBCBC;
+    /*background-color: #1162f6;*/
+    color: #272A2D;
+    /*color: #ffffff;*/
     border-bottom-right-radius: 30px;
     border-bottom-left-radius: 30px;
     padding: 0px 15px
@@ -49,9 +53,8 @@ div.headerwrap {
 body {
     font-family: Arial, sans-serif;
     font-size: 100%;
-/*    background-color: #3366CC;
-    background-color: #1162f6; */
-    background-color: #3399ff;
+    /*background-color: #1162f6; */
+    background-color: #f8f8ff;
     color: #555;
     margin: 0 80px;
     padding: 0;
@@ -73,20 +76,23 @@ hr {
 }
  
 div.document {
-    background-color: #eee;
+    /*background-color: #eee;*/
+    background-color: #f8f8ff;
     min-width: 1030px;
 }
  
 div.body {
     background-color: #f8f8ff;
     min-width: 740px;
-    color: #3E4349;
+    /*color: #3E4349;*/
+    color: #272A2D;
     padding: 0 30px 30px 30px;
     font-size: 0.9em;
 }
  
 div.footer {
-    color: #555;
+    color: #272A2D;
+    /*color: #555;*/
     width: 100%;
     padding: 13px 0;
     text-align: center;
@@ -94,16 +100,17 @@ div.footer {
 }
  
 div.footer a {
-    color: #444;
+    color: #272A2D;
     text-decoration: underline;
 }
  
 div.related {
 /*    background-color: #6BA81E;*/
-    background-color: #1162f6;
+    /*background-color: #1162f6;*/
+    background-color: #9DBCBC;
     line-height: 32px;
-    color: #fff;
-    text-shadow: 0px 1px 0 #444;
+    /*color: #fff;*/
+    color: #272A2D;
     font-size: 0.9em;
     border-top: 1px solid white;
     border-bottom: 1px solid white;
@@ -111,7 +118,9 @@ div.related {
 }
  
 div.related a {
-    color: #E2F3CC;
+    /*color: #E2F3CC;*/
+    color: #272A2D;
+    font-weight: normal; 
 }
  
 div.sphinxsidebar {
@@ -127,13 +136,13 @@ div.sphinxsidebarwrapper{
 div.sphinxsidebar h3,
 div.sphinxsidebar h4 {
     font-family: Arial, sans-serif;
-    color: #222;
+    /*color: #222;*/
+    color: #272A2D;
     font-size: 1.2em;
     font-weight: normal;
     margin: 0;
     padding: 5px 10px;
-    background-color: #ddd;
-    text-shadow: 1px 1px 0 white
+    background-color: #9DBCBC;
 }
 
 div.sphinxsidebar h4{
@@ -146,7 +155,8 @@ div.sphinxsidebar h3 a {
  
  
 div.sphinxsidebar p {
-    color: #888;
+    /*color: #888;*/
+    color: #272A2D
     padding: 5px 15px;
 }
  
@@ -184,28 +194,30 @@ a:hover {
     color: #E32E00;
     text-decoration: underline;
 }
- 
+
 div.body h1,
 div.body h2,
 div.body h3,
 div.body h4,
 div.body h5,
 div.body h6 {
-    font-family: Arial, sans-serif;
+    font-family: "Georgia", "Times New Roman", serif;
+    font-weight: normal; }
+}
+  
+div.body h1{
     background-color: #BED4EB;
-    font-weight: normal;
-    color: #212224;
+    /*color: #212224;*/
     margin: 30px 0px 10px 0px;
     padding: 5px 0 5px 10px;
-    text-shadow: 0px 1px 0 white
 }
  
-div.body h1 { border-top: 20px solid #f8f8ff; margin-top: 0; font-size: 200%; word-wrap: break-word }
-div.body h2 { font-size: 150%; background-color: #C8D5E3; border-radius : 30px; }
-div.body h3 { font-size: 120%; background-color: #D8DEE3; border-radius : 30px; }
-div.body h4 { font-size: 110%; background-color: #D8DEE3; border-radius : 30px; }
-div.body h5 { font-size: 100%; background-color: #D8DEE3; border-radius : 30px; }
-div.body h6 { font-size: 100%; background-color: #D8DEE3; border-radius : 30px; }
+div.body h1 { font-size: 275% ; border-top: 20px solid #f8f8ff; margin-top: 0 ; word-wrap: break-word}
+div.body h2 { font-size: 209%}
+div.body h3 { font-size: 167%}
+div.body h4 { font-size: 125%}
+div.body h5 { font-size: 100%}
+div.body h6 { font-size: 100%}
  
 a.headerlink {
     color: #c60f0f;
@@ -232,7 +244,8 @@ div.highlight{
 }
 
 div.note {
-    background-color: #eee;
+    /*background-color: #eee;*/
+    background-color: #f8f8ff;
     border: 1px solid #ccc;
 }
  
@@ -242,7 +255,8 @@ div.seealso {
 }
  
 div.topic {
-    background-color: #eee;
+    /*background-color: #eee;*/
+    background-color: #f8f8ff;
 }
  
 div.warning {
