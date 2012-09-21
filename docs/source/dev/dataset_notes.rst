@@ -1,32 +1,34 @@
 .. _add_data:
 
 Datasets
-~~~~~~~~
+========
 
-For details about the datasets, please see the :ref:`datasets page <datasets>`.
+For a list of currently available datasets and usage instructions, see the
+:ref:`datasets page <datasets>`.
 
-Adding a dataset
-================
+License
+-------
 
-First, if the data is not in the public domain or listed with a BSD-compatible
-license, we must obtain permission from the original author.
+To be considered for inclusion in `statsmodels`, a dataset must be in the
+public domain, distributed under a BSD-compatible license, or we must obtain
+permission from the original author. 
 
-To take an example, I will use the Nile River data that measures the volume of
-the discharge of the Nile River at Aswan for the years 1871 to 1970. The data
-are copied from the paper of Cobb (1978).
+Adding a dataset: An example
+----------------------------
 
-Create a directory `datasets/nile/`.  Add `datasets/nile/nile.csv` and
-`datasets/__init__.py` that contains ::
+The Nile River data measures the volume of the discharge of the Nile River at
+Aswan for the years 1871 to 1970. The data are copied from the paper of Cobb
+(1978).
+
+**Step 1**: Create a directory `datasets/nile/`  
+
+**Step 2**: Add `datasets/nile/nile.csv` and  a new file `datasets/__init__.py` which contains ::
 
     from data import *
 
-If the data will be cleaned before it is in the form included in the datasets
-package then create a `nile/src` directory and include the original raw data
-there. In this case, it's not necessary.
+**Step 3**: If `nile.csv` is a transformed/cleaned version of the original data, create a `nile/src` directory and include the original raw data there. In the `nile` case, this step is not necessary.
 
-Next, copy the template_data.py to nile and rename it data.py. Edit the data.py
-as follows.  Fill in the strings for COPYRIGHT, TITLE, SOURCE, DESCRSHORT,
-DESCLONG, and NOTE. ::
+**Step 4**: Copy `datasets/template_data.py` to `nile/data.py`. Edit `nile/data.py` by filling-in strings for COPYRIGHT, TITLE, SOURCE, DESCRSHORT, DESCLONG, and NOTE. ::
 
     COPYRIGHT   = """This is public domain."""
     TITLE       = """Nile River Data"""
@@ -53,12 +55,15 @@ DESCLONG, and NOTE. ::
     set is also used as an example in many textbooks and software packages.
     """
 
-Next we edit the `load` function. You only need to edit the docstring to
-specify which dataset will be loaded. You should also edit the path and the
-indices for the `endog` and `exog` attributes. In this case, there is no
-`exog`, so everything referencing `exog` is not used. The `year` variable is
-also not used.
+**Step 5:** Edit the docstring of the `load` function in `data.py` to specify
+which dataset will be loaded. Also edit the path and the indices for the
+`endog` and `exog` attributes. In the `nile` case, there is no `exog`, so
+everything referencing `exog` is not used. The `year` variable is also not
+used.
 
-Lastly, edit the datasets/__init__.py to import the directory.
+**Step 6:** Edit the `datasets/__init__.py` to import the directory.
 
-That's it!
+That's it! The result can be found `here
+<https://github.com/statsmodels/statsmodels/tree/master/statsmodels/datasets/nile>`_
+for reference.
+
