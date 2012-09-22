@@ -259,7 +259,7 @@ def _pandas_add_constant(data, prepend):
 
 
 #TODO: add an axis argument to this for sysreg
-def add_constant(data, prepend=False):
+def add_constant(data, prepend=True):
     '''
     This appends a column of ones to an array if prepend==False.
 
@@ -301,8 +301,9 @@ def add_constant(data, prepend=False):
             to_warn = 'prepend' not in '\n'.join(info[3])
         if to_warn:
             import warnings
-            warnings.warn("The default of `prepend` will be changed to True "
-                          "in 0.5.0, use explicit prepend",
+            warnings.warn("The default of `prepend` has been changed to True "
+                          "in 0.5.0. This warning will be removed at the final "
+                          "0.5.0 release",
                           FutureWarning)
 
     if _is_using_pandas(data, None):
