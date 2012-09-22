@@ -28,7 +28,7 @@ print resid_fit.pvalues[0]
 # While we don't have strong evidence that the errors follow an AR(1)
 # process we continue
 
-rho = resid_fit.params[0]
+rho = resid_fit.params[1]
 
 # As we know, an AR(1) process means that near-neighbors have a stronger
 # relation so we can give this structure by using a toeplitz matrix
