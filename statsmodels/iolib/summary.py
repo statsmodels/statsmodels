@@ -23,6 +23,12 @@ def forg(x, prec=3):
     else:
         raise NotImplementedError
 
+def num2string(x, prec=4):
+    #assume x is 2d or 1 row
+    x = np.atleast_2d(x)
+    x_str = [[forg(cell, prec=prec) for cell in row] for row in x]
+    return x_str
+
 
 def summary(self, yname=None, xname=None, title=0, alpha=.05,
             returns='text', model_info=None):
@@ -260,6 +266,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
 def _getnames(self, yname=None, xname=None):
     '''extract names from model or construct names
     '''
+    #print "getting name", self, self.model._data.xnames
     if yname is None:
         try:
             yname = self.model.endog_names

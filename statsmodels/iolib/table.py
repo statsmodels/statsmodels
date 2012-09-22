@@ -779,9 +779,9 @@ default_html_fmt = dict(
         colsep=' ',
         row_pre = '<tr>\n  ',
         row_post = '\n</tr>',
-        data_aligns = "c",
+        data_aligns = "r",
         #data formats
-        data_fmts = ['<td>%s</td>'],
+        data_fmts = ['<td style="text-align: right">%s</td>'],
         data_fmt = "<td>%s</td>",  #deprecated; use data_fmts
         #labeled alignments
         #stubs_align = 'l',   #deprecated; use data_fmts
@@ -844,5 +844,3 @@ def get_output_format(output_format):
     return output_format
 
 #########  end: default formats  ##############
-
-
