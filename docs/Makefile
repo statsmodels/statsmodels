@@ -49,6 +49,8 @@ html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	$(TOOLSPATH)$(EXAMPLEBUILD)
 	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
+	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/examples/index.html ../_static
+	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

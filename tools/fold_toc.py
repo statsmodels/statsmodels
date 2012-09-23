@@ -4,14 +4,19 @@ import re
 
 # Read doc to string
 filename = sys.argv[1]
+try:
+    static_path = sys.argv[2]
+except:
+    static_path = '_static'
 doc = open(filename).read()
 
 # Add mktree to head
 pre = '<head>'
 post = '''<head>
-    <script type="text/javascript" src="_static/mktree.js"></script>
-    <link rel="stylesheet" href="_static/mktree.css" type="text/css">
+    <script type="text/javascript" src="static_path/mktree.js"></script>
+    <link rel="stylesheet" href="static_path/mktree.css" type="text/css">
 '''
+post = re.sub('static_path', static_path, post)
 doc = re.sub(pre, post, doc)
 
 # TOC class
@@ -19,10 +24,13 @@ pre = '''<div class="toctree-wrapper compound">
 <ul>'''
 post = '''<div class="toctree-wrapper compound">
 Click <tt>+</tt> to expand and <tt>-</tt> to collapse.
-<a onclick="collapseTree('toctree')" href="javascript:void(0);">Collapse all. </a>
-<a onclick="expandTree('toctree')" href="javascript:void(0);">Expand all. </a>
-<ul class="mktree" id="toctree">'''
-doc = re.sub(pre, post, doc)
+<a onclick="collapseTree('toctree#')" href="javascript:void(0);">Collapse all. </a>
+<a onclick="expandTree('toctree#')" href="javascript:void(0);">Expand all. </a>
+<ul class="mktree" id="toctree#">'''
+toc_n = doc.count('toctree-wrapper')
+for i in range(toc_n):
+    post_n = re.sub('#', str(i), post)
+    doc = re.sub(pre, post_n, doc, count=1)
 
 ## TOC entries
 pre = '<li class="toctree-l1">'

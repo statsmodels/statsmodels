@@ -41,18 +41,24 @@ described in `results.__doc__` and results methods have their own docstrings.
 Basic Documentation
 -------------------
 
-+ `Introduction <introduction.html>`_
-+ `Getting Started <gettingstarted.html>`_
-+ `Installation <install.html>`_
-+ `Related Projects <related.html>`_
+.. toctree::
+    :maxdepth: 3
+
+    introduction
+    gettingstarted
+    install
+    related
 
 Information about the structure and development of
 statsmodels:
 
-+ `Import paths and structure <importpaths.html>`_
-+ `Pitfalls <pitfalls.html>`_
-+ `Developer page <dev/index.html>`_
-+ `Internal classes <dev/internal.html>`_
+.. toctree::
+    :maxdepth: 3
+
+    importpaths
+    pitfalls
+    dev/index
+    dev/internal
 
 Table of Contents
 -----------------
