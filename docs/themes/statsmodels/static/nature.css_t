@@ -183,6 +183,9 @@ div.body h6 { font-size: 100%}
 div.body a{
     text-decoration: none
 }
+div.body a:hover{
+    text-decoration: underline
+}
 
 /* --------- Header links ---------- */
 a.headerlink {
