@@ -534,23 +534,15 @@ def nan_dot(A, B):
     ----------
     A, B : np.ndarrays
     """
-    m = A.shape[0]
-    n = B.shape[1]
-    K = A.shape[1]
-    assert K == B.shape[0], "Matrices must be aligned"
+    # Find out who should be nan due to nan * nonzero
+    should_be_nan_1 = np.dot(np.isnan(A), (B != 0))
+    should_be_nan_2 = np.dot((A != 0), np.isnan(B))
+    should_be_nan = should_be_nan_1 + should_be_nan_2
 
-    C = np.zeros((m, n))
-    for i in xrange(m):
-        for j in xrange(n):
-            for k in xrange(K):
-                a = A[i, k]
-                b = B[k, j]
-                if np.isnan(a) and b == 1 or a == 1 and np.isnan(b):
-                    C[i, j] = np.nan
-                    break
-                elif np.isnan(a) and b == 0 or a == 0 and np.isnan(b):
-                    value = 0.
-                else:
-                    value = a * b
-                C[i, j] += value
+    # Multiply after setting all nan to 0
+    # This is what happens if there were no nan * nonzero conflicts
+    C = np.dot(np.nan_to_num(A), np.nan_to_num(B))
+
+    C[should_be_nan] = np.nan
+
     return C
