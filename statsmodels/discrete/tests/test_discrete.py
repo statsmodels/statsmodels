@@ -18,7 +18,6 @@ from sys import platform
 from nose import SkipTest
 from results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
-import pdb  # pdb.set_trace
 try:
     import cvxopt
     has_cvxopt = True
