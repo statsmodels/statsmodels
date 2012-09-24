@@ -1,3 +1,5 @@
+.. _importpaths:
+
 Import Paths and Structure
 ==========================
 

@@ -63,6 +63,8 @@ Each object also defines a `fit` (or similar) method that returns a
 model-specific results object.  In addition there are some functions, e.g. for
 statistical tests or convenience functions.
 
+See also the related explanation in :ref:`endog_exog`.
+
 Variable Names
 ~~~~~~~~~~~~~~
 All of our models assume that data is arranged with variables in columns. Thus, internally the data

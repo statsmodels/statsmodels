@@ -53,12 +53,13 @@ Information about the structure and development of
 statsmodels:
 
 .. toctree::
-    :maxdepth: 3
+   :maxdepth: 1
 
-    importpaths
-    pitfalls
-    dev/index
-    dev/internal
+   endog_exog
+   importpaths
+   pitfalls
+   dev/index
+   dev/internal
 
 Table of Contents
 -----------------
