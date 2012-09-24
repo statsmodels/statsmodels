@@ -55,6 +55,7 @@ statsmodels:
 .. toctree::
    :maxdepth: 1
 
+   endog_exog
    importpaths
    pitfalls
    dev/index

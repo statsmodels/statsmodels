@@ -1,3 +1,4 @@
+.. _importpaths:
 
 Import Paths and Structure
 ==========================
@@ -117,7 +118,7 @@ for the submodules. The intention is to change all directories to have an
 
 The following are some examples for imports that are used within statsmodels.
 
-importing functions and classes::
+importing functions and classes ::
 
     from statsmodels.regression.linear_model import OLS, WLS
     from statsmodels.tools.tools import rank, add_constant
