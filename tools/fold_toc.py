@@ -23,9 +23,8 @@ doc = re.sub(pre, post, doc)
 pre = '''<div class="toctree-wrapper compound">
 <ul>'''
 post = '''<div class="toctree-wrapper compound">
-Click <tt>+</tt> to expand and <tt>-</tt> to collapse.
-<a onclick="collapseTree('toctree#')" href="javascript:void(0);">Collapse all. </a>
 <a onclick="expandTree('toctree#')" href="javascript:void(0);">Expand all. </a>
+<a onclick="collapseTree('toctree#')" href="javascript:void(0);">Collapse all.</a>
 <ul class="mktree" id="toctree#">'''
 toc_n = doc.count('toctree-wrapper')
 for i in range(toc_n):
