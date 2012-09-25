@@ -667,6 +667,24 @@ class CountModel(DiscreteModel):
         return CountResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
 
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1CountResults(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+        return CountResultsWrapper(discretefit)
+    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
+
+
 class OrderedModel(DiscreteModel):
     pass
 
@@ -2084,6 +2102,23 @@ class DiscreteResults(base.LikelihoodModelResults):
 
 class CountResults(DiscreteResults):
     pass
+
+class L1CountResults(DiscreteResults):
+        #discretefit = CountResults(self, cntfit)
+    def __init__(self, model, cntfit):
+        super(L1CountResults, self).__init__(model, cntfit)
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = cntfit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
+
+    @cache_readonly
+    def aic(self):
+        return -2*(self.llf - self.nnz_params)
+
+    @cache_readonly
+    def bic(self):
+        return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 class OrderedResults(DiscreteResults):
     pass
