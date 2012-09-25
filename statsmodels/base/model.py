@@ -156,8 +156,7 @@ class LikelihoodModel(Model):
 
     def fit(self, start_params=None, method='newton', maxiter=100, 
             full_output=True, disp=True, fargs=(), callback=None, 
-            retall=False, extra_fit_funcs=None, cov_params_func=None, 
-            **kwargs):
+            retall=False, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -192,11 +191,6 @@ class LikelihoodModel(Model):
         retall : bool
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
-        extra_fit_funcs : Dictionary
-            Keys are methods and values are fit functions to use.  Populating
-            this dictionary has the effect of adding new methods
-        cov_params_func : Function
-            Used to compute the cov_params
 
         Notes
         -----
@@ -252,10 +246,13 @@ class LikelihoodModel(Model):
                 start_direc : ndarray
                     Initial direction set.
                 """
+        # Extract kwargs specific to fit_regularized calling fit
+        extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
+        cov_params_func = kwargs.setdefault('cov_params_func', None)
+
         Hinv = None  # JP error if full_output=0, Hinv not defined
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
-        if extra_fit_funcs:
-            methods += extra_fit_funcs.keys()
+        methods += extra_fit_funcs.keys()
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
