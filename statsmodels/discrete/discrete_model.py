@@ -2197,7 +2197,8 @@ class L1BinaryResults(BinaryResults):
 
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None):
-        invcov = self.invcov()
+        if not invcov is None:
+            invcov = self.invcov()
         return super(L1BinaryResults, self).f_test(
                 r_matrix, q_matrix, cov_p, scale, invcov)
 
