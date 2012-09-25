@@ -476,7 +476,7 @@ class TestSweepAlphaL1(object):
         cls.res1 = DiscreteL1()
         cls.res1.sweep()
 
-    def sweep_alpha_and_test(self):
+    def test_sweep_alpha(self):
         for i in range(3):
             alpha = self.alphas[i, :]
             res2 = self.model.fit_regularized(
@@ -496,7 +496,7 @@ class TestL1Compatability(object):
         cls.data = sm.datasets.spector.load()
         cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
 
-    def l1_compatability_logit(self):
+    def test_l1_compatability_logit(self):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = np.array([0, 0, 0, 10])
         res_reg = Logit(self.data.endog, self.data.exog).fit_regularized(
@@ -513,7 +513,7 @@ class TestL1Compatability(object):
         # The restricted cov_params should be equal
         assert_almost_equal(res_unreg.cov_params(), res_reg.cov_params()[:3, :3], DECIMAL_1)
 
-    def l1_compatability_mnlogit(self):
+    def test_l1_compatability_mnlogit(self):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = np.array([0, 0, 0, 10])
         res_reg = MNLogit(self.data.endog, self.data.exog).fit_regularized(
@@ -530,7 +530,7 @@ class TestL1Compatability(object):
         # The restricted cov_params should be equal
         assert_almost_equal(res_unreg.cov_params(), res_reg.cov_params()[:3, :3], DECIMAL_1)
 
-    def l1_compatability_probit(self):
+    def test_l1_compatability_probit(self):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = np.array([0, 0, 0, 10])
         res_reg = Probit(self.data.endog, self.data.exog).fit_regularized(
