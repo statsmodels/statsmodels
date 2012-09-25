@@ -90,6 +90,11 @@ print poisson_res.summary()
 poisson_margeff = poisson_res.get_margeff()
 print poisson_margeff.summary()
 
+# l1 regularized Poisson model
+alpha = 0.1 * len(rand_data.endog) * np.ones(rand_exog.shape[1])
+alpha[-1] = 0
+poisson_l1_res = poisson_mod.fit_regularized(method='l1', alpha=alpha)
+
 #Alternative solvers
 #-------------------
 
