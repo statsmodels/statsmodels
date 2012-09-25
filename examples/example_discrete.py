@@ -27,6 +27,14 @@ print logit_res.params
 logit_margeff = logit_res.get_margeff(method='dydx', at='overall')
 print logit_margeff.summary()
 
+#l1 regularized logit
+#-----------
+alpha = 0.1 * len(spector_data.endog) * np.ones(spector_data.exog.shape[1])
+alpha[-1] = 0
+logit_l1_res = logit_mod.fit_regularized(method='l1', alpha=alpha)
+print logit_l1_res.summary()
+
+
 # As in all the discrete data models presented below, we can print a nice
 # summary of results:
 print logit_res.summary()
@@ -58,6 +66,12 @@ print mlogit_res.params
 mlogit_margeff = mlogit_res.get_margeff()
 print mlogit_margeff.summary()
 
+#l1 regularized Multinomial Logit
+#-----------------
+alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+alpha[-1,:] = 0
+mlogit_l1_res = mlogit_mod.fit_regularized(method='l1', alpha=alpha)
+print mlogit_l1_res.summary()
 
 #Poisson model
 #-------------

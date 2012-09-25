@@ -227,6 +227,7 @@ class DiscreteModel(base.LikelihoodModel):
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, extra_fit_funcs=extra_fit_funcs,
                 cov_params_func=cov_params_func, **kwargs)
+
         return mlefit # up to subclasses to wrap results
 
     def cov_params_func_l1(self, likelihood_model, xopt, retvals):
