@@ -1188,8 +1188,8 @@ class LikelihoodModelResults(Results):
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
-        # If self.cov_params contains nan, we have to make sure this contrast
-        # is valid.
+        # nan_dot multiplies with the convention nan * 0 = 0
+
         if np.isnan(self.cov_params().diagonal()).any():
             use_nan_dot = True
         else:

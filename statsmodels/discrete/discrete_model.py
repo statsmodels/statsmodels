@@ -178,6 +178,13 @@ class DiscreteModel(base.LikelihoodModel):
                     number of iterative refinement steps when solving KKT
                     equations (default: 1).
         """
+        ### Set attributes based on method
+        if method in ['l1', 'l1_cvxopt_cp']:
+            cov_params_func = self.cov_params_func_l1
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
         ### Bundle up extra kwargs for the dictionary kwargs.  These are 
         ### passed through super(...).fit() as kwargs and unpacked at 
         ### appropriate times
@@ -204,16 +211,13 @@ class DiscreteModel(base.LikelihoodModel):
         # For the 'extra' parameters, pass all that are available,
         # even if we know (at this point) we will only use one.
         extra_fit_funcs = {'l1': fit_l1_slsqp}
-        if have_cvxopt:
+        if have_cvxopt and method == 'l1_cvxopt_cp':
             from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
             extra_fit_funcs['l1_cvxopt_cp'] = fit_l1_cvxopt_cp
         elif method.lower() == 'l1_cvxopt_cp':
             message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
             could not be imported"""
 
-        if method in ['l1', 'l1_cvxopt_cp']:
-            cov_params_func = self.cov_params_func_l1
- 
         if callback is None:
             callback = self._check_perfect_pred
         else:
@@ -239,17 +243,14 @@ class DiscreteModel(base.LikelihoodModel):
         nz_idx = np.nonzero(trimmed == False)[0]
         nnz_params = (trimmed == False).sum()
         if nnz_params > 0:
-            H_restricted = np.zeros((nnz_params, nnz_params))
-            for new_i, old_i in enumerate(nz_idx):
-                for new_j, old_j in enumerate(nz_idx):
-                    H_restricted[new_i, new_j] = H[old_i, old_j]
+            H_restricted = H[nz_idx[:, None], nz_idx]
             # Covariance estimate for the nonzero params
             H_restricted_inv = np.linalg.inv(-H_restricted)
+        else:
+            H_restricted_inv = np.zeros(0)
 
         cov_params = np.nan * np.ones(H.shape)
-        for new_i, old_i in enumerate(nz_idx):
-            for new_j, old_j in enumerate(nz_idx):
-                cov_params[old_i, old_j] = H_restricted_inv[new_i, new_j]
+        cov_params[nz_idx[:, None], nz_idx] = H_restricted_inv
 
         return cov_params
 
@@ -455,11 +456,7 @@ class MultinomialModel(BinaryModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
-        if method in ['l1', 'l1_cvxopt_cp']:
-            mnfit = L1MultinomialResults(self, mnfit)
-        else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+        mnfit = L1MultinomialResults(self, mnfit)
         return MultinomialResultsWrapper(mnfit)
     fit_regularized.__doc__ = DiscreteModel.fit.__doc__
 
