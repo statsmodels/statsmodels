@@ -115,16 +115,34 @@ class DiscreteModel(base.LikelihoodModel):
         The regularization method AND the solver used is determined by the
         argument method.
 
-        Replacment Parameters
-        ---------------------
+        Parameters (also present in LikelihoodModel.fit)
+        ----------
+        start_params : array-like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is an array of zeros.
         method : 'l1' or 'l1_cvxopt_cp'
             See notes for details.
         maxiter : Integer or 'defined_by_method'
-            Maximum number of iterations to allow the solver to use.
+            Maximum number of iterations to perform.
             If 'defined_by_method', then use method defaults (see notes).
+        full_output : bool
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute. The output is dependent on the solver.
+            See LikelihoodModelResults notes section for more information.
+        disp : bool
+            Set to True to print convergence messages.
+        fargs : tuple
+            Extra arguments passed to the likelihood function, i.e.,
+            loglike(x,*args)
+        callback : callable callback(xk)
+            Called after each iteration, as callback(xk), where xk is the
+            current parameter vector.
+        retall : bool
+            Set to True to return list of solutions at each iteration.
+            Available in Results object's mle_retvals attribute.
 
 
-        New Parameters
+        fit_regularized Specific Parameters
         ------------------
         alpha : non-negative scalar or numpy array (same size as parameters)
             The weight multiplying the l1 penalty term
@@ -145,17 +163,20 @@ class DiscreteModel(base.LikelihoodModel):
 
         Notes
         -----
-        Optional arguments for the solvers (available in Results.mle_settings):
+        Additional solver-specific arguments
             'l1'
-                TODO Cut-and-paste from l1_slsqp when ready
+                acc : float (default 1e-6)
+                    Requested accuracy as used by slsqp
             'l1_cvxopt_cp'
-                TODO Cut-and-paste from l1_cvxopt when ready
-
-        TODO: The docstring won't be right since it will include all the
-        solvers for LikelihoodModel.fit
-
-        The rest of the docstring is from
-        statsmodels.LikelihoodModel.fit
+                abstol : float
+                    absolute accuracy (default: 1e-7).
+                reltol : float
+                    relative accuracy (default: 1e-6).
+                feastol : float
+                    tolerance for feasibility conditions (default: 1e-7).
+                refinement : int
+                    number of iterative refinement steps when solving KKT
+                    equations (default: 1).
         """
         ### Bundle up extra kwargs for the dictionary kwargs.  These are 
         ### passed through super(...).fit() as kwargs and unpacked at 
@@ -203,8 +224,6 @@ class DiscreteModel(base.LikelihoodModel):
                 disp=disp, callback=callback, extra_fit_funcs=extra_fit_funcs,
                 cov_params_func=cov_params_func, **kwargs)
         return mlefit # up to subclasses to wrap results
-
-    fit_regularized.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def cov_params_func_l1(self, likelihood_model, xopt, retvals):
         """
