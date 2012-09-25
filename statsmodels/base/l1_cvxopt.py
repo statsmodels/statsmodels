@@ -14,6 +14,18 @@ def fit_l1_cvxopt_cp(
     """
     Solve the l1 regularized problem using cvxopt.solvers.cp
 
+    Specifically:  We solve the convex but non-smooth problem
+    .. math:: \\min_\\beta f(\\beta) + \\sum_k\\alpha_k |\\beta_k|
+    via the transformation to the smooth, convex, constrained problem in twice
+    as many variables (adding the "added variables" u_k)
+    .. math:: \\min_{\\beta,u} f(\\beta) + \\sum_k\\alpha_k u_k,
+    subject to
+    .. math:: -u_k \\leq \\beta_k \\leq u_k.
+
+    Theory dictates that, at the minimum, one of two conditions holds:
+        i) abs(score[i]) == alpha[i]  and  params[i] != 0
+        ii) abs(score[i]) <= alpha[i]  and  params[i] == 0
+
     Parameters
     ----------
     All the usual parameters from LikelhoodModel.fit
