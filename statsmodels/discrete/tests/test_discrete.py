@@ -501,7 +501,7 @@ class TestL1Compatability(object):
         alpha = np.array([0, 0, 0, 10])
         res_reg = Logit(self.data.endog, self.data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
-            trim_mode='off')
+            trim_mode='auto')
         # Actually drop the last columnand do an unregularized fit
         exog_no_PSI = self.data.exog[:, :3]
         res_unreg = Logit(self.data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
@@ -511,14 +511,25 @@ class TestL1Compatability(object):
         # The last entry should be close to zero
         assert_almost_equal(0, res_reg.params[3], DECIMAL_4)
         # The restricted cov_params should be equal
-        assert_almost_equal(res_unreg.cov_params(), res_reg.cov_params()[:3, :3], DECIMAL_1)
+        assert_almost_equal(
+                res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
+                DECIMAL_1)
+        # Test t_test
+        t_unreg = res_unreg.t_test(np.eye(3))
+        t_reg = res_reg.t_test(np.eye(4))
+        assert_almost_equal(t_unreg.effect, t_reg.effect[:3], DECIMAL_3)
+        assert_almost_equal(t_unreg.sd, t_reg.sd[:3], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.sd[3])
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:3], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.tvalue[3])
+
 
     def test_l1_compatability_mnlogit(self):
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = np.array([0, 0, 0, 10])
         res_reg = MNLogit(self.data.endog, self.data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
-            trim_mode='off')
+            trim_mode='auto')
         # Actually drop the last columnand do an unregularized fit
         exog_no_PSI = self.data.exog[:, :3]
         res_unreg = MNLogit(self.data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
@@ -528,7 +539,16 @@ class TestL1Compatability(object):
         # The last entry should be close to zero
         assert_almost_equal(0, res_reg.params[3], DECIMAL_4)
         # The restricted cov_params should be equal
-        assert_almost_equal(res_unreg.cov_params(), res_reg.cov_params()[:3, :3], DECIMAL_1)
+        assert_almost_equal(
+                res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
+                DECIMAL_1)
+        # Test t_test
+        t_unreg = res_unreg.t_test(np.eye(3))
+        t_reg = res_reg.t_test(np.eye(4))
+        assert_almost_equal(t_unreg.effect, t_reg.effect[:3], DECIMAL_3)
+        assert_almost_equal(t_unreg.sd, t_reg.sd[:3], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.sd[3])
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:3, :3], DECIMAL_3)
 
     def test_l1_compatability_probit(self):
         # Do a regularized fit with alpha, effectively dropping the last column

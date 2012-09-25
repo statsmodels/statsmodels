@@ -1014,7 +1014,7 @@ class LikelihoodModelResults(Results):
         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
-                   other=None, use_nan_dot=False):
+            other=None):
         """
         Returns the variance/covariance matrix.
 
@@ -1034,8 +1034,6 @@ class LikelihoodModelResults(Results):
             the scale argument is taken from the model.
         other : array-like, optional
             Can be used when r_matrix is specified.
-        use_nan_dot : Boolean, optional
-            Use tools.nan_dot, which is np.dot with the convention nan * 0 = 0.
 
         Returns
         -------
@@ -1060,7 +1058,7 @@ class LikelihoodModelResults(Results):
         (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
-        if use_nan_dot:
+        if self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']:
             dot_fun = nan_dot
         else:
             dot_fun = np.dot
@@ -1200,17 +1198,12 @@ class LikelihoodModelResults(Results):
         _effect = np.dot(r_matrix, self.params)
         # nan_dot multiplies with the convention nan * 0 = 0
 
-        if np.isnan(self.cov_params().diagonal()).any():
-            use_nan_dot = True
-        else:
-            use_nan_dot = False
         # Perform the test
         if num_ttests > 1:
             _sd = np.sqrt(np.diag(self.cov_params(
-                r_matrix=r_matrix, cov_p=cov_p, use_nan_dot=use_nan_dot)))
+                r_matrix=r_matrix, cov_p=cov_p)))
         else:
-            _sd = np.sqrt(self.cov_params(
-                r_matrix=r_matrix, cov_p=cov_p, use_nan_dot=use_nan_dot))
+            _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
