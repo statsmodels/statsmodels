@@ -63,13 +63,13 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
         message += '\nTry increasing solver accuracy or number of iterations'\
             ', decreasing alpha, or switch solvers'
         if qc_verbose:
-            message += get_verbose_addon(qc_dict)
+            message += _get_verbose_addon(qc_dict)
         print message
 
     return passed
 
 
-def get_verbose_addon(qc_dict):
+def _get_verbose_addon(qc_dict):
     alpha = qc_dict['alpha']
     params = qc_dict['params']
     fprime = qc_dict['fprime']

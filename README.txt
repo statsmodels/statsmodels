@@ -7,12 +7,8 @@ Regularization is handled by a fit_regularized method.
 Main Files
 ==========
 
-l1_demo/generate_test_results.py
-    $ python generate_test_results.py
-    will print out results that can be cut and paste into tests/results/results_discrete.py
-
 l1_demo/demo.py
-    $ python demo.py logit
+    $ python demo.py --get_l1_slsqp_results logit
     does a quick demo of the regularization using logistic regression.
 
 l1_demo/sklearn_compare.py
@@ -20,17 +16,17 @@ l1_demo/sklearn_compare.py
     Plots a comparison of regularization paths.  Modify the source to use
     different datasets.
 
-statsmodels/discrete/l1_cvxopt.py
-    _fit_l1_cvxopt_cp() 
+statsmodels/base/l1_cvxopt.py
+    fit_l1_cvxopt_cp() 
         Fit likelihood model using l1 regularization.  Use the CVXOPT package.
-    Lots of small functions supporting _fit_l1_cvxopt_cp
+    Lots of small functions supporting fit_l1_cvxopt_cp
 
-statsmodels/discrete/l1_slsqp.py
-    _fit_l1_slsqp() 
+statsmodels/base/l1_slsqp.py
+    fit_l1_slsqp() 
         Fit likelihood model using l1 regularization.  Use scipy.optimize
-    Lots of small functions supporting _fit_l1_slsqp
+    Lots of small functions supporting fit_l1_slsqp
 
-statsmodels/discrete/l1_solvers_common.py
+statsmodels/base/l1_solvers_common.py
     Common methods used by l1 solvers
 
 statsmodels/base/model.py

@@ -9,7 +9,7 @@ import pdb
 # pdb.set_trace
 
 
-def _fit_l1_slsqp(
+def fit_l1_slsqp(
         f, score, start_params, args, kwargs, disp=False, maxiter=1000,
         callback=None, retall=False, full_output=False, hess=None):
     """
@@ -66,15 +66,15 @@ def _fit_l1_slsqp(
     alpha = alpha * np.ones(k_params)
     assert alpha.min() >= 0
     # Convert display parameters to scipy.optimize form
-    disp_slsqp = get_disp_slsqp(disp, retall)
+    disp_slsqp = _get_disp_slsqp(disp, retall)
     # Set/retrieve the desired accuracy
     acc = kwargs.setdefault('acc', 1e-10)
 
     ### Wrap up for use in fmin_slsqp
-    func = lambda x_full: objective_func(f, x_full, k_params, alpha, *args)
-    f_ieqcons_wrap = lambda x_full: f_ieqcons(x_full, k_params)
-    fprime_wrap = lambda x_full: fprime(score, x_full, k_params, alpha)
-    fprime_ieqcons_wrap = lambda x_full: fprime_ieqcons(x_full, k_params)
+    func = lambda x_full: _objective_func(f, x_full, k_params, alpha, *args)
+    f_ieqcons_wrap = lambda x_full: _f_ieqcons(x_full, k_params)
+    fprime_wrap = lambda x_full: _fprime(score, x_full, k_params, alpha)
+    fprime_ieqcons_wrap = lambda x_full: _fprime_ieqcons(x_full, k_params)
 
     ### Call the solver
     results = fmin_slsqp(
@@ -118,7 +118,7 @@ def _fit_l1_slsqp(
         return params
 
 
-def get_disp_slsqp(disp, retall):
+def _get_disp_slsqp(disp, retall):
     if disp or retall:
         if disp:
             disp_slsqp = 1
@@ -129,7 +129,7 @@ def get_disp_slsqp(disp, retall):
     return disp_slsqp
 
 
-def objective_func(f, x_full, k_params, alpha, *args):
+def _objective_func(f, x_full, k_params, alpha, *args):
     """
     The regularized objective function
     """
@@ -139,7 +139,7 @@ def objective_func(f, x_full, k_params, alpha, *args):
     return f(x_params, *args) + (alpha * x_added).sum()
 
 
-def fprime(score, x_full, k_params, alpha):
+def _fprime(score, x_full, k_params, alpha):
     """
     The regularized derivative
     """
@@ -148,7 +148,7 @@ def fprime(score, x_full, k_params, alpha):
     return np.append(score(x_params), alpha)
 
 
-def f_ieqcons(x_full, k_params):
+def _f_ieqcons(x_full, k_params):
     """
     The inequality constraints.
     """
@@ -158,7 +158,7 @@ def f_ieqcons(x_full, k_params):
     return np.append(x_params + x_added, x_added - x_params)
 
 
-def fprime_ieqcons(x_full, k_params):
+def _fprime_ieqcons(x_full, k_params):
     """
     Derivative of the inequality constraints
     """
