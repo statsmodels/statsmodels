@@ -2103,13 +2103,19 @@ class L1CountResults(DiscreteResults):
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
+        #update degrees of freedom
+        self.model.df_model = self.nnz_params - 1
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
+
 
     @cache_readonly
-    def aic(self):
+    def aic_(self):
         return -2*(self.llf - self.nnz_params)
 
     @cache_readonly
-    def bic(self):
+    def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 class OrderedResults(DiscreteResults):
@@ -2186,13 +2192,17 @@ class L1BinaryResults(BinaryResults):
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
+        self.model.df_model = self.nnz_params - 1
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
 
     @cache_readonly
-    def aic(self):
+    def aic_(self):
         return -2*(self.llf - self.nnz_params)
 
     @cache_readonly
-    def bic(self):
+    def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
@@ -2305,12 +2315,17 @@ class L1MultinomialResults(MultinomialResults):
         self.trimmed = mlefit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
 
+        self.model.df_model = self.nnz_params - self.model.J
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
+
     @cache_readonly
-    def aic(self):
+    def aic_(self):
         return -2*(self.llf - self.nnz_params)
 
     @cache_readonly
-    def bic(self):
+    def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 #### Results Wrappers ####
