@@ -111,7 +111,7 @@ class DiscreteModel(base.LikelihoodModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, qc_verbose=False, **kwargs):
         """
-        Fit the model using a regularized maximum likelihood.  
+        Fit the model using a regularized maximum likelihood.
         The regularization method AND the solver used is determined by the
         argument method.
 
@@ -185,8 +185,8 @@ class DiscreteModel(base.LikelihoodModel):
             raise Exception(
                     "argument method == %s, which is not handled" % method)
 
-        ### Bundle up extra kwargs for the dictionary kwargs.  These are 
-        ### passed through super(...).fit() as kwargs and unpacked at 
+        ### Bundle up extra kwargs for the dictionary kwargs.  These are
+        ### passed through super(...).fit() as kwargs and unpacked at
         ### appropriate times
         alpha = np.array(alpha)
         assert alpha.min() >= 0
@@ -215,7 +215,7 @@ class DiscreteModel(base.LikelihoodModel):
             from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
             extra_fit_funcs['l1_cvxopt_cp'] = fit_l1_cvxopt_cp
         elif method.lower() == 'l1_cvxopt_cp':
-            message = """Attempt to use l1_cvxopt_cp failed since cvxopt 
+            message = """Attempt to use l1_cvxopt_cp failed since cvxopt
             could not be imported"""
 
         if callback is None:
@@ -2111,13 +2111,19 @@ class L1CountResults(DiscreteResults):
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
+        #update degrees of freedom
+        self.model.df_model = self.nnz_params - 1
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
+
 
     @cache_readonly
-    def aic(self):
+    def aic_(self):
         return -2*(self.llf - self.nnz_params)
 
     @cache_readonly
-    def bic(self):
+    def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 class OrderedResults(DiscreteResults):
@@ -2183,7 +2189,7 @@ class L1BinaryResults(BinaryResults):
     New Attributes
     --------------
     nnz_params : Integer
-        The number of nonzero parameters in the model.  Train with 
+        The number of nonzero parameters in the model.  Train with
         trim_params==True or else numerical error will distort this.
     trimmed : Boolean array
         trimmed[i] == True if the ith parameter was trimmed from the model.
@@ -2194,13 +2200,17 @@ class L1BinaryResults(BinaryResults):
         # entry in params has been set zero'd out.
         self.trimmed = bnryfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
+        self.model.df_model = self.nnz_params - 1
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
 
     @cache_readonly
-    def aic(self):
+    def aic_(self):
         return -2*(self.llf - self.nnz_params)
 
     @cache_readonly
-    def bic(self):
+    def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
@@ -2303,7 +2313,7 @@ class L1MultinomialResults(MultinomialResults):
     New Attributes
     --------------
     nnz_params : Integer
-        The number of nonzero parameters in the model.  Train with 
+        The number of nonzero parameters in the model.  Train with
         trim_params==True or else numerical error will distort this.
     """
     def __init__(self, model, mlefit):
@@ -2313,12 +2323,17 @@ class L1MultinomialResults(MultinomialResults):
         self.trimmed = mlefit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
 
+        self.model.df_model = self.nnz_params - self.model.J
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
+
     @cache_readonly
-    def aic(self):
+    def aic_(self):
         return -2*(self.llf - self.nnz_params)
 
     @cache_readonly
-    def bic(self):
+    def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 #### Results Wrappers ####
