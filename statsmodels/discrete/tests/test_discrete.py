@@ -522,6 +522,11 @@ class TestL1Compatability(object):
         assert_almost_equal(np.nan, t_reg.sd[3])
         assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:3], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.tvalue[3])
+        # Test f_test
+        f_unreg = res_unreg.f_test(np.eye(3))
+        f_reg = res_reg.f_test(np.eye(4))
+        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
+        assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
 
     def test_l1_compatability_mnlogit(self):

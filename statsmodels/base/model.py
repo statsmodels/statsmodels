@@ -9,8 +9,6 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
-import pdb  # pdb.set_trace
-
 
 _model_params_doc = """    Parameters
     ----------
@@ -1329,7 +1327,10 @@ class LikelihoodModelResults(Results):
         if invcov is None:
             invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
                                                    cov_p=cov_p))
-        F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
+        if self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']:
+            F = nan_dot(nan_dot(Rbq.T, invcov), Rbq) / J
+        else:
+            F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
         return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
 
