@@ -532,6 +532,8 @@ class TestL1Compatability(object):
         assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
+        #The following should be nan or ValueError, but is currently LinalgError
+        assert_raises(Exception, res_reg.f_test, np.eye(4) )
 
     def test_l1_compatability_mnlogit(self):
         # Do a regularized fit with alpha, effectively dropping the last column
@@ -582,7 +584,7 @@ class TestL1Compatability(object):
 
         assert_equal(res_unreg.df_model, res_reg.df_model)
         assert_equal(res_unreg.df_resid, res_reg.df_resid)
-        
+
         # Test f_test
         f_unreg = res_unreg.f_test(np.eye(3))
         f_reg = res_reg.f_test(np.eye(4)[:3])
