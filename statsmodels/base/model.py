@@ -1313,8 +1313,12 @@ class LikelihoodModelResults(Results):
                                  "number of rows")
         Rbq = cparams - q_matrix
         if invcov is None:
-            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
-                                                   cov_p=cov_p))
+            cov_p = self.cov_params(r_matrix=r_matrix, cov_p=cov_p)
+            if np.isnan(cov_p).max():
+                raise ValueError("r_matrix performs f_test for using "
+                    "dimensions that are asymptotically non-normal")
+            invcov = np.linalg.inv(cov_p)
+                                  
         if (hasattr(self, 'mle_settings') and
             self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
             F = nan_dot(nan_dot(Rbq.T, invcov), Rbq) / J
