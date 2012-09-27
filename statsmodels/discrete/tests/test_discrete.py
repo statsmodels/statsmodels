@@ -514,6 +514,10 @@ class TestL1Compatability(object):
         assert_almost_equal(
                 res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
                 DECIMAL_1)
+
+        assert_equal(res_unreg.df_model, res_reg.df_model)
+        assert_equal(res_unreg.df_resid, res_reg.df_resid)
+
         # Test t_test
         t_unreg = res_unreg.t_test(np.eye(3))
         t_reg = res_reg.t_test(np.eye(4))
@@ -524,7 +528,7 @@ class TestL1Compatability(object):
         assert_almost_equal(np.nan, t_reg.tvalue[3])
         # Test f_test
         f_unreg = res_unreg.f_test(np.eye(3))
-        f_reg = res_reg.f_test(np.eye(4))
+        f_reg = res_reg.f_test(np.eye(4)[:3])
         assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
@@ -547,6 +551,10 @@ class TestL1Compatability(object):
         assert_almost_equal(
                 res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
                 DECIMAL_1)
+
+        assert_equal(res_unreg.df_model, res_reg.df_model)
+        assert_equal(res_unreg.df_resid, res_reg.df_resid)
+
         # Test t_test
         t_unreg = res_unreg.t_test(np.eye(3))
         t_reg = res_reg.t_test(np.eye(4))
@@ -571,6 +579,10 @@ class TestL1Compatability(object):
         assert_almost_equal(0, res_reg.params[3], DECIMAL_4)
         # The restricted cov_params should be equal
         assert_almost_equal(res_unreg.cov_params(), res_reg.cov_params()[:3, :3], DECIMAL_1)
+
+        assert_equal(res_unreg.df_model, res_reg.df_model)
+        assert_equal(res_unreg.df_resid, res_reg.df_resid)
+
 
 
 class CompareL1(object):

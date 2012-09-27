@@ -2315,7 +2315,8 @@ class L1MultinomialResults(MultinomialResults):
         self.trimmed = mlefit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
 
-        self.model.df_model = self.nnz_params - self.model.J
+        #Note: J-1 constants
+        self.model.df_model = self.nnz_params - (self.model.J - 1)
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
         self.df_model = self.model.df_model
         self.df_resid = self.model.df_resid
