@@ -381,11 +381,11 @@ class CheckLikelihoodModelL1(object):
 
     def test_aic(self):
         assert_almost_equal(
-                self.res1.aic, self.res2.aic, DECIMAL_4)
+                self.res1.aic, self.res2.aic, DECIMAL_3)
 
     def test_bic(self):
         assert_almost_equal(
-                self.res1.bic, self.res2.bic, DECIMAL_4)
+                self.res1.bic, self.res2.bic, DECIMAL_3)
 
 
 class TestProbitL1(CheckLikelihoodModelL1):
