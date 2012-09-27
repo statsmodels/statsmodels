@@ -2118,14 +2118,6 @@ class L1CountResults(DiscreteResults):
         self.df_resid = self.model.df_resid
 
 
-    @cache_readonly
-    def aic_(self):
-        return -2*(self.llf - self.nnz_params)
-
-    @cache_readonly
-    def bic_(self):
-        return -2*self.llf + np.log(self.nobs)*self.nnz_params
-
 class OrderedResults(DiscreteResults):
     pass
 
@@ -2204,14 +2196,6 @@ class L1BinaryResults(BinaryResults):
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
         self.df_model = self.model.df_model
         self.df_resid = self.model.df_resid
-
-    @cache_readonly
-    def aic_(self):
-        return -2*(self.llf - self.nnz_params)
-
-    @cache_readonly
-    def bic_(self):
-        return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 
 class MultinomialResults(DiscreteResults):
@@ -2304,13 +2288,6 @@ class L1MultinomialResults(MultinomialResults):
         self.df_model = self.model.df_model
         self.df_resid = self.model.df_resid
 
-    @cache_readonly
-    def aic_(self):
-        return -2*(self.llf - self.nnz_params)
-
-    @cache_readonly
-    def bic_(self):
-        return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
 #### Results Wrappers ####
 
