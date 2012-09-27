@@ -395,7 +395,7 @@ class TestProbitL1(CheckLikelihoodModelL1):
         data.exog = sm.add_constant(data.exog, prepend=True)
         alpha = np.array([0.1, 0.2, 0.3, 10])
         cls.res1 = Probit(data.endog, data.exog).fit_regularized(
-            method="l1", alpha=alpha, disp=0, trim_mode='auto', 
+            method="l1", alpha=alpha, disp=0, trim_mode='auto',
             auto_trim_tol=0.02, acc=1e-10, maxiter=1000)
         res2 = DiscreteL1()
         res2.probit()
@@ -430,7 +430,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.alpha = 3 * np.array([0, 1, 1, 1])
         cls.res1 = Logit(data.endog, data.exog).fit_regularized(
-            method="l1", alpha=cls.alpha, disp=0, trim_mode='size', 
+            method="l1", alpha=cls.alpha, disp=0, trim_mode='size',
             size_trim_tol=1e-5, acc=1e-10, maxiter=1000)
         res2 = DiscreteL1()
         res2.logit()
@@ -454,7 +454,7 @@ class TestCVXOPT(object):
         if has_cvxopt:
             self.alpha = 3 * np.array([0, 1, 1, 1])
             res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
-                method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000, 
+                method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
                 trim_mode='auto')
             res_cvxopt = Logit(self.data.endog, self.data.exog).fit_regularized(
                 method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
@@ -514,6 +514,10 @@ class TestL1Compatability(object):
         assert_almost_equal(
                 res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
                 DECIMAL_1)
+
+        assert_equal(res_unreg.df_model, res_reg.df_model)
+        assert_equal(res_unreg.df_resid, res_reg.df_resid)
+
         # Test t_test
         t_unreg = res_unreg.t_test(np.eye(3))
         t_reg = res_reg.t_test(np.eye(4))
@@ -524,7 +528,7 @@ class TestL1Compatability(object):
         assert_almost_equal(np.nan, t_reg.tvalue[3])
         # Test f_test
         f_unreg = res_unreg.f_test(np.eye(3))
-        f_reg = res_reg.f_test(np.eye(4))
+        f_reg = res_reg.f_test(np.eye(4)[:3])
         assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
@@ -547,6 +551,10 @@ class TestL1Compatability(object):
         assert_almost_equal(
                 res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
                 DECIMAL_1)
+
+        assert_equal(res_unreg.df_model, res_reg.df_model)
+        assert_equal(res_unreg.df_resid, res_reg.df_resid)
+
         # Test t_test
         t_unreg = res_unreg.t_test(np.eye(3))
         t_reg = res_reg.t_test(np.eye(4))
@@ -572,10 +580,14 @@ class TestL1Compatability(object):
         # The restricted cov_params should be equal
         assert_almost_equal(res_unreg.cov_params(), res_reg.cov_params()[:3, :3], DECIMAL_1)
 
+        assert_equal(res_unreg.df_model, res_reg.df_model)
+        assert_equal(res_unreg.df_resid, res_reg.df_resid)
+
+
 
 class CompareL1(object):
     """
-    For checking results for l1 regularization.  
+    For checking results for l1 regularization.
     Assumes self.res1 and self.res2 are two legitimate models to be compared.
     """
     def test_basic_results(self):
