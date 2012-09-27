@@ -2205,31 +2205,6 @@ class L1BinaryResults(BinaryResults):
     def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
-    def f_test_(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
-               invcov=None):
-        if invcov is None:
-            invcov = self.invcov()
-        return super(L1BinaryResults, self).f_test(
-                r_matrix, q_matrix, cov_p, scale, invcov)
-
-    def invcov(self):
-        """
-        Returns the "inverse" of self.cov_params, computed by restricting
-        cov_params to the space with no trimmed params, inverting, and
-        then inserting into a zeros matrix.
-        """
-        C = self.cov_params()
-        trimmed = self.trimmed
-        nz_idx = np.nonzero(trimmed == False)[0]
-        if self.nnz_params > 0:
-            C_restricted = C[nz_idx[:, None], nz_idx]
-            C_restricted_inv = np.linalg.inv(C_restricted)
-        else:
-            C_restricted_inv = np.zeros(0)
-        C_inv = np.nan * np.ones(C.shape)
-        C_inv[nz_idx[:, None], nz_idx] = C_restricted_inv
-
-        return C_inv
 
 class MultinomialResults(DiscreteResults):
     def _maybe_convert_ynames_int(self, ynames):
