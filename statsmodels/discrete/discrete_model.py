@@ -2205,7 +2205,7 @@ class L1BinaryResults(BinaryResults):
     def bic_(self):
         return -2*self.llf + np.log(self.nobs)*self.nnz_params
 
-    def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
+    def f_test_(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None):
         if invcov is None:
             invcov = self.invcov()

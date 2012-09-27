@@ -568,7 +568,7 @@ class TestL1Compatability(object):
         alpha = np.array([0, 0, 0, 10])
         res_reg = Probit(self.data.endog, self.data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
-            trim_mode='off')
+            trim_mode='auto') #'off')
         # Actually drop the last columnand do an unregularized fit
         exog_no_PSI = self.data.exog[:, :3]
         res_unreg = Probit(self.data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
@@ -582,6 +582,12 @@ class TestL1Compatability(object):
 
         assert_equal(res_unreg.df_model, res_reg.df_model)
         assert_equal(res_unreg.df_resid, res_reg.df_resid)
+
+        # Test f_test
+        f_unreg = res_unreg.f_test(np.eye(3))
+        f_reg = res_reg.f_test(np.eye(4)[:3])
+        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
+        assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
 
 
