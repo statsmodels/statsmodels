@@ -485,111 +485,100 @@ class TestSweepAlphaL1(object):
             assert_almost_equal(res2.params, self.res1.params[i], DECIMAL_4)
 
 
-class TestL1Compatability(object):
+class CheckL1Compatability(object):
     """
     Tests compatability between l1 and unregularized by setting alpha such
     that certain parameters should be effectively unregularized, and others
     should be ignored by the model.
     """
-    @classmethod
-    def setupClass(cls):
-        cls.data = sm.datasets.spector.load()
-        cls.data.exog = sm.add_constant(cls.data.exog, prepend=True)
-
-    def test_l1_compatability_logit(self):
-        # Do a regularized fit with alpha, effectively dropping the last column
-        alpha = np.array([0, 0, 0, 10])
-        res_reg = Logit(self.data.endog, self.data.exog).fit_regularized(
-            method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
-            trim_mode='auto')
-        # Actually drop the last columnand do an unregularized fit
-        exog_no_PSI = self.data.exog[:, :3]
-        res_unreg = Logit(self.data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
-        ## Compare arrays
-        # The first three params should be equal
-        assert_almost_equal(res_unreg.params, res_reg.params[:3], DECIMAL_4)
+    def test_params(self):
+        assert_almost_equal(
+            self.res_unreg.params, self.res_reg.params[:3], DECIMAL_4)
         # The last entry should be close to zero
-        assert_almost_equal(0, res_reg.params[3], DECIMAL_4)
+        assert_almost_equal(0, self.res_reg.params[3], DECIMAL_4)
+
+    def test_cov_params(self):
         # The restricted cov_params should be equal
         assert_almost_equal(
-                res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
-                DECIMAL_1)
+            self.res_unreg.cov_params(), self.res_reg.cov_params()[:3, :3],
+            DECIMAL_1)
 
-        assert_equal(res_unreg.df_model, res_reg.df_model)
-        assert_equal(res_unreg.df_resid, res_reg.df_resid)
+    def test_df(self):
+        assert_equal(self.res_unreg.df_model, self.res_reg.df_model)
+        assert_equal(self.res_unreg.df_resid, self.res_reg.df_resid)
 
-        # Test t_test
-        t_unreg = res_unreg.t_test(np.eye(3))
-        t_reg = res_reg.t_test(np.eye(4))
+    def test_t_test(self):
+        t_unreg = self.res_unreg.t_test(np.eye(3))
+        t_reg = self.res_reg.t_test(np.eye(4))
         assert_almost_equal(t_unreg.effect, t_reg.effect[:3], DECIMAL_3)
         assert_almost_equal(t_unreg.sd, t_reg.sd[:3], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.sd[3])
         assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:3], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.tvalue[3])
-        # Test f_test
-        f_unreg = res_unreg.f_test(np.eye(3))
-        f_reg = res_reg.f_test(np.eye(4)[:3])
+
+    def test_f_test(self):
+        f_unreg = self.res_unreg.f_test(np.eye(3))
+        f_reg = self.res_reg.f_test(np.eye(4)[:3])
         assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
-        #The following should be nan or ValueError, but is currently LinalgError
-        assert_raises(ValueError, res_reg.f_test, np.eye(4) )
+    def test_bad_r_matrix(self):
+        assert_raises(ValueError, self.res_reg.f_test, np.eye(4) )
 
-    def test_l1_compatability_mnlogit(self):
+
+class TestLogitL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = np.array([0, 0, 0, 10])
-        res_reg = MNLogit(self.data.endog, self.data.exog).fit_regularized(
+        cls.res_reg = Logit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
             trim_mode='auto')
         # Actually drop the last columnand do an unregularized fit
-        exog_no_PSI = self.data.exog[:, :3]
-        res_unreg = MNLogit(self.data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
-        ## Compare arrays
-        # The first three params should be equal
-        assert_almost_equal(res_unreg.params, res_reg.params[:3], DECIMAL_4)
-        # The last entry should be close to zero
-        assert_almost_equal(0, res_reg.params[3], DECIMAL_4)
-        # The restricted cov_params should be equal
-        assert_almost_equal(
-                res_unreg.cov_params(), res_reg.cov_params()[:3, :3],
-                DECIMAL_1)
+        exog_no_PSI = data.exog[:, :3]
+        cls.res_unreg = Logit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
 
-        assert_equal(res_unreg.df_model, res_reg.df_model)
-        assert_equal(res_unreg.df_resid, res_reg.df_resid)
 
-        # Test t_test
-        t_unreg = res_unreg.t_test(np.eye(3))
-        t_reg = res_reg.t_test(np.eye(4))
+class TestMNLogitL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        alpha = np.array([0, 0, 0, 10])
+        cls.res_reg = MNLogit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
+            trim_mode='auto')
+        # Actually drop the last columnand do an unregularized fit
+        exog_no_PSI = data.exog[:, :3]
+        cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
+            disp=0, tol=1e-15)
+#
+    def test_t_test(self):
+        t_unreg = self.res_unreg.t_test(np.eye(3))
+        t_reg = self.res_reg.t_test(np.eye(4))
         assert_almost_equal(t_unreg.effect, t_reg.effect[:3], DECIMAL_3)
         assert_almost_equal(t_unreg.sd, t_reg.sd[:3], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.sd[3])
         assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:3, :3], DECIMAL_3)
 
-    def test_l1_compatability_probit(self):
-        # Do a regularized fit with alpha, effectively dropping the last column
+    def test_f_test(self):
+        raise SkipTest("Skipped test_f_test for MNLogit")
+
+
+class TestProbitL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
         alpha = np.array([0, 0, 0, 10])
-        res_reg = Probit(self.data.endog, self.data.exog).fit_regularized(
+        cls.res_reg = Probit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
-            trim_mode='auto') #'off')
+            trim_mode='auto')
         # Actually drop the last columnand do an unregularized fit
-        exog_no_PSI = self.data.exog[:, :3]
-        res_unreg = Probit(self.data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
-        ## Compare arrays
-        # The first three params should be equal
-        assert_almost_equal(res_unreg.params, res_reg.params[:3], DECIMAL_4)
-        # The last entry should be close to zero
-        assert_almost_equal(0, res_reg.params[3], DECIMAL_4)
-        # The restricted cov_params should be equal
-        assert_almost_equal(res_unreg.cov_params(), res_reg.cov_params()[:3, :3], DECIMAL_1)
-
-        assert_equal(res_unreg.df_model, res_reg.df_model)
-        assert_equal(res_unreg.df_resid, res_reg.df_resid)
-
-        # Test f_test
-        f_unreg = res_unreg.f_test(np.eye(3))
-        f_reg = res_reg.f_test(np.eye(4)[:3])
-        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
-        assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
+        exog_no_PSI = data.exog[:, :3]
+        cls.res_unreg = Probit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
 
 
 class CompareL1(object):
