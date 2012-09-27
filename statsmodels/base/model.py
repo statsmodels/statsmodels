@@ -152,8 +152,8 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
-    def fit(self, start_params=None, method='newton', maxiter=100, 
-            full_output=True, disp=True, fargs=(), callback=None, 
+    def fit(self, start_params=None, method='newton', maxiter=100,
+            full_output=True, disp=True, fargs=(), callback=None,
             retall=False, **kwargs):
         """
         Fit method for likelihood based models
@@ -167,7 +167,7 @@ class LikelihoodModel(Model):
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient.  `method` determines which solver from 
+            conjugate gradient.  `method` determines which solver from
             scipy.optimize is used.  The explicit arguments in `fit` are
             passed to the solver.  Each solver has several optional arguments
             that are not the same across solvers.  See the notes section below
@@ -1043,7 +1043,8 @@ class LikelihoodModelResults(Results):
         (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
-        if self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']:
+        if (hasattr(self, 'mle_settings') and
+            self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
             dot_fun = nan_dot
         else:
             dot_fun = np.dot
@@ -1193,7 +1194,7 @@ class LikelihoodModelResults(Results):
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
 
-            
+
     #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None):
@@ -1314,7 +1315,8 @@ class LikelihoodModelResults(Results):
         if invcov is None:
             invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
                                                    cov_p=cov_p))
-        if self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']:
+        if (hasattr(self, 'mle_settings') and
+            self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
             F = nan_dot(nan_dot(Rbq.T, invcov), Rbq) / J
         else:
             F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
