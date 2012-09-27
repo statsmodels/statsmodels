@@ -1056,7 +1056,8 @@ class LikelihoodModelResults(Results):
         (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
-        if self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']:
+        if (hasattr(self, 'mle_settings') and
+            self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
             dot_fun = nan_dot
         else:
             dot_fun = np.dot
@@ -1327,7 +1328,8 @@ class LikelihoodModelResults(Results):
         if invcov is None:
             invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
                                                    cov_p=cov_p))
-        if self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']:
+        if (hasattr(self, 'mle_settings') and
+            self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
             F = nan_dot(nan_dot(Rbq.T, invcov), Rbq) / J
         else:
             F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
