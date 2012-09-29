@@ -75,7 +75,7 @@ This is a bit of a trick, as the `race` category conveniently maps to zero-based
 .. ipython:: python
 
    from statsmodels.formula.api import ols
-   mod = ols("write ~ C(race, Treatment)", df=hsb2)
+   mod = ols("write ~ C(race, Treatment)", data=hsb2)
    res = mod.fit()
    print res.summary()
 
@@ -92,7 +92,7 @@ Like Treatment Coding, Simple Coding compares each level to a fixed reference le
    contrast = Simple().code_without_intercept(levels)
    print contrast.matrix
 
-   mod = ols("write ~ C(race, Simple)", df=hsb2)
+   mod = ols("write ~ C(race, Simple)", data=hsb2)
    res = mod.fit()
    print res.summary()
 
@@ -107,7 +107,7 @@ Sum coding compares the mean of the dependent variable for a given level to the 
    contrast = Sum().code_without_intercept(levels)
    print contrast.matrix
 
-   mod = ols("write ~ C(race, Sum)", df=hsb2)
+   mod = ols("write ~ C(race, Sum)", data=hsb2)
    res = mod.fit()
    print res.summary()
 
@@ -128,7 +128,7 @@ In backward difference coding, the mean of the dependent variable for a level is
    contrast = Diff().code_without_intercept(levels)
    print contrast.matrix
 
-   mod = ols("write ~ C(race, Diff)", df=hsb2)
+   mod = ols("write ~ C(race, Diff)", data=hsb2)
    res = mod.fit()
    print res.summary()
 
@@ -151,7 +151,7 @@ Our version of Helmert coding is sometimes referred to as Reverse Helmert Coding
    contrast = Helmert().code_without_intercept(levels)
    print contrast.matrix
 
-   mod = ols("write ~ C(race, Helmert)", df=hsb2)
+   mod = ols("write ~ C(race, Helmert)", data=hsb2)
    res = mod.fit()
    print res.summary()
 
@@ -194,7 +194,7 @@ The coefficients taken on by polynomial coding for `k=4` levels are the linear, 
    contrast = Poly().code_without_intercept(levels)
    print contrast.matrix
 
-   mod = ols("write ~ C(readcat, Poly)", df=hsb2)
+   mod = ols("write ~ C(readcat, Poly)", data=hsb2)
    res = mod.fit()
    print res.summary()
 
@@ -230,5 +230,5 @@ If you want to use your own coding, you must do so by writing a coding class tha
            contrast = self._simple_contrast(levels)
            return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
 
-   mod = ols("write ~ C(race, Simple)", df=hsb2)
+   mod = ols("write ~ C(race, Simple)", data=hsb2)
    res = mod.fit()

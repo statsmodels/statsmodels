@@ -96,7 +96,7 @@ from statsmodels.stats.api import anova_lm
 table1 = anova_lm(lm, interX_lm)
 print table1
 
-interM_lm = ols("S ~ X + C(E)*C(M)", df=salary_table).fit()
+interM_lm = ols("S ~ X + C(E)*C(M)", data=salary_table).fit()
 print interM_lm.summary()
 
 table2 = anova_lm(lm, interM_lm)
@@ -128,18 +128,18 @@ drop_idx = abs(resid).argmax()
 print drop_idx # zero-based index
 idx = salary_table.index.drop([drop_idx])
 
-lm32 = ols('S ~ C(E) + X + C(M)', df=salary_table, subset=idx).fit()
+lm32 = ols('S ~ C(E) + X + C(M)', data=salary_table, subset=idx).fit()
 
 print lm32.summary()
 
-interX_lm32 = ols('S ~ C(E) * X + C(M)', df=salary_table, subset=idx).fit()
+interX_lm32 = ols('S ~ C(E) * X + C(M)', data=salary_table, subset=idx).fit()
 
 print interX_lm32.summary()
 
 table3 = anova_lm(lm32, interX_lm32)
 print table3
 
-interM_lm32 = ols('S ~ X + C(E) * C(M)', df=salary_table, subset=idx).fit()
+interM_lm32 = ols('S ~ X + C(E) * C(M)', data=salary_table, subset=idx).fit()
 
 table4 = anova_lm(lm32, interM_lm32)
 print table4
@@ -163,7 +163,7 @@ plt.ylabel('standardized resids');
 # Plot the fitted values
 
 lm_final = ols('S ~ X + C(E)*C(M)',
-                    df = salary_table.drop([drop_idx])).fit()
+                    data = salary_table.drop([drop_idx])).fit()
 mf = lm_final.model._data._orig_exog
 lstyle = ['-','--']
 
@@ -212,7 +212,7 @@ plt.xlabel('TEST');
 #@savefig group_test.png align=center
 plt.ylabel('JPERF');
 
-min_lm = ols('JPERF ~ TEST', df=minority_table).fit()
+min_lm = ols('JPERF ~ TEST', data=minority_table).fit()
 print min_lm.summary()
 
 plt.figure(figsize=(6,6));
@@ -226,7 +226,7 @@ plt.ylabel('JPERF')
 abline_plot(model_results = min_lm, ax=plt.gca());
 
 min_lm2 = ols('JPERF ~ TEST + TEST:ETHN',
-        df=minority_table).fit()
+        data=minority_table).fit()
 
 print min_lm2.summary()
 
@@ -243,7 +243,7 @@ abline_plot(intercept = min_lm2.params['Intercept'],
         ax=plt.gca(), color='green');
 
 
-min_lm3 = ols('JPERF ~ TEST + ETHN', df = minority_table).fit()
+min_lm3 = ols('JPERF ~ TEST + ETHN', data = minority_table).fit()
 print min_lm3.summary()
 
 plt.figure(figsize=(6,6));
@@ -258,7 +258,7 @@ abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
         slope = min_lm3.params['TEST'], ax=plt.gca(), color='green');
 
 
-min_lm4 = ols('JPERF ~ TEST * ETHN', df = minority_table).fit()
+min_lm4 = ols('JPERF ~ TEST * ETHN', data = minority_table).fit()
 print min_lm4.summary()
 
 plt.figure(figsize=(6,6));
@@ -304,7 +304,7 @@ plt.figure(figsize=(6,6))
 #@savefig plot_boxplot.png align=center
 rehab_table.boxplot('Time', 'Fitness', ax=plt.gca())
 
-rehab_lm = ols('Time ~ C(Fitness)', df=rehab_table).fit()
+rehab_lm = ols('Time ~ C(Fitness)', data=rehab_table).fit()
 table9 = anova_lm(rehab_lm)
 print table9
 
@@ -335,18 +335,18 @@ interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days']+1),
 
 # You have things available in the calling namespace available
 # in the formula evaluation namespace
-kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)', df=kt).fit()
+kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)', data=kt).fit()
 
 table10 = anova_lm(kidney_lm)
 
 print anova_lm(ols('np.log(Days+1) ~ C(Duration) + C(Weight)',
-                df=kt).fit(), kidney_lm)
-print anova_lm(ols('np.log(Days+1) ~ C(Duration)', df=kt).fit(),
+                data=kt).fit(), kidney_lm)
+print anova_lm(ols('np.log(Days+1) ~ C(Duration)', data=kt).fit(),
                ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)',
-                   df=kt).fit())
-print anova_lm(ols('np.log(Days+1) ~ C(Weight)', df=kt).fit(),
+                   data=kt).fit())
+print anova_lm(ols('np.log(Days+1) ~ C(Weight)', data=kt).fit(),
                ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)',
-                   df=kt).fit())
+                   data=kt).fit())
 
 # Sum of squares
 # --------------
@@ -360,14 +360,14 @@ print anova_lm(ols('np.log(Days+1) ~ C(Weight)', df=kt).fit(),
 # Don't use Type III with non-orthogonal contrast - ie., Treatment
 
 sum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
-            df=kt).fit()
+            data=kt).fit()
 
 print anova_lm(sum_lm)
 print anova_lm(sum_lm, typ=2)
 print anova_lm(sum_lm, typ=3)
 
 nosum_lm = ols('np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)',
-            df=kt).fit()
+            data=kt).fit()
 print anova_lm(nosum_lm)
 print anova_lm(nosum_lm, typ=2)
 print anova_lm(nosum_lm, typ=3)

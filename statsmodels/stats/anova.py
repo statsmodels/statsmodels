@@ -359,9 +359,9 @@ if __name__ == "__main__":
                                 names=['partner_status','conformity',
                                     'fcategory','fscore'])
     moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
-                    df=moore).fit()
+                    data=moore).fit()
 
-    mooreB = ols('conformity ~ C(partner_status, Sum)', df=moore).fit()
+    mooreB = ols('conformity ~ C(partner_status, Sum)', data=moore).fit()
 
     # for each term you just want to test vs the model without its
     # higher-order terms
