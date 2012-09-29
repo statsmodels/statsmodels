@@ -276,9 +276,11 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     Parameters
     ----------
     x : array
-       time series data
+        time series data
     unbiased : bool
-       if True, then denominators is n-k, otherwise n
+        if True, then denominators is n-k, otherwise n
+    demean : bool
+        if True, then subtract the mean x from each element of x
     fft : bool
         If True, use FFT convolution.  This method should be preferred
         for long time series.
