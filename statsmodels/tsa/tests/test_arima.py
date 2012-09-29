@@ -1577,12 +1577,25 @@ def test_1dexog():
     exog = dta['m1'].values.squeeze()
     mod = ARMA(endog, (1,1), exog).fit(disp=-1)
 
-def arima_predict_bug():
+def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
-    dta = sm.datasets.sunspots.load_pandas().data
-    dta.index = pandas.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
-    arma_mod20 = sm.tsa.ARMA(dta, (2,0)).fit(disp=-1)
+    from statsmodels.datasets import sunspots
+    dta = sunspots.load_pandas().data.SUNACTIVITY
+    dta.index = pandas.Index(dates_from_range('1700', '2008'))
+    arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
+
+def test_arima_predict_q2():
+    # bug with q > 1 for arima predict
+    from statsmodels.datasets import macrodata
+    inv = macrodata.load().data['realinv']
+    arima_mod = ARIMA(np.log(inv), (1,1,2)).fit(start_params=[0,0,0,0], disp=-1)
+    fc, stderr, conf_int = arima_mod.forecast(5)
+    # values copy-pasted from gretl
+    assert_almost_equal(fc,
+                        [7.306320, 7.313825, 7.321749, 7.329827, 7.337962],
+                        5)
+
 
 if __name__ == "__main__":
     import nose
