@@ -270,10 +270,11 @@ class LikelihoodModel(Model):
         # user-supplied and numerically evaluated estimate frprime doesn't take
         # args in most (any?) of the optimize function
 
-        f = lambda params, *args: -self.loglike(params, *args)
-        score = lambda params: -self.score(params)
+        nobs = self.endog.shape[0]
+        f = lambda params, *args: -self.loglike(params, *args) / nobs
+        score = lambda params: -self.score(params) / nobs
         try:
-            hess = lambda params: -self.hessian(params)
+            hess = lambda params: -self.hessian(params) / nobs
         except:
             hess = None
 
@@ -289,8 +290,9 @@ class LikelihoodModel(Model):
             fit_funcs.update(extra_fit_funcs)
 
         if method == 'newton':
-            score = lambda params: self.score(params)
-            hess = lambda params: self.hessian(params)
+            score = lambda params: self.score(params) / nobs
+            hess = lambda params: self.hessian(params) / nobs
+            #TODO: why are score and hess positive?
 
         func = fit_funcs[method]
         xopt, retvals = func(f, score, start_params, fargs, kwargs,
@@ -309,7 +311,7 @@ class LikelihoodModel(Model):
         elif cov_params_func:
             Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
-            Hinv = np.linalg.inv(-retvals['Hessian'])
+            Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
         else:
             try:
                 Hinv = np.linalg.inv(-1 * self.hessian(xopt))
