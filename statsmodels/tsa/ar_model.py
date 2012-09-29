@@ -910,8 +910,6 @@ if __name__ == "__main__":
 
     #NOTE: pandas can't handle pre-1900 dates
     mod = AR(sunspots, freq='A')
-    #NOTE: If you use timeseries, predict is buggy
-    #mod = AR(sunspots.values, dates=ts_dr, freq='A')
     res = mod.fit(method='mle', maxlag=9)
 
 
