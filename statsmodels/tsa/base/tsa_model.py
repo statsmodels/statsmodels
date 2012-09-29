@@ -52,19 +52,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             dates = self._data.row_labels
 
         if dates is not None:
-            try:
-                from scikits.timeseries import Date
-                if not isinstance(dates[0], (datetime.datetime,Date)):
-                    raise ValueError("dates must be of type datetime or "
-                                     "scikits.timeseries.Date")
-            except ImportError:
-                if not isinstance(dates[0], (datetime.datetime)):
-                    raise ValueError("dates must be of type datetime")
             if not freq:
-                #if isinstance(dates, DateRange):
-                #    freq = datetools.inferTimeRule(dates)
-                #elif isinstance(dates, TimeSeries):
-                #    freq = dates.freqstr
                 try:
                     freq = datetools._infer_freq(dates)
                 except:
@@ -229,13 +217,6 @@ if __name__ == "__main__":
     #TODO: attach a DataFrame to some of the datasets, for quicker use
     dates = [str(int(x[0])) +':'+ str(int(x[1])) \
              for x in data.data[['year','quarter']]]
-    try:
-        import scikits.timeseries as ts
-        ts_dates = date_array(start_date = Date(year=1959,quarter=1,freq='Q'),
-                             length=len(data.data))
-    except:
-        pass
-
 
     df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
     ex_mod = TimeSeriesModel(df)
