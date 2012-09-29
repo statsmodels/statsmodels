@@ -296,8 +296,8 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     else:
         xo = x
     if unbiased:
-#        xi = np.ones(n);
-#        d = np.correlate(xi, xi, 'full')
+        #xi = np.ones(n);
+        #d = np.correlate(xi, xi, 'full')
         xi = np.arange(1,n+1)
         d = np.hstack((xi,xi[:-1][::-1])) # faster, is correlate more general?
     else:
@@ -308,7 +308,8 @@ def acovf(x, unbiased=False, demean=True, fft=False):
         acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs]/d
         return acov.real
     else:
-        return (np.correlate(xo, xo, 'full')/d)[n-1:]
+        return np.correlate(xo, xo, 'full')[-n:]/d
+
 
 def q_stat(x,nobs, type="ljungbox"):
     """
