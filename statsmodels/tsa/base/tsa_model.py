@@ -52,6 +52,10 @@ class TimeSeriesModel(base.LikelihoodModel):
             dates = self._data.row_labels
 
         if dates is not None:
+            if (not isinstance(dates[0], datetime.datetime) and
+                    isinstance(self._data, data.PandasData)):
+                raise ValueError("Given a pandas object and the index does "
+                                 "not contain dates")
             if not freq:
                 try:
                     freq = datetools._infer_freq(dates)
