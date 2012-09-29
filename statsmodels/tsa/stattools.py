@@ -308,7 +308,7 @@ def acovf(x, unbiased=False, demean=True, fft=False):
         acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs]/d
         return acov.real
     else:
-        return np.correlate(xo, xo, 'full')[-n:]/d
+        return (np.correlate(xo, xo, 'full')[::-1]/d)[n-1:]
 
 
 def q_stat(x,nobs, type="ljungbox"):
