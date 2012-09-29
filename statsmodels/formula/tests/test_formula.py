@@ -93,4 +93,4 @@ def test_formula_predict():
     data = load_pandas()
     dta = load_pandas().data
     results = ols(formula, dta).fit()
-    npt.assert_equal(results.fittedvalues, results.predict(data.exog))
+    npt.assert_equal(results.fittedvalues.values, results.predict(data.exog))
