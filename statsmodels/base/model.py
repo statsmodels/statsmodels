@@ -326,11 +326,6 @@ class LikelihoodModel(Model):
         if not full_output: # xopt should be None and retvals is argmin
             xopt = retvals
 
-        # NOTE: better just to use the Analytic Hessian here, as approximation
-        # isn't great
-#        if method == 'bfgs' and full_output:
-#            Hinv = retvals.setdefault('Hinv', 0)
-        # If we have full_output, then compute the inverse Hessian
         elif cov_params_func:
             Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
