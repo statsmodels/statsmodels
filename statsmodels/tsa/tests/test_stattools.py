@@ -1,6 +1,6 @@
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests, coint,
-                                       acovf)
+                                               acovf)
 
 import numpy as np
 from numpy.testing import assert_almost_equal
