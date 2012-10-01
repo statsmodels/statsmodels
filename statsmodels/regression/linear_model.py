@@ -73,6 +73,7 @@ class RegressionModel(base.LikelihoodModel):
     """
     def __init__(self, endog, exog, **kwargs):
         super(RegressionModel, self).__init__(endog, exog, **kwargs)
+        self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
         #print "calling initialize, now whitening"  #for debugging
@@ -257,8 +258,7 @@ class GLS(RegressionModel):
                                   sigma=self.sigma)
 
         #store attribute names for data arrays
-        self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
-                               'wendog', 'wexog', 'weights'])
+        self._data_attr.extend(['sigma', 'cholsigmainv'])
 
 
     def whiten(self, X):
