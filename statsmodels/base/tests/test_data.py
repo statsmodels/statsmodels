@@ -608,7 +608,7 @@ class TestMissingPandas(object):
         labels = pandas.Index([0, 1, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15,
                                16, 17, 18, 19, 20, 21, 22, 23, 24])
         data = sm_data.handle_data(self.y, self.X, 'drop')
-        ptesting.assert_series_equal(data.row_labels, labels)
+        np.testing.assert_(data.row_labels.equals(labels))
 
 
 
