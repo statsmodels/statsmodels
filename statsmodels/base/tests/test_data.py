@@ -578,9 +578,9 @@ class TestMissingPandas(object):
         X = X.ix[idx]
         data = sm_data.handle_data(self.y, self.X, 'drop')
         np.testing.assert_array_equal(data.endog, y.values)
-        ptesting.assert_series_equal(data._orig_endog, self.y)
+        ptesting.assert_series_equal(data._orig_endog, self.y.ix[idx])
         np.testing.assert_array_equal(data.exog, X.values)
-        ptesting.assert_frame_equal(data._orig_exog, self.X)
+        ptesting.assert_frame_equal(data._orig_exog, self.X.ix[idx])
 
     def test_none(self):
         data = sm_data.handle_data(self.y, self.X, 'none')
@@ -607,7 +607,7 @@ class TestMissingPandas(object):
         2, 10, 14
         labels = pandas.Index([0, 1, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15,
                                16, 17, 18, 19, 20, 21, 22, 23, 24])
-        data = sm_data.handle_data(self.y, self.X, 'none')
+        data = sm_data.handle_data(self.y, self.X, 'drop')
         ptesting.assert_series_equal(data.row_labels, labels)
 
 
