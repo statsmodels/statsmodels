@@ -463,11 +463,22 @@ class TestGlmPoissonOffset(CheckModelResults):
         data.exog[:,3] = np.log(data.exog[:,3])
         data.exog = add_constant(data.exog)
         exposure = [100] * len(data.endog)
+        cls.data = data
+        cls.exposure = exposure
         cls.res1 = GLM(data.endog, data.exog, family=sm.families.Poisson(),
                     exposure=exposure).fit()
         cls.res1.params[-1] += np.log(100) # add exposure back in to param
                                             # to make the results the same
         cls.res2 = Cpunish()
+
+    def test_missing(self):
+        # make sure offset is dropped correctly
+        endog = self.data.endog.copy()
+        endog[[2,4,6,8]] = np.nan
+        mod = GLM(endog, self.data.exog, family=sm.families.Poisson(),
+                    exposure=self.exposure, missing='drop')
+        assert_equal(mod.exposure.shape[0], 13)
+
 
 def test_prefect_pred():
     cur_dir = os.path.dirname(os.path.abspath(__file__))

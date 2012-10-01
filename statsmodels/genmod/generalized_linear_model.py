@@ -38,7 +38,7 @@ def _check_convergence(criterion, iteration, tol, maxiter):
             and iteration <= maxiter)
 
 class GLM(base.LikelihoodModel):
-    '''
+    __doc__ = '''
     Generalized Linear Models class
 
     GLM inherits from statsmodels.LikelihoodModel
@@ -46,17 +46,19 @@ class GLM(base.LikelihoodModel):
     Parameters
     -----------
     endog : array-like
-        1d array of endogenous response variable.  This array can be
-        1d or 2d.  Binomial family models accept a 2d array with two columns.
-        If supplied, each observation is expected to be [success, failure].
+        1d array of endogenous response variable.  This array can be 1d or 2d.
+        Binomial family models accept a 2d array with two columns. If
+        supplied, each observation is expected to be [success, failure].
     exog : array-like
-        n x p design / exogenous data array
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An interecept is not included by default
+        and should be added by the user. See `statsmodels.tools.add_constant`.
     family : family class instance
         The default is Gaussian.  To specify the binomial distribution
         family = sm.family.Binomial()
         Each family can take a link instance as an argument.  See
         statsmodels.family.family for more information.
-
+    %(extra_params)s
 
     Attributes
     -----------
@@ -182,12 +184,17 @@ class GLM(base.LikelihoodModel):
         The value of the weights after the last iteration of fit.  Only
         available after fit is called.  See statsmodels.families.family for
         the specific distribution weighting functions.
+    ''' % {'extra_params' : base._missing_param_doc}
 
-    '''
-
-    def __init__(self, endog, exog, family=None, offset=None, exposure=None):
-        super(GLM, self).__init__(endog, exog)
-        self._sanitize_inputs(family, offset, exposure)
+    def __init__(self, endog, exog, family=None, offset=None, exposure=None,
+                        missing='none'):
+        self._check_inputs(family, offset, exposure, endog)
+        super(GLM, self).__init__(endog, exog, missing=missing,
+                                  offset=self.offset, exposure=self.exposure)
+        if offset is None:
+            delattr(self, 'offset')
+        if exposure is None:
+            delattr(self, 'exposure')
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog', 'mu', 'data_weights',
                                 ])
@@ -208,22 +215,22 @@ class GLM(base.LikelihoodModel):
         self.df_model = rank(self.exog)-1
         self.df_resid = self.exog.shape[0] - rank(self.exog)
 
-    def _sanitize_inputs(self, family, offset, exposure):
+    def _check_inputs(self, family, offset, exposure, endog):
         if family is None:
             family = families.Gaussian()
         self.family = family
 
         if offset is not None:
             offset = np.asarray(offset)
-            if offset.shape[0] != self.endog.shape[0]:
+            if offset.shape[0] != endog.shape[0]:
                 raise ValueError("offset is not the same length as endog")
-            self.offset = offset
+        self.offset = offset
 
         if exposure is not None:
             exposure = np.log(exposure)
-            if exposure.shape[0] != self.endog.shape[0]:
+            if exposure.shape[0] != endog.shape[0]:
                 raise ValueError("exposure is not the same length as endog")
-            self.exposure = exposure
+        self.exposure = exposure
 
     def score(self, params):
         """

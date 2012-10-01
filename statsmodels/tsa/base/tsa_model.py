@@ -17,34 +17,32 @@ def _check_freq(freq):
     return freq
 
 _tsa_doc = """
-%(model)s
+    %(model)s
 
-Parameters
-----------
-%(params)s
-dates : array-like of datetime, optional
-    An array-like object of datetime objects. If a pandas object is given
-    for endog or exog, it is assumed to have a DateIndex.
-freq : str, {'B', 'D', 'W', 'M', 'A', 'Q'}, optional
-    The frequency of the time-series. This is not optional if dates are given
-    but this will soon be unnecessary.
-%(extra)s
+    Parameters
+    ----------
+    %(params)s
+    dates : array-like of datetime, optional
+        An array-like object of datetime objects. If a pandas object is given
+        for endog or exog, it is assumed to have a DateIndex.
+    freq : str, {'B', 'D', 'W', 'M', 'A', 'Q'}, optional
+        The frequency of the time-series. This is optional if dates are given.
+    %(extra_params)s
 """
 
 _model_doc = "Timeseries model base class"
 
-_generic_params = """endog
-exog
-"""
+_generic_params = base._model_params_doc
+_missing_param_doc = base._missing_param_doc
 
 #REPLACE frequencies with either timeseries or pandas conventions
 class TimeSeriesModel(base.LikelihoodModel):
 
     __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
-                          "extra" : ""}
+                          "extra_params" : base._missing_param_doc}
 
-    def __init__(self, endog, exog=None, dates=None, freq=None):
-        super(TimeSeriesModel, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, dates=None, freq=None, missing='none'):
+        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing)
         self._init_dates(dates, freq)
 
     def _init_dates(self, dates, freq):
