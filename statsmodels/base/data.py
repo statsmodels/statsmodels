@@ -50,15 +50,19 @@ class ModelData(object):
     appropriate form
     """
     def __init__(self, endog, exog=None, missing='none', **kwargs):
-        self._orig_endog = endog
-        self._orig_exog = exog
         if missing != 'none':
-            arrays = self._handle_missing(endog, exog, missing, **kwargs)
+            arrays, nan_idx = self._handle_missing(endog, exog, missing,
+                                                       **kwargs)
+            self.missing_row_idx = nan_idx
             self.__dict__.update(arrays) # attach all the data arrays
+            self._orig_endog = self.endog
+            self._orig_exog = self.exog
             self.endog, self.exog = self._convert_endog_exog(self.endog,
                     self.exog)
         else:
             self.__dict__.update(kwargs) # attach the extra arrays anyway
+            self._orig_endog = endog
+            self._orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
 
         self._check_integrity()
@@ -76,8 +80,6 @@ class ModelData(object):
         kwargs. It preserves Nones.
         """
         none_array_names = []
-        if endog.ndim == 1:
-            endog = endog[:,None]
 
         if exog is not None:
             combined = (endog, exog)
@@ -130,7 +132,7 @@ class ModelData(object):
                 combined.update(dict(zip(none_array_names,
                                          [None]*len(none_array_names)
                                          )))
-            return combined
+            return combined, np.where(~nan_mask)[0].tolist()
         else:
             raise ValueError("missing option %s not understood" % missing)
 
