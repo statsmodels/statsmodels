@@ -12,6 +12,23 @@ import statsmodels.tools.data as data_util
 class MissingDataError(Exception):
     pass
 
+def _asarray_2dcolumns(x):
+    if np.asarray(x).ndim > 1 and np.asarray(x).squeeze().ndim == 1:
+        return
+
+def _asarray_2d_null_rows(x):
+    """
+    Makes sure input is an array and is 2d. Makes sure output is 2d. True
+    indicates a null in the rows of 2d x.
+    """
+    #Have to have the asarrays because isnull doesn't account for array-like
+    #input
+    x = np.asarray(x)
+    if x.ndim == 1:
+        x = x[:,None]
+    return np.any(isnull(x), axis=1)[:,None]
+
+
 def _nan_rows(*arrs):
     """
     Returns a boolean array which is True where any of the rows in any
@@ -20,14 +37,11 @@ def _nan_rows(*arrs):
     """
     if len(arrs) == 1:
         arrs += ([[False]],)
-    #Have to have the asarrays because isnull doesn't account for array-like
-    #input
     def _nan_row_maybe_two_inputs(x, y):
         # check for dtype bc dataframe has dtypes
         x_is_boolean_array = hasattr(x, 'dtype') and x.dtype == bool and x
-        return np.logical_or(np.any(isnull(np.asarray(x)), axis=1)[:,None],
-                             (x_is_boolean_array |
-                              np.any(isnull(np.asarray(y)), axis=1)[:,None]))
+        return np.logical_or(_asarray_2d_null_rows(x),
+                             (x_is_boolean_array | _asarray_2d_null_rows(y)))
     return reduce(_nan_row_maybe_two_inputs, arrs).squeeze()
 
 class ModelData(object):
@@ -83,7 +97,7 @@ class ModelData(object):
                     continue
                 # grab 1d arrays
                 if value_array.ndim == 1:
-                    combined += (value_array[:,None],)
+                    combined += (value_array,)
                     combined_names += [key]
                 elif value_array.squeeze().ndim == 1:
                     combined += (value_array,)
