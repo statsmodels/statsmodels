@@ -329,7 +329,7 @@ class VAR(tsbase.TimeSeriesModel):
     Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
     """
     def __init__(self, endog, dates=None, names=None, freq=None,
-            missing=None):
+            missing='none'):
         super(VAR, self).__init__(endog, None, dates, freq, missing=missing)
         if names is not None:
             import warnings

@@ -19,10 +19,10 @@ _model_params_doc = """    Parameters
         is the number of regressors. An interecept is not included by default
         and should be added by the user. See `statsmodels.tools.add_constant`."""
 
-_missing_param_doc = """missing : str or None
-        Available options are None, 'drop', and 'raise'. If None, no nan
+_missing_param_doc = """missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
-        If 'raise', an error is raised. Default is None."""
+        If 'raise', an error is raised. Default is 'none.'"""
 
 class Model(object):
     __doc__ = """
@@ -38,7 +38,7 @@ class Model(object):
     will change as well.
     """ % {'params_doc' : _model_params_doc,
             'extra_params_doc' : _missing_param_doc}
-    def __init__(self, endog, exog=None, missing=None, **kwargs):
+    def __init__(self, endog, exog=None, missing='none', **kwargs):
         self._data = handle_data(endog, exog, missing, **kwargs)
         self.exog = self._data.exog
         self.endog = self._data.endog
@@ -121,7 +121,7 @@ class LikelihoodModel(Model):
     Likelihood model is a subclass of Model.
     """
 
-    def __init__(self, endog, exog=None, missing=None, **kwargs):
+    def __init__(self, endog, exog=None, missing='none', **kwargs):
         super(LikelihoodModel, self).__init__(endog, exog, missing, **kwargs)
         self.initialize()
 
@@ -567,7 +567,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
-                 hessian=None, missing=None):
+                 hessian=None, missing='none'):
     # let them be none in case user wants to use inheritance
         if loglike:
             self.loglike = loglike

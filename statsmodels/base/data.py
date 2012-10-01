@@ -35,10 +35,10 @@ class ModelData(object):
     Class responsible for handling input data and extracting metadata into the
     appropriate form
     """
-    def __init__(self, endog, exog=None, missing=None, **kwargs):
+    def __init__(self, endog, exog=None, missing='none', **kwargs):
         self._orig_endog = endog
         self._orig_exog = exog
-        if missing is not None:
+        if missing != 'none':
             arrays = self._handle_missing(endog, exog, missing, **kwargs)
             self.__dict__.update(arrays) # attach all the data arrays
             self.endog, self.exog = self._convert_endog_exog(self.endog,
@@ -322,7 +322,7 @@ def _make_exog_names(exog):
 
     return exog_names
 
-def handle_data(endog, exog, missing=None, **kwargs):
+def handle_data(endog, exog, missing='none', **kwargs):
     """
     Given inputs
     """

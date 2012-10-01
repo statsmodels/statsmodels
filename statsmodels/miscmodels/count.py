@@ -145,7 +145,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
     '''
 
-    def __init__(self, endog, exog=None, offset=None, missing=None, **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
         if not offset is None:
             if offset.ndim == 1:
@@ -199,7 +199,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
     '''
 
-    def __init__(self, endog, exog=None, offset=None, missing=None, **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
 
         super(PoissonZiGMLE, self).__init__(endog, exog, missing=missing,

@@ -109,7 +109,7 @@ class RLM(base.LikelihoodModel):
     """ % {'params' : base._model_params_doc,
             'extra_params' : base._missing_param_doc}
 
-    def __init__(self, endog, exog, M=norms.HuberT(), missing=None):
+    def __init__(self, endog, exog, M=norms.HuberT(), missing='none'):
         self.M = M
         super(base.LikelihoodModel, self).__init__(endog, exog,
                 missing=missing)

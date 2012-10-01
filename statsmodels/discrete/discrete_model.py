@@ -45,7 +45,7 @@ class DiscreteModel(base.LikelihoodModel):
     call signature expected of child classes in addition to those of
     statsmodels.model.LikelihoodModel.
     """
-    def __init__(self, endog, exog, missing=None, **kwargs):
+    def __init__(self, endog, exog, missing='none', **kwargs):
         super(DiscreteModel, self).__init__(endog, exog, missing=missing,
                                             **kwargs)
         self.raise_on_perfect_prediction = True
@@ -364,7 +364,7 @@ class MultinomialModel(BinaryModel):
         return margeff.reshape(len(exog), -1, order='F')
 
 class CountModel(DiscreteModel):
-    def __init__(self, endog, exog, offset=None, exposure=None, missing=None):
+    def __init__(self, endog, exog, offset=None, exposure=None, missing='none'):
         self._check_inputs(offset, exposure, endog) # attaches if needed
         super(CountModel, self).__init__(endog, exog, missing=missing,
                 offset=self.offset, exposure=self.exposure)

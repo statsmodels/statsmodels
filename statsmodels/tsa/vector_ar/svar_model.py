@@ -65,7 +65,7 @@ class SVAR(tsbase.TimeSeriesModel):
     Hamilton (1994) Time Series Analysis
     """
     def __init__(self, endog, svar_type, names=None, dates=None,
-                freq=None, A=None, B=None, missing=None):
+                freq=None, A=None, B=None, missing='none'):
         super(SVAR, self).__init__(endog, None, dates, freq, missing=missing)
         if names is not None:
             import warnings

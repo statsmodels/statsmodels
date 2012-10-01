@@ -111,7 +111,7 @@ class NonlinearLS(Model):  #or subclass a model
     '''
     #NOTE: This needs to call super for data checking
     def __init__(self, endog=None, exog=None, weights=None, sigma=None,
-            missing=None):
+            missing='none'):
         self.endog = endog
         self.exog = exog
         if not sigma is None:

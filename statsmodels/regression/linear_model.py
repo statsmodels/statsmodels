@@ -247,7 +247,7 @@ class GLS(RegressionModel):
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
 
-    def __init__(self, endog, exog, sigma=None, missing=None):
+    def __init__(self, endog, exog, sigma=None, missing='none'):
     #TODO: add options igls, for iterative fgls if sigma is None
     #TODO: default is sigma is none should be two-step GLS
         self.sigma, cholsigmainv = _get_sigma(sigma, len(endog))
@@ -376,7 +376,7 @@ class WLS(RegressionModel):
     #mse_model is calculated incorrectly according to R
     #same fixed used for WLS in the tests doesn't work
     #mse_resid is good
-    def __init__(self, endog, exog, weights=1., missing=None):
+    def __init__(self, endog, exog, weights=1., missing='none'):
         weights = np.array(weights)
         if weights.shape == ():
             self.weights = weights
@@ -487,7 +487,7 @@ class OLS(WLS):
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
     #TODO: change example to use datasets.  This was the point of datasets!
-    def __init__(self, endog, exog=None, missing=None):
+    def __init__(self, endog, exog=None, missing='none'):
         super(OLS, self).__init__(endog, exog, missing=missing)
 
     def loglike(self, params):
@@ -570,7 +570,7 @@ class GLSAR(GLS):
         TODO
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
-    def __init__(self, endog, exog=None, rho=1, missing=None):
+    def __init__(self, endog, exog=None, rho=1, missing='none'):
         #this looks strange, interpreting rho as order if it is int
         if isinstance(rho, np.int):
             self.order = rho

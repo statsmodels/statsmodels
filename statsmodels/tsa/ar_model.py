@@ -67,7 +67,7 @@ class AR(tsbase.TimeSeriesModel):
             "params" : """endog : array-like
         1-d endogenous response variable. The independent variable.""",
         "extra_params" : base._missing_param_doc}
-    def __init__(self, endog, dates=None, freq=None, missing=None):
+    def __init__(self, endog, dates=None, freq=None, missing='none'):
         super(AR, self).__init__(endog, None, dates, freq, missing=missing)
         endog = self.endog # original might not have been an ndarray
         if endog.ndim == 1:
