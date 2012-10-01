@@ -22,7 +22,7 @@ def _nan_rows(*arrs):
         arrs += ([[False]],)
     #Have to have the asarrays because isnull doesn't account for array-like
     #input
-    def _nan_row_maybe_two_input(x, y):
+    def _nan_row_maybe_two_inputs(x, y):
         # check for dtype bc dataframe has dtypes
         x_is_boolean_array = hasattr(x, 'dtype') and x.dtype == bool and x
         return np.logical_or(np.any(isnull(np.asarray(x)), axis=1)[:,None],
