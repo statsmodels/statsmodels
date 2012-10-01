@@ -99,7 +99,7 @@ class ModelData(object):
 
         nan_idx = _nan_rows(*combined)
         if combined_2d:
-            nan_idx = _nan_rows(*(nan_idx, combined_2d))
+            nan_idx = _nan_rows(*(nan_idx[:,None],) + combined_2d)
 
         if missing == 'raise' and np.any(nan_idx):
             raise MissingDataError("NaNs were encountered in the data")
