@@ -250,12 +250,10 @@ class GLS(RegressionModel):
     def __init__(self, endog, exog, sigma=None, missing='none'):
     #TODO: add options igls, for iterative fgls if sigma is None
     #TODO: default is sigma is none should be two-step GLS
-        self.sigma, cholsigmainv = _get_sigma(sigma, len(endog))
-        if cholsigmainv is not None:
-            self.cholsigmainv = cholsigmainv
-
+        sigma, cholsigmainv = _get_sigma(sigma, len(endog))
         super(GLS, self).__init__(endog, exog, missing=missing,
-                                  sigma=self.sigma)
+                                  sigma=sigma, cholsigmainv=cholsigmainv)
+
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv'])
