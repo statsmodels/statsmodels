@@ -540,6 +540,21 @@ class TestMissingArray(object):
         data = sm_data.handle_data(self.X, None, 'drop')
         np.testing.assert_array_equal(data.endog, y)
 
+    def test_extra_kwargs_2d(self):
+        sigma = np.random.random((25, 25))
+        sigma = sigma + sigma.T - np.diag(np.diag(sigma))
+        data = sm_data.handle_data(self.y, self.X, 'drop', sigma=sigma)
+        idx = ~np.isnan(np.c_[self.y, self.X]).any(axis=1)
+        sigma = sigma[idx][:,idx]
+        np.testing.assert_array_equal(data.sigma, sigma)
+
+    def test_extra_kwargs_1d(self):
+        weights = np.random.random(25)
+        data = sm_data.handle_data(self.y, self.X, 'drop', weights=weights)
+        idx = ~np.isnan(np.c_[self.y, self.X]).any(axis=1)
+        weights = weights[idx]
+        np.testing.assert_array_equal(data.weights, weights)
+
 class TestMissingPandas(object):
     @classmethod
     def setupClass(cls):
