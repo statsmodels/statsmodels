@@ -38,7 +38,8 @@ class Model(object):
     will change as well.
     """ % {'params_doc' : _model_params_doc,
             'extra_params_doc' : _missing_param_doc}
-    def __init__(self, endog, exog=None, missing='none', **kwargs):
+    def __init__(self, endog, exog=None, **kwargs):
+        missing = kwargs.pop('missing', 'none')
         self._data = handle_data(endog, exog, missing, **kwargs)
         self.exog = self._data.exog
         self.endog = self._data.endog
@@ -121,8 +122,8 @@ class LikelihoodModel(Model):
     Likelihood model is a subclass of Model.
     """
 
-    def __init__(self, endog, exog=None, missing='none', **kwargs):
-        super(LikelihoodModel, self).__init__(endog, exog, missing, **kwargs)
+    def __init__(self, endog, exog=None, **kwargs):
+        super(LikelihoodModel, self).__init__(endog, exog, **kwargs)
         self.initialize()
 
     def initialize(self):

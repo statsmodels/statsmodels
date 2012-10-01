@@ -45,7 +45,7 @@ class DiscreteModel(base.LikelihoodModel):
     call signature expected of child classes in addition to those of
     statsmodels.model.LikelihoodModel.
     """
-    def __init__(self, endog, exog, missing='none', **kwargs):
+    def __init__(self, endog, exog, **kwargs):
         super(DiscreteModel, self).__init__(endog, exog, missing=missing,
                                             **kwargs)
         self.raise_on_perfect_prediction = True
