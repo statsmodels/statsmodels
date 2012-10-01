@@ -45,6 +45,11 @@ from scipy import optimize
 from scipy.stats import chi2
 
 def _get_sigma(sigma, nobs):
+    """
+    Returns sigma for GLS and the inverse of its Cholesky decomposition.
+    Handles dimensions and checks integrity. If sigma is None, returns
+    None, None. Otherwise returns sigma, cholsigmainv.
+    """
     if sigma is None:
         return None, None
     sigma = np.asarray(sigma).squeeze()
