@@ -22,12 +22,13 @@ def _nan_rows(*arrs):
         arrs += ([[False]],)
     #Have to have the asarrays because isnull doesn't account for array-like
     #input
-    return reduce(lambda x, y:
-                  np.logical_or(np.any(isnull(np.asarray(x)), axis=1)[:,None],
-                      # check for dtype bc dataframes has dtypes
-                            hasattr(x, 'dtype') and x.dtype == bool and x) |
-                  np.any(isnull(np.asarray(y)), axis=1)[:,None],
-                    arrs).squeeze()
+    def _nan_row_maybe_two_input(x, y):
+        # check for dtype bc dataframe has dtypes
+        x_is_boolean_array = hasattr(x, 'dtype') and x.dtype == bool and x
+        return np.logical_or(np.any(isnull(np.asarray(x)), axis=1)[:,None],
+                             (x_is_boolean_array |
+                              np.any(isnull(np.asarray(y)), axis=1)[:,None]))
+    return reduce(_nan_row_maybe_two_inputs, arrs).squeeze()
 
 class ModelData(object):
     """
