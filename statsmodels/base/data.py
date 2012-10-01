@@ -78,7 +78,7 @@ class ModelData(object):
         combined_2d_names = []
         if len(kwargs):
             for key, value_array in kwargs.iteritems():
-                if value_array is None:
+                if value_array is None or value_array.ndim == 0:
                     none_array_names += [key]
                     continue
                 # grab 1d arrays
