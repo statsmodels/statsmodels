@@ -17,13 +17,12 @@ _model_params_doc = """    Parameters
     exog : array-like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An interecept is not included by default
-        and should be added by the user. See `statsmodels.tools.add_constant`.
-    """
+        and should be added by the user. See `statsmodels.tools.add_constant`."""
 
 _missing_param_doc = """missing : str or None
         Available options are None, 'drop', and 'raise'. If None, no nan
         checking is done. If 'drop', any observations with nans are dropped.
-        If 'raise', an error is raised."""
+        If 'raise', an error is raised. Default is None."""
 
 class Model(object):
     __doc__ = """
