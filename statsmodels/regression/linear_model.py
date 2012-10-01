@@ -254,7 +254,6 @@ class GLS(RegressionModel):
         super(GLS, self).__init__(endog, exog, missing=missing,
                                   sigma=sigma, cholsigmainv=cholsigmainv)
 
-
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv'])
 
