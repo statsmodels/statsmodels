@@ -64,11 +64,11 @@ class ModelData(object):
         self._check_integrity()
         self._cache = resettable_cache()
 
-    def _drop_nans(self, x, nan_idx):
-        return x[nan_idx]
+    def _drop_nans(self, x, nan_mask):
+        return x[nan_mask]
 
-    def _drop_nans_2d(self, x, nan_idx):
-        return x[nan_idx][:, nan_idx]
+    def _drop_nans_2d(self, x, nan_mask):
+        return x[nan_mask][:, nan_mask]
 
     def _handle_missing(self, endog, exog, missing, **kwargs):
         """
@@ -111,17 +111,17 @@ class ModelData(object):
                     raise ValueError("Arrays with more than 2 dimensions "
                             "aren't yet handled")
 
-        nan_idx = _nan_rows(*combined)
+        nan_mask = _nan_rows(*combined)
         if combined_2d:
-            nan_idx = _nan_rows(*(nan_idx[:,None],) + combined_2d)
+            nan_mask = _nan_rows(*(nan_mask[:,None],) + combined_2d)
 
-        if missing == 'raise' and np.any(nan_idx):
+        if missing == 'raise' and np.any(nan_mask):
             raise MissingDataError("NaNs were encountered in the data")
 
         elif missing == 'drop':
-            nan_idx = ~nan_idx
-            drop_nans = lambda x : self._drop_nans(x, nan_idx)
-            drop_nans_2d = lambda x : self._drop_nans_2d(x, nan_idx)
+            nan_mask = ~nan_mask
+            drop_nans = lambda x : self._drop_nans(x, nan_mask)
+            drop_nans_2d = lambda x : self._drop_nans_2d(x, nan_mask)
             combined = dict(zip(combined_names, map(drop_nans, combined)))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names,
@@ -257,17 +257,17 @@ class PandasData(ModelData):
     Data handling class which knows how to reattach pandas metadata to model
     results
     """
-    def _drop_nans(self, x, nan_idx):
+    def _drop_nans(self, x, nan_mask):
         if hasattr(x, 'ix'):
-            return x.ix[nan_idx]
+            return x.ix[nan_mask]
         else: # extra arguments could be plain ndarrays
-            return super(PandasData, self)._drop_nans(x, nan_idx)
+            return super(PandasData, self)._drop_nans(x, nan_mask)
 
-    def _drop_nans_2d(self, x, nan_idx):
+    def _drop_nans_2d(self, x, nan_mask):
         if hasattr(x, 'ix'):
-            return x.ix[nan_idx].ix[:, nan_idx]
+            return x.ix[nan_mask].ix[:, nan_mask]
         else:  # extra arguments could be plain ndarrays
-            return super(PandasData, self)._drop_nans_2d(x, nan_idx)
+            return super(PandasData, self)._drop_nans_2d(x, nan_mask)
 
     def _check_integrity(self):
         try:
