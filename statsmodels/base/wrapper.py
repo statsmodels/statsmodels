@@ -33,7 +33,7 @@ class ResultsWrapper(object):
             pass
 
         obj = getattr(results, attr)
-        data = results.model._data
+        data = results.model.data
         how = self._wrap_attrs.get(attr)
         if how:
             obj = data.wrap_output(obj, how=how)
@@ -85,7 +85,7 @@ def make_wrapper(func, how):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         results = object.__getattribute__(self, '_results')
-        data = results.model._data
+        data = results.model.data
         return data.wrap_output(func(results, *args, **kwargs), how)
 
     argspec = inspect.getargspec(func)

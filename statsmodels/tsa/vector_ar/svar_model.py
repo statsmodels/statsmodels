@@ -272,7 +272,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         return SVARResults(y, z, var_params, omega, lags,
                             names=self.endog_names, trend=trend,
-                            dates=self._data.dates, model=self,
+                            dates=self.data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
 
     def loglike(self, params):

@@ -220,7 +220,7 @@ class ARMA(tsbase.TimeSeriesModel):
     def __init__(self, endog, order=None, exog=None, dates=None, freq=None,
                         missing='none'):
         super(ARMA, self).__init__(endog, exog, dates, freq)
-        exog = self._data.exog # get it after it's gone through processing
+        exog = self.data.exog # get it after it's gone through processing
         if order is None:
             import warnings
             warnings.warn("In the next release order will not be optional "
@@ -400,7 +400,7 @@ class ARMA(tsbase.TimeSeriesModel):
             start = super(ARMA, self)._get_predict_start(start)
         else: # should be on a date
             #elif 'mle' not in method or dynamic: # should be on a date
-            start = _validate(start, k_ar, k_diff, self._data.dates,
+            start = _validate(start, k_ar, k_diff, self.data.dates,
                               method)
             start = super(ARMA, self)._get_predict_start(start)
         _check_arima_start(start, k_ar, k_diff, method, dynamic)
@@ -678,13 +678,13 @@ class ARMA(tsbase.TimeSeriesModel):
 
         # (re)set trend and handle exogenous variables
         # always pass original exog
-        k_trend, exog = _make_arma_exog(endog, self._data.exog, trend)
+        k_trend, exog = _make_arma_exog(endog, self.data.exog, trend)
 
         self.k_trend = k_trend
         self.exog = exog    # overwrites original exog from __init__
 
         # (re)set names for this model
-        self.exog_names = _make_arma_names(self._data, k_trend, (k_ar, k_ma))
+        self.exog_names = _make_arma_names(self.data, k_trend, (k_ar, k_ma))
         k = k_trend + k_exog
 
 
@@ -744,7 +744,7 @@ class ARIMA(ARMA):
         super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq)
         self.k_diff = d
         self.endog = np.diff(self.endog, n=d)
-        self._data.ynames = 'D.' + self.endog_names
+        self.data.ynames = 'D.' + self.endog_names
         # what about exog, should we difference it automatically before
         # super call?
 
@@ -770,7 +770,7 @@ class ARIMA(ARMA):
                     raise ValueError("start must be in series. "
                                      "got %d" % (start + k_diff))
         else: # received a date
-            start = _validate(start, k_ar, k_diff, self._data.dates,
+            start = _validate(start, k_ar, k_diff, self.data.dates,
                               method)
             start = super(ARIMA, self)._get_predict_start(start, dynamic)
         # reset date for k_diff adjustment
@@ -934,7 +934,7 @@ class ARIMA(ARMA):
         """
         # go ahead and convert to an index for easier checking
         if isinstance(start, (basestring, datetime)):
-            start = _index_date(start, self._data.dates)
+            start = _index_date(start, self.data.dates)
         if typ == 'linear':
             if not dynamic or (start != self.k_ar + self.k_diff and
                                                     start is not None):
@@ -951,7 +951,7 @@ class ARIMA(ARMA):
                 self.k_ma = q
                 return predictedvalues
         elif typ == 'levels':
-            endog = self._data.endog
+            endog = self.data.endog
             if not dynamic:
                 predict = super(ARIMA, self).predict(params, start, end,
                                                      dynamic)
@@ -1339,12 +1339,12 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             start = k_diff
         else:
             start = k_diff + self.k_ar
-        if self._data.dates is not None:
-            dates = self._data.dates
+        if self.data.dates is not None:
+            dates = self.data.dates
             sample = [dates[start].strftime('%m-%d-%Y')]
             sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
         else:
-            sample = str(start) + ' - ' + str(len(self._data._orig_endog))
+            sample = str(start) + ' - ' + str(len(self.data._orig_endog))
 
         k_ar, k_ma = self.k_ar, self.k_ma
         if not k_diff:
@@ -1481,7 +1481,7 @@ class ARIMAResults(ARMAResults):
                                         self.k_ar, self.k_ma, self.k_trend,
                                         self.k_exog, self.model.endog,
                                         exog, method=self.model.method)
-        forecast = self.model._data.endog[-1] + np.cumsum(forecast)
+        forecast = self.model.data.endog[-1] + np.cumsum(forecast)
         # get forecast errors
         arparams = self.arparams
         maparams = self.maparams
