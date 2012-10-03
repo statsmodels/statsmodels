@@ -145,7 +145,7 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
 
     '''
 
-    def __init__(self, endog, exog=None, offset=None, **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
         if not offset is None:
             if offset.ndim == 1:
@@ -153,7 +153,8 @@ class PoissonOffsetGMLE(GenericLikelihoodModel):
             self.offset = offset.ravel()
         else:
             self.offset = 0.
-        super(PoissonOffsetGMLE, self).__init__(endog, exog, **kwds)
+        super(PoissonOffsetGMLE, self).__init__(endog, exog, missing=missing,
+                **kwds)
 
 #this was added temporarily for bug-hunting, but shouldn't be needed
 #    def loglike(self, params):
@@ -198,10 +199,11 @@ class PoissonZiGMLE(GenericLikelihoodModel):
 
     '''
 
-    def __init__(self, endog, exog=None, offset=None, **kwds):
+    def __init__(self, endog, exog=None, offset=None, missing='none', **kwds):
         # let them be none in case user wants to use inheritance
 
-        super(PoissonZiGMLE, self).__init__(endog, exog, **kwds)
+        super(PoissonZiGMLE, self).__init__(endog, exog, missing=missing,
+                **kwds)
         if not offset is None:
             if offset.ndim == 1:
                 offset = offset[:,None] #need column

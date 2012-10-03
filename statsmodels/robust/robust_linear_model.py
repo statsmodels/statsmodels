@@ -32,23 +32,19 @@ def _check_convergence(criterion, iteration, tol, maxiter):
                 criterion[iteration-1]) > tol) and iteration < maxiter)
 
 class RLM(base.LikelihoodModel):
-    """
+    __doc__ = """
     Robust Linear Models
 
     Estimate a robust linear model via iteratively reweighted least squares
     given a robust criterion estimator.
 
-    Parameters
-    ----------
-    endog : array-like
-        1d endogenous response variable
-    exog : array-like
-        n x p exogenous design matrix
+    %(params)s
     M : statsmodels.robust.norms.RobustNorm, optional
         The robust criterion function for downweighting outliers.
         The current options are LeastSquares, HuberT, RamsayE, AndrewWave,
         TrimmedMean, Hampel, and TukeyBiweight.  The default is HuberT().
         See statsmodels.robust.norms for more information.
+    %(extra_params)s
 
     Notes
     -----
@@ -110,12 +106,13 @@ class RLM(base.LikelihoodModel):
 
     >>> rlm_hamp_hub.params
     array([  0.73175452,   1.25082038,  -0.14794399, -40.27122257])
+    """ % {'params' : base._model_params_doc,
+            'extra_params' : base._missing_param_doc}
 
-    """
-
-    def __init__(self, endog, exog, M=norms.HuberT()):
+    def __init__(self, endog, exog, M=norms.HuberT(), missing='none'):
         self.M = M
-        super(base.LikelihoodModel, self).__init__(endog, exog)
+        super(base.LikelihoodModel, self).__init__(endog, exog,
+                missing=missing)
         self._initialize()
         #things to remove_data
         self._data_attr.extend(['weights', 'pinv_wexog'])

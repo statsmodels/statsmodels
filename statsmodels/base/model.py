@@ -10,30 +10,43 @@ from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
 
-class Model(object):
-    """
-    A (predictive) statistical model. The class Model itself is not to be used.
-
-    Model lays out the methods expected of any subclass.
-
-    Parameters
+_model_params_doc = """    Parameters
     ----------
     endog : array-like
-        Endogenous response variable.
+        1-d endogenous response variable. The independent variable.
     exog : array-like
-        Exogenous design.
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An interecept is not included by default
+        and should be added by the user. See `statsmodels.tools.add_constant`."""
+
+_missing_param_doc = """missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none.'"""
+
+class Model(object):
+    __doc__ = """
+    A (predictive) statistical model. Intended to be subclassed not used.
+
+    %(params_doc)s
+    %(extra_params_doc)s
 
     Notes
     -----
     `endog` and `exog` are references to any data provided.  So if the data is
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
-    """
-
-    def __init__(self, endog, exog=None):
-        self._data = handle_data(endog, exog)
+    """ % {'params_doc' : _model_params_doc,
+            'extra_params_doc' : _missing_param_doc}
+    def __init__(self, endog, exog=None, **kwargs):
+        missing = kwargs.pop('missing', 'none')
+        self._data = handle_data(endog, exog, missing, **kwargs)
         self.exog = self._data.exog
         self.endog = self._data.endog
+        # kwargs arrays could have changed, easier to just attach here
+        for key in kwargs:
+            # pop so we don't start keeping all these twice or references
+            setattr(self, key, self._data.__dict__.pop(key))
         self._data_attr = []
         self._data_attr.extend(['exog', 'endog', '_data.exog', '_data.endog',
                                 '_data._orig_endog', '_data._orig_exog'])
@@ -109,8 +122,8 @@ class LikelihoodModel(Model):
     Likelihood model is a subclass of Model.
     """
 
-    def __init__(self, endog, exog=None):
-        super(LikelihoodModel, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, **kwargs):
+        super(LikelihoodModel, self).__init__(endog, exog, **kwargs)
         self.initialize()
 
     def initialize(self):
@@ -555,7 +568,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
-                 hessian=None):
+                 hessian=None, missing='none'):
     # let them be none in case user wants to use inheritance
         if loglike:
             self.loglike = loglike
@@ -572,7 +585,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             #try:
             self.nparams = self.df_model = (exog.shape[1]
                                             if np.ndim(exog) == 2 else 1)
-        super(GenericLikelihoodModel, self).__init__(endog, exog)
+        super(GenericLikelihoodModel, self).__init__(endog, exog, missing)
 
     #this is redundant and not used when subclassing
     def initialize(self):

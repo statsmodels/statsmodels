@@ -187,6 +187,14 @@ class TestOLS(CheckRegressionResults):
                 self.res1.normalized_cov_params /
                 self.res_qr.normalized_cov_params, 5)
 
+    def test_missing(self):
+        data = longley.load()
+        data.exog = add_constant(data.exog)
+        data.endog[[3, 7, 14]] = np.nan
+        mod = OLS(data.endog, data.exog, missing='drop')
+        assert_equal(mod.endog.shape[0], 13)
+        assert_equal(mod.exog.shape[0], 13)
+
 
 class TestFtest(object):
     """
@@ -365,6 +373,10 @@ class TestGLS(object):
         GLS_results = GLS(data.endog, exog, sigma=sigma).fit()
         cls.res1 = GLS_results
         cls.res2 = LongleyGls()
+        # attach for test_missing
+        cls.sigma = sigma
+        cls.exog = exog
+        cls.endog = data.endog
 
     def test_aic(self):
         assert_approx_equal(self.res1.aic+2, self.res2.aic, 3)
@@ -396,6 +408,14 @@ class TestGLS(object):
 
     def test_pvalues(self):
         assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
+
+    def test_missing(self):
+        endog = self.endog.copy() # copy or changes endog for other methods
+        endog[[4,7,14]] = np.nan
+        mod = GLS(endog, self.exog, sigma=self.sigma, missing='drop')
+        assert_equal(mod.endog.shape[0], 13)
+        assert_equal(mod.exog.shape[0], 13)
+        assert_equal(mod.sigma.shape, (13,13))
 
 class TestGLS_nosigma(CheckRegressionResults):
     '''
@@ -445,6 +465,18 @@ class TestWLS_GLS(CheckRegressionResults):
 
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
+
+def test_wls_missing():
+    from statsmodels.datasets.ccard import load
+    data = load()
+    endog = data.endog
+    endog[[10, 25]] = np.nan
+    mod = WLS(data.endog, data.exog, weights = 1/data.exog[:,2], missing='drop')
+    assert_equal(mod.endog.shape[0], 70)
+    assert_equal(mod.exog.shape[0], 70)
+    assert_equal(mod.weights.shape[0], 70)
+
+
 
 class TestWLS_OLS(CheckRegressionResults):
     @classmethod

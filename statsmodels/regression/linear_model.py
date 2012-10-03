@@ -44,121 +44,36 @@ from statsmodels.emplike.elregress import _ELRegOpts
 from scipy import optimize
 from scipy.stats import chi2
 
-class GLS(base.LikelihoodModel):
+def _get_sigma(sigma, nobs):
     """
-    Generalized least squares model with a general covariance structure.
-
-    Parameters
-    ----------
-    endog : array-like
-           endog is a 1-d vector that contains the response/dependent variable
-    exog : array-like
-           exog is a n x p vector where n is the number of observations and p
-           is the number of regressors/independent variables including the
-           intercept if one is included in the data.
-    sigma : scalar or array
-           `sigma` is the weighting matrix of the covariance.
-           The default is None for no scaling.  If `sigma` is a scalar, it is
-           assumed that `sigma` is an n x n diagonal matrix with the given
-           scalar, `sigma` as the value of each diagonal element.  If `sigma`
-           is an n-length vector, then `sigma` is assumed to be a diagonal
-           matrix with the given `sigma` on the diagonal.  This should be the
-           same as WLS.
-
-    Attributes
-    ----------
-    pinv_wexog : array
-        `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
-    cholsimgainv : array
-        The transpose of the Cholesky decomposition of the pseudoinverse.
-    df_model : float
-        p - 1, where p is the number of regressors including the intercept.
-        of freedom.
-    df_resid : float
-        Number of observations n less the number of parameters p.
-    llf : float
-        The value of the likelihood function of the fitted model.
-    nobs : float
-        The number of observations n.
-    normalized_cov_params : array
-        p x p array :math:`(X^{T}\Sigma^{-1}X)^{-1}`
-    results : RegressionResults instance
-        A property that returns the RegressionResults class if fit.
-    sigma : array
-        `sigma` is the n x n covariance structure of the error terms.
-    wexog : array
-        Design matrix whitened by `cholsigmainv`
-    wendog : array
-        Response variable whitened by `cholsigmainv`
-
-    Notes
-    -----
-    If sigma is a function of the data making one of the regressors
-    a constant, then the current postestimation statistics will not be correct.
-
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import statsmodels.api as sm
-    >>> data = sm.datasets.longley.load()
-    >>> data.exog = sm.add_constant(data.exog)
-    >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
-    >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1]).fit()
-    >>> rho = res_fit.params
-
-    `rho` is a consistent estimator of the correlation of the residuals from
-    an OLS fit of the longley data.  It is assumed that this is the true rho
-    of the AR process data.
-
-    >>> from scipy.linalg import toeplitz
-    >>> order = toeplitz(np.arange(16))
-    >>> sigma = rho**order
-
-    `sigma` is an n x n matrix of the autocorrelation structure of the
-    data.
-
-    >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
-    >>> gls_results = gls_model.fit()
-    >>> print gls_results.summary()
-
+    Returns sigma for GLS and the inverse of its Cholesky decomposition.
+    Handles dimensions and checks integrity. If sigma is None, returns
+    None, None. Otherwise returns sigma, cholsigmainv.
     """
+    if sigma is None:
+        return None, None
+    sigma = np.asarray(sigma).squeeze()
+    if sigma.ndim == 1:
+        sigma = np.diag(sigma)
+    elif sigma.ndim == 0:
+        sigma = np.diag([sigma] * nobs)
 
-    def __init__(self, endog, exog, sigma=None):
-#TODO: add options igls, for iterative fgls if sigma is None
-#TODO: default is sigma is none should be two-step GLS
-        if sigma is not None:
-            self.sigma = np.asarray(sigma)
-        else:
-            self.sigma = sigma
+    if sigma.shape != (nobs, nobs):
+        raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
+                        "array of shape %s x %s" % (nobs, nobs))
 
-        #check for correct shape of sigma for 1d and 2d
-        if self.sigma is not None and not self.sigma.shape == (): #greedy logic
-            nobs = int(endog.shape[0])
-            if self.sigma.ndim == 1 or np.squeeze(self.sigma).ndim == 1:
-                if self.sigma.shape[0] != nobs:
-                    raise ValueError("sigma is not the correct dimension.  \
-Should be of length %s, if sigma is a 1d array" % nobs)
-            elif self.sigma.shape[0] != nobs and \
-                    self.sigma.shape[1] != nobs:
-                raise ValueError("expected an %s x %s array for sigma" % \
-                        (nobs, nobs))
+    cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
+    return sigma, cholsigmainv
 
-        #convert to 2d sigma and get cholsigmainv
-        if self.sigma is not None:
-            nobs = int(endog.shape[0])
-            if self.sigma.shape == ():
-                self.sigma = np.diag(np.ones(nobs)*self.sigma)
-            if np.squeeze(self.sigma).ndim == 1:
-                self.sigma = np.diag(np.squeeze(self.sigma))
-            #TODO: avoid cholesky pinv for diag sigma
-            self.cholsigmainv = np.linalg.cholesky(np.linalg.pinv(\
-                    self.sigma)).T
-        super(GLS, self).__init__(endog, exog)
+class RegressionModel(base.LikelihoodModel):
+    """
+    Base class for linear regression models not used by users.
 
-        #store attribute names for data arrays
-        self._data_attr.extend(['sigma', 'cholsigmainv', 'pinv_wexog',
-                               'wendog', 'wexog', 'weights'])
+    Intended for subclassing.
+    """
+    def __init__(self, endog, exog, **kwargs):
+        super(RegressionModel, self).__init__(endog, exog, **kwargs)
+        self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
         #print "calling initialize, now whitening"  #for debugging
@@ -167,31 +82,8 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         # overwrite nobs from class Model:
         self.nobs = float(self.wexog.shape[0])
         self.df_resid = self.nobs - rank(self.exog)
-#       Below assumes that we have a constant
+        #Below assumes that we have a constant
         self.df_model = float(rank(self.exog)-1)
-
-    def whiten(self, X):
-        """
-        GLS whiten method.
-
-        Parameters
-        -----------
-        X : array-like
-            Data to be whitened.
-
-        Returns
-        -------
-        np.dot(cholsigmainv,X)
-
-        See Also
-        --------
-        regression.GLS
-        """
-        X = np.asarray(X)
-        if np.any(self.sigma) and not self.sigma.shape == ():
-            return np.dot(self.cholsigmainv, X)
-        else:
-            return X
 
     def fit(self, method="pinv", **kwargs):
         """
@@ -220,8 +112,8 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Currently it is assumed that all models will have an intercept /
         constant in the design matrix for postestimation statistics.
 
-        The fit method uses the pseudoinverse of the design/exogenous
-        variables to solve the least squares minimization.
+        The fit method uses the pseudoinverse of the design/exogenous variables
+        to solve the least squares minimization.
         """
         exog = self.wexog
         endog = self.wendog
@@ -280,6 +172,115 @@ Should be of length %s, if sigma is a 1d array" % nobs)
             exog = self.exog
         return np.dot(exog, params)
 
+class GLS(RegressionModel):
+    __doc__ = """
+    Generalized least squares model with a general covariance structure.
+
+    %(params)s
+    sigma : scalar or array
+           `sigma` is the weighting matrix of the covariance.
+           The default is None for no scaling.  If `sigma` is a scalar, it is
+           assumed that `sigma` is an n x n diagonal matrix with the given
+           scalar, `sigma` as the value of each diagonal element.  If `sigma`
+           is an n-length vector, then `sigma` is assumed to be a diagonal
+           matrix with the given `sigma` on the diagonal.  This should be the
+           same as WLS.
+    %(extra_params)s
+
+    Attributes
+    ----------
+    pinv_wexog : array
+        `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
+    cholsimgainv : array
+        The transpose of the Cholesky decomposition of the pseudoinverse.
+    df_model : float
+        p - 1, where p is the number of regressors including the intercept.
+        of freedom.
+    df_resid : float
+        Number of observations n less the number of parameters p.
+    llf : float
+        The value of the likelihood function of the fitted model.
+    nobs : float
+        The number of observations n.
+    normalized_cov_params : array
+        p x p array :math:`(X^{T}\Sigma^{-1}X)^{-1}`
+    results : RegressionResults instance
+        A property that returns the RegressionResults class if fit.
+    sigma : array
+        `sigma` is the n x n covariance structure of the error terms.
+    wexog : array
+        Design matrix whitened by `cholsigmainv`
+    wendog : array
+        Response variable whitened by `cholsigmainv`
+
+    Notes
+    -----
+    If sigma is a function of the data making one of the regressors
+    a constant, then the current postestimation statistics will not be correct.
+
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import statsmodels.api as sm
+    >>> data = sm.datasets.longley.load()
+    >>> data.exog = sm.add_constant(data.exog)
+    >>> ols_resid = sm.OLS(data.endog, data.exog).fit().resid
+    >>> res_fit = sm.OLS(ols_resid[1:], ols_resid[:-1]).fit()
+    >>> rho = res_fit.params
+
+    `rho` is a consistent estimator of the correlation of the residuals from
+    an OLS fit of the longley data.  It is assumed that this is the true rho
+    of the AR process data.
+
+    >>> from scipy.linalg import toeplitz
+    >>> order = toeplitz(np.arange(16))
+    >>> sigma = rho**order
+
+    `sigma` is an n x n matrix of the autocorrelation structure of the
+    data.
+
+    >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
+    >>> gls_results = gls_model.fit()
+    >>> print gls_results.summary()
+
+    """ % {'params' : base._model_params_doc,
+           'extra_params' : base._missing_param_doc}
+
+    def __init__(self, endog, exog, sigma=None, missing='none'):
+    #TODO: add options igls, for iterative fgls if sigma is None
+    #TODO: default is sigma is none should be two-step GLS
+        sigma, cholsigmainv = _get_sigma(sigma, len(endog))
+        super(GLS, self).__init__(endog, exog, missing=missing,
+                                  sigma=sigma, cholsigmainv=cholsigmainv)
+
+        #store attribute names for data arrays
+        self._data_attr.extend(['sigma', 'cholsigmainv'])
+
+
+    def whiten(self, X):
+        """
+        GLS whiten method.
+
+        Parameters
+        -----------
+        X : array-like
+            Data to be whitened.
+
+        Returns
+        -------
+        np.dot(cholsigmainv,X)
+
+        See Also
+        --------
+        regression.GLS
+        """
+        X = np.asarray(X)
+        if np.any(self.sigma) and not self.sigma.shape == ():
+            return np.dot(self.cholsigmainv, X)
+        else:
+            return X
+
     def loglike(self, params):
         """
         Returns the value of the gaussian loglikelihood function at params.
@@ -307,21 +308,19 @@ Should be of length %s, if sigma is a 1d array" % nobs)
         Y and Y-hat are whitened.
 
         """
-#TODO: combine this with OLS/WLS loglike and add _det_sigma argument
+        #TODO: combine this with OLS/WLS loglike and add _det_sigma argument
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
         if np.any(self.sigma) and self.sigma.ndim == 2:
-#FIXME: robust-enough check?  unneeded if _det_sigma gets defined
+        #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
             llf -= .5*np.log(np.linalg.det(self.sigma))
             # with error covariance matrix
         return llf
 
-
-
-class WLS(GLS):
-    """
+class WLS(RegressionModel):
+    __doc__ = """
     A regression model with diagonal but non-identity covariance structure.
 
     The weights are presumed to be (proportional to) the inverse of the
@@ -330,23 +329,12 @@ class WLS(GLS):
     is different than the behavior for GLS with a diagonal Sigma, where you
     would just supply W.
 
-    **Methods**
-
-    whiten
-        Returns the input scaled by sqrt(W)
-
-
-    Parameters
-    ----------
-
-    endog : array-like
-        n length array containing the response variabl
-    exog : array-like
-        n x p array of design / exogenous data
+    %(params)s
     weights : array-like, optional
         1d array of weights.  If you supply 1/W then the variables are pre-
         multiplied by 1/sqrt(W).  If no weights are supplied the default value
         is 1 and WLS reults are the same as OLS.
+    %(extra_params)s
 
     Attributes
     ----------
@@ -354,8 +342,6 @@ class WLS(GLS):
         The stored weights supplied as an argument.
 
     See regression.GLS
-
-
 
     Examples
     ---------
@@ -376,16 +362,18 @@ class WLS(GLS):
 
     Notes
     -----
-    If the weights are a function of the data, then the postestimation statistics
-    such as fvalue and mse_model might not be correct, as the package does not
-    yet support no-constant regression.
-    """
-#FIXME: bug in fvalue or f_test for this example?
-#UPDATE the bug is in fvalue, f_test is correct vs. R
-#mse_model is calculated incorrectly according to R
-#same fixed used for WLS in the tests doesn't work
-#mse_resid is good
-    def __init__(self, endog, exog, weights=1.):
+    If the weights are a function of the data, then the postestimation
+    statistics such as fvalue and mse_model might not be correct, as the
+    package does not yet support no-constant regression.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' : base._missing_param_doc}
+
+    #FIXME: bug in fvalue or f_test for this example?
+    #UPDATE the bug is in fvalue, f_test is correct vs. R
+    #mse_model is calculated incorrectly according to R
+    #same fixed used for WLS in the tests doesn't work
+    #mse_resid is good
+    def __init__(self, endog, exog, weights=1., missing='none'):
         weights = np.array(weights)
         if weights.shape == ():
             self.weights = weights
@@ -396,7 +384,8 @@ class WLS(GLS):
                 raise ValueError(\
                     'Weights must be scalar or same length as design')
             self.weights = weights.reshape(design_rows)
-        super(WLS, self).__init__(endog, exog)
+        super(WLS, self).__init__(endog, exog, missing=missing,
+                                  weights=self.weights)
 
     def whiten(self, X):
         """
@@ -453,21 +442,13 @@ class WLS(GLS):
             llf -= .5*np.log(np.multiply.reduce(1/self.weights)) # with weights
         return llf
 
+
 class OLS(WLS):
-    """
+    __doc__ = """
     A simple ordinary least squares model.
 
-    **Methods**
-
-    inherited from regression.GLS
-
-    Parameters
-    ----------
-    endog : array-like
-         1d vector of response/dependent variable
-    exog: array-like
-        Column ordered (observations in rows) design matrix.
-
+    %(params)s
+    %(extra_params)s
 
     Attributes
     ----------
@@ -500,10 +481,11 @@ class OLS(WLS):
     Notes
     -----
     OLS, as the other models, assumes that the design matrix contains a constant.
-    """
-#TODO: change example to use datasets.  This was the point of datasets!
-    def __init__(self, endog, exog=None):
-        super(OLS, self).__init__(endog, exog)
+    """ % {'params' : base._model_params_doc,
+           'extra_params' : base._missing_param_doc}
+    #TODO: change example to use datasets.  This was the point of datasets!
+    def __init__(self, endog, exog=None, missing='none'):
+        super(OLS, self).__init__(endog, exog, missing=missing)
 
     def loglike(self, params):
         '''
@@ -532,11 +514,13 @@ class OLS(WLS):
         return Y
 
 class GLSAR(GLS):
-    """
+    __doc__ = """
     A regression model with an AR(p) covariance structure.
 
-    The linear autoregressive process of order p--AR(p)--is defined as:
-        TODO
+    %(params)s
+    rho : int
+        Order of the autoregressive covariance
+    %(extra_params)s
 
     Examples
     --------
@@ -579,8 +563,11 @@ class GLSAR(GLS):
     Notes
     -----
     GLSAR is considered to be experimental.
-    """
-    def __init__(self, endog, exog=None, rho=1):
+    The linear autoregressive process of order p--AR(p)--is defined as:
+        TODO
+    """ % {'params' : base._model_params_doc,
+           'extra_params' : base._missing_param_doc}
+    def __init__(self, endog, exog=None, rho=1, missing='none'):
         #this looks strange, interpreting rho as order if it is int
         if isinstance(rho, np.int):
             self.order = rho
@@ -596,9 +583,10 @@ class GLSAR(GLS):
             #JP this looks wrong, should be a regression on constant
             #results for rho estimate now identical to yule-walker on y
             #super(AR, self).__init__(endog, add_constant(endog))
-            super(GLSAR, self).__init__(endog, np.ones((endog.shape[0],1)))
+            super(GLSAR, self).__init__(endog, np.ones((endog.shape[0],1)),
+                                        missing=missing)
         else:
-            super(GLSAR, self).__init__(endog, exog)
+            super(GLSAR, self).__init__(endog, exog, missing=missing)
 
     def iterative_fit(self, maxiter=3):
         """
@@ -702,9 +690,9 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     16.808022730464351
 
     """
-#TODO: define R better, look back at notes and technical notes on YW.
-#First link here is useful
-#http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
+    #TODO: define R better, look back at notes and technical notes on YW.
+    #First link here is useful
+    #http://www-stat.wharton.upenn.edu/~steele/Courses/956/ResourceDetails/YuleWalkerAndMore.htm
     method = str(method).lower()
     if method not in ["unbiased", "mle"]:
         raise ValueError("ACF estimation method must be 'unbiased' or 'MLE'")
@@ -877,9 +865,6 @@ class RegressionResults(base.LikelihoodModelResults):
     def __str__(self):
         self.summary()
 
-##    def __repr__(self):
-##        print self.summary()
-
     def conf_int(self, alpha=.05, cols=None):
         """
         Returns the confidence interval of the fitted parameters.
@@ -936,19 +921,7 @@ class RegressionResults(base.LikelihoodModelResults):
         return self.model.endog - self.model.predict(self.params,
                 self.model.exog)
 
-#    def _getscale(self):
-#        val = self._cache.get("scale", None)
-#        if val is None:
-#            val = ss(self.wresid) / self.df_resid
-#            self._cache["scale"] = val
-#        return val
-
-#    def _setscale(self, val):
-#        self._cache.setdefault("scale", val)
-
-#    scale = property(_getscale, _setscale)
-
-#TODO: fix writable example
+    #TODO: fix writable example
     @cache_writable()
     def scale(self):
         wresid = self.wresid
@@ -973,10 +946,10 @@ class RegressionResults(base.LikelihoodModelResults):
     def ess(self):
         return self.centered_tss - self.ssr
 
-# Centered R2 for models with intercepts
-# have a look in test_regression.test_wls to see
-# how to compute these stats for a model without intercept,
-# and when the weights are a (linear?) function of the data...
+    # Centered R2 for models with intercepts
+    # have a look in test_regression.test_wls to see
+    # how to compute these stats for a model without intercept,
+    # and when the weights are a (linear?) function of the data...
     @cache_readonly
     def rsquared(self):
         return 1 - self.ssr/self.centered_tss
@@ -1021,12 +994,12 @@ class RegressionResults(base.LikelihoodModelResults):
     def bic(self):
         return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
 
-# Centered R2 for models with intercepts
-# have a look in test_regression.test_wls to see
-# how to compute these stats for a model without intercept,
-# and when the weights are a (linear?) function of the data...
+    # Centered R2 for models with intercepts
+    # have a look in test_regression.test_wls to see
+    # how to compute these stats for a model without intercept,
+    # and when the weights are a (linear?) function of the data...
 
-#TODO: make these properties reset bse
+    #TODO: make these properties reset bse
     def _HCCM(self, scale):
         H = np.dot(self.model.pinv_wexog,
             scale[:,None]*self.model.pinv_wexog.T)
@@ -1084,7 +1057,7 @@ class RegressionResults(base.LikelihoodModelResults):
             self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
         return self._HC3_se
 
-#TODO: this needs a test
+    #TODO: this needs a test
     def norm_resid(self):
         """
         Residuals, normalized to have unit length and unit variance.
@@ -1173,7 +1146,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         TODO: put into separate function, needs tests
         '''
-#        See mailing list discussion October 17,
+    #        See mailing list discussion October 17,
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
@@ -1231,9 +1204,9 @@ class RegressionResults(base.LikelihoodModelResults):
                           omni=omni, omnipv=omnipv, condno=condno,
                           mineigval=eigvals[0])
 
-#        #TODO not used yet
-#        diagn_left_header = ['Models stats']
-#        diagn_right_header = ['Residual stats']
+        #TODO not used yet
+        #diagn_left_header = ['Models stats']
+        #diagn_right_header = ['Residual stats']
 
         #TODO: requiring list/iterable is a bit annoying
         #need more control over formatting
@@ -1289,15 +1262,18 @@ class RegressionResults(base.LikelihoodModelResults):
         #add warnings/notes, added to text format only
         etext =[]
         if eigvals[0] < 1e-10:
-            wstr = \
-'''The smallest eigenvalue is %6.3g. This might indicate that there are
-strong multicollinearity problems or that the design matrix is singular.''' \
-                    % eigvals[0]
+            wstr = "The smallest eigenvalue is %6.3g. This might indicate "
+            wstr += "that there are\n"
+            wstr = "strong multicollinearity problems or that the design "
+            wstr += "matrix is singular."
+            wstr = wstr % eigvals[0]
             etext.append(wstr)
         elif condno > 1000:  #TODO: what is recommended
-            wstr = \
-'''The condition number is large, %6.3g. This might indicate that there are
-strong multicollinearity or other numerical problems.''' % condno
+            wstr = "The condition number is large, %6.3g. This might "
+            wstr += "indicate that there are\n"
+            wstr += "strong multicollinearity or other numerical "
+            wstr += "problems."
+            wstr = wstr % condno
             etext.append(wstr)
 
         if etext:
@@ -1305,18 +1281,18 @@ strong multicollinearity or other numerical problems.''' % condno
 
         return smry
 
-#        top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
-#                          yname=yname, xname=xname,
-#                          title=self.model.__class__.__name__ + ' ' +
-#                          "Regression Results")
-#        par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-#                             use_t=False)
-#
-#        diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="Linear Model")
-#
-#        return summary_return([top, par, diagn], return_fmt=return_fmt)
+        #top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
+        #                  yname=yname, xname=xname,
+        #                  title=self.model.__class__.__name__ + ' ' +
+        #                  "Regression Results")
+        #par = summary_params(self, yname=yname, xname=xname, alpha=.05,
+        #                     use_t=False)
+        #
+        #diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
+        #                  yname=yname, xname=xname,
+        #                  title="Linear Model")
+        #
+        #return summary_return([top, par, diagn], return_fmt=return_fmt)
 
 
     def summary_old(self, yname=None, xname=None, returns='text'):
