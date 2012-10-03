@@ -480,7 +480,7 @@ class VAR(tsbase.TimeSeriesModel):
         omega = sse / df_resid
 
         varfit = VARResults(y, z, params, omega, lags, names=self.endog_names,
-                          trend=trend, dates=self._data.dates, model=self)
+                          trend=trend, dates=self.data.dates, model=self)
         return VARResultsWrapper(varfit)
 
     def select_order(self, maxlags=None, verbose=True):

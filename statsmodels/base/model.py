@@ -40,16 +40,16 @@ class Model(object):
             'extra_params_doc' : _missing_param_doc}
     def __init__(self, endog, exog=None, **kwargs):
         missing = kwargs.pop('missing', 'none')
-        self._data = handle_data(endog, exog, missing, **kwargs)
-        self.exog = self._data.exog
-        self.endog = self._data.endog
+        self.data = handle_data(endog, exog, missing, **kwargs)
+        self.exog = self.data.exog
+        self.endog = self.data.endog
         # kwargs arrays could have changed, easier to just attach here
         for key in kwargs:
             # pop so we don't start keeping all these twice or references
-            setattr(self, key, self._data.__dict__.pop(key))
+            setattr(self, key, self.data.__dict__.pop(key))
         self._data_attr = []
-        self._data_attr.extend(['exog', 'endog', '_data.exog', '_data.endog',
-                                '_data._orig_endog', '_data._orig_exog'])
+        self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
+                                'data.orig_endog', 'data.orig_exog'])
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, *args, **kwargs):
@@ -90,17 +90,17 @@ class Model(object):
         mod.formula = formula
 
         # since we got a dataframe, attach the original
-        mod._data.frame = data
+        mod.data.frame = data
         return mod
 
 
     @property
     def endog_names(self):
-        return self._data.ynames
+        return self.data.ynames
 
     @property
     def exog_names(self):
-        return self._data.xnames
+        return self.data.xnames
 
     def fit(self):
         """
@@ -774,7 +774,7 @@ class Results(object):
         """
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
-            exog = dmatrix(self.model._data._orig_exog.design_info.builder,
+            exog = dmatrix(self.model.data.orig_exog.design_info.builder,
                     exog)
         return self.model.predict(self.params, exog, *args, **kwargs)
 
