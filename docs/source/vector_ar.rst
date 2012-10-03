@@ -366,7 +366,7 @@ Dynamic Vector Autoregressions
 
     To use this functionality, `pandas <http://pypi.python.org/pypi/pandas>`__
     must be installed. See the `pandas documentation
-    <http://pandas.sourceforge.net>`__ for more information on the below data
+    <http://pandas.pydata.org>`__ for more information on the below data
     structures.
 
 One is often interested in estimating a moving-window regression on time series
