@@ -46,8 +46,7 @@ class DiscreteModel(base.LikelihoodModel):
     statsmodels.model.LikelihoodModel.
     """
     def __init__(self, endog, exog, **kwargs):
-        super(DiscreteModel, self).__init__(endog, exog, missing=missing,
-                                            **kwargs)
+        super(DiscreteModel, self).__init__(endog, exog, **kwargs)
         self.raise_on_perfect_prediction = True
 
     def initialize(self):

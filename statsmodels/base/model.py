@@ -585,7 +585,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             #try:
             self.nparams = self.df_model = (exog.shape[1]
                                             if np.ndim(exog) == 2 else 1)
-        super(GenericLikelihoodModel, self).__init__(endog, exog, missing)
+        super(GenericLikelihoodModel, self).__init__(endog, exog, missing=missing)
 
     #this is redundant and not used when subclassing
     def initialize(self):
