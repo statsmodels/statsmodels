@@ -233,7 +233,7 @@ def test_ar_dates():
         predict_dates = DatetimeIndex(predict_dates, freq='infer')
     except:
         pass
-    assert_equal(ar_model._data.predict_dates, predict_dates)
+    assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
 
 #TODO: likelihood for ARX model?

@@ -682,12 +682,12 @@ def test_arima_predict_mle_dates():
     start, end = 2, 51
     fv = res1.predict('1959Q3', '1971Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_dates[start:end+1])
+    assert_equal(res1.data.predict_dates, cpi_dates[start:end+1])
 
     start, end = 202, 227
     fv = res1.predict('2009Q3', '2015Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_predict_dates)
+    assert_equal(res1.data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
 
@@ -710,12 +710,12 @@ def test_arma_predict_mle_dates():
     start, end = 2, 51
     _ = mod._get_predict_start('1702', False)
     _ = mod._get_predict_end('1751')
-    assert_equal(mod._data.predict_dates, sun_dates[start:end+1])
+    assert_equal(mod.data.predict_dates, sun_dates[start:end+1])
 
     start, end = 308, 333
     _ = mod._get_predict_start('2008', False)
     _ = mod._get_predict_end('2033')
-    assert_equal(mod._data.predict_dates, sun_predict_dates)
+    assert_equal(mod.data.predict_dates, sun_predict_dates)
 
 
 def test_arima_predict_css_dates():
@@ -741,12 +741,12 @@ def test_arima_predict_css_dates():
     start, end = 5, 51
     fv = res1.model.predict(params, '1960Q2', '1971Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_dates[start:end+1])
+    assert_equal(res1.data.predict_dates, cpi_dates[start:end+1])
 
     start, end = 202, 227
     fv = res1.model.predict(params, '2009Q3', '2015Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_predict_dates)
+    assert_equal(res1.data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
     start, end = 5, 51

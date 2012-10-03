@@ -40,7 +40,7 @@ print pred
 # This just returns a regular array, but since the model has date information
 # attached, you can get the prediction dates in a roundabout way.
 
-print ar_res._data.predict_dates
+print ar_res.data.predict_dates
 
 # This attribute only exists if predict has been called. It holds the dates
 # associated with the last call to predict.

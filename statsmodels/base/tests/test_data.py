@@ -30,8 +30,8 @@ class TestArrays(object):
         cls.row_labels = None
 
     def test_orig(self):
-        np.testing.assert_equal(self.data._orig_endog, self.endog)
-        np.testing.assert_equal(self.data._orig_exog, self.exog)
+        np.testing.assert_equal(self.data.orig_endog, self.endog)
+        np.testing.assert_equal(self.data.orig_exog, self.exog)
 
     def test_endogexog(self):
         np.testing.assert_equal(self.data.endog, self.endog)
@@ -85,8 +85,8 @@ class TestArrays1dExog(TestArrays):
         cls.ynames = 'y'
 
     def test_orig(self):
-        np.testing.assert_equal(self.data._orig_endog, self.endog)
-        np.testing.assert_equal(self.data._orig_exog, self.exog.squeeze())
+        np.testing.assert_equal(self.data.orig_endog, self.endog)
+        np.testing.assert_equal(self.data.orig_exog, self.exog.squeeze())
 
 
 class TestDataFrames(TestArrays):
@@ -115,8 +115,8 @@ class TestDataFrames(TestArrays):
         cls.row_labels = cls.exog.index
 
     def test_orig(self):
-        ptesting.assert_frame_equal(self.data._orig_endog, self.endog)
-        ptesting.assert_frame_equal(self.data._orig_exog, self.exog)
+        ptesting.assert_frame_equal(self.data.orig_endog, self.endog)
+        ptesting.assert_frame_equal(self.data.orig_exog, self.exog)
 
     def test_endogexog(self):
         np.testing.assert_equal(self.data.endog, self.endog.values.squeeze())
@@ -213,8 +213,8 @@ class TestListDataFrame(TestDataFrames):
         np.testing.assert_equal(self.data.exog, self.exog.values)
 
     def test_orig(self):
-        np.testing.assert_equal(self.data._orig_endog, self.endog)
-        ptesting.assert_frame_equal(self.data._orig_exog, self.exog)
+        np.testing.assert_equal(self.data.orig_endog, self.endog)
+        ptesting.assert_frame_equal(self.data.orig_exog, self.exog)
 
 
 class TestDataFrameList(TestDataFrames):
@@ -248,8 +248,8 @@ class TestDataFrameList(TestDataFrames):
         np.testing.assert_equal(self.data.exog, self.exog)
 
     def test_orig(self):
-        ptesting.assert_frame_equal(self.data._orig_endog, self.endog)
-        np.testing.assert_equal(self.data._orig_exog, self.exog)
+        ptesting.assert_frame_equal(self.data.orig_endog, self.endog)
+        np.testing.assert_equal(self.data.orig_exog, self.exog)
 
 
 class TestArrayDataFrame(TestDataFrames):
@@ -283,8 +283,8 @@ class TestArrayDataFrame(TestDataFrames):
         np.testing.assert_equal(self.data.exog, self.exog.values)
 
     def test_orig(self):
-        np.testing.assert_equal(self.data._orig_endog, self.endog)
-        ptesting.assert_frame_equal(self.data._orig_exog, self.exog)
+        np.testing.assert_equal(self.data.orig_endog, self.endog)
+        ptesting.assert_frame_equal(self.data.orig_exog, self.exog)
 
 
 class TestDataFrameArray(TestDataFrames):
@@ -318,8 +318,8 @@ class TestDataFrameArray(TestDataFrames):
         np.testing.assert_equal(self.data.exog, self.exog)
 
     def test_orig(self):
-        ptesting.assert_frame_equal(self.data._orig_endog, self.endog)
-        np.testing.assert_equal(self.data._orig_exog, self.exog)
+        ptesting.assert_frame_equal(self.data.orig_endog, self.endog)
+        np.testing.assert_equal(self.data.orig_exog, self.exog)
 
 
 class TestSeriesDataFrame(TestDataFrames):
@@ -349,8 +349,8 @@ class TestSeriesDataFrame(TestDataFrames):
         cls.row_labels = cls.exog.index
 
     def test_orig(self):
-        ptesting.assert_series_equal(self.data._orig_endog, self.endog)
-        ptesting.assert_frame_equal(self.data._orig_exog, self.exog)
+        ptesting.assert_series_equal(self.data.orig_endog, self.endog)
+        ptesting.assert_frame_equal(self.data.orig_exog, self.exog)
 
 
 class TestSeriesSeries(TestDataFrames):
@@ -378,8 +378,8 @@ class TestSeriesSeries(TestDataFrames):
         cls.row_labels = cls.exog.index
 
     def test_orig(self):
-        ptesting.assert_series_equal(self.data._orig_endog, self.endog)
-        ptesting.assert_series_equal(self.data._orig_exog, self.exog)
+        ptesting.assert_series_equal(self.data.orig_endog, self.endog)
+        ptesting.assert_series_equal(self.data.orig_exog, self.exog)
 
     def test_endogexog(self):
         np.testing.assert_equal(self.data.endog, self.endog.values.squeeze())
@@ -578,9 +578,9 @@ class TestMissingPandas(object):
         X = X.ix[idx]
         data = sm_data.handle_data(self.y, self.X, 'drop')
         np.testing.assert_array_equal(data.endog, y.values)
-        ptesting.assert_series_equal(data._orig_endog, self.y.ix[idx])
+        ptesting.assert_series_equal(data.orig_endog, self.y.ix[idx])
         np.testing.assert_array_equal(data.exog, X.values)
-        ptesting.assert_frame_equal(data._orig_exog, self.X.ix[idx])
+        ptesting.assert_frame_equal(data.orig_exog, self.X.ix[idx])
 
     def test_none(self):
         data = sm_data.handle_data(self.y, self.X, 'none')

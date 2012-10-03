@@ -57,11 +57,11 @@ lm.model.exog[:20]
 
 # Or since we initially passed in a DataFrame, we have a DataFrame available in
 
-lm.model._data._orig_exog
+lm.model.data.orig_exog
 
 # We keep a reference to the original untouched data in
 
-lm.model._data.frame
+lm.model.data.frame
 
 # Get influence statistics
 infl = lm.get_influence()
@@ -103,7 +103,7 @@ table2 = anova_lm(lm, interM_lm)
 print table2
 
 # The design matrix as a DataFrame
-interM_lm.model._data._orig_exog
+interM_lm.model.data.orig_exog
 # The design matrix as an ndarray
 interM_lm.model.exog
 interM_lm.model.exog_names
@@ -164,7 +164,7 @@ plt.ylabel('standardized resids');
 
 lm_final = ols('S ~ X + C(E)*C(M)',
                     data = salary_table.drop([drop_idx])).fit()
-mf = lm_final.model._data._orig_exog
+mf = lm_final.model.data.orig_exog
 lstyle = ['-','--']
 
 plt.figure(figsize=(6,6))
@@ -308,7 +308,7 @@ rehab_lm = ols('Time ~ C(Fitness)', data=rehab_table).fit()
 table9 = anova_lm(rehab_lm)
 print table9
 
-print rehab_lm.model._data._orig_exog
+print rehab_lm.model.data.orig_exog
 
 print rehab_lm.summary()
 

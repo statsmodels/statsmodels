@@ -55,14 +55,14 @@ class ModelData(object):
                                                        **kwargs)
             self.missing_row_idx = nan_idx
             self.__dict__.update(arrays) # attach all the data arrays
-            self._orig_endog = self.endog
-            self._orig_exog = self.exog
+            self.orig_endog = self.endog
+            self.orig_exog = self.exog
             self.endog, self.exog = self._convert_endog_exog(self.endog,
                     self.exog)
         else:
             self.__dict__.update(kwargs) # attach the extra arrays anyway
-            self._orig_endog = endog
-            self._orig_exog = exog
+            self.orig_endog = endog
+            self.orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
 
         self._check_integrity()
@@ -152,7 +152,7 @@ class ModelData(object):
 
     @cache_writable()
     def ynames(self):
-        endog = self._orig_endog
+        endog = self.orig_endog
         ynames = self._get_names(endog)
         if not ynames:
             ynames = _make_endog_names(self.endog)
@@ -164,7 +164,7 @@ class ModelData(object):
 
     @cache_writable()
     def xnames(self):
-        exog = self._orig_exog
+        exog = self.orig_exog
         if exog is not None:
             xnames = self._get_names(exog)
             if not xnames:
@@ -174,11 +174,11 @@ class ModelData(object):
 
     @cache_readonly
     def row_labels(self):
-        exog = self._orig_exog
+        exog = self.orig_exog
         if exog is not None:
             row_labels = self._get_row_labels(exog)
         else:
-            endog = self._orig_endog
+            endog = self.orig_endog
             row_labels = self._get_row_labels(endog)
         return row_labels
 
@@ -273,11 +273,11 @@ class PandasData(ModelData):
 
     def _check_integrity(self):
         try:
-            endog, exog = self._orig_endog, self._orig_exog
+            endog, exog = self.orig_endog, self.orig_exog
             # exog can be None and we could be upcasting one or the other
             if exog is not None and (hasattr(endog, 'index') and
                     hasattr(exog, 'index')):
-                assert self._orig_endog.index.equals(self._orig_exog.index)
+                assert self.orig_endog.index.equals(self.orig_exog.index)
         except AssertionError:
             raise ValueError("The indices for endog and exog are not aligned")
         super(PandasData, self)._check_integrity()
@@ -288,7 +288,7 @@ class PandasData(ModelData):
         except AttributeError, err:
             # if we've gotten here it's because endog is pandas and
             # exog is not, so just return the row labels from endog
-            return self._orig_endog.index
+            return self.orig_endog.index
 
     def attach_columns(self, result):
         if result.squeeze().ndim <= 1:
