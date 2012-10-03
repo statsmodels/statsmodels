@@ -9,7 +9,7 @@ Input-Output :mod:`iolib`
 reader for STATA files, a class for generating tables for printing in several
 formats and two helper functions for pickling.
 
-Users can also leverage the powerful input/output functions provided by ``pandas`` (a ``statsmodels`` dependency). Among other things, ``pandas`` allows reading and writing to Excel, CSV, and HDF5 (PyTables). http://pandas.sourceforge.net/io.html
+Users can also leverage the powerful input/output functions provided by :ref:`pandas.io <pandas:io>`. Among other things, ``pandas`` (a ``statsmodels`` dependency) allows reading and writing to Excel, CSV, and HDF5 (PyTables).
 
 Examples
 --------
