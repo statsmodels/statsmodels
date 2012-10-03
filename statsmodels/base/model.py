@@ -49,7 +49,7 @@ class Model(object):
             setattr(self, key, self.data.__dict__.pop(key))
         self._data_attr = []
         self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
-                                'data._orig_endog', 'data._orig_exog'])
+                                'data.orig_endog', 'data.orig_exog'])
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, *args, **kwargs):
@@ -774,7 +774,7 @@ class Results(object):
         """
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
-            exog = dmatrix(self.model.data._orig_exog.design_info.builder,
+            exog = dmatrix(self.model.data.orig_exog.design_info.builder,
                     exog)
         return self.model.predict(self.params, exog, *args, **kwargs)
 

@@ -185,7 +185,7 @@ def _make_arma_names(data, k_trend, order):
     k_ar, k_ma = order
     exog = data.exog
     if exog is not None:
-        exog_names = data._get_names(data._orig_exog) or []
+        exog_names = data._get_names(data.orig_exog) or []
     else:
         exog_names = []
     ar_lag_names = util.make_lag_names([data.ynames], k_ar, 0)
@@ -1344,7 +1344,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             sample = [dates[start].strftime('%m-%d-%Y')]
             sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
         else:
-            sample = str(start) + ' - ' + str(len(self.data._orig_endog))
+            sample = str(start) + ' - ' + str(len(self.data.orig_endog))
 
         k_ar, k_ma = self.k_ar, self.k_ma
         if not k_diff:
