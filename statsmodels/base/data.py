@@ -72,8 +72,22 @@ class ModelData(object):
             self.orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
 
+        # this has side-effects, attaches k_constant and const_idx
+        self._handle_constant()
         self._check_integrity()
         self._cache = resettable_cache()
+
+    def _handle_constant(self):
+        try:
+            const_idx = np.where(self.exog.var(axis = 0) == 0)[0].squeeze()
+            self.k_constant = const_idx.size
+            if self.k_constant > 1:
+                raise ValueError("More than one constant detected.")
+            else:
+                self.const_idx = const_idx
+        except: # should be an index error but who knows
+            self.const_idx = None
+            self.k_constant = 0
 
     def _drop_nans(self, x, nan_mask):
         return x[nan_mask]
