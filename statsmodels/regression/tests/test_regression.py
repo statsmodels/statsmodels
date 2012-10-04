@@ -280,7 +280,6 @@ class TestFtestQ(object):
     def test_df_num(self):
         assert_equal(self.Ftest1.df_num, 5)
 
-
 class TestTtest(object):
     '''
     Test individual t-tests.  Ie., are the coefficients significantly
@@ -429,6 +428,25 @@ class TestGLS_nosigma(CheckRegressionResults):
 
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
+
+class TestWLSExogWeights(CheckRegressionResults):
+    #Test WLS with Greene's credit card data
+    #reg avgexp age income incomesq ownrent [aw=1/incomesq]
+    def __init__(self):
+        from results.results_regression import CCardWLS
+        from statsmodels.datasets.ccard import load
+        dta = load()
+
+        dta.exog = add_constant(dta.exog, prepend=False)
+        nobs = 72.
+
+        weights = 1/dta.exog[:,2]
+        # for comparison with stata analytic weights
+        scaled_weights = ((weights * nobs)/weights.sum())
+
+        self.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
+        self.res2 = CCardWLS()
+        self.res2.wresid = scaled_weights ** .5 * self.res2.resid
 
 def test_wls_example():
     #example from the docstring, there was a note about a bug, should
