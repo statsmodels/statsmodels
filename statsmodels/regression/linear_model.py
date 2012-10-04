@@ -439,7 +439,7 @@ class WLS(RegressionModel):
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
         if np.all(self.weights != 1):    #FIXME: is this a robust-enough check?
-            llf -= .5*np.log(np.multiply.reduce(1/self.weights)) # with weights
+            llf -= .5*np.log(np.multiply.reduce(1./self.weights)) # with weights
         return llf
 
 
