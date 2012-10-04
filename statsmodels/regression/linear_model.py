@@ -376,14 +376,11 @@ class WLS(RegressionModel):
     def __init__(self, endog, exog, weights=1., missing='none'):
         weights = np.array(weights)
         if weights.shape == ():
-            self.weights = weights
-        else:
-            design_rows = exog.shape[0]
-            if not(weights.shape[0] == design_rows and
-                   weights.size == design_rows) :
-                raise ValueError(\
-                    'Weights must be scalar or same length as design')
-            self.weights = weights.reshape(design_rows)
+            weights = np.repeat(weights, len(endog))
+        nobs = exog.shape[0]
+        if weights.shape[0] != nobs and weights.size == nobs:
+            raise ValueError('Weights must be scalar or same length as design')
+        self.weights = weights.squeeze()
         super(WLS, self).__init__(endog, exog, missing=missing,
                                   weights=self.weights)
 
@@ -935,9 +932,13 @@ class RegressionResults(base.LikelihoodModelResults):
     @cache_readonly
     def centered_tss(self):
         model = self.model
-        weights = model.weights
-        return np.sum(weights*(model.endog - np.average(model.endog,
+        weights = getattr(model, 'weights', None)
+        if weights is not None:
+            return np.sum(weights*(model.endog - np.average(model.endog,
                                                         weights=weights))**2)
+        else: # this is probably broken for GLS
+            centered_endog = model.wendog - model.wendog.mean()
+            return np.dot(centered_endog, centered_endog)
 
     @cache_readonly
     def uncentered_tss(self):
