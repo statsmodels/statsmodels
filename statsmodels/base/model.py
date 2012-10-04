@@ -41,6 +41,7 @@ class Model(object):
     def __init__(self, endog, exog=None, **kwargs):
         missing = kwargs.pop('missing', 'none')
         self.data = handle_data(endog, exog, missing, **kwargs)
+        self.k_constant = self.data.k_constant
         self.exog = self.data.exog
         self.endog = self.data.endog
         # kwargs arrays could have changed, easier to just attach here
@@ -764,6 +765,7 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
+        self.k_constant = model.k_constant
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
