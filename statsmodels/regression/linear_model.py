@@ -83,9 +83,11 @@ class RegressionModel(base.LikelihoodModel):
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
         self.nobs = float(self.wexog.shape[0])
-        self.df_resid = self.nobs - rank(self.exog)
+        self.rank = rank(self.exog)
+        self.df_model = float(self.rank - self.k_constant)
+        self.df_resid = self.nobs - self.rank
         #Below assumes that we have a constant
-        self.df_model = float(rank(self.exog)-1)
+        self.df_model = float(rank(self.exog)- self.k_constant)
 
     def fit(self, method="pinv", **kwargs):
         """
@@ -736,13 +738,11 @@ class RegressionResults(base.LikelihoodModelResults):
     cov_HC3
         See HC3_se below.  Only available after calling HC3_se.
     df_model :
-        Model degress of freedom. The number of regressors p - 1 for the
-        constant  Note that df_model does not include the constant even though
-        the design does.  The design is always assumed to have a constant
-        in calculating results for now.
+        Model degress of freedom. The number of regressors `p`. Does not
+        include the constant if one is present
     df_resid
-        Residual degrees of freedom. n - p.  Note that the constant *is*
-        included in calculating the residual degrees of freedom.
+        Residual degrees of freedom. `n - p - 1`, if a constant is present.
+        `n - p` if a constant is not included.
     ess
         Explained sum of squares.  The centered total sum of squares minus
         the sum of squared residuals.
@@ -818,10 +818,12 @@ class RegressionResults(base.LikelihoodModelResults):
         The residuals of the model.
     rsquared
         R-squared of a model with an intercept.  This is defined here as
-        1 - `ssr`/`centered_tss`
+        1 - `ssr`/`centered_tss` if the constant is included in the model and
+        1 - `ssr`/`uncentered_tss` if the constant is omitted.
     rsquared_adj
         Adjusted R-squared.  This is defined here as
-        1 - (n-1)/(n-p)*(1-`rsquared`)
+        1 - (`nobs`-1)/`df_resid` * (1-`rsquared`) if a constant is included
+        and 1 - `nobs`/`df_resid` * (1-`rsquared`) if no constant is included.
     scale
         A scale factor for the covariance matrix.
         Default value is ssr/(n-p).  Note that the square root of `scale` is
@@ -937,7 +939,10 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def ess(self):
-        return self.centered_tss - self.ssr
+        if self.k_constant:
+            return self.centered_tss - self.ssr
+        else:
+            return self.uncentered_tss - self.ssr
 
     # Centered R2 for models with intercepts
     # have a look in test_regression.test_wls to see
@@ -945,11 +950,15 @@ class RegressionResults(base.LikelihoodModelResults):
     # and when the weights are a (linear?) function of the data...
     @cache_readonly
     def rsquared(self):
-        return 1 - self.ssr/self.centered_tss
+        if self.k_constant:
+            return 1 - self.ssr/self.centered_tss
+        else:
+            return 1 - self.ssr/self.uncentered_tss
 
     @cache_readonly
     def rsquared_adj(self):
-        return 1 - (self.nobs - 1)/self.df_resid * (1 - self.rsquared)
+        return (1 - (self.nobs - self.k_constant)/self.df_resid *
+                (1 - self.rsquared))
 
     @cache_readonly
     def mse_model(self):
@@ -981,11 +990,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def aic(self):
-        return -2 * self.llf + 2 * (self.df_model + 1)
+        return -2 * self.llf + 2 * (self.df_model + self.k_constant)
 
     @cache_readonly
     def bic(self):
-        return -2 * self.llf + np.log(self.nobs) * (self.df_model + 1)
+        return (-2 * self.llf + np.log(self.nobs) * (self.df_model +
+                                                     self.k_constant))
 
     # Centered R2 for models with intercepts
     # have a look in test_regression.test_wls to see
