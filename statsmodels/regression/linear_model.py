@@ -934,8 +934,10 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def centered_tss(self):
-        centered_wendog = self.model.wendog - np.mean(self.model.wendog)
-        return np.dot(centered_wendog, centered_wendog)
+        model = self.model
+        weights = model.weights
+        return np.sum(weights*(model.endog - np.average(model.endog,
+                                                        weights=weights))**2)
 
     @cache_readonly
     def uncentered_tss(self):
