@@ -720,9 +720,13 @@ class RegressionResults(base.LikelihoodModelResults):
     **Attributes**
 
     aic
-        Aikake's information criteria :math:`-2llf + 2(df_model+1)`
+        Aikake's information criteria. For a model with a constant
+        :math:`-2llf + 2(df_model + 1)`. For a model without a constant
+        :math:`-2llf + 2(df_model)`.
     bic
-        Bayes' information criteria :math:`-2llf + \log(n)(df_model+1)`
+        Bayes' information criteria For a model with a constant
+        :math:`-2llf + \log(n)(df_model+1)`. For a model without a constant
+        :math:`-2llf + \log(n)(df_model)`
     bse
         The standard errors of the parameter estimates.
     pinv_wexog
@@ -744,8 +748,9 @@ class RegressionResults(base.LikelihoodModelResults):
         Residual degrees of freedom. `n - p - 1`, if a constant is present.
         `n - p` if a constant is not included.
     ess
-        Explained sum of squares.  The centered total sum of squares minus
-        the sum of squared residuals.
+        Explained sum of squares.  If a constant is present, the centered
+        total sum of squares minus the sum of squared residuals. If there is
+        no constant, the uncentered total sum of squares is used.
     fvalue
         F-statistic of the fully specified model.  Calculated as the mean
         squared error of the model divided by the mean squared error of the
