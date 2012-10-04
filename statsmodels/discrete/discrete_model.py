@@ -320,8 +320,8 @@ class BinaryModel(DiscreteModel):
         else:
             raise Exception(
                     "argument method == %s, which is not handled" % method)
-        return BinaryResultsWrapper(discretefit)
-    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
+        return L1BinaryResultsWrapper(discretefit)
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -458,8 +458,8 @@ class MultinomialModel(BinaryModel):
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
         mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
         mnfit = L1MultinomialResults(self, mnfit)
-        return MultinomialResultsWrapper(mnfit)
-    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
+        return L1MultinomialResultsWrapper(mnfit)
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
@@ -687,8 +687,8 @@ class CountModel(DiscreteModel):
         else:
             raise Exception(
                     "argument method == %s, which is not handled" % method)
-        return CountResultsWrapper(discretefit)
-    fit_regularized.__doc__ = DiscreteModel.fit.__doc__
+        return L1CountResultsWrapper(discretefit)
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
 
 class OrderedModel(DiscreteModel):
@@ -2292,13 +2292,25 @@ class CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
 
+class L1CountResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1CountResultsWrapper, L1CountResults)
+
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
 
+class L1BinaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1BinaryResultsWrapper, L1BinaryResults)
+
 class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
+
+class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
 
 
 if __name__=="__main__":
