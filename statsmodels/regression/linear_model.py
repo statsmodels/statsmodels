@@ -368,11 +368,6 @@ class WLS(RegressionModel):
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
 
-    #FIXME: bug in fvalue or f_test for this example?
-    #UPDATE the bug is in fvalue, f_test is correct vs. R
-    #mse_model is calculated incorrectly according to R
-    #same fixed used for WLS in the tests doesn't work
-    #mse_resid is good
     def __init__(self, endog, exog, weights=1., missing='none'):
         weights = np.array(weights)
         if weights.shape == ():
@@ -435,8 +430,9 @@ class WLS(RegressionModel):
         #SSR = ss(self.endog - np.dot(self.exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
-        if np.all(self.weights != 1):    #FIXME: is this a robust-enough check?
-            llf -= .5*np.log(np.multiply.reduce(1./self.weights)) # with weights
+        #NOTE: weights are implicit in the above already
+        #if np.all(self.weights != 1):    #FIXME: is this a robust-enough check?
+        #    llf -= .5*np.log(np.multiply.reduce(1./self.weights)) # with weights
         return llf
 
 
