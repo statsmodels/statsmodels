@@ -148,12 +148,10 @@ class TestOLS(CheckRegressionResults):
         cls.res_qr = res_qr
 
 
-#  Robust error tests.  Compare values computed with SAS
+    #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
-        '''
-        They are split up because the copied results do not have any DECIMAL_4
-        places for the last place.
-        '''
+        #They are split up because the copied results do not have any DECIMAL_4
+        #places for the last place.
         assert_almost_equal(self.res1.HC0_se[:-1],
                 self.res2.HC0_se[:-1], DECIMAL_4)
         assert_approx_equal(np.round(self.res1.HC0_se[-1]), self.res2.HC0_se[-1])
@@ -191,6 +189,19 @@ class TestOLS(CheckRegressionResults):
         assert_equal(mod.endog.shape[0], 13)
         assert_equal(mod.exog.shape[0], 13)
 
+class TestRTO(CheckRegressionResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_regression import LongleyRTO
+        data = longley.load()
+        res1 = OLS(data.endog, data.exog).fit()
+        res2 = LongleyRTO()
+        res2.wresid = res1.wresid # workaround hack
+        cls.res1 = res1
+        cls.res2 = res2
+
+        res_qr = OLS(data.endog, data.exog).fit(method="qr")
+        cls.res_qr = res_qr
 
 class TestFtest(object):
     """
