@@ -194,6 +194,7 @@ class DiscreteModel(base.LikelihoodModel):
             kwargs['alpha'] = alpha
         except TypeError:
             kwargs = dict(alpha=alpha)
+        kwargs['alpha_rescaled'] = kwargs['alpha'] / float(self.endog.shape[0])
         kwargs['trim_mode'] = trim_mode
         kwargs['size_trim_tol'] = size_trim_tol
         kwargs['auto_trim_tol'] = auto_trim_tol

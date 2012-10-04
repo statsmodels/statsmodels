@@ -67,7 +67,7 @@ def fit_l1_cvxopt_cp(
     x0 = np.append(start_params, np.fabs(start_params))
     x0 = matrix(x0, (2 * k_params, 1))
     # The regularization parameter
-    alpha = np.array(kwargs['alpha']).ravel('F')
+    alpha = np.array(kwargs['alpha_rescaled']).ravel('F')
     # Make sure it's a vector
     alpha = alpha * np.ones(k_params)
     assert alpha.min() >= 0
