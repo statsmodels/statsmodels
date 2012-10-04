@@ -177,7 +177,7 @@ estimation results are not strongly influenced even if there are many
 outliers, while most of the other measures are better in identifying
 individual outliers and might not be able to identify groups of outliers.
 
-robust regression results RLM
+:py:class:`RLM <statsmodels.robust.robust_linear_model.RLM>`
     example from example_rlm.py ::
 
         import statsmodels.api as sm
