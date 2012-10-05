@@ -86,8 +86,7 @@ class RegressionModel(base.LikelihoodModel):
         self.rank = rank(self.exog)
         self.df_model = float(self.rank - self.k_constant)
         self.df_resid = self.nobs - self.rank
-        #Below assumes that we have a constant
-        self.df_model = float(rank(self.exog)- self.k_constant)
+        self.df_model = float(rank(self.exog) - self.k_constant)
 
     def fit(self, method="pinv", **kwargs):
         """
@@ -113,9 +112,6 @@ class RegressionModel(base.LikelihoodModel):
 
         Notes
         -----
-        Currently it is assumed that all models will have an intercept /
-        constant in the design matrix for postestimation statistics.
-
         The fit method uses the pseudoinverse of the design/exogenous variables
         to solve the least squares minimization.
         """
@@ -471,7 +467,7 @@ class OLS(WLS):
 
     Notes
     -----
-    OLS, as the other models, assumes that the design matrix contains a constant.
+    No constant is added by the model unless you are using formulas.
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
     #TODO: change example to use datasets.  This was the point of datasets!
@@ -949,10 +945,6 @@ class RegressionResults(base.LikelihoodModelResults):
         else:
             return self.uncentered_tss - self.ssr
 
-    # Centered R2 for models with intercepts
-    # have a look in test_regression.test_wls to see
-    # how to compute these stats for a model without intercept,
-    # and when the weights are a (linear?) function of the data...
     @cache_readonly
     def rsquared(self):
         if self.k_constant:
@@ -1001,11 +993,6 @@ class RegressionResults(base.LikelihoodModelResults):
     def bic(self):
         return (-2 * self.llf + np.log(self.nobs) * (self.df_model +
                                                      self.k_constant))
-
-    # Centered R2 for models with intercepts
-    # have a look in test_regression.test_wls to see
-    # how to compute these stats for a model without intercept,
-    # and when the weights are a (linear?) function of the data...
 
     #TODO: make these properties reset bse
     def _HCCM(self, scale):
