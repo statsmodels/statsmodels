@@ -325,9 +325,7 @@ class WLS(RegressionModel):
 
     The weights are presumed to be (proportional to) the inverse of the
     variance of the observations.  That is, if the variables are to be
-    transformed by 1/sqrt(W) you must supply weights = 1/W.  Note that this
-    is different than the behavior for GLS with a diagonal Sigma, where you
-    would just supply W.
+    transformed by 1/sqrt(W) you must supply weights = 1/W.
 
     %(params)s
     weights : array-like, optional
@@ -368,22 +366,14 @@ class WLS(RegressionModel):
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc}
 
-    #FIXME: bug in fvalue or f_test for this example?
-    #UPDATE the bug is in fvalue, f_test is correct vs. R
-    #mse_model is calculated incorrectly according to R
-    #same fixed used for WLS in the tests doesn't work
-    #mse_resid is good
     def __init__(self, endog, exog, weights=1., missing='none'):
         weights = np.array(weights)
         if weights.shape == ():
-            self.weights = weights
-        else:
-            design_rows = exog.shape[0]
-            if not(weights.shape[0] == design_rows and
-                   weights.size == design_rows) :
-                raise ValueError(\
-                    'Weights must be scalar or same length as design')
-            self.weights = weights.reshape(design_rows)
+            weights = np.repeat(weights, len(endog))
+        nobs = exog.shape[0]
+        if weights.shape[0] != nobs and weights.size == nobs:
+            raise ValueError('Weights must be scalar or same length as design')
+        self.weights = weights.squeeze()
         super(WLS, self).__init__(endog, exog, missing=missing,
                                   weights=self.weights)
 
@@ -405,11 +395,7 @@ class WLS(RegressionModel):
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            if np.shape(self.weights) == ():
-                whitened = np.sqrt(self.weights)*X
-            else:
-                whitened = np.sqrt(self.weights)[:,None]*X
-            return whitened
+            return np.sqrt(self.weights)[:,None]*X
 
     def loglike(self, params):
         """
@@ -435,11 +421,8 @@ class WLS(RegressionModel):
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
-        #SSR = ss(self.endog - np.dot(self.exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
-        if np.all(self.weights != 1):    #FIXME: is this a robust-enough check?
-            llf -= .5*np.log(np.multiply.reduce(1/self.weights)) # with weights
         return llf
 
 
@@ -739,7 +722,7 @@ class RegressionResults(base.LikelihoodModelResults):
     pinv_wexog
         See specific model class docstring
     centered_tss
-        The total sum of squares centered about the mean
+        The total (weighted) sum of squares centered about the mean.
     cov_HC0
         See HC0_se below.  Only available after calling HC0_se.
     cov_HC1
@@ -934,8 +917,14 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def centered_tss(self):
-        centered_wendog = self.model.wendog - np.mean(self.model.wendog)
-        return np.dot(centered_wendog, centered_wendog)
+        model = self.model
+        weights = getattr(model, 'weights', None)
+        if weights is not None:
+            return np.sum(weights*(model.endog - np.average(model.endog,
+                                                        weights=weights))**2)
+        else: # this is probably broken for GLS
+            centered_endog = model.wendog - model.wendog.mean()
+            return np.dot(centered_endog, centered_endog)
 
     @cache_readonly
     def uncentered_tss(self):
