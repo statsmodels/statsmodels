@@ -96,6 +96,11 @@ class CheckRegressionResults(object):
         assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid,
                     self.decimal_mse_model)
 
+    decimal_mse_total = DECIMAL_4
+    def test_mse_total(self):
+        assert_almost_equal(self.res1.mse_total, self.res2.mse_total,
+                    self.decimal_mse_total)
+
     decimal_fvalue = DECIMAL_4
     def test_fvalue(self):
         #didn't change this, not sure it should complain -inf not equal -inf

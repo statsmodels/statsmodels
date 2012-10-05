@@ -30,6 +30,7 @@ class Longley(object):
         self.ssr = 836424.055505915
         self.mse_model = 30695400.3240823
         self.mse_resid = 92936.0061673238
+        self.mse_total = (self.ess + self.ssr) / (self.df_model + self.df_resid)
         self.fvalue = 330.285339234588
         self.llf = -109.6174
         self.aic = 233.2349
@@ -97,6 +98,7 @@ class CCardWLS(object):
         self.ssr = 2393372.229657007
         self.mse_model = 818838.8079468152 / 4
         self.mse_resid = 2393372.229657007 / 67
+        self.mse_total = (self.ess + self.ssr) / 71.
         self.fvalue = 5.730638077585917
         self.llf = -476.9792946562806
         self.aic = 963.95858931256
@@ -151,6 +153,7 @@ class LongleyRTO(object):
         self.ssr = 2257822.599757476
         self.mse_model = 68443718827.40025 / 6
         self.mse_resid = 2257822.599757476 / 10
+        self.mse_total = (self.ess + self.ssr) / 16.
         self.fvalue = 50523.39573737409
         self.llf = -117.5615983965251
         self.aic = 247.123196793
