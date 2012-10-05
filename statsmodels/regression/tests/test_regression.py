@@ -38,7 +38,7 @@ class CheckRegressionResults(object):
 
     decimal_confidenceintervals = DECIMAL_4
     def test_confidenceintervals(self):
-#NOTE: stata rounds residuals (at least) to sig digits so approx_equal
+    #NOTE: stata rounds residuals (at least) to sig digits so approx_equal
         conf1 = self.res1.conf_int()
         conf2 = self.res2.conf_int()
         for i in range(len(conf1)):
