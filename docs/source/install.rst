@@ -92,7 +92,7 @@ Dependencies
 * `NumPy <http://www.scipy.org/>`__ >= 1.4
 * `SciPy <http://www.scipy.org/>`__ >= 0.7
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
-  `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
+* `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
 * `Cython <http://cython.org/>`__ >= 15.1, Still optional but recommended for building from non-source distributions. That is, it will be used when building the source from github and not from a zipped source distribution archive.
 
 .. tested with Python 2.5., 2.6, 2.7 and 3.2
