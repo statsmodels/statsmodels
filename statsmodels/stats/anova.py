@@ -106,8 +106,10 @@ def anova1_lm_single(model, endog, exog, nobs, design_info, table, n_rows, test,
     Use of this function is discouraged. Use anova_lm instead.
     """
     #maybe we should rethink using pinv > qr in OLS/linear models?
-    q,r = np.linalg.qr(exog)
-    effects = np.dot(q.T, endog)
+    effects = getattr(model, 'effects', None)
+    if effects is None:
+        q,r = np.linalg.qr(exog)
+        effects = np.dot(q.T, endog)
 
     arr = np.zeros((len(design_info.terms), len(design_info.column_names)))
     slices = [design_info.slice(name) for name in design_info.term_names]
