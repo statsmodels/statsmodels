@@ -92,16 +92,17 @@ poisson_margeff = poisson_res.get_margeff()
 print poisson_margeff.summary()
 
 # l1 regularized Poisson model
+poisson_mod2 = sm.Poisson(rand_data.endog, rand_exog)
 alpha = 0.1 * len(rand_data.endog) * np.ones(rand_exog.shape[1])
 alpha[-1] = 0
-poisson_l1_res = poisson_mod.fit_regularized(method='l1', alpha=alpha)
+poisson_l1_res = poisson_mod2.fit_regularized(method='l1', alpha=alpha)
 
 #Alternative solvers
 #-------------------
 
 # The default method for fitting discrete data MLE models is Newton-Raphson.
 # You can use other solvers by using the ``method`` argument:
-mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
+mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=500)
 
 #.. The below needs a lot of iterations to get it right?
 #.. TODO: Add a technical note on algorithms

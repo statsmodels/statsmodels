@@ -287,7 +287,7 @@ class TestProbitNewton(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.probit()
@@ -306,7 +306,7 @@ class TestProbitBFGS(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="bfgs",
             disp=0)
         res2 = Spector()
@@ -318,7 +318,7 @@ class TestProbitNM(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
@@ -329,7 +329,7 @@ class TestProbitPowell(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
@@ -342,7 +342,7 @@ class TestProbitCG(CheckBinaryResults):
         if iswindows:   # does this work with classmethod?
             raise SkipTest("fmin_cg sometimes fails to converge on windows")
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
@@ -353,7 +353,7 @@ class TestProbitNCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
@@ -393,7 +393,7 @@ class TestProbitL1(CheckLikelihoodModelL1):
     def setupClass(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
-        alpha = np.array([0.1, 0.2, 0.3, 10])
+        alpha = np.array([0.1, 0.2, 0.3, 10]) #/ data.exog.shape[0]
         cls.res1 = Probit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=alpha, disp=0, trim_mode='auto',
             auto_trim_tol=0.02, acc=1e-10, maxiter=1000)
@@ -413,7 +413,7 @@ class TestMNLogitL1(CheckLikelihoodModelL1):
         anes_exog = anes_data.exog
         anes_exog = sm.add_constant(anes_exog, prepend=False)
         mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
-        alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+        alpha = 10. * np.ones((mlogit_mod.J - 1, mlogit_mod.K)) #/ anes_exog.shape[0]
         alpha[-1,:] = 0
         cls.res1 = mlogit_mod.fit_regularized(
                 method='l1', alpha=alpha, trim_mode='auto', auto_trim_tol=0.02,
@@ -428,7 +428,7 @@ class TestLogitL1(CheckLikelihoodModelL1):
     def setupClass(cls):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
-        cls.alpha = 3 * np.array([0, 1, 1, 1])
+        cls.alpha = 3 * np.array([0., 1., 1., 1.]) #/ data.exog.shape[0]
         cls.res1 = Logit(data.endog, data.exog).fit_regularized(
             method="l1", alpha=cls.alpha, disp=0, trim_mode='size',
             size_trim_tol=1e-5, acc=1e-10, maxiter=1000)
@@ -448,11 +448,9 @@ class TestCVXOPT(object):
         self.data.exog = sm.add_constant(self.data.exog, prepend=True)
 
     def test_cvxopt_versus_slsqp(self):
-        """
-        Compares resutls from cvxopt to the standard slsqp
-        """
+        #Compares resutls from cvxopt to the standard slsqp
         if has_cvxopt:
-            self.alpha = 3 * np.array([0, 1, 1, 1])
+            self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
             res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
                 method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
                 trim_mode='auto')
@@ -471,8 +469,9 @@ class TestSweepAlphaL1(object):
         data.exog = sm.add_constant(data.exog, prepend=True)
         cls.model = Logit(data.endog, data.exog)
         cls.alphas = np.array(
-                [[0.1, 0.1, 0.1, 0.1],
-                    [0.4, 0.4, 0.5, 0.5], [0.5, 0.5, 1, 1]])
+                   [[0.1, 0.1, 0.1, 0.1],
+                    [0.4, 0.4, 0.5, 0.5], 
+                    [0.5, 0.5, 1, 1]]) #/ data.exog.shape[0]
         cls.res1 = DiscreteL1()
         cls.res1.sweep()
 
@@ -688,7 +687,7 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.logit()
@@ -736,7 +735,7 @@ class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
         raise SkipTest
 
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.logit()
         cls.res2 = res2
@@ -748,7 +747,7 @@ class TestPoissonNewton(CheckModelResults):
     def setupClass(cls):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
-        exog = sm.add_constant(data.exog)
+        exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.poisson()
@@ -775,7 +774,7 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         data = sm.datasets.anes96.load()
         cls.data = data
         exog = data.exog
-        exog = sm.add_constant(exog)
+        exog = sm.add_constant(exog, prepend=False)
         cls.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
         res2 = Anes()
         res2.mnlogit_basezero()
@@ -795,7 +794,7 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         data = self.data
         vote = data.data['vote']
         exog = np.column_stack((data.exog, vote))
-        exog = sm.add_constant(exog)
+        exog = sm.add_constant(exog, prepend=False)
         res = MNLogit(data.endog, exog).fit(method="newton", disp=0)
         me = res.get_margeff(dummy=True)
         assert_almost_equal(me.margeff, self.res2.margeff_dydx_dummy_overall,
@@ -901,7 +900,7 @@ def test_perfect_prediction():
 def test_poisson_predict():
     #GH: 175, make sure poisson predict works without offset and exposure
     data = sm.datasets.randhie.load()
-    exog = sm.add_constant(data.exog)
+    exog = sm.add_constant(data.exog, prepend=True)
     res = sm.Poisson(data.endog, exog).fit(method='newton', disp=0)
     pred1 = res.predict()
     pred2 = res.predict(exog)
