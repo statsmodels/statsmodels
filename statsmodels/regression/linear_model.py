@@ -967,7 +967,10 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def mse_total(self):
-        return self.uncentered_tss/self.nobs
+        if self.k_constant:
+            return self.centered_tss / (self.df_resid + self.df_model)
+        else:
+            return self.uncentered_tss/ (self.df_resid + self.df_model)
 
     @cache_readonly
     def fvalue(self):
