@@ -491,15 +491,17 @@ class CheckL1Compatability(object):
     should be ignored by the model.
     """
     def test_params(self):
+        m = self.m
         assert_almost_equal(
-            self.res_unreg.params, self.res_reg.params[:3], DECIMAL_4)
+            self.res_unreg.params, self.res_reg.params[:m], DECIMAL_4)
         # The last entry should be close to zero
-        assert_almost_equal(0, self.res_reg.params[3], DECIMAL_4)
+        assert_almost_equal(0, self.res_reg.params[m:], DECIMAL_4)
 
     def test_cov_params(self):
+        m = self.m
         # The restricted cov_params should be equal
         assert_almost_equal(
-            self.res_unreg.cov_params(), self.res_reg.cov_params()[:3, :3],
+            self.res_unreg.cov_params(), self.res_reg.cov_params()[:m, :m],
             DECIMAL_1)
 
     def test_df(self):
@@ -507,27 +509,54 @@ class CheckL1Compatability(object):
         assert_equal(self.res_unreg.df_resid, self.res_reg.df_resid)
 
     def test_t_test(self):
-        t_unreg = self.res_unreg.t_test(np.eye(3))
-        t_reg = self.res_reg.t_test(np.eye(4))
-        assert_almost_equal(t_unreg.effect, t_reg.effect[:3], DECIMAL_3)
-        assert_almost_equal(t_unreg.sd, t_reg.sd[:3], DECIMAL_3)
-        assert_almost_equal(np.nan, t_reg.sd[3])
-        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:3], DECIMAL_3)
-        assert_almost_equal(np.nan, t_reg.tvalue[3])
+        m = self.m
+        kvars = self.kvars
+        t_unreg = self.res_unreg.t_test(np.eye(m))
+        t_reg = self.res_reg.t_test(np.eye(kvars))
+        assert_almost_equal(t_unreg.effect, t_reg.effect[:m], DECIMAL_3)
+        assert_almost_equal(t_unreg.sd, t_reg.sd[:m], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.sd[m])
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.tvalue[m])
 
     def test_f_test(self):
-        f_unreg = self.res_unreg.f_test(np.eye(3))
-        f_reg = self.res_reg.f_test(np.eye(4)[:3])
+        m = self.m
+        kvars = self.kvars
+        f_unreg = self.res_unreg.f_test(np.eye(m))
+        f_reg = self.res_reg.f_test(np.eye(kvars)[:m])
         assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
     def test_bad_r_matrix(self):
-        assert_raises(ValueError, self.res_reg.f_test, np.eye(4) )
+        kvars = self.kvars
+        assert_raises(ValueError, self.res_reg.f_test, np.eye(kvars) )
+
+
+class TestPoissonL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 10 # Number of variables
+        cls.m = 7 # Number of unregularized parameters
+        rand_data = sm.datasets.randhie.load()
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog = sm.add_constant(rand_exog, prepend=True)
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, :cls.m]
+        cls.res_unreg = sm.Poisson(
+            rand_data.endog, exog_no_PSI).fit(method="newton")
+        # Do a regularized fit with alpha, effectively dropping the last column
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
+        alpha[:cls.m] = 0
+        cls.res_reg = sm.Poisson(rand_data.endog, rand_exog).fit_regularized(
+            method='l1', alpha=alpha, disp=1, acc=1e-10, maxiter=2000,
+            trim_mode='auto')
 
 
 class TestLogitL1Compatability(CheckL1Compatability):
     @classmethod
     def setupClass(cls):
+        cls.kvars = 4 # Number of variables
+        cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         # Do a regularized fit with alpha, effectively dropping the last column
@@ -536,13 +565,14 @@ class TestLogitL1Compatability(CheckL1Compatability):
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
             trim_mode='auto')
         # Actually drop the last columnand do an unregularized fit
-        exog_no_PSI = data.exog[:, :3]
+        exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = Logit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
-
 
 class TestMNLogitL1Compatability(CheckL1Compatability):
     @classmethod
     def setupClass(cls):
+        cls.kvars = 4 # Number of variables
+        cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         alpha = np.array([0, 0, 0, 10])
@@ -550,17 +580,19 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
             trim_mode='auto')
         # Actually drop the last columnand do an unregularized fit
-        exog_no_PSI = data.exog[:, :3]
+        exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
             disp=0, tol=1e-15)
 #
     def test_t_test(self):
-        t_unreg = self.res_unreg.t_test(np.eye(3))
-        t_reg = self.res_reg.t_test(np.eye(4))
-        assert_almost_equal(t_unreg.effect, t_reg.effect[:3], DECIMAL_3)
-        assert_almost_equal(t_unreg.sd, t_reg.sd[:3], DECIMAL_3)
-        assert_almost_equal(np.nan, t_reg.sd[3])
-        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:3, :3], DECIMAL_3)
+        m = self.m
+        kvars = self.kvars
+        t_unreg = self.res_unreg.t_test(np.eye(m))
+        t_reg = self.res_reg.t_test(np.eye(kvars))
+        assert_almost_equal(t_unreg.effect, t_reg.effect[:m], DECIMAL_3)
+        assert_almost_equal(t_unreg.sd, t_reg.sd[:m], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.sd[m])
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m, :m], DECIMAL_3)
 
     def test_f_test(self):
         raise SkipTest("Skipped test_f_test for MNLogit")
@@ -569,6 +601,8 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
 class TestProbitL1Compatability(CheckL1Compatability):
     @classmethod
     def setupClass(cls):
+        cls.kvars = 4 # Number of variables
+        cls.m = 3 # Number of unregularized parameters
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=True)
         alpha = np.array([0, 0, 0, 10])
@@ -576,7 +610,7 @@ class TestProbitL1Compatability(CheckL1Compatability):
             method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
             trim_mode='auto')
         # Actually drop the last columnand do an unregularized fit
-        exog_no_PSI = data.exog[:, :3]
+        exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = Probit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
 
 

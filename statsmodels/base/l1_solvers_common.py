@@ -76,6 +76,7 @@ def _get_verbose_addon(qc_dict):
     passed_array = qc_dict['passed_array']
 
     addon = '\n------ verbose QC printout -----------------'
+    addon = '\n------ Recall the problem was rescaled by 1 / nobs ---'
     addon += '\n|%-10s|%-10s|%-10s|%-10s|' % (
         'passed', 'alpha', 'fprime', 'param')
     addon += '\n--------------------------------------------'
