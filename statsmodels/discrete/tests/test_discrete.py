@@ -347,7 +347,7 @@ class TestProbitCG(CheckBinaryResults):
         res2.probit()
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="cg",
-            disp=0, maxiter=500)
+            disp=0, maxiter=500, gtol=1e-06)
 
 class TestProbitNCG(CheckBinaryResults):
     @classmethod
@@ -524,7 +524,7 @@ class CheckL1Compatability(object):
         kvars = self.kvars
         f_unreg = self.res_unreg.f_test(np.eye(m))
         f_reg = self.res_reg.f_test(np.eye(kvars)[:m])
-        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_3)
+        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_2)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
     def test_bad_r_matrix(self):
