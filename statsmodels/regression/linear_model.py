@@ -722,7 +722,7 @@ class RegressionResults(base.LikelihoodModelResults):
     pinv_wexog
         See specific model class docstring
     centered_tss
-        The total sum of squares centered about the mean
+        The total (weighted) sum of squares centered about the mean.
     cov_HC0
         See HC0_se below.  Only available after calling HC0_se.
     cov_HC1
