@@ -421,12 +421,8 @@ class WLS(RegressionModel):
         """
         nobs2 = self.nobs / 2.0
         SSR = ss(self.wendog - np.dot(self.wexog,params))
-        #SSR = ss(self.endog - np.dot(self.exog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
-        #NOTE: weights are implicit in the above already
-        #if np.all(self.weights != 1):    #FIXME: is this a robust-enough check?
-        #    llf -= .5*np.log(np.multiply.reduce(1./self.weights)) # with weights
         return llf
 
 
