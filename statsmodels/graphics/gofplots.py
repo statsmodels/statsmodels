@@ -374,6 +374,7 @@ class ProbPlot(object):
 
         return fig
 
+@utils.drawifinteractive
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
            line=False, ax=None):
     """
@@ -477,6 +478,7 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
     fig = probplot.qqplot(ax=ax, line=line)
     return fig
 
+@utils.drawifinteractive
 def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
     """
     Q-Q Plot of two samples' quantiles.
@@ -548,6 +550,7 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
 
     return fig
 
+@utils.drawifinteractive
 def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     """
     Plot a reference line for a qqplot.
@@ -636,6 +639,7 @@ def plotting_pos(nobs, a):
     """
     return (np.arange(1.,nobs+1) - a)/(nobs- 2*a + 1)
 
+@utils.drawifinteractive
 def _fmt_probplot_axis(ax, dist, nobs):
     """
     Formats a theoretical quantile axis to display the corresponding
@@ -674,6 +678,7 @@ def _fmt_probplot_axis(ax, dist, nobs):
                        verticalalignment='center')
     ax.set_xlim([axis_qntls.min(), axis_qntls.max()])
 
+@utils.drawifinteractive
 def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
     """
     Boiler plate plotting function for the `ppplot`, `qqplot`, and

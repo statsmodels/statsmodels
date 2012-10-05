@@ -89,3 +89,14 @@ def create_mpl_fig(fig=None, figsize=None):
         fig = plt.figure(figsize=figsize)
 
     return fig
+
+def drawifinteractive(func):
+    """
+    Decorates plot functions with a draw_if_interactive call.
+    """
+    def new(*args, **kwargs):
+        import matplotlib.pyplot as plt
+        fig = func(*args, **kwargs)
+        plt.draw_if_interactive()
+        return fig
+    return new

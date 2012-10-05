@@ -12,7 +12,7 @@ from . import utils
 
 __all__ = ['violinplot', 'beanplot']
 
-
+@utils.drawifinteractive
 def violinplot(data, ax=None, labels=None, positions=None, side='both',
                show_boxplot=True, plot_opts={}):
     """Make a violin plot of each dataset in the `data` sequence.
@@ -223,6 +223,7 @@ def _set_ticks_labels(ax, data, labels, positions, plot_opts):
     return
 
 
+@utils.drawifinteractive
 def beanplot(data, ax=None, labels=None, positions=None, side='both',
              jitter=False, plot_opts={}):
     """Make a bean plot of each dataset in the `data` sequence.

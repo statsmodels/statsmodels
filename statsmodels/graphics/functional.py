@@ -12,6 +12,7 @@ from . import utils
 __all__ = ['fboxplot', 'rainbowplot', 'banddepth']
 
 
+@utils.drawifinteractive
 def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
              wfactor=1.5, ax=None, plot_opts={}):
     """Plot functional boxplot.
@@ -205,6 +206,7 @@ def fboxplot(data, xdata=None, labels=None, depth=None, method='MBD',
     return fig, depth, ix_depth, ix_outliers
 
 
+@utils.drawifinteractive
 def rainbowplot(data, xdata=None, depth=None, method='MBD', ax=None,
                  cmap=None):
     """Create a rainbow plot for a set of curves.

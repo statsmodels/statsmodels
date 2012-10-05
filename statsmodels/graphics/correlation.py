@@ -12,6 +12,7 @@ import numpy as np
 from . import utils
 
 
+@utils.drawifinteractive
 def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
               ax=None, cmap='RdYlBu_r'):
     """Plot correlation of many variables in a tight color grid.
@@ -128,6 +129,7 @@ def plot_corr(dcorr, xnames=None, ynames=None, title=None, normcolor=False,
     return fig
 
 
+@utils.drawifinteractive
 def plot_corr_grid(dcorrs, titles=None, ncols=None, normcolor=False, xnames=None,
                    ynames=None, fig=None, cmap='RdYlBu_r'):
     """Create a grid of correlation plots.

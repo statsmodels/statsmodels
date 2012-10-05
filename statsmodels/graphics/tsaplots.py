@@ -7,6 +7,7 @@ from statsmodels.graphics import utils
 from statsmodels.tsa.stattools import acf, pacf
 
 
+@utils.drawifinteractive
 def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
             fft=False, **kwargs):
     """Plot the autocorrelation function
@@ -87,6 +88,7 @@ def plot_acf(x, ax=None, lags=None, alpha=.05, use_vlines=True, unbiased=False,
 
     return fig
 
+@utils.drawifinteractive
 def plot_pacf(x, ax=None, lags=None, alpha=.05, method='ywm',
                 use_vlines=True, **kwargs):
     """Plot the partial autocorrelation function
