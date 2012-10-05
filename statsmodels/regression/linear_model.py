@@ -395,11 +395,7 @@ class WLS(RegressionModel):
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            if np.shape(self.weights) == ():
-                whitened = np.sqrt(self.weights)*X
-            else:
-                whitened = np.sqrt(self.weights)[:,None]*X
-            return whitened
+            return np.sqrt(self.weights)[:,None]*X
 
     def loglike(self, params):
         """
