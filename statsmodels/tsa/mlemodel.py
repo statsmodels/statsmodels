@@ -13,7 +13,10 @@ License: BSD
 
 import numpy as np
 
-import numdifftools as ndt
+try:
+    import numdifftools as ndt
+except:
+    pass
 
 from statsmodels.base.model import LikelihoodModel
 
