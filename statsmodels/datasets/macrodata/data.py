@@ -39,7 +39,7 @@ Variable name definitions::
                 US$, seasonally adjusted annual rate)
     realgovt  - Real federal consumption expenditures & gross investment
                 (Bil. of chained 2005 US$, seasonally adjusted annual rate)
-    realdpi   - Real gross private domestic investment (Bil. of chained 2005
+    realdpi   - Real private disposable income (Bil. of chained 2005
                 US$, seasonally adjusted annual rate)
     cpi       - End of the quarter consumer price index for all urban
                 consumers: all items (1982-84 = 100, seasonally adjusted).
