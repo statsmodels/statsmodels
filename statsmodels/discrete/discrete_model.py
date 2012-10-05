@@ -31,6 +31,15 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
+from statsmodels.base.l1_slsqp import fit_l1_slsqp
+try:
+    import cvxopt
+    have_cvxopt = True
+except ImportError:
+    have_cvxopt = False
+
+import pdb  # pdb.set_trace
+
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
 
@@ -97,6 +106,156 @@ class DiscreteModel(base.LikelihoodModel):
 
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=True, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, qc_verbose=False, **kwargs):
+        """
+        Fit the model using a regularized maximum likelihood.
+        The regularization method AND the solver used is determined by the
+        argument method.
+
+        Parameters (also present in LikelihoodModel.fit)
+        ----------
+        start_params : array-like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is an array of zeros.
+        method : 'l1' or 'l1_cvxopt_cp'
+            See notes for details.
+        maxiter : Integer or 'defined_by_method'
+            Maximum number of iterations to perform.
+            If 'defined_by_method', then use method defaults (see notes).
+        full_output : bool
+            Set to True to have all available output in the Results object's
+            mle_retvals attribute. The output is dependent on the solver.
+            See LikelihoodModelResults notes section for more information.
+        disp : bool
+            Set to True to print convergence messages.
+        fargs : tuple
+            Extra arguments passed to the likelihood function, i.e.,
+            loglike(x,*args)
+        callback : callable callback(xk)
+            Called after each iteration, as callback(xk), where xk is the
+            current parameter vector.
+        retall : bool
+            Set to True to return list of solutions at each iteration.
+            Available in Results object's mle_retvals attribute.
+
+
+        fit_regularized Specific Parameters
+        ------------------
+        alpha : non-negative scalar or numpy array (same size as parameters)
+            The weight multiplying the l1 penalty term
+        trim_mode : 'auto, 'size', or 'off'
+            If not 'off', trim (set to zero) parameters that would have been zero
+                if the solver reached the theoretical minimum.
+            If 'auto', trim params using the Theory above.
+            If 'size', trim params if they have very small absolute value
+        size_trim_tol : float or 'auto' (default = 'auto')
+            For use when trim_mode === 'size'
+        auto_trim_tol : float
+            For sue when trim_mode == 'auto'.  Use
+        qc_tol : float
+            Print warning and don't allow auto trim when (ii) in "Theory" (above)
+            is violated by this much.
+        qc_verbose : Boolean
+            If true, print out a full QC report upon failure
+
+        Notes
+        -----
+        Additional solver-specific arguments
+            'l1'
+                acc : float (default 1e-6)
+                    Requested accuracy as used by slsqp
+            'l1_cvxopt_cp'
+                abstol : float
+                    absolute accuracy (default: 1e-7).
+                reltol : float
+                    relative accuracy (default: 1e-6).
+                feastol : float
+                    tolerance for feasibility conditions (default: 1e-7).
+                refinement : int
+                    number of iterative refinement steps when solving KKT
+                    equations (default: 1).
+        """
+        ### Set attributes based on method
+        if method in ['l1', 'l1_cvxopt_cp']:
+            cov_params_func = self.cov_params_func_l1
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+
+        ### Bundle up extra kwargs for the dictionary kwargs.  These are
+        ### passed through super(...).fit() as kwargs and unpacked at
+        ### appropriate times
+        alpha = np.array(alpha)
+        assert alpha.min() >= 0
+        try:
+            kwargs['alpha'] = alpha
+        except TypeError:
+            kwargs = dict(alpha=alpha)
+        kwargs['alpha_rescaled'] = kwargs['alpha'] / float(self.endog.shape[0])
+        kwargs['trim_mode'] = trim_mode
+        kwargs['size_trim_tol'] = size_trim_tol
+        kwargs['auto_trim_tol'] = auto_trim_tol
+        kwargs['qc_tol'] = qc_tol
+        kwargs['qc_verbose'] = qc_verbose
+
+        ### Define default keyword arguments to be passed to super(...).fit()
+        if maxiter == 'defined_by_method':
+            if method == 'l1':
+                maxiter = 1000
+            elif method == 'l1_cvxopt_cp':
+                maxiter = 70
+
+        ## Parameters to pass to super(...).fit()
+        # For the 'extra' parameters, pass all that are available,
+        # even if we know (at this point) we will only use one.
+        extra_fit_funcs = {'l1': fit_l1_slsqp}
+        if have_cvxopt and method == 'l1_cvxopt_cp':
+            from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
+            extra_fit_funcs['l1_cvxopt_cp'] = fit_l1_cvxopt_cp
+        elif method.lower() == 'l1_cvxopt_cp':
+            message = """Attempt to use l1_cvxopt_cp failed since cvxopt
+            could not be imported"""
+
+        if callback is None:
+            callback = self._check_perfect_pred
+        else:
+            pass # make a function factory to have multiple call-backs
+
+        mlefit = super(DiscreteModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, extra_fit_funcs=extra_fit_funcs,
+                cov_params_func=cov_params_func, **kwargs)
+
+        return mlefit # up to subclasses to wrap results
+
+    def cov_params_func_l1(self, likelihood_model, xopt, retvals):
+        """
+        Computes cov_params on a reduced parameter space
+        corresponding to the nonzero parameters resulting from the
+        l1 regularized fit.
+
+        Returns a full cov_params matrix, with entries corresponding
+        to zero'd values set to np.nan.
+        """
+        H = likelihood_model.hessian(xopt)
+        trimmed = retvals['trimmed']
+        nz_idx = np.nonzero(trimmed == False)[0]
+        nnz_params = (trimmed == False).sum()
+        if nnz_params > 0:
+            H_restricted = H[nz_idx[:, None], nz_idx]
+            # Covariance estimate for the nonzero params
+            H_restricted_inv = np.linalg.inv(-H_restricted)
+        else:
+            H_restricted_inv = np.zeros(0)
+
+        cov_params = np.nan * np.ones(H.shape)
+        cov_params[nz_idx[:, None], nz_idx] = H_restricted_inv
+
+        return cov_params
+
     def predict(self, params, exog=None, linear=False):
         """
         Predict response variable of a model given exogenous variables.
@@ -146,6 +305,23 @@ class BinaryModel(DiscreteModel):
         discretefit = BinaryResults(self, bnryfit)
         return BinaryResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        bnryfit = super(BinaryModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1BinaryResults(self, bnryfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+        return L1BinaryResultsWrapper(discretefit)
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -266,6 +442,25 @@ class MultinomialModel(BinaryModel):
         mnfit = MultinomialResults(self, mnfit)
         return MultinomialResultsWrapper(mnfit)
     fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        if start_params is None:
+            start_params = np.zeros((self.K * (self.J-1)))
+        else:
+            start_params = np.asarray(start_params)
+        mnfit = DiscreteModel.fit_regularized(
+                self, start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        mnfit.params = mnfit.params.reshape(self.K, -1, order='F')
+        mnfit = L1MultinomialResults(self, mnfit)
+        return L1MultinomialResultsWrapper(mnfit)
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -477,6 +672,24 @@ class CountModel(DiscreteModel):
         discretefit = CountResults(self, cntfit)
         return CountResultsWrapper(discretefit)
     fit.__doc__ = DiscreteModel.fit.__doc__
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1CountResults(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+        return L1CountResultsWrapper(discretefit)
+    fit_regularized.__doc__ = DiscreteModel.fit_regularized.__doc__
+
 
 class OrderedModel(DiscreteModel):
     pass
@@ -1880,9 +2093,23 @@ class DiscreteResults(base.LikelihoodModelResults):
         #                   title="")
         return smry
 
-
 class CountResults(DiscreteResults):
     pass
+
+class L1CountResults(DiscreteResults):
+        #discretefit = CountResults(self, cntfit)
+    def __init__(self, model, cntfit):
+        super(L1CountResults, self).__init__(model, cntfit)
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = cntfit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
+        #update degrees of freedom
+        self.model.df_model = self.nnz_params - 1
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
+
 
 class OrderedResults(DiscreteResults):
     pass
@@ -1938,6 +2165,31 @@ class BinaryResults(DiscreteResults):
             smry.add_extra_txt(etext)
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
+
+class L1BinaryResults(BinaryResults):
+    """
+    Special version of BinaryResults for use with a model that was fit
+    with L1 penalized regression.
+
+    New Attributes
+    --------------
+    nnz_params : Integer
+        The number of nonzero parameters in the model.  Train with
+        trim_params==True or else numerical error will distort this.
+    trimmed : Boolean array
+        trimmed[i] == True if the ith parameter was trimmed from the model.
+    """
+    def __init__(self, model, bnryfit):
+        super(L1BinaryResults, self).__init__(model, bnryfit)
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = bnryfit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
+        self.model.df_model = self.nnz_params - 1
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
+
 
 class MultinomialResults(DiscreteResults):
     def _maybe_convert_ynames_int(self, ynames):
@@ -2005,6 +2257,30 @@ class MultinomialResults(DiscreteResults):
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
 
+class L1MultinomialResults(MultinomialResults):
+    """
+    Special version of MultinomialResults for use with a model that was fit
+    with L1 penalized regression.
+
+    New Attributes
+    --------------
+    nnz_params : Integer
+        The number of nonzero parameters in the model.  Train with
+        trim_params==True or else numerical error will distort this.
+    """
+    def __init__(self, model, mlefit):
+        super(L1MultinomialResults, self).__init__(model, mlefit)
+        # self.trimmed is a boolean array with T/F telling whether or not that
+        # entry in params has been set zero'd out.
+        self.trimmed = mlefit.mle_retvals['trimmed']
+        self.nnz_params = (self.trimmed == False).sum()
+
+        #Note: J-1 constants
+        self.model.df_model = self.nnz_params - (self.model.J - 1)
+        self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        self.df_model = self.model.df_model
+        self.df_resid = self.model.df_resid
+
 
 #### Results Wrappers ####
 
@@ -2016,13 +2292,25 @@ class CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
 
+class L1CountResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1CountResultsWrapper, L1CountResults)
+
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
 
+class L1BinaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1BinaryResultsWrapper, L1BinaryResults)
+
 class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
+
+class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1MultinomialResultsWrapper, L1MultinomialResults)
 
 
 if __name__=="__main__":
