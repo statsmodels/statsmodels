@@ -53,16 +53,18 @@ def _get_sigma(sigma, nobs):
     if sigma is None:
         return None, None
     sigma = np.asarray(sigma).squeeze()
+    if sigma.ndim == 0:
+        sigma = np.repeat(sigma, nobs)
     if sigma.ndim == 1:
+        cholsigmainv = np.diag(1/sigma**.5)
         sigma = np.diag(sigma)
-    elif sigma.ndim == 0:
-        sigma = np.diag([sigma] * nobs)
+    else:
+        cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
 
     if sigma.shape != (nobs, nobs):
         raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                         "array of shape %s x %s" % (nobs, nobs))
 
-    cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
     return sigma, cholsigmainv
 
 class RegressionModel(base.LikelihoodModel):
