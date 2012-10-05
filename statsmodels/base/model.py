@@ -270,10 +270,15 @@ class LikelihoodModel(Model):
         # user-supplied and numerically evaluated estimate frprime doesn't take
         # args in most (any?) of the optimize function
 
-        f = lambda params, *args: -self.loglike(params, *args)
-        score = lambda params: -self.score(params)
+        # Scale the problem to make it easier for the solvers
+        nobs = self.endog.shape[0]
+        optscale = 1.0 / nobs  
+        # Should this be passed with kwargs or as a separate keyword arg?
+        kwargs['optscale'] = optscale 
+        f = lambda params, *args: -optscale * self.loglike(params, *args)
+        score = lambda params: -optscale * self.score(params)
         try:
-            hess = lambda params: -self.hessian(params)
+            hess = lambda params: -optscale * self.hessian(params)
         except:
             hess = None
 
