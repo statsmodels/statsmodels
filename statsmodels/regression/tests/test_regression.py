@@ -5,7 +5,7 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_approx_equal,
                             assert_raises, assert_equal)
 from scipy.linalg import toeplitz
-from statsmodels.tools.tools import add_constant
+from statsmodels.tools.tools import add_constant, categorical
 from statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
         yule_walker)
 from statsmodels.datasets import longley
@@ -625,6 +625,16 @@ def test_bad_size():
     np.random.seed(54321)
     data = np.random.uniform(0,20,31)
     assert_raises(ValueError, OLS, data, data[1:])
+
+def test_const_indicator():
+    np.random.seed(12345)
+    X = np.random.randint(0, 3, size=30)
+    X = categorical(X, drop=True)
+    y = np.dot(X, [1., 2., 3.]) + np.random.normal(size=30)
+    modc = OLS(y, add_constant(X[:,1:], prepend=True)).fit()
+    mod = OLS(y, X, hasconst=True).fit()
+    assert_almost_equal(modc.rsquared, mod.rsquared, 12)
+
 
 if __name__=="__main__":
 
