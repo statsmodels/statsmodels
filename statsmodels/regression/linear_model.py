@@ -325,9 +325,7 @@ class WLS(RegressionModel):
 
     The weights are presumed to be (proportional to) the inverse of the
     variance of the observations.  That is, if the variables are to be
-    transformed by 1/sqrt(W) you must supply weights = 1/W.  Note that this
-    is different than the behavior for GLS with a diagonal Sigma, where you
-    would just supply W.
+    transformed by 1/sqrt(W) you must supply weights = 1/W.
 
     %(params)s
     weights : array-like, optional
