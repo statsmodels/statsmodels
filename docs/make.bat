@@ -8,6 +8,7 @@ if "%SPHINXBUILD%" == "" (
 set BUILDDIR=build
 set TOOLSPATH=../tools
 set EXAMPLEBUILD=examples_rst.py
+set FOLDTOC=fold_toc.py
 set ALLSPHINXOPTS=-d %BUILDDIR%/doctrees %SPHINXOPTS% source
 if NOT "%PAPER%" == "" (
 	set ALLSPHINXOPTS=-D latex_paper_size=%PAPER% %ALLSPHINXOPTS%
@@ -46,6 +47,9 @@ if "%1" == "html" (
 	python %TOOLSPATH%/%EXAMPLEBUILD%
 	%SPHINXBUILD% -b html %ALLSPHINXOPTS% %BUILDDIR%/html
 	if errorlevel 1 exit /b 1
+	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/index.html
+	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/examples/index.html ../_static
+	python %TOOLSPATH%/%FOLDTOC% %BUILDDIR%/html/dev/index.html ../_static
 	echo.
 	echo.Build finished. The HTML pages are in %BUILDDIR%/html.
 	goto end
