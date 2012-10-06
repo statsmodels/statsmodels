@@ -57,6 +57,7 @@ Regression Plots
    regressionplots.plot_regress_exog
    regressionplots.plot_partregress
    regressionplots.plot_ccpr
+   regressionplots.abline_plot
 
 Time Series Plots
 -----------------
