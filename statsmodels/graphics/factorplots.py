@@ -3,9 +3,10 @@ import numpy as np
 from statsmodels.graphics.plottools import rainbow
 import utils
 
+
 def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
-                     xlabel=None, ylabel=None, colors = [], markers = [],
-                     linestyles = [], legendloc='best', legendtitle=None,
+                     xlabel=None, ylabel=None, colors=[], markers=[],
+                     linestyles=[], legendloc='best', legendtitle=None,
                      **kwargs):
     """
     Interaction plot for factor level statistics
@@ -82,7 +83,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     fig, ax = utils.create_mpl_ax(ax)
 
     if ylabel is None:
-        try: # did we get a pandas.Series
+        try:  # did we get a pandas.Series
             response_name = response.name
         except:
             response_name = 'response'
@@ -99,11 +100,10 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         try:
             legendtitle = trace.name
         except:
-            legentitle = 'Trace'
+            legendtitle = 'Trace'
 
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
-
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
@@ -115,21 +115,21 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
             assert len(linestyles) == n_trace
         except AssertionError, err:
             raise ValueError("Must be a linestyle for each trace level")
-    else: # set a default
+    else:  # set a default
         linestyles = ['-'] * n_trace
     if markers:
         try:
             assert len(markers) == n_trace
         except AssertionError, err:
             raise ValueError("Must be a linestyle for each trace level")
-    else: # set a default
+    else:  # set a default
         markers = ['.'] * n_trace
     if colors:
         try:
             assert len(colors) == n_trace
         except AssertionError, err:
             raise ValueError("Must be a linestyle for each trace level")
-    else: # set a default
+    else:  # set a default
         #TODO: how to get n_trace different colors?
         colors = rainbow(n_trace)
 
