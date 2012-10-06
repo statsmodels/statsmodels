@@ -4,10 +4,10 @@ from statsmodels.graphics.plottools import rainbow
 import utils
 
 
-def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
-                     xlabel=None, ylabel=None, colors=[], markers=[],
-                     linestyles=[], legendloc='best', legendtitle=None,
-                     **kwargs):
+def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xlabel=None,
+                     ylabel=None, colors=[], markers=[], linestyles=[],
+                     legendloc='best', legendtitle=None, x_levels=None,
+                     trace_levels=None, **kwargs):
     """
     Interaction plot for factor level statistics
 
@@ -29,6 +29,12 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     func : function
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
+    x_levels: dict
+        maps categorial levels (keys, str) to factor codings (values, int)
+        for the x factor.
+    trace_levels: dict
+        maps categorial levels (keys, str) to factor codings (values, int)
+        for the trace factor.
     plottype : str {'line', 'scatter', 'both'}, optional
         The type of plot to return. Can be 'l', 's', or 'b'
     ax : axes, optional
@@ -79,6 +85,10 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
        import matplotlib.pyplot as plt
        #plt.show()
     """
+    # this is a hack!
+    x_levels = kwargs.pop('x_levels') if 'x_levels' in kwargs else None
+    trace_levels = (kwargs.pop('trace_levels') if 'trace_levels' in kwargs else None)
+
     from pandas import DataFrame
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -105,11 +115,26 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
 
+    if x_levels == dict:
+        x = _recode(x, x_levels)
+
+    elif x_levels != None:
+        raise ValueError('%s is not a valid option.'
+                         'A dict is required' % x_levels)
+
+    if trace_levels == dict:
+        trace = _recode(trace, trace_levels)
+
+    elif trace_levels != None:
+        raise ValueError('%s is not a valid option.'
+                         'A dict is required' % trace_levels)
+
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
 
     # check plot args
     n_trace = len(plot_data['trace'].unique())
+
     if linestyles:
         try:
             assert len(linestyles) == n_trace
@@ -158,3 +183,48 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     ax.legend(loc=legendloc, title=legendtitle)
     ax.margins(.1)
     return fig
+
+
+def _recode(a, levels):
+    """ recode categorial data to int factor
+    Parameters
+    ----------
+    a : array-like
+        array like object supporting with numpy array methods of categorially
+        coded data.
+    levels : dict
+        mapping of labels to integer-codings
+
+    Returns
+    -------
+    out : instance numpy.ndarray
+
+    """
+    from pandas import Series
+    name = None
+
+    if isinstance(a, Series):
+        name = a.name
+        a = a.values
+
+    if a.dtype.type not in [np.str_, np.object_]:
+        raise ValueError('This is not a categorial factor.'
+                         ' Array of str type required.')
+
+    elif not isinstance(levels, dict):
+        raise ValueError('This is not a valid value for levels.'
+                         ' Dict required.')
+
+    elif not (np.unique(a) == np.unique(levels.keys())).all():
+        raise ValueError('The levels do not match the array values.')
+
+    else:
+        out = np.empty(a.shape[0], dtype=np.int)
+        for level, coding in levels.items():
+            out[a == level] = coding
+
+        if name:
+            out = Series(out)
+            out.name = name
+
+        return out
