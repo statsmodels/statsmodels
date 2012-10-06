@@ -524,3 +524,25 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
         return DataFrame.from_records(genfromdta(dta))
     else:
         return genfromdta(dta)
+
+def nan_dot(A, B):
+    """
+    Returns np.dot(left_matrix, right_matrix) with the convention that
+    nan * 0 = 0 and nan * x = nan if x != 0.
+
+    Parameters
+    ----------
+    A, B : np.ndarrays
+    """
+    # Find out who should be nan due to nan * nonzero
+    should_be_nan_1 = np.dot(np.isnan(A), (B != 0))
+    should_be_nan_2 = np.dot((A != 0), np.isnan(B))
+    should_be_nan = should_be_nan_1 + should_be_nan_2
+
+    # Multiply after setting all nan to 0
+    # This is what happens if there were no nan * nonzero conflicts
+    C = np.dot(np.nan_to_num(A), np.nan_to_num(B))
+
+    C[should_be_nan] = np.nan
+
+    return C

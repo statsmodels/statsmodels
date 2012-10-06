@@ -1,3 +1,5 @@
+What Statsmodels is
+===================
 What it is
 ==========
 

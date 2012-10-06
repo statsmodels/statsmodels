@@ -386,3 +386,74 @@ def test_chain_dot():
     B = np.arange(3,15).reshape(4,3)
     C = np.arange(5,8).reshape(3,1)
     assert_equal(tools.chain_dot(A,B,C), np.array([[1820],[4300],[6780]]))
+
+
+class TestNanDot(object):
+    @classmethod
+    def setupClass(cls):
+        nan = np.nan
+        cls.mx_1 = np.array([[nan, 1.], [2., 3.]])
+        cls.mx_2 = np.array([[nan, nan], [2., 3.]])
+        cls.mx_3 = np.array([[0., 0.], [0., 0.]])
+        cls.mx_4 = np.array([[1., 0.], [1., 0.]])
+        cls.mx_5 = np.array([[0., 1.], [0., 1.]])
+        cls.mx_6 = np.array([[1., 2.], [3., 4.]])
+
+    def test_11(self):
+        test_res = tools.nan_dot(self.mx_1, self.mx_1)
+        expected_res = np.array([[ np.nan,  np.nan], [ np.nan,  11.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_12(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_1, self.mx_2)
+        expected_res = np.array([[ nan,  nan], [ nan,  nan]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_13(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_1, self.mx_3)
+        expected_res = np.array([[ 0.,  0.], [ 0.,  0.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_14(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_1, self.mx_4)
+        expected_res = np.array([[ nan,   0.], [  5.,   0.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_41(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_4, self.mx_1)
+        expected_res = np.array([[ nan,   1.], [ nan,   1.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_23(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_2, self.mx_3)
+        expected_res = np.array([[ 0.,  0.], [ 0.,  0.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_32(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_3, self.mx_2)
+        expected_res = np.array([[ 0.,  0.], [ 0.,  0.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_24(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_2, self.mx_4)
+        expected_res = np.array([[ nan,   0.], [  5.,   0.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_25(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_2, self.mx_5)
+        expected_res = np.array([[  0.,  nan], [  0.,   5.]])
+        assert_array_equal(test_res, expected_res)
+
+    def test_66(self):
+        nan = np.nan
+        test_res = tools.nan_dot(self.mx_6, self.mx_6)
+        expected_res = np.array([[  7.,  10.], [ 15.,  22.]])
+        assert_array_equal(test_res, expected_res)

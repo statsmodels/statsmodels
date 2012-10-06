@@ -16,8 +16,13 @@ from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 from sys import platform
 from nose import SkipTest
-from results.results_discrete import Spector
+from results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+try:
+    import cvxopt
+    has_cvxopt = True
+except ImportError:
+    has_cvxopt = False
 
 DECIMAL_14 = 14
 DECIMAL_10 = 10
@@ -282,7 +287,7 @@ class TestProbitNewton(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.probit()
@@ -301,7 +306,7 @@ class TestProbitBFGS(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Probit(data.endog, data.exog).fit(method="bfgs",
             disp=0)
         res2 = Spector()
@@ -313,7 +318,7 @@ class TestProbitNM(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
@@ -324,7 +329,7 @@ class TestProbitPowell(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
@@ -337,29 +342,352 @@ class TestProbitCG(CheckBinaryResults):
         if iswindows:   # does this work with classmethod?
             raise SkipTest("fmin_cg sometimes fails to converge on windows")
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="cg",
-            disp=0, maxiter=500)
+            disp=0, maxiter=500, gtol=1e-06)
 
 class TestProbitNCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
             disp=0, avextol=1e-8)
 
+
+class CheckLikelihoodModelL1(object):
+    """
+    For testing results generated with L1 regularization
+    """
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(
+                self.res1.conf_int(), self.res2.conf_int, DECIMAL_4)
+
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
+
+    def test_nnz_params(self):
+        assert_almost_equal(
+                self.res1.nnz_params, self.res2.nnz_params, DECIMAL_4)
+
+    def test_aic(self):
+        assert_almost_equal(
+                self.res1.aic, self.res2.aic, DECIMAL_3)
+
+    def test_bic(self):
+        assert_almost_equal(
+                self.res1.bic, self.res2.bic, DECIMAL_3)
+
+
+class TestProbitL1(CheckLikelihoodModelL1):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        alpha = np.array([0.1, 0.2, 0.3, 10]) #/ data.exog.shape[0]
+        cls.res1 = Probit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=alpha, disp=0, trim_mode='auto',
+            auto_trim_tol=0.02, acc=1e-10, maxiter=1000)
+        res2 = DiscreteL1()
+        res2.probit()
+        cls.res2 = res2
+
+    def test_cov_params(self):
+        assert_almost_equal(
+                self.res1.cov_params(), self.res2.cov_params, DECIMAL_4)
+
+
+class TestMNLogitL1(CheckLikelihoodModelL1):
+    @classmethod
+    def setupClass(cls):
+        anes_data = sm.datasets.anes96.load()
+        anes_exog = anes_data.exog
+        anes_exog = sm.add_constant(anes_exog, prepend=False)
+        mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
+        alpha = 10. * np.ones((mlogit_mod.J - 1, mlogit_mod.K)) #/ anes_exog.shape[0]
+        alpha[-1,:] = 0
+        cls.res1 = mlogit_mod.fit_regularized(
+                method='l1', alpha=alpha, trim_mode='auto', auto_trim_tol=0.02,
+                acc=1e-10, disp=0)
+        res2 = DiscreteL1()
+        res2.mnlogit()
+        cls.res2 = res2
+
+
+class TestLogitL1(CheckLikelihoodModelL1):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.alpha = 3 * np.array([0., 1., 1., 1.]) #/ data.exog.shape[0]
+        cls.res1 = Logit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=cls.alpha, disp=0, trim_mode='size',
+            size_trim_tol=1e-5, acc=1e-10, maxiter=1000)
+        res2 = DiscreteL1()
+        res2.logit()
+        cls.res2 = res2
+
+    def test_cov_params(self):
+        assert_almost_equal(
+                self.res1.cov_params(), self.res2.cov_params, DECIMAL_4)
+
+
+class TestCVXOPT(object):
+    @classmethod
+    def setupClass(self):
+        self.data = sm.datasets.spector.load()
+        self.data.exog = sm.add_constant(self.data.exog, prepend=True)
+
+    def test_cvxopt_versus_slsqp(self):
+        #Compares resutls from cvxopt to the standard slsqp
+        if has_cvxopt:
+            self.alpha = 3. * np.array([0, 1, 1, 1.]) #/ self.data.endog.shape[0]
+            res_slsqp = Logit(self.data.endog, self.data.exog).fit_regularized(
+                method="l1", alpha=self.alpha, disp=0, acc=1e-10, maxiter=1000,
+                trim_mode='auto')
+            res_cvxopt = Logit(self.data.endog, self.data.exog).fit_regularized(
+                method="l1_cvxopt_cp", alpha=self.alpha, disp=0, abstol=1e-10,
+                trim_mode='auto', auto_trim_tol=0.01, maxiter=1000)
+            assert_almost_equal(res_slsqp.params, res_cvxopt.params, DECIMAL_4)
+        else:
+            raise SkipTest("Skipped test_cvxopt since cvxopt is not available")
+
+
+class TestSweepAlphaL1(object):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.model = Logit(data.endog, data.exog)
+        cls.alphas = np.array(
+                   [[0.1, 0.1, 0.1, 0.1],
+                    [0.4, 0.4, 0.5, 0.5],
+                    [0.5, 0.5, 1, 1]]) #/ data.exog.shape[0]
+        cls.res1 = DiscreteL1()
+        cls.res1.sweep()
+
+    def test_sweep_alpha(self):
+        for i in range(3):
+            alpha = self.alphas[i, :]
+            res2 = self.model.fit_regularized(
+                    method="l1", alpha=alpha, disp=0, acc=1e-10,
+                    trim_mode='off', maxiter=1000)
+            assert_almost_equal(res2.params, self.res1.params[i], DECIMAL_4)
+
+
+class CheckL1Compatability(object):
+    """
+    Tests compatability between l1 and unregularized by setting alpha such
+    that certain parameters should be effectively unregularized, and others
+    should be ignored by the model.
+    """
+    def test_params(self):
+        m = self.m
+        assert_almost_equal(
+            self.res_unreg.params, self.res_reg.params[:m], DECIMAL_4)
+        # The last entry should be close to zero
+        assert_almost_equal(0, self.res_reg.params[m:], DECIMAL_4)
+
+    def test_cov_params(self):
+        m = self.m
+        # The restricted cov_params should be equal
+        assert_almost_equal(
+            self.res_unreg.cov_params(), self.res_reg.cov_params()[:m, :m],
+            DECIMAL_1)
+
+    def test_df(self):
+        assert_equal(self.res_unreg.df_model, self.res_reg.df_model)
+        assert_equal(self.res_unreg.df_resid, self.res_reg.df_resid)
+
+    def test_t_test(self):
+        m = self.m
+        kvars = self.kvars
+        t_unreg = self.res_unreg.t_test(np.eye(m))
+        t_reg = self.res_reg.t_test(np.eye(kvars))
+        assert_almost_equal(t_unreg.effect, t_reg.effect[:m], DECIMAL_3)
+        assert_almost_equal(t_unreg.sd, t_reg.sd[:m], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.sd[m])
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.tvalue[m])
+
+    def test_f_test(self):
+        m = self.m
+        kvars = self.kvars
+        f_unreg = self.res_unreg.f_test(np.eye(m))
+        f_reg = self.res_reg.f_test(np.eye(kvars)[:m])
+        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_2)
+        assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
+
+    def test_bad_r_matrix(self):
+        kvars = self.kvars
+        assert_raises(ValueError, self.res_reg.f_test, np.eye(kvars) )
+
+
+class TestPoissonL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 10 # Number of variables
+        cls.m = 7 # Number of unregularized parameters
+        rand_data = sm.datasets.randhie.load()
+        rand_exog = rand_data.exog.view(float).reshape(len(rand_data.exog), -1)
+        rand_exog = sm.add_constant(rand_exog, prepend=True)
+        # Drop some columns and do an unregularized fit
+        exog_no_PSI = rand_exog[:, :cls.m]
+        cls.res_unreg = sm.Poisson(
+            rand_data.endog, exog_no_PSI).fit(method="newton")
+        # Do a regularized fit with alpha, effectively dropping the last column
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
+        alpha[:cls.m] = 0
+        cls.res_reg = sm.Poisson(rand_data.endog, rand_exog).fit_regularized(
+            method='l1', alpha=alpha, disp=1, acc=1e-10, maxiter=2000,
+            trim_mode='auto')
+
+
+class TestLogitL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 4 # Number of variables
+        cls.m = 3 # Number of unregularized parameters
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        # Do a regularized fit with alpha, effectively dropping the last column
+        alpha = np.array([0, 0, 0, 10])
+        cls.res_reg = Logit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
+            trim_mode='auto')
+        # Actually drop the last columnand do an unregularized fit
+        exog_no_PSI = data.exog[:, :cls.m]
+        cls.res_unreg = Logit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
+
+class TestMNLogitL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 4 # Number of variables
+        cls.m = 3 # Number of unregularized parameters
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        alpha = np.array([0, 0, 0, 10])
+        cls.res_reg = MNLogit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
+            trim_mode='auto')
+        # Actually drop the last columnand do an unregularized fit
+        exog_no_PSI = data.exog[:, :cls.m]
+        cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
+            disp=0, tol=1e-15)
+#
+    def test_t_test(self):
+        m = self.m
+        kvars = self.kvars
+        t_unreg = self.res_unreg.t_test(np.eye(m))
+        t_reg = self.res_reg.t_test(np.eye(kvars))
+        assert_almost_equal(t_unreg.effect, t_reg.effect[:m], DECIMAL_3)
+        assert_almost_equal(t_unreg.sd, t_reg.sd[:m], DECIMAL_3)
+        assert_almost_equal(np.nan, t_reg.sd[m])
+        assert_almost_equal(t_unreg.tvalue, t_reg.tvalue[:m, :m], DECIMAL_3)
+
+    def test_f_test(self):
+        raise SkipTest("Skipped test_f_test for MNLogit")
+
+
+class TestProbitL1Compatability(CheckL1Compatability):
+    @classmethod
+    def setupClass(cls):
+        cls.kvars = 4 # Number of variables
+        cls.m = 3 # Number of unregularized parameters
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        alpha = np.array([0, 0, 0, 10])
+        cls.res_reg = Probit(data.endog, data.exog).fit_regularized(
+            method="l1", alpha=alpha, disp=0, acc=1e-15, maxiter=2000,
+            trim_mode='auto')
+        # Actually drop the last columnand do an unregularized fit
+        exog_no_PSI = data.exog[:, :cls.m]
+        cls.res_unreg = Probit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
+
+
+class CompareL1(object):
+    """
+    For checking results for l1 regularization.
+    Assumes self.res1 and self.res2 are two legitimate models to be compared.
+    """
+    def test_basic_results(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+        assert_almost_equal(self.res1.cov_params(), self.res2.cov_params(), DECIMAL_4)
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int(), DECIMAL_4)
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
+        assert_almost_equal(self.res1.pred_table(), self.res2.pred_table(), DECIMAL_4)
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
+        assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_4)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_4)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_4)
+        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
+
+
+class CompareL11D(CompareL1):
+    """
+    Check t and f tests.  This only works for 1-d results
+    """
+    def test_tests(self):
+        restrictmat = np.eye(len(self.res1.params.ravel()))
+        assert_almost_equal(self.res1.t_test(restrictmat).pvalue,
+                            self.res2.t_test(restrictmat).pvalue, DECIMAL_4)
+        assert_almost_equal(self.res1.f_test(restrictmat).pvalue,
+                            self.res2.f_test(restrictmat).pvalue, DECIMAL_4)
+
+
+class TestL1AlphaZeroLogit(CompareL11D):
+    """
+    Compares l1 model with alpha = 0 to the unregularized model.
+    """
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.res1 = Logit(data.endog, data.exog).fit_regularized(
+                method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1000,
+                trim_mode='auto', auto_trim_tol=0.01)
+        cls.res2 = Logit(data.endog, data.exog).fit(disp=0, tol=1e-15)
+
+
+class TestL1AlphaZeroProbit(CompareL11D):
+    """
+    Compares l1 model with alpha = 0 to the unregularized model.
+    """
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=True)
+        cls.res1 = Probit(data.endog, data.exog).fit_regularized(
+                method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1000,
+                trim_mode='auto', auto_trim_tol=0.01)
+        cls.res2 = Probit(data.endog, data.exog).fit(disp=0, tol=1e-15)
+
+
+class TestL1AlphaZeroMNLogit(CompareL1):
+    @classmethod
+    def setupClass(cls):
+        data = sm.datasets.anes96.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = MNLogit(data.endog, data.exog).fit_regularized(
+                method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1000,
+                trim_mode='auto', auto_trim_tol=0.01)
+        cls.res2 = MNLogit(data.endog, data.exog).fit(disp=0, tol=1e-15)
+
+
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Logit(data.endog, data.exog).fit(method="newton", disp=0)
         res2 = Spector()
         res2.logit()
@@ -407,7 +735,7 @@ class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
         raise SkipTest
 
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.logit()
         cls.res2 = res2
@@ -419,7 +747,7 @@ class TestPoissonNewton(CheckModelResults):
     def setupClass(cls):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
-        exog = sm.add_constant(data.exog)
+        exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
         res2 = RandHIE()
         res2.poisson()
@@ -446,7 +774,7 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         data = sm.datasets.anes96.load()
         cls.data = data
         exog = data.exog
-        exog = sm.add_constant(exog)
+        exog = sm.add_constant(exog, prepend=False)
         cls.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
         res2 = Anes()
         res2.mnlogit_basezero()
@@ -466,7 +794,7 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
         data = self.data
         vote = data.data['vote']
         exog = np.column_stack((data.exog, vote))
-        exog = sm.add_constant(exog)
+        exog = sm.add_constant(exog, prepend=False)
         res = MNLogit(data.endog, exog).fit(method="newton", disp=0)
         me = res.get_margeff(dummy=True)
         assert_almost_equal(me.margeff, self.res2.margeff_dydx_dummy_overall,
@@ -572,7 +900,7 @@ def test_perfect_prediction():
 def test_poisson_predict():
     #GH: 175, make sure poisson predict works without offset and exposure
     data = sm.datasets.randhie.load()
-    exog = sm.add_constant(data.exog)
+    exog = sm.add_constant(data.exog, prepend=True)
     res = sm.Poisson(data.endog, exog).fit(method='newton', disp=0)
     pred1 = res.predict()
     pred2 = res.predict(exog)

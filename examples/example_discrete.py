@@ -27,6 +27,14 @@ print logit_res.params
 logit_margeff = logit_res.get_margeff(method='dydx', at='overall')
 print logit_margeff.summary()
 
+#l1 regularized logit
+#-----------
+alpha = 0.1 * len(spector_data.endog) * np.ones(spector_data.exog.shape[1])
+alpha[-1] = 0
+logit_l1_res = logit_mod.fit_regularized(method='l1', alpha=alpha)
+print logit_l1_res.summary()
+
+
 # As in all the discrete data models presented below, we can print a nice
 # summary of results:
 print logit_res.summary()
@@ -58,6 +66,13 @@ print mlogit_res.params
 mlogit_margeff = mlogit_res.get_margeff()
 print mlogit_margeff.summary()
 
+#l1 regularized Multinomial Logit
+#-----------------
+alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+alpha[-1,:] = 0
+mlogit_mod2 = sm.MNLogit(anes_data.endog, anes_exog)
+mlogit_l1_res = mlogit_mod2.fit_regularized(method='l1', alpha=alpha)
+print mlogit_l1_res.summary()
 
 #Poisson model
 #-------------
@@ -76,12 +91,18 @@ print poisson_res.summary()
 poisson_margeff = poisson_res.get_margeff()
 print poisson_margeff.summary()
 
+# l1 regularized Poisson model
+poisson_mod2 = sm.Poisson(rand_data.endog, rand_exog)
+alpha = 0.1 * len(rand_data.endog) * np.ones(rand_exog.shape[1])
+alpha[-1] = 0
+poisson_l1_res = poisson_mod2.fit_regularized(method='l1', alpha=alpha)
+
 #Alternative solvers
 #-------------------
 
 # The default method for fitting discrete data MLE models is Newton-Raphson.
 # You can use other solvers by using the ``method`` argument:
-mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
+mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=500)
 
 #.. The below needs a lot of iterations to get it right?
 #.. TODO: Add a technical note on algorithms
