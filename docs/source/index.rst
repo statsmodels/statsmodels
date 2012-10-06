@@ -41,32 +41,30 @@ described in `results.__doc__` and results methods have their own docstrings.
 Basic Documentation
 -------------------
 
-.. toctree::
-   :maxdepth: 1
+.. toctree:: 
+    :maxdepth: 3
+    
+    introduction
+    gettingstarted
+    install
+    related
 
-   introduction
-   gettingstarted
-   install
-   related
-
-The following provide more information about the structure and development of
+Information about the structure and development of
 statsmodels:
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 3
 
-   importpaths
-   pitfalls
-   dev/index
-   dev/internal
-
-
+    importpaths
+    pitfalls
+    dev/index
+    dev/internal
 
 Table of Contents
 -----------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    regression
    glm
