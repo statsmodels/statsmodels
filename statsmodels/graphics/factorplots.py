@@ -4,10 +4,9 @@ from statsmodels.graphics.plottools import rainbow
 import utils
 
 
-def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xlabel=None,
-                     ylabel=None, colors=[], markers=[], linestyles=[],
-                     legendloc='best', legendtitle=None, x_levels=None,
-                     trace_levels=None, **kwargs):
+def interaction_plot(x, trace, response, x_levels, func=np.mean, ax=None, plottype='b', xlabel=None,
+                     ylabel=None, colors=[], markers=[], linestyles=[], legendtitle=None,
+                     legendloc='best', **kwargs):
     """
     Interaction plot for factor level statistics
 
@@ -32,9 +31,6 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xl
     x_levels: dict
         maps categorial levels (keys, str) to factor codings (values, int)
         for the x factor.
-    trace_levels: dict
-        maps categorial levels (keys, str) to factor codings (values, int)
-        for the trace factor.
     plottype : str {'line', 'scatter', 'both'}, optional
         The type of plot to return. Can be 'l', 's', or 'b'
     ax : axes, optional
@@ -85,9 +81,6 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xl
        import matplotlib.pyplot as plt
        #plt.show()
     """
-    # this is a hack!
-    x_levels = kwargs.pop('x_levels') if 'x_levels' in kwargs else None
-    trace_levels = (kwargs.pop('trace_levels') if 'trace_levels' in kwargs else None)
 
     from pandas import DataFrame
     fig, ax = utils.create_mpl_ax(ax)
@@ -115,23 +108,17 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xl
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
 
-    if x_levels == dict:
+    if isinstance(x_levels, dict):
         x = _recode(x, x_levels)
 
     elif x_levels != None:
         raise ValueError('%s is not a valid option.'
                          'A dict is required' % x_levels)
 
-    if trace_levels == dict:
-        trace = _recode(trace, trace_levels)
-
-    elif trace_levels != None:
-        raise ValueError('%s is not a valid option.'
-                         'A dict is required' % trace_levels)
-
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
 
+    # return data
     # check plot args
     n_trace = len(plot_data['trace'].unique())
 
@@ -228,3 +215,14 @@ def _recode(a, levels):
             out.name = name
 
         return out
+
+
+
+
+def test_kwargs(x, func=np.mean, ax=None, plottype='b', xlabel=None,
+                ylabel=None, colors=[], markers=[], linestyles=[],
+                legendloc='best', legendtitle=None, x_levels=None,
+                **kwargs):
+    x_levels = kwargs.pop('x_levels') if 'x_levels' in kwargs else None
+    print x_levels
+    print kwargs
