@@ -118,7 +118,7 @@ class TestGradMNLogit(CheckGradLoglike):
             assert_almost_equal(he, hefd, decimal=7)
             hefd = numdiff.approx_fprime(test_params, self.mod.score,
                                          centered=True)
-            assert_almost_equal(he, hefd, decimal=5)
+            assert_almost_equal(he, hefd, decimal=4)
             hefd = numdiff.approx_fprime(test_params, self.mod.score, 1e-9,
                                          centered=False)
             assert_almost_equal(he, hefd, decimal=2)
