@@ -215,14 +215,3 @@ def _recode(a, levels):
             out.name = name
 
         return out
-
-
-
-
-def test_kwargs(x, func=np.mean, ax=None, plottype='b', xlabel=None,
-                ylabel=None, colors=[], markers=[], linestyles=[],
-                legendloc='best', legendtitle=None, x_levels=None,
-                **kwargs):
-    x_levels = kwargs.pop('x_levels') if 'x_levels' in kwargs else None
-    print x_levels
-    print kwargs
