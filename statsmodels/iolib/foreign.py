@@ -440,6 +440,17 @@ def _set_endianness(endianness):
         raise ValueError("Endianness %s not understood" % endianness)
 
 def _dtype_to_stata_type(dtype):
+    """
+    Converts dtype types to stata types. Returns the byte of the given ordinal.
+    See TYPE_MAP and comments for an explanation. This is also explained in
+    the dta spec.
+    1 - 244 are strings of this length
+    251 - chr(251) - for int8 and int16
+    252 - chr(252) - for int32
+    253 - chr(253) - for int64
+    254 - chr(254) - for float32
+    255 - chr(255) - double
+    """
     #TODO: expand to handle datetime to integer conversion
     if isinstance(dtype.type, np.string_): # might have to coerce objects here
         return chr(dtype.itemsize)
@@ -458,6 +469,18 @@ def _dtype_to_stata_type(dtype):
                          "Please report an error to the developers." % dtype)
 
 def _dtype_to_default_stata_fmt(dtype):
+    """
+    Maps numpy dtype to stata's default format for this type. Not terribly
+    important since users can change this in Stata. Semantics are
+
+    string  -> "%sDD" where DD is the length of the string
+    float64 -> "%10.0g"
+    float32 -> "%9.0g"
+    int64   -> "%9.0g"
+    int32   -> "%9.0g"
+    int16   -> "%9.0g"
+    int8    -> "%8.0g"
+    """
     #TODO: expand this to handle a default datetime format?
     if isinstance(dtype.type, np.string_): # might have to coerce objects here
         return "%" + str(dtype.itemsize) + "s"
@@ -476,9 +499,39 @@ def _dtype_to_default_stata_fmt(dtype):
                          "Please report an error to the developers." % dtype)
 
 def _pad_bytes(name, length):
+    """
+    Takes a char string and pads it wih null bytes until it's length chars
+    """
     return name + "\x00" * (length - len(name))
 
+def _default_names(nvar):
+    """
+    Returns default Stata names v1, v2, ... vnvar
+    """
+    return ["v%d" % i for i in range(1,nvar+1)]
+
 class StataWriter(object):
+    """
+    A class for writing Stata binary dta files from array-like objects
+
+    Parameters
+    ----------
+    fname : file path or buffer
+        Where to save the dta file.
+    data : array-like
+        Array-like input to save
+    encoding : str
+        Default is latin-1. Note that Stata does not support unicode.
+    byteorder : str
+        Can be ">", "<", "little", or "big". The default is None which uses
+        `sys.byteorder`
+
+    Returns
+    -------
+    writer : StataWriter instance
+        The StataWriter instance has a write_file method, which will
+        write the file to the given `fname`.
+    """
     #type          code
     #--------------------
     #str1        1 = 0x01
@@ -502,21 +555,75 @@ class StataWriter(object):
             (-2147483647, 2147483620), 'f': (-1.701e+38, +1.701e+38), 'd':
             (-1.798e+308, +8.988e+307) }
     def __init__(self, fname, data, encoding="latin-1", byteorder=None):
-        data = np.asarray(data)
-        if data_util._is_structured_ndarray(data):
-            self.nobs = len(data)
-            self.nvar = len(data.dtype)
-        else:
-            if data.ndim == 1:
-                data = data[:,None]
-            self.nobs, self.nvar = data.shape
-        self.data = data
+        # attach nobs, nvars, data, varlist, typlist
+        if data_util._is_using_pandas(data, None):
+            self._prepare_pandas(data)
+
+        elif data_util._is_array_like(data, None):
+            data = np.asarray(data)
+            if data_util._is_structured_ndarray(data):
+                self._prepare_structured_array(data)
+            else:
+                self._prepare_ndarray(data)
+
+        else: # pragma : no cover
+            raise ValueError("Type %s for data not understood" % type(data))
+
 
         if byteorder is None:
             byteorder = sys.byteorder
         self._byteorder = _set_endianness(byteorder)
         self._encoding = encoding
         self._file = _open_file_binary_write(fname, encoding)
+
+    def _prepare_structured_array(self, data):
+        self.nobs = len(data)
+        self.nvar = len(data.dtype)
+        self.data = data
+        self.datarows = iter(data)
+        dtype = data.dtype
+        if dtype.names is None:
+            varlist = _default_names(nvar)
+        else:
+            varlist = dtype.names
+        self.varlist = varlist
+        self.typlist = [_dtype_to_stata_type(dtype[i])
+                        for i in range(self.nvar)]
+        self.fmtlist = [_dtype_to_default_stata_fmt(dtype[i])
+                        for i in range(self.nvar)]
+
+    def _prepare_ndarray(self, data):
+        if data.ndim == 1:
+            data = data[:,None]
+        self.nobs, self.nvar = data.shape
+        self.data = data
+        self.datarows = iter(data)
+        #TODO: this should be user settable
+        dtype = data.dtype
+        self.varlist = _default_names(self.nvar)
+        self.typlist = [_dtype_to_stata_type(dtype) for i in range(self.nvar)]
+        self.fmtlist = [_dtype_to_default_stata_fmt(dtype)
+                        for i in range(self.nvar)]
+
+    def _prepare_pandas(self, data):
+        #NOTE: we might need a different API / class for pandas objects so
+        # we can set different semantics - handle this with a PR to pandas.io
+        class DataFrameRowIter(object):
+            def __init__(self, data):
+                self.data = data
+
+            def __iter__(self):
+                for i, row in data.iterrows():
+                    yield row
+
+        data = data.reset_index()
+        self.datarows = DataFrameRowIter(data)
+        self.nobs, self.nvar = data.shape
+        self.data = data
+        self.varlist = data.columns.tolist()
+        dtypes = data.dtypes
+        self.typlist = [_dtype_to_stata_type(dt) for dt in dtypes]
+        self.fmtlist = [_dtype_to_default_stata_fmt(dt) for dt in dtypes]
 
     def write_file(self):
         self._write_header()
@@ -561,40 +668,26 @@ class StataWriter(object):
     def _write_descriptors(self, typlist=None, varlist=None, srtlist=None,
                            fmtlist=None, lbllist=None):
         nvar = self.nvar
-        dtype = self.data.dtype
         # typlist, length nvar, format byte array
-        typlist = []
-        for i in range(nvar):
-            if len(dtype):
-                typ = _dtype_to_stata_type(dtype[i])
-            else:
-                typ = _dtype_to_stata_type(dtype)
+        for typ in self.typlist:
             self._file.write(typ)
-            typlist.append(typ)
-        self.typlist = typlist
+
         # varlist, length 33*nvar, char array, null terminated
-        for i in range(nvar):
-            if dtype.names:
-                name = self._null_terminate(dtype.names[i], self._encoding)
-                name = _pad_bytes(name[:32], 33)
-            else:
-                name = "v%d" % i
-                name = _pad_bytes(name, 33)
+        for name in self.varlist:
+            name = self._null_terminate(name, self._encoding)
+            name = _pad_bytes(name[:32], 33)
             self._file.write(name)
 
         # srtlist, 2*(nvar+1), int array, encoded by byteorder
         srtlist = _pad_bytes("", (2*(nvar+1)))
         self._file.write(srtlist)
+
         # fmtlist, 49*nvar, char array
-        for i in range(nvar):
-            if len(dtype):
-                fmt = _dtype_to_default_stata_fmt(dtype[i])
-            else:
-                fmt = _dtype_to_default_stata_fmt(dtype)
+        for fmt in self.fmtlist:
             self._file.write(_pad_bytes(fmt, 49))
 
         # lbllist, 33*nvar, char array
-        #NOTE: this is where you could get fancy with pandas objects
+        #NOTE: this is where you could get fancy with pandas categorical type
         for i in range(nvar):
             self._file.write(_pad_bytes("", 33))
 
@@ -605,7 +698,7 @@ class StataWriter(object):
                 self._file.write(_pad_bytes("", 81))
 
     def _write_data(self):
-        data = self.data
+        data = self.datarows
         byteorder = self._byteorder
         TYPE_MAP = self.TYPE_MAP
         typlist = self.typlist
