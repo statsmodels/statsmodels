@@ -10,11 +10,13 @@ See also
 numpy.lib.io
 """
 
-from struct import unpack, calcsize
+from struct import unpack, calcsize, pack
+from datetime import datetime
 import sys
 import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
 from statsmodels.compatnp.py3k import asbytes
+import statsmodels.tools.data as data_util
 
 
 def is_py3():
@@ -419,6 +421,214 @@ class StataReader(object):
             return map(lambda i: self._unpack(typlist[i],
                 self._file.read(self._col_size(i))),
                 range(self._header['nvar']))
+
+def _open_file_binary_write(fname, encoding):
+    if hasattr(fname, 'write'):
+        if 'b' not in fname.mode:
+            return fname
+    if PY3:
+        return open(fname, "wb", encoding=encoding)
+    else:
+        return open(fname, "wb")
+
+def _set_endianness(endianness):
+    if endianness.lower() in ["<", "little"]:
+        return "<"
+    elif endianness.lower() in [">", "big"]:
+        return ">"
+    else: # pragma : no cover
+        raise ValueError("Endianness %s not understood" % endianness)
+
+def _dtype_to_stata_type(dtype):
+    #TODO: expand to handle datetime to integer conversion
+    if isinstance(dtype.type, np.string_): # might have to coerce objects here
+        return chr(dtype.itemsize)
+    elif dtype == np.float64:
+        return chr(255)
+    elif dtype == np.float32:
+        return chr(254)
+    elif dtype == np.int64:
+        return chr(253)
+    elif dtype == np.int32:
+        return chr(252)
+    elif dtype == np.int8 or dtype == np.int16: # ok to assume bytes?
+        return chr(251)
+    else: # pragma : no cover
+        raise ValueError("Data type %s not currently understood. "
+                         "Please report an error to the developers." % dtype)
+
+def _dtype_to_default_stata_fmt(dtype):
+    #TODO: expand this to handle a default datetime format?
+    if isinstance(dtype.type, np.string_): # might have to coerce objects here
+        return "%" + str(dtype.itemsize) + "s"
+    elif dtype == np.float64:
+        return "%10.0g"
+    elif dtype == np.float32:
+        return "%9.0g"
+    elif dtype == np.int64:
+        return "%9.0g"
+    elif dtype == np.int32:
+        return "%8.0g"
+    elif dtype == np.int8 or dtype == np.int16: # ok to assume bytes?
+        return "%8.0g"
+    else: # pragma : no cover
+        raise ValueError("Data type %s not currently understood. "
+                         "Please report an error to the developers." % dtype)
+
+def _pad_bytes(name, length):
+    return name + "\x00" * (length - len(name))
+
+class StataWriter(object):
+    #type          code
+    #--------------------
+    #str1        1 = 0x01
+    #str2        2 = 0x02
+    #...
+    #str244    244 = 0xf4
+    #byte      251 = 0xfb  (sic)
+    #int       252 = 0xfc
+    #long      253 = 0xfd
+    #float     254 = 0xfe
+    #double    255 = 0xff
+    #--------------------
+    #NOTE: the byte type seems to be reserved for categorical variables
+    # with a label, but the underlying variable is -127 to 100
+    # we're going to drop the label and cast to int
+    DTYPE_MAP = dict(zip(range(1,245), ['a' + str(i) for i in range(1,245)]) + \
+                    [(251, np.int16),(252, np.int32),(253, int),
+                        (254, np.float32), (255, np.float64)])
+    TYPE_MAP = range(251)+list('bhlfd')
+    MISSING_VALUES = { 'b': (-127,100), 'h': (-32767, 32740), 'l':
+            (-2147483647, 2147483620), 'f': (-1.701e+38, +1.701e+38), 'd':
+            (-1.798e+308, +8.988e+307) }
+    def __init__(self, fname, data, encoding="latin-1", byteorder=None):
+        data = np.asarray(data)
+        if data_util._is_structured_ndarray(data):
+            self.nobs = len(data)
+            self.nvar = len(data.dtype)
+        else:
+            if data.ndim == 1:
+                data = data[:,None]
+            self.nobs, self.nvar = data.shape
+        self.data = data
+
+        if byteorder is None:
+            byteorder = sys.byteorder
+        self._byteorder = _set_endianness(byteorder)
+        self._encoding = encoding
+        self._file = _open_file_binary_write(fname, encoding)
+
+    def write_file(self):
+        self._write_header()
+        self._write_descriptors()
+        self._write_variable_labels()
+        # write 5 zeros for expansion fields
+        self._file.write(_pad_bytes("", 5))
+        self._write_data()
+        #self._write_value_labels()
+        self._file.close()
+
+    def _write_header(self, data_label=None, time_stamp=None):
+        byteorder = self._byteorder
+        # ds_format - just use 114
+        self._file.write(pack("b", 114))
+        # byteorder
+        self._file.write(byteorder == ">" and "\x01" or "\x02")
+        # filetype
+        self._file.write("\x01")
+        # unused
+        self._file.write("\x00")
+        # number of vars, 2 bytes
+        self._file.write(pack(byteorder+"h", self.nvar)[:2])
+        # number of obs, 4 bytes
+        self._file.write(pack(byteorder+"i", self.nobs)[:4])
+        # data label 81 bytes, char, null terminated
+        if data_label is None:
+            self._file.write(self._null_terminate(_pad_bytes("", 80),
+                             self._encoding))
+        else:
+            self._file.write(self._null_terminate(_pad_bytes(data_label[:80],
+                                80), self._encoding))
+        # time stamp, 18 bytes, char, null terminated
+        # format dd Mon yyyy hh:mm
+        if time_stamp is None:
+            time_stamp = datetime.now()
+        elif not isinstance(time_stamp, datetime):
+            raise ValueError("time_stamp should be datetime type")
+        self._file.write(self._null_terminate(
+                            time_stamp.strftime("%d %b %Y %H:%M"),
+                            self._encoding))
+
+    def _write_descriptors(self, typlist=None, varlist=None, srtlist=None,
+                           fmtlist=None, lbllist=None):
+        nvar = self.nvar
+        dtype = self.data.dtype
+        # typlist, length nvar, format byte array
+        typlist = []
+        for i in range(nvar):
+            if len(dtype):
+                typ = _dtype_to_stata_type(dtype[i])
+            else:
+                typ = _dtype_to_stata_type(dtype)
+            self._file.write(typ)
+            typlist.append(typ)
+        self.typlist = typlist
+        # varlist, length 33*nvar, char array, null terminated
+        for i in range(nvar):
+            if dtype.names:
+                name = self._null_terminate(dtype.names[i], self._encoding)
+                name = _pad_bytes(name[:32], 33)
+            else:
+                name = "v%d" % i
+                name = _pad_bytes(name, 33)
+            self._file.write(name)
+
+        # srtlist, 2*(nvar+1), int array, encoded by byteorder
+        srtlist = _pad_bytes("", (2*(nvar+1)))
+        self._file.write(srtlist)
+        # fmtlist, 49*nvar, char array
+        for i in range(nvar):
+            if len(dtype):
+                fmt = _dtype_to_default_stata_fmt(dtype[i])
+            else:
+                fmt = _dtype_to_default_stata_fmt(dtype)
+            self._file.write(_pad_bytes(fmt, 49))
+
+        # lbllist, 33*nvar, char array
+        #NOTE: this is where you could get fancy with pandas objects
+        for i in range(nvar):
+            self._file.write(_pad_bytes("", 33))
+
+    def _write_variable_labels(self, labels=None):
+        nvar = self.nvar
+        if labels is None:
+            for i in range(nvar):
+                self._file.write(_pad_bytes("", 81))
+
+    def _write_data(self):
+        data = self.data
+        byteorder = self._byteorder
+        TYPE_MAP = self.TYPE_MAP
+        typlist = self.typlist
+        for row in data:
+            #row = row.squeeze().tolist() # needed for structured arrays
+            for i,var in enumerate(row):
+                typ = ord(typlist[i])
+                if typ <= 244: # we've got a string
+                    if len(var) < typ:
+                        var = _pad_bytes(var, len(var) + 1)
+                    self._file.write(var)
+                else:
+                    self._file.write(pack(byteorder+TYPE_MAP[typ], var))
+
+    def _null_terminate(self, s, encoding):
+        null_byte = asbytes('\x00')
+        if PY3:
+            s += null_byte
+            return s.encode(encoding)
+        else:
+            s += null_byte
+            return s
 
 def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
                 pandas=False):
