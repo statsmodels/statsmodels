@@ -372,12 +372,13 @@ class WLS(RegressionModel):
         weights = np.array(weights)
         if weights.shape == ():
             weights = np.repeat(weights, len(endog))
-        nobs = exog.shape[0]
-        if weights.shape[0] != nobs and weights.size == nobs:
-            raise ValueError('Weights must be scalar or same length as design')
-        self.weights = weights.squeeze()
+        weights = weights.squeeze()
         super(WLS, self).__init__(endog, exog, missing=missing,
-                                  weights=self.weights)
+                                  weights=weights)
+        nobs = self.exog.shape[0]
+        weights = self.weights
+        if len(weights) != nobs and weights.size == nobs:
+            raise ValueError('Weights must be scalar or same length as design')
 
     def whiten(self, X):
         """
