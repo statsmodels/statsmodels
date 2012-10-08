@@ -436,11 +436,9 @@ class StataReader(object):
                                 encoding) for i in range(nvar)]
 
         # ignore expansion fields
-# When reading, read five bytes; the last four bytes now tell you the size of
-# the next read, which you discard.  You then continue like this until you
-# read 5 bytes of zeros.
-# TODO: The way I read this is that they both should be zero, but that's
-# not what we get.
+        # When reading, read five bytes; the last four bytes now tell you the
+        # size of the next read, which you discard.  You then continue like
+        # this until you read 5 bytes of zeros.
 
         while True:
             data_type = unpack(byteorder+'b', self._file.read(1))[0]
