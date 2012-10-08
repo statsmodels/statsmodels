@@ -424,8 +424,8 @@ class StataReader(object):
 
 def _open_file_binary_write(fname, encoding):
     if hasattr(fname, 'write'):
-        if 'b' not in fname.mode:
-            return fname
+        #if 'b' not in fname.mode:
+        return fname
     if PY3:
         return open(fname, "wb", encoding=encoding)
     else:
@@ -526,7 +526,6 @@ class StataWriter(object):
         self._file.write(_pad_bytes("", 5))
         self._write_data()
         #self._write_value_labels()
-        self._file.close()
 
     def _write_header(self, data_label=None, time_stamp=None):
         byteorder = self._byteorder
