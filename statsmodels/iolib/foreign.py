@@ -26,6 +26,81 @@ def is_py3():
     return False
 PY3 = is_py3()
 
+def _datetime_to_stata_elapsed_date(date, fmt):
+    """
+    Convert from SIF to datetime. http://www.stata.com/help.cgi?datetime
+
+    Parameters
+    ----------
+    date : datetime.datetime
+        The date to convert in Stata Internal Format given by fmt
+    fmt : str
+        The format to convert to. Can be, tc, tC, td, tw, tm, tq, th, ty
+
+    Notes
+    -----
+    datetime/c - tc
+        milliseconds since 01jan1960 00:00:00.000, assuming 86,400 s/day
+    datetime/C - tC - NOT IMPLEMENTED
+        milliseconds since 01jan1960 00:00:00.000, adjusted for leap seconds
+    date - td
+        days since 01jan1960 (01jan1960 = 0)
+    weekly date - tw
+        weeks since 1960w1
+        This assumes 52 weeks in a year, then adds 7 * remainder of the weeks.
+        The datetime value is the start of the week in terms of days in the
+        year, not ISO calendar weeks.
+    monthly date - tm
+        months since 1960m1
+    quarterly date - tq
+        quarters since 1960q1
+    half-yearly date - th
+        half-years since 1960h1 yearly
+    date - ty
+        years since 0000
+
+    If you don't have pandas with datetime support, then you can't do
+    milliseconds accurately.
+    """
+    stata_epoch = datetime.datetime(1960, 1, 1)
+    if fmt == "tc":
+        # assumes 86,400 seconds in a day
+        ymd_date = stata_epoch + datetime.timedelta(date / (86400*1000))
+        hours = (date % (86400*1000)) / (1000 * 60 * 60)
+        minutes = (date % (86400*1000) / (1000 * 60)) % (hours * 60)
+        seconds = (date % (86400*1000) / (1000)) % (hours * 60**2 + minutes * 60)
+        microseconds = (date % (86400*1000)) % (1000*(hours * 60**2 + minutes * 60 + seconds))
+        return datetime.datetime(ymd_date.year, ymd_date.month, ymd_date.day,
+                hours, minutes, seconds, microseconds)
+    elif fmt == "tC":
+        pass
+        raise NotImplementedError("Leap seconds are not currently handled")
+    elif fmt == "td":
+        return stata_epoch + datetime.timedelta(date)
+    elif fmt == "tw": # does not count leap days - 7 days is a week
+        year = datetime.datetime(stata_epoch.year + date / 52, 1, 1)
+        day_delta = (date  % 52 ) * 7
+        return year + datetime.timedelta(day_delta)
+    elif fmt == "tm":
+        year = stata_epoch.year + date / 12
+        month_delta = (date  % 12 ) + 1
+        return datetime.datetime(year, month_delta, 1)
+    elif fmt == "tq":
+        year = stata_epoch.year + date / 4
+        month_delta = (date % 4) * 3 + 1
+        return datetime.datetime(year, month_delta, 1)
+    elif fmt == "th":
+        year = stata_epoch.year + date / 2
+        month_delta = (date % 2) * 6 + 1
+        return datetime.datetime(year, month_delta, 1)
+    elif fmt == "ty":
+        if date > 0:
+            return datetime.datetime(date, 1, 1)
+        else:
+            return date
+    else:
+        raise ValueError("Date fmt %s not understood" % fmt)
+
 ### Helper classes for StataReader ###
 
 class _StataMissingValue(object):
