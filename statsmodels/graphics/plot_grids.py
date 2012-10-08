@@ -38,6 +38,7 @@ def _make_ellipse(mean, cov, ax, level=0.95, color=None):
     ax.add_artist(ell)
 
 
+@utils.drawifinteractive
 def scatter_ellipse(data, level=0.9, varnames=None, ell_kwds=None,
                     plot_kwds=None, add_titles=False, keep_ticks=False,
                     fig=None):

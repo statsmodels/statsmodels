@@ -22,6 +22,7 @@ __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog']
 
 
+@utils.drawifinteractive
 def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'):
     """Plot fit against one regressor.
 
@@ -82,6 +83,7 @@ def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'
 
 
 
+@utils.drawifinteractive
 def plot_regress_exog(res, exog_idx, exog_name='', fig=None):
     """Plot regression results against one regressor.
 
@@ -174,6 +176,7 @@ def _partial_regression(endog, exog_i, exog_others):
     return res1c, (res1a, res1b)
 
 
+@utils.drawifinteractive
 def plot_partregress_ax(endog, exog_i, exog_others, varname='',
                         title_fontsize=None, ax=None):
     """Plot partial regression for a single regressor.
@@ -217,6 +220,7 @@ def plot_partregress_ax(endog, exog_i, exog_others, varname='',
     return fig
 
 
+@utils.drawifinteractive
 def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
     """Plot partial regression for a set of regressors.
 
@@ -308,6 +312,7 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
     return fig
 
 
+@utils.drawifinteractive
 def plot_ccpr_ax(res, exog_idx=None, ax=None):
     """Plot CCPR against one regressor.
 
@@ -351,6 +356,7 @@ def plot_ccpr_ax(res, exog_idx=None, ax=None):
     return fig
 
 
+@utils.drawifinteractive
 def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
     """Generate CCPR plots against a set of regressors, plot in a grid.
 
@@ -413,6 +419,7 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
 
     return fig
 
+@utils.drawifinteractive
 def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
                 model_results=None, ax=None, **kwargs):
     """

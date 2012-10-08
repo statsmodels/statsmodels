@@ -3,7 +3,7 @@ import numpy as np
 from statsmodels.graphics.plottools import rainbow
 import utils
 
-
+@utils.drawifinteractive
 def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
                      xlabel=None, ylabel=None, colors=[], markers=[],
                      linestyles=[], legendloc='best', legendtitle=None,

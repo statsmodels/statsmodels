@@ -1,5 +1,5 @@
 """Helper functions for graphics with Matplotlib."""
-
+from functools import wraps
 
 __all__ = ['create_mpl_ax', 'create_mpl_fig']
 
@@ -89,3 +89,15 @@ def create_mpl_fig(fig=None, figsize=None):
         fig = plt.figure(figsize=figsize)
 
     return fig
+
+def drawifinteractive(func):
+    """
+    Decorates plot functions with a draw_if_interactive call.
+    """
+    @wraps(func)
+    def new(*args, **kwargs):
+        import matplotlib.pyplot as plt
+        fig = func(*args, **kwargs)
+        plt.draw_if_interactive()
+        return fig
+    return new
