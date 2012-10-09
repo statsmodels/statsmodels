@@ -11,7 +11,7 @@ numpy.lib.io
 """
 
 from struct import unpack, calcsize, pack
-from datetime import datetime
+import datetime
 import sys
 import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
@@ -26,7 +26,9 @@ def is_py3():
     return False
 PY3 = is_py3()
 
-def _datetime_to_stata_elapsed_date(date, fmt):
+_date_formats = ["%tc", "%tC", "%td", "%tw", "%tm", "%tq", "%th", "%ty"]
+
+def _stata_elapsed_date_to_datetime(date, fmt):
     """
     Convert from SIF to datetime. http://www.stata.com/help.cgi?datetime
 
@@ -62,42 +64,42 @@ def _datetime_to_stata_elapsed_date(date, fmt):
     If you don't have pandas with datetime support, then you can't do
     milliseconds accurately.
     """
+    #NOTE: we could run into overflow / loss of precision situations here
+    # casting to int, but I'm not sure what to do. datetime won't deal with
+    # numpy types and numpy datetime isn't mature enough / we can't rely on
+    # pandas version > 0.7.1
+    #TODO: IIRC relative delta doesn't play well with np.datetime?
     stata_epoch = datetime.datetime(1960, 1, 1)
-    if fmt == "tc":
-        # assumes 86,400 seconds in a day
-        ymd_date = stata_epoch + datetime.timedelta(date / (86400*1000))
-        hours = (date % (86400*1000)) / (1000 * 60 * 60)
-        minutes = (date % (86400*1000) / (1000 * 60)) % (hours * 60)
-        seconds = (date % (86400*1000) / (1000)) % (hours * 60**2 + minutes * 60)
-        microseconds = (date % (86400*1000)) % (1000*(hours * 60**2 + minutes * 60 + seconds))
-        return datetime.datetime(ymd_date.year, ymd_date.month, ymd_date.day,
-                hours, minutes, seconds, microseconds)
-    elif fmt == "tC":
-        pass
-        raise NotImplementedError("Leap seconds are not currently handled")
-    elif fmt == "td":
-        return stata_epoch + datetime.timedelta(date)
-    elif fmt == "tw": # does not count leap days - 7 days is a week
+    if fmt == "%tc":
+        from dateutil.relativedelta import relativedelta
+        return stata_epoch + relativedelta(microseconds=date*1000)
+    elif fmt == "%tC":
+        from warnings import warn
+        warn("Encountered %tC format. Leaving in Stata Internal Format.")
+        return date
+    elif fmt == "%td":
+        return stata_epoch + datetime.timedelta(int(date))
+    elif fmt == "%tw": # does not count leap days - 7 days is a week
         year = datetime.datetime(stata_epoch.year + date / 52, 1, 1)
         day_delta = (date  % 52 ) * 7
-        return year + datetime.timedelta(day_delta)
-    elif fmt == "tm":
+        return year + datetime.timedelta(int(day_delta))
+    elif fmt == "%tm":
         year = stata_epoch.year + date / 12
         month_delta = (date  % 12 ) + 1
         return datetime.datetime(year, month_delta, 1)
-    elif fmt == "tq":
+    elif fmt == "%tq":
         year = stata_epoch.year + date / 4
         month_delta = (date % 4) * 3 + 1
         return datetime.datetime(year, month_delta, 1)
-    elif fmt == "th":
+    elif fmt == "%th":
         year = stata_epoch.year + date / 2
         month_delta = (date % 2) * 6 + 1
         return datetime.datetime(year, month_delta, 1)
-    elif fmt == "ty":
+    elif fmt == "%ty":
         if date > 0:
             return datetime.datetime(date, 1, 1)
-        else:
-            return date
+        else: # don't do negative years bc can't mix dtypes in column
+            raise ValueError("Years before 0 not implemented")
     else:
         raise ValueError("Date fmt %s not understood" % fmt)
 
@@ -731,7 +733,7 @@ class StataWriter(object):
         # time stamp, 18 bytes, char, null terminated
         # format dd Mon yyyy hh:mm
         if time_stamp is None:
-            time_stamp = datetime.now()
+            time_stamp = datetime.datetime.now()
         elif not isinstance(time_stamp, datetime):
             raise ValueError("time_stamp should be datetime type")
         self._file.write(self._null_terminate(
@@ -796,7 +798,7 @@ class StataWriter(object):
             return s
 
 def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
-                pandas=False):
+                pandas=False, convert_dates=True):
     """
     Returns an ndarray or DataFrame from a Stata .dta file.
 
@@ -814,11 +816,14 @@ def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
         Defaults to `locale.getpreferredencoding`
     pandas : bool
         Optionally return a DataFrame instead of an ndarray
+    convert_dates : bool
+        If convert_dates is True, then Stata formatted dates will be converted
+        to datetime types according to the variable's format.
 
     Notes
     ------
-    Date types will be returned as their numeric value in Stata. A date
-    parser is not written yet.
+    The tC Stata Internal Format for dates is not handled. These values
+    will be returned in SIF even if convert_dates is True.
     """
     if isinstance(fname, basestring):
         fhd = StataReader(open(fname, 'rb'), missing_values=False,
@@ -838,6 +843,7 @@ def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
     nobs = header['nobs']
     numvars = header['nvar']
     varnames = header['varlist']
+    fmtlist = header['fmtlist']
     dataname = header['data_label']
     labels = header['vlblist'] # labels are thrown away unless DataArray
                                # type is used
@@ -861,10 +867,30 @@ def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
                     line[i] = convert_missing[np.issctype(types[i])]
         data[rownum] = tuple(line)
 
-    #TODO: make it possible to return plain array if all 'f8' for example
     if pandas:
         from pandas import DataFrame
-        return DataFrame.from_records(data)
+        data = DataFrame.from_records(data)
+        if convert_dates:
+            cols = np.where(map(lambda x : x in _date_formats, fmtlist))[0]
+            for col in cols:
+                i = col
+                col = data.columns[col]
+                data[col] = data[col].apply(_stata_elapsed_date_to_datetime,
+                        args=(fmtlist[i],))
+    elif convert_dates:
+        #date_cols = np.where(map(lambda x : x in _date_formats,
+        #                                                    fmtlist))[0]
+        # make the dtype for the datetime types
+        cols = np.where(map(lambda x : x in _date_formats, fmtlist))[0]
+        dtype = data.dtype.descr
+        dtype = [(dt[0], object) if i in cols else dt for i,dt in
+                 enumerate(dtype)]
+        data = data.astype(dtype) # have to copy
+        for col in cols:
+            def convert(x):
+                return _stata_elapsed_date_to_datetime(x, fmtlist[col])
+            data[data.dtype.names[col]] = map(convert,
+                                              data[data.dtype.names[col]])
     return data
 
 def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
