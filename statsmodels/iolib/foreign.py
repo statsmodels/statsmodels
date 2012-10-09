@@ -563,11 +563,14 @@ def _dtype_to_stata_type(dtype):
     See TYPE_MAP and comments for an explanation. This is also explained in
     the dta spec.
     1 - 244 are strings of this length
-    251 - chr(251) - for int8 and int16
-    252 - chr(252) - for int32
-    253 - chr(253) - for int64
-    254 - chr(254) - for float32
-    255 - chr(255) - double
+    251 - chr(251) - for int8 and int16, byte
+    252 - chr(252) - for int32, int
+    253 - chr(253) - for int64, long
+    254 - chr(254) - for float32, float
+    255 - chr(255) - double, double
+
+    If there are dates to convert, then dtype will already have the correct
+    type inserted.
     """
     #TODO: expand to handle datetime to integer conversion
     if isinstance(dtype.type, np.string_): # might have to coerce objects here
@@ -628,6 +631,30 @@ def _default_names(nvar):
     """
     return ["v%d" % i for i in range(1,nvar+1)]
 
+def _convert_datetime_to_stata_type(fmt):
+    """
+    Converts from one of the stata date formats to a type in TYPE_MAP
+    """
+    if fmt in ["tc", "%tc", "td", "%td", "tw", "%tw", "tm", "%tm", "tq",
+               "%tq", "th", "%th", "ty", "%ty"]:
+        return np.float64 # Stata expects doubles for SIFs
+    else:
+        raise ValueError("fmt %s not understood" % fmt)
+
+def _maybe_convert_to_int_keys(convert_dates, varlist):
+    new_dict = {}
+    for key in convert_dates:
+        if not convert_dates[key].startswith("%"): # make sure proper fmts
+            convert_dates[key] = "%" + convert_dates[key]
+        if key in varlist:
+            new_dict.update({varlist.index(key) : convert_dates[key]})
+        else:
+            if not isinstance(key, int):
+                raise ValueError("convery_dates key is not in varlist "
+                        "and is not an int")
+            new_dict.update({key : convert_dates[key]})
+    return new_dict
+
 class StataWriter(object):
     """
     A class for writing Stata binary dta files from array-like objects
@@ -637,7 +664,12 @@ class StataWriter(object):
     fname : file path or buffer
         Where to save the dta file.
     data : array-like
-        Array-like input to save
+        Array-like input to save. Pandas objects are also accepted.
+    convert_dates : dict
+        Dictionary mapping column of datetime types to the stata internal
+        format that you want to use for the dates. Options are
+        'tc', 'td', 'tm', 'tw', 'th', 'tq', 'ty'. Column can be either a
+        number or a name.
     encoding : str
         Default is latin-1. Note that Stata does not support unicode.
     byteorder : str
@@ -649,6 +681,16 @@ class StataWriter(object):
     writer : StataWriter instance
         The StataWriter instance has a write_file method, which will
         write the file to the given `fname`.
+
+    Examples
+    --------
+    >>> writer = StataWriter('./data_file.dta', data)
+    >>> writer.write_file()
+
+    Or with dates
+
+    >>> writer = StataWriter('./date_data_file.dta', date, {2 : 'tw'})
+    >>> writer.write_file()
     """
     #type          code
     #--------------------
@@ -672,7 +714,10 @@ class StataWriter(object):
     MISSING_VALUES = { 'b': (-127,100), 'h': (-32767, 32740), 'l':
             (-2147483647, 2147483620), 'f': (-1.701e+38, +1.701e+38), 'd':
             (-1.798e+308, +8.988e+307) }
-    def __init__(self, fname, data, encoding="latin-1", byteorder=None):
+    def __init__(self, fname, data, convert_dates=None, encoding="latin-1",
+                 byteorder=None):
+
+        self._convert_dates = convert_dates
         # attach nobs, nvars, data, varlist, typlist
         if data_util._is_using_pandas(data, None):
             self._prepare_pandas(data)
@@ -682,6 +727,9 @@ class StataWriter(object):
             if data_util._is_structured_ndarray(data):
                 self._prepare_structured_array(data)
             else:
+                if convert_dates is not None:
+                    raise ValueError("Not able to convert dates in a plain"
+                                     " ndarray.")
                 self._prepare_ndarray(data)
 
         else: # pragma : no cover
@@ -694,21 +742,42 @@ class StataWriter(object):
         self._encoding = encoding
         self._file = _open_file_binary_write(fname, encoding)
 
+
     def _prepare_structured_array(self, data):
         self.nobs = len(data)
         self.nvar = len(data.dtype)
         self.data = data
         self.datarows = iter(data)
         dtype = data.dtype
+        descr = dtype.descr
         if dtype.names is None:
             varlist = _default_names(nvar)
         else:
             varlist = dtype.names
+
+        # check for datetime and change the type
+        convert_dates = self._convert_dates
+        if convert_dates is not None:
+            convert_dates = _maybe_convert_to_int_keys(convert_dates,
+                                                      varlist)
+            self._convert_dates = convert_dates
+            for key in convert_dates:
+                descr[key] = (
+                        descr[key][0],
+                        _convert_datetime_to_stata_type(convert_dates[key])
+                                )
+            dtype = np.dtype(descr)
+
         self.varlist = varlist
         self.typlist = [_dtype_to_stata_type(dtype[i])
                         for i in range(self.nvar)]
         self.fmtlist = [_dtype_to_default_stata_fmt(dtype[i])
                         for i in range(self.nvar)]
+        # set the given format for the datetime cols
+        if convert_dates is not None:
+            for key in convert_dates:
+                self.fmtlist[key] = convert_dates[key]
+
 
     def _prepare_ndarray(self, data):
         if data.ndim == 1:
@@ -740,8 +809,20 @@ class StataWriter(object):
         self.data = data
         self.varlist = data.columns.tolist()
         dtypes = data.dtypes
+        convert_dates = self._convert_dates
+        if convert_dates is not None:
+            convert_dates = _maybe_convert_to_int_keys(convert_dates,
+                                                      self.varlist)
+            self._convert_dates = convert_dates
+            for key in convert_dates:
+                new_type = _convert_datetime_to_stata_type(convert_dates[key])
+                dtypes[key] = np.dtype(new_type)
         self.typlist = [_dtype_to_stata_type(dt) for dt in dtypes]
         self.fmtlist = [_dtype_to_default_stata_fmt(dt) for dt in dtypes]
+        # set the given format for the datetime cols
+        if convert_dates is not None:
+            for key in convert_dates:
+                self.fmtlist[key] = convert_dates[key]
 
     def write_file(self):
         self._write_header()
@@ -749,7 +830,10 @@ class StataWriter(object):
         self._write_variable_labels()
         # write 5 zeros for expansion fields
         self._file.write(_pad_bytes("", 5))
-        self._write_data()
+        if self._convert_dates is None:
+            self._write_data_nodates()
+        else:
+            self._write_data_dates()
         #self._write_value_labels()
 
     def _write_header(self, data_label=None, time_stamp=None):
@@ -815,7 +899,7 @@ class StataWriter(object):
             for i in range(nvar):
                 self._file.write(_pad_bytes("", 81))
 
-    def _write_data(self):
+    def _write_data_nodates(self):
         data = self.datarows
         byteorder = self._byteorder
         TYPE_MAP = self.TYPE_MAP
@@ -830,6 +914,29 @@ class StataWriter(object):
                     self._file.write(var)
                 else:
                     self._file.write(pack(byteorder+TYPE_MAP[typ], var))
+
+    def _write_data_dates(self):
+        convert_dates = self._convert_dates
+        data = self.datarows
+        byteorder = self._byteorder
+        TYPE_MAP = self.TYPE_MAP
+        typlist = self.typlist
+        for row in data:
+            #row = row.squeeze().tolist() # needed for structured arrays
+            for i,var in enumerate(row):
+                typ = ord(typlist[i])
+                #NOTE: If anyone finds this terribly slow, there is
+                # a vectorized way to convert dates, see genfromdta for going
+                # from int to datetime and reverse it. will copy data though
+                if i in convert_dates:
+                    var = _datetime_to_stata_elapsed(var, self.fmtlist[i])
+                if typ <= 244: # we've got a string
+                    if len(var) < typ:
+                        var = _pad_bytes(var, len(var) + 1)
+                    self._file.write(var)
+                else:
+                    self._file.write(pack(byteorder+TYPE_MAP[typ], var))
+
 
     def _null_terminate(self, s, encoding):
         null_byte = asbytes('\x00')
