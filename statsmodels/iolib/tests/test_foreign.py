@@ -3,6 +3,8 @@ Tests for iolib/foreign.py
 """
 
 from StringIO import StringIO
+from datetime import datetime
+
 from numpy.testing import *
 import numpy as np
 import statsmodels.api as sm
@@ -81,14 +83,11 @@ def test_stata_writer_pandas():
     dta2 = genfromdta(buf)
     ptesting.assert_frame_equal(dta.reset_index(), DataFrame.from_records(dta2))
 
-
 def test_stata_writer_unicode():
     # make sure to test with characters outside the latin-1 encoding
     pass
 
-
 def test_genfromdta_datetime():
-    from datetime import datetime
     results = [(datetime(2006, 11, 19, 23, 13, 20), 1479596223000,
             datetime(2010, 1, 20), datetime(2010, 1, 8), datetime(2010, 1, 1),
             datetime(1974, 7, 1), datetime(2010, 1, 1), datetime(2010, 1, 1)),
@@ -132,6 +131,26 @@ def test_date_converters():
     for i in year:
         assert_equal(_datetime_to_stata_elapsed(
                      _stata_elapsed_date_to_datetime(i, "ty"), "ty"), i)
+
+def test_datetime_roundtrip():
+    dta = np.array([(1, datetime(2010, 1, 1), 2),
+                    (2, datetime(2010, 2, 1), 3),
+                    (4, datetime(2010, 3, 1), 5)],
+                    dtype=[('var1', float), ('var2', object), ('var3', float)])
+    buf = StringIO()
+    writer = StataWriter(buf, dta, {"var2" : "tm"})
+    writer.write_file()
+    buf.seek(0)
+    dta2 = genfromdta(buf)
+    assert_equal(dta, dta2)
+
+    dta = DataFrame.from_records(dta)
+    buf = StringIO()
+    writer = StataWriter(buf, dta, {"var2" : "tm"})
+    writer.write_file()
+    buf.seek(0)
+    dta2 = genfromdta(buf, pandas=True)
+    ptesting.assert_frame_equal(dta, dta2.drop('index', axis=1))
 
 
 if __name__ == "__main__":
