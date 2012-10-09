@@ -7,7 +7,8 @@ from numpy.testing import *
 import numpy as np
 import statsmodels.api as sm
 import os
-from statsmodels.iolib.foreign import StataWriter, genfromdta
+from statsmodels.iolib.foreign import (StataWriter, genfromdta,
+            _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)
 from statsmodels.datasets import macrodata
 from pandas import DataFrame
 import pandas.util.testing as ptesting
@@ -101,6 +102,36 @@ def test_genfromdta_datetime():
     dta = genfromdta("results/time_series_examples.dta", pandas=True)
     assert_array_equal(dta.irow(0).tolist(), results[0])
     assert_array_equal(dta.irow(1).tolist(), results[1])
+
+def test_date_converters():
+    ms = [-1479597200000, -1e6, -1e5, -100, 1e5, 1e6, 1479597200000]
+    days = [-1e5, -1200, -800, -365, -50, 0, 50, 365, 800, 1200, 1e5]
+    weeks = [-1e4, -1e2, -53, -52, -51, 0, 51, 52, 53, 1e2, 1e4]
+    months = [-1e4, -1e3, -100, -13, -12, -11, 0, 11, 12, 13, 100, 1e3, 1e4]
+    quarter = [-100, -50, -5, -4, -3, 0, 3, 4, 5, 50, 100]
+    half = [-50, 40, 30, 10, 3, 2, 1, 0, 1, 2, 3, 10, 30, 40, 50]
+    year = [1, 50, 500, 1000, 1500, 1975, 2075]
+    for i in ms:
+        assert_equal(_datetime_to_stata_elapsed(
+                     _stata_elapsed_date_to_datetime(i, "tc"), "tc"), i)
+    for i in days:
+        assert_equal(_datetime_to_stata_elapsed(
+                     _stata_elapsed_date_to_datetime(i, "td"), "td"), i)
+    for i in weeks:
+        assert_equal(_datetime_to_stata_elapsed(
+                     _stata_elapsed_date_to_datetime(i, "tw"), "tw"), i)
+    for i in months:
+        assert_equal(_datetime_to_stata_elapsed(
+                     _stata_elapsed_date_to_datetime(i, "tm"), "tm"), i)
+    for i in quarter:
+        assert_equal(_datetime_to_stata_elapsed(
+                     _stata_elapsed_date_to_datetime(i, "tq"), "tq"), i)
+    for i in half:
+        assert_equal(_datetime_to_stata_elapsed(
+                     _stata_elapsed_date_to_datetime(i, "th"), "th"), i)
+    for i in year:
+        assert_equal(_datetime_to_stata_elapsed(
+                     _stata_elapsed_date_to_datetime(i, "ty"), "ty"), i)
 
 
 if __name__ == "__main__":
