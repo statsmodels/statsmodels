@@ -12,7 +12,7 @@ import os
 from statsmodels.iolib.foreign import (StataWriter, genfromdta,
             _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)
 from statsmodels.datasets import macrodata
-from pandas import DataFrame
+from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
 
 # Test precisions
@@ -66,8 +66,21 @@ def test_stata_writer_array():
     dta = dta.to_records(index=False)
     assert_array_equal(dta, dta2)
 
-def test_stata_writer_missing():
-    pass
+def test_missing_roundtrip():
+    buf = StringIO()
+    dta = np.array([(np.nan, np.inf, "")],
+                      dtype=[("double_miss", float), ("float_miss", np.float32),
+                              ("string_miss", "a1")])
+    writer = StataWriter(buf, dta)
+    writer.write_file()
+    buf.seek(0)
+    dta = genfromdta(buf, missing_flt=np.nan)
+    assert_(isnull(dta[0][0]))
+    assert_(isnull(dta[0][1]))
+    assert_(dta[0][2] == "")
+
+    dta = genfromdta("./data_missing.dta", missing_flt=-999)
+    assert_(np.all([dta[0][i] == -999 for i in range(5)]))
 
 def test_stata_writer_pandas():
     buf = StringIO()
