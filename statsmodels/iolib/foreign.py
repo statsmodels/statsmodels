@@ -28,16 +28,58 @@ PY3 = is_py3()
 
 _date_formats = ["%tc", "%tC", "%td", "%tw", "%tm", "%tq", "%th", "%ty"]
 
+def _datetime_to_stata_elapsed(date, fmt):
+    """
+    Convert from datetime to SIF. http://www.stata.com/help.cgi?datetime
+
+    Parameters
+    ----------
+    date : datetime.datetime
+        The date to convert to the Stata Internal Format given by fmt
+    fmt : str
+        The format to convert to. Can be, tc, td, tw, tm, tq, th, ty
+    """
+    if not isinstance(date, datetime.datetime):
+        raise ValueError("date should be datetime.datetime format")
+    stata_epoch = datetime.datetime(1960, 1, 1)
+    if fmt in ["%tc", "tc"]:
+        delta = date - stata_epoch
+        return (delta.days * 86400000 + delta.seconds*1000 +
+                delta.microseconds/1000)
+    elif fmt in ["%tC", "tC"]:
+        from warnings import warn
+        warn("Stata Internal Format tC not supported.")
+        return date
+    elif fmt in ["%td", "td"]:
+        return (date- stata_epoch).days
+    elif fmt in ["%tw", "tw"]:
+        return (52*(date.year-stata_epoch.year) +
+                (date - datetime.datetime(date.year, 1, 1)).days / 7)
+    elif fmt in ["%tm", "tm"]:
+        return (12 * (date.year - stata_epoch.year) + date.month - 1)
+    elif fmt in ["%tq", "tq"]:
+        return 4*(date.year-stata_epoch.year) + int((date.month - 1)/3)
+    elif fmt in ["%th", "th"]:
+        return 2 * (date.year - stata_epoch.year) + int(date.month > 6)
+    elif fmt in ["%ty", "ty"]:
+        return date.year
+    else:
+        raise ValueError("fmt %s not understood" % fmt)
+
 def _stata_elapsed_date_to_datetime(date, fmt):
     """
     Convert from SIF to datetime. http://www.stata.com/help.cgi?datetime
 
     Parameters
     ----------
-    date : datetime.datetime
-        The date to convert in Stata Internal Format given by fmt
+    date : int
+        The Stata Internal Format date to convert to datetime according to fmt
     fmt : str
-        The format to convert to. Can be, tc, tC, td, tw, tm, tq, th, ty
+        The format to convert to. Can be, tc, td, tw, tm, tq, th, ty
+
+    Examples
+    --------
+    >>> _stata_elapsed_date_to_datetime(52, "%tw")                                datetime.datetime(1961, 1, 1, 0, 0)
 
     Notes
     -----
@@ -69,37 +111,38 @@ def _stata_elapsed_date_to_datetime(date, fmt):
     # numpy types and numpy datetime isn't mature enough / we can't rely on
     # pandas version > 0.7.1
     #TODO: IIRC relative delta doesn't play well with np.datetime?
+    date = int(date)
     stata_epoch = datetime.datetime(1960, 1, 1)
-    if fmt == "%tc":
+    if fmt in ["%tc", "tc"]:
         from dateutil.relativedelta import relativedelta
         return stata_epoch + relativedelta(microseconds=date*1000)
-    elif fmt == "%tC":
+    elif fmt in ["%tC", "tC"]:
         from warnings import warn
         warn("Encountered %tC format. Leaving in Stata Internal Format.")
         return date
-    elif fmt == "%td":
+    elif fmt in ["%td", "td"]:
         return stata_epoch + datetime.timedelta(int(date))
-    elif fmt == "%tw": # does not count leap days - 7 days is a week
+    elif fmt in ["%tw", "tw"]: # does not count leap days - 7 days is a week
         year = datetime.datetime(stata_epoch.year + date / 52, 1, 1)
         day_delta = (date  % 52 ) * 7
         return year + datetime.timedelta(int(day_delta))
-    elif fmt == "%tm":
+    elif fmt in ["%tm", "tm"]:
         year = stata_epoch.year + date / 12
         month_delta = (date  % 12 ) + 1
         return datetime.datetime(year, month_delta, 1)
-    elif fmt == "%tq":
+    elif fmt in ["%tq", "tq"]:
         year = stata_epoch.year + date / 4
         month_delta = (date % 4) * 3 + 1
         return datetime.datetime(year, month_delta, 1)
-    elif fmt == "%th":
+    elif fmt in ["%th", "th"]:
         year = stata_epoch.year + date / 2
         month_delta = (date % 2) * 6 + 1
         return datetime.datetime(year, month_delta, 1)
-    elif fmt == "%ty":
+    elif fmt in ["%ty", "ty"]:
         if date > 0:
             return datetime.datetime(date, 1, 1)
         else: # don't do negative years bc can't mix dtypes in column
-            raise ValueError("Years before 0 not implemented")
+            raise ValueError("Year 0 and before not implemented")
     else:
         raise ValueError("Date fmt %s not understood" % fmt)
 
