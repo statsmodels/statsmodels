@@ -17,6 +17,7 @@ import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
 from statsmodels.compatnp.py3k import asbytes
 import statsmodels.tools.data as data_util
+from pandas import isnull
 
 
 def is_py3():
@@ -288,6 +289,9 @@ class StataReader(object):
                     [(251, np.int16),(252, np.int32),(253, int),
                         (254, np.float32), (255, np.float64)])
     TYPE_MAP = range(251)+list('bhlfd')
+    #NOTE: technically, some of these are wrong. there are more numbers
+    # that can be represented. it's the 27 ABOVE and BELOW the max listed
+    # numeric data type in [U] 12.2.2 of the 11.2 manual
     MISSING_VALUES = { 'b': (-127,100), 'h': (-32767, 32740), 'l':
             (-2147483647, 2147483620), 'f': (-1.701e+38, +1.701e+38), 'd':
             (-1.798e+308, +8.988e+307) }
@@ -573,7 +577,7 @@ def _dtype_to_stata_type(dtype):
     type inserted.
     """
     #TODO: expand to handle datetime to integer conversion
-    if isinstance(dtype.type, np.string_): # might have to coerce objects here
+    if dtype.type == np.string_: # might have to coerce objects here
         return chr(dtype.itemsize)
     elif dtype == np.float64:
         return chr(255)
@@ -603,7 +607,7 @@ def _dtype_to_default_stata_fmt(dtype):
     int8    -> "%8.0g"
     """
     #TODO: expand this to handle a default datetime format?
-    if isinstance(dtype.type, np.string_): # might have to coerce objects here
+    if dtype.type == np.string_: # might have to coerce objects here
         return "%" + str(dtype.itemsize) + "s"
     elif dtype == np.float64:
         return "%10.0g"
@@ -711,9 +715,11 @@ class StataWriter(object):
                     [(251, np.int16),(252, np.int32),(253, int),
                         (254, np.float32), (255, np.float64)])
     TYPE_MAP = range(251)+list('bhlfd')
-    MISSING_VALUES = { 'b': (-127,100), 'h': (-32767, 32740), 'l':
-            (-2147483647, 2147483620), 'f': (-1.701e+38, +1.701e+38), 'd':
-            (-1.798e+308, +8.988e+307) }
+    MISSING_VALUES = { 'b': 101,
+                       'h': 32741,
+                       'l' : 2147483621,
+                       'f': 1.7014118346046923e+38,
+                       'd': 8.98846567431158e+307}
     def __init__(self, fname, data, convert_dates=None, encoding="latin-1",
                  byteorder=None):
 
@@ -920,6 +926,7 @@ class StataWriter(object):
         data = self.datarows
         byteorder = self._byteorder
         TYPE_MAP = self.TYPE_MAP
+        MISSING_VALUES = self.MISSING_VALUES
         typlist = self.typlist
         for row in data:
             #row = row.squeeze().tolist() # needed for structured arrays
@@ -931,10 +938,14 @@ class StataWriter(object):
                 if i in convert_dates:
                     var = _datetime_to_stata_elapsed(var, self.fmtlist[i])
                 if typ <= 244: # we've got a string
+                    if isnull(var):
+                        var = "" # missing string
                     if len(var) < typ:
                         var = _pad_bytes(var, len(var) + 1)
                     self._file.write(var)
                 else:
+                    if isnull(var): # this only matters for floats
+                        var = MISSING_VALUES[typ]
                     self._file.write(pack(byteorder+TYPE_MAP[typ], var))
 
 
@@ -947,8 +958,8 @@ class StataWriter(object):
             s += null_byte
             return s
 
-def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
-                pandas=False, convert_dates=True):
+def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
+                convert_dates=True):
     """
     Returns an ndarray or DataFrame from a Stata .dta file.
 
@@ -959,8 +970,6 @@ def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
     missing_flt : numeric
         The numeric value to replace missing values with. Will be used for
         any numeric value.
-    missing_str : str
-        The string to replace missing values with for string variables.
     encoding : string, optional
         Used for Python 3 only. Encoding to use when reading the .dta file.
         Defaults to `locale.getpreferredencoding`
@@ -1000,21 +1009,18 @@ def genfromdta(fname, missing_flt=-999., missing_str="", encoding=None,
     data = np.zeros((nobs,numvars))
     stata_dta = fhd.dataset()
 
-    # key is given by np.issctype
-    convert_missing = {
-            True : missing_flt,
-            False : missing_str}
-
     dt = np.dtype(zip(varnames, types))
     data = np.zeros((nobs), dtype=dt) # init final array
 
     for rownum,line in enumerate(stata_dta):
         # doesn't handle missing value objects, just casts
         # None will only work without missing value object.
-        if None in line:# and not remove_comma:
+        if None in line:
             for i,val in enumerate(line):
+                #NOTE: This will only be scalar types because missing strings
+                # are empty not None in Stata
                 if val is None:
-                    line[i] = convert_missing[np.issctype(types[i])]
+                    line[i] = missing_flt
         data[rownum] = tuple(line)
 
     if pandas:
