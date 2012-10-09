@@ -85,8 +85,22 @@ def test_stata_writer_unicode():
     # make sure to test with characters outside the latin-1 encoding
     pass
 
-def test_stata_writer_datetime():
-    pass
+
+def test_genfromdta_datetime():
+    from datetime import datetime
+    results = [(datetime(2006, 11, 19, 23, 13, 20), 1479596223000,
+            datetime(2010, 1, 20), datetime(2010, 1, 8), datetime(2010, 1, 1),
+            datetime(1974, 7, 1), datetime(2010, 1, 1), datetime(2010, 1, 1)),
+        (datetime(1959, 12, 31, 20, 3, 20), -1479590, datetime(1953, 10, 2),
+            datetime(1948, 6, 10), datetime(1955, 1, 1), datetime(1955, 7, 1),
+            datetime(1955, 1, 1), datetime(2, 1, 1))]
+    dta = genfromdta("results/time_series_examples.dta")
+    assert_array_equal(dta[0].tolist(), results[0])
+    assert_array_equal(dta[1].tolist(), results[1])
+
+    dta = genfromdta("results/time_series_examples.dta", pandas=True)
+    assert_array_equal(dta.irow(0).tolist(), results[0])
+    assert_array_equal(dta.irow(1).tolist(), results[1])
 
 
 if __name__ == "__main__":
