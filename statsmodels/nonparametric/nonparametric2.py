@@ -1579,3 +1579,141 @@ class TestRegCoefD(TestRegCoefC):
         m = m / float(len(self.dom_x))
         m = np.reshape(m, (np.shape(self.txdat)[0], 1))
         return m
+
+
+class SemiLinear(Reg):
+    """
+    Semiparametric partially linear model
+    Y = Xb + g(Z) + e
+    Parameters
+    ----------
+    tydat: array_like
+        The dependent variable
+    txdat: array_like
+        The linear component in the regression
+    tzdat: array_like
+        The nonparametric component in the regression
+    var_type: str
+        The type of the variables in the nonparametric component
+        c: continuous
+        o: ordered
+        u: unordered
+    l_K: int
+        The number of the variables that comprise the linear component
+
+    Attributes
+    ----------
+    bw: array_like
+        Bandwidths for the nonparametric component tzdat
+    b: array_like
+        Coefficients in the linear component
+
+    Methods
+    -------
+    fit(): Returns the fitted mean and marginal effects dy/dz
+
+    References
+    ----------
+    See chapter on Semiparametric Models in [1]
+    Notes
+    -----
+    This model uses only the local constant regression estimator
+    """
+
+    def __init__(self, tydat, txdat, tzdat, var_type, l_K):
+        self.tydat = tools.adjust_shape(tydat, 1)
+        self.txdat = tools.adjust_shape(txdat, l_K)
+        self.K = len(var_type)
+        self.tzdat = tools.adjust_shape(tzdat, self.K)
+        self.l_K = l_K
+        self.N = np.shape(self.txdat)[0]
+        self.var_type = var_type
+        self.all_vars_type = self.var_type
+        self.func = self._est_loc_linear
+
+        self.b, self.bw = self._est_b_bw()
+
+    def _est_b_bw(self):
+        """
+        Computes the (beta) coefficients and the bandwidths
+        Minimizes cv_loo with respect to b and bw
+        """
+        params0 = np.random.uniform(size=(self.l_K + self.K, ))
+        b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
+        b = b_bw[0 : self.l_K]
+        bw = b_bw[self.l_K::]
+        #bw = self._set_bw_bounds(np.asarray(bw))
+        return b, bw
+
+    def cv_loo(self, params):
+        """
+        Similar to the cross validation leave-one-out estimator
+        Modified to reflect the linear components
+        Parameters
+        ----------
+        params: array_like
+            Vector consisting of the coefficients (b) and the bandwidths (bw)
+            The first l_K elements are the coefficients
+        Returns
+        -------
+        L: float
+            The value of the objective function
+
+        References
+        ----------
+        See p.254 in [1]
+        """
+        params = np.asarray(params)
+        b = params[0 : self.l_K]
+        bw = params[self.l_K::]
+        LOO_X = tools.LeaveOneOut(self.txdat)
+        LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        LOO_Z = tools.LeaveOneOut(self.tzdat).__iter__()
+        Xb = b * self.txdat
+        i = 0
+        L = 0
+        for X_j in LOO_X:
+            Y = LOO_Y.next()
+            Z = LOO_Z.next()
+            Xb_j = b * X_j
+            Yx = Y - Xb_j
+            G = self.func(bw, tydat=Yx, txdat=-Z, edat=-self.tzdat[i, :])[0]
+            lt = np.sum(Xb[i, :])  # linear term
+            L += (self.tydat[i] - lt - G) ** 2
+            i += 1
+        return L
+
+    def fit(self, exdat=None, ezdat=None):
+        """Computes fitted values and marginal effects"""
+
+        if exdat is None:
+            exdat = self.txdat
+        else:
+            exdat = tools.adjust_shape(exdat, self.l_K)
+        if ezdat is None:
+            ezdat = self.tzdat
+        else:
+            ezdat = tools.adjust_shape(ezdat, self.K)
+
+        N_edat = np.shape(ezdat)[0]
+        mean = np.empty((N_edat,))
+        mfx = np.empty((N_edat, self.K))
+        Y = self.tydat - self.b * exdat
+        for i in xrange(N_edat):
+            mean_mfx = self.func(self.bw, Y,
+                    self.tzdat, edat=ezdat[i, :])
+            mean[i] = mean_mfx[0]
+            mfx_c = np.squeeze(mean_mfx[1])
+            mfx[i, :] = mfx_c
+        return mean, mfx
+
+
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Semiparamateric Paritally Linear Model \n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: cv_ls" + "\n"
+        repr += "Estimator type: local constant" + "\n"
+        return repr
