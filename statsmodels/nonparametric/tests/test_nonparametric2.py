@@ -318,3 +318,262 @@ class TestCKDE(MyTest):
 
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.15)
         print "test_continuous_cvml_efficient successful"
+
+
+class TestReg(MyTest):
+
+    def test_ordered_lc_cvls(self):
+        model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
+                           reg_type='lc', var_type='o', bw='cv_ls')
+        sm_bw = model.bw
+        R_bw = 0.1390096
+
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_mfx = sm_mfx[0:5]
+        R_mean = 6.190486
+
+        sm_R2 = model.r_squared()
+        R_R2 = 0.1435323
+
+        ## CODE TO REPRODUCE IN R
+        ## library(np)
+        ## data(Italy)
+        ## attach(Italy)
+        ## bw <- npregbw(formula=gdp[1:50]~ordered(year[1:50]))
+        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+
+        print "test_ordered_lc_cvls - successful"
+
+    def test_continuousdata_lc_cvls(self):
+        model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
+                           reg_type='lc', var_type='cc', bw='cv_ls')
+        # Bandwidth
+        sm_bw = model.bw
+        R_bw = [0.6163835, 0.1649656]
+        # Conditional Mean
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_mfx = sm_mfx[0:5]
+        R_mean = [31.49157, 37.29536, 43.72332, 40.58997, 36.80711]
+        # R-Squared
+        sm_R2 = model.r_squared()
+        R_R2 = 0.956381720885
+
+        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        print "test_continuousdata_lc_cvls - successful"
+
+
+    def test_continuousdata_ll_cvls(self):
+        model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
+                           reg_type='ll', var_type='cc', bw='cv_ls')
+
+        sm_bw = model.bw
+        R_bw = [1.717891, 2.449415]
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_mfx = sm_mfx[0:5]
+        R_mean = [31.16003, 37.30323, 44.49870, 40.73704, 36.19083]
+
+        sm_R2 = model.r_squared()
+        R_R2 = 0.9336019
+
+        npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
+        npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
+        npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
+        print "test_continuousdata_ll_cvls - successful"
+
+
+    def test_continuous_mfx_ll_cvls(self, file_name='RegData.csv'):
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+                            reg_type='ll', var_type='ccc', bw='cv_ls')
+        sm_bw = model.bw
+        print "Bandwidth: ", sm_bw
+        sm_mean, sm_mfx = model.fit()
+        sm_mean = sm_mean[0:5]
+        sm_R2 = model.r_squared()
+        print "R2: ", sm_R2
+        print "test_continuous_mfx_ll_cvls - successful"
+        print model
+        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        self.write2file(file_name, (Y, C1, C2, C3))
+
+
+    def test_mixed_mfx_ll_cvls(self, file_name='RegData.csv'):
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, O],
+                            reg_type='ll', var_type='cco', bw='cv_ls')
+        sm_bw = model.bw
+        sm_mean, sm_mfx = model.fit()
+        sm_R2 = model.r_squared()
+        print "test_continuous_mfx_ll_cvls - successful"
+        npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
+        #self.write2file(file_name, (Y, C1, C2, C3))
+
+
+    def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
+        N = 200
+        np.random.seed(1234)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+                            reg_type='ll', var_type='ccc', bw='cv_ls')
+        sm_bw = model.bw
+        sm_mean, sm_mfx = model.fit()
+        sm_R2 = model.r_squared()
+        # Theoretical marginal effects
+        mfx1 = b1 * C2
+        mfx2 = b1 * C1
+        #npt.assert_allclose(sm_mfx[:,0], mfx1, rtol=2e-1)
+        #npt.assert_allclose(sm_mfx[0:10,1], mfx2[0:10], rtol=2e-1)
+        npt.assert_allclose(sm_mean, Y, rtol = 2e-1)
+        #self.write2file(file_name, (Y, C1, C2, C3))
+        print "test_continuous_mfx_ll_cvls - successful"
+
+    @dec.slow
+    def test_continuous_cvls_efficient(self):
+        N = 1000
+        np.random.seed(12345)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b0+ b1 * C1 + b2*C2
+
+        model_efficient = nparam.Reg(tydat=[Y], txdat=[C1],
+                            reg_type='lc', var_type='c', bw='cv_ls',
+                    defaults=SetDefaults(efficient=True, n_sub=100))
+
+        print model_efficient.bw
+        model = nparam.Reg(tydat=[Y], txdat=[C1],
+                            reg_type='ll', var_type='c', bw='cv_ls')
+        print model.bw
+        #print model_efficient.bw
+        print "----"*10
+
+        npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
+
+
+    @dec.slow
+    def test_continuous_lc_aic(self):
+        N = 200
+        np.random.seed(1234)
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
+        #self.write2file('RegData.csv', (Y, C1, C2))
+
+        #CODE TO PRODUCE BANDWIDTH ESTIMATION IN R
+        #library(np)
+        #data <- read.csv('RegData.csv', header=FALSE)
+        #bw <- npregbw(formula=data$V1 ~ data$V2 + data$V3,
+        #                bwmethod='cv.aic', regtype='lc')
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C2],
+                            reg_type='lc', var_type='cc', bw='aic')
+        R_bw = [0.4017893, 0.4943397]  # Bandwidth obtained in R
+        npt.assert_allclose(model.bw, R_bw, rtol = 1e-3)
+
+
+    @dec.slow
+    def test_significance_continuous(self):
+        N = 250
+        np.random.seed(12345)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b1 * C1 + b2 * C2 + noise
+
+        bw=[11108137.1087194, 1333821.85150218]  # This is the cv_ls bandwidth estimated earlier
+
+        model = nparam.Reg(tydat=[Y], txdat=[C1, C3],
+                            reg_type='ll', var_type='cc', bw=bw)
+        nboot = 45  # Number of bootstrap samples
+        sig_var12 = model.sig_test([0,1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
+        npt.assert_equal(sig_var12 == 'Not Significant', False)
+        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        npt.assert_equal(sig_var1 == 'Not Significant', False)
+        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        npt.assert_equal(sig_var2 == 'Not Significant', True)
+        print "test_significance_continuous ran successfully"
+
+    @dec.slow
+    def test_significance_discrete(self):
+
+        N = 200
+        np.random.seed(12345)
+        O = np.random.binomial(2, 0.5, size=(N, ))
+        O2 = np.random.binomial(2, 0.5, size=(N, ))
+        C1 = np.random.normal(size=(N, ))
+        C2 = np.random.normal(2, 1, size=(N, ))
+        C3 = np.random.beta(0.5,0.2, size=(N,))
+        noise = np.random.normal(size=(N, ))
+        b0 = 3
+        b1 = 1.2
+        b2 = 3.7  # regression coefficients
+        b3 = 2.3
+        Y = b1 * O + b2 * C2 + noise
+
+        bw= [3.63473198e+00, 1.21404803e+06]
+                 # This is the cv_ls bandwidth estimated earlier
+        # The cv_ls bandwidth was estimated earlier to save time
+        model = nparam.Reg(tydat=[Y], txdat=[O, C3],
+                            reg_type='ll', var_type='oc', bw=bw)
+        # This was also tested with local constant estimator
+        nboot = 45  # Number of bootstrap samples
+        sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0
+        npt.assert_equal(sig_var1 == 'Not Significant', False)
+        sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
+        npt.assert_equal(sig_var2 == 'Not Significant', True)

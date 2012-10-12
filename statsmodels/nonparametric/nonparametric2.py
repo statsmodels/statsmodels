@@ -36,7 +36,7 @@ import copy
 from scipy.stats.mstats import mquantiles
 
 
-__all__ = ['KDE', 'ConditionalKDE']
+__all__ = ['KDE', 'ConditionalKDE', 'Reg']
 
 
 class _GenericKDE (object):
@@ -936,3 +936,646 @@ class ConditionalKDE(_GenericKDE):
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
 
         return CV / float(self.N)
+
+
+class Reg(_GenericKDE):
+    """
+    Nonparametric Regression
+
+    Calculates the condtional mean E[y|X] where y = g(X) + e
+
+    Parameters
+    ----------
+    tydat: list with one element which is array_like
+        This is the dependent variable.
+
+    txdat: list
+        The training data for the independent variable(s)
+        Each element in the list is a separate variable
+
+    dep_type: str
+        The type of the dependent variable(s)
+        c: Continuous
+        u: Unordered (Discrete)
+        o: Ordered (Discrete)
+
+    reg_type: str
+        Type of regression estimator
+        lc: Local Constant Estimator
+        ll: Local Linear Estimator
+
+    bw: array-like
+        Either a user-specified bandwidth or
+        the method for bandwidth selection.
+        cv_ls: cross-validaton least squares
+        aic: AIC Hurvich Estimator
+
+    defaults: Instance of class SetDefaults
+        The default values for the efficient bandwidth estimation
+
+    Attributes
+    ---------
+    bw: array-like
+        The bandwidth parameters
+
+    Methods
+    -------
+    r-squared(): Calculates the R-Squared for the model
+    mean(): Calculates the conditiona mean
+    """
+
+    def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
+                defaults=SetDefaults()):
+
+        self.var_type = var_type
+        self.all_vars_type = var_type
+        self.reg_type = reg_type
+        self.K = len(self.var_type)
+        self.tydat = tools.adjust_shape(tydat, 1)
+        self.txdat = tools.adjust_shape(txdat, self.K)
+        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
+        self.N = np.shape(self.txdat)[0]
+        self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
+        self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
+        self._set_defaults(defaults)
+        if not self.efficient:
+            self.bw = self.compute_reg_bw(bw)
+        else:
+
+            if self.randomize:
+                self.bw = self._compute_efficient_randomize(bw)
+            else:
+                self.bw = self._compute_efficient_all(bw)
+
+    def compute_reg_bw(self, bw):
+        if not isinstance(bw, basestring):
+            self._bw_method = "user-specified"
+            return np.asarray(bw)
+        else:
+            # The user specified a bandwidth selection
+            # method e.g. 'cv_ls'
+            self._bw_method = bw
+            res = self.bw_func[bw]
+            X = np.std(self.txdat, axis=0)
+            h0 = 1.06 * X * \
+                 self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
+        func = self.est[self.reg_type]
+        return optimize.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
+                      maxfun=1e3, disp=0)
+
+    def _est_loc_linear(self, bw, tydat, txdat, edat):
+        """
+        Local linear estimator of g(x) in the regression
+        y = g(x) + e
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth value(s)
+        tydat: 1D array_like
+            The dependent variable
+        txdat: 1D or 2D array_like
+            The independent variable(s)
+        edat: 1D array_like of length K, where K is
+            the number of variables. The point at which
+            the density is estimated
+
+        Returns
+        -------
+        D_x: array_like
+            The value of the conditional mean at edat
+
+        Notes
+        -----
+        See p. 81 in [1] and p.38 in [2] for the formulas
+        Unlike other methods, this one requires that edat be 1D
+        """
+        Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg',
+                            tosum=False)
+        # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
+        # See also p. 38 in [2]
+        iscontinuous = tools._get_type_pos(self.var_type)[0]
+        iscontinuous = xrange(self.K)  # Use all vars instead of continuous only
+        Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
+        N, Qc = np.shape(txdat[:, iscontinuous])
+        Ker = Ker / float(N)
+        L = 0
+        R = 0
+        M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
+        M22 = np.dot(M12.T, M12 * Ker)
+        M22 = np.reshape(M22, (Qc, Qc))
+        M12 = np.sum(M12 * Ker , axis=0)
+        M12 = np.reshape(M12, (1, Qc))
+        M21 = M12.T
+        M11 = np.sum(np.ones((N,1)) * Ker, axis=0)
+        M11 = np.reshape(M11, (1,1))
+        M_1 = np.concatenate((M11, M12), axis=1)
+        M_2 = np.concatenate((M21, M22), axis=1)
+        M = np.concatenate((M_1, M_2), axis=0)
+        V1 = np.sum(np.ones((N,1)) * Ker * tydat, axis=0)
+        V2 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
+        V2 = np.sum(V2 * Ker * tydat , axis=0)
+        V1 = np.reshape(V1, (1,1))
+        V2 = np.reshape(V2, (Qc, 1))
+
+        V = np.concatenate((V1, V2), axis=0)
+        assert np.shape(M) == (Qc + 1, Qc + 1)
+        assert np.shape(V) == (Qc + 1, 1)
+        mean_mfx = np.dot(np.linalg.pinv(M), V)
+        mean = mean_mfx[0]
+        mfx = mean_mfx[1::, :]
+        return mean, mfx
+
+    def _est_loc_constant(self, bw, tydat, txdat, edat):
+        """
+        Local constant estimator of g(x) in the regression
+        y = g(x) + e
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth value(s)
+        tydat: 1D array_like
+            The dependent variable
+        txdat: 1D or 2D array_like
+            The independent variable(s)
+        edat: 1D or 2D array_like
+            The point(s) at which
+            the density is estimated
+
+        Returns
+        -------
+        G: array_like
+            The value of the conditional mean at edat
+
+        """
+        KX = tools.gpke(bw, tdat=txdat, edat=edat,
+                        var_type=self.var_type,
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg',
+                            tosum=False)
+        KX = np.reshape(KX, np.shape(tydat))
+        G_numer = np.sum(tydat * KX, axis=0)
+        G_denom = np.sum(tools.gpke(bw, tdat=txdat, edat=edat,
+                                    var_type=self.var_type,
+                            #ukertype='aitchison_aitken_reg',
+                            #okertype='wangryzin_reg',
+                            tosum=False), axis=0)
+        G = G_numer / G_denom
+        B_x = np.ones((self.K))
+        N, K = np.shape(txdat)
+        f_x = np.sum(KX, axis=0) / float(N)
+        KX_c = tools.gpke(bw, tdat=txdat, edat=edat,
+                        var_type=self.var_type,
+                            ckertype='d_gaussian',
+                            #okertype='wangryzin_reg',
+                            tosum=False)
+
+        KX_c = np.reshape(KX_c, (N, 1))
+        d_mx = - np.sum(tydat * KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
+        d_fx = - np.sum(KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
+        B_x = d_mx / f_x - G * d_fx / f_x
+        m_x = G_numer
+        B_x = (G_numer * d_fx - G_denom * d_mx)/(G_denom**2)
+        #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
+        return G, B_x
+
+
+    def aic_hurvich(self, bw, func=None):
+        """
+        Computes the AIC Hurvich criteria for the estimation of the bandwidth
+        References
+        ----------
+        See ch.2 in [1]
+        See p.35 in [2]
+        """
+        #print "Running aic"
+        H = np.empty((self.N, self.N))
+        for j in range(self.N):
+            H[:, j] = tools.gpke(bw, tdat=self.txdat, edat=self.txdat[j,:],
+                            var_type=self.var_type, tosum=False)
+        denom = np.sum(H, axis=1)
+        H = H / denom
+        I = np.eye(self.N)
+        gx = Reg(tydat=self.tydat, txdat=self.txdat, var_type=self.var_type,
+                reg_type=self.reg_type, bw=bw, defaults=SetDefaults(efficient=False)).fit()[0]
+        gx = np.reshape(gx, (self.N, 1))
+        sigma = np.sum((self.tydat - gx) ** 2, axis=0) / float(self.N)
+
+        frac = (1 + np.trace(H)/float(self.N)) / (1 - (np.trace(H) +2)/float(self.N))
+        #siga = np.dot(self.tydat.T, (I - H).T)
+        #sigb = np.dot((I - H), self.tydat)
+        #sigma = np.dot(siga, sigb) / float(self.N)
+        aic = np.log(sigma) + frac
+
+        return aic
+
+
+
+    def cv_loo(self, bw, func):
+        """
+        The cross-validation function with leave-one-out
+        estimator
+
+        Parameters
+        ----------
+        bw: array_like
+            Vector of bandwidth values
+        func: callable function
+            Returns the estimator of g(x).
+            Can be either _est_loc_constant(local constant) or _est_loc_linear(local_linear)
+
+        Returns
+        -------
+        L: float
+            The value of the CV function
+
+        Notes
+        -----
+        Calculates the cross-validation least-squares
+        function. This function is minimized by compute_bw
+        to calculate the optimal value of bw
+
+        For details see p.35 in [2]
+
+        ..math:: CV(h)=n^{-1}\sum_{i=1}^{n}(Y_{i}-g_{-i}(X_{i}))^{2}
+
+        where :math:`g_{-i}(X_{i})` is the leave-one-out estimator of g(X)
+        and :math:`h` is the vector of bandwidths
+
+        """
+        #print "Running"
+        LOO_X = tools.LeaveOneOut(self.txdat)
+        LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        i = 0
+        L = 0
+
+        for X_j in LOO_X:
+            Y = LOO_Y.next()
+            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :])[0]
+            L += (self.tydat[i] - G) ** 2
+            i += 1
+        # Note: There might be a way to vectorize this. See p.72 in [1]
+        return L / self.N
+
+    def r_squared(self):
+        """
+        Returns the R-Squared for the nonparametric regression
+
+        Notes
+        -----
+        For more details see p.45 in [2]
+        The R-Squared is calculated by:
+        .. math:: R^{2}=\frac{\left[\sum_{i=1}^{n}
+        (Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}
+        (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
+
+        where :math:`\hat{Y_{i}}` are the
+        fitted values calculated in self.mean()
+        """
+        Y = np.squeeze(self.tydat)
+        Yhat = self.fit()[0]
+        Y_bar = np.mean(Yhat)
+        R2_numer = (np.sum((Y - Y_bar) * (Yhat - Y_bar)) ** 2)
+        R2_denom = np.sum((Y - Y_bar) ** 2, axis=0) * \
+                   np.sum((Yhat - Y_bar) ** 2, axis=0)
+        return R2_numer / R2_denom
+
+    def fit(self, edat=None):
+        """
+        Returns the marginal effects at the edat points
+        """
+        func = self.est[self.reg_type]
+        if edat is None:
+            edat = self.txdat
+        else:
+            edat = tools.adjust_shape(edat, self.K)
+        N_edat = np.shape(edat)[0]
+        mean = np.empty((N_edat,))
+        mfx = np.empty((N_edat, self.K))
+        for i in xrange(N_edat):
+            mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :])
+            mean[i] = mean_mfx[0]
+            mfx_c = np.squeeze(mean_mfx[1])
+            mfx[i, :] = mfx_c
+        return mean, mfx
+
+    def sig_test(self, var_pos, nboot=50, nested_res=25, pivot=False):
+        """
+        Significance test for the variables in the regression
+        Parameters
+        ----------
+        var_pos: tuple, list
+            The position of the variable in txdat to be tested
+        Returns
+        -------
+        sig: str
+            The level of significance
+            * : at 90% confidence level
+            ** : at 95% confidence level
+            *** : at 99* confidence level
+            "Not Significant" : if not significant
+            """
+        var_pos = np.asarray(var_pos)
+        iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
+        if (iscontinuous == var_pos).any():  # continuous variable
+            if (isordered == var_pos).any() or (isunordered == var_pos).any():
+                raise "Discrete variable in hypothesis. Must be continuous"
+            print "------CONTINUOUS---------"
+            Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot)
+        else:
+            print "------DISCRETE-----------"
+            Sig = TestRegCoefD(self, var_pos, nboot)
+        return Sig.sig
+
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Reg instance\n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: " + self._bw_method + "\n"
+        repr += "Estimator type: " + self.reg_type + "\n"
+        return repr
+
+
+class TestRegCoefC(object):
+    """
+    Significance test for continuous variables in a nonparametric
+    regression.
+
+    Null Hypothesis dE(Y|X)/dX_j = 0
+    Alternative Hypothesis dE(Y|X)/dX_j != 0
+
+    Parameteres
+    -----------
+    model: Instance of Reg class
+        This is the nonparametric regression model whose elements
+        are tested for significance.
+
+    test_vars: tuple, list of integers, array_like
+        index of position of the continuous variables to be tested
+        for significance. E.g. (1,3,5) jointly tests variables at
+        position 1,3 and 5 for significance.
+
+    nboot: int
+        Number of bootstrap samples used to determine the distribution
+        of the test statistic in a finite sample. Default is 400
+
+    nested_res: int
+        Number of nested resamples used to calculate lambda.
+        Must enable the pivot option
+
+    pivot: bool
+        Pivot the test statistic by dividing by its standard error
+        Significantly increases computational time. But pivot statistics
+        have more desirable properties
+        (See references)
+
+    Attributes
+    ----------
+    sig: str
+        The significance level of the variable(s) tested
+        "Not Significant": Not significant at the 90% confidence level
+                            Fails to reject the null
+        "*": Significant at the 90% confidence level
+        "**": Significant at the 95% confidence level
+        "***": Significant at the 99% confidence level
+
+    Notes
+    -----
+    This class allows testing of joint hypothesis as long as all variables
+    are continuous.
+
+    References
+    ----------
+    See Racine, J.: "Consistent Significance Testing for Nonparametric
+        Regression" Journal of Business & Economics Statistics
+    See chapter 12 in [1]
+    """
+    # Significance of continuous vars in nonparametric regression
+    # Racine: Consistent Significance Testing for Nonparametric Regression
+    # Journal of Business & Economics Statistics
+    def __init__(self, model, test_vars, nboot=400, nested_res=400, pivot=False):
+        self.nboot = nboot
+        self.nres = nested_res
+        self.test_vars = test_vars
+        self.model = model
+        self.bw = model.bw
+        self.var_type = model.var_type
+        self.K = len(self.var_type)
+        self.tydat = model.tydat
+        self.txdat = model.txdat
+        self.gx = model.est[model.reg_type]
+        self.test_vars = test_vars
+        self.pivot = pivot
+        self.run()
+
+    def run(self):
+        self.test_stat = self._compute_test_stat(self.tydat, self.txdat)
+        self.sig = self._compute_sig()
+
+    def _compute_test_stat(self, Y, X):
+        """
+        Computes the test statistic
+        See p.371 in [8]
+        """
+        lam = self._compute_lambda(Y, X)
+        t = lam
+        if self.pivot:
+            se_lam = self._compute_se_lambda(Y, X)
+            t = lam / float(se_lam)
+        return t
+
+    def _compute_lambda(self, Y, X):
+        """Computes only lambda -- the main part of the test statistic"""
+        n = np.shape(X)[0]
+        Y = tools.adjust_shape(Y, 1)
+        X = tools.adjust_shape(X, self.K)
+        b = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                        defaults = SetDefaults(efficient=False)).fit()[1]
+
+        b = b[:, self.test_vars]
+        b = np.reshape(b, (n, len(self.test_vars)))
+        #fct = np.std(b)  # Pivot the statistic by dividing by SE
+        fct = 1.  # Don't Pivot -- Bootstrapping works better if Pivot
+        lam = np.sum(np.sum(((b / fct) ** 2), axis=1), axis=0) / float(n)
+        return lam
+
+    def _compute_se_lambda(self, Y, X):
+        """
+        Calculates the SE of lambda by nested resampling
+        Used to pivot the statistic.
+        Bootstrapping works better with estimating pivotal statistics
+        but slows down computation significantly.
+        """
+        n = np.shape(Y)[0]
+        lam = np.empty(shape=(self.nres, ))
+        for i in xrange(self.nres):
+            ind = np.random.random_integers(0, n-1, size=(n,1))
+            Y1 = Y[ind, 0]
+            X1 = X[ind, 0::]
+            lam[i] = self._compute_lambda(Y1, X1)
+        se_lambda = np.std(lam)
+        return se_lambda
+
+    def _compute_sig(self):
+        """
+        Computes the significance value for the variable(s) tested.
+        The empirical distribution of the test statistic is obtained
+        through bootstrapping the sample.
+        The null hypothesis is rejected if the test statistic is larger
+        than the 90, 95, 99 percentiles
+        """
+        t_dist = np.empty(shape=(self.nboot, ))
+        Y = self.tydat
+        X = copy.deepcopy(self.txdat)
+        n = np.shape(Y)[0]
+
+        X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
+        # Calculate the restricted mean. See p. 372 in [8]
+        M = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                defaults = SetDefaults(efficient=False)).fit()[0]
+        M = np.reshape(M, (n, 1))
+        e = Y - M
+        e = e - np.mean(e)  # recenter residuals
+        for i in xrange(self.nboot):
+            print "Bootstrap sample ", i
+            ind = np.random.random_integers(0, n-1, size=(n,1))
+            e_boot = e[ind, 0]
+            Y_boot = M + e_boot
+            t_dist[i] = self._compute_test_stat(Y_boot, self.txdat)
+
+        sig = "Not Significant"
+        #print "Test statistic is", self.test_stat
+        #print  "0.9 quantile is ", mquantiles(t_dist, 0.9)
+        #print sorted(t_dist)
+
+        if self.test_stat > mquantiles(t_dist, 0.9):
+            sig = "*"
+        if self.test_stat > mquantiles(t_dist, 0.95):
+            sig = "**"
+        if self.test_stat > mquantiles(t_dist, 0.99):
+            sig = "***"
+        return sig
+
+
+class TestRegCoefD(TestRegCoefC):
+    """
+    Significance test for the categorical variables in a
+    nonparametric regression
+
+    Parameteres
+    -----------
+    model: Instance of Reg class
+        This is the nonparametric regression model whose elements
+        are tested for significance.
+
+    test_vars: tuple, list of one element
+        index of position of the discrete variable to be tested
+        for significance. E.g. (3) tests variable at
+        position 3 for significance.
+
+    nboot: int
+        Number of bootstrap samples used to determine the distribution
+        of the test statistic in a finite sample. Default is 400
+
+    Attributes
+    ----------
+    sig: str
+        The significance level of the variable(s) tested
+        "Not Significant": Not significant at the 90% confidence level
+                            Fails to reject the null
+        "*": Significant at the 90% confidence level
+        "**": Significant at the 95% confidence level
+        "***": Significant at the 99% confidence level
+
+    Notes
+    -----
+    This class currently doesn't allow joint hypothesis.
+    Only one variable can be tested at a time
+
+    References
+    ----------
+    See [9]
+    See chapter 12 in [1]
+    """
+
+    def _compute_test_stat(self, Y, X):
+        """Computes the test statistic"""
+
+        dom_x = np.sort(np.unique(self.txdat[:, self.test_vars]))
+
+        n = np.shape(X)[0]
+        model = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                        defaults = SetDefaults(efficient=False))
+        X1 = copy.deepcopy(X)
+        X1[:, self.test_vars] = 0
+
+        m0 = model.fit(edat=X1)[0]
+        m0 = np.reshape(m0, (n, 1))
+        I = np.zeros((n, 1))
+        for i in dom_x[1::] :
+            X1[:, self.test_vars] = i
+            m1 = model.fit(edat=X1)[0]
+            m1 = np.reshape(m1, (n, 1))
+            I += (m1 - m0) ** 2
+        I = np.sum(I, axis=0) / float(n)
+        return I
+
+    def _compute_sig(self):
+        """Calculates the significance level of the variable tested"""
+
+        m = self._est_cond_mean()
+        Y = self.tydat
+        X = self.txdat
+        n = np.shape(X)[0]
+        u = Y - m
+        u = u - np.mean(u)  # center
+        fct1 = (1 - 5**0.5) / 2.
+        fct2 = (1 + 5**0.5) / 2.
+        u1 = fct1 * u
+        u2 = fct2 * u
+        r = fct2 / (5 ** 0.5)
+        I_dist = np.empty((self.nboot,1))
+        for j in xrange(self.nboot):
+            print "Bootstrap sample ", j
+            u_boot = copy.deepcopy(u2)
+
+            prob = np.random.uniform(0,1, size = (n,1))
+            ind = prob < r
+            u_boot[ind] = u1[ind]
+            Y_boot = m + u_boot
+            I_dist[j] = self._compute_test_stat(Y_boot, X)
+
+        sig = "Not Significant"
+        #print "Test statistic is: ", self.test_stat
+        #print  "0.9 quantile is: ", mquantiles(I_dist, 0.9)
+        #print  mquantiles(I_dist, 0.95)
+        #print mquantiles(I_dist, 0.99)
+        #print I_dist
+
+        if self.test_stat > mquantiles(I_dist, 0.9):
+            sig = "*"
+        if self.test_stat > mquantiles(I_dist, 0.95):
+            sig = "**"
+        if self.test_stat > mquantiles(I_dist, 0.99):
+            sig = "***"
+        return sig
+
+    def _est_cond_mean(self):
+        """
+        Calculates the expected conditional mean
+        m(X, Z=l) for all possible l
+        """
+        self.dom_x = np.sort(np.unique(self.txdat[:, self.test_vars]))
+        X = copy.deepcopy(self.txdat)
+        m=0
+        for i in self.dom_x:
+            X[:, self.test_vars]  = i
+            m += self.model.fit(edat = X)[0]
+        m = m / float(len(self.dom_x))
+        m = np.reshape(m, (np.shape(self.txdat)[0], 1))
+        return m
