@@ -1930,6 +1930,111 @@ class TestFForm(object):
         return T
 
 
+class SingleIndexModel(Reg):
+    """
+    Single index semiparametric model ``y = g(X * b) + e``.
+
+    Parameters
+    ----------
+    tydat: array_like
+        The dependent variable
+    txdat: array_like
+        The independent variable(s)
+    var_type: str
+        The type of variables in X
+        c: continuous
+        o: ordered
+        u: unordered
+
+    Attributes
+    ----------
+    b: array_like
+        The linear coefficients b (betas)
+    bw: array_like
+        Bandwidths
+
+    Methods
+    -------
+    fit(): Computes the fitted values E[Y|X] = g(X * b)
+            and the marginal effects dY/dX
+    References
+    ----------
+    See chapter on semiparametric models in [1]
+
+    Notes
+    -----
+    This model resembles the binary choice models. The user knows
+    that X and b interact linearly, but g(X*b) is unknown.
+    In the parametric binary choice models the user usually assumes
+    some distribution of g() such as normal or logistic.
+
+    """
+    def __init__(self, tydat, txdat, var_type):
+        self.var_type = var_type
+        self.K = len(var_type)
+        self.tydat = tools.adjust_shape(tydat, 1)
+        self.txdat = tools.adjust_shape(txdat, self.K)
+        self.N = np.shape(self.txdat)[0]
+        self.all_vars_type = self.var_type
+        self.func = self._est_loc_linear
+
+        self.b, self.bw = self._est_b_bw()
+
+    def _est_b_bw(self):
+        params0 = np.random.uniform(size=(2*self.K, ))
+        b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
+        b = b_bw[0:self.K]
+        bw = b_bw[self.K::]
+        bw = self._set_bw_bounds(bw)
+        return b, bw
+
+    def cv_loo(self, params):
+        #print "Running"
+        # See p. 254 in Textbook
+        params = np.asarray(params)
+        b = params[0 : self.K]
+        bw = params[self.K::]
+        LOO_X = tools.LeaveOneOut(self.txdat)
+        LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
+        i = 0
+        L = 0
+        func = self._est_loc_linear
+        for X_j in LOO_X:
+            Y = LOO_Y.next()
+            G = self.func(bw, tydat=Y, txdat=-b*X_j, edat=-b*self.txdat[i, :])[0]
+            L += (self.tydat[i] - G) ** 2
+            i += 1
+        # Note: There might be a way to vectorize this. See p.72 in [1]
+        return L / self.N
+
+    def fit(self, edat=None):
+        if edat is None:
+            edat = self.txdat
+        else:
+            edat = tools.adjust_shape(edat, self.K)
+        N_edat = np.shape(edat)[0]
+        mean = np.empty((N_edat,))
+        mfx = np.empty((N_edat, self.K))
+        for i in xrange(N_edat):
+            mean_mfx = self.func(self.bw, self.tydat,
+                    self.b*self.txdat, edat=self.b*edat[i, :])
+            mean[i] = mean_mfx[0]
+            mfx_c = np.squeeze(mean_mfx[1])
+            mfx[i, :] = mfx_c
+        return mean, mfx
+
+
+    def __repr__(self):
+        """Provide something sane to print."""
+        repr = "Single Index Model \n"
+        repr += "Number of variables: K = " + str(self.K) + "\n"
+        repr += "Number of samples:   N = " + str(self.N) + "\n"
+        repr += "Variable types:      " + self.var_type + "\n"
+        repr += "BW selection method: cv_ls" + "\n"
+        repr += "Estimator type: local constant" + "\n"
+        return repr
+
+
 class SemiLinear(Reg):
     """
     Semiparametric partially linear model
