@@ -1,12 +1,12 @@
+import csv
+
 import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
-import scipy.stats as stats
+
 import statsmodels.nonparametric as nparam
 from ..nonparametric2 import SetDefaults, SemiLinear
-#import nonparametric2 as nparam
-reload(nparam)
-import csv
+
 
 class MyTest(object):
     def setUp(self):
@@ -59,6 +59,7 @@ class MyTest(object):
         [0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
        0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
        0, 0, 0, 0]
+
     def write2file(self, file_name, data):
         data_file = csv.writer(open(file_name, "w"))
         data = np.column_stack(data)
@@ -70,8 +71,7 @@ class MyTest(object):
             data_file.writerow(list(data[i, :]))
 
 
-
-class TestUKDE(MyTest):
+class TestKDE(MyTest):
     @dec.slow
     def test_pdf_mixeddata_CV_LS(self):
         dens_u = nparam.KDE(tdat=[self.c1, self.o, self.o2], var_type='coo',
@@ -161,21 +161,14 @@ class TestUKDE(MyTest):
         np.random.seed(12345)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2
-
         dens_efficient = nparam.KDE(tdat=[Y, C1],
                                     var_type='cc', bw='cv_ls',
                                     defaults=SetDefaults(efficient=True,
                                                          n_sub=100))
         dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ls',
                           defaults=SetDefaults(efficient=False))
-        print dens.bw
-        print dens_efficient.bw
-
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
-        print "test_continuous_cvls_efficient successful"
 
     @dec.slow
     def test_continuous_cvml_efficient(self):
@@ -183,8 +176,6 @@ class TestUKDE(MyTest):
         np.random.seed(12345)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDE(tdat=[Y, C1],
@@ -193,11 +184,7 @@ class TestUKDE(MyTest):
                                                          n_sub=100))
         dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
                           defaults=SetDefaults(efficient=False))
-        print dens.bw
-        print dens_efficient.bw
-
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
-        print "test_continuous_cvml_efficient successful"
 
     @dec.slow
     def test_efficient_notrandom(self):
@@ -205,19 +192,13 @@ class TestUKDE(MyTest):
         np.random.seed(12345)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
                             defaults=SetDefaults(efficient=True, randomize=False, n_sub=100))
         dens = nparam.KDE(tdat=[Y, C1],
                             var_type='cc', bw='cv_ml')
-        print dens.bw
-        print dens_efficient.bw
-
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
-        print "test_efficient_notrandom successful"
 
 class TestCKDE(MyTest):
     @dec.slow
@@ -237,13 +218,14 @@ class TestCKDE(MyTest):
 
     @dec.slow
     def test_unordered_CV_LS(self):
-        dens_ls = nparam.ConditionalKDE(tydat=[self.oecd],
-                              txdat=[self.growth],
-                              dep_type='u', indep_type='c', bw='cv_ls')
+        dens_ls = nparam.ConditionalKDE(tydat=[self.oecd], txdat=[self.growth],
+                                        dep_type='u', indep_type='c',
+                                        bw='cv_ls')
+        # TODO: assert missing
 
     def test_pdf_continuous(self):
         dens = nparam.ConditionalKDE(tydat=[self.growth], txdat=[self.Italy_gdp],
-                            dep_type='c', indep_type='c', bw='cv_ml')
+                                     dep_type='c', indep_type='c', bw='cv_ml')
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [11.97964, 12.73290, 13.23037, 13.46438, 12.22779]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
@@ -272,7 +254,7 @@ class TestCKDE(MyTest):
                               indep_type='c', bw='normal_reference')
         sm_result = dens_nm.bw
         R_result = [1.283532, 0.01535401]
-        # Here we need a smaller tolerance.check!
+        # TODO: here we need a smaller tolerance.check!
         npt.assert_allclose(sm_result, R_result, atol=1e-1)
 
     def test_continuous_cdf(self):
@@ -298,15 +280,11 @@ class TestCKDE(MyTest):
         N = 1000
         np.random.seed(12345)
         O = np.random.binomial(2, 0.5, size=(N, ))
-        O2 = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
-        b3 = 2.3
         Y = b0+ b1 * C1 + b2*O  + noise
 
         dens_efficient = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
@@ -317,7 +295,6 @@ class TestCKDE(MyTest):
                            dep_type='c', indep_type='c', bw='cv_ml')
 
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.15)
-        print "test_continuous_cvml_efficient successful"
 
 
 class TestReg(MyTest):
@@ -345,8 +322,6 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
-        print "test_ordered_lc_cvls - successful"
-
     def test_continuousdata_lc_cvls(self):
         model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
                            reg_type='lc', var_type='cc', bw='cv_ls')
@@ -365,7 +340,6 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
-        print "test_continuousdata_lc_cvls - successful"
 
 
     def test_continuousdata_ll_cvls(self):
@@ -385,8 +359,6 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_bw, R_bw, atol=1e-2)
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
-        print "test_continuousdata_ll_cvls - successful"
-
 
     def test_continuous_mfx_ll_cvls(self, file_name='RegData.csv'):
         N = 200

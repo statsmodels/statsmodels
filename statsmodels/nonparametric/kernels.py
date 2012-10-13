@@ -79,9 +79,10 @@ def aitchison_aitken(h, Xi, x, num_levels=False):
     if K == 0:
         return Xi
 
-    c = np.asarray([len(np.unique(Xi[:, i])) for i in range(K)], dtype=int)
     if num_levels:
         c = num_levels
+    else:
+        c = np.asarray([len(np.unique(Xi[:, i])) for i in range(K)], dtype=int)
 
     kernel_value = np.tile(h / (c - 1), (N, 1))
     inDom = (Xi == x) * (1 - h)
