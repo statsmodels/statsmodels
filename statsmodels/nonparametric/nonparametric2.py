@@ -241,9 +241,8 @@ class _GenericKDE (object):
         where ``n`` is the number of observations and ``q`` is the number of
         variables.
         """
-        c = 1.06
         X = np.std(self.all_vars, axis=0)
-        return c * X * self.N ** (- 1. / (4 + np.size(self.all_vars, axis=1)))
+        return 1.06 * X * self.N ** (- 1. / (4 + self.all_vars.shape[1]))
 
     def _set_bw_bounds(self, bw):
         """
