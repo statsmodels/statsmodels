@@ -28,12 +28,13 @@ References
 
 """
 
+import copy
+
 import numpy as np
 from scipy import optimize
-import np_tools as tools
-import kernels as kf
-import copy
 from scipy.stats.mstats import mquantiles
+
+import np_tools as tools
 
 
 __all__ = ['KDE', 'ConditionalKDE', 'Reg', 'CensoredReg']
@@ -76,6 +77,7 @@ class _GenericKDE (object):
             self._bw_method = bw
             bwfunc = self.bw_func[bw]
             res = bwfunc()
+
         return res
 
     def _compute_dispersion(self, all_vars):
@@ -90,15 +92,13 @@ class _GenericKDE (object):
         """
         if self.__class__.__name__ == "Reg":
             all_vars = all_vars[:, 1::]
-        s1 = np.std(all_vars, axis=0)
-        q75 = mquantiles(all_vars,0.75, axis=0).data[0]
-        q25 = mquantiles(all_vars,0.25, axis=0).data[0]
-        s2 = (q75-q25) / 1.349
-        s = [min(s1[z], s2[z]) for z in range(len(s1))]
-        s = np.asarray(s)
-        #s = s1
-        return s
 
+        s1 = np.std(all_vars, axis=0)
+        q75 = mquantiles(all_vars, 0.75, axis=0).data[0]
+        q25 = mquantiles(all_vars, 0.25, axis=0).data[0]
+        s2 = (q75-q25) / 1.349
+        s = np.asarray([min(s1[z], s2[z]) for z in range(len(s1))])
+        return s
 
     def _compute_efficient_randomize(self, bw):
         """
@@ -127,15 +127,14 @@ class _GenericKDE (object):
             fct = s * self.n_sub ** (-1./(l + co))
             fct[isunordered] = self.n_sub ** (-2. / (l + do))
             fct[isordered] = self.n_sub ** (-2. / (l + do))
-            c = sub_model.bw / fct  #  TODO: Check if this is correct!
+            c = sub_model.bw / fct  # TODO: Check if this is correct!
             sample_scale[i, :] = c
             only_bw[i, :] = sub_model.bw
-            #print sub_model.bw
 
         s = self._compute_dispersion(all_vars)
         if self.return_median:
             median_scale = np.median(sample_scale, axis=0)
-            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Chekc if 1/5 is correct!
+            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Check if 1/5 is correct!
             bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
             bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
         else:
@@ -143,6 +142,7 @@ class _GenericKDE (object):
             bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
             bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
             bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)
 
@@ -167,20 +167,18 @@ class _GenericKDE (object):
         bounds.append((slices[-1], self.N))
         sample_scale = np.empty((len(bounds), self.K))
         only_bw = np.empty((len(bounds), self.K))
-        i = 0
-        for b in bounds:
+        for ii, b in enumerate(bounds):
             print "Estimating slice ", b, " ..."
-
             sub_all_vars = all_vars[b[0] : b[1], :]
             sub_model = self._call_self(sub_all_vars, bw)
             s = self._compute_dispersion(sub_all_vars)
             fct = s * self.n_sub ** (-1./(l + co))
             fct[isunordered] = self.n_sub ** (-2. / (l + do))
             fct[isordered] = self.n_sub ** (-2. / (l + do))
-            c = sub_model.bw / fct  #  TODO: Check if this is correct!
-            sample_scale[i, :] = c
-            only_bw[i, :] = sub_model.bw
-            i += 1
+            c = sub_model.bw / fct  # TODO: Check if this is correct!
+            sample_scale[ii, :] = c
+            only_bw[ii, :] = sub_model.bw
+
         s = self._compute_dispersion(all_vars)
         if self.return_median:
             median_scale = np.median(sample_scale, axis=0)
@@ -198,7 +196,6 @@ class _GenericKDE (object):
 
         return bw
 
-
     def _call_self(self, all_vars, bw):
         """ Calls the class itself with the proper input parameters"""
         # only used with the efficient=True estimation option
@@ -206,13 +203,13 @@ class _GenericKDE (object):
             model = KDE(all_vars, self.var_type, bw=bw,
                         defaults=SetDefaults(efficient=False))
 
-        if self.__class__.__name__ == 'ConditionalKDE':
+        if self.__class__.__name__ == 'ConditionalKDE':  # TODO: use isinstance
             tydat = all_vars[:, 0 : self.K_dep]
             txdat = all_vars[:, self.K_dep ::]
             model = ConditionalKDE(tydat, txdat, self.dep_type,
                         self.indep_type, bw=bw,
                         defaults=SetDefaults(efficient=False))
-        if self.__class__.__name__ == 'Reg':
+        elif self.__class__.__name__ == 'Reg':
             tydat = tools.adjust_shape(all_vars[:, 0], 1)
             txdat = tools.adjust_shape(all_vars[:, 1::], self.K)
             model = Reg(tydat=tydat, txdat=txdat, reg_type=self.reg_type,
@@ -241,8 +238,8 @@ class _GenericKDE (object):
 
         .. math:: h = 1.06n^{-1/(4+q)}
 
-        where :math:`n` is the number of observations and :math:`q` is the
-        number of variables.
+        where ``n`` is the number of observations and ``q`` is the number of
+        variables.
         """
         c = 1.06
         X = np.std(self.all_vars, axis=0)
@@ -250,10 +247,9 @@ class _GenericKDE (object):
 
     def _set_bw_bounds(self, bw):
         """
-        Sets bandwidth lower bound to zero and
-        for discrete values upper bound of one
+        Sets bandwidth lower bound to zero and for discrete values upper bound
+        to 1.
         """
-        #unit = np.ones((self.K, ))
         ind0 = np.where(bw < 0)
         bw[ind0] = 1e-10
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
@@ -261,6 +257,7 @@ class _GenericKDE (object):
             bw[i] = min(bw[i], 1.)
         for i in isunordered:
             bw[i] = min(bw[i], 1.)
+
         return bw
 
     def _cv_ml(self):
@@ -322,39 +319,37 @@ class _GenericKDE (object):
 
 class SetDefaults(object):
     """
-    A helper class that sets the default values for the estimators
-    Sets the default values for the efficient bandwidth estimator
-    Parameteres
-    -----------
-    efficient: Boolean
+    A helper class that sets the default values for the estimators.
+
+    Sets the default values for the efficient bandwidth estimator.
+
+    Parameters
+    ----------
+    efficient: bool, optional
         Set to True if the bandwidth estimation is to be performed
         efficiently -- by taking smaller sub-samples and estimating
         the scaling factor of each subsample. Use for large samples
         (N >> 300) and multiple variables (K >> 3). Default is False
-
-    randomize: Boolean
+    randomize: bool, optional
         Set to True if the bandwidth estimation is to be performed by
         taking n_res random resamples of size n_sub from the full sample.
         If set to False, the estimation is performed by slicing the
         full sample in sub-samples of size n_sub so that the full sample
         is used fully.
-
-    n_sub: Integer
+    n_sub: int, optional
         Size of the subsamples
-
-    n_res: Integer
+    n_res: int, optional
         The number of random re-samples used to estimate the bandwidth.
         Must have randomize set to True. Default value is 25
-
-    return_median: Boolean
+    return_median: bool, optional
         If True the estimator uses the median of all scaling factors for
         each sub-sample to estimate the bandwidth of the full sample.
         If False then the estimator uses the mean. Default is True.
-
-    return_only_bw: Boolean
+    return_only_bw: bool, optional
         Set to True if the estimator is to use the bandwidth and not the
         scaling factor. This is *not* theoretically justified. Should be used
         only for experimenting.
+
     """
     def __init__(self, n_res=25, n_sub=50, randomize=True, return_median=True,
                  efficient=False, return_only_bw=False):
@@ -425,7 +420,6 @@ class KDE(_GenericKDE):
     """
     def __init__(self, tdat, var_type, bw=None,
                                 defaults = SetDefaults()):
-
         self.var_type = var_type
         self.K = len(self.var_type)
         self.tdat = tools.adjust_shape(tdat, self.K)
@@ -463,7 +457,7 @@ class KDE(_GenericKDE):
         bw: array_like
             The value for the bandwidth parameter(s).
         func: function
-            For the log likelihood should be numpy.log
+            For the log likelihood should be ``numpy.log``.
 
         Notes
         -----
@@ -680,8 +674,7 @@ class ConditionalKDE(_GenericKDE):
     """
 
     def __init__(self, tydat, txdat, dep_type, indep_type, bw,
-                            defaults=SetDefaults()):
-
+                 defaults=SetDefaults()):
         self.dep_type = dep_type
         self.indep_type = indep_type
         self.all_vars_type = dep_type + indep_type
@@ -716,7 +709,6 @@ class ConditionalKDE(_GenericKDE):
         repr += "BW selection method: " + self._bw_method + "\n"
         return repr
 
-
     def loo_likelihood(self, bw, func=lambda x: x):
         """
         Returns the leave-one-out function for the data.
@@ -750,6 +742,7 @@ class ConditionalKDE(_GenericKDE):
                              edat=-self.txdat[i, :], var_type=self.indep_type)
             f_i = f_yx / f_x
             L += func(f_i)
+
         return - L
 
     def pdf(self, eydat=None, exdat=None):
@@ -857,8 +850,8 @@ class ConditionalKDE(_GenericKDE):
                              okertype='wangryzin_cdf', tosum=False)
 
             W_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
-                         edat=exdat[i, :], var_type=self.indep_type,
-                         tosum=False)
+                             edat=exdat[i, :], var_type=self.indep_type,
+                             tosum=False)
             S = np.sum(G_y * W_x, axis=0)
             cdf_est[i] = S / (self.N * mu_x)
 
@@ -876,7 +869,7 @@ class ConditionalKDE(_GenericKDE):
         Returns
         -------
         CV: float
-            The cross-validation objective function
+            The cross-validation objective function.
 
         Notes
         -----
@@ -942,51 +935,47 @@ class Reg(_GenericKDE):
     """
     Nonparametric Regression
 
-    Calculates the condtional mean E[y|X] where y = g(X) + e
+    Calculates the condtional mean ``E[y|X]`` where ``y = g(X) + e``.
 
     Parameters
     ----------
     tydat: list with one element which is array_like
         This is the dependent variable.
-
     txdat: list
         The training data for the independent variable(s)
         Each element in the list is a separate variable
-
     dep_type: str
-        The type of the dependent variable(s)
-        c: Continuous
-        u: Unordered (Discrete)
-        o: Ordered (Discrete)
+        The type of the dependent variable(s)::
+
+            c: Continuous
+            u: Unordered (Discrete)
+            o: Ordered (Discrete)
 
     reg_type: str
         Type of regression estimator
         lc: Local Constant Estimator
         ll: Local Linear Estimator
-
     bw: array-like
-        Either a user-specified bandwidth or
-        the method for bandwidth selection.
+        Either a user-specified bandwidth or the method for bandwidth
+        selection.
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
-
-    defaults: Instance of class SetDefaults
-        The default values for the efficient bandwidth estimation
+    defaults: SetDefaults instance
+        The default values for the efficient bandwidth estimation.
 
     Attributes
     ---------
     bw: array-like
-        The bandwidth parameters
+        The bandwidth parameters.
 
     Methods
     -------
-    r-squared(): Calculates the R-Squared for the model
-    mean(): Calculates the conditiona mean
+    r-squared(): Calculates the R-Squared for the model.
+    mean(): Calculates the conditional mean.
     """
 
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
-                defaults=SetDefaults()):
-
+                 defaults=SetDefaults()):
         self.var_type = var_type
         self.all_vars_type = var_type
         self.reg_type = reg_type
@@ -1001,7 +990,6 @@ class Reg(_GenericKDE):
         if not self.efficient:
             self.bw = self.compute_reg_bw(bw)
         else:
-
             if self.randomize:
                 self.bw = self._compute_efficient_randomize(bw)
             else:
@@ -1012,48 +1000,46 @@ class Reg(_GenericKDE):
             self._bw_method = "user-specified"
             return np.asarray(bw)
         else:
-            # The user specified a bandwidth selection
-            # method e.g. 'cv_ls'
+            # The user specified a bandwidth selection method e.g. 'cv_ls'
             self._bw_method = bw
             res = self.bw_func[bw]
             X = np.std(self.txdat, axis=0)
             h0 = 1.06 * X * \
                  self.N ** (- 1. / (4 + np.size(self.txdat, axis=1)))
+
         func = self.est[self.reg_type]
         return optimize.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
-                      maxfun=1e3, disp=0)
+                             maxfun=1e3, disp=0)
 
     def _est_loc_linear(self, bw, tydat, txdat, edat):
         """
-        Local linear estimator of g(x) in the regression
-        y = g(x) + e
+        Local linear estimator of g(x) in the regression ``y = g(x) + e``.
 
         Parameters
         ----------
         bw: array_like
-            Vector of bandwidth value(s)
+            Vector of bandwidth value(s).
         tydat: 1D array_like
-            The dependent variable
+            The dependent variable.
         txdat: 1D or 2D array_like
-            The independent variable(s)
-        edat: 1D array_like of length K, where K is
-            the number of variables. The point at which
-            the density is estimated
+            The independent variable(s).
+        edat: 1D array_like of length K, where K is the number of variables.
+            The point at which the density is estimated.
 
         Returns
         -------
         D_x: array_like
-            The value of the conditional mean at edat
+            The value of the conditional mean at `edat`.
 
         Notes
         -----
-        See p. 81 in [1] and p.38 in [2] for the formulas
-        Unlike other methods, this one requires that edat be 1D
+        See p. 81 in [1] and p.38 in [2] for the formulas.
+        Unlike other methods, this one requires that `edat` be 1D.
         """
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
-                            #ukertype='aitchison_aitken_reg',
-                            #okertype='wangryzin_reg',
-                            tosum=False)
+                         #ukertype='aitchison_aitken_reg',
+                         #okertype='wangryzin_reg',
+                         tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
         iscontinuous = tools._get_type_pos(self.var_type)[0]
@@ -1061,8 +1047,6 @@ class Reg(_GenericKDE):
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
-        L = 0
-        R = 0
         M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
         M22 = np.dot(M12.T, M12 * Ker)
         M22 = np.reshape(M22, (Qc, Qc))
@@ -1113,9 +1097,9 @@ class Reg(_GenericKDE):
         """
         KX = tools.gpke(bw, tdat=txdat, edat=edat,
                         var_type=self.var_type,
-                            #ukertype='aitchison_aitken_reg',
-                            #okertype='wangryzin_reg',
-                            tosum=False)
+                        #ukertype='aitchison_aitken_reg',
+                        #okertype='wangryzin_reg',
+                        tosum=False)
         KX = np.reshape(KX, np.shape(tydat))
         G_numer = np.sum(tydat * KX, axis=0)
         G_denom = np.sum(tools.gpke(bw, tdat=txdat, edat=edat,
@@ -1127,21 +1111,18 @@ class Reg(_GenericKDE):
         B_x = np.ones((self.K))
         N, K = np.shape(txdat)
         f_x = np.sum(KX, axis=0) / float(N)
-        KX_c = tools.gpke(bw, tdat=txdat, edat=edat,
-                        var_type=self.var_type,
-                            ckertype='d_gaussian',
-                            #okertype='wangryzin_reg',
-                            tosum=False)
+        KX_c = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
+                          ckertype='d_gaussian',
+                          #okertype='wangryzin_reg',
+                          tosum=False)
 
         KX_c = np.reshape(KX_c, (N, 1))
         d_mx = - np.sum(tydat * KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
         d_fx = - np.sum(KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
         B_x = d_mx / f_x - G * d_fx / f_x
-        m_x = G_numer
         B_x = (G_numer * d_fx - G_denom * d_mx)/(G_denom**2)
         #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
         return G, B_x
-
 
     def aic_hurvich(self, bw, func=None):
         """
@@ -1151,14 +1132,12 @@ class Reg(_GenericKDE):
         See ch.2 in [1]
         See p.35 in [2]
         """
-        #print "Running aic"
         H = np.empty((self.N, self.N))
         for j in range(self.N):
             H[:, j] = tools.gpke(bw, tdat=self.txdat, edat=self.txdat[j,:],
-                            var_type=self.var_type, tosum=False)
+                                 var_type=self.var_type, tosum=False)
         denom = np.sum(H, axis=1)
         H = H / denom
-        I = np.eye(self.N)
         gx = Reg(tydat=self.tydat, txdat=self.txdat, var_type=self.var_type,
                 reg_type=self.reg_type, bw=bw, defaults=SetDefaults(efficient=False)).fit()[0]
         gx = np.reshape(gx, (self.N, 1))
@@ -1172,8 +1151,6 @@ class Reg(_GenericKDE):
 
         return aic
 
-
-
     def cv_loo(self, bw, func):
         """
         The cross-validation function with leave-one-out
@@ -1184,8 +1161,8 @@ class Reg(_GenericKDE):
         bw: array_like
             Vector of bandwidth values
         func: callable function
-            Returns the estimator of g(x).
-            Can be either _est_loc_constant(local constant) or _est_loc_linear(local_linear)
+            Returns the estimator of g(x).  Can be either ``_est_loc_constant``
+            (local constant) or ``_est_loc_linear`` (local_linear).
 
         Returns
         -------
@@ -1194,9 +1171,8 @@ class Reg(_GenericKDE):
 
         Notes
         -----
-        Calculates the cross-validation least-squares
-        function. This function is minimized by compute_bw
-        to calculate the optimal value of bw
+        Calculates the cross-validation least-squares function. This function
+        is minimized by compute_bw to calculate the optimal value of `bw`.
 
         For details see p.35 in [2]
 
@@ -1206,17 +1182,14 @@ class Reg(_GenericKDE):
         and :math:`h` is the vector of bandwidths
 
         """
-        #print "Running"
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
-        i = 0
         L = 0
-
-        for X_j in LOO_X:
+        for ii, X_j in enumerate(LOO_X):
             Y = LOO_Y.next()
-            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :])[0]
-            L += (self.tydat[i] - G) ** 2
-            i += 1
+            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[ii, :])[0]
+            L += (self.tydat[ii] - G) ** 2
+
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N
 
@@ -1232,8 +1205,8 @@ class Reg(_GenericKDE):
         (Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}
         (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
 
-        where :math:`\hat{Y_{i}}` are the
-        fitted values calculated in self.mean()
+        where :math:`\hat{Y_{i}}` are the fitted values calculated in
+        self.mean().
         """
         Y = np.squeeze(self.tydat)
         Yhat = self.fit()[0]
@@ -1252,6 +1225,7 @@ class Reg(_GenericKDE):
             edat = self.txdat
         else:
             edat = tools.adjust_shape(edat, self.K)
+
         N_edat = np.shape(edat)[0]
         mean = np.empty((N_edat,))
         mfx = np.empty((N_edat, self.K))
@@ -1260,24 +1234,29 @@ class Reg(_GenericKDE):
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
+
         return mean, mfx
 
     def sig_test(self, var_pos, nboot=50, nested_res=25, pivot=False):
         """
-        Significance test for the variables in the regression
+        Significance test for the variables in the regression.
+
         Parameters
         ----------
         var_pos: tuple, list
             The position of the variable in txdat to be tested
+
         Returns
         -------
         sig: str
-            The level of significance
-            * : at 90% confidence level
-            ** : at 95% confidence level
-            *** : at 99* confidence level
-            "Not Significant" : if not significant
-            """
+            The level of significance:
+
+                - * : at 90% confidence level
+                - ** : at 95% confidence level
+                - *** : at 99* confidence level
+                - "Not Significant" : if not significant
+
+        """
         var_pos = np.asarray(var_pos)
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
         if (iscontinuous == var_pos).any():  # continuous variable
@@ -1288,6 +1267,7 @@ class Reg(_GenericKDE):
         else:
             print "------DISCRETE-----------"
             Sig = TestRegCoefD(self, var_pos, nboot)
+
         return Sig.sig
 
     def __repr__(self):
@@ -1303,13 +1283,12 @@ class Reg(_GenericKDE):
 
 class CensoredReg(Reg):
     """
-    Nonparametric censored regression
+    Nonparametric censored regression.
 
-    Calculates the condtional mean E[y|X] where y = g(X) + e
-    Where y is left-censored
-    Left censored variable Y is deined as
-    Y = min {Y', L} where L is the value at which Y is censored
-    and Y' is the true value of the variable
+    Calculates the condtional mean ``E[y|X]`` where ``y = g(X) + e``,
+    where y is left-censored.  Left censored variable Y is defined as
+    ``Y = min {Y', L}`` where ``L`` is the value at which ``Y`` is censored
+    and ``Y'`` is the true value of the variable.
 
     Parameters
     ----------
@@ -1332,11 +1311,9 @@ class CensoredReg(Reg):
         the method for bandwidth selection.
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
-
     censor_val: Float
         Value at which the dependent variable is censored
-
-    defaults: Instance of class SetDefaults
+    defaults: SetDefaults instance, optional
         The default values for the efficient bandwidth estimation
 
     Attributes
@@ -1352,7 +1329,6 @@ class CensoredReg(Reg):
 
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
                  censor_val=0, defaults=SetDefaults()):
-
         self.var_type = var_type
         self.all_vars_type = var_type
         self.reg_type = reg_type
@@ -1373,7 +1349,6 @@ class CensoredReg(Reg):
         if not self.efficient:
             self.bw = self.compute_reg_bw(bw)
         else:
-
             if self.randomize:
                 self.bw = self._compute_efficient_randomize(bw)
             else:
@@ -1406,8 +1381,7 @@ class CensoredReg(Reg):
 
     def _est_loc_linear(self, bw, tydat, txdat, edat, W):
         """
-        Local linear estimator of g(x) in the regression
-        y = g(x) + e
+        Local linear estimator of g(x) in the regression ``y = g(x) + e``.
 
         Parameters
         ----------
@@ -1433,9 +1407,8 @@ class CensoredReg(Reg):
         """
 
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
-                            ukertype='aitchison_aitken_reg',
-                            okertype='wangryzin_reg',
-                            tosum=False)
+                         ukertype='aitchison_aitken_reg',
+                         okertype='wangryzin_reg', tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
         iscontinuous = tools._get_type_pos(self.var_type)[0]
@@ -1444,8 +1417,6 @@ class CensoredReg(Reg):
         Ker = Ker * W
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
-        L = 0
-        R = 0
         M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
         M22 = np.dot(M12.T, M12 * Ker)
         M22 = np.reshape(M22, (Qc, Qc))
@@ -1483,7 +1454,8 @@ class CensoredReg(Reg):
             Vector of bandwidth values
         func: callable function
             Returns the estimator of g(x).
-            Can be either _est_loc_constant(local constant) or _est_loc_linear(local_linear)
+            Can be either ``_est_loc_constant`` (local constant) or
+            ``_est_loc_linear`` (local_linear).
 
         Returns
         -------
@@ -1504,68 +1476,64 @@ class CensoredReg(Reg):
         and :math:`h` is the vector of bandwidths
 
         """
-        #print "Running"
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         LOO_W = tools.LeaveOneOut(self.W_in).__iter__()
-        i = 0
         L = 0
-        for X_j in LOO_X:
+        for ii, X_j in enumerate(LOO_X):
             Y = LOO_Y.next()
             w = LOO_W.next()
-            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[i, :], W=w)[0]
-            L += (self.tydat[i] - G) ** 2
-            i += 1
+            G = func(bw, tydat=Y, txdat=-X_j, edat=-self.txdat[ii, :], W=w)[0]
+            L += (self.tydat[ii] - G) ** 2
+
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N
 
     def fit(self, edat=None):
         """
-        Returns the marginal effects at the edat points
+        Returns the marginal effects at the edat points.
         """
         func = self.est[self.reg_type]
         if edat is None:
             edat = self.txdat
         else:
             edat = tools.adjust_shape(edat, self.K)
+
         N_edat = np.shape(edat)[0]
         mean = np.empty((N_edat,))
         mfx = np.empty((N_edat, self.K))
         for i in xrange(N_edat):
-            mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :], W = self.W_in)
+            mean_mfx = func(self.bw, self.tydat, self.txdat, edat=edat[i, :],
+                            W=self.W_in)
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
+
         return mean, mfx
 
 
 class TestRegCoefC(object):
     """
-    Significance test for continuous variables in a nonparametric
-    regression.
+    Significance test for continuous variables in a nonparametric regression.
 
-    Null Hypothesis dE(Y|X)/dX_j = 0
-    Alternative Hypothesis dE(Y|X)/dX_j != 0
+    The null hypothesis is ``dE(Y|X)/dX_j = 0``, the alternative hypothesis is
+    ``dE(Y|X)/dX_j != 0``.
 
-    Parameteres
-    -----------
-    model: Instance of Reg class
+    Parameters
+    ----------
+    model: Reg instance
         This is the nonparametric regression model whose elements
         are tested for significance.
-
     test_vars: tuple, list of integers, array_like
         index of position of the continuous variables to be tested
         for significance. E.g. (1,3,5) jointly tests variables at
         position 1,3 and 5 for significance.
-
     nboot: int
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
-
     nested_res: int
         Number of nested resamples used to calculate lambda.
         Must enable the pivot option
-
     pivot: bool
         Pivot the test statistic by dividing by its standard error
         Significantly increases computational time. But pivot statistics
@@ -1589,9 +1557,10 @@ class TestRegCoefC(object):
 
     References
     ----------
-    See Racine, J.: "Consistent Significance Testing for Nonparametric
-        Regression" Journal of Business & Economics Statistics
-    See chapter 12 in [1]
+    Racine, J.: "Consistent Significance Testing for Nonparametric Regression"
+    Journal of Business \& Economics Statistics.
+
+    Chapter 12 in [1].
     """
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
@@ -1617,14 +1586,14 @@ class TestRegCoefC(object):
 
     def _compute_test_stat(self, Y, X):
         """
-        Computes the test statistic
-        See p.371 in [8]
+        Computes the test statistic.  See p.371 in [8].
         """
         lam = self._compute_lambda(Y, X)
         t = lam
         if self.pivot:
             se_lam = self._compute_se_lambda(Y, X)
             t = lam / float(se_lam)
+
         return t
 
     def _compute_lambda(self, Y, X):
@@ -1656,16 +1625,17 @@ class TestRegCoefC(object):
             Y1 = Y[ind, 0]
             X1 = X[ind, 0::]
             lam[i] = self._compute_lambda(Y1, X1)
+
         se_lambda = np.std(lam)
         return se_lambda
 
     def _compute_sig(self):
         """
         Computes the significance value for the variable(s) tested.
-        The empirical distribution of the test statistic is obtained
-        through bootstrapping the sample.
-        The null hypothesis is rejected if the test statistic is larger
-        than the 90, 95, 99 percentiles
+
+        The empirical distribution of the test statistic is obtained through
+        bootstrapping the sample.  The null hypothesis is rejected if the test
+        statistic is larger than the 90, 95, 99 percentiles.
         """
         t_dist = np.empty(shape=(self.nboot, ))
         Y = self.tydat
@@ -1687,35 +1657,30 @@ class TestRegCoefC(object):
             t_dist[i] = self._compute_test_stat(Y_boot, self.txdat)
 
         sig = "Not Significant"
-        #print "Test statistic is", self.test_stat
-        #print  "0.9 quantile is ", mquantiles(t_dist, 0.9)
-        #print sorted(t_dist)
-
         if self.test_stat > mquantiles(t_dist, 0.9):
             sig = "*"
         if self.test_stat > mquantiles(t_dist, 0.95):
             sig = "**"
         if self.test_stat > mquantiles(t_dist, 0.99):
             sig = "***"
+
         return sig
 
 
 class TestRegCoefD(TestRegCoefC):
     """
-    Significance test for the categorical variables in a
-    nonparametric regression
+    Significance test for the categorical variables in a nonparametric
+    regression.
 
-    Parameteres
-    -----------
+    Parameters
+    ----------
     model: Instance of Reg class
         This is the nonparametric regression model whose elements
         are tested for significance.
-
     test_vars: tuple, list of one element
         index of position of the discrete variable to be tested
         for significance. E.g. (3) tests variable at
         position 3 for significance.
-
     nboot: int
         Number of bootstrap samples used to determine the distribution
         of the test statistic in a finite sample. Default is 400
@@ -1737,8 +1702,7 @@ class TestRegCoefD(TestRegCoefC):
 
     References
     ----------
-    See [9]
-    See chapter 12 in [1]
+    See [9] and chapter 12 in [1].
     """
 
     def _compute_test_stat(self, Y, X):
@@ -1760,6 +1724,7 @@ class TestRegCoefD(TestRegCoefC):
             m1 = model.fit(edat=X1)[0]
             m1 = np.reshape(m1, (n, 1))
             I += (m1 - m0) ** 2
+
         I = np.sum(I, axis=0) / float(n)
         return I
 
@@ -1789,18 +1754,13 @@ class TestRegCoefD(TestRegCoefC):
             I_dist[j] = self._compute_test_stat(Y_boot, X)
 
         sig = "Not Significant"
-        #print "Test statistic is: ", self.test_stat
-        #print  "0.9 quantile is: ", mquantiles(I_dist, 0.9)
-        #print  mquantiles(I_dist, 0.95)
-        #print mquantiles(I_dist, 0.99)
-        #print I_dist
-
         if self.test_stat > mquantiles(I_dist, 0.9):
             sig = "*"
         if self.test_stat > mquantiles(I_dist, 0.95):
             sig = "**"
         if self.test_stat > mquantiles(I_dist, 0.99):
             sig = "***"
+
         return sig
 
     def _est_cond_mean(self):
@@ -1814,6 +1774,7 @@ class TestRegCoefD(TestRegCoefC):
         for i in self.dom_x:
             X[:, self.test_vars]  = i
             m += self.model.fit(edat = X)[0]
+
         m = m / float(len(self.dom_x))
         m = np.reshape(m, (np.shape(self.txdat)[0], 1))
         return m
@@ -1827,34 +1788,33 @@ class TestFForm(object):
     ----------
     tydat: list
         Dependent variable (training set)
-
     txdat: list of array_like objects
         The independent (right-hand-side) variables
-
     bw: array_like, str
         Bandwidths for txdat or specify method for bandwidth selection
-
     fform: function
-        The functional form y = g(b, x) to be tested. Takes as inputs
-        the RHS variables txdat and the coefficients b (betas)
-        and returns a fitted y_hat
-
+        The functional form ``y = g(b, x)`` to be tested. Takes as inputs
+        the RHS variables `txdat` and the coefficients ``b`` (betas)
+        and returns a fitted ``y_hat``.
     var_type: str
-        The type of the independent txdat variables
-        c: continuous
-        o: ordered
-        u: unordered
+        The type of the independent `txdat` variables:
+
+            - c: continuous
+            - o: ordered
+            - u: unordered
 
     estimator: function
         Must return the estimated coefficients b (betas). Takes as inputs
-        (tydat, txdat). E.g. least square estimator:
-        lambda (x,y): np.dot(np.pinv(np.dot(x.T, x)), np.dot(x.T, y))
+        ``(tydat, txdat)``.  E.g. least square estimator::
+
+            lambda (x,y): np.dot(np.pinv(np.dot(x.T, x)), np.dot(x.T, y))
 
     References
     ----------
     See Racine, J.: "Consistent Significance Testing for Nonparametric
-        Regression" Journal of Business & Economics Statistics
-    See chapter 12 in [1]  pp. 355-357
+    Regression" Journal of Business \& Economics Statistics.
+
+    See chapter 12 in [1]  pp. 355-357.
 
     """
     def __init__(self, tydat, txdat, bw, var_type, fform, estimator):
@@ -1892,13 +1852,8 @@ class TestFForm(object):
             m_hat = self.fform(X, b_hat)
             u_boot_hat = Y_boot - m_hat
             I_dist[j] = self._compute_test_stat(u_boot_hat)
-        sig = "Not Significant"
-        #print "Test statistic is: ", self.test_stat
-        #print  "0.9 quantile is: ", mquantiles(I_dist, 0.9)
-        #print  mquantiles(I_dist, 0.95)
-        #print mquantiles(I_dist, 0.99)
-        #print I_dist
 
+        sig = "Not Significant"
         if self.test_stat > mquantiles(I_dist, 0.9):
             sig = "*"
         if self.test_stat > mquantiles(I_dist, 0.95):
@@ -1917,8 +1872,8 @@ class TestFForm(object):
         for i, X_j in enumerate(XLOO):
             u_j = uLOO.next()
             # See Bootstrapping procedure on p. 357 in [1]
-            K = tools.gpke(self.bw, tdat=-X_j, edat=-X[i, :],
-                             var_type=self.var_type, tosum=False)
+            K = tools.gpke(self.bw, tdat=-X_j, edat=-X_j[i, :],
+                           var_type=self.var_type, tosum=False)
             f_i = u[i] * u_j * K
             I += f_i  # See eq. 12.7 on p. 355 in [1]
             S2 += f_i ** 2  # See Theorem 12.1 on p.356 in [1]
@@ -1941,10 +1896,11 @@ class SingleIndexModel(Reg):
     txdat: array_like
         The independent variable(s)
     var_type: str
-        The type of variables in X
-        c: continuous
-        o: ordered
-        u: unordered
+        The type of variables in X:
+
+            - c: continuous
+            - o: ordered
+            - u: unordered
 
     Attributes
     ----------
@@ -1955,8 +1911,9 @@ class SingleIndexModel(Reg):
 
     Methods
     -------
-    fit(): Computes the fitted values E[Y|X] = g(X * b)
-            and the marginal effects dY/dX
+    fit(): Computes the fitted values ``E[Y|X] = g(X * b)``
+           and the marginal effects ``dY/dX``.
+
     References
     ----------
     See chapter on semiparametric models in [1]
@@ -1964,7 +1921,7 @@ class SingleIndexModel(Reg):
     Notes
     -----
     This model resembles the binary choice models. The user knows
-    that X and b interact linearly, but g(X*b) is unknown.
+    that X and b interact linearly, but ``g(X * b)`` is unknown.
     In the parametric binary choice models the user usually assumes
     some distribution of g() such as normal or logistic.
 
@@ -1989,21 +1946,18 @@ class SingleIndexModel(Reg):
         return b, bw
 
     def cv_loo(self, params):
-        #print "Running"
         # See p. 254 in Textbook
         params = np.asarray(params)
         b = params[0 : self.K]
         bw = params[self.K::]
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
-        i = 0
         L = 0
-        func = self._est_loc_linear
-        for X_j in LOO_X:
+        for ii, X_j in enumerate(LOO_X):
             Y = LOO_Y.next()
-            G = self.func(bw, tydat=Y, txdat=-b*X_j, edat=-b*self.txdat[i, :])[0]
-            L += (self.tydat[i] - G) ** 2
-            i += 1
+            G = self.func(bw, tydat=Y, txdat=-b*X_j, edat=-b*self.txdat[ii, :])[0]
+            L += (self.tydat[ii] - G) ** 2
+
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.N
 
@@ -2021,8 +1975,8 @@ class SingleIndexModel(Reg):
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
-        return mean, mfx
 
+        return mean, mfx
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -2037,8 +1991,8 @@ class SingleIndexModel(Reg):
 
 class SemiLinear(Reg):
     """
-    Semiparametric partially linear model
-    Y = Xb + g(Z) + e
+    Semiparametric partially linear model, ``Y = Xb + g(Z) + e``.
+
     Parameters
     ----------
     tydat: array_like
@@ -2048,12 +2002,14 @@ class SemiLinear(Reg):
     tzdat: array_like
         The nonparametric component in the regression
     var_type: str
-        The type of the variables in the nonparametric component
-        c: continuous
-        o: ordered
-        u: unordered
+        The type of the variables in the nonparametric component;
+
+            - c: continuous
+            - o: ordered
+            - u: unordered
+
     l_K: int
-        The number of the variables that comprise the linear component
+        The number of the variables that comprise the linear component.
 
     Attributes
     ----------
@@ -2066,12 +2022,13 @@ class SemiLinear(Reg):
     -------
     fit(): Returns the fitted mean and marginal effects dy/dz
 
-    References
-    ----------
-    See chapter on Semiparametric Models in [1]
     Notes
     -----
     This model uses only the local constant regression estimator
+
+    References
+    ----------
+    See chapter on Semiparametric Models in [1]
     """
 
     def __init__(self, tydat, txdat, tzdat, var_type, l_K):
@@ -2089,8 +2046,9 @@ class SemiLinear(Reg):
 
     def _est_b_bw(self):
         """
-        Computes the (beta) coefficients and the bandwidths
-        Minimizes cv_loo with respect to b and bw
+        Computes the (beta) coefficients and the bandwidths.
+
+        Minimizes ``cv_loo`` with respect to ``b`` and ``bw``.
         """
         params0 = np.random.uniform(size=(self.l_K + self.K, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
@@ -2101,13 +2059,16 @@ class SemiLinear(Reg):
 
     def cv_loo(self, params):
         """
-        Similar to the cross validation leave-one-out estimator
-        Modified to reflect the linear components
+        Similar to the cross validation leave-one-out estimator.
+
+        Modified to reflect the linear components.
+
         Parameters
         ----------
         params: array_like
-            Vector consisting of the coefficients (b) and the bandwidths (bw)
-            The first l_K elements are the coefficients
+            Vector consisting of the coefficients (b) and the bandwidths (bw).
+            The first ``l_K`` elements are the coefficients.
+
         Returns
         -------
         L: float
@@ -2124,17 +2085,16 @@ class SemiLinear(Reg):
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         LOO_Z = tools.LeaveOneOut(self.tzdat).__iter__()
         Xb = b * self.txdat
-        i = 0
         L = 0
-        for X_j in LOO_X:
+        for ii, X_j in enumerate(LOO_X):
             Y = LOO_Y.next()
             Z = LOO_Z.next()
             Xb_j = b * X_j
             Yx = Y - Xb_j
-            G = self.func(bw, tydat=Yx, txdat=-Z, edat=-self.tzdat[i, :])[0]
-            lt = np.sum(Xb[i, :])  # linear term
-            L += (self.tydat[i] - lt - G) ** 2
-            i += 1
+            G = self.func(bw, tydat=Yx, txdat=-Z, edat=-self.tzdat[ii, :])[0]
+            lt = np.sum(Xb[ii, :])  # linear term
+            L += (self.tydat[ii] - lt - G) ** 2
+
         return L
 
     def fit(self, exdat=None, ezdat=None):
@@ -2144,6 +2104,7 @@ class SemiLinear(Reg):
             exdat = self.txdat
         else:
             exdat = tools.adjust_shape(exdat, self.l_K)
+
         if ezdat is None:
             ezdat = self.tzdat
         else:
@@ -2154,20 +2115,20 @@ class SemiLinear(Reg):
         mfx = np.empty((N_edat, self.K))
         Y = self.tydat - self.b * exdat
         for i in xrange(N_edat):
-            mean_mfx = self.func(self.bw, Y,
-                    self.tzdat, edat=ezdat[i, :])
+            mean_mfx = self.func(self.bw, Y, self.tzdat, edat=ezdat[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
-        return mean, mfx
 
+        return mean, mfx
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "Semiparamateric Paritally Linear Model \n"
+        repr = "Semiparamatric Partially Linear Model \n"
         repr += "Number of variables: K = " + str(self.K) + "\n"
         repr += "Number of samples:   N = " + str(self.N) + "\n"
         repr += "Variable types:      " + self.var_type + "\n"
         repr += "BW selection method: cv_ls" + "\n"
         repr += "Estimator type: local constant" + "\n"
         return repr
+
