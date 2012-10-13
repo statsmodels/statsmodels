@@ -70,8 +70,9 @@ def adjust_shape(dat, K):
     else:
         if np.shape(dat)[0] == K and np.shape(dat)[1] != K:
             dat = dat.T
+
         N = np.shape(dat)[0]  # ndim >1 so many obs many vars
-        #assert np.shape(dat)[1] == K
+
     dat = np.reshape(dat, (N, K))
     return dat
 
@@ -83,7 +84,7 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
 
     Parameters
     ----------
-    bw: array-like
+    bw: ndarray
         The user-specified bandwidth parameters.
     tdat: 1D or 2-D ndarray
         The training data.
@@ -121,17 +122,16 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
                 k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
     """
     iscontinuous, isordered, isunordered = _get_type_pos(var_type)
-    K = len(var_type)
     # must remain 1-D for indexing to work
-    bw = np.reshape(np.asarray(bw), (K,))
+    bw = bw.reshape((len(var_type),)).astype(float)
     Kval = np.column_stack((kernel_func[ckertype](bw[iscontinuous],
                                                   tdat[:, iscontinuous],
                                                   edat[:, iscontinuous]),
-                            kernel_func[okertype](bw[isordered], tdat[:,
-                                                  isordered],
+                            kernel_func[okertype](bw[isordered],
+                                                  tdat[:, isordered],
                                                   edat[:, isordered]),
-                            kernel_func[ukertype](bw[isunordered], tdat[:,
-                                                  isunordered],
+                            kernel_func[ukertype](bw[isunordered],
+                                                  tdat[:, isunordered],
                                                   edat[:, isunordered])))
 
     dens = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))

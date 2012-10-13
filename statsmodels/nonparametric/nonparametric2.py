@@ -286,7 +286,7 @@ class _GenericKDE (object):
         # the initial value for the optimization is the normal_reference
         h0 = self._normal_reference()
         bw = optimize.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
-                           maxiter=1e3, maxfun=1e3, disp=0)
+                           maxiter=1e3, maxfun=1e3, disp=0, xtol=1e-3)
         bw = self._set_bw_bounds(bw)  # bound bw if necessary
         return bw
 
@@ -308,7 +308,8 @@ class _GenericKDE (object):
         conditional (ConditionalKDE) and unconditional (KDE) kernel density estimation.
         """
         h0 = self._normal_reference()
-        bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0)
+        bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0,
+                           xtol=1e-3)
         bw = self._set_bw_bounds(bw)  # bound bw if necessary
         return bw
 
@@ -511,7 +512,7 @@ class KDE(_GenericKDE):
         N_edat = np.shape(edat)[0]
         for i in xrange(N_edat):
             pdf_est.append(tools.gpke(self.bw, tdat=self.tdat, edat=edat[i, :],
-                          var_type=self.var_type) / self.N)
+                           var_type=self.var_type) / self.N)
 
         pdf_est = np.squeeze(pdf_est)
         return pdf_est
@@ -554,10 +555,10 @@ class KDE(_GenericKDE):
         cdf_est = []
         for i in xrange(N_edat):
             cdf_est.append(tools.gpke(self.bw, tdat=self.tdat,
-                             edat=edat[i, :], var_type=self.var_type,
-                             ckertype="gaussian_cdf",
-                             ukertype="aitchisonaitken_cdf",
-                             okertype='wangryzin_cdf') / self.N)
+                           edat=edat[i, :], var_type=self.var_type,
+                           ckertype="gaussian_cdf",
+                           ukertype="aitchisonaitken_cdf",
+                           okertype='wangryzin_cdf') / self.N)
 
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
