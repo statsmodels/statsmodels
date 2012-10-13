@@ -1,6 +1,7 @@
 import numpy as np
 import kernels
 
+
 kernel_func = dict(wangryzin=kernels.wang_ryzin,
                    aitchisonaitken=kernels.aitchison_aitken,
                    gaussian=kernels.gaussian,
@@ -121,7 +122,6 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
     """
     iscontinuous, isordered, isunordered = _get_type_pos(var_type)
     K = len(var_type)
-    N = np.shape(tdat)[0]
     # must remain 1-D for indexing to work
     bw = np.reshape(np.asarray(bw), (K,))
     Kval = np.concatenate((
