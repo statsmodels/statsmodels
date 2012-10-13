@@ -91,7 +91,7 @@ class _GenericKDE (object):
         a discussion on the measure of dispersion
         """
         if self.__class__.__name__ == "Reg":
-            all_vars = all_vars[:, 1::]
+            all_vars = all_vars[:, 1:]
 
         s1 = np.std(all_vars, axis=0)
         q75 = mquantiles(all_vars, 0.75, axis=0).data[0]
@@ -163,7 +163,7 @@ class _GenericKDE (object):
 
         slices = np.arange(0, self.N, self.n_sub)
         n_slice = len(slices)
-        bounds = [(slices[0:-1][i], slices[1::][i]) for i in range(n_slice - 1)]
+        bounds = [(slices[0:-1][i], slices[1:][i]) for i in range(n_slice - 1)]
         bounds.append((slices[-1], self.N))
         sample_scale = np.empty((len(bounds), self.K))
         only_bw = np.empty((len(bounds), self.K))
@@ -205,13 +205,13 @@ class _GenericKDE (object):
 
         if self.__class__.__name__ == 'ConditionalKDE':  # TODO: use isinstance
             tydat = all_vars[:, 0 : self.K_dep]
-            txdat = all_vars[:, self.K_dep ::]
+            txdat = all_vars[:, self.K_dep:]
             model = ConditionalKDE(tydat, txdat, self.dep_type,
                         self.indep_type, bw=bw,
                         defaults=SetDefaults(efficient=False))
         elif self.__class__.__name__ == 'Reg':
             tydat = tools.adjust_shape(all_vars[:, 0], 1)
-            txdat = tools.adjust_shape(all_vars[:, 1::], self.K)
+            txdat = tools.adjust_shape(all_vars[:, 1:], self.K)
             model = Reg(tydat=tydat, txdat=txdat, reg_type=self.reg_type,
                         var_type=self.var_type, bw=bw,
                         defaults=SetDefaults(efficient=False))
@@ -683,7 +683,7 @@ class ConditionalKDE(_GenericKDE):
         self.tydat = tools.adjust_shape(tydat, self.K_dep)
         self.txdat = tools.adjust_shape(txdat, self.K_indep)
         self.N, self.K_dep = np.shape(self.tydat)
-        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
+        self.all_vars = np.column_stack((self.tydat, self.txdat))
         self.K = np.shape(self.all_vars)[1]
         assert len(self.dep_type) == self.K_dep
         assert len(self.indep_type) == np.shape(self.txdat)[1]
@@ -738,7 +738,7 @@ class ConditionalKDE(_GenericKDE):
             X_j = xLOO.next()
             f_yx = tools.gpke(bw, tdat=-Y_j, edat=-self.all_vars[i, :],
                               var_type=(self.dep_type + self.indep_type))
-            f_x = tools.gpke(bw[self.K_dep::], tdat=-X_j,
+            f_x = tools.gpke(bw[self.K_dep:], tdat=-X_j,
                              edat=-self.txdat[i, :], var_type=self.indep_type)
             f_i = f_yx / f_x
             L += func(f_i)
@@ -785,12 +785,12 @@ class ConditionalKDE(_GenericKDE):
             exdat = tools.adjust_shape(exdat, self.K_indep)
 
         pdf_est = []
-        edat = np.concatenate((eydat, exdat), axis=1)
+        edat = np.column_stack((eydat, exdat))
         N_edat = np.shape(edat)[0]
         for i in xrange(N_edat):
             f_yx = tools.gpke(self.bw, tdat=self.all_vars, edat=edat[i, :],
                               var_type=(self.dep_type + self.indep_type))
-            f_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
+            f_x = tools.gpke(self.bw[self.K_dep:], tdat=self.txdat,
                              edat=exdat[i, :], var_type=self.indep_type)
             pdf_est.append(f_yx / f_x)
 
@@ -840,7 +840,7 @@ class ConditionalKDE(_GenericKDE):
         N_edat = np.shape(exdat)[0]
         cdf_est = np.empty(N_edat)
         for i in xrange(N_edat):
-            mu_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
+            mu_x = tools.gpke(self.bw[self.K_dep:], tdat=self.txdat,
                               edat=exdat[i, :], var_type=self.indep_type) / self.N
             mu_x = np.squeeze(mu_x)
             G_y = tools.gpke(self.bw[0:self.K_dep], tdat=self.tydat,
@@ -849,7 +849,7 @@ class ConditionalKDE(_GenericKDE):
                              ukertype="aitchisonaitken_cdf",
                              okertype='wangryzin_cdf', tosum=False)
 
-            W_x = tools.gpke(self.bw[self.K_dep::], tdat=self.txdat,
+            W_x = tools.gpke(self.bw[self.K_dep:], tdat=self.txdat,
                              edat=exdat[i, :], var_type=self.indep_type,
                              tosum=False)
             S = np.sum(G_y * W_x, axis=0)
@@ -900,17 +900,17 @@ class ConditionalKDE(_GenericKDE):
         zLOO = tools.LeaveOneOut(self.all_vars)
         CV = 0
         for l, Z in enumerate(zLOO):
-            X = Z[:, self.K_dep::]
+            X = Z[:, self.K_dep:]
             Y = Z[:, 0:self.K_dep]
             Expander = np.ones((self.N - 1, 1))
             Ye_L = np.kron(Y, Expander)
             Ye_R = np.kron(Expander, Y)
             Xe_L = np.kron(X, Expander)
             Xe_R = np.kron(Expander, X)
-            K_Xi_Xl = tools.gpke(bw[self.K_dep::], tdat=Xe_L,
+            K_Xi_Xl = tools.gpke(bw[self.K_dep:], tdat=Xe_L,
                                  edat=self.txdat[l, :],
                                  var_type=self.indep_type, tosum=False)
-            K_Xj_Xl = tools.gpke(bw[self.K_dep::], tdat=Xe_R,
+            K_Xj_Xl = tools.gpke(bw[self.K_dep:], tdat=Xe_R,
                                  edat=self.txdat[l, :],
                                  var_type=self.indep_type, tosum=False)
             K2_Yi_Yj = tools.gpke(bw[0:self.K_dep], tdat=Ye_L,
@@ -924,7 +924,7 @@ class ConditionalKDE(_GenericKDE):
             f_X_Y = tools.gpke(bw, tdat=-Z, edat=-self.all_vars[l, :],
                                var_type=(self.dep_type +
                                          self.indep_type)) / float(self.N)
-            m_x = tools.gpke(bw[self.K_dep::], tdat=-X, edat=-self.txdat[l, :],
+            m_x = tools.gpke(bw[self.K_dep:], tdat=-X, edat=-self.txdat[l, :],
                              var_type=self.indep_type) / float(self.N)
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
 
@@ -982,7 +982,7 @@ class Reg(_GenericKDE):
         self.K = len(self.var_type)
         self.tydat = tools.adjust_shape(tydat, 1)
         self.txdat = tools.adjust_shape(txdat, self.K)
-        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
+        self.all_vars = np.column_stack((self.tydat, self.txdat))
         self.N = np.shape(self.txdat)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
@@ -1055,21 +1055,21 @@ class Reg(_GenericKDE):
         M21 = M12.T
         M11 = np.sum(np.ones((N,1)) * Ker, axis=0)
         M11 = np.reshape(M11, (1,1))
-        M_1 = np.concatenate((M11, M12), axis=1)
-        M_2 = np.concatenate((M21, M22), axis=1)
-        M = np.concatenate((M_1, M_2), axis=0)
+        M_1 = np.column_stack((M11, M12))
+        M_2 = np.column_stack((M21, M22))
+        M = np.row_stack((M_1, M_2))
         V1 = np.sum(np.ones((N,1)) * Ker * tydat, axis=0)
         V2 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
         V2 = np.sum(V2 * Ker * tydat , axis=0)
         V1 = np.reshape(V1, (1,1))
         V2 = np.reshape(V2, (Qc, 1))
 
-        V = np.concatenate((V1, V2), axis=0)
+        V = np.row_stack((V1, V2))
         assert np.shape(M) == (Qc + 1, Qc + 1)
         assert np.shape(V) == (Qc + 1, 1)
         mean_mfx = np.dot(np.linalg.pinv(M), V)
         mean = mean_mfx[0]
-        mfx = mean_mfx[1::, :]
+        mfx = mean_mfx[1:, :]
         return mean, mfx
 
     def _est_loc_constant(self, bw, tydat, txdat, edat):
@@ -1335,7 +1335,7 @@ class CensoredReg(Reg):
         self.K = len(self.var_type)
         self.tydat = tools.adjust_shape(tydat, 1)
         self.txdat = tools.adjust_shape(txdat, self.K)
-        self.all_vars = np.concatenate((self.tydat, self.txdat), axis=1)
+        self.all_vars = np.column_stack((self.tydat, self.txdat))
         self.N = np.shape(self.txdat)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
@@ -1425,21 +1425,21 @@ class CensoredReg(Reg):
         M21 = M12.T
         M11 = np.sum(np.ones((N,1)) * Ker, axis=0)
         M11 = np.reshape(M11, (1,1))
-        M_1 = np.concatenate((M11, M12), axis=1)
-        M_2 = np.concatenate((M21, M22), axis=1)
-        M = np.concatenate((M_1, M_2), axis=0)
+        M_1 = np.column_stack((M11, M12))
+        M_2 = np.column_stack((M21, M22))
+        M = np.row_stack((M_1, M_2))
         V1 = np.sum(np.ones((N,1)) * Ker * tydat, axis=0)
         V2 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
         V2 = np.sum(V2 * Ker * tydat , axis=0)
         V1 = np.reshape(V1, (1,1))
         V2 = np.reshape(V2, (Qc, 1))
 
-        V = np.concatenate((V1, V2), axis=0)
+        V = np.row_stack((V1, V2))
         assert np.shape(M) == (Qc + 1, Qc + 1)
         assert np.shape(V) == (Qc + 1, 1)
         mean_mfx = np.dot(np.linalg.pinv(M), V)
         mean = mean_mfx[0]
-        mfx = mean_mfx[1::, :]
+        mfx = mean_mfx[1:, :]
         return mean, mfx
 
 
@@ -1623,7 +1623,7 @@ class TestRegCoefC(object):
         for i in xrange(self.nres):
             ind = np.random.random_integers(0, n-1, size=(n,1))
             Y1 = Y[ind, 0]
-            X1 = X[ind, 0::]
+            X1 = X[ind, 0:]
             lam[i] = self._compute_lambda(Y1, X1)
 
         se_lambda = np.std(lam)
@@ -1719,7 +1719,7 @@ class TestRegCoefD(TestRegCoefC):
         m0 = model.fit(edat=X1)[0]
         m0 = np.reshape(m0, (n, 1))
         I = np.zeros((n, 1))
-        for i in dom_x[1::] :
+        for i in dom_x[1:] :
             X1[:, self.test_vars] = i
             m1 = model.fit(edat=X1)[0]
             m1 = np.reshape(m1, (n, 1))
@@ -1941,7 +1941,7 @@ class SingleIndexModel(Reg):
         params0 = np.random.uniform(size=(2*self.K, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0:self.K]
-        bw = b_bw[self.K::]
+        bw = b_bw[self.K:]
         bw = self._set_bw_bounds(bw)
         return b, bw
 
@@ -1949,7 +1949,7 @@ class SingleIndexModel(Reg):
         # See p. 254 in Textbook
         params = np.asarray(params)
         b = params[0 : self.K]
-        bw = params[self.K::]
+        bw = params[self.K:]
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         L = 0
@@ -2053,7 +2053,7 @@ class SemiLinear(Reg):
         params0 = np.random.uniform(size=(self.l_K + self.K, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0 : self.l_K]
-        bw = b_bw[self.l_K::]
+        bw = b_bw[self.l_K:]
         #bw = self._set_bw_bounds(np.asarray(bw))
         return b, bw
 
@@ -2080,7 +2080,7 @@ class SemiLinear(Reg):
         """
         params = np.asarray(params)
         b = params[0 : self.l_K]
-        bw = params[self.l_K::]
+        bw = params[self.l_K:]
         LOO_X = tools.LeaveOneOut(self.txdat)
         LOO_Y = tools.LeaveOneOut(self.tydat).__iter__()
         LOO_Z = tools.LeaveOneOut(self.tzdat).__iter__()
