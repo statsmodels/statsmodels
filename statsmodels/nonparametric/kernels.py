@@ -19,21 +19,17 @@ def _get_shape_and_transform(h, Xi, x=None):
     """
     Utility function to transform arrays and check shape parameters.
     """
-    x = np.asarray(x)
-    h = np.asarray(h, dtype=float)
-    Xi = np.asarray(Xi)
     # More than one variable with more than one observations
     if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-        N = np.shape(Xi)[0]
+        K = Xi.shape[1]
+        N = Xi.shape[0]
     elif Xi.ndim == 1:  # One variable with many observations
         K = 1
-        N = np.shape(Xi)[0]
+        N = Xi.shape[0]
     else:  # ndim ==0 so Xi is a single point (number)
         K = 1
         N = 1
 
-    #assert N >= K  # Need more observations than variables
     Xi = Xi.reshape([N, K])
     return h, Xi, x, N, K
 
@@ -101,7 +97,7 @@ def wang_ryzin(h, Xi, x):
         The bandwidths used to estimate the value of the kernel function.
     Xi : 1-D ndarray, shape (K,)
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : scalar or 1-D ndarray of shape (K,)
         The value at which the kernel density is being estimated.
 
     Returns
@@ -124,15 +120,14 @@ def wang_ryzin(h, Xi, x):
            discrete distributions", Biometrika, vol. 68, pp. 301-309, 1981.
     """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    Xi = np.abs(np.asarray(Xi, dtype=int))
-    x = np.abs(np.asarray(x, dtype=int))
+    Xi = np.abs(Xi.astype(int))
     if K == 0:
         return Xi
 
-    kernel_value = (0.5 * (1 - h) * (h ** abs(Xi - x)))
-    kernel_value = kernel_value.reshape([N, K])
-    inDom = (Xi == x) * (1 - h)
-    kernel_value[Xi == x] = inDom[Xi == x]
+    x = np.abs(np.asarray(x, dtype=int))
+    kernel_value = 0.5 * (1 - h) * (h ** abs(Xi - x))
+    idx = Xi == x
+    kernel_value[idx] = (idx * (1 - h))[idx]
     return kernel_value
 
 
@@ -177,26 +172,23 @@ def gaussian_convolution(h, Xi, x):
 
 
 def wang_ryzin_convolution(h, Xi, Xj):
-    # This is the equivalent of the convolution case
-    # with the Gaussian Kernel
+    # This is the equivalent of the convolution case with the Gaussian Kernel
     # However it is not exactly convolution. Think of a better name
     # References
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
-    Xi = np.abs(np.asarray(Xi, dtype=int))
-    Xj = np.abs(np.asarray(Xj, dtype=int))
+    Xi = np.abs(Xi.astype(int))
     if K == 0:
         return Xi
 
-    Xi = Xi.reshape([N, K])
+    Xj = np.abs(np.asarray(Xj, dtype=int))
     Xj = Xj.reshape((K, ))
-    h = h.reshape((K, ))
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
     Ordered = np.empty([N, K])
     for i in range(K):
-        Sigma_x = 0
+        Sigma_x = np.zeros((N, 1))
         for x in Dom_x[i]:
-            Sigma_x += wang_ryzin(h[i], Xi[:, i],
-                                 int(x)) * wang_ryzin(h[i], Xj[i], int(x))
+            Sigma_x += wang_ryzin(h[i], Xi[:, i], x) * \
+                       wang_ryzin(h[i], Xj[i], x)
 
         Ordered[:, i] = Sigma_x[:, 0]
 
@@ -205,21 +197,21 @@ def wang_ryzin_convolution(h, Xi, Xj):
 
 def aitchison_aitken_convolution(h, Xi, Xj):
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
-    Xi = np.abs(np.asarray(Xi, dtype=int))
-    Xj = np.abs(np.asarray(Xj, dtype=int))
+    Xi = np.abs(Xi.astype(int))
     if K == 0:
         return Xi
 
-    Xi = Xi.reshape([N, K])
-    h = h.reshape((K, ))
+    Xj = np.abs(np.asarray(Xj, dtype=int))
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
     Ordered = np.empty([N, K])
     for i in range(K):
-        Sigma_x = 0
+        Sigma_x = np.zeros((N, 1))
+        num_levels = Dom_x[i].size
         for x in Dom_x[i]:
-            Sigma_x += aitchison_aitken(h[i], Xi[:, i], int(x),
-                                       num_levels=len(Dom_x[i])) * \
-            aitchison_aitken(h[i], Xj[i], int(x), num_levels=len(Dom_x[i]))
+            Sigma_x += aitchison_aitken(h[i], Xi[:, i], x,
+                                        num_levels=num_levels) * \
+                       aitchison_aitken(h[i], Xj[i], x,
+                                        num_levels=num_levels)
 
         Ordered[:, i] = Sigma_x[:, 0]
 
@@ -291,7 +283,7 @@ def wang_ryzin_cdf(h, Xi, x_u):
         Sigma_x = 0
         for x in Dom_x[i]:
             if x <= x_u:
-                Sigma_x += wang_ryzin(h[i], Xi[:, i], int(x))
+                Sigma_x += wang_ryzin(h[i], Xi[:, i], x)
 
         Ordered[:, i] = Sigma_x[:, 0]
     return Ordered
@@ -301,13 +293,14 @@ def d_gaussian(h, Xi, x):
     Xi = np.asarray(Xi)
     x = np.asarray(x)
     h = np.asarray(h, dtype=float)
-    N = np.shape(Xi)[0]
     if Xi.ndim > 1:
         K = np.shape(Xi)[1]
     else:
         K = 1
+
     if K == 0:
         return Xi
+
     z = (Xi - x) / h
     value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
     value = 2 * ( x - Xi) * gaussian(h, Xi, x) / (h ** 2)
