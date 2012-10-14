@@ -85,7 +85,7 @@ Potential problems for Python 3
 from __future__ import division, with_statement
 import logging
 
-from statsmodels.compatnp.iter_compat import zip_longest as izip_longest
+from statsmodels.compatnp.iter_compat import zip_longest
 
 try: #plan for Python 3
     #from itertools import izip_longest, izip as zip
@@ -260,7 +260,7 @@ class SimpleTable(list):
         """
         header_rows = [header.split('\n') for header in headers]
         #rows in reverse order
-        rows = list(izip_longest(*header_rows, **dict(fillvalue='')))
+        rows = list(zip_longest(*header_rows, **dict(fillvalue='')))
         rows.reverse()
         for i, row in enumerate(rows):
             self.insert(rownum, row, datatype='header')

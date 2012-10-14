@@ -9,6 +9,13 @@ from statsmodels.tools.decorators import (resettable_cache,
                 cache_readonly, cache_writable)
 import statsmodels.tools.data as data_util
 
+try:
+    reduce
+    pass
+except NameError:
+    #python 3.2
+    from functools import reduce
+
 class MissingDataError(Exception):
     pass
 
