@@ -9,6 +9,17 @@ Distributions
 This section collects various additional functions and methods for statistical
 distributions.
 
+Empirical Distributions
+-----------------------
+
+.. currentmodule:: statsmodels.distributions.empirical_distribution
+
+.. autosummary::
+   :toctree: generated/
+
+   ECDF
+   StepFunction
+
 Distribution Extras
 -------------------
 
