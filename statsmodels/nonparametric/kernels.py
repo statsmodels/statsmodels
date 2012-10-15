@@ -42,7 +42,7 @@ def aitchison_aitken(h, Xi, x, num_levels=False):
     ----------
     h : 1-D ndarray, shape (K,)
         The bandwidths used to estimate the value of the kernel function.
-    Xi : 2-D ndarray, shape (N, K)
+    Xi : 2-D ndarray of ints, shape (N, K)
         The value of the training set.
     x: 1-D ndarray, shape (K,)
         The value at which the kernel density is being estimated.
@@ -70,20 +70,15 @@ def aitchison_aitken(h, Xi, x, num_levels=False):
            and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
     """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    Xi = np.abs(np.asarray(Xi, dtype=int))
-    x = np.abs(np.asarray(x, dtype=int))
-    if K == 0:
-        return Xi
-
+    x = np.asarray(x, dtype=int)
     if num_levels:
         c = num_levels
     else:
         c = np.asarray([len(np.unique(Xi[:, i])) for i in range(K)], dtype=int)
 
     kernel_value = np.tile(h / (c - 1), (N, 1))
-    inDom = (Xi == x) * (1 - h)
-    kernel_value[Xi == x] = inDom[Xi == x]
-    kernel_value = kernel_value.reshape([N, K])
+    idx = Xi == x
+    kernel_value[idx] = (idx * (1 - h))[idx]
     return kernel_value
 
 
@@ -93,9 +88,9 @@ def wang_ryzin(h, Xi, x):
 
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
+    h : scalar or 1-D ndarray, shape (K,)
         The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    Xi : ndarray of ints, shape (N, K)
         The value of the training set.
     x : scalar or 1-D ndarray of shape (K,)
         The value at which the kernel density is being estimated.
@@ -109,7 +104,8 @@ def wang_ryzin(h, Xi, x):
     -----
     See p. 19 in [1]_ for details.  The value of the kernel L if
     :math:`X_{i}=x` is :math:`1-\lambda`, otherwise it is
-    :math:`\frac{1-\lambda}{2}\lambda^{|X_{i}-x|}`.
+    :math:`\frac{1-\lambda}{2}\lambda^{|X_{i}-x|}`, where :math:`\lambda` is
+    the bandwidth.
 
     References
     ----------
@@ -120,11 +116,7 @@ def wang_ryzin(h, Xi, x):
            discrete distributions", Biometrika, vol. 68, pp. 301-309, 1981.
     """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    Xi = np.abs(Xi.astype(int))
-    if K == 0:
-        return Xi
-
-    x = np.abs(np.asarray(x, dtype=int))
+    x = np.asarray(x, dtype=int)
     kernel_value = 0.5 * (1 - h) * (h ** abs(Xi - x))
     idx = Xi == x
     kernel_value[idx] = (idx * (1 - h))[idx]
@@ -150,24 +142,16 @@ def gaussian(h, Xi, x):
 
     """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    if K == 0:
-        return Xi
-
     z = (Xi - x) / h
     kernel_value = (1. / np.sqrt(2 * np.pi)) * np.exp(- z ** 2 / 2.)
-    kernel_value = kernel_value.reshape([N, K])
     return kernel_value
 
 
 def gaussian_convolution(h, Xi, x):
     """ Calculates the Gaussian Convolution Kernel """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    if K == 0:
-        return Xi
-
     z = (Xi - x) / h
     kernel_value = (1. / np.sqrt(4 * np.pi)) * np.exp(- z ** 2 / 4.)
-    kernel_value = kernel_value.reshape([N, K])
     return kernel_value
 
 
@@ -176,12 +160,10 @@ def wang_ryzin_convolution(h, Xi, Xj):
     # However it is not exactly convolution. Think of a better name
     # References
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
-    Xi = np.abs(Xi.astype(int))
-    if K == 0:
-        return Xi
-
-    Xj = np.abs(np.asarray(Xj, dtype=int))
+    Xi = Xi.astype(int)
+    Xj = np.asarray(Xj, dtype=int)
     Xj = Xj.reshape((K, ))
+
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
     Ordered = np.empty([N, K])
     for i in range(K):
@@ -198,9 +180,6 @@ def wang_ryzin_convolution(h, Xi, Xj):
 def aitchison_aitken_convolution(h, Xi, Xj):
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
     Xi = np.abs(Xi.astype(int))
-    if K == 0:
-        return Xi
-
     Xj = np.abs(np.asarray(Xj, dtype=int))
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
     Ordered = np.empty([N, K])
@@ -220,11 +199,7 @@ def aitchison_aitken_convolution(h, Xi, Xj):
 
 def gaussian_cdf(h, Xi, x):
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    if K == 0:
-        return Xi
-
     cdf = 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
-    cdf = cdf.reshape([N, K])
     return cdf
 
 
@@ -239,9 +214,6 @@ def aitchison_aitken_cdf(h, Xi, x_u):
     else:  # ndim ==0 so Xi is a single point (number)
         K = 1
         N = 1
-
-    if K == 0:
-        return Xi
 
     h = np.asarray(h, dtype=float)
     Xi = Xi.reshape([N, K])
@@ -272,9 +244,6 @@ def wang_ryzin_cdf(h, Xi, x_u):
         K = 1
         N = 1
 
-    if K == 0:
-        return Xi
-
     Xi = Xi.reshape([N, K])
     h = h.reshape((K, ))
     Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
@@ -293,14 +262,6 @@ def d_gaussian(h, Xi, x):
     Xi = np.asarray(Xi)
     x = np.asarray(x)
     h = np.asarray(h, dtype=float)
-    if Xi.ndim > 1:
-        K = np.shape(Xi)[1]
-    else:
-        K = 1
-
-    if K == 0:
-        return Xi
-
     z = (Xi - x) / h
     value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
     value = 2 * ( x - Xi) * gaussian(h, Xi, x) / (h ** 2)
@@ -313,9 +274,6 @@ def aitchison_aitken_reg(h, Xi, x):
     Suggested by Li and Racine.
     """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    if K == 0:
-        return Xi
-
     kernel_value = np.ones((N,K))
     inDom = (Xi != x) * h
     kernel_value[Xi != x] = inDom[Xi != x]
@@ -329,9 +287,5 @@ def wang_ryzin_reg(h, Xi, x):
     Suggested by Li and Racine in [1] ch.4
     """
     h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    if K == 0:
-        return Xi
-
     kernel_value = h ** abs(Xi - x)
-    kernel_value = kernel_value.reshape([N,K])
     return kernel_value
