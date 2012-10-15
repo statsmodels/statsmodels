@@ -19,13 +19,13 @@ import pandas.util.testing as ptesting
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 
+curdir = os.path.dirname(os.path.abspath(__file__))
 
 def test_genfromdta():
     #Test genfromdta vs. results/macrodta.npy created with genfromtxt.
     #NOTE: Stata handles data very oddly.  Round tripping from csv to dta
     #    to ndarray 2710.349 (csv) -> 2510.2491 (stata) -> 2710.34912109375
     #    (dta/ndarray)
-    curdir = os.path.dirname(os.path.abspath(__file__))
     #res2 = np.load(curdir+'/results/macrodata.npy')
     #res2 = res2.view((float,len(res2[0])))
     from results.macrodata import macrodata_result as res2
@@ -79,7 +79,8 @@ def test_missing_roundtrip():
     assert_(isnull(dta[0][1]))
     assert_(dta[0][2] == "")
 
-    dta = genfromdta("./data_missing.dta", missing_flt=-999)
+    dta = genfromdta(os.path.join(curdir, "results/data_missing.dta"),
+            missing_flt=-999)
     assert_(np.all([dta[0][i] == -999 for i in range(5)]))
 
 def test_stata_writer_pandas():
@@ -107,11 +108,12 @@ def test_genfromdta_datetime():
         (datetime(1959, 12, 31, 20, 3, 20), -1479590, datetime(1953, 10, 2),
             datetime(1948, 6, 10), datetime(1955, 1, 1), datetime(1955, 7, 1),
             datetime(1955, 1, 1), datetime(2, 1, 1))]
-    dta = genfromdta("results/time_series_examples.dta")
+    dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"))
     assert_array_equal(dta[0].tolist(), results[0])
     assert_array_equal(dta[1].tolist(), results[1])
 
-    dta = genfromdta("results/time_series_examples.dta", pandas=True)
+    dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"),
+                    pandas=True)
     assert_array_equal(dta.irow(0).tolist(), results[0])
     assert_array_equal(dta.irow(1).tolist(), results[1])
 
