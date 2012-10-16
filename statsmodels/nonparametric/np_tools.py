@@ -84,7 +84,7 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
 
     Parameters
     ----------
-    bw: ndarray
+    bw: 1-D ndarray
         The user-specified bandwidth parameters.
     tdat: 1D or 2-D ndarray
         The training data.
@@ -121,19 +121,16 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
                 k\left( \frac{X_{i2}-x_{2}}{h_{2}}\right)\times...\times
                 k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
     """
-    iscontinuous, isordered, isunordered = _get_type_pos(var_type)
-    # must remain 1-D for indexing to work
-    bw = bw.reshape((len(var_type),)).astype(float)
-    Kval = np.column_stack((kernel_func[ckertype](bw[iscontinuous],
-                                                  tdat[:, iscontinuous],
-                                                  edat[:, iscontinuous]),
-                            kernel_func[okertype](bw[isordered],
-                                                  tdat[:, isordered],
-                                                  edat[:, isordered]),
-                            kernel_func[ukertype](bw[isunordered],
-                                                  tdat[:, isunordered],
-                                                  edat[:, isunordered])))
+    kertypes = dict(c=ckertype, o=okertype, u=ukertype)
+    Kval = []
+    for ii, vtype in enumerate(var_type):
+        func = kernel_func[kertypes[vtype]]
+        Kval.append(func(bw[ii], tdat[:, ii], edat[ii]))
 
+    Kval = np.column_stack(Kval)
+
+    var_type = np.asarray(list(var_type))
+    iscontinuous = np.where(var_type == 'c')[0]
     dens = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
     if tosum:
         return np.sum(dens, axis=0)

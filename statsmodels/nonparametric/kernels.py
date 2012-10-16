@@ -115,8 +115,7 @@ def wang_ryzin(h, Xi, x):
     .. [2] M.-C. Wang and J. van Ryzin, "A class of smooth estimators for
            discrete distributions", Biometrika, vol. 68, pp. 301-309, 1981.
     """
-    h, Xi, x, N, K = _get_shape_and_transform(h, Xi, x)
-    x = np.asarray(x, dtype=int)
+    Xi = Xi.reshape((Xi.size, 1))  # seems needed in case Xi is scalar
     kernel_value = 0.5 * (1 - h) * (h ** abs(Xi - x))
     idx = Xi == x
     kernel_value[idx] = (idx * (1 - h))[idx]
@@ -159,20 +158,12 @@ def wang_ryzin_convolution(h, Xi, Xj):
     # This is the equivalent of the convolution case with the Gaussian Kernel
     # However it is not exactly convolution. Think of a better name
     # References
-    h, Xi, x, N, K = _get_shape_and_transform(h, Xi)
     Xi = Xi.astype(int)
     Xj = np.asarray(Xj, dtype=int)
-    Xj = Xj.reshape((K, ))
 
-    Dom_x = [np.unique(Xi[:, i]) for i in range(K)]
-    Ordered = np.empty([N, K])
-    for i in range(K):
-        Sigma_x = np.zeros((N, 1))
-        for x in Dom_x[i]:
-            Sigma_x += wang_ryzin(h[i], Xi[:, i], x) * \
-                       wang_ryzin(h[i], Xj[i], x)
-
-        Ordered[:, i] = Sigma_x[:, 0]
+    Ordered = np.zeros((Xi.size, 1))
+    for x in np.unique(Xi):
+        Ordered += wang_ryzin(h, Xi, x) * wang_ryzin(h, Xj, x)
 
     return Ordered
 
@@ -223,7 +214,7 @@ def aitchison_aitken_cdf(h, Xi, x_u):
         Sigma_x = 0
         for x in Dom_x[i]:
             if x <= x_u:
-                Sigma_x += aitchison_aitken(h[i], Xi[:, i], int(x),
+                Sigma_x += aitchison_aitken(h, Xi[:, i], int(x),
                                            num_levels=len(Dom_x[i]))
 
         Ordered[:, i] = Sigma_x[:, 0]
