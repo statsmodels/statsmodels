@@ -228,9 +228,9 @@ class DescrStatsW(object):
 
 
 
-def tstat_generic(value, value2, std_diff, dof, alternative):
+def tstat_generic(value, value2, std_diff, dof, alternative, diff=0):
     '''generic ttest to save typing'''
-    tstat = (value - value2) / std_diff
+    tstat = (value - value2 + diff) / std_diff
     from scipy import stats
     if alternative in ['two-sided', '2-sided', '2']:
        pvalue = stats.t.sf(np.abs(tstat), dof)*2
@@ -238,6 +238,8 @@ def tstat_generic(value, value2, std_diff, dof, alternative):
        pvalue = stats.t.sf(tstat, dof)
     elif alternative in ['smaller', 's']:
        pvalue = stats.t.cdf(tstat, dof)
+    else:
+       raise ValueError('invalid alternative')
     return tstat, pvalue
 
 
@@ -291,7 +293,21 @@ class CompareMeans(object):
                           (d1.nobs - 1 + d2.nobs - 1))
         return np.sqrt(var_pooled * (1. / d1.nobs + 1. /d2.nobs))
 
-    def ttest_ind(self, alternative='two-sided', usevar='pooled'):
+    def dof_satt(self):
+        d1 = self.d1
+        d2 = self.d2
+        #this follows blindly the SPSS manual
+        #except I assume var has ddof=0
+        #I should check d1.ddof, d2.ddof
+        sem1 = d1.var / (d1.nobs-1)
+        sem2 = d2.var / (d2.nobs-1)
+        semsum = sem1 + sem2
+        z1 = (sem1 / semsum)**2 / (d1.nobs - 1)
+        z2 = (sem2 / semsum)**2 / (d2.nobs - 1)
+        dof = 1. / (z1 + z2)
+        return dof
+
+    def ttest_ind(self, alternative='two-sided', usevar='pooled', diff=0):
         '''ttest for the null hypothesis of identical means
 
         note: I was looking for `usevar` option for the multiple comparison
@@ -307,19 +323,17 @@ class CompareMeans(object):
             dof = (d1.nobs - 1 + d2.nobs - 1)
         elif usevar == 'separate':
             stdm = self.std_meandiff_separatevar
-            #this follows blindly the SPSS manual
-            #except I assume var has ddof=0
-            #I should check d1.ddof, d2.ddof
-            sem1 = d1.var / (d1.nobs-1)
-            sem2 = d2.var / (d2.nobs-1)
-            semsum = sem1 + sem2
-            z1 = (sem1 / semsum)**2 / (d1.nobs - 1)
-            z2 = (sem2 / semsum)**2 / (d2.nobs - 1)
-            dof = 1. / (z1 + z2)
+            dof = self.dof_satt()
 
-        tstat, pval = tstat_generic(d1.mean, d2.mean, stdm, dof, alternative)
+        tstat, pval = tstat_generic(d1.mean, d2.mean, stdm, dof, alternative,
+                                    diff=diff)
 
         return tstat, pval, dof
+
+    def tost(self, low, upp, usevar='pooled'):
+        tt1 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=low)
+        tt2 = self.ttest_ind(alternative='larger', usevar=usevar, diff=upp)
+        return max(tt1[1], tt2[1]), (tt1, tt2)
 
 
     def test_equal_var():
@@ -345,5 +359,35 @@ def ttest_ind(x1, x2, alternative='two-sided',
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                      DescrStatsW(x2, weights=weights[1], ddof=0))
     tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar)
+
     return tstat, pval, dof
+
+
+def tost_ind(x1, x2, low, upp,
+                        usevar='pooled',
+                        weights=(None, None)):
+    '''ttest independent sample
+
+    convenience function that uses the classes and throws away the intermediate
+    results,
+    compared to scipy stats: drops axis option, adds alternative, usevar, and
+    weights option
+    '''
+    cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
+                     DescrStatsW(x2, weights=weights[1], ddof=0))
+    pval, res = cm.tost(low, upp, usevar=usevar)
+    return pval, res[0], res[1]
+
+def tost_paired(x, y, low, upp, transform=None, weights=None):
+
+    if transform:
+        xy = transform(np.hstack((x,y)))
+        x = xy[:len(x)]
+        y = xy[len(x):]
+        low = transform(low)
+        upp = transform(upp)
+    dd = DescrStatsW(x - y, weights=weights, ddof=0)
+    t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
+    t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
+    return max(pv1, pv2), (t1, pv1), (t2, pv2)
 
