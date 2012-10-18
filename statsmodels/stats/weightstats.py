@@ -346,9 +346,8 @@ class CompareMeans(object):
         return stats.levene(d1.data, d2.data)
 
 
-def ttest_ind(x1, x2, alternative='two-sided',
-                        usevar='pooled',
-                        weights=(None, None)):
+def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
+                      weights=(None, None), diff=0):
     '''ttest independent sample
 
     convenience function that uses the classes and throws away the intermediate
@@ -358,7 +357,7 @@ def ttest_ind(x1, x2, alternative='two-sided',
     '''
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                      DescrStatsW(x2, weights=weights[1], ddof=0))
-    tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar)
+    tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar, diff=diff)
 
     return tstat, pval, dof
 

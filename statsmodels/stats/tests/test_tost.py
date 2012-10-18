@@ -130,6 +130,73 @@ tost_clinic_indep_2_pooled.result = 'not rejected'
 tost_clinic_indep_2_pooled.p_value = 0.43169347692374
 tost_clinic_indep_2_pooled.check_me = (0.525333333333332, 0.6)
 
+#t-tests
+
+#> tt = t.test(clinic$var1[16:30], clinic$var1[1:15], data=clinic, mu=-0., alternative="two.sided", paired=TRUE)
+#> cat_items(tt, prefix="ttest_clinic_paired_1.")
+ttest_clinic_paired_1 = Holder()
+ttest_clinic_paired_1.statistic = 1.213001548676048
+ttest_clinic_paired_1.parameter = 14
+ttest_clinic_paired_1.p_value = 0.245199929713149
+ttest_clinic_paired_1.conf_int = (-0.1264911434745851, 0.4558244768079186)
+ttest_clinic_paired_1.estimate = 0.1646666666666667
+ttest_clinic_paired_1.null_value = 0
+ttest_clinic_paired_1.alternative = 'two.sided'
+ttest_clinic_paired_1.method = 'Paired t-test'
+ttest_clinic_paired_1.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
+
+
+#> ttless = t.test(clinic$var1[1:15], clinic$var1[16:30],, data=clinic, mu=-0., alternative="less", paired=FALSE)
+#> cat_items(ttless, prefix="ttest_clinic_paired_1_l.")
+ttest_clinic_paired_1_l = Holder()
+ttest_clinic_paired_1_l.statistic = 0.650438363512706
+ttest_clinic_paired_1_l.parameter = 26.7484787582315
+ttest_clinic_paired_1_l.p_value = 0.739521349864458
+ttest_clinic_paired_1_l.conf_int = (-np.inf, 0.596019631405587)
+ttest_clinic_paired_1_l.estimate = (3.498, 3.333333333333333)
+ttest_clinic_paired_1_l.null_value = 0
+ttest_clinic_paired_1_l.alternative = 'less'
+ttest_clinic_paired_1_l.method = 'Welch Two Sample t-test'
+ttest_clinic_paired_1_l.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
+#> cat_items(tt, prefix="ttest_clinic_indep_1_g.")
+ttest_clinic_indep_1_g = Holder()
+ttest_clinic_indep_1_g.statistic = 0.650438363512706
+ttest_clinic_indep_1_g.parameter = 26.7484787582315
+ttest_clinic_indep_1_g.p_value = 0.2604786501355416
+ttest_clinic_indep_1_g.conf_int = (-0.2666862980722534, np.inf)
+ttest_clinic_indep_1_g.estimate = (3.498, 3.333333333333333)
+ttest_clinic_indep_1_g.null_value = 0
+ttest_clinic_indep_1_g.alternative = 'greater'
+ttest_clinic_indep_1_g.method = 'Welch Two Sample t-test'
+ttest_clinic_indep_1_g.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
+#> cat_items(ttless, prefix="ttest_clinic_indep_1_l.")
+ttest_clinic_indep_1_l = Holder()
+ttest_clinic_indep_1_l.statistic = 0.650438363512706
+ttest_clinic_indep_1_l.parameter = 26.7484787582315
+ttest_clinic_indep_1_l.p_value = 0.739521349864458
+ttest_clinic_indep_1_l.conf_int = (-np.inf, 0.596019631405587)
+ttest_clinic_indep_1_l.estimate = (3.498, 3.333333333333333)
+ttest_clinic_indep_1_l.null_value = 0
+ttest_clinic_indep_1_l.alternative = 'less'
+ttest_clinic_indep_1_l.method = 'Welch Two Sample t-test'
+ttest_clinic_indep_1_l.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
+#> ttless = t.test(clinic$var1[1:15], clinic$var1[16:30],, data=clinic, mu=1., alternative="less", paired=FALSE)
+#> cat_items(ttless, prefix="ttest_clinic_indep_1_l_mu.")
+ttest_clinic_indep_1_l_mu = Holder()
+ttest_clinic_indep_1_l_mu.statistic = -3.299592184135306
+ttest_clinic_indep_1_l_mu.parameter = 26.7484787582315
+ttest_clinic_indep_1_l_mu.p_value = 0.001372434925571605
+ttest_clinic_indep_1_l_mu.conf_int = (-np.inf, 0.596019631405587)
+ttest_clinic_indep_1_l_mu.estimate = (3.498, 3.333333333333333)
+ttest_clinic_indep_1_l_mu.null_value = 1
+ttest_clinic_indep_1_l_mu.alternative = 'less'
+ttest_clinic_indep_1_l_mu.method = 'Welch Two Sample t-test'
+ttest_clinic_indep_1_l_mu.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
 
 res1 = smws.tost_paired(clinic[:15, 2], clinic[15:, 2], -0.6, 0.6, transform=None)
 res2 = smws.tost_paired(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, transform=None)
@@ -143,15 +210,38 @@ class CheckTost(object):
         #assert_almost_equal(self.res1.df, self.res2.df, decimal=13)
 
 class TestTostp1(CheckTost):
+    #paired var1
     def __init__(self):
         self.res2 = tost_clinic_paired_1
-        x, y = clinic[:15, 2], clinic[15:, 2]
+        x1, x2 = clinic[:15, 2], clinic[15:, 2]
         self.res1 = Holder()
-        res = smws.tost_paired(x, y, -0.6, 0.6, transform=None)
+        res = smws.tost_paired(x1, x2, -0.6, 0.6, transform=None)
         self.res1.pvalue = res[0]
         #self.res1.df = res[1][-1] not yet
+        res_ds = smws.DescrStatsW(x1 - x2, weights=None, ddof=0)
+        #tost confint 2*alpha TODO: check again
+        self.res1.confint_diff = res_ds.confint_mean(0.1)
+        self.res1.confint_05 = res_ds.confint_mean(0.05)
+        self.res1.mean_diff = res_ds.mean
+        self.res1.std_mean_diff = res_ds.std_mean
+
+        self.res2b = ttest_clinic_paired_1
+
+    def test_special(self):
+        #TODO: add attributes to other cases and move to superclass
+        assert_almost_equal(self.res1.confint_diff, self.res2.ci_diff,
+                            decimal=13)
+        assert_almost_equal(self.res1.mean_diff, self.res2.mean_diff,
+                            decimal=13)
+        assert_almost_equal(self.res1.std_mean_diff, self.res2.se_diff,
+                            decimal=13)
+        #compare with ttest
+        assert_almost_equal(self.res1.confint_05, self.res2b.conf_int,
+                            decimal=13)
+
 
 class TestTostp2(CheckTost):
+    #paired var2
     def __init__(self):
         self.res2 = tost_clinic_paired
         x, y = clinic[:15, 3], clinic[15:, 3]
@@ -191,9 +281,32 @@ class TestTostip2(CheckTost):
         res = smws.tost_ind(x, y, -0.6, 0.6, usevar='pooled')
         self.res1.pvalue = res[0]
 
+
+def test_ttest():
+    x1, x2 = clinic[:15, 2], clinic[15:, 2]
+    all_tests = []
+    t1 = smws.ttest_ind(x1, x2, alternative='larger', usevar='separate')
+    all_tests.append((t1, ttest_clinic_indep_1_g))
+    t2 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate')
+    all_tests.append((t2, ttest_clinic_indep_1_l))
+    t3 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate',
+                        diff=-1)  #diff is reversed sign from R ttest
+    all_tests.append((t3, ttest_clinic_indep_1_l_mu))
+
+    for res1, res2 in all_tests:
+        assert_almost_equal(res1[0], res2.statistic, decimal=13)
+        assert_almost_equal(res1[1], res2.p_value, decimal=13)
+        #assert_almost_equal(res1[2], res2.df, decimal=13)
+
+
 if __name__ == '__main__':
+    tt = TestTostp1()
+    tt.test_special()
     for cls in [TestTostp1, TestTostp2, TestTosti1, TestTosti2,
                 TestTostip1, TestTostip2]:
         print cls
         tt = cls()
         tt.test_pval()
+
+    test_ttest()
+
