@@ -186,7 +186,7 @@ class DescrStatsW(object):
 
     def confint_mean(self, alpha=0.05):
         dof = self.sum_weights - 1
-        tcrit = stats.t.ppf((1+alpha)/2., dof)
+        tcrit = stats.t.ppf(1-alpha/2., dof)
         lower = self.mean - tcrit * self.std_mean
         upper = self.mean + tcrit * self.std_mean
         return lower, upper
