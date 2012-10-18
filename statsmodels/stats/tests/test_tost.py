@@ -9,7 +9,17 @@ Author: Josef Perktold
 import numpy as np
 import statsmodels.stats.weightstats as smws
 
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_
+
+def assert_almost_equal_inf(x, y, decimal=6, msg=None):
+    x = np.atleast_1d(x)
+    y = np.atleast_1d(y)
+    assert_equal(np.isposinf(x), np.isposinf(y))
+    assert_equal(np.isneginf(x), np.isneginf(y))
+    assert_equal(np.isnan(x), np.isnan(y))
+    assert_almost_equal(x[np.isfinite(x)], y[np.isfinite(y)])
+
+
 
 class Holder(object):
     pass
@@ -298,13 +308,30 @@ def test_ttest():
         assert_almost_equal(res1[1], res2.p_value, decimal=13)
         #assert_almost_equal(res1[2], res2.df, decimal=13)
 
+    cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))
+#    ci = cm.confint_diff(alternative='two-sided', usevar='separate')
+#    assert_almost_equal(ci, ttest_clinic_indep_1_g.conf_int, decimal=13)
+    ci = cm.confint_diff(alternative='smaller', usevar='separate')
+    assert_almost_equal_inf(ci, ttest_clinic_indep_1_l.conf_int, decimal=13)
+    ci = cm.confint_diff(alternative='larger', usevar='separate')
+    assert_almost_equal_inf(ci, ttest_clinic_indep_1_g.conf_int, decimal=13)
+
+    #test get_compare
+    cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))
+    cm1 = cm.d1.get_compare(cm.d2)
+    cm2 = cm.d1.get_compare(x2)
+    cm3 = cm.d1.get_compare(np.hstack((x2,x2)))
+    #all use the same d1, no copying
+    assert_(cm.d1 is cm1.d1)
+    assert_(cm.d1 is cm2.d1)
+    assert_(cm.d1 is cm3.d1)
 
 if __name__ == '__main__':
     tt = TestTostp1()
     tt.test_special()
     for cls in [TestTostp1, TestTostp2, TestTosti1, TestTosti2,
                 TestTostip1, TestTostip2]:
-        print cls
+        #print cls
         tt = cls()
         tt.test_pval()
 
