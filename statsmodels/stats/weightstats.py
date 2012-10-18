@@ -214,8 +214,32 @@ class DescrStatsW(object):
 
         return tstat, pvalue, dof
 
-    def ttest_meandiff(self, other):
-       pass
+    def get_compare(self, other, weights=None):
+        '''return an instance of CompareMeans with self and other
+
+        Parameters
+        ----------
+        other : array_like or instance of DescrStatsW
+            If array_like then this creates an instance of DescrStatsW with
+            the given weights.
+        weights : None or array
+            weights are only used if other is not an instance of DescrStatsW
+
+        Returns
+        -------
+        cm : instance of CompareMeans
+            the instance has self attached as d1 and other as d2.
+
+        See Also
+        --------
+        CompareMeans
+
+        '''
+        if not isinstance(other, self.__class__):
+            d2 = DescrStatsW(other, weights)
+        else:
+            d2 = other
+        return CompareMeans(self, d2)
 
     def asrepeats(self):
         '''get array that has repeats given by floor(weights)
@@ -242,6 +266,26 @@ def tstat_generic(value, value2, std_diff, dof, alternative, diff=0):
        raise ValueError('invalid alternative')
     return tstat, pvalue
 
+def tconfint_generic(mean, std_mean, dof, alpha, alternative, diff=0):
+    '''generic t-confint to save typing'''
+
+    from scipy import stats
+    if alternative in ['two-sided', '2-sided', '2']:
+        tcrit = stats.t.ppf(1 - alpha / 2., dof)
+        lower = mean - tcrit * std_mean
+        upper = mean + tcrit * std_mean
+    elif alternative in ['larger', 'l']:
+        tcrit = stats.t.ppf(alpha, dof)
+        lower = mean + tcrit * std_mean
+        upper = np.inf
+    elif alternative in ['smaller', 's']:
+        tcrit = stats.t.ppf(1 - alpha, dof)
+        lower = -np.inf
+        upper = mean + tcrit * std_mean
+    else:
+       raise ValueError('invalid alternative')
+
+    return lower, upper
 
 class CompareMeans(object):
     '''temporary just to hold formulas
@@ -329,6 +373,22 @@ class CompareMeans(object):
                                     diff=diff)
 
         return tstat, pval, dof
+
+    def confint_diff(self, alpha=0.05, alternative='two-sided',
+                     usevar='pooled'):
+        d1 = self.d1
+        d2 = self.d2
+        diff = d1.mean - d2.mean
+        if usevar == 'pooled':
+            std_diff = self.std_meandiff_pooledvar
+            dof = (d1.nobs - 1 + d2.nobs - 1)
+        elif usevar == 'separate':
+            std_diff = self.std_meandiff_separatevar
+            dof = self.dof_satt()
+
+        res = tconfint_generic(diff, std_diff, dof, alpha=alpha,
+                               alternative=alternative)
+        return res
 
     def tost(self, low, upp, usevar='pooled'):
         tt1 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=low)
