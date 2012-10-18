@@ -56,6 +56,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
     .. [2] Racine, Jeff. "Nonparametric Econometrics: A Primer," Foundation
            and Trends in Econometrics: Vol 3: No 1, pp1-88., 2008.
     """
+    Xi = Xi.reshape(Xi.size)  # seems needed in case Xi is scalar
     if num_levels is None:
         num_levels = np.asarray(np.unique(Xi).size)
 
@@ -98,7 +99,7 @@ def wang_ryzin(h, Xi, x):
     .. [2] M.-C. Wang and J. van Ryzin, "A class of smooth estimators for
            discrete distributions", Biometrika, vol. 68, pp. 301-309, 1981.
     """
-    Xi = Xi.reshape((Xi.size, 1))  # seems needed in case Xi is scalar
+    Xi = Xi.reshape(Xi.size)  # seems needed in case Xi is scalar
     kernel_value = 0.5 * (1 - h) * (h ** abs(Xi - x))
     idx = Xi == x
     kernel_value[idx] = (idx * (1 - h))[idx]
@@ -139,7 +140,7 @@ def wang_ryzin_convolution(h, Xi, Xj):
     # This is the equivalent of the convolution case with the Gaussian Kernel
     # However it is not exactly convolution. Think of a better name
     # References
-    ordered = np.zeros((Xi.size, 1))
+    ordered = np.zeros(Xi.size)
     for x in np.unique(Xi):
         ordered += wang_ryzin(h, Xi, x) * wang_ryzin(h, Xj, x)
 
@@ -148,7 +149,7 @@ def wang_ryzin_convolution(h, Xi, Xj):
 
 def aitchison_aitken_convolution(h, Xi, Xj):
     Xi_vals = np.unique(Xi)
-    ordered = np.zeros((Xi.size, 1))
+    ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
     for x in Xi_vals:
         ordered += aitchison_aitken(h, Xi, x, num_levels=num_levels) * \

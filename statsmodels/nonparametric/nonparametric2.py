@@ -117,9 +117,7 @@ class _GenericKDE (object):
         do = 4  # 2*order of discrete kernel
         iscontinuous, isordered, isunordered = \
                 tools._get_type_pos(self.all_vars_type)
-        print "Running Block by block efficient bandwidth estimation"
         for i in xrange(self.n_res):
-            print "Estimating sample ", i + 1, " ..."
             np.random.shuffle(all_vars)
             sub_all_vars = all_vars[0 : self.n_sub, :]
             sub_model = self._call_self(sub_all_vars, bw)
@@ -168,7 +166,6 @@ class _GenericKDE (object):
         sample_scale = np.empty((len(bounds), self.K))
         only_bw = np.empty((len(bounds), self.K))
         for ii, b in enumerate(bounds):
-            print "Estimating slice ", b, " ..."
             sub_all_vars = all_vars[b[0] : b[1], :]
             sub_model = self._call_self(sub_all_vars, bw)
             s = self._compute_dispersion(sub_all_vars)
@@ -1259,13 +1256,11 @@ class Reg(_GenericKDE):
         """
         var_pos = np.asarray(var_pos)
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
-        if (iscontinuous == var_pos).any():  # continuous variable
-            if (isordered == var_pos).any() or (isunordered == var_pos).any():
+        if np.any(iscontinuous == var_pos):  # continuous variable
+            if np.any(isordered == var_pos) or np.any(isunordered == var_pos):
                 raise "Discrete variable in hypothesis. Must be continuous"
-            print "------CONTINUOUS---------"
             Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot)
         else:
-            print "------DISCRETE-----------"
             Sig = TestRegCoefD(self, var_pos, nboot)
 
         return Sig.sig
@@ -1650,7 +1645,6 @@ class TestRegCoefC(object):
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
         for i in xrange(self.nboot):
-            print "Bootstrap sample ", i
             ind = np.random.random_integers(0, n-1, size=(n,1))
             e_boot = e[ind, 0]
             Y_boot = M + e_boot
@@ -1744,7 +1738,6 @@ class TestRegCoefD(TestRegCoefC):
         r = fct2 / (5 ** 0.5)
         I_dist = np.empty((self.nboot,1))
         for j in xrange(self.nboot):
-            print "Bootstrap sample ", j
             u_boot = copy.deepcopy(u2)
 
             prob = np.random.uniform(0,1, size = (n,1))
@@ -1841,7 +1834,6 @@ class TestFForm(object):
         r = fct2 / (5 ** 0.5)
         I_dist = np.empty((self.nboot,1))
         for j in xrange(self.nboot):
-            print "Bootstrap sample ", j
             u_boot = copy.deepcopy(u2)
 
             prob = np.random.uniform(0,1, size = (n,1))

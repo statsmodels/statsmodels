@@ -65,7 +65,6 @@ class MyTest(object):
         data = np.column_stack(data)
         N = max(np.shape(data))
         K = min(np.shape(data))
-        print "shape is for writing in file is: ", (N,K)
         data = np.reshape(data, (N,K))
         for i in range(N):
             data_file.writerow(list(data[i, :]))
@@ -195,10 +194,12 @@ class TestKDE(MyTest):
         Y = 0.3 +1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
-                            defaults=SetDefaults(efficient=True, randomize=False, n_sub=100))
-        dens = nparam.KDE(tdat=[Y, C1],
-                            var_type='cc', bw='cv_ml')
+                                    defaults=SetDefaults(efficient=True,
+                                                         randomize=False,
+                                                         n_sub=100))
+        dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml')
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
+
 
 class TestCKDE(MyTest):
     @dec.slow
@@ -363,8 +364,6 @@ class TestReg(MyTest):
     def test_continuous_mfx_ll_cvls(self, file_name='RegData.csv'):
         N = 200
         np.random.seed(1234)
-        O = np.random.binomial(2, 0.5, size=(N, ))
-        O2 = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
         C3 = np.random.beta(0.5,0.2, size=(N,))
@@ -376,14 +375,8 @@ class TestReg(MyTest):
         Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
         model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
                             reg_type='ll', var_type='ccc', bw='cv_ls')
-        sm_bw = model.bw
-        print "Bandwidth: ", sm_bw
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
-        sm_R2 = model.r_squared()
-        print "R2: ", sm_R2
-        print "test_continuous_mfx_ll_cvls - successful"
-        print model
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
         self.write2file(file_name, (Y, C1, C2, C3))
 
@@ -392,10 +385,8 @@ class TestReg(MyTest):
         N = 200
         np.random.seed(1234)
         O = np.random.binomial(2, 0.5, size=(N, ))
-        O2 = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
         b0 = 3
         b1 = 1.2
@@ -404,26 +395,20 @@ class TestReg(MyTest):
         Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
         model = nparam.Reg(tydat=[Y], txdat=[C1, C2, O],
                             reg_type='ll', var_type='cco', bw='cv_ls')
-        sm_bw = model.bw
         sm_mean, sm_mfx = model.fit()
         sm_R2 = model.r_squared()
-        print "test_continuous_mfx_ll_cvls - successful"
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
-        #self.write2file(file_name, (Y, C1, C2, C3))
 
 
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
         N = 200
         np.random.seed(1234)
-        O = np.random.binomial(2, 0.5, size=(N, ))
-        O2 = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
         C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
         b0 = 3
         b1 = 1.2
-        b2 = 3.7  # regression coefficients
         b3 = 2.3
         Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
         model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
@@ -438,35 +423,25 @@ class TestReg(MyTest):
         #npt.assert_allclose(sm_mfx[0:10,1], mfx2[0:10], rtol=2e-1)
         npt.assert_allclose(sm_mean, Y, rtol = 2e-1)
         #self.write2file(file_name, (Y, C1, C2, C3))
-        print "test_continuous_mfx_ll_cvls - successful"
 
     @dec.slow
     def test_continuous_cvls_efficient(self):
         N = 1000
         np.random.seed(12345)
-        O = np.random.binomial(2, 0.5, size=(N, ))
-        O2 = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
-        b3 = 2.3
         Y = b0+ b1 * C1 + b2*C2
 
-        model_efficient = nparam.Reg(tydat=[Y], txdat=[C1],
-                            reg_type='lc', var_type='c', bw='cv_ls',
-                    defaults=SetDefaults(efficient=True, n_sub=100))
+        model_efficient = nparam.Reg(tydat=[Y], txdat=[C1], reg_type='lc',
+                                     var_type='c', bw='cv_ls',
+                                     defaults=SetDefaults(efficient=True,
+                                                          n_sub=100))
 
-        print model_efficient.bw
-        model = nparam.Reg(tydat=[Y], txdat=[C1],
-                            reg_type='ll', var_type='c', bw='cv_ls')
-        print model.bw
-        #print model_efficient.bw
-        print "----"*10
-
+        model = nparam.Reg(tydat=[Y], txdat=[C1], reg_type='ll', var_type='c',
+                           bw='cv_ls')
         npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
 
     @dec.slow
@@ -505,27 +480,22 @@ class TestReg(MyTest):
         R_bw = [0.4017893, 0.4943397]  # Bandwidth obtained in R
         npt.assert_allclose(model.bw, R_bw, rtol = 1e-3)
 
-
     @dec.slow
     def test_significance_continuous(self):
         N = 250
         np.random.seed(12345)
-        O = np.random.binomial(2, 0.5, size=(N, ))
-        O2 = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
         C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
-        b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
-        b3 = 2.3
         Y = b1 * C1 + b2 * C2 + noise
 
-        bw=[11108137.1087194, 1333821.85150218]  # This is the cv_ls bandwidth estimated earlier
-
+        # This is the cv_ls bandwidth estimated earlier
+        bw=[11108137.1087194, 1333821.85150218]
         model = nparam.Reg(tydat=[Y], txdat=[C1, C3],
-                            reg_type='ll', var_type='cc', bw=bw)
+                           reg_type='ll', var_type='cc', bw=bw)
         nboot = 45  # Number of bootstrap samples
         sig_var12 = model.sig_test([0,1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         npt.assert_equal(sig_var12 == 'Not Significant', False)
@@ -533,7 +503,6 @@ class TestReg(MyTest):
         npt.assert_equal(sig_var1 == 'Not Significant', False)
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         npt.assert_equal(sig_var2 == 'Not Significant', True)
-        print "test_significance_continuous ran successfully"
 
     @dec.slow
     def test_significance_discrete(self):
@@ -541,15 +510,11 @@ class TestReg(MyTest):
         N = 200
         np.random.seed(12345)
         O = np.random.binomial(2, 0.5, size=(N, ))
-        O2 = np.random.binomial(2, 0.5, size=(N, ))
-        C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
         C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
-        b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
-        b3 = 2.3
         Y = b1 * O + b2 * C2 + noise
 
         bw= [3.63473198e+00, 1.21404803e+06]
