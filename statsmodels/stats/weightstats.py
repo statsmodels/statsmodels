@@ -120,25 +120,53 @@ class DescrStatsW(object):
 
     @OneTimeProperty
     def sum(self):
+        '''weighted sum of data'''
         return np.dot(self.data.T, self.weights)
 
     @OneTimeProperty
     def mean(self):
+        '''weighted mean of data'''
         return self.sum / self.sum_weights
 
     @OneTimeProperty
     def demeaned(self):
+        '''data with weighted mean subtracted'''
         return self.data - self.mean
 
     @OneTimeProperty
     def sumsquares(self):
+        '''weighted sum of squares of demeaned data'''
         return np.dot((self.demeaned**2).T, self.weights)
 
     #need memoize instead of cache decorator
     def var_ddof(self, ddof=0):
+        '''variance of data given ddof
+
+        Parameters
+        ----------
+        ddof : int, float
+            degrees of freedom correction, independent of attribute ddof
+
+        Returns
+        -------
+        var : float, ndarray
+            variance with denominator ``sum_weights - ddof``
+        '''
         return self.sumsquares / (self.sum_weights - ddof)
 
     def std_ddof(self, ddof=0):
+        '''standard deviation of data with given ddof
+
+        Parameters
+        ----------
+        ddof : int, float
+            degrees of freedom correction, independent of attribute ddof
+
+        Returns
+        -------
+        std : float, ndarray
+            standard deviation with denominator ``sum_weights - ddof``
+        '''
         return np.sqrt(self.var_ddof(ddof=ddof))
 
     @OneTimeProperty
@@ -149,11 +177,16 @@ class DescrStatsW(object):
 
     @OneTimeProperty
     def std(self):
+        '''standard deviation with default degrees of freedom correction
+        '''
         return np.sqrt(self.var)
 
     @OneTimeProperty
     def cov(self):
-        '''covariance
+        '''weighted covariance of data if data is 2 dimensional
+
+        assumes variables in columns and observations in rows
+        uses default ddof
         '''
         cov_ = np.dot(self.weights * self.demeaned.T, self.demeaned)
         cov_ /= (self.sum_weights - self.ddof)
@@ -161,16 +194,15 @@ class DescrStatsW(object):
 
     @OneTimeProperty
     def corrcoef(self):
-        '''correlation coefficient with default ddof for standard deviation
+        '''weighted correlation with default ddof
+
+        assumes variables in columns and observations in rows
         '''
         return self.cov / self.std / self.std[:,None]
 
     @OneTimeProperty
     def std_mean(self):
-        '''standard deviation of mean
-
-        TODO: this might assume self.ddof=0
-
+        '''standard deviation of weighted mean
         '''
         std = self.std
         if self.ddof != 0:
@@ -185,6 +217,26 @@ class DescrStatsW(object):
         pass
 
     def confint_mean(self, alpha=0.05):
+        '''two-sided confidence interval for weighted mean of data
+
+        If the data is 2d, then these are separate confidence intervals
+        for each column.
+
+        Parameters
+        ----------
+        alpha : float
+            level of the test, confidence level is ``1-alpha``
+        Returns
+        -------
+        lower, upper : floats or ndarrays
+            lower and upper bound of confidence interval
+
+        Notes
+        -----
+        In a previous version, statsmodels 0.4, alpha was the confidence
+        level, e.g. 0.95
+        '''
+        #TODO: add asymmetric
         dof = self.sum_weights - 1
         tcrit = stats.t.ppf(1-alpha/2., dof)
         lower = self.mean - tcrit * self.std_mean
@@ -197,13 +249,20 @@ class DescrStatsW(object):
         '''ttest of Null hypothesis that mean is equal to value.
 
         The alternative hypothesis H1 is defined by the following
-        'two-sided': H1: mean different than value
+        'two-sided': H1: mean not equal to value
         'larger' :   H1: mean larger than value
         'smaller' :  H1: mean smaller than value
 
+        Parameters
+        ----------
+        value : float or array
+            the hypothesized value for the mean
+
         '''
+        #TODO: check direction with R, smaller=less, larger=greater
         tstat = (self.mean - value) / self.std_mean
         dof = self.sum_weights - 1
+        #TODO: use outsourced
         from scipy import stats
         if alternative == 'two-sided':
            pvalue = stats.t.sf(np.abs(tstat), dof)*2
@@ -252,9 +311,10 @@ class DescrStatsW(object):
 
 
 
-def tstat_generic(value, value2, std_diff, dof, alternative, diff=0):
+def tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
     '''generic ttest to save typing'''
-    tstat = (value - value2 + diff) / std_diff
+    #TODO: diff convention has wrong sign
+    tstat = (value1 - value2 + diff) / std_diff
     from scipy import stats
     if alternative in ['two-sided', '2-sided', '2']:
        pvalue = stats.t.sf(np.abs(tstat), dof)*2
@@ -266,7 +326,7 @@ def tstat_generic(value, value2, std_diff, dof, alternative, diff=0):
        raise ValueError('invalid alternative')
     return tstat, pvalue
 
-def tconfint_generic(mean, std_mean, dof, alpha, alternative, diff=0):
+def tconfint_generic(mean, std_mean, dof, alpha, alternative):
     '''generic t-confint to save typing'''
 
     from scipy import stats
@@ -288,7 +348,7 @@ def tconfint_generic(mean, std_mean, dof, alpha, alternative, diff=0):
     return lower, upper
 
 class CompareMeans(object):
-    '''temporary just to hold formulas
+    '''class for two sample comparison
 
     formulas should also be correct for unweighted means
 
@@ -301,6 +361,10 @@ class CompareMeans(object):
 
     Parameters
     ----------
+    d1, d2 : instances of DescrStatsW
+
+
+    TODO: check: I think this assumes ddof=0 in each DescrStatsW instance
 
     '''
 
@@ -325,10 +389,12 @@ class CompareMeans(object):
 
     @OneTimeProperty
     def std_meandiff_pooledvar(self):
+        '''variance assuming equal variance in both data sets
+
         '''
-        uses d1.ddof, d2.ddof which should be one for the ttest
-        hardcoding ddof=1 for varpooled
-        '''
+        #uses d1.ddof, d2.ddof which should be one for the ttest
+        #hardcoding ddof=1 for varpooled
+
         d1 = self.d1
         d2 = self.d2
         #could make var_pooled into attribute
@@ -338,6 +404,8 @@ class CompareMeans(object):
         return np.sqrt(var_pooled * (1. / d1.nobs + 1. /d2.nobs))
 
     def dof_satt(self):
+        '''degrees of freedom of Satterthwaite for unequal variance
+        '''
         d1 = self.d1
         d2 = self.d2
         #this follows blindly the SPSS manual
@@ -395,6 +463,8 @@ class CompareMeans(object):
         tt2 = self.ttest_ind(alternative='larger', usevar=usevar, diff=upp)
         return max(tt1[1], tt2[1]), (tt1, tt2)
 
+    #tost.__doc__ = tost_ind.__doc__
+
 #doesn't work for 2d, doesn't take weights into account
 ##    def test_equal_var(self):
 ##        '''Levene test for independence
@@ -424,18 +494,56 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
 
 def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
              transform=None):
-    '''tost independent sample
+    '''test of (non-)equivalence for independent sample
 
-    convenience function that uses the classes and throws away the intermediate
-    results,
-    compared to scipy stats: drops axis option, adds alternative, usevar, and
-    weights option
+    TOST: two one-sided t tests
+
+    null hypothesis:  x - y < low or x - y > upp
+    alternative hypothesis:  low < x - y < upp
+
+    If the pvalue is smaller than a threshold,say 0.05, then we reject the
+    hypothesis that the difference between the two samples is larger than the
+    the thresholds given by low and upp.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        two independent samples
+    low, upp : float
+        equivalence interval low < x - y < upp
+    usevar : string, 'pooled' or 'unequal'
+        If ``pooled``, then the standard deviation of the samples is assumed to be
+        the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+        of freedom is used
+    weights : tuple of None or ndarrays
+        Case weights for the two samples. For details on weights see
+        ``DescrStatsW``
+    transform : None or function
+        If None (default), then the data is not transformed. Given a function
+        sample data and thresholds are transformed. If transform is log the
+        the equivalence interval is in ratio: low < x / y < upp
+
+    Returns
+    -------
+    pvalue : float
+        pvalue of the non-equivalence test
+    t1, pv1 : tuple of floats
+        test statistic and pvalue for lower threshold test
+    t2, pv2 : tuple of floats
+        test statistic and pvalue for upper threshold test
+
     '''
 
     if transform:
-        xx = transform(np.hstack((x1, x2)))
-        x1 = xx[:len(x1)]
-        x2 = xx[len(x1):]
+        if transform: #np.log:
+            #avoid hstack in special case
+            x1 = transform(x1)
+            x2 = transform(x2)
+        else:
+            #for transforms like rankdata that will need both datasets
+            xx = transform(np.hstack((x1, x2)))
+            x1 = xx[:len(x1)]
+            x2 = xx[len(x1):]
         low = transform(low)
         upp = transform(upp)
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
@@ -443,15 +551,56 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
     pval, res = cm.tost(low, upp, usevar=usevar)
     return pval, res[0], res[1]
 
-def tost_paired(x, y, low, upp, transform=None, weights=None):
+def tost_paired(x1, x2, low, upp, transform=None, weights=None):
+    '''test of (non-)equivalence for independent sample
+
+    TOST: two one-sided t tests
+
+    null hypothesis:  x1 - x2 < low or x1 - x2 > upp
+    alternative hypothesis:  low < x1 - x2 < upp
+
+    If the pvalue is smaller than a threshold,say 0.05, then we reject the
+    hypothesis that the difference between the two samples is larger than the
+    the thresholds given by low and upp.
+
+    Parameters
+    ----------
+    x1, x2 : array_like
+        two independent samples
+    low, upp : float
+        equivalence interval low < x1 - x2 < upp
+    weights : None or ndarray
+        case weights for the two samples. For details on weights see
+        ``DescrStatsW``
+    transform : None or function
+        If None (default), then the data is not transformed. Given a function
+        sample data and thresholds are transformed. If transform is log the
+        the equivalence interval is in ratio: low < x1 / x2 < upp
+
+    Returns
+    -------
+    pvalue : float
+        pvalue of the non-equivalence test
+    t1, pv1 : tuple of floats
+        test statistic and pvalue for lower threshold test
+    t2, pv2 : tuple of floats
+        test statistic and pvalue for upper threshold test
+
+    '''
 
     if transform:
-        xy = transform(np.hstack((x,y)))
-        x = xy[:len(x)]
-        y = xy[len(x):]
+        if transform is np.log:
+            #avoid hstack in special case
+            x1 = transform(x1)
+            x2 = transform(x2)
+        else:
+            #for transforms like rankdata that will need both datasets
+            xx = transform(np.hstack((x1, x2)))
+            x1 = xx[:len(x1)]
+            x2 = xx[len(x1):]
         low = transform(low)
         upp = transform(upp)
-    dd = DescrStatsW(x - y, weights=weights, ddof=0)
+    dd = DescrStatsW(x1 - x2, weights=weights, ddof=0)
     t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
     return max(pv1, pv2), (t1, pv1), (t2, pv2)
