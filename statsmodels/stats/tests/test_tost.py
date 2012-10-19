@@ -140,6 +140,51 @@ tost_clinic_indep_2_pooled.result = 'not rejected'
 tost_clinic_indep_2_pooled.p_value = 0.43169347692374
 tost_clinic_indep_2_pooled.check_me = (0.525333333333332, 0.6)
 
+
+#tost ratio, log transformed
+#> t = tost(log(clinic$var1[1:15]), log(clinic$var1[16:30]), eps=log(1.25), paired=TRUE)
+#> cat_items(t, prefix="tost_clinic_1_paired.")
+tost_clinic_1_paired = Holder()
+tost_clinic_1_paired.mean_diff = 0.0431223318225235
+tost_clinic_1_paired.se_diff = 0.03819576328421437
+tost_clinic_1_paired.alpha = 0.05
+tost_clinic_1_paired.ci_diff = (-0.02415225319362176, 0.1103969168386687)
+tost_clinic_1_paired.df = 14
+tost_clinic_1_paired.epsilon = 0.2231435513142098
+tost_clinic_1_paired.result = 'rejected'
+tost_clinic_1_paired.p_value = 0.0001664157928976468
+tost_clinic_1_paired.check_me = (-0.1368988876691603, 0.2231435513142073)
+
+#> t = tost(log(clinic$var1[1:15]), log(clinic$var1[16:30]), eps=log(1.25), paired=FALSE)
+#> cat_items(t, prefix="tost_clinic_1_indep.")
+tost_clinic_1_indep = Holder()
+tost_clinic_1_indep.mean_diff = 0.04312233182252334
+tost_clinic_1_indep.se_diff = 0.073508371131806
+tost_clinic_1_indep.alpha = 0.05
+tost_clinic_1_indep.ci_diff = (-0.0819851930203655, 0.1682298566654122)
+tost_clinic_1_indep.df = 27.61177037646526
+tost_clinic_1_indep.epsilon = 0.2231435513142098
+tost_clinic_1_indep.result = 'rejected'
+tost_clinic_1_indep.p_value = 0.01047085593138891
+tost_clinic_1_indep.check_me = (-0.1368988876691633, 0.22314355131421)
+
+#> t = tost(log(y), log(x), eps=log(1.25), paired=TRUE)
+#> cat_items(t, prefix="tost_s_paired.")
+tost_s_paired = Holder()
+tost_s_paired.mean_diff = 0.06060076667771316
+tost_s_paired.se_diff = 0.04805826005366752
+tost_s_paired.alpha = 0.05
+tost_s_paired.ci_diff = (-0.0257063329659993, 0.1469078663214256)
+tost_s_paired.df = 11
+tost_s_paired.epsilon = 0.2231435513142098
+tost_s_paired.result = 'rejected'
+tost_s_paired.p_value = 0.003059338540563293
+tost_s_paired.check_me = (-0.1019420179587835, 0.2231435513142098)
+
+
+
+
+
 #t-tests
 
 #> tt = t.test(clinic$var1[16:30], clinic$var1[1:15], data=clinic, mu=-0., alternative="two.sided", paired=TRUE)
@@ -206,6 +251,35 @@ ttest_clinic_indep_1_l_mu.null_value = 1
 ttest_clinic_indep_1_l_mu.alternative = 'less'
 ttest_clinic_indep_1_l_mu.method = 'Welch Two Sample t-test'
 ttest_clinic_indep_1_l_mu.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
+
+#> tt2 = t.test(clinic$var1[1:15], clinic$var1[16:30],, data=clinic, mu=1, alternative="two.sided", paired=FALSE)
+#> cat_items(tt2, prefix="ttest_clinic_indep_1_two_mu.")
+ttest_clinic_indep_1_two_mu = Holder()
+ttest_clinic_indep_1_two_mu.statistic = -3.299592184135306
+ttest_clinic_indep_1_two_mu.parameter = 26.7484787582315
+ttest_clinic_indep_1_two_mu.p_value = 0.00274486985114321
+ttest_clinic_indep_1_two_mu.conf_int = (-0.3550087243406, 0.6843420576739336)
+ttest_clinic_indep_1_two_mu.estimate = (3.498, 3.333333333333333)
+ttest_clinic_indep_1_two_mu.null_value = 1
+ttest_clinic_indep_1_two_mu.alternative = 'two.sided'
+ttest_clinic_indep_1_two_mu.method = 'Welch Two Sample t-test'
+ttest_clinic_indep_1_two_mu.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
+#> tt2 = t.test(clinic$var1[1:15], clinic$var1[16:30],, data=clinic, mu=1, alternative="two.sided", paired=FALSE, var.equal=TRUE)
+#> cat_items(tt2, prefix="ttest_clinic_indep_1_two_mu_pooled.")
+ttest_clinic_indep_1_two_mu_pooled = Holder
+ttest_clinic_indep_1_two_mu_pooled.statistic = -3.299592184135305
+ttest_clinic_indep_1_two_mu_pooled.parameter = 28
+ttest_clinic_indep_1_two_mu_pooled.p_value = 0.002643203760742494
+ttest_clinic_indep_1_two_mu_pooled.conf_int = (-0.35391340938235, 0.6832467427156834)
+ttest_clinic_indep_1_two_mu_pooled.estimate = (3.498, 3.333333333333333)
+ttest_clinic_indep_1_two_mu_pooled.null_value = 1
+ttest_clinic_indep_1_two_mu_pooled.alternative = 'two.sided'
+ttest_clinic_indep_1_two_mu_pooled.method = ' Two Sample t-test'
+ttest_clinic_indep_1_two_mu_pooled.data_name = 'clinic$var1[1:15] and clinic$var1[16:30]'
+
+
 
 
 res1 = smws.tost_paired(clinic[:15, 2], clinic[15:, 2], -0.6, 0.6, transform=None)
@@ -291,6 +365,17 @@ class TestTostip2(CheckTost):
         res = smws.tost_ind(x, y, -0.6, 0.6, usevar='pooled')
         self.res1.pvalue = res[0]
 
+#transform=np.log
+#class TestTostp1_log(CheckTost):
+def test_tost_log():
+    x1, x2 = clinic[:15, 2], clinic[15:, 2]
+
+    resp = smws.tost_paired(x1, x2, 0.8, 1.25, transform=np.log)
+    assert_almost_equal(resp[0], tost_clinic_1_paired.p_value, 13)
+
+    resi = smws.tost_ind(x1, x2, 0.8, 1.25, transform=np.log, usevar='separate')
+    assert_almost_equal(resi[0], tost_clinic_1_indep.p_value, 13)
+
 
 def test_ttest():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
@@ -309,12 +394,15 @@ def test_ttest():
         #assert_almost_equal(res1[2], res2.df, decimal=13)
 
     cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))
-#    ci = cm.confint_diff(alternative='two-sided', usevar='separate')
-#    assert_almost_equal(ci, ttest_clinic_indep_1_g.conf_int, decimal=13)
+    ci = cm.confint_diff(alternative='two-sided', usevar='separate')
+    assert_almost_equal(ci, ttest_clinic_indep_1_two_mu.conf_int, decimal=13)
+    ci = cm.confint_diff(alternative='two-sided', usevar='pooled')
+    assert_almost_equal(ci, ttest_clinic_indep_1_two_mu_pooled.conf_int, decimal=13)
     ci = cm.confint_diff(alternative='smaller', usevar='separate')
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_l.conf_int, decimal=13)
     ci = cm.confint_diff(alternative='larger', usevar='separate')
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_g.conf_int, decimal=13)
+
 
     #test get_compare
     cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))
@@ -326,6 +414,21 @@ def test_ttest():
     assert_(cm.d1 is cm2.d1)
     assert_(cm.d1 is cm3.d1)
 
+def tost_transform_paired():
+    raw = np.array('''\
+       103.4 90.11  59.92 77.71  68.17 77.71  94.54 97.51
+       69.48 58.21  72.17 101.3  74.37 79.84  84.44 96.06
+       96.74 89.30  94.26 97.22  48.52 61.62  95.68 85.80'''.split(), float)
+
+    x, y = raw.reshape(-1,2).T
+
+    res1 = smws.tost_paired(x, y, 0.8, 1.25, transform=np.log)
+    res_sas = (0.0031, (3.38, 0.0031), (-5.90, 0.00005))
+    assert_almost_equal(res1[0], res_sas[0], 3)
+    assert_almost_equal(res1[1:], res_sas[1:], 2)
+    #result R tost
+    assert_almost_equal(res1[0], tost_s_paired.p_value, 13)
+
 if __name__ == '__main__':
     tt = TestTostp1()
     tt.test_special()
@@ -336,4 +439,7 @@ if __name__ == '__main__':
         tt.test_pval()
 
     test_ttest()
+    tost_transform_paired()
+    test_tost_log()
+
 
