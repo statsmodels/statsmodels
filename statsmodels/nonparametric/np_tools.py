@@ -52,7 +52,8 @@ class LeaveOneOut(object):
 
 def _get_type_pos(var_type):
     var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
+    #iscontinuous = np.where(var_type == 'c')[0]
+    iscontinuous = np.array([c == 'c' for c in var_type])
     isordered = np.where(var_type == 'o')[0]
     isunordered = np.where(var_type == 'u')[0]
     return iscontinuous, isordered, isunordered
