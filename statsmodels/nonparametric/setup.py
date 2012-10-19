@@ -27,9 +27,13 @@ def configuration(parent_package='', top_path=None):
     #config.add_data_files('tests/results/results_kde_weights.csv')
     if has_c_compiler():
         cython(['fast_linbin.pyx'], working_path=cur_dir)
-
         config.add_extension('fast_linbin',
                          sources=['fast_linbin.c'],
+                         include_dirs=[get_numpy_include_dirs()])
+
+        cython(['_kernels.pyx'], working_path=cur_dir)
+        config.add_extension('_kernels',
+                         sources=['_kernels.c'],
                          include_dirs=[get_numpy_include_dirs()])
 
 

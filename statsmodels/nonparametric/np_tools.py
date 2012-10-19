@@ -1,5 +1,5 @@
 import numpy as np
-import kernels
+import _kernels as kernels
 
 
 kernel_func = dict(wangryzin=kernels.wang_ryzin,
