@@ -113,11 +113,16 @@ class TestWeightstats(object):
         t,p,d = d1w_2d.ttest_mean(3)
         assert_almost_equal([t, p], stats.ttest_1samp(x1r_2d, 3), 11)
         #print [stats.ttest_1samp(xi, 3) for xi in x1r_2d.T]
-        ressm = CompareMeans(d1w_2d, d2w_2d).ttest_ind()
+        cm = CompareMeans(d1w_2d, d2w_2d)
+        ressm = cm.ttest_ind()
         resss = stats.ttest_ind(x1r_2d, x2r_2d)
         assert_almost_equal(ressm[:2], resss, 14)
-#        print ressm
-#        print resss
+
+##        #doesn't work for 2d, levene doesn't use weights
+##        cm = CompareMeans(d1w_2d, d2w_2d)
+##        ressm = cm.test_equal_var()
+##        resss = stats.levene(x1r_2d, x2r_2d)
+##        assert_almost_equal(ressm[:2], resss, 14)
 
 
 class CheckWeightstats1d(object):
@@ -129,6 +134,10 @@ class CheckWeightstats1d(object):
         assert_almost_equal(x1r.mean(0), d1w.mean, 14)
         assert_almost_equal(x1r.var(0, ddof=d1w.ddof), d1w.var, 14)
         assert_almost_equal(x1r.std(0, ddof=d1w.ddof), d1w.std, 14)
+        var1 = d1w.var_ddof(ddof=1)
+        assert_almost_equal(x1r.var(0, ddof=1), var1, 14)
+        std1 = d1w.std_ddof(ddof=1)
+        assert_almost_equal(x1r.std(0, ddof=1), std1, 14)
 
 
         assert_almost_equal(np.cov(x1r.T, bias=1-d1w.ddof), d1w.cov, 14)
@@ -158,14 +167,14 @@ class CheckWeightstats1d(object):
     def test_confint_mean(self):
         #compare confint_mean with ttest
         d1w = self.d1w
-        alpha = 0.95
+        alpha = 0.05
         low, upp = d1w.confint_mean()
         t, p, d = d1w.ttest_mean(low)
-        assert_almost_equal(p, alpha * np.ones(p.shape), 10)
+        assert_almost_equal(p, alpha * np.ones(p.shape), 8)
         t, p, d = d1w.ttest_mean(upp)
-        assert_almost_equal(p, alpha * np.ones(p.shape), 10)
+        assert_almost_equal(p, alpha * np.ones(p.shape), 8)
         t, p, d = d1w.ttest_mean(np.vstack((low, upp)))
-        assert_almost_equal(p, alpha * np.ones(p.shape), 10)
+        assert_almost_equal(p, alpha * np.ones(p.shape), 8)
 
 class CheckWeightstats2d(CheckWeightstats1d):
 

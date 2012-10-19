@@ -136,10 +136,10 @@ class DescrStatsW(object):
 
     #need memoize instead of cache decorator
     def var_ddof(self, ddof=0):
-        return sumsquares(self) / (self.sum_weights - ddof)
+        return self.sumsquares / (self.sum_weights - ddof)
 
     def std_ddof(self, ddof=0):
-        return np.sqrt(self.var(ddof=ddof))
+        return np.sqrt(self.var_ddof(ddof=ddof))
 
     @OneTimeProperty
     def var(self):
@@ -395,15 +395,15 @@ class CompareMeans(object):
         tt2 = self.ttest_ind(alternative='larger', usevar=usevar, diff=upp)
         return max(tt1[1], tt2[1]), (tt1, tt2)
 
-
-    def test_equal_var():
-        '''Levene test for independence
-
-        '''
-        d1 = self.d1
-        d2 = self.d2
-        #rewrite this, for now just use scipy.stats
-        return stats.levene(d1.data, d2.data)
+#doesn't work for 2d, doesn't take weights into account
+##    def test_equal_var(self):
+##        '''Levene test for independence
+##
+##        '''
+##        d1 = self.d1
+##        d2 = self.d2
+##        #rewrite this, for now just use scipy.stats
+##        return stats.levene(d1.data, d2.data)
 
 
 def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
