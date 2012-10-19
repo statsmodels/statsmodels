@@ -115,8 +115,7 @@ class _GenericKDE (object):
         l = self.all_vars_type.count('c')  # number of continuous variables
         co = 4  # 2*order of continuous kernel
         do = 4  # 2*order of discrete kernel
-        iscontinuous, isordered, isunordered = \
-                tools._get_type_pos(self.all_vars_type)
+        _, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
         for i in xrange(self.n_res):
             np.random.shuffle(all_vars)
             sub_all_vars = all_vars[0 : self.n_sub, :]
@@ -132,12 +131,14 @@ class _GenericKDE (object):
         s = self._compute_dispersion(all_vars)
         if self.return_median:
             median_scale = np.median(sample_scale, axis=0)
-            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Check if 1/5 is correct!
+            # TODO: Check if 1/5 is correct in line below!
+            bw = median_scale * s * self.N **(-1. / (l + co))
             bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
             bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
         else:
             mean_scale = np.mean(sample_scale, axis=0)
-            bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
+            # TODO: Check if 1/5 is correct in line below!
+            bw = mean_scale * s * self.N ** (-1. / (l + co))
             bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
             bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
 
@@ -156,8 +157,7 @@ class _GenericKDE (object):
         l = self.all_vars_type.count('c')  # number of continuous vars
         co = 4  # 2 * order of continuous kernel
         do = 4  # 2 * order of discrete kernel
-        iscontinuous, isordered, isunordered = \
-                tools._get_type_pos(self.all_vars_type)
+        _, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
 
         slices = np.arange(0, self.N, self.n_sub)
         n_slice = len(slices)
@@ -248,11 +248,9 @@ class _GenericKDE (object):
         """
         ind0 = np.where(bw < 0)
         bw[ind0] = 1e-10
-        iscontinuous, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
-        for i in isordered:
-            bw[i] = min(bw[i], 1.)
-        for i in isunordered:
-            bw[i] = min(bw[i], 1.)
+        _, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
+        bw[isordered] = np.where(bw[isordered] >= 1, 1., bw[isordered])
+        bw[isunordered] = np.where(bw[isunordered] >= 1, 1., bw[isunordered])
 
         return bw
 
@@ -1039,8 +1037,8 @@ class Reg(_GenericKDE):
                          tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
-        iscontinuous = tools._get_type_pos(self.var_type)[0]
-        iscontinuous = xrange(self.K)  # Use all vars instead of continuous only
+        #iscontinuous = tools._get_type_pos(self.var_type)[0]
+        iscontinuous = np.arange(self.K)  # Use all vars instead of continuous only
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
         N, Qc = np.shape(txdat[:, iscontinuous])
         Ker = Ker / float(N)
@@ -1256,7 +1254,8 @@ class Reg(_GenericKDE):
         """
         var_pos = np.asarray(var_pos)
         iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
-        if np.any(iscontinuous == var_pos):  # continuous variable
+        #if np.any(iscontinuous == var_pos):  # continuous variable
+        if iscontinuous[var_pos]:  #FIXME: these comparisons shouldn't work!
             if np.any(isordered == var_pos) or np.any(isunordered == var_pos):
                 raise "Discrete variable in hypothesis. Must be continuous"
             Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot)
@@ -1406,12 +1405,10 @@ class CensoredReg(Reg):
                          okertype='wangryzin_reg', tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
-        iscontinuous = tools._get_type_pos(self.var_type)[0]
-        iscontinuous = xrange(self.K)  # Use all vars instead of continuous only
+        iscontinuous = np.arange(self.K)  # Use all vars instead of continuous only
         Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
-        Ker = Ker * W
         N, Qc = np.shape(txdat[:, iscontinuous])
-        Ker = Ker / float(N)
+        Ker = Ker * W / float(N)
         M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
         M22 = np.dot(M12.T, M12 * Ker)
         M22 = np.reshape(M22, (Qc, Qc))
@@ -1860,7 +1857,6 @@ class TestFForm(object):
         uLOO = tools.LeaveOneOut(u).__iter__()
         I = 0
         S2 = 0
-        iscontinuous = tools._get_type_pos(self.var_type)[0]
         for i, X_j in enumerate(XLOO):
             u_j = uLOO.next()
             # See Bootstrapping procedure on p. 357 in [1]
@@ -1871,6 +1867,7 @@ class TestFForm(object):
             S2 += f_i ** 2  # See Theorem 12.1 on p.356 in [1]
 
         I *= 1. / (n * (n - 1))
+        iscontinuous = tools._get_type_pos(self.var_type)[0]
         hp = np.prod(self.bw[iscontinuous])
         S2 *= 2 * hp / (n * (n - 1))
         T = n * (hp ** 0.5) * I / (S2 ** 0.5)
