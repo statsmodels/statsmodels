@@ -422,16 +422,22 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     return tstat, pval, dof
 
 
-def tost_ind(x1, x2, low, upp,
-                        usevar='pooled',
-                        weights=(None, None)):
-    '''ttest independent sample
+def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
+             transform=None):
+    '''tost independent sample
 
     convenience function that uses the classes and throws away the intermediate
     results,
     compared to scipy stats: drops axis option, adds alternative, usevar, and
     weights option
     '''
+
+    if transform:
+        xx = transform(np.hstack((x1, x2)))
+        x1 = xx[:len(x1)]
+        x2 = xx[len(x1):]
+        low = transform(low)
+        upp = transform(upp)
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                      DescrStatsW(x2, weights=weights[1], ddof=0))
     pval, res = cm.tost(low, upp, usevar=usevar)
