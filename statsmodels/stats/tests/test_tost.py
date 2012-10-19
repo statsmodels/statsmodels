@@ -182,6 +182,22 @@ tost_s_paired.p_value = 0.003059338540563293
 tost_s_paired.check_me = (-0.1019420179587835, 0.2231435513142098)
 
 
+#> comp <- multeq.diff(data=clinic,grp="fact", resp=c("var1"),method="step.up",margin.up=rep(0.6), margin.lo=rep(-1.5))
+#> cat_items(comp, prefix="tost_clinic_1_asym.")
+tost_clinic_1_asym = Holder
+tost_clinic_1_asym.comp_name = '2-1'
+tost_clinic_1_asym.estimate = -0.1646666666666667
+tost_clinic_1_asym.degr_fr = 26.74847875823152
+tost_clinic_1_asym.test_stat = 3.020456692101513
+tost_clinic_1_asym.p_value = 0.00274867705173331
+tost_clinic_1_asym.lower = -0.596019631405587
+tost_clinic_1_asym.upper = 0.2666862980722534
+tost_clinic_1_asym.margin_lo = -1.5
+tost_clinic_1_asym.margin_up = 0.6
+tost_clinic_1_asym.base = 1
+tost_clinic_1_asym.method = 'step.up'
+tost_clinic_1_asym.var_equal = '''FALSE'''
+tost_clinic_1_asym.FWER = 0.05
 
 
 
@@ -268,7 +284,7 @@ ttest_clinic_indep_1_two_mu.data_name = 'clinic$var1[1:15] and clinic$var1[16:30
 
 #> tt2 = t.test(clinic$var1[1:15], clinic$var1[16:30],, data=clinic, mu=1, alternative="two.sided", paired=FALSE, var.equal=TRUE)
 #> cat_items(tt2, prefix="ttest_clinic_indep_1_two_mu_pooled.")
-ttest_clinic_indep_1_two_mu_pooled = Holder
+ttest_clinic_indep_1_two_mu_pooled = Holder()
 ttest_clinic_indep_1_two_mu_pooled.statistic = -3.299592184135305
 ttest_clinic_indep_1_two_mu_pooled.parameter = 28
 ttest_clinic_indep_1_two_mu_pooled.p_value = 0.002643203760742494
@@ -376,6 +392,10 @@ def test_tost_log():
     resi = smws.tost_ind(x1, x2, 0.8, 1.25, transform=np.log, usevar='separate')
     assert_almost_equal(resi[0], tost_clinic_1_indep.p_value, 13)
 
+def test_tost_asym():
+    x1, x2 = clinic[:15, 2], clinic[15:, 2]
+    resa = smws.tost_ind(x1, x2, -1.5, 0.6, usevar='separate')
+    assert_almost_equal(resa[0], tost_clinic_1_asym.p_value, 13)
 
 def test_ttest():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
