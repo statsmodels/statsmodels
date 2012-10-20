@@ -463,6 +463,7 @@ class CompareMeans(object):
     def tost(self, low, upp, usevar='pooled'):
         tt1 = self.ttest_ind(alternative='larger', usevar=usevar, diff=low)
         tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=upp)
+        #TODO: remove tuple return, use same as for function tost_ind
         return np.maximum(tt1[1], tt2[1]), (tt1, tt2)
 
     #tost.__doc__ = tost_ind.__doc__
@@ -549,13 +550,14 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
     '''
 
     if transform:
-        if transform: #np.log:
+        if transform is np.log:
             #avoid hstack in special case
             x1 = transform(x1)
             x2 = transform(x2)
         else:
             #for transforms like rankdata that will need both datasets
-            xx = transform(np.hstack((x1, x2)))
+            #concatenate works for stacking 1d and 2d arrays
+            xx = transform(np.concatenate((x1, x2), 0))
             x1 = xx[:len(x1)]
             x2 = xx[len(x1):]
         low = transform(low)
@@ -609,12 +611,14 @@ def tost_paired(x1, x2, low, upp, transform=None, weights=None):
             x2 = transform(x2)
         else:
             #for transforms like rankdata that will need both datasets
-            xx = transform(np.hstack((x1, x2)))
+            #concatenate works for stacking 1d and 2d arrays
+            xx = transform(np.concatenate((x1, x2), 0))
             x1 = xx[:len(x1)]
             x2 = xx[len(x1):]
         low = transform(low)
         upp = transform(upp)
     dd = DescrStatsW(x1 - x2, weights=weights, ddof=0)
+    #TODO: add tost as method to DescrStatsW
     t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
     return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)

@@ -470,6 +470,20 @@ def test_tost_asym():
                            usevar='separate')
     assert_almost_equal(resall[0], tost_clinic_all_no_multi.p_value, 13)
 
+    #SMOKE test
+    resall = smws.tost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
+                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
+                           usevar='separate', transform=np.log)
+    resall = smws.tost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
+                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
+                           usevar='separate', transform=np.exp)
+    resall = smws.tost_paired(clinic[15:, 2:7], clinic[:15, 2:7],
+                              [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
+                              transform=np.log)
+    resall = smws.tost_paired(clinic[15:, 2:7], clinic[:15, 2:7],
+                              [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
+                              transform=np.exp)
+
 def test_ttest():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
     all_tests = []
