@@ -314,7 +314,7 @@ class DescrStatsW(object):
 def tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
     '''generic ttest to save typing'''
     #TODO: diff convention has wrong sign
-    tstat = (value1 - value2 + diff) / std_diff
+    tstat = (value1 - value2 - diff) / std_diff
     from scipy import stats
     if alternative in ['two-sided', '2-sided', '2']:
        pvalue = stats.t.sf(np.abs(tstat), dof)*2
@@ -459,8 +459,8 @@ class CompareMeans(object):
         return res
 
     def tost(self, low, upp, usevar='pooled'):
-        tt1 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=low)
-        tt2 = self.ttest_ind(alternative='larger', usevar=usevar, diff=upp)
+        tt1 = self.ttest_ind(alternative='larger', usevar=usevar, diff=low)
+        tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=upp)
         return max(tt1[1], tt2[1]), (tt1, tt2)
 
     #tost.__doc__ = tost_ind.__doc__
