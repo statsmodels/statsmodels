@@ -394,7 +394,9 @@ def test_tost_log():
 
 def test_tost_asym():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
-    resa = smws.tost_ind(x1, x2, -1.5, 0.6, usevar='separate')
+    #Note: x1, x2 reversed by definition in multeq.dif
+    assert_almost_equal(x2.mean() - x1.mean(), tost_clinic_1_asym.estimate, 13)
+    resa = smws.tost_ind(x2, x1, -1.5, 0.6, usevar='separate')
     assert_almost_equal(resa[0], tost_clinic_1_asym.p_value, 13)
 
 def test_ttest():
@@ -405,7 +407,7 @@ def test_ttest():
     t2 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate')
     all_tests.append((t2, ttest_clinic_indep_1_l))
     t3 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate',
-                        diff=-1)  #diff is reversed sign from R ttest
+                        diff=1)
     all_tests.append((t3, ttest_clinic_indep_1_l_mu))
 
     for res1, res2 in all_tests:
