@@ -27,7 +27,10 @@ ctypedef np.float_t DTYPE_t
 # - Check for the scalar Xi case everywhere
 
 
-def aitchison_aitken(h, Xi, x, num_levels=None):
+cdef DTYPE_t PI = 3.141592653589793
+
+
+def aitchison_aitken(DTYPE_t h, Xi, x, num_levels=None):
     """
     The Aitchison-Aitken kernel, used for unordered discrete random variables.
 
@@ -39,10 +42,9 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
         The value of the training set.
     x: 1-D ndarray, shape (K,)
         The value at which the kernel density is being estimated.
-    num_levels: bool, optional
-        Gives the user the option to specify the number of levels for the
-        random variable.  If False, the number of levels is calculated from
-        the data.
+    num_levels: int, optional
+        The number of levels for the random variable.  If not given, the number
+        of levels is calculated from `Xi`..
 
     Returns
     -------
@@ -64,7 +66,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
     """
     Xi = Xi.reshape(Xi.size)  # seems needed in case Xi is scalar
     if num_levels is None:
-        num_levels = np.asarray(np.unique(Xi).size)
+        num_levels = np.unique(Xi).size
 
     kernel_value = np.ones(Xi.size) * h / (num_levels - 1)
     idx = Xi == x
@@ -72,7 +74,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
     return kernel_value
 
 
-def wang_ryzin(h, Xi, x):
+def wang_ryzin(DTYPE_t h, Xi, x):
     """
     The Wang-Ryzin kernel, used for ordered discrete random variables.
 
@@ -106,23 +108,23 @@ def wang_ryzin(h, Xi, x):
            discrete distributions", Biometrika, vol. 68, pp. 301-309, 1981.
     """
     Xi = Xi.reshape(Xi.size)  # seems needed in case Xi is scalar
-    kernel_value = 0.5 * (1 - h) * (h ** abs(Xi - x))
+    kernel_value = 0.5 * (1 - h) * (h ** np.abs(Xi - x))
     idx = Xi == x
     kernel_value[idx] = (idx * (1 - h))[idx]
     return kernel_value
 
 
 @cython.boundscheck(False)
-def gaussian(float h, np.ndarray[DTYPE_t, ndim=1] Xi, float x):
+def gaussian(DTYPE_t h, np.ndarray[DTYPE_t, ndim=1] Xi, DTYPE_t x):
     """
     Gaussian Kernel for continuous variables
     Parameters
     ----------
-    h : 1-D ndarray, shape (K,)
+    h : float
         The bandwidths used to estimate the value of the kernel function.
-    Xi : 1-D ndarray, shape (K,)
+    Xi : 1-D ndarray of floats
         The value of the training set.
-    x : 1-D ndarray, shape (K,)
+    x : float
         The value at which the kernel density is being estimated.
 
     Returns
@@ -131,18 +133,16 @@ def gaussian(float h, np.ndarray[DTYPE_t, ndim=1] Xi, float x):
         The value of the kernel function at each training point for each var.
 
     """
-    cdef DTYPE_t pi = 3.141592653589793
-    return (1. / sqrt(2 * pi)) * np.exp(-(Xi - x)**2 / (h**2 * 2.))
+    return (1. / sqrt(2 * PI)) * np.exp(-(Xi - x)**2 / (h**2 * 2.))
 
 
-def gaussian_convolution(h, Xi, x):
+@cython.boundscheck(False)
+def gaussian_convolution(DTYPE_t h, np.ndarray[DTYPE_t, ndim=1] Xi, DTYPE_t x):
     """ Calculates the Gaussian Convolution Kernel """
-    z = (Xi - x) / h
-    kernel_value = (1. / np.sqrt(4 * np.pi)) * np.exp(- z ** 2 / 4.)
-    return kernel_value
+    return (1. / sqrt(4 * PI)) * np.exp(- (Xi - x)**2 / (h**2 * 4.))
 
 
-def wang_ryzin_convolution(h, Xi, Xj):
+def wang_ryzin_convolution(DTYPE_t h, Xi, Xj):
     # This is the equivalent of the convolution case with the Gaussian Kernel
     # However it is not exactly convolution. Think of a better name
     # References
@@ -153,7 +153,7 @@ def wang_ryzin_convolution(h, Xi, Xj):
     return ordered
 
 
-def aitchison_aitken_convolution(h, Xi, Xj):
+def aitchison_aitken_convolution(DTYPE_t h, Xi, Xj):
     Xi_vals = np.unique(Xi)
     ordered = np.zeros(Xi.size)
     num_levels = Xi_vals.size
@@ -164,11 +164,11 @@ def aitchison_aitken_convolution(h, Xi, Xj):
     return ordered
 
 
-def gaussian_cdf(h, Xi, x):
+def gaussian_cdf(DTYPE_t h, Xi, x):
     return 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
 
 
-def aitchison_aitken_cdf(h, Xi, x_u):
+def aitchison_aitken_cdf(DTYPE_t h, Xi, x_u):
     x_u = int(x_u)
     Xi_vals = np.unique(Xi)
     ordered = np.zeros(Xi.size)
@@ -180,7 +180,7 @@ def aitchison_aitken_cdf(h, Xi, x_u):
     return ordered
 
 
-def wang_ryzin_cdf(h, Xi, x_u):
+def wang_ryzin_cdf(DTYPE_t h, Xi, x_u):
     ordered = np.zeros(Xi.size)
     for x in np.unique(Xi):
         if x <= x_u:
@@ -188,14 +188,12 @@ def wang_ryzin_cdf(h, Xi, x_u):
 
     return ordered
 
-def d_gaussian(h, Xi, x):
+@cython.boundscheck(False)
+def d_gaussian(DTYPE_t h, np.ndarray[DTYPE_t, ndim=1] Xi, DTYPE_t x):
     # The derivative of the Gaussian Kernel
-    z = (Xi - x) / h
-    value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
-    value = 2 * ( x - Xi) * gaussian(h, Xi, x) / (h ** 2)
-    return value
+    return 2 * (Xi - x) * gaussian(h, Xi, x) / h**2
 
-def aitchison_aitken_reg(h, Xi, x):
+def aitchison_aitken_reg(DTYPE_t h, Xi, x):
     """
     A version for the Aitchison-Aitken kernel for nonparametric regression.
 
@@ -208,11 +206,11 @@ def aitchison_aitken_reg(h, Xi, x):
     return kernel_value
 
 
-def wang_ryzin_reg(h, Xi, x):
+def wang_ryzin_reg(DTYPE_t h, Xi, x):
     """
     A version for the Wang-Ryzin kernel for nonparametric regression.
 
     Suggested by Li and Racine in [1] ch.4
     """
-    return h ** abs(Xi - x)
+    return h ** np.abs(Xi - x)
 

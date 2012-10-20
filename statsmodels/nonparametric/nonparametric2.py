@@ -34,6 +34,7 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
+import kernels as kernels
 import np_tools as tools
 
 
@@ -149,9 +150,9 @@ class _GenericKDE (object):
 
     def _compute_efficient_all(self, bw):
         """
-        Computes the bandiwdth by breaking down the full sample
-        into however many sub_samples of size n_sub and calculates
-        the scaling factor of the bandiwdth
+        Computes the bandwidth by breaking down the full sample
+        into however many sub-samples of size n_sub and calculates
+        the scaling factor of the bandwidth.
         """
         all_vars = copy.deepcopy(self.all_vars)
         l = self.all_vars_type.count('c')  # number of continuous vars
@@ -246,11 +247,10 @@ class _GenericKDE (object):
         Sets bandwidth lower bound to zero and for discrete values upper bound
         to 1.
         """
-        ind0 = np.where(bw < 0)
-        bw[ind0] = 1e-10
+        bw[bw < 0] = 1e-10
         _, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
-        bw[isordered] = np.where(bw[isordered] >= 1, 1., bw[isordered])
-        bw[isunordered] = np.where(bw[isunordered] >= 1, 1., bw[isunordered])
+        bw[isordered] = np.minimum(bw[isordered], 1.)
+        bw[isunordered] = np.minimum(bw[isunordered], 1.)
 
         return bw
 
@@ -558,7 +558,7 @@ class KDE(_GenericKDE):
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
 
-    def imse(self, bw):
+    def imse_orig(self, bw):
         """
         Returns the Integrated Mean Square Error for the unconditional KDE.
 
@@ -596,8 +596,50 @@ class KDE(_GenericKDE):
                                    ukertype='aitchisonaitken_convolution')
             F += k_bar_sum
         # there is a + because loo_likelihood returns the negative
-        return (F / (self.N ** 2) + self.loo_likelihood(bw) *\
+        return (F / (self.N ** 2) + self.loo_likelihood(bw) * \
                 2 / ((self.N) * (self.N - 1)))
+
+    def imse(self, bw):
+        F = 0
+        kertypes = dict(c=kernels.gaussian_convolution,
+                        o=kernels.wang_ryzin_convolution,
+                        u=kernels.aitchison_aitken_convolution)
+        N = self.N
+        tdat = -self.tdat
+        var_type = self.var_type
+        iscontinuous = np.array([c == 'c' for c in var_type])
+        _bw_cont_product = np.prod(bw[iscontinuous])
+        Kval = np.empty(tdat.shape)
+        for i in range(N):
+            for ii, vtype in enumerate(var_type):
+                Kval[:, ii] = kertypes[vtype](bw[ii],
+                                              tdat[:, ii],
+                                              tdat[i, ii])
+
+            dens = Kval.prod(axis=1) / _bw_cont_product
+            k_bar_sum = dens.sum(axis=0)
+            F += k_bar_sum
+
+        #leave_one_out = self.loo_likelihood(bw)
+        kertypes = dict(c=kernels.gaussian,
+                        o=kernels.wang_ryzin,
+                        u=kernels.aitchison_aitken)
+        LOO = tools.LeaveOneOut(self.tdat)
+        L = 0
+        Kval = np.empty((tdat.shape[0]-1, tdat.shape[1]))
+        for i, X_j in enumerate(LOO):
+            #f_i = tools.gpke(bw, tdat=-X_j, edat=tdat[i, :],
+            #                 var_type=var_type)
+            for ii, vtype in enumerate(var_type):
+                Kval[:, ii] = kertypes[vtype](bw[ii],
+                                              -X_j[:, ii],
+                                              tdat[i, ii])
+            dens = Kval.prod(axis=1) / _bw_cont_product
+            L -= dens.sum(axis=0)
+
+        # there is a + because loo_likelihood returns the negative
+        return (F / N**2 + 2 * L / (N * (N - 1)))
+        #return (F / N**2 + 2 * leave_one_out / (N * (N - 1)))
 
 
 class ConditionalKDE(_GenericKDE):
@@ -1031,37 +1073,34 @@ class Reg(_GenericKDE):
         See p. 81 in [1] and p.38 in [2] for the formulas.
         Unlike other methods, this one requires that `edat` be 1D.
         """
+        N, Qc = txdat.shape
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
                          #ukertype='aitchison_aitken_reg',
                          #okertype='wangryzin_reg',
-                         tosum=False)
+                         tosum=False) / float(N)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
-        #iscontinuous = tools._get_type_pos(self.var_type)[0]
-        iscontinuous = np.arange(self.K)  # Use all vars instead of continuous only
-        Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
-        N, Qc = np.shape(txdat[:, iscontinuous])
-        Ker = Ker / float(N)
-        M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
-        M22 = np.dot(M12.T, M12 * Ker)
-        M22 = np.reshape(M22, (Qc, Qc))
-        M12 = np.sum(M12 * Ker , axis=0)
-        M12 = np.reshape(M12, (1, Qc))
-        M21 = M12.T
-        M11 = np.sum(np.ones((N,1)) * Ker, axis=0)
-        M11 = np.reshape(M11, (1,1))
-        M_1 = np.column_stack((M11, M12))
-        M_2 = np.column_stack((M21, M22))
-        M = np.row_stack((M_1, M_2))
-        V1 = np.sum(np.ones((N,1)) * Ker * tydat, axis=0)
-        V2 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
-        V2 = np.sum(V2 * Ker * tydat , axis=0)
-        V1 = np.reshape(V1, (1,1))
-        V2 = np.reshape(V2, (Qc, 1))
+        #iscontinuous = np.arange(self.K)  # Use all vars instead of continuous only
+        # Note: because iscontinuous was defined here such that it selected all
+        # columns, I removed the indexing with it from txdat/edat.
 
-        V = np.row_stack((V1, V2))
-        assert np.shape(M) == (Qc + 1, Qc + 1)
-        assert np.shape(V) == (Qc + 1, 1)
+        # Convert Ker to a 2-D array to make matrix operations below work
+        Ker = Ker[:, np.newaxis]
+
+        M12 = txdat - edat
+        M22 = np.dot(M12.T, M12 * Ker)
+        M12 = (M12 * Ker).sum(axis=0)
+        M = np.empty((Qc + 1, Qc + 1))
+        M[0, 0] = Ker.sum()
+        M[0, 1:] = M12
+        M[1:, 0] = M12
+        M[1:, 1:] = M22
+
+        ker_tydat = Ker * tydat
+        V = np.empty((Qc + 1, 1))
+        V[0, 0] = ker_tydat.sum()
+        V[1:, 0] = ((txdat - edat) * ker_tydat).sum(axis=0)
+
         mean_mfx = np.dot(np.linalg.pinv(M), V)
         mean = mean_mfx[0]
         mfx = mean_mfx[1:, :]
@@ -1096,26 +1135,21 @@ class Reg(_GenericKDE):
                         #okertype='wangryzin_reg',
                         tosum=False)
         KX = np.reshape(KX, np.shape(tydat))
-        G_numer = np.sum(tydat * KX, axis=0)
-        G_denom = np.sum(tools.gpke(bw, tdat=txdat, edat=edat,
-                                    var_type=self.var_type,
-                            #ukertype='aitchison_aitken_reg',
-                            #okertype='wangryzin_reg',
-                            tosum=False), axis=0)
+        G_numer = (KX * tydat).sum(axis=0)
+        G_denom = KX.sum(axis=0)
         G = G_numer / G_denom
-        B_x = np.ones((self.K))
-        N, K = np.shape(txdat)
-        f_x = np.sum(KX, axis=0) / float(N)
+        N, K = txdat.shape
+        f_x = G_denom / float(N)
         KX_c = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
                           ckertype='d_gaussian',
                           #okertype='wangryzin_reg',
                           tosum=False)
 
-        KX_c = np.reshape(KX_c, (N, 1))
-        d_mx = - np.sum(tydat * KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
-        d_fx = - np.sum(KX_c, axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
+        KX_c = KX_c[:, np.newaxis]
+        d_mx = -(tydat * KX_c).sum(axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
+        d_fx = -KX_c.sum(axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
         B_x = d_mx / f_x - G * d_fx / f_x
-        B_x = (G_numer * d_fx - G_denom * d_mx)/(G_denom**2)
+        B_x = (G_numer * d_fx - G_denom * d_mx) / (G_denom**2)
         #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
         return G, B_x
 
@@ -1131,12 +1165,13 @@ class Reg(_GenericKDE):
         for j in range(self.N):
             H[:, j] = tools.gpke(bw, tdat=self.txdat, edat=self.txdat[j,:],
                                  var_type=self.var_type, tosum=False)
-        denom = np.sum(H, axis=1)
+        denom = H.sum(axis=1)
         H = H / denom
         gx = Reg(tydat=self.tydat, txdat=self.txdat, var_type=self.var_type,
-                reg_type=self.reg_type, bw=bw, defaults=SetDefaults(efficient=False)).fit()[0]
+                 reg_type=self.reg_type, bw=bw,
+                 defaults=SetDefaults(efficient=False)).fit()[0]
         gx = np.reshape(gx, (self.N, 1))
-        sigma = np.sum((self.tydat - gx) ** 2, axis=0) / float(self.N)
+        sigma = ((self.tydat - gx)**2).sum(axis=0) / float(self.N)
 
         frac = (1 + np.trace(H)/float(self.N)) / (1 - (np.trace(H) +2)/float(self.N))
         #siga = np.dot(self.tydat.T, (I - H).T)
@@ -1206,9 +1241,9 @@ class Reg(_GenericKDE):
         Y = np.squeeze(self.tydat)
         Yhat = self.fit()[0]
         Y_bar = np.mean(Yhat)
-        R2_numer = (np.sum((Y - Y_bar) * (Yhat - Y_bar)) ** 2)
-        R2_denom = np.sum((Y - Y_bar) ** 2, axis=0) * \
-                   np.sum((Yhat - Y_bar) ** 2, axis=0)
+        R2_numer = (((Y - Y_bar) * (Yhat - Y_bar)).sum())**2
+        R2_denom = ((Y - Y_bar)**2).sum(axis=0) * \
+                   ((Yhat - Y_bar)**2).sum(axis=0)
         return R2_numer / R2_denom
 
     def fit(self, edat=None):
@@ -1600,7 +1635,7 @@ class TestRegCoefC(object):
         b = np.reshape(b, (n, len(self.test_vars)))
         #fct = np.std(b)  # Pivot the statistic by dividing by SE
         fct = 1.  # Don't Pivot -- Bootstrapping works better if Pivot
-        lam = np.sum(np.sum(((b / fct) ** 2), axis=1), axis=0) / float(n)
+        lam = ((b / fct) ** 2).sum() / float(n)
         return lam
 
     def _compute_se_lambda(self, Y, X):
@@ -1716,7 +1751,7 @@ class TestRegCoefD(TestRegCoefC):
             m1 = np.reshape(m1, (n, 1))
             I += (m1 - m0) ** 2
 
-        I = np.sum(I, axis=0) / float(n)
+        I = I.sum(axis=0) / float(n)
         return I
 
     def _compute_sig(self):
@@ -1870,7 +1905,7 @@ class TestFForm(object):
         iscontinuous = tools._get_type_pos(self.var_type)[0]
         hp = np.prod(self.bw[iscontinuous])
         S2 *= 2 * hp / (n * (n - 1))
-        T = n * (hp ** 0.5) * I / (S2 ** 0.5)
+        T = n * I * np.sqrt(hp / S2)
         return T
 
 

@@ -124,16 +124,12 @@ def gaussian(h, Xi, x):
         The value of the kernel function at each training point for each var.
 
     """
-    z = (Xi - x) / h
-    kernel_value = (1. / np.sqrt(2 * np.pi)) * np.exp(- z ** 2 / 2.)
-    return kernel_value
+    return (1. / np.sqrt(2 * np.pi)) * np.exp(-(Xi - x)**2 / (h**2 * 2.))
 
 
 def gaussian_convolution(h, Xi, x):
     """ Calculates the Gaussian Convolution Kernel """
-    z = (Xi - x) / h
-    kernel_value = (1. / np.sqrt(4 * np.pi)) * np.exp(- z ** 2 / 4.)
-    return kernel_value
+    return (1. / np.sqrt(4 * np.pi)) * np.exp(- (Xi - x)**2 / (h**2 * 4.))
 
 
 def wang_ryzin_convolution(h, Xi, Xj):
@@ -182,12 +178,11 @@ def wang_ryzin_cdf(h, Xi, x_u):
 
     return ordered
 
+
 def d_gaussian(h, Xi, x):
     # The derivative of the Gaussian Kernel
-    z = (Xi - x) / h
-    value = np.exp(-z ** 2 / 2.) * (Xi - x) / (np.sqrt(2 * np.pi) * h ** 2)
-    value = 2 * ( x - Xi) * gaussian(h, Xi, x) / (h ** 2)
-    return value
+    return 2 * (Xi - x) * gaussian(h, Xi, x) / h**2
+
 
 def aitchison_aitken_reg(h, Xi, x):
     """
