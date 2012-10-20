@@ -181,6 +181,39 @@ tost_s_paired.result = 'rejected'
 tost_s_paired.p_value = 0.003059338540563293
 tost_s_paired.check_me = (-0.1019420179587835, 0.2231435513142098)
 
+#multiple endpoints
+#> compvall <- multeq.diff(data=clinic,grp="fact",method="step.up",margin.up=rep(0.6,5), margin.lo=c(-1.0, -1.0, -1.5, -1.5, -1.5))
+#> cat_items(compvall, prefix="tost_clinic_all_no_multi.")
+tost_clinic_all_no_multi = Holder()
+tost_clinic_all_no_multi.comp_name = '2-1'
+tost_clinic_all_no_multi.estimate = np.array([
+     -0.1646666666666667, -0.562666666666666, -0.3073333333333332,
+     -0.5553333333333335, -0.469333333333333])
+tost_clinic_all_no_multi.degr_fr = np.array([
+     26.74847875823152, 24.1100015106273, 23.90046331918926,
+     25.71678948210178, 24.88436709341423])
+tost_clinic_all_no_multi.test_stat = np.array([
+     3.020456692101513, 2.034229724989578, 4.052967897750272,
+     4.37537447933403, 4.321997343344])
+tost_clinic_all_no_multi.p_value = np.array([
+     0.00274867705173331, 0.02653543052872217, 0.0002319468040526358,
+     8.916466517494902e-05, 0.00010890038649094043])
+tost_clinic_all_no_multi.lower = np.array([
+     -0.596019631405587, -0.930417082633366, -0.690410573009442,
+     -0.92373513818557, -0.876746448909633])
+tost_clinic_all_no_multi.upper = np.array([
+     0.2666862980722534, -0.194916250699966, 0.07574390634277595,
+     -0.186931528481097, -0.06192021775703377])
+tost_clinic_all_no_multi.margin_lo = np.array([
+     -1, -1, -1.5, -1.5, -1.5])
+tost_clinic_all_no_multi.margin_up = np.array([
+     0.6, 0.6, 0.6, 0.6, 0.6])
+tost_clinic_all_no_multi.base = 1
+tost_clinic_all_no_multi.method = 'step.up'
+tost_clinic_all_no_multi.var_equal = '''FALSE'''
+tost_clinic_all_no_multi.FWER = 0.05
+
+
 
 #> comp <- multeq.diff(data=clinic,grp="fact", resp=c("var1"),method="step.up",margin.up=rep(0.6), margin.lo=rep(-1.5))
 #> cat_items(comp, prefix="tost_clinic_1_asym.")
@@ -199,6 +232,38 @@ tost_clinic_1_asym.method = 'step.up'
 tost_clinic_1_asym.var_equal = '''FALSE'''
 tost_clinic_1_asym.FWER = 0.05
 
+#TODO: not used yet, some p-values are multi-testing adjusted
+#      not implemented
+#> compvall <- multeq.diff(data=clinic,grp="fact",method="step.up",margin.up=rep(0.6,5), margin.lo=c(-0.5, -0.5, -1.5, -1.5, -1.5))
+#> cat_items(compvall, prefix="tost_clinic_all_multi.")
+tost_clinic_all_multi = Holder()
+tost_clinic_all_multi.comp_name = '2-1'
+tost_clinic_all_multi.estimate = np.array([
+     -0.1646666666666667, -0.562666666666666, -0.3073333333333332,
+     -0.5553333333333335, -0.469333333333333])
+tost_clinic_all_multi.degr_fr = np.array([
+     26.74847875823152, 24.1100015106273, 23.90046331918926,
+     25.71678948210178, 24.88436709341423])
+tost_clinic_all_multi.test_stat = np.array([
+     1.324576910311299, -0.2914902349832590, 4.052967897750272,
+     4.37537447933403, 4.321997343344])
+tost_clinic_all_multi.p_value = np.array([
+     0.0982588867413542, 0.6134151998456164, 0.0006958404121579073,
+     0.0002674939955248471, 0.0003267011594728213])
+tost_clinic_all_multi.lower = np.array([
+     -0.596019631405587, -0.930417082633366, -0.812901144055456,
+     -1.040823983574101, -1.006578759345919])
+tost_clinic_all_multi.upper = np.array([
+     0.2666862980722534, -0.194916250699966, 0.1982344773887895,
+     -0.0698426830925655, 0.0679120926792529])
+tost_clinic_all_multi.margin_lo = np.array([
+     -0.5, -0.5, -1.5, -1.5, -1.5])
+tost_clinic_all_multi.margin_up = np.array([
+     0.6, 0.6, 0.6, 0.6, 0.6])
+tost_clinic_all_multi.base = 1
+tost_clinic_all_multi.method = 'step.up'
+tost_clinic_all_multi.var_equal = '''FALSE'''
+tost_clinic_all_multi.FWER = 0.05
 
 
 #t-tests
@@ -398,6 +463,12 @@ def test_tost_asym():
     assert_almost_equal(x2.mean() - x1.mean(), tost_clinic_1_asym.estimate, 13)
     resa = smws.tost_ind(x2, x1, -1.5, 0.6, usevar='separate')
     assert_almost_equal(resa[0], tost_clinic_1_asym.p_value, 13)
+
+    #multi-endpoints, asymmetric bounds, vectorized
+    resall = smws.tost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
+                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
+                           usevar='separate')
+    assert_almost_equal(resall[0], tost_clinic_all_no_multi.p_value, 13)
 
 def test_ttest():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]

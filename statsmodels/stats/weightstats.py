@@ -353,7 +353,9 @@ class CompareMeans(object):
     formulas should also be correct for unweighted means
 
     not sure what happens if we have several variables.
-    everything should go through vectorized but not checked yet.
+    at least, tost test works for multi-endpoint comparison: If d1 and d2
+    have the same number of rows, then each column of the data in d1 is
+    compared with the corresponding column in d2.
 
 
     extend to any number of groups or write a version that works in that
@@ -461,7 +463,7 @@ class CompareMeans(object):
     def tost(self, low, upp, usevar='pooled'):
         tt1 = self.ttest_ind(alternative='larger', usevar=usevar, diff=low)
         tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=upp)
-        return max(tt1[1], tt2[1]), (tt1, tt2)
+        return np.maximum(tt1[1], tt2[1]), (tt1, tt2)
 
     #tost.__doc__ = tost_ind.__doc__
 
@@ -507,8 +509,8 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
 
     Parameters
     ----------
-    x1, x2 : array_like
-        two independent samples
+    x1, x2 : array_like, 1-D or 2-D
+        two independent samples, see notes for 2-D case
     low, upp : float
         equivalence interval low < x - y < upp
     usevar : string, 'pooled' or 'unequal'
@@ -531,6 +533,18 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
         test statistic and pvalue for lower threshold test
     t2, pv2 : tuple of floats
         test statistic and pvalue for upper threshold test
+
+    Notes
+    -----
+    The test rejects if the 2*alpha confidence interval for the difference
+    is contained in the ``(low, upp)`` interval.
+
+    This test works also for multi-endpoint comparisons: If d1 and d2
+    have the same number of columns, then each column of the data in d1 is
+    compared with the corresponding column in d2. This is the same as
+    comparing each of the corresponding columns separately. Currently no
+    multi-comparison correction is used. The raw p-values reported here can
+    be correction with the functions in ``multitest``.
 
     '''
 
@@ -603,4 +617,5 @@ def tost_paired(x1, x2, low, upp, transform=None, weights=None):
     dd = DescrStatsW(x1 - x2, weights=weights, ddof=0)
     t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
-    return max(pv1, pv2), (t1, pv1), (t2, pv2)
+    return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
+
