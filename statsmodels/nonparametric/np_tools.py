@@ -1,5 +1,5 @@
 import numpy as np
-import _kernels as kernels
+import kernels as kernels
 
 
 kernel_func = dict(wangryzin=kernels.wang_ryzin,
@@ -123,17 +123,22 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
                 k\left(\frac{X_{iq}-x_{q}}{h_{q}}\right)
     """
     kertypes = dict(c=ckertype, o=okertype, u=ukertype)
-    Kval = []
+    #Kval = []
+    #for ii, vtype in enumerate(var_type):
+    #    func = kernel_func[kertypes[vtype]]
+    #    Kval.append(func(bw[ii], tdat[:, ii], edat[ii]))
+
+    #Kval = np.column_stack(Kval)
+
+    Kval = np.empty(tdat.shape)
     for ii, vtype in enumerate(var_type):
         func = kernel_func[kertypes[vtype]]
-        Kval.append(func(bw[ii], tdat[:, ii], edat[ii]))
+        Kval[:, ii] = func(bw[ii], tdat[:, ii], edat[ii])
 
-    Kval = np.column_stack(Kval)
-
-    var_type = np.asarray(list(var_type))
-    iscontinuous = np.where(var_type == 'c')[0]
-    dens = np.prod(Kval, axis=1) * 1. / (np.prod(bw[iscontinuous]))
+    iscontinuous = np.array([c == 'c' for c in var_type])
+    dens = Kval.prod(axis=1) / np.prod(bw[iscontinuous])
     if tosum:
-        return np.sum(dens, axis=0)
+        return dens.sum(axis=0)
     else:
         return dens
+
