@@ -470,19 +470,35 @@ def test_tost_asym():
                            usevar='separate')
     assert_almost_equal(resall[0], tost_clinic_all_no_multi.p_value, 13)
 
-    #SMOKE test
+    #SMOKE tests: foe multi-endpoint vectorized, k on k
     resall = smws.tost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
                            [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
                            usevar='separate', transform=np.log)
     resall = smws.tost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
                            [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
                            usevar='separate', transform=np.exp)
+
     resall = smws.tost_paired(clinic[15:, 2:7], clinic[:15, 2:7],
                               [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
                               transform=np.log)
     resall = smws.tost_paired(clinic[15:, 2:7], clinic[:15, 2:7],
                               [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
                               transform=np.exp)
+
+    resall = smws.ttest_ind(clinic[15:, 2:7], clinic[:15, 2:7],
+                              diff=[-1.0, -1.0, -1.5, -1.5, -1.5])
+
+    #k on 1: compare all with reference
+    resall = smws.tost_ind(clinic[15:, 2:7], clinic[:15, 2:3],
+                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6, usevar='separate')
+    resa3_2 = smws.tost_ind(clinic[15:, 3:4], clinic[:15, 2:3],
+                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6, usevar='separate')
+    assert_almost_equal(resall[0][1], resa3_2[0][1], decimal=13)
+    resall = smws.tost_ind(clinic[15:, 2], clinic[:15, 2],
+                           [-1.0, -0.5, -0.7, -1.5, -1.5], 0.6, usevar='separate')
+    resall = smws.tost_ind(clinic[15:, 2], clinic[:15, 2],
+                           [-1.0, -0.5, -0.7, -1.5, -1.5],
+                           np.repeat(0.6,5), usevar='separate')
 
 def test_ttest():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
