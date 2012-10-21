@@ -450,7 +450,6 @@ class TestReg(MyTest):
         np.random.seed(1234)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
         Y[Y>0] = 0  # censor the data
@@ -465,7 +464,6 @@ class TestReg(MyTest):
         np.random.seed(1234)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
         noise = np.random.normal(size=(N, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
         #self.write2file('RegData.csv', (Y, C1, C2))

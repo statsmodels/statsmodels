@@ -91,15 +91,14 @@ class _GenericKDE (object):
         In the notes on bwscaling option in npreg, npudens, npcdens there is
         a discussion on the measure of dispersion
         """
-        if self.__class__.__name__ == "Reg":
+        if isinstance(self, Reg):
             all_vars = all_vars[:, 1:]
 
         s1 = np.std(all_vars, axis=0)
         q75 = mquantiles(all_vars, 0.75, axis=0).data[0]
         q25 = mquantiles(all_vars, 0.25, axis=0).data[0]
         s2 = (q75-q25) / 1.349
-        s = np.asarray([min(s1[z], s2[z]) for z in range(len(s1))])
-        return s
+        return np.minimum(s1, s2)
 
     def _compute_efficient_randomize(self, bw):
         """
@@ -110,38 +109,38 @@ class _GenericKDE (object):
         ----------
         See p.9 in socserv.mcmaster.ca/racine/np_faq.pdf
         """
+        N = self.N
         sample_scale = np.empty((self.n_res, self.K))
         only_bw = np.empty((self.n_res, self.K))
         all_vars = copy.deepcopy(self.all_vars)
-        l = self.all_vars_type.count('c')  # number of continuous variables
+        num_cvars = self.all_vars_type.count('c')
         co = 4  # 2*order of continuous kernel
         do = 4  # 2*order of discrete kernel
-        _, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
+        _, ix_ord, ix_unord = tools._get_type_pos(self.all_vars_type)
         for i in xrange(self.n_res):
             np.random.shuffle(all_vars)
-            sub_all_vars = all_vars[0 : self.n_sub, :]
+            sub_all_vars = all_vars[:self.n_sub, :]
             sub_model = self._call_self(sub_all_vars, bw)
             s = self._compute_dispersion(sub_all_vars)
-            fct = s * self.n_sub ** (-1./(l + co))
-            fct[isunordered] = self.n_sub ** (-2. / (l + do))
-            fct[isordered] = self.n_sub ** (-2. / (l + do))
-            c = sub_model.bw / fct  # TODO: Check if this is correct!
-            sample_scale[i, :] = c
+            fct = s * self.n_sub**(-1. / (num_cvars + co))
+            fct[ix_unord] = self.n_sub**(-2. / (num_cvars + do))
+            fct[ix_ord] = self.n_sub**(-2. / (num_cvars + do))
+            sample_scale[i, :] = sub_model.bw / fct  #TODO: check if correct
             only_bw[i, :] = sub_model.bw
 
         s = self._compute_dispersion(all_vars)
         if self.return_median:
             median_scale = np.median(sample_scale, axis=0)
             # TODO: Check if 1/5 is correct in line below!
-            bw = median_scale * s * self.N **(-1. / (l + co))
-            bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
-            bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
+            bw = median_scale * s * self.N **(-1. / (num_cvars + co))
+            bw[ix_ord] = median_scale[ix_ord] * N**(-2./ (num_cvars + do))
+            bw[ix_unord] = median_scale[ix_unord] * N**(-2./ (num_cvars + do))
         else:
             mean_scale = np.mean(sample_scale, axis=0)
             # TODO: Check if 1/5 is correct in line below!
-            bw = mean_scale * s * self.N ** (-1. / (l + co))
-            bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
-            bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+            bw = mean_scale * s * self.N ** (-1. / (num_cvars + co))
+            bw[ix_ord] = mean_scale[ix_ord] * N**(-2./ (num_cvars + do))
+            bw[ix_unord] = mean_scale[ix_unord] * N**(-2./ (num_cvars + do))
 
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)
@@ -154,40 +153,41 @@ class _GenericKDE (object):
         into however many sub-samples of size n_sub and calculates
         the scaling factor of the bandwidth.
         """
+        N = self.N
         all_vars = copy.deepcopy(self.all_vars)
-        l = self.all_vars_type.count('c')  # number of continuous vars
+        num_cvars = self.all_vars_type.count('c')
         co = 4  # 2 * order of continuous kernel
         do = 4  # 2 * order of discrete kernel
-        _, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
+        _, ix_ord, ix_unord = tools._get_type_pos(self.all_vars_type)
 
-        slices = np.arange(0, self.N, self.n_sub)
+        slices = np.arange(0, N, self.n_sub)
         n_slice = len(slices)
         bounds = [(slices[0:-1][i], slices[1:][i]) for i in range(n_slice - 1)]
-        bounds.append((slices[-1], self.N))
+        bounds.append((slices[-1], N))
         sample_scale = np.empty((len(bounds), self.K))
         only_bw = np.empty((len(bounds), self.K))
-        for ii, b in enumerate(bounds):
-            sub_all_vars = all_vars[b[0] : b[1], :]
+        for ii, bound in enumerate(bounds):
+            sub_all_vars = all_vars[bound[0]:bound[1], :]
             sub_model = self._call_self(sub_all_vars, bw)
             s = self._compute_dispersion(sub_all_vars)
-            fct = s * self.n_sub ** (-1./(l + co))
-            fct[isunordered] = self.n_sub ** (-2. / (l + do))
-            fct[isordered] = self.n_sub ** (-2. / (l + do))
-            c = sub_model.bw / fct  # TODO: Check if this is correct!
-            sample_scale[ii, :] = c
+            fct = s * self.n_sub**(-1. / (num_cvars + co))
+            fct[ix_unord] = self.n_sub**(-2. / (num_cvars + do))
+            fct[ix_ord] = self.n_sub**(-2. / (num_cvars + do))
+            sample_scale[ii, :] = sub_model.bw / fct  # TODO: Check if correct
             only_bw[ii, :] = sub_model.bw
 
         s = self._compute_dispersion(all_vars)
         if self.return_median:
             median_scale = np.median(sample_scale, axis=0)
-            bw = median_scale * s * self.N **(-1. / (l + co))  # TODO: Check if 1/5 is correct!
-            bw[isordered] = median_scale[isordered] * self.N ** (-2./ (l + do))
-            bw[isunordered] = median_scale[isunordered] * self.N ** (-2./ (l + do))
+            # TODO: Check if 1/5 is correct!
+            bw = median_scale * s * N**(-1. / (num_cvars + co))
+            bw[ix_ord] = median_scale[ix_ord] * N**(-2./ (num_cvars + do))
+            bw[ix_unord] = median_scale[ix_unord] * N**(-2./ (num_cvars + do))
         else:
             mean_scale = np.mean(sample_scale, axis=0)
-            bw = mean_scale * s * self.N ** (-1. / (l + co))  # TODO: Check if 1/5 is correct!
-            bw[isordered] = mean_scale[isordered] * self.N ** (-2./ (l + do))
-            bw[isunordered] = mean_scale[isunordered] * self.N ** (-2./ (l + do))
+            bw = mean_scale * s * N**(-1. / (num_cvars + co))
+            bw[ix_ord] = mean_scale[ix_ord] * N**(-2./ (num_cvars + do))
+            bw[ix_unord] = mean_scale[ix_unord] * N**(-2./ (num_cvars + do))
 
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)
@@ -197,22 +197,23 @@ class _GenericKDE (object):
     def _call_self(self, all_vars, bw):
         """ Calls the class itself with the proper input parameters"""
         # only used with the efficient=True estimation option
-        if self.__class__.__name__ == 'KDE':
+        if isinstance(self, KDE):
             model = KDE(all_vars, self.var_type, bw=bw,
                         defaults=SetDefaults(efficient=False))
-
-        if self.__class__.__name__ == 'ConditionalKDE':  # TODO: use isinstance
-            tydat = all_vars[:, 0 : self.K_dep]
+        elif isinstance(self, ConditionalKDE):
+            tydat = all_vars[:, :self.K_dep]
             txdat = all_vars[:, self.K_dep:]
             model = ConditionalKDE(tydat, txdat, self.dep_type,
-                        self.indep_type, bw=bw,
-                        defaults=SetDefaults(efficient=False))
-        elif self.__class__.__name__ == 'Reg':
+                                   self.indep_type, bw=bw,
+                                   defaults=SetDefaults(efficient=False))
+        elif isinstance(self, Reg):
             tydat = tools.adjust_shape(all_vars[:, 0], 1)
             txdat = tools.adjust_shape(all_vars[:, 1:], self.K)
             model = Reg(tydat=tydat, txdat=txdat, reg_type=self.reg_type,
                         var_type=self.var_type, bw=bw,
                         defaults=SetDefaults(efficient=False))
+        else:
+            raise ValueError("Don't know what I am; aborting.")
 
         return model
 
@@ -248,9 +249,9 @@ class _GenericKDE (object):
         to 1.
         """
         bw[bw < 0] = 1e-10
-        _, isordered, isunordered = tools._get_type_pos(self.all_vars_type)
-        bw[isordered] = np.minimum(bw[isordered], 1.)
-        bw[isunordered] = np.minimum(bw[isunordered], 1.)
+        _, ix_ord, ix_unord = tools._get_type_pos(self.all_vars_type)
+        bw[ix_ord] = np.minimum(bw[ix_ord], 1.)
+        bw[ix_unord] = np.minimum(bw[ix_unord], 1.)
 
         return bw
 
@@ -607,8 +608,8 @@ class KDE(_GenericKDE):
         N = self.N
         tdat = -self.tdat
         var_type = self.var_type
-        iscontinuous = np.array([c == 'c' for c in var_type])
-        _bw_cont_product = np.prod(bw[iscontinuous])
+        ix_cont = np.array([c == 'c' for c in var_type])
+        _bw_cont_product = bw[ix_cont].prod()
         Kval = np.empty(tdat.shape)
         for i in range(N):
             for ii, vtype in enumerate(var_type):
@@ -620,7 +621,6 @@ class KDE(_GenericKDE):
             k_bar_sum = dens.sum(axis=0)
             F += k_bar_sum
 
-        #leave_one_out = self.loo_likelihood(bw)
         kertypes = dict(c=kernels.gaussian,
                         o=kernels.wang_ryzin,
                         u=kernels.aitchison_aitken)
@@ -628,18 +628,14 @@ class KDE(_GenericKDE):
         L = 0
         Kval = np.empty((tdat.shape[0]-1, tdat.shape[1]))
         for i, X_j in enumerate(LOO):
-            #f_i = tools.gpke(bw, tdat=-X_j, edat=tdat[i, :],
-            #                 var_type=var_type)
             for ii, vtype in enumerate(var_type):
                 Kval[:, ii] = kertypes[vtype](bw[ii],
                                               -X_j[:, ii],
                                               tdat[i, ii])
             dens = Kval.prod(axis=1) / _bw_cont_product
-            L -= dens.sum(axis=0)
+            L += dens.sum(axis=0)
 
-        # there is a + because loo_likelihood returns the negative
-        return (F / N**2 + 2 * L / (N * (N - 1)))
-        #return (F / N**2 + 2 * leave_one_out / (N * (N - 1)))
+        return (F / N**2 - 2 * L / (N * (N - 1)))
 
 
 class ConditionalKDE(_GenericKDE):
@@ -889,7 +885,7 @@ class ConditionalKDE(_GenericKDE):
             W_x = tools.gpke(self.bw[self.K_dep:], tdat=self.txdat,
                              edat=exdat[i, :], var_type=self.indep_type,
                              tosum=False)
-            S = np.sum(G_y * W_x, axis=0)
+            S = (G_y * W_x).sum(axis=0)
             cdf_est[i] = S / (self.N * mu_x)
 
         return cdf_est
@@ -936,14 +932,15 @@ class ConditionalKDE(_GenericKDE):
         """
         zLOO = tools.LeaveOneOut(self.all_vars)
         CV = 0
+        N = float(self.N)
+        expander = np.ones((self.N - 1, 1))
         for l, Z in enumerate(zLOO):
             X = Z[:, self.K_dep:]
-            Y = Z[:, 0:self.K_dep]
-            Expander = np.ones((self.N - 1, 1))
-            Ye_L = np.kron(Y, Expander)
-            Ye_R = np.kron(Expander, Y)
-            Xe_L = np.kron(X, Expander)
-            Xe_R = np.kron(Expander, X)
+            Y = Z[:, :self.K_dep]
+            Ye_L = np.kron(Y, expander)
+            Ye_R = np.kron(expander, Y)
+            Xe_L = np.kron(X, expander)
+            Xe_R = np.kron(expander, X)
             K_Xi_Xl = tools.gpke(bw[self.K_dep:], tdat=Xe_L,
                                  edat=self.txdat[l, :],
                                  var_type=self.indep_type, tosum=False)
@@ -956,16 +953,14 @@ class ConditionalKDE(_GenericKDE):
                                   okertype='wangryzin_convolution',
                                   ukertype='aitchisonaitken_convolution',
                                   tosum=False)
-            G = np.sum(K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj)
-            G = G / self.N ** 2
+            G = (K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj).sum() / N**2
             f_X_Y = tools.gpke(bw, tdat=-Z, edat=-self.all_vars[l, :],
-                               var_type=(self.dep_type +
-                                         self.indep_type)) / float(self.N)
+                               var_type=(self.dep_type + self.indep_type)) / N
             m_x = tools.gpke(bw[self.K_dep:], tdat=-X, edat=-self.txdat[l, :],
-                             var_type=self.indep_type) / float(self.N)
+                             var_type=self.indep_type) / N
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
 
-        return CV / float(self.N)
+        return CV / N
 
 
 class Reg(_GenericKDE):
@@ -1080,8 +1075,8 @@ class Reg(_GenericKDE):
                          tosum=False) / float(N)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
-        #iscontinuous = np.arange(self.K)  # Use all vars instead of continuous only
-        # Note: because iscontinuous was defined here such that it selected all
+        #ix_cont = np.arange(self.K)  # Use all vars instead of continuous only
+        # Note: because ix_cont was defined here such that it selected all
         # columns, I removed the indexing with it from txdat/edat.
 
         # Convert Ker to a 2-D array to make matrix operations below work
@@ -1146,8 +1141,8 @@ class Reg(_GenericKDE):
                           tosum=False)
 
         KX_c = KX_c[:, np.newaxis]
-        d_mx = -(tydat * KX_c).sum(axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
-        d_fx = -KX_c.sum(axis=0) / float(N) #* np.prod(bw[:, iscontinuous]))
+        d_mx = -(tydat * KX_c).sum(axis=0) / float(N) #* np.prod(bw[:, ix_cont]))
+        d_fx = -KX_c.sum(axis=0) / float(N) #* np.prod(bw[:, ix_cont]))
         B_x = d_mx / f_x - G * d_fx / f_x
         B_x = (G_numer * d_fx - G_denom * d_mx) / (G_denom**2)
         #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
@@ -1288,11 +1283,11 @@ class Reg(_GenericKDE):
 
         """
         var_pos = np.asarray(var_pos)
-        iscontinuous, isordered, isunordered = tools._get_type_pos(self.var_type)
-        #if np.any(iscontinuous == var_pos):  # continuous variable
-        if iscontinuous[var_pos]:  #FIXME: these comparisons shouldn't work!
-            if np.any(isordered == var_pos) or np.any(isunordered == var_pos):
+        ix_cont, ix_ord, ix_unord = tools._get_type_pos(self.var_type)
+        if np.any(ix_cont[var_pos]):
+            if np.any(ix_ord[var_pos]) or np.any(ix_unord[var_pos]):
                 raise "Discrete variable in hypothesis. Must be continuous"
+
             Sig = TestRegCoefC(self, var_pos, nboot, nested_res, pivot)
         else:
             Sig = TestRegCoefD(self, var_pos, nboot)
@@ -1434,36 +1429,30 @@ class CensoredReg(Reg):
         See p. 81 in [1] and p.38 in [2] for the formulas
         Unlike other methods, this one requires that edat be 1D
         """
-
+        N, Qc = txdat.shape
         Ker = tools.gpke(bw, tdat=txdat, edat=edat, var_type=self.var_type,
                          ukertype='aitchison_aitken_reg',
                          okertype='wangryzin_reg', tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
-        iscontinuous = np.arange(self.K)  # Use all vars instead of continuous only
-        Ker = np.reshape(Ker, np.shape(tydat))  # FIXME: try to remove for speed
-        N, Qc = np.shape(txdat[:, iscontinuous])
-        Ker = Ker * W / float(N)
-        M12 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
-        M22 = np.dot(M12.T, M12 * Ker)
-        M22 = np.reshape(M22, (Qc, Qc))
-        M12 = np.sum(M12 * Ker , axis=0)
-        M12 = np.reshape(M12, (1, Qc))
-        M21 = M12.T
-        M11 = np.sum(np.ones((N,1)) * Ker, axis=0)
-        M11 = np.reshape(M11, (1,1))
-        M_1 = np.column_stack((M11, M12))
-        M_2 = np.column_stack((M21, M22))
-        M = np.row_stack((M_1, M_2))
-        V1 = np.sum(np.ones((N,1)) * Ker * tydat, axis=0)
-        V2 = (txdat[:, iscontinuous] - edat[:, iscontinuous])
-        V2 = np.sum(V2 * Ker * tydat , axis=0)
-        V1 = np.reshape(V1, (1,1))
-        V2 = np.reshape(V2, (Qc, 1))
 
-        V = np.row_stack((V1, V2))
-        assert np.shape(M) == (Qc + 1, Qc + 1)
-        assert np.shape(V) == (Qc + 1, 1)
+        # Convert Ker to a 2-D array to make matrix operations below work
+        Ker = Ker[:, np.newaxis]
+
+        M12 = txdat - edat
+        M22 = np.dot(M12.T, M12 * Ker)
+        M12 = (M12 * Ker).sum(axis=0)
+        M = np.empty((Qc + 1, Qc + 1))
+        M[0, 0] = Ker.sum()
+        M[0, 1:] = M12
+        M[1:, 0] = M12
+        M[1:, 1:] = M22
+
+        ker_tydat = Ker * tydat
+        V = np.empty((Qc + 1, 1))
+        V[0, 0] = ker_tydat.sum()
+        V[1:, 0] = ((txdat - edat) * ker_tydat).sum(axis=0)
+
         mean_mfx = np.dot(np.linalg.pinv(M), V)
         mean = mean_mfx[0]
         mfx = mean_mfx[1:, :]
@@ -1902,8 +1891,8 @@ class TestFForm(object):
             S2 += f_i ** 2  # See Theorem 12.1 on p.356 in [1]
 
         I *= 1. / (n * (n - 1))
-        iscontinuous = tools._get_type_pos(self.var_type)[0]
-        hp = np.prod(self.bw[iscontinuous])
+        ix_cont = tools._get_type_pos(self.var_type)[0]
+        hp = self.bw[ix_cont].prod()
         S2 *= 2 * hp / (n * (n - 1))
         T = n * I * np.sqrt(hp / S2)
         return T
@@ -2116,7 +2105,7 @@ class SemiLinear(Reg):
             Xb_j = b * X_j
             Yx = Y - Xb_j
             G = self.func(bw, tydat=Yx, txdat=-Z, edat=-self.tzdat[ii, :])[0]
-            lt = np.sum(Xb[ii, :])  # linear term
+            lt = Xb[ii, :].sum()  # linear term
             L += (self.tydat[ii] - lt - G) ** 2
 
         return L
