@@ -156,7 +156,7 @@ class TestKDE(MyTest):
 
     @dec.slow
     def test_continuous_cvls_efficient(self):
-        N = 1000
+        N = 400
         np.random.seed(12345)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
@@ -167,11 +167,11 @@ class TestKDE(MyTest):
                                                          n_sub=100))
         dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ls',
                           defaults=SetDefaults(efficient=False))
-        npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
+        npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol=0.2)
 
     @dec.slow
     def test_continuous_cvml_efficient(self):
-        N = 1000
+        N = 400
         np.random.seed(12345)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
@@ -187,7 +187,7 @@ class TestKDE(MyTest):
 
     @dec.slow
     def test_efficient_notrandom(self):
-        N = 1000
+        N = 400
         np.random.seed(12345)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
@@ -278,7 +278,7 @@ class TestCKDE(MyTest):
 
     @dec.slow
     def test_continuous_cvml_efficient(self):
-        N = 1000
+        N = 500
         np.random.seed(12345)
         O = np.random.binomial(2, 0.5, size=(N, ))
         C1 = np.random.normal(size=(N, ))
@@ -290,7 +290,7 @@ class TestCKDE(MyTest):
 
         dens_efficient = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
                     dep_type='c', indep_type='c', bw='cv_ml',
-                    defaults=SetDefaults(efficient=True, n_sub=150))
+                    defaults=SetDefaults(efficient=True, n_sub=50))
 
         dens = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
                            dep_type='c', indep_type='c', bw='cv_ml')
@@ -299,7 +299,6 @@ class TestCKDE(MyTest):
 
 
 class TestReg(MyTest):
-
     def test_ordered_lc_cvls(self):
         model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
                            reg_type='lc', var_type='o', bw='cv_ls')
@@ -342,7 +341,6 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_mean, R_mean, atol=1e-2)
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
-
     def test_continuousdata_ll_cvls(self):
         model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
                            reg_type='ll', var_type='cc', bw='cv_ls')
@@ -380,7 +378,6 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
         self.write2file(file_name, (Y, C1, C2, C3))
 
-
     def test_mixed_mfx_ll_cvls(self, file_name='RegData.csv'):
         N = 200
         np.random.seed(1234)
@@ -398,7 +395,6 @@ class TestReg(MyTest):
         sm_mean, sm_mfx = model.fit()
         sm_R2 = model.r_squared()
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
-
 
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
         N = 200
@@ -426,7 +422,7 @@ class TestReg(MyTest):
 
     @dec.slow
     def test_continuous_cvls_efficient(self):
-        N = 1000
+        N = 500
         np.random.seed(12345)
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
@@ -504,7 +500,6 @@ class TestReg(MyTest):
 
     @dec.slow
     def test_significance_discrete(self):
-
         N = 200
         np.random.seed(12345)
         O = np.random.binomial(2, 0.5, size=(N, ))
@@ -529,7 +524,7 @@ class TestReg(MyTest):
 
     @dec.slow
     def test_semi_linear_model(self):
-        N = 800
+        N = 300
         np.random.seed(1234)
         C1 = np.random.normal(0,2, size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
