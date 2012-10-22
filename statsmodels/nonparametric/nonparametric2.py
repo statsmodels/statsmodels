@@ -37,8 +37,70 @@ from scipy.stats.mstats import mquantiles
 import kernels as kernels
 import np_tools as tools
 
+try:
+    import joblib
+    has_joblib = True
+except ImportError:
+    has_joblib = False
+
 
 __all__ = ['KDE', 'ConditionalKDE', 'Reg', 'CensoredReg']
+
+
+def _compute_subset(class_type, all_vars, bw, co, do, n_cvars, ix_ord,
+                    ix_unord, n_sub, class_vars, randomize, bound):
+    """"Compute bw on subset of data.
+
+    Called from _GenericKDE._compute_efficient_*.
+
+    Notes
+    -----
+    Needs to be outside the class in order for joblib to be able to pickle it.
+
+    """
+    if randomize:
+        np.random.shuffle(all_vars)
+        sub_all_vars = all_vars[:n_sub, :]
+    else:
+        sub_all_vars = all_vars[bound[0]:bound[1], :]
+
+    if class_type == 'KDE':
+        var_type = class_vars[0]
+        sub_model = KDE(sub_all_vars, var_type, bw=bw,
+                        defaults=SetDefaults(efficient=False))
+    elif class_type == 'ConditionalKDE':
+        K_dep, dep_type, indep_type = class_vars
+        tydat = sub_all_vars[:, :K_dep]
+        txdat = sub_all_vars[:, K_dep:]
+        sub_model = ConditionalKDE(tydat, txdat, dep_type,
+                                   indep_type, bw=bw,
+                                   defaults=SetDefaults(efficient=False))
+    elif class_type == 'Reg':
+        var_type, K, reg_type = class_vars
+        tydat = tools.adjust_shape(sub_all_vars[:, 0], 1)
+        txdat = tools.adjust_shape(sub_all_vars[:, 1:], K)
+        sub_model = Reg(tydat=tydat, txdat=txdat, reg_type=reg_type,
+                        var_type=var_type, bw=bw,
+                        defaults=SetDefaults(efficient=False))
+    else:
+        raise ValueError("Don't know what I am; aborting.")
+
+    # Compute dispersion in next 7 lines
+    if class_type == 'Reg':
+        sub_all_vars = sub_all_vars[:, 1:]
+
+    s1 = np.std(sub_all_vars, axis=0)
+    q75 = mquantiles(sub_all_vars, 0.75, axis=0).data[0]
+    q25 = mquantiles(sub_all_vars, 0.25, axis=0).data[0]
+    s2 = (q75 - q25) / 1.349  # IQR
+    s = np.minimum(s1, s2)
+
+    fct = s * n_sub**(-1. / (n_cvars + co))
+    fct[ix_unord] = n_sub**(-2. / (n_cvars + do))
+    fct[ix_ord] = n_sub**(-2. / (n_cvars + do))
+    sample_scale_sub = sub_model.bw / fct  #TODO: check if correct
+    bw_sub = sub_model.bw
+    return sample_scale_sub, bw_sub
 
 
 class _GenericKDE (object):
@@ -83,8 +145,10 @@ class _GenericKDE (object):
 
     def _compute_dispersion(self, all_vars):
         """
-        Computes the measure of dispersion
+        Computes the measure of dispersion.
+
         The minimum of the standard deviation and interquartile range / 1.349
+
         References
         ----------
         See the user guide for the np package in R.
@@ -97,125 +161,84 @@ class _GenericKDE (object):
         s1 = np.std(all_vars, axis=0)
         q75 = mquantiles(all_vars, 0.75, axis=0).data[0]
         q25 = mquantiles(all_vars, 0.25, axis=0).data[0]
-        s2 = (q75-q25) / 1.349
+        s2 = (q75 - q25) / 1.349
         return np.minimum(s1, s2)
 
-    def _compute_efficient_randomize(self, bw):
+    def _get_class_vars_type(self):
+        """Helper method to be able to pass needed vars to _compute_subset."""
+        if isinstance(self, KDE):
+            class_type = 'KDE'
+            class_vars = (self.var_type, )
+        elif isinstance(self, ConditionalKDE):
+            class_type = 'ConditionalKDE'
+            class_vars = (self.K_dep, self.dep_type, self.indep_type)
+        elif isinstance(self, Reg):
+            class_type = 'Reg'
+            class_vars = (self.var_type, self.K, self.reg_type)
+
+        return class_type, class_vars
+
+    def _compute_efficient(self, bw):
         """
         Computes the bandwidth by estimating the scaling factor (c)
-        in n_res resamples of size n_sub
+        in n_res resamples of size n_sub (in `randomize` case), or by dividing
+        N into as many n_sub blocks as needed (if `randomize` is False).
 
         References
         ----------
         See p.9 in socserv.mcmaster.ca/racine/np_faq.pdf
         """
         N = self.N
-        sample_scale = np.empty((self.n_res, self.K))
-        only_bw = np.empty((self.n_res, self.K))
+        n_sub = self.n_sub
         all_vars = copy.deepcopy(self.all_vars)
-        num_cvars = self.all_vars_type.count('c')
+        n_cvars = self.all_vars_type.count('c')
         co = 4  # 2*order of continuous kernel
         do = 4  # 2*order of discrete kernel
         _, ix_ord, ix_unord = tools._get_type_pos(self.all_vars_type)
-        for i in xrange(self.n_res):
-            np.random.shuffle(all_vars)
-            sub_all_vars = all_vars[:self.n_sub, :]
-            sub_model = self._call_self(sub_all_vars, bw)
-            s = self._compute_dispersion(sub_all_vars)
-            fct = s * self.n_sub**(-1. / (num_cvars + co))
-            fct[ix_unord] = self.n_sub**(-2. / (num_cvars + do))
-            fct[ix_ord] = self.n_sub**(-2. / (num_cvars + do))
-            sample_scale[i, :] = sub_model.bw / fct  #TODO: check if correct
-            only_bw[i, :] = sub_model.bw
+
+        # Define bounds for slicing the data
+        if self.randomize:
+            # randomize chooses blocks of size n_sub, independent of N
+            bounds = [None] * self.n_res
+        else:
+            bounds = [(i * n_sub, (i+1) * n_sub) for i in range(N//n_sub)]
+            if N % n_sub > 0:
+                bounds.append((N - N % n_sub, N))
+
+        n_blocks = self.n_res if self.randomize else len(bounds)
+        sample_scale = np.empty((n_blocks, self.K))
+        only_bw = np.empty((n_blocks, self.K))
+
+        class_type, class_vars = self._get_class_vars_type()
+        if has_joblib:
+            # `res` is a list of tuples (sample_scale_sub, bw_sub)
+            res = joblib.Parallel(n_jobs=-1)(joblib.delayed(_compute_subset) \
+                (class_type, all_vars, bw, co, do, n_cvars, ix_ord, ix_unord, \
+                n_sub, class_vars, self.randomize, bounds[i]) \
+                for i in range(n_blocks))
+        else:
+            res = []
+            for i in xrange(n_blocks):
+                res.append(_compute_subset(class_type, all_vars, bw, co, do,
+                                           n_cvars, ix_ord, ix_unord, n_sub,
+                                           class_vars, self.randomize))
+
+        for i in xrange(n_blocks):
+            sample_scale[i, :] = res[i][0]
+            only_bw[i, :] = res[i][1]
 
         s = self._compute_dispersion(all_vars)
-        if self.return_median:
-            median_scale = np.median(sample_scale, axis=0)
-            # TODO: Check if 1/5 is correct in line below!
-            bw = median_scale * s * self.N **(-1. / (num_cvars + co))
-            bw[ix_ord] = median_scale[ix_ord] * N**(-2./ (num_cvars + do))
-            bw[ix_unord] = median_scale[ix_unord] * N**(-2./ (num_cvars + do))
-        else:
-            mean_scale = np.mean(sample_scale, axis=0)
-            # TODO: Check if 1/5 is correct in line below!
-            bw = mean_scale * s * self.N ** (-1. / (num_cvars + co))
-            bw[ix_ord] = mean_scale[ix_ord] * N**(-2./ (num_cvars + do))
-            bw[ix_unord] = mean_scale[ix_unord] * N**(-2./ (num_cvars + do))
+        order_func = np.median if self.return_median else np.mean
+        m_scale = order_func(sample_scale, axis=0)
+        # TODO: Check if 1/5 is correct in line below!
+        bw = m_scale * s * N**(-1. / (n_cvars + co))
+        bw[ix_ord] = m_scale[ix_ord] * N**(-2./ (n_cvars + do))
+        bw[ix_unord] = m_scale[ix_unord] * N**(-2./ (n_cvars + do))
 
         if self.return_only_bw:
             bw = np.median(only_bw, axis=0)
 
         return bw
-
-    def _compute_efficient_all(self, bw):
-        """
-        Computes the bandwidth by breaking down the full sample
-        into however many sub-samples of size n_sub and calculates
-        the scaling factor of the bandwidth.
-        """
-        N = self.N
-        all_vars = copy.deepcopy(self.all_vars)
-        num_cvars = self.all_vars_type.count('c')
-        co = 4  # 2 * order of continuous kernel
-        do = 4  # 2 * order of discrete kernel
-        _, ix_ord, ix_unord = tools._get_type_pos(self.all_vars_type)
-
-        slices = np.arange(0, N, self.n_sub)
-        n_slice = len(slices)
-        bounds = [(slices[0:-1][i], slices[1:][i]) for i in range(n_slice - 1)]
-        bounds.append((slices[-1], N))
-        sample_scale = np.empty((len(bounds), self.K))
-        only_bw = np.empty((len(bounds), self.K))
-        for ii, bound in enumerate(bounds):
-            sub_all_vars = all_vars[bound[0]:bound[1], :]
-            sub_model = self._call_self(sub_all_vars, bw)
-            s = self._compute_dispersion(sub_all_vars)
-            fct = s * self.n_sub**(-1. / (num_cvars + co))
-            fct[ix_unord] = self.n_sub**(-2. / (num_cvars + do))
-            fct[ix_ord] = self.n_sub**(-2. / (num_cvars + do))
-            sample_scale[ii, :] = sub_model.bw / fct  # TODO: Check if correct
-            only_bw[ii, :] = sub_model.bw
-
-        s = self._compute_dispersion(all_vars)
-        if self.return_median:
-            median_scale = np.median(sample_scale, axis=0)
-            # TODO: Check if 1/5 is correct!
-            bw = median_scale * s * N**(-1. / (num_cvars + co))
-            bw[ix_ord] = median_scale[ix_ord] * N**(-2./ (num_cvars + do))
-            bw[ix_unord] = median_scale[ix_unord] * N**(-2./ (num_cvars + do))
-        else:
-            mean_scale = np.mean(sample_scale, axis=0)
-            bw = mean_scale * s * N**(-1. / (num_cvars + co))
-            bw[ix_ord] = mean_scale[ix_ord] * N**(-2./ (num_cvars + do))
-            bw[ix_unord] = mean_scale[ix_unord] * N**(-2./ (num_cvars + do))
-
-        if self.return_only_bw:
-            bw = np.median(only_bw, axis=0)
-
-        return bw
-
-    def _call_self(self, all_vars, bw):
-        """ Calls the class itself with the proper input parameters"""
-        # only used with the efficient=True estimation option
-        if isinstance(self, KDE):
-            model = KDE(all_vars, self.var_type, bw=bw,
-                        defaults=SetDefaults(efficient=False))
-        elif isinstance(self, ConditionalKDE):
-            tydat = all_vars[:, :self.K_dep]
-            txdat = all_vars[:, self.K_dep:]
-            model = ConditionalKDE(tydat, txdat, self.dep_type,
-                                   self.indep_type, bw=bw,
-                                   defaults=SetDefaults(efficient=False))
-        elif isinstance(self, Reg):
-            tydat = tools.adjust_shape(all_vars[:, 0], 1)
-            txdat = tools.adjust_shape(all_vars[:, 1:], self.K)
-            model = Reg(tydat=tydat, txdat=txdat, reg_type=self.reg_type,
-                        var_type=self.var_type, bw=bw,
-                        defaults=SetDefaults(efficient=False))
-        else:
-            raise ValueError("Don't know what I am; aborting.")
-
-        return model
 
     def _set_defaults(self, defaults):
         """Sets the default values for the efficient estimation"""
@@ -428,10 +451,7 @@ class KDE(_GenericKDE):
         if not self.efficient:
             self.bw = self._compute_bw(bw)
         else:
-            if self.randomize:
-                self.bw = self._compute_efficient_randomize(bw)
-            else:
-                self.bw = self._compute_efficient_all(bw)
+            self.bw = self._compute_efficient(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -724,10 +744,7 @@ class ConditionalKDE(_GenericKDE):
         if not self.efficient:
             self.bw = self._compute_bw(bw)
         else:
-            if self.randomize:
-                self.bw = self._compute_efficient_randomize(bw)
-            else:
-                self.bw = self._compute_efficient_all(bw)
+            self.bw = self._compute_efficient(bw)
 
     def __repr__(self):
         """Provide something sane to print."""
@@ -1022,10 +1039,7 @@ class Reg(_GenericKDE):
         if not self.efficient:
             self.bw = self.compute_reg_bw(bw)
         else:
-            if self.randomize:
-                self.bw = self._compute_efficient_randomize(bw)
-            else:
-                self.bw = self._compute_efficient_all(bw)
+            self.bw = self._compute_efficient(bw)
 
     def compute_reg_bw(self, bw):
         if not isinstance(bw, basestring):
@@ -1373,10 +1387,7 @@ class CensoredReg(Reg):
         if not self.efficient:
             self.bw = self.compute_reg_bw(bw)
         else:
-            if self.randomize:
-                self.bw = self._compute_efficient_randomize(bw)
-            else:
-                self.bw = self._compute_efficient_all(bw)
+            self.bw = self._compute_efficient(bw)
 
     def censored(self, censor_val):
         # see pp. 341-344 in [1]
