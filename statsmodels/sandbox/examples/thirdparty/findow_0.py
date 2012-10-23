@@ -8,7 +8,7 @@ No guarantee for correctness.
 Assumes no missing values.
 colors of lines in graphs are not great
 
-uses DataMatrix and WidePanel to hold data downloaded from yahoo using matplotlib.
+uses DataFrame and WidePanel to hold data downloaded from yahoo using matplotlib.
 I haven't figured out storage, so the download happens at each run
 of the script.
 
@@ -39,7 +39,7 @@ def getquotes(symbol, start, end):
     }
 
     dates = pa.Index([dt.datetime.fromordinal(int(d)) for d in dates])
-    return pa.DataMatrix(data, index=dates)
+    return pa.DataFrame(data, index=dates)
 
 
 start_date = dt.datetime(2009, 1, 1)
