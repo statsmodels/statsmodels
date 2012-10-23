@@ -202,8 +202,8 @@ class DynamicVAR(object):
         output = np.empty((self.T - steps, self.neqs))
 
         y_values = self.y.values
-        y_index_map = self.y.index.indexMap
-        result_index_map = self.result_index.indexMap
+        y_index_map = dict((d, idx) for idx, d in enumerate(self.y.index))
+        result_index_map = dict((d, idx) for idx, d in enumerate(self.result_index))
 
         coefs = self._coefs_raw
         intercepts = self._intercepts_raw
