@@ -45,7 +45,7 @@ class DynamicVAR(object):
 
     Parameters
     ----------
-    data : pandas.{DataFrame, DataMatrix}
+    data : pandas.DataFrame
     lag_order : int, default 1
     window : int
     window_type : {'expanding', 'rolling'}
@@ -116,7 +116,7 @@ class DynamicVAR(object):
     def nobs(self):
         # Stub, do I need this?
         data = dict((eq, r.nobs) for eq, r in self.equations.iteritems())
-        return pn.DataMatrix(data)
+        return pn.DataFrame(data)
 
     @cache_readonly
     def equations(self):
@@ -185,7 +185,7 @@ class DynamicVAR(object):
         for eq, result in self.equations.iteritems():
             data[eq] = result.resid
 
-        return pn.DataMatrix(data)
+        return pn.DataFrame(data)
 
     def forecast(self, steps=1):
         """
@@ -197,13 +197,13 @@ class DynamicVAR(object):
 
         Returns
         -------
-        forecasts : pandas.DataMatrix
+        forecasts : pandas.DataFrame
         """
         output = np.empty((self.T - steps, self.neqs))
 
         y_values = self.y.values
-        y_index_map = self.y.index.indexMap
-        result_index_map = self.result_index.indexMap
+        y_index_map = dict((d, idx) for idx, d in enumerate(self.y.index))
+        result_index_map = dict((d, idx) for idx, d in enumerate(self.result_index))
 
         coefs = self._coefs_raw
         intercepts = self._intercepts_raw
@@ -222,7 +222,7 @@ class DynamicVAR(object):
 
             output[i] = forcs[-1]
 
-        return pn.DataMatrix(output, index=forc_index, columns=self.names)
+        return pn.DataFrame(output, index=forc_index, columns=self.names)
 
     def plot_forecast(self, steps=1, figsize=(10, 10)):
         """
@@ -270,7 +270,7 @@ class DynamicVAR(object):
     def r2(self):
         """Returns the r-squared values."""
         data = dict((eq, r.r2) for eq, r in self.equations.iteritems())
-        return pn.DataMatrix(data)
+        return pn.DataFrame(data)
 
 class DynamicPanelVAR(DynamicVAR):
     """
@@ -350,7 +350,7 @@ def _make_lag_matrix(x, lags):
         data.update(lag._series)
         columns.extend(lag.columns)
 
-    return pn.DataMatrix(data, columns=columns)
+    return pn.DataFrame(data, columns=columns)
 
 class Equation(object):
     """

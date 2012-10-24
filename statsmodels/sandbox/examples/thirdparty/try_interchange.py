@@ -9,7 +9,7 @@ repository checkout, but are not fully up-to-date
 
 some brief comments
 
-* la.larry and pandas.DataMatrix require unique labels/index so
+* la.larry and pandas.DataFrame require unique labels/index so
   groups have to represented in a separate data structure
 * pandas is missing GroupBy in the docs, but the docstring is helpful
 * both la and pandas handle datetime objects as object arrays
@@ -42,7 +42,7 @@ print repr(s2u)
 
 print '\nUsing pandas'
 import pandas
-pdta = pandas.DataMatrix(s.data, np.arange(len(s.data)), [1])
+pdta = pandas.DataFrame(s.data, np.arange(len(s.data)), [1])
 pa = pdta.groupby(dict(zip(np.arange(len(s.data)),
             s.dates.tolist()))).aggregate(np.mean)
 s3 = ts.time_series(pa.values.ravel(),
