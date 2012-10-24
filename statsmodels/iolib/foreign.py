@@ -577,8 +577,11 @@ def _dtype_to_stata_type(dtype):
     type inserted.
     """
     #TODO: expand to handle datetime to integer conversion
-    if dtype.type == np.string_: # might have to coerce objects here
+    if dtype.type == np.string_:
         return chr(dtype.itemsize)
+    elif dtype.type == np.object_: # try to coerce it to the biggest string
+                        # not memory efficient, what else could we do?
+        return chr(244)
     elif dtype == np.float64:
         return chr(255)
     elif dtype == np.float32:
@@ -598,7 +601,7 @@ def _dtype_to_default_stata_fmt(dtype):
     Maps numpy dtype to stata's default format for this type. Not terribly
     important since users can change this in Stata. Semantics are
 
-    string  -> "%sDD" where DD is the length of the string
+    string  -> "%DDs" where DD is the length of the string
     float64 -> "%10.0g"
     float32 -> "%9.0g"
     int64   -> "%9.0g"
@@ -607,8 +610,10 @@ def _dtype_to_default_stata_fmt(dtype):
     int8    -> "%8.0g"
     """
     #TODO: expand this to handle a default datetime format?
-    if dtype.type == np.string_: # might have to coerce objects here
+    if dtype.type == np.string_:
         return "%" + str(dtype.itemsize) + "s"
+    elif dtype.type == np.object_:
+        return "%244s"
     elif dtype == np.float64:
         return "%10.0g"
     elif dtype == np.float32:
