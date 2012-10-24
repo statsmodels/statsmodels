@@ -28,6 +28,9 @@ References
 
 """
 
+# TODO: make default behavior efficient=True above a certain n_obs
+
+
 import copy
 
 import numpy as np
@@ -44,7 +47,7 @@ except ImportError:
     has_joblib = False
 
 
-__all__ = ['KDE', 'ConditionalKDE', 'Reg', 'CensoredReg']
+__all__ = ['KDE', 'ConditionalKDE', 'Reg', 'CensoredReg', 'EstimatorSettings']
 
 
 def _compute_subset(class_type, all_vars, bw, co, do, n_cvars, ix_ord,
@@ -67,21 +70,21 @@ def _compute_subset(class_type, all_vars, bw, co, do, n_cvars, ix_ord,
     if class_type == 'KDE':
         var_type = class_vars[0]
         sub_model = KDE(sub_all_vars, var_type, bw=bw,
-                        defaults=SetDefaults(efficient=False))
+                        defaults=EstimatorSettings(efficient=False))
     elif class_type == 'ConditionalKDE':
         K_dep, dep_type, indep_type = class_vars
         tydat = sub_all_vars[:, :K_dep]
         txdat = sub_all_vars[:, K_dep:]
         sub_model = ConditionalKDE(tydat, txdat, dep_type,
                                    indep_type, bw=bw,
-                                   defaults=SetDefaults(efficient=False))
+                                   defaults=EstimatorSettings(efficient=False))
     elif class_type == 'Reg':
         var_type, K, reg_type = class_vars
         tydat = tools.adjust_shape(sub_all_vars[:, 0], 1)
         txdat = tools.adjust_shape(sub_all_vars[:, 1:], K)
         sub_model = Reg(tydat=tydat, txdat=txdat, reg_type=reg_type,
                         var_type=var_type, bw=bw,
-                        defaults=SetDefaults(efficient=False))
+                        defaults=EstimatorSettings(efficient=False))
     else:
         raise ValueError("Don't know what I am; aborting.")
 
@@ -212,7 +215,8 @@ class _GenericKDE (object):
         class_type, class_vars = self._get_class_vars_type()
         if has_joblib:
             # `res` is a list of tuples (sample_scale_sub, bw_sub)
-            res = joblib.Parallel(n_jobs=-1)(joblib.delayed(_compute_subset) \
+            res = joblib.Parallel(n_jobs=self.n_jobs) \
+                (joblib.delayed(_compute_subset) \
                 (class_type, all_vars, bw, co, do, n_cvars, ix_ord, ix_unord, \
                 n_sub, class_vars, self.randomize, bounds[i]) \
                 for i in range(n_blocks))
@@ -248,6 +252,7 @@ class _GenericKDE (object):
         self.return_median = defaults.return_median
         self.efficient = defaults.efficient
         self.return_only_bw = defaults.return_only_bw
+        self.n_jobs = defaults.n_jobs
 
     def _normal_reference(self):
         """
@@ -336,48 +341,63 @@ class _GenericKDE (object):
         raise NotImplementedError
 
 
-class SetDefaults(object):
+class EstimatorSettings(object):
     """
-    A helper class that sets the default values for the estimators.
+    Object to specify settings for density estimation or regression.
 
-    Sets the default values for the efficient bandwidth estimator.
+    `EstimatorSettings` has several proporties related to how bandwidth
+    estimation for the `KDE`, `ConditionalKde`, `Reg` and `CensoredReg`
+    classes behaves.
 
     Parameters
     ----------
     efficient: bool, optional
-        Set to True if the bandwidth estimation is to be performed
+        If True, the bandwidth estimation is to be performed
         efficiently -- by taking smaller sub-samples and estimating
-        the scaling factor of each subsample. Use for large samples
-        (N >> 300) and multiple variables (K >> 3). Default is False
+        the scaling factor of each subsample.  This is useful for large
+        samples (N >> 300) and/or multiple variables (K > 3).
+        If False (default), all data is used at the same time.
     randomize: bool, optional
-        Set to True if the bandwidth estimation is to be performed by
-        taking n_res random resamples of size n_sub from the full sample.
-        If set to False, the estimation is performed by slicing the
-        full sample in sub-samples of size n_sub so that the full sample
-        is used fully.
+        If True, the bandwidth estimation is to be performed by
+        taking `n_res` random resamples (with replacement) of size `n_sub` from
+        the full sample.  If set to False (default), the estimation is
+        performed by slicing the full sample in sub-samples of size `n_sub` so
+        that all samples are used once.
     n_sub: int, optional
-        Size of the subsamples
+        Size of the sub-samples.  Default is 50.
     n_res: int, optional
         The number of random re-samples used to estimate the bandwidth.
-        Must have randomize set to True. Default value is 25
+        Only has an effect if ``randomize == True`.  Default value is 25.
     return_median: bool, optional
-        If True the estimator uses the median of all scaling factors for
-        each sub-sample to estimate the bandwidth of the full sample.
-        If False then the estimator uses the mean. Default is True.
+        If True (default), the estimator uses the median of all scaling factors
+        for each sub-sample to estimate the bandwidth of the full sample.
+        If False, the estimator uses the mean.
     return_only_bw: bool, optional
-        Set to True if the estimator is to use the bandwidth and not the
-        scaling factor. This is *not* theoretically justified. Should be used
-        only for experimenting.
+        If True, the estimator is to use the bandwidth and not the
+        scaling factor.  This is *not* theoretically justified.
+        Should be used only for experimenting.
+    n_jobs : int, optional
+        The number of jobs to use for parallel estimation with
+        ``joblib.Parallel``.  Default is -1, meaning ``n_cores - 1``, with
+        ``n_cores`` the number of available CPU cores.
+        See the `joblib documentation
+        <http://packages.python.org/joblib/parallel.html`_ for more details.
+
+    Examples
+    --------
+    >>> settings = EstimatorSettings(randomize=True, n_jobs=3)
+    >>> k_dens = KDE(tdat, var_type, defaults=settings)
 
     """
-    def __init__(self, n_res=25, n_sub=50, randomize=True, return_median=True,
-                 efficient=False, return_only_bw=False):
+    def __init__(self, efficient=False, randomize=False, n_res=25, n_sub=50,
+                 return_median=True, return_only_bw=False, n_jobs=-1):
+        self.efficient = efficient
+        self.randomize = randomize
         self.n_res = n_res
         self.n_sub = n_sub
-        self.randomize = randomize
         self.return_median = return_median
-        self.efficient = efficient
-        self.return_only_bw = return_only_bw
+        self.return_only_bw = return_only_bw  # TODO: remove this?
+        self.n_jobs = n_jobs
 
 
 class KDE(_GenericKDE):
@@ -408,7 +428,7 @@ class KDE(_GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    defaults: Instance of class SetDefaults
+    defaults: Instance of class EstimatorSettings
         The default values for the efficient bandwidth estimation
 
     Attributes
@@ -437,8 +457,7 @@ class KDE(_GenericKDE):
     >>> dens_u.bw
     array([ 0.39967419,  0.38423292])
     """
-    def __init__(self, tdat, var_type, bw=None,
-                                defaults = SetDefaults()):
+    def __init__(self, tdat, var_type, bw=None, defaults=EstimatorSettings()):
         self.var_type = var_type
         self.K = len(self.var_type)
         self.tdat = tools.adjust_shape(tdat, self.K)
@@ -695,7 +714,7 @@ class ConditionalKDE(_GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    defaults: Instance of class SetDefaults
+    defaults: Instance of class EstimatorSettings
         The default values for the efficient bandwidth estimation
 
     Attributes
@@ -727,7 +746,7 @@ class ConditionalKDE(_GenericKDE):
     """
 
     def __init__(self, tydat, txdat, dep_type, indep_type, bw,
-                 defaults=SetDefaults()):
+                 defaults=EstimatorSettings()):
         self.dep_type = dep_type
         self.indep_type = indep_type
         self.all_vars_type = dep_type + indep_type
@@ -1009,7 +1028,7 @@ class Reg(_GenericKDE):
         selection.
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
-    defaults: SetDefaults instance
+    defaults: EstimatorSettings instance
         The default values for the efficient bandwidth estimation.
 
     Attributes
@@ -1024,7 +1043,7 @@ class Reg(_GenericKDE):
     """
 
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
-                 defaults=SetDefaults()):
+                 defaults=EstimatorSettings()):
         self.var_type = var_type
         self.all_vars_type = var_type
         self.reg_type = reg_type
@@ -1178,7 +1197,7 @@ class Reg(_GenericKDE):
         H = H / denom
         gx = Reg(tydat=self.tydat, txdat=self.txdat, var_type=self.var_type,
                  reg_type=self.reg_type, bw=bw,
-                 defaults=SetDefaults(efficient=False)).fit()[0]
+                 defaults=EstimatorSettings(efficient=False)).fit()[0]
         gx = np.reshape(gx, (self.N, 1))
         sigma = ((self.tydat - gx)**2).sum(axis=0) / float(self.N)
 
@@ -1351,7 +1370,7 @@ class CensoredReg(Reg):
         aic: AIC Hurvich Estimator
     censor_val: Float
         Value at which the dependent variable is censored
-    defaults: SetDefaults instance, optional
+    defaults: EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
 
     Attributes
@@ -1366,7 +1385,7 @@ class CensoredReg(Reg):
     """
 
     def __init__(self, tydat, txdat, var_type, reg_type, bw='cv_ls',
-                 censor_val=0, defaults=SetDefaults()):
+                 censor_val=0, defaults=EstimatorSettings()):
         self.var_type = var_type
         self.all_vars_type = var_type
         self.reg_type = reg_type
@@ -1629,7 +1648,7 @@ class TestRegCoefC(object):
         Y = tools.adjust_shape(Y, 1)
         X = tools.adjust_shape(X, self.K)
         b = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                        defaults = SetDefaults(efficient=False)).fit()[1]
+                        defaults = EstimatorSettings(efficient=False)).fit()[1]
 
         b = b[:, self.test_vars]
         b = np.reshape(b, (n, len(self.test_vars)))
@@ -1672,7 +1691,7 @@ class TestRegCoefC(object):
         X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
         # Calculate the restricted mean. See p. 372 in [8]
         M = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                defaults = SetDefaults(efficient=False)).fit()[0]
+                defaults = EstimatorSettings(efficient=False)).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
@@ -1738,7 +1757,7 @@ class TestRegCoefD(TestRegCoefC):
 
         n = np.shape(X)[0]
         model = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                        defaults = SetDefaults(efficient=False))
+                        defaults = EstimatorSettings(efficient=False))
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0
 

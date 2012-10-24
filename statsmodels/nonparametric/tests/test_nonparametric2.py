@@ -5,7 +5,7 @@ import numpy.testing as npt
 import numpy.testing.decorators as dec
 
 import statsmodels.nonparametric as nparam
-from ..nonparametric2 import SetDefaults, SemiLinear
+from ..nonparametric2 import EstimatorSettings, SemiLinear
 
 
 class MyTest(object):
@@ -161,13 +161,13 @@ class TestKDE(MyTest):
         C1 = np.random.normal(size=(N, ))
         C2 = np.random.normal(2, 1, size=(N, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2
-        dens_efficient = nparam.KDE(tdat=[Y, C1],
-                                    var_type='cc', bw='cv_ls',
-                                    defaults=SetDefaults(efficient=True,
-                                                         n_sub=100))
-        dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ls',
-                          defaults=SetDefaults(efficient=False))
-        npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol=0.2)
+        dens_efficient = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ls',
+                defaults=EstimatorSettings(efficient=True, n_sub=100))
+        #dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ls',
+        #                  defaults=EstimatorSettings(efficient=False))
+        #bw = dens.bw
+        bw = np.array([0.3404, 0.1666])
+        npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol=0.2)
 
     @dec.slow
     def test_continuous_cvml_efficient(self):
@@ -179,11 +179,13 @@ class TestKDE(MyTest):
 
         dens_efficient = nparam.KDE(tdat=[Y, C1],
                                     var_type='cc', bw='cv_ml',
-                                    defaults=SetDefaults(efficient=True,
+                                    defaults=EstimatorSettings(efficient=True,
                                                          n_sub=100))
-        dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
-                          defaults=SetDefaults(efficient=False))
-        npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
+        #dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
+        #                  defaults=EstimatorSettings(efficient=False))
+        #bw = dens.bw
+        bw = np.array([0.4471, 0.2861])
+        npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
 
     @dec.slow
     def test_efficient_notrandom(self):
@@ -194,7 +196,7 @@ class TestKDE(MyTest):
         Y = 0.3 +1.2 * C1 - 0.9 * C2
 
         dens_efficient = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
-                                    defaults=SetDefaults(efficient=True,
+                                    defaults=EstimatorSettings(efficient=True,
                                                          randomize=False,
                                                          n_sub=100))
         dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml')
@@ -225,8 +227,11 @@ class TestCKDE(MyTest):
         # TODO: assert missing
 
     def test_pdf_continuous(self):
+        # Hardcode here the bw that will be calculated is we had used
+        # ``bw='cv_ml'``.  That calculation is slow, and tested in other tests.
+        bw_cv_ml = np.array([0.010043, 12095254.7]) # TODO: odd numbers (?!)
         dens = nparam.ConditionalKDE(tydat=[self.growth], txdat=[self.Italy_gdp],
-                                     dep_type='c', indep_type='c', bw='cv_ml')
+                                     dep_type='c', indep_type='c', bw=bw_cv_ml)
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [11.97964, 12.73290, 13.23037, 13.46438, 12.22779]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
@@ -290,12 +295,13 @@ class TestCKDE(MyTest):
 
         dens_efficient = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
                     dep_type='c', indep_type='c', bw='cv_ml',
-                    defaults=SetDefaults(efficient=True, n_sub=50))
+                    defaults=EstimatorSettings(efficient=True, n_sub=50))
 
-        dens = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
-                           dep_type='c', indep_type='c', bw='cv_ml')
-
-        npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.15)
+        #dens = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
+        #                   dep_type='c', indep_type='c', bw='cv_ml')
+        #bw = dens.bw
+        bw = np.array([0.4516, 0.3413])
+        npt.assert_allclose(bw, dens_efficient.bw, atol=0.1, rtol = 0.15)
 
 
 class TestReg(MyTest):
@@ -371,8 +377,9 @@ class TestReg(MyTest):
         b2 = 3.7  # regression coefficients
         b3 = 2.3
         Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
+        bw_cv_ls = np.array([0.96075, 0.5682, 0.29835])
         model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
-                            reg_type='ll', var_type='ccc', bw='cv_ls')
+                            reg_type='ll', var_type='ccc', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
@@ -390,10 +397,11 @@ class TestReg(MyTest):
         b2 = 3.7  # regression coefficients
         b3 = 2.3
         Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
+        bw_cv_ls = np.array([1.04726, 1.67485, 0.39852])
         model = nparam.Reg(tydat=[Y], txdat=[C1, C2, O],
-                            reg_type='ll', var_type='cco', bw='cv_ls')
+                            reg_type='ll', var_type='cco', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
-        sm_R2 = model.r_squared()
+        sm_R2 = model.r_squared()  # TODO: add expected result
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
 
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
@@ -433,7 +441,7 @@ class TestReg(MyTest):
 
         model_efficient = nparam.Reg(tydat=[Y], txdat=[C1], reg_type='lc',
                                      var_type='c', bw='cv_ls',
-                                     defaults=SetDefaults(efficient=True,
+                                     defaults=EstimatorSettings(efficient=True,
                                                           n_sub=100))
 
         model = nparam.Reg(tydat=[Y], txdat=[C1], reg_type='ll', var_type='c',
