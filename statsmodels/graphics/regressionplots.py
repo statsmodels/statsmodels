@@ -70,11 +70,13 @@ def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'
     else:
         title = 'fitted versus regressor %s' % exog_name
 
-    prstd, iv_l, iv_u = wls_prediction_std(res)
-    ax.plot(x1, res.fittedvalues[x1_argsort], 'k-', label='fitted') #'k-o')
+    prstd, iv_l, iv_u = wls_prediction_std(res._results)
+    ax.plot(x1, res._results.fittedvalues[x1_argsort], 'k-',
+            label='fitted') #'k-o')
     #ax.plot(x1, iv_u, 'r--')
     #ax.plot(x1, iv_l, 'r--')
-    ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1, color='k')
+    ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
+            color='k')
     ax.set_title(title, fontsize=fontsize)
 
     return fig
