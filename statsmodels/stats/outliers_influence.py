@@ -13,6 +13,7 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.stats.multitest import multipletests
+from statsmodels.tools.tools import maybe_unwrap_results
 
 # outliers test convenience wrapper
 
@@ -57,7 +58,7 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
     from scipy import stats # lazy import
     infl = getattr(model_results, 'get_influence', None)
     if infl is None:
-        results = getattr(model_results, '_results', model_results)
+        results = maybe_unwrap_results(model_results)
         raise AttributeError("model_results object %s does not have a "
                 "get_influence method." % results.__class__.__name__)
     resid = infl().resid_studentized_external
@@ -198,10 +199,7 @@ class OLSInfluence(object):
 
     def __init__(self, results):
         #check which model is allowed
-        try:
-            self.results = results._results # don't use wrapped results
-        except: # we got unwrapped results
-            self.results = results
+        self.results = maybe_unwrap_results(results)
         self.nobs, self.k_vars = results.model.exog.shape
         self.endog = results.model.endog
         self.exog = results.model.exog
