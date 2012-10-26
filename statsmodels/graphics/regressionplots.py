@@ -448,7 +448,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
     >>> mod = sm.OLS(y,X).fit()
     >>> fig = abline_plot(model_results=mod)
-    >>> ax = fig.axes
+    >>> ax = fig.axes[0]
     >>> ax.scatter(X[:,1], y)
     >>> ax.margins(.1)
     >>> import matplotlib.pyplot as plt
