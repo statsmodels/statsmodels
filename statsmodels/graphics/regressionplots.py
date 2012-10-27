@@ -342,7 +342,7 @@ def plot_ccpr_ax(res, exog_idx=None, ax=None):
 
     x1 = res.model.exog[:,exog_idx]
     #namestr = ' for %s' % self.name if self.name else ''
-    x1beta = x1*res.params[1]
+    x1beta = x1*res.params[exog_idx]
     ax.plot(x1, x1beta + res.resid, 'o')
     ax.plot(x1, x1beta, '-')
     ax.set_title('X_%d beta_%d plus residuals versus exog (CCPR)' % \
