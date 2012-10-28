@@ -172,7 +172,7 @@ def _partial_regression(endog, exog_i, exog_others):
     return res1c, (res1a, res1b)
 
 
-def plot_partregress_ax(endog, exog_i, exog_others, title_fontsize=None,
+def plot_partregress(endog, exog_i, exog_others, title_fontsize=None,
                         ax=None):
     """Plot partial regression for a single regressor.
 
@@ -215,7 +215,7 @@ def plot_partregress_ax(endog, exog_i, exog_others, title_fontsize=None,
     return fig
 
 
-def plot_partregress(results, exog_idx=None, grid=None, fig=None):
+def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     """Plot partial regression for a set of regressors.
 
     Parameters
@@ -246,7 +246,7 @@ def plot_partregress(results, exog_idx=None, grid=None, fig=None):
 
     See Also
     --------
-    plot_partregress_ax : Plot partial regression for a single regressor.
+    plot_partregress : Plot partial regression for a single regressor.
     plot_ccpr
 
     References
@@ -282,7 +282,7 @@ def plot_partregress(results, exog_idx=None, grid=None, fig=None):
         others.pop(idx)
         exog_others = exog[:, others]
         ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_partregress_ax(y, exog[:, idx], exog_others, ax=ax,
+        plot_partregress(y, exog[:, idx], exog_others, ax=ax,
                                varname=exog_idx[i])
 
     import matplotlib as mpl
@@ -294,7 +294,7 @@ def plot_partregress(results, exog_idx=None, grid=None, fig=None):
     return fig
 
 
-def plot_ccpr_ax(results, exog_idx=None, ax=None):
+def plot_ccpr(results, exog_idx=None, ax=None):
     """Plot CCPR against one regressor.
 
     Generates a CCPR (component and component-plus-residual) plot.
@@ -339,7 +339,7 @@ def plot_ccpr_ax(results, exog_idx=None, ax=None):
     return fig
 
 
-def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
+def plot_ccpr_grid(res, exog_idx=None, grid=None, fig=None):
     """Generate CCPR plots against a set of regressors, plot in a grid.
 
     Generates a grid of CCPR (component and component-plus-residual) plots.
@@ -376,7 +376,7 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
 
     See Also
     --------
-    plot_ccpr_ax : Creates CCPR plot for a single regressor.
+    plot_ccpr : Creates CCPR plot for a single regressor.
 
     References
     ----------
@@ -397,7 +397,7 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
 
     for i, idx in enumerate(exog_idx):
         ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_ccpr_ax(results, exog_idx=idx, ax=ax)
+        plot_ccpr(results, exog_idx=idx, ax=ax)
 
     return fig
 
