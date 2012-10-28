@@ -76,7 +76,7 @@ def adjust_shape(dat, K):
     return dat
 
 
-def gpke(bw, data, edat, var_type, ckertype='gaussian',
+def gpke(bw, data, data_predict, var_type, ckertype='gaussian',
          okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
     """
     Returns the non-normalized Generalized Product Kernel Estimator
@@ -87,7 +87,7 @@ def gpke(bw, data, edat, var_type, ckertype='gaussian',
         The user-specified bandwidth parameters.
     data: 1D or 2-D ndarray
         The training data.
-    edat: 1-D ndarray
+    data_predict: 1-D ndarray
         The evaluation points at which the kernel estimation is performed.
     var_type: str, optional
         The variable type (continuous, ordered, unordered).
@@ -124,14 +124,14 @@ def gpke(bw, data, edat, var_type, ckertype='gaussian',
     #Kval = []
     #for ii, vtype in enumerate(var_type):
     #    func = kernel_func[kertypes[vtype]]
-    #    Kval.append(func(bw[ii], data[:, ii], edat[ii]))
+    #    Kval.append(func(bw[ii], data[:, ii], data_predict[ii]))
 
     #Kval = np.column_stack(Kval)
 
     Kval = np.empty(data.shape)
     for ii, vtype in enumerate(var_type):
         func = kernel_func[kertypes[vtype]]
-        Kval[:, ii] = func(bw[ii], data[:, ii], edat[ii])
+        Kval[:, ii] = func(bw[ii], data[:, ii], data_predict[ii])
 
     iscontinuous = np.array([c == 'c' for c in var_type])
     dens = Kval.prod(axis=1) / np.prod(bw[iscontinuous])
