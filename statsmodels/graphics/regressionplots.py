@@ -53,12 +53,7 @@ def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    if isinstance(exog_idx, int):
-        exog_name = res.model.exog_names[exog_idx]
-        exog_idx = exog_idx
-    else:
-        exog_name = exog_idx
-        exog_idx = res.model.exog_names.index(exog_idx)
+    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
 
     #maybe add option for wendog, wexog
     y = res.model.endog
@@ -86,7 +81,7 @@ def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     return fig
 
 
-def plot_regress_exog(res, exog_idx, exog_name='', fig=None):
+def plot_regress_exog(results, exog_idx, fig=None):
     """Plot regression results against one regressor.
 
     This plots four graphs in a 2 by 2 figure: 'endog versus exog',
@@ -95,7 +90,7 @@ def plot_regress_exog(res, exog_idx, exog_name='', fig=None):
 
     Parameters
     ----------
-    res : result instance
+    results : result instance
         result instance with resid, model.endog and model.exog as attributes
     exog_idx : int
         index of regressor in exog matrix
@@ -115,32 +110,31 @@ def plot_regress_exog(res, exog_idx, exog_name='', fig=None):
 
     fig = utils.create_mpl_fig(fig)
 
-    if exog_name == '':
-        exog_name = 'variable %d' % exog_idx
+    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
 
     #maybe add option for wendog, wexog
     #y = res.endog
-    x1 = res.model.exog[:,exog_idx]
+    x1 = results.model.exog[:,exog_idx]
 
     ax = fig.add_subplot(2,2,1)
     #namestr = ' for %s' % self.name if self.name else ''
-    ax.plot(x1, res.model.endog, 'o')
+    ax.plot(x1, results.model.endog, 'o')
     ax.set_title('endog versus exog', fontsize='small')# + namestr)
 
     ax = fig.add_subplot(2,2,2)
     #namestr = ' for %s' % self.name if self.name else ''
-    ax.plot(x1, res.resid, 'o')
+    ax.plot(x1, results.resid, 'o')
     ax.axhline(y=0)
     ax.set_title('residuals versus exog', fontsize='small')# + namestr)
 
     ax = fig.add_subplot(2,2,3)
     #namestr = ' for %s' % self.name if self.name else ''
-    ax.plot(x1, res.fittedvalues, 'o')
+    ax.plot(x1, results.fittedvalues, 'o')
     ax.set_title('Fitted versus exog', fontsize='small')# + namestr)
 
     ax = fig.add_subplot(2,2,4)
     #namestr = ' for %s' % self.name if self.name else ''
-    ax.plot(x1, res.fittedvalues + res.resid, 'o')
+    ax.plot(x1, results.fittedvalues + results.resid, 'o')
     ax.set_title('Fitted plus residuals versus exog', fontsize='small')# + namestr)
 
     fig.suptitle('Regression Plots for %s' % exog_name)
@@ -178,8 +172,8 @@ def _partial_regression(endog, exog_i, exog_others):
     return res1c, (res1a, res1b)
 
 
-def plot_partregress_ax(endog, exog_i, exog_others, varname='',
-                        title_fontsize=None, ax=None):
+def plot_partregress_ax(endog, exog_i, exog_others, title_fontsize=None,
+                        ax=None):
     """Plot partial regression for a single regressor.
 
     Parameters
@@ -191,8 +185,6 @@ def plot_partregress_ax(endog, exog_i, exog_others, varname='',
     exog_others : ndarray
         other exogenous, explanatory variables, the effect of these variables
         will be removed by OLS regression
-    varname : str
-        name of the variable used in the title
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
@@ -210,29 +202,28 @@ def plot_partregress_ax(endog, exog_i, exog_others, varname='',
     """
     fig, ax = utils.create_mpl_ax(ax)
 
+    varname = util.get_data_names(exog_i)
+
     res1a = OLS(endog, exog_others).fit()
     res1b = OLS(exog_i, exog_others).fit()
     ax.plot(res1b.resid, res1a.resid, 'o')
     res1c = OLS(res1a.resid, res1b.resid).fit()
     ax.plot(res1b.resid, res1c.fittedvalues, '-', color='k')
-    ax.set_title('Partial Regression plot %s' % varname,
+    ax.set_title('Partial Regression Plot %s' % varname,
                  fontsize=title_fontsize)# + namestr)
 
     return fig
 
 
-def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
+def plot_partregress(results, exog_idx=None, grid=None, fig=None):
     """Plot partial regression for a set of regressors.
 
     Parameters
     ----------
     results : results instance
         A regression model results instance
-    exog_idx : None or list of int
+    exog_idx : None, list of ints, list of strings
         (column) indices of the exog used in the plot, default is all.
-    xnames : None or list of strings
-        Names for the numbers given in exog_idx. Default is
-        results.model.exog_names.
     grid : None or tuple of int (nrows, ncols)
         If grid is given, then it is used for the arrangement of the subplots.
         If grid is None, then ncol is one, if there are only 2 subplots, and
@@ -265,6 +256,8 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
     """
     fig = utils.create_mpl_fig(fig)
 
+    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
+
     #maybe add option for using wendog, wexog instead
     y = results.model.endog
     exog = results.model.exog
@@ -272,18 +265,8 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
     k_vars = exog.shape[1]
     #this function doesn't make sense if k_vars=1
 
-    if xnames is None:
-        exog_idx = range(k_vars)
-        xnames = results.model.exog_names
-    else:
-        exog_idx = []
-        for name in xnames:
-            exog_idx.append(results.model.exog_names.index(name))
-
-
     if not grid is None:
         nrows, ncols = grid
-
     else:
         if len(exog_idx) > 2:
             nrows = int(np.ceil(len(exog_idx)/2.))
@@ -294,14 +277,13 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
             ncols = 1
             title_fontsize = None
 
-
     for i,idx in enumerate(exog_idx):
         others = range(k_vars)
         others.pop(idx)
         exog_others = exog[:, others]
         ax = fig.add_subplot(nrows, ncols, i+1)
         plot_partregress_ax(y, exog[:, idx], exog_others, ax=ax,
-                               varname=xnames[i])
+                               varname=exog_idx[i])
 
     import matplotlib as mpl
     if mpl.__version__ >= '1.1':
@@ -312,14 +294,14 @@ def plot_partregress(results, exog_idx=None, xnames=None, grid=None, fig=None):
     return fig
 
 
-def plot_ccpr_ax(res, exog_idx=None, ax=None):
+def plot_ccpr_ax(results, exog_idx=None, ax=None):
     """Plot CCPR against one regressor.
 
     Generates a CCPR (component and component-plus-residual) plot.
 
     Parameters
     ----------
-    res : result instance
+    results : result instance
         uses exog and params of the result instance
     exog_idx : int
         (column) index of the exog used in the plot
@@ -339,18 +321,20 @@ def plot_ccpr_ax(res, exog_idx=None, ax=None):
 
     References
     ----------
-    See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
+    http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
 
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    x1 = res.model.exog[:,exog_idx]
+    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
+
+    x1 = results.model.exog[:,exog_idx]
     #namestr = ' for %s' % self.name if self.name else ''
-    x1beta = x1*res.params[exog_idx]
-    ax.plot(x1, x1beta + res.resid, 'o')
+    x1beta = x1*results.params[exog_idx]
+    ax.plot(x1, x1beta + results.resid, 'o')
     ax.plot(x1, x1beta, '-')
-    ax.set_title('X_%d beta_%d plus residuals versus exog (CCPR)' % \
-                                                (exog_idx, exog_idx))
+    ax.set_title('X_%d beta_%d plus residuals vs. exog (CCPR)' % (
+                                                        exog_name, exog_idx))
 
     return fig
 
@@ -362,7 +346,7 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
 
     Parameters
     ----------
-    res : result instance
+    results : result instance
         uses exog and params of the result instance
     exog_idx : None or list of int
         (column) indices of the exog used in the plot
@@ -413,7 +397,7 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
 
     for i, idx in enumerate(exog_idx):
         ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_ccpr_ax(res, exog_idx=idx, ax=ax)
+        plot_ccpr_ax(results, exog_idx=idx, ax=ax)
 
     return fig
 

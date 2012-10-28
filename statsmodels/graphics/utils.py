@@ -89,3 +89,42 @@ def create_mpl_fig(fig=None, figsize=None):
         fig = plt.figure(figsize=figsize)
 
     return fig
+
+def maybe_name_or_idx(idx, model):
+    """
+    Give a name or an integer and return the name and integer location of the
+    column in a design matrix.
+    """
+    if isinstance(exog_idx, int):
+        exog_name = model.exog_names[exog_idx]
+        exog_idx = exog_idx
+    # anticipate index as list and recurse
+    elif isinstance(idx, (tuple, list)):
+        exog_name = []
+        exog_idx = []
+        for item in idx:
+            exog_name_item, exog_idx_item = maybe_name_or_idx(item, model)
+            exog_name.append(exog_name_item)
+            exog_idx.append(exog_idx_item)
+    else: # assume we've got a string variable
+        exog_name = exog_idx
+        exog_idx = model.exog_names.index(exog_idx)
+
+    return exog_name, exog_idx
+
+def get_data_names(series_or_dataframe):
+    """
+    Input can be an array or pandas-like. Will handle 1d array-like but not
+    2d. Returns a str for 1d data or a list of strings for 2d data.
+    """
+    names = getattr(series_or_dataframe, 'name', None)
+    if not names:
+        names = getattr(series_or_dataframe, 'columns', None).tolist()
+    if not names:
+        shape = getattr(series_or_dataframe, 'shape', [1])
+        nvars = 1 if len(shape) == 1 else series.shape[1]
+        names = ["X%d" for names in range(nvars)]
+        if nvars == 1:
+            names = names[0]
+    return names
+
