@@ -205,7 +205,7 @@ class _GenericKDE (object):
             # randomize chooses blocks of size n_sub, independent of nobs
             bounds = [None] * self.n_res
         else:
-            bounds = [(i * n_sub, (i+1) * n_sub) for i in range(nobs//n_sub)]
+            bounds = [(i * n_sub, (i+1) * n_sub) for i in range(nobs // n_sub)]
             if nobs % n_sub > 0:
                 bounds.append((nobs - nobs % n_sub, nobs))
 
@@ -330,7 +330,8 @@ class _GenericKDE (object):
         .. math:: \int\left[\hat{f}(x)-f(x)\right]^{2}dx
 
         This is the general formula for the IMSE.  The IMSE differs for
-        conditional (ConditionalKDE) and unconditional (KDE) kernel density estimation.
+        conditional (ConditionalKDE) and unconditional (KDE) kernel density
+        estimation.
         """
         h0 = self._normal_reference()
         bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0,
@@ -510,25 +511,25 @@ class KDE(_GenericKDE):
         LOO = tools.LeaveOneOut(self.data)
         L = 0
         for i, X_not_i in enumerate(LOO):
-            f_i = tools.gpke(bw, data=-X_not_i, edat=-self.data[i, :],
+            f_i = tools.gpke(bw, data=-X_not_i, data_predict=-self.data[i, :],
                              var_type=self.var_type)
             L += func(f_i)
 
         return -L
 
-    def pdf(self, edat=None):
+    def pdf(self, data_predict=None):
         """
         Evaluate the probability density function.
 
         Parameters
         ----------
-        edat: array_like, optional
+        data_predict: array_like, optional
             Points to evaluate at.  If unspecified, the training data is used.
 
         Returns
         -------
         pdf_est: array_like
-            Probability density function evaluated at `edat`.
+            Probability density function evaluated at `data_predict`.
 
         Notes
         -----
@@ -538,27 +539,27 @@ class KDE(_GenericKDE):
         .. math:: K_{h}(X_{i},X_{j}) =
             \prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
         """
-        if edat is None:
-            edat = self.data
+        if data_predict is None:
+            data_predict = self.data
         else:
-            edat = tools.adjust_shape(edat, self.K)
+            data_predict = tools.adjust_shape(data_predict, self.K)
 
         pdf_est = []
-        N_edat = np.shape(edat)[0]
-        for i in xrange(N_edat):
-            pdf_est.append(tools.gpke(self.bw, data=self.data, edat=edat[i, :],
+        for i in xrange(np.shape(data_predict)[0]):
+            pdf_est.append(tools.gpke(self.bw, data=self.data,
+                           data_predict=data_predict[i, :],
                            var_type=self.var_type) / self.nobs)
 
         pdf_est = np.squeeze(pdf_est)
         return pdf_est
 
-    def cdf(self, edat=None):
+    def cdf(self, data_predict=None):
         """
         Evaluate the cumulative distribution function.
 
         Parameters
         ----------
-        edat: array_like, optional
+        data_predict: array_like, optional
             Points to evaluate at.  If unspecified, the training data is used.
 
         Returns
@@ -581,19 +582,19 @@ class KDE(_GenericKDE):
         where G() is the product kernel CDF estimator for the continuous
         and L() for the discrete variables.
         """
-        if edat is None:
-            edat = self.data
+        if data_predict is None:
+            data_predict = self.data
         else:
-            edat = tools.adjust_shape(edat, self.K)
+            data_predict = tools.adjust_shape(data_predict, self.K)
 
-        N_edat = np.shape(edat)[0]
         cdf_est = []
-        for i in xrange(N_edat):
+        for i in xrange(np.shape(data_predict)[0]):
             cdf_est.append(tools.gpke(self.bw, data=self.data,
-                           edat=edat[i, :], var_type=self.var_type,
-                           ckertype="gaussian_cdf",
-                           ukertype="aitchisonaitken_cdf",
-                           okertype='wangryzin_cdf') / self.nobs)
+                                      data_predict=data_predict[i, :],
+                                      var_type=self.var_type,
+                                      ckertype="gaussian_cdf",
+                                      ukertype="aitchisonaitken_cdf",
+                                      okertype='wangryzin_cdf') / self.nobs)
 
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
@@ -629,7 +630,8 @@ class KDE(_GenericKDE):
         """
         F = 0
         for i in range(self.nobs):
-            k_bar_sum = tools.gpke(bw, data=-self.data, edat=-self.data[i, :],
+            k_bar_sum = tools.gpke(bw, data=-self.data,
+                                   data_predict=-self.data[i, :],
                                    var_type=self.var_type,
                                    ckertype='gauss_convolution',
                                    okertype='wangryzin_convolution',
@@ -805,31 +807,32 @@ class ConditionalKDE(_GenericKDE):
         L = 0
         for i, Y_j in enumerate(yLOO):
             X_not_i = xLOO.next()
-            f_yx = tools.gpke(bw, data=-Y_j, edat=-self.data[i, :],
+            f_yx = tools.gpke(bw, data=-Y_j, data_predict=-self.data[i, :],
                               var_type=(self.dep_type + self.indep_type))
             f_x = tools.gpke(bw[self.k_dep:], data=-X_not_i,
-                             edat=-self.exog[i, :], var_type=self.indep_type)
+                             data_predict=-self.exog[i, :],
+                             var_type=self.indep_type)
             f_i = f_yx / f_x
             L += func(f_i)
 
         return - L
 
-    def pdf(self, eydat=None, exdat=None):
+    def pdf(self, endog_predict=None, exog_predict=None):
         """
         Evaluate the probability density function.
 
         Parameters
         ----------
-        eydat: array_like, optional
+        endog_predict: array_like, optional
             Evaluation data for the dependent variables.  If unspecified, the
             training data is used.
-        exdat: array_like, optional
+        exog_predict: array_like, optional
             Evaluation data for the independent variables.
 
         Returns
         -------
         pdf: array_like
-            The value of the probability density at `eydat` and `exdat`.
+            The value of the probability density at `endog_predict` and `exog_predict`.
 
         Notes
         -----
@@ -844,37 +847,38 @@ class ConditionalKDE(_GenericKDE):
 
         where :math:`k` is the appropriate kernel for each variable.
         """
-        if eydat is None:
-            eydat = self.endog
+        if endog_predict is None:
+            endog_predict = self.endog
         else:
-            eydat = tools.adjust_shape(eydat, self.k_dep)
-        if exdat is None:
-            exdat = self.exog
+            endog_predict = tools.adjust_shape(endog_predict, self.k_dep)
+        if exog_predict is None:
+            exog_predict = self.exog
         else:
-            exdat = tools.adjust_shape(exdat, self.k_indep)
+            exog_predict = tools.adjust_shape(exog_predict, self.k_indep)
 
         pdf_est = []
-        edat = np.column_stack((eydat, exdat))
-        N_edat = np.shape(edat)[0]
-        for i in xrange(N_edat):
-            f_yx = tools.gpke(self.bw, data=self.data, edat=edat[i, :],
+        data_predict = np.column_stack((endog_predict, exog_predict))
+        for i in xrange(np.shape(data_predict)[0]):
+            f_yx = tools.gpke(self.bw, data=self.data,
+                              data_predict=data_predict[i, :],
                               var_type=(self.dep_type + self.indep_type))
             f_x = tools.gpke(self.bw[self.k_dep:], data=self.exog,
-                             edat=exdat[i, :], var_type=self.indep_type)
+                             data_predict=exog_predict[i, :],
+                             var_type=self.indep_type)
             pdf_est.append(f_yx / f_x)
 
         return np.squeeze(pdf_est)
 
-    def cdf(self, eydat=None, exdat=None):
+    def cdf(self, endog_predict=None, exog_predict=None):
         """
         Cumulative distribution function for the conditional density.
 
         Parameters
         ----------
-        eydat: array_like, optional
+        endog_predict: array_like, optional
             The evaluation dependent variables at which the cdf is estimated.
             If not specified the training dependent variables are used.
-        exdat: array_like, optional
+        exog_predict: array_like, optional
             The evaluation independent variables at which the cdf is estimated.
             If not specified the training independent variables are used.
 
@@ -897,32 +901,33 @@ class ConditionalKDE(_GenericKDE):
         variable(s) and W() is the product kernel CDF estimator for the
         independent variable(s).
         """
-        if eydat is None:
-            eydat = self.endog
+        if endog_predict is None:
+            endog_predict = self.endog
         else:
-            eydat = tools.adjust_shape(eydat, self.k_dep)
-        if exdat is None:
-            exdat = self.exog
+            endog_predict = tools.adjust_shape(endog_predict, self.k_dep)
+        if exog_predict is None:
+            exog_predict = self.exog
         else:
-            exdat = tools.adjust_shape(exdat, self.k_indep)
+            exog_predict = tools.adjust_shape(exog_predict, self.k_indep)
 
-        N_edat = np.shape(exdat)[0]
-        cdf_est = np.empty(N_edat)
-        for i in xrange(N_edat):
+        N_data_predict = np.shape(exog_predict)[0]
+        cdf_est = np.empty(N_data_predict)
+        for i in xrange(N_data_predict):
             mu_x = tools.gpke(self.bw[self.k_dep:], data=self.exog,
-                              edat=exdat[i, :], var_type=self.indep_type) / \
-                              self.nobs
+                              data_predict=exog_predict[i, :],
+                              var_type=self.indep_type) / self.nobs
             mu_x = np.squeeze(mu_x)
             cdf_endog = tools.gpke(self.bw[0:self.k_dep], data=self.endog,
-                                   edat=eydat[i, :], var_type=self.dep_type,
+                                   data_predict=endog_predict[i, :],
+                                   var_type=self.dep_type,
                                    ckertype="gaussian_cdf",
                                    ukertype="aitchisonaitken_cdf",
                                    okertype='wangryzin_cdf', tosum=False)
 
-            W_x = tools.gpke(self.bw[self.k_dep:], data=self.exog,
-                             edat=exdat[i, :], var_type=self.indep_type,
-                             tosum=False)
-            S = (cdf_endog * W_x).sum(axis=0)
+            cdf_exog = tools.gpke(self.bw[self.k_dep:], data=self.exog,
+                                  data_predict=exog_predict[i, :],
+                                  var_type=self.indep_type, tosum=False)
+            S = (cdf_endog * cdf_exog).sum(axis=0)
             cdf_est[i] = S / (self.nobs * mu_x)
 
         return cdf_est
@@ -979,22 +984,23 @@ class ConditionalKDE(_GenericKDE):
             Xe_L = np.kron(X, expander)
             Xe_R = np.kron(expander, X)
             K_Xi_Xl = tools.gpke(bw[self.k_dep:], data=Xe_L,
-                                 edat=self.exog[ii, :],
+                                 data_predict=self.exog[ii, :],
                                  var_type=self.indep_type, tosum=False)
             K_Xj_Xl = tools.gpke(bw[self.k_dep:], data=Xe_R,
-                                 edat=self.exog[ii, :],
+                                 data_predict=self.exog[ii, :],
                                  var_type=self.indep_type, tosum=False)
             K2_Yi_Yj = tools.gpke(bw[0:self.k_dep], data=Ye_L,
-                                  edat=Ye_R, var_type=self.dep_type,
+                                  data_predict=Ye_R, var_type=self.dep_type,
                                   ckertype='gauss_convolution',
                                   okertype='wangryzin_convolution',
                                   ukertype='aitchisonaitken_convolution',
                                   tosum=False)
             G = (K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj).sum() / nobs**2
-            f_X_Y = tools.gpke(bw, data=-Z, edat=-self.data[ii, :],
+            f_X_Y = tools.gpke(bw, data=-Z, data_predict=-self.data[ii, :],
                                var_type=(self.dep_type + self.indep_type)) / \
                                nobs
-            m_x = tools.gpke(bw[self.k_dep:], data=-X, edat=-self.exog[ii, :],
+            m_x = tools.gpke(bw[self.k_dep:], data=-X,
+                             data_predict=-self.exog[ii, :],
                              var_type=self.indep_type) / nobs
             CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
 
@@ -1078,7 +1084,7 @@ class Reg(_GenericKDE):
         return optimize.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
                              maxfun=1e3, disp=0)
 
-    def _est_loc_linear(self, bw, endog, exog, edat):
+    def _est_loc_linear(self, bw, endog, exog, data_predict):
         """
         Local linear estimator of g(x) in the regression ``y = g(x) + e``.
 
@@ -1090,21 +1096,22 @@ class Reg(_GenericKDE):
             The dependent variable.
         exog: 1D or 2D array_like
             The independent variable(s).
-        edat: 1D array_like of length K, where K is the number of variables.
+        data_predict: 1D array_like of length K, where K is the number of variables.
             The point at which the density is estimated.
 
         Returns
         -------
         D_x: array_like
-            The value of the conditional mean at `edat`.
+            The value of the conditional mean at `data_predict`.
 
         Notes
         -----
         See p. 81 in [1] and p.38 in [2] for the formulas.
-        Unlike other methods, this one requires that `edat` be 1D.
+        Unlike other methods, this one requires that `data_predict` be 1D.
         """
         nobs, Qc = exog.shape
-        Ker = tools.gpke(bw, data=exog, edat=edat, var_type=self.var_type,
+        Ker = tools.gpke(bw, data=exog, data_predict=data_predict,
+                         var_type=self.var_type,
                          #ukertype='aitchison_aitken_reg',
                          #okertype='wangryzin_reg',
                          tosum=False) / float(nobs)
@@ -1112,12 +1119,12 @@ class Reg(_GenericKDE):
         # See also p. 38 in [2]
         #ix_cont = np.arange(self.K)  # Use all vars instead of continuous only
         # Note: because ix_cont was defined here such that it selected all
-        # columns, I removed the indexing with it from exog/edat.
+        # columns, I removed the indexing with it from exog/data_predict.
 
         # Convert Ker to a 2-D array to make matrix operations below work
         Ker = Ker[:, np.newaxis]
 
-        M12 = exog - edat
+        M12 = exog - data_predict
         M22 = np.dot(M12.T, M12 * Ker)
         M12 = (M12 * Ker).sum(axis=0)
         M = np.empty((Qc + 1, Qc + 1))
@@ -1129,14 +1136,14 @@ class Reg(_GenericKDE):
         ker_endog = Ker * endog
         V = np.empty((Qc + 1, 1))
         V[0, 0] = ker_endog.sum()
-        V[1:, 0] = ((exog - edat) * ker_endog).sum(axis=0)
+        V[1:, 0] = ((exog - data_predict) * ker_endog).sum(axis=0)
 
         mean_mfx = np.dot(np.linalg.pinv(M), V)
         mean = mean_mfx[0]
         mfx = mean_mfx[1:, :]
         return mean, mfx
 
-    def _est_loc_constant(self, bw, endog, exog, edat):
+    def _est_loc_constant(self, bw, endog, exog, data_predict):
         """
         Local constant estimator of g(x) in the regression
         y = g(x) + e
@@ -1149,17 +1156,17 @@ class Reg(_GenericKDE):
             The dependent variable
         exog: 1D or 2D array_like
             The independent variable(s)
-        edat: 1D or 2D array_like
+        data_predict: 1D or 2D array_like
             The point(s) at which
             the density is estimated
 
         Returns
         -------
         G: array_like
-            The value of the conditional mean at edat
+            The value of the conditional mean at data_predict
 
         """
-        KX = tools.gpke(bw, data=exog, edat=edat,
+        KX = tools.gpke(bw, data=exog, data_predict=data_predict,
                         var_type=self.var_type,
                         #ukertype='aitchison_aitken_reg',
                         #okertype='wangryzin_reg',
@@ -1170,7 +1177,8 @@ class Reg(_GenericKDE):
         G = G_numer / G_denom
         nobs, K = exog.shape
         f_x = G_denom / float(nobs)
-        KX_c = tools.gpke(bw, data=exog, edat=edat, var_type=self.var_type,
+        KX_c = tools.gpke(bw, data=exog, data_predict=data_predict,
+                          var_type=self.var_type,
                           ckertype='d_gaussian',
                           #okertype='wangryzin_reg',
                           tosum=False)
@@ -1193,7 +1201,7 @@ class Reg(_GenericKDE):
         """
         H = np.empty((self.nobs, self.nobs))
         for j in range(self.nobs):
-            H[:, j] = tools.gpke(bw, data=self.exog, edat=self.exog[j,:],
+            H[:, j] = tools.gpke(bw, data=self.exog, data_predict=self.exog[j,:],
                                  var_type=self.var_type, tosum=False)
         denom = H.sum(axis=1)
         H = H / denom
@@ -1248,7 +1256,8 @@ class Reg(_GenericKDE):
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
-            G = func(bw, endog=Y, exog=-X_not_i, edat=-self.exog[ii, :])[0]
+            G = func(bw, endog=Y, exog=-X_not_i,
+                     data_predict=-self.exog[ii, :])[0]
             L += (self.endog[ii] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -1277,21 +1286,22 @@ class Reg(_GenericKDE):
                    ((Yhat - Y_bar)**2).sum(axis=0)
         return R2_numer / R2_denom
 
-    def fit(self, edat=None):
+    def fit(self, data_predict=None):
         """
-        Returns the marginal effects at the edat points
+        Returns the marginal effects at the data_predict points
         """
         func = self.est[self.reg_type]
-        if edat is None:
-            edat = self.exog
+        if data_predict is None:
+            data_predict = self.exog
         else:
-            edat = tools.adjust_shape(edat, self.K)
+            data_predict = tools.adjust_shape(data_predict, self.K)
 
-        N_edat = np.shape(edat)[0]
-        mean = np.empty((N_edat,))
-        mfx = np.empty((N_edat, self.K))
-        for i in xrange(N_edat):
-            mean_mfx = func(self.bw, self.endog, self.exog, edat=edat[i, :])
+        N_data_predict = np.shape(data_predict)[0]
+        mean = np.empty((N_data_predict,))
+        mfx = np.empty((N_data_predict, self.K))
+        for i in xrange(N_data_predict):
+            mean_mfx = func(self.bw, self.endog, self.exog,
+                            data_predict=data_predict[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
@@ -1436,7 +1446,7 @@ class CensoredReg(Reg):
         repr += "Estimator type: " + self.reg_type + "\n"
         return repr
 
-    def _est_loc_linear(self, bw, endog, exog, edat, W):
+    def _est_loc_linear(self, bw, endog, exog, data_predict, W):
         """
         Local linear estimator of g(x) in the regression ``y = g(x) + e``.
 
@@ -1448,22 +1458,23 @@ class CensoredReg(Reg):
             The dependent variable
         exog: 1D or 2D array_like
             The independent variable(s)
-        edat: 1D array_like of length K, where K is
+        data_predict: 1D array_like of length K, where K is
             the number of variables. The point at which
             the density is estimated
 
         Returns
         -------
         D_x: array_like
-            The value of the conditional mean at edat
+            The value of the conditional mean at data_predict
 
         Notes
         -----
         See p. 81 in [1] and p.38 in [2] for the formulas
-        Unlike other methods, this one requires that edat be 1D
+        Unlike other methods, this one requires that data_predict be 1D
         """
         nobs, Qc = exog.shape
-        Ker = tools.gpke(bw, data=exog, edat=edat, var_type=self.var_type,
+        Ker = tools.gpke(bw, data=exog, data_predict=data_predict,
+                         var_type=self.var_type,
                          ukertype='aitchison_aitken_reg',
                          okertype='wangryzin_reg', tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
@@ -1472,7 +1483,7 @@ class CensoredReg(Reg):
         # Convert Ker to a 2-D array to make matrix operations below work
         Ker = Ker[:, np.newaxis]
 
-        M12 = exog - edat
+        M12 = exog - data_predict
         M22 = np.dot(M12.T, M12 * Ker)
         M12 = (M12 * Ker).sum(axis=0)
         M = np.empty((Qc + 1, Qc + 1))
@@ -1484,7 +1495,7 @@ class CensoredReg(Reg):
         ker_endog = Ker * endog
         V = np.empty((Qc + 1, 1))
         V[0, 0] = ker_endog.sum()
-        V[1:, 0] = ((exog - edat) * ker_endog).sum(axis=0)
+        V[1:, 0] = ((exog - data_predict) * ker_endog).sum(axis=0)
 
         mean_mfx = np.dot(np.linalg.pinv(M), V)
         mean = mean_mfx[0]
@@ -1532,27 +1543,29 @@ class CensoredReg(Reg):
         for ii, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
             w = LOO_W.next()
-            G = func(bw, endog=Y, exog=-X_not_i, edat=-self.exog[ii, :], W=w)[0]
+            G = func(bw, endog=Y, exog=-X_not_i,
+                     data_predict=-self.exog[ii, :], W=w)[0]
             L += (self.endog[ii] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.nobs
 
-    def fit(self, edat=None):
+    def fit(self, data_predict=None):
         """
-        Returns the marginal effects at the edat points.
+        Returns the marginal effects at the data_predict points.
         """
         func = self.est[self.reg_type]
-        if edat is None:
-            edat = self.exog
+        if data_predict is None:
+            data_predict = self.exog
         else:
-            edat = tools.adjust_shape(edat, self.K)
+            data_predict = tools.adjust_shape(data_predict, self.K)
 
-        N_edat = np.shape(edat)[0]
-        mean = np.empty((N_edat,))
-        mfx = np.empty((N_edat, self.K))
-        for i in xrange(N_edat):
-            mean_mfx = func(self.bw, self.endog, self.exog, edat=edat[i, :],
+        N_data_predict = np.shape(data_predict)[0]
+        mean = np.empty((N_data_predict,))
+        mfx = np.empty((N_data_predict, self.K))
+        for i in xrange(N_data_predict):
+            mean_mfx = func(self.bw, self.endog, self.exog,
+                            data_predict=data_predict[i, :],
                             W=self.W_in)
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
@@ -1565,8 +1578,8 @@ class TestRegCoefC(object):
     """
     Significance test for continuous variables in a nonparametric regression.
 
-    The null hypothesis is ``dE(Y|X)/dX_not_i = 0``, the alternative hypothesis is
-    ``dE(Y|X)/dX_not_i != 0``.
+    The null hypothesis is ``dE(Y|X)/dX_not_i = 0``, the alternative hypothesis
+    is ``dE(Y|X)/dX_not_i != 0``.
 
     Parameters
     ----------
@@ -1614,7 +1627,8 @@ class TestRegCoefC(object):
     # Significance of continuous vars in nonparametric regression
     # Racine: Consistent Significance Testing for Nonparametric Regression
     # Journal of Business & Economics Statistics
-    def __init__(self, model, test_vars, nboot=400, nested_res=400, pivot=False):
+    def __init__(self, model, test_vars, nboot=400, nested_res=400,
+                 pivot=False):
         self.nboot = nboot
         self.nres = nested_res
         self.test_vars = test_vars
@@ -1764,12 +1778,12 @@ class TestRegCoefD(TestRegCoefC):
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0
 
-        m0 = model.fit(edat=X1)[0]
+        m0 = model.fit(data_predict=X1)[0]
         m0 = np.reshape(m0, (n, 1))
         I = np.zeros((n, 1))
         for i in dom_x[1:] :
             X1[:, self.test_vars] = i
-            m1 = model.fit(edat=X1)[0]
+            m1 = model.fit(data_predict=X1)[0]
             m1 = np.reshape(m1, (n, 1))
             I += (m1 - m0) ** 2
 
@@ -1820,7 +1834,7 @@ class TestRegCoefD(TestRegCoefC):
         m=0
         for i in self.dom_x:
             X[:, self.test_vars]  = i
-            m += self.model.fit(edat = X)[0]
+            m += self.model.fit(data_predict = X)[0]
 
         m = m / float(len(self.dom_x))
         m = np.reshape(m, (np.shape(self.exog)[0], 1))
@@ -1917,7 +1931,7 @@ class TestFForm(object):
         for i, X_not_i in enumerate(XLOO):
             u_j = uLOO.next()
             # See Bootstrapping procedure on p. 357 in [1]
-            K = tools.gpke(self.bw, data=-X_not_i, edat=-X_not_i[i, :],
+            K = tools.gpke(self.bw, data=-X_not_i, data_predict=-X_not_i[i, :],
                            var_type=self.var_type, tosum=False)
             f_i = u[i] * u_j * K
             I += f_i  # See eq. 12.7 on p. 355 in [1]
@@ -1999,25 +2013,28 @@ class SingleIndexModel(Reg):
         LOO_X = tools.LeaveOneOut(self.exog)
         LOO_Y = tools.LeaveOneOut(self.endog).__iter__()
         L = 0
-        for ii, X_not_i in enumerate(LOO_X):
+        for i, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
-            G = self.func(bw, endog=Y, exog=-b*X_not_i, edat=-b*self.exog[ii, :])[0]
-            L += (self.endog[ii] - G) ** 2
+            G = self.func(bw, endog=Y, exog=-b*X_not_i,
+                          data_predict=-b*self.exog[i, :])[0]
+            L += (self.endog[i] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
         return L / self.nobs
 
-    def fit(self, edat=None):
-        if edat is None:
-            edat = self.exog
+    def fit(self, data_predict=None):
+        if data_predict is None:
+            data_predict = self.exog
         else:
-            edat = tools.adjust_shape(edat, self.K)
-        N_edat = np.shape(edat)[0]
-        mean = np.empty((N_edat,))
-        mfx = np.empty((N_edat, self.K))
-        for i in xrange(N_edat):
+            data_predict = tools.adjust_shape(data_predict, self.K)
+
+        N_data_predict = np.shape(data_predict)[0]
+        mean = np.empty((N_data_predict,))
+        mfx = np.empty((N_data_predict, self.K))
+        for i in xrange(N_data_predict):
             mean_mfx = self.func(self.bw, self.endog,
-                    self.b*self.exog, edat=self.b*edat[i, :])
+                                 self.b * self.exog,
+                                 data_predict=self.b * data_predict[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
@@ -2045,7 +2062,7 @@ class SemiLinear(Reg):
         The dependent variable
     exog: array_like
         The linear component in the regression
-    tzdat: array_like
+    exog_nonparametric: array_like
         The nonparametric component in the regression
     var_type: str
         The type of the variables in the nonparametric component;
@@ -2060,7 +2077,7 @@ class SemiLinear(Reg):
     Attributes
     ----------
     bw: array_like
-        Bandwidths for the nonparametric component tzdat
+        Bandwidths for the nonparametric component exog_nonparametric
     b: array_like
         Coefficients in the linear component
 
@@ -2077,11 +2094,11 @@ class SemiLinear(Reg):
     See chapter on Semiparametric Models in [1]
     """
 
-    def __init__(self, endog, exog, tzdat, var_type, l_K):
+    def __init__(self, endog, exog, exog_nonparametric, var_type, l_K):
         self.endog = tools.adjust_shape(endog, 1)
         self.exog = tools.adjust_shape(exog, l_K)
         self.K = len(var_type)
-        self.tzdat = tools.adjust_shape(tzdat, self.K)
+        self.exog_nonparametric = tools.adjust_shape(exog_nonparametric, self.K)
         self.l_K = l_K
         self.nobs = np.shape(self.exog)[0]
         self.var_type = var_type
@@ -2129,7 +2146,7 @@ class SemiLinear(Reg):
         bw = params[self.l_K:]
         LOO_X = tools.LeaveOneOut(self.exog)
         LOO_Y = tools.LeaveOneOut(self.endog).__iter__()
-        LOO_Z = tools.LeaveOneOut(self.tzdat).__iter__()
+        LOO_Z = tools.LeaveOneOut(self.exog_nonparametric).__iter__()
         Xb = b * self.exog
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
@@ -2137,31 +2154,33 @@ class SemiLinear(Reg):
             Z = LOO_Z.next()
             Xb_j = b * X_not_i
             Yx = Y - Xb_j
-            G = self.func(bw, endog=Yx, exog=-Z, edat=-self.tzdat[ii, :])[0]
+            G = self.func(bw, endog=Yx, exog=-Z,
+                          data_predict=-self.exog_nonparametric[ii, :])[0]
             lt = Xb[ii, :].sum()  # linear term
             L += (self.endog[ii] - lt - G) ** 2
 
         return L
 
-    def fit(self, exdat=None, ezdat=None):
+    def fit(self, exog_predict=None, exog_nonparametric_predict=None):
         """Computes fitted values and marginal effects"""
 
-        if exdat is None:
-            exdat = self.exog
+        if exog_predict is None:
+            exog_predict = self.exog
         else:
-            exdat = tools.adjust_shape(exdat, self.l_K)
+            exog_predict = tools.adjust_shape(exog_predict, self.l_K)
 
-        if ezdat is None:
-            ezdat = self.tzdat
+        if exog_nonparametric_predict is None:
+            exog_nonparametric_predict = self.exog_nonparametric
         else:
-            ezdat = tools.adjust_shape(ezdat, self.K)
+            exog_nonparametric_predict = tools.adjust_shape(exog_predict, self.K)
 
-        N_edat = np.shape(ezdat)[0]
-        mean = np.empty((N_edat,))
-        mfx = np.empty((N_edat, self.K))
-        Y = self.endog - self.b * exdat
-        for i in xrange(N_edat):
-            mean_mfx = self.func(self.bw, Y, self.tzdat, edat=ezdat[i, :])
+        N_data_predict = np.shape(exog_nonparametric_predict)[0]
+        mean = np.empty((N_data_predict,))
+        mfx = np.empty((N_data_predict, self.K))
+        Y = self.endog - self.b * exog_predict
+        for i in xrange(N_data_predict):
+            mean_mfx = self.func(self.bw, Y, self.exog_nonparametric,
+                                 data_predict=exog_predict[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c

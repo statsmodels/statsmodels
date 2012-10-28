@@ -139,7 +139,7 @@ class TestKDE(MyTest):
         R_result = [0.0052051, 0.05835941]
         npt.assert_allclose(dens.bw, R_result, atol=1e-2)
 
-    def test_continuous_cdf(self, edat=None):
+    def test_continuous_cdf(self, data_predict=None):
         dens = nparam.KDE(data=[self.Italy_gdp, self.growth],
                             var_type='cc', bw='cv_ml')
         sm_result = dens.cdf()[0:5]
@@ -147,7 +147,7 @@ class TestKDE(MyTest):
                     0.513387712, 0.210985350]
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
-    def test_mixeddata_cdf(self, edat=None):
+    def test_mixeddata_cdf(self, data_predict=None):
         dens = nparam.KDE(data=[self.Italy_gdp, self.oecd], var_type='cu',
                            bw='cv_ml')
         sm_result = dens.cdf()[0:5]
@@ -540,7 +540,7 @@ class TestReg(MyTest):
         b1 = 1.3
         b2 = -0.7
         Y = b1 * C1 + np.exp(b2 * C2) + e
-        model = SemiLinear(endog=[Y], exog=[C1], tzdat=[C2],
+        model = SemiLinear(endog=[Y], exog=[C1], exog_nonparametric=[C2],
                            var_type='c', l_K=1)
         b_hat = np.squeeze(model.b)
         # Only tests for the linear part of the regression
