@@ -40,6 +40,7 @@ from scipy.stats.mstats import mquantiles
 import kernels as kernels
 import np_tools as tools
 
+
 try:
     import joblib
     has_joblib = True
@@ -465,8 +466,10 @@ class KDE(_GenericKDE):
         self.data = tools.adjust_shape(data, self.K)
         self.data_type = var_type
         self.nobs, self.K = np.shape(self.data)
-        assert self.K == len(self.var_type)
-        assert self.nobs > self.K  # Num of obs must be > than num of vars
+        if self.nobs <= self.K:
+            raise ValueError("The number of observations must be larger " \
+                             "than the number of variables.")
+
         self._set_defaults(defaults)
         if not self.efficient:
             self.bw = self._compute_bw(bw)
@@ -599,7 +602,7 @@ class KDE(_GenericKDE):
         cdf_est = np.squeeze(cdf_est)
         return cdf_est
 
-    def imse_orig(self, bw):
+    def imse(self, bw):
         """
         Returns the Integrated Mean Square Error for the unconditional KDE.
 
@@ -628,20 +631,22 @@ class KDE(_GenericKDE):
         Where :math:`\bar{K}_{h}` is the multivariate product convolution
         kernel (consult [3] for mixed data types).
         """
-        F = 0
-        for i in range(self.nobs):
-            k_bar_sum = tools.gpke(bw, data=-self.data,
-                                   data_predict=-self.data[i, :],
-                                   var_type=self.var_type,
-                                   ckertype='gauss_convolution',
-                                   okertype='wangryzin_convolution',
-                                   ukertype='aitchisonaitken_convolution')
-            F += k_bar_sum
-        # there is a + because loo_likelihood returns the negative
-        return (F / self.nobs**2 + self.loo_likelihood(bw) * \
-                2 / ((self.nobs) * (self.nobs - 1)))
+        #F = 0
+        #for i in range(self.nobs):
+        #    k_bar_sum = tools.gpke(bw, data=-self.data,
+        #                           data_predict=-self.data[i, :],
+        #                           var_type=self.var_type,
+        #                           ckertype='gauss_convolution',
+        #                           okertype='wangryzin_convolution',
+        #                           ukertype='aitchisonaitken_convolution')
+        #    F += k_bar_sum
+        ## there is a + because loo_likelihood returns the negative
+        #return (F / self.nobs**2 + self.loo_likelihood(bw) * \
+        #        2 / ((self.nobs) * (self.nobs - 1)))
 
-    def imse(self, bw):
+        # The code below is equivalent to the commented-out code above.  It's
+        # about 20% faster due to some code being moved outside the for-loops
+        # and shared by gpke() and loo_likelihood().
         F = 0
         kertypes = dict(c=kernels.gaussian_convolution,
                         o=kernels.wang_ryzin_convolution,
@@ -759,8 +764,6 @@ class ConditionalKDE(_GenericKDE):
         self.nobs, self.k_dep = np.shape(self.endog)
         self.data = np.column_stack((self.endog, self.exog))
         self.K = np.shape(self.data)[1]
-        assert len(self.dep_type) == self.k_dep
-        assert len(self.indep_type) == np.shape(self.exog)[1]
         self._set_defaults(defaults)
         if not self.efficient:
             self.bw = self._compute_bw(bw)
@@ -1031,7 +1034,7 @@ class Reg(_GenericKDE):
         Type of regression estimator
         lc: Local Constant Estimator
         ll: Local Linear Estimator
-    bw: array-like
+    bw: array_like
         Either a user-specified bandwidth or the method for bandwidth
         selection.
         cv_ls: cross-validaton least squares
@@ -1041,7 +1044,7 @@ class Reg(_GenericKDE):
 
     Attributes
     ---------
-    bw: array-like
+    bw: array_like
         The bandwidth parameters.
 
     Methods
@@ -1222,13 +1225,12 @@ class Reg(_GenericKDE):
 
     def cv_loo(self, bw, func):
         """
-        The cross-validation function with leave-one-out
-        estimator
+        The cross-validation function with leave-one-out estimator.
 
         Parameters
         ----------
         bw: array_like
-            Vector of bandwidth values
+            Vector of bandwidth values.
         func: callable function
             Returns the estimator of g(x).  Can be either ``_est_loc_constant``
             (local constant) or ``_est_loc_linear`` (local_linear).
@@ -1272,8 +1274,8 @@ class Reg(_GenericKDE):
         For more details see p.45 in [2]
         The R-Squared is calculated by:
         .. math:: R^{2}=\frac{\left[\sum_{i=1}^{n}
-        (Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}
-        (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
+            (Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}
+            (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
 
         where :math:`\hat{Y_{i}}` are the fitted values calculated in
         self.mean().
@@ -1314,8 +1316,8 @@ class Reg(_GenericKDE):
 
         Parameters
         ----------
-        var_pos: tuple, list
-            The position of the variable in exog to be tested
+        var_pos: sequence
+            The position of the variable in exog to be tested.
 
         Returns
         -------
@@ -1376,25 +1378,25 @@ class CensoredReg(Reg):
         Type of regression estimator
         lc: Local Constant Estimator
         ll: Local Linear Estimator
-    bw: array-like
+    bw: array_like
         Either a user-specified bandwidth or
         the method for bandwidth selection.
         cv_ls: cross-validaton least squares
         aic: AIC Hurvich Estimator
-    censor_val: Float
+    censor_val: float
         Value at which the dependent variable is censored
     defaults: EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation
 
     Attributes
     ---------
-    bw: array-like
+    bw: array_like
         The bandwidth parameters
 
     Methods
     -------
-    r-squared(): Calculates the R-Squared for the model
-    mean(): Calculates the conditiona mean
+    r-squared : Calculates the R-Squared coefficientfor the model.
+    mean : Calculates the conditional mean.
     """
 
     def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',
@@ -2071,8 +2073,8 @@ class SemiLinear(Reg):
             - o: ordered
             - u: unordered
 
-    l_K: int
-        The number of the variables that comprise the linear component.
+    k_linear : int
+        The number of variables that comprise the linear component.
 
     Attributes
     ----------
@@ -2080,6 +2082,10 @@ class SemiLinear(Reg):
         Bandwidths for the nonparametric component exog_nonparametric
     b: array_like
         Coefficients in the linear component
+    nobs : int
+        The number of observations.
+    k_linear : int
+        The number of variables that comprise the linear component.
 
     Methods
     -------
@@ -2094,12 +2100,12 @@ class SemiLinear(Reg):
     See chapter on Semiparametric Models in [1]
     """
 
-    def __init__(self, endog, exog, exog_nonparametric, var_type, l_K):
+    def __init__(self, endog, exog, exog_nonparametric, var_type, k_linear):
         self.endog = tools.adjust_shape(endog, 1)
-        self.exog = tools.adjust_shape(exog, l_K)
+        self.exog = tools.adjust_shape(exog, k_linear)
         self.K = len(var_type)
         self.exog_nonparametric = tools.adjust_shape(exog_nonparametric, self.K)
-        self.l_K = l_K
+        self.k_linear = k_linear
         self.nobs = np.shape(self.exog)[0]
         self.var_type = var_type
         self.data_type = self.var_type
@@ -2113,10 +2119,10 @@ class SemiLinear(Reg):
 
         Minimizes ``cv_loo`` with respect to ``b`` and ``bw``.
         """
-        params0 = np.random.uniform(size=(self.l_K + self.K, ))
+        params0 = np.random.uniform(size=(self.k_linear + self.K, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
-        b = b_bw[0 : self.l_K]
-        bw = b_bw[self.l_K:]
+        b = b_bw[0 : self.k_linear]
+        bw = b_bw[self.k_linear:]
         #bw = self._set_bw_bounds(np.asarray(bw))
         return b, bw
 
@@ -2130,7 +2136,7 @@ class SemiLinear(Reg):
         ----------
         params: array_like
             Vector consisting of the coefficients (b) and the bandwidths (bw).
-            The first ``l_K`` elements are the coefficients.
+            The first ``k_linear`` elements are the coefficients.
 
         Returns
         -------
@@ -2142,8 +2148,8 @@ class SemiLinear(Reg):
         See p.254 in [1]
         """
         params = np.asarray(params)
-        b = params[0 : self.l_K]
-        bw = params[self.l_K:]
+        b = params[0 : self.k_linear]
+        bw = params[self.k_linear:]
         LOO_X = tools.LeaveOneOut(self.exog)
         LOO_Y = tools.LeaveOneOut(self.endog).__iter__()
         LOO_Z = tools.LeaveOneOut(self.exog_nonparametric).__iter__()
@@ -2167,7 +2173,7 @@ class SemiLinear(Reg):
         if exog_predict is None:
             exog_predict = self.exog
         else:
-            exog_predict = tools.adjust_shape(exog_predict, self.l_K)
+            exog_predict = tools.adjust_shape(exog_predict, self.k_linear)
 
         if exog_nonparametric_predict is None:
             exog_nonparametric_predict = self.exog_nonparametric

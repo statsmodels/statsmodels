@@ -541,7 +541,7 @@ class TestReg(MyTest):
         b2 = -0.7
         Y = b1 * C1 + np.exp(b2 * C2) + e
         model = SemiLinear(endog=[Y], exog=[C1], exog_nonparametric=[C2],
-                           var_type='c', l_K=1)
+                           var_type='c', k_linear=1)
         b_hat = np.squeeze(model.b)
         # Only tests for the linear part of the regression
         # Currently doesn't work well with the nonparametric part
