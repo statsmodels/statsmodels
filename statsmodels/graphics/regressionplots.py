@@ -22,7 +22,7 @@ __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog']
 
 
-def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'):
+def plot_fit(res, x_var, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
 
     This creates one graph with the scatterplot of observed values compared to
@@ -32,8 +32,8 @@ def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'
     ----------
     res : result instance
         result instance with resid, model.endog and model.exog as attributes
-    exog_idx : int
-        index of regressor in exog matrix
+    x_var : int or str
+        Name or index of regressor in exog matrix.
     y_true : array_like
         (optional) If this is not None, then the array is added to the plot
     ax : Matplotlib AxesSubplot instance, optional
@@ -53,8 +53,12 @@ def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    if exog_name == '':
-        exog_name = 'variable %d' % exog_idx
+    if isinstance(x_var, int):
+        exog_name = res.model.exog_names[x_var]
+        exog_idx = x_var
+    else:
+        exog_idx = res.model.exog_names.index(x_var)
+        exog_name = x_var
 
     #maybe add option for wendog, wexog
     y = res.model.endog
@@ -63,19 +67,21 @@ def plot_fit(res, exog_idx, exog_name='', y_true=None, ax=None, fontsize='small'
     y = y[x1_argsort]
     x1 = x1[x1_argsort]
 
-    ax.plot(x1, y, 'bo', label='observed')
+    ax.plot(x1, y, 'bo', label=res.model.endog_names)
     if not y_true is None:
-        ax.plot(x1, y_true[x1_argsort], 'b-', label='true')
-        title = 'fitted versus regressor %s' % exog_name
+        ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
+        title = 'fitted versus %s' % exog_name
     else:
-        title = 'fitted versus regressor %s' % exog_name
+        title = 'fitted versus %s' % exog_name
 
     prstd, iv_l, iv_u = wls_prediction_std(res)
-    ax.plot(x1, res.fittedvalues[x1_argsort], 'k-', label='fitted') #'k-o')
+    ax.plot(x1, res.fittedvalues[x1_argsort], 'k-', label='fitted', **kwargs)
+                                                                    #'k-o')
     #ax.plot(x1, iv_u, 'r--')
     #ax.plot(x1, iv_l, 'r--')
-    ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1, color='k')
-    ax.set_title(title, fontsize=fontsize)
+    ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
+                        color='k')
+    ax.set_title(title)
 
     return fig
 
