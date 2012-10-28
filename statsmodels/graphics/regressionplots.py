@@ -22,7 +22,7 @@ __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog']
 
 
-def plot_fit(res, x_var, y_true=None, ax=None, **kwargs):
+def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
 
     This creates one graph with the scatterplot of observed values compared to
@@ -53,12 +53,12 @@ def plot_fit(res, x_var, y_true=None, ax=None, **kwargs):
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    if isinstance(x_var, int):
-        exog_name = res.model.exog_names[x_var]
-        exog_idx = x_var
+    if isinstance(exog_idx, int):
+        exog_name = res.model.exog_names[exog_idx]
+        exog_idx = exog_idx
     else:
-        exog_idx = res.model.exog_names.index(x_var)
-        exog_name = x_var
+        exog_name = exog_idx
+        exog_idx = res.model.exog_names.index(exog_idx)
 
     #maybe add option for wendog, wexog
     y = res.model.endog
