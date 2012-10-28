@@ -1,9 +1,8 @@
 import statsmodels.nonparametric as nparam
-import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import axes3d
 from matplotlib import cm
+from mpl_toolkits.mplot3d import axes3d
 
 
 """
@@ -16,7 +15,7 @@ author: George Panterov
 np.random.seed(123456)
 
 # generate the data
-N = 500
+nobs = 500
 BW = 'cv_ml'
 
 mu1 = [3, 4]
@@ -24,14 +23,14 @@ mu2 = [6, 1]
 cov1 = np.asarray([[1, 0.7], [0.7, 1]])
 cov2 = np.asarray([[1, -0.7], [-0.7, 1]])
 
-ix = np.random.uniform(size=N) > 0.5
-V = np.random.multivariate_normal(mu1, cov1, size=N)
-V[ix, :] = np.random.multivariate_normal(mu2, cov2, size=N)[ix, :]
+ix = np.random.uniform(size=nobs) > 0.5
+V = np.random.multivariate_normal(mu1, cov1, size=nobs)
+V[ix, :] = np.random.multivariate_normal(mu2, cov2, size=nobs)[ix, :]
 
 x = V[:, 0]
 y = V[:, 1]
 
-dens = nparam.KDE(tdat=[x, y], var_type='cc', bw=BW)
+dens = nparam.KDE(data=[x, y], var_type='cc', bw=BW)
 
 supportx = np.linspace(min(x), max(x), 60)
 supporty = np.linspace(min(y), max(y), 60)
