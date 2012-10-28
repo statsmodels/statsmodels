@@ -86,8 +86,6 @@ def plot_fit(res, x_var, y_true=None, ax=None, **kwargs):
     return fig
 
 
-
-
 def plot_regress_exog(res, exog_idx, exog_name='', fig=None):
     """Plot regression results against one regressor.
 
@@ -418,6 +416,7 @@ def plot_ccpr(res, exog_idx=None, grid=None, fig=None):
         plot_ccpr_ax(res, exog_idx=idx, ax=ax)
 
     return fig
+
 
 def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
                 model_results=None, ax=None, **kwargs):
