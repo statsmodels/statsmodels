@@ -29,7 +29,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
     ----------
     h : 1-D ndarray, shape (K,)
         The bandwidths used to estimate the value of the kernel function.
-    Xi : 2-D ndarray of ints, shape (N, K)
+    Xi : 2-D ndarray of ints, shape (nobs, K)
         The value of the training set.
     x: 1-D ndarray, shape (K,)
         The value at which the kernel density is being estimated.
@@ -40,7 +40,7 @@ def aitchison_aitken(h, Xi, x, num_levels=None):
 
     Returns
     -------
-    kernel_value : ndarray, shape (N, K)
+    kernel_value : ndarray, shape (nobs, K)
         The value of the kernel function at each training point for each var.
 
     Notes
@@ -74,14 +74,14 @@ def wang_ryzin(h, Xi, x):
     ----------
     h : scalar or 1-D ndarray, shape (K,)
         The bandwidths used to estimate the value of the kernel function.
-    Xi : ndarray of ints, shape (N, K)
+    Xi : ndarray of ints, shape (nobs, K)
         The value of the training set.
     x : scalar or 1-D ndarray of shape (K,)
         The value at which the kernel density is being estimated.
 
     Returns
     -------
-    kernel_value : ndarray, shape (N, K)
+    kernel_value : ndarray, shape (nobs, K)
         The value of the kernel function at each training point for each var.
 
     Notes
@@ -120,7 +120,7 @@ def gaussian(h, Xi, x):
 
     Returns
     -------
-    kernel_value : ndarray, shape (N, K)
+    kernel_value : ndarray, shape (nobs, K)
         The value of the kernel function at each training point for each var.
 
     """

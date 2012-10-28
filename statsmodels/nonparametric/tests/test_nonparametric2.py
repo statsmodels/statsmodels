@@ -10,14 +10,14 @@ from ..nonparametric2 import EstimatorSettings, SemiLinear
 
 class MyTest(object):
     def setUp(self):
-        N = 60
+        nobs = 60
         np.random.seed(123456)
-        self.o = np.random.binomial(2, 0.7, size=(N, 1))
-        self.o2 = np.random.binomial(3, 0.7, size=(N, 1))
-        self.c1 = np.random.normal(size=(N, 1))
-        self.c2 = np.random.normal(10, 1, size=(N, 1))
-        self.c3 = np.random.normal(10, 2, size=(N, 1))
-        self.noise = np.random.normal(size=(N, 1))
+        self.o = np.random.binomial(2, 0.7, size=(nobs, 1))
+        self.o2 = np.random.binomial(3, 0.7, size=(nobs, 1))
+        self.c1 = np.random.normal(size=(nobs, 1))
+        self.c2 = np.random.normal(10, 1, size=(nobs, 1))
+        self.c3 = np.random.normal(10, 2, size=(nobs, 1))
+        self.noise = np.random.normal(size=(nobs, 1))
         b0 = 0.3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
@@ -63,17 +63,17 @@ class MyTest(object):
     def write2file(self, file_name, data):
         data_file = csv.writer(open(file_name, "w"))
         data = np.column_stack(data)
-        N = max(np.shape(data))
+        nobs = max(np.shape(data))
         K = min(np.shape(data))
-        data = np.reshape(data, (N,K))
-        for i in range(N):
+        data = np.reshape(data, (nobs,K))
+        for i in range(nobs):
             data_file.writerow(list(data[i, :]))
 
 
 class TestKDE(MyTest):
     @dec.slow
     def test_pdf_mixeddata_CV_LS(self):
-        dens_u = nparam.KDE(tdat=[self.c1, self.o, self.o2], var_type='coo',
+        dens_u = nparam.KDE(data=[self.c1, self.o, self.o2], var_type='coo',
                              bw='cv_ls')
         npt.assert_allclose(dens_u.bw, [0.709195, 0.087333, 0.092500],
                             atol=1e-6)
@@ -92,15 +92,15 @@ class TestKDE(MyTest):
         ## r_bw = NP.npudensbw(formula, data=df, bwmethod='cv.ls')
 
     def test_pdf_mixeddata_LS_vs_ML(self):
-        dens_ls = nparam.KDE(tdat=[self.c1, self.o, self.o2], var_type='coo',
+        dens_ls = nparam.KDE(data=[self.c1, self.o, self.o2], var_type='coo',
                              bw='cv_ls')
-        dens_ml = nparam.KDE(tdat=[self.c1, self.o, self.o2], var_type='coo',
+        dens_ml = nparam.KDE(data=[self.c1, self.o, self.o2], var_type='coo',
                              bw='cv_ml')
         npt.assert_allclose(dens_ls.bw, dens_ml.bw, atol=0, rtol=0.5)
 
     def test_pdf_mixeddata_CV_ML(self):
         # Test ML cross-validation
-        dens_ml = nparam.KDE(tdat=[self.c1, self.o, self.c2], var_type='coc',
+        dens_ml = nparam.KDE(data=[self.c1, self.o, self.c2], var_type='coc',
                              bw='cv_ml')
         R_bw = [1.021563, 2.806409e-14, 0.5142077]
         npt.assert_allclose(dens_ml.bw, R_bw, atol=0.1, rtol=0.1)
@@ -108,7 +108,7 @@ class TestKDE(MyTest):
     @dec.slow
     def test_pdf_continuous(self):
         # Test for only continuous data
-        dens = nparam.KDE(tdat=[self.growth, self.Italy_gdp],
+        dens = nparam.KDE(data=[self.growth, self.Italy_gdp],
                             var_type='cc', bw='cv_ls')
         # take the first data points from the training set
         sm_result = np.squeeze(dens.pdf()[0:5])
@@ -126,7 +126,7 @@ class TestKDE(MyTest):
 
     def test_pdf_ordered(self):
         # Test for only ordered data
-        dens = nparam.KDE(tdat=[self.oecd], var_type='o', bw='cv_ls')
+        dens = nparam.KDE(data=[self.oecd], var_type='o', bw='cv_ls')
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [0.7236395, 0.7236395, 0.2763605, 0.2763605, 0.7236395]
         # lower tol here. only 2nd decimal
@@ -134,13 +134,13 @@ class TestKDE(MyTest):
 
     @dec.slow
     def test_unordered_CV_LS(self):
-        dens = nparam.KDE(tdat=[self.growth, self.oecd],
+        dens = nparam.KDE(data=[self.growth, self.oecd],
                            var_type='cu', bw='cv_ls')
         R_result = [0.0052051, 0.05835941]
         npt.assert_allclose(dens.bw, R_result, atol=1e-2)
 
     def test_continuous_cdf(self, edat=None):
-        dens = nparam.KDE(tdat=[self.Italy_gdp, self.growth],
+        dens = nparam.KDE(data=[self.Italy_gdp, self.growth],
                             var_type='cc', bw='cv_ml')
         sm_result = dens.cdf()[0:5]
         R_result = [0.192180770, 0.299505196, 0.557303666,
@@ -148,7 +148,7 @@ class TestKDE(MyTest):
         npt.assert_allclose(sm_result, R_result, atol=1e-3)
 
     def test_mixeddata_cdf(self, edat=None):
-        dens = nparam.KDE(tdat=[self.Italy_gdp, self.oecd], var_type='cu',
+        dens = nparam.KDE(data=[self.Italy_gdp, self.oecd], var_type='cu',
                            bw='cv_ml')
         sm_result = dens.cdf()[0:5]
         R_result = [0.54700010, 0.65907039, 0.89676865, 0.74132941, 0.25291361]
@@ -156,14 +156,14 @@ class TestKDE(MyTest):
 
     @dec.slow
     def test_continuous_cvls_efficient(self):
-        N = 400
+        nobs = 400
         np.random.seed(12345)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2
-        dens_efficient = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ls',
+        dens_efficient = nparam.KDE(data=[Y, C1], var_type='cc', bw='cv_ls',
                 defaults=EstimatorSettings(efficient=True, n_sub=100))
-        #dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ls',
+        #dens = nparam.KDE(data=[Y, C1], var_type='cc', bw='cv_ls',
         #                  defaults=EstimatorSettings(efficient=False))
         #bw = dens.bw
         bw = np.array([0.3404, 0.1666])
@@ -171,17 +171,17 @@ class TestKDE(MyTest):
 
     @dec.slow
     def test_continuous_cvml_efficient(self):
-        N = 400
+        nobs = 400
         np.random.seed(12345)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2
 
-        dens_efficient = nparam.KDE(tdat=[Y, C1],
+        dens_efficient = nparam.KDE(data=[Y, C1],
                                     var_type='cc', bw='cv_ml',
                                     defaults=EstimatorSettings(efficient=True,
                                                          n_sub=100))
-        #dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
+        #dens = nparam.KDE(data=[Y, C1], var_type='cc', bw='cv_ml',
         #                  defaults=EstimatorSettings(efficient=False))
         #bw = dens.bw
         bw = np.array([0.4471, 0.2861])
@@ -189,39 +189,39 @@ class TestKDE(MyTest):
 
     @dec.slow
     def test_efficient_notrandom(self):
-        N = 400
+        nobs = 400
         np.random.seed(12345)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2
 
-        dens_efficient = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml',
+        dens_efficient = nparam.KDE(data=[Y, C1], var_type='cc', bw='cv_ml',
                                     defaults=EstimatorSettings(efficient=True,
                                                          randomize=False,
                                                          n_sub=100))
-        dens = nparam.KDE(tdat=[Y, C1], var_type='cc', bw='cv_ml')
+        dens = nparam.KDE(data=[Y, C1], var_type='cc', bw='cv_ml')
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
 
 
 class TestCKDE(MyTest):
     @dec.slow
     def test_mixeddata_CV_LS(self):
-        dens_ls = nparam.ConditionalKDE(tydat=[self.Italy_gdp],
-                              txdat=[self.Italy_year],
+        dens_ls = nparam.ConditionalKDE(endog=[self.Italy_gdp],
+                              exog=[self.Italy_year],
                               dep_type='c', indep_type='o', bw='cv_ls')
         # Values from the estimation in R with the same data
         npt.assert_allclose(dens_ls.bw, [1.6448, 0.2317373], atol=1e-3)
 
     def test_continuous_CV_ML(self):
-        dens_ml = nparam.ConditionalKDE(tydat=[self.Italy_gdp],
-                               txdat=[self.growth], dep_type='c',
+        dens_ml = nparam.ConditionalKDE(endog=[self.Italy_gdp],
+                               exog=[self.growth], dep_type='c',
                                indep_type='c', bw='cv_ml')
         # Results from R
         npt.assert_allclose(dens_ml.bw, [0.5341164, 0.04510836], atol=1e-3)
 
     @dec.slow
     def test_unordered_CV_LS(self):
-        dens_ls = nparam.ConditionalKDE(tydat=[self.oecd], txdat=[self.growth],
+        dens_ls = nparam.ConditionalKDE(endog=[self.oecd], exog=[self.growth],
                                         dep_type='u', indep_type='c',
                                         bw='cv_ls')
         # TODO: assert missing
@@ -230,7 +230,7 @@ class TestCKDE(MyTest):
         # Hardcode here the bw that will be calculated is we had used
         # ``bw='cv_ml'``.  That calculation is slow, and tested in other tests.
         bw_cv_ml = np.array([0.010043, 12095254.7]) # TODO: odd numbers (?!)
-        dens = nparam.ConditionalKDE(tydat=[self.growth], txdat=[self.Italy_gdp],
+        dens = nparam.ConditionalKDE(endog=[self.growth], exog=[self.Italy_gdp],
                                      dep_type='c', indep_type='c', bw=bw_cv_ml)
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [11.97964, 12.73290, 13.23037, 13.46438, 12.22779]
@@ -238,8 +238,8 @@ class TestCKDE(MyTest):
 
     @dec.slow
     def test_pdf_mixeddata(self):
-        dens = nparam.ConditionalKDE(tydat=[self.Italy_gdp],
-                           txdat=[self.Italy_year], dep_type='c',
+        dens = nparam.ConditionalKDE(endog=[self.Italy_gdp],
+                           exog=[self.Italy_year], dep_type='c',
                            indep_type='o', bw='cv_ls')
         sm_result = np.squeeze(dens.pdf()[0:5])
         R_result = [0.08469226, 0.01737731, 0.05679909, 0.09744726, 0.15086674]
@@ -255,8 +255,8 @@ class TestCKDE(MyTest):
 
     def test_continuous_normal_ref(self):
         # test for normal reference rule of thumb with continuous data
-        dens_nm = nparam.ConditionalKDE(tydat=[self.Italy_gdp],
-                              txdat=[self.growth], dep_type='c',
+        dens_nm = nparam.ConditionalKDE(endog=[self.Italy_gdp],
+                              exog=[self.growth], dep_type='c',
                               indep_type='c', bw='normal_reference')
         sm_result = dens_nm.bw
         R_result = [1.283532, 0.01535401]
@@ -264,8 +264,8 @@ class TestCKDE(MyTest):
         npt.assert_allclose(sm_result, R_result, atol=1e-1)
 
     def test_continuous_cdf(self):
-        dens_nm = nparam.ConditionalKDE(tydat=[self.Italy_gdp],
-                              txdat=[self.growth],
+        dens_nm = nparam.ConditionalKDE(endog=[self.Italy_gdp],
+                              exog=[self.growth],
                               dep_type='c',
                               indep_type='c', bw='normal_reference')
         sm_result = dens_nm.cdf()[0:5]
@@ -274,8 +274,8 @@ class TestCKDE(MyTest):
 
     @dec.slow
     def test_mixeddata_cdf(self):
-        dens = nparam.ConditionalKDE(tydat=[self.Italy_gdp],
-                           txdat=[self.Italy_year],
+        dens = nparam.ConditionalKDE(endog=[self.Italy_gdp],
+                           exog=[self.Italy_year],
                            dep_type='c', indep_type='o', bw='cv_ls')
         sm_result = dens.cdf()[0:5]
         R_result = [0.8118257, 0.9724863, 0.8843773, 0.7720359, 0.4361867]
@@ -283,21 +283,21 @@ class TestCKDE(MyTest):
 
     @dec.slow
     def test_continuous_cvml_efficient(self):
-        N = 500
+        nobs = 500
         np.random.seed(12345)
-        O = np.random.binomial(2, 0.5, size=(N, ))
-        C1 = np.random.normal(size=(N, ))
-        noise = np.random.normal(size=(N, ))
+        O = np.random.binomial(2, 0.5, size=(nobs, ))
+        C1 = np.random.normal(size=(nobs, ))
+        noise = np.random.normal(size=(nobs, ))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         Y = b0+ b1 * C1 + b2*O  + noise
 
-        dens_efficient = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
+        dens_efficient = nparam.ConditionalKDE(endog=[Y], exog=[C1],
                     dep_type='c', indep_type='c', bw='cv_ml',
                     defaults=EstimatorSettings(efficient=True, n_sub=50))
 
-        #dens = nparam.ConditionalKDE(tydat=[Y], txdat=[C1],
+        #dens = nparam.ConditionalKDE(endog=[Y], exog=[C1],
         #                   dep_type='c', indep_type='c', bw='cv_ml')
         #bw = dens.bw
         bw = np.array([0.4516, 0.3413])
@@ -306,7 +306,7 @@ class TestCKDE(MyTest):
 
 class TestReg(MyTest):
     def test_ordered_lc_cvls(self):
-        model = nparam.Reg(tydat=[self.Italy_gdp], txdat=[self.Italy_year],
+        model = nparam.Reg(endog=[self.Italy_gdp], exog=[self.Italy_year],
                            reg_type='lc', var_type='o', bw='cv_ls')
         sm_bw = model.bw
         R_bw = 0.1390096
@@ -329,7 +329,7 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
     def test_continuousdata_lc_cvls(self):
-        model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
+        model = nparam.Reg(endog=[self.y], exog=[self.c1, self.c2],
                            reg_type='lc', var_type='cc', bw='cv_ls')
         # Bandwidth
         sm_bw = model.bw
@@ -348,7 +348,7 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
     def test_continuousdata_ll_cvls(self):
-        model = nparam.Reg(tydat=[self.y], txdat=[self.c1, self.c2],
+        model = nparam.Reg(endog=[self.y], exog=[self.c1, self.c2],
                            reg_type='ll', var_type='cc', bw='cv_ls')
 
         sm_bw = model.bw
@@ -366,19 +366,19 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
     def test_continuous_mfx_ll_cvls(self, file_name='RegData.csv'):
-        N = 200
+        nobs = 200
         np.random.seed(1234)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        noise = np.random.normal(size=(nobs, ))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         b3 = 2.3
         Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
         bw_cv_ls = np.array([0.96075, 0.5682, 0.29835])
-        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+        model = nparam.Reg(endog=[Y], exog=[C1, C2, C3],
                             reg_type='ll', var_type='ccc', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
@@ -386,36 +386,36 @@ class TestReg(MyTest):
         self.write2file(file_name, (Y, C1, C2, C3))
 
     def test_mixed_mfx_ll_cvls(self, file_name='RegData.csv'):
-        N = 200
+        nobs = 200
         np.random.seed(1234)
-        O = np.random.binomial(2, 0.5, size=(N, ))
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        noise = np.random.normal(size=(N, ))
+        O = np.random.binomial(2, 0.5, size=(nobs, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        noise = np.random.normal(size=(nobs, ))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         b3 = 2.3
         Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
         bw_cv_ls = np.array([1.04726, 1.67485, 0.39852])
-        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, O],
+        model = nparam.Reg(endog=[Y], exog=[C1, C2, O],
                             reg_type='ll', var_type='cco', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
         sm_R2 = model.r_squared()  # TODO: add expected result
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
 
     def test_mfx_nonlinear_ll_cvls(self, file_name='RegData.csv'):
-        N = 200
+        nobs = 200
         np.random.seed(1234)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        noise = np.random.normal(size=(nobs, ))
         b0 = 3
         b1 = 1.2
         b3 = 2.3
         Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
-        model = nparam.Reg(tydat=[Y], txdat=[C1, C2, C3],
+        model = nparam.Reg(endog=[Y], exog=[C1, C2, C3],
                             reg_type='ll', var_type='ccc', bw='cv_ls')
         sm_bw = model.bw
         sm_mean, sm_mfx = model.fit()
@@ -430,45 +430,45 @@ class TestReg(MyTest):
 
     @dec.slow
     def test_continuous_cvls_efficient(self):
-        N = 500
+        nobs = 500
         np.random.seed(12345)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
         b0 = 3
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         Y = b0+ b1 * C1 + b2*C2
 
-        model_efficient = nparam.Reg(tydat=[Y], txdat=[C1], reg_type='lc',
+        model_efficient = nparam.Reg(endog=[Y], exog=[C1], reg_type='lc',
                                      var_type='c', bw='cv_ls',
                                      defaults=EstimatorSettings(efficient=True,
                                                           n_sub=100))
 
-        model = nparam.Reg(tydat=[Y], txdat=[C1], reg_type='ll', var_type='c',
+        model = nparam.Reg(endog=[Y], exog=[C1], reg_type='ll', var_type='c',
                            bw='cv_ls')
         npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
 
     @dec.slow
     def test_censored_ll_cvls(self):
-        N = 200
+        nobs = 200
         np.random.seed(1234)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        noise = np.random.normal(size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        noise = np.random.normal(size=(nobs, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
         Y[Y>0] = 0  # censor the data
-        model = nparam.CensoredReg(tydat=[Y], txdat=[C1, C2], reg_type='ll',
+        model = nparam.CensoredReg(endog=[Y], exog=[C1, C2], reg_type='ll',
                                    var_type='cc', bw='cv_ls', censor_val=0)
         sm_mean, sm_mfx = model.fit()
         npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)
 
     @dec.slow
     def test_continuous_lc_aic(self):
-        N = 200
+        nobs = 200
         np.random.seed(1234)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        noise = np.random.normal(size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        noise = np.random.normal(size=(nobs, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
         #self.write2file('RegData.csv', (Y, C1, C2))
 
@@ -477,26 +477,26 @@ class TestReg(MyTest):
         #data <- read.csv('RegData.csv', header=FALSE)
         #bw <- npregbw(formula=data$V1 ~ data$V2 + data$V3,
         #                bwmethod='cv.aic', regtype='lc')
-        model = nparam.Reg(tydat=[Y], txdat=[C1, C2],
+        model = nparam.Reg(endog=[Y], exog=[C1, C2],
                             reg_type='lc', var_type='cc', bw='aic')
         R_bw = [0.4017893, 0.4943397]  # Bandwidth obtained in R
         npt.assert_allclose(model.bw, R_bw, rtol = 1e-3)
 
     @dec.slow
     def test_significance_continuous(self):
-        N = 250
+        nobs = 250
         np.random.seed(12345)
-        C1 = np.random.normal(size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        noise = np.random.normal(size=(nobs, ))
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         Y = b1 * C1 + b2 * C2 + noise
 
         # This is the cv_ls bandwidth estimated earlier
         bw=[11108137.1087194, 1333821.85150218]
-        model = nparam.Reg(tydat=[Y], txdat=[C1, C3],
+        model = nparam.Reg(endog=[Y], exog=[C1, C3],
                            reg_type='ll', var_type='cc', bw=bw)
         nboot = 45  # Number of bootstrap samples
         sig_var12 = model.sig_test([0,1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
@@ -508,12 +508,12 @@ class TestReg(MyTest):
 
     @dec.slow
     def test_significance_discrete(self):
-        N = 200
+        nobs = 200
         np.random.seed(12345)
-        O = np.random.binomial(2, 0.5, size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        C3 = np.random.beta(0.5,0.2, size=(N,))
-        noise = np.random.normal(size=(N, ))
+        O = np.random.binomial(2, 0.5, size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        C3 = np.random.beta(0.5,0.2, size=(nobs,))
+        noise = np.random.normal(size=(nobs, ))
         b1 = 1.2
         b2 = 3.7  # regression coefficients
         Y = b1 * O + b2 * C2 + noise
@@ -521,7 +521,7 @@ class TestReg(MyTest):
         bw= [3.63473198e+00, 1.21404803e+06]
                  # This is the cv_ls bandwidth estimated earlier
         # The cv_ls bandwidth was estimated earlier to save time
-        model = nparam.Reg(tydat=[Y], txdat=[O, C3],
+        model = nparam.Reg(endog=[Y], exog=[O, C3],
                             reg_type='ll', var_type='oc', bw=bw)
         # This was also tested with local constant estimator
         nboot = 45  # Number of bootstrap samples
@@ -532,15 +532,15 @@ class TestReg(MyTest):
 
     @dec.slow
     def test_semi_linear_model(self):
-        N = 300
+        nobs = 300
         np.random.seed(1234)
-        C1 = np.random.normal(0,2, size=(N, ))
-        C2 = np.random.normal(2, 1, size=(N, ))
-        e = np.random.normal(size=(N, ))
+        C1 = np.random.normal(0,2, size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        e = np.random.normal(size=(nobs, ))
         b1 = 1.3
         b2 = -0.7
         Y = b1 * C1 + np.exp(b2 * C2) + e
-        model = SemiLinear(tydat=[Y], txdat=[C1], tzdat=[C2],
+        model = SemiLinear(endog=[Y], exog=[C1], tzdat=[C2],
                            var_type='c', l_K=1)
         b_hat = np.squeeze(model.b)
         # Only tests for the linear part of the regression

@@ -42,10 +42,10 @@ class LeaveOneOut(object):
 
     def __iter__(self):
         X = self.X
-        N, K = np.shape(X)
+        nobs, K = np.shape(X)
 
-        for i in xrange(N):
-            index = np.ones(N, dtype=np.bool)
+        for i in xrange(nobs):
+            index = np.ones(nobs, dtype=np.bool)
             index[i] = False
             yield X[index, :]
 
@@ -58,25 +58,25 @@ def _get_type_pos(var_type):
 
 
 def adjust_shape(dat, K):
-    """ Returns NxK array so that it can be used with gpke()."""
+    """ Returns an array of shape (nobs, K) for use with `gpke`."""
     dat = np.asarray(dat)
     if dat.ndim > 2:
         dat = np.squeeze(dat)
     if dat.ndim == 1 and K > 1:  # one obs many vars
-        N = 1
+        nobs = 1
     elif dat.ndim == 1 and K == 1:  # one obs one var
-        N = len(dat)
+        nobs = len(dat)
     else:
         if np.shape(dat)[0] == K and np.shape(dat)[1] != K:
             dat = dat.T
 
-        N = np.shape(dat)[0]  # ndim >1 so many obs many vars
+        nobs = np.shape(dat)[0]  # ndim >1 so many obs many vars
 
-    dat = np.reshape(dat, (N, K))
+    dat = np.reshape(dat, (nobs, K))
     return dat
 
 
-def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
+def gpke(bw, data, edat, var_type, ckertype='gaussian',
          okertype='wangryzin', ukertype='aitchisonaitken', tosum=True):
     """
     Returns the non-normalized Generalized Product Kernel Estimator
@@ -85,7 +85,7 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
     ----------
     bw: 1-D ndarray
         The user-specified bandwidth parameters.
-    tdat: 1D or 2-D ndarray
+    data: 1D or 2-D ndarray
         The training data.
     edat: 1-D ndarray
         The evaluation points at which the kernel estimation is performed.
@@ -124,14 +124,14 @@ def gpke(bw, tdat, edat, var_type, ckertype='gaussian',
     #Kval = []
     #for ii, vtype in enumerate(var_type):
     #    func = kernel_func[kertypes[vtype]]
-    #    Kval.append(func(bw[ii], tdat[:, ii], edat[ii]))
+    #    Kval.append(func(bw[ii], data[:, ii], edat[ii]))
 
     #Kval = np.column_stack(Kval)
 
-    Kval = np.empty(tdat.shape)
+    Kval = np.empty(data.shape)
     for ii, vtype in enumerate(var_type):
         func = kernel_func[kertypes[vtype]]
-        Kval[:, ii] = func(bw[ii], tdat[:, ii], edat[ii])
+        Kval[:, ii] = func(bw[ii], data[:, ii], edat[ii])
 
     iscontinuous = np.array([c == 'c' for c in var_type])
     dens = Kval.prod(axis=1) / np.prod(bw[iscontinuous])
