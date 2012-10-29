@@ -493,3 +493,90 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
         ax.vline(vert)
     return fig
 
+
+def influence_plot(results, external=True, alpha=.05, criterion="cooks",
+                    size=48, plot_alpha=.75, ax=None, **kwargs):
+    """
+    Plot of influence in regression. Plots studentized resids vs. leverage.
+
+    Parameters
+    ----------
+    results : results instance
+        A fitted model.
+    external : bool
+        Whether to use externally or internally studentized residuals. It is
+        recommended to leave external as True.
+    alpha : float
+        The alpha value to identify large studentized residuals. Large means
+        |resid_studentized| > t.ppf(1-alpha/2, dof=results.df_resid)
+    criterion : str {'DFFITS', 'Cooks'}
+        Which criterion to base the size of the points on. Options are
+        DFFITS or Cook's D.
+    size : float
+        The range of `criterion` is mapped to 10**2 - size**2 in points.
+    plot_alpha : float
+        The `alpha` of the plotted points.
+    ax : matplotlib Axes instance
+        An instance of a matplotlib Axes.
+
+    Returns
+    -------
+    fig : matplotlib figure
+        The matplotlib figure that contains the Axes.
+
+    Notes
+    -----
+    Row labels for the observations in which the leverage, measured by the
+    diagonal of the hat matrix, is high or the residuals are large, as the
+    combination of large residuals and a high influence value indicates an
+    influence point. The value of large residuals can be controlled using the
+    `alpha` parameter. Large leverage points are identified as
+    hat_i > 2 * (df_model + 1)/nobs.
+    """
+    fig, ax = utils.create_mpl_ax(ax)
+
+    infl = results.get_influence()
+
+    if criterion.lower().startswith('dff'):
+        psize = infl.cooks_distance[0]
+    elif criterion.lower().startswith('coo'):
+        psize = np.abs(infl.dffits[0])
+    else:
+        raise ValueError("Criterion %s not understood" % criterion)
+
+    # scale the variables
+    #TODO: what is the correct scaling and the assumption here?
+    #we want plots to be comparable across different plots
+    #so we would need to use the expected distribution of criterion probably
+    old_range = np.ptp(psize)
+    new_range = size**2 - 8**2
+
+    psize = (psize - psize.min()) * new_range/old_range + 8**2
+
+    leverage = infl.hat_matrix_diag
+    if external:
+        resids = infl.resid_studentized_external
+    else:
+        resids = infl.resid_studentized_internal
+
+    from scipy import stats
+
+    cutoff = stats.t.ppf(1.-alpha/2, results.df_resid)
+    large_resid = np.abs(resids) > cutoff
+    large_leverage = leverage > 2 * (results.df_model + 1)/results.nobs
+    large_points = np.logical_or(large_resid, large_leverage)
+
+    ax.scatter(leverage, resids, s=psize, alpha=plot_alpha)
+    for idx in np.where(large_points)[0]:
+        point_label = results.model.data.row_labels[idx]
+        ax.annotate(point_label, (leverage[idx], resids[idx]),
+                xytext=(-(psize[idx]/2)**.5, (psize[idx]/2)**.5),
+                textcoords="offset points", size="x-large")
+
+    #TODO: make configurable or let people do it ex-post?
+    font = {"fontsize" : 16, "color" : "black"}
+    ax.set_ylabel("Studentized Residuals", **font)
+    ax.set_xlabel("H Leverage", **font)
+    ax.set_title("Influence Plot", **font)
+    return fig
+
