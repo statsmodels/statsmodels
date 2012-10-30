@@ -259,7 +259,7 @@ class ModelData(object):
 
 class PatsyData(ModelData):
     def _get_names(self, arr):
-        return arr.column_info.column_names
+        return arr.design_info.column_names
 
 class PandasData(ModelData):
     """
