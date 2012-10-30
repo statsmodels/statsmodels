@@ -26,6 +26,7 @@ def _high_leverage(results):
     #TODO: replace 1 with k_constant
     return 2. * (results.df_model + 1)/results.nobs
 
+
 def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
 
@@ -146,11 +147,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
 
     fig.suptitle('Regression Plots for %s' % exog_name, fontsize="large")
 
-    import matplotlib as mpl
-    if mpl.__version__ >= '1.1':
-        # The tight_layout feature is not available before version 1.1
-        # It automatically pads the figure so labels do not get clipped.
-        fig.tight_layout()
+    fig = utils.maybe_tight_layout(fig)
 
     fig.subplots_adjust(top=.90)
     return fig
@@ -392,11 +389,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     fig.suptitle("Partial Regression Plot", fontsize="large")
 
-    import matplotlib as mpl
-    if mpl.__version__ >= '1.1':
-        # The tight_layout feature is not available before version 1.1
-        # It automatically pads the figure so labels do not get clipped.
-        fig.tight_layout()
+    fig = utils.maybe_tight_layout(fig)
 
     fig.subplots_adjust(top=.95)
     return fig
@@ -521,11 +514,7 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     fig.suptitle("Component-Component Plus Residual Plot", fontsize="large")
 
-    import matplotlib as mpl
-    if mpl.__version__ >= '1.1':
-        # The tight_layout feature is not available before version 1.1
-        # It automatically pads the figure so labels do not get clipped.
-        fig.tight_layout()
+    fig = utils.maybe_tight_layout(fig)
 
     fig.subplots_adjust(top=.95)
     return fig
