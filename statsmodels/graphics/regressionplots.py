@@ -188,7 +188,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
        arbitrary translations as with a formula.
     exog_i : ndarray or string
         exogenous, explanatory variable. If string is given, you can use a
-       arbitrary translations as with a formula.
+        arbitrary translations as with a formula.
     exog_others : ndarray or list of strings
         other exogenous, explanatory variables. If a list of strings is given,
         each item is a term in formula. You can use a arbitrary translations
@@ -392,7 +392,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     return fig
 
 
-def plot_ccpr(results, exog_idx=None, ax=None):
+def plot_ccpr(results, exog_idx, ax=None):
     """Plot CCPR against one regressor.
 
     Generates a CCPR (component and component-plus-residual) plot.
@@ -400,11 +400,12 @@ def plot_ccpr(results, exog_idx=None, ax=None):
     Parameters
     ----------
     results : result instance
-        uses exog and params of the result instance
-    exog_idx : int
-        (column) index of the exog used in the plot
+        A regression results instance.
+    exog_i : ndarray or string
+        Exogenous, explanatory variable. If string is given, you can use a
+        arbitrary translations as with a formula.
     ax : Matplotlib AxesSubplot instance, optional
-        If given, this subplot is used to plot in instead of a new figure being
+        If given, it is used to plot in instead of a new figure being
         created.
 
     Returns
@@ -420,24 +421,28 @@ def plot_ccpr(results, exog_idx=None, ax=None):
     References
     ----------
     http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
-
     """
     fig, ax = utils.create_mpl_ax(ax)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
-    x1 = results.model.exog[:,exog_idx]
+    x1 = results.model.exog[:, exog_idx]
     #namestr = ' for %s' % self.name if self.name else ''
-    x1beta = x1*results.params[exog_idx]
+    x1beta = x1*results._results.params[exog_idx]
     ax.plot(x1, x1beta + results.resid, 'o')
-    ax.plot(x1, x1beta, '-')
-    ax.set_title('X_%d beta_%d plus residuals vs. exog (CCPR)' % (
-                                                        exog_name, exog_idx))
+    from statsmodels.tools.tools import add_constant
+    mod = OLS(x1beta, add_constant(x1, prepend=True)).fit()
+    params = mod.params
+    fig = abline_plot(*params, ax=ax)
+    #ax.plot(x1, x1beta, '-')
+    ax.set_title('Component and component plus residual plot')
+    ax.set_ylabel("Residual + %s*beta_%d" % (exog_name, exog_idx))
+    ax.set_xlabel("%s" % exog_name)
 
     return fig
 
 
-def plot_ccpr_grid(res, exog_idx=None, grid=None, fig=None):
+def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
     """Generate CCPR plots against a set of regressors, plot in a grid.
 
     Generates a grid of CCPR (component and component-plus-residual) plots.
@@ -479,9 +484,10 @@ def plot_ccpr_grid(res, exog_idx=None, grid=None, fig=None):
     References
     ----------
     See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
-
     """
     fig = utils.create_mpl_fig(fig)
+
+    exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     if grid is not None:
         nrows, ncols = grid
@@ -493,10 +499,25 @@ def plot_ccpr_grid(res, exog_idx=None, grid=None, fig=None):
             nrows = len(exog_idx)
             ncols = 1
 
+    seen_constant = 0
     for i, idx in enumerate(exog_idx):
-        ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_ccpr(results, exog_idx=idx, ax=ax)
+        if results.model.exog[:,idx].var() == 0:
+            seen_constant = 1
+            continue
 
+        ax = fig.add_subplot(nrows, ncols, i+1-seen_constant)
+        fig = plot_ccpr(results, exog_idx=idx, ax=ax)
+        ax.set_title("")
+
+    fig.suptitle("Component-Component Plus Residual Plot", fontsize="large")
+
+    import matplotlib as mpl
+    if mpl.__version__ >= '1.1':
+        # The tight_layout feature is not available before version 1.1
+        # It automatically pads the figure so labels do not get clipped.
+        fig.tight_layout()
+
+    fig.subplots_adjust(top=.95)
     return fig
 
 
