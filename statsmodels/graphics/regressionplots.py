@@ -126,7 +126,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, results.resid, 'o')
     ax.axhline(y=0, color='black')
-    ax.set_title('residuals versus exog', fontsize='large')# + namestr)
+    ax.set_title('Residuals versus exog', fontsize='large')# + namestr)
     ax.set_xlabel(exog_name)
     ax.set_ylabel("resid")
 
