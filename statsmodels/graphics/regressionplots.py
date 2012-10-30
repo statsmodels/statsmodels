@@ -731,6 +731,11 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
         The keywords to pass to annotate for the labels.
     ax : Axes instance
         Matplotlib Axes instance
+
+    Returns
+    -------
+    fig : matplotlib Figure
+        A matplotlib figure instance.
     """
     from scipy.stats import zscore, norm, t
     fig, ax = utils.create_mpl_ax(ax)
