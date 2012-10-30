@@ -49,11 +49,6 @@ def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
-
-    Notes
-    -----
-    This is currently very simple, no options or varnames yet.
-
     """
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -105,11 +100,6 @@ def plot_regress_exog(results, exog_idx, fig=None):
     Returns
     -------
     fig : matplotlib figure instance
-
-    Notes
-    -----
-    This is currently very simple, no options or varnames yet.
-
     """
 
     fig = utils.create_mpl_fig(fig)
@@ -117,32 +107,49 @@ def plot_regress_exog(results, exog_idx, fig=None):
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     #maybe add option for wendog, wexog
-    #y = res.endog
+    y_name = results.model.endog_names
     x1 = results.model.exog[:,exog_idx]
 
     ax = fig.add_subplot(2,2,1)
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, results.model.endog, 'o')
-    ax.set_title('endog versus exog', fontsize='small')# + namestr)
+    ax.set_title('Y vs. X', fontsize='large')
+    ax.set_xlabel(exog_name)
+    ax.set_ylabel(y_name)
+
+    # + namestr)
 
     ax = fig.add_subplot(2,2,2)
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, results.resid, 'o')
-    ax.axhline(y=0)
-    ax.set_title('residuals versus exog', fontsize='small')# + namestr)
+    ax.axhline(y=0, color='black')
+    ax.set_title('residuals versus exog', fontsize='large')# + namestr)
+    ax.set_xlabel(exog_name)
+    ax.set_ylabel("resid")
 
     ax = fig.add_subplot(2,2,3)
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, results.fittedvalues, 'o')
-    ax.set_title('Fitted versus exog', fontsize='small')# + namestr)
+    ax.set_title('Fitted values versus X', fontsize='large')# + namestr)
+    ax.set_ylabel("Fitted values")
+    ax.set_xlabel(exog_name)
 
     ax = fig.add_subplot(2,2,4)
     #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, results.fittedvalues + results.resid, 'o')
-    ax.set_title('Fitted plus residuals versus exog', fontsize='small')# + namestr)
+    ax.set_title('Fitted plus residuals versus X', fontsize='large')
+    ax.set_xlabel(exog_name)
+    ax.set_ylabel("Fitted values + resids")
 
-    fig.suptitle('Regression Plots for %s' % exog_name)
+    fig.suptitle('Regression Plots for %s' % exog_name, fontsize="large")
 
+    import matplotlib as mpl
+    if mpl.__version__ >= '1.1':
+        # The tight_layout feature is not available before version 1.1
+        # It automatically pads the figure so labels do not get clipped.
+        fig.tight_layout()
+
+    fig.subplots_adjust(top=.90)
     return fig
 
 
