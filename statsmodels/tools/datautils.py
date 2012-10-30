@@ -52,7 +52,8 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
 
     return dataset
 
-def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None):
+def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None,
+                            index_idx=None):
     from pandas import DataFrame
 
     data = DataFrame(data, dtype=dtype)
@@ -74,6 +75,12 @@ def process_recarray_pandas(data, endog_idx=0, exog_idx=None, dtype=None):
             exog = data.filter([names[exog_idx]])
         else:
             exog = data.filter(names[exog_idx])
+
+    if index_idx is not None: #NOTE: will have to be improved for dates
+        from pandas import Index
+        endog.index = Index(data.ix[:, index_idx])
+        exog.index = Index(data.ix[:, index_idx])
+        data = data.set_index(names[index_idx])
 
     exog_name = list(exog.columns)
     dataset = Dataset(data=data, names=list(names), endog=endog, exog=exog,
