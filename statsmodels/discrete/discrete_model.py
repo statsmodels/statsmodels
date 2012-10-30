@@ -38,7 +38,6 @@ try:
 except ImportError:
     have_cvxopt = False
 
-import pdb  # pdb.set_trace
 
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
@@ -115,8 +114,8 @@ class DiscreteModel(base.LikelihoodModel):
         The regularization method AND the solver used is determined by the
         argument method.
 
-        Parameters (also present in LikelihoodModel.fit)
-        ----------
+        Parameters 
+        -----------
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
@@ -140,10 +139,6 @@ class DiscreteModel(base.LikelihoodModel):
         retall : bool
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
-
-
-        fit_regularized Specific Parameters
-        ------------------
         alpha : non-negative scalar or numpy array (same size as parameters)
             The weight multiplying the l1 penalty term
         trim_mode : 'auto, 'size', or 'off'
@@ -156,27 +151,50 @@ class DiscreteModel(base.LikelihoodModel):
         auto_trim_tol : float
             For sue when trim_mode == 'auto'.  Use
         qc_tol : float
-            Print warning and don't allow auto trim when (ii) in "Theory" (above)
-            is violated by this much.
+            Print warning and don't allow auto trim when (ii) (above) is
+            violated by this much.
         qc_verbose : Boolean
             If true, print out a full QC report upon failure
 
+        Other Parameters
+        ----------------
+        Additional solver-specific arguments
+
+        'l1'
+            acc : float (default 1e-6)
+                Requested accuracy as used by slsqp
+        'l1_cvxopt_cp'
+            abstol : float
+                absolute accuracy (default: 1e-7).
+            reltol : float
+                relative accuracy (default: 1e-6).
+            feastol : float
+                tolerance for feasibility conditions (default: 1e-7).
+            refinement : int
+                number of iterative refinement steps when solving KKT
+                equations (default: 1).
+
         Notes
         -----
-        Additional solver-specific arguments
-            'l1'
-                acc : float (default 1e-6)
-                    Requested accuracy as used by slsqp
-            'l1_cvxopt_cp'
-                abstol : float
-                    absolute accuracy (default: 1e-7).
-                reltol : float
-                    relative accuracy (default: 1e-6).
-                feastol : float
-                    tolerance for feasibility conditions (default: 1e-7).
-                refinement : int
-                    number of iterative refinement steps when solving KKT
-                    equations (default: 1).
+        With :math:`L` the negative log likelihood, we solve the convex but
+        non-smooth problem
+
+        .. math:: \\min_\\beta L(\\beta) + \\sum_k\\alpha_k |\\beta_k|
+
+        via the transformation to the smooth, convex, constrained problem in twice
+        as many variables (adding the "added variables" :math:`u_k`)
+
+        .. math:: \\min_{\\beta,u} L(\\beta) + \\sum_k\\alpha_k u_k,
+
+        subject to
+
+        .. math:: -u_k \\leq \\beta_k \\leq u_k.
+
+        With :math:`\\partial_k L` the derivative of :math:`L` in the 
+        :math:`k^{th}` parameter direction, theory dictates that, at the
+        minimum, exactly one of two conditions holds:
+            i) :math:`|\\partial_k| = \\alpha_k`  and  :math:`\\alpha_k \\neq 0`
+            ii) :math:`|\\partial_k| \\leq \\alpha_k`  and  :math:`\\alpha_k = 0`
         """
         ### Set attributes based on method
         if method in ['l1', 'l1_cvxopt_cp']:

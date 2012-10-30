@@ -15,24 +15,22 @@ def fit_l1_slsqp(
     """
     Solve the l1 regularized problem using scipy.optimize.fmin_slsqp().
 
-    Specifically:  We solve the convex but non-smooth problem
-    .. math:: \\min_\\beta f(\\beta) + \\sum_k\\alpha_k |\\beta_k|
-    via the transformation to the smooth, convex, constrained problem in twice
-    as many variables (adding the "added variables" u_k)
-    .. math:: \\min_{\\beta,u} f(\\beta) + \\sum_k\\alpha_k u_k,
-    subject to
-    .. math:: -u_k \\leq \\beta_k \\leq u_k.
+    Specifically:  We convert the convex but non-smooth problem
 
-    Theory dictates that, at the minimum, one of two conditions holds:
-        i) abs(score[i]) == alpha[i]  and  params[i] != 0
-        ii) abs(score[i]) <= alpha[i]  and  params[i] == 0
+    .. math:: \\min_\\beta f(\\beta) + \\sum_k\\alpha_k |\\beta_k|
+
+    via the transformation to the smooth, convex, constrained problem in twice
+    as many variables (adding the "added variables" :math:`u_k`)
+
+    .. math:: \\min_{\\beta,u} f(\\beta) + \\sum_k\\alpha_k u_k,
+
+    subject to
+
+    .. math:: -u_k \\leq \\beta_k \\leq u_k.
 
     Parameters
     ----------
     All the usual parameters from LikelhoodModel.fit
-
-    Special kwargs
-    ------------------
     alpha : non-negative scalar or numpy array (same size as parameters)
         The weight multiplying the l1 penalty term
     trim_mode : 'auto, 'size', or 'off'

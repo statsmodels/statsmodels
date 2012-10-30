@@ -28,8 +28,11 @@ logit_margeff = logit_res.get_margeff(method='dydx', at='overall')
 print logit_margeff.summary()
 
 #l1 regularized logit
-#-----------
+#--------------------
+# The regularization parameter alpha should be a scalar or have the same shape
+# as results.params
 alpha = 0.1 * len(spector_data.endog) * np.ones(spector_data.exog.shape[1])
+# Choose not to regularize the constant
 alpha[-1] = 0
 logit_l1_res = logit_mod.fit_regularized(method='l1', alpha=alpha)
 print logit_l1_res.summary()
@@ -67,8 +70,11 @@ mlogit_margeff = mlogit_res.get_margeff()
 print mlogit_margeff.summary()
 
 #l1 regularized Multinomial Logit
-#-----------------
-alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
+#--------------------------------
+# The regularization parameter alpha should be a scalar or have the same shape as
+# as results.params
+alpha = 10 * np.ones((mlogit_mod.K, mlogit_mod.J - 1))
+# Choose not to regularize the constant
 alpha[-1,:] = 0
 mlogit_mod2 = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_l1_res = mlogit_mod2.fit_regularized(method='l1', alpha=alpha)
