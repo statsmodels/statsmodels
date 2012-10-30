@@ -53,7 +53,7 @@ def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
+    exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     #maybe add option for wendog, wexog
     y = res.model.endog
@@ -110,7 +110,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
 
     fig = utils.create_mpl_fig(fig)
 
-    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
+    exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     #maybe add option for wendog, wexog
     #y = res.endog
@@ -172,47 +172,131 @@ def _partial_regression(endog, exog_i, exog_others):
     return res1c, (res1a, res1b)
 
 
-def plot_partregress(endog, exog_i, exog_others, title_fontsize=None,
-                        ax=None):
+def plot_partregress(endog, exog_i, exog_others, data=None,
+                     title_kwargs={}, obs_labels=True, label_kwargs={},
+                     ax=None, ret_coords=False, **kwargs):
     """Plot partial regression for a single regressor.
 
     Parameters
     ----------
-    endog : ndarray
-       endogenous or response variable
-    exog_i : ndarray
-        exogenous, explanatory variable
-    exog_others : ndarray
-        other exogenous, explanatory variables, the effect of these variables
-        will be removed by OLS regression
+    endog : ndarray or string
+       endogenous or response variable. If string is given, you can use a
+       arbitrary translations as with a formula.
+    exog_i : ndarray or string
+        exogenous, explanatory variable. If string is given, you can use a
+       arbitrary translations as with a formula.
+    exog_others : ndarray or list of strings
+        other exogenous, explanatory variables. If a list of strings is given,
+        each item is a term in formula. You can use a arbitrary translations
+        as with a formula. The effect of these variables will be removed by
+        OLS regression.
+    data : DataFrame, dict, or recarray
+        Some kind of data structure with names if the other variables are
+        given as strings.
+    title_kwargs : dict
+        Keyword arguments to pass on for the title. The key to control the
+        fonts is fontdict.
+    obs_labels : bool or array-like
+        Whether or not to annotate the plot points with their observation
+        labels. If obs_labels is a boolean, the point labels will try to do
+        the right thing. First it will try to use the index of data, then
+        fall back to the index of exog_i. Alternatively, you may give an
+        array-like object corresponding to the obseveration numbers.
+    labels_kwargs : dict
+        Keyword arguments that control annotate for the observation labels.
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+    ret_coords : bool
+        If True will return the coordinates of the points in the plot. You
+        can use this to add your own annotations.
+    kwargs
+        The keyword arguments passed to plot for the points.
 
     Returns
     -------
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
+    coords : list, optional
+        If ret_coords is True, return a tuple of arrays (x_coords, y_coords).
+
+    Notes
+    -----
+    The slope of the fitted line is the that of `exog_i` in the full
+    multiple regression. The individual points can be used to assess the
+    influence of points on the estimated coefficient.
 
     See Also
     --------
-    plot_partregress : Plot partial regression for a set of regressors.
-
+    plot_partregress_grid : Plot partial regression for a set of regressors.
     """
+    #NOTE: there is no interaction between possible missing data and
+    #obs_labels yet, so this will need to be tweaked a bit for this case
     fig, ax = utils.create_mpl_ax(ax)
 
-    varname = util.get_data_names(exog_i)
+    if (isinstance(endog, basestring) or isinstance(exog_others,
+                                                   (basestring, list)) or
+        isinstance(exog_i, basestring)):
+        from patsy import dmatrix
 
-    res1a = OLS(endog, exog_others).fit()
-    res1b = OLS(exog_i, exog_others).fit()
-    ax.plot(res1b.resid, res1a.resid, 'o')
-    res1c = OLS(res1a.resid, res1b.resid).fit()
-    ax.plot(res1b.resid, res1c.fittedvalues, '-', color='k')
-    ax.set_title('Partial Regression Plot %s' % varname,
-                 fontsize=title_fontsize)# + namestr)
+    # strings, use patsy to transform to data
+    if isinstance(endog, basestring):
+        endog = dmatrix(endog + "-1", data)
 
-    return fig
+    if isinstance(exog_others, basestring):
+        RHS = dmatrix(RHS, data)
+    elif isinstance(exog_others, list):
+        RHS = "+".join(exog_others)
+        RHS = dmatrix(RHS, data)
+    else:
+        RHS = exog_others
+
+    if isinstance(exog_i, basestring):
+        varname = exog_i
+        exog_i = dmatrix(exog_i + "-1", data)
+
+    # all arrays or pandas-like
+    res_yaxis = OLS(endog, RHS).fit()
+    res_xaxis = OLS(exog_i, RHS).fit()
+
+    ax.plot(res_xaxis.resid, res_yaxis.resid, 'o', **kwargs)
+    fitted_line = OLS(res_yaxis.resid, res_xaxis.resid).fit()
+    fig = abline_plot(0, fitted_line.params[0], color='k', ax=ax)
+    ax.set_xlabel("e(%s | X)" % res_xaxis.model.endog_names)
+    ax.set_ylabel("e(%s | X)" % res_yaxis.model.endog_names)
+    ax.set_title('Partial Regression Plot', **title_kwargs)
+
+    #NOTE: if we want to get super fancy, we could annotate if a point is
+    #clicked using this widget
+    #http://stackoverflow.com/questions/4652439/
+    #is-there-a-matplotlib-equivalent-of-matlabs-datacursormode/
+    #4674445#4674445
+    if obs_labels is True:
+        if data is not None:
+            obs_labels = data.index
+        elif hasattr(exog_i, "index"):
+            obs_labels = exog_i.index
+        else:
+            obs_labels = res_xaxis.model.data.row_labels
+        #NOTE: row_labels can be None.
+        #Maybe we should fix this to never be the case.
+        if obs_labels is None:
+            obs_labels = range(len(exog_i))
+
+    if obs_labels is not False: # could be array-like
+        if len(obs_labels) != len(exog_i):
+            raise ValueError("obs_labels does not match length of exog_i")
+        for i, label in enumerate(obs_labels):
+            ax.annotate(str(label), (res_xaxis.resid[i], res_yaxis.resid[i]),
+                        (0, 5), textcoords="offset points",
+                        ha="center", va="bottom", fontsize="x-large",
+                        **label_kwargs)
+
+    if ret_coords:
+        return fig, (res_axis.resid, res_yaxis.resid)
+    else:
+        return fig
 
 
 def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
@@ -254,12 +338,13 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     See http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/partregr.htm
 
     """
+    import pandas
     fig = utils.create_mpl_fig(fig)
 
-    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
+    exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     #maybe add option for using wendog, wexog instead
-    y = results.model.endog
+    y = pandas.Series(results.model.endog, name=results.model.endog_names)
     exog = results.model.exog
 
     k_vars = exog.shape[1]
@@ -271,19 +356,27 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
         if len(exog_idx) > 2:
             nrows = int(np.ceil(len(exog_idx)/2.))
             ncols = 2
-            title_fontsize = 'small'
+            title_kwargs = {"fontdict" : {"fontsize" : 'small'}}
         else:
             nrows = len(exog_idx)
             ncols = 1
-            title_fontsize = None
+            title_kwargs = {}
 
+    # for indexing purposes
+    other_names = np.array(results.model.exog_names)
     for i,idx in enumerate(exog_idx):
         others = range(k_vars)
         others.pop(idx)
-        exog_others = exog[:, others]
+        exog_others = pandas.DataFrame(exog[:, others],
+                                       columns=other_names[others])
         ax = fig.add_subplot(nrows, ncols, i+1)
-        plot_partregress(y, exog[:, idx], exog_others, ax=ax,
-                               varname=exog_idx[i])
+        plot_partregress(y, pandas.Series(exog[:, idx],
+                                          name=other_names[idx]),
+                         exog_others, ax=ax, title_kwargs=title_kwargs,
+                         obs_labels=False)
+        ax.set_title("")
+
+    fig.suptitle("Partial Regression Plot", fontsize="large")
 
     import matplotlib as mpl
     if mpl.__version__ >= '1.1':
@@ -291,6 +384,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
         # It automatically pads the figure so labels do not get clipped.
         fig.tight_layout()
 
+    fig.subplots_adjust(top=.95)
     return fig
 
 
@@ -326,7 +420,7 @@ def plot_ccpr(results, exog_idx=None, ax=None):
     """
     fig, ax = utils.create_mpl_ax(ax)
 
-    exog_name, exog_idx = util.maybe_name_or_idx(exog_idx, results.model)
+    exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     x1 = results.model.exog[:,exog_idx]
     #namestr = ' for %s' % self.name if self.name else ''
@@ -480,6 +574,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
             y = [x[0]*slope+intercept, x[1]*slope+intercept]
             abline.set_data(x,y)
             ax.figure.canvas.draw()
+    #TODO: how to intercept something like a margins call and adjust?
 
     line = ABLine2D(x, data_y, **kwargs)
     ax.add_line(line)
