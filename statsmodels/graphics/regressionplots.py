@@ -26,7 +26,7 @@ def _high_leverage(results):
     #TODO: replace 1 with k_constant
     return 2. * (results.df_model + 1)/results.nobs
 
-def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
+def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
 
     This creates one graph with the scatterplot of observed values compared to
@@ -34,7 +34,7 @@ def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
 
     Parameters
     ----------
-    res : result instance
+    results : result instance
         result instance with resid, model.endog and model.exog as attributes
     x_var : int or str
         Name or index of regressor in exog matrix.
@@ -43,6 +43,9 @@ def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
         created.
+    kwargs
+        The keyword arguments are passed to the plot command for the fitted
+        values line.
 
     Returns
     -------
@@ -55,27 +58,27 @@ def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
 
     #maybe add option for wendog, wexog
-    y = res.model.endog
-    x1 = res.model.exog[:, exog_idx]
+    y = results.model.endog
+    x1 = results.model.exog[:, exog_idx]
     x1_argsort = np.argsort(x1)
     y = y[x1_argsort]
     x1 = x1[x1_argsort]
 
-    ax.plot(x1, y, 'bo', label=res.model.endog_names)
+    ax.plot(x1, y, 'bo', label=results.model.endog_names)
     if not y_true is None:
         ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
-        title = 'fitted versus %s' % exog_name
-    else:
-        title = 'fitted versus %s' % exog_name
+    title = 'Fitted values versus %s' % exog_name
 
-    prstd, iv_l, iv_u = wls_prediction_std(res)
-    ax.plot(x1, res.fittedvalues[x1_argsort], 'k-', label='fitted', **kwargs)
+    prstd, iv_l, iv_u = wls_prediction_std(results)
+    ax.plot(x1, results.fittedvalues[x1_argsort], 'k-', label='fitted',
+            **kwargs)
                                                                     #'k-o')
-    #ax.plot(x1, iv_u, 'r--')
-    #ax.plot(x1, iv_l, 'r--')
     ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
                         color='k')
     ax.set_title(title)
+    ax.set_xlabel(exog_name)
+    ax.set_ylabel(results.model.endog_names)
+    ax.legend(loc='best')
 
     return fig
 
