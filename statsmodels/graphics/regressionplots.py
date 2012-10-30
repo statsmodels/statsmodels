@@ -21,6 +21,10 @@ from statsmodels.graphics import utils
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog']
 
+#TODO: consider moving to influence module
+def _high_leverage(results):
+    #TODO: replace 1 with k_constant
+    return 2. * (results.df_model + 1)/results.nobs
 
 def plot_fit(res, exog_idx, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
@@ -287,11 +291,11 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     if obs_labels is not False: # could be array-like
         if len(obs_labels) != len(exog_i):
             raise ValueError("obs_labels does not match length of exog_i")
-        for i, label in enumerate(obs_labels):
-            ax.annotate(str(label), (res_xaxis.resid[i], res_yaxis.resid[i]),
-                        (0, 5), textcoords="offset points",
-                        ha="center", va="bottom", fontsize="x-large",
-                        **label_kwargs)
+        label_kwargs.update(dict(ha="center", va="bottom"))
+        ax = utils.annotate_axes(range(len(obs_labels)), obs_labels,
+                            zip(res_xaxis.resid, res_yaxis.resid),
+                            [(0, 5)] * len(obs_labels), "x-large", ax=ax,
+                            **label_kwargs)
 
     if ret_coords:
         return fig, (res_axis.resid, res_yaxis.resid)
@@ -658,15 +662,19 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
 
     cutoff = stats.t.ppf(1.-alpha/2, results.df_resid)
     large_resid = np.abs(resids) > cutoff
-    large_leverage = leverage > 2 * (results.df_model + 1)/results.nobs
+    large_leverage = leverage > _high_leverage(results)
     large_points = np.logical_or(large_resid, large_leverage)
 
     ax.scatter(leverage, resids, s=psize, alpha=plot_alpha)
-    for idx in np.where(large_points)[0]:
-        point_label = results.model.data.row_labels[idx]
-        ax.annotate(point_label, (leverage[idx], resids[idx]),
-                xytext=(-(psize[idx]/2)**.5, (psize[idx]/2)**.5),
-                textcoords="offset points", size="x-large")
+
+    # add point labels
+    labels = results.model.data.row_labels
+    if labels is None:
+        labels = range(len(resids))
+    ax = utils.annotate_axes(np.where(large_points)[0], labels,
+                             zip(leverage, resids),
+                             zip(-(psize/2)**.5, (psize/2)**.5), "x-large",
+                             ax)
 
     #TODO: make configurable or let people do it ex-post?
     font = {"fontsize" : 16, "color" : "black"}
@@ -675,3 +683,45 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
     ax.set_title("Influence Plot", **font)
     return fig
 
+
+def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
+                         **kwargs):
+    """
+    Plots leverage statistics vs. normalized residuals squared
+
+    Parameters
+    ----------
+    results : results instance
+        A regression results instance
+    alpha : float
+        Specifies the cut-off for large-standardized residuals. Residuals
+        are assumed to be distributed N(0, 1) with alpha=alpha.
+    label_kwargs : dict
+        The keywords to pass to annotate for the labels.
+    ax : Axes instance
+        Matplotlib Axes instance
+    """
+    from scipy.stats import zscore, norm, t
+    fig, ax = utils.create_mpl_ax(ax)
+
+    infl = results.get_influence()
+    leverage = infl.hat_matrix_diag
+    resid = zscore(results.resid)
+    ax.plot(resid**2, leverage, 'o', **kwargs)
+    ax.set_xlabel("Normalized residuals**2")
+    ax.set_ylabel("Leverage")
+    ax.set_title("Leverage vs. Normalized residuals squared")
+
+    large_leverage = leverage > _high_leverage(results)
+    #norm or t here if standardized?
+    cutoff = norm.ppf(1.-alpha/2)
+    large_resid = np.abs(resid) > cutoff
+    labels = results.model.data.row_labels
+    if labels is None:
+        labels = range(results.nobs)
+    index = np.where(np.logical_or(large_leverage, large_resid))[0]
+    ax = utils.annotate_axes(index, labels, zip(resid**2, leverage),
+                             [(0, 5)]*int(results.nobs), "large",
+                             ax=ax, ha="center", va="bottom")
+    ax.margins(.075, .075)
+    return fig
