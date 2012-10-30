@@ -421,6 +421,17 @@ def plot_ccpr(results, exog_idx, ax=None):
     --------
     plot_ccpr : Creates CCPR plot for multiple regressors in a plot grid.
 
+    Notes
+    -----
+    The CCPR plot provides a way to judge the effect of one regressor on the
+    response variable by taking into account the effects of the other
+    independent variables. The partial residuals plot is defined as
+    Residuals + B_i*X_i versus X_i. The component adds the B_i*X_i versus
+    X_i to show where the fitted line would lie. Care should be taken if X_i
+    is highly correlated with any of the other independent variables. If this
+    is the case, the variance evident in the plot will be an underestimate of
+    the true variance.
+
     References
     ----------
     http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/ccpr.htm
