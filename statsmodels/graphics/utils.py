@@ -110,8 +110,8 @@ def maybe_name_or_idx(idx, model):
             exog_name.append(exog_name_item)
             exog_idx.append(exog_idx_item)
     else: # assume we've got a string variable
-        exog_name = exog_idx
-        exog_idx = model.exog_names.index(exog_idx)
+        exog_name = idx
+        exog_idx = model.exog_names.index(idx)
 
     return exog_name, exog_idx
 
