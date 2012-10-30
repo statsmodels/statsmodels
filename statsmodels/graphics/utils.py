@@ -95,9 +95,11 @@ def maybe_name_or_idx(idx, model):
     Give a name or an integer and return the name and integer location of the
     column in a design matrix.
     """
-    if isinstance(exog_idx, int):
-        exog_name = model.exog_names[exog_idx]
-        exog_idx = exog_idx
+    if idx is None:
+        idx = range(model.exog.shape[1])
+    if isinstance(idx, int):
+        exog_name = model.exog_names[idx]
+        exog_idx = idx
     # anticipate index as list and recurse
     elif isinstance(idx, (tuple, list)):
         exog_name = []
