@@ -90,6 +90,7 @@ def create_mpl_fig(fig=None, figsize=None):
 
     return fig
 
+
 def maybe_name_or_idx(idx, model):
     """
     Give a name or an integer and return the name and integer location of the
@@ -114,6 +115,7 @@ def maybe_name_or_idx(idx, model):
 
     return exog_name, exog_idx
 
+
 def get_data_names(series_or_dataframe):
     """
     Input can be an array or pandas-like. Will handle 1d array-like but not
@@ -132,3 +134,16 @@ def get_data_names(series_or_dataframe):
         names = names.tolist()
     return names
 
+
+def annotate_axes(index, labels, points, offset_points, size, ax, **kwargs):
+    """
+    Annotate Axes with labels, points, offset_points according to the
+    given index.
+    """
+    for i in index:
+        label = labels[i]
+        point = points[i]
+        offset = offset_points[i]
+        ax.annotate(label, point, xytext=offset, textcoords="offset points",
+                    size=size, **kwargs)
+    return ax
