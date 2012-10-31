@@ -156,26 +156,27 @@ class DiscreteModel(base.LikelihoodModel):
         qc_verbose : Boolean
             If true, print out a full QC report upon failure
 
-        Other Parameters
-        ----------------
-        Additional solver-specific arguments
-
-        'l1'
-            acc : float (default 1e-6)
-                Requested accuracy as used by slsqp
-        'l1_cvxopt_cp'
-            abstol : float
-                absolute accuracy (default: 1e-7).
-            reltol : float
-                relative accuracy (default: 1e-6).
-            feastol : float
-                tolerance for feasibility conditions (default: 1e-7).
-            refinement : int
-                number of iterative refinement steps when solving KKT
-                equations (default: 1).
-
         Notes
         -----
+        Optional arguments for the solvers (available in Results.mle_settings):
+
+            'l1'
+                acc : float (default 1e-6)
+                    Requested accuracy as used by slsqp
+            'l1_cvxopt_cp'
+                abstol : float
+                    absolute accuracy (default: 1e-7).
+                reltol : float
+                    relative accuracy (default: 1e-6).
+                feastol : float
+                    tolerance for feasibility conditions (default: 1e-7).
+                refinement : int
+                    number of iterative refinement steps when solving KKT
+                    equations (default: 1).
+
+
+        Optimization methodology
+
         With :math:`L` the negative log likelihood, we solve the convex but
         non-smooth problem
 
