@@ -279,7 +279,10 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     ax.plot(res_xaxis.resid, res_yaxis.resid, 'o', **kwargs)
     fitted_line = OLS(res_yaxis.resid, res_xaxis.resid).fit()
     fig = abline_plot(0, fitted_line.params[0], color='k', ax=ax)
-    ax.set_xlabel("e(%s | X)" % res_xaxis.model.endog_names)
+    x_axis_endog_name = res_xaxis.model.endog_names
+    if x_axis_endog_name == 'y': # for no names regression will just get a y
+        x_axis_endog_name = 'x'  # this is misleading, so use x
+    ax.set_xlabel("e(%s | X)" % x_axis_endog_name)
     ax.set_ylabel("e(%s | X)" % res_yaxis.model.endog_names)
     ax.set_title('Partial Regression Plot', **title_kwargs)
 
