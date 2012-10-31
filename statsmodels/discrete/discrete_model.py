@@ -115,7 +115,7 @@ class DiscreteModel(base.LikelihoodModel):
         argument method.
 
         Parameters 
-        -----------
+        ----------
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
@@ -195,8 +195,8 @@ class DiscreteModel(base.LikelihoodModel):
         :math:`k^{th}` parameter direction, theory dictates that, at the
         minimum, exactly one of two conditions holds:
 
-        (i) :math:`|\\partial_k L| = \\alpha_k`  and  :math:`\\alpha_k \\neq 0`
-        (ii) :math:`|\\partial_k L| \\leq \\alpha_k`  and  :math:`\\alpha_k = 0`
+        (i) :math:`|\\partial_k L| = \\alpha_k`  and  :math:`\\beta_k \\neq 0`
+        (ii) :math:`|\\partial_k L| \\leq \\alpha_k`  and  :math:`\\beta_k = 0`
         """
         ### Set attributes based on method
         if method in ['l1', 'l1_cvxopt_cp']:
