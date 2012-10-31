@@ -97,7 +97,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
         ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
     title = 'Fitted values versus %s' % exog_name
 
-    prstd, iv_l, iv_u = wls_prediction_std(results)
+    prstd, iv_l, iv_u = wls_prediction_std(results._results)
     ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
             label='fitted', **kwargs)
     ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k', alpha=.7)
@@ -140,7 +140,7 @@ def plot_regress_exog(results, exog_idx, fig=None):
     #maybe add option for wendog, wexog
     y_name = results.model.endog_names
     x1 = results.model.exog[:,exog_idx]
-    prstd, iv_l, iv_u = wls_prediction_std(results)
+    prstd, iv_l, iv_u = wls_prediction_std(results._results)
 
     ax = fig.add_subplot(2,2,1)
     ax.plot(x1, results.model.endog, 'o', color='b', alpha=0.9, label=y_name)
