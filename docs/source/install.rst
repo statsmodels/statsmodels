@@ -104,3 +104,4 @@ Optional Dependencies
 
 * `Matplotlib <http://matplotlib.sourceforge.net/>`__ is needed for plotting functions and running many of the examples. 
 * `Nose <http://www.somethingaboutorange.com/mrl/projects/nose/>`__ is required to run the test suite.
+# `Rdatasets <http://vincentarelbundock.github.com/Rdatasets/>`__ is a GPL-licensed Python package that provides hundreds of datasets originally distributed with the R statistical software environment. Statsmodels makes use of many of these datasets in its examples.
