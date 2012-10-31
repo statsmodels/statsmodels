@@ -181,8 +181,8 @@ class DiscreteModel(base.LikelihoodModel):
 
         .. math:: \\min_\\beta L(\\beta) + \\sum_k\\alpha_k |\\beta_k|
 
-        via the transformation to the smooth, convex, constrained problem in twice
-        as many variables (adding the "added variables" :math:`u_k`)
+        via the transformation to the smooth, convex, constrained problem
+        in twice as many variables (adding the "added variables" :math:`u_k`)
 
         .. math:: \\min_{\\beta,u} L(\\beta) + \\sum_k\\alpha_k u_k,
 
@@ -193,8 +193,10 @@ class DiscreteModel(base.LikelihoodModel):
         With :math:`\\partial_k L` the derivative of :math:`L` in the 
         :math:`k^{th}` parameter direction, theory dictates that, at the
         minimum, exactly one of two conditions holds:
-            i) :math:`|\\partial_k| = \\alpha_k`  and  :math:`\\alpha_k \\neq 0`
-            ii) :math:`|\\partial_k| \\leq \\alpha_k`  and  :math:`\\alpha_k = 0`
+
+        (i) :math:`|\\partial_k L| = \\alpha_k`  and  :math:`\\alpha_k \\neq 0`
+        (ii) :math:`|\\partial_k L| \\leq \\alpha_k`  and  :math:`\\alpha_k = 0`
+
         """
         ### Set attributes based on method
         if method in ['l1', 'l1_cvxopt_cp']:
