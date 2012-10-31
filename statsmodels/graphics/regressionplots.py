@@ -113,37 +113,42 @@ def plot_regress_exog(results, exog_idx, fig=None):
     #maybe add option for wendog, wexog
     y_name = results.model.endog_names
     x1 = results.model.exog[:,exog_idx]
+    prstd, iv_l, iv_u = wls_prediction_std(results)
 
     ax = fig.add_subplot(2,2,1)
-    #namestr = ' for %s' % self.name if self.name else ''
-    ax.plot(x1, results.model.endog, 'o')
-    ax.set_title('Y vs. X', fontsize='large')
+    ax.plot(x1, results.model.endog, 'o', color='b', alpha=0.9, label=y_name)
+    ax.plot(x1, results.fittedvalues, 'D', color='r', label='fitted',
+                alpha=.5)
+    ax.vlines(x1, iv_l, iv_u, linewidth=1, color='k', alpha=.7)
+    ax.set_title('Y and Fitted vs. X', fontsize='large')
     ax.set_xlabel(exog_name)
     ax.set_ylabel(y_name)
-
-    # + namestr)
+    ax.legend(loc='best')
 
     ax = fig.add_subplot(2,2,2)
-    #namestr = ' for %s' % self.name if self.name else ''
     ax.plot(x1, results.resid, 'o')
     ax.axhline(y=0, color='black')
-    ax.set_title('Residuals versus exog', fontsize='large')# + namestr)
+    ax.set_title('Residuals versus %s' % exog_name, fontsize='large')
     ax.set_xlabel(exog_name)
     ax.set_ylabel("resid")
 
     ax = fig.add_subplot(2,2,3)
-    #namestr = ' for %s' % self.name if self.name else ''
-    ax.plot(x1, results.fittedvalues, 'o')
-    ax.set_title('Fitted values versus X', fontsize='large')# + namestr)
-    ax.set_ylabel("Fitted values")
-    ax.set_xlabel(exog_name)
+    exog_noti = np.ones(results.model.exog.shape[1], bool)
+    exog_noti[exog_idx] = False
+    exog_others = results.model.exog[:, exog_noti]
+    from pandas import Series
+    fig = plot_partregress(results.model.data.orig_endog,
+            Series(x1, name=exog_name, index=results.model.data.row_labels),
+            exog_others, obs_labels=False, ax=ax)
+    ax.set_title('Partial regression plot', fontsize='large')
+    #ax.set_ylabel("Fitted values")
+    #ax.set_xlabel(exog_name)
 
     ax = fig.add_subplot(2,2,4)
-    #namestr = ' for %s' % self.name if self.name else ''
-    ax.plot(x1, results.fittedvalues + results.resid, 'o')
-    ax.set_title('Fitted plus residuals versus X', fontsize='large')
-    ax.set_xlabel(exog_name)
-    ax.set_ylabel("Fitted values + resids")
+    fig = plot_ccpr(results, exog_idx, ax=ax)
+    ax.set_title('CCPR Plot', fontsize='large')
+    #ax.set_xlabel(exog_name)
+    #ax.set_ylabel("Fitted values + resids")
 
     fig.suptitle('Regression Plots for %s' % exog_name, fontsize="large")
 
