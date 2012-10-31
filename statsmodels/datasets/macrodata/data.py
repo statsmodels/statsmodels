@@ -56,7 +56,7 @@ Variable name definitions::
 from numpy import recfromtxt, column_stack, array
 from pandas import DataFrame
 
-from statsmodels.tools import Dataset
+from statsmodels.datasets.utils import Dataset
 from os.path import dirname, abspath
 
 def load():

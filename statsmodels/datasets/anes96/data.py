@@ -86,7 +86,7 @@ Variables name definitions::
 
 from numpy import recfromtxt, column_stack, array, log
 import numpy.lib.recfunctions as nprf
-import statsmodels.tools.datautils as du
+from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
 def load():
