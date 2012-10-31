@@ -142,12 +142,12 @@ class DiscreteModel(base.LikelihoodModel):
         alpha : non-negative scalar or numpy array (same size as parameters)
             The weight multiplying the l1 penalty term
         trim_mode : 'auto, 'size', or 'off'
-            If not 'off', trim (set to zero) parameters that would have been zero
-                if the solver reached the theoretical minimum.
+            If not 'off', trim (set to zero) parameters that would have been
+                zero if the solver reached the theoretical minimum.
             If 'auto', trim params using the Theory above.
             If 'size', trim params if they have very small absolute value
         size_trim_tol : float or 'auto' (default = 'auto')
-            For use when trim_mode === 'size'
+            For use when trim_mode == 'size'
         auto_trim_tol : float
             For sue when trim_mode == 'auto'.  Use
         qc_tol : float
@@ -197,7 +197,6 @@ class DiscreteModel(base.LikelihoodModel):
 
         (i) :math:`|\\partial_k L| = \\alpha_k`  and  :math:`\\alpha_k \\neq 0`
         (ii) :math:`|\\partial_k L| \\leq \\alpha_k`  and  :math:`\\alpha_k = 0`
-
         """
         ### Set attributes based on method
         if method in ['l1', 'l1_cvxopt_cp']:
