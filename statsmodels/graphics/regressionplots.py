@@ -46,7 +46,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
         created.
     kwargs
         The keyword arguments are passed to the plot command for the fitted
-        values line.
+        values points.
 
     Returns
     -------
@@ -71,11 +71,11 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     title = 'Fitted values versus %s' % exog_name
 
     prstd, iv_l, iv_u = wls_prediction_std(results)
-    ax.plot(x1, results.fittedvalues[x1_argsort], 'k-', label='fitted',
-            **kwargs)
-                                                                    #'k-o')
-    ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
-                        color='k')
+    ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
+            label='fitted', **kwargs)
+    ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k', alpha=.7)
+    #ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
+    #                    color='k')
     ax.set_title(title)
     ax.set_xlabel(exog_name)
     ax.set_ylabel(results.model.endog_names)
