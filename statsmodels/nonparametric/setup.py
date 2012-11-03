@@ -11,6 +11,7 @@ from _build import cython, has_c_compiler
 sys.path.pop(0)
 del sys
 
+
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import (Configuration,
                                         get_numpy_include_dirs)
@@ -31,13 +32,8 @@ def configuration(parent_package='', top_path=None):
                          sources=['fast_linbin.c'],
                          include_dirs=[get_numpy_include_dirs()])
 
-        cython(['_kernels.pyx'], working_path=cur_dir)
-        config.add_extension('_kernels',
-                         sources=['_kernels.c'],
-                         include_dirs=[get_numpy_include_dirs()])
-
-
     return config
+
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup
