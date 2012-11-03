@@ -38,12 +38,17 @@ from _kernel_base import _GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _adjust_shape
 
 
-__all__ = ['KDE', 'ConditionalKDE', 'EstimatorSettings']
+__all__ = ['KDEMultivariate', 'KDEMultivariateConditional', 'EstimatorSettings']
 
 
-class KDE(_GenericKDE):
+class KDEMultivariate(_GenericKDE):
     """
-    Unconditional Kernel Density Estimator
+    Multivariate kernel density estimator.
+
+    This density estimator can handle univariate as well as multivariate data,
+    including mixed continuous / ordered discrete / unordered discrete data.
+    It also provides cross-validated bandwidth selection methods (least
+    squares, maximum likelihood).
 
     Parameters
     ----------
@@ -83,6 +88,10 @@ class KDE(_GenericKDE):
     cdf : the cumulative distribution function
     imse : the integrated mean square error
     loo_likelihood : the leave one out likelihood
+
+    See Also
+    --------
+    KDEMultivariateConditional
 
     Examples
     --------
@@ -323,20 +332,20 @@ class KDE(_GenericKDE):
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset."""
-        class_type = 'KDE'
+        class_type = 'KDEMultivariate'
         class_vars = (self.var_type, )
         return class_type, class_vars
 
 
 
-class ConditionalKDE(_GenericKDE):
+class KDEMultivariateConditional(_GenericKDE):
     """
-    Conditional Kernel Density Estimator.
+    Conditional multivariate kernel density estimator.
 
     Calculates ``P(X_1,X_2,...X_n | Y_1,Y_2...Y_m) =
     P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)``.
-    The conditional density is by definition the ratio of the two unconditional
-    densities, see [1]_.
+    The conditional density is by definition the ratio of the two densities,
+    see [1]_.
 
     Parameters
     ----------
@@ -381,6 +390,10 @@ class ConditionalKDE(_GenericKDE):
     imse : the integrated mean square error
     loo_likelihood : the leave one out likelihood
 
+    See Also
+    --------
+    KDEMultivariate
+
     References
     ----------
     .. [1] http://en.wikipedia.org/wiki/Conditional_probability_distribution
@@ -391,9 +404,8 @@ class ConditionalKDE(_GenericKDE):
     >>> c1 = np.random.normal(size=(nobs,1))
     >>> c2 = np.random.normal(2,1,size=(nobs,1))
 
-    >>> dens_c = ConditionalKDE(endog=[c1], exog=[c2], dep_type='c',
-    ...               indep_type='c', bw='normal_reference')
-
+    >>> dens_c = KDEMultivariateConditional(endog=[c1], exog=[c2],
+    ...               dep_type='c', indep_type='c', bw='normal_reference')
     >>> print "The bandwidth is: ", dens_c.bw
     """
 
@@ -417,7 +429,7 @@ class ConditionalKDE(_GenericKDE):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "ConditionalKDE instance\n"
+        repr = "KDEMultivariateConditional instance\n"
         repr += "Number of independent variables: k_indep = " + \
                 str(self.k_indep) + "\n"
         repr += "Number of dependent variables: k_dep = " + \
@@ -655,6 +667,7 @@ class ConditionalKDE(_GenericKDE):
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset."""
-        class_type = 'ConditionalKDE'
+        class_type = 'KDEMultivariateConditional'
         class_vars = (self.k_dep, self.dep_type, self.indep_type)
         return class_type, class_vars
+

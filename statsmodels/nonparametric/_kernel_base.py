@@ -49,19 +49,18 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     else:
         sub_data = data[bound[0]:bound[1], :]
 
-    if class_type == 'KDE':
-        from kernel_density import KDE
+    if class_type == 'KDEMultivariate':
+        from kernel_density import KDEMultivariate
         var_type = class_vars[0]
-        sub_model = KDE(sub_data, var_type, bw=bw,
+        sub_model = KDEMultivariate(sub_data, var_type, bw=bw,
                         defaults=EstimatorSettings(efficient=False))
-    elif class_type == 'ConditionalKDE':
-        from kernel_density import ConditionalKDE
+    elif class_type == 'KDEMultivariateConditional':
+        from kernel_density import KDEMultivariateConditional
         k_dep, dep_type, indep_type = class_vars
         endog = sub_data[:, :k_dep]
         exog = sub_data[:, k_dep:]
-        sub_model = ConditionalKDE(endog, exog, dep_type,
-                                   indep_type, bw=bw,
-                                   defaults=EstimatorSettings(efficient=False))
+        sub_model = KDEMultivariateConditional(endog, exog, dep_type,
+            indep_type, bw=bw, defaults=EstimatorSettings(efficient=False))
     elif class_type == 'Reg':
         from kernel_regression import Reg
         var_type, K, reg_type = class_vars
@@ -93,7 +92,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
 
 class _GenericKDE (object):
     """
-    Generic KDE class with methods shared by both KDE and ConditionalKDE
+    Base class for density estimation and regression KDE classes.
     """
     def _compute_bw(self, bw):
         """
@@ -309,8 +308,8 @@ class _GenericKDE (object):
         .. math:: \int\left[\hat{f}(x)-f(x)\right]^{2}dx
 
         This is the general formula for the IMSE.  The IMSE differs for
-        conditional (ConditionalKDE) and unconditional (KDE) kernel density
-        estimation.
+        conditional (``KDEMultivariateConditional``) and unconditional
+        (``KDEMultivariate``) kernel density estimation.
         """
         h0 = self._normal_reference()
         bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0,
@@ -327,8 +326,8 @@ class EstimatorSettings(object):
     Object to specify settings for density estimation or regression.
 
     `EstimatorSettings` has several proporties related to how bandwidth
-    estimation for the `KDE`, `ConditionalKde`, `Reg` and `CensoredReg`
-    classes behaves.
+    estimation for the `KDEMultivariate`, `KDEMultivariateConditional`,
+    `Reg` and `CensoredReg` classes behaves.
 
     Parameters
     ----------
@@ -367,7 +366,7 @@ class EstimatorSettings(object):
     Examples
     --------
     >>> settings = EstimatorSettings(randomize=True, n_jobs=3)
-    >>> k_dens = KDE(data, var_type, defaults=settings)
+    >>> k_dens = KDEMultivariate(data, var_type, defaults=settings)
 
     """
     def __init__(self, efficient=False, randomize=False, n_res=25, n_sub=50,
