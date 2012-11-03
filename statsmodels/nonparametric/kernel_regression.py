@@ -37,977 +37,11 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
-import kernels as kernels
-import np_tools as tools
+from _kernel_base import _GenericKDE, EstimatorSettings, gpke, \
+    LeaveOneOut, _get_type_pos, _adjust_shape
 
 
-try:
-    import joblib
-    has_joblib = True
-except ImportError:
-    has_joblib = False
-
-
-__all__ = ['KDE', 'ConditionalKDE', 'Reg', 'CensoredReg', 'EstimatorSettings']
-
-
-def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
-                    ix_unord, n_sub, class_vars, randomize, bound):
-    """"Compute bw on subset of data.
-
-    Called from _GenericKDE._compute_efficient_*.
-
-    Notes
-    -----
-    Needs to be outside the class in order for joblib to be able to pickle it.
-
-    """
-    if randomize:
-        np.random.shuffle(data)
-        sub_data = data[:n_sub, :]
-    else:
-        sub_data = data[bound[0]:bound[1], :]
-
-    if class_type == 'KDE':
-        var_type = class_vars[0]
-        sub_model = KDE(sub_data, var_type, bw=bw,
-                        defaults=EstimatorSettings(efficient=False))
-    elif class_type == 'ConditionalKDE':
-        k_dep, dep_type, indep_type = class_vars
-        endog = sub_data[:, :k_dep]
-        exog = sub_data[:, k_dep:]
-        sub_model = ConditionalKDE(endog, exog, dep_type,
-                                   indep_type, bw=bw,
-                                   defaults=EstimatorSettings(efficient=False))
-    elif class_type == 'Reg':
-        var_type, K, reg_type = class_vars
-        endog = tools.adjust_shape(sub_data[:, 0], 1)
-        exog = tools.adjust_shape(sub_data[:, 1:], K)
-        sub_model = Reg(endog=endog, exog=exog, reg_type=reg_type,
-                        var_type=var_type, bw=bw,
-                        defaults=EstimatorSettings(efficient=False))
-    else:
-        raise ValueError("Don't know what I am; aborting.")
-
-    # Compute dispersion in next 7 lines
-    if class_type == 'Reg':
-        sub_data = sub_data[:, 1:]
-
-    s1 = np.std(sub_data, axis=0)
-    q75 = mquantiles(sub_data, 0.75, axis=0).data[0]
-    q25 = mquantiles(sub_data, 0.25, axis=0).data[0]
-    s2 = (q75 - q25) / 1.349  # IQR
-    s = np.minimum(s1, s2)
-
-    fct = s * n_sub**(-1. / (n_cvars + co))
-    fct[ix_unord] = n_sub**(-2. / (n_cvars + do))
-    fct[ix_ord] = n_sub**(-2. / (n_cvars + do))
-    sample_scale_sub = sub_model.bw / fct  #TODO: check if correct
-    bw_sub = sub_model.bw
-    return sample_scale_sub, bw_sub
-
-
-class _GenericKDE (object):
-    """
-    Generic KDE class with methods shared by both KDE and ConditionalKDE
-    """
-    def _compute_bw(self, bw):
-        """
-        Computes the bandwidth of the data.
-
-        Parameters
-        ----------
-        bw: array_like or str
-            If array_like: user-specified bandwidth.
-            If a string, should be one of:
-
-                - cv_ml: cross validation maximum likelihood
-                - normal_reference: normal reference rule of thumb
-                - cv_ls: cross validation least squares
-
-        Notes
-        -----
-        The default values for bw is 'normal_reference'.
-        """
-
-        self.bw_func = dict(normal_reference=self._normal_reference,
-                            cv_ml=self._cv_ml, cv_ls=self._cv_ls)
-        if bw is None:
-            bwfunc = self.bw_func['normal_reference']
-            return bwfunc()
-
-        if not isinstance(bw, basestring):
-            self._bw_method = "user-specified"
-            res = np.asarray(bw)
-        else:
-            # The user specified a bandwidth selection method
-            self._bw_method = bw
-            bwfunc = self.bw_func[bw]
-            res = bwfunc()
-
-        return res
-
-    def _compute_dispersion(self, data):
-        """
-        Computes the measure of dispersion.
-
-        The minimum of the standard deviation and interquartile range / 1.349
-
-        References
-        ----------
-        See the user guide for the np package in R.
-        In the notes on bwscaling option in npreg, npudens, npcdens there is
-        a discussion on the measure of dispersion
-        """
-        if isinstance(self, Reg):
-            data = data[:, 1:]
-
-        s1 = np.std(data, axis=0)
-        q75 = mquantiles(data, 0.75, axis=0).data[0]
-        q25 = mquantiles(data, 0.25, axis=0).data[0]
-        s2 = (q75 - q25) / 1.349
-        return np.minimum(s1, s2)
-
-    def _get_class_vars_type(self):
-        """Helper method to be able to pass needed vars to _compute_subset."""
-        if isinstance(self, KDE):
-            class_type = 'KDE'
-            class_vars = (self.var_type, )
-        elif isinstance(self, ConditionalKDE):
-            class_type = 'ConditionalKDE'
-            class_vars = (self.k_dep, self.dep_type, self.indep_type)
-        elif isinstance(self, Reg):
-            class_type = 'Reg'
-            class_vars = (self.var_type, self.K, self.reg_type)
-
-        return class_type, class_vars
-
-    def _compute_efficient(self, bw):
-        """
-        Computes the bandwidth by estimating the scaling factor (c)
-        in n_res resamples of size ``n_sub`` (in `randomize` case), or by
-        dividing ``nobs`` into as many ``n_sub`` blocks as needed (if
-        `randomize` is False).
-
-        References
-        ----------
-        See p.9 in socserv.mcmaster.ca/racine/np_faq.pdf
-        """
-        nobs = self.nobs
-        n_sub = self.n_sub
-        data = copy.deepcopy(self.data)
-        n_cvars = self.data_type.count('c')
-        co = 4  # 2*order of continuous kernel
-        do = 4  # 2*order of discrete kernel
-        _, ix_ord, ix_unord = tools._get_type_pos(self.data_type)
-
-        # Define bounds for slicing the data
-        if self.randomize:
-            # randomize chooses blocks of size n_sub, independent of nobs
-            bounds = [None] * self.n_res
-        else:
-            bounds = [(i * n_sub, (i+1) * n_sub) for i in range(nobs // n_sub)]
-            if nobs % n_sub > 0:
-                bounds.append((nobs - nobs % n_sub, nobs))
-
-        n_blocks = self.n_res if self.randomize else len(bounds)
-        sample_scale = np.empty((n_blocks, self.K))
-        only_bw = np.empty((n_blocks, self.K))
-
-        class_type, class_vars = self._get_class_vars_type()
-        if has_joblib:
-            # `res` is a list of tuples (sample_scale_sub, bw_sub)
-            res = joblib.Parallel(n_jobs=self.n_jobs) \
-                (joblib.delayed(_compute_subset) \
-                (class_type, data, bw, co, do, n_cvars, ix_ord, ix_unord, \
-                n_sub, class_vars, self.randomize, bounds[i]) \
-                for i in range(n_blocks))
-        else:
-            res = []
-            for i in xrange(n_blocks):
-                res.append(_compute_subset(class_type, data, bw, co, do,
-                                           n_cvars, ix_ord, ix_unord, n_sub,
-                                           class_vars, self.randomize))
-
-        for i in xrange(n_blocks):
-            sample_scale[i, :] = res[i][0]
-            only_bw[i, :] = res[i][1]
-
-        s = self._compute_dispersion(data)
-        order_func = np.median if self.return_median else np.mean
-        m_scale = order_func(sample_scale, axis=0)
-        # TODO: Check if 1/5 is correct in line below!
-        bw = m_scale * s * nobs**(-1. / (n_cvars + co))
-        bw[ix_ord] = m_scale[ix_ord] * nobs**(-2./ (n_cvars + do))
-        bw[ix_unord] = m_scale[ix_unord] * nobs**(-2./ (n_cvars + do))
-
-        if self.return_only_bw:
-            bw = np.median(only_bw, axis=0)
-
-        return bw
-
-    def _set_defaults(self, defaults):
-        """Sets the default values for the efficient estimation"""
-        self.n_res = defaults.n_res
-        self.n_sub = defaults.n_sub
-        self.randomize = defaults.randomize
-        self.return_median = defaults.return_median
-        self.efficient = defaults.efficient
-        self.return_only_bw = defaults.return_only_bw
-        self.n_jobs = defaults.n_jobs
-
-    def _normal_reference(self):
-        """
-        Returns Scott's normal reference rule of thumb bandwidth parameter.
-
-        Notes
-        -----
-        See p.13 in [2] for an example and discussion.  The formula for the
-        bandwidth is
-
-        .. math:: h = 1.06n^{-1/(4+q)}
-
-        where ``n`` is the number of observations and ``q`` is the number of
-        variables.
-        """
-        X = np.std(self.data, axis=0)
-        return 1.06 * X * self.nobs ** (- 1. / (4 + self.data.shape[1]))
-
-    def _set_bw_bounds(self, bw):
-        """
-        Sets bandwidth lower bound to zero and for discrete values upper bound
-        to 1.
-        """
-        bw[bw < 0] = 1e-10
-        _, ix_ord, ix_unord = tools._get_type_pos(self.data_type)
-        bw[ix_ord] = np.minimum(bw[ix_ord], 1.)
-        bw[ix_unord] = np.minimum(bw[ix_unord], 1.)
-
-        return bw
-
-    def _cv_ml(self):
-        """
-        Returns the cross validation maximum likelihood bandwidth parameter.
-
-        Notes
-        -----
-        For more details see p.16, 18, 27 in Ref. [1] (see module docstring).
-
-        Returns the bandwidth estimate that maximizes the leave-out-out
-        likelihood.  The leave-one-out log likelihood function is:
-
-        .. math:: \ln L=\sum_{i=1}^{n}\ln f_{-i}(X_{i})
-
-        The leave-one-out kernel estimator of :math:`f_{-i}` is:
-
-        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}
-                        \sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
-
-        where :math:`K_{h}` represents the Generalized product kernel
-        estimator:
-
-        .. math:: K_{h}(X_{i},X_{j})=\prod_{s=1}^
-                        {q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
-        """
-        # the initial value for the optimization is the normal_reference
-        h0 = self._normal_reference()
-        bw = optimize.fmin(self.loo_likelihood, x0=h0, args=(np.log, ),
-                           maxiter=1e3, maxfun=1e3, disp=0, xtol=1e-3)
-        bw = self._set_bw_bounds(bw)  # bound bw if necessary
-        return bw
-
-    def _cv_ls(self):
-        """
-        Returns the cross-validation least squares bandwidth parameter(s).
-
-        Notes
-        -----
-        For more details see pp. 16, 27 in Ref. [1] (see module docstring).
-
-        Returns the value of the bandwidth that maximizes the integrated mean
-        square error between the estimated and actual distribution.  The
-        integrated mean square error (IMSE) is given by:
-
-        .. math:: \int\left[\hat{f}(x)-f(x)\right]^{2}dx
-
-        This is the general formula for the IMSE.  The IMSE differs for
-        conditional (ConditionalKDE) and unconditional (KDE) kernel density
-        estimation.
-        """
-        h0 = self._normal_reference()
-        bw = optimize.fmin(self.imse, x0=h0, maxiter=1e3, maxfun=1e3, disp=0,
-                           xtol=1e-3)
-        bw = self._set_bw_bounds(bw)  # bound bw if necessary
-        return bw
-
-    def loo_likelihood(self):
-        raise NotImplementedError
-
-
-class EstimatorSettings(object):
-    """
-    Object to specify settings for density estimation or regression.
-
-    `EstimatorSettings` has several proporties related to how bandwidth
-    estimation for the `KDE`, `ConditionalKde`, `Reg` and `CensoredReg`
-    classes behaves.
-
-    Parameters
-    ----------
-    efficient: bool, optional
-        If True, the bandwidth estimation is to be performed
-        efficiently -- by taking smaller sub-samples and estimating
-        the scaling factor of each subsample.  This is useful for large
-        samples (nobs >> 300) and/or multiple variables (K > 3).
-        If False (default), all data is used at the same time.
-    randomize: bool, optional
-        If True, the bandwidth estimation is to be performed by
-        taking `n_res` random resamples (with replacement) of size `n_sub` from
-        the full sample.  If set to False (default), the estimation is
-        performed by slicing the full sample in sub-samples of size `n_sub` so
-        that all samples are used once.
-    n_sub: int, optional
-        Size of the sub-samples.  Default is 50.
-    n_res: int, optional
-        The number of random re-samples used to estimate the bandwidth.
-        Only has an effect if ``randomize == True`.  Default value is 25.
-    return_median: bool, optional
-        If True (default), the estimator uses the median of all scaling factors
-        for each sub-sample to estimate the bandwidth of the full sample.
-        If False, the estimator uses the mean.
-    return_only_bw: bool, optional
-        If True, the estimator is to use the bandwidth and not the
-        scaling factor.  This is *not* theoretically justified.
-        Should be used only for experimenting.
-    n_jobs : int, optional
-        The number of jobs to use for parallel estimation with
-        ``joblib.Parallel``.  Default is -1, meaning ``n_cores - 1``, with
-        ``n_cores`` the number of available CPU cores.
-        See the `joblib documentation
-        <http://packages.python.org/joblib/parallel.html`_ for more details.
-
-    Examples
-    --------
-    >>> settings = EstimatorSettings(randomize=True, n_jobs=3)
-    >>> k_dens = KDE(data, var_type, defaults=settings)
-
-    """
-    def __init__(self, efficient=False, randomize=False, n_res=25, n_sub=50,
-                 return_median=True, return_only_bw=False, n_jobs=-1):
-        self.efficient = efficient
-        self.randomize = randomize
-        self.n_res = n_res
-        self.n_sub = n_sub
-        self.return_median = return_median
-        self.return_only_bw = return_only_bw  # TODO: remove this?
-        self.n_jobs = n_jobs
-
-
-class KDE(_GenericKDE):
-    """
-    Unconditional Kernel Density Estimator
-
-    Parameters
-    ----------
-    data: list of ndarrays or 2-D ndarray
-        The training data for the Kernel Density Estimation, used to determine
-        the bandwidth(s).  If a 2-D array, should be of shape
-        (num_observations, num_variables).  If a list, each list element is a
-        separate observation.
-    var_type: str
-        The type of the variables:
-
-            c : Continuous
-            u : Unordered (Discrete)
-            o : Ordered (Discrete)
-
-        The string should contain a type specifier for each variable, so for
-        example ``var_type='ccuo'``.
-    bw: array_like or str
-        If an array, it is a fixed user-specified bandwidth.  If a string,
-        should be one of:
-
-            - normal_reference: normal reference rule of thumb (default)
-            - cv_ml: cross validation maximum likelihood
-            - cv_ls: cross validation least squares
-
-    defaults: Instance of class EstimatorSettings
-        The default values for the efficient bandwidth estimation
-
-    Attributes
-    ----------
-    bw: array_like
-        The bandwidth parameters.
-
-    Methods
-    -------
-    pdf : the probability density function
-    cdf : the cumulative distribution function
-    imse : the integrated mean square error
-    loo_likelihood : the leave one out likelihood
-
-    Examples
-    --------
-    >>> from statsmodels.nonparametric import KDE
-    >>> nobs = 300
-    >>> np.random.seed(1234)  # Seed random generator
-    >>> c1 = np.random.normal(size=(nobs,1))
-    >>> c2 = np.random.normal(2, 1, size=(nobs,1))
-
-    Estimate a bivariate distribution and display the bandwidth found:
-
-    >>> dens_u = KDE(data=[c1,c2], var_type='cc', bw='normal_reference')
-    >>> dens_u.bw
-    array([ 0.39967419,  0.38423292])
-    """
-    def __init__(self, data, var_type, bw=None, defaults=EstimatorSettings()):
-        self.var_type = var_type
-        self.K = len(self.var_type)
-        self.data = tools.adjust_shape(data, self.K)
-        self.data_type = var_type
-        self.nobs, self.K = np.shape(self.data)
-        if self.nobs <= self.K:
-            raise ValueError("The number of observations must be larger " \
-                             "than the number of variables.")
-
-        self._set_defaults(defaults)
-        if not self.efficient:
-            self.bw = self._compute_bw(bw)
-        else:
-            self.bw = self._compute_efficient(bw)
-
-    def __repr__(self):
-        """Provide something sane to print."""
-        repr = "KDE instance\n"
-        repr += "Number of variables: K = " + str(self.K) + "\n"
-        repr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
-        repr += "Variable types:      " + self.var_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        return repr
-
-    def loo_likelihood(self, bw, func=lambda x: x):
-        """
-        Returns the leave-one-out likelihood function.
-
-        The leave-one-out likelihood function for the unconditional KDE.
-
-        Parameters
-        ----------
-        bw: array_like
-            The value for the bandwidth parameter(s).
-        func: function
-            For the log likelihood should be ``numpy.log``.
-
-        Notes
-        -----
-        The leave-one-out kernel estimator of :math:`f_{-i}` is:
-
-        .. math:: f_{-i}(X_{i})=\frac{1}{(n-1)h}
-                    \sum_{j=1,j\neq i}K_{h}(X_{i},X_{j})
-
-        where :math:`K_{h}` represents the generalized product kernel
-        estimator:
-
-        .. math:: K_{h}(X_{i},X_{j}) =
-            \prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
-        """
-        LOO = tools.LeaveOneOut(self.data)
-        L = 0
-        for i, X_not_i in enumerate(LOO):
-            f_i = tools.gpke(bw, data=-X_not_i, data_predict=-self.data[i, :],
-                             var_type=self.var_type)
-            L += func(f_i)
-
-        return -L
-
-    def pdf(self, data_predict=None):
-        """
-        Evaluate the probability density function.
-
-        Parameters
-        ----------
-        data_predict: array_like, optional
-            Points to evaluate at.  If unspecified, the training data is used.
-
-        Returns
-        -------
-        pdf_est: array_like
-            Probability density function evaluated at `data_predict`.
-
-        Notes
-        -----
-        The probability density is given by the generalized product kernel
-        estimator:
-
-        .. math:: K_{h}(X_{i},X_{j}) =
-            \prod_{s=1}^{q}h_{s}^{-1}k\left(\frac{X_{is}-X_{js}}{h_{s}}\right)
-        """
-        if data_predict is None:
-            data_predict = self.data
-        else:
-            data_predict = tools.adjust_shape(data_predict, self.K)
-
-        pdf_est = []
-        for i in xrange(np.shape(data_predict)[0]):
-            pdf_est.append(tools.gpke(self.bw, data=self.data,
-                           data_predict=data_predict[i, :],
-                           var_type=self.var_type) / self.nobs)
-
-        pdf_est = np.squeeze(pdf_est)
-        return pdf_est
-
-    def cdf(self, data_predict=None):
-        """
-        Evaluate the cumulative distribution function.
-
-        Parameters
-        ----------
-        data_predict: array_like, optional
-            Points to evaluate at.  If unspecified, the training data is used.
-
-        Returns
-        -------
-        cdf_est: array_like
-            The estimate of the cdf.
-
-        Notes
-        -----
-        See http://en.wikipedia.org/wiki/Cumulative_distribution_function
-        For more details on the estimation see Ref. [5] in module docstring.
-
-        The multivariate CDF for mixed data (continuous and ordered/unordered
-        discrete) is estimated by:
-
-        ..math:: F(x^{c},x^{d})=n^{-1}\sum_{i=1}^{n}\left[G(
-            \frac{x^{c}-X_{i}}{h})\sum_{u\leq x^{d}}L(X_{i}^{d},x_{i}^{d},
-            \lambda)\right]
-
-        where G() is the product kernel CDF estimator for the continuous
-        and L() for the discrete variables.
-        """
-        if data_predict is None:
-            data_predict = self.data
-        else:
-            data_predict = tools.adjust_shape(data_predict, self.K)
-
-        cdf_est = []
-        for i in xrange(np.shape(data_predict)[0]):
-            cdf_est.append(tools.gpke(self.bw, data=self.data,
-                                      data_predict=data_predict[i, :],
-                                      var_type=self.var_type,
-                                      ckertype="gaussian_cdf",
-                                      ukertype="aitchisonaitken_cdf",
-                                      okertype='wangryzin_cdf') / self.nobs)
-
-        cdf_est = np.squeeze(cdf_est)
-        return cdf_est
-
-    def imse(self, bw):
-        """
-        Returns the Integrated Mean Square Error for the unconditional KDE.
-
-        Parameters
-        ----------
-        bw: array_like
-            The bandwidth parameter(s).
-
-        Returns
-        ------
-        CV: float
-            The cross-validation objective function.
-
-        Notes
-        -----
-        See p. 27 in [1]
-        For details on how to handle the multivariate
-        estimation with mixed data types see p.6 in [3]
-
-        The formula for the cross-validation objective function is:
-
-        .. math:: CV=\frac{1}{n^{2}}\sum_{i=1}^{n}\sum_{j=1}^{N}
-            \bar{K}_{h}(X_{i},X_{j})-\frac{2}{n(n-1)}\sum_{i=1}^{n}
-            \sum_{j=1,j\neq i}^{N}K_{h}(X_{i},X_{j})
-
-        Where :math:`\bar{K}_{h}` is the multivariate product convolution
-        kernel (consult [3] for mixed data types).
-        """
-        #F = 0
-        #for i in range(self.nobs):
-        #    k_bar_sum = tools.gpke(bw, data=-self.data,
-        #                           data_predict=-self.data[i, :],
-        #                           var_type=self.var_type,
-        #                           ckertype='gauss_convolution',
-        #                           okertype='wangryzin_convolution',
-        #                           ukertype='aitchisonaitken_convolution')
-        #    F += k_bar_sum
-        ## there is a + because loo_likelihood returns the negative
-        #return (F / self.nobs**2 + self.loo_likelihood(bw) * \
-        #        2 / ((self.nobs) * (self.nobs - 1)))
-
-        # The code below is equivalent to the commented-out code above.  It's
-        # about 20% faster due to some code being moved outside the for-loops
-        # and shared by gpke() and loo_likelihood().
-        F = 0
-        kertypes = dict(c=kernels.gaussian_convolution,
-                        o=kernels.wang_ryzin_convolution,
-                        u=kernels.aitchison_aitken_convolution)
-        nobs = self.nobs
-        data = -self.data
-        var_type = self.var_type
-        ix_cont = np.array([c == 'c' for c in var_type])
-        _bw_cont_product = bw[ix_cont].prod()
-        Kval = np.empty(data.shape)
-        for i in range(nobs):
-            for ii, vtype in enumerate(var_type):
-                Kval[:, ii] = kertypes[vtype](bw[ii],
-                                              data[:, ii],
-                                              data[i, ii])
-
-            dens = Kval.prod(axis=1) / _bw_cont_product
-            k_bar_sum = dens.sum(axis=0)
-            F += k_bar_sum
-
-        kertypes = dict(c=kernels.gaussian,
-                        o=kernels.wang_ryzin,
-                        u=kernels.aitchison_aitken)
-        LOO = tools.LeaveOneOut(self.data)
-        L = 0
-        Kval = np.empty((data.shape[0]-1, data.shape[1]))
-        for i, X_not_i in enumerate(LOO):
-            for ii, vtype in enumerate(var_type):
-                Kval[:, ii] = kertypes[vtype](bw[ii],
-                                              -X_not_i[:, ii],
-                                              data[i, ii])
-            dens = Kval.prod(axis=1) / _bw_cont_product
-            L += dens.sum(axis=0)
-
-        return (F / nobs**2 - 2 * L / (nobs * (nobs - 1)))
-
-
-class ConditionalKDE(_GenericKDE):
-    """
-    Conditional Kernel Density Estimator.
-
-    Calculates ``P(X_1,X_2,...X_n | Y_1,Y_2...Y_m) =
-    P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)``.
-    The conditional density is by definition the ratio of the two unconditional
-    densities, see [1]_.
-
-    Parameters
-    ----------
-    endog: list of ndarrays or 2-D ndarray
-        The training data for the dependent variables, used to determine
-        the bandwidth(s).  If a 2-D array, should be of shape
-        (num_observations, num_variables).  If a list, each list element is a
-        separate observation.
-    exog: list of ndarrays or 2-D ndarray
-        The training data for the independent variable; same shape as `endog`.
-    dep_type: str
-        The type of the dependent variables:
-
-            c : Continuous
-            u : Unordered (Discrete)
-            o : Ordered (Discrete)
-
-        The string should contain a type specifier for each variable, so for
-        example ``dep_type='ccuo'``.
-    indep_type: str
-        The type of the independent variables; specifed like `dep_type`.
-    bw: array_like or str, optional
-        If an array, it is a fixed user-specified bandwidth.  If a string,
-        should be one of:
-
-            - normal_reference: normal reference rule of thumb (default)
-            - cv_ml: cross validation maximum likelihood
-            - cv_ls: cross validation least squares
-
-    defaults: Instance of class EstimatorSettings
-        The default values for the efficient bandwidth estimation
-
-    Attributes
-    ---------
-    bw: array_like
-        The bandwidth parameters
-
-    Methods
-    -------
-    pdf : the probability density function
-    cdf : the cumulative distribution function
-    imse : the integrated mean square error
-    loo_likelihood : the leave one out likelihood
-
-    References
-    ----------
-    .. [1] http://en.wikipedia.org/wiki/Conditional_probability_distribution
-
-    Examples
-    --------
-    >>> nobs = 300
-    >>> c1 = np.random.normal(size=(nobs,1))
-    >>> c2 = np.random.normal(2,1,size=(nobs,1))
-
-    >>> dens_c = ConditionalKDE(endog=[c1], exog=[c2], dep_type='c',
-    ...               indep_type='c', bw='normal_reference')
-
-    >>> print "The bandwidth is: ", dens_c.bw
-    """
-
-    def __init__(self, endog, exog, dep_type, indep_type, bw,
-                 defaults=EstimatorSettings()):
-        self.dep_type = dep_type
-        self.indep_type = indep_type
-        self.data_type = dep_type + indep_type
-        self.k_dep = len(self.dep_type)
-        self.k_indep = len(self.indep_type)
-        self.endog = tools.adjust_shape(endog, self.k_dep)
-        self.exog = tools.adjust_shape(exog, self.k_indep)
-        self.nobs, self.k_dep = np.shape(self.endog)
-        self.data = np.column_stack((self.endog, self.exog))
-        self.K = np.shape(self.data)[1]
-        self._set_defaults(defaults)
-        if not self.efficient:
-            self.bw = self._compute_bw(bw)
-        else:
-            self.bw = self._compute_efficient(bw)
-
-    def __repr__(self):
-        """Provide something sane to print."""
-        repr = "ConditionalKDE instance\n"
-        repr += "Number of independent variables: k_indep = " + \
-                str(self.k_indep) + "\n"
-        repr += "Number of dependent variables: k_dep = " + \
-                str(self.k_dep) + "\n"
-        repr += "Number of observations: nobs = " + str(self.nobs) + "\n"
-        repr += "Independent variable types:      " + self.indep_type + "\n"
-        repr += "Dependent variable types:      " + self.dep_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        return repr
-
-    def loo_likelihood(self, bw, func=lambda x: x):
-        """
-        Returns the leave-one-out function for the data.
-
-        Parameters
-        ----------
-        bw: array_like
-            The bandwidth parameter(s).
-        func: function f(x), optional
-            Should be ``np.log`` for the log likelihood.
-            Default is ``f(x) = x``.
-
-        Returns
-        -------
-        L: float
-            The value of the leave-one-out function for the data.
-
-        Notes
-        -----
-        Similar to ``KDE.loo_likelihood`, but substitute
-        ``f(x|y)=f(x,y)/f(y)`` for f(x).
-        """
-        yLOO = tools.LeaveOneOut(self.data)
-        xLOO = tools.LeaveOneOut(self.exog).__iter__()
-        L = 0
-        for i, Y_j in enumerate(yLOO):
-            X_not_i = xLOO.next()
-            f_yx = tools.gpke(bw, data=-Y_j, data_predict=-self.data[i, :],
-                              var_type=(self.dep_type + self.indep_type))
-            f_x = tools.gpke(bw[self.k_dep:], data=-X_not_i,
-                             data_predict=-self.exog[i, :],
-                             var_type=self.indep_type)
-            f_i = f_yx / f_x
-            L += func(f_i)
-
-        return - L
-
-    def pdf(self, endog_predict=None, exog_predict=None):
-        """
-        Evaluate the probability density function.
-
-        Parameters
-        ----------
-        endog_predict: array_like, optional
-            Evaluation data for the dependent variables.  If unspecified, the
-            training data is used.
-        exog_predict: array_like, optional
-            Evaluation data for the independent variables.
-
-        Returns
-        -------
-        pdf: array_like
-            The value of the probability density at `endog_predict` and `exog_predict`.
-
-        Notes
-        -----
-        The formula for the conditional probability density is:
-
-        .. math:: f(X|Y)=\frac{f(X,Y)}{f(Y)}
-
-        with
-
-        .. math:: f(X)=\prod_{s=1}^{q}h_{s}^{-1}k
-                            \left(\frac{X_{is}-X_{js}}{h_{s}}\right)
-
-        where :math:`k` is the appropriate kernel for each variable.
-        """
-        if endog_predict is None:
-            endog_predict = self.endog
-        else:
-            endog_predict = tools.adjust_shape(endog_predict, self.k_dep)
-        if exog_predict is None:
-            exog_predict = self.exog
-        else:
-            exog_predict = tools.adjust_shape(exog_predict, self.k_indep)
-
-        pdf_est = []
-        data_predict = np.column_stack((endog_predict, exog_predict))
-        for i in xrange(np.shape(data_predict)[0]):
-            f_yx = tools.gpke(self.bw, data=self.data,
-                              data_predict=data_predict[i, :],
-                              var_type=(self.dep_type + self.indep_type))
-            f_x = tools.gpke(self.bw[self.k_dep:], data=self.exog,
-                             data_predict=exog_predict[i, :],
-                             var_type=self.indep_type)
-            pdf_est.append(f_yx / f_x)
-
-        return np.squeeze(pdf_est)
-
-    def cdf(self, endog_predict=None, exog_predict=None):
-        """
-        Cumulative distribution function for the conditional density.
-
-        Parameters
-        ----------
-        endog_predict: array_like, optional
-            The evaluation dependent variables at which the cdf is estimated.
-            If not specified the training dependent variables are used.
-        exog_predict: array_like, optional
-            The evaluation independent variables at which the cdf is estimated.
-            If not specified the training independent variables are used.
-
-        Returns
-        -------
-        cdf_est: array_like
-            The estimate of the cdf.
-
-        Notes
-        -----
-        For more details on the estimation see [5], and p.181 in [1].
-
-        The multivariate conditional CDF for mixed data (continuous and
-        ordered/unordered discrete) is estimated by:
-
-        ..math:: F(y|x)=\frac{n^{-1}\sum_{i=1}^{n}G(\frac{y-Y_{i}}{h_{0}})
-                              W_{h}(X_{i},x)}{\widehat{\mu}(x)}
-
-        where G() is the product kernel CDF estimator for the dependent (y)
-        variable(s) and W() is the product kernel CDF estimator for the
-        independent variable(s).
-        """
-        if endog_predict is None:
-            endog_predict = self.endog
-        else:
-            endog_predict = tools.adjust_shape(endog_predict, self.k_dep)
-        if exog_predict is None:
-            exog_predict = self.exog
-        else:
-            exog_predict = tools.adjust_shape(exog_predict, self.k_indep)
-
-        N_data_predict = np.shape(exog_predict)[0]
-        cdf_est = np.empty(N_data_predict)
-        for i in xrange(N_data_predict):
-            mu_x = tools.gpke(self.bw[self.k_dep:], data=self.exog,
-                              data_predict=exog_predict[i, :],
-                              var_type=self.indep_type) / self.nobs
-            mu_x = np.squeeze(mu_x)
-            cdf_endog = tools.gpke(self.bw[0:self.k_dep], data=self.endog,
-                                   data_predict=endog_predict[i, :],
-                                   var_type=self.dep_type,
-                                   ckertype="gaussian_cdf",
-                                   ukertype="aitchisonaitken_cdf",
-                                   okertype='wangryzin_cdf', tosum=False)
-
-            cdf_exog = tools.gpke(self.bw[self.k_dep:], data=self.exog,
-                                  data_predict=exog_predict[i, :],
-                                  var_type=self.indep_type, tosum=False)
-            S = (cdf_endog * cdf_exog).sum(axis=0)
-            cdf_est[i] = S / (self.nobs * mu_x)
-
-        return cdf_est
-
-    def imse(self, bw):
-        """
-        The integrated mean square error for the conditional KDE.
-
-        Parameters
-        ----------
-        bw: array_like
-            The bandwidth parameter(s).
-
-        Returns
-        -------
-        CV: float
-            The cross-validation objective function.
-
-        Notes
-        -----
-        For more details see pp. 156-166 in [1].
-        For details on how to handle the mixed variable types see [3].
-
-        The formula for the cross-validation objective function for mixed
-        variable types is:
-
-        .. math:: CV(h,\lambda)=\frac{1}{n}\sum_{l=1}^{n}
-            \frac{G_{-l}(X_{l})}{\left[\mu_{-l}(X_{l})\right]^{2}}-
-            \frac{2}{n}\sum_{l=1}^{n}\frac{f_{-l}(X_{l},Y_{l})}{\mu_{-l}(X_{l})}
-
-        where
-
-        .. math:: G_{-l}(X_{l}) = n^{-2}\sum_{i\neq l}\sum_{j\neq l}
-                        K_{X_{i},X_{l}} K_{X_{j},X_{l}}K_{Y_{i},Y_{j}}^{(2)}
-
-        where :math:`K_{X_{i},X_{l}}` is the multivariate product kernel and
-        :math:`\mu_{-l}(X_{l})` is the leave-one-out estimator of the pdf.
-
-        :math:`K_{Y_{i},Y_{j}}^{(2)}` is the convolution kernel.
-
-        The value of the function is minimized by the ``_cv_ls`` method of the
-        `_GenericKDE` class to return the bw estimates that minimize the
-        distance between the estimated and "true" probability density.
-        """
-        zLOO = tools.LeaveOneOut(self.data)
-        CV = 0
-        nobs = float(self.nobs)
-        expander = np.ones((self.nobs - 1, 1))
-        for ii, Z in enumerate(zLOO):
-            X = Z[:, self.k_dep:]
-            Y = Z[:, :self.k_dep]
-            Ye_L = np.kron(Y, expander)
-            Ye_R = np.kron(expander, Y)
-            Xe_L = np.kron(X, expander)
-            Xe_R = np.kron(expander, X)
-            K_Xi_Xl = tools.gpke(bw[self.k_dep:], data=Xe_L,
-                                 data_predict=self.exog[ii, :],
-                                 var_type=self.indep_type, tosum=False)
-            K_Xj_Xl = tools.gpke(bw[self.k_dep:], data=Xe_R,
-                                 data_predict=self.exog[ii, :],
-                                 var_type=self.indep_type, tosum=False)
-            K2_Yi_Yj = tools.gpke(bw[0:self.k_dep], data=Ye_L,
-                                  data_predict=Ye_R, var_type=self.dep_type,
-                                  ckertype='gauss_convolution',
-                                  okertype='wangryzin_convolution',
-                                  ukertype='aitchisonaitken_convolution',
-                                  tosum=False)
-            G = (K_Xi_Xl * K_Xj_Xl * K2_Yi_Yj).sum() / nobs**2
-            f_X_Y = tools.gpke(bw, data=-Z, data_predict=-self.data[ii, :],
-                               var_type=(self.dep_type + self.indep_type)) / \
-                               nobs
-            m_x = tools.gpke(bw[self.k_dep:], data=-X,
-                             data_predict=-self.exog[ii, :],
-                             var_type=self.indep_type) / nobs
-            CV += (G / m_x ** 2) - 2 * (f_X_Y / m_x)
-
-        return CV / nobs
+__all__ = ['Reg', 'CensoredReg']
 
 
 class Reg(_GenericKDE):
@@ -1059,8 +93,8 @@ class Reg(_GenericKDE):
         self.data_type = var_type
         self.reg_type = reg_type
         self.K = len(self.var_type)
-        self.endog = tools.adjust_shape(endog, 1)
-        self.exog = tools.adjust_shape(exog, self.K)
+        self.endog = _adjust_shape(endog, 1)
+        self.exog = _adjust_shape(exog, self.K)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
@@ -1113,11 +147,11 @@ class Reg(_GenericKDE):
         Unlike other methods, this one requires that `data_predict` be 1D.
         """
         nobs, Qc = exog.shape
-        Ker = tools.gpke(bw, data=exog, data_predict=data_predict,
-                         var_type=self.var_type,
-                         #ukertype='aitchison_aitken_reg',
-                         #okertype='wangryzin_reg',
-                         tosum=False) / float(nobs)
+        Ker = gpke(bw, data=exog, data_predict=data_predict,
+                   var_type=self.var_type,
+                   #ukertype='aitchison_aitken_reg',
+                   #okertype='wangryzin_reg',
+                   tosum=False) / float(nobs)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
         #ix_cont = np.arange(self.K)  # Use all vars instead of continuous only
@@ -1169,22 +203,22 @@ class Reg(_GenericKDE):
             The value of the conditional mean at data_predict
 
         """
-        KX = tools.gpke(bw, data=exog, data_predict=data_predict,
-                        var_type=self.var_type,
-                        #ukertype='aitchison_aitken_reg',
-                        #okertype='wangryzin_reg',
-                        tosum=False)
+        KX = gpke(bw, data=exog, data_predict=data_predict,
+                  var_type=self.var_type,
+                  #ukertype='aitchison_aitken_reg',
+                  #okertype='wangryzin_reg',
+                  tosum=False)
         KX = np.reshape(KX, np.shape(endog))
         G_numer = (KX * endog).sum(axis=0)
         G_denom = KX.sum(axis=0)
         G = G_numer / G_denom
         nobs, K = exog.shape
         f_x = G_denom / float(nobs)
-        KX_c = tools.gpke(bw, data=exog, data_predict=data_predict,
-                          var_type=self.var_type,
-                          ckertype='d_gaussian',
-                          #okertype='wangryzin_reg',
-                          tosum=False)
+        KX_c = gpke(bw, data=exog, data_predict=data_predict,
+                    var_type=self.var_type,
+                    ckertype='d_gaussian',
+                    #okertype='wangryzin_reg',
+                    tosum=False)
 
         KX_c = KX_c[:, np.newaxis]
         d_mx = -(endog * KX_c).sum(axis=0) / float(nobs) #* np.prod(bw[:, ix_cont]))
@@ -1204,8 +238,8 @@ class Reg(_GenericKDE):
         """
         H = np.empty((self.nobs, self.nobs))
         for j in range(self.nobs):
-            H[:, j] = tools.gpke(bw, data=self.exog, data_predict=self.exog[j,:],
-                                 var_type=self.var_type, tosum=False)
+            H[:, j] = gpke(bw, data=self.exog, data_predict=self.exog[j,:],
+                           var_type=self.var_type, tosum=False)
         denom = H.sum(axis=1)
         H = H / denom
         gx = Reg(endog=self.endog, exog=self.exog, var_type=self.var_type,
@@ -1253,8 +287,8 @@ class Reg(_GenericKDE):
         and :math:`h` is the vector of bandwidths
 
         """
-        LOO_X = tools.LeaveOneOut(self.exog)
-        LOO_Y = tools.LeaveOneOut(self.endog).__iter__()
+        LOO_X = LeaveOneOut(self.exog)
+        LOO_Y = LeaveOneOut(self.endog).__iter__()
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
@@ -1296,7 +330,7 @@ class Reg(_GenericKDE):
         if data_predict is None:
             data_predict = self.exog
         else:
-            data_predict = tools.adjust_shape(data_predict, self.K)
+            data_predict = _adjust_shape(data_predict, self.K)
 
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
@@ -1331,7 +365,7 @@ class Reg(_GenericKDE):
 
         """
         var_pos = np.asarray(var_pos)
-        ix_cont, ix_ord, ix_unord = tools._get_type_pos(self.var_type)
+        ix_cont, ix_ord, ix_unord = _get_type_pos(self.var_type)
         if np.any(ix_cont[var_pos]):
             if np.any(ix_ord[var_pos]) or np.any(ix_unord[var_pos]):
                 raise "Discrete variable in hypothesis. Must be continuous"
@@ -1351,6 +385,32 @@ class Reg(_GenericKDE):
         repr += "BW selection method: " + self._bw_method + "\n"
         repr += "Estimator type: " + self.reg_type + "\n"
         return repr
+
+    def _get_class_vars_type(self):
+        """Helper method to be able to pass needed vars to _compute_subset."""
+        class_type = 'Reg'
+        class_vars = (self.var_type, self.K, self.reg_type)
+        return class_type, class_vars
+
+    def _compute_dispersion(self, data):
+        """
+        Computes the measure of dispersion.
+
+        The minimum of the standard deviation and interquartile range / 1.349
+
+        References
+        ----------
+        See the user guide for the np package in R.
+        In the notes on bwscaling option in npreg, npudens, npcdens there is
+        a discussion on the measure of dispersion
+        """
+        data = data[:, 1:]
+
+        s1 = np.std(data, axis=0)
+        q75 = mquantiles(data, 0.75, axis=0).data[0]
+        q25 = mquantiles(data, 0.25, axis=0).data[0]
+        s2 = (q75 - q25) / 1.349
+        return np.minimum(s1, s2)
 
 
 class CensoredReg(Reg):
@@ -1405,8 +465,8 @@ class CensoredReg(Reg):
         self.data_type = var_type
         self.reg_type = reg_type
         self.K = len(self.var_type)
-        self.endog = tools.adjust_shape(endog, 1)
-        self.exog = tools.adjust_shape(exog, self.K)
+        self.endog = _adjust_shape(endog, 1)
+        self.exog = _adjust_shape(exog, self.K)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
@@ -1428,7 +488,7 @@ class CensoredReg(Reg):
         self.d = (self.endog != censor_val) * 1.
         ix = np.argsort(np.squeeze(self.endog))
         self.endog = np.squeeze(self.endog[ix])
-        self.endog = tools.adjust_shape(self.endog, 1)
+        self.endog = _adjust_shape(self.endog, 1)
         self.exog = np.squeeze(self.exog[ix])
         self.d = np.squeeze(self.d[ix])
         self.W_in = np.empty((self.nobs, 1))
@@ -1475,10 +535,10 @@ class CensoredReg(Reg):
         Unlike other methods, this one requires that data_predict be 1D
         """
         nobs, Qc = exog.shape
-        Ker = tools.gpke(bw, data=exog, data_predict=data_predict,
-                         var_type=self.var_type,
-                         ukertype='aitchison_aitken_reg',
-                         okertype='wangryzin_reg', tosum=False)
+        Ker = gpke(bw, data=exog, data_predict=data_predict,
+                   var_type=self.var_type,
+                   ukertype='aitchison_aitken_reg',
+                   okertype='wangryzin_reg', tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
 
@@ -1538,9 +598,9 @@ class CensoredReg(Reg):
         and :math:`h` is the vector of bandwidths
 
         """
-        LOO_X = tools.LeaveOneOut(self.exog)
-        LOO_Y = tools.LeaveOneOut(self.endog).__iter__()
-        LOO_W = tools.LeaveOneOut(self.W_in).__iter__()
+        LOO_X = LeaveOneOut(self.exog)
+        LOO_Y = LeaveOneOut(self.endog).__iter__()
+        LOO_W = LeaveOneOut(self.W_in).__iter__()
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
@@ -1560,7 +620,7 @@ class CensoredReg(Reg):
         if data_predict is None:
             data_predict = self.exog
         else:
-            data_predict = tools.adjust_shape(data_predict, self.K)
+            data_predict = _adjust_shape(data_predict, self.K)
 
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
@@ -1664,8 +724,8 @@ class TestRegCoefC(object):
     def _compute_lambda(self, Y, X):
         """Computes only lambda -- the main part of the test statistic"""
         n = np.shape(X)[0]
-        Y = tools.adjust_shape(Y, 1)
-        X = tools.adjust_shape(X, self.K)
+        Y = _adjust_shape(Y, 1)
+        X = _adjust_shape(X, self.K)
         b = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
                         defaults = EstimatorSettings(efficient=False)).fit()[1]
 
@@ -1926,21 +986,21 @@ class TestFForm(object):
 
     def _compute_test_stat(self, u):
         n = np.shape(u)[0]
-        XLOO = tools.LeaveOneOut(self.exog)
-        uLOO = tools.LeaveOneOut(u).__iter__()
+        XLOO = LeaveOneOut(self.exog)
+        uLOO = LeaveOneOut(u).__iter__()
         I = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):
             u_j = uLOO.next()
             # See Bootstrapping procedure on p. 357 in [1]
-            K = tools.gpke(self.bw, data=-X_not_i, data_predict=-X_not_i[i, :],
-                           var_type=self.var_type, tosum=False)
+            K = gpke(self.bw, data=-X_not_i, data_predict=-X_not_i[i, :],
+                     var_type=self.var_type, tosum=False)
             f_i = u[i] * u_j * K
             I += f_i  # See eq. 12.7 on p. 355 in [1]
             S2 += f_i ** 2  # See Theorem 12.1 on p.356 in [1]
 
         I *= 1. / (n * (n - 1))
-        ix_cont = tools._get_type_pos(self.var_type)[0]
+        ix_cont = _get_type_pos(self.var_type)[0]
         hp = self.bw[ix_cont].prod()
         S2 *= 2 * hp / (n * (n - 1))
         T = n * I * np.sqrt(hp / S2)
@@ -1991,8 +1051,8 @@ class SingleIndexModel(Reg):
     def __init__(self, endog, exog, var_type):
         self.var_type = var_type
         self.K = len(var_type)
-        self.endog = tools.adjust_shape(endog, 1)
-        self.exog = tools.adjust_shape(exog, self.K)
+        self.endog = _adjust_shape(endog, 1)
+        self.exog = _adjust_shape(exog, self.K)
         self.nobs = np.shape(self.exog)[0]
         self.data_type = self.var_type
         self.func = self._est_loc_linear
@@ -2012,8 +1072,8 @@ class SingleIndexModel(Reg):
         params = np.asarray(params)
         b = params[0 : self.K]
         bw = params[self.K:]
-        LOO_X = tools.LeaveOneOut(self.exog)
-        LOO_Y = tools.LeaveOneOut(self.endog).__iter__()
+        LOO_X = LeaveOneOut(self.exog)
+        LOO_Y = LeaveOneOut(self.endog).__iter__()
         L = 0
         for i, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
@@ -2028,7 +1088,7 @@ class SingleIndexModel(Reg):
         if data_predict is None:
             data_predict = self.exog
         else:
-            data_predict = tools.adjust_shape(data_predict, self.K)
+            data_predict = _adjust_shape(data_predict, self.K)
 
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
@@ -2101,10 +1161,10 @@ class SemiLinear(Reg):
     """
 
     def __init__(self, endog, exog, exog_nonparametric, var_type, k_linear):
-        self.endog = tools.adjust_shape(endog, 1)
-        self.exog = tools.adjust_shape(exog, k_linear)
+        self.endog = _adjust_shape(endog, 1)
+        self.exog = _adjust_shape(exog, k_linear)
         self.K = len(var_type)
-        self.exog_nonparametric = tools.adjust_shape(exog_nonparametric, self.K)
+        self.exog_nonparametric = _adjust_shape(exog_nonparametric, self.K)
         self.k_linear = k_linear
         self.nobs = np.shape(self.exog)[0]
         self.var_type = var_type
@@ -2150,9 +1210,9 @@ class SemiLinear(Reg):
         params = np.asarray(params)
         b = params[0 : self.k_linear]
         bw = params[self.k_linear:]
-        LOO_X = tools.LeaveOneOut(self.exog)
-        LOO_Y = tools.LeaveOneOut(self.endog).__iter__()
-        LOO_Z = tools.LeaveOneOut(self.exog_nonparametric).__iter__()
+        LOO_X = LeaveOneOut(self.exog)
+        LOO_Y = LeaveOneOut(self.endog).__iter__()
+        LOO_Z = LeaveOneOut(self.exog_nonparametric).__iter__()
         Xb = b * self.exog
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
@@ -2173,12 +1233,12 @@ class SemiLinear(Reg):
         if exog_predict is None:
             exog_predict = self.exog
         else:
-            exog_predict = tools.adjust_shape(exog_predict, self.k_linear)
+            exog_predict = _adjust_shape(exog_predict, self.k_linear)
 
         if exog_nonparametric_predict is None:
             exog_nonparametric_predict = self.exog_nonparametric
         else:
-            exog_nonparametric_predict = tools.adjust_shape(exog_predict, self.K)
+            exog_nonparametric_predict = _adjust_shape(exog_predict, self.K)
 
         N_data_predict = np.shape(exog_nonparametric_predict)[0]
         mean = np.empty((N_data_predict,))
