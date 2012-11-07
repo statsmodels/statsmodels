@@ -93,13 +93,15 @@ def detrend(y, order):
     return OLS(y, np.vander(np.linspace(-1,1,len(y)), order+1)).fit().resid
 
 def resid(y, x):
+    if x.size == 0:
+        return y
     r = y - np.dot(x, np.dot(np.linalg.pinv(x), y))
     return r
 
 
 
 
-def coint_johansen(x, p, k):
+def coint_johansen(x, p, k, coint_trend=None):
 
     #    % error checking on inputs
     #    if (nargin ~= 3)
@@ -112,6 +114,9 @@ def coint_johansen(x, p, k):
         f = 0
     else:
         f = p
+
+    if coint_trend is not None:
+        f = coint_trend  #matlab has separate options
 
     x     = detrend(x,p)
     dx    = tdiff(x,1, axis=0)
