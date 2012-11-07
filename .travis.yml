@@ -5,6 +5,9 @@
 # travis-ci; it uses virtualenvs, they do not have numpy, scipy, matplotlib,
 # and it is impractical to build them
 language: erlang
+notifications: 
+    email: 
+        - statsmodels-commits@googlegroups.com 
 env:
     # Enable python 2 and python 3 builds. Python3.2 available in Ubuntu 12.04.
     - PYTHON=python PYSUF=''
