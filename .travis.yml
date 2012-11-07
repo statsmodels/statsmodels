@@ -13,6 +13,7 @@ env:
     - PYTHON=python PYSUF=''
     - PYTHON=python3 PYSUF=3
 install:
+    - sudo apt-get update
     - sudo apt-get install $PYTHON-dev
     - sudo apt-get install $PYTHON-numpy
     - sudo apt-get install $PYTHON-scipy
