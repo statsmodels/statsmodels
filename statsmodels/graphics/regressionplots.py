@@ -16,7 +16,7 @@ import numpy as np
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.graphics import utils
-from statsmodels.nonparametric import lowess
+from statsmodels.nonparametric.smoothers_lowess import lowess
 
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
