@@ -40,5 +40,5 @@ script:
       fi
     # For some reason, Python 3 will try to work with the build directory. Get out of folder to avoid breakage
     - cd ../
-    - nosetests statsmodels
+    - $PYTHON -c "import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)"
 
