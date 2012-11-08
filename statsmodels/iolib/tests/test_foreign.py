@@ -46,8 +46,8 @@ def test_stata_writer_structured():
     buf = StringIO()
     dta = macrodata.load().data
     dtype = dta.dtype
-    dta = dta.astype(np.dtype([('year', 'i8'),
-                               ('quarter', 'i4')] + dtype.descr[2:]))
+    dta = dta.astype(np.dtype([('year', int),
+                               ('quarter', int)] + dtype.descr[2:]))
     writer = StataWriter(buf, dta)
     writer.write_file()
     buf.seek(0)
