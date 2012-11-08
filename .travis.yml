@@ -40,5 +40,5 @@ script:
       fi
     # For some reason, Python 3 will try to work with the build directory. Get out of folder to avoid breakage
     - cd ../
-    - $PYTHON -c "import statsmodels.api as sm ; sm.test()"
+    - nosetests statsmodels
 
