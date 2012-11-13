@@ -776,7 +776,6 @@ class VARResults(VARProcess):
     bse
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    coef_names
     cov_params
     dates
     detomega
