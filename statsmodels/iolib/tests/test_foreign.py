@@ -1,8 +1,8 @@
 """
 Tests for iolib/foreign.py
 """
-
-from StringIO import StringIO
+import sys
+from statsmodels.compatnp.py3k import BytesIO, asbytes
 from datetime import datetime
 
 from numpy.testing import *
@@ -43,7 +43,7 @@ def test_genfromdta_pandas():
     assert_frame_equal(res1, dta)
 
 def test_stata_writer_structured():
-    buf = StringIO()
+    buf = BytesIO()
     dta = macrodata.load().data
     dtype = dta.dtype
     dta = dta.astype(np.dtype([('year', int),
@@ -55,7 +55,7 @@ def test_stata_writer_structured():
     assert_array_equal(dta, dta2)
 
 def test_stata_writer_array():
-    buf = StringIO()
+    buf = BytesIO()
     dta = macrodata.load().data
     dta = DataFrame.from_records(dta)
     dta.columns = ["v%d" % i for i in range(1,15)]
@@ -67,7 +67,7 @@ def test_stata_writer_array():
     assert_array_equal(dta, dta2)
 
 def test_missing_roundtrip():
-    buf = StringIO()
+    buf = BytesIO()
     dta = np.array([(np.nan, np.inf, "")],
                       dtype=[("double_miss", float), ("float_miss", np.float32),
                               ("string_miss", "a1")])
@@ -77,14 +77,14 @@ def test_missing_roundtrip():
     dta = genfromdta(buf, missing_flt=np.nan)
     assert_(isnull(dta[0][0]))
     assert_(isnull(dta[0][1]))
-    assert_(dta[0][2] == "")
+    assert_(dta[0][2] == asbytes(""))
 
     dta = genfromdta(os.path.join(curdir, "results/data_missing.dta"),
             missing_flt=-999)
     assert_(np.all([dta[0][i] == -999 for i in range(5)]))
 
 def test_stata_writer_pandas():
-    buf = StringIO()
+    buf = BytesIO()
     dta = macrodata.load().data
     dtype = dta.dtype
     #as of 0.9.0 pandas only supports i8 and f8
@@ -152,7 +152,7 @@ def test_datetime_roundtrip():
                     (2, datetime(2010, 2, 1), 3),
                     (4, datetime(2010, 3, 1), 5)],
                     dtype=[('var1', float), ('var2', object), ('var3', float)])
-    buf = StringIO()
+    buf = BytesIO()
     writer = StataWriter(buf, dta, {"var2" : "tm"})
     writer.write_file()
     buf.seek(0)
@@ -160,7 +160,7 @@ def test_datetime_roundtrip():
     assert_equal(dta, dta2)
 
     dta = DataFrame.from_records(dta)
-    buf = StringIO()
+    buf = BytesIO()
     writer = StataWriter(buf, dta, {"var2" : "tm"})
     writer.write_file()
     buf.seek(0)
