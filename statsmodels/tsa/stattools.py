@@ -290,7 +290,9 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     acovf : array
         autocovariance function
     '''
-    x = np.asarray(x)
+    x = np.squeeze(np.asarray(x))
+    if x.ndim > 1:
+        raise ValueError("x must be 1d. Got %d dims." % x.ndim)
     n = len(x)
 
     if demean:
