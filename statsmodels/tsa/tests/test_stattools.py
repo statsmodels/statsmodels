@@ -3,7 +3,7 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                coint, acovf)
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_raises
 from numpy import genfromtxt#, concatenate
 from statsmodels.datasets import macrodata, sunspots
 from pandas import Series, Index
@@ -238,6 +238,8 @@ def test_acovf2d():
     del dta["YEAR"]
     res = acovf(dta)
     assert_equal(res, acovf(dta.values))
+    X = np.random.random((10,2))
+    assert_raises(ValueError, acovf, X)
 
 if __name__=="__main__":
     import nose
