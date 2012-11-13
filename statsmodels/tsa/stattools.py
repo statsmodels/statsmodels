@@ -290,16 +290,16 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     acovf : array
         autocovariance function
     '''
+    x = np.asarray(x)
     n = len(x)
+
     if demean:
-        xo = x - x.mean();
+        xo = x - x.mean()
     else:
         xo = x
     if unbiased:
-#        xi = np.ones(n);
-#        d = np.correlate(xi, xi, 'full')
-        xi = np.arange(1,n+1)
-        d = np.hstack((xi,xi[:-1][::-1])) # faster, is correlate more general?
+        xi = np.arange(1, n+1)
+        d = np.hstack((xi, xi[:-1][::-1]))
     else:
         d = n
     if fft:
@@ -309,6 +309,7 @@ def acovf(x, unbiased=False, demean=True, fft=False):
         return acov.real
     else:
         return (np.correlate(xo, xo, 'full')/d)[n-1:]
+
 
 def q_stat(x,nobs, type="ljungbox"):
     """

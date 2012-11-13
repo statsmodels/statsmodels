@@ -1,10 +1,12 @@
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
-                                               pacf, grangercausalitytests, coint)
+                                               pacf, grangercausalitytests, coint,
+                                               acovf)
 
 import numpy as np
 from numpy.testing import assert_almost_equal
 from numpy import genfromtxt#, concatenate
 from statsmodels.datasets import macrodata
+from pandas import Series
 import os
 
 
@@ -226,7 +228,9 @@ def test_grangercausality():
     assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
                         decimal=7)
 
-
+def test_pandasacovf():
+    s = Series(range(1, 11))
+    assert_almost_equal(acovf(s), acovf(s.values))
 
 if __name__=="__main__":
     import nose
