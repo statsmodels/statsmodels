@@ -11,11 +11,12 @@ numpy.lib.io
 """
 
 from struct import unpack, calcsize, pack
+from struct import error as struct_error
 import datetime
 import sys
 import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
-from statsmodels.compatnp.py3k import asbytes
+from statsmodels.compatnp.py3k import asbytes, asstr
 import statsmodels.tools.data as data_util
 from pandas import isnull
 
@@ -124,19 +125,19 @@ def _stata_elapsed_date_to_datetime(date, fmt):
     elif fmt in ["%td", "td"]:
         return stata_epoch + datetime.timedelta(int(date))
     elif fmt in ["%tw", "tw"]: # does not count leap days - 7 days is a week
-        year = datetime.datetime(stata_epoch.year + date / 52, 1, 1)
+        year = datetime.datetime(stata_epoch.year + date // 52, 1, 1)
         day_delta = (date  % 52 ) * 7
         return year + datetime.timedelta(int(day_delta))
     elif fmt in ["%tm", "tm"]:
-        year = stata_epoch.year + date / 12
+        year = stata_epoch.year + date // 12
         month_delta = (date  % 12 ) + 1
         return datetime.datetime(year, month_delta, 1)
     elif fmt in ["%tq", "tq"]:
-        year = stata_epoch.year + date / 4
+        year = stata_epoch.year + date // 4
         month_delta = (date % 4) * 3 + 1
         return datetime.datetime(year, month_delta, 1)
     elif fmt in ["%th", "th"]:
-        year = stata_epoch.year + date / 2
+        year = stata_epoch.year + date // 2
         month_delta = (date % 2) * 6 + 1
         return datetime.datetime(year, month_delta, 1)
     elif fmt in ["%ty", "ty"]:
@@ -664,6 +665,8 @@ def _maybe_convert_to_int_keys(convert_dates, varlist):
             new_dict.update({key : convert_dates[key]})
     return new_dict
 
+_type_converters = {253 : np.long, 252 : int}
+
 class StataWriter(object):
     """
     A class for writing Stata binary dta files from array-like objects
@@ -753,6 +756,11 @@ class StataWriter(object):
         self._encoding = encoding
         self._file = _open_file_binary_write(fname, encoding)
 
+    def _write(self, to_write):
+        """
+        Helper to call asbytes before writing to file for Python 3 compat.
+        """
+        self._file.write(asbytes(to_write))
 
     def _prepare_structured_array(self, data):
         self.nobs = len(data)
@@ -840,7 +848,7 @@ class StataWriter(object):
         self._write_descriptors()
         self._write_variable_labels()
         # write 5 zeros for expansion fields
-        self._file.write(_pad_bytes("", 5))
+        self._write(_pad_bytes("", 5))
         if self._convert_dates is None:
             self._write_data_nodates()
         else:
@@ -850,23 +858,23 @@ class StataWriter(object):
     def _write_header(self, data_label=None, time_stamp=None):
         byteorder = self._byteorder
         # ds_format - just use 114
-        self._file.write(pack("b", 114))
+        self._write(pack("b", 114))
         # byteorder
-        self._file.write(byteorder == ">" and "\x01" or "\x02")
+        self._write(byteorder == ">" and "\x01" or "\x02")
         # filetype
-        self._file.write("\x01")
+        self._write("\x01")
         # unused
-        self._file.write("\x00")
+        self._write("\x00")
         # number of vars, 2 bytes
-        self._file.write(pack(byteorder+"h", self.nvar)[:2])
+        self._write(pack(byteorder+"h", self.nvar)[:2])
         # number of obs, 4 bytes
-        self._file.write(pack(byteorder+"i", self.nobs)[:4])
+        self._write(pack(byteorder+"i", self.nobs)[:4])
         # data label 81 bytes, char, null terminated
         if data_label is None:
-            self._file.write(self._null_terminate(_pad_bytes("", 80),
+            self._write(self._null_terminate(_pad_bytes("", 80),
                              self._encoding))
         else:
-            self._file.write(self._null_terminate(_pad_bytes(data_label[:80],
+            self._write(self._null_terminate(_pad_bytes(data_label[:80],
                                 80), self._encoding))
         # time stamp, 18 bytes, char, null terminated
         # format dd Mon yyyy hh:mm
@@ -874,7 +882,7 @@ class StataWriter(object):
             time_stamp = datetime.datetime.now()
         elif not isinstance(time_stamp, datetime):
             raise ValueError("time_stamp should be datetime type")
-        self._file.write(self._null_terminate(
+        self._write(self._null_terminate(
                             time_stamp.strftime("%d %b %Y %H:%M"),
                             self._encoding))
 
@@ -883,32 +891,32 @@ class StataWriter(object):
         nvar = self.nvar
         # typlist, length nvar, format byte array
         for typ in self.typlist:
-            self._file.write(typ)
+            self._write(typ)
 
         # varlist, length 33*nvar, char array, null terminated
         for name in self.varlist:
             name = self._null_terminate(name, self._encoding)
-            name = _pad_bytes(name[:32], 33)
-            self._file.write(name)
+            name = _pad_bytes(asstr(name[:32]), 33)
+            self._write(name)
 
         # srtlist, 2*(nvar+1), int array, encoded by byteorder
         srtlist = _pad_bytes("", (2*(nvar+1)))
-        self._file.write(srtlist)
+        self._write(srtlist)
 
         # fmtlist, 49*nvar, char array
         for fmt in self.fmtlist:
-            self._file.write(_pad_bytes(fmt, 49))
+            self._write(_pad_bytes(fmt, 49))
 
         # lbllist, 33*nvar, char array
         #NOTE: this is where you could get fancy with pandas categorical type
         for i in range(nvar):
-            self._file.write(_pad_bytes("", 33))
+            self._write(_pad_bytes("", 33))
 
     def _write_variable_labels(self, labels=None):
         nvar = self.nvar
         if labels is None:
             for i in range(nvar):
-                self._file.write(_pad_bytes("", 81))
+                self._write(_pad_bytes("", 81))
 
     def _write_data_nodates(self):
         data = self.datarows
@@ -921,10 +929,16 @@ class StataWriter(object):
                 typ = ord(typlist[i])
                 if typ <= 244: # we've got a string
                     if len(var) < typ:
-                        var = _pad_bytes(var, len(var) + 1)
-                    self._file.write(var)
+                        var = _pad_bytes(asstr(var), len(var) + 1)
+                    self._write(var)
                 else:
-                    self._file.write(pack(byteorder+TYPE_MAP[typ], var))
+                    try:
+                        self._write(pack(byteorder+TYPE_MAP[typ], var))
+                    except struct_error:
+                        # have to be strict about type pack won't do any
+                        # kind of casting
+                        self._write(pack(byteorder+TYPE_MAP[typ],
+                                    _type_converters[typ](var)))
 
     def _write_data_dates(self):
         convert_dates = self._convert_dates
@@ -947,15 +961,15 @@ class StataWriter(object):
                         var = "" # missing string
                     if len(var) < typ:
                         var = _pad_bytes(var, len(var) + 1)
-                    self._file.write(var)
+                    self._write(var)
                 else:
                     if isnull(var): # this only matters for floats
                         var = MISSING_VALUES[typ]
-                    self._file.write(pack(byteorder+TYPE_MAP[typ], var))
+                    self._write(pack(byteorder+TYPE_MAP[typ], var))
 
 
     def _null_terminate(self, s, encoding):
-        null_byte = asbytes('\x00')
+        null_byte = '\x00'
         if PY3:
             s += null_byte
             return s.encode(encoding)
