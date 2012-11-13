@@ -1,12 +1,12 @@
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
-                                               pacf, grangercausalitytests, coint,
-                                               acovf)
-
+                                               pacf, grangercausalitytests,
+                                               coint, acovf)
+from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 from numpy import genfromtxt#, concatenate
-from statsmodels.datasets import macrodata
-from pandas import Series
+from statsmodels.datasets import macrodata, sunspots
+from pandas import Series, Index
 import os
 
 
@@ -231,6 +231,13 @@ def test_grangercausality():
 def test_pandasacovf():
     s = Series(range(1, 11))
     assert_almost_equal(acovf(s), acovf(s.values))
+
+def test_acovf2d():
+    dta = sunspots.load_pandas().data
+    dta.index = Index(dates_from_range('1700', '2008'))
+    del dta["YEAR"]
+    res = acovf(dta)
+    assert_equal(res, acovf(dta.values))
 
 if __name__=="__main__":
     import nose
