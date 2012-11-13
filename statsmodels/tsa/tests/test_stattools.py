@@ -230,7 +230,6 @@ def test_grangercausality():
 
 def test_pandasacovf():
     s = Series(range(1, 11))
-
     assert_almost_equal(acovf(s), acovf(s.values))
 
 if __name__=="__main__":
