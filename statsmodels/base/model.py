@@ -13,7 +13,7 @@ from statsmodels.formula import handle_formula_data
 _model_params_doc = """    Parameters
     ----------
     endog : array-like
-        1-d endogenous response variable. The independent variable.
+        1-d endogenous response variable. The dependent variable.
     exog : array-like
         A nobs x k array where `nobs` is the number of observations and `k`
         is the number of regressors. An interecept is not included by default
