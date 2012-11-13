@@ -54,9 +54,9 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
     assumed to be in contiguous columns from low to high lag length with
     the highest lag in the last column.
     """
-#TODO: can tcol be replaced by maxlag + 2?
-#TODO: This could be changed to laggedRHS and exog keyword arguments if this
-#    will be more general.
+    #TODO: can tcol be replaced by maxlag + 2?
+    #TODO: This could be changed to laggedRHS and exog keyword arguments if
+    #    this will be more general.
 
     results = {}
     method = method.lower()
@@ -70,7 +70,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         icbest, bestlag = min((v.bic,k) for k,v in results.iteritems())
     elif method == "t-stat":
         lags = sorted(results.keys())[::-1]
-#        stop = stats.norm.ppf(.95)
+        #stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
         for lag in range(startlag + maxlag, startlag - 1, -1):
             icbest = np.abs(results[lag].tvalues[-1])
