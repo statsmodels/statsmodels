@@ -17,8 +17,8 @@ import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.var_model as model
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
-#reload(model)
 from statsmodels.tsa.vector_ar.var_model import VAR
+from statsmodels.compatnp.py3k import BytesIO
 
 from numpy.testing import assert_almost_equal, assert_equal, assert_
 
@@ -499,18 +499,8 @@ def get_lutkepohl_data(name='e2'):
 
     return util.parse_lutkepohl_data(path)
 
-def have_pandas():
-    try:
-        import pandas as _
-        return True
-    except ImportError:
-        return False
-
 def test_lutkepohl_parse():
     files = ['e%d' % i for i in range(1, 7)]
-
-    if not have_pandas():
-        raise nose.SkipTest
 
     for f in files:
         get_lutkepohl_data(f)
@@ -522,10 +512,6 @@ class TestVARResultsLutkepohl(object):
 
     def __init__(self):
         self.p = 2
-
-        if not have_pandas():
-            return
-
         sdata, dates = get_lutkepohl_data('e1')
 
         names = sdata.dtype.names
@@ -540,9 +526,6 @@ class TestVARResultsLutkepohl(object):
         self.lut = E1_Results()
 
     def test_approx_mse(self):
-        if not have_pandas():
-            raise nose.SkipTest
-
         # 3.5.18, p. 99
         mse2 = np.array([[25.12, .580, 1.300],
                          [.580, 1.581, .586],
@@ -552,27 +535,18 @@ class TestVARResultsLutkepohl(object):
                             DECIMAL_3)
 
     def test_irf_stderr(self):
-        if not have_pandas():
-            raise nose.SkipTest
-
         irf_stderr = self.irf.stderr(orth=False)
         for i in range(1, 1 + len(self.lut.irf_stderr)):
             assert_almost_equal(np.round(irf_stderr[i], 3),
                                 self.lut.irf_stderr[i-1])
 
     def test_cum_irf_stderr(self):
-        if not have_pandas():
-            raise nose.SkipTest
-
         stderr = self.irf.cum_effect_stderr(orth=False)
         for i in range(1, 1 + len(self.lut.cum_irf_stderr)):
             assert_almost_equal(np.round(stderr[i], 3),
                                 self.lut.cum_irf_stderr[i-1])
 
     def test_lr_effect_stderr(self):
-        if not have_pandas():
-            raise nose.SkipTest
-
         stderr = self.irf.lr_effect_stderr(orth=False)
         orth_stderr = self.irf.lr_effect_stderr(orth=True)
         assert_almost_equal(np.round(stderr, 3), self.lut.lr_stderr)
