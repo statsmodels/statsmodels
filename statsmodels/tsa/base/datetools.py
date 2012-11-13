@@ -2,6 +2,7 @@ import re
 import datetime
 from pandas import datetools as pandas_datetools
 import numpy as np
+from statsmodels.compatnp.py3k import asstr
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
 try:
@@ -198,7 +199,8 @@ def date_range_str(start, end=None, length=None):
         offset = np.tile(np.arange(1, annual_freq+1), yr2-yr1-1)
         offset = np.r_[np.arange(offset1, annual_freq+1).astype('a2'), offset]
         offset = np.r_[offset, np.arange(1,offset2+1).astype('a2')]
-        date_arr_range = [''.join([i,split,j]) for i,j in zip(years, offset)]
+        date_arr_range = [''.join([i, split, asstr(j)]) for i,j in
+                                                        zip(years, offset)]
     else:
         date_arr_range = years.tolist()
     return date_arr_range
