@@ -1,80 +1,77 @@
+.. _importpaths:
 
 Import Paths and Structure
 ==========================
 
-We have two ways of importing functions and classes from statsmodels. One
-way is designed for interactive use, where tab completion makes it easy to see
-what is available and to save on typing. The other way is designed for use in
-a program, where we do not want to import modules that are not needed for
-the purpose on hand.
+We offer two ways of importing functions and classes from statsmodels: 
 
-The API Import
---------------
+1. `API import for interactive use`_
 
-Importing `statsmodels.api` will load most of the public parts of statsmodels
-and make functions and classes available within one or two levels.
+   + Allows tab completion
 
-For interactive use the recommended import is
+2. `Direct import for programs`_ 
 
->>> import statsmodels.api as sm
+   + Avoids importing unnecessary modules and commands
 
-The following illustrates what is currently available (and changes as new
-functionality is added). Instead of using dir(xxx), we can get the same
-information by tab completion in most Python editors, for example Ipython and
-Spyder, or IDLE.
+API Import for interactive use
+------------------------------
 
->>> dir(sm)
+For interactive use the recommended import is:
 
-['GLM', 'GLS', 'GLSAR', 'Logit', 'MNLogit', 'OLS', 'Poisson', 'Probit', 'RLM',
-'WLS', '__builtins__', '__doc__', '__file__', '__name__', '__package__',
-'add_constant', 'categorical', 'datasets', 'distributions', 'families',
-'graphics', 'iolib', 'nonparametric', 'qqplot', 'regression', 'robust',
-'stats', 'test', 'tools', 'tsa', 'version']
+.. code-block:: python
 
->>> dir(sm.nonparametric)
-['KDE', '__builtins__', '__doc__', '__file__', '__name__',
-'__package__', 'bandwidths', 'lowess']
+    import statsmodels.api as sm
 
->>> dir(sm.graphics)
-['__builtins__', '__doc__', '__file__', '__name__', '__package__',
-'abline_plot', 'beanplot', 'fboxplot', 'interaction_plot', 'qqplot',
-'rainbow', 'rainbowplot', 'violinplot']
+Importing `statsmodels.api` will load most of the public parts of statsmodels.
+This makes most functions and classes conveniently available within one or two
+levels, without making the "sm" namespace too crowded. 
 
->>> dir(sm.tsa)
-['AR', 'ARMA', 'DynamicVAR', 'SVAR', 'VAR', '__builtins__', '__doc__',
-'__file__', '__name__', '__package__', 'acf', 'acovf', 'add_lag',
-'add_trend', 'adfuller', 'ccf', 'ccovf', 'datetools', 'detrend',
-'filters', 'grangercausalitytests', 'interp', 'lagmat', 'lagmat2ds',
-'pacf', 'pacf_ols', 'pacf_yw', 'periodogram', 'q_stat', 'stattools',
-'tsatools', 'var']
+To see what functions and classes available, you can type the following (or use
+the namespace exploration features of IPython, Spyder, IDLE, etc.): 
 
->>> dir(sm.tsa.tsatools)
-...
+.. code-block:: python
 
-The idea is to be able to access the commonly used models and functions of
-statsmodels from "sm" (statsmodels.api) directly or within one level. We add
-one level so the `sm` namespace does not get too crowded.
+    >>> dir(sm)
+    ['GLM', 'GLS', 'GLSAR', 'Logit', 'MNLogit', 'OLS', 'Poisson', 'Probit', 'RLM',
+    'WLS', '__builtins__', '__doc__', '__file__', '__name__', '__package__',
+    'add_constant', 'categorical', 'datasets', 'distributions', 'families',
+    'graphics', 'iolib', 'nonparametric', 'qqplot', 'regression', 'robust',
+    'stats', 'test', 'tools', 'tsa', 'version']
 
-The `api` modules contain the main public functionality of statsmodels.
-Functions that are not in the `api's` are not clearly marked as to whether they
-are considered public or private. If you find something that should be
-added to the api, then please file an issue on github or report it to the
-mailing list.
+    >>> dir(sm.graphics)
+    ['__builtins__', '__doc__', '__file__', '__name__', '__package__',
+    'abline_plot', 'beanplot', 'fboxplot', 'interaction_plot', 'qqplot',
+    'rainbow', 'rainbowplot', 'violinplot']
 
-**Detail**
+    >>> dir(sm.tsa)
+    ['AR', 'ARMA', 'DynamicVAR', 'SVAR', 'VAR', '__builtins__', '__doc__',
+    '__file__', '__name__', '__package__', 'acf', 'acovf', 'add_lag',
+    'add_trend', 'adfuller', 'ccf', 'ccovf', 'datetools', 'detrend',
+    'filters', 'grangercausalitytests', 'interp', 'lagmat', 'lagmat2ds',
+    'pacf', 'pacf_ols', 'pacf_yw', 'periodogram', 'q_stat', 'stattools',
+    'tsatools', 'var']
 
-In the subpackages of statsmodels we have `api.py` modules that are mainly to
-collect the imports from a subpackage. Those `subpackage/api.py` are imported
-into statsmodels api, for example ::
+Notes
+^^^^^
+
+The `api` modules may not include all the public functionality of statsmodels. If
+you find something that should be added to the api, please file an issue on
+github or report it to the mailing list.
+
+The subpackages of statsmodels include `api.py` modules that are mainly
+intended to collect the imports needed for those subpackages. The `subpackage/api.py`
+files are imported into statsmodels api, for example ::
 
      from .nonparametric import api as nonparametric
 
 Users do not need to load the `subpackage/api.py` modules directly.
 
+Direct import for programs
+--------------------------
 
-Direct Imports - File and Directory Structure
----------------------------------------------
-Our directory tree stripped down looks something like::
+``statsmodels`` submodules are arranged by topic (e.g. `discrete` for discrete
+choice models, or `tsa` for time series analysis). Our directory tree (stripped
+down) looks something like this::
 
     statsmodels/
         __init__.py
@@ -109,25 +106,25 @@ Our directory tree stripped down looks something like::
             decorators.py
             tests/
 
-The submodules are arranged by topic, `discrete` for discrete choice models,
-or `tsa` for time series analysis. The submodules that can be import heavy
-contain an empty `__init__.py`, except for some testing code for running tests
-for the submodules. The intention is to change all directories to have an
-`api.py` and empty `__init__.py` in the next release.
+The submodules that can be import heavy contain an empty `__init__.py`, except
+for some testing code for running tests for the submodules. The intention is to
+change all directories to have an `api.py` and empty `__init__.py` in the next
+release.
 
-The following are some examples for imports that are used within statsmodels.
+Import examples
+^^^^^^^^^^^^^^^
 
-importing functions and classes::
+Functions and classes::
 
     from statsmodels.regression.linear_model import OLS, WLS
     from statsmodels.tools.tools import rank, add_constant
 
-importing modules ::
+Modules ::
 
     from statsmodels.datasets import macrodata
     import statsmodels.stats import diagnostic
 
-importing modules with alias ::
+Modules with aliases ::
 
     import statsmodels.regression.linear_model as lm
     import statsmodels.stats.diagnostic as smsdia
