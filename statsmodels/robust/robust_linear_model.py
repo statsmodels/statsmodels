@@ -446,15 +446,6 @@ class RLMResults(base.LikelihoodModelResults):
                     *np.dot(np.dot(W_inv, np.dot(model.exog.T,model.exog)),\
                     W_inv)
 
-    def t(self):
-        """
-        Deprecated method to return t-values. Use tvalues attribute instead.
-        """
-        import warnings
-        warnings.warn("t will be removed in the next release. Use attribute "
-                "tvalues instead", FutureWarning)
-        return self.tvalues
-
     @cache_readonly
     def pvalues(self):
         return stats.norm.sf(np.abs(self.tvalues))*2
