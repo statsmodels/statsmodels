@@ -109,12 +109,14 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import pandas
     import pandas.core.datetools as dt
     import re
+    from statsmodels.compatnp.py3k import asbytes
 
-    regex = re.compile('<(.*) (\w)([\d]+)>.*')
-    lines = deque(open(path))
+    regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
+    lines = deque(open(path, 'rb'))
 
     to_skip = 0
-    while '*/' not in lines.popleft():
+    while asbytes('*/') not in lines.popleft():
+        #while '*/' not in lines.popleft():
         to_skip += 1
 
     while True:
@@ -134,9 +136,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
     year = int(year)
 
     offsets = {
-        'Q' : dt.BQuarterEnd(),
-        'M' : dt.BMonthEnd(),
-        'A' : dt.BYearEnd()
+        asbytes('Q') : dt.BQuarterEnd(),
+        asbytes('M') : dt.BMonthEnd(),
+        asbytes('A') : dt.BYearEnd()
     }
 
     # create an instance
