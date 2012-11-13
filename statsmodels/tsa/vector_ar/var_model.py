@@ -839,10 +839,7 @@ class VARResults(VARProcess):
             trendorder = None
         self.k_trend = k_trend
         self.trendorder = trendorder
-
-        #TODO: deprecate coef_names
-        self.coef_names = self.exog_names = util.make_lag_names(names,
-                                                lag_order, k_trend)
+        self.exog_names = util.make_lag_names(names, lag_order, k_trend)
         self.params = params
 
         # Initialize VARProcess parent class
@@ -856,6 +853,15 @@ class VARResults(VARProcess):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         super(VARResults, self).__init__(coefs, intercept, sigma_u, names=names)
+
+    @cache_readonly
+    def coef_names(self):
+        """Coefficient names (deprecated)
+        """
+        from warnings import warn
+        warn("coef_names is deprecated and will be removed in 0.6.0."
+             "Use exog_names", FutureWarning)
+        return self.exog_names
 
     def plot(self):
         """Plot input time series
