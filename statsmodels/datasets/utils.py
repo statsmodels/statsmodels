@@ -1,4 +1,5 @@
 import shutil
+import pickle
 from os import environ
 from os import makedirs
 from os.path import basename
@@ -8,7 +9,7 @@ from os.path import expanduser
 from os.path import join
 from StringIO import StringIO
 import time
-import httplib2
+from urllib2 import urlopen, HTTPError
 
 import numpy as np
 from numpy import genfromtxt, array
@@ -114,7 +115,6 @@ def _get_rdatasets_name(dataname):
     Grabs a list of all csv files and tries to match versus one in a case
     insensitive way. Could be extended to do fuzzy matching
     """
-    from urllib2 import urlopen
     from HTMLParser import HTMLParser
     base_url = ("https://github.com/vincentarelbundock/Rdatasets/tree/"
                 "master/csv")
@@ -139,26 +139,6 @@ def _get_rdatasets_name(dataname):
     result = parser.result
     return result
 
-def _open_w_404_handling(connection, base_url, dataname, extension):
-    url = base_url + ("%s." + extension) % dataname
-    response, data = connection.request(url)
-    if response.status == 404:
-        # try a little harder to find the dataset
-        new_dataname = _get_rdatasets_name(dataname)
-        if new_dataname:
-            url = base_url + ("%s." + extension) % new_dataname
-            response, data = connection.request(url)
-        else:
-            raise ValueError("Dataset %s was not found." % dataname)
-        if response.status == 404:
-            raise ValueError("Dataset %s was not found." % dataname)
-
-    # python 3 compatibility
-    import sys
-    if sys.version[0] == '3':  # pragma: no cover
-        data = data.decode('ascii', errors='strict')
-    return StringIO(data), response.fromcache
-
 
 def _get_cache(cache):
     if cache is False:
@@ -171,13 +151,63 @@ def _get_cache(cache):
     return cache
 
 
-def _get_data(base_url, dataname, cache, extension="csv"):
-    connection = httplib2.Http(cache)
-    data, from_cache = _open_w_404_handling(connection, base_url, dataname,
-                                           extension)
+def _cache_it(data, cache_path):
+    open(cache_path, "wb").write(pickle.dumps(data).encode("zip"))
+
+
+def _urlopen_cached(url, cache):
+    """
+    Tries to load data from cache location otherwise downloads it. If it
+    downloads the data and cache is not None then it will put the downloaded
+    data in the cache path.
+    """
+    from_cache = False
+    if cache is not None:
+        cache_path = join(cache,
+                          url.split("://")[-1].replace('/', ',') +".zip")
+        try:
+            data = pickle.loads(open(cache_path, 'rb').read().decode('zip'))
+            from_cache = True
+        except:
+            pass
+
+    # not using the cache or didn't find it in cache
+    if not from_cache:
+        data = urlopen(url).read()
+        if cache is not None: # then put it in the cache
+            _cache_it(data, cache_path)
     return data, from_cache
 
-def _get_data_doc(base_url, dataname, cache):
+
+def _get_data(base_url, dataname, cache, extension="csv"):
+    """
+    Try to download the data and not worry about case sensitivity
+    """
+    url = base_url + (dataname + ".%s") % extension
+    try:
+        data, from_cache = _urlopen_cached(url, cache)
+    except HTTPError, err:
+        if '404' in err.message:
+            new_dataname = _get_rdatasets_name(dataname)
+        if new_dataname:
+            try:
+                url = base_url + ("%s." + extension) % new_dataname
+                data, from_cache = _urlopen_cached(url, cache)
+            except HTTPError, err:
+                if '404' in err.message:
+                    raise ValueError("Dataset %s was not found." % dataname)
+                else:
+                    raise err
+        else:
+            raise ValueError("Dataset %s was not found." % dataname)
+
+    import sys
+    if sys.version[0] == '3':  # pragma: no cover
+        data = data.decode('ascii', errors='strict')
+    return StringIO(data), from_cache
+
+
+def _get_data_docs(base_url, dataname, cache):
     #TODO: will need to include parsed HTML docs in repo first
     data, _ = _get_data(base_url, dataname, cache, "rst")
     # return it
@@ -187,8 +217,7 @@ def _get_dataset_meta(dataname, cache):
     # to download info about all the data to get info about any of the data...
     index_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
                  "datasets.csv")
-    connection = httplib2.Http(cache)
-    response, data = connection.request(index_url)
+    data, _ = _urlopen_cached(index_url, cache)
     index = read_csv(StringIO(data))
     idx = index.Dataset.str.lower() == dataname.lower()
     dataset_meta = index.ix[idx]
@@ -224,7 +253,10 @@ def get_rdataset(dataname, cache=False):
     If the R dataset has an integer index. This is reset to be zero-based.
     Otherwise the index is preserved. While the function will do its best not
     to be case-sensitive. If you want to use the caching facilities, you need
-    to give the case-sensitive name of the dataset.
+    to give the case-sensitive name of the dataset. This is a dumb cache.
+    That is, no download dates, e-tags, or otherwise identifying information
+    is checked to see if the data should be downloaded again or now. If the
+    dataset is in the cache, it's used.
     """
     #NOTE: use raw github bc html site might not be most up to date
     data_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
