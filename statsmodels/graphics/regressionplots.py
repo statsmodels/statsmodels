@@ -441,9 +441,10 @@ def plot_ccpr(results, exog_idx, ax=None):
     ----------
     results : result instance
         A regression results instance.
-    exog_i : ndarray or string
-        Exogenous, explanatory variable. If string is given, you can use a
-        arbitrary translations as with a formula.
+    exog_idx : int or string
+        Exogenous, explanatory variable. If string is given, it should
+        be the variable name that you want to use, and you can use arbitrary
+        translations as with a formula.
     ax : Matplotlib AxesSubplot instance, optional
         If given, it is used to plot in instead of a new figure being
         created.
@@ -456,7 +457,7 @@ def plot_ccpr(results, exog_idx, ax=None):
 
     See Also
     --------
-    plot_ccpr : Creates CCPR plot for multiple regressors in a plot grid.
+    plot_ccpr_grid : Creates CCPR plot for multiple regressors in a plot grid.
 
     Notes
     -----
