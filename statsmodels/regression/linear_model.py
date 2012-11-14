@@ -130,15 +130,17 @@ class RegressionModel(base.LikelihoodModel):
             beta = np.dot(self.pinv_wexog, endog)
 
         elif method == "qr":
-            if ((not hasattr(self, '_exog_Q')) or
+            if ((not hasattr(self, 'exog_Q')) or
                 (not hasattr(self, 'normalized_cov_params'))):
                 Q, R = np.linalg.qr(exog)
-                self._exog_Q, self._exog_R = Q, R
+                self.exog_Q, self.exog_R = Q, R
                 self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
             else:
-                Q, R = self._exog_Q, self._exog_R
+                Q, R = self.exog_Q, self.exog_R
 
-            beta = np.linalg.solve(R,np.dot(Q.T,endog))
+            # used in ANOVA
+            self.effects = effects = np.dot(Q.T, endog)
+            beta = np.linalg.solve(R, effects)
 
             # no upper triangular solve routine in numpy/scipy?
         if isinstance(self, OLS):
