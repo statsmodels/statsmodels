@@ -7,7 +7,8 @@ import nose
 
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
-                  plot_partregress, plot_regress_exog, abline_plot )
+                  plot_partregress, plot_regress_exog, abline_plot,
+                  plot_partregress_grid)
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
