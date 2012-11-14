@@ -187,14 +187,14 @@ def _get_data(base_url, dataname, cache, extension="csv"):
     try:
         data, from_cache = _urlopen_cached(url, cache)
     except HTTPError, err:
-        if '404' in err.message:
+        if '404' in str(err):
             new_dataname = _get_rdatasets_name(dataname)
         if new_dataname:
             try:
                 url = base_url + ("%s." + extension) % new_dataname
                 data, from_cache = _urlopen_cached(url, cache)
             except HTTPError, err:
-                if '404' in err.message:
+                if '404' in str(err):
                     raise ValueError("Dataset %s was not found." % dataname)
                 else:
                     raise err
