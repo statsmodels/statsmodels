@@ -20,7 +20,9 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
-           'plot_regress_exog']
+           'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
+           'add_lowess', 'abline_plot', 'influence_plot',
+           'plot_leverage_resid2']
 
 #TODO: consider moving to influence module
 def _high_leverage(results):
