@@ -8,7 +8,7 @@ import nose
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
-                  plot_partregress_grid)
+                  plot_partregress_grid, plot_ccpr_grid)
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -70,8 +70,9 @@ class TestPlot(object):
         plot_fit(res, 0, y_true=None)
         plot_partregress_grid(res, exog_idx=[0,1])
         plot_regress_exog(res, exog_idx=0)
-        plot_ccpr(res, exog_idx=[0])
-        plot_ccpr(res, exog_idx=[0,1])
+        plot_ccpr(res, exog_idx=0)
+        plot_ccpr_grid(res, exog_idx=[0])
+        plot_ccpr_grid(res, exog_idx=[0,1])
 
         plt.close('all')
 
