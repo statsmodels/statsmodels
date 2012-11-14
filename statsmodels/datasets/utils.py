@@ -12,6 +12,7 @@ import httplib2
 
 import numpy as np
 from numpy import genfromtxt, array
+from pandas import read_csv
 
 
 class Dataset(dict):
@@ -138,27 +139,28 @@ def _get_rdatasets_name(dataname):
     result = parser.result
     return result
 
-def _open_w_404_handling(connection, base_url, dataname):
-    url = base_url + "%s.csv" % dataname
+def _open_w_404_handling(connection, base_url, dataname, extension):
+    url = base_url + ("%s." + extension) % dataname
     response, data = connection.request(url)
     if response.status == 404:
         # try a little harder to find the dataset
         new_dataname = _get_rdatasets_name(dataname)
         if new_dataname:
-            url = base_url + "%s.csv" % new_dataname
+            url = base_url + ("%s." + extension) % new_dataname
             response, data = connection.request(url)
         else:
-            raise
+            raise ValueError("Dataset %s was not found." % dataname)
         if response.status == 404:
-            raise
+            raise ValueError("Dataset %s was not found." % dataname)
 
     # python 3 compatibility
     import sys
     if sys.version[0] == '3':  # pragma: no cover
         data = data.decode('ascii', errors='strict')
-    return StringIO(data)
+    return StringIO(data), response.fromcache
 
-def _get_data(base_url, dataname, cache):
+
+def _get_cache(cache):
     if cache is False:
         # do not do any caching or load from cache
         cache = None
@@ -166,10 +168,32 @@ def _get_data(base_url, dataname, cache):
         cache = get_data_home(None)
     else:
         cache = get_data_home(cache)
+    return cache
 
+
+def _get_data(base_url, dataname, cache, extension="csv"):
     connection = httplib2.Http(cache)
-    data = _open_w_404_handling(connection, base_url, dataname)
-    return data
+    data, from_cache = _open_w_404_handling(connection, base_url, dataname,
+                                           extension)
+    return data, from_cache
+
+def _get_data_doc(base_url, dataname, cache):
+    #TODO: will need to include parsed HTML docs in repo first
+    data, _ = _get_data(base_url, dataname, cache, "rst")
+    # return it
+
+def _get_dataset_meta(dataname, cache):
+    # get the index, you'll probably want this cached because you have
+    # to download info about all the data to get info about any of the data...
+    index_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
+                 "datasets.csv")
+    connection = httplib2.Http(cache)
+    response, data = connection.request(index_url)
+    index = read_csv(StringIO(data))
+    idx = index.Dataset.str.lower() == dataname.lower()
+    dataset_meta = index.ix[idx]
+    return (dataset_meta["R Package"].item(),
+            dataset_meta["Description"].item())
 
 def get_rdataset(dataname, cache=False):
     """
@@ -185,8 +209,15 @@ def get_rdataset(dataname, cache=False):
 
     Returns
     -------
-    dataframe : pandas.DataFrame
-        A dataframe containing the requested dataset.
+    dataset : Dataset instance
+        A `statsmodels.data.utils.Dataset` instance. This objects has
+        attributes::
+
+        * data - A pandas DataFrame containing the data
+        * descr - A brief description of the data
+        * package - The package the data came from
+        * from_cache - Whether not cached data was retrieved
+
 
     Notes
     -----
@@ -196,13 +227,20 @@ def get_rdataset(dataname, cache=False):
     to give the case-sensitive name of the dataset.
     """
     #NOTE: use raw github bc html site might not be most up to date
-    base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
-                "csv/")
-    data = _get_data(base_url, dataname, cache)
-    from pandas import read_csv
+    data_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
+                     "master/csv/")
+    docs_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
+                     "master/doc/")
+    cache = _get_cache(cache)
+    data, from_cache = _get_data(data_base_url, dataname, cache)
     data = read_csv(data, index_col=0)
     data = _maybe_reset_index(data)
-    return data
+
+    package, descr = _get_dataset_meta(dataname, cache)
+
+    #doc = _get_data_doc(docs_base_url, dataname, cache)
+    return Dataset(data=data, __doc__=None, package=package, descr=descr,
+                   from_cache=from_cache)
 
 ### The below function were taken from sklearn
 
