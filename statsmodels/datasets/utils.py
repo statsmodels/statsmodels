@@ -1,3 +1,4 @@
+import sys
 import shutil
 import pickle
 from os import environ
@@ -119,6 +120,12 @@ def _get_rdatasets_name(dataname):
     base_url = ("https://github.com/vincentarelbundock/Rdatasets/tree/"
                 "master/csv")
     html = urlopen(base_url).read()
+
+    #Python 3
+    if sys.version[0] == '3':  # pragma: no cover
+        from statsmodels.compatnp.py3k import asstr
+        html = asstr(html)
+
     class MyHTMLParser(HTMLParser):
         result = None
         def handle_starttag(self, tag, attrs):
@@ -152,8 +159,24 @@ def _get_cache(cache):
 
 
 def _cache_it(data, cache_path):
-    open(cache_path, "wb").write(pickle.dumps(data).encode("zip"))
+    if sys.version_info[0] >= 3:
+        # for some reason encode("zip") won't work for me in Python 3?
+        import zlib
+        open(cache_path, "wb").write(zlib.compress(pickle.dumps(data)))
+    else:
+        open(cache_path, "wb").write(pickle.dumps(data).encode("zip"))
 
+def _open_cache(cache_path):
+    if sys.version_info[0] >= 3:
+        #NOTE: don't know why but decode('zip') doesn't work on my
+        # Python 3 build
+        import zlib
+        data = zlib.decompress(open(cache_path, 'rb').read())
+        data = pickle.loads(data)
+    else:
+        data = open(cache_path, 'rb').read().decode('zip')
+        data = pickle.loads(data)
+    return data
 
 def _urlopen_cached(url, cache):
     """
@@ -166,7 +189,7 @@ def _urlopen_cached(url, cache):
         cache_path = join(cache,
                           url.split("://")[-1].replace('/', ',') +".zip")
         try:
-            data = pickle.loads(open(cache_path, 'rb').read().decode('zip'))
+            data = _open_cache(cache_path)
             from_cache = True
         except:
             pass
@@ -201,7 +224,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
         else:
             raise ValueError("Dataset %s was not found." % dataname)
 
-    import sys
+    #Python 3
     if sys.version[0] == '3':  # pragma: no cover
         data = data.decode('ascii', errors='strict')
     return StringIO(data), from_cache
@@ -218,6 +241,9 @@ def _get_dataset_meta(dataname, cache):
     index_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
                  "datasets.csv")
     data, _ = _urlopen_cached(index_url, cache)
+    #Python 3
+    if sys.version[0] == '3':  # pragma: no cover
+        data = data.decode('ascii', errors='strict')
     index = read_csv(StringIO(data))
     idx = index.Dataset.str.lower() == dataname.lower()
     dataset_meta = index.ix[idx]
