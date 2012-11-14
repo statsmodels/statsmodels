@@ -4,7 +4,7 @@ from statsmodels.graphics.plottools import rainbow
 import utils
 
 
-def interaction_plot(x, trace, response, x_levels, func=np.mean, ax=None, plottype='b', xlabel=None,
+def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xlabel=None,
                      ylabel=None, colors=[], markers=[], linestyles=[], legendtitle=None,
                      legendloc='best', **kwargs):
     """
@@ -16,21 +16,18 @@ def interaction_plot(x, trace, response, x_levels, func=np.mean, ax=None, plotty
     Parameters
     ----------
     x : array-like
-        The `x` factor levels are the x-axis. If a `pandas.Series` is given
-        its name will be used in `xlabel` if `xlabel` is None.
+        The `x` factor levels constitute the x-axis. If a `pandas.Series` is
+        given its name will be used in `xlabel` if `xlabel` is None.
     trace : array-like
-        The `trace` factor levels will form the trace. If `trace` is a
-        `pandas.Series` its name will be used as the `legendtitle` if
-        `legendtitle` is None.
+        The `trace` factor levels will be drawn as lines in the plot.
+        If `trace` is a `pandas.Series` its name will be used as the `legendtitle`
+        if `legendtitle` is None.
     response : array-like
-        The reponse variable. If a `pandas.Series` is given
+        The reponse or independent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
     func : function
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
-    x_levels: dict
-        maps categorial levels (keys, str) to factor codings (values, int)
-        for the x factor.
     plottype : str {'line', 'scatter', 'both'}, optional
         The type of plot to return. Can be 'l', 's', or 'b'
     ax : axes, optional
@@ -108,12 +105,11 @@ def interaction_plot(x, trace, response, x_levels, func=np.mean, ax=None, plotty
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
 
-    if isinstance(x_levels, dict):
-        x = _recode(x, x_levels)
-
-    elif x_levels != None:
-        raise ValueError('%s is not a valid option.'
-                         'A dict is required' % x_levels)
+    x_values = x_levels = None
+    if isinstance(x[0], str):
+        x_levels = [l for l in np.unique(x)]
+        x_values = xrange(len(x_levels))
+        x = _recode(x, dict(zip(x_levels, x_values)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
@@ -169,6 +165,10 @@ def interaction_plot(x, trace, response, x_levels, func=np.mean, ax=None, plotty
         raise ValueError("Plot type %s not understood" % plottype)
     ax.legend(loc=legendloc, title=legendtitle)
     ax.margins(.1)
+
+    if all([x_levels, x_values]):
+        ax.set_xticks(x_values)
+        ax.set_xticklabels(x_levels)
     return fig
 
 
