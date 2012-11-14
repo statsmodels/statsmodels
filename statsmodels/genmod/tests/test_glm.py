@@ -115,7 +115,7 @@ class TestGlmGaussian(CheckModelResults):
 
         from statsmodels.datasets.longley import load
         self.data = load()
-        self.data.exog = add_constant(self.data.exog)
+        self.data.exog = add_constant(self.data.exog, prepend=False)
         self.res1 = GLM(self.data.endog, self.data.exog,
                         family=sm.families.Gaussian()).fit()
         from results.results_glm import Longley
@@ -198,7 +198,7 @@ class TestGlmBinomial(CheckModelResults):
         from statsmodels.datasets.star98 import load
         from results.results_glm import Star98
         data = load()
-        data.exog = add_constant(data.exog)
+        data.exog = add_constant(data.exog, prepend=False)
         self.res1 = GLM(data.endog, data.exog, \
         family=sm.families.Binomial()).fit()
         #NOTE: if you want to replicate with RModel
@@ -273,7 +273,7 @@ class TestGlmGamma(CheckModelResults):
         from statsmodels.datasets.scotland import load
         from results.results_glm import Scotvote
         data = load()
-        data.exog = add_constant(data.exog)
+        data.exog = add_constant(data.exog, prepend=False)
         res1 = GLM(data.endog, data.exog, \
                     family=sm.families.Gamma()).fit()
         self.res1 = res1
@@ -335,7 +335,7 @@ class TestGlmPoisson(CheckModelResults):
         from statsmodels.datasets.cpunish import load
         self.data = load()
         self.data.exog[:,3] = np.log(self.data.exog[:,3])
-        self.data.exog = add_constant(self.data.exog)
+        self.data.exog = add_constant(self.data.exog, prepend=False)
         self.res1 = GLM(self.data.endog, self.data.exog,
                     family=sm.families.Poisson()).fit()
         self.res2 = Cpunish()
@@ -428,7 +428,7 @@ class TestGlmNegbinomial(CheckModelResults):
         self.data.exog[:,2] = np.log(self.data.exog[:,2])
         interaction = self.data.exog[:,2]*self.data.exog[:,1]
         self.data.exog = np.column_stack((self.data.exog,interaction))
-        self.data.exog = add_constant(self.data.exog)
+        self.data.exog = add_constant(self.data.exog, prepend=False)
         self.res1 = GLM(self.data.endog, self.data.exog,
                 family=sm.families.NegativeBinomial()).fit()
         from results.results_glm import Committee
@@ -461,7 +461,7 @@ class TestGlmPoissonOffset(CheckModelResults):
         from statsmodels.datasets.cpunish import load
         data = load()
         data.exog[:,3] = np.log(data.exog[:,3])
-        data.exog = add_constant(data.exog)
+        data.exog = add_constant(data.exog, prepend=False)
         exposure = [100] * len(data.endog)
         cls.data = data
         cls.exposure = exposure
