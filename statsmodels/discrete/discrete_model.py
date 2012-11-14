@@ -42,6 +42,59 @@ except ImportError:
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
 
+_discrete_models_docs = """
+"""
+
+_discrete_results_docs = """
+    %(one_line_description)s
+
+    Parameters
+    ----------
+    model : A DiscreteModel instance
+    params : array-like
+        The parameters of a fitted model.
+    hessian : array-like
+        The hessian of the fitted model.
+    scale : float
+        A scale parameter for the covariance matrix.
+
+    Returns
+    -------
+    *Attributes*
+
+    aic : float
+        Akaike information criterion.  -2*(`llf` - p) where p is the number
+        of regressors including the intercept.
+    bic : float
+        Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
+        number of regressors including the intercept.
+    bse : array
+        The standard errors of the coefficients.
+    df_resid : float
+        See model definition.
+    df_model : float
+        See model definition.
+    fitted_values : array
+        Linear predictor XB.
+    llf : float
+        Value of the loglikelihood
+    llnull : float
+        Value of the constant-only loglikelihood
+    llr : float
+        Likelihood ratio chi-squared statistic; -2*(`llnull` - `llf`)
+    llr_pvalue : float
+        The chi-squared probability of getting a log-likelihood ratio
+        statistic greater than llr.  llr has a chi-squared distribution
+        with degrees of freedom `df_model`.
+    prsquared : float
+        McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
+%(extra_attr)s"""
+
+_l1_results_attr = """    nnz_params : Integer
+        The number of nonzero parameters in the model.  Train with
+        trim_params == True or else numerical error will distort this.
+    trimmed : Boolean array
+        trimmed[i] == True if the ith parameter was trimmed from the model."""
 
 #### Private Model Classes ####
 
@@ -1708,52 +1761,9 @@ class NBin(CountModel):
 ### Results Class ###
 
 class DiscreteResults(base.LikelihoodModelResults):
-    """
-    A results class for the discrete dependent variable models.
-
-    Parameters
-    ----------
-    model : A DiscreteModel instance
-    params : array-like
-        The parameters of a fitted model.
-    hessian : array-like
-        The hessian of the fitted model.
-    scale : float
-        A scale parameter for the covariance matrix.
-
-
-    Returns
-    -------
-    *Attributes*
-
-    aic : float
-        Akaike information criterion.  -2*(`llf` - p) where p is the number
-        of regressors including the intercept.
-    bic : float
-        Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
-        number of regressors including the intercept.
-    bse : array
-        The standard errors of the coefficients.
-    df_resid : float
-        See model definition.
-    df_model : float
-        See model definition.
-    fitted_values : array
-        Linear predictor XB.
-    llf : float
-        Value of the loglikelihood
-    llnull : float
-        Value of the constant-only loglikelihood
-    llr : float
-        Likelihood ratio chi-squared statistic; -2*(`llnull` - `llf`)
-    llr_pvalue : float
-        The chi-squared probability of getting a log-likelihood ratio
-        statistic greater than llr.  llr has a chi-squared distribution
-        with degrees of freedom `df_model`.
-    prsquared : float
-        McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
-    """
-
+    __doc__ = _discrete_results_docs % {"one_line_description" :
+        "A results class for the discrete dependent variable models.",
+        "extra_attr" : ""}
     def __init__(self, model, mlefit):
         #super(DiscreteResults, self).__init__(model, params,
         #        np.linalg.inv(-hessian), scale=1.)
@@ -2114,9 +2124,13 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
 class CountResults(DiscreteResults):
+    __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for count data", "extra_attr" : ""}
     pass
 
 class L1CountResults(DiscreteResults):
+    __doc__ = _discrete_results_docs % {"one_line_description" :
+            "A results class for count data fit by l1 regularization",
+            "extra_attr" : _l1_results_attr}
         #discretefit = CountResults(self, cntfit)
     def __init__(self, model, cntfit):
         super(L1CountResults, self).__init__(model, cntfit)
@@ -2132,10 +2146,11 @@ class L1CountResults(DiscreteResults):
 
 
 class OrderedResults(DiscreteResults):
+    __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for ordered discrete data." , "extra_attr" : ""}
     pass
 
 class BinaryResults(DiscreteResults):
-
+    __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for binary data", "extra_attr" : ""}
     def pred_table(self, threshold=.5):
         """
         Prediction table
@@ -2187,18 +2202,9 @@ class BinaryResults(DiscreteResults):
     summary.__doc__ = DiscreteResults.summary.__doc__
 
 class L1BinaryResults(BinaryResults):
-    """
-    Special version of BinaryResults for use with a model that was fit
-    with L1 penalized regression.
-
-    New Attributes
-    --------------
-    nnz_params : Integer
-        The number of nonzero parameters in the model.  Train with
-        trim_params==True or else numerical error will distort this.
-    trimmed : Boolean array
-        trimmed[i] == True if the ith parameter was trimmed from the model.
-    """
+    __doc__ = _discrete_results_docs % {"one_line_description" :
+    "Results instance for binary data fit by l1 regularization",
+    "extra_attr" : _l1_results_attr}
     def __init__(self, model, bnryfit):
         super(L1BinaryResults, self).__init__(model, bnryfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
@@ -2212,6 +2218,8 @@ class L1BinaryResults(BinaryResults):
 
 
 class MultinomialResults(DiscreteResults):
+    __doc__ = _discrete_results_docs % {"one_line_description" :
+            "A results class for multinomial data", "extra_attr" : ""}
     def _maybe_convert_ynames_int(self, ynames):
         # see if they're integers
         try:
@@ -2278,16 +2286,9 @@ class MultinomialResults(DiscreteResults):
         raise NotImplementedError("Use get_margeff instead")
 
 class L1MultinomialResults(MultinomialResults):
-    """
-    Special version of MultinomialResults for use with a model that was fit
-    with L1 penalized regression.
-
-    New Attributes
-    --------------
-    nnz_params : Integer
-        The number of nonzero parameters in the model.  Train with
-        trim_params==True or else numerical error will distort this.
-    """
+    __doc__ = _discrete_results_docs % {"one_line_description" :
+        "A results class for multinomial data fit by l1 regularization",
+        "extra_attr" : _l1_results_attr}
     def __init__(self, model, mlefit):
         super(L1MultinomialResults, self).__init__(model, mlefit)
         # self.trimmed is a boolean array with T/F telling whether or not that
