@@ -4,7 +4,7 @@ from statsmodels.graphics.plottools import rainbow
 import utils
 
 
-def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
+def interaction_plot(x, trace, response, x_levels, func=np.mean, ax=None, plottype='b',
                      xlabel=None, ylabel=None, colors=[], markers=[],
                      linestyles=[], legendloc='best', legendtitle=None,
                      **kwargs):
@@ -26,6 +26,9 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     response : array-like
         The reponse variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
+    x_levels: dict
+        maps categorial levels (keys, str) to factor codings (values, int)
+        for the x factor.
     func : function
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
         the response variable grouped by the trace levels.
@@ -105,6 +108,13 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
 
+    if isinstance(x_levels, dict):
+        x = _recode(x, x_levels)
+
+    elif x_levels != None:
+        raise ValueError('%s is not a valid option.'
+                         'A dict is required' % x_levels)
+
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
 
@@ -158,3 +168,49 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     ax.legend(loc=legendloc, title=legendtitle)
     ax.margins(.1)
     return fig
+
+
+def _recode(a, levels):
+    """ recode categorial data to int factor
+    Parameters
+    ----------
+    a : array-like
+        array like object supporting with numpy array methods of categorially
+        coded data.
+    levels : dict
+        mapping of labels to integer-codings
+
+    Returns
+    -------
+    out : instance numpy.ndarray
+
+    """
+    from pandas import Series
+    name = None
+
+    if isinstance(a, Series):
+        name = a.name
+        a = a.values
+
+    if a.dtype.type not in [np.str_, np.object_]:
+        raise ValueError('This is not a categorial factor.'
+                         ' Array of str type required.')
+
+    elif not isinstance(levels, dict):
+        raise ValueError('This is not a valid value for levels.'
+                         ' Dict required.')
+
+    elif not (np.unique(a) == np.unique(levels.keys())).all():
+        raise ValueError('The levels do not match the array values.')
+
+    else:
+        out = np.empty(a.shape[0], dtype=np.int)
+        for level, coding in levels.items():
+            out[a == level] = coding
+
+        if name:
+            out = Series(out)
+            out.name = name
+
+        return out
+
