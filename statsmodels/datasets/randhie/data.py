@@ -45,7 +45,7 @@ Variable name definitions::
 """
 
 from numpy import recfromtxt, column_stack, array
-import statsmodels.tools.datautils as du
+from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
 PATH = '%s/%s' % (dirname(abspath(__file__)), 'randhie.csv')

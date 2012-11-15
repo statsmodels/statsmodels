@@ -1,5 +1,7 @@
 .. _datasets:
 
+.. currentmodule:: statsmodels.datasets
+
 .. ipython:: python
    :suppress:
 
@@ -11,6 +13,31 @@ The Datasets Package
 
 ``statsmodels`` provides data sets (i.e. data *and* meta-data) for use in
 examples, tutorials, model testing, etc.
+
+Using Datasets from R
+---------------------
+
+The `Rdatasets project <http://vincentarelbundock.github.com/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. For example:
+
+.. ipython:: python
+
+   import statsmodels.api as sm
+   duncan_prestige = sm.datasets.get_rdataset("Duncan", "car")
+   print duncan_prestige.__doc__
+   duncan_prestige.data.head(5)
+
+
+R Datasets Function Reference
+-----------------------------
+
+
+.. autosummary::
+   :toctree: generated/
+
+   get_rdataset
+   get_data_home
+   clear_data_home
+   
 
 Available Datasets
 ------------------

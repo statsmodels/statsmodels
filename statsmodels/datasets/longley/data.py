@@ -39,7 +39,7 @@ Variable name definitions::
 """
 
 from numpy import recfromtxt, array, column_stack
-import statsmodels.tools.datautils as du
+from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
 def load():

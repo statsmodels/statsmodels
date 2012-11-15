@@ -26,7 +26,7 @@ Any other useful information that does not fit into the above categories.
 """
 
 import numpy as np
-from statsmodels.tools import datautils as du
+from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
 def load():
