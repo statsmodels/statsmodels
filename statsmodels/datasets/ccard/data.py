@@ -25,7 +25,7 @@ Variable name definitions - See Source for more information on the variables.
 """
 
 from numpy import recfromtxt, column_stack, array
-import statsmodels.tools.datautils as du
+from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
 def load():
