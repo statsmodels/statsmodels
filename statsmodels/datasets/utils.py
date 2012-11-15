@@ -250,7 +250,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
 ### The below function were taken from sklearn
 
 def get_data_home(data_home=None):
-    """Return the path of the scikit-learn data dir.
+    """Return the path of the statsmodels data dir.
 
     This folder is used by some large dataset loaders to avoid
     downloading the data several times.
