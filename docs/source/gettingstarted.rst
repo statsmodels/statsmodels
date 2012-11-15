@@ -33,7 +33,7 @@ Data
 ----
 
 We download the `Guerry dataset
-<http://vincentarelbundock.github.com/Rdatasets/doc/Guerry.html>`_, a
+<http://vincentarelbundock.github.com/Rdatasets/doc/HistData/Guerry.html>`_, a
 collection of historical data used in support of Andre-Michel Guerry's 1833
 *Essay on the Moral Statistics of France*. The data set is hosted online in
 comma-separated values format (CSV) by the `Rdatasets
@@ -43,7 +43,7 @@ We could download the file locally and then load it using ``read_csv``, but
 
 .. ipython:: python
 
-    url = "http://vincentarelbundock.github.com/Rdatasets/csv/Guerry.csv"
+    url = "http://vincentarelbundock.github.com/Rdatasets/csv/HistData/Guerry.csv"
     #the next two lines are not necessary with a recent version of pandas
     from urllib2 import urlopen
     url = urlopen(url)
