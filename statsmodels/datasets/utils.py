@@ -111,42 +111,6 @@ def _maybe_reset_index(data):
         data = data.reset_index(drop=True)
     return data
 
-def _get_rdatasets_name(dataname):
-    """
-    Grabs a list of all csv files and tries to match versus one in a case
-    insensitive way. Could be extended to do fuzzy matching
-    """
-    from HTMLParser import HTMLParser
-    base_url = ("https://github.com/vincentarelbundock/Rdatasets/tree/"
-                "master/csv")
-    html = urlopen(base_url).read()
-
-    #Python 3
-    if sys.version[0] == '3':  # pragma: no cover
-        from statsmodels.compatnp.py3k import asstr
-        html = asstr(html)
-
-    class MyHTMLParser(HTMLParser):
-        result = None
-        def handle_starttag(self, tag, attrs):
-            if tag == "a":
-                for name, value in attrs:
-                    if name == "href" and value.endswith('.csv'):
-                        #from IPython.core.debugger import Pdb; Pdb().set_trace()
-                        base = basename(value)
-                        if base.lower() == dataname + ".csv":
-                            self.result = base[:-4]
-                            raise StopIteration
-
-    parser = MyHTMLParser()
-    try:
-        parser.feed(html)
-    except StopIteration:
-        pass
-    result = parser.result
-    return result
-
-
 def _get_cache(cache):
     if cache is False:
         # do not do any caching or load from cache
@@ -156,7 +120,6 @@ def _get_cache(cache):
     else:
         cache = get_data_home(cache)
     return cache
-
 
 def _cache_it(data, cache_path):
     if sys.version_info[0] >= 3:
@@ -203,28 +166,16 @@ def _urlopen_cached(url, cache):
 
 
 def _get_data(base_url, dataname, cache, extension="csv"):
-    """
-    Try to download the data and not worry about case sensitivity
-    """
     url = base_url + (dataname + ".%s") % extension
     try:
         data, from_cache = _urlopen_cached(url, cache)
     except HTTPError, err:
         if '404' in str(err):
-            new_dataname = _get_rdatasets_name(dataname)
-        if new_dataname:
-            try:
-                url = base_url + ("%s." + extension) % new_dataname
-                data, from_cache = _urlopen_cached(url, cache)
-            except HTTPError, err:
-                if '404' in str(err):
-                    raise ValueError("Dataset %s was not found." % dataname)
-                else:
-                    raise err
-        else:
             raise ValueError("Dataset %s was not found." % dataname)
+        else:
+            raise err
 
-    #Python 3
+    #Python 3, don't think there will be any unicode in r datasets
     if sys.version[0] == '3':  # pragma: no cover
         data = data.decode('ascii', errors='strict')
     return StringIO(data), from_cache
@@ -245,17 +196,19 @@ def _get_dataset_meta(dataname, cache):
     if sys.version[0] == '3':  # pragma: no cover
         data = data.decode('ascii', errors='strict')
     index = read_csv(StringIO(data))
-    idx = index.Dataset.str.lower() == dataname.lower()
+    idx = index.Item == dataname
     dataset_meta = index.ix[idx]
-    return (dataset_meta["R Package"].item(),
-            dataset_meta["Description"].item())
+    return dataset_meta["Title"].item()
 
-def get_rdataset(dataname, cache=False):
+def get_rdataset(dataname, package="datasets", cache=False):
     """
     Parameters
     ----------
     dataname : str
         The name of the dataset you want to download
+    package : str
+        The package in which the dataset is found. The default is the core
+        'datasets' package.
     cache : bool or str
         If True, will download this data into the STATSMODELS_DATA folder.
         The default location is a folder called statsmodels_data in the
@@ -269,35 +222,33 @@ def get_rdataset(dataname, cache=False):
         attributes::
 
         * data - A pandas DataFrame containing the data
-        * descr - A brief description of the data
-        * package - The package the data came from
+        * title - The dataset title
+        * package - The package from which the data came
         * from_cache - Whether not cached data was retrieved
 
 
     Notes
     -----
     If the R dataset has an integer index. This is reset to be zero-based.
-    Otherwise the index is preserved. While the function will do its best not
-    to be case-sensitive. If you want to use the caching facilities, you need
-    to give the case-sensitive name of the dataset. This is a dumb cache.
-    That is, no download dates, e-tags, or otherwise identifying information
-    is checked to see if the data should be downloaded again or now. If the
+    Otherwise the index is preserved. The caching facilities are dumb. That
+    is, no download dates, e-tags, or otherwise identifying information
+    is checked to see if the data should be downloaded again or not. If the
     dataset is in the cache, it's used.
     """
     #NOTE: use raw github bc html site might not be most up to date
     data_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
-                     "master/csv/")
+                     "master/csv/"+package+"/")
     docs_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
-                     "master/doc/")
+                     "master/doc/"+package+"/")
     cache = _get_cache(cache)
     data, from_cache = _get_data(data_base_url, dataname, cache)
     data = read_csv(data, index_col=0)
     data = _maybe_reset_index(data)
 
-    package, descr = _get_dataset_meta(dataname, cache)
+    title = _get_dataset_meta(dataname, cache)
 
     #doc = _get_data_doc(docs_base_url, dataname, cache)
-    return Dataset(data=data, __doc__=None, package=package, descr=descr,
+    return Dataset(data=data, __doc__=None, package=package, title=title,
                    from_cache=from_cache)
 
 ### The below function were taken from sklearn
