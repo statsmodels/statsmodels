@@ -75,6 +75,7 @@ Variables name definitions::
             leanings from "Left" to "Right".
         DoleLR  - Respondents impression of Bob Dole's political leanings
             from "Left" to "Right".
+        logpopul - log(popul + .1)
 
 
 Source
