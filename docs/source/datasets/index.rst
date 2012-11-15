@@ -32,7 +32,7 @@ R Datasets Function Reference
 
 
 .. autosummary::
-   :toctree: generated/
+   :toctree: ./
 
    get_rdataset
    get_data_home
