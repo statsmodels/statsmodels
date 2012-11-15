@@ -71,14 +71,14 @@ class NBin(GenericLikelihoodModel):
 #Usage Example
 #-------------
 
-#The `Medpar <http://vincentarelbundock.github.com/Rdatasets/doc/medpar.html>`_
+#The `Medpar <http://vincentarelbundock.github.com/Rdatasets/doc/COUNT/medpar.html>`_
 #dataset is hosted in CSV format at the `Rdatasets repository
 #<http://vincentarelbundock.github.com/Rdatasets>`_. We use the ``read_csv``
 #function from the `Pandas library <http://pandas.pydata.org>`_ to load the data
 #in memory. We then print the first few columns:
 
 import pandas as pd
-url = 'http://vincentarelbundock.github.com/Rdatasets/csv/medpar.csv'
+url = 'http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/medpar.csv'
 medpar = pd.read_csv(url)
 medpar.head()
 
@@ -115,7 +115,7 @@ res.aic
 #To ensure that the above results are sound, we compare them to results
 # obtained using the MASS implementation for R::
 #
-#    url = 'http://vincentarelbundock.github.com/Rdatasets/csv/medpar.csv'
+#    url = 'http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/medpar.csv'
 #    medpar = read.csv(url)
 #    f = los~factor(type)+hmo+white
 #
