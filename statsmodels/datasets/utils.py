@@ -186,7 +186,7 @@ def _get_data_docs(base_url, dataname, cache):
     data, _ = _get_data(base_url, dataname, cache, "rst")
     # return it
 
-def _get_dataset_meta(dataname, cache):
+def _get_dataset_meta(dataname, package, cache):
     # get the index, you'll probably want this cached because you have
     # to download info about all the data to get info about any of the data...
     index_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/master/"
@@ -196,7 +196,7 @@ def _get_dataset_meta(dataname, cache):
     if sys.version[0] == '3':  # pragma: no cover
         data = data.decode('ascii', errors='strict')
     index = read_csv(StringIO(data))
-    idx = index.Item == dataname
+    idx = np.logical_and(index.Item == dataname, index.Package == package)
     dataset_meta = index.ix[idx]
     return dataset_meta["Title"].item()
 
@@ -245,7 +245,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
     data = read_csv(data, index_col=0)
     data = _maybe_reset_index(data)
 
-    title = _get_dataset_meta(dataname, cache)
+    title = _get_dataset_meta(dataname, package, cache)
 
     #doc = _get_data_doc(docs_base_url, dataname, cache)
     return Dataset(data=data, __doc__=None, package=package, title=title,
