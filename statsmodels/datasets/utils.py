@@ -181,11 +181,6 @@ def _get_data(base_url, dataname, cache, extension="csv"):
     return StringIO(data), from_cache
 
 
-def _get_data_docs(base_url, dataname, cache):
-    #TODO: will need to include parsed HTML docs in repo first
-    data, _ = _get_data(base_url, dataname, cache, "rst")
-    # return it
-
 def _get_dataset_meta(dataname, package, cache):
     # get the index, you'll probably want this cached because you have
     # to download info about all the data to get info about any of the data...
@@ -225,6 +220,7 @@ def get_rdataset(dataname, package="datasets", cache=False):
         * title - The dataset title
         * package - The package from which the data came
         * from_cache - Whether not cached data was retrieved
+        * __doc__ - The verbatim R documentation.
 
 
     Notes
@@ -239,16 +235,16 @@ def get_rdataset(dataname, package="datasets", cache=False):
     data_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
                      "master/csv/"+package+"/")
     docs_base_url = ("https://raw.github.com/vincentarelbundock/Rdatasets/"
-                     "master/doc/"+package+"/")
+                     "master/doc/"+package+"/rst/")
     cache = _get_cache(cache)
     data, from_cache = _get_data(data_base_url, dataname, cache)
     data = read_csv(data, index_col=0)
     data = _maybe_reset_index(data)
 
     title = _get_dataset_meta(dataname, package, cache)
+    doc, _ = _get_data(docs_base_url, dataname, cache, "rst")
 
-    #doc = _get_data_doc(docs_base_url, dataname, cache)
-    return Dataset(data=data, __doc__=None, package=package, title=title,
+    return Dataset(data=data, __doc__=doc.read(), package=package, title=title,
                    from_cache=from_cache)
 
 ### The below function were taken from sklearn
