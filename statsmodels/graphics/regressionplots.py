@@ -483,7 +483,7 @@ def plot_ccpr(results, exog_idx, ax=None):
     x1beta = x1*results._results.params[exog_idx]
     ax.plot(x1, x1beta + results.resid, 'o')
     from statsmodels.tools.tools import add_constant
-    mod = OLS(x1beta, add_constant(x1, prepend=True)).fit()
+    mod = OLS(x1beta, add_constant(x1)).fit()
     params = mod.params
     fig = abline_plot(*params, ax=ax)
     #ax.plot(x1, x1beta, '-')
@@ -600,7 +600,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> import numpy as np
     >>> import statsmodels.api as sm
     >>> np.random.seed(12345)
-    >>> X = sm.add_constant(np.random.normal(0, 20, size=30), prepend=True)
+    >>> X = sm.add_constant(np.random.normal(0, 20, size=30))
     >>> y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
     >>> mod = sm.OLS(y,X).fit()
     >>> fig = abline_plot(model_results=mod)

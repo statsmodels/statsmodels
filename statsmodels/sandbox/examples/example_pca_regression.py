@@ -44,7 +44,7 @@ print f0[:5]
 
 import statsmodels.api as sm
 
-res = sm.OLS(y0, sm.add_constant(x0)).fit()
+res = sm.OLS(y0, sm.add_constant(x0, prepend=False)).fit()
 print 'OLS on original data'
 print res.params
 print res.aic
@@ -69,7 +69,7 @@ xred, fact, eva, eve  = pca(x0, keepdim=0, normalize=1)
 for k in range(0, x0.shape[1]+1):
     #xred, fact, eva, eve  = pca(x0, keepdim=k, normalize=1)
     # this is faster and same result
-    fact_wconst = sm.add_constant(fact[:,:k])
+    fact_wconst = sm.add_constant(fact[:,:k], prepend=False)
     res = sm.OLS(y0, fact_wconst).fit()
 ##    print 'k =', k
 ##    print res.params

@@ -72,7 +72,7 @@ class ELOriginRegress(object):
             Empirical likelihood regression class
 
         """
-        exog_with = add_constant(self.exog, prepend=1)
+        exog_with = add_constant(self.exog, prepend=True)
         unrestricted_fit = OLS(self.endog, self.exog).fit()
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
@@ -87,7 +87,7 @@ class ELOriginRegress(object):
     def predict(self, params, exog=None):
         if exog is None:
             exog = self.exog
-        return np.dot(add_constant(exog, prepend=1), params)
+        return np.dot(add_constant(exog, prepend=True), params)
 
 
 class OriginResults(RegressionResults):

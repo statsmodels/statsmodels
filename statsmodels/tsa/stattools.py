@@ -496,7 +496,7 @@ def pacf_ols(x, nlags=40):
     #maybe we can compare small sample properties with a MonteCarlo
     xlags, x0 = lagmat(x, nlags, original='sep')
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = add_constant(xlags, prepend=True)
+    xlags = add_constant(xlags)
     pacf = [1.]
     for k in range(1, nlags+1):
         res = OLS(x0[k:], xlags[k:,:k+1]).fit()

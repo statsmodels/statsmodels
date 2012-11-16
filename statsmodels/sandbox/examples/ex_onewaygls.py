@@ -28,7 +28,7 @@ nobs, nvars = example_size
 x1 = np.random.normal(size=(nobs, nvars))
 y1 = 10 + np.dot(x1,[15.]*nvars) + 2*np.random.normal(size=nobs)
 
-x1 = sm.add_constant(x1) #, prepend=True)
+x1 = sm.add_constant(x1, prepend=False)
 #assert_almost_equal(x1, np.vander(x1[:,0],2), 16)
 #res1 = sm.OLS(y1, x1).fit()
 #print res1.params
@@ -43,7 +43,7 @@ if example == 'null':
 else:
     y2 = 19 + np.dot(x2,[17.]*nvars) + 2*np.random.normal(size=nobs)
 
-x2 = sm.add_constant(x2)
+x2 = sm.add_constant(x2, prepend=False)
 
 # stack
 x = np.concatenate((x1,x2),0)

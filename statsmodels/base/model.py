@@ -1078,9 +1078,9 @@ class LikelihoodModelResults(Results):
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> r = np.zeros_like(results.params)
-        >>> r[4:6] = [1,-1]
+        >>> r[5:] = [1,-1]
         >>> print r
-        [ 0.  0.  0.  0.  1. -1.  0.]
+        [ 0.  0.  0.  0.  0.  1. -1.]
 
         r tests that the coefficients on the 5th and 6th independent
         variable are the same.
@@ -1093,9 +1093,9 @@ class LikelihoodModelResults(Results):
         -1829.2025687192481
         >>> T_test.sd
         455.39079425193762
-        >>> T_test.t
+        >>> T_test.tvalue
         -4.0167754636411717
-        >>> T_test.p
+        >>> T_test.pvalue
         0.0015163772380899498
 
         Alternatively, you can specify the hypothesis tests using a string
@@ -1193,7 +1193,7 @@ class LikelihoodModelResults(Results):
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> A = np.identity(len(results.params))
-        >>> A = A[:-1,:]
+        >>> A = A[1:,:]
 
         This tests that each coefficient is jointly statistically
         significantly different from zero.
@@ -1209,7 +1209,7 @@ class LikelihoodModelResults(Results):
         >>> results.F_p
         4.98403096572e-10
 
-        >>> B = np.array(([0,1,-1,0,0,0,0],[0,0,0,0,1,-1,0]))
+        >>> B = np.array(([0,0,1,-1,0,0,0],[0,0,0,0,0,1,-1]))
 
         This tests that the coefficient on the 2nd and 3rd regressors are
         equal and jointly that the coefficient on the 5th and 6th regressors
@@ -1322,17 +1322,18 @@ class LikelihoodModelResults(Results):
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> results.conf_int()
-        array([[ -1.77029035e+02,   2.07152780e+02],
-        [ -1.11581102e-01,   3.99427438e-02],
-        [ -3.12506664e+00,  -9.15392966e-01],
-        [ -1.51794870e+00,  -5.48505034e-01],
-        [ -5.62517214e-01,   4.60309003e-01],
-        [  7.98787515e+02,   2.85951541e+03],
-        [ -5.49652948e+06,  -1.46798779e+06]])
+        array([[-5496529.48322745, -1467987.78596704],
+               [    -177.02903529,      207.15277984],
+               [      -0.1115811 ,        0.03994274],
+               [      -3.12506664,       -0.91539297],
+               [      -1.5179487 ,       -0.54850503],
+               [      -0.56251721,        0.460309  ],
+               [     798.7875153 ,     2859.51541392]])
 
-        >>> results.conf_int(cols=(1,2))
+
+        >>> results.conf_int(cols=(2,3))
         array([[-0.1115811 ,  0.03994274],
-        [-3.12506664, -0.91539297]])
+               [-3.12506664, -0.91539297]])
 
         Notes
         -----

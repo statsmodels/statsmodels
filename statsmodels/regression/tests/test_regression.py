@@ -358,8 +358,8 @@ class TestGLS(object):
         from results.results_regression import LongleyGls
 
         data = longley.load()
-        exog = add_constant(np.column_stack(\
-                (data.exog[:,1],data.exog[:,4])), prepend=False)
+        exog = add_constant(np.column_stack((data.exog[:,1],
+                                             data.exog[:,4])), prepend=False)
         tmp_results = OLS(data.endog, exog).fit()
         rho = np.corrcoef(tmp_results.resid[1:],
                 tmp_results.resid[:-1])[0][1] # by assumption

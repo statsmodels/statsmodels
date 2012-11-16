@@ -15,13 +15,13 @@ class TestTools(TestCase):
 
     def test_add_constant_list(self):
         x = range(1,5)
-        x = tools.add_constant(x, prepend=True)
+        x = tools.add_constant(x)
         y = np.asarray([[1,1,1,1],[1,2,3,4.]]).T
         assert_equal(x, y)
 
     def test_add_constant_1d(self):
         x = np.arange(1,5)
-        x = tools.add_constant(x, prepend=True)
+        x = tools.add_constant(x)
         y = np.asarray([[1,1,1,1],[1,2,3,4.]]).T
         assert_equal(x, y)
 

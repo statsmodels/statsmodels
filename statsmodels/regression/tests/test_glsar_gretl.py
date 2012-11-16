@@ -45,11 +45,10 @@ class TestGLSARGretl(object):
 
         #simple diff, not growthrate, I want heteroscedasticity later for testing
         endogd = np.diff(d['realinv'])
-        exogd = add_constant(np.c_[np.diff(d['realgdp']), d['realint'][:-1]],
-                            prepend=True)
+        exogd = add_constant(np.c_[np.diff(d['realgdp']), d['realint'][:-1]])
 
         endogg = gs_l_realinv
-        exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1]],prepend=True)
+        exogg = add_constant(np.c_[gs_l_realgdp, d['realint'][:-1]])
 
         res_ols = OLS(endogg, exogg).fit()
         #print res_ols.params

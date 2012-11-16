@@ -10,7 +10,7 @@ class GenRes(object):
     """
     def __init__(self):
         data = sm.datasets.stackloss.load()
-        data.exog = sm.add_constant(data.exog, prepend=1)
+        data.exog = sm.add_constant(data.exog)
         self.res1 = sm.OLS(data.endog, data.exog).fit()
         self.res2 = RegressionResults()
 
