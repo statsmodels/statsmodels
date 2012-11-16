@@ -23,6 +23,13 @@ _missing_param_doc = """missing : str
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'none.'"""
+_extra_param_doc = """
+    hasconst : None or bool
+        Indicates whether the RHS includes a user-supplied constant. If True,
+        a constant is not checked for and k_constant is set to 1 and all
+        result statistics are calculated as if a constant is present. If
+        False, a constant is not checked for and k_constant is set to 0.
+        """
 
 class Model(object):
     __doc__ = """
@@ -37,10 +44,12 @@ class Model(object):
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
     """ % {'params_doc' : _model_params_doc,
-            'extra_params_doc' : _missing_param_doc}
+            'extra_params_doc' : _missing_param_doc + _extra_param_doc}
     def __init__(self, endog, exog=None, **kwargs):
         missing = kwargs.pop('missing', 'none')
-        self.data = handle_data(endog, exog, missing, **kwargs)
+        hasconst = kwargs.pop('hasconst', None)
+        self.data = handle_data(endog, exog, missing, hasconst, **kwargs)
+        self.k_constant = self.data.k_constant
         self.exog = self.data.exog
         self.endog = self.data.endog
         # kwargs arrays could have changed, easier to just attach here
@@ -764,6 +773,7 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
+        self.k_constant = model.k_constant
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """

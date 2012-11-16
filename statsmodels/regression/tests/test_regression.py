@@ -5,7 +5,7 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_approx_equal,
                             assert_raises, assert_equal)
 from scipy.linalg import toeplitz
-from statsmodels.tools.tools import add_constant
+from statsmodels.tools.tools import add_constant, categorical
 from statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
         yule_walker)
 from statsmodels.datasets import longley
@@ -38,7 +38,7 @@ class CheckRegressionResults(object):
 
     decimal_confidenceintervals = DECIMAL_4
     def test_confidenceintervals(self):
-#NOTE: stata rounds residuals (at least) to sig digits so approx_equal
+    #NOTE: stata rounds residuals (at least) to sig digits so approx_equal
         conf1 = self.res1.conf_int()
         conf2 = self.res2.conf_int()
         for i in range(len(conf1)):
@@ -96,6 +96,11 @@ class CheckRegressionResults(object):
         assert_almost_equal(self.res1.mse_resid, self.res2.mse_resid,
                     self.decimal_mse_model)
 
+    decimal_mse_total = DECIMAL_4
+    def test_mse_total(self):
+        assert_almost_equal(self.res1.mse_total, self.res2.mse_total,
+                    self.decimal_mse_total)
+
     decimal_fvalue = DECIMAL_4
     def test_fvalue(self):
         #didn't change this, not sure it should complain -inf not equal -inf
@@ -148,12 +153,10 @@ class TestOLS(CheckRegressionResults):
         cls.res_qr = res_qr
 
 
-#  Robust error tests.  Compare values computed with SAS
+    #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
-        '''
-        They are split up because the copied results do not have any DECIMAL_4
-        places for the last place.
-        '''
+        #They are split up because the copied results do not have any DECIMAL_4
+        #places for the last place.
         assert_almost_equal(self.res1.HC0_se[:-1],
                 self.res2.HC0_se[:-1], DECIMAL_4)
         assert_approx_equal(np.round(self.res1.HC0_se[-1]), self.res2.HC0_se[-1])
@@ -191,6 +194,19 @@ class TestOLS(CheckRegressionResults):
         assert_equal(mod.endog.shape[0], 13)
         assert_equal(mod.exog.shape[0], 13)
 
+class TestRTO(CheckRegressionResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_regression import LongleyRTO
+        data = longley.load()
+        res1 = OLS(data.endog, data.exog).fit()
+        res2 = LongleyRTO()
+        res2.wresid = res1.wresid # workaround hack
+        cls.res1 = res1
+        cls.res2 = res2
+
+        res_qr = OLS(data.endog, data.exog).fit(method="qr")
+        cls.res_qr = res_qr
 
 class TestFtest(object):
     """
@@ -609,6 +625,16 @@ def test_bad_size():
     np.random.seed(54321)
     data = np.random.uniform(0,20,31)
     assert_raises(ValueError, OLS, data, data[1:])
+
+def test_const_indicator():
+    np.random.seed(12345)
+    X = np.random.randint(0, 3, size=30)
+    X = categorical(X, drop=True)
+    y = np.dot(X, [1., 2., 3.]) + np.random.normal(size=30)
+    modc = OLS(y, add_constant(X[:,1:], prepend=True)).fit()
+    mod = OLS(y, X, hasconst=True).fit()
+    assert_almost_equal(modc.rsquared, mod.rsquared, 12)
+
 
 if __name__=="__main__":
 
