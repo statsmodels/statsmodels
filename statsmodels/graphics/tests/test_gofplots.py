@@ -20,7 +20,7 @@ except:
 def test_qqplot():
     #just test that it runs
     data = sm.datasets.longley.load()
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     mod_fit = sm.OLS(data.endog, data.exog).fit()
     res = mod_fit.resid
     fig = sm.qqplot(res, line='r')
@@ -31,7 +31,7 @@ def test_qqplot():
 def test_ProbPlot():
     #just test that it runs
     data = sm.datasets.longley.load()
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     mod_fit = sm.OLS(data.endog, data.exog).fit()
     res = sm.ProbPlot(mod_fit.resid, stats.t, distargs=(4,))
 

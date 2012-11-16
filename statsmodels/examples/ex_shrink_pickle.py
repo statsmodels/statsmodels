@@ -12,7 +12,7 @@ import statsmodels.api as sm
 nobs = 10000
 np.random.seed(987689)
 x = np.random.randn(nobs, 3)
-x = sm.add_constant(x, prepend=True)
+x = sm.add_constant(x)
 y = x.sum(1) + np.random.randn(nobs)
 
 

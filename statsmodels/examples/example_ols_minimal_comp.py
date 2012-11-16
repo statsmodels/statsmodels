@@ -10,7 +10,7 @@ import statsmodels.api as sm
 np.random.seed(765367)
 nsample = 100
 x = np.linspace(0,10, 100)
-X = sm.add_constant(np.column_stack((x, x**2)), prepend=True)
+X = sm.add_constant(np.column_stack((x, x**2)))
 beta = np.array([10, 1, 0.01])
 y = np.dot(X, beta) + np.random.normal(size=nsample)
 

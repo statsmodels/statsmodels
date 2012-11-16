@@ -28,7 +28,7 @@ def test_cov_cluster_2groups():
     endog = pet[:,-1]
     group = pet[:,0].astype(int)
     time = pet[:,1].astype(int)
-    exog = add_constant(pet[:,2], prepend=True)
+    exog = add_constant(pet[:,2])
     res = OLS(endog, exog).fit()
 
     cov01, covg, covt = sw.cov_cluster_2groups(res, group, group2=time)
@@ -58,7 +58,7 @@ def test_hac_simple():
     d2 = macrodata.load().data
     g_gdp = 400*np.diff(np.log(d2['realgdp']))
     g_inv = 400*np.diff(np.log(d2['realinv']))
-    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]],prepend=True)
+    exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]])
     res_olsg = OLS(g_inv, exogg).fit()
 
 

@@ -345,7 +345,7 @@ if __name__ == '__main__': #pragma : no cover
     import numpy as np
 
     data = sm.datasets.spector.load()
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     mod = sm.Probit(data.endog, data.exog)
     res = mod.fit(method="newton")
     test_params = [1,0.25,1.4,-7]

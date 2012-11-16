@@ -496,7 +496,7 @@ def pacf_ols(x, nlags=40):
     #maybe we can compare small sample properties with a MonteCarlo
     xlags, x0 = lagmat(x, nlags, original='sep')
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = add_constant(xlags, prepend=True)
+    xlags = add_constant(xlags)
     pacf = [1.]
     for k in range(1, nlags+1):
         res = OLS(x0[k:], xlags[k:,:k+1]).fit()
@@ -799,8 +799,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
         #add constant
         if addconst:
-            dtaown = add_constant(dta[:,1:mxlg+1])
-            dtajoint = add_constant(dta[:,1:])
+            dtaown = add_constant(dta[:,1:mxlg+1], prepend=False)
+            dtajoint = add_constant(dta[:,1:], prepend=False)
         else:
             raise ValueError('Not Implemented')
             dtaown = dta[:,1:mxlg]
@@ -901,9 +901,9 @@ def coint(y1, y2, regression="c"):
     y1 = np.asarray(y1)
     y2 = np.asarray(y2)
     if regression == 'c':
-        y2 = add_constant(y2)
+        y2 = add_constant(y2, prepend=False)
     st1_resid = OLS(y1, y2).fit().resid #stage one residuals
-    lgresid_cons = add_constant(st1_resid[0:-1])
+    lgresid_cons = add_constant(st1_resid[0:-1], prepend=False)
     uroot_reg = OLS(st1_resid[1:], lgresid_cons).fit()
     coint_t = (uroot_reg.params[0]-1)/uroot_reg.bse[0]
     pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)

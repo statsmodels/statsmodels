@@ -42,7 +42,7 @@ class RemoveDataPickle(object):
         nobs = 10000
         np.random.seed(987689)
         x = np.random.randn(nobs, 3)
-        x = sm.add_constant(x, prepend=True)
+        x = sm.add_constant(x)
         self.exog = x
         self.xf = 0.25 * np.ones((2,4))
 

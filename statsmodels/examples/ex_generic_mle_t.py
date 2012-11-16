@@ -78,7 +78,7 @@ class MyT(GenericLikelihoodModel):
 np.random.seed(98765678)
 nobs = 1000
 rvs = np.random.randn(nobs,5)
-data_exog = sm.add_constant(rvs)
+data_exog = sm.add_constant(rvs, prepend=False)
 xbeta = 0.9 + 0.1*rvs.sum(1)
 data_endog = xbeta + 0.1*np.random.standard_t(5, size=nobs)
 #print data_endog

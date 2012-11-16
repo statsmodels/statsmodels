@@ -41,7 +41,7 @@ if 'ex1' in examples:
     #with slope 3 instead of two, I get negative weights, Not correct
     #   - was misspecified, but the negative weights are still possible with identity link
     #gamma /= gamma.sum()   #normalize assuming x1.max is 1
-    z_true = add_constant(x1, prepend=True)
+    z_true = add_constant(x1)
 
     winv = np.dot(z_true, gamma)
     het_params = sig**2 * np.array([1, 3.])  # for squared
@@ -52,9 +52,9 @@ if 'ex1' in examples:
     #y2[:nsample*6/10] = y_true2[:nsample*6/10] + sig*1. * np.random.normal(size=nsample*6/10)
     z0 = np.zeros(nsample)
     z0[(nsample * 5)//10:] = 1   #dummy for 2 halfs of sample
-    z0 = add_constant(z0, prepend=True)
+    z0 = add_constant(z0)
 
-    z1 = add_constant(x1, prepend=True)
+    z1 = add_constant(x1)
 
     noise = np.sqrt(sig2_het) * np.random.normal(size=nsample)
     y2 = y_true2 + noise
@@ -115,7 +115,7 @@ if 'ex1' in examples:
 
     import statsmodels.api as sm
     #z = sm.add_constant(w, prepend=True)
-    z = sm.add_constant(x1/x1.max(), prepend=True)
+    z = sm.add_constant(x1/x1.max())
     mod3 = GLSHet(y2, X2, exog_var=z1)#, link=sm.families.links.log())
     res3 = mod3.iterative_fit(20)
     error_var_3 = res3.mse_resid/res3.model.weights

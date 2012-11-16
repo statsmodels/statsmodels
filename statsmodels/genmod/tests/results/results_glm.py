@@ -690,7 +690,7 @@ class Lbw(object):
         design = np.column_stack((data['age'], data['lwt'],
                     data['race_black'], data['race_other'], data['smoke'],
                     data['ptl'], data['ht'], data['ui']))
-        self.exog = add_constant(design)
+        self.exog = add_constant(design, prepend=False)
         # Results for Canonical Logit Link
         self.params = (-.02710031, -.01515082, 1.26264728,
                         .86207916, .92334482, .54183656, 1.83251780,
@@ -797,7 +797,7 @@ class Cancer(object):
         design = np.column_stack((data.age,data.drug))
         design = categorical(design, col=1, drop=True)
         design = np.delete(design, 1, axis=1) # drop first dummy
-        self.exog = add_constant(design)
+        self.exog = add_constant(design, prepend=False)
 
 class CancerLog(Cancer):
     """
@@ -1139,7 +1139,7 @@ class InvGauss(object):
         data=np.genfromtxt(open(filename, 'rb'), delimiter=",", dtype=float)[1:]
         self.endog = data[:5000,0]
         self.exog = data[:5000,1:]
-        self.exog = add_constant(self.exog)
+        self.exog = add_constant(self.exog, prepend=False)
 
 #class InvGaussDefault(InvGauss)
 #    def __init__(self):
@@ -2180,7 +2180,7 @@ class Medpar1(object):
         design = np.column_stack((data.admitype, data.codes))
         design = categorical(design, col=0, drop=True)
         design = np.delete(design, 1, axis=1) # drop first dummy
-        self.exog = add_constant(design)
+        self.exog = add_constant(design, prepend=False)
 
 class InvGaussLog(Medpar1):
     """

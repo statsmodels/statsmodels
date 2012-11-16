@@ -9,7 +9,7 @@ import statsmodels.api as sm
 # Let's generate some regression data
 np.random.seed(100)  # no significance of the seed
 X = np.random.standard_normal((40, 3))
-X = sm.add_constant(X, prepend=1)
+X = sm.add_constant(X)
 beta = np.arange(1,5)
 y = np.dot(X, beta) + np.random.standard_normal(40)
 # There are no distributional assumptions on the error.  I just chose

@@ -355,12 +355,13 @@ class WLS(RegressionModel):
     >>> wls_model = sm.WLS(Y,X, weights=range(1,8))
     >>> results = wls_model.fit()
     >>> results.params
-    array([ 0.0952381 ,  2.91666667])
+    array([ 2.91666667,  0.0952381 ])
     >>> results.tvalues
-    array([ 0.35684428,  2.0652652 ])
-    <T test: effect=2.9166666666666674, sd=1.4122480109543243, t=2.0652651970780505, p=0.046901390323708769, df_denom=5>
-    >>> print results.f_test([1,0])
-    <F test: F=0.12733784321528099, p=0.735774089183, df_denom=5, df_num=1>
+    array([ 2.0652652 ,  0.35684428])
+    >>> print results.t_test([1, 0])
+    <T test: effect=array([ 2.91666667]), sd=array([[ 1.41224801]]), t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
+    >>> print results.f_test([0, 1])
+    <F test: F=array([[ 0.12733784]]), p=[[ 0.73577409]], df_denom=5, df_num=1>
 
     Notes
     -----
@@ -452,19 +453,19 @@ class OLS(WLS):
     >>> import statsmodels.api as sm
     >>>
     >>> Y = [1,3,4,5,2,3,4]
-    >>> X = range(1,8) #[:,np.newaxis]
+    >>> X = range(1,8)
     >>> X = sm.add_constant(X)
     >>>
     >>> model = sm.OLS(Y,X)
     >>> results = model.fit()
     >>> results.params
-    array([ 0.25      ,  2.14285714])
-    >>> results.tvales
-    array([ 0.98019606,  1.87867287])
-    >>> print results.t_test([0,1])
-    <T test: effect=2.1428571428571423, sd=1.1406228159050935, t=1.8786728732554485, p=0.059539737780605395, df_denom=5>
+    array([ 2.14285714,  0.25      ])
+    >>> results.tvalues
+    array([ 1.87867287,  0.98019606])
+    >>> print results.t_test([1, 0])
+<T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
     >>> print results.f_test(np.identity(2))
-    <F test: F=19.460784313725501, p=0.00437250591095, df_denom=5, df_num=2>
+    <F test: F=array([[ 19.46078431]]), p=[[ 0.00437251]], df_denom=5, df_num=2>
 
     Notes
     -----
@@ -531,15 +532,13 @@ class GLSAR(GLS):
     AR coefficients: [-0.6048218  -0.85846157]
     AR coefficients: [-0.60479146 -0.85841922]
     >>> results.params
-    array([ 1.60850853, -0.66661205])
+    array([-0.66661205,  1.60850853])
     >>> results.tvalues
-    array([ 21.8047269 ,  -2.10304127])
-    >>> print results.t_test([0,1])
-    <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]),
-    t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
-    >>> print(results.f_test(np.identity(2)))
-    <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3,
-                                                             df_num=2>
+    array([ -2.10304127,  21.8047269 ])
+    >>> print results.t_test([1, 0])
+    <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]), t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
+    >>> print results.f_test(np.identity(2))
+<F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3, df_num=2>
 
     Or, equivalently
 
@@ -1598,7 +1597,7 @@ class OLSResults(RegressionResults):
         >>> import statsmodels.api as sm
         >>> data = sm.datasets.stackloss.load()
         >>> endog = data.endog
-        >>> exog = sm.add_constant(data.exog, prepend=1)
+        >>> exog = sm.add_constant(data.exog)
         >>> model = sm.OLS(endog, exog)
         >>> fitted = model.fit()
         >>> fitted.params
@@ -1759,7 +1758,7 @@ wrap.populate_wrapper(RegressionResultsWrapper,
 if __name__ == "__main__":
     import statsmodels.api as sm
     data = sm.datasets.longley.load()
-    data.exog = add_constant(data.exog)
+    data.exog = add_constant(data.exog, prepend=False)
     ols_results = OLS(data.endog, data.exog).fit() #results
     gls_results = GLS(data.endog, data.exog).fit() #results
     print(ols_results.summary())

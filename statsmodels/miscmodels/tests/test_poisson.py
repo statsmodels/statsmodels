@@ -41,7 +41,7 @@ class TestPoissonMLE(Compare):
         nobs = 200
         rvs = np.random.randn(nobs,6)
         data_exog = rvs
-        data_exog = sm.add_constant(data_exog)
+        data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 0.1 + 0.1*rvs.sum(1)
         data_endog = np.random.poisson(np.exp(xbeta))
 
@@ -68,7 +68,7 @@ class TestPoissonOffset(Compare):
         nobs = 200
         rvs = np.random.randn(nobs,6)
         data_exog = rvs
-        data_exog = sm.add_constant(data_exog)
+        data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 1 + 0.1*rvs.sum(1)
         data_endog = np.random.poisson(np.exp(xbeta))
 
@@ -109,7 +109,7 @@ class TestPoissonZi(Compare):
         nobs = 200
         rvs = np.random.randn(nobs,6)
         data_exog = rvs
-        data_exog = sm.add_constant(data_exog)
+        data_exog = sm.add_constant(data_exog, prepend=False)
         xbeta = 1 + 0.1*rvs.sum(1)
         data_endog = np.random.poisson(np.exp(xbeta))
 

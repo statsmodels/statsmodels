@@ -8,7 +8,7 @@ class GenRes(object):
     def __init__(self):
         data = sm.datasets.heart.load()
         endog = np.log10(data.endog)
-        exog = sm.add_constant(data.exog, prepend=1)
+        exog = sm.add_constant(data.exog)
         self.mod1 = sm.emplike.emplikeAFT(endog, exog, data.censors)
         self.res1 = self.mod1.fit()
         self.res2 = AFTRes()

@@ -40,7 +40,7 @@ def notyet_atst():
     realgdp = d['realgdp']
     realint = d['realint']
     endog = realinv
-    exog = add_constant(np.c_[realgdp, realint],prepend=True)
+    exog = add_constant(np.c_[realgdp, realint])
     res_ols1 = OLS(endog, exog).fit()
 
     #growth rates
@@ -50,8 +50,8 @@ def notyet_atst():
     tbilrate = d['tbilrate'][:-1]
 
     endogg = gs_l_realinv
-    exogg = add_constant(np.c_[gs_l_realgdp, lint], prepend=True)
-    exogg2 = add_constant(np.c_[gs_l_realgdp, tbilrate], prepend=True)
+    exogg = add_constant(np.c_[gs_l_realgdp, lint])
+    exogg2 = add_constant(np.c_[gs_l_realgdp, tbilrate])
 
     res_ols = OLS(endogg, exogg).fit()
     res_ols2 = OLS(endogg, exogg2).fit()
@@ -109,9 +109,9 @@ class TestDiagnosticG(object):
         tbilrate = d['tbilrate'][:-1]
 
         endogg = gs_l_realinv
-        exogg = add_constant(np.c_[gs_l_realgdp, lint], prepend=True)
-        exogg2 = add_constant(np.c_[gs_l_realgdp, tbilrate], prepend=True)
-        exogg3 = add_constant(np.c_[gs_l_realgdp], prepend=True)
+        exogg = add_constant(np.c_[gs_l_realgdp, lint])
+        exogg2 = add_constant(np.c_[gs_l_realgdp, tbilrate])
+        exogg3 = add_constant(np.c_[gs_l_realgdp])
 
         res_ols = OLS(endogg, exogg).fit()
         res_ols2 = OLS(endogg, exogg2).fit()
