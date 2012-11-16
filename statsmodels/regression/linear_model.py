@@ -376,7 +376,7 @@ class WLS(RegressionModel):
             weights = np.repeat(weights, len(endog))
         weights = weights.squeeze()
         super(WLS, self).__init__(endog, exog, missing=missing,
-                                  weights=weights, hasconst=hascont)
+                                  weights=weights, hasconst=hasconst)
         nobs = self.exog.shape[0]
         weights = self.weights
         if len(weights) != nobs and weights.size == nobs:
