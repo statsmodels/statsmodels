@@ -259,7 +259,7 @@ def _pandas_add_constant(data, prepend):
 
 
 #TODO: add an axis argument to this for sysreg
-def add_constant(data, prepend=False):
+def add_constant(data, prepend=True):
     '''
     This appends a column of ones to an array if prepend==False.
 
@@ -281,30 +281,7 @@ def add_constant(data, prepend=False):
     data : array
         The original array with a constant (column of ones) as the first or
         last column.
-
-    Notes
-    -----
-
-    .. WARNING::
-       The default of prepend will be changed to True in the next release of
-       statsmodels. We recommend to use an explicit prepend in any permanent
-       code.
     '''
-    if not prepend:
-        import inspect
-        frame = inspect.currentframe().f_back
-        info = inspect.getframeinfo(frame)
-        try: # info.code_context is None on python 2.6? Why?
-            to_warn = (info.code_context is not None and
-                       'prepend' not in '\n'.join(info.code_context))
-        except: # python 2.5 compatibility
-            to_warn = 'prepend' not in '\n'.join(info[3])
-        if to_warn:
-            import warnings
-            warnings.warn("The default of `prepend` will be changed to True "
-                          "in 0.5.0, use explicit prepend",
-                          FutureWarning)
-
     if _is_using_pandas(data, None):
         # work on a copy
         return _pandas_add_constant(data.copy(), prepend)

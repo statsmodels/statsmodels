@@ -11,7 +11,7 @@ nobs = 50
 nvars = 6
 df = 3
 rvs = np.random.randn(nobs, nvars-1)
-data_exog = sm.add_constant(rvs)
+data_exog = sm.add_constant(rvs, prepend=False)
 xbeta = 0.9 + 0.1*rvs.sum(1)
 data_endog = xbeta + 0.1*np.random.standard_t(df, size=nobs)
 print 'variance of endog:', data_endog.var()

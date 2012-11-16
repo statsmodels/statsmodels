@@ -256,7 +256,7 @@ if __name__ == '__main__':
     nobs = 1000
     rvs = np.random.randn(nobs,6)
     data_exog = rvs
-    data_exog = sm.add_constant(data_exog)
+    data_exog = sm.add_constant(data_exog, prepend=False)
     xbeta = 1 + 0.1*rvs.sum(1)
     data_endog = np.random.poisson(np.exp(xbeta))
     #print data_endog

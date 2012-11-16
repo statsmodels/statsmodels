@@ -16,7 +16,7 @@ if __name__ == '__main__':
     import numpy as np
 
     data = load()
-    data.exog = sm.tools.add_constant(data.exog)
+    data.exog = sm.tools.add_constant(data.exog, prepend=False)
 
     resols = sm.OLS(data.endog, data.exog).fit()
 

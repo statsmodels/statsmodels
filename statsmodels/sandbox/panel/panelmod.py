@@ -355,7 +355,7 @@ if __name__ == "__main__":
 
     # the most cumbersome way of doing it as far as preprocessing by hand
     exog = fullexog[['value','capital']].view(float).reshape(-1,2)
-    exog = sm.add_constant(exog)
+    exog = sm.add_constant(exog, prepend=False)
     panel = group(fullexog['firm'])
     year = fullexog['year']
     panel_mod = PanelModel(endog, exog, panel, year, xtnames=['firm','year'],

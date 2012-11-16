@@ -18,7 +18,7 @@ import statsmodels.api as sm
 print '\n\n Example 1: Longley Data, high multicollinearity'
 
 data = sm.datasets.longley.load()
-data.exog = sm.add_constant(data.exog)
+data.exog = sm.add_constant(data.exog, prepend=False)
 res = sm.OLS(data.endog, data.exog).fit()
 
 # test pairwise equality of some coefficients
@@ -131,7 +131,7 @@ dummyvar = (xcat == np.arange(ncat)).astype(float)
 
 beta = np.array([0., 2, -2, 1])[:,np.newaxis]
 ytrue = np.dot(dummyvar, beta)
-X = sm.tools.add_constant(dummyvar[:,:-1])
+X = sm.tools.add_constant(dummyvar[:,:-1], prepend=False)
 y = ytrue + sigma * np.random.randn(nsample,1)
 mod2 = sm.OLS(y[:,0], X)
 res2 = mod2.fit()

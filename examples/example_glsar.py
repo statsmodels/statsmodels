@@ -49,7 +49,7 @@ beta = np.array([0.1, 2])
 noiseratio = 0.5
 nsample = 2000
 x = np.arange(nsample)
-X1 = sm.add_constant(x)
+X1 = sm.add_constant(x, prepend=False)
 
 wnoise = noiseratio * np.random.randn(nsample+nlags)
 #.. noise = noise[1:] + rhotrue*noise[:-1] # wrong this is not AR

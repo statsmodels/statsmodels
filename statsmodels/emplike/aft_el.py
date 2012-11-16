@@ -129,7 +129,7 @@ class OptAFT(_OptFuncts):
             survivalprob = death[::-1]
             surv_point_mat = np.dot(F.reshape(-1, 1),
                                 1. / survivalprob[survidx].reshape(1, - 1))
-            surv_point_mat = add_constant(surv_point_mat, prepend=1)
+            surv_point_mat = add_constant(surv_point_mat)
             summed_wts = np.cumsum(surv_point_mat, axis=1)
             wts = summed_wts[np.int_(np.arange(uncens_nobs)),
                              numcensbelow[uncensored]]
@@ -463,7 +463,7 @@ class AFTResults(OptAFT):
         y = np.log10(data.endog)
         x = data.exog
         cens = data.censors
-        model = sm.emplike.emplikeAFT(y, sm.add_constant(x, prepend=1), cens)
+        model = sm.emplike.emplikeAFT(y, sm.add_constant(x), cens)
         res=model.test_beta([0], [1])
         >>>res
         >>>(4.623487775078047, 0.031537049752572731)

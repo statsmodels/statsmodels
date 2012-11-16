@@ -138,7 +138,7 @@ if __name__ == '__main__':
     # convert edu to dummy
     exog = sm.tools.categorical(exog, col=0, drop=True)
     # drop reference categories and add intercept
-    exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]])
+    exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]], prepend=False)
 
     endog = np.round(data.endog)
     mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()

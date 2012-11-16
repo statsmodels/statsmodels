@@ -814,7 +814,7 @@ if __name__ == '__main__':
 
 
         x = np.linspace(0,10, nobs)
-        X = tools.add_constant(np.column_stack((x, x**2)))
+        X = tools.add_constant(np.column_stack((x, x**2)), prepend=False)
         beta = np.array([1, 0.1, 10])
 
         def sample_ols(exog):

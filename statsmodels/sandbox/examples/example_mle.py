@@ -13,7 +13,7 @@ import statsmodels.api as sm
 
 np.random.seed(54321)
 X = np.random.rand(40,2)
-X = sm.add_constant(X)
+X = sm.add_constant(X, prepend=False)
 beta = np.array((3.5, 5.7, 150))
 Y = np.dot(X,beta) + np.random.standard_normal(40)
 mod2 = sm.OLS(Y,X)
@@ -32,7 +32,7 @@ print   '-----------------------------------------------\n'
 
 from statsmodels.datasets.longley import load
 data = load()
-data.exog = sm.add_constant(data.exog)
+data.exog = sm.add_constant(data.exog, prepend=False)
 mod = sm.OLS(data.endog, data.exog)
 f = lambda params: -1*mod.loglike(params)
 score = lambda params: -1*mod.score(params)

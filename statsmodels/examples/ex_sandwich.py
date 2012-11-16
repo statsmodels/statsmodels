@@ -17,7 +17,7 @@ import statsmodels.stats.sandwich_covariance as sw
 nobs = 100
 kvars = 4 #including constant
 x = np.random.randn(nobs, kvars-1)
-exog = sm.add_constant(x, prepend=True)
+exog = sm.add_constant(x)
 params_true = np.ones(kvars)
 y_true = np.dot(exog, params_true)
 sigma = 0.1 + np.exp(exog[:,-1])

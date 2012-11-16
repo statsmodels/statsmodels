@@ -77,7 +77,7 @@ class CheckRlmResults(object):
 class TestRlm(CheckRlmResults):
     from statsmodels.datasets.stackloss import load
     data = load()   # class attributes for subclasses
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     def __init__(self):
         # Test precisions
         self.decimal_standarderrors = DECIMAL_1
@@ -177,7 +177,7 @@ class TestRlmAndrews(TestRlm):
 class TestRlmHuber(CheckRlmResults):
     from statsmodels.datasets.stackloss import load
     data = load()
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,\
                     M=sm.robust.norms.HuberT()).fit(scale_est=\
@@ -264,7 +264,7 @@ class TestRlmSresid(CheckRlmResults):
     #Check GH:187
     from statsmodels.datasets.stackloss import load
     data = load()   # class attributes for subclasses
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     def __init__(self):
         # Test precisions
         self.decimal_standarderrors = DECIMAL_1

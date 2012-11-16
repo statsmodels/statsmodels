@@ -163,19 +163,19 @@ from his web site and edit this script accordingly."
     y = data3['realcons'] + data3['realinvs'] + data3['realgovt']
 
     exog1 = np.column_stack((y[1:],data3['realcons'][:-1]))
-    exog1 = sm.add_constant(exog1)
+    exog1 = sm.add_constant(exog1, prepend=False)
     sys3.append(exog1)
     sys3.append(data3['realinvs'][1:])
     exog2 = np.column_stack((data3['tbilrate'][1:],
         np.diff(y)))
     # realint is missing 1st observation
-    exog2 = sm.add_constant(exog2)
+    exog2 = sm.add_constant(exog2, prepend=False)
     sys3.append(exog2)
     indep_endog = {0 : [0]} # need to be able to say that y_1 is an instrument..
     instruments = np.column_stack((data3[['realgovt',
         'tbilrate']][1:].view(float).reshape(-1,2),data3['realcons'][:-1],
         y[:-1]))
-    instruments = sm.add_constant(instruments)
+    instruments = sm.add_constant(instruments, prepend=False)
     sem_mod = Sem2SLS(sys3, indep_endog = indep_endog, instruments=instruments)
     sem_params = sem_mod.fit() # first equation is right, but not second?
                                # should y_t in the diff be instrumented?
@@ -184,7 +184,7 @@ from his web site and edit this script accordingly."
     y_instr = sem_mod.wexog[0][:,0]
     wyd = y_instr - y[:-1]
     wexog = np.column_stack((data3['tbilrate'][1:],wyd))
-    wexog = sm.add_constant(wexog)
+    wexog = sm.add_constant(wexog, prepend=False)
     params = sm.GLS(data3['realinvs'][1:], wexog).fit().params
 
     print "These are the simultaneous equation estimates for Greene's \

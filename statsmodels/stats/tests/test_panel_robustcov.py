@@ -24,7 +24,8 @@ def test_panel_robust_cov():
     #Stata example/data seems to miss last firm
     dtapa_endog = dtapa.endog[:200]
     dtapa_exog = dtapa.exog[:200]
-    res = OLS(dtapa_endog, add_constant(dtapa_exog[['value', 'capital']], prepend=False)).fit()
+    res = OLS(dtapa_endog, add_constant(dtapa_exog[['value', 'capital']],
+              prepend=False)).fit()
 
     #time indicator in range(max Ti)
     time = np.asarray(dtapa_exog[['year']])

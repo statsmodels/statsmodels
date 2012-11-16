@@ -28,7 +28,7 @@ if rescale > 1:
     #rescale_ratio = data.exog.var(0)/data.endog.var()
 
 #skip because mean has been removed, but dimension is hardcoded in table
-data.exog = sm.tools.add_constant(data.exog)
+data.exog = sm.tools.add_constant(data.exog, prepend=False)
 
 
 

@@ -17,7 +17,7 @@ nobs = 10 #100
 x1 = np.random.randn(nobs)
 y1 = 10 + 15*x1 + 2*np.random.randn(nobs)
 
-x1 = sm.add_constant(x1) #, prepend=True)
+x1 = sm.add_constant(x1, prepend=False)
 assert_almost_equal(x1, np.vander(x1[:,0],2), 16)
 res1 = sm.OLS(y1, x1).fit()
 print res1.params
@@ -30,7 +30,7 @@ x2 = np.random.randn(nobs)
 y2 = 19 + 17*x2 + 2*np.random.randn(nobs)
 #y2 = 10 + 15*x2 + 2*np.random.randn(nobs)  # if H0 is true
 
-x2 = sm.add_constant(x2) #, prepend=True)
+x2 = sm.add_constant(x2, prepend=False)
 assert_almost_equal(x2, np.vander(x2[:,0],2), 16)
 
 res2 = sm.OLS(y2, x2).fit()

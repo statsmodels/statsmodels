@@ -18,7 +18,7 @@ except:
         return 1, np.log(np.linalg.det(x))
 
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
-
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, \
                                                         VARResults
@@ -542,7 +542,6 @@ class SVARResults(SVARProcess, VARResults):
     bse
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    coef_names
     cov_params
     dates
     detomega
@@ -603,7 +602,7 @@ class SVARResults(SVARProcess, VARResults):
         self.k_trend = k_trend
         self.trendorder = trendorder
 
-        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
+        self.exog_names = util.make_lag_names(names, lag_order, k_trend)
         self.params = params
         self.sigma_u = sigma_u
 
@@ -625,6 +624,15 @@ class SVARResults(SVARProcess, VARResults):
 
         super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
                              B, names=names)
+
+    @cache_readonly
+    def coef_names(self):
+        """Coefficient names (deprecated)
+        """
+        from warnings import warn
+        warn("coef_names is deprecated and will be removed in 0.6.0."
+             "Use exog_names", FutureWarning)
+        return self.exog_names
 
     def irf(self, periods=10, var_order=None):
         """

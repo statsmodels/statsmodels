@@ -6,7 +6,7 @@ from statsmodels.base.model import GenericLikelihoodModel
 
 
 data = sm.datasets.spector.load()
-data.exog = sm.add_constant(data.exog)
+data.exog = sm.add_constant(data.exog, prepend=False)
 # in this dir
 
 probit_mod = sm.Probit(data.endog, data.exog)
@@ -35,14 +35,14 @@ print res.params, probit_res.params
 
 #datal = sm.datasets.longley.load()
 datal = sm.datasets.ccard.load()
-datal.exog = sm.add_constant(datal.exog)
+datal.exog = sm.add_constant(datal.exog, prepend=False)
 # Instance of GenericLikelihood model doesn't work directly, because loglike
 # cannot get access to data in self.endog, self.exog
 
 nobs = 5000
 rvs = np.random.randn(nobs,6)
 datal.exog = rvs[:,:-1]
-datal.exog = sm.add_constant(datal.exog)
+datal.exog = sm.add_constant(datal.exog, prepend=False)
 datal.endog = 1 + rvs.sum(1)
 
 show_error = False

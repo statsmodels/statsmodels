@@ -170,7 +170,7 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
 
     #### Make the data and model
     exog = get_exog(N, num_nonconst_covariates, cor_length)
-    exog = sm.add_constant(exog, prepend=True)
+    exog = sm.add_constant(exog)
     true_params = sp.rand(num_nonconst_covariates+1, num_targets-1)
     if num_zero_params:
         true_params[-num_zero_params:, :] = 0

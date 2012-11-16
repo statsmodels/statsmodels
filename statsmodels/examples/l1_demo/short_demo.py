@@ -25,7 +25,7 @@ import pdb  # pdb.set_trace()
 
 ## Load the data from Spector and Mazzeo (1980)
 spector_data = sm.datasets.spector.load()
-spector_data.exog = sm.add_constant(spector_data.exog, prepend=True)
+spector_data.exog = sm.add_constant(spector_data.exog)
 N = len(spector_data.endog)
 K = spector_data.exog.shape[1]
 

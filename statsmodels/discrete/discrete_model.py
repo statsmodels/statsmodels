@@ -167,7 +167,7 @@ class DiscreteModel(base.LikelihoodModel):
         The regularization method AND the solver used is determined by the
         argument method.
 
-        Parameters 
+        Parameters
         ----------
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
@@ -244,7 +244,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         .. math:: -u_k \\leq \\beta_k \\leq u_k.
 
-        With :math:`\\partial_k L` the derivative of :math:`L` in the 
+        With :math:`\\partial_k L` the derivative of :math:`L` in the
         :math:`k^{th}` parameter direction, theory dictates that, at the
         minimum, exactly one of two conditions holds:
 

@@ -14,8 +14,7 @@ data = sm.datasets.heart.load()
 # We will take the log (base 10) of the endogenous survival times
 
 model = sm.emplike.emplikeAFT(np.log10(data.endog),
-                              sm.add_constant(data.exog, prepend=1),
-                              data.censors)
+                              sm.add_constant(data.exog), data.censors)
 
 # We need to fit the model to get the parameters
 fitted = model.fit()

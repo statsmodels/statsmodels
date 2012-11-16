@@ -763,7 +763,7 @@ if __name__ == '__main__':
     varnames = 'weight height age'.split()
 
     endog = data[:,0]
-    exog = sm.add_constant(data[:,2], prepend=True)
+    exog = sm.add_constant(data[:,2])
 
 
     res_ols = sm.OLS(endog, exog).fit()
