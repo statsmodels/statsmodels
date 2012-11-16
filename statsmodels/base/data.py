@@ -56,7 +56,8 @@ class ModelData(object):
     Class responsible for handling input data and extracting metadata into the
     appropriate form
     """
-    def __init__(self, endog, exog=None, missing='none', **kwargs):
+    def __init__(self, endog, exog=None, missing='none', hasconst=None,
+                       **kwargs):
         if missing != 'none':
             arrays, nan_idx = self._handle_missing(endog, exog, missing,
                                                        **kwargs)
@@ -72,8 +73,30 @@ class ModelData(object):
             self.orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
 
+        # this has side-effects, attaches k_constant and const_idx
+        self._handle_constant(hasconst)
         self._check_integrity()
         self._cache = resettable_cache()
+
+    def _handle_constant(self, hasconst):
+        if hasconst is not None:
+            if hasconst:
+                self.k_constant = 1
+                self.const_idx = None
+            else:
+                self.k_constant = 0
+                self.const_idx = None
+        else:
+            try: # to detect where the constant is
+                const_idx = np.where(self.exog.var(axis = 0) == 0)[0].squeeze()
+                self.k_constant = const_idx.size
+                if self.k_constant > 1:
+                    raise ValueError("More than one constant detected.")
+                else:
+                    self.const_idx = const_idx
+            except: # should be an index error but who knows, means no const
+                self.const_idx = None
+                self.k_constant = 0
 
     def _drop_nans(self, x, nan_mask):
         return x[nan_mask]
@@ -345,7 +368,7 @@ def _make_exog_names(exog):
 
     return exog_names
 
-def handle_data(endog, exog, missing='none', **kwargs):
+def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
     """
     Given inputs
     """
@@ -368,4 +391,4 @@ def handle_data(endog, exog, missing='none', **kwargs):
         raise ValueError('unrecognized data structures: %s / %s' %
                          (type(endog), type(exog)))
 
-    return klass(endog, exog=exog, missing=missing, **kwargs)
+    return klass(endog, exog=exog, missing=missing, hasconst=hasconst, **kwargs)

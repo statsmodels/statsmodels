@@ -611,6 +611,37 @@ class TestMissingPandas(object):
         np.testing.assert_(data.row_labels.equals(labels))
 
 
+class TestConstant(object):
+    @classmethod
+    def setupClass(cls):
+        from statsmodels.datasets.longley import load_pandas
+        cls.data = load_pandas()
+
+    def test_array_constant(self):
+        exog = self.data.exog.copy()
+        exog['const'] = 1
+        data = sm_data.handle_data(self.data.endog.values, exog.values)
+        np.testing.assert_equal(data.k_constant, 1)
+        np.testing.assert_equal(data.const_idx, 6)
+
+    def test_pandas_constant(self):
+        exog = self.data.exog.copy()
+        exog['const'] = 1
+        data = sm_data.handle_data(self.data.endog, exog)
+        np.testing.assert_equal(data.k_constant, 1)
+        np.testing.assert_equal(data.const_idx, 6)
+
+    def test_pandas_noconstant(self):
+        exog = self.data.exog.copy()
+        data = sm_data.handle_data(self.data.endog, exog)
+        np.testing.assert_equal(data.k_constant, 0)
+        np.testing.assert_equal(data.const_idx, None)
+
+    def test_array_noconstant(self):
+        exog = self.data.exog.copy()
+        data = sm_data.handle_data(self.data.endog.values, exog.values)
+        np.testing.assert_equal(data.k_constant, 0)
+        np.testing.assert_equal(data.const_idx, None)
 
 if __name__ == "__main__":
     import nose
