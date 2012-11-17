@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Authors:    Josef Perktold
-            Skipper Seabold
-            Denis A. Engemann
+Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
 import numpy as np
 
