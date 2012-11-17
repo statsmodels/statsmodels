@@ -41,10 +41,10 @@ from _kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _get_type_pos, _adjust_shape
 
 
-__all__ = ['Reg', 'CensoredReg']
+__all__ = ['KernelReg', 'KernelCensoredReg']
 
 
-class Reg(GenericKDE):
+class KernelReg(GenericKDE):
     """
     Nonparametric Regression
 
@@ -242,9 +242,9 @@ class Reg(GenericKDE):
                            var_type=self.var_type, tosum=False)
         denom = H.sum(axis=1)
         H = H / denom
-        gx = Reg(endog=self.endog, exog=self.exog, var_type=self.var_type,
-                 reg_type=self.reg_type, bw=bw,
-                 defaults=EstimatorSettings(efficient=False)).fit()[0]
+        gx = KernelReg(endog=self.endog, exog=self.exog, var_type=self.var_type,
+                       reg_type=self.reg_type, bw=bw,
+                       defaults=EstimatorSettings(efficient=False)).fit()[0]
         gx = np.reshape(gx, (self.nobs, 1))
         sigma = ((self.endog - gx)**2).sum(axis=0) / float(self.nobs)
 
@@ -378,7 +378,7 @@ class Reg(GenericKDE):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "Reg instance\n"
+        repr = "KernelReg instance\n"
         repr += "Number of variables: K = " + str(self.K) + "\n"
         repr += "Number of samples:   N = " + str(self.nobs) + "\n"
         repr += "Variable types:      " + self.var_type + "\n"
@@ -388,7 +388,7 @@ class Reg(GenericKDE):
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset."""
-        class_type = 'Reg'
+        class_type = 'KernelReg'
         class_vars = (self.var_type, self.K, self.reg_type)
         return class_type, class_vars
 
@@ -413,7 +413,7 @@ class Reg(GenericKDE):
         return np.minimum(s1, s2)
 
 
-class CensoredReg(Reg):
+class KernelCensoredReg(KernelReg):
     """
     Nonparametric censored regression.
 
@@ -500,7 +500,7 @@ class CensoredReg(Reg):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "Reg instance\n"
+        repr = "KernelCensoredReg instance\n"
         repr += "Number of variables: K = " + str(self.K) + "\n"
         repr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
         repr += "Variable types:      " + self.var_type + "\n"
@@ -645,7 +645,7 @@ class TestRegCoefC(object):
 
     Parameters
     ----------
-    model: Reg instance
+    model: KernelReg instance
         This is the nonparametric regression model whose elements
         are tested for significance.
     test_vars: tuple, list of integers, array_like
@@ -726,7 +726,7 @@ class TestRegCoefC(object):
         n = np.shape(X)[0]
         Y = _adjust_shape(Y, 1)
         X = _adjust_shape(X, self.K)
-        b = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
+        b = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
                         defaults = EstimatorSettings(efficient=False)).fit()[1]
 
         b = b[:, self.test_vars]
@@ -769,8 +769,8 @@ class TestRegCoefC(object):
 
         X[:, self.test_vars] = np.mean(X[:, self.test_vars], axis=0)
         # Calculate the restricted mean. See p. 372 in [8]
-        M = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                defaults = EstimatorSettings(efficient=False)).fit()[0]
+        M = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                      defaults = EstimatorSettings(efficient=False)).fit()[0]
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
@@ -798,7 +798,7 @@ class TestRegCoefD(TestRegCoefC):
 
     Parameters
     ----------
-    model: Instance of Reg class
+    model: Instance of KernelReg class
         This is the nonparametric regression model whose elements
         are tested for significance.
     test_vars: tuple, list of one element
@@ -835,8 +835,8 @@ class TestRegCoefD(TestRegCoefC):
         dom_x = np.sort(np.unique(self.exog[:, self.test_vars]))
 
         n = np.shape(X)[0]
-        model = Reg(Y, X, self.var_type, self.model.reg_type, self.bw,
-                        defaults = EstimatorSettings(efficient=False))
+        model = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
+                          defaults = EstimatorSettings(efficient=False))
         X1 = copy.deepcopy(X)
         X1[:, self.test_vars] = 0
 

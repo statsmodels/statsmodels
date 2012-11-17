@@ -4,4 +4,5 @@ import bandwidths
 
 from kernel_density import \
     KDEMultivariate, KDEMultivariateConditional, EstimatorSettings
-from kernel_regression import Reg, CensoredReg
+from kernel_regression import KernelReg, KernelCensoredReg
+

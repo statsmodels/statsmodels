@@ -71,10 +71,11 @@ class MyTest(object):
             data_file.writerow(list(data[i, :]))
 
 
-class TestReg(MyTest):
+class TestKernelReg(MyTest):
     def test_ordered_lc_cvls(self):
-        model = nparam.Reg(endog=[self.Italy_gdp], exog=[self.Italy_year],
-                           reg_type='lc', var_type='o', bw='cv_ls')
+        model = nparam.KernelReg(endog=[self.Italy_gdp],
+                                 exog=[self.Italy_year], reg_type='lc',
+                                 var_type='o', bw='cv_ls')
         sm_bw = model.bw
         R_bw = 0.1390096
 
@@ -96,8 +97,8 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
     def test_continuousdata_lc_cvls(self):
-        model = nparam.Reg(endog=[self.y], exog=[self.c1, self.c2],
-                           reg_type='lc', var_type='cc', bw='cv_ls')
+        model = nparam.KernelReg(endog=[self.y], exog=[self.c1, self.c2],
+                                 reg_type='lc', var_type='cc', bw='cv_ls')
         # Bandwidth
         sm_bw = model.bw
         R_bw = [0.6163835, 0.1649656]
@@ -115,8 +116,8 @@ class TestReg(MyTest):
         npt.assert_allclose(sm_R2, R_R2, atol=1e-2)
 
     def test_continuousdata_ll_cvls(self):
-        model = nparam.Reg(endog=[self.y], exog=[self.c1, self.c2],
-                           reg_type='ll', var_type='cc', bw='cv_ls')
+        model = nparam.KernelReg(endog=[self.y], exog=[self.c1, self.c2],
+                                 reg_type='ll', var_type='cc', bw='cv_ls')
 
         sm_bw = model.bw
         R_bw = [1.717891, 2.449415]
@@ -145,8 +146,8 @@ class TestReg(MyTest):
         b3 = 2.3
         Y = b0+ b1 * C1 + b2*C2+ b3 * C3 + noise
         bw_cv_ls = np.array([0.96075, 0.5682, 0.29835])
-        model = nparam.Reg(endog=[Y], exog=[C1, C2, C3],
-                            reg_type='ll', var_type='ccc', bw=bw_cv_ls)
+        model = nparam.KernelReg(endog=[Y], exog=[C1, C2, C3],
+                                 reg_type='ll', var_type='ccc', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
         sm_mean = sm_mean[0:5]
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
@@ -164,8 +165,8 @@ class TestReg(MyTest):
         b3 = 2.3
         Y = b0+ b1 * C1 + b2*C2+ b3 * O + noise
         bw_cv_ls = np.array([1.04726, 1.67485, 0.39852])
-        model = nparam.Reg(endog=[Y], exog=[C1, C2, O],
-                            reg_type='ll', var_type='cco', bw=bw_cv_ls)
+        model = nparam.KernelReg(endog=[Y], exog=[C1, C2, O],
+                                 reg_type='ll', var_type='cco', bw=bw_cv_ls)
         sm_mean, sm_mfx = model.fit()
         sm_R2 = model.r_squared()  # TODO: add expected result
         npt.assert_allclose(sm_mfx[0,:], [b1,b2,b3], rtol=2e-1)
@@ -181,8 +182,8 @@ class TestReg(MyTest):
         b1 = 1.2
         b3 = 2.3
         Y = b0+ b1 * C1 * C2 + b3 * C3 + noise
-        model = nparam.Reg(endog=[Y], exog=[C1, C2, C3],
-                            reg_type='ll', var_type='ccc', bw='cv_ls')
+        model = nparam.KernelReg(endog=[Y], exog=[C1, C2, C3],
+                                 reg_type='ll', var_type='ccc', bw='cv_ls')
         sm_bw = model.bw
         sm_mean, sm_mfx = model.fit()
         sm_R2 = model.r_squared()
@@ -204,13 +205,13 @@ class TestReg(MyTest):
         b2 = 3.7  # regression coefficients
         Y = b0+ b1 * C1 + b2*C2
 
-        model_efficient = nparam.Reg(endog=[Y], exog=[C1], reg_type='lc',
-                                     var_type='c', bw='cv_ls',
-                                     defaults=nparam.EstimatorSettings(efficient=True,
-                                                          n_sub=100))
+        model_efficient = nparam.KernelReg(endog=[Y], exog=[C1], reg_type='lc',
+                              var_type='c', bw='cv_ls',
+                              defaults=nparam.EstimatorSettings(efficient=True,
+                                                                n_sub=100))
 
-        model = nparam.Reg(endog=[Y], exog=[C1], reg_type='ll', var_type='c',
-                           bw='cv_ls')
+        model = nparam.KernelReg(endog=[Y], exog=[C1], reg_type='ll',
+                                 var_type='c', bw='cv_ls')
         npt.assert_allclose(model.bw, model_efficient.bw, atol=5e-2, rtol=1e-1)
 
     @dec.slow
@@ -222,8 +223,9 @@ class TestReg(MyTest):
         noise = np.random.normal(size=(nobs, ))
         Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
         Y[Y>0] = 0  # censor the data
-        model = nparam.CensoredReg(endog=[Y], exog=[C1, C2], reg_type='ll',
-                                   var_type='cc', bw='cv_ls', censor_val=0)
+        model = nparam.KernelCensoredReg(endog=[Y], exog=[C1, C2],
+                                         reg_type='ll', var_type='cc',
+                                         bw='cv_ls', censor_val=0)
         sm_mean, sm_mfx = model.fit()
         npt.assert_allclose(sm_mfx[0,:], [1.2, -0.9], rtol = 2e-1)
 
@@ -242,8 +244,8 @@ class TestReg(MyTest):
         #data <- read.csv('RegData.csv', header=FALSE)
         #bw <- npregbw(formula=data$V1 ~ data$V2 + data$V3,
         #                bwmethod='cv.aic', regtype='lc')
-        model = nparam.Reg(endog=[Y], exog=[C1, C2],
-                            reg_type='lc', var_type='cc', bw='aic')
+        model = nparam.KernelReg(endog=[Y], exog=[C1, C2],
+                                 reg_type='lc', var_type='cc', bw='aic')
         R_bw = [0.4017893, 0.4943397]  # Bandwidth obtained in R
         npt.assert_allclose(model.bw, R_bw, rtol = 1e-3)
 
@@ -261,8 +263,8 @@ class TestReg(MyTest):
 
         # This is the cv_ls bandwidth estimated earlier
         bw=[11108137.1087194, 1333821.85150218]
-        model = nparam.Reg(endog=[Y], exog=[C1, C3],
-                           reg_type='ll', var_type='cc', bw=bw)
+        model = nparam.KernelReg(endog=[Y], exog=[C1, C3],
+                                 reg_type='ll', var_type='cc', bw=bw)
         nboot = 45  # Number of bootstrap samples
         sig_var12 = model.sig_test([0,1], nboot=nboot)  # H0: b1 = 0 and b2 = 0
         npt.assert_equal(sig_var12 == 'Not Significant', False)
@@ -286,8 +288,8 @@ class TestReg(MyTest):
         bw= [3.63473198e+00, 1.21404803e+06]
                  # This is the cv_ls bandwidth estimated earlier
         # The cv_ls bandwidth was estimated earlier to save time
-        model = nparam.Reg(endog=[Y], exog=[O, C3],
-                            reg_type='ll', var_type='oc', bw=bw)
+        model = nparam.KernelReg(endog=[Y], exog=[O, C3],
+                                 reg_type='ll', var_type='oc', bw=bw)
         # This was also tested with local constant estimator
         nboot = 45  # Number of bootstrap samples
         sig_var1 = model.sig_test([0], nboot=nboot)  # H0: b1 = 0

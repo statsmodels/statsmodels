@@ -61,19 +61,19 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
         exog = sub_data[:, k_dep:]
         sub_model = KDEMultivariateConditional(endog, exog, dep_type,
             indep_type, bw=bw, defaults=EstimatorSettings(efficient=False))
-    elif class_type == 'Reg':
-        from kernel_regression import Reg
+    elif class_type == 'KernelReg':
+        from kernel_regression import KernelReg
         var_type, K, reg_type = class_vars
         endog = _adjust_shape(sub_data[:, 0], 1)
         exog = _adjust_shape(sub_data[:, 1:], K)
-        sub_model = Reg(endog=endog, exog=exog, reg_type=reg_type,
-                        var_type=var_type, bw=bw,
-                        defaults=EstimatorSettings(efficient=False))
+        sub_model = KernelReg(endog=endog, exog=exog, reg_type=reg_type,
+                              var_type=var_type, bw=bw,
+                              defaults=EstimatorSettings(efficient=False))
     else:
         raise ValueError("Don't know what I am; aborting.")
 
     # Compute dispersion in next 7 lines
-    if class_type == 'Reg':
+    if class_type == 'KernelReg':
         sub_data = sub_data[:, 1:]
 
     s1 = np.std(sub_data, axis=0)
@@ -138,8 +138,8 @@ class GenericKDE (object):
 
         Notes
         -----
-        Reimplemented in `Reg`, because the first column of `data` has to be
-        removed.
+        Reimplemented in `KernelReg`, because the first column of `data` has to
+        be removed.
 
         References
         ----------
@@ -327,7 +327,7 @@ class EstimatorSettings(object):
 
     `EstimatorSettings` has several proporties related to how bandwidth
     estimation for the `KDEMultivariate`, `KDEMultivariateConditional`,
-    `Reg` and `CensoredReg` classes behaves.
+    `KernelReg` and `CensoredKernelReg` classes behaves.
 
     Parameters
     ----------
