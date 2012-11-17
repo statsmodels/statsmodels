@@ -1,8 +1,9 @@
-from scipy import stats
 import numpy as np
+from scipy import stats
 from statsmodels.distributions.mixture_rvs import mixture_rvs
-from statsmodels.nonparametric.kde import (kdensity, kdensityfft)
+from statsmodels.nonparametric.kde import kdensityfft
 import matplotlib.pyplot as plt
+
 
 np.random.seed(12345)
 obs_dist = mixture_rvs([.25,.75], size=10000, dist=[stats.norm, stats.norm],

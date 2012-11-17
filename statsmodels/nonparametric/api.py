@@ -1,4 +1,4 @@
-from kde import KDE
+from kde import KDE, KDEUnivariate
 from smoothers_lowess import lowess
 import bandwidths
 
