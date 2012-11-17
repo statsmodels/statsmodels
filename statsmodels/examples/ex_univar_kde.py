@@ -14,10 +14,12 @@ Produces six different plots for each distribution
 """
 
 
-import statsmodels.nonparametric as nparam
-import scipy.stats as stats
 import numpy as np
+import scipy.stats as stats
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
+
+KDEMultivariate = sm.nonparametric.KDEMultivariate
 
 
 np.random.seed(123456)
@@ -33,9 +35,9 @@ support = np.random.beta(a, b, size=nobs)
 rv = stats.beta(a, b)
 ix = np.argsort(support)
 
-dens_normal = nparam.KDE(data=[support], var_type='c', bw='normal_reference')
-dens_cvls = nparam.KDE(data=[support], var_type='c', bw='cv_ls')
-dens_cvml = nparam.KDE(data=[support], var_type='c', bw='cv_ml')
+dens_normal = KDEMultivariate(data=[support], var_type='c', bw='normal_reference')
+dens_cvls = KDEMultivariate(data=[support], var_type='c', bw='cv_ls')
+dens_cvml = KDEMultivariate(data=[support], var_type='c', bw='cv_ml')
 
 plt.figure(1)
 plt.plot(support[ix], rv.pdf(support[ix]), label='Actual')
@@ -55,9 +57,9 @@ support = np.random.f(dn, df, size=nobs)
 rv = stats.f(df, dn)
 ix = np.argsort(support)
 
-dens_normal = nparam.KDE(data=[support], var_type='c', bw='normal_reference')
-dens_cvls = nparam.KDE(data=[support], var_type='c', bw='cv_ls')
-dens_cvml = nparam.KDE(data=[support], var_type='c', bw='cv_ml')
+dens_normal = KDEMultivariate(data=[support], var_type='c', bw='normal_reference')
+dens_cvls = KDEMultivariate(data=[support], var_type='c', bw='cv_ls')
+dens_cvml = KDEMultivariate(data=[support], var_type='c', bw='cv_ml')
 
 plt.figure(2)
 plt.plot(support[ix], rv.pdf(support[ix]), label='Actual')
@@ -75,9 +77,9 @@ support = np.random.pareto(a, size=nobs)
 rv = stats.pareto(a)
 ix = np.argsort(support)
 
-dens_normal = nparam.KDE(data=[support], var_type='c', bw='normal_reference')
-dens_cvls = nparam.KDE(data=[support], var_type='c', bw='cv_ls')
-dens_cvml = nparam.KDE(data=[support], var_type='c', bw='cv_ml')
+dens_normal = KDEMultivariate(data=[support], var_type='c', bw='normal_reference')
+dens_cvls = KDEMultivariate(data=[support], var_type='c', bw='cv_ls')
+dens_cvml = KDEMultivariate(data=[support], var_type='c', bw='cv_ml')
 plt.figure(3)
 plt.plot(support[ix], rv.pdf(support[ix]), label='Actual')
 plt.plot(support[ix], dens_normal.pdf()[ix], label='Scott')
@@ -96,9 +98,9 @@ support = np.random.laplace(mu, s, size=nobs)
 rv = stats.laplace(mu, s)
 ix = np.argsort(support)
 
-dens_normal = nparam.KDE(data=[support], var_type='c', bw='normal_reference')
-dens_cvls = nparam.KDE(data=[support], var_type='c', bw='cv_ls')
-dens_cvml = nparam.KDE(data=[support], var_type='c', bw='cv_ml')
+dens_normal = KDEMultivariate(data=[support], var_type='c', bw='normal_reference')
+dens_cvls = KDEMultivariate(data=[support], var_type='c', bw='cv_ls')
+dens_cvml = KDEMultivariate(data=[support], var_type='c', bw='cv_ml')
 
 plt.figure(4)
 plt.plot(support[ix], rv.pdf(support[ix]), label='Actual')
@@ -117,9 +119,9 @@ support = np.random.weibull(a, size=nobs)
 rv = stats.weibull_min(a)
 
 ix = np.argsort(support)
-dens_normal = nparam.KDE(data=[support], var_type='c', bw='normal_reference')
-dens_cvls = nparam.KDE(data=[support], var_type='c', bw='cv_ls')
-dens_cvml = nparam.KDE(data=[support], var_type='c', bw='cv_ml')
+dens_normal = KDEMultivariate(data=[support], var_type='c', bw='normal_reference')
+dens_cvls = KDEMultivariate(data=[support], var_type='c', bw='cv_ls')
+dens_cvml = KDEMultivariate(data=[support], var_type='c', bw='cv_ml')
 
 plt.figure(5)
 plt.plot(support[ix], rv.pdf(support[ix]), label='Actual')
@@ -137,9 +139,9 @@ support = np.random.poisson(a, size=nobs)
 rv = stats.poisson(a)
 
 ix = np.argsort(support)
-dens_normal = nparam.KDE(data=[support], var_type='o', bw='normal_reference')
-dens_cvls = nparam.KDE(data=[support], var_type='o', bw='cv_ls')
-dens_cvml = nparam.KDE(data=[support], var_type='o', bw='cv_ml')
+dens_normal = KDEMultivariate(data=[support], var_type='o', bw='normal_reference')
+dens_cvls = KDEMultivariate(data=[support], var_type='o', bw='cv_ls')
+dens_cvml = KDEMultivariate(data=[support], var_type='o', bw='cv_ml')
 
 plt.figure(6)
 plt.plot(support[ix], rv.pmf(support[ix]), label='Actual')
