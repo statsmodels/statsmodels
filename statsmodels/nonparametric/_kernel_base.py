@@ -36,7 +36,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
                     ix_unord, n_sub, class_vars, randomize, bound):
     """"Compute bw on subset of data.
 
-    Called from _GenericKDE._compute_efficient_*.
+    Called from ``GenericKDE._compute_efficient_*``.
 
     Notes
     -----
@@ -90,7 +90,7 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
     return sample_scale_sub, bw_sub
 
 
-class _GenericKDE (object):
+class GenericKDE (object):
     """
     Base class for density estimation and regression KDE classes.
     """
