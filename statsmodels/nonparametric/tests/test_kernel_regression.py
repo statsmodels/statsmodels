@@ -2,7 +2,8 @@ import numpy as np
 import numpy.testing as npt
 import numpy.testing.decorators as dec
 
-import statsmodels.nonparametric as nparam
+import statsmodels.api as sm
+nparam = sm.nonparametric
 
 
 class MyTest(object):

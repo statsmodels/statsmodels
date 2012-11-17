@@ -95,7 +95,7 @@ class KDEMultivariate(_GenericKDE):
 
     Examples
     --------
-    >>> from statsmodels.nonparametric import KDE
+    >>> import statsmodels.api as sm
     >>> nobs = 300
     >>> np.random.seed(1234)  # Seed random generator
     >>> c1 = np.random.normal(size=(nobs,1))
@@ -103,7 +103,8 @@ class KDEMultivariate(_GenericKDE):
 
     Estimate a bivariate distribution and display the bandwidth found:
 
-    >>> dens_u = KDE(data=[c1,c2], var_type='cc', bw='normal_reference')
+    >>> dens_u = sm.nonparametric.KDEMultivariate(data=[c1,c2],
+    ...     var_type='cc', bw='normal_reference')
     >>> dens_u.bw
     array([ 0.39967419,  0.38423292])
     """
@@ -400,13 +401,15 @@ class KDEMultivariateConditional(_GenericKDE):
 
     Examples
     --------
+    >>> import statsmodels.api as sm
     >>> nobs = 300
     >>> c1 = np.random.normal(size=(nobs,1))
     >>> c2 = np.random.normal(2,1,size=(nobs,1))
 
-    >>> dens_c = KDEMultivariateConditional(endog=[c1], exog=[c2],
-    ...               dep_type='c', indep_type='c', bw='normal_reference')
-    >>> print "The bandwidth is: ", dens_c.bw
+    >>> dens_c = sm.nonparametric.KDEMultivariateConditional(endog=[c1],
+    ...     exog=[c2], dep_type='c', indep_type='c', bw='normal_reference')
+    >>> dens_c.bw   # show computed bandwidth
+    array([ 0.41223484,  0.40976931])
     """
 
     def __init__(self, endog, exog, dep_type, indep_type, bw,
