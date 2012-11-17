@@ -37,14 +37,14 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
-from _kernel_base import _GenericKDE, EstimatorSettings, gpke, \
+from _kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _get_type_pos, _adjust_shape
 
 
 __all__ = ['Reg', 'CensoredReg']
 
 
-class Reg(_GenericKDE):
+class Reg(GenericKDE):
     """
     Nonparametric Regression
 

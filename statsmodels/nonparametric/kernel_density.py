@@ -34,14 +34,14 @@ References
 import numpy as np
 
 import kernels
-from _kernel_base import _GenericKDE, EstimatorSettings, gpke, \
+from _kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _adjust_shape
 
 
 __all__ = ['KDEMultivariate', 'KDEMultivariateConditional', 'EstimatorSettings']
 
 
-class KDEMultivariate(_GenericKDE):
+class KDEMultivariate(GenericKDE):
     """
     Multivariate kernel density estimator.
 
@@ -339,7 +339,7 @@ class KDEMultivariate(_GenericKDE):
 
 
 
-class KDEMultivariateConditional(_GenericKDE):
+class KDEMultivariateConditional(GenericKDE):
     """
     Conditional multivariate kernel density estimator.
 
@@ -632,7 +632,7 @@ class KDEMultivariateConditional(_GenericKDE):
         :math:`K_{Y_{i},Y_{j}}^{(2)}` is the convolution kernel.
 
         The value of the function is minimized by the ``_cv_ls`` method of the
-        `_GenericKDE` class to return the bw estimates that minimize the
+        `GenericKDE` class to return the bw estimates that minimize the
         distance between the estimated and "true" probability density.
         """
         zLOO = LeaveOneOut(self.data)
