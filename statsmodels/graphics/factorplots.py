@@ -31,7 +31,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         If `trace` is a `pandas.Series` its name will be used as the
         `legendtitle` if `legendtitle` is None.
     response : array-like
-        The reponse or independent variable. If a `pandas.Series` is given
+        The reponse or dependent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
     func : function
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
