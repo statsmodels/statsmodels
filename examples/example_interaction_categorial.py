@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 =======================================
 Plot Interaction of Cateogorial Factors
@@ -6,7 +7,11 @@ Plot Interaction of Cateogorial Factors
 In this example, we will vizualize the interaction between
 cateogorial factors. First, cateogorial data are inialized
 and then plotted using the interaction_plot function.
+
+Author: Denis A. Engemann
 """
+
+
 print __doc__
 
 import numpy as np
@@ -21,5 +26,5 @@ days = np.log(np.random.randint(1, 30, size=60))
 fig = interaction_plot(weight, nutrition, days, colors=['red', 'blue'],
                        markers=['D', '^'], ms=10)
 
-import matplotlib.pyplot as plt
+import matplotlib.pylab as plt
 plt.show()
