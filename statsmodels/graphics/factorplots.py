@@ -4,11 +4,15 @@ from statsmodels.graphics.plottools import rainbow
 import utils
 
 
-def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xlabel=None,
-                     ylabel=None, colors=[], markers=[], linestyles=[], legendtitle=None,
-                     legendloc='best', **kwargs):
+def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
+                     xlabel=None, ylabel=None, colors=[], markers=[],
+                     linestyles=[], legendloc='best', legendtitle=None,
+                     **kwargs):
     """
-    Interaction plot for factor level statistics
+    Interaction plot for factor level statistics.
+
+    Note. If categorial factors are supplied levels will be internally
+    recoded to integers. This ensures matplotlib compatiblity.
 
     uses pandas.DataFrame to calculate an `aggregate` statistic for each
     level of the factor or group given by `trace`.
@@ -20,8 +24,8 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xl
         given its name will be used in `xlabel` if `xlabel` is None.
     trace : array-like
         The `trace` factor levels will be drawn as lines in the plot.
-        If `trace` is a `pandas.Series` its name will be used as the `legendtitle`
-        if `legendtitle` is None.
+        If `trace` is a `pandas.Series` its name will be used as the
+        `legendtitle` if `legendtitle` is None.
     response : array-like
         The reponse or independent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
@@ -172,11 +176,12 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b', xl
     return fig
 
 
-def _recode(a, levels):
-    """ recode categorial data to int factor
+def _recode(x, levels):
+    """ Recode categorial data to int factor.
+
     Parameters
     ----------
-    a : array-like
+    x : array-like
         array like object supporting with numpy array methods of categorially
         coded data.
     levels : dict
@@ -190,11 +195,11 @@ def _recode(a, levels):
     from pandas import Series
     name = None
 
-    if isinstance(a, Series):
-        name = a.name
-        a = a.values
+    if isinstance(x, Series):
+        name = x.name
+        x = x.values
 
-    if a.dtype.type not in [np.str_, np.object_]:
+    if x.dtype.type not in [np.str_, np.object_]:
         raise ValueError('This is not a categorial factor.'
                          ' Array of str type required.')
 
@@ -202,13 +207,13 @@ def _recode(a, levels):
         raise ValueError('This is not a valid value for levels.'
                          ' Dict required.')
 
-    elif not (np.unique(a) == np.unique(levels.keys())).all():
+    elif not (np.unique(x) == np.unique(levels.keys())).all():
         raise ValueError('The levels do not match the array values.')
 
     else:
-        out = np.empty(a.shape[0], dtype=np.int)
+        out = np.empty(x.shape[0], dtype=np.int)
         for level, coding in levels.items():
-            out[a == level] = coding
+            out[x == level] = coding
 
         if name:
             out = Series(out)
