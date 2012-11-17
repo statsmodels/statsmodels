@@ -1,9 +1,9 @@
-import statsmodels.nonparametric as nparam
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d
 
+import statsmodels.api as sm
 
 """
 This example illustrates the nonparametric estimation of a
@@ -30,7 +30,7 @@ V[ix, :] = np.random.multivariate_normal(mu2, cov2, size=nobs)[ix, :]
 x = V[:, 0]
 y = V[:, 1]
 
-dens = nparam.KDE(data=[x, y], var_type='cc', bw=BW)
+dens = sm.nonparametric.KDEMultivariate(data=[x, y], var_type='cc', bw=BW)
 
 supportx = np.linspace(min(x), max(x), 60)
 supporty = np.linspace(min(y), max(y), 60)
