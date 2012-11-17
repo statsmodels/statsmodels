@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Authors:    Josef Perktold
+            Skipper Seabold
+            Denis A. Engemann
+"""
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
