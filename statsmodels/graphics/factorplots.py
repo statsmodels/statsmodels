@@ -93,7 +93,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     response_name = ylabel or getattr(response, 'name', 'response')
     ylabel = '%s of %s' % (func.func_name, response_name)
     xlabel = xlabel or getattr(x, 'name', 'X')
-    legendtitle = legentitle or getattr(trace, 'name', 'Trace')
+    legendtitle = legendtitle or getattr(trace, 'name', 'Trace')
 
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
