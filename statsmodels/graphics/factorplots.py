@@ -90,25 +90,10 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     from pandas import DataFrame
     fig, ax = utils.create_mpl_ax(ax)
 
-    if ylabel is None:
-        try:  # did we get a pandas.Series
-            response_name = response.name
-        except:
-            response_name = 'response'
-        #NOTE: py3 compatible?
-        ylabel = '%s of %s' % (func.func_name, response_name)
-
-    if xlabel is None:
-        try:
-            x_name = x.name
-        except:
-            x_name = 'X'
-
-    if legendtitle is None:
-        try:
-            legendtitle = trace.name
-        except:
-            legendtitle = 'Trace'
+    response_name = ylabel or getattr(response, 'name', 'response')
+    ylabel = '%s of %s' % (func.func_name, response_name)
+    xlabel = xlabel or getattr(x, 'name', 'X')
+    legendtitle = legentitle or getattr(trace, 'name', 'Trace')
 
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
