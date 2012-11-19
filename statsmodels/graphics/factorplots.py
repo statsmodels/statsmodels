@@ -96,7 +96,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     legendtitle = legendtitle or getattr(trace, 'name', 'Trace')
 
     ax.set_ylabel(ylabel)
-    ax.set_xlabel(x_name)
+    ax.set_xlabel(xlabel)
 
     x_values = x_levels = None
     if isinstance(x[0], str):
