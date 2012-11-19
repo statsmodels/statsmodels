@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""
+Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
+"""
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
@@ -9,7 +13,10 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
                      linestyles=[], legendloc='best', legendtitle=None,
                      **kwargs):
     """
-    Interaction plot for factor level statistics
+    Interaction plot for factor level statistics.
+
+    Note. If categorial factors are supplied levels will be internally
+    recoded to integers. This ensures matplotlib compatiblity.
 
     uses pandas.DataFrame to calculate an `aggregate` statistic for each
     level of the factor or group given by `trace`.
@@ -17,14 +24,14 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     Parameters
     ----------
     x : array-like
-        The `x` factor levels are the x-axis. If a `pandas.Series` is given
-        its name will be used in `xlabel` if `xlabel` is None.
+        The `x` factor levels constitute the x-axis. If a `pandas.Series` is
+        given its name will be used in `xlabel` if `xlabel` is None.
     trace : array-like
-        The `trace` factor levels will form the trace. If `trace` is a
-        `pandas.Series` its name will be used as the `legendtitle` if
-        `legendtitle` is None.
+        The `trace` factor levels will be drawn as lines in the plot.
+        If `trace` is a `pandas.Series` its name will be used as the
+        `legendtitle` if `legendtitle` is None.
     response : array-like
-        The reponse variable. If a `pandas.Series` is given
+        The reponse or dependent variable. If a `pandas.Series` is given
         its name will be used in `ylabel` if `ylabel` is None.
     func : function
         Anything accepted by `pandas.DataFrame.aggregate`. This is applied to
@@ -79,6 +86,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
        import matplotlib.pyplot as plt
        #plt.show()
     """
+
     from pandas import DataFrame
     fig, ax = utils.create_mpl_ax(ax)
 
@@ -105,11 +113,19 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     ax.set_ylabel(ylabel)
     ax.set_xlabel(x_name)
 
+    x_values = x_levels = None
+    if isinstance(x[0], str):
+        x_levels = [l for l in np.unique(x)]
+        x_values = xrange(len(x_levels))
+        x = _recode(x, dict(zip(x_levels, x_values)))
+
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
 
+    # return data
     # check plot args
     n_trace = len(plot_data['trace'].unique())
+
     if linestyles:
         try:
             assert len(linestyles) == n_trace
@@ -157,4 +173,54 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
         raise ValueError("Plot type %s not understood" % plottype)
     ax.legend(loc=legendloc, title=legendtitle)
     ax.margins(.1)
+
+    if all([x_levels, x_values]):
+        ax.set_xticks(x_values)
+        ax.set_xticklabels(x_levels)
     return fig
+
+
+def _recode(x, levels):
+    """ Recode categorial data to int factor.
+
+    Parameters
+    ----------
+    x : array-like
+        array like object supporting with numpy array methods of categorially
+        coded data.
+    levels : dict
+        mapping of labels to integer-codings
+
+    Returns
+    -------
+    out : instance numpy.ndarray
+
+    """
+    from pandas import Series
+    name = None
+
+    if isinstance(x, Series):
+        name = x.name
+        x = x.values
+
+    if x.dtype.type not in [np.str_, np.object_]:
+        raise ValueError('This is not a categorial factor.'
+                         ' Array of str type required.')
+
+    elif not isinstance(levels, dict):
+        raise ValueError('This is not a valid value for levels.'
+                         ' Dict required.')
+
+    elif not (np.unique(x) == np.unique(levels.keys())).all():
+        raise ValueError('The levels do not match the array values.')
+
+    else:
+        out = np.empty(x.shape[0], dtype=np.int)
+        for level, coding in levels.items():
+            out[x == level] = coding
+
+        if name:
+            out = Series(out)
+            out.name = name
+
+        return out
