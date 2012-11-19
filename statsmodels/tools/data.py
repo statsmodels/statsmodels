@@ -122,5 +122,6 @@ def _is_array_like(endog, exog):
 
 def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
-    return is_design_matrix(endog) and is_design_matrix(exog)
+    return (is_design_matrix(endog) and
+            (is_design_matrix(exog) or exog is None))
 
