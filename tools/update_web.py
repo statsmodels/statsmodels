@@ -120,7 +120,10 @@ def install_branch(branch):
     # if it's already in the virtualenv, remove it
     ver = '.'.join(map(str,(sys.version_info.major,sys.version_info.minor)))
     sitepack = os.path.join(virtual_dir,'lib','python'+ver, 'site-packages')
-    dir_list = os.listdir(sitepack)
+    if os.path.exists(sitepack):
+        dir_list = os.listdir(sitepack)
+    else:
+        dir_list = []
     for f in dir_list:
         if 'statsmodels' in f:
             shutil.rmtree(os.path.join(sitepack, f))
