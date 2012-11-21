@@ -5,6 +5,7 @@ import copy
 import collections
 from statsmodels.iolib.table import SimpleTable
 import StringIO
+import textwrap
 
 def _getnames(self, yname=None, xname=None):
     '''extract names from model or construct names
@@ -172,7 +173,7 @@ class Summary(object):
     def __init__(self):
         self.tables = []
         self.settings = []
-        self.extra_txt = None
+        self.extra_txt = []
 
     def __str__(self):
         return self.as_text()
@@ -211,6 +212,9 @@ class Summary(object):
         self.tables.append(table)
         self.settings.append(settings)
 
+    def add_text(self, string, max_len=79):
+        self.extra_txt.append(string)
+
     def as_text(self):
         pad_sep, pad_stub, length = _pad_target(self.tables, self.settings)
         tab = []
@@ -218,7 +222,16 @@ class Summary(object):
             tab.append(_df_to_ascii(self.tables[i], pad_sep[i]+2, pad_stub[i], **self.settings[i]))
         rule_equal = '\n' + max(length) * '=' + '\n' 
         rule_dash = '\n' + max(length) * '-' + '\n'
-        return rule_equal + rule_dash.join(tab) + rule_equal
+        ntxt = len(self.extra_txt)
+        if ntxt > 0:
+            txt = copy.deepcopy(self.extra_txt)
+            for i in range(ntxt):
+                txt[i] = '\n'.join(textwrap.wrap(txt[i], max(length)))
+            txt = '\n'.join(txt)
+            out = rule_equal + rule_dash.join(tab) + rule_equal + txt
+        else: 
+            out = rule_equal + rule_dash.join(tab) + rule_equal 
+        return out
 
     def as_html(self):
         tables = copy.deepcopy(self.tables)

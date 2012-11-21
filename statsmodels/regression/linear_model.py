@@ -1220,8 +1220,8 @@ class RegressionResults(base.LikelihoodModelResults):
         smry.add_dict(model_info) 
         smry.add_df(model_params) 
         smry.add_dict(diagnostic) 
-        return smry
 
+        # Warnings
         #TODO: add warnings/notes, added to text format only
         #etext =[]
         #if eigvals[0] < 1e-10:
@@ -1231,14 +1231,12 @@ class RegressionResults(base.LikelihoodModelResults):
             #wstr += "matrix is singular."
             #wstr = wstr % eigvals[0]
             #etext.append(wstr)
-        #elif condno > 1000:  #TODO: what is recommended
-            #wstr = "The condition number is large, %6.3g. This might "
-            #wstr += "indicate that there are\n"
-            #wstr += "strong multicollinearity or other numerical "
-            #wstr += "problems."
-            #wstr = wstr % condno
-            #etext.append(wstr)
+        if condno > 1000:  
+            warn = "* The condition number is large (%.g). This might indicate \
+            strong multicollinearity or other numerical problems." % condno
+            smry.add_text(warn)
 
+        return smry
 
 class OLSResults(RegressionResults):
     """
