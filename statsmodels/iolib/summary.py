@@ -23,7 +23,9 @@ def _getnames(self, yname=None, xname=None):
 
 def _run_dict(res, d):
     '''
-    Apply lambda functions held in a dict to a result instance
+    If the Dict contains lambda functions, apply the, to the results instance. 
+    Otherwise, return the Dict value. The value must be string, or the lambda 
+    function must return a string.  
 
     Parameters
     ----------
@@ -33,9 +35,9 @@ def _run_dict(res, d):
 
     Returns
     -------
-    Dict with model information
+    Dict of strings
     '''
-    out = collections.OrderedDict()
+    out = collections.OrderedDict() # Preserve order in summary table
     for key in d.keys():
         if type(d[key]) == str:
             out[key] = d[key]
@@ -59,20 +61,24 @@ def _dict_to_df(d, ncols=2):
     -------
     DataFrame with ncols * 2 columns (Values/Keys in separate columns)
     '''
-    def chunks(l, n):
-        return [l[i:i+n] for i in range(0, len(l), n)]
+    # Dict -> Numpy array
     data = np.array([d.keys(), d.values()]).T
     n = data.shape[0]
+    # Find next multiple of ncols and pad array
     if n % ncols != 0:
         multiple = np.arange(n, 1000) % ncols
         multiple = np.arange(n, 1000)[multiple == 0][0]
         pad = np.array((multiple-n) * [['','']])
         data = np.vstack([data, pad])
     n = data.shape[0]
+    # Split array in ncols chunks and stack horizontally
+    def chunks(l, n):
+        return [l[i:i+n] for i in range(0, len(l), n)]
     idx = chunks(range(data.shape[0]), data.shape[0]/ncols)
     out = data[idx[0]]
     for i in range(1,len(idx)):
         out = np.hstack([out, data[idx[i]]])
+    # Numpy -> DataFrame
     out = pd.DataFrame(out)
     return out
 
@@ -95,33 +101,37 @@ def _df_to_ascii(df, pad_sep=2, pad_stub=0, header=False, index=False,
     -------
     ASCII table as string 
     '''
-
+    # Format numbers where possible and convert to Numpy array (type str)
     for col in df.columns:
         try:
+            df[col] = map(lambda x: float_format % x, df[col])
             df[col] = map(lambda x: float_format % x, df[col])
         except:
             pass
     data = np.array(df)
+    # Pandas inserts undesirable white space
     for i in range(data.shape[1]):
         try:
             data[:,i] = map(lambda x: x.lstrip(), data[:,i])
             data[:,i] = map(lambda x: x.rstrip(), data[:,i])
         except:
             pass
+    # Headers and index
     if header:
         headers = df.columns.tolist()
     else:
         headers = None
     if index:
         index = df.index.tolist()
+        # Pad right-side of first column if necessary
         try:
             index = map(lambda x: x + ' ' * pad_stub, index)
         except:
             pass
     else:
         index=None
-        # Hackish
         try:
+            # Pad right-side of first column if necessary
             data[:,0] = data[:,0] + ' ' * pad_stub
         except:
             pass
@@ -140,50 +150,40 @@ def _pad_target(tables, settings):
     '''
     tab = []
     for i in range(len(tables)):
+        # Convert DataFrames to string with default padding
         tab.append(_df_to_ascii(tables[i], **settings[i]))
+    # Measure tables width
     length = map(lambda x: len(x.splitlines()[0]), tab)
+    # Calculate padding
     pad_sep = []
     target = []
     for i in range(len(length)):
+        # Space between each column remains equal (i.e. nsep col separators)
         nsep = settings[i]['ncols'] - 1
-        temp = np.arange(200) * nsep + length[i] <= max(length)
-        pad_sep.append(max(np.arange(200)[temp]))
+        # Padding domain
+        temp = np.arange(1000) * nsep + length[i] <= max(length)
+        # Max pad which keeps us under the width of largest table
+        pad_sep.append(max(np.arange(1000)[temp]))
         target.append(pad_sep[i] * nsep + length[i])
     pad_stub = map(lambda x: max(length) - x, target)
     return pad_sep, pad_stub, length
-
-def summary_params(results, xname=None, alpha=.05):
-    '''create a summary table of parameters from results instance
-
-    Parameters
-    ----------
-    res : results instance
-        some required information is directly taken from the result
-        instance
-    xname : list of strings or None
-        optional names for the exogenous variables, default is "var_xx"
-    alpha : float
-        significance level for the confidence intervals
-
-    Returns
-    -------
-    params_table : DataFrame instance
-    '''
-    #Parameters part of the summary table
-    data = np.array([results.params, results.bse, results.tvalues, results.pvalues]).T
-    data = np.hstack([data, results.conf_int(alpha)])
-    data = pd.DataFrame(data)
-    data.columns = ['Coef.', 'Std.Err.', 't', 'P>|t|', 
-                    '[' + str(alpha/2), str(1-alpha/2) + ']']
-    yname, xname = _getnames(results)
-    data.index = xname
-    return data
 
 class Summary(object):
     def __init__(self):
         self.tables = []
         self.settings = []
         self.extra_txt = None
+
+    def __str__(self):
+        return self.as_text()
+
+    def __repr__(self):
+        return str(type(self)) + '\n"""\n' + self.__str__() + '\n"""'
+
+    def _repr_html_(self):
+        '''Display as HTML in IPython notebook.'''
+        return self.as_html()
+
     def add_dict(self, d, ncols=2):
         table = _run_dict(self, d)
         table = _dict_to_df(d, ncols=ncols) 
@@ -192,14 +192,17 @@ class Summary(object):
                     'align':'l'}
         self.tables.append(table)
         self.settings.append(settings)
+
     def add_df(self, df, index=True, header=True, float_format='%.4f', align='r'):
+        # Needs a deep copy somewhere, otherwise float_formatting gets hardcoded
         settings = {'ncols':df.shape[1], 
                     'index':index, 'header':header, 'float_format':float_format, 
                     'align':align} 
         if header:
             settings['ncols'] += 1
-        self.tables.append(df)
+        self.tables.append(copy.deepcopy(df))
         self.settings.append(settings)
+        
     def add_array(self, array):
         table = pd.DataFrame(array)
         settings = {'ncols':table.shape[1], 
@@ -207,15 +210,17 @@ class Summary(object):
                     'align':'l'}
         self.tables.append(table)
         self.settings.append(settings)
-    def print_txt(self):
+
+    def as_text(self):
         pad_sep, pad_stub, length = _pad_target(self.tables, self.settings)
         tab = []
         for i in range(len(self.tables)):
             tab.append(_df_to_ascii(self.tables[i], pad_sep[i]+2, pad_stub[i], **self.settings[i]))
         rule_equal = '\n' + max(length) * '=' + '\n' 
         rule_dash = '\n' + max(length) * '-' + '\n'
-        print rule_equal + rule_dash.join(tab) + rule_equal
-    def print_html(self):
+        return rule_equal + rule_dash.join(tab) + rule_equal
+
+    def as_html(self):
         tables = copy.deepcopy(self.tables)
         for i in range(len(tables)):
             tables[i] = tables[i].to_html(header=self.settings[i]['header'], 
@@ -223,7 +228,8 @@ class Summary(object):
                                           float_format=self.settings[i]['float_format']) 
         out = '\n'.join(tables)
         return out
-    def print_latex(self):
+
+    def as_latex(self):
         tables = copy.deepcopy(self.tables)
         for i in range(len(tables)):
             tables[i] = tables[i].to_latex(header=self.settings[i]['index'], 
@@ -231,62 +237,6 @@ class Summary(object):
             tables[i] = tables[i].replace('\\hline\n', '')
         out = '\\begin{table}\n' + '\n'.join(tables) + '\\end{table}\n'
         return out
-
-# OLS Regression
-import statsmodels.api as sm
-spector_data = sm.datasets.spector.load()
-spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
-lpm_mod = sm.OLS(spector_data.endog, spector_data.exog)
-res = lpm_mod.fit()
-from statsmodels.stats.stattools import (jarque_bera, omni_normtest, durbin_watson)
-jb, jbpv, skew, kurtosis = jarque_bera(res.wresid)
-omni, omnipv = omni_normtest(res.wresid)
-diagnostic = {'Omnibus:': "%.3f" % omni,
-              'Prob(Omnibus):': "%.3f" % omnipv,
-              'Skew:': "%.3f" % skew,
-              'Kurtosis:': "%.3f" % kurtosis,
-              'Durbin-Watson:': "%.3f" % durbin_watson(res.wresid),
-              'Jarque-Bera (JB):': "%.3f" % jb,
-              'Prob(JB):': "%.3f" % jbpv
-             }
-
-# Array
-array2d = np.array([
-    [123456, 'Other text here'],
-    ['Some text over here', 654321]
-    ])
-array3d = np.array([
-    ['Row 1', 123456, 'Other text here'],
-    ['Row 2', 'Some text over here', 654321],
-    ['Row 3', 'Some text over here', 654321]
-    ])
-
-# Summary
-a = Summary()
-a.add_dict(get_model_info(res))
-a.add_df(summary_params(res))
-a.add_dict(diagnostic)
-a.add_array(array2d)
-a.add_array(array3d)
-a.print_txt()
-
-# Summary
-a = Summary()
-a.add_dict(get_model_info(res), ncols=3)
-a.add_df(summary_params(res))
-a.add_dict(diagnostic)
-a.add_array(array2d)
-a.add_array(array3d)
-a.print_txt()
-
-# Summary
-a = Summary()
-a.add_dict(get_model_info(res), ncols=2)
-a.add_df(summary_params(res), float_format='%.1f')
-a.add_dict(diagnostic)
-a.add_array(array2d)
-a.add_array(array3d)
-a.print_txt()
 
 # Useful stuff
 model_types = {'OLS' : 'Ordinary least squares',
@@ -298,7 +248,9 @@ model_types = {'OLS' : 'Ordinary least squares',
                'GLM' : 'Generalized linear model'
                }
 
-def get_model_info(results):
+def summary_model(results):
+    '''Create a dict with information about the model
+    '''
     def time_now(**kwrds):
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d %H:%M')
@@ -331,10 +283,31 @@ def get_model_info(results):
     out = _run_dict(results, info)
     return out 
 
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    data = sm.datasets.longley.load()
-    data.exog = sm.add_constant(data.exog)
-    res = sm.OLS(data.endog, data.exog).fit()
-    res.summary()
+def summary_params(results, xname=None, alpha=.05):
+    '''create a summary table of parameters from results instance
+
+    Parameters
+    ----------
+    res : results instance
+        some required information is directly taken from the result
+        instance
+    xname : list of strings or None
+        optional names for the exogenous variables, default is "var_xx"
+    alpha : float
+        significance level for the confidence intervals
+
+    Returns
+    -------
+    params_table : DataFrame instance
+    '''
+    #Parameters part of the summary table
+    data = np.array([results.params, results.bse, results.tvalues, results.pvalues]).T
+    data = np.hstack([data, results.conf_int(alpha)])
+    data = pd.DataFrame(data)
+    data.columns = ['Coef.', 'Std.Err.', 't', 'P>|t|', 
+                    '[' + str(alpha/2), str(1-alpha/2) + ']']
+    yname, xname = _getnames(results)
+    data.index = xname
+    return data
+
 
