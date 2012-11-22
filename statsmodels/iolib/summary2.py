@@ -174,6 +174,7 @@ class Summary(object):
         self.tables = []
         self.settings = []
         self.extra_txt = []
+        self.title = None
 
     def __str__(self):
         return self.as_text()
@@ -215,6 +216,28 @@ class Summary(object):
     def add_text(self, string, max_len=79):
         self.extra_txt.append(string)
 
+    def add_title(self, results=None, title=None):
+        if type(title) == str and results == None:
+            self.title = title 
+        elif type(title) == str and results != None:
+            try:
+                model = results.model.__class__.__name__
+                if model in model_types:
+                    model = model_types[model]
+                self.title = title + ": " + model + " Results"
+            except:
+                self.title = title 
+        elif type(title) != str and results == None:
+            self.title = 'Estimation Results'
+        else:
+            try:
+                model = results.model.__class__.__name__
+                if model in model_types:
+                    model = model_types[model]
+                self.title = 'Results: ' + model
+            except:
+                self.title = '' 
+
     def as_text(self):
         pad_sep, pad_stub, length = _pad_target(self.tables, self.settings)
         tab = []
@@ -231,6 +254,10 @@ class Summary(object):
             out = rule_equal + rule_dash.join(tab) + rule_equal + txt
         else: 
             out = rule_equal + rule_dash.join(tab) + rule_equal 
+        if type(self.title) == str:
+            if len(self.title) < max(length):
+                title = ' ' * int(max(length)/2 - len(self.title)/2) + self.title
+                out = title + out
         return out
 
     def as_html(self):
