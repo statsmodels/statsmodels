@@ -288,6 +288,8 @@ def summary_model(results):
     info['AIC:'] = lambda x: "%8.4f" % x.aic
     info['BIC:'] = lambda x: "%8.4f" % x.bic
     info['Log-Likelihood:'] = lambda x: "%#8.5g" % x.llf
+    info['LL-Null:'] = lambda x: "%#8.5g" % x.llnull
+    info['LLR p-value:'] = lambda x: "%#8.5g" % x.llr_pvalue
     info['Deviance:'] = lambda x: "%#8.5g" % x.deviance 
     info['Pearson chi2:'] = lambda x: "%#6.3g" % x.pearson_chi2
     info ['F-statistic:'] = lambda x: "%#8.4g" % self.fvalue

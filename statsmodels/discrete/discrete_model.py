@@ -2084,43 +2084,19 @@ class DiscreteResults(base.LikelihoodModelResults):
             results
 
         """
+        from statsmodels.iolib.summary2 import (Summary, summary_params, 
+                                               summary_model)
 
-        top_left = [('Dep. Variable:', None),
-                     ('Model:', [self.model.__class__.__name__]),
-                     ('Method:', ['MLE']),
-                     ('Date:', None),
-                     ('Time:', None),
-                     #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
-                     ('converged:', ["%s" % self.mle_retvals['converged']])
-                      ]
-
-        top_right = [('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None),
-                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
-                     ('Log-Likelihood:', None),
-                     ('LL-Null:', ["%#8.5g" % self.llnull]),
-                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
-                     ]
-
-        if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Regression Results"
-
-        #boiler plate
-        from statsmodels.iolib.summary import Summary
+        # TODO: Use xname, yname, title arguments
+        # Model Info
+        model_info = summary_model(self)
+        # Parameters
+        params = summary_params(self)
+        # Summary
         smry = Summary()
-        yname, yname_list = self._get_endog_name(yname, yname_list)
-        # for top of table
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
-        # for parameters, etc
-        smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
-                             use_t=False)
+        smry.add_dict(model_info)
+        smry.add_df(params)
 
-        #diagnostic table not used yet
-        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-        #                   yname=yname, xname=xname,
-        #                   title="")
         return smry
 
 class CountResults(DiscreteResults):
@@ -2175,29 +2151,25 @@ class BinaryResults(DiscreteResults):
                 yname_list=None):
         smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
                      yname_list)
+
+        # Diagnostics (TODO: Improve diagnostics)
         fittedvalues = self.model.cdf(self.fittedvalues)
         absprederror = np.abs(self.model.endog - fittedvalues)
         predclose_sum = (absprederror < 1e-4).sum()
         predclose_frac = predclose_sum / len(fittedvalues)
 
-        #add warnings/notes
-        etext = []
-        if predclose_sum == len(fittedvalues): #nobs?
-            wstr = "Complete Separation: The results show that there is"
-            wstr += "complete separation.\n"
-            wstr += "In this case the Maximum Likelihood Estimator does "
-            wstr += "not exist and the parameters\n"
-            wstr += "are not identified."
-            etext.append(wstr)
-        elif predclose_frac > 0.1:  #TODO: get better diagnosis
-            wstr = "Possibly complete quasi-separation: A fraction "
-            wstr += "%4.2f of observations can be\n" % predclose_frac
-            wstr += "perfectly predicted. This might indicate that there "
-            wstr += "is complete\nquasi-separation. In this case some "
-            wstr += "parameters will not be identified."
-            etext.append(wstr)
-        if etext:
-            smry.add_extra_txt(etext)
+        if predclose_sum == len(fittedvalues): # TODO: nobs?
+            warn = "Complete Separation: The results show that there is \
+            complete separation. In this case the Maximum Likelihood Estimator \
+            does not exist and the parameters are not identified."
+            smry.add_text(warn)
+        elif predclose_frac > 0.1:  
+            warn = "Possibly complete quasi-separation: A fraction %4.2f of \
+            observations can be perfectly predicted. This might indicate that \
+            there is complete quasi-separation. In this case some parameters \
+            will not be identified." % predclose_frac 
+            smry.add_text(warn)
+
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
 
