@@ -1220,6 +1220,7 @@ class RegressionResults(base.LikelihoodModelResults):
         smry.add_dict(model_info) 
         smry.add_df(model_params) 
         smry.add_dict(diagnostic) 
+        smry.add_title(results=self) 
 
         # Warnings
         #TODO: add warnings/notes, added to text format only

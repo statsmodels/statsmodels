@@ -480,6 +480,7 @@ class RLMResults(base.LikelihoodModelResults):
         smry = Summary()
         smry.add_dict(model_info)
         smry.add_df(params)
+        smry.add_title(results=self)
         return smry
 
 class RLMResultsWrapper(lm.RegressionResultsWrapper):

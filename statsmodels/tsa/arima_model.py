@@ -1387,6 +1387,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         smry.add_dict(model_info)
         smry.add_df(params)
         smry.add_df(data, float_format="%17.4f")
+        smry.add_title(results=self)
         return smry
 
 class ARMAResultsWrapper(wrap.ResultsWrapper):

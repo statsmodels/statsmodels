@@ -657,6 +657,7 @@ class GLMResults(base.LikelihoodModelResults):
         # Parameters
         params = summary_params(self)
         smry.add_df(params)
+        smry.add_title(results=self)
         # TODO: Diagnostics
         return smry
 
