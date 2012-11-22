@@ -1312,23 +1312,30 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         return forecast, fcasterr, conf_int
 
-    def summary(self, alpha=.05):
-        """Summarize the Model
+    def summary(self, title=None, alpha=.05, float_format="%.4f"):
+        """Summarize the ARIMA Results
 
         Parameters
-        ----------
-        alpha : float, optional
-            Significance level for the confidence intervals.
+        -----------
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
         smry : Summary instance
-            This holds the summary table and text, which can be printed or
+            this holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
         """
         # get sample TODO: make better sample machinery for estimation
         k_diff = getattr(self, 'k_diff', 0)
@@ -1348,18 +1355,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             order = str((k_ar, k_ma))
         else:
             order = str((k_ar, k_diff, k_ma))
-        # Summary
-        from statsmodels.iolib.summary2 import (Summary, summary_params,
-                                               summary_model)
-        # Model info
-        model_info = summary_model(self)
-        model_info['Method:'] = self.model.method
-        model_info['Sample:'] = sample[0]
-        model_info['S.D. of innovations:'] = "%#5.3f" % self.sigma2**.5
-        model_info['HQIC:'] = "%#5.3f" % self.hqic
-        model_info['No. Observations:'] = str(len(self.model.endog))
-        # Parameters
-        params = summary_params(self)
+
         # Roots table
         if k_ma and k_ar:
             arstubs = ["AR.%d" % i for i in range(1, k_ar + 1)]
@@ -1382,12 +1378,27 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         data = pd.DataFrame(data)
         data.columns = ['Real', 'Imaginary', 'Modulus', 'Frequency']
         data.index = stubs
-        # TODO: title="Roots"
+        
+        # Summary
+        from statsmodels.iolib.summary2 import (Summary, summary_params,
+                                               summary_model)
         smry = Summary()
+
+        # Model info
+        model_info = summary_model(self)
+        model_info['Method:'] = self.model.method
+        model_info['Sample:'] = sample[0]
+        model_info['S.D. of innovations:'] = "%#5.3f" % self.sigma2**.5
+        model_info['HQIC:'] = "%#5.3f" % self.hqic
+        model_info['No. Observations:'] = str(len(self.model.endog))
+
+        # Parameters
+        params = summary_params(self)
         smry.add_dict(model_info)
-        smry.add_df(params)
+        smry.add_df(params, float_format=float_format)
         smry.add_df(data, float_format="%17.4f")
-        smry.add_title(results=self)
+        smry.add_title(results=self, title=title)
+
         return smry
 
 class ARMAResultsWrapper(wrap.ResultsWrapper):

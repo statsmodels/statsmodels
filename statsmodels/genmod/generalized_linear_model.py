@@ -619,20 +619,18 @@ class GLMResults(base.LikelihoodModelResults):
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, title=None, alpha=.05, float_format="%.4f"):
         """Summarize the Regression Results
 
         Parameters
         -----------
-        yname : string, optional
-            Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
@@ -646,19 +644,15 @@ class GLMResults(base.LikelihoodModelResults):
             results
 
         """
-        # Summary
-        from statsmodels.iolib.summary2 import (Summary, summary_params,
-                                               summary_model)
-        smry = Summary()
-        # Model info
-        model_info = summary_model(self)
-        model_info['Method:'] = 'IRLS'
-        smry.add_dict(model_info)
-        # Parameters
-        params = summary_params(self)
-        smry.add_df(params)
-        smry.add_title(results=self)
-        # TODO: Diagnostics
+        from statsmodels.iolib.summary2 import (Summary, summary_model, 
+                summary_params)
+        info = summary_model(self)
+        info['Method:'] = 'IRLS'
+        para = summary_params(self, alpha=alpha)
+        smry.add_dict(info)
+        smry.add_df(para, float_format=float_format)
+        smry.add_title(title=title, results=self)
+        
         return smry
 
 class GLMResultsWrapper(lm.RegressionResultsWrapper):

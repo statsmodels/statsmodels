@@ -1159,20 +1159,18 @@ class RegressionResults(base.LikelihoodModelResults):
         return lrstat, lr_pvalue, lrdf
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, title=None, alpha=.05, float_format="%.4f"):
         """Summarize the Regression Results
 
         Parameters
         -----------
-        yname : string, optional
-            Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
@@ -1186,10 +1184,10 @@ class RegressionResults(base.LikelihoodModelResults):
             results
 
         """
-
-        from statsmodels.iolib.summary2 import (Summary, summary_params, 
-                                               summary_model)
+        from statsmodels.iolib.summary2 import (Summary, summary_model, 
+                summary_params)
         from collections import OrderedDict
+
         # Diagnostics
         from statsmodels.stats.stattools import (jarque_bera, 
                                                  omni_normtest, 
@@ -1209,18 +1207,17 @@ class RegressionResults(base.LikelihoodModelResults):
                      ('Prob(JB):', "%.3f" % jbpv), 
                      ('Condition No.:', "%.0f" % condno)
                      ])
-        # Model Info
-        model_info = summary_model(self)
-
-        # Parameter Info
-        model_params = summary_params(self)
 
         # Summary
-        smry = Summary()
-        smry.add_dict(model_info) 
-        smry.add_df(model_params) 
-        smry.add_dict(diagnostic) 
-        smry.add_title(results=self) 
+        info = summary_model(self)
+        para = summary_params(self, alpha=alpha)
+        smry.add_dict(info)
+        smry.add_df(para, float_format=float_format)
+        smry.add_dict(diagnostic)
+        smry.add_title(title=title, results=self)
+
+        return smry
+
 
         # Warnings
         #TODO: add warnings/notes, added to text format only

@@ -465,22 +465,38 @@ class RLMResults(base.LikelihoodModelResults):
 
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
-    def summary(self, yname=None, xname=None, title=0, alpha=.05,
-                return_fmt='text'):
+    def summary(self, title=None, alpha=.05, float_format="%.4f"):
+        """Summarize the Regression Results
+
+        Parameters
+        -----------
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
         """
-        This is for testing the new summary setup
-        """
-        from statsmodels.iolib.summary2 import (Summary,
-                                              summary_params, summary_model)
-        # Model info
-        model_info = summary_model(self)
-        # Parameters
-        params = summary_params(self)
-        # Summary
-        smry = Summary()
-        smry.add_dict(model_info)
-        smry.add_df(params)
-        smry.add_title(results=self)
+        from statsmodels.iolib.summary2 import (Summary, summary_model, 
+                summary_params)
+        info = summary_model(self)
+        para = summary_params(self, alpha=alpha)
+        smry.add_dict(info)
+        smry.add_df(para, float_format=float_format)
+        smry.add_title(title=title, results=self)
         return smry
 
 class RLMResultsWrapper(lm.RegressionResultsWrapper):

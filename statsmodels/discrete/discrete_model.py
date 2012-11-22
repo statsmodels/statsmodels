@@ -2057,21 +2057,18 @@ class DiscreteResults(base.LikelihoodModelResults):
         return effects
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                yname_list=None):
+    def summary(self, title=None, alpha=.05, float_format="%.4f"):
         """Summarize the Regression Results
 
         Parameters
         -----------
-        yname : string, optional
-            Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
@@ -2085,20 +2082,13 @@ class DiscreteResults(base.LikelihoodModelResults):
             results
 
         """
-        from statsmodels.iolib.summary2 import (Summary, summary_params, 
-                                               summary_model)
-
-        # TODO: Use xname, yname, title arguments
-        # Model Info
-        model_info = summary_model(self)
-        # Parameters
-        params = summary_params(self)
-        # Summary
-        smry = Summary()
-        smry.add_dict(model_info)
-        smry.add_df(params)
-        smry.add_title(results=self)
-
+        from statsmodels.iolib.summary2 import (Summary, summary_model, 
+                summary_params)
+        info = summary_model(self)
+        para = summary_params(self, alpha=alpha)
+        smry.add_dict(info)
+        smry.add_df(para, float_format=float_format)
+        smry.add_title(title=title, results=self)
         return smry
 
 class CountResults(DiscreteResults):

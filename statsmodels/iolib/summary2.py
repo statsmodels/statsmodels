@@ -170,11 +170,10 @@ def _pad_target(tables, settings):
     return pad_sep, pad_stub, length
 
 class Summary(object):
-    def __init__(self):
+    def __init__(self)
         self.tables = []
         self.settings = []
         self.extra_txt = []
-        self.title = None
 
     def __str__(self):
         return self.as_text()
@@ -186,21 +185,22 @@ class Summary(object):
         '''Display as HTML in IPython notebook.'''
         return self.as_html()
 
-    def add_dict(self, d, ncols=2):
+    def add_dict(self, d, ncols=2, align='l'):
         table = _run_dict(self, d)
         table = _dict_to_df(d, ncols=ncols) 
         settings = {'ncols':table.shape[1], 
                     'index':False, 'header':False, 'float_format':None, 
-                    'align':'l'}
+                    'align':align}
         self.tables.append(table)
         self.settings.append(settings)
 
-    def add_df(self, df, index=True, header=True, float_format='%.4f', align='r'):
-        # Needs a deep copy somewhere, otherwise float_formatting gets hardcoded
+    def add_df(self, df, index=True, header=True, float_format='%.4f', 
+               align='r'):
+        # TODO: Does this need a deep copy7
         settings = {'ncols':df.shape[1], 
                     'index':index, 'header':header, 'float_format':float_format, 
                     'align':align} 
-        if header:
+        if index:
             settings['ncols'] += 1
         self.tables.append(copy.deepcopy(df))
         self.settings.append(settings)
@@ -217,24 +217,14 @@ class Summary(object):
         self.extra_txt.append(string)
 
     def add_title(self, results=None, title=None):
-        if type(title) == str and results == None:
+        if type(title) == str:
             self.title = title 
-        elif type(title) == str and results != None:
+        else type(title) == str and results != None:
             try:
                 model = results.model.__class__.__name__
                 if model in model_types:
                     model = model_types[model]
                 self.title = title + ": " + model + " Results"
-            except:
-                self.title = title 
-        elif type(title) != str and results == None:
-            self.title = 'Estimation Results'
-        else:
-            try:
-                model = results.model.__class__.__name__
-                if model in model_types:
-                    model = model_types[model]
-                self.title = 'Results: ' + model
             except:
                 self.title = '' 
 
@@ -325,7 +315,7 @@ def summary_model(results):
     out = _run_dict(results, info)
     return out 
 
-def summary_params(results, xname=None, alpha=.05):
+def summary_params(results, alpha=.05):
     '''create a summary table of parameters from results instance
 
     Parameters
