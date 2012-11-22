@@ -1761,6 +1761,7 @@ class NBin(CountModel):
 ### Results Class ###
 
 class DiscreteResults(base.LikelihoodModelResults):
+
     __doc__ = _discrete_results_docs % {"one_line_description" :
         "A results class for the discrete dependent variable models.",
         "extra_attr" : ""}
