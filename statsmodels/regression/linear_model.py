@@ -1193,12 +1193,14 @@ class RegressionResults(base.LikelihoodModelResults):
         from statsmodels.stats.stattools import (jarque_bera, 
                                                  omni_normtest, 
                                                  durbin_watson)
-        from numpy.linalg import cond
+        from numpy.linalg import (cond, eigvalsh)
         from collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         dw = durbin_watson(self.wresid)
         condno = cond(self.model.wexog)
+        eigvals = eigvalsh(np.dot(self.model.wexog.T, self.model.wexog))
+        eigvals = np.sort(eigvals) #in increasing order
         diagnostic = OrderedDict([
                      ('Omnibus:',  "%.3f" % omni),
                      ('Prob(Omnibus):', "%.3f" % omnipv),
@@ -1217,19 +1219,12 @@ class RegressionResults(base.LikelihoodModelResults):
                 xname=xname, yname=yname, title=title) 
         smry.add_dict(diagnostic)
 
-        return smry
-
-
         # Warnings
-        #TODO: add warnings/notes, added to text format only
-        #etext =[]
-        #if eigvals[0] < 1e-10:
-            #wstr = "The smallest eigenvalue is %6.3g. This might indicate "
-            #wstr += "that there are\n"
-            #wstr = "strong multicollinearity problems or that the design "
-            #wstr += "matrix is singular."
-            #wstr = wstr % eigvals[0]
-            #etext.append(wstr)
+        if eigvals[0] < 1e-10:
+            warn = "The smallest eigenvalue is %6.3g. This might indicate that\
+            there are strong multicollinearity problems or that the design\
+            matrix is singular." % eigvals[0]
+            smry.add_text(warn)
         if condno > 1000:  
             warn = "* The condition number is large (%.g). This might indicate \
             strong multicollinearity or other numerical problems." % condno
