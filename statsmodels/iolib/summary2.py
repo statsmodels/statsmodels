@@ -8,7 +8,7 @@ import StringIO
 import textwrap
 
 def _getnames(self, yname=None, xname=None):
-    '''extract names from model or construct names
+    '''Extract names from model or construct names
     '''
     if yname is None: 
         try: 
@@ -24,15 +24,16 @@ def _getnames(self, yname=None, xname=None):
 
 def _run_dict(res, d):
     '''
-    If the Dict contains lambda functions, apply the, to the results instance. 
+    If the Dict contains lambda functions, apply them to the results instance. 
     Otherwise, return the Dict value. The value must be string, or the lambda 
     function must return a string.  
 
     Parameters
     ----------
-    res : results instance
-    d : dict that contains either strings or lambda functions which generate 
-        strings when they are applied to the results instance.
+    res : model results instance
+    d : dict 
+        Strings or lambda functions which return strings when they are applied
+        to a results instance.
 
     Returns
     -------
@@ -54,9 +55,11 @@ def _dict_to_df(d, ncols=2):
 
     Parameters
     ----------
-    d : dict of strings or lambda functions which generate 
-        strings when they are applied to a results instance.
-    ncols : Break values in ncols columns 
+    d : dict 
+        Strings or lambda functions which return strings when they are applied
+        to a results instance.
+    ncols : int
+        Split dict values in ncols columns 
 
     Returns
     -------
@@ -85,18 +88,24 @@ def _dict_to_df(d, ncols=2):
 
 def _df_to_ascii(df, pad_sep=2, pad_stub=0, header=False, index=False, 
                  float_format='%.4f', align='l', **kwargs):
-    '''Convert a DataFrame
+    '''Convert a DataFrame to ASCII table
 
     Parameters
     ----------
-    df : DataFrame to print as ASCII table
-    pad_sep : Number of spaces in between columns
-    pad_stub : Number of spaces after the first column 
-               (for internal use, leave at 0)
-    header : Reproduce the DataFrame header in ASCII Table?
-    index : Reproduce the DataFrame row index in ASCII Table?
-    float_format : Float formatter
-    align : data alignment (l/c/r)
+    df : DataFrame
+        Print df as ASCII table
+    pad_sep : int
+        Number of spaces in between columns
+    pad_stub : int
+        Number of spaces after the first column 
+    header : bool
+        Reproduce the DataFrame header in ASCII Table?
+    index : bool
+        Reproduce the DataFrame row index in ASCII Table?
+    float_format : string
+        Float format
+    align : string: 
+        data alignment (l/c/r)
 
     Returns
     -------
@@ -144,11 +153,12 @@ def _df_to_ascii(df, pad_sep=2, pad_stub=0, header=False, index=False,
     return ascii
 
 def _pad_target(tables, settings):
-    '''Compare width of tables in a list and calculate padding values.
+    '''Compare width of ascii tables in a list and calculate padding values.
     We add space to each col_sep to get us as close as possible to the
     width of the largest table. Then, we add a few spaces to the first
     column to pad the rest.
     '''
+
     tab = []
     for i in range(len(tables)):
         # Convert DataFrames to string with default padding
@@ -186,6 +196,20 @@ class Summary(object):
         return self.as_html()
 
     def add_dict(self, d, ncols=2, align='l'):
+        '''Add the contents of a Dict to summary table
+
+        Parameters
+        ----------
+        d : dict
+            Values must be character string or lambda functions
+            that produce character strings when they are applied to the Results
+            instance object.
+        ncols: int
+            Number of columns of the output table
+        align : string
+            Data alignment (l/c/r)
+        '''
+
         table = _run_dict(self, d)
         table = _dict_to_df(d, ncols=ncols) 
         settings = {'ncols':table.shape[1], 
@@ -196,6 +220,21 @@ class Summary(object):
 
     def add_df(self, df, index=True, header=True, float_format='%.4f', 
                align='r'):
+        '''Add the contents of a DataFrame to summary table
+
+        Parameters
+        ----------
+        df : DataFrame
+        header: bool 
+            Reproduce the DataFrame column labels in summary table
+        index: bool 
+            Reproduce the DataFrame row labels in summary table
+        float_format: string
+            Formatting to float data columns
+        align : string 
+            Data alignment (l/c/r)
+        '''
+
         # TODO: Does this need a deep copy7
         settings = {'ncols':df.shape[1], 
                     'index':index, 'header':header, 'float_format':float_format, 
@@ -205,31 +244,67 @@ class Summary(object):
         self.tables.append(copy.deepcopy(df))
         self.settings.append(settings)
         
-    def add_array(self, array):
+    def add_array(self, array, align='l', float_format="%.4f"):
+        '''Add the contents of a Numpy array to summary table
+
+        Parameters
+        ----------
+        array : numpy array (2D)
+        float_format: string
+            Formatting to array if type is float
+        align : string 
+            Data alignment (l/c/r)
+        '''
+
         table = pd.DataFrame(array)
         settings = {'ncols':table.shape[1], 
-                    'index':False, 'header':False, 'float_format':None, 
-                    'align':'l'}
+                    'index':False, 'header':False, 
+                    'float_format':float_format, 'align':align}
         self.tables.append(table)
         self.settings.append(settings)
 
-    def add_text(self, string, max_len=79):
+    def add_text(self, string):
+        '''Append a note to the bottom of the summary table. In ASCII tables,
+        the note will be wrapped to table width. Notes are not indendented. 
+        '''
         self.extra_txt.append(string)
 
     def add_title(self, results=None, title=None):
+        '''Insert a title on top of the summary table. If a string is provided
+        in the title argument, that string is printed. If no title string is
+        provided but a results instance is provided, statsmodels attempts
+        to construct a useful title automatically.
+        '''
         if type(title) == str:
             self.title = title 
         else:
             try:
                 model = results.model.__class__.__name__
-                if model in model_types:
-                    model = model_types[model]
+                if model in _model_types:
+                    model = _model_types[model]
                 self.title = 'Results: ' + model
             except:
                 self.title = '' 
 
     def add_base(self, results, alpha=0.05, float_format="%.4f", title=None, 
             xname=None, yname=None):
+        '''Try to construct a basic summary instance. 
+
+        Parameters
+        ----------
+        results : Model results instance
+        alpha : float
+            significance level for the confidence intervals (optional)
+        float_formatting: string
+            Float formatting for summary of parameters (optional)
+        title : string
+            Title of the summary table (optional)
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)
+        '''
+
         param = summary_params(results, alpha=alpha)
         info = summary_model(results)
         if xname != None:
@@ -241,6 +316,8 @@ class Summary(object):
         self.add_title(title=title, results=results)
 
     def as_text(self):
+        '''Generate ASCII Summary Table
+        '''
         pad_sep, pad_stub, length = _pad_target(self.tables, self.settings)
         tab = []
         for i in range(len(self.tables)):
@@ -263,6 +340,8 @@ class Summary(object):
         return out
 
     def as_html(self):
+        '''Generate HTML Summary Table
+        '''
         tables = copy.deepcopy(self.tables)
         for i in range(len(tables)):
             tables[i] = tables[i].to_html(header=self.settings[i]['header'], 
@@ -272,6 +351,8 @@ class Summary(object):
         return out
 
     def as_latex(self):
+        '''Generate LaTeX Summary Table
+        '''
         tables = copy.deepcopy(self.tables)
         for i in range(len(tables)):
             tables[i] = tables[i].to_latex(header=self.settings[i]['index'], 
@@ -281,7 +362,7 @@ class Summary(object):
         return out
 
 # Useful stuff
-model_types = {'OLS' : 'Ordinary least squares',
+_model_types = {'OLS' : 'Ordinary least squares',
                'GLS' : 'Generalized least squares',
                'GLSAR' : 'Generalized least squares with AR(p)',
                'WLS' : 'Weigthed least squares',
@@ -335,8 +416,6 @@ def summary_params(results, alpha=.05):
     res : results instance
         some required information is directly taken from the result
         instance
-    xname : list of strings or None
-        optional names for the exogenous variables, default is "var_xx"
     alpha : float
         significance level for the confidence intervals
 

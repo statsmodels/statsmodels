@@ -471,6 +471,10 @@ class RLMResults(base.LikelihoodModelResults):
 
         Parameters
         -----------
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title

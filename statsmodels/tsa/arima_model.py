@@ -1328,7 +1328,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which can be printed or
+            This holds the summary table and text, which can be printed or
             converted to various output formats.
 
         See Also
