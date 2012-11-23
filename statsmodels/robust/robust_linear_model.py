@@ -465,7 +465,8 @@ class RLMResults(base.LikelihoodModelResults):
 
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
-    def summary(self, title=None, alpha=.05, float_format="%.4f"):
+    def summary(self, title=None, xname=None, yname=None, alpha=.05,
+                        float_format="%.4f"): 
         """Summarize the Regression Results
 
         Parameters
@@ -490,13 +491,12 @@ class RLMResults(base.LikelihoodModelResults):
             results
 
         """
-        from statsmodels.iolib.summary2 import (Summary, summary_model, 
-                summary_params)
-        info = summary_model(self)
-        para = summary_params(self, alpha=alpha)
-        smry.add_dict(info)
-        smry.add_df(para, float_format=float_format)
-        smry.add_title(title=title, results=self)
+        # Summary
+        from statsmodels.iolib.summary2 import Summary
+        smry = Summary()
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title) 
+
         return smry
 
 class RLMResultsWrapper(lm.RegressionResultsWrapper):

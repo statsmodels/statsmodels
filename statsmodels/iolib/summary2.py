@@ -170,7 +170,7 @@ def _pad_target(tables, settings):
     return pad_sep, pad_stub, length
 
 class Summary(object):
-    def __init__(self)
+    def __init__(self):
         self.tables = []
         self.settings = []
         self.extra_txt = []
@@ -219,14 +219,26 @@ class Summary(object):
     def add_title(self, results=None, title=None):
         if type(title) == str:
             self.title = title 
-        else type(title) == str and results != None:
+        else:
             try:
                 model = results.model.__class__.__name__
                 if model in model_types:
                     model = model_types[model]
-                self.title = title + ": " + model + " Results"
+                self.title = 'Results: ' + model
             except:
                 self.title = '' 
+
+    def add_base(self, results, alpha=0.05, float_format="%.4f", title=None, 
+            xname=None, yname=None):
+        param = summary_params(results, alpha=alpha)
+        info = summary_model(results)
+        if xname != None:
+            param.index = xname
+        if yname != None: 
+            info['Dependent Variable:'] = yname
+        self.add_dict(info)
+        self.add_df(param, float_format=float_format)
+        self.add_title(title=title, results=results)
 
     def as_text(self):
         pad_sep, pad_stub, length = _pad_target(self.tables, self.settings)

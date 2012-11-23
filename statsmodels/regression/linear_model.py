@@ -1159,7 +1159,8 @@ class RegressionResults(base.LikelihoodModelResults):
         return lrstat, lr_pvalue, lrdf
 
 
-    def summary(self, title=None, alpha=.05, float_format="%.4f"):
+    def summary(self, title=None, xname=None, yname=None, alpha=.05,
+            float_format="%.4f"): 
         """Summarize the Regression Results
 
         Parameters
@@ -1184,15 +1185,12 @@ class RegressionResults(base.LikelihoodModelResults):
             results
 
         """
-        from statsmodels.iolib.summary2 import (Summary, summary_model, 
-                summary_params)
-        from collections import OrderedDict
-
         # Diagnostics
         from statsmodels.stats.stattools import (jarque_bera, 
                                                  omni_normtest, 
                                                  durbin_watson)
         from numpy.linalg import cond
+        from collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         dw = durbin_watson(self.wresid)
@@ -1209,12 +1207,11 @@ class RegressionResults(base.LikelihoodModelResults):
                      ])
 
         # Summary
-        info = summary_model(self)
-        para = summary_params(self, alpha=alpha)
-        smry.add_dict(info)
-        smry.add_df(para, float_format=float_format)
+        from statsmodels.iolib.summary2 import Summary
+        smry = Summary()
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title) 
         smry.add_dict(diagnostic)
-        smry.add_title(title=title, results=self)
 
         return smry
 

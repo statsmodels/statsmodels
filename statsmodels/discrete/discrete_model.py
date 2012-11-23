@@ -2057,7 +2057,8 @@ class DiscreteResults(base.LikelihoodModelResults):
         return effects
 
 
-    def summary(self, title=None, alpha=.05, float_format="%.4f"):
+    def summary(self, title=None, xname=None, yname=None, alpha=.05,
+            float_format="%.4f"): 
         """Summarize the Regression Results
 
         Parameters
@@ -2082,13 +2083,12 @@ class DiscreteResults(base.LikelihoodModelResults):
             results
 
         """
-        from statsmodels.iolib.summary2 import (Summary, summary_model, 
-                summary_params)
-        info = summary_model(self)
-        para = summary_params(self, alpha=alpha)
-        smry.add_dict(info)
-        smry.add_df(para, float_format=float_format)
-        smry.add_title(title=title, results=self)
+        # Summary
+        from statsmodels.iolib.summary2 import Summary
+        smry = Summary()
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title) 
+
         return smry
 
 class CountResults(DiscreteResults):
@@ -2140,9 +2140,9 @@ class BinaryResults(DiscreteResults):
         return np.histogram2d(actual, pred, bins=2)[0]
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                yname_list=None):
-        smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
-                     yname_list)
+                float_format="%.4f"):
+        smry = super(BinaryResults, self).summary(yname=yname, xname=xname,
+                title=title, alpha=alpha, float_format=float_format)
 
         # Diagnostics (TODO: Improve diagnostics)
         fittedvalues = self.model.cdf(self.fittedvalues)
