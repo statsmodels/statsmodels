@@ -1761,6 +1761,7 @@ class NBin(CountModel):
 ### Results Class ###
 
 class DiscreteResults(base.LikelihoodModelResults):
+
     __doc__ = _discrete_results_docs % {"one_line_description" :
         "A results class for the discrete dependent variable models.",
         "extra_attr" : ""}
@@ -2056,21 +2057,23 @@ class DiscreteResults(base.LikelihoodModelResults):
         return effects
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                yname_list=None):
+    def summary(self, title=None, xname=None, yname=None, alpha=.05,
+            float_format="%.4f"): 
         """Summarize the Regression Results
 
         Parameters
         -----------
-        yname : string, optional
-            Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
@@ -2084,43 +2087,12 @@ class DiscreteResults(base.LikelihoodModelResults):
             results
 
         """
-
-        top_left = [('Dep. Variable:', None),
-                     ('Model:', [self.model.__class__.__name__]),
-                     ('Method:', ['MLE']),
-                     ('Date:', None),
-                     ('Time:', None),
-                     #('No. iterations:', ["%d" % self.mle_retvals['iterations']]),
-                     ('converged:', ["%s" % self.mle_retvals['converged']])
-                      ]
-
-        top_right = [('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None),
-                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
-                     ('Log-Likelihood:', None),
-                     ('LL-Null:', ["%#8.5g" % self.llnull]),
-                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue])
-                     ]
-
-        if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Regression Results"
-
-        #boiler plate
-        from statsmodels.iolib.summary import Summary
+        # Summary
+        from statsmodels.iolib.summary2 import Summary
         smry = Summary()
-        yname, yname_list = self._get_endog_name(yname, yname_list)
-        # for top of table
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
-        # for parameters, etc
-        smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
-                             use_t=False)
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title) 
 
-        #diagnostic table not used yet
-        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-        #                   yname=yname, xname=xname,
-        #                   title="")
         return smry
 
 class CountResults(DiscreteResults):
@@ -2172,32 +2144,28 @@ class BinaryResults(DiscreteResults):
         return np.histogram2d(actual, pred, bins=2)[0]
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                yname_list=None):
-        smry = super(BinaryResults, self).summary(yname, xname, title, alpha,
-                     yname_list)
+                float_format="%.4f"):
+        smry = super(BinaryResults, self).summary(yname=yname, xname=xname,
+                title=title, alpha=alpha, float_format=float_format)
+
+        # Diagnostics (TODO: Improve diagnostics)
         fittedvalues = self.model.cdf(self.fittedvalues)
         absprederror = np.abs(self.model.endog - fittedvalues)
         predclose_sum = (absprederror < 1e-4).sum()
         predclose_frac = predclose_sum / len(fittedvalues)
 
-        #add warnings/notes
-        etext = []
-        if predclose_sum == len(fittedvalues): #nobs?
-            wstr = "Complete Separation: The results show that there is"
-            wstr += "complete separation.\n"
-            wstr += "In this case the Maximum Likelihood Estimator does "
-            wstr += "not exist and the parameters\n"
-            wstr += "are not identified."
-            etext.append(wstr)
-        elif predclose_frac > 0.1:  #TODO: get better diagnosis
-            wstr = "Possibly complete quasi-separation: A fraction "
-            wstr += "%4.2f of observations can be\n" % predclose_frac
-            wstr += "perfectly predicted. This might indicate that there "
-            wstr += "is complete\nquasi-separation. In this case some "
-            wstr += "parameters will not be identified."
-            etext.append(wstr)
-        if etext:
-            smry.add_extra_txt(etext)
+        if predclose_sum == len(fittedvalues): # TODO: nobs?
+            warn = "Complete Separation: The results show that there is \
+            complete separation. In this case the Maximum Likelihood Estimator \
+            does not exist and the parameters are not identified."
+            smry.add_text(warn)
+        elif predclose_frac > 0.1:  
+            warn = "Possibly complete quasi-separation: A fraction %4.2f of \
+            observations can be perfectly predicted. This might indicate that \
+            there is complete quasi-separation. In this case some parameters \
+            will not be identified." % predclose_frac 
+            smry.add_text(warn)
+
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
 
