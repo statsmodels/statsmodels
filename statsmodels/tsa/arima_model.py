@@ -1346,7 +1346,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         if self.data.dates is not None:
             dates = self.data.dates
             sample = [dates[start].strftime('%m-%d-%Y')]
-            sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
+            sample += [dates[-1].strftime('%m-%d-%Y')]
         else:
             sample = str(start) + ' - ' + str(len(self.data.orig_endog))
 
@@ -1388,6 +1388,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         model_info = summary_model(self)
         model_info['Method:'] = self.model.method
         model_info['Sample:'] = sample[0]
+        model_info['   '] = sample[-1]
         model_info['S.D. of innovations:'] = "%#5.3f" % self.sigma2**.5
         model_info['HQIC:'] = "%#5.3f" % self.hqic
         model_info['No. Observations:'] = str(len(self.model.endog))
