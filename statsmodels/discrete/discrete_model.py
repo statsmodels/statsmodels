@@ -1646,7 +1646,12 @@ class NBin(CountModel):
     exog : array
         A reference to the exogenous design.
     ll : string
-        Log-likelihood type. 'nb2','nb1', or 'geometric'. 'nb2' is most common
+        Log-likelihood type. 'nb2','nb1', or 'geometric'. 
+        Fitted value :math:`\\mu` 
+        Heterogeneity parameter :math:`\\alpha`
+        nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
+        nb1: Variance equal to :math:`\\mu + \\alpha\\mu` 
+        geometric: Variance equal to :math:`\\mu + \\mu^2` 
 
     References
     ----------
@@ -1687,7 +1692,7 @@ class NBin(CountModel):
 
         .. math::
 
-            \lambda_i = exp(X\\beta)\\\\
+            \\lambda_i = exp(X\\beta)\\\\
             \\theta = 1 / \\alpha \\\\
             g_i = \\theta \lambda_i^Q \\\\
             w_i = g_i/(g_i + \lambda_i) \\\\
