@@ -1805,8 +1805,6 @@ class NBin(CountModel):
                 start_params = np.append(start_params, 0.1)
             elif self.ll == 'nb2':
                 start_params = np.append(start_params, 0.1)
-            elif self.ll == 'nbp':
-                start_params = np.append(start_params, [0.1, 0.])
 
         mlefit = super(CountModel, self).fit(start_params=start_params,
                 maxiter=maxiter, method=method, tol=tol, disp=disp, 
