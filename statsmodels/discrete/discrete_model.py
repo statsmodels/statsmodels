@@ -16,7 +16,7 @@ G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
 W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 
-__all__ = ["Poisson","Logit","Probit","MNLogit","NBin"]
+__all__ = ["Poisson","Logit","Probit","MNLogit","NegativeBinomial"]
 
 import numpy as np
 from scipy.special import gammaln
@@ -1705,7 +1705,7 @@ class MNLogit(MultinomialModel):
 #        return mlefit
 #
 
-class NBin(CountModel):
+class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial model for count data
 
@@ -2648,7 +2648,7 @@ if __name__=="__main__":
 #    endog2 = np.array(endog>=1, dtype=float)
 # skipped for now, binary poisson results look off?
     data = sm.datasets.randhie.load()
-    nbreg = NBin
+    nbreg = NegativeBinomial
     mod = nbreg(data.endog, data.exog.view((float,9)))
 #FROM STATA:
     params = np.asarray([-.05654133,  -.21214282, .0878311, -.02991813, .22903632,
