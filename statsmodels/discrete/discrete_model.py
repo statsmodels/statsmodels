@@ -1665,7 +1665,8 @@ class NBin(CountModel):
         mu = np.exp(np.dot(self.exog, params))
         size = np.exp(lnalpha)**-1 * mu**Q 
         prob = size/(size+mu)
-        llf = nbinom.logpmf(self.endog, size, prob)
+        coeff = gammaln(size+self.endog) - gammaln(self.endog+1) - gammaln(size)
+        llf = coeff + size*np.log(prob) + self.endog*np.log(1-prob)
         return llf
 
     def _ll_nb2(self, params):
