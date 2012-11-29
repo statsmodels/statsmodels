@@ -1811,25 +1811,26 @@ class NBin(CountModel):
         params = params[:-1]
         a1 = np.exp(lnalpha)**-1
 
+        exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(self.exog,params))[:,None]
+        mu = np.exp(np.dot(exog,params))[:,None]
 
         # for dl/dparams dparams
-        dim = self.exog.shape[1]
+        dim = exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
         const_arr = a1*mu*(a1+y)/(mu+a1)**2
         for i in range(dim):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(-self.exog[:,i,None]*self.exog[:,j,None] *\
+                hess_arr[i,j] = np.sum(-exog[:,i,None]*exog[:,j,None] *\
                                 const_arr, axis=0)
         hess_arr[np.triu_indices(dim, k=1)] = hess_arr.T[np.triu_indices(dim,
                                                         k =1)]
 
         # for dl/dparams dalpha
         da1 = -1*np.exp(lnalpha)**-2
-        dldpda = np.sum(mu*self.exog*(y-mu)*da1/(mu+a1)**2 , axis=0)
+        dldpda = np.sum(mu*exog*(y-mu)*da1/(mu+a1)**2 , axis=0)
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
