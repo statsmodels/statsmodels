@@ -1848,6 +1848,10 @@ class NBin(CountModel):
         sc = approx_fprime(params, self.loglike)
         return sc
 
+    def scoreobs(self, params):
+        sc = approx_fprime(params, self.loglikeobs)
+        return sc
+
     def __init__(self, endog, exog, ll='nb2', **kwargs):
         self.ll = ll
         if ll=='nb2':
