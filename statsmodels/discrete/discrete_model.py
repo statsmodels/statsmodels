@@ -16,7 +16,7 @@ G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
 W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 
-__all__ = ["Poisson","Logit","Probit","MNLogit"]
+__all__ = ["Poisson","Logit","Probit","MNLogit","NBin"]
 
 import numpy as np
 from scipy.special import gammaln
@@ -26,7 +26,9 @@ from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from statsmodels.regression.linear_model import OLS
 from scipy import stats, special, optimize # opt just for nbin
+from scipy.stats import nbinom
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.numdiff import (approx_fprime, approx_hess)
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
@@ -154,6 +156,7 @@ class DiscreteModel(base.LikelihoodModel):
             callback = self._check_perfect_pred
         else:
             pass # make a function factory to have multiple call-backs
+
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
@@ -1703,56 +1706,75 @@ class MNLogit(MultinomialModel):
 #
 
 class NBin(CountModel):
-    """
-    Negative Binomial model.
-    """
-    #def pdf(self, X, alpha):
-    #    a1 = alpha**-1
-    #    term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+    __doc__ = """
+    Negative Binomial model for count data
 
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    ll : string
+        Log-likelihood type. 'nb2','nb1', or 'geometric'. 'nb2' is most common
+
+    References
+    ----------
+
+    References:
+
+    Greene, W. 2008. "Functional forms for the negtive binomial model
+        for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
+    Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
+    """ 
     def _check_inputs(self, offset, exposure):
         if offset is not None or exposure is not None:
             raise ValueError("offset and exposure not implemented yet")
+
+    def _ll_nbin(self, params, lnalpha, Q=0):
+        mu = np.exp(np.dot(self.exog, params))
+        size = np.exp(lnalpha)**-1 * mu**Q 
+        prob = size/(size+mu)
+        llf = nbinom.logpmf(self.endog, size, prob)
+        return llf
+
+    def _ll_nb2(self, params):
+        return self._ll_nbin(params[:-1], params[-1], Q=0)
+
+    def _ll_nb1(self, params):
+        return self._ll_nbin(params[:-1], params[-1], Q=1)
+
+    def _ll_geometric(self, params):
+        return self._ll_nbin(params, 0, 0)
 
     def loglike(self, params):
         """
         Loglikelihood for negative binomial model
 
-        Notes
-        -----
-        The ancillary parameter is assumed to be the last element of
-        the params vector
-        """
-        lnalpha = params[-1]
-        params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
-        y = self.endog
-        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
-        mu = np.exp(np.dot(self.exog,params))
-        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
-        llf = np.sum(J+pdf)
-        return llf
+        Following notation in Greene (2008), with negative binomial heterogeneity
+        parameter :math:`\\alpha`:
 
-    def loglikeobs(self, params):
-        """
-        Loglikelihood for negative binomial model
+        .. math::
+
+            \lambda_i = exp(X\\beta)\\\\
+            \\theta = 1 / \\alpha \\\\
+            g_i = \\theta \lambda_i^Q \\\\
+            w_i = g_i/(g_i + \lambda_i) \\\\
+            r_i = \\theta / (\\theta+\lambda_i) \\\\
+            ln \mathcal{L}_i = ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
 
         Notes
         -----
         The ancillary parameter is assumed to be the last element of
         the params vector
         """
-        lnalpha = params[-1]
-        params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
-        y = self.endog
-        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
-        mu = np.exp(np.dot(self.exog,params))
-        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
-        llf = J + pdf
+        llf = np.sum(self.loglikeobs(params))
         return llf
 
-    def score(self, params, full=False):
+    def _score_nb2(self, params, full=False):
         """
         Score vector for NB2 model
         """
@@ -1764,8 +1786,6 @@ class NBin(CountModel):
         mu = np.exp(np.dot(exog,params))[:,None]
         dparams = exog*a1 * (y-mu)/(mu+a1)
 
-
-
         da1 = -1*np.exp(lnalpha)**-2
         dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
@@ -1776,8 +1796,8 @@ class NBin(CountModel):
         #JP: what's full, and why is there no da1?
 
         return np.r_[dparams.sum(0), da1*dalpha.sum()]
-
-    def hessian(self, params):
+     
+    def _hessian_nb2(self, params):
         """
         Hessian of NB2 model.
         """
@@ -1785,26 +1805,25 @@ class NBin(CountModel):
         params = params[:-1]
         a1 = np.exp(lnalpha)**-1
 
-        exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog,params))[:,None]
+        mu = np.exp(np.dot(self.exog,params))[:,None]
 
         # for dl/dparams dparams
-        dim = exog.shape[1]
+        dim = self.exog.shape[1]
         hess_arr = np.empty((dim+1,dim+1))
         const_arr = a1*mu*(a1+y)/(mu+a1)**2
         for i in range(dim):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(-exog[:,i,None]*exog[:,j,None] *\
+                hess_arr[i,j] = np.sum(-self.exog[:,i,None]*self.exog[:,j,None] *\
                                 const_arr, axis=0)
         hess_arr[np.triu_indices(dim, k=1)] = hess_arr.T[np.triu_indices(dim,
                                                         k =1)]
 
         # for dl/dparams dalpha
         da1 = -1*np.exp(lnalpha)**-2
-        dldpda = np.sum(mu*exog*(y-mu)*da1/(mu+a1)**2 , axis=0)
+        dldpda = np.sum(mu*self.exog*(y-mu)*da1/(mu+a1)**2 , axis=0)
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
@@ -1820,16 +1839,52 @@ class NBin(CountModel):
 
         return hess_arr
 
+    def _hessian_approx(self, params):
+        hess = approx_hess(params, self.loglike)
+        return hess
 
-    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
-        # start_params = [0]*(self.exog.shape[1])+[1]
-        # Use poisson fit as first guess.
-        start_params = Poisson(self.endog, self.exog).fit(disp=0).params
-        start_params = np.r_[start_params, 0.1]
-        mlefit = super(NegBinTwo, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, tol=tol)
+    def _score_approx(self, params):
+        sc = approx_fprime(params, self.loglike)
+        return sc
+
+    def __init__(self, endog, exog, ll='nb2', **kwargs):
+        self.ll = ll
+        if ll=='nb2':
+            self.hessian = self._hessian_nb2
+            self.score = self._score_nb2
+            self.loglikeobs = self._ll_nb2
+        elif ll=='nb1':
+            self.hessian = self._hessian_approx
+            self.score = self._score_approx
+            self.loglikeobs = self._ll_nb1
+        elif ll=='geometric':
+            self.hessian = self._hessian_approx
+            self.score = self._score_approx
+            self.loglikeobs = self._ll_geometric
+        else:
+            raise NotImplementedError("Likelihood type must nb1, nb2 or geometric")
+        super(CountModel, self ).__init__(endog, exog, **kwargs)
+        if ll in ['nb2', 'nb1']:
+            self.exog_names.append('lnalpha')
+        self.method = ll
+
+    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
+            disp=1):
+        if start_params == None:
+            # Use poisson fit as first guess.
+            start_params = Poisson(self.endog, self.exog).fit(disp=0).params
+            if self.ll == 'nb1':
+                start_params = np.append(start_params, 0.1)
+            elif self.ll == 'nb2':
+                start_params = np.append(start_params, 0.1)
+            elif self.ll == 'nbp':
+                start_params = np.append(start_params, [0.1, 0.])
+
+        mlefit = super(CountModel, self).fit(start_params=start_params,
+                maxiter=maxiter, method=method, tol=tol, disp=disp, 
+                callback=lambda x:x) # TODO: Fix NBin _check_perfect_pred
+        mlefit = CountResults(self, mlefit)
         return mlefit
-
 
 ### Results Class ###
 
