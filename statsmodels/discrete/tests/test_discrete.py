@@ -7,11 +7,12 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
+
 import os
 import numpy as np
 from numpy.testing import *
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson)
+                                                 Poisson, NegativeBinomial)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 from sys import platform
@@ -766,6 +767,67 @@ class TestPoissonNewton(CheckModelResults):
                 self.res2.margeff_dummy_overall, DECIMAL_4)
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_overall_se, DECIMAL_4)
+
+class TestNegativeBinomialNB2BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+        
+    def test_jac(self):
+        pass
+
+    def test_predict(self):
+        pass
+
+    def test_predict_xb(self):
+        pass
+
+class TestNegativeBinomialNB1BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+        
+    def test_jac(self):
+        pass
+
+    def test_predict(self):
+        pass
+
+    def test_predict_xb(self):
+        pass
+
+class TestNegativeBinomialGeometricBFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'geometric').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_geometric_bfgs()
+        cls.res2 = res2
+        
+    def test_jac(self):
+        pass
+
+    def test_predict(self):
+        pass
+
+    def test_predict_xb(self):
+        pass
+
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
