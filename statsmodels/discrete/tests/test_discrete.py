@@ -15,7 +15,7 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
                            assert_equal, assert_array_equal)
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson)
+                                                 Poisson, NegativeBinomial)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 from sys import platform
@@ -783,6 +783,66 @@ class TestPoissonNewton(CheckModelResults):
 
     def test_resid(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, 2)
+
+class TestNegativeBinomialNB2BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+
+    def test_jac(self):
+        pass
+
+    def test_predict(self):
+        pass
+
+    def test_predict_xb(self):
+        pass
+
+class TestNegativeBinomialNB1BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_jac(self):
+        pass
+
+    def test_predict(self):
+        pass
+
+    def test_predict_xb(self):
+        pass
+
+class TestNegativeBinomialGeometricBFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'geometric').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_geometric_bfgs()
+        cls.res2 = res2
+
+    def test_jac(self):
+        pass
+
+    def test_predict(self):
+        pass
+
+    def test_predict_xb(self):
+        pass
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
