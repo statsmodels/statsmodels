@@ -338,7 +338,6 @@ class KDEMultivariate(GenericKDE):
         return class_type, class_vars
 
 
-
 class KDEMultivariateConditional(GenericKDE):
     """
     Conditional multivariate kernel density estimator.
