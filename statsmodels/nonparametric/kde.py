@@ -9,7 +9,7 @@ Racine, Jeff. (2008) "Nonparametric Econometrics: A Primer," Foundation and
 
 http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 
-Silverman, B.W.  Density Estimation for Statistics and Data Anaylsis.
+Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
 
 import warnings
