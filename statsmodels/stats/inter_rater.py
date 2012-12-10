@@ -28,7 +28,7 @@ convenience functions to create required data format from raw data
 
 
 import numpy as np
-from numpy.testing import assert_almost_equal
+from scipy import stats  #get rid of this? need only norm.sf
 
 
 class ResultsBunch(dict):
@@ -36,7 +36,7 @@ class ResultsBunch(dict):
     def __init__(self, **kwds):
         dict.__init__(self, kwds)
         self.__dict__  = self
-        self._initialize
+        self._initialize()
 
     def __str__(self):
         return self.template % self
