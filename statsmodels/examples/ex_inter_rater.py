@@ -85,7 +85,7 @@ table10 = [[0, 4, 1],
            [0, 1, 5]]
 res10 = cohens_kappa(table10)
 print 'res10', res10
-print np.sqrt(res10[-1])
+print np.sqrt(res10[3])
 
 res10_sas = [0.4842, 0.1380, 0.2137, 0.7547]
 delta = stats.norm.isf(0.025) * np.sqrt(res10[3])
@@ -101,15 +101,15 @@ print res10w[0] - delta, res10w[0] + delta
 res10w_ = res10w[0], np.sqrt(res10w[3]), res10w[0] - delta, res10w[0] + delta
 assert_almost_equal(res10w_, res10w_sas, decimal=4)
 #assert_almost_equal(???, res10w_sash0, decimal=4)
-print np.sqrt(res10w[3:])
+print np.sqrt(res10w[3:5])
 
-zval = res10w[0]/np.sqrt(res10w[-1])
+zval = res10w[0]/np.sqrt(res10w[4])
 pval = stats.norm.sf(zval)
 pval_two_sided = pval * 2
 
 
 
-kappa, kappa_max, weights, var_kappa, var_kappa0 = res10
+kappa, kappa_max, weights, var_kappa, var_kappa0, _ = res10
 k10 = KappaResults( kind='Simple',
                     kappa=kappa,
                     kappa_max=kappa_max,

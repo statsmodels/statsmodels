@@ -34,9 +34,9 @@ from numpy.testing import assert_almost_equal
 class ResultsBunch(dict):
 
     def __init__(self, **kwds):
-        dict.__init__(self, kw)
+        dict.__init__(self, kwds)
         self.__dict__  = self
-        self.initialize
+        self._initialize
 
     def __str__(self):
         return self.template % self
