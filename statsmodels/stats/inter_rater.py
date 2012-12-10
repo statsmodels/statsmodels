@@ -30,10 +30,16 @@ convenience functions to create required data format from raw data
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-class Bunch(dict):
-    def __init__(self, **kw):
+
+class ResultsBunch(dict):
+
+    def __init__(self, **kwds):
         dict.__init__(self, kw)
         self.__dict__  = self
+        self.initialize
+
+    def __str__(self):
+        return self.template % self
 
 def int_ifclose(x, dec=1, width=4):
     '''helper function for creating result string for int or float
@@ -192,6 +198,7 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
     #print prob_exp.sum()
     agree_exp = np.diag(prob_exp).sum() #need for kappa_max
     if weights is None and wt is None:
+        kind = 'Simple'
         kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
 
         if return_var:
@@ -210,6 +217,7 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
 
     else:
         #weights follows the Wikipedia definition, not the SAS, which is 1 -
+        kind = 'Weighted'
         weights = np.asarray(weights, float)
         if weights.ndim == 1:
             if wt is 'ca':
@@ -250,7 +258,14 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
     kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / (1 - agree_exp)
 
     if return_var:
-        return kappa, kappa_max, weights, var_kappa, var_kappa0
+        res = KappaResults( kind=kind,
+                    kappa=kappa,
+                    kappa_max=kappa_max,
+                    weights=weights,
+                    var_kappa=var_kappa,
+                    var_kappa0=var_kappa0
+                    )
+        return kappa, kappa_max, weights, var_kappa, var_kappa0, res
     else:
         return kappa, kappa_max, weights
 
@@ -363,10 +378,11 @@ kappa_template = '''\
 '''
 
 
-class KappaResults(dict):
+class KappaResults(ResultsBunch):
 
-    def __init__(self, **kwds):
-        self.update(kwds)
+    template = kappa_template
+
+    def _initialize(self):
         if not 'alpha' in self:
             self['alpha'] = 0.025
             self['alpha_ci'] = int_ifclose(100 - 0.025 * 200)[1]
@@ -384,7 +400,7 @@ class KappaResults(dict):
         self['kappa_upp'] = self['kappa'] + delta
 
     def __str__(self):
-        return kappa_template % self
+        return self.template % self
 
 
 kappa, kappa_max, weights, var_kappa, var_kappa0 = res10
