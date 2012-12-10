@@ -53,7 +53,7 @@ class UnweightedCohens(CheckCohens):
     #comparison to printout of a SAS example
     def __init__(self):
         #temporary: res instance is at last position
-        self.res = cohens_kappa(table10)[-1]
+        self.res = cohens_kappa(table10)
         res10_sas = [0.4842, 0.1380, 0.2137, 0.7547]
         res10_sash0 = [0.1484, 3.2626, 0.0006, 0.0011]  #for test H0:kappa=0
         self.res2 = res10_sas + res10_sash0 #concatenate
@@ -71,15 +71,17 @@ class UnweightedCohens(CheckCohens):
               ASE under H0              0.1484
               Z                         3.2626
               One-sided Pr >  Z         0.0006
-              Two-sided Pr > |Z|        0.0011
-'''
+              Two-sided Pr > |Z|        0.0011''' + '\n'
 
+    def test_option(self):
+        kappa = cohens_kappa(table10, return_results=False)
+        assert_almost_equal(kappa, self.res2[0], decimal=4)
 
 class TestWeightedCohens(CheckCohens):
     #comparison to printout of a SAS example
     def __init__(self):
         #temporary: res instance is at last position
-        self.res = cohens_kappa(table10, weights=[0, 1, 2])[-1]
+        self.res = cohens_kappa(table10, weights=[0, 1, 2])
         res10w_sas = [0.4701, 0.1457, 0.1845, 0.7558]
         res10w_sash0 = [0.1426, 3.2971, 0.0005, 0.0010]  #for test H0:kappa=0
         self.res2 = res10w_sas + res10w_sash0 #concatenate
@@ -97,8 +99,11 @@ class TestWeightedCohens(CheckCohens):
               ASE under H0              0.1426
               Z                         3.2971
               One-sided Pr >  Z         0.0005
-              Two-sided Pr > |Z|        0.0010
-'''
+              Two-sided Pr > |Z|        0.0010''' + '\n'
+
+    def test_option(self):
+        kappa = cohens_kappa(table10, weights=[0, 1, 2], return_results=False)
+        assert_almost_equal(kappa, self.res2[0], decimal=4)
 
 if __name__ == '__main__':
     import nose

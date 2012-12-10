@@ -111,7 +111,7 @@ def fleiss_kappa(table):
     return kappa
 
 
-def cohens_kappa(table, weights=None, return_var=True, wt=None):
+def cohens_kappa(table, weights=None, return_results=True, wt=None):
     '''Compute Cohen's kappa with variance and equal-zero test
 
     Parameters
@@ -142,17 +142,16 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
             from the one dimensional weights. (maximum weight in this case
             should be less or equal to one)
             TODO: test variance estimate for this case
-    return_kappa : bool
-        If False (default), then an instance of KappaResults is returned.
-        If True, then only kappa is computed and returned.
+    return_results : bool
+        If True (default), then an instance of KappaResults is returned.
+        If False, then only kappa is computed and returned.
 
     Returns
     -------
-    kappa or results
-        TODO: change to this
-        If return_kappa is False (default), then a results instance is returned
-        with all statistics.
-        If return_kappa is true, then only kappa is calculated and returned.
+    results or kappa
+        If return_results is True (default), then a results instance with all
+        statistics is returned
+        If return_results is False, then only kappa is calculated and returned.
 
     Notes
     -----
@@ -183,7 +182,7 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
         kind = 'Simple'
         kappa = (agree / nobs - agree_exp) / (1 - agree_exp)
 
-        if return_var:
+        if return_results:
             #variance
             term_a = probs_diag * (1 - (freq_row + freq_col) * (1 - kappa))**2
             term_a = term_a.sum()
@@ -220,7 +219,7 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
         #this is formula from Wikipedia
         kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
         #TODO: add var_kappa for weighted version
-        if return_var:
+        if return_results:
             var_kappa = np.nan
             var_kappa0 = np.nan
             #switch to SAS manula weights, problem if user specifies weights
@@ -239,7 +238,7 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
 
     kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / (1 - agree_exp)
 
-    if return_var:
+    if return_results:
         res = KappaResults( kind=kind,
                     kappa=kappa,
                     kappa_max=kappa_max,
@@ -247,9 +246,9 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
                     var_kappa=var_kappa,
                     var_kappa0=var_kappa0
                     )
-        return kappa, kappa_max, weights, var_kappa, var_kappa0, res
+        return res
     else:
-        return kappa, kappa_max, weights
+        return kappa
 
 
 kappa_template = '''\

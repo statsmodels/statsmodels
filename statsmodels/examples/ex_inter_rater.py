@@ -67,57 +67,16 @@ print 'res', cohens_kappa(t9, weights=[0, 1, 2])
 #check max kappa, constructed by hand, same marginals
 table6a = np.array([[30, 30], [0, 40]])
 res = cohens_kappa(table6a)
-assert res[0] == res[1]
-print np.divide(*cohens_kappa(table6)[:2])
-print np.divide(*cohens_kappa(table6a)[:2])
+assert res.kappa == res.kappa_max
+#print np.divide(*cohens_kappa(table6)[:2])
+print res.kappa / res.kappa_max
 
-
-from scipy import stats
-delta = stats.norm.isf(0.025) * np.sqrt(res9[3])
-print res9[0] - delta, res9[0] + delta
-
-res9_sas = [0.3333, 0.0814, 0.1738, 0.4929]
-res9_ = res9[0], np.sqrt(res9[3]), res9[0] - delta, res9[0] + delta
-assert_almost_equal(res9_, res9_sas, decimal=4)
 
 table10 = [[0, 4, 1],
            [0, 8, 0],
            [0, 1, 5]]
 res10 = cohens_kappa(table10)
 print 'res10', res10
-print np.sqrt(res10[3])
-
-res10_sas = [0.4842, 0.1380, 0.2137, 0.7547]
-delta = stats.norm.isf(0.025) * np.sqrt(res10[3])
-print res10[0] - delta, res10[0] + delta
-res10_ = res10[0], np.sqrt(res10[3]), res10[0] - delta, res10[0] + delta
-assert_almost_equal(res10_, res10_sas, decimal=4)
-
-res10w = cohens_kappa(table10, weights=[0, 1, 2])
-res10w_sas = [0.4701, 0.1457, 0.1845, 0.7558]
-res10w_sash0 = [0.1426, 3.2971, 0.0005]  #for test H0:kappa=0
-delta = stats.norm.isf(0.025) * np.sqrt(res10w[3])
-print res10w[0] - delta, res10w[0] + delta
-res10w_ = res10w[0], np.sqrt(res10w[3]), res10w[0] - delta, res10w[0] + delta
-assert_almost_equal(res10w_, res10w_sas, decimal=4)
-#assert_almost_equal(???, res10w_sash0, decimal=4)
-print np.sqrt(res10w[3:5])
-
-zval = res10w[0]/np.sqrt(res10w[4])
-pval = stats.norm.sf(zval)
-pval_two_sided = pval * 2
-
-
-
-kappa, kappa_max, weights, var_kappa, var_kappa0, _ = res10
-k10 = KappaResults( kind='Simple',
-                    kappa=kappa,
-                    kappa_max=kappa_max,
-                    weights=weights,
-                    var_kappa=var_kappa,
-                    var_kappa0=var_kappa0
-                    )
-
 
 
 '''SAS result for table10
