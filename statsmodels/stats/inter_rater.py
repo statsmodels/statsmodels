@@ -139,9 +139,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         wt in ['quadratic', 'fc'] : use linear weights, Fleiss-Cohen
             actual weights are squared in the score "weights" difference
         wt = 'toeplitz' : weight matrix is constructed as a toeplitz matrix
-            from the one dimensional weights. (maximum weight in this case
-            should be less or equal to one)
-            TODO: test variance estimate for this case
+            from the one dimensional weights.
     return_results : bool
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
@@ -155,10 +153,17 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     Notes
     -----
-    There are two conflicting definitions of the weight matrix.
-    Wikipedia versus SAS manual.
+    There are two conflicting definitions of the weight matrix, Wikipedia
+    versus SAS manual. However, the computation are invariant to rescaling
+    of the weights matrix, so there is no difference in the results.
 
-    TODO: need more checks and consistency for weight options
+    Weights for 'linear' and 'quadratic' are interpreted as scores for the
+    categories, the weights in the computation are based on the pairwise
+    difference between the scores. Weights for 'toeplitz' are weights applied
+    to a linear distance. The linear distance only depends on how far apart
+    two levels are but not on the levels themselves.
+
+    TODO: need more checks for weight options
 
     References
     ----------
@@ -201,17 +206,19 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         kind = 'Weighted'
         weights = np.asarray(weights, float)
         if weights.ndim == 1:
-            if wt is 'ca':
+            if wt in ['ca', 'linear', None]:
                 weights = np.abs(weights[:, None] - weights) /  \
                            (weights[-1] - weights[0])
-            elif wt is 'fs':
+            elif wt in ['fc', 'quadratic']:
                 weights = (weights[:, None] - weights)**2 /  \
                            (weights[-1] - weights[0])**2
-            else:
+            elif wt == 'toeplitz':
                 #assume toeplitz structure
                 from scipy.linalg import toeplitz
                 #weights = toeplitz(np.arange(table.shape[0]))
                 weights = toeplitz(weights)
+            else:
+                raise ValueError('wt option is not known')
         else:
             rows, cols = table.shape
             if (table.shape != weights.shape):
@@ -222,7 +229,9 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         if return_results:
             var_kappa = np.nan
             var_kappa0 = np.nan
-            #switch to SAS manula weights, problem if user specifies weights
+            #switch to SAS manual weights, problem if user specifies weights
+            #w is negative in some examples,
+            #but weights is scale invariant in examples and rough check of source
             w = 1. - weights
             w_row = (freq_col * w).sum(1)
             w_col = (freq_row[:, None] * w).sum(0)
