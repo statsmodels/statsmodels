@@ -140,6 +140,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             actual weights are squared in the score "weights" difference
         wt = 'toeplitz' : weight matrix is constructed as a toeplitz matrix
             from the one dimensional weights.
+
     return_results : bool
         If True (default), then an instance of KappaResults is returned.
         If False, then only kappa is computed and returned.
@@ -159,11 +160,23 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
 
     Weights for 'linear' and 'quadratic' are interpreted as scores for the
     categories, the weights in the computation are based on the pairwise
-    difference between the scores. Weights for 'toeplitz' are weights applied
-    to a linear distance. The linear distance only depends on how far apart
-    two levels are but not on the levels themselves.
+    difference between the scores.
+    Weights for 'toeplitz' are a interpreted as weighted distance. The distance
+    only depends on how many levels apart two entries in the table are but
+    not on the levels themselves.
 
-    TODO: need more checks for weight options
+    example:
+
+    weights = '0, 1, 2, 3' and wt is either linear or toeplitz means that the
+    weighting only depends on the simple distance of levels.
+
+    weights = '0, 0, 1, 1' and wt = 'linear' means that the first two levels
+    are zero distance apart and the same for the last two levels. This is
+    the sampe as forming two aggregated levels by merging the first two and
+    the last two levels, respectively.
+
+    weights = [0, 1, 2, 3] and wt = 'quadratic' is the same as squaring these
+    weights and using wt = 'toeplitz'.
 
     References
     ----------
