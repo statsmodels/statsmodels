@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-"""inter rater agreement
+"""Inter Rater Agreement
+
+contains
+--------
+fleiss_kappa
+cohens_kappa
 
 Created on Thu Dec 06 22:57:56 2012
 Author: Josef Perktold
@@ -7,14 +12,28 @@ License: BSD-3
 
 References
 ----------
-Wikipedia
-SAS-Manual
+Wikipedia: kappa's initially based on these two pages
+    http://en.wikipedia.org/wiki/Fleiss%27_kappa
+    http://en.wikipedia.org/wiki/Cohen's_kappa
+SAS-Manual : formulas for cohens_kappa, especially variances
+see also R package irr, not looked at it yet except index
+
+TODO
+----
+other statistics and tests, in R package irr, SAS has more
+inconsistent naming, changed variable names as I added more functionality
+convenience functions to create required data format from raw data
 
 """
 
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+
+class Bunch(dict):
+    def __init__(self, **kw):
+        dict.__init__(self, kw)
+        self.__dict__  = self
 
 def int_ifclose(x, dec=1, width=4):
     '''helper function for creating result string for int or float
@@ -36,6 +55,7 @@ def int_ifclose(x, dec=1, width=4):
         x is converted to int if it is within 1e-14 of an integer
     x_string : str
         x formatted as string, either '%4d' or '%4.1f'
+
     '''
     xint = int(round(x))
     if np.max(np.abs(xint - x)) < 1e-14:
@@ -63,7 +83,7 @@ table1 = table0[:, 1:-1]
 
 
 def fleiss_kappa(table):
-    '''
+    '''Fleiss' kappa multi-rater agreement measure
 
     Parameters
     ----------
@@ -77,9 +97,10 @@ def fleiss_kappa(table):
 
     Notes
     -----
-
     coded from Wikipedia page
     http://en.wikipedia.org/wiki/Fleiss%27_kappa
+
+    no variance or tests yet
 
     '''
     n_sub, n_cat =  table.shape
@@ -100,7 +121,6 @@ def fleiss_kappa(table):
 
     kappa = (p_mean - p_mean_exp) / (1- p_mean_exp)
     return kappa
-
 
 
 def cohens_kappa(table, weights=None, return_var=True, wt=None):
@@ -134,13 +154,16 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
             from the one dimensional weights. (maximum weight in this case
             should be less or equal to one)
             TODO: test variance estimate for this case
+    return_kappa : bool
+        If False (default), then an instance of KappaResults is returned.
+        If True, then only kappa is computed and returned.
 
     Returns
     -------
     kappa or results
         TODO: change to this
-        If return_kappa is False (default), then a results instance is returned with all
-        statistics.
+        If return_kappa is False (default), then a results instance is returned
+        with all statistics.
         If return_kappa is true, then only kappa is calculated and returned.
 
     Notes
@@ -149,6 +172,11 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
     Wikipedia versus SAS manual.
 
     TODO: need more checks and consistency for weight options
+
+    References
+    ----------
+    Wikipedia
+    SAS Manual
 
     '''
     table = np.asarray(table, float) #avoid integer division
@@ -199,6 +227,7 @@ def cohens_kappa(table, weights=None, return_var=True, wt=None):
             rows, cols = table.shape
             if (table.shape != weights.shape):
                 raise ValueError('weights are not square')
+        #this is formula from Wikipedia
         kappa = 1 - (weights * table).sum() / nobs / (weights * prob_exp).sum()
         #TODO: add var_kappa for weighted version
         if return_var:
