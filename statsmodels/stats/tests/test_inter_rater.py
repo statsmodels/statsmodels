@@ -11,6 +11,9 @@ from numpy.testing import assert_almost_equal, assert_equal
 
 from statsmodels.stats.inter_rater import fleiss_kappa, cohens_kappa
 
+class Holder(object):
+    pass
+
 
 table0 = np.asarray('''\
 1 	0 	0 	0 	0 	14 	1.000
@@ -30,7 +33,7 @@ table10 = [[0, 4, 1],
            [0, 8, 0],
            [0, 1, 5]]
 
-#Fleiss 1971
+#Fleiss 1971, Fleiss has only the transformed table
 diagnoses = np.array( [[4, 4, 4, 4, 4, 4],
                        [2, 2, 2, 5, 5, 5],
                        [2, 3, 3, 3, 3, 5],
@@ -177,19 +180,101 @@ def test_cohenskappa_weights():
     assert_almost_equal(res1.kappa, res2.kappa, decimal=14)
     assert_almost_equal(res1.var_kappa, res2.var_kappa, decimal=14)
 
-    #anxiety = np.array([
-    #     3, 3, 3, 4, 5, 5, 2, 3, 5, 2, 2, 6, 1, 5, 2, 2, 1, 2, 4, 3, 3, 6, 4,
-    #     6, 2, 4, 2, 4, 3, 3, 2, 3, 3, 3, 2, 2, 1, 3, 3, 4, 2, 1, 4, 4, 3, 2,
-    #     1, 6, 1, 1, 1, 2, 3, 3, 1, 1, 3, 3, 2, 2
-    #    ]).reshape(20,3, order='F')
-    #anxiety_rownames = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', ]
-    #anxiety_colnames = ['rater1', 'rater2', 'rater3', ]
+anxiety = np.array([
+     3, 3, 3, 4, 5, 5, 2, 3, 5, 2, 2, 6, 1, 5, 2, 2, 1, 2, 4, 3, 3, 6, 4,
+     6, 2, 4, 2, 4, 3, 3, 2, 3, 3, 3, 2, 2, 1, 3, 3, 4, 2, 1, 4, 4, 3, 2,
+     1, 6, 1, 1, 1, 2, 3, 3, 1, 1, 3, 3, 2, 2
+    ]).reshape(20,3, order='F')
+anxiety_rownames = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', ]
+anxiety_colnames = ['rater1', 'rater2', 'rater3', ]
+
+
+def test_cohens_kappa_irr():
+
+    ck_w3 = Holder()
+    ck_w4 = Holder()
+
+    #>r = kappa2(anxiety[,1:2], c(0,0,0,1,1,1))
+    #> cat_items(r, pref="ck_w3.")
+    ck_w3.method = "Cohen's Kappa for 2 Raters (Weights: 0,0,0,1,1,1)"
+    ck_w3.irr_name = 'Kappa'
+    ck_w3.value = 0.1891892
+    ck_w3.stat_name = 'z'
+    ck_w3.statistic = 0.5079002
+    ck_w3.p_value = 0.6115233
+
+    #> r = kappa2(anxiety[,1:2], c(0,0,1,1,2,2))
+    #> cat_items(r, pref="ck_w4.")
+    ck_w4.method = "Cohen's Kappa for 2 Raters (Weights: 0,0,1,1,2,2)"
+    ck_w4.irr_name = 'Kappa'
+    ck_w4.value = 0.2820513
+    ck_w4.stat_name = 'z'
+    ck_w4.statistic = 1.257410
+    ck_w4.p_value = 0.2086053
+
+    ck_w1 = Holder()
+    ck_w2 = Holder()
+    ck_w3 = Holder()
+    ck_w4 = Holder()
+    #> r = kappa2(anxiety[,2:3])
+    #> cat_items(r, pref="ck_w1.")
+    ck_w1.method = "Cohen's Kappa for 2 Raters (Weights: unweighted)"
+    ck_w1.irr_name = 'Kappa'
+    ck_w1.value = -0.006289308
+    ck_w1.stat_name = 'z'
+    ck_w1.statistic = -0.0604067
+    ck_w1.p_value = 0.9518317
+
+    #> r = kappa2(anxiety[,2:3], "equal")
+    #> cat_items(r, pref="ck_w2.")
+    ck_w2.method = "Cohen's Kappa for 2 Raters (Weights: equal)"
+    ck_w2.irr_name = 'Kappa'
+    ck_w2.value = 0.1459075
+    ck_w2.stat_name = 'z'
+    ck_w2.statistic = 1.282472
+    ck_w2.p_value = 0.1996772
+
+    #> r = kappa2(anxiety[,2:3], "squared")
+    #> cat_items(r, pref="ck_w3.")
+    ck_w3.method = "Cohen's Kappa for 2 Raters (Weights: squared)"
+    ck_w3.irr_name = 'Kappa'
+    ck_w3.value = 0.2520325
+    ck_w3.stat_name = 'z'
+    ck_w3.statistic = 1.437451
+    ck_w3.p_value = 0.1505898
+
+    #> r = kappa2(anxiety[,2:3], c(0,0,1,1,2))
+    #> cat_items(r, pref="ck_w4.")
+    ck_w4.method = "Cohen's Kappa for 2 Raters (Weights: 0,0,1,1,2)"
+    ck_w4.irr_name = 'Kappa'
+    ck_w4.value = 0.2391304
+    ck_w4.stat_name = 'z'
+    ck_w4.statistic = 1.223734
+    ck_w4.p_value = 0.2210526
+
+    all_cases = [(ck_w1, None, None),
+                 (ck_w2, None, 'linear'),
+                 (ck_w2, np.arange(5), None),
+                 (ck_w2, np.arange(5), 'toeplitz'),
+                 (ck_w3, None, 'quadratic'),
+                 (ck_w3, np.arange(5)**2, 'toeplitz'),
+                 (ck_w3, 4*np.arange(5)**2, 'toeplitz'),
+                 (ck_w4, [0,0,1,1,2], 'toeplitz')]
+    #Note R drops the missing category level 4 and uses the reduced matrix
+    r = np.histogramdd(anxiety[:,1:], ([1, 2, 3, 4, 6, 7], [1, 2, 3, 4, 6, 7]))
+
+    for res2, w, wt in all_cases:
+        msg = repr(w) + repr(wt)
+        res1 = cohens_kappa(r[0], weights=w, wt=wt)
+        assert_almost_equal(res1.kappa, res2.value, decimal=6, err_msg=msg)
+        assert_almost_equal(res1.z_value, res2.statistic, decimal=5, err_msg=msg)
+        assert_almost_equal(res1.pvalue_two_sided, res2.p_value, decimal=6, err_msg=msg)
 
 
 
 
 if __name__ == '__main__':
     import nose
-#    nose.runmodule(argv=[__file__, '-vvs', '-x'#, '--pdb-failures'
-#                        ], exit=False)
+    nose.runmodule(argv=[__file__, '-vvs', '-x'#, '--pdb-failures'
+                        ], exit=False)
 

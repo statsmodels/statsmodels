@@ -216,6 +216,8 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             var_kappa0 =( agree_exp + agree_exp**2 - term_c.sum()) / (1 - agree_exp)**2 / nobs
 
     else:
+        if weights is None:
+            weights = np.arange(table.shape[0])
         #weights follows the Wikipedia definition, not the SAS, which is 1 -
         kind = 'Weighted'
         weights = np.asarray(weights, float)
