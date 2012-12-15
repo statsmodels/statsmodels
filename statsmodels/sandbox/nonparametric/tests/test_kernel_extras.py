@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.testing as npt
 
-from statsmodels.nonparametric.kernel_regression import SemiLinear
+from statsmodels.sandbox.nonparametric.kernel_extras import SemiLinear
 
 
 class MyTest(object):
