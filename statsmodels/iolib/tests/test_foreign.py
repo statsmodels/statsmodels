@@ -1,25 +1,28 @@
 """
 Tests for iolib/foreign.py
 """
-import sys
-from statsmodels.compatnp.py3k import BytesIO, asbytes
+import os
+import warnings
 from datetime import datetime
 
 from numpy.testing import *
 import numpy as np
+from pandas import DataFrame, isnull
+import pandas.util.testing as ptesting
+
+from statsmodels.compatnp.py3k import BytesIO, asbytes
 import statsmodels.api as sm
-import os
 from statsmodels.iolib.foreign import (StataWriter, genfromdta,
             _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)
 from statsmodels.datasets import macrodata
-from pandas import DataFrame, isnull
-import pandas.util.testing as ptesting
+
 
 # Test precisions
 DECIMAL_4 = 4
 DECIMAL_3 = 3
 
 curdir = os.path.dirname(os.path.abspath(__file__))
+
 
 def test_genfromdta():
     #Test genfromdta vs. results/macrodta.npy created with genfromtxt.
@@ -108,12 +111,17 @@ def test_genfromdta_datetime():
         (datetime(1959, 12, 31, 20, 3, 20), -1479590, datetime(1953, 10, 2),
             datetime(1948, 6, 10), datetime(1955, 1, 1), datetime(1955, 7, 1),
             datetime(1955, 1, 1), datetime(2, 1, 1))]
-    dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"))
+    with warnings.catch_warnings(record=True) as w:
+        dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"))
+        assert_(len(w) == 1)  # should get a warning for that format.
+
     assert_array_equal(dta[0].tolist(), results[0])
     assert_array_equal(dta[1].tolist(), results[1])
 
-    dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"),
-                    pandas=True)
+    with warnings.catch_warnings(record=True):
+        dta = genfromdta(os.path.join(curdir, "results/time_series_examples.dta"),
+                         pandas=True)
+
     assert_array_equal(dta.irow(0).tolist(), results[0])
     assert_array_equal(dta.irow(1).tolist(), results[1])
 
