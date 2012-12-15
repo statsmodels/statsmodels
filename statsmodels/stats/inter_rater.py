@@ -70,6 +70,114 @@ def int_ifclose(x, dec=1, width=4):
         return x, '%4.1f' % x
 
 
+def aggregate_raters(data, n_cat=None):
+    '''convert raw data with shape (subject, rater) to (subject, cat_counts)
+
+    brings data into correct format for fleiss_kappa
+
+    bincount will raise exception if data cannot be converted to integer.
+
+    Parameters
+    ----------
+    data : array_like, 2-Dim
+        data containing category assignment with subjects in rows and raters
+        in columns.
+    n_cat : None or int
+        If None, then the data is converted to integer categories,
+        0,1,2,...,n_cat-1. Because of the relabeling only category levels
+        with non-zero counts are included.
+        If this is an integer, then the category levels in the data are already
+        assumed to be in integers, 0,1,2,...,n_cat-1. In this case, the
+        returned array may contain columns with zero count, if no subject
+        has been categorized with this level.
+
+    Returns
+    -------
+    arr : nd_array, (n_rows, n_cat)
+        Contains counts of raters that assigned a category level to individuals.
+        Subjects are in rows, category levels in columns.
+
+
+    '''
+    data = np.asarray(data)
+    n_rows = data.shape[0]
+    if n_cat is None:
+        #I could add int conversion (reverse_index) to np.unique
+        cat_uni, cat_int = np.unique(data.ravel(), return_inverse=True)
+        n_cat = len(cat_uni)
+        data_ = cat_int.reshape(data.shape)
+    else:
+        cat_uni = np.arange(n_cat)  #for return only, assumed cat levels
+        data_ = data
+
+    tt = np.zeros((n_rows, n_cat), int)
+    for idx, row in enumerate(data_):
+        ro = np.bincount(row)
+        tt[idx, :len(ro)] = ro
+
+    return tt, cat_uni
+
+def to_table(data, bins=None):
+    '''convert raw data with shape (subject, rater) to (rater1, rater2)
+
+    brings data into correct format for cohens_kappa
+
+    Parameters
+    ----------
+    data : array_like, 2-Dim
+        data containing category assignment with subjects in rows and raters
+        in columns.
+    bins : None, int or tuple of array_like
+        If None, then the data is converted to integer categories,
+        0,1,2,...,n_cat-1. Because of the relabeling only category levels
+        with non-zero counts are included.
+        If this is an integer, then the category levels in the data are already
+        assumed to be in integers, 0,1,2,...,n_cat-1. In this case, the
+        returned array may contain columns with zero count, if no subject
+        has been categorized with this level.
+        If bins are a tuple of two array_like, then the bins are directly used
+        by ``numpy.histogramdd``. This is useful if we want to merge categories.
+
+    Returns
+    -------
+    arr : nd_array, (n_cat, n_cat)
+        Contingency table that contains counts of category level with rater1
+        in rows and rater2 in columns.
+
+    Notes
+    -----
+    no NaN handling, delete rows with missing values
+
+    This works also for more than two raters. In that case the dimension of
+    the resulting contingency table is the same as the number of raters
+    instead of 2-dimensional.
+
+    '''
+
+    data = np.asarray(data)
+    n_rows, n_cols = data.shape
+    if bins is None:
+        #I could add int conversion (reverse_index) to np.unique
+        cat_uni, cat_int = np.unique(data.ravel(), return_inverse=True)
+        n_cat = len(cat_uni)
+        data_ = cat_int.reshape(data.shape)
+        bins_ = np.arange(n_cat+1) - 0.5
+        #alternative implementation with double loop
+        #tt = np.asarray([[(x == [i,j]).all(1).sum() for j in cat_uni]
+        #                 for i in cat_uni] )
+        #other altervative: unique rows and bincount
+    elif np.isscalar(bins):
+        bins_ = np.arange(bins+1) - 0.5
+        data_ = data
+    else:
+        bins_ = bins
+        data_ = data
+
+
+    tt = np.histogramdd(data_, (bins_,)*n_cols)
+
+    return tt[0], bins_
+
 def fleiss_kappa(table):
     '''Fleiss' kappa multi-rater agreement measure
 

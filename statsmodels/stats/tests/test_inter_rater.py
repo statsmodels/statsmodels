@@ -9,7 +9,8 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
-from statsmodels.stats.inter_rater import fleiss_kappa, cohens_kappa
+from statsmodels.stats.inter_rater import (fleiss_kappa, cohens_kappa,
+                                           to_table, aggregate_raters)
 
 class Holder(object):
     pass
@@ -260,7 +261,8 @@ def test_cohens_kappa_irr():
                  (ck_w3, np.arange(5)**2, 'toeplitz'),
                  (ck_w3, 4*np.arange(5)**2, 'toeplitz'),
                  (ck_w4, [0,0,1,1,2], 'toeplitz')]
-    #Note R drops the missing category level 4 and uses the reduced matrix
+
+    #Note R:irr drops the missing category level 4 and uses the reduced matrix
     r = np.histogramdd(anxiety[:,1:], ([1, 2, 3, 4, 6, 7], [1, 2, 3, 4, 6, 7]))
 
     for res2, w, wt in all_cases:
@@ -271,6 +273,47 @@ def test_cohens_kappa_irr():
         assert_almost_equal(res1.pvalue_two_sided, res2.p_value, decimal=6, err_msg=msg)
 
 
+def test_fleiss_kappa_irr():
+    fleiss = Holder()
+    #> r = kappam.fleiss(diagnoses)
+    #> cat_items(r, pref="fleiss.")
+    fleiss.method = "Fleiss' Kappa for m Raters"
+    fleiss.irr_name = 'Kappa'
+    fleiss.value = 0.4302445
+    fleiss.stat_name = 'z'
+    fleiss.statistic = 17.65183
+    fleiss.p_value = 0
+    data_ = aggregate_raters(diagnoses)[0]
+    res1_kappa = fleiss_kappa(data_)
+    assert_almost_equal(res1_kappa, fleiss.value, decimal=7)
+
+def test_to_table():
+    data = diagnoses
+    res1 = to_table(data[:,:2]-1, 5)
+    res0 = np.asarray([[(data[:,:2]-1 == [i,j]).all(1).sum()
+                            for j in range(5)]
+                                for i in range(5)] )
+    assert_equal(res1[0], res0)
+
+    res2 = to_table(data[:,:2])
+    assert_equal(res2[0], res0)
+
+    bins = [0.5,  1.5,  2.5,  3.5,  4.5, 5.5]
+    res3 = to_table(data[:,:2], bins)
+    assert_equal(res3[0], res0)
+
+    #more than 2 columns
+    res4 = to_table(data[:,:3]-1, bins=[-0.5,  0.5,  1.5,  2.5,  3.5,  4.5])
+    res5 = to_table(data[:,:3]-1, bins=5)
+    assert_equal(res4[0].sum(-1), res0)
+    assert_equal(res5[0].sum(-1), res0)
+
+
+def test_aggregate_raters():
+    data = diagnoses
+    resf = aggregate_raters(data)
+    colsum = np.array([26, 26, 30, 55, 43])
+    assert_equal(resf[0].sum(0), colsum)
 
 
 if __name__ == '__main__':
