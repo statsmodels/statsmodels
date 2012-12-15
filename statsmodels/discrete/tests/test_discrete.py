@@ -543,12 +543,12 @@ class TestPoissonL1Compatability(CheckL1Compatability):
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
         cls.res_unreg = sm.Poisson(
-            rand_data.endog, exog_no_PSI).fit(method="newton")
+            rand_data.endog, exog_no_PSI).fit(method="newton", disp=False)
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
         alpha[:cls.m] = 0
         cls.res_reg = sm.Poisson(rand_data.endog, rand_exog).fit_regularized(
-            method='l1', alpha=alpha, disp=1, acc=1e-10, maxiter=2000,
+            method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
 
 
@@ -895,7 +895,7 @@ def test_perfect_prediction():
     assert_raises(PerfectSeparationError, mod.fit)
     #turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
-    mod.fit()  #should not raise
+    mod.fit(disp=False)  #should not raise
 
 def test_poisson_predict():
     #GH: 175, make sure poisson predict works without offset and exposure
