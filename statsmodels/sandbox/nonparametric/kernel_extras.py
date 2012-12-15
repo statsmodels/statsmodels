@@ -37,7 +37,7 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
-from statsmodels.nonparametric import KDEMultivariate, Reg
+from statsmodels.nonparametric.api import KDEMultivariate, KernelReg
 from statsmodels.nonparametric._kernel_base import \
     gpke, LeaveOneOut, _get_type_pos, _adjust_shape
 
@@ -149,7 +149,7 @@ class TestFForm(object):
         return T
 
 
-class SingleIndexModel(Reg):
+class SingleIndexModel(KernelReg):
     """
     Single index semiparametric model ``y = g(X * b) + e``.
 
@@ -256,7 +256,7 @@ class SingleIndexModel(Reg):
         return repr
 
 
-class SemiLinear(Reg):
+class SemiLinear(KernelReg):
     """
     Semiparametric partially linear model, ``Y = Xb + g(Z) + e``.
 
