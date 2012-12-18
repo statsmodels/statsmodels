@@ -678,9 +678,9 @@ class CountModel(DiscreteModel):
                 offset = 0
 
         if not linear:
-            return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
+            return np.exp(np.dot(exog, params[:exog.shape[1]]) + exposure + offset) # not cdf
         else:
-            return np.dot(exog, params) + exposure + offset
+            return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -1723,8 +1723,8 @@ class NegativeBinomial(CountModel):
         Fitted value :math:`\\mu`
         Heterogeneity parameter :math:`\\alpha`
         nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
-        nb1: Variance equal to :math:`\\mu + \\alpha\\mu` 
-        geometric: Variance equal to :math:`\\mu + \\mu^2` 
+        nb1: Variance equal to :math:`\\mu + \\alpha\\mu`
+        geometric: Variance equal to :math:`\\mu + \\mu^2`
 
     References
     ----------
@@ -1734,7 +1734,7 @@ class NegativeBinomial(CountModel):
     Greene, W. 2008. "Functional forms for the negtive binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
-    """ 
+    """
 
     def _check_inputs(self, offset, exposure):
         if offset is not None or exposure is not None:
@@ -1742,7 +1742,7 @@ class NegativeBinomial(CountModel):
 
     def _ll_nbin(self, params, lnalpha, Q=0):
         mu = np.exp(np.dot(self.exog, params))
-        size = np.exp(lnalpha)**-1 * mu**Q 
+        size = np.exp(lnalpha)**-1 * mu**Q
         prob = size/(size+mu)
         coeff = gammaln(size+self.endog) - gammaln(self.endog+1) - gammaln(size)
         llf = coeff + size*np.log(prob) + self.endog*np.log(1-prob)
@@ -1880,7 +1880,7 @@ class NegativeBinomial(CountModel):
             self.exog_names.append('lnalpha')
         self.method = ll
 
-    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
+    def fit(self, start_params=None, maxiter=35, method='newton', tol=1e-08,
             disp=1):
         if start_params == None:
             # Use poisson fit as first guess.
@@ -1891,7 +1891,7 @@ class NegativeBinomial(CountModel):
                 start_params = np.append(start_params, 0.1)
 
         mlefit = super(CountModel, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, tol=tol, disp=disp, 
+                maxiter=maxiter, method=method, tol=tol, disp=disp,
                 callback=lambda x:x) # TODO: Fix NBin _check_perfect_pred
         mlefit = CountResults(self, mlefit)
         return mlefit
