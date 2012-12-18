@@ -177,7 +177,7 @@ class Summary(object):
                     'align':align} 
         if index:
             settings['ncols'] += 1
-        self.tables.append(copy.deepcopy(df))
+        self.tables.append(df)
         self.settings.append(settings)
         
     def add_array(self, array, align='l', float_format="%.4f"):
@@ -373,4 +373,107 @@ def summary_params(results, alpha=.05):
                     '[' + str(alpha/2), str(1-alpha/2) + ']']
     data.index = results.model.exog_names
     return data
+
+
+'''Summary instance for multiple models
+'''
+
+def _col_params(result, float_format='%.4f', stars=True):
+    '''Stack coefficients and standard errors in single column
+    '''
+
+    # Extract parameters
+    res = summary_params(result)
+    # Format float
+    for col in res.columns[:2]:
+        res[col] = res[col].apply(lambda x: float_format % x)
+    # Std.Errors in parentheses
+    res.ix[:,1] = '(' + res.ix[:,1] + ')'
+    # Significance stars
+    if stars:
+        idx = res.ix[:,3] < .1
+        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
+        idx = res.ix[:,3] < .05
+        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
+        idx = res.ix[:,3] < .01
+        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
+    # Stack Coefs and Std.Errors
+    res = res.ix[:,:2]
+    res = res.stack()
+    res = pd.DataFrame(res)
+    return res
+
+def _col_info(result, info_dict=None):
+    '''Stack model info in a column
+    '''
+
+    if info_dict == None:
+        info_dict = {'N': lambda x: str(int(x.nobs)), 
+                    'AIC': lambda x: '%.3f' % x.aic, 
+                    'R2': lambda x: '%.3f' % x.rsquared}
+    out = []
+    for i in info_dict:
+        try:
+            out.append(info_dict[i](result))
+        except:
+            out.append('')
+    out = pd.DataFrame(out)
+    out.index = pd.Index(info_dict.keys())
+    return out
+
+def summary_col(results, float_format='%.4f', model_names=None, stars=True,
+        info_dict=None):
+    '''Add the contents of a Dict to summary table
+
+    Parameters
+    ----------
+    results : statsmodels results instance or list of result instances
+    float_format : string 
+        float format for coefficients and standard errors
+    model_names : list of strings of length len(results)
+    stars : bool
+        print significance stars 
+    info_dict : dict
+        dict of lambda functions to be applied to results instances to retrieve
+        model info 
+    '''
+
+    # Coerce to list if user feeds a results instance
+    if type(results) != list:
+        results = [results]
+    # Params as dataframe columns
+    cols = [_col_params(x, stars=stars, float_format=float_format) for x in results]
+    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
+    summ = reduce(merg, cols)
+    # Index
+    idx = summ.index.get_level_values(0)
+    idx[range(1,len(idx),2)] = ''
+    summ.index = pd.Index(idx)
+    # Header
+    if model_names == None:
+        header = []
+        try:
+            for r in results:
+                header.append(r.model.endog_names)
+        except:
+            i = 0
+            for r in results:
+                header.append('Model ' + i)
+                i += 1
+    else:
+        header = model_names
+    summ.columns = pd.Index(header)
+    summ = summ.fillna('')
+    # Info as dataframe columns
+    cols = [_col_info(x, info_dict) for x in results]
+    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
+    info = reduce(merg, cols)
+    # Summary
+    smry = Summary()
+    smry.add_df(summ, header=True, align='l')
+    smry.add_df(info, header=False, align='l')
+    smry.add_text('Standard errors in parentheses.')
+    if stars:
+        smry.add_text('* p<.1, ** p<.05, ***p<.01')
+    return smry
 
