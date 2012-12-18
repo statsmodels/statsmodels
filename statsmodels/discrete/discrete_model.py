@@ -683,10 +683,10 @@ class CountModel(DiscreteModel):
                 offset = 0
 
         if not linear:
-            return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
+            return np.exp(np.dot(exog, params[:exog.shape[1]]) + exposure + offset) # not cdf
         else:
-            return np.dot(exog, params) + exposure + offset
-            return super(CountModel, self).predict(params, exog, linear)
+            return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
+            return super(CountModel, self).predict(params[:exog.shape[1]], exog, linear)
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -1807,7 +1807,7 @@ class NegativeBinomial(CountModel):
             self.exog_names.append('lnalpha')
         self.method = ll
 
-    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
+    def fit(self, start_params=None, maxiter=35, method='newton', tol=1e-08,
             disp=1):
         if start_params == None:
             # Use poisson fit as first guess.
