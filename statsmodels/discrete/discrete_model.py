@@ -633,7 +633,7 @@ class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none'):
         self._check_inputs(offset, exposure, endog) # attaches if needed
         super(CountModel, self).__init__(endog, exog, missing=missing,
-                offset=self.offset, exposure=self.exposure)
+                offset=offset, exposure=exposure)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
@@ -1736,7 +1736,7 @@ class NegativeBinomial(CountModel):
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
     """
 
-    def _check_inputs(self, offset, exposure):
+    def _check_inputs(self, offset, exposure, endog):
         if offset is not None or exposure is not None:
             raise ValueError("offset and exposure not implemented yet")
 
@@ -1859,28 +1859,42 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime(params, self.loglikeobs)
         return sc
 
-    def __init__(self, endog, exog, ll='nb2', **kwargs):
+    def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None, **kwargs):
+        super(CountModel, self).__init__(endog, exog, **kwargs)
         self.ll = ll
-        if ll=='nb2':
+        self._initialize()
+        if ll in ['nb2', 'nb1']:
+            self.exog_names.append('lnalpha')
+
+    def _initialize(self):
+        if self.ll=='nb2':
             self.hessian = self._hessian_nb2
             self.score = self._score_nb2
             self.loglikeobs = self._ll_nb2
-        elif ll=='nb1':
+        elif self.ll=='nb1':
             self.hessian = self._hessian_approx
             self.score = self._score_approx
             self.loglikeobs = self._ll_nb1
-        elif ll=='geometric':
+        elif self.ll=='geometric':
             self.hessian = self._hessian_approx
             self.score = self._score_approx
             self.loglikeobs = self._ll_geometric
         else:
             raise NotImplementedError("Likelihood type must nb1, nb2 or geometric")
-        super(CountModel, self).__init__(endog, exog, **kwargs)
-        if ll in ['nb2', 'nb1']:
-            self.exog_names.append('lnalpha')
-        self.method = ll
 
-    def fit(self, start_params=None, maxiter=35, method='newton', tol=1e-08,
+    # Workaround to pickle instance methods
+    def __getstate__(self):
+        odict = self.__dict__.copy() # copy the dict since we change it
+        del odict['hessian']
+        del odict['score']
+        del odict['loglikeobs']
+        return odict
+
+    def __setstate__(self, indict):
+        self.__dict__.update(indict)
+        self._initialize()
+
+    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
             disp=1):
         if start_params == None:
             # Use poisson fit as first guess.
@@ -1889,11 +1903,11 @@ class NegativeBinomial(CountModel):
                 start_params = np.append(start_params, 0.1)
             elif self.ll == 'nb2':
                 start_params = np.append(start_params, 0.1)
-
-        mlefit = super(CountModel, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, tol=tol, disp=disp,
-                callback=lambda x:x) # TODO: Fix NBin _check_perfect_pred
-        mlefit = CountResults(self, mlefit)
+        mlefit = super(NegativeBinomial, self).fit(
+                        start_params=start_params, maxiter=maxiter,
+                        method=method, tol=tol, disp=disp,
+                        callback=lambda x:x)
+                        # TODO: Fix NBin _check_perfect_pred
         return mlefit
 
 ### Results Class ###
