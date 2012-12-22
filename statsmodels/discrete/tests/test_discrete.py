@@ -798,11 +798,25 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
     def test_jac(self):
         pass
 
-    def test_predict(self):
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse[:-1], self.res2.bse, DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params[:-1], self.res2.params, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int()[:-1,:], self.res2.conf_int, DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues, DECIMAL_2)
+
+    def no_info(self):
         pass
 
-    def test_predict_xb(self):
-        pass
+    test_bic = test_jac = test_df_model = test_predict = no_info
+    test_predict_xb = test_llf = test_llnull = test_llr = no_info
+    test_llr_pvalue = no_info
+
 
 class TestNegativeBinomialNB1BFGS(CheckModelResults):
     @classmethod
@@ -838,11 +852,21 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     def test_jac(self):
         pass
 
-    def test_predict(self):
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse[:-1], self.res2.bse[:-1], DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params[:-1], self.res2.params[:-1], DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.tvalues[:-1], self.res2.z[:-1], DECIMAL_1)
+
+    def no_info(self):
         pass
 
-    def test_predict_xb(self):
-        pass
+    test_bic = test_jac = test_df_model = test_predict = no_info
+    test_predict_xb = test_llf = test_llnull = test_llr = no_info
+    test_llr_pvalue = test_pvalues = test_aic = test_conf_int = test_dof = no_info
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
