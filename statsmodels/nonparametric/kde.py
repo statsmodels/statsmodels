@@ -271,7 +271,7 @@ class KDE(KDEUnivariate):
 def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
              adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
-    Rosenblatz-Parzen univariate kernel density estimator.
+    Rosenblatt-Parzen univariate kernel density estimator.
 
     Parameters
     ----------
@@ -377,7 +377,7 @@ def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
 def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
                 adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
-    Rosenblatz-Parzen univariate kernel desnity estimator
+    Rosenblatt-Parzen univariate kernel density estimator
 
     Parameters
     ----------

@@ -31,8 +31,6 @@ References
 # TODO: make default behavior efficient=True above a certain n_obs
 
 
-import copy
-
 import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
@@ -96,17 +94,17 @@ class TestFForm(object):
         b = self.estimator(Y, X)
         m = self.fform(X, b)
         n = np.shape(X)[0]
-        u = Y - m
-        u = u - np.mean(u)  # center residuals
-        self.test_stat = self._compute_test_stat(u)
+        resid = Y - m
+        resid = resid - np.mean(resid)  # center residuals
+        self.test_stat = self._compute_test_stat(resid)
         fct1 = (1 - 5**0.5) / 2.
         fct2 = (1 + 5**0.5) / 2.
-        u1 = fct1 * u
-        u2 = fct2 * u
+        u1 = fct1 * resid
+        u2 = fct2 * resid
         r = fct2 / (5 ** 0.5)
         I_dist = np.empty((self.nboot,1))
         for j in xrange(self.nboot):
-            u_boot = copy.deepcopy(u2)
+            u_boot = u2.copy()
 
             prob = np.random.uniform(0,1, size = (n,1))
             ind = prob < r

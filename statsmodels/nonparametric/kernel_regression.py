@@ -38,7 +38,8 @@ from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
 from _kernel_base import GenericKDE, EstimatorSettings, gpke, \
-    LeaveOneOut, _get_type_pos, _adjust_shape
+    LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR
+
 
 
 __all__ = ['KernelReg', 'KernelCensoredReg']
@@ -46,9 +47,12 @@ __all__ = ['KernelReg', 'KernelCensoredReg']
 
 class KernelReg(GenericKDE):
     """
-    Nonparametric Regression
+    Nonparametric kernel regression class.
 
-    Calculates the condtional mean ``E[y|X]`` where ``y = g(X) + e``.
+    Calculates the conditional mean ``E[y|X]`` where ``y = g(X) + e``.
+    Note that the "local constant" type of regression provided here is also
+    known as Nadaraya-Watson kernel regression; "local linear" is an extension
+    of that which suffers less from bias issues at the edge of the support.
 
     Parameters
     ----------
@@ -57,23 +61,22 @@ class KernelReg(GenericKDE):
     exog: list
         The training data for the independent variable(s)
         Each element in the list is a separate variable
-    dep_type: str
-        The type of the dependent variable(s)::
+    var_type: str
+        The type of the variables, one character per variable:
 
-            c: Continuous
-            u: Unordered (Discrete)
-            o: Ordered (Discrete)
+            - c: continuous
+            - u: unordered (discrete)
+            - o: ordered (discrete)
 
-    reg_type: str
-        Type of regression estimator
-        lc: Local Constant Estimator
-        ll: Local Linear Estimator
-    bw: array_like
+    reg_type: {'lc', 'll'}, optional
+        Type of regression estimator. 'lc' means local constant and
+        'll' local Linear estimator.  Default is 'll'
+    bw: str or array_like, optional
         Either a user-specified bandwidth or the method for bandwidth
-        selection.
-        cv_ls: cross-validaton least squares
-        aic: AIC Hurvich Estimator
-    defaults: EstimatorSettings instance
+        selection.  If a string, valid values are 'cv_ls' (least-squares
+        cross-validation) and 'aic' (AIC Hurvich bandwidth estimation).
+        Default is 'cv_ls'.
+    defaults: EstimatorSettings instance, optional
         The default values for the efficient bandwidth estimation.
 
     Attributes
@@ -83,29 +86,29 @@ class KernelReg(GenericKDE):
 
     Methods
     -------
-    r-squared(): Calculates the R-Squared for the model.
-    mean(): Calculates the conditional mean.
-    """
+    r-squared : calculates the R-Squared coefficient for the model.
+    fit : calculates the conditional mean and marginal effects.
 
-    def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',
+    """
+    def __init__(self, endog, exog, var_type, reg_type='ll', bw='cv_ls',
                  defaults=EstimatorSettings()):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
-        self.K = len(self.var_type)
+        self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
-        self.exog = _adjust_shape(exog, self.K)
+        self.exog = _adjust_shape(exog, self.k_vars)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
         self.est = dict(lc=self._est_loc_constant, ll=self._est_loc_linear)
         self._set_defaults(defaults)
         if not self.efficient:
-            self.bw = self.compute_reg_bw(bw)
+            self.bw = self._compute_reg_bw(bw)
         else:
             self.bw = self._compute_efficient(bw)
 
-    def compute_reg_bw(self, bw):
+    def _compute_reg_bw(self, bw):
         if not isinstance(bw, basestring):
             self._bw_method = "user-specified"
             return np.asarray(bw)
@@ -117,9 +120,10 @@ class KernelReg(GenericKDE):
             h0 = 1.06 * X * \
                  self.nobs ** (- 1. / (4 + np.size(self.exog, axis=1)))
 
-        func = self.est[self.reg_type]
-        return optimize.fmin(res, x0=h0, args=(func, ), maxiter=1e3,
-                             maxfun=1e3, disp=0)
+            func = self.est[self.reg_type]
+            bw_estimated = optimize.fmin(res, x0=h0, args=(func, ),
+                                         maxiter=1e3, maxfun=1e3, disp=0)
+            return bw_estimated
 
     def _est_loc_linear(self, bw, endog, exog, data_predict):
         """
@@ -145,33 +149,34 @@ class KernelReg(GenericKDE):
         -----
         See p. 81 in [1] and p.38 in [2] for the formulas.
         Unlike other methods, this one requires that `data_predict` be 1D.
+
         """
-        nobs, Qc = exog.shape
-        Ker = gpke(bw, data=exog, data_predict=data_predict,
+        nobs, k_vars = exog.shape
+        ker = gpke(bw, data=exog, data_predict=data_predict,
                    var_type=self.var_type,
                    #ukertype='aitchison_aitken_reg',
                    #okertype='wangryzin_reg',
                    tosum=False) / float(nobs)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
-        #ix_cont = np.arange(self.K)  # Use all vars instead of continuous only
+        #ix_cont = np.arange(self.k_vars)  # Use all vars instead of continuous only
         # Note: because ix_cont was defined here such that it selected all
         # columns, I removed the indexing with it from exog/data_predict.
 
-        # Convert Ker to a 2-D array to make matrix operations below work
-        Ker = Ker[:, np.newaxis]
+        # Convert ker to a 2-D array to make matrix operations below work
+        ker = ker[:, np.newaxis]
 
         M12 = exog - data_predict
-        M22 = np.dot(M12.T, M12 * Ker)
-        M12 = (M12 * Ker).sum(axis=0)
-        M = np.empty((Qc + 1, Qc + 1))
-        M[0, 0] = Ker.sum()
+        M22 = np.dot(M12.T, M12 * ker)
+        M12 = (M12 * ker).sum(axis=0)
+        M = np.empty((k_vars + 1, k_vars + 1))
+        M[0, 0] = ker.sum()
         M[0, 1:] = M12
         M[1:, 0] = M12
         M[1:, 1:] = M22
 
-        ker_endog = Ker * endog
-        V = np.empty((Qc + 1, 1))
+        ker_endog = ker * endog
+        V = np.empty((k_vars + 1, 1))
         V[0, 0] = ker_endog.sum()
         V[1:, 0] = ((exog - data_predict) * ker_endog).sum(axis=0)
 
@@ -187,42 +192,43 @@ class KernelReg(GenericKDE):
 
         Parameters
         ----------
-        bw: array_like
-            Vector of bandwidth value(s)
-        endog: 1D array_like
-            The dependent variable
-        exog: 1D or 2D array_like
-            The independent variable(s)
-        data_predict: 1D or 2D array_like
-            The point(s) at which
-            the density is estimated
+        bw : array_like
+            Array of bandwidth value(s).
+        endog : 1D array_like
+            The dependent variable.
+        exog : 1D or 2D array_like
+            The independent variable(s).
+        data_predict : 1D or 2D array_like
+            The point(s) at which the density is estimated.
 
         Returns
         -------
-        G: array_like
-            The value of the conditional mean at data_predict
+        G : ndarray
+            The value of the conditional mean at `data_predict`.
+        B_x : ndarray
+            The marginal effects.
 
         """
-        KX = gpke(bw, data=exog, data_predict=data_predict,
-                  var_type=self.var_type,
-                  #ukertype='aitchison_aitken_reg',
-                  #okertype='wangryzin_reg',
-                  tosum=False)
-        KX = np.reshape(KX, np.shape(endog))
-        G_numer = (KX * endog).sum(axis=0)
-        G_denom = KX.sum(axis=0)
+        ker_x = gpke(bw, data=exog, data_predict=data_predict,
+                     var_type=self.var_type,
+                     #ukertype='aitchison_aitken_reg',
+                     #okertype='wangryzin_reg',
+                     tosum=False)
+        ker_x = np.reshape(ker_x, np.shape(endog))
+        G_numer = (ker_x * endog).sum(axis=0)
+        G_denom = ker_x.sum(axis=0)
         G = G_numer / G_denom
-        nobs, K = exog.shape
+        nobs = exog.shape[0]
         f_x = G_denom / float(nobs)
-        KX_c = gpke(bw, data=exog, data_predict=data_predict,
-                    var_type=self.var_type,
-                    ckertype='d_gaussian',
-                    #okertype='wangryzin_reg',
-                    tosum=False)
+        ker_xc = gpke(bw, data=exog, data_predict=data_predict,
+                      var_type=self.var_type,
+                      ckertype='d_gaussian',
+                      #okertype='wangryzin_reg',
+                      tosum=False)
 
-        KX_c = KX_c[:, np.newaxis]
-        d_mx = -(endog * KX_c).sum(axis=0) / float(nobs) #* np.prod(bw[:, ix_cont]))
-        d_fx = -KX_c.sum(axis=0) / float(nobs) #* np.prod(bw[:, ix_cont]))
+        ker_xc = ker_xc[:, np.newaxis]
+        d_mx = -(endog * ker_xc).sum(axis=0) / float(nobs) #* np.prod(bw[:, ix_cont]))
+        d_fx = -ker_xc.sum(axis=0) / float(nobs) #* np.prod(bw[:, ix_cont]))
         B_x = d_mx / f_x - G * d_fx / f_x
         B_x = (G_numer * d_fx - G_denom * d_mx) / (G_denom**2)
         #B_x = (f_x * d_mx - m_x * d_fx) / (f_x ** 2)
@@ -230,16 +236,30 @@ class KernelReg(GenericKDE):
 
     def aic_hurvich(self, bw, func=None):
         """
-        Computes the AIC Hurvich criteria for the estimation of the bandwidth
+        Computes the AIC Hurvich criteria for the estimation of the bandwidth.
+
+        Parameters
+        ----------
+        bw : str or array_like
+            See the ``bw`` parameter of `KernelReg` for details.
+
+        Returns
+        -------
+        aic : ndarray
+            The AIC Hurvich criteria, one element for each variable.
+        func : None
+            Unused here, needed in signature because it's used in `cv_loo`.
+
         References
         ----------
-        See ch.2 in [1]
-        See p.35 in [2]
+        See ch.2 in [1] and p.35 in [2].
+
         """
         H = np.empty((self.nobs, self.nobs))
         for j in range(self.nobs):
             H[:, j] = gpke(bw, data=self.exog, data_predict=self.exog[j,:],
                            var_type=self.var_type, tosum=False)
+
         denom = H.sum(axis=1)
         H = H / denom
         gx = KernelReg(endog=self.endog, exog=self.exog, var_type=self.var_type,
@@ -254,7 +274,6 @@ class KernelReg(GenericKDE):
         #sigb = np.dot((I - H), self.endog)
         #sigma = np.dot(siga, sigb) / float(self.nobs)
         aic = np.log(sigma) + frac
-
         return aic
 
     def cv_loo(self, bw, func):
@@ -272,7 +291,7 @@ class KernelReg(GenericKDE):
         Returns
         -------
         L: float
-            The value of the CV function
+            The value of the CV function.
 
         Notes
         -----
@@ -301,18 +320,20 @@ class KernelReg(GenericKDE):
 
     def r_squared(self):
         """
-        Returns the R-Squared for the nonparametric regression
+        Returns the R-Squared for the nonparametric regression.
 
         Notes
         -----
         For more details see p.45 in [2]
         The R-Squared is calculated by:
+
         .. math:: R^{2}=\frac{\left[\sum_{i=1}^{n}
             (Y_{i}-\bar{y})(\hat{Y_{i}}-\bar{y}\right]^{2}}{\sum_{i=1}^{n}
-            (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}}
+            (Y_{i}-\bar{y})^{2}\sum_{i=1}^{n}(\hat{Y_{i}}-\bar{y})^{2}},
 
-        where :math:`\hat{Y_{i}}` are the fitted values calculated in
-        self.mean().
+        where :math:`\hat{Y_{i}}` is the mean calculated in `fit` at the exog
+        points.
+
         """
         Y = np.squeeze(self.endog)
         Yhat = self.fit()[0]
@@ -324,17 +345,31 @@ class KernelReg(GenericKDE):
 
     def fit(self, data_predict=None):
         """
-        Returns the marginal effects at the data_predict points
+        Returns the mean and marginal effects at the `data_predict` points.
+
+        Parameters
+        ----------
+        data_predict : array_like, optional
+            Points at which to return the mean and marginal effects.  If not
+            given, ``data_predict == exog``.
+
+        Returns
+        -------
+        mean : ndarray
+            The regression result for the mean (i.e. the actual curve).
+        mfx : ndarray
+            The marginal effects, i.e. the partial derivatives of the mean.
+
         """
         func = self.est[self.reg_type]
         if data_predict is None:
             data_predict = self.exog
         else:
-            data_predict = _adjust_shape(data_predict, self.K)
+            data_predict = _adjust_shape(data_predict, self.k_vars)
 
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
-        mfx = np.empty((N_data_predict, self.K))
+        mfx = np.empty((N_data_predict, self.k_vars))
         for i in xrange(N_data_predict):
             mean_mfx = func(self.bw, self.endog, self.exog,
                             data_predict=data_predict[i, :])
@@ -378,18 +413,18 @@ class KernelReg(GenericKDE):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "KernelReg instance\n"
-        repr += "Number of variables: K = " + str(self.K) + "\n"
-        repr += "Number of samples:   N = " + str(self.nobs) + "\n"
-        repr += "Variable types:      " + self.var_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        repr += "Estimator type: " + self.reg_type + "\n"
-        return repr
+        rpr = "KernelReg instance\n"
+        rpr += "Number of variables: k_vars = " + str(self.k_vars) + "\n"
+        rpr += "Number of samples:   N = " + str(self.nobs) + "\n"
+        rpr += "Variable types:      " + self.var_type + "\n"
+        rpr += "BW selection method: " + self._bw_method + "\n"
+        rpr += "Estimator type: " + self.reg_type + "\n"
+        return rpr
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset."""
         class_type = 'KernelReg'
-        class_vars = (self.var_type, self.K, self.reg_type)
+        class_vars = (self.var_type, self.k_vars, self.reg_type)
         return class_type, class_vars
 
     def _compute_dispersion(self, data):
@@ -405,12 +440,7 @@ class KernelReg(GenericKDE):
         a discussion on the measure of dispersion
         """
         data = data[:, 1:]
-
-        s1 = np.std(data, axis=0)
-        q75 = mquantiles(data, 0.75, axis=0).data[0]
-        q25 = mquantiles(data, 0.25, axis=0).data[0]
-        s2 = (q75 - q25) / 1.349
-        return np.minimum(s1, s2)
+        return _compute_min_std_IQR(data)
 
 
 class KernelCensoredReg(KernelReg):
@@ -455,18 +485,18 @@ class KernelCensoredReg(KernelReg):
 
     Methods
     -------
-    r-squared : Calculates the R-Squared coefficientfor the model.
-    mean : Calculates the conditional mean.
-    """
+    r-squared : calculates the R-Squared coefficient for the model.
+    fit : calculates the conditional mean and marginal effects.
 
+    """
     def __init__(self, endog, exog, var_type, reg_type, bw='cv_ls',
                  censor_val=0, defaults=EstimatorSettings()):
         self.var_type = var_type
         self.data_type = var_type
         self.reg_type = reg_type
-        self.K = len(self.var_type)
+        self.k_vars = len(self.var_type)
         self.endog = _adjust_shape(endog, 1)
-        self.exog = _adjust_shape(exog, self.K)
+        self.exog = _adjust_shape(exog, self.k_vars)
         self.data = np.column_stack((self.endog, self.exog))
         self.nobs = np.shape(self.exog)[0]
         self.bw_func = dict(cv_ls=self.cv_loo, aic=self.aic_hurvich)
@@ -479,7 +509,7 @@ class KernelCensoredReg(KernelReg):
             self.W_in = np.ones((self.nobs, 1))
 
         if not self.efficient:
-            self.bw = self.compute_reg_bw(bw)
+            self.bw = self._compute_reg_bw(bw)
         else:
             self.bw = self._compute_efficient(bw)
 
@@ -500,13 +530,13 @@ class KernelCensoredReg(KernelReg):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "KernelCensoredReg instance\n"
-        repr += "Number of variables: K = " + str(self.K) + "\n"
-        repr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
-        repr += "Variable types:      " + self.var_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        repr += "Estimator type: " + self.reg_type + "\n"
-        return repr
+        rpr = "KernelCensoredReg instance\n"
+        rpr += "Number of variables: k_vars = " + str(self.k_vars) + "\n"
+        rpr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
+        rpr += "Variable types:      " + self.var_type + "\n"
+        rpr += "BW selection method: " + self._bw_method + "\n"
+        rpr += "Estimator type: " + self.reg_type + "\n"
+        return rpr
 
     def _est_loc_linear(self, bw, endog, exog, data_predict, W):
         """
@@ -533,29 +563,30 @@ class KernelCensoredReg(KernelReg):
         -----
         See p. 81 in [1] and p.38 in [2] for the formulas
         Unlike other methods, this one requires that data_predict be 1D
+
         """
-        nobs, Qc = exog.shape
-        Ker = gpke(bw, data=exog, data_predict=data_predict,
+        nobs, k_vars = exog.shape
+        ker = gpke(bw, data=exog, data_predict=data_predict,
                    var_type=self.var_type,
                    ukertype='aitchison_aitken_reg',
                    okertype='wangryzin_reg', tosum=False)
         # Create the matrix on p.492 in [7], after the multiplication w/ K_h,ij
         # See also p. 38 in [2]
 
-        # Convert Ker to a 2-D array to make matrix operations below work
-        Ker = Ker[:, np.newaxis]
+        # Convert ker to a 2-D array to make matrix operations below work
+        ker = ker[:, np.newaxis]
 
         M12 = exog - data_predict
-        M22 = np.dot(M12.T, M12 * Ker)
-        M12 = (M12 * Ker).sum(axis=0)
-        M = np.empty((Qc + 1, Qc + 1))
-        M[0, 0] = Ker.sum()
+        M22 = np.dot(M12.T, M12 * ker)
+        M12 = (M12 * ker).sum(axis=0)
+        M = np.empty((k_vars + 1, k_vars + 1))
+        M[0, 0] = ker.sum()
         M[0, 1:] = M12
         M[1:, 0] = M12
         M[1:, 1:] = M22
 
-        ker_endog = Ker * endog
-        V = np.empty((Qc + 1, 1))
+        ker_endog = ker * endog
+        V = np.empty((k_vars + 1, 1))
         V[0, 0] = ker_endog.sum()
         V[1:, 0] = ((exog - data_predict) * ker_endog).sum(axis=0)
 
@@ -620,11 +651,11 @@ class KernelCensoredReg(KernelReg):
         if data_predict is None:
             data_predict = self.exog
         else:
-            data_predict = _adjust_shape(data_predict, self.K)
+            data_predict = _adjust_shape(data_predict, self.k_vars)
 
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
-        mfx = np.empty((N_data_predict, self.K))
+        mfx = np.empty((N_data_predict, self.k_vars))
         for i in xrange(N_data_predict):
             mean_mfx = func(self.bw, self.endog, self.exog,
                             data_predict=data_predict[i, :],
@@ -697,7 +728,7 @@ class TestRegCoefC(object):
         self.model = model
         self.bw = model.bw
         self.var_type = model.var_type
-        self.K = len(self.var_type)
+        self.k_vars = len(self.var_type)
         self.endog = model.endog
         self.exog = model.exog
         self.gx = model.est[model.reg_type]
@@ -725,7 +756,7 @@ class TestRegCoefC(object):
         """Computes only lambda -- the main part of the test statistic"""
         n = np.shape(X)[0]
         Y = _adjust_shape(Y, 1)
-        X = _adjust_shape(X, self.K)
+        X = _adjust_shape(X, self.k_vars)
         b = KernelReg(Y, X, self.var_type, self.model.reg_type, self.bw,
                         defaults = EstimatorSettings(efficient=False)).fit()[1]
 
@@ -748,7 +779,7 @@ class TestRegCoefC(object):
         for i in xrange(self.nres):
             ind = np.random.random_integers(0, n-1, size=(n,1))
             Y1 = Y[ind, 0]
-            X1 = X[ind, 0:]
+            X1 = X[ind, :]
             lam[i] = self._compute_lambda(Y1, X1)
 
         se_lambda = np.std(lam)

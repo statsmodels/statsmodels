@@ -60,13 +60,13 @@ class KDEMultivariate(GenericKDE):
     var_type: str
         The type of the variables:
 
-            c : Continuous
-            u : Unordered (Discrete)
-            o : Ordered (Discrete)
+            - c : continuous
+            - u : unordered (discrete)
+            - o : ordered (discrete)
 
         The string should contain a type specifier for each variable, so for
         example ``var_type='ccuo'``.
-    bw: array_like or str
+    bw: array_like or str, optional
         If an array, it is a fixed user-specified bandwidth.  If a string,
         should be one of:
 
@@ -74,8 +74,8 @@ class KDEMultivariate(GenericKDE):
             - cv_ml: cross validation maximum likelihood
             - cv_ls: cross validation least squares
 
-    defaults: Instance of class EstimatorSettings
-        The default values for the efficient bandwidth estimation
+    defaults: EstimatorSettings instance, optional
+        The default values for (efficient) bandwidth estimation.
 
     Attributes
     ----------
@@ -110,11 +110,11 @@ class KDEMultivariate(GenericKDE):
     """
     def __init__(self, data, var_type, bw=None, defaults=EstimatorSettings()):
         self.var_type = var_type
-        self.K = len(self.var_type)
-        self.data = _adjust_shape(data, self.K)
+        self.k_vars = len(self.var_type)
+        self.data = _adjust_shape(data, self.k_vars)
         self.data_type = var_type
-        self.nobs, self.K = np.shape(self.data)
-        if self.nobs <= self.K:
+        self.nobs, self.k_vars = np.shape(self.data)
+        if self.nobs <= self.k_vars:
             raise ValueError("The number of observations must be larger " \
                              "than the number of variables.")
 
@@ -126,12 +126,12 @@ class KDEMultivariate(GenericKDE):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "KDE instance\n"
-        repr += "Number of variables: K = " + str(self.K) + "\n"
-        repr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
-        repr += "Variable types:      " + self.var_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        return repr
+        rpr = "KDE instance\n"
+        rpr += "Number of variables: k_vars = " + str(self.k_vars) + "\n"
+        rpr += "Number of samples:   nobs = " + str(self.nobs) + "\n"
+        rpr += "Variable types:      " + self.var_type + "\n"
+        rpr += "BW selection method: " + self._bw_method + "\n"
+        return rpr
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
@@ -143,8 +143,9 @@ class KDEMultivariate(GenericKDE):
         ----------
         bw: array_like
             The value for the bandwidth parameter(s).
-        func: function
-            For the log likelihood should be ``numpy.log``.
+        func: callable, optional
+            Function to transform the likelihood values (before summing); for
+            the log likelihood, use ``func=np.log``.  Default is ``f(x) = x``.
 
         Notes
         -----
@@ -193,7 +194,7 @@ class KDEMultivariate(GenericKDE):
         if data_predict is None:
             data_predict = self.data
         else:
-            data_predict = _adjust_shape(data_predict, self.K)
+            data_predict = _adjust_shape(data_predict, self.k_vars)
 
         pdf_est = []
         for i in xrange(np.shape(data_predict)[0]):
@@ -232,11 +233,13 @@ class KDEMultivariate(GenericKDE):
 
         where G() is the product kernel CDF estimator for the continuous
         and L() for the discrete variables.
+
+        Used bandwidth is ``self.bw``.
         """
         if data_predict is None:
             data_predict = self.data
         else:
-            data_predict = _adjust_shape(data_predict, self.K)
+            data_predict = _adjust_shape(data_predict, self.k_vars)
 
         cdf_est = []
         for i in xrange(np.shape(data_predict)[0]):
@@ -313,13 +316,13 @@ class KDEMultivariate(GenericKDE):
 
             dens = Kval.prod(axis=1) / _bw_cont_product
             k_bar_sum = dens.sum(axis=0)
-            F += k_bar_sum
+            F += k_bar_sum  # sum of prod kernel over nobs
 
         kertypes = dict(c=kernels.gaussian,
                         o=kernels.wang_ryzin,
                         u=kernels.aitchison_aitken)
         LOO = LeaveOneOut(self.data)
-        L = 0
+        L = 0   # leave-one-out likelihood
         Kval = np.empty((data.shape[0]-1, data.shape[1]))
         for i, X_not_i in enumerate(LOO):
             for ii, vtype in enumerate(var_type):
@@ -329,6 +332,7 @@ class KDEMultivariate(GenericKDE):
             dens = Kval.prod(axis=1) / _bw_cont_product
             L += dens.sum(axis=0)
 
+        # CV objective function, eq. (2.4) of Ref. [3]
         return (F / nobs**2 - 2 * L / (nobs * (nobs - 1)))
 
     def _get_class_vars_type(self):
@@ -342,7 +346,7 @@ class KDEMultivariateConditional(GenericKDE):
     """
     Conditional multivariate kernel density estimator.
 
-    Calculates ``P(X_1,X_2,...X_n | Y_1,Y_2...Y_m) =
+    Calculates ``P(Y_1,Y_2,...Y_n | X_1,X_2...X_m) =
     P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)``.
     The conditional density is by definition the ratio of the two densities,
     see [1]_.
@@ -422,7 +426,7 @@ class KDEMultivariateConditional(GenericKDE):
         self.exog = _adjust_shape(exog, self.k_indep)
         self.nobs, self.k_dep = np.shape(self.endog)
         self.data = np.column_stack((self.endog, self.exog))
-        self.K = np.shape(self.data)[1]
+        self.k_vars = np.shape(self.data)[1]
         self._set_defaults(defaults)
         if not self.efficient:
             self.bw = self._compute_bw(bw)
@@ -431,28 +435,31 @@ class KDEMultivariateConditional(GenericKDE):
 
     def __repr__(self):
         """Provide something sane to print."""
-        repr = "KDEMultivariateConditional instance\n"
-        repr += "Number of independent variables: k_indep = " + \
-                str(self.k_indep) + "\n"
-        repr += "Number of dependent variables: k_dep = " + \
-                str(self.k_dep) + "\n"
-        repr += "Number of observations: nobs = " + str(self.nobs) + "\n"
-        repr += "Independent variable types:      " + self.indep_type + "\n"
-        repr += "Dependent variable types:      " + self.dep_type + "\n"
-        repr += "BW selection method: " + self._bw_method + "\n"
-        return repr
+        rpr = "KDEMultivariateConditional instance\n"
+        rpr += "Number of independent variables: k_indep = " + \
+               str(self.k_indep) + "\n"
+        rpr += "Number of dependent variables: k_dep = " + \
+               str(self.k_dep) + "\n"
+        rpr += "Number of observations: nobs = " + str(self.nobs) + "\n"
+        rpr += "Independent variable types:      " + self.indep_type + "\n"
+        rpr += "Dependent variable types:      " + self.dep_type + "\n"
+        rpr += "BW selection method: " + self._bw_method + "\n"
+        return rpr
 
     def loo_likelihood(self, bw, func=lambda x: x):
         """
-        Returns the leave-one-out function for the data.
+        Returns the leave-one-out conditional likelihood of the data.
+
+        If `func` is not equal to the default, what's calculated is a function
+        of the leave-one-out conditional likelihood.
 
         Parameters
         ----------
         bw: array_like
             The bandwidth parameter(s).
-        func: function f(x), optional
-            Should be ``np.log`` for the log likelihood.
-            Default is ``f(x) = x``.
+        func: callable, optional
+            Function to transform the likelihood values (before summing); for
+            the log likelihood, use ``func=np.log``.  Default is ``f(x) = x``.
 
         Returns
         -------
@@ -461,8 +468,8 @@ class KDEMultivariateConditional(GenericKDE):
 
         Notes
         -----
-        Similar to ``KDE.loo_likelihood`, but substitute
-        ``f(x|y)=f(x,y)/f(y)`` for f(x).
+        Similar to ``KDE.loo_likelihood`, but substitute ``f(y|x)=f(x,y)/f(y)``
+        for ``f(x)``.
         """
         yLOO = LeaveOneOut(self.data)
         xLOO = LeaveOneOut(self.exog).__iter__()
@@ -477,7 +484,7 @@ class KDEMultivariateConditional(GenericKDE):
             f_i = f_yx / f_x
             L += func(f_i)
 
-        return - L
+        return -L
 
     def pdf(self, endog_predict=None, exog_predict=None):
         """
