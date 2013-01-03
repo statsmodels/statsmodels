@@ -12,7 +12,7 @@ import numpy as np
 from scipy.linalg import lstsq
 
 
-def lowess(endog, exog, frac = 2./3, it = 3):
+def lowess(endog, exog, frac=2./3, it=3):
     """
     LOWESS (Locally Weighted Scatterplot Smoothing)
 
@@ -45,18 +45,18 @@ def lowess(endog, exog, frac = 2./3, it = 3):
     reference below using local linear estimates.
 
     Suppose the input data has N points. The algorithm works by
-    estimating the true y_i by taking the frac*N closest points
-    to (x_i,y_i) based on their x values and estimating y_i
-    using a weighted linear regression. The weight for (x_j,y_j)
-    is _lowess_tricube function applied to `|x_i-x_j|`.
+    estimating the true ``y_i`` by taking the frac*N closest points
+    to ``(x_i,y_i)`` based on their x values and estimating ``y_i``
+    using a weighted linear regression. The weight for ``(x_j,y_j)``
+    is `_lowess_tricube` function applied to ``|x_i-x_j|``.
 
-    If iter>0, then further weighted local linear regressions
+    If ``iter > 0``, then further weighted local linear regressions
     are performed, where the weights are the same as above
-    times the _lowess_bisquare function of the residuals. Each iteration
+    times the `_lowess_bisquare` function of the residuals. Each iteration
     takes approximately the same amount of time as the original fit,
     so these iterations are expensive. They are most useful when
     the noise has extremely heavy tails, such as Cauchy noise.
-    Noise with less heavy-tails, such as t-distributions with df>2,
+    Noise with less heavy-tails, such as t-distributions with ``df > 2``,
     are less problematic. The weights downgrade the influence of
     points with large residuals. In the extreme case, points whose
     residuals are larger than 6 times the median absolute residual
@@ -65,43 +65,35 @@ def lowess(endog, exog, frac = 2./3, it = 3):
     Some experimentation is likely required to find a good
     choice of frac and iter for a particular dataset.
 
-
     References
     ----------
     Cleveland, W.S. (1979) "Robust Locally Weighted Regression
     and Smoothing Scatterplots". Journal of the American Statistical
     Association 74 (368): 829-836.
 
-
     Examples
     --------
     The below allows a comparison between how different the fits from
-    lowess for different values of frac can be.
+    `lowess` for different values of frac can be.
 
     >>> import numpy as np
     >>> import statsmodels.api as sm
-    >>> from sm.nonparametric import lowess
-    >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)
+    >>> lowess = sm.nonparametric.lowess
+    >>> x = np.random.uniform(low=-2*np.pi, high=2*np.pi, size=500)
     >>> y = np.sin(x) + np.random.normal(size=len(x))
-    >>> z = lowess(y,x)
-    >>> w = lowess(y,x, frac=1./3)
+    >>> z = lowess(y, x)
+    >>> w = lowess(y, x, frac=1./3)
 
     This gives a similar comparison for when it is 0 vs not.
 
-    >>> import numpy as np
     >>> import scipy.stats as stats
-    >>> import statsmodels.api as sm
-    >>> from sm.nonparametric import lowess
-    >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)
+    >>> x = np.random.uniform(low=-2*np.pi, high=2*np.pi, size=500)
     >>> y = np.sin(x) + stats.cauchy.rvs(size=len(x))
-    >>> z = lowess(y,x, frac= 1./3, it=0)
-    >>> w = lowess(y,x, frac=1./3)
+    >>> z = lowess(y, x, frac= 1./3, it=0)
+    >>> w = lowess(y, x, frac=1./3)
 
     """
-
     x = exog
-    y = endog
-
 
     if exog.ndim != 1:
         raise ValueError('exog must be a vector')
@@ -123,7 +115,7 @@ def lowess(endog, exog, frac = 2./3, it = 3):
 
     for i in xrange(it):
         _lowess_robustify_fit(x_copy, y_copy, fitted,
-                                            weights, k, n)
+                              weights, k, n)
 
     out = np.array([x_copy, fitted]).T
     out.shape = (n,2)
@@ -212,7 +204,6 @@ def _lowess_wt_standardize(weights, new_entries, x_copy_i, width):
     weights /= width
 
 
-
 def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     """
     Additional weighted local linear regressions, performed if
@@ -241,7 +232,6 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     -------
     Nothing. The fitted values are modified in place.
 
-
     """
     nn_indices = [0,k]
     X = np.ones((k,2))
@@ -258,7 +248,6 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
 
 
     for i in xrange(n):
-
         total_weights = weights[i,:] * np.sqrt(residual_weights[nn_indices[0]:
                                                         nn_indices[1]])
 
@@ -271,9 +260,6 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
         fitted[i] = beta[0] + beta[1] * x_copy[i]
 
         _lowess_update_nn(x_copy, nn_indices, i+1)
-
-
-
 
 
 def _lowess_update_nn(x, cur_nn,i):
@@ -310,6 +296,7 @@ def _lowess_update_nn(x, cur_nn,i):
         else:
             break
 
+
 def _lowess_tricube(t):
     """
     The _tricube function applied to a numpy array.
@@ -332,6 +319,7 @@ def _lowess_tricube(t):
     t += 1
     _lowess_mycube(t)
 
+
 def _lowess_mycube(t):
     """
     Fast matrix cube
@@ -349,6 +337,7 @@ def _lowess_mycube(t):
     #t **= 3
     t2 = t*t
     t *= t2
+
 
 def _lowess_bisquare(t):
     """
@@ -370,12 +359,4 @@ def _lowess_bisquare(t):
     t[:] = np.negative(t) #, out=t)
     t += 1
     t *= t
-
-
-
-
-
-
-
-
 
