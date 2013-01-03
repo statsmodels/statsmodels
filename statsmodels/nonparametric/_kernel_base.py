@@ -32,6 +32,16 @@ kernel_func = dict(wangryzin=kernels.wang_ryzin,
                    d_gaussian=kernels.d_gaussian)
 
 
+def _compute_min_std_IQR(data):
+    """Compute minimum of std and IQR for each variable."""
+    s1 = np.std(data, axis=0)
+    q75 = mquantiles(data, 0.75, axis=0).data[0]
+    q25 = mquantiles(data, 0.25, axis=0).data[0]
+    s2 = (q75 - q25) / 1.349  # IQR
+    dispersion = np.minimum(s1, s2)
+    return dispersion
+
+
 def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
                     ix_unord, n_sub, class_vars, randomize, bound):
     """"Compute bw on subset of data.
@@ -63,26 +73,23 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
             indep_type, bw=bw, defaults=EstimatorSettings(efficient=False))
     elif class_type == 'KernelReg':
         from kernel_regression import KernelReg
-        var_type, K, reg_type = class_vars
+        var_type, k_vars, reg_type = class_vars
         endog = _adjust_shape(sub_data[:, 0], 1)
-        exog = _adjust_shape(sub_data[:, 1:], K)
+        exog = _adjust_shape(sub_data[:, 1:], k_vars)
         sub_model = KernelReg(endog=endog, exog=exog, reg_type=reg_type,
                               var_type=var_type, bw=bw,
                               defaults=EstimatorSettings(efficient=False))
     else:
-        raise ValueError("Don't know what I am; aborting.")
+        raise ValueError("class_type not recognized, should be one of " \
+                 "{KDEMultivariate, KDEMultivariateConditional, KernelReg}")
 
-    # Compute dispersion in next 7 lines
+    # Compute dispersion in next 4 lines
     if class_type == 'KernelReg':
         sub_data = sub_data[:, 1:]
 
-    s1 = np.std(sub_data, axis=0)
-    q75 = mquantiles(sub_data, 0.75, axis=0).data[0]
-    q25 = mquantiles(sub_data, 0.25, axis=0).data[0]
-    s2 = (q75 - q25) / 1.349  # IQR
-    s = np.minimum(s1, s2)
+    dispersion = _compute_min_std_IQR(sub_data)
 
-    fct = s * n_sub**(-1. / (n_cvars + co))
+    fct = dispersion * n_sub**(-1. / (n_cvars + co))
     fct[ix_unord] = n_sub**(-2. / (n_cvars + do))
     fct[ix_ord] = n_sub**(-2. / (n_cvars + do))
     sample_scale_sub = sub_model.bw / fct  #TODO: check if correct
@@ -147,11 +154,7 @@ class GenericKDE (object):
         In the notes on bwscaling option in npreg, npudens, npcdens there is
         a discussion on the measure of dispersion
         """
-        s1 = np.std(data, axis=0)
-        q75 = mquantiles(data, 0.75, axis=0).data[0]
-        q25 = mquantiles(data, 0.25, axis=0).data[0]
-        s2 = (q75 - q25) / 1.349
-        return np.minimum(s1, s2)
+        return _compute_min_std_IQR(data)
 
     def _get_class_vars_type(self):
         """Helper method to be able to pass needed vars to _compute_subset.
@@ -188,8 +191,8 @@ class GenericKDE (object):
                 bounds.append((nobs - nobs % n_sub, nobs))
 
         n_blocks = self.n_res if self.randomize else len(bounds)
-        sample_scale = np.empty((n_blocks, self.K))
-        only_bw = np.empty((n_blocks, self.K))
+        sample_scale = np.empty((n_blocks, self.k_vars))
+        only_bw = np.empty((n_blocks, self.k_vars))
 
         class_type, class_vars = self._get_class_vars_type()
         if has_joblib:
@@ -252,8 +255,8 @@ class GenericKDE (object):
 
     def _set_bw_bounds(self, bw):
         """
-        Sets bandwidth lower bound to zero and for discrete values upper bound
-        to 1.
+        Sets bandwidth lower bound to effectively zero )1e-10), and for
+        discrete values upper bound to 1.
         """
         bw[bw < 0] = 1e-10
         _, ix_ord, ix_unord = _get_type_pos(self.data_type)
@@ -335,7 +338,7 @@ class EstimatorSettings(object):
         If True, the bandwidth estimation is to be performed
         efficiently -- by taking smaller sub-samples and estimating
         the scaling factor of each subsample.  This is useful for large
-        samples (nobs >> 300) and/or multiple variables (K > 3).
+        samples (nobs >> 300) and/or multiple variables (k_vars > 3).
         If False (default), all data is used at the same time.
     randomize: bool, optional
         If True, the bandwidth estimation is to be performed by
@@ -406,7 +409,7 @@ class LeaveOneOut(object):
 
     def __iter__(self):
         X = self.X
-        nobs, K = np.shape(X)
+        nobs, k_vars = np.shape(X)
 
         for i in xrange(nobs):
             index = np.ones(nobs, dtype=np.bool)
@@ -421,22 +424,22 @@ def _get_type_pos(var_type):
     return ix_cont, ix_ord, ix_unord
 
 
-def _adjust_shape(dat, K):
-    """ Returns an array of shape (nobs, K) for use with `gpke`."""
+def _adjust_shape(dat, k_vars):
+    """ Returns an array of shape (nobs, k_vars) for use with `gpke`."""
     dat = np.asarray(dat)
     if dat.ndim > 2:
         dat = np.squeeze(dat)
-    if dat.ndim == 1 and K > 1:  # one obs many vars
+    if dat.ndim == 1 and k_vars > 1:  # one obs many vars
         nobs = 1
-    elif dat.ndim == 1 and K == 1:  # one obs one var
+    elif dat.ndim == 1 and k_vars == 1:  # one obs one var
         nobs = len(dat)
     else:
-        if np.shape(dat)[0] == K and np.shape(dat)[1] != K:
+        if np.shape(dat)[0] == k_vars and np.shape(dat)[1] != k_vars:
             dat = dat.T
 
         nobs = np.shape(dat)[0]  # ndim >1 so many obs many vars
 
-    dat = np.reshape(dat, (nobs, K))
+    dat = np.reshape(dat, (nobs, k_vars))
     return dat
 
 
