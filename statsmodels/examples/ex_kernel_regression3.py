@@ -16,7 +16,8 @@ if __name__ == '__main__':
     sig_fac = 1
     x = np.random.uniform(-2, 2, size=nobs)
     x.sort()
-    y_true = np.sin(x*5)/x + 2*x - 3 * x**2
+    x2 = x**2 + 0.02 * np.random.normal(size=nobs)
+    y_true = np.sin(x*5)/x + 2*x - 3 * x2
     y = y_true + sig_fac * (np.sqrt(np.abs(3+x))) * np.random.normal(size=nobs)
     cens_side = ['left', 'right', 'random'][2]
     if cens_side == 'left':
@@ -31,8 +32,8 @@ if __name__ == '__main__':
 
     model = nparam.KernelCensoredReg(endog=[y_cens],
                              #exog=[np.column_stack((x, x**2))], reg_type='lc',
-                             exog=[x, x**2], reg_type='ll',
-                             var_type='cc', bw='cv_ls', #[0.23, 434697.22], #'cv_ls',
+                             exog=[x, x2], reg_type='ll',
+                             var_type='cc', bw='aic', #'cv_ls', #[0.23, 434697.22], #'cv_ls',
                              censor_val=c_val[:,None],
                              #defaults=nparam.EstimatorSettings(efficient=True)
                              )
@@ -47,8 +48,9 @@ if __name__ == '__main__':
 #    mean1, mfx1 = model1.fit()
 
     model2 = nparam.KernelReg(endog=[y_cens],
-                             exog=[x, x**2], reg_type='ll',
-                             var_type='cc', bw='cv_ls')
+                             exog=[x, x2], reg_type='ll',
+                             var_type='cc', bw='aic',# 'cv_ls'
+                             )
 
     mean2, mfx2 = model2.fit()
 
@@ -59,6 +61,7 @@ if __name__ == '__main__':
     ix = np.argsort(y_cens)
     ix_rev = np.zeros(nobs, int)
     ix_rev[ix] = np.arange(nobs)
+    ix_rev = model.sortix_rev
 
     import matplotlib.pyplot as plt
     fig = plt.figure()
