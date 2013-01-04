@@ -7,89 +7,6 @@ from statsmodels.iolib.table import SimpleTable
 import StringIO
 import textwrap
 
-def _df_to_ascii(df, pad_sep=2, pad_index=0, header=False, index=False, 
-                 float_format='%.4f', align='l', **kwargs):
-    '''Convert a DataFrame to ASCII table
-
-    Parameters
-    ----------
-    df : DataFrame
-        Print df as ASCII table
-    pad_sep : int
-        Number of spaces in between columns
-    pad_index : int
-        Number of spaces after the first column 
-    header : bool
-        Reproduce the DataFrame header in ASCII Table?
-    index : bool
-        Reproduce the DataFrame row index in ASCII Table?
-    float_format : string
-        Float format
-    align : string: 
-        data alignment (l/c/r)
-
-    Returns
-    -------
-    ASCII table as string 
-    '''
-    # Format numbers where possible and convert to Numpy array (type str)
-    for col in df.columns:
-        try:
-            df[col] = [float_format % x for x in df[col]]
-        except:
-            pass
-        try:
-            df[col] = [x.lstrip().rstrip() for x in df[col]]
-        except:
-            pass
-    data = np.array(df)
-    # Headers and index
-    if header:
-        headers = map(str, df.columns)
-    else:
-        headers = None
-    if index:
-        # Pad right-side of index if necessary
-        try:
-            index = [str(x) + ' ' * pad_index for x in df.index]
-        except:
-            pass
-    else:
-        index=None
-        try:
-            # Pad right-side of first column if necessary
-            data[:,0] = [str(x) + ' ' * pad_index for x in data[:,0]]
-        except:
-            pass
-    # Numpy -> SimpleTable -> ASCII
-    st_fmt = {'fmt':'txt', 'title_align':'c', 'data_aligns':align, 
-              'table_dec_above':None, 'table_dec_below':None}
-    st_fmt['colsep'] = ' ' * pad_sep
-    ascii = SimpleTable(data, headers=headers, stubs=index, txt_fmt=st_fmt).as_text()
-    return ascii
-
-def _pad(tables, settings):
-    '''Compare width of ascii tables in a list and calculate padding values.
-    We add space to each col_sep to get us as close as possible to the
-    width of the largest table. Then, we add a few spaces to the first
-    column to pad the rest.
-    '''
-    tab = []
-    pad_index = []
-    pad_sep = []
-    for i in range(len(tables)):
-        tab.append(_df_to_ascii(tables[i], **settings[i]))
-    length = [len(x.splitlines()[0]) for x in tab]
-    len_max = max(length)
-    pad_sep = []
-    for i in range(len(tab)):
-        nsep = settings[i]['ncols'] - 1
-        pad = (len_max - length[i]) / nsep 
-        pad_sep.append(pad)
-        len_new = length[i] + nsep * pad
-        pad_index.append(len_max - len_new) 
-    return pad_sep, pad_index, max(length)
-
 class Summary(object):
     def __init__(self):
         self.tables = []
@@ -276,6 +193,92 @@ class Summary(object):
         out = '\\begin{table}\n' + '\n'.join(tables) + '\\end{table}\n'
         return out
 
+
+# ASCII table formatting
+def _df_to_ascii(df, pad_sep=2, pad_index=0, header=False, index=False, 
+                 float_format='%.4f', align='l', **kwargs):
+    '''Convert a DataFrame to ASCII table
+
+    Parameters
+    ----------
+    df : DataFrame
+        Print df as ASCII table
+    pad_sep : int
+        Number of spaces in between columns
+    pad_index : int
+        Number of spaces after the first column 
+    header : bool
+        Reproduce the DataFrame header in ASCII Table?
+    index : bool
+        Reproduce the DataFrame row index in ASCII Table?
+    float_format : string
+        Float format
+    align : string: 
+        data alignment (l/c/r)
+
+    Returns
+    -------
+    ASCII table as string 
+    '''
+    # Format numbers where possible and convert to Numpy array (type str)
+    for col in df.columns:
+        try:
+            df[col] = [float_format % x for x in df[col]]
+        except:
+            pass
+        try:
+            df[col] = [x.lstrip().rstrip() for x in df[col]]
+        except:
+            pass
+    data = np.array(df)
+    # Headers and index
+    if header:
+        headers = map(str, df.columns)
+    else:
+        headers = None
+    if index:
+        # Pad right-side of index if necessary
+        try:
+            index = [str(x) + ' ' * pad_index for x in df.index]
+        except:
+            pass
+    else:
+        index=None
+        try:
+            # Pad right-side of first column if necessary
+            data[:,0] = [str(x) + ' ' * pad_index for x in data[:,0]]
+        except:
+            pass
+    # Numpy -> SimpleTable -> ASCII
+    st_fmt = {'fmt':'txt', 'title_align':'c', 'data_aligns':align, 
+              'table_dec_above':None, 'table_dec_below':None}
+    st_fmt['colsep'] = ' ' * pad_sep
+    ascii = SimpleTable(data, headers=headers, stubs=index, txt_fmt=st_fmt).as_text()
+    return ascii
+
+def _pad(tables, settings):
+    '''Compare width of ascii tables in a list and calculate padding values.
+    We add space to each col_sep to get us as close as possible to the
+    width of the largest table. Then, we add a few spaces to the first
+    column to pad the rest.
+    '''
+    tab = []
+    pad_index = []
+    pad_sep = []
+    for i in range(len(tables)):
+        tab.append(_df_to_ascii(tables[i], **settings[i]))
+    length = [len(x.splitlines()[0]) for x in tab]
+    len_max = max(length)
+    pad_sep = []
+    for i in range(len(tab)):
+        nsep = settings[i]['ncols'] - 1
+        pad = (len_max - length[i]) / nsep 
+        pad_sep.append(pad)
+        len_new = length[i] + nsep * pad
+        pad_index.append(len_max - len_new) 
+    return pad_sep, pad_index, max(length)
+
+
 # Useful stuff
 _model_types = {'OLS' : 'Ordinary least squares',
                'GLS' : 'Generalized least squares',
@@ -353,9 +356,7 @@ def summary_params(results, alpha=.05):
     return data
 
 
-'''Summary instance for multiple models
-'''
-
+# Vertical summary instance for multiple models
 def _col_params(result, float_format='%.4f', stars=True):
     '''Stack coefficients and standard errors in single column
     '''
@@ -424,9 +425,11 @@ def summary_col(results, float_format='%.4f', model_names=None, stars=True,
     merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
     summ = reduce(merg, cols)
     # Index
-    idx = summ.index.get_level_values(0)
-    idx[range(1,len(idx),2)] = ''
-    summ.index = pd.Index(idx)
+    idx1 = summ.index.get_level_values(0).tolist()
+    idx2 = range(1,len(idx1),2)
+    for i in idx2:
+        idx1[i] = ''
+    summ.index = pd.Index(idx1)
     # Header
     if model_names == None:
         header = []
