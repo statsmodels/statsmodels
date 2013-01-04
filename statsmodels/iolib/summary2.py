@@ -7,36 +7,6 @@ from statsmodels.iolib.table import SimpleTable
 import StringIO
 import textwrap
 
-def _dict_to_array(d, ncols=2, float_format="%.4f"):
-    '''Convert a dict to DataFrame
-
-    Parameters
-    ----------
-    d : dict 
-        Strings or lambda functions which return strings when they are applied
-        to a results instance.
-    ncols : int
-        Split dict values in ncols columns 
-
-    Returns
-    -------
-    Numpy array with ncols * 2 columns (Values/Keys in separate columns)
-    '''
-    data = pd.DataFrame([d.keys(), d.values()]).T
-    for col in data.columns:
-        try:
-            data[col] = [float_format % x for x in data[col]]
-        except:
-            pass
-    if data.shape[0] % ncols != 0:
-        pad = ncols - (data.shape[0] % ncols)
-        data = np.vstack([data, np.array(pad * [['','']])])
-    else: 
-        data = np.array(data)
-    data = np.split(data, ncols)
-    data = reduce(lambda x,y: np.hstack([x,y]), data)
-    return data
-
 def _df_to_ascii(df, pad_sep=2, pad_index=0, header=False, index=False, 
                  float_format='%.4f', align='l', **kwargs):
     '''Convert a DataFrame to ASCII table
@@ -151,8 +121,16 @@ class Summary(object):
         align : string
             Data alignment (l/c/r)
         '''
-        table = _dict_to_array(d, ncols=ncols) 
-        self.add_array(table, align=align)
+
+        data = pd.DataFrame([d.keys(), d.values()]).T
+        if data.shape[0] % ncols != 0:
+            pad = ncols - (data.shape[0] % ncols)
+            data = np.vstack([data, np.array(pad * [['','']])])
+        else: 
+            data = np.array(data)
+        data = np.split(data, ncols)
+        data = reduce(lambda x,y: np.hstack([x,y]), data)
+        self.add_array(data, align=align)
 
     def add_df(self, df, index=True, header=True, float_format='%.4f', 
                align='r'):
@@ -205,7 +183,7 @@ class Summary(object):
         '''
         self.extra_txt.append(string)
 
-    def add_title(self, results=None, title=None):
+    def add_title(self, title=None, results=None):
         '''Insert a title on top of the summary table. If a string is provided
         in the title argument, that string is printed. If no title string is
         provided but a results instance is provided, statsmodels attempts
@@ -476,4 +454,3 @@ def summary_col(results, float_format='%.4f', model_names=None, stars=True,
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
     return smry
-
