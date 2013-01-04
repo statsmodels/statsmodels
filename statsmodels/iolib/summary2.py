@@ -24,6 +24,47 @@ class Summary(object):
         '''Display as HTML in IPython notebook.'''
         return self.as_html()
 
+    def add_df(self, df, index=True, header=True, float_format='%.4f', 
+               align='r'):
+        '''Add the contents of a DataFrame to summary table
+
+        Parameters
+        ----------
+        df : DataFrame
+        header: bool 
+            Reproduce the DataFrame column labels in summary table
+        index: bool 
+            Reproduce the DataFrame row labels in summary table
+        float_format: string
+            Formatting to float data columns
+        align : string 
+            Data alignment (l/c/r)
+        '''
+
+        settings = {'ncols':df.shape[1], 
+                    'index':index, 'header':header, 'float_format':float_format, 
+                    'align':align} 
+        if index:
+            settings['ncols'] += 1
+        self.tables.append(df)
+        self.settings.append(settings)
+
+    def add_array(self, array, align='l', float_format="%.4f"):
+        '''Add the contents of a Numpy array to summary table
+
+        Parameters
+        ----------
+        array : numpy array (2D)
+        float_format: string
+            Formatting to array if type is float
+        align : string 
+            Data alignment (l/c/r)
+        '''
+
+        table = pd.DataFrame(array)
+        self.add_df(table, index=False, header=False,
+                float_format=float_format, align=align)
+
     def add_dict(self, d, ncols=2, align='l'):
         '''Add the contents of a Dict to summary table
 
@@ -48,51 +89,6 @@ class Summary(object):
         data = np.split(data, ncols)
         data = reduce(lambda x,y: np.hstack([x,y]), data)
         self.add_array(data, align=align)
-
-    def add_df(self, df, index=True, header=True, float_format='%.4f', 
-               align='r'):
-        '''Add the contents of a DataFrame to summary table
-
-        Parameters
-        ----------
-        df : DataFrame
-        header: bool 
-            Reproduce the DataFrame column labels in summary table
-        index: bool 
-            Reproduce the DataFrame row labels in summary table
-        float_format: string
-            Formatting to float data columns
-        align : string 
-            Data alignment (l/c/r)
-        '''
-
-        # TODO: Does this need a deep copy7
-        settings = {'ncols':df.shape[1], 
-                    'index':index, 'header':header, 'float_format':float_format, 
-                    'align':align} 
-        if index:
-            settings['ncols'] += 1
-        self.tables.append(df)
-        self.settings.append(settings)
-        
-    def add_array(self, array, align='l', float_format="%.4f"):
-        '''Add the contents of a Numpy array to summary table
-
-        Parameters
-        ----------
-        array : numpy array (2D)
-        float_format: string
-            Formatting to array if type is float
-        align : string 
-            Data alignment (l/c/r)
-        '''
-
-        table = pd.DataFrame(array)
-        settings = {'ncols':table.shape[1], 
-                    'index':False, 'header':False, 
-                    'float_format':float_format, 'align':align}
-        self.tables.append(table)
-        self.settings.append(settings)
 
     def add_text(self, string):
         '''Append a note to the bottom of the summary table. In ASCII tables,
