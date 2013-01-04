@@ -42,8 +42,8 @@ class Summary(object):
         '''
 
         settings = {'ncols':df.shape[1], 
-                    'index':index, 'header':header, 'float_format':float_format, 
-                    'align':align} 
+                    'index':index, 'header':header, 
+                    'float_format':float_format, 'align':align}
         if index:
             settings['ncols'] += 1
         self.tables.append(df)
@@ -71,21 +71,22 @@ class Summary(object):
         Parameters
         ----------
         d : dict
-            Values must be character string or lambda functions
-            that produce character strings when they are applied to the Results
-            instance object.
+            Keys and values are automatically coerced to strings with str().
+            Users are encouraged to format them before using add_dict.
         ncols: int
             Number of columns of the output table
         align : string
             Data alignment (l/c/r)
         '''
 
-        data = pd.DataFrame([d.keys(), d.values()]).T
+        key = map(str, d.keys())
+        val = map(str, d.values())
+        data = np.array([key, val]).T
+        # Pad if necessary to fill columns
         if data.shape[0] % ncols != 0:
             pad = ncols - (data.shape[0] % ncols)
             data = np.vstack([data, np.array(pad * [['','']])])
-        else: 
-            data = np.array(data)
+        # Split and join as multi-columns
         data = np.split(data, ncols)
         data = reduce(lambda x,y: np.hstack([x,y]), data)
         self.add_array(data, align=align)
