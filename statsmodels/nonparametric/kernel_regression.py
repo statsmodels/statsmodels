@@ -574,7 +574,7 @@ class KernelCensoredReg(KernelReg):
         # See also p. 38 in [2]
 
         # Convert ker to a 2-D array to make matrix operations below work
-        ker = ker[:, np.newaxis]
+        ker = W * ker[:, np.newaxis]
 
         M12 = exog - data_predict
         M22 = np.dot(M12.T, M12 * ker)
