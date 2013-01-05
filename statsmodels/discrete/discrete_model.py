@@ -2088,7 +2088,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
         """
         # Summary
-        from statsmodels.iolib.summary2 import Summary
+        from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_base(results=self, alpha=alpha, float_format=float_format,
                 xname=xname, yname=yname, title=title) 

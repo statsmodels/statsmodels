@@ -52,8 +52,8 @@ if __name__ == '__main__':
     r_summary = str(results.summary())
     print r_summary
 
-    #print results.summary2(return_fmt='latex')
-    #print results.summary2(return_fmt='csv')
+    #print results.summary(return_fmt='latex')
+    #print results.summary(return_fmt='csv')
 
     smry = olsres.summary()
     print smry.as_csv()

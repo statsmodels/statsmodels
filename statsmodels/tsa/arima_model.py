@@ -1380,7 +1380,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         data.index = stubs
         
         # Summary
-        from statsmodels.iolib.summary2 import (Summary, summary_params,
+        from statsmodels.iolib.summary import (Summary, summary_params,
                                                summary_model)
         smry = Summary()
 
