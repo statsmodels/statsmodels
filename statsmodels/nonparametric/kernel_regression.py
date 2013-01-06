@@ -517,6 +517,9 @@ class KernelCensoredReg(KernelReg):
         # see pp. 341-344 in [1]
         self.d = (self.endog != censor_val) * 1.
         ix = np.argsort(np.squeeze(self.endog))
+        self.sortix = ix
+        self.sortix_rev = np.zeros(ix.shape, int)
+        self.sortix_rev[ix] = np.arange(len(ix))
         self.endog = np.squeeze(self.endog[ix])
         self.endog = _adjust_shape(self.endog, 1)
         self.exog = np.squeeze(self.exog[ix])
