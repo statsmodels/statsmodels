@@ -8,8 +8,7 @@ Author: Josef Perktold
 
 import numpy as np
 
-
-
+## Functions
 
 def fg1(x):
     '''Fan and Gijbels example function 1
@@ -34,14 +33,8 @@ def func1(x):
 
     '''
     return np.sin(x * 5) / x + 2. * x - 1. * x**2
-    '''
-    sig_fac = 1
-    x = np.random.uniform(-2, 2, size=nobs)
-    x.sort()
-    x2 = x**2 + 0.02 * np.random.normal(size=nobs)
-    y_true = np.sin(x*5)/x + 2*x - 3 * x2
-    y = y_true + sig_fac * (np.sqrt(np.abs(3+x))) * np.random.normal(size=nobs)
-    '''
+
+## Classes with Data Generating Processes
 
 doc = {'description':
 '''Base Class for Univariate non-linear example
@@ -51,7 +44,7 @@ doc = {'description':
 ''',
 'ref': ''}
 
-class _UnivariateFanGijbels(object):
+class _UnivariateFunction(object):
     #Base Class for Univariate non-linear example.
     #Does not work on it's own. needs additionally at least self.func
     __doc__ = '''%(description)s
@@ -151,8 +144,8 @@ The Annals of Statistics 20 (4) (December): 2008-2036. doi:10.2307/2242378.
 
 '''}
 
-class UnivariateFanGijbels1(_UnivariateFanGijbels):
-    __doc__ = _UnivariateFanGijbels.__doc__ % doc
+class UnivariateFanGijbels1(_UnivariateFunction):
+    __doc__ = _UnivariateFunction.__doc__ % doc
 
 
     def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
@@ -169,8 +162,8 @@ doc['description'] =\
 sin plus a hump
 '''
 
-class UnivariateFanGijbels2(_UnivariateFanGijbels):
-    __doc__ = _UnivariateFanGijbels.__doc__ % doc
+class UnivariateFanGijbels2(_UnivariateFunction):
+    __doc__ = _UnivariateFunction.__doc__ % doc
 
     def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
         self.s_x = 1.
@@ -180,7 +173,7 @@ class UnivariateFanGijbels2(_UnivariateFanGijbels):
                                              distr_x=distr_x,
                                              distr_noise=distr_noise)
 
-class UnivariateFanGijbels1EU(_UnivariateFanGijbels):
+class UnivariateFanGijbels1EU(_UnivariateFunction):
     '''
 
     Eubank p.179f
@@ -196,7 +189,7 @@ class UnivariateFanGijbels1EU(_UnivariateFanGijbels):
                                              distr_x=distr_x,
                                              distr_noise=distr_noise)
 
-class UnivariateFunc1(_UnivariateFanGijbels):
+class UnivariateFunc1(_UnivariateFunction):
     '''
 
     made up, with sin and quadratic trend

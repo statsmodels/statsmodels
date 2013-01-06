@@ -8,11 +8,16 @@ Author: Josef Perktold
 
 if __name__ == '__main__':
 
+    import numpy as np
+    import matplotlib.pyplot as plt
     from statsmodels.nonparametric.api import KernelReg
     import statsmodels.nonparametric.dgp_examples as dgp
-    import matplotlib.pyplot as plt
 
-    from scipy import stats
+
+    seed = np.random.randint(999999)
+    seed = 430973
+    print seed
+    np.random.seed(seed)
 
     funcs = [dgp.UnivariateFanGijbels1(),
              dgp.UnivariateFanGijbels2(),
