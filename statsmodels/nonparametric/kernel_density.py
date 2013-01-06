@@ -82,13 +82,6 @@ class KDEMultivariate(GenericKDE):
     bw: array_like
         The bandwidth parameters.
 
-    Methods
-    -------
-    pdf : the probability density function
-    cdf : the cumulative distribution function
-    imse : the integrated mean square error
-    loo_likelihood : the leave one out likelihood
-
     See Also
     --------
     KDEMultivariateConditional
@@ -134,7 +127,7 @@ class KDEMultivariate(GenericKDE):
         return rpr
 
     def loo_likelihood(self, bw, func=lambda x: x):
-        """
+        r"""
         Returns the leave-one-out likelihood function.
 
         The leave-one-out likelihood function for the unconditional KDE.
@@ -170,7 +163,7 @@ class KDEMultivariate(GenericKDE):
         return -L
 
     def pdf(self, data_predict=None):
-        """
+        r"""
         Evaluate the probability density function.
 
         Parameters
@@ -206,7 +199,7 @@ class KDEMultivariate(GenericKDE):
         return pdf_est
 
     def cdf(self, data_predict=None):
-        """
+        r"""
         Evaluate the cumulative distribution function.
 
         Parameters
@@ -254,7 +247,7 @@ class KDEMultivariate(GenericKDE):
         return cdf_est
 
     def imse(self, bw):
-        """
+        r"""
         Returns the Integrated Mean Square Error for the unconditional KDE.
 
         Parameters
@@ -387,13 +380,6 @@ class KDEMultivariateConditional(GenericKDE):
     bw: array_like
         The bandwidth parameters
 
-    Methods
-    -------
-    pdf : the probability density function
-    cdf : the cumulative distribution function
-    imse : the integrated mean square error
-    loo_likelihood : the leave one out likelihood
-
     See Also
     --------
     KDEMultivariate
@@ -487,7 +473,7 @@ class KDEMultivariateConditional(GenericKDE):
         return -L
 
     def pdf(self, endog_predict=None, exog_predict=None):
-        """
+        r"""
         Evaluate the probability density function.
 
         Parameters
@@ -539,7 +525,7 @@ class KDEMultivariateConditional(GenericKDE):
         return np.squeeze(pdf_est)
 
     def cdf(self, endog_predict=None, exog_predict=None):
-        """
+        r"""
         Cumulative distribution function for the conditional density.
 
         Parameters
@@ -602,7 +588,7 @@ class KDEMultivariateConditional(GenericKDE):
         return cdf_est
 
     def imse(self, bw):
-        """
+        r"""
         The integrated mean square error for the conditional KDE.
 
         Parameters

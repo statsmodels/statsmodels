@@ -90,3 +90,8 @@ helper functions for kernel bandwidths
    bandwidths.bw_silverman
    bandwidths.select_bandwidth
 
+There are some examples for nonlinear functions in
+:mod:`statsmodels.nonparametric.dgp_examples`
+
+The sandbox.nonparametric contains additional insufficiently tested classes
+for testing functional form and for semi-linear and single index models.
