@@ -29,6 +29,20 @@ def fg2(x):
     '''
     return np.sin(2 * x) + 2 * np.exp(-16 * x**2)
 
+def func1(x):
+    '''made up example with sin, square
+
+    '''
+    return np.sin(x * 5) / x + 2. * x - 1. * x**2
+    '''
+    sig_fac = 1
+    x = np.random.uniform(-2, 2, size=nobs)
+    x.sort()
+    x2 = x**2 + 0.02 * np.random.normal(size=nobs)
+    y_true = np.sin(x*5)/x + 2*x - 3 * x2
+    y = y_true + sig_fac * (np.sqrt(np.abs(3+x))) * np.random.normal(size=nobs)
+    '''
+
 doc = {'description':
 '''Base Class for Univariate non-linear example
 
@@ -38,6 +52,8 @@ doc = {'description':
 'ref': ''}
 
 class _UnivariateFanGijbels(object):
+    #Base Class for Univariate non-linear example.
+    #Does not work on it's own. needs additionally at least self.func
     __doc__ = '''%(description)s
 
     Parameters
@@ -82,6 +98,9 @@ class _UnivariateFanGijbels(object):
         else:
             noise = distr_noise.rvs(size=nobs)
 
+        if hasattr(self, 'het_scale'):
+            noise *= self.het_scale(self.x)
+
         #self.func = fg1
         self.y_true = y_true = self.func(x)
         self.y = y_true + noise
@@ -93,7 +112,7 @@ class _UnivariateFanGijbels(object):
         Parameters
         ----------
         scatter: bool
-            add scatterpoints of sample to plot
+            If true, then add scatterpoints of sample to plot.
         ax : None or matplotlib axis instance
             If None, then a matplotlib.pyplot figure is created, otherwise
             the given axis, ax, is used.
@@ -168,10 +187,30 @@ class UnivariateFanGijbels1EU(_UnivariateFanGijbels):
     '''
 
     def __init__(self, nobs=50, x=None, distr_x=None, distr_noise=None):
-        from scipy import stats
-        distr_x = stats.uniform
+        if distr_x is None:
+            from scipy import stats
+            distr_x = stats.uniform
         self.s_noise = 0.15
         self.func = fg1eu
         super(self.__class__, self).__init__(nobs=nobs, x=x,
-                                                   distr_x=distr_x,
-                                                   distr_noise=distr_noise)
+                                             distr_x=distr_x,
+                                             distr_noise=distr_noise)
+
+class UnivariateFunc1(_UnivariateFanGijbels):
+    '''
+
+    made up, with sin and quadratic trend
+    '''
+
+    def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
+        if x is None and distr_x is None:
+            from scipy import stats
+            distr_x = stats.uniform(-2, 4)
+        self.s_noise = 2.
+        self.func = func1
+        super(self.__class__, self).__init__(nobs=nobs, x=x,
+                                             distr_x=distr_x,
+                                             distr_noise=distr_noise)
+
+    def het_scale(self, x):
+        return np.sqrt(np.abs(3+x))

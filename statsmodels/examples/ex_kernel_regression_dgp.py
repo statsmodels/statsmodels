@@ -17,7 +17,8 @@ if __name__ == '__main__':
     funcs = [dgp.UnivariateFanGijbels1(),
              dgp.UnivariateFanGijbels2(),
              dgp.UnivariateFanGijbels1EU(),
-             dgp.UnivariateFanGijbels2(distr_x=stats.uniform(-2, 4))
+             #dgp.UnivariateFanGijbels2(distr_x=stats.uniform(-2, 4))
+             dgp.UnivariateFunc1()
              ]
 
     res = []
