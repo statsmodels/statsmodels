@@ -29,40 +29,6 @@ def fg2(x):
     '''
     return np.sin(2 * x) + 2 * np.exp(-16 * x**2)
 
-class UnivariateFanGijbels1_(object):
-    '''Fan and Gijbels example function 1
-    '''
-
-    def __init__(self, nobs=200, x=None, distr_x=None, distr_noise=None):
-
-        if x is None:
-            if distr_x is None:
-                x = np.random.normal(loc=0, scale=1, size=nobs)
-            else:
-                x = distr_x.rvs(size=nobs)
-        self.x = x
-        self.x.sort()
-        if distr_noise is None:
-            noise = np.random.normal(loc=0, scale=0.07, size=nobs)
-        else:
-            noise = distr_noise.rvs(size=nobs)
-
-        self.y_true = y_true = fg1(x)
-        self.y = y_true + noise
-        self.func = fg1
-
-    def plot(self, scatter=True, ax=None):
-        if ax is None:
-            import matplotlib.pyplot as plt
-            fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-
-        if scatter:
-            ax.plot(self.x, self.y, 'o', alpha=0.6)
-
-        xx = np.linspace(self.x.min(), self.x.max(), 200)
-        ax.plot(xx, self.func(xx), lw=2, color='r')
-        return fig
 
 class _UnivariateFanGijbels(object):
     '''Fan and Gijbels example function 1
