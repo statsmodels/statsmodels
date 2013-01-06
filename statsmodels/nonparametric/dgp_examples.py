@@ -51,10 +51,12 @@ class UnivariateFanGijbels1_(object):
         self.y = y_true + noise
         self.func = fg1
 
-    def plot(self, scatter=True):
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+    def plot(self, scatter=True, ax=None):
+        if ax is None:
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+
         if scatter:
             ax.plot(self.x, self.y, 'o', alpha=0.6)
 
@@ -85,16 +87,18 @@ class _UnivariateFanGijbels(object):
         self.y = y_true + noise
 
 
-    def plot(self, scatter=True):
-        import matplotlib.pyplot as plt
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1)
+    def plot(self, scatter=True, ax=None):
+        if ax is None:
+            import matplotlib.pyplot as plt
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+
         if scatter:
-            ax.plot(self.x, self.y, 'o', alpha=0.6)
+            ax.plot(self.x, self.y, 'o', alpha=0.5)
 
         xx = np.linspace(self.x.min(), self.x.max(), 100)
-        ax.plot(xx, self.func(xx), lw=2, color='r')
-        return fig
+        ax.plot(xx, self.func(xx), lw=2, color='b', label='dgp mean')
+        return ax.figure
 
 class UnivariateFanGijbels1(_UnivariateFanGijbels):
 
@@ -103,8 +107,8 @@ class UnivariateFanGijbels1(_UnivariateFanGijbels):
         self.s_noise = 0.7
         self.func = fg1
         super(self.__class__, self).__init__(nobs=nobs, x=x,
-                                                   distr_x=distr_x,
-                                                   distr_noise=distr_noise)
+                                             distr_x=distr_x,
+                                             distr_noise=distr_noise)
 
 class UnivariateFanGijbels2(_UnivariateFanGijbels):
 
@@ -113,8 +117,8 @@ class UnivariateFanGijbels2(_UnivariateFanGijbels):
         self.s_noise = 0.5
         self.func = fg2
         super(self.__class__, self).__init__(nobs=nobs, x=x,
-                                                   distr_x=distr_x,
-                                                   distr_noise=distr_noise)
+                                             distr_x=distr_x,
+                                             distr_noise=distr_noise)
 
 class UnivariateFanGijbels1EU(_UnivariateFanGijbels):
     '''
@@ -134,29 +138,41 @@ class UnivariateFanGijbels1EU(_UnivariateFanGijbels):
 
 
 if __name__ == '__main__':
-    f = UnivariateFanGijbels1()
-    fig = f.plot()
-    fig.show()
-    f = UnivariateFanGijbels2()
-    fig = f.plot()
-    fig.show()
-    f = UnivariateFanGijbels1EU()
-    fig = f.plot()
-    #fig.show()
+#    f = UnivariateFanGijbels1()
+#    fig = f.plot()
+#    fig.show()
+#    f = UnivariateFanGijbels2()
+#    fig = f.plot()
+#    fig.show()
+#    f = UnivariateFanGijbels1EU()
+#    fig = f.plot()
+#    #fig.show()
 
     from statsmodels.nonparametric.api import KernelReg
+    import matplotlib.pyplot as plt
 
-    model1 = KernelReg(endog=[f.y], exog=[f.x], reg_type='ll',
-                      var_type='c', bw='cv_ls')
-    mean1, mfx1 = model1.fit()
-    fig.axes[0].plot(f.x, mean1)
+    from scipy import stats
+
+    funcs = [UnivariateFanGijbels1(),
+             UnivariateFanGijbels2(),
+             UnivariateFanGijbels1EU(),
+             UnivariateFanGijbels2(distr_x=stats.uniform(-2, 4))
+             ]
+
+    res = []
+    fig = plt.figure()
+    for i,func in enumerate(funcs):
+        #f = func()
+        f = func
+        model = KernelReg(endog=[f.y], exog=[f.x], reg_type='ll',
+                          var_type='c', bw='cv_ls')
+        mean, mfx = model.fit()
+        ax = fig.add_subplot(2, 2, i+1)
+        f.plot(ax=ax)
+        ax.plot(f.x, mean, color='r', lw=2, label='est. mean')
+        ax.legend(loc='upper left')
+        res.append((model, mean, mfx))
+
+    fig.suptitle('Kernel Regression')
     fig.show()
 
-
-    f = UnivariateFanGijbels1()
-    fig = f.plot()
-    model = KernelReg(endog=[f.y], exog=[f.x], reg_type='ll',
-                      var_type='c', bw='cv_ls')
-    mean, mfx = model.fit()
-    fig.axes[0].plot(f.x, mean)
-    fig.show()
