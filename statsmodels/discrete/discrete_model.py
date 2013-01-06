@@ -30,6 +30,7 @@ from statsmodels.tools.sm_exceptions import PerfectSeparationError
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.iolib.summary import Summary, summary_params, summary_model
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:
@@ -2252,6 +2253,24 @@ class MultinomialResults(DiscreteResults):
 
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
+
+    def summary(self, alpha=0.05, float_format="%.4f"):
+        smry = Summary()
+        smry.add_dict(summary_model(self))
+        # One data frame per value of endog
+        eqn = self.params.shape[1]
+        confint = self.conf_int(alpha)
+        for i in range(eqn):
+            coefs = summary_params(self, alpha, self.params[:,i], 
+                    self.bse[:,i], self.tvalues[:,i], self.pvalues[:,i], 
+                    confint[i])
+            # Header must show value of endog
+            level_str =  self.model.endog_names + ' = ' + str(i) 
+            coefs[level_str] = coefs.index
+            coefs = coefs.ix[:,[-1,0,1,2,3,4,5]]
+            smry.add_df(coefs, index=False, header=True, float_format=float_format)
+            smry.add_title(results=self)
+        return smry
 
 class L1MultinomialResults(MultinomialResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :

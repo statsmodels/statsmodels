@@ -328,7 +328,8 @@ def summary_model(results):
             pass 
     return out 
 
-def summary_params(results, alpha=.05):
+def summary_params(results, alpha=.05, params=None, bse=None, tvalues=None,
+        pvalues=None, confint=None):
     '''create a summary table of parameters from results instance
 
     Parameters
@@ -344,8 +345,15 @@ def summary_params(results, alpha=.05):
     params_table : DataFrame instance
     '''
     #Parameters part of the summary table
-    data = np.array([results.params, results.bse, results.tvalues, results.pvalues]).T
-    data = np.hstack([data, results.conf_int(alpha)])
+    vals = [params, bse, tvalues, pvalues, confint]
+    if any([x is None for x in vals]):
+        params = results.params
+        bse = results.bse
+        tvalues = results.tvalues
+        pvalues = results.pvalues
+        confint = results.conf_int(alpha)
+    data = np.array([params, bse, tvalues, pvalues]).T
+    data = np.hstack([data, confint])
     data = pd.DataFrame(data)
     data.columns = ['Coef.', 'Std.Err.', 't', 'P>|t|', 
                     '[' + str(alpha/2), str(1-alpha/2) + ']']
