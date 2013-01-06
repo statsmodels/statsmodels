@@ -249,7 +249,7 @@ def _df_to_ascii(df, pad_sep=2, pad_index=0, header=False, index=False,
     # Numpy -> SimpleTable -> ASCII
     st_fmt = {'fmt':'txt', 'title_align':'c', 'data_aligns':align, 
               'table_dec_above':None, 'table_dec_below':None}
-    st_fmt['colsep'] = ' ' * pad_sep
+    st_fmt['colsep'] = ' ' * int(pad_sep)
     ascii = SimpleTable(data, headers=headers, stubs=index, txt_fmt=st_fmt).as_text()
     return ascii
 

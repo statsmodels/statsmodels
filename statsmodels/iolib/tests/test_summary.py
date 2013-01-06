@@ -23,7 +23,7 @@ def test_summary_params():
              0.66363722],
            [-1.49801712,  0.52388862, -2.85941908,  0.00792932, -2.57115432,
             -0.42487993]])
-    np.testing.assert_array_almost_equal(output == desire)
+    np.testing.assert_array_almost_equal(output, desire, 4)
 
 def test_model_info():
     output = summary_model(res)
