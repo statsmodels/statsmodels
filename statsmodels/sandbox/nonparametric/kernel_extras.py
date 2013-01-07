@@ -191,6 +191,7 @@ class SingleIndexModel(KernelReg):
     def __init__(self, endog, exog, var_type):
         self.var_type = var_type
         self.K = len(var_type)
+        self.var_type = self.var_type[0]
         self.endog = _adjust_shape(endog, 1)
         self.exog = _adjust_shape(exog, self.K)
         self.nobs = np.shape(self.exog)[0]
@@ -200,7 +201,7 @@ class SingleIndexModel(KernelReg):
         self.b, self.bw = self._est_b_bw()
 
     def _est_b_bw(self):
-        params0 = np.random.uniform(size=(2*self.K, ))
+        params0 = np.random.uniform(size=(self.K + 1, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0:self.K]
         bw = b_bw[self.K:]
@@ -217,8 +218,11 @@ class SingleIndexModel(KernelReg):
         L = 0
         for i, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
-            G = self.func(bw, endog=Y, exog=-b*X_not_i,
-                          data_predict=-b*self.exog[i, :])[0]
+            #print b.shape, np.dot(self.exog[i:i+1, :], b).shape, bw,
+            G = self.func(bw, endog=Y, exog=np.dot(X_not_i, b)[:,None],
+                          #data_predict=-b*self.exog[i, :])[0]
+                          data_predict=np.dot(self.exog[i:i+1, :], b))[0]
+            #print G.shape
             L += (self.endog[i] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -235,8 +239,8 @@ class SingleIndexModel(KernelReg):
         mfx = np.empty((N_data_predict, self.K))
         for i in xrange(N_data_predict):
             mean_mfx = self.func(self.bw, self.endog,
-                                 self.b * self.exog,
-                                 data_predict=self.b * data_predict[i, :])
+                                 np.dot(self.exog, self.b)[:,None],
+                                 data_predict=np.dot(data_predict[i:i+1, :],self.b))
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
