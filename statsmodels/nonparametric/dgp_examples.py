@@ -84,8 +84,10 @@ class _UnivariateFunction(object):
                 x = np.random.normal(loc=0, scale=self.s_x, size=nobs)
             else:
                 x = distr_x.rvs(size=nobs)
+            x.sort()
+
         self.x = x
-        self.x.sort()
+
         if distr_noise is None:
             noise = np.random.normal(loc=0, scale=self.s_noise, size=nobs)
         else:
@@ -199,6 +201,8 @@ class UnivariateFunc1(_UnivariateFunction):
         if x is None and distr_x is None:
             from scipy import stats
             distr_x = stats.uniform(-2, 4)
+        else:
+            nobs = x.shape[0]
         self.s_noise = 2.
         self.func = func1
         super(self.__class__, self).__init__(nobs=nobs, x=x,
