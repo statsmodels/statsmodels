@@ -219,9 +219,9 @@ class SingleIndexModel(KernelReg):
         for i, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
             #print b.shape, np.dot(self.exog[i:i+1, :], b).shape, bw,
-            G = self.func(bw, endog=Y, exog=np.dot(X_not_i, b)[:,None],
+            G = self.func(bw, endog=Y, exog=-np.dot(X_not_i, b)[:,None],
                           #data_predict=-b*self.exog[i, :])[0]
-                          data_predict=np.dot(self.exog[i:i+1, :], b))[0]
+                          data_predict=-np.dot(self.exog[i:i+1, :], b))[0]
             #print G.shape
             L += (self.endog[i] - G) ** 2
 
