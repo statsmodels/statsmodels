@@ -205,7 +205,7 @@ class UnivariateFunc1(_UnivariateFunction):
             nobs = x.shape[0]
         self.s_noise = 2.
         self.func = func1
-        super(self.__class__, self).__init__(nobs=nobs, x=x,
+        super(UnivariateFunc1, self).__init__(nobs=nobs, x=x,
                                              distr_x=distr_x,
                                              distr_noise=distr_noise)
 
