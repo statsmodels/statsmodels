@@ -357,16 +357,16 @@ class SemiLinear(KernelReg):
         LOO_X = LeaveOneOut(self.exog)
         LOO_Y = LeaveOneOut(self.endog).__iter__()
         LOO_Z = LeaveOneOut(self.exog_nonparametric).__iter__()
-        Xb = b * self.exog
+        Xb = np.dot(self.exog, b)[:,None]
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
             Z = LOO_Z.next()
-            Xb_j = b * X_not_i
+            Xb_j = np.dot(X_not_i, b)[:,None]
             Yx = Y - Xb_j
             G = self.func(bw, endog=Yx, exog=-Z,
                           data_predict=-self.exog_nonparametric[ii, :])[0]
-            lt = Xb[ii, :].sum()  # linear term
+            lt = Xb[ii, :] #.sum()  # linear term
             L += (self.endog[ii] - lt - G) ** 2
 
         return L
@@ -382,15 +382,15 @@ class SemiLinear(KernelReg):
         if exog_nonparametric_predict is None:
             exog_nonparametric_predict = self.exog_nonparametric
         else:
-            exog_nonparametric_predict = _adjust_shape(exog_predict, self.K)
+            exog_nonparametric_predict = _adjust_shape(exog_nonparametric_predict, self.K)
 
         N_data_predict = np.shape(exog_nonparametric_predict)[0]
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.K))
-        Y = self.endog - self.b * exog_predict
+        Y = self.endog - np.dot(exog_predict, self.b)[:,None]
         for i in xrange(N_data_predict):
             mean_mfx = self.func(self.bw, Y, self.exog_nonparametric,
-                                 data_predict=exog_predict[i, :])
+                                 data_predict=exog_nonparametric_predict[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
