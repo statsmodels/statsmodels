@@ -14,7 +14,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     #from statsmodels.nonparametric.api import KernelReg
     import statsmodels.sandbox.nonparametric.kernel_extras as smke
-    import statsmodels.nonparametric.dgp_examples as dgp
+    import statsmodels.sandbox.nonparametric.dgp_examples as dgp
 
     class UnivariateFunc1a(dgp.UnivariateFunc1):
 
@@ -123,5 +123,6 @@ if __name__ == '__main__':
     plt.title('observed versus fitted values')
 
     plt.show()
+
 
 

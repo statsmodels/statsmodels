@@ -11,7 +11,7 @@ if __name__ == '__main__':
     import numpy as np
     import matplotlib.pyplot as plt
     from statsmodels.nonparametric.api import KernelReg
-    import statsmodels.nonparametric.dgp_examples as dgp
+    import statsmodels.sandbox.nonparametric.dgp_examples as dgp
 
 
     seed = np.random.randint(999999)
