@@ -137,7 +137,7 @@ class TestFForm(object):
         for i, X_not_i in enumerate(XLOO):
             u_j = uLOO.next()
             # See Bootstrapping procedure on p. 357 in [1]
-            K = gpke(self.bw, data=X_not_i, data_predict=self.exog[i, :],
+            K = gpke(self.bw, data=-X_not_i, data_predict=-self.exog[i, :],
                      var_type=self.var_type, tosum=False)[0]
             f_i = (u[i] * u_j * K).sum()   #TODO: verify sum() is correct
             assert np.size(f_i) == 1
