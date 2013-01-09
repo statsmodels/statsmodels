@@ -454,10 +454,12 @@ def summary_col(results, float_format='%.4f', model_names=None, stars=True,
     cols = [_col_info(x, info_dict) for x in results]
     merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
     info = reduce(merg, cols)
+    dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
+    dat.columns = summ.columns
+    dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
     # Summary
     smry = Summary()
-    smry.add_df(summ, header=True, align='l')
-    smry.add_df(info, header=False, align='l')
+    smry.add_df(dat, header=True, align='l')
     smry.add_text('Standard errors in parentheses.')
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
