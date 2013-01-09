@@ -14,18 +14,39 @@ Li, Q., and Suojin Wang. 1998. "A Simple Consistent Bootstrap Test for a
 
 currently DGP1
 
-in a few runs the test_statistic is around -1.8, while Li/Wang report a
-mean=-0.764 in the simulations.
-bootstrap distribution is also wider
-maybe a scaling factor 0.5 missing in test statistic?
+
+
+
+Monte Carlo with 100 replications
+---------------------------------
+results
+598948
+time 11.1642833312
+[-0.72505981  0.26514944  0.45681704]
+[ 0.74884796  0.22005569  0.3004892 ]
+reject at [0.2, 0.1, 0.05] (row 1: normal, row 2: bootstrap)
+[[ 0.55  0.24  0.01]
+ [ 0.29  0.16  0.06]]
+bw [ 0.11492364  0.11492364]
+tst.test_stat -1.40274609515
+Not Significant
+tst.boots_results min, max -2.03386582198 2.32562183511
+lower tail bootstrap p-value 0.077694235589
+aymp.normal p-value (2-sided) 0.160692566481
+
+mean and std in Li and Wang for n=1 are -0.764 and 0.621
+results look reasonable now
 
 """
 
 
 
 if __name__ == '__main__':
+    
+    import time
 
     import numpy as np
+    from scipy import stats
 
     from statsmodels.regression.linear_model import OLS
     #from statsmodels.nonparametric.api import KernelReg
@@ -38,24 +59,40 @@ if __name__ == '__main__':
 
     sig_e = 0.1 #0.5 #0.1
     nobs, k_vars = 100, 1
-    x = np.random.uniform(0, 1, size=(nobs, k_vars))
-    x.sort(0)
-
-    order = 2
-    exog = x**np.arange(1, order + 1)
-    beta = np.array([2, -1.])[:order+1-1] # 1. / np.arange(1, order + 2)
-    y_true = np.dot(exog, beta)
-    y = y_true + sig_e * np.random.normal(size=nobs)
-    endog = y
-
-    mod_ols = OLS(endog, exog[:,:2])
-    res_ols = mod_ols.fit()
-    #'cv_ls'[1000, 0.5]
-    bw_lw = [1./np.sqrt(12.) * nobs**(-0.2)]*2  #(-1. / 5.)
-    tst = smke.TestFForm(endog, exog[:,:2], bw=bw_lw, var_type='cc',
-                         fform=lambda x,p: mod_ols.predict(p,x),
-                         estimator=lambda y,x: OLS(y,x).fit().params,
-                         nboot=399)
+    
+    t0 = time.time()
+    
+    b_res = []
+    for i in range(100):
+        x = np.random.uniform(0, 1, size=(nobs, k_vars))
+        x.sort(0)
+    
+        order = 2
+        exog = x**np.arange(1, order + 1)
+        beta = np.array([2, -1.])[:order+1-1] # 1. / np.arange(1, order + 2)
+        y_true = np.dot(exog, beta)
+        y = y_true + sig_e * np.random.normal(size=nobs)
+        endog = y
+    
+        mod_ols = OLS(endog, exog[:,:2])
+        #res_ols = mod_ols.fit()
+        #'cv_ls'[1000, 0.5]
+        bw_lw = [1./np.sqrt(12.) * nobs**(-0.2)]*2  #(-1. / 5.)
+        tst = smke.TestFForm(endog, exog[:,:2], bw=bw_lw, var_type='cc',
+                             fform=lambda x,p: mod_ols.predict(p,x),
+                             estimator=lambda y,x: OLS(y,x).fit().params,
+                             nboot=399)
+        b_res.append([tst.test_stat,
+                      stats.norm.cdf(tst.test_stat),
+                      (tst.boots_results < tst.test_stat).mean()])
+    t1 = time.time()
+    b_res = np.asarray(b_res)
+    
+    print 'time', (t1 - t0) / 60.
+    print b_res.mean(0)
+    print b_res.std(0)
+    print 'reject at [0.2, 0.1, 0.05] (row 1: normal, row 2: bootstrap)'
+    print (b_res[:,1:,None] < [0.2, 0.1, 0.05]).mean(0)
 
     print 'bw', tst.bw
     print 'tst.test_stat', tst.test_stat
@@ -65,6 +102,8 @@ if __name__ == '__main__':
     from scipy import stats
     print 'aymp.normal p-value (2-sided)', stats.norm.sf(np.abs(tst.test_stat))*2
 
+    res_ols = mod_ols.fit()
+    
     do_plot=True
     if do_plot:
         import matplotlib.pyplot as plt
