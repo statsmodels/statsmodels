@@ -80,11 +80,13 @@ class TestFForm(object):
     See chapter 12 in [1]  pp. 355-357.
 
     """
-    def __init__(self, endog, exog, bw, var_type, fform, estimator):
+    def __init__(self, endog, exog, bw, var_type, fform, estimator, nboot=100):
         self.endog = endog
         self.exog = exog
+        self.var_type = var_type
         self.fform = fform
         self.estimator = estimator
+        self.nboot = nboot
         self.bw = KDEMultivariate(exog, bw=bw, var_type=var_type).bw
         self.sig = self._compute_sig()
 
@@ -97,16 +99,17 @@ class TestFForm(object):
         resid = Y - m
         resid = resid - np.mean(resid)  # center residuals
         self.test_stat = self._compute_test_stat(resid)
-        fct1 = (1 - 5**0.5) / 2.
-        fct2 = (1 + 5**0.5) / 2.
+        sqrt5 = np.sqrt(5.)
+        fct1 = (1 - sqrt5) / 2.
+        fct2 = (1 + sqrt5) / 2.
         u1 = fct1 * resid
         u2 = fct2 * resid
-        r = fct2 / (5 ** 0.5)
+        r = fct2 / sqrt5
         I_dist = np.empty((self.nboot,1))
         for j in xrange(self.nboot):
             u_boot = u2.copy()
 
-            prob = np.random.uniform(0,1, size = (n,1))
+            prob = np.random.uniform(0,1, size = (n,))
             ind = prob < r
             u_boot[ind] = u1[ind]
             Y_boot = m + u_boot
@@ -115,6 +118,7 @@ class TestFForm(object):
             u_boot_hat = Y_boot - m_hat
             I_dist[j] = self._compute_test_stat(u_boot_hat)
 
+        self.boots_results = I_dist
         sig = "Not Significant"
         if self.test_stat > mquantiles(I_dist, 0.9):
             sig = "*"
@@ -127,15 +131,16 @@ class TestFForm(object):
     def _compute_test_stat(self, u):
         n = np.shape(u)[0]
         XLOO = LeaveOneOut(self.exog)
-        uLOO = LeaveOneOut(u).__iter__()
+        uLOO = LeaveOneOut(u[:,None]).__iter__()
         I = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):
             u_j = uLOO.next()
             # See Bootstrapping procedure on p. 357 in [1]
-            K = gpke(self.bw, data=-X_not_i, data_predict=-X_not_i[i, :],
-                     var_type=self.var_type, tosum=False)
-            f_i = u[i] * u_j * K
+            K = gpke(self.bw, data=X_not_i, data_predict=self.exog[i, :],
+                     var_type=self.var_type, tosum=False)[0]
+            f_i = (u[i] * u_j * K).sum()   #TODO: verify sum() is correct
+            assert np.size(f_i) == 1
             I += f_i  # See eq. 12.7 on p. 355 in [1]
             S2 += f_i ** 2  # See Theorem 12.1 on p.356 in [1]
 
