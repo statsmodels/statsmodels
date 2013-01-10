@@ -520,7 +520,7 @@ if __name__ == "__main__":
 #f2py -c denest.pyf ./fft.o denest.f
 
     try:
-        from denest2 import denest
+        from denest2 import denest # @UnresolvedImport
         a = -3.4884382032045504
         b = 4.3671504686785605
         RANGE = b - a

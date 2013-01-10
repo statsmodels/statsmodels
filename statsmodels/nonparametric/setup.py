@@ -7,7 +7,7 @@ cur_dir = os.path.abspath(os.path.dirname(__file__))
 import sys
 sys.path.insert(0, os.path.normpath(os.path.join(cur_dir,
                                         '..', '..', 'tools')))
-from _build import cython, has_c_compiler
+from _build import cython, has_c_compiler # @UnresolvedImport
 sys.path.pop(0)
 del sys
 
