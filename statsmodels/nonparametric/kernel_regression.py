@@ -517,6 +517,9 @@ class KernelCensoredReg(KernelReg):
         # see pp. 341-344 in [1]
         self.d = (self.endog != censor_val) * 1.
         ix = np.argsort(np.squeeze(self.endog))
+        self.sortix = ix
+        self.sortix_rev = np.zeros(ix.shape, int)
+        self.sortix_rev[ix] = np.arange(len(ix))
         self.endog = np.squeeze(self.endog[ix])
         self.endog = _adjust_shape(self.endog, 1)
         self.exog = np.squeeze(self.exog[ix])
@@ -574,7 +577,7 @@ class KernelCensoredReg(KernelReg):
         # See also p. 38 in [2]
 
         # Convert ker to a 2-D array to make matrix operations below work
-        ker = ker[:, np.newaxis]
+        ker = W * ker[:, np.newaxis]
 
         M12 = exog - data_predict
         M22 = np.dot(M12.T, M12 * ker)
@@ -811,6 +814,7 @@ class TestRegCoefC(object):
             Y_boot = M + e_boot
             t_dist[i] = self._compute_test_stat(Y_boot, self.exog)
 
+        self.t_dist = t_dist
         sig = "Not Significant"
         if self.test_stat > mquantiles(t_dist, 0.9):
             sig = "*"

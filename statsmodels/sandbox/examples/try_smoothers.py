@@ -17,8 +17,12 @@ if __name__ == "__main__":
 
     import time
     np.random.seed(500)
-    x = np.random.normal(size = 250)
-    y = np.array([np.sin(i*5)/i + 2*i + (3+i)*np.random.normal() for i in x])
+    nobs = 250
+    sig_fac = 0.5
+    #x = np.random.normal(size=nobs)
+    x = np.random.uniform(-2, 2, size=nobs)
+    #y = np.array([np.sin(i*5)/i + 2*i + (3+i)*np.random.normal() for i in x])
+    y = np.sin(x*5)/x + 2*x + sig_fac * (3+x)*np.random.normal(size=nobs)
 
     K = kernels.Biweight(0.25)
     K2 = kernels.CustomKernel(lambda x: (1 - x*x)**2, 0.25, domain = [-1.0,
@@ -61,14 +65,14 @@ if __name__ == "__main__":
     ax = fig.add_subplot(221)
     ax.plot(x, y, "+")
     ax.plot(KSx, KSy, "-o")
-    ax.set_ylim(-20, 30)
+    #ax.set_ylim(-20, 30)
     ax2 = fig.add_subplot(222)
     ax2.plot(KSx, KVar, "-o")
 
     ax3 = fig.add_subplot(223)
     ax3.plot(x, y, "+")
     ax3.plot(KSx, KS2y, "-o")
-    ax3.set_ylim(-20, 30)
+    #ax3.set_ylim(-20, 30)
     ax4 = fig.add_subplot(224)
     ax4.plot(KSx, K2Var, "-o")
 
@@ -77,7 +81,7 @@ if __name__ == "__main__":
     ax5.plot(x, y, "+")
     ax5.plot(KSConfIntx, KSConfInty, "-o")
 
-    from statsmodels.nonparametric import lowess as lo
+    import statsmodels.nonparametric.smoothers_lowess as lo
     ys = lo.lowess(y, x)
     ax5.plot(ys[:,0], ys[:,1], 'b-')
     ys2 = lo.lowess(y, x, frac=0.25)
