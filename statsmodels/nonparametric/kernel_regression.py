@@ -814,6 +814,7 @@ class TestRegCoefC(object):
             Y_boot = M + e_boot
             t_dist[i] = self._compute_test_stat(Y_boot, self.exog)
 
+        self.t_dist = t_dist
         sig = "Not Significant"
         if self.test_stat > mquantiles(t_dist, 0.9):
             sig = "*"
