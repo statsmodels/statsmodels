@@ -80,11 +80,13 @@ class TestFForm(object):
     See chapter 12 in [1]  pp. 355-357.
 
     """
-    def __init__(self, endog, exog, bw, var_type, fform, estimator):
+    def __init__(self, endog, exog, bw, var_type, fform, estimator, nboot=100):
         self.endog = endog
         self.exog = exog
+        self.var_type = var_type
         self.fform = fform
         self.estimator = estimator
+        self.nboot = nboot
         self.bw = KDEMultivariate(exog, bw=bw, var_type=var_type).bw
         self.sig = self._compute_sig()
 
@@ -97,16 +99,17 @@ class TestFForm(object):
         resid = Y - m
         resid = resid - np.mean(resid)  # center residuals
         self.test_stat = self._compute_test_stat(resid)
-        fct1 = (1 - 5**0.5) / 2.
-        fct2 = (1 + 5**0.5) / 2.
+        sqrt5 = np.sqrt(5.)
+        fct1 = (1 - sqrt5) / 2.
+        fct2 = (1 + sqrt5) / 2.
         u1 = fct1 * resid
         u2 = fct2 * resid
-        r = fct2 / (5 ** 0.5)
+        r = fct2 / sqrt5
         I_dist = np.empty((self.nboot,1))
         for j in xrange(self.nboot):
             u_boot = u2.copy()
 
-            prob = np.random.uniform(0,1, size = (n,1))
+            prob = np.random.uniform(0,1, size = (n,))
             ind = prob < r
             u_boot[ind] = u1[ind]
             Y_boot = m + u_boot
@@ -115,6 +118,7 @@ class TestFForm(object):
             u_boot_hat = Y_boot - m_hat
             I_dist[j] = self._compute_test_stat(u_boot_hat)
 
+        self.boots_results = I_dist
         sig = "Not Significant"
         if self.test_stat > mquantiles(I_dist, 0.9):
             sig = "*"
@@ -127,17 +131,21 @@ class TestFForm(object):
     def _compute_test_stat(self, u):
         n = np.shape(u)[0]
         XLOO = LeaveOneOut(self.exog)
-        uLOO = LeaveOneOut(u).__iter__()
+        uLOO = LeaveOneOut(u[:,None]).__iter__()
         I = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):
             u_j = uLOO.next()
+            u_j = np.squeeze(u_j)
             # See Bootstrapping procedure on p. 357 in [1]
-            K = gpke(self.bw, data=-X_not_i, data_predict=-X_not_i[i, :],
+            K = gpke(self.bw, data=-X_not_i, data_predict=-self.exog[i, :],
                      var_type=self.var_type, tosum=False)
-            f_i = u[i] * u_j * K
-            I += f_i  # See eq. 12.7 on p. 355 in [1]
-            S2 += f_i ** 2  # See Theorem 12.1 on p.356 in [1]
+            f_i = (u[i] * u_j * K)
+            assert u_j.shape == K.shape
+            I += f_i.sum()  # See eq. 12.7 on p. 355 in [1]
+            S2 += (f_i**2).sum()  # See Theorem 12.1 on p.356 in [1]
+            assert np.size(I) == 1
+            assert np.size(S2) == 1
 
         I *= 1. / (n * (n - 1))
         ix_cont = _get_type_pos(self.var_type)[0]
@@ -191,6 +199,7 @@ class SingleIndexModel(KernelReg):
     def __init__(self, endog, exog, var_type):
         self.var_type = var_type
         self.K = len(var_type)
+        self.var_type = self.var_type[0]
         self.endog = _adjust_shape(endog, 1)
         self.exog = _adjust_shape(exog, self.K)
         self.nobs = np.shape(self.exog)[0]
@@ -200,7 +209,7 @@ class SingleIndexModel(KernelReg):
         self.b, self.bw = self._est_b_bw()
 
     def _est_b_bw(self):
-        params0 = np.random.uniform(size=(2*self.K, ))
+        params0 = np.random.uniform(size=(self.K + 1, ))
         b_bw = optimize.fmin(self.cv_loo, params0, disp=0)
         b = b_bw[0:self.K]
         bw = b_bw[self.K:]
@@ -217,8 +226,11 @@ class SingleIndexModel(KernelReg):
         L = 0
         for i, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
-            G = self.func(bw, endog=Y, exog=-b*X_not_i,
-                          data_predict=-b*self.exog[i, :])[0]
+            #print b.shape, np.dot(self.exog[i:i+1, :], b).shape, bw,
+            G = self.func(bw, endog=Y, exog=-np.dot(X_not_i, b)[:,None],
+                          #data_predict=-b*self.exog[i, :])[0]
+                          data_predict=-np.dot(self.exog[i:i+1, :], b))[0]
+            #print G.shape
             L += (self.endog[i] - G) ** 2
 
         # Note: There might be a way to vectorize this. See p.72 in [1]
@@ -235,8 +247,8 @@ class SingleIndexModel(KernelReg):
         mfx = np.empty((N_data_predict, self.K))
         for i in xrange(N_data_predict):
             mean_mfx = self.func(self.bw, self.endog,
-                                 self.b * self.exog,
-                                 data_predict=self.b * data_predict[i, :])
+                                 np.dot(self.exog, self.b)[:,None],
+                                 data_predict=np.dot(data_predict[i:i+1, :],self.b))
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
@@ -353,16 +365,16 @@ class SemiLinear(KernelReg):
         LOO_X = LeaveOneOut(self.exog)
         LOO_Y = LeaveOneOut(self.endog).__iter__()
         LOO_Z = LeaveOneOut(self.exog_nonparametric).__iter__()
-        Xb = b * self.exog
+        Xb = np.dot(self.exog, b)[:,None]
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
             Y = LOO_Y.next()
             Z = LOO_Z.next()
-            Xb_j = b * X_not_i
+            Xb_j = np.dot(X_not_i, b)[:,None]
             Yx = Y - Xb_j
             G = self.func(bw, endog=Yx, exog=-Z,
                           data_predict=-self.exog_nonparametric[ii, :])[0]
-            lt = Xb[ii, :].sum()  # linear term
+            lt = Xb[ii, :] #.sum()  # linear term
             L += (self.endog[ii] - lt - G) ** 2
 
         return L
@@ -378,15 +390,15 @@ class SemiLinear(KernelReg):
         if exog_nonparametric_predict is None:
             exog_nonparametric_predict = self.exog_nonparametric
         else:
-            exog_nonparametric_predict = _adjust_shape(exog_predict, self.K)
+            exog_nonparametric_predict = _adjust_shape(exog_nonparametric_predict, self.K)
 
         N_data_predict = np.shape(exog_nonparametric_predict)[0]
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.K))
-        Y = self.endog - self.b * exog_predict
+        Y = self.endog - np.dot(exog_predict, self.b)[:,None]
         for i in xrange(N_data_predict):
             mean_mfx = self.func(self.bw, Y, self.exog_nonparametric,
-                                 data_predict=exog_predict[i, :])
+                                 data_predict=exog_nonparametric_predict[i, :])
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
