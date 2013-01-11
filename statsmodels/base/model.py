@@ -10,7 +10,8 @@ from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
 
-_model_params_doc = """    Parameters
+_model_params_doc = """\
+    Parameters
     ----------
     endog : array-like
         1-d endogenous response variable. The dependent variable.
