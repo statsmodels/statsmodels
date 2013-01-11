@@ -19,7 +19,7 @@ class gaussian_kde_set_covariance(stats.gaussian_kde):
 
     def _compute_covariance(self):
         self.inv_cov = np.linalg.inv(self.covariance)
-        self._norm_factor = sqrt(np.linalg.det(2*np.pi*self.covariance)) * self.n
+        self._norm_factor = np.sqrt(np.linalg.det(2*np.pi*self.covariance)) * self.n
 
 
 class gaussian_kde_covfact(stats.gaussian_kde):
@@ -30,7 +30,7 @@ class gaussian_kde_covfact(stats.gaussian_kde):
     def _compute_covariance_(self):
         '''not used'''
         self.inv_cov = np.linalg.inv(self.covariance)
-        self._norm_factor = sqrt(np.linalg.det(2*np.pi*self.covariance)) * self.n
+        self._norm_factor = np.sqrt(np.linalg.det(2*np.pi*self.covariance)) * self.n
 
     def covariance_factor(self):
         if self.covfact in ['sc', 'scotts']:
@@ -162,3 +162,5 @@ if __name__ == '__main__':
 
     # get kde for original sample
     gkde = stats.gaussian_kde(xn)
+    #smoke test for method
+    gkde._compute_covariance()
