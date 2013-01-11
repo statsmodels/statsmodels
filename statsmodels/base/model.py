@@ -950,7 +950,6 @@ class LikelihoodModelResults(Results):
     def normalized_cov_params(self):
         raise NotImplementedError
 
-    #JP: add methods that are valid generically higher up in class hierarchy
     @cache_readonly
     def llf(self):
         return self.model.loglike(self.params)
@@ -1364,10 +1363,6 @@ class LikelihoodModelResults(Results):
             lower = self.params[cols] - q * bse[cols]
             upper = self.params[cols] + q * bse[cols]
         return np.asarray(zip(lower, upper))
-
-    @cache_readonly
-    def llf(self):
-        return self.model.loglike(self.params)
 
     def save(self, fname, remove_data=False):
         '''
