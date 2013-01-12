@@ -825,7 +825,9 @@ class Poisson(CountModel):
 
         Returns
         -------
-        The value of the Poisson PMF at each point.
+        pdf : ndarray
+            The value of the Poisson probability mass function, PMF, for each
+            point of X.
 
         Notes
         --------
@@ -835,9 +837,9 @@ class Poisson(CountModel):
 
         where :math:`\\lambda` assumes the loglinear model. I.e.,
 
-        .. math:: \\ln\\lambda_{i}=X\\beta
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
 
-        The parameter `X` is :math:`X\\beta` in the above formula.
+        The parameter `X` is :math:`x_{i}\\beta` in the above formula.
         """
         y = self.endog
         return stats.poisson.pmf(y, np.exp(X))
@@ -853,7 +855,9 @@ class Poisson(CountModel):
 
         Returns
         -------
-        The log likelihood of the model evaluated at `params`
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
 
         Notes
         --------
@@ -877,11 +881,16 @@ class Poisson(CountModel):
 
         Returns
         -------
-        The log likelihood for each observation of the model evaluated at `params`
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
 
         Notes
         --------
-        .. math :: \\ln L=\\sum_{i=1}^{n}\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+        .. math :: \\ln L_{i}=\\left[-\\lambda_{i}+y_{i}x_{i}^{\\prime}\\beta-\\ln y_{i}!\\right]
+
+        for observations :math:`i=1,...,n`
+
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -903,7 +912,9 @@ class Poisson(CountModel):
 
         Returns
         -------
-        The score vector of the model evaluated at `params`
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
 
         Notes
         -----
@@ -911,7 +922,7 @@ class Poisson(CountModel):
 
         where the loglinear model is assumed
 
-        .. math:: \\ln\\lambda_{i}=X\\beta
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -930,15 +941,18 @@ class Poisson(CountModel):
 
         Returns
         -------
-        The score vector of the model evaluated at `params`
+        score : ndarray (nobs, k_vars)
+            The score vector of the model evaluated at `params`
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\lambda_{i}\\right)x_{i}
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\lambda_{i}\\right)x_{i}
+
+        for observations :math:`i=1,...,n`
 
         where the loglinear model is assumed
 
-        .. math:: \\ln\\lambda_{i}=X\\beta
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
         """
         offset = getattr(self, "offset", 0)
         exposure = getattr(self, "exposure", 0)
@@ -957,7 +971,9 @@ class Poisson(CountModel):
 
         Returns
         -------
-        The Hessian matrix evaluated at params
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
 
         Notes
         -----
@@ -965,7 +981,7 @@ class Poisson(CountModel):
 
         where the loglinear model is assumed
 
-        .. math:: \\ln\\lambda_{i}=X\\beta
+        .. math:: \\ln\\lambda_{i}=x_{i}\\beta
 
         """
         offset = getattr(self, "offset", 0)
@@ -1026,7 +1042,9 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        np.exp(-x)/(1+np.exp(-X))**2
+        pdf : ndarray
+            The value of the Logit probability mass function, PMF, for each
+            point of X. ``np.exp(-x)/(1+np.exp(-X))**2``
 
         Notes
         -----
@@ -1048,7 +1066,9 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        The log-likelihood function of the logit model.  See notes.
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
 
         Notes
         ------
@@ -1072,13 +1092,17 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        The log-likelihood function of the logit model.  See notes.
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
 
         Notes
         ------
         .. math:: \\ln L=\\sum_{i}\\ln\\Lambda\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
-        Where :math:`q=2y-1`. This simplification comes from the fact that the
+        for observations :math:`i=1,...,n`
+
+        where :math:`q=2y-1`. This simplification comes from the fact that the
         logistic distribution is symmetric.
         """
         q = 2*self.endog - 1
@@ -1096,7 +1120,9 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        The score vector of the model evaluated at `params`
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
 
         Notes
         -----
@@ -1119,13 +1145,16 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        jac : ndarray, (nobs, k)
-            The derivative of the loglikelihood evaluated at `params` for each
-            observation
+        jac : ndarray, (nobs, k_vars)
+            The derivative of the loglikelihood for each observation evaluated
+            at `params`.
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left(y_{i}-\\Lambda_{i}\\right)x_{i}
+
+        for observations :math:`i=1,...,n`
+
         """
 
         y = self.endog
@@ -1144,7 +1173,9 @@ class Logit(BinaryModel):
 
         Returns
         -------
-        The Hessian evaluated at `params`
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
 
         Notes
         -----
@@ -1181,7 +1212,8 @@ class Probit(BinaryModel):
 
         Returns
         --------
-        The cdf evaluated at `X`.
+        cdf : ndarray
+            The cdf evaluated at `X`.
 
         Notes
         -----
@@ -1200,7 +1232,8 @@ class Probit(BinaryModel):
 
         Returns
         --------
-        The pdf evaluated at X.
+        pdf : ndarray
+            The value of the normal density function for each point of X.
 
         Notes
         -----
@@ -1222,7 +1255,9 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        The log-likelihood evaluated at params
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
 
         Notes
         -----
@@ -1248,13 +1283,17 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        The log-likelihood evaluated at params
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
 
         Notes
         -----
-        .. math:: \\ln L=\\sum_{i}\\ln\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
+        .. math:: \\ln L_{i}=\\ln\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)
 
-        Where :math:`q=2y-1`. This simplification comes from the fact that the
+        for observations :math:`i=1,...,n`
+
+        where :math:`q=2y-1`. This simplification comes from the fact that the
         normal distribution is symmetric.
         """
 
@@ -1274,7 +1313,9 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        The score vector of the model evaluated at `params`
+        score : ndarray, 1-D
+            The score vector of the model, i.e. the first derivative of the
+            loglikelihood function, evaluated at `params`
 
         Notes
         -----
@@ -1302,11 +1343,15 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        The score vector of the model evaluated at `params`
+        jac : ndarray, (nobs, k_vars)
+            The derivative of the loglikelihood for each observation evaluated
+            at `params`.
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta}=\\sum_{i=1}^{n}\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta}=\\left[\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}\\right]x_{i}
+
+        for observations :math:`i=1,...,n`
 
         Where :math:`q=2y-1`. This simplification comes from the fact that the
         normal distribution is symmetric.
@@ -1330,13 +1375,16 @@ class Probit(BinaryModel):
 
         Returns
         -------
-        The Hessian evaluated at `params`
+        hess : ndarray, (k_vars, k_vars)
+            The Hessian, second derivative of loglikelihood function,
+            evaluated at `params`
 
         Notes
         -----
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta\\partial\\beta^{\\prime}}=-\lambda_{i}\\left(\\lambda_{i}+x_{i}^{\\prime}\\beta\\right)x_{i}x_{i}^{\\prime}
 
         where
+
         .. math:: \\lambda_{i}=\\frac{q_{i}\\phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}{\\Phi\\left(q_{i}x_{i}^{\\prime}\\beta\\right)}
 
         and :math:`q=2y-1`
@@ -1407,7 +1455,8 @@ class MNLogit(MultinomialModel):
 
         Returns
         --------
-        The cdf evaluated at `XB`.
+        cdf : ndarray
+            The cdf evaluated at `X`.
 
         Notes
         -----
@@ -1428,7 +1477,9 @@ class MNLogit(MultinomialModel):
 
         Returns
         -------
-        The log-likelihood function of the logit model.  See notes.
+        loglike : float
+            The log-likelihood function of the model evaluated at `params`.
+            See notes.
 
         Notes
         ------
@@ -1453,11 +1504,15 @@ class MNLogit(MultinomialModel):
 
         Returns
         -------
-        The log-likelihood function of the logit model.  See notes.
+        loglike : ndarray (nobs,)
+            The log likelihood for each observation of the model evaluated
+            at `params`. See Notes
 
         Notes
         ------
-        .. math:: \\ln L=\\sum_{i=1}^{n}\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+        .. math:: \\ln L_{i}=\\sum_{j=0}^{J}d_{ij}\\ln\\left(\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)
+
+        for observations :math:`i=1,...,n`
 
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
@@ -1478,8 +1533,10 @@ class MNLogit(MultinomialModel):
 
         Returns
         --------
-        The 2-d score vector of the multinomial logit model evaluated at
-        `params`.
+        score : ndarray, (K * (J-1),)
+            The 2-d score vector, i.e. the first derivative of the
+            loglikelihood function, of the multinomial logit model evaluated at
+            `params`.
 
         Notes
         -----
@@ -1487,7 +1544,7 @@ class MNLogit(MultinomialModel):
 
         for :math:`j=1,...,J`
 
-        In the multinomial model ths score matrix is K x J-1 but is returned
+        In the multinomial model the score matrix is K x J-1 but is returned
         as a flattened array to work with the solvers.
         """
         params = params.reshape(self.K, -1, order='F')
@@ -1498,7 +1555,7 @@ class MNLogit(MultinomialModel):
 
     def jac(self, params):
         """
-        Jabobian matrix for multinomial logit model log-likelihood
+        Jacobian matrix for multinomial logit model log-likelihood
 
         Parameters
         ----------
@@ -1507,17 +1564,19 @@ class MNLogit(MultinomialModel):
 
         Returns
         --------
-        The 2-d score vector of the multinomial logit model evaluated at
-        `params`.
+        jac : ndarray, (nobs, k_vars*(J-1))
+            The derivative of the loglikelihood for each observation evaluated
+            at `params` .
 
         Notes
         -----
-        .. math:: \\frac{\\partial\\ln L}{\\partial\\beta_{j}}=\\sum_{i}\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
+        .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta_{j}}=\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
 
-        for :math:`j=1,...,J`
+        for :math:`j=1,...,J`, for observations :math:`i=1,...,n`
 
-        In the multinomial model ths score matrix is K x J-1 but is returned
-        as a flattened array to work with the solvers.
+        In the multinomial model the score vector is K x (J-1) but is returned
+        as a flattened array. The Jacobian has the observations in rows and
+        the flatteded array of derivatives in columns.
         """
         params = params.reshape(self.K, -1, order='F')
         firstterm = self.wendog[:,1:] - self.cdf(np.dot(self.exog,
@@ -1536,7 +1595,9 @@ class MNLogit(MultinomialModel):
 
         Returns
         -------
-        The Hessian evaluated at `params`
+        hess : ndarray, (J*K, J*K)
+            The Hessian, second derivative of loglikelihood function with
+            respect to the flattened parameters, evaluated at `params`
 
         Notes
         -----

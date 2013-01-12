@@ -57,8 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2011,Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
-
+copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
 autosummary_generate = True
