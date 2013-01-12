@@ -511,7 +511,7 @@ class CompareMeans(object):
                                alternative=alternative)
         return res
 
-    def tost(self, low, upp, usevar='pooled'):
+    def tost_ind(self, low, upp, usevar='pooled'):
         '''test of (non-)equivalence for two independent samples
 
         Parameters
@@ -672,7 +672,7 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
         upp = transform(upp)
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                      DescrStatsW(x2, weights=weights[1], ddof=0))
-    pval, res = cm.tost(low, upp, usevar=usevar)
+    pval, res = cm.tost_ind(low, upp, usevar=usevar)
     return pval, res[0], res[1]
 
 def tost_paired(x1, x2, low, upp, transform=None, weights=None):
@@ -731,5 +731,5 @@ def tost_paired(x1, x2, low, upp, transform=None, weights=None):
     #TODO: add tost as method to DescrStatsW
     t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
-    return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
+    return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
