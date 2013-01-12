@@ -119,7 +119,7 @@ def install_branch(branch):
 
     # if it's already in the virtualenv, remove it
     ver = '.'.join(map(str,(sys.version_info.major,sys.version_info.minor)))
-    sitepack = os.path.join(virtual_dir,'lib','python'+ver, 'site-packages')
+    sitepack = os.path.join(virtual_dir, 'lib','python'+ver, 'site-packages')
     if os.path.exists(sitepack):
         dir_list = os.listdir(sitepack)
     else:
@@ -223,6 +223,12 @@ def upload_pdf(branch):
         raise Exception(msg)
     os.chdir(dname)
 
+def activate_virtualenv():
+    activate = os.path.join(virtual_dir, "bin", "activate")
+    retcode = subprocess.call("source "+activate, shell=True)
+
+def deactivate_virtualenv():
+    retcode = subprocess.call("deactivate", shell=True)
 
 def email_me(status='ok'):
     if status == 'ok':
@@ -258,7 +264,9 @@ def main():
             create_virtualenv()
             create_update_gitdir()
             install_branch(branch)
+            activate_virtualenv() # so sphinx-build uses that python
             build_docs(branch)
+            deactivate_virtualenv()
             upload_docs(branch)
     #        build_pdf(new_branch_dir)
     #        upload_pdf(branch, new_branch_dir)
