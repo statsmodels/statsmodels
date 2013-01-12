@@ -6,16 +6,20 @@ Created on 2010-09-18
 Author: josef-pktd
 License: BSD (3-clause)
 
+
+References
+----------
+SPSS manual
+SAS manual
+
 This follows in large parts the SPSS manual, which is largely the same as
 the SAS manual with different, simpler notation.
 
 Freq, Weight in SAS seems redundant since they always show up as product, SPSS
 has only weights.
 
-References
-----------
-SPSS manual
-SAS manual
+Notes
+-----
 
 This has potential problems with ddof, I started to follow numpy with ddof=0
 by default and users can change it, but this might still mess up the t-tests,
@@ -36,16 +40,16 @@ from statsmodels.tools.decorators import OneTimeProperty
 
 
 class DescrStatsW(object):
-    '''descriptive statistics with weights for case weights
+    '''descriptive statistics and tests with weights for case weights
 
-    assumes that the data is 1d or 2d with (nobs,nvars) observations in rows,
-    variables in columns, and that the same weight apply to each column.
+    Assumes that the data is 1d or 2d with (nobs, nvars) observations in rows,
+    variables in columns, and that the same weight applies to each column.
 
     If degrees of freedom correction is used, then weights should add up to the
     number of observations. ttest also assumes that the sum of weights
     corresponds to the sample size.
 
-    This is essentially the same as replicating each observations by it's
+    This is essentially the same as replicating each observations by its
     weight, if the weights are integers, often called case weights.
 
     Parameters
@@ -56,8 +60,9 @@ class DescrStatsW(object):
         weights for each observation, with same length as zero axis of data
     ddof : int
         default ddof=0, degrees of freedom correction used for second moments,
-        var, std, cov, corrcoef
-
+        var, std, cov, corrcoef.
+        However, statistical tests are independent of `ddof`, based on the
+        standard formulas.
 
     Examples
     --------
@@ -243,8 +248,6 @@ class DescrStatsW(object):
         upper = self.mean + tcrit * self.std_mean
         return lower, upper
 
-
-
     def ttest_mean(self, value, alternative='two-sided'):
         '''ttest of Null hypothesis that mean is equal to value.
 
@@ -263,13 +266,12 @@ class DescrStatsW(object):
         tstat = (self.mean - value) / self.std_mean
         dof = self.sum_weights - 1
         #TODO: use outsourced
-        from scipy import stats
         if alternative == 'two-sided':
-           pvalue = stats.t.sf(np.abs(tstat), dof)*2
+            pvalue = stats.t.sf(np.abs(tstat), dof)*2
         elif alternative == 'larger':
-           pvalue = stats.t.sf(tstat, dof)
+            pvalue = stats.t.sf(tstat, dof)
         elif alternative == 'smaller':
-           pvalue = stats.t.cdf(tstat, dof)
+            pvalue = stats.t.cdf(tstat, dof)
 
         return tstat, pvalue, dof
 
@@ -315,21 +317,19 @@ def tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
     '''generic ttest to save typing'''
     #TODO: diff convention has wrong sign
     tstat = (value1 - value2 - diff) / std_diff
-    from scipy import stats
     if alternative in ['two-sided', '2-sided', '2']:
-       pvalue = stats.t.sf(np.abs(tstat), dof)*2
+        pvalue = stats.t.sf(np.abs(tstat), dof)*2
     elif alternative in ['larger', 'l']:
-       pvalue = stats.t.sf(tstat, dof)
+        pvalue = stats.t.sf(tstat, dof)
     elif alternative in ['smaller', 's']:
-       pvalue = stats.t.cdf(tstat, dof)
+        pvalue = stats.t.cdf(tstat, dof)
     else:
-       raise ValueError('invalid alternative')
+        raise ValueError('invalid alternative')
     return tstat, pvalue
 
 def tconfint_generic(mean, std_mean, dof, alpha, alternative):
     '''generic t-confint to save typing'''
 
-    from scipy import stats
     if alternative in ['two-sided', '2-sided', '2']:
         tcrit = stats.t.ppf(1 - alpha / 2., dof)
         lower = mean - tcrit * std_mean
@@ -343,7 +343,7 @@ def tconfint_generic(mean, std_mean, dof, alpha, alternative):
         lower = -np.inf
         upper = mean + tcrit * std_mean
     else:
-       raise ValueError('invalid alternative')
+        raise ValueError('invalid alternative')
 
     return lower, upper
 
@@ -377,9 +377,9 @@ class CompareMeans(object):
         self.d1 = d1
         self.d2 = d2
         #assume nobs is available
- ##   if not hasattr(self.d1, 'nobs'):
- ##       d1.nobs1 = d1.sum_weights.astype(float)  #float just to make sure
- ##   self.nobs2 = d2.sum_weights.astype(float)
+#        if not hasattr(self.d1, 'nobs'):
+#            d1.nobs1 = d1.sum_weights.astype(float)  #float just to make sure
+#        self.nobs2 = d2.sum_weights.astype(float)
 
     @OneTimeProperty
     def std_meandiff_separatevar(self):
@@ -424,10 +424,38 @@ class CompareMeans(object):
     def ttest_ind(self, alternative='two-sided', usevar='pooled', diff=0):
         '''ttest for the null hypothesis of identical means
 
-        note: I was looking for `usevar` option for the multiple comparison
-           tests correction
-
         this should also be the same as onewaygls, except for ddof differences
+
+        Parameters
+        ----------
+        x1, x2 : array_like, 1-D or 2-D
+            two independent samples, see notes for 2-D case
+        alternative : string
+            The alternative hypothesis, H1, has to be one of the following
+            'two-sided': H1: difference in means not equal to value (default)
+            'larger' :   H1: difference in means larger than value
+            'smaller' :  H1: difference in means smaller than value
+
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is assumed to be
+            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+            of freedom is used
+        weights : tuple of None or ndarrays
+            Case weights for the two samples. For details on weights see
+            ``DescrStatsW``
+        diff : float
+            difference between the means under the Null hypothesis.
+
+
+        Returns
+        -------
+        tstat : float
+            test statisic
+        pvalue : float
+            pvalue of the t-test
+        df : int or float
+            degrees of freedom used in the t-test
+
         '''
         d1 = self.d1
         d2 = self.d2
@@ -446,6 +474,29 @@ class CompareMeans(object):
 
     def confint_diff(self, alpha=0.05, alternative='two-sided',
                      usevar='pooled'):
+        '''confidence intevall for the difference in means
+
+        Parameters
+        ----------
+        alpha: float
+            1-alpha is the confidence level for the interval
+        alternative : string
+            The alternative hypothesis, H1, has to be one of the following
+            'two-sided': H1: difference in means not equal to value (default)
+            'larger' :   H1: difference in means larger than value
+            'smaller' :  H1: difference in means smaller than value
+
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is assumed to be
+            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+            of freedom is used
+
+        Returns
+        -------
+        lower, upper : floats
+            lower and upper limits of the confidence interval
+
+        '''
         d1 = self.d1
         d2 = self.d2
         diff = d1.mean - d2.mean
@@ -461,6 +512,30 @@ class CompareMeans(object):
         return res
 
     def tost(self, low, upp, usevar='pooled'):
+        '''test of (non-)equivalence for two independent samples
+
+        Parameters
+        ----------
+        low, upp : float
+            equivalence interval low < m1 - m2 < upp
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is assumed to be
+            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+            of freedom is used
+        transform : None or function
+            If None (default), then the data is not transformed. Given a function,
+            sample data and thresholds are transformed. If transform is log, then
+            the equivalence interval is in ratio: low < m1 / m2 < upp
+
+        Returns
+        -------
+        pvalue : float
+            pvalue of the non-equivalence test
+        t1, pv1 : tuple of floats
+            test statistic and pvalue for lower threshold test
+        t2, pv2 : tuple of floats
+            test statistic and pvalue for upper threshold test
+        '''
         tt1 = self.ttest_ind(alternative='larger', usevar=usevar, diff=low)
         tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=upp)
         #TODO: remove tuple return, use same as for function tost_ind
@@ -487,6 +562,37 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     results,
     compared to scipy stats: drops axis option, adds alternative, usevar, and
     weights option
+
+    Parameters
+    ----------
+    x1, x2 : array_like, 1-D or 2-D
+        two independent samples, see notes for 2-D case
+    alternative : string
+        The alternative hypothesis, H1, has to be one of the following
+        'two-sided': H1: difference in means not equal to value (default)
+        'larger' :   H1: difference in means larger than value
+        'smaller' :  H1: difference in means smaller than value
+
+    usevar : string, 'pooled' or 'unequal'
+        If ``pooled``, then the standard deviation of the samples is assumed to be
+        the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+        of freedom is used
+    weights : tuple of None or ndarrays
+        Case weights for the two samples. For details on weights see
+        ``DescrStatsW``
+    diff : float
+        difference between the means under the Null hypothesis.
+
+
+    Returns
+    -------
+    tstat : float
+        test statisic
+    pvalue : float
+        pvalue of the t-test
+    df : int or float
+        degrees of freedom used in the t-test
+
     '''
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                      DescrStatsW(x2, weights=weights[1], ddof=0))
@@ -497,12 +603,14 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
 
 def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
              transform=None):
-    '''test of (non-)equivalence for independent sample
+    '''test of (non-)equivalence for two independent samples
 
     TOST: two one-sided t tests
 
-    null hypothesis:  x - y < low or x - y > upp
-    alternative hypothesis:  low < x - y < upp
+    null hypothesis:  m1 - m2 < low or m1 - m2 > upp
+    alternative hypothesis:  low < m1 - m2 < upp
+
+    where m1, m2 are the means, expected values of the two samples.
 
     If the pvalue is smaller than a threshold,say 0.05, then we reject the
     hypothesis that the difference between the two samples is larger than the
@@ -513,7 +621,7 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
     x1, x2 : array_like, 1-D or 2-D
         two independent samples, see notes for 2-D case
     low, upp : float
-        equivalence interval low < x - y < upp
+        equivalence interval low < m1 - m2 < upp
     usevar : string, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
         the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
@@ -522,9 +630,9 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
         Case weights for the two samples. For details on weights see
         ``DescrStatsW``
     transform : None or function
-        If None (default), then the data is not transformed. Given a function
-        sample data and thresholds are transformed. If transform is log the
-        the equivalence interval is in ratio: low < x / y < upp
+        If None (default), then the data is not transformed. Given a function,
+        sample data and thresholds are transformed. If transform is log, then
+        the equivalence interval is in ratio: low < m1 / m2 < upp
 
     Returns
     -------
@@ -568,12 +676,14 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
     return pval, res[0], res[1]
 
 def tost_paired(x1, x2, low, upp, transform=None, weights=None):
-    '''test of (non-)equivalence for independent sample
+    '''test of (non-)equivalence for two dependent, paired sample
 
     TOST: two one-sided t tests
 
-    null hypothesis:  x1 - x2 < low or x1 - x2 > upp
-    alternative hypothesis:  low < x1 - x2 < upp
+    null hypothesis:  md < low or md > upp
+    alternative hypothesis:  low < md < upp
+
+    where md is the mean, expected value of the difference x1 - x2
 
     If the pvalue is smaller than a threshold,say 0.05, then we reject the
     hypothesis that the difference between the two samples is larger than the
@@ -582,7 +692,7 @@ def tost_paired(x1, x2, low, upp, transform=None, weights=None):
     Parameters
     ----------
     x1, x2 : array_like
-        two independent samples
+        two dependent samples
     low, upp : float
         equivalence interval low < x1 - x2 < upp
     weights : None or ndarray
