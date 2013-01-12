@@ -84,8 +84,8 @@ class KernelReg(GenericKDE):
     bw: array_like
         The bandwidth parameters.
 
-    Methods
-    -------
+    **Methods**
+
     r-squared : calculates the R-Squared coefficient for the model.
     fit : calculates the conditional mean and marginal effects.
 
@@ -319,7 +319,7 @@ class KernelReg(GenericKDE):
         return L / self.nobs
 
     def r_squared(self):
-        """
+        r"""
         Returns the R-Squared for the nonparametric regression.
 
         Notes
@@ -393,9 +393,9 @@ class KernelReg(GenericKDE):
         sig: str
             The level of significance:
 
-                - * : at 90% confidence level
-                - ** : at 95% confidence level
-                - *** : at 99* confidence level
+                - `*` : at 90% confidence level
+                - `**` : at 95% confidence level
+                - `***` : at 99* confidence level
                 - "Not Significant" : if not significant
 
         """
@@ -483,8 +483,8 @@ class KernelCensoredReg(KernelReg):
     bw: array_like
         The bandwidth parameters
 
-    Methods
-    -------
+    *Methods*
+
     r-squared : calculates the R-Squared coefficient for the model.
     fit : calculates the conditional mean and marginal effects.
 

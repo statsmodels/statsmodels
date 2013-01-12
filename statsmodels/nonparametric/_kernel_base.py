@@ -350,7 +350,7 @@ class EstimatorSettings(object):
         Size of the sub-samples.  Default is 50.
     n_res: int, optional
         The number of random re-samples used to estimate the bandwidth.
-        Only has an effect if ``randomize == True`.  Default value is 25.
+        Only has an effect if ``randomize == True``.  Default value is 25.
     return_median: bool, optional
         If True (default), the estimator uses the median of all scaling factors
         for each sub-sample to estimate the bandwidth of the full sample.
@@ -364,7 +364,7 @@ class EstimatorSettings(object):
         ``joblib.Parallel``.  Default is -1, meaning ``n_cores - 1``, with
         ``n_cores`` the number of available CPU cores.
         See the `joblib documentation
-        <http://packages.python.org/joblib/parallel.html`_ for more details.
+        <http://packages.python.org/joblib/parallel.html>`_ for more details.
 
     Examples
     --------

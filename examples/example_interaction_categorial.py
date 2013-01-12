@@ -1,15 +1,12 @@
 # -*- coding: utf-8 -*-
+"""Plot Interaction of Categorical Factors
 """
-=======================================
-Plot Interaction of Cateogorial Factors
-=======================================
 
-In this example, we will vizualize the interaction between
-cateogorial factors. First, cateogorial data are inialized
-and then plotted using the interaction_plot function.
-
-Author: Denis A. Engemann
-"""
+#In this example, we will vizualize the interaction between
+#categorical factors. First, categorical data are initialized
+#and then plotted using the interaction_plot function.
+#
+#Author: Denis A. Engemann
 
 
 print __doc__

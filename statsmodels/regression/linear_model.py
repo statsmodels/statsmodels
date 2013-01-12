@@ -462,7 +462,7 @@ class OLS(WLS):
     >>> results.tvalues
     array([ 1.87867287,  0.98019606])
     >>> print results.t_test([1, 0])
-<T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
+    <T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
     >>> print results.f_test(np.identity(2))
     <F test: F=array([[ 19.46078431]]), p=[[ 0.00437251]], df_denom=5, df_num=2>
 
@@ -538,7 +538,7 @@ class GLSAR(GLS):
     >>> print results.t_test([1, 0])
     <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]), t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
     >>> print results.f_test(np.identity(2))
-<F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3, df_num=2>
+    <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3, df_num=2>
 
     Or, equivalently
 
@@ -551,7 +551,7 @@ class GLSAR(GLS):
     -----
     GLSAR is considered to be experimental.
     The linear autoregressive process of order p--AR(p)--is defined as:
-        TODO
+    TODO
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
     def __init__(self, endog, exog=None, rho=1, missing='none'):
