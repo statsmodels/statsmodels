@@ -14,7 +14,8 @@ Notes
 
 Number of observations: 6366
 Number of variables: 9
-Variable name definitions:
+Variable name definitions::
+
     rate_marriage   : How rate marriage, 1 = very poor, 2 = poor, 3 = fair,
                       4 = good, 5 = very good
     age             : Age

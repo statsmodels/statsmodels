@@ -57,8 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'statsmodels'
-copyright = u'2009-2011,Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
-
+copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 
 autosummary_generate = True
@@ -262,7 +261,7 @@ man_pages = [
 epub_title = u'statsmodels'
 epub_author = u'Josef Perktold, Skipper Seabold'
 epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2011, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+epub_copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

@@ -30,28 +30,30 @@ try:
 except:
     fast_kalman = 0
 
-_arma_params = """endog : array-like
-    The endogenous variable.
-order : iterable
-    The (p,q) order of the model for the number of AR parameters,
-    differences, and MA parameters to use. Though optional, the order
-    keyword in fit is deprecated and it is recommended to give order here.
-exog : array-like, optional
-    An optional arry of exogenous variables. This should *not* include a
-    constant or trend. You can specify this in the `fit` method."""
+_arma_params = """\
+    endog : array-like
+        The endogenous variable.
+    order : iterable
+        The (p,q) order of the model for the number of AR parameters,
+        differences, and MA parameters to use. Though optional, the order
+        keyword in fit is deprecated and it is recommended to give order here.
+    exog : array-like, optional
+        An optional arry of exogenous variables. This should *not* include a
+        constant or trend. You can specify this in the `fit` method."""
 
 _arma_model = "Autoregressive Moving Average ARMA(p,q) Model"
 
 _arima_model = "Autoregressive Integrated Moving Average ARIMA(p,d,q) Model"
 
-_arima_params = """endog : array-like
-    The endogenous variable.
-order : iterable
-    The (p,d,q) order of the model for the number of AR parameters,
-    differences, and MA parameters to use.
-exog : array-like, optional
-    An optional arry of exogenous variables. This should *not* include a
-    constant or trend. You can specify this in the `fit` method."""
+_arima_params = """\
+    endog : array-like
+        The endogenous variable.
+    order : iterable
+        The (p,d,q) order of the model for the number of AR parameters,
+        differences, and MA parameters to use.
+    exog : array-like, optional
+        An optional arry of exogenous variables. This should *not* include a
+        constant or trend. You can specify this in the `fit` method."""
 
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
     if start < 0:
@@ -919,12 +921,12 @@ class ARIMA(ARMA):
         indices are in terms of the *original*, undifferenced series. Ie.,
         given some undifferenced observations::
 
-        1970Q1, 1
-        1970Q2, 1.5
-        1970Q3, 1.25
-        1970Q4, 2.25
-        1971Q1, 1.2
-        1971Q2, 4.1
+         1970Q1, 1
+         1970Q2, 1.5
+         1970Q3, 1.25
+         1970Q4, 2.25
+         1971Q1, 1.2
+         1971Q2, 4.1
 
         1970Q1 is observation 0 in the original series. However, if we fit an
         ARIMA(p,1,q) model then we lose this first observation through
