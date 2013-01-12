@@ -42,10 +42,15 @@ from scipy import stats  #get rid of this? need only norm.sf
 
 class ResultsBunch(dict):
 
+    template = '%r'
+
     def __init__(self, **kwds):
         dict.__init__(self, kwds)
         self.__dict__  = self
         self._initialize()
+
+    def _initialize(self):
+        pass
 
     def __str__(self):
         return self.template % self
@@ -310,7 +315,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
     probs_diag = np.diag(probs)
     freq_row = table.sum(1) / nobs
     freq_col = table.sum(0) / nobs
-    prob_exp = freq_col * freq_row[:,None]
+    prob_exp = freq_col * freq_row[:, None]
     assert np.allclose(prob_exp.sum(), 1)
     #print prob_exp.sum()
     agree_exp = np.diag(prob_exp).sum() #need for kappa_max
@@ -322,15 +327,16 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             #variance
             term_a = probs_diag * (1 - (freq_row + freq_col) * (1 - kappa))**2
             term_a = term_a.sum()
-            term_b = probs * (freq_col[:,None] + freq_row)**2
+            term_b = probs * (freq_col[:, None] + freq_row)**2
             d_idx = np.arange(table.shape[0])
             term_b[d_idx, d_idx] = 0   #set diagonal to zero
             term_b = (1 - kappa)**2 * term_b.sum()
             term_c = (kappa - agree_exp * (1-kappa))**2
             var_kappa = (term_a + term_b - term_c) / (1 - agree_exp)**2 / nobs
-            #term_c = freq_col * freq_row[:,None] * (freq_col + freq_row[:,None])
+            #term_c = freq_col * freq_row[:, None] * (freq_col + freq_row[:,None])
             term_c = freq_col * freq_row * (freq_col + freq_row)
-            var_kappa0 =( agree_exp + agree_exp**2 - term_c.sum()) / (1 - agree_exp)**2 / nobs
+            var_kappa0 = (agree_exp + agree_exp**2 - term_c.sum())
+            var_kappa0 /= (1 - agree_exp)**2 * nobs
 
     else:
         if weights is None:
@@ -368,17 +374,19 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
             w = 1. - weights
             w_row = (freq_col * w).sum(1)
             w_col = (freq_row[:, None] * w).sum(0)
-            agree_wexp = (w * freq_col * freq_row[:,None]).sum()
-            term_a = freqs * (w -  (w_col + w_row[:,None]) * (1 - kappa))**2
+            agree_wexp = (w * freq_col * freq_row[:, None]).sum()
+            term_a = freqs * (w -  (w_col + w_row[:, None]) * (1 - kappa))**2
             fac = 1. / ((1 - agree_wexp)**2 * nobs)
             var_kappa = term_a.sum() - (kappa - agree_wexp * (1 - kappa))**2
             var_kappa *=  fac
 
-            freqse = freq_col * freq_row[:,None]
-            var_kappa0 = (freqse * (w -  (w_col + w_row[:,None]))**2).sum() - agree_wexp**2
+            freqse = freq_col * freq_row[:, None]
+            var_kappa0 = (freqse * (w -  (w_col + w_row[:, None]))**2).sum()
+            var_kappa0 -= agree_wexp**2
             var_kappa0 *=  fac
 
-    kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / (1 - agree_exp)
+    kappa_max = (np.minimum(freq_row, freq_col).sum() - agree_exp) / \
+                (1 - agree_exp)
 
     if return_results:
         res = KappaResults( kind=kind,
