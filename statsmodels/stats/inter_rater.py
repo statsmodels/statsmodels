@@ -6,6 +6,11 @@ contains
 fleiss_kappa
 cohens_kappa
 
+aggregate_raters:
+    helper function to get data into fleiss_kappa format
+to_table:
+    helper function to create contingency table, can be used for cohens_kappa
+
 Created on Thu Dec 06 22:57:56 2012
 Author: Josef Perktold
 License: BSD-3
@@ -16,13 +21,17 @@ Wikipedia: kappa's initially based on these two pages
     http://en.wikipedia.org/wiki/Fleiss%27_kappa
     http://en.wikipedia.org/wiki/Cohen's_kappa
 SAS-Manual : formulas for cohens_kappa, especially variances
-see also R package irr, not looked at it yet except index
+see also R package irr
 
 TODO
 ----
-other statistics and tests, in R package irr, SAS has more
-inconsistent naming, changed variable names as I added more functionality
+standard errors and hypothesis tests for fleiss_kappa
+other statistics and tests,
+   in R package irr, SAS has more
+inconsistent internal naming, changed variable names as I added more
+   functionality
 convenience functions to create required data format from raw data
+   DONE
 
 """
 
@@ -41,7 +50,7 @@ class ResultsBunch(dict):
     def __str__(self):
         return self.template % self
 
-def int_ifclose(x, dec=1, width=4):
+def _int_ifclose(x, dec=1, width=4):
     '''helper function for creating result string for int or float
 
     only dec=1 and width=4 is implemented
@@ -384,7 +393,7 @@ def cohens_kappa(table, weights=None, return_results=True, wt=None):
         return kappa
 
 
-kappa_template = '''\
+_kappa_template = '''\
                   %(kind)s Kappa Coefficient
               --------------------------------
               Kappa                     %(kappa)6.4f
@@ -442,12 +451,12 @@ class KappaResults(ResultsBunch):
 
     '''
 
-    template = kappa_template
+    template = _kappa_template
 
     def _initialize(self):
         if not 'alpha' in self:
             self['alpha'] = 0.025
-            self['alpha_ci'] = int_ifclose(100 - 0.025 * 200)[1]
+            self['alpha_ci'] = _int_ifclose(100 - 0.025 * 200)[1]
 
         self['std_kappa'] = np.sqrt(self['var_kappa'])
         self['std_kappa0'] = np.sqrt(self['var_kappa0'])
