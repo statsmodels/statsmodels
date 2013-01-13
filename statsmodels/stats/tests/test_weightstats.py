@@ -14,12 +14,17 @@ License: BSD (3-clause)
 
 '''
 
+import copy
 
 import numpy as np
 from scipy import stats
 from numpy.testing import assert_almost_equal, assert_equal
 from statsmodels.stats.weightstats import \
                 DescrStatsW, CompareMeans, ttest_ind
+from statsmodels.stats.power import TTestPower, TTestIndPower
+
+class Holder(object):
+    pass
 
 class TestWeightstats(object):
 
@@ -261,4 +266,174 @@ def test_ttest_ind_with_uneq_var():
     tr = -0.2108663315950719
     t, p, df = ttest_ind(a, b, usevar='separate')
     assert_almost_equal([t,p], [tr, pr], 13)
+
+
+class CheckPower(object):
+
+    def test_power(self):
+        #test against R results
+        kwds = copy.copy(self.kwds)
+        del kwds['beta']
+        kwds.update(self.kwds_extra)
+        res1 = self.cls()
+        assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=6)
+
+    def test_roots(self):
+        kwds = copy.copy(self.kwds)
+        kwds.update(self.kwds_extra)
+        for key in self.kwds:
+            value = kwds[key]
+            kwds[key] = None
+
+            result = self.cls().solve_power(**kwds)
+            assert_almost_equal(result, value, decimal=3, err_msg=key+' failed')
+            kwds[key] = value  #reset dict
+
+
+class TestTTPowerOneS1(CheckPower):
+
+    def __init__(self):
+
+        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
+        #> cat_items(p, prefix='tt_power2_1.')
+        res2 = Holder()
+        res2.n = 30
+        res2.d = 1
+        res2.sig_level = 0.05
+        res2.power = 0.9995636009612725
+        res2.alternative = 'two.sided'
+        res2.note = 'NULL'
+        res2.method = 'One-sample t test power calculation'
+        self.res2 = res2
+
+        self.kwds = {'effect_size':res2.d, 'nobs':res2.n, 'alpha':res2.sig_level,
+                'beta':res2.power}
+        self.kwds_extra = {}
+        self.cls = TTestPower
+
+class TestTTPowerOneS2(CheckPower):
+
+    def __init__(self):
+
+        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
+        #> cat_items(p, prefix='tt_power2_1.')
+        res2 = Holder()
+        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="greater")
+        #> cat_items(p, prefix='tt_power1_1g.')
+        res2.n = 30
+        res2.d = 1
+        res2.sig_level = 0.05
+        res2.power = 0.999892010204909
+        res2.alternative = 'greater'
+        res2.note = 'NULL'
+        res2.method = 'One-sample t test power calculation'
+        self.res2 = res2
+
+        self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
+                     'alpha': res2.sig_level, 'beta': res2.power}
+        self.kwds_extra = {'alternative': 'one-sided'}
+        self.cls = TTestPower
+
+class TestTTPowerTwoS1(CheckPower):
+
+    def __init__(self):
+
+        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
+        #> cat_items(p, prefix='tt_power2_1.')
+        res2 = Holder()
+        res2.n = 30
+        res2.d = 1
+        res2.sig_level = 0.05
+        res2.power = 0.967708258242517
+        res2.alternative = 'two.sided'
+        res2.note = 'n is number in *each* group'
+        res2.method = 'Two-sample t test power calculation'
+        self.res2 = res2
+
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta': res2.power, 'ratio': 1}
+        self.kwds_extra = {}
+        self.cls = TTestIndPower
+
+class TestTTPowerTwoS2(CheckPower):
+
+    def __init__(self):
+
+        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
+        #> cat_items(p, prefix='tt_power2_1.')
+        res2 = Holder()
+        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="greater")
+        #> cat_items(p, prefix='tt_power2_1g.')
+        res2.n = 30
+        res2.d = 1
+        res2.sig_level = 0.05
+        res2.power = 0.985459690251624
+        res2.alternative = 'greater'
+        res2.note = 'n is number in *each* group'
+        res2.method = 'Two-sample t test power calculation'
+        self.res2 = res2
+
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
+        self.kwds_extra = {'alternative': 'one-sided'}
+        self.cls = TTestIndPower
+
+#Note: compared to R power, I only added one-sided which is the same as greater
+'''
+#------------
+#> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
+#> cat_items(p, prefix='tt_power2_1.')
+tt_power2_1.n = 30
+tt_power2_1.d = 1
+tt_power2_1.sig_level = 0.05
+tt_power2_1.power = 0.967708258242517
+tt_power2_1.alternative = 'two.sided'
+tt_power2_1.note = 'n is number in *each* group'
+tt_power2_1.method = 'Two-sample t test power calculation'
+#> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="two.sided")
+#> cat_items(p, prefix='tt_power1_1.')
+tt_power1_1.n = 30
+tt_power1_1.d = 1
+tt_power1_1.sig_level = 0.05
+tt_power1_1.power = 0.9995636009612725
+tt_power1_1.alternative = 'two.sided'
+tt_power1_1.note = 'NULL'
+tt_power1_1.method = 'One-sample t test power calculation'
+> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="greater")
+> cat_items(p, prefix='tt_power1_1g.')
+tt_power1_1g.n = 30
+tt_power1_1g.d = 1
+tt_power1_1g.sig_level = 0.05
+tt_power1_1g.power = 0.999892010204909
+tt_power1_1g.alternative = 'greater'
+tt_power1_1g.note = 'NULL'
+tt_power1_1g.method = 'One-sample t test power calculation'
+> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="less")
+> cat_items(p, prefix='tt_power1_1l.')
+tt_power1_1l.n = 30
+tt_power1_1l.d = 1
+tt_power1_1l.sig_level = 0.05
+tt_power1_1l.power = 1.277755679041093e-12
+tt_power1_1l.alternative = 'less'
+tt_power1_1l.note = 'NULL'
+tt_power1_1l.method = 'One-sample t test power calculation'
+> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="less")
+> cat_items(p, prefix='tt_power2_1l.')
+tt_power2_1l.n = 30
+tt_power2_1l.d = 1
+tt_power2_1l.sig_level = 0.05
+tt_power2_1l.power = 2.203160931468773e-08
+tt_power2_1l.alternative = 'less'
+tt_power2_1l.note = 'n is number in *each* group'
+tt_power2_1l.method = 'Two-sample t test power calculation'
+> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="greater")
+> cat_items(p, prefix='tt_power2_1g.')
+tt_power2_1g.n = 30
+tt_power2_1g.d = 1
+tt_power2_1g.sig_level = 0.05
+tt_power2_1g.power = 0.985459690251624
+tt_power2_1g.alternative = 'greater'
+tt_power2_1g.note = 'n is number in *each* group'
+tt_power2_1g.method = 'Two-sample t test power calculation'
+'''
 
