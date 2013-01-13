@@ -90,7 +90,16 @@ class Power(object):
             start_value = 0.9
             print 'Warning: using default start_value'
 
-        return optimize.fsolve(func, start_value).item() #scalar
+        #TODO: check more cases to make this robust
+        #return optimize.newton(func, start_value).item() #scalar
+        val, infodict, ier, msg = optimize.fsolve(func, start_value, full_output=True) #scalar
+        if ier != 1:
+            print infodict
+            if key in ['alpha', 'beta']:
+                val, r = optimize.brentq(func, 1e-8, 1-1e-8, full_output=True) #scalar
+                if not r.converged:
+                    print r
+        return val
 
 class TTestPower(Power):
     '''Statistical Power calculations for one sample or paired sample t-test
