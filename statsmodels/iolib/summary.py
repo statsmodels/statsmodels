@@ -218,25 +218,26 @@ def _df_to_ascii(df, pad_sep=2, pad_index=0, header=False, index=False,
     ASCII table as string 
     '''
     # Format numbers where possible and convert to Numpy array (type str)
-    for col in df.columns:
+    dat = df.copy()
+    for col in dat.columns:
         try:
-            df[col] = [float_format % x for x in df[col]]
+            dat[col] = [float_format % x for x in dat[col]]
         except:
             pass
         try:
-            df[col] = [x.lstrip().rstrip() for x in df[col]]
+            dat[col] = [x.lstrip().rstrip() for x in dat[col]]
         except:
             pass
-    data = np.array(df)
+    data = np.array(dat)
     # Headers and index
     if header:
-        headers = map(str, df.columns)
+        headers = map(str, dat.columns)
     else:
         headers = None
     if index:
         # Pad right-side of index if necessary
         try:
-            index = [str(x) + ' ' * pad_index for x in df.index]
+            index = [str(x) + ' ' * pad_index for x in dat.index]
         except:
             pass
     else:
