@@ -810,10 +810,16 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
     def test_zstat(self): # Low precision because Z vs. t
         assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues, DECIMAL_2)
 
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
     def no_info(self):
         pass
 
-    test_bic = test_jac = test_df_model = test_predict = no_info
+    test_bic = test_jac = test_df_model = no_info
     test_predict_xb = test_llf = test_llnull = test_llr = no_info
     test_llr_pvalue = no_info
 
@@ -867,6 +873,36 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     test_bic = test_jac = test_df_model = test_predict = no_info
     test_predict_xb = test_llf = test_llnull = test_llr = no_info
     test_llr_pvalue = test_pvalues = test_aic = test_conf_int = test_dof = no_info
+
+
+class TestNegativeBinomialGeometricBFGS(CheckModelResults):
+    '''Cannot find another implementation of the geometric to cross-check results
+    we only test fitted values because geometric has fewer parameters than nb1 and nb2
+    and we want to make sure that predict() np.dot(exog, params) works
+    '''
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'geometric').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_geometric_bfgs()
+        cls.res2 = res2
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def no_info(self):
+        pass
+
+    test_bse = test_aic = test_params = test_conf_int = test_zstat = no_info
+    test_bic = test_jac = test_dof = test_df_model = no_info
+    test_predict_xb = test_llf = test_llnull = test_llr = no_info
+    test_llr_pvalue = no_info
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
