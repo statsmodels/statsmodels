@@ -386,6 +386,7 @@ def _col_params(result, float_format='%.4f', stars=True):
     res = res.ix[:,:2]
     res = res.stack()
     res = pd.DataFrame(res)
+    res.columns = [str(result.model.endog_names)]
     return res
 
 def _col_info(result, info_dict=None):
@@ -404,6 +405,7 @@ def _col_info(result, info_dict=None):
             out.append('')
     out = pd.DataFrame(out)
     out.index = pd.Index(info_dict.keys())
+    out.columns = [str(result.model.endog_names)] 
     return out
 
 def summary_col(results, float_format='%.4f', model_names=None, stars=True,
