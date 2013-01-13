@@ -275,6 +275,43 @@ class DescrStatsW(object):
 
         return tstat, pvalue, dof
 
+    def tost(self, low, upp):
+        '''test of (non-)equivalence of one sample
+
+        TOST: two one-sided t tests
+
+        null hypothesis:  m < low or m > upp
+        alternative hypothesis:  low < m < upp
+
+        where m is the expected value of the sample (mean of the population).
+
+        If the pvalue is smaller than a threshold, say 0.05, then we reject the
+        hypothesis that the expected value of the sample (mean of the
+        population) is outside of the interval given by thresholds low and upp.
+
+        Parameters
+        ----------
+        low, upp : float
+            equivalence interval low < mean < upp
+
+        Returns
+        -------
+        pvalue : float
+            pvalue of the non-equivalence test
+        t1, pv1, df1 : tuple
+            test statistic, pvalue and degrees of freedom for lower threshold
+            test
+        t2, pv2, df2 : tuple
+            test statistic, pvalue and degrees of freedom for upper threshold
+            test
+
+        '''
+
+        t1, pv1, df1 = self.ttest_mean(low, alternative='larger')
+        t2, pv2, df2 = self.ttest_mean(upp, alternative='smaller')
+        return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
+
+
     def get_compare(self, other, weights=None):
         '''return an instance of CompareMeans with self and other
 
@@ -313,7 +350,7 @@ class DescrStatsW(object):
 
 
 
-def tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
+def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
     '''generic ttest to save typing'''
     #TODO: diff convention has wrong sign
     tstat = (value1 - value2 - diff) / std_diff
@@ -327,7 +364,7 @@ def tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
         raise ValueError('invalid alternative')
     return tstat, pvalue
 
-def tconfint_generic(mean, std_mean, dof, alpha, alternative):
+def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
     '''generic t-confint to save typing'''
 
     if alternative in ['two-sided', '2-sided', '2']:
@@ -467,7 +504,7 @@ class CompareMeans(object):
             stdm = self.std_meandiff_separatevar
             dof = self.dof_satt()
 
-        tstat, pval = tstat_generic(d1.mean, d2.mean, stdm, dof, alternative,
+        tstat, pval = _tstat_generic(d1.mean, d2.mean, stdm, dof, alternative,
                                     diff=diff)
 
         return tstat, pval, dof
@@ -507,7 +544,7 @@ class CompareMeans(object):
             std_diff = self.std_meandiff_separatevar
             dof = self.dof_satt()
 
-        res = tconfint_generic(diff, std_diff, dof, alpha=alpha,
+        res = _tconfint_generic(diff, std_diff, dof, alpha=alpha,
                                alternative=alternative)
         return res
 
@@ -694,7 +731,7 @@ def tost_paired(x1, x2, low, upp, transform=None, weights=None):
     x1, x2 : array_like
         two dependent samples
     low, upp : float
-        equivalence interval low < x1 - x2 < upp
+        equivalence interval low < mean of difference < upp
     weights : None or ndarray
         case weights for the two samples. For details on weights see
         ``DescrStatsW``
@@ -707,10 +744,10 @@ def tost_paired(x1, x2, low, upp, transform=None, weights=None):
     -------
     pvalue : float
         pvalue of the non-equivalence test
-    t1, pv1 : tuple of floats
-        test statistic and pvalue for lower threshold test
-    t2, pv2 : tuple of floats
-        test statistic and pvalue for upper threshold test
+    t1, pv1, df1 : tuple
+        test statistic, pvalue and degrees of freedom for lower threshold test
+    t2, pv2, df2 : tuple
+        test statistic, pvalue and degrees of freedom for upper threshold test
 
     '''
 
