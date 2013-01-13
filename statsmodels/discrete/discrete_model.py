@@ -136,7 +136,7 @@ class DiscreteModel(base.LikelihoodModel):
 
     def _check_perfect_pred(self, params):
         endog = self.endog
-        fittedvalues = self.cdf(np.dot(self.exog, params))
+        fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
         if (self.raise_on_perfect_prediction and
                 np.allclose(fittedvalues - endog, 0)):
             msg = "Perfect separation detected, results not available"
@@ -1900,7 +1900,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        return np.dot(self.model.exog, self.params)
+        return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
 
     @cache_readonly
     def aic(self):

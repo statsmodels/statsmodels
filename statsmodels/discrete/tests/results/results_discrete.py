@@ -754,6 +754,9 @@ class RandHIE():
                 1.71796558863781e-28, 2.2944789508802e-19,
                 3.57231639404726e-158, 0.0268550333379416, 0.630272102021494,
                 0.0163241908407114, 8.55476622951356e-155]
+        self.fittedvalues = [0.892904166867786, 0.892904166867786, 0.892904166867786, 
+0.892904166867786, 0.892904166867786, 0.937038051489553, 0.937038051489553, 
+0.937038051489553, 0.937038051489553, 0.937038051489553]
         #self.aic = 86789.3241530713 # This is what R reports
         self.aic = 86787.3241530713 # TODO: Check what AIC should be
         self.df_resid = 20180
@@ -800,5 +803,5 @@ class RandHIE():
             [ 3.607387349, 3.8543518219],
             [ 0.715478301, 0.7996419867]]
 
-    #def negativebinomial_geometric_bfgs(self):
-        # TODO: Find another implementation to cross-check statsmodels results
+    def negativebinomial_geometric_bfgs(self):
+        self.fittedvalues = [ 0.893581  ,  0.893581  ,  0.893581  ,  0.893581  ,  0.893581  ,  0.93630476,  0.93630476,  0.93630476,  0.93630476,  0.93630476]
