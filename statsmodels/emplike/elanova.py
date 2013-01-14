@@ -114,7 +114,7 @@ class ANOVA(_ANOVAOpt):
                 return llr, pval, mu
         else:
             res = optimize.fmin_powell(self._opt_common_mu, mu_start,
-                                       full_output=1)
+                                       full_output=1, disp=False)
             llr = res[1]
             mu_common = float(res[0])
             pval = 1 - chi2.cdf(llr, self.num_groups - 1)
