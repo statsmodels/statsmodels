@@ -38,7 +38,7 @@ enhancements:
 
 '''
 
-from scipy import stats
+from scipy import stats, integrate
 import numpy as np
 
 
