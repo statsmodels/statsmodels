@@ -13,9 +13,10 @@ This section collects various statistical tests and tools.
 Some can be used independently of any models, some are intended as extension to the
 models and model results.
 
-API Warning: The functions and objects in this category are spread out in various modules
-and might still be moved around.
-
+API Warning: The functions and objects in this category are spread out in
+various modules and might still be moved around. We expect that in future the
+statistical tests will return class instances with more informative reporting
+instead of only the raw numbers.
 
 
 .. _stattools:
@@ -116,7 +117,7 @@ standard errors attached to LinearModelResults
 Goodness of Fit Tests and Measures
 ----------------------------------
 
- some tests for goodness of fit for univariate distributions
+some tests for goodness of fit for univariate distributions
 
 .. currentmodule:: statsmodels.stats.gof
 
@@ -210,14 +211,42 @@ The following functions are not (yet) public (here for my own benefit, JP)
 Basic Statistics and t-Tests with frequency weights
 ---------------------------------------------------
 
+Besides basic statistics, like mean, variance, covariance and correlation for
+data with case weights, the classes here provide one and two sample tests
+for means. The t-tests have more options than those in scipy.stats, but are
+more restrictive in the shape of the arrays. Confidence intervals for means
+are provided based on the same assumptions as the t-tests.
+
+Additionally, tests for equivalence of means are available for one sample and
+for two, either paired or independent, samples. These tests are based on TOST,
+two one-sided tests, which have as null hypothesis that the means are not
+"close" to each other.
+
 .. currentmodule:: statsmodels.stats.weightstats
 
 .. autosummary::
    :toctree: generated/
 
-   CompareMeans
    DescrStatsW
-   tstat_generic
+   CompareMeans
+   ttest_ind
+   tost_ind
+   tost_paired
+
+The :mod:`power` module currently implements power and sample size calculations
+for the t-tests. The implementation is class based, but the module also provides
+two shortcut functions, ``tt_solve_power`` and ``tt_ind_solve_power`` to solve
+for any one of the parameters of the power equations.
+
+.. currentmodule:: statsmodels.stats.power
+
+.. autosummary::
+   :toctree: generated/
+
+   TTestIndPower
+   TTestPower
+   tt_solve_power
+   tt_ind_solve_power
 
 
 Moment Helpers
@@ -239,7 +268,4 @@ kurtosis and cummulants.
    mnc2mvsk
    mvsk2mc
    mvsk2mnc
-
-
-
 
