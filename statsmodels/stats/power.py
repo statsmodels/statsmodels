@@ -49,7 +49,7 @@ start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15, beta=0.6,
 #--------------------------
 
 class Power(object):
-    '''Statistical Power calculations
+    '''Statistical Power calculations, Base Class
 
     so far this could all be class methods
     '''
@@ -57,7 +57,7 @@ class Power(object):
     def power(self, *args, **kwds):
         raise NotImplementedError
 
-    def power_identity(self, *args, **kwds):
+    def _power_identity(self, *args, **kwds):
         beta_ = kwds.pop('beta')
         return self.power(*args, **kwds) - beta_
 
@@ -67,7 +67,7 @@ class Power(object):
         for t-test the keywords are:
             effect_size, nobs, alpha, beta
 
-        exactly one needs to be `None`, all others need numeric values
+        exactly one needs to be ``None``, all others need numeric values
 
         '''
         #TODO: maybe use explicit kwds,
@@ -81,7 +81,7 @@ class Power(object):
 
         def func(x):
             kwds[key] = x
-            return self.power_identity(**kwds)
+            return self._power_identity(**kwds)
 
         #TODO: I'm using the following so I get a warning when start_ttp is not defined
         try:
@@ -106,15 +106,96 @@ class TTestPower(Power):
 
     '''
 
-    def power(self, effect_size, nobs, alpha, df=None,
-              alternative='two-sided'):
-        return ttest_power(effect_size, nobs, alpha, df=None,
+    def power(self, effect_size, nobs, alpha, df=None, alternative='two-sided'):
+        '''Calculate the power of a t-test for two independent sample
+
+        Parameters
+        ----------
+        effect_size : float
+            standardize effect size, difference between the two means divided
+            by the standard deviation. effect size has to be positive.
+        nobs : int or float
+            sample size, number of observations.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        df : int or float
+            degrees of freedom. By default this is None, and the df from the
+            one sample or paired ttest is used, ``df = nobs1 - 1``
+        alternative : string, 'two-sided' (default) or 'one-sided'
+            extra argument to choose whether the power is calculated for a
+            two-sided (default) or one sided test.
+            'one-sided' assumes we are in the relevant tail.
+
+        Returns
+        -------
+        power : float
+            Power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+       '''
+        return ttest_power(effect_size, nobs, alpha, df=df,
                            alternative=alternative)
+
+    #method is only added to have explicit keywords and docstring
+    def solve_power(self, effect_size=None, nobs=None, alpha=None, beta=None,
+                    alternative='two-sided'):
+        '''solve for any one parameter of the power of a one sample t-test
+
+        for the one sample t-test the keywords are:
+            effect_size, nobs, alpha, beta
+
+        Exactly one needs to be ``None``, all others need numeric values.
+
+        This test can also be used for a paired t-test, where effect size is
+        defined in terms of the mean difference, and nobs is the number of
+        pairs.
+
+        Parameters
+        ----------
+        effect_size : float
+            standardize effect size, difference between the two means divided
+            by the standard deviation. effect size has to be positive.
+        nobs : int or float
+            sample size, number of observations.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        beta : float in interval (0,1)
+            power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+        alternative : string, 'two-sided' (default) or 'one-sided'
+            extra argument to choose whether the power is calculated for a
+            two-sided (default) or one sided test.
+            'one-sided' assumes we are in the relevant tail.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter that was set to None in the call. The
+            value solves the power equation given the remainding parameters.
+
+
+        Notes
+        -----
+        The function uses scipy.optimize for finding the value that satisfies
+        the power equation. It first uses ``fsolve``. If it fails to find a
+        root, then for alpha or beta ``brentq`` is used.
+        However, there can still be cases where this fails.
+        If it becomes necessary, then we will add options to control the root
+        finding in future.
+
+        '''
+        return super(TTestPower, self).solve_power(effect_size=effect_size,
+                                                      nobs=nobs,
+                                                      alpha=alpha,
+                                                      beta=beta,
+                                                      alternative=alternative)
 
 class TTestIndPower(Power):
     '''Statistical Power calculations for t-test for two independent sample
-
-    check that nobs in non-centrality parameter is correct
 
     currently only uses pooled variance
 
@@ -123,14 +204,115 @@ class TTestIndPower(Power):
 
     def power(self, effect_size, nobs1, alpha, ratio=1, df=None,
               alternative='two-sided'):
-        #pooled variance
+        '''Calculate the power of a t-test for two independent sample
+
+        Parameters
+        ----------
+        effect_size : float
+            standardize effect size, difference between the two means divided
+            by the standard deviation. effect size has to be positive.
+        nobs1 : int or float
+            number of observations of sample 1. The number of observations of
+            sample two is ratio times the size of sample 1,
+            i.e. ``nobs2 = nobs1 * ratio``
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        ratio : float
+            ratio of the number of observations in sample 2 relative to
+            sample 1. see description of nobs1
+            The default for ratio is 1; to solve for ration given the other
+            arguments it has to be explicitely set to None.
+        df : int or float
+            degrees of freedom. By default this is None, and the df from the
+            ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
+        alternative : string, 'two-sided' (default) or 'one-sided'
+            extra argument to choose whether the power is calculated for a
+            two-sided (default) or one sided test.
+            'one-sided' assumes we are in the relevant tail.
+
+        Returns
+        -------
+        power : float
+            Power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+        '''
+
         nobs2 = nobs1*ratio
-        df = (nobs1 - 1 + nobs2 - 1)
+        #pooled variance
+        if df is None:
+            df = (nobs1 - 1 + nobs2 - 1)
+
         nobs = 1./ (1. / nobs1 + 1. / nobs2)
         return ttest_power(effect_size, nobs, alpha, df=df,
                            alternative=alternative)
 
+    #method is only added to have explicit keywords and docstring
+    def solve_power(self, effect_size=None, nobs1=None, alpha=None, beta=None,
+                    ratio=1., alternative='two-sided'):
+        '''solve for any one parameter of the power of a two sample t-test
+
+        for t-test the keywords are:
+            effect_size, nobs1, alpha, beta, ratio
+
+        exactly one needs to be ``None``, all others need numeric values
+
+        Parameters
+        ----------
+        effect_size : float
+            standardize effect size, difference between the two means divided
+            by the standard deviation.
+        nobs1 : int or float
+            number of observations of sample 1. The number of observations of
+            sample two is ratio times the size of sample 1,
+            i.e. ``nobs2 = nobs1 * ratio``
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        beta : float in interval (0,1)
+            power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+        ratio : float
+            ratio of the number of observations in sample 2 relative to
+            sample 1. see description of nobs1
+            The default for ratio is 1; to solve for ration given the other
+            arguments it has to be explicitely set to None.
+        alternative : string, 'two-sided' (default) or 'one-sided'
+            extra argument to choose whether the power is calculated for a
+            two-sided (default) or one sided test.
+            'one-sided' assumes we are in the relevant tail.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter that was set to None in the call. The
+            value solves the power equation given the remainding parameters.
+
+
+        Notes
+        -----
+        The function uses scipy.optimize for finding the value that satisfies
+        the power equation. It first uses ``fsolve``. If it fails to find a
+        root, then for alpha or beta ``brentq`` is used.
+        However, there can still be cases where this fails.
+        If it becomes necessary, then we will add options to control the root
+        finding in future.
+
+        '''
+        return super(TTestIndPower, self).solve_power(effect_size=effect_size,
+                                                      nobs1=nobs1,
+                                                      alpha=alpha,
+                                                      beta=beta,
+                                                      ratio=ratio,
+                                                      alternative=alternative)
+
+
+#shortcut functions
 tt_solve_power = TTestPower().solve_power
+tt_ind_solve_power = TTestIndPower().solve_power
 
 if __name__ == '__main__':
     effect_size, alpha, beta = 0.5, 0.05, 0.8

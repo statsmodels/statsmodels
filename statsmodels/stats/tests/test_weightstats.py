@@ -306,8 +306,8 @@ class TestTTPowerOneS1(CheckPower):
         res2.method = 'One-sample t test power calculation'
         self.res2 = res2
 
-        self.kwds = {'effect_size':res2.d, 'nobs':res2.n, 'alpha':res2.sig_level,
-                'beta':res2.power}
+        self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power}
         self.kwds_extra = {}
         self.cls = TTestPower
 
@@ -381,33 +381,6 @@ class TestTTPowerTwoS2(CheckPower):
 #Note: compared to R power, I only added one-sided which is the same as greater
 '''
 #------------
-#> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
-#> cat_items(p, prefix='tt_power2_1.')
-tt_power2_1.n = 30
-tt_power2_1.d = 1
-tt_power2_1.sig_level = 0.05
-tt_power2_1.power = 0.967708258242517
-tt_power2_1.alternative = 'two.sided'
-tt_power2_1.note = 'n is number in *each* group'
-tt_power2_1.method = 'Two-sample t test power calculation'
-#> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="two.sided")
-#> cat_items(p, prefix='tt_power1_1.')
-tt_power1_1.n = 30
-tt_power1_1.d = 1
-tt_power1_1.sig_level = 0.05
-tt_power1_1.power = 0.9995636009612725
-tt_power1_1.alternative = 'two.sided'
-tt_power1_1.note = 'NULL'
-tt_power1_1.method = 'One-sample t test power calculation'
-> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="greater")
-> cat_items(p, prefix='tt_power1_1g.')
-tt_power1_1g.n = 30
-tt_power1_1g.d = 1
-tt_power1_1g.sig_level = 0.05
-tt_power1_1g.power = 0.999892010204909
-tt_power1_1g.alternative = 'greater'
-tt_power1_1g.note = 'NULL'
-tt_power1_1g.method = 'One-sample t test power calculation'
 > p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="less")
 > cat_items(p, prefix='tt_power1_1l.')
 tt_power1_1l.n = 30
@@ -426,14 +399,6 @@ tt_power2_1l.power = 2.203160931468773e-08
 tt_power2_1l.alternative = 'less'
 tt_power2_1l.note = 'n is number in *each* group'
 tt_power2_1l.method = 'Two-sample t test power calculation'
-> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="greater")
-> cat_items(p, prefix='tt_power2_1g.')
-tt_power2_1g.n = 30
-tt_power2_1g.d = 1
-tt_power2_1g.sig_level = 0.05
-tt_power2_1g.power = 0.985459690251624
-tt_power2_1g.alternative = 'greater'
-tt_power2_1g.note = 'n is number in *each* group'
-tt_power2_1g.method = 'Two-sample t test power calculation'
+
 '''
 
