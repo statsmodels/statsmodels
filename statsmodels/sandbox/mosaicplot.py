@@ -18,6 +18,8 @@ from statsmodels.graphics import utils
 
 __all__ = ["mosaic"]
 
+from numpy import iterable, r_, cumsum, array
+from statsmodels.graphics import utils
 
 def _normalize_split(proportion):
     """
