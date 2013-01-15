@@ -49,7 +49,7 @@ def check_dependency_versions(min_versions):
             raise ImportError("statsmodels requires scipy")
     try:
         from pandas.version import version as pversion
-    except:
+    except ImportError:
         raise ImportError("statsmodels requires pandas")
     try:
         assert StrictVersion(strip_rc(npversion)) >= min_versions['numpy']
