@@ -54,19 +54,19 @@ class TestRegressionPowell(GenRes):
                                      method='powell')
         assert_almost_equal(beta3res[:2], self.res2.test_beta3[:2], 4)
         assert_almost_equal(beta3res[2], self.res2.test_beta3[2], 4)
-    @slow
+
     def test_ci_beta0(self):
-        beta0ci = self.res1.conf_int_el(0, upper_bound=-20,
-                                    lower_bound=-55, method='powell')
+        beta0ci = self.res1.conf_int_el(0, lower_bound=-52.8, upper_bound=-24.1,
+                                        method='powell')
         lower_lim = beta0ci[0]
         upper_lim = beta0ci[1]
         ul_pval = self.res1.el_test([upper_lim], [0])[1]
         ll_pval = self.res1.el_test([lower_lim], [0])[1]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
-    @slow
+
     def test_ci_beta1(self):
-        beta1ci = self.res1.conf_int_el(1, lower_bound=.4, upper_bound=1,
+        beta1ci = self.res1.conf_int_el(1, lower_bound=.418, upper_bound=.986,
                                         method='powell')
         lower_lim = beta1ci[0]
         upper_lim = beta1ci[1]
@@ -76,17 +76,18 @@ class TestRegressionPowell(GenRes):
         assert_almost_equal(ll_pval, .050000, 4)
     @slow
     def test_ci_beta2(self):
-        beta2ci = self.res1.conf_int_el(2, lower_bound=.6,
-                                    upper_bound=2.19, method='powell')
+        beta2ci = self.res1.conf_int_el(2, lower_bound=.59,
+                                    upper_bound=2.2, method='powell')
         lower_lim = beta2ci[0]
         upper_lim = beta2ci[1]
         ul_pval = self.res1.el_test([upper_lim], [2])[1]
         ll_pval = self.res1.el_test([lower_lim], [2])[1]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
+
     @slow
     def test_ci_beta3(self):
-        beta3ci = self.res1.conf_int_el(3, lower_bound=-.4, upper_bound=.1,
+        beta3ci = self.res1.conf_int_el(3, lower_bound=-.39, upper_bound=.01,
                                         method='powell')
         lower_lim = beta3ci[0]
         upper_lim = beta3ci[1]
@@ -134,7 +135,7 @@ class TestRegressionNM(GenRes):
                                           method='nm')
         assert_almost_equal(beta3res[:2], self.res2.test_beta3[:2], 4)
         assert_almost_equal(beta3res[2], self.res2.test_beta3[2], 4)
-    @slow
+
     def test_ci_beta0(self):
         """
         All confidence intervals are tested by conducting a hypothesis
@@ -147,28 +148,25 @@ class TestRegressionNM(GenRes):
         test_descriptive.py, test_ci_skew
 
         """
-        beta0ci = self.res1.conf_int_el(0, method='nm', upper_bound=-20,
-                                    lower_bound=-55)
+        beta0ci = self.res1.conf_int_el(0, method='nm')
         lower_lim = beta0ci[0]
         upper_lim = beta0ci[1]
         ul_pval = self.res1.el_test([upper_lim], [0], method='nm')[1]
         ll_pval = self.res1.el_test([lower_lim], [0], method='nm')[1]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
-    @slow
+
     def test_ci_beta1(self):
-        beta1ci = self.res1.conf_int_el(1, lower_bound=.4, upper_bound=1,
-                                        method='nm')
+        beta1ci = self.res1.conf_int_el(1, method='nm')
         lower_lim = beta1ci[0]
         upper_lim = beta1ci[1]
         ul_pval = self.res1.el_test([upper_lim], [1], method='nm')[1]
         ll_pval = self.res1.el_test([lower_lim], [1], method='nm')[1]
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
-    @slow
+
     def test_ci_beta2(self):
-        beta2ci = self.res1.conf_int_el(2, lower_bound=.6,
-                                    upper_bound=2.19, method='nm')
+        beta2ci = self.res1.conf_int_el(2, method='nm')
         lower_lim = beta2ci[0]
         upper_lim = beta2ci[1]
         ul_pval = self.res1.el_test([upper_lim], [2], method='nm')[1]
@@ -176,10 +174,9 @@ class TestRegressionNM(GenRes):
         assert_almost_equal(ul_pval, .050000, 4)
         assert_almost_equal(ll_pval, .050000, 4)
 
-    @slow
+
     def test_ci_beta3(self):
-        beta3ci = self.res1.conf_int_el(3, lower_bound=-.4,
-                                        upper_bound=.1, method='nm')
+        beta3ci = self.res1.conf_int_el(3, method='nm')
         lower_lim = beta3ci[0]
         upper_lim = beta3ci[1]
         ul_pval = self.res1.el_test([upper_lim], [3], method='nm')[1]
