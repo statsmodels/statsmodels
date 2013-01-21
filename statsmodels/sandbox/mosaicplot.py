@@ -1,3 +1,15 @@
+"""Create a mosaic plot from a contingency table.
+
+It allows to visualize multivariate categorical data in a rigorous
+and informative way.
+
+for more information you can read:
+    http://www.math.yorku.ca/SCS/Online/mosaics/about.html
+    http://www.theusrus.de/blog/understanding-mosaic-plots/
+    http://www.vicc.org/biostatistics/LuncheonTalks/DrTsai2.pdf
+"""
+# Author: Enrico Giampieri - 21 Jan 2013
+
 from __future__ import division
 
 import numpy
@@ -200,14 +212,13 @@ def _single_hsv_to_rgb(hsv):
 
 
 def mosaic(data, ax=None, horizontal=True, gap=0.005,
-           colors={}, labelizer=None):
+           properties={}, labelizer=None):
     """
     Create a mosaic plot from a contingency table.
 
     It allows to visualize multivariate categorical data in a rigorous
-    and informative way.  At the moment the color scheme is only used
-    for discriminating the columns, but can be personalized with the
-    colors keyword.
+    and informative way.  The color scheme can be personalized with the
+    properties keyword.
 
     for more information you can read:
         http://www.math.yorku.ca/SCS/Online/mosaics/about.html
@@ -237,7 +248,7 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
                 A lambda function that generate the text to display
                 at the center of each tile base on the dataset and the
                 key related to that tile
-    colors : dict
+    properties : dict
                 Contains the properties for each tile, using the same
                 key as the dataset as index.  The properties are used to
                 create a matplotlib.Rectangle.  If the key is not found it
@@ -261,11 +272,12 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
         labelizer = lambda k: "\n".join(k) + "\ncount=" + str(data.get(k, 0))
     for k, v in rects.items():
         x, y, w, h = v
-        conf = _get_from_partial_key(colors, k, {})
+        conf = _get_from_partial_key(properties, k, {})
         Rect = Rectangle((x, y), w, h, **conf)
         test = labelizer(k)
         ax.add_patch(Rect)
-        ax.text(x + w / 2, y + h / 2, test, ha='center', va='center')
+        ax.text(x + w / 2, y + h / 2, test, ha='center',
+                 va='center', size='smaller')
     ax.set_xticks([])
     ax.set_xticklabels([])
     ax.set_yticks([])
