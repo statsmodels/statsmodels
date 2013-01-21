@@ -359,6 +359,6 @@ if __name__ == '__main__':
     test_recursive_split()
 
     plot_mosaic_simple()
-    #plot_mosaic()
-    #plot_mosaic_complex()
-    #plot_mosaic_very_complex()
+    plot_mosaic()
+    plot_mosaic_complex()
+    plot_mosaic_very_complex()
