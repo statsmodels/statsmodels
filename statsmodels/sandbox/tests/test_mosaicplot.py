@@ -1,6 +1,18 @@
 from __future__ import division
 
 from numpy.testing import assert_, assert_raises, dec
+
+# utilities for the tests
+from collections import Counter, OrderedDict
+import numpy
+from itertools import product
+try:
+    import matplotlib.pyplot as pylab
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
+
 # the main drawing function
 from statsmodels.sandbox.mosaicplot import mosaic
 # other functions to be tested for accuracy
@@ -11,39 +23,51 @@ from statsmodels.sandbox.mosaicplot import _normalize_split
 from statsmodels.sandbox.mosaicplot import _split_rect
 
 
-# utilities for the tests
-from collections import Counter, OrderedDict
-import numpy
-from itertools import product
-
-try:
-    import matplotlib.pyplot as pylab
-    have_matplotlib = True
-except:
-    have_matplotlib = False
 
 
 @dec.skipif(not have_matplotlib)
 def plot_mosaic_simple():
+    """display a simple plot of 4 categories of data, splitted in four
+    levels with increasing size for each group"""
+    # creation of the levels
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
                ['worker', 'unemployed'], ['healty', 'ill'])
+    # the cartesian product of all the categories is
+    # the complete set of categories
     keys = list(product(*key_set))
-    # data = OrderedDict(zip(keys,[1]*len(keys)))
     data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
-    mosaic(data)
+    # which colours should I use for the various categories?
+    # put it into a dict
+    props = {}
+    #males and females in blue and red
+    props[('male',)] = {'color': 'b'}
+    props[('female',)] = {'color': 'r'}
+    # all the groups corresponding to ill groups have a different color
+    for key in keys:
+        if 'ill' in key:
+            if 'male' in key:
+                props[key] = {'color': 'BlueViolet' , 'hatch': '+'}
+            else:
+                props[key] = {'color': 'Crimson' , 'hatch': '+'}
+    # mosaic of the data, with given gaps and colors
+    mosaic(data, gap=0.05, properties=props)
     pylab.title('syntetic data, 4 categories')
     pylab.show()
 
 
 @dec.skipif(not have_matplotlib)
 def plot_mosaic():
+    """make the same analysis on a known dataset"""
     import statsmodels.api as sm
+    # load the data and clean it a bit
     affairs = sm.datasets.fair.load_pandas()
     datas = affairs.exog
     datas['duration'] = affairs.endog
     categorical = datas[['rate_marriage', 'religious', 'duration']]
+    # the cheaters are those who had any kind of relationship, even short one
     categorical['cheater'] = categorical['duration'] > 0
     del categorical['duration']
+    #change the numbers to a more meaningful description
     num_to_desc = {1: '1 awful', 2: '2 bad', 3: '3 intermediate',
                       4: '4 good', 5: '5 wonderful'}
     categorical['rate_marriage'] = categorical['rate_marriage'].map(
@@ -51,15 +75,19 @@ def plot_mosaic():
     num_to_cat = {1: 'r1', 2: 'r2', 3: 'r3', 4: 'r4'}
     categorical['religious'] = categorical['religious'].map(num_to_cat)
     del categorical['religious']
+    # count the data
     data = Counter(tuple(str(k) for k in v.values)
                    for k, v in categorical.iterrows())
     data = OrderedDict([k, data[k]] for k in sorted(data.keys()))
+    # do the plot (vanilla version version)
     mosaic(data)
     pylab.title('extraconiugal affairs as function of the marriage status')
     pylab.show()
 
 
 def plot_mosaic_complex():
+    """this show the limits of the current implementation in terms of labeling
+    so it shut off the labels completly"""
     import pylab
     import pandas
     yogurt_url = 'http://vincentarelbundock.github.com/Rdatasets/csv/Ecdat/Yogurt.csv'
@@ -72,12 +100,15 @@ def plot_mosaic_complex():
                                       for idx, row in data[names_interesse].iterrows()})
     count_id = data.groupby(['cheapest', 'choice'])['id'].count()
     data = dict(count_id)
-    mosaic(data, horizontal=False)
+    mosaic(data, horizontal=False, labelizer = lambda *a: "")
     pylab.title('yogurt preferences data')
     pylab.show()
 
 
 def plot_mosaic_very_complex():
+    """make a scattermatrix of mosaic plots to show the correlations between
+    each pair of variable in a dataset. Could be easily converted into a
+    new function that does this automatically based on the type of data"""
     import pylab
     key_name = ['gender', 'age', 'health', 'work']
     key_base = (['male', 'female'], ['old', 'young'],
@@ -110,7 +141,7 @@ def plot_mosaic_very_complex():
                     temp_data[k[:2]] = value
                     del temp_data[k]
                 mosaic(temp_data, ax=axes[i, j],
-                       colors=props, gap=0.05, horizontal=i > j)
+                       properties=props, gap=0.05, horizontal=i > j)
     pylab.show()
 
 
@@ -328,6 +359,6 @@ if __name__ == '__main__':
     test_recursive_split()
 
     plot_mosaic_simple()
-    plot_mosaic()
-    plot_mosaic_complex()
-    plot_mosaic_very_complex()
+    #plot_mosaic()
+    #plot_mosaic_complex()
+    #plot_mosaic_very_complex()
