@@ -7,8 +7,8 @@ dependent variables.
 General References
 --------------------
 
-A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`.  Cambridge,
-    1998
+A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`.
+    Cambridge, 1998
 
 G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
     Cambridge, 1983.
@@ -16,17 +16,19 @@ G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
 W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 
-__all__ = ["Poisson","Logit","Probit","MNLogit"]
+__all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
 import numpy as np
 from scipy.special import gammaln
-from scipy import stats, special, optimize # opt just for nbin
+from scipy import stats, special, optimize  # opt just for nbin
 import statsmodels.tools.tools as tools
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from statsmodels.regression.linear_model import OLS
-from scipy import stats, special, optimize # opt just for nbin
+from scipy import stats, special, optimize  # opt just for nbin
+from scipy.stats import nbinom
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.numdiff import (approx_fprime, approx_hess)
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
@@ -98,6 +100,7 @@ _l1_results_attr = """    nnz_params : Integer
 
 #### Private Model Classes ####
 
+
 class DiscreteModel(base.LikelihoodModel):
     """
     Abstract class for discrete choice models.
@@ -116,7 +119,7 @@ class DiscreteModel(base.LikelihoodModel):
         statsmodels.model.LikelihoodModel.__init__
         and should contain any preprocessing that needs to be done for a model.
         """
-        self.df_model = float(tools.rank(self.exog) - 1) # assumes constant
+        self.df_model = float(tools.rank(self.exog) - 1)  # assumes constant
         self.df_resid = float(self.exog.shape[0] - tools.rank(self.exog))
 
     def cdf(self, X):
@@ -133,7 +136,7 @@ class DiscreteModel(base.LikelihoodModel):
 
     def _check_perfect_pred(self, params):
         endog = self.endog
-        fittedvalues = self.cdf(np.dot(self.exog, params))
+        fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
         if (self.raise_on_perfect_prediction and
                 np.allclose(fittedvalues - endog, 0)):
             msg = "Perfect separation detected, results not available"
@@ -151,6 +154,7 @@ class DiscreteModel(base.LikelihoodModel):
             callback = self._check_perfect_pred
         else:
             pass # make a function factory to have multiple call-backs
+
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
@@ -635,7 +639,7 @@ class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none'):
         self._check_inputs(offset, exposure, endog) # attaches if needed
         super(CountModel, self).__init__(endog, exog, missing=missing,
-                offset=self.offset, exposure=self.exposure)
+                offset=offset, exposure=exposure)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
@@ -680,10 +684,10 @@ class CountModel(DiscreteModel):
                 offset = 0
 
         if not linear:
-            return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
+            return np.exp(np.dot(exog, params[:exog.shape[1]]) + exposure + offset) # not cdf
         else:
-            return np.dot(exog, params) + exposure + offset
-            return super(CountModel, self).predict(params, exog, linear)
+            return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
+            return super(CountModel, self).predict(params[:exog.shape[1]], exog, linear)
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -867,7 +871,6 @@ class Poisson(CountModel):
         exposure = getattr(self, "exposure", 0)
         XB = np.dot(self.exog, params) + offset + exposure
         endog = self.endog
-        #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return np.sum(-np.exp(XB) +  endog*XB - gammaln(endog+1))
 
     def loglikeobs(self, params):
@@ -1691,57 +1694,83 @@ class MNLogit(MultinomialModel):
 #        return mlefit
 #
 
-class NBin(CountModel):
-    """
-    Negative Binomial model.
-    """
-    #def pdf(self, X, alpha):
-    #    a1 = alpha**-1
-    #    term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+class NegativeBinomial(CountModel):
+    __doc__ = """
+    Negative Binomial model for count data
 
-    def _check_inputs(self, offset, exposure):
+    %(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+    ll : string
+        Log-likelihood type. 'nb2','nb1', or 'geometric'.
+        Fitted value :math:`\\mu`
+        Heterogeneity parameter :math:`\\alpha`
+        nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
+        nb1: Variance equal to :math:`\\mu + \\alpha\\mu` 
+        geometric: Variance equal to :math:`\\mu + \\mu^2` 
+
+    References
+    ----------
+
+    References:
+
+    Greene, W. 2008. "Functional forms for the negtive binomial model
+        for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
+    Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
+    """ 
+
+    def _check_inputs(self, offset, exposure, endog):
         if offset is not None or exposure is not None:
             raise ValueError("offset and exposure not implemented yet")
+
+    def _ll_nbin(self, params, lnalpha, Q=0):
+        mu = np.exp(np.dot(self.exog, params))
+        size = np.exp(lnalpha)**-1 * mu**Q 
+        prob = size/(size+mu)
+        coeff = gammaln(size+self.endog) - gammaln(self.endog+1) - gammaln(size)
+        llf = coeff + size*np.log(prob) + self.endog*np.log(1-prob)
+        return llf
+
+    def _ll_nb2(self, params):
+        return self._ll_nbin(params[:-1], params[-1], Q=0)
+
+    def _ll_nb1(self, params):
+        return self._ll_nbin(params[:-1], params[-1], Q=1)
+
+    def _ll_geometric(self, params):
+        return self._ll_nbin(params, 0, 0)
 
     def loglike(self, params):
         """
         Loglikelihood for negative binomial model
 
-        Notes
-        -----
-        The ancillary parameter is assumed to be the last element of
-        the params vector
-        """
-        lnalpha = params[-1]
-        params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
-        y = self.endog
-        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
-        mu = np.exp(np.dot(self.exog,params))
-        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
-        llf = np.sum(J+pdf)
-        return llf
+        Following notation in Greene (2008), with negative binomial heterogeneity
+        parameter :math:`\\alpha`:
 
-    def loglikeobs(self, params):
-        """
-        Loglikelihood for negative binomial model
+        .. math::
+
+            \\lambda_i = exp(X\\beta)\\\\
+            \\theta = 1 / \\alpha \\\\
+            g_i = \\theta \lambda_i^Q \\\\
+            w_i = g_i/(g_i + \lambda_i) \\\\
+            r_i = \\theta / (\\theta+\lambda_i) \\\\
+            ln \mathcal{L}_i = ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
 
         Notes
         -----
         The ancillary parameter is assumed to be the last element of
         the params vector
         """
-        lnalpha = params[-1]
-        params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
-        y = self.endog
-        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
-        mu = np.exp(np.dot(self.exog,params))
-        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
-        llf = J + pdf
+        llf = np.sum(self.loglikeobs(params))
         return llf
 
-    def score(self, params, full=False):
+    def _score_nb2(self, params, full=False):
         """
         Score vector for NB2 model
         """
@@ -1750,10 +1779,8 @@ class NBin(CountModel):
         a1 = np.exp(lnalpha)**-1
         y = self.endog[:,None]
         exog = self.exog
-        mu = np.exp(np.dot(exog,params))[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
         dparams = exog*a1 * (y-mu)/(mu+a1)
-
-
 
         da1 = -1*np.exp(lnalpha)**-2
         dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
@@ -1766,7 +1793,7 @@ class NBin(CountModel):
 
         return np.r_[dparams.sum(0), da1*dalpha.sum()]
 
-    def hessian(self, params):
+    def _hessian_nb2(self, params):
         """
         Hessian of NB2 model.
         """
@@ -1776,7 +1803,7 @@ class NBin(CountModel):
 
         exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog,params))[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
 
         # for dl/dparams dparams
         dim = exog.shape[1]
@@ -1802,23 +1829,73 @@ class NBin(CountModel):
         da2 = 2*np.exp(lnalpha)**-3
         dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) + \
                     np.log(a1) - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
-        dada = (da2*dalpha/da1 + da1**2 * (special.polygamma(1,a1+y) - \
+        dada = (da2*dalpha/da1 + da1**2 * (special.polygamma(1, a1+y) - \
                     special.polygamma(1,a1) + 1/a1 -1/(a1+mu) + \
                     (y-mu)/(mu+a1)**2)).sum()
         hess_arr[-1,-1] = dada
 
         return hess_arr
 
+    def _hessian_approx(self, params):
+        hess = approx_hess(params, self.loglike)
+        return hess
 
-    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
-        # start_params = [0]*(self.exog.shape[1])+[1]
-        # Use poisson fit as first guess.
-        start_params = Poisson(self.endog, self.exog).fit(disp=0).params
-        start_params = np.r_[start_params, 0.1]
-        mlefit = super(NegBinTwo, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, tol=tol)
+    def _score_approx(self, params):
+        sc = approx_fprime(params, self.loglike)
+        return sc
+
+    def scoreobs(self, params):
+        sc = approx_fprime(params, self.loglikeobs)
+        return sc
+
+    def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None, **kwargs):
+        super(CountModel, self).__init__(endog, exog, **kwargs)
+        self.ll = ll
+        self._initialize()
+        if ll in ['nb2', 'nb1']:
+            self.exog_names.append('lnalpha')
+
+    def _initialize(self):
+        if self.ll=='nb2':
+            self.hessian = self._hessian_nb2
+            self.score = self._score_nb2
+            self.loglikeobs = self._ll_nb2
+        elif self.ll=='nb1':
+            self.hessian = self._hessian_approx
+            self.score = self._score_approx
+            self.loglikeobs = self._ll_nb1
+        elif self.ll=='geometric':
+            self.hessian = self._hessian_approx
+            self.score = self._score_approx
+            self.loglikeobs = self._ll_geometric
+        else:
+            raise NotImplementedError("Likelihood type must nb1, nb2 or geometric")
+    
+    # Workaround to pickle instance methods
+    def __getstate__(self):
+        odict = self.__dict__.copy() # copy the dict since we change it
+        del odict['hessian']              
+        del odict['score']              
+        del odict['loglikeobs']              
+        return odict        
+    
+    def __setstate__(self, indict): 
+        self.__dict__.update(indict)
+        self._initialize()
+
+    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
+            disp=1):
+        if start_params == None:
+            # Use poisson fit as first guess.
+            start_params = Poisson(self.endog, self.exog).fit(disp=0).params
+            if self.ll == 'nb1':
+                start_params = np.append(start_params, 0.1)
+            elif self.ll == 'nb2':
+                start_params = np.append(start_params, 0.1)
+        mlefit = super(self.__class__, self).fit(start_params=start_params,
+                maxiter=maxiter, method=method, tol=tol, disp=disp, 
+                callback=lambda x:x) # TODO: Fix NBin _check_perfect_pred
         return mlefit
-
 
 ### Results Class ###
 
@@ -1826,6 +1903,7 @@ class DiscreteResults(base.LikelihoodModelResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
         "A results class for the discrete dependent variable models.",
         "extra_attr" : ""}
+
     def __init__(self, model, mlefit):
         #super(DiscreteResults, self).__init__(model, params,
         #        np.linalg.inv(-hessian), scale=1.)
@@ -1884,7 +1962,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        return np.dot(self.model.exog, self.params)
+        return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
 
     @cache_readonly
     def aic(self):
@@ -2194,6 +2272,7 @@ class L1CountResults(DiscreteResults):
             "A results class for count data fit by l1 regularization",
             "extra_attr" : _l1_results_attr}
         #discretefit = CountResults(self, cntfit)
+
     def __init__(self, model, cntfit):
         super(L1CountResults, self).__init__(model, cntfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
@@ -2213,6 +2292,7 @@ class OrderedResults(DiscreteResults):
 
 class BinaryResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for binary data", "extra_attr" : ""}
+
     def pred_table(self, threshold=.5):
         """
         Prediction table
@@ -2251,7 +2331,7 @@ class BinaryResults(DiscreteResults):
             wstr += "not exist and the parameters\n"
             wstr += "are not identified."
             etext.append(wstr)
-        elif predclose_frac > 0.1:  #TODO: get better diagnosis
+        elif predclose_frac > 0.1:  # TODO: get better diagnosis
             wstr = "Possibly complete quasi-separation: A fraction "
             wstr += "%4.2f of observations can be\n" % predclose_frac
             wstr += "perfectly predicted. This might indicate that there "
@@ -2428,7 +2508,7 @@ if __name__=="__main__":
 #    endog2 = np.array(endog>=1, dtype=float)
 # skipped for now, binary poisson results look off?
     data = sm.datasets.randhie.load()
-    nbreg = NBin
+    nbreg = NegativeBinomial
     mod = nbreg(data.endog, data.exog.view((float,9)))
 #FROM STATA:
     params = np.asarray([-.05654133,  -.21214282, .0878311, -.02991813, .22903632,
@@ -2448,5 +2528,3 @@ if __name__=="__main__":
 #    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
 #NOTE: this is the hessian in terms of alpha _not_ lnalpha
     hess_arr = mod.hessian(res1)
-
-

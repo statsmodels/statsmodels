@@ -7,11 +7,12 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
+
 import os
 import numpy as np
 from numpy.testing import *
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
-                                                 Poisson)
+                                                 Poisson, NegativeBinomial)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 from sys import platform
@@ -766,6 +767,137 @@ class TestPoissonNewton(CheckModelResults):
                 self.res2.margeff_dummy_overall, DECIMAL_4)
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_overall_se, DECIMAL_4)
+
+class TestNegativeBinomialNB2BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+         
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse[:-1], self.res2.bse, DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params[:-1], self.res2.params, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int()[:-1,:], self.res2.conf_int, DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues, DECIMAL_2)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(linear=True)[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def no_info(self):
+        pass
+    test_jac = no_info
+
+
+class TestNegativeBinomialNB1BFGS(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+         
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse[:-1], self.res2.bse[:-1], DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params[:-1], self.res2.params[:-1], DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.tvalues[:-1], self.res2.z[:-1], DECIMAL_1)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(linear=True)[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def no_info(self):
+        pass
+
+    test_jac = no_info
+
+
+class TestNegativeBinomialGeometricBFGS(CheckModelResults):
+    '''Cannot find another implementation of the geometric to cross-check results
+    we only test fitted values because geometric has fewer parameters than nb1 and nb2
+    and we want to make sure that predict() np.dot(exog, params) works
+    '''
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'geometric').fit(method='bfgs', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_geometric_bfgs()
+        cls.res2 = res2
+
+    def test_bic(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_aic(self):
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_1)
+
+    def test_bic(self):
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_1)
+
+    def test_llf(self):
+        assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_1)
+
+    def test_llr(self):
+        assert_almost_equal(self.res1.llr, self.res2.llr, DECIMAL_2)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(linear=True)[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_2)
+
+    def no_info(self):
+        pass
+    test_jac = no_info
+
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
