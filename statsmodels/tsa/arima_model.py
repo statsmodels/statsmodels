@@ -65,7 +65,7 @@ def _check_arima_start(start, k_ar, k_diff, method, dynamic):
 
 def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
                                trendparam, exparams, arparams, maparams, steps,
-                               method):
+                               method, exog=None):
     """
     Returns endog, resid, mu of appropriate length for out of sample
     prediction.
@@ -90,7 +90,9 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
         mu = np.zeros(steps)
 
     if k_exog > 0:
-        mu += np.dot(exparams, self.exog)
+        if exog.ndim == 1:
+            exog = exog[:, None]
+        mu += np.dot(exog, exparams)[:,None]
 
     endog = np.zeros(p + steps - 1)
 
@@ -109,7 +111,8 @@ def _arma_predict_out_of_sample(params, steps, errors, p, q, k_trend, k_exog,
     endog, resid, mu = _get_predict_out_of_sample(endog, p, q, k_trend, k_exog,
                                                    start, errors, trendparam,
                                                    exparams, arparams,
-                                                   maparams, steps, method)
+                                                   maparams, steps, method,
+                                                   exog)
 
     forecast = np.zeros(steps)
     if steps == 1:
