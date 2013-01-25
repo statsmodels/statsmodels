@@ -797,12 +797,12 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
     def test_predict(self):
         assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
 
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(linear=True)[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
     def no_info(self):
         pass
-
-    test_bic = test_jac = test_df_model = no_info
-    test_predict_xb = test_llf = test_llnull = test_llr = no_info 
-    test_llr_pvalue = no_info
+    test_jac = no_info
 
 
 class TestNegativeBinomialNB1BFGS(CheckModelResults):
@@ -825,12 +825,22 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
     def test_zstat(self): # Low precision because Z vs. t
         assert_almost_equal(self.res1.tvalues[:-1], self.res2.z[:-1], DECIMAL_1)
 
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(linear=True)[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
     def no_info(self):
         pass
 
-    test_bic = test_jac = test_df_model = test_predict = no_info
-    test_predict_xb = test_llf = test_llnull = test_llr = no_info 
-    test_llr_pvalue = test_pvalues = test_aic = test_conf_int = test_dof = no_info 
+    test_jac = no_info
 
 
 class TestNegativeBinomialGeometricBFGS(CheckModelResults):
@@ -848,19 +858,46 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
         res2.negativebinomial_geometric_bfgs()
         cls.res2 = res2
 
+    def test_bic(self):
+        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_aic(self):
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_1)
+
+    def test_bic(self):
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_1)
+
+    def test_llf(self):
+        assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_1)
+
+    def test_llr(self):
+        assert_almost_equal(self.res1.llr, self.res2.llr, DECIMAL_2)
+
     def test_fittedvalues(self):
         assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
 
     def test_predict(self):
         assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
 
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(linear=True)[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_2)
+
     def no_info(self):
         pass
+    test_jac = no_info
 
-    test_bse = test_aic = test_params = test_conf_int = test_zstat = no_info
-    test_bic = test_jac = test_dof = test_df_model = no_info
-    test_predict_xb = test_llf = test_llnull = test_llr = no_info 
-    test_llr_pvalue = no_info
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
