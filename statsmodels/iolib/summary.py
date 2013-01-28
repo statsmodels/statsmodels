@@ -161,8 +161,8 @@ class Summary(object):
 
         tab_ascii = []
         for i in range(len(tables)):
-            pad_col = ' ' * (2+pad_col_list[i])
-            pad_index = ' ' * pad_index_list[i]
+            pad_col = ' ' * int(2+pad_col_list[i])
+            pad_index = ' ' * int(pad_index_list[i])
             index = settings[i]['index']
             header = settings[i]['header']
             tab = _df_to_ascii(df=tables[i], pad_col=pad_col, 
@@ -231,18 +231,18 @@ def _measure_tables(tables, settings):
     for i in range(len(tables)):
         tab.append(_df_to_ascii(tables[i], float_format=settings[i]['float_format'], 
             header=settings[i]['header'], index=settings[i]['index']))
-            
+                
     length = [len(x.splitlines()[0]) for x in tab]
     len_max = max(length)
     pad_sep = []
     for i in range(len(tab)):
         nsep = settings[i]['ncols'] - 1
-        pad = (len_max - length[i]) / nsep 
+        pad = int((len_max - length[i]) / nsep)
         pad_sep.append(pad)
         len_new = length[i] + nsep * pad
         pad_index.append(len_max - len_new) 
 
-    return pad_sep, pad_index, max(length)
+        return pad_sep, pad_index, max(length)
 
 
 # Useful stuff

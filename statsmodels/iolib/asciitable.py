@@ -5,6 +5,7 @@ def _array_to_ascii(ar, align_data='r', align_index='l', align_header='c',
         sep_table_above=False, sep_table_below=False, sep_table_char='=',
         sep_header_below=True, sep_header_above=True, sep_header_char='-',
         pad_col='  ', pad_index=None, fixed_width=False):
+    '''Convert numpy string array to ascii table'''
 
     if fixed_width:
         max_len_table = []
@@ -73,6 +74,8 @@ def _df_to_ascii(df, header=True, index=True, float_format="%.4f",
         sep_table_above=False, sep_table_below=False, sep_table_char='=',
         sep_header_above=True, sep_header_below=True, sep_header_char='-',
         pad_col='  ', pad_index=None, fixed_width=False):
+    '''Convert a Pandas DataFrame to a numpy string array and convert
+    to ascii table'''
 
     dataframe = df.copy()
 
