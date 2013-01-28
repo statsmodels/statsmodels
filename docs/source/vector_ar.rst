@@ -132,7 +132,7 @@ Plotting input time series:
 
 ::
 
-    >>> model.plot()
+    >>> results.plot()
 
 .. plot:: plots/var_plot_input.py
 
@@ -140,7 +140,7 @@ Plotting time series autocorrelation function:
 
 ::
 
-    >>> model.plot_acorr()
+    >>> results.plot_acorr()
 
 .. plot:: plots/var_plot_acorr.py
 
