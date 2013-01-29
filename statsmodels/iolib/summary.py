@@ -5,7 +5,7 @@ import copy
 import collections
 import StringIO
 import textwrap
-from asciitable import _array_to_ascii, _df_to_ascii
+from asciitable import _df_to_ascii
 
 class Summary(object):
     def __init__(self):
@@ -25,7 +25,7 @@ class Summary(object):
         return self.as_html()
 
     def add_df(self, df, index=True, header=True, float_format='%.4f', 
-               align_data='r', align_header='c', align_index='l'):
+               align='r'):
         '''Add the contents of a DataFrame to summary table
 
         Parameters
@@ -41,14 +41,9 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        if header == False:
-            align_header = align_data
-        if index == False:
-            align_index = align_data
         settings = {'ncols':df.shape[1], 
                     'index':index, 'header':header, 
-                    'float_format':float_format, 'align_data':align_data, 
-                    'align_header':align_header, 'align_index':align_index}
+                    'float_format':float_format, 'align':align}
         if index:
             settings['ncols'] += 1
         self.tables.append(df)
@@ -68,8 +63,7 @@ class Summary(object):
 
         table = pd.DataFrame(array)
         self.add_df(table, index=False, header=False,
-                float_format=float_format, align_data=align, 
-                align_header=align, align_index=align)
+                float_format=float_format, align=align)
 
     def add_dict(self, d, ncols=2, align='l'):
         '''Add the contents of a Dict to summary table
@@ -161,16 +155,14 @@ class Summary(object):
 
         tab_ascii = []
         for i in range(len(tables)):
-            pad_col = ' ' * int(2+pad_col_list[i])
-            pad_index = ' ' * int(pad_index_list[i])
+            pad_col = pad_col_list[i]
+            pad_index = pad_index_list[i]
             index = settings[i]['index']
             header = settings[i]['header']
             tab = _df_to_ascii(df=tables[i], pad_col=pad_col, 
                     pad_index=pad_index, header=header, index=index,
                     float_format=settings[i]['float_format'], 
-                    align_data=settings[i]['align_data'],
-                    align_header=settings[i]['align_header'],
-                    align_index=settings[i]['align_index'])
+                    align=settings[i]['align'])
             tab_ascii.append(tab)
 
         rule_equal = widest * '='
@@ -235,14 +227,15 @@ def _measure_tables(tables, settings):
     length = [len(x.splitlines()[0]) for x in tab]
     len_max = max(length)
     pad_sep = []
+
     for i in range(len(tab)):
-        nsep = settings[i]['ncols'] - 1
+        nsep = settings[i]['ncols'] - 2
         pad = int((len_max - length[i]) / nsep)
         pad_sep.append(pad)
         len_new = length[i] + nsep * pad
         pad_index.append(len_max - len_new) 
 
-        return pad_sep, pad_index, max(length)
+    return pad_sep, pad_index, max(length)
 
 
 # Useful stuff
@@ -431,9 +424,67 @@ def summary_col(results, float_format='%.4f', model_names=None, stars=True,
     dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
     # Summary
     smry = Summary()
-    smry.add_df(dat, header=True, align_data='l')
+    smry.add_df(dat, header=True, align='l')
     smry.add_text('Standard errors in parentheses.')
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
 
     return smry
+
+def _format_element(element, float_format, align, length=None):
+    try:
+        element = float_format % element
+    except:
+        element = str(element)
+    element = element.strip()
+    if length != None:
+        if align == 'c':
+            element = element.center(length)
+        elif align == 'l':
+            element = element.ljust(length)
+        elif align == 'r':
+            element = element.rjust(length)
+        else:
+            raise Exception('align must be l, c or r')
+    return element
+
+def _format_series(series, float_format='%.4f', align='l'):
+    f = lambda x: _format_element(x, float_format, align)
+    max_len = series.apply(f).apply(len).max()
+    f = lambda x: _format_element(x, float_format, align, max_len)
+    out = series.apply(f)
+    return out
+
+def _df_to_ascii(df, align='r', float_format="%.4f", header=True, index=True, sep_table_above=False, sep_table_below=False, sep_table_char='=', sep_header_below=True, sep_header_above=True, sep_header_char='-', pad_col=0, pad_index=0, fixed_width=False):
+    f = lambda x: _format_series(x, float_format, align)
+    dat = df.apply(f)
+    max_len = dat.apply(lambda x: x.apply(len).max()).tolist()
+    col = [str(x) for x in dat.columns.tolist()]
+    idx = [str(x) for x in dat.index.tolist()]
+    for i in range(dat.shape[1]):
+        if fixed_width:
+            col_len = max(max_len)
+        else:
+            col_len = max_len[i]
+        col[i] = col[i].center(col_len)
+    for i in range(dat.shape[1]-1):
+        col[i] = col[i] + pad_col * ' '
+        dat.ix[:,i] = dat.ix[:,i].apply(lambda x: x + pad_col * ' ')
+    idx = [x + pad_index * ' ' for x in idx]  
+    dat.columns = col
+    dat.index = idx
+    tab = dat.to_string(header=header, index=index)
+    tab = tab.splitlines() 
+    width = len(tab[0])
+    sep_table = width * sep_table_char
+    sep_header = width * sep_header_char
+    if sep_header_above:
+        tab[0] = sep_header + '\n' + tab[0]
+    if sep_header_below: 
+        tab[0] = tab[0] + '\n' + sep_header
+    if sep_table_above:
+        tab[0] = sep_table + '\n' + tab[0]
+    if sep_table_below: 
+        tab[-1] = tab[-1] + '\n' + sep_table
+    tab = '\n'.join(tab)
+    return tab
