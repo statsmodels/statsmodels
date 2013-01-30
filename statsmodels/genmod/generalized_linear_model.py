@@ -619,20 +619,23 @@ class GLMResults(base.LikelihoodModelResults):
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, title=None, xname=None, yname=None, alpha=.05,
+            float_format="%.4f"): 
         """Summarize the Regression Results
 
         Parameters
         -----------
-        yname : string, optional
-            Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)           
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
@@ -646,273 +649,14 @@ class GLMResults(base.LikelihoodModelResults):
             results
 
         """
-
-        top_left = [('Dep. Variable:', None),
-                  ('Model:', None),
-                  ('Model Family:', [self.family.__class__.__name__]),
-                  ('Link Function:', [self.family.link.__class__.__name__]),
-                  ('Method:', ['IRLS']),
-                  ('Date:', None),
-                  ('Time:', None),
-                  ('No. Iterations:', ["%d" % self.fit_history['iteration']]),
-                  ]
-
-        top_right = [('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None),
-                     ('Scale:', [self.scale]),
-                     ('Log-Likelihood:', None),
-                     ('Deviance:', ["%#8.5g" % self.deviance]),
-                     ('Pearson chi2:', ["%#6.3g" % self.pearson_chi2])
-                     ]
-
-        if title is None:
-            title = "Generalized Linear Model Regression Results"
-
-        #create summary tables
+        # Summary
+        self.method = 'IRLS'
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=True)
-
-        #diagnostic table is not used yet:
-        #smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-        #                  yname=yname, xname=xname,
-        #                  title="")
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title) 
 
         return smry
-
-
-    def summary_old(self, yname=None, xname=None,
-                    title='Generalized linear model', returns='text'):
-        """
-        Print a table of results or returns SimpleTable() instance which
-        summarizes the Generalized linear model results.
-
-        Parameters
-        -----------
-        yname : string
-                optional, Default is `Y`
-        xname : list of strings
-                optional, Default is `X.#` for # in p the number of regressors
-        title : string
-                optional, Defualt is 'Generalized linear model'
-        returns : string
-                  'text', 'table', 'csv', 'latex', 'html'
-
-        Returns
-        -------
-        Defualt :
-        returns='print'
-                Prints the summarirized results
-
-        Option :
-        returns='text'
-                Prints the summarirized results
-
-        Option :
-        returns='table'
-                 SimpleTable instance : summarizing the fit of a linear model.
-
-        Option :
-        returns='csv'
-                returns a string of csv of the results, to import into a
-                spreadsheet
-
-        Option :
-        returns='latex'
-        Not implimented yet
-
-        Option :
-        returns='HTML'
-        Not implimented yet
-
-
-        Examples (needs updating)
-        --------
-        >>> import statsmodels.api as sm
-        >>> data = sm.datasets.longley.load()
-        >>> data.exog = sm.add_constant(data.exog)
-        >>> ols_results = sm.OLS(data.endog, data.exog).results
-        >>> print ols_results.summary()
-        ...
-
-        Notes
-        -----
-        stand_errors are not implimented.
-        conf_int calculated from normal dist.
-        """
-        import time as Time
-        from statsmodels.iolib import SimpleTable
-
-        yname = 'Y'
-        if xname is None:
-            xname = ['x%d' % i for i in range(self.model.exog.shape[1])]
-
-        #List of results used in summary
-        #yname = yname
-        #xname = xname
-        time = Time.localtime()
-        dist_family = self.model.family.__class__.__name__
-        df_model = self.df_model
-        df_resid = self.df_resid
-        llf = self.llf
-        nobs = self.nobs
-        params = self.params
-        scale = self.scale
-        #TODO   #stand_errors = self.stand_errors
-        stand_errors = self.bse  #[' ' for x in range(len(self.params))]
-        #Added note about conf_int
-        conf_int = self.conf_int()
-        #f_test() = self.f_test()
-        t = self.tvalues
-        #t_test = self.t_test()
-
-
-
-        table_1l_fmt = dict(
-            data_fmts = ["%s", "%s", "%s", "%s", "%s"],
-            empty_cell = '',
-            colwidths = 15,
-            colsep='   ',
-            row_pre = '  ',
-            row_post = '  ',
-            table_dec_above='=',
-            table_dec_below='',
-            header_dec_below=None,
-            header_fmt = '%s',
-            stub_fmt = '%s',
-            title_align='c',
-            header_align = 'r',
-            data_aligns = "r",
-            stubs_align = "l",
-            fmt = 'txt'
-            )
-        # Note table_1l_fmt over rides the below formating. in extend_right? JP
-        table_1r_fmt = dict(
-            data_fmts = ["%s", "%s", "%s", "%s", "%1s"],
-            empty_cell = '',
-            colwidths = 12,
-            colsep='   ',
-            row_pre = '',
-            row_post = '',
-            table_dec_above='=',
-            table_dec_below='',
-            header_dec_below=None,
-            header_fmt = '%s',
-            stub_fmt = '%s',
-            title_align='c',
-            header_align = 'r',
-            data_aligns = "r",
-            stubs_align = "l",
-            fmt = 'txt'
-            )
-
-        table_2_fmt = dict(
-            data_fmts = ["%s", "%s", "%s", "%s"],
-            #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-            #data_fmts = ["%#10.4g","%#6.4f", "%#6.4f"],
-            #data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
-            empty_cell = '',
-            colwidths = 13,
-            colsep=' ',
-            row_pre = '  ',
-            row_post = '   ',
-            table_dec_above='=',
-            table_dec_below='=',
-            header_dec_below='-',
-            header_fmt = '%s',
-            stub_fmt = '%s',
-            title_align='c',
-            header_align = 'r',
-            data_aligns = 'r',
-            stubs_align = 'l',
-            fmt = 'txt'
-        )
-        ########  summary table 1   #######
-        table_1l_title = title
-        table_1l_header = None
-        table_1l_stubs = ('Model Family:',
-                          'Method:',
-                          'Dependent Variable:',
-                          'Date:',
-                          'Time:',
-                          )
-        table_1l_data = [
-                         [dist_family],
-                         ['IRLS'],
-                         [yname],
-                         [Time.strftime("%a, %d %b %Y",time)],
-                         [Time.strftime("%H:%M:%S",time)],
-                        ]
-        table_1l = SimpleTable(table_1l_data,
-                            table_1l_header,
-                            table_1l_stubs,
-                            title=table_1l_title,
-                            txt_fmt = table_1l_fmt)
-        table_1r_title = None
-        table_1r_header = None
-        table_1r_stubs = ('# of obs:',
-                          'Df residuals:',
-                          'Df model:',
-                          'Scale:',
-                          'Log likelihood:'
-                          )
-        table_1r_data = [
-                         [nobs],
-                         [df_resid],
-                         [df_model],
-                         ["%#6.4f" % (scale,)],
-                         ["%#6.4f" % (llf,)]
-                        ]
-        table_1r = SimpleTable(table_1r_data,
-                            table_1r_header,
-                            table_1r_stubs,
-                            title=table_1r_title,
-                            txt_fmt = table_1r_fmt)
-
-        ########  summary table 2   #######
-        #TODO add % range to confidance interval column header
-        table_2header = ('coefficient', 'stand errors', 't-statistic',
-        'Conf. Interval')
-        table_2stubs = xname
-        table_2data = zip(
-                      ["%#6.4f" % (params[i]) for i in range(len(xname))],
-                      ["%#6.4f" % stand_errors[i] for i in range(len(xname))],
-                      ["%#6.4f" % (t[i]) for i in range(len(xname))],
-                      [""" [%#6.3f, %#6.3f]""" % tuple(conf_int[i]) for i in
-                                                          range(len(xname))]
-                      )
-
-
-        #dfmt={'data_fmt':["%#12.6g","%#12.6g","%#10.4g","%#5.4g"]}
-        table_2 = SimpleTable(table_2data,
-                            table_2header,
-                            table_2stubs,
-                            title=None,
-                            txt_fmt = table_2_fmt)
-
-        ########  Return Summary Tables ########
-        # join table table_s then print
-        if returns == 'text':
-            table_1l.extend_right(table_1r)
-            return str(table_1l) + '\n' +  str(table_2)
-        elif returns == 'print':
-            table_1l.extend_right(table_1r)
-            print(str(table_1l) + '\n' +  str(table_2))
-        elif returns == 'tables':
-            return [table_1l, table_1r, table_2]
-            #return [table_1, table_2 ,table_3L, notes]
-        elif returns == 'csv':
-            return table_1.as_csv() + '\n' + table_2.as_csv() + '\n' + \
-                   table_3L.as_csv()
-        elif returns == 'latex':
-            print('not avalible yet')
-        elif returns == html:
-            print('not avalible yet')
-
 
 class GLMResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {
@@ -932,7 +676,7 @@ if __name__ == "__main__":
     data = sm.datasets.longley.load()
     #data.exog = add_constant(data.exog)
     GLMmod = GLM(data.endog, data.exog).fit()
-    GLMT = GLMmod.summary(returns='tables')
+    GLMT = GLMmod.summary()
 ##    GLMT[0].extend_right(GLMT[1])
 ##    print(GLMT[0])
 ##    print(GLMT[2])

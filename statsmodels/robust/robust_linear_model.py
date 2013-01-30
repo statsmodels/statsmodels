@@ -465,64 +465,41 @@ class RLMResults(base.LikelihoodModelResults):
 
     remove_data.__doc__ = base.LikelihoodModelResults.remove_data.__doc__
 
-    def summary(self, yname=None, xname=None, title=0, alpha=.05,
-                return_fmt='text'):
+    def summary(self, title=None, xname=None, yname=None, alpha=.05,
+                        float_format="%.4f"): 
+        """Summarize the Regression Results
+
+        Parameters
+        -----------
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
         """
-        This is for testing the new summary setup
-        """
-        from statsmodels.iolib.summary import (summary_top,
-                                            summary_params, summary_return)
-
-##        left = [(i, None) for i in (
-##                        'Dependent Variable:',
-##                        'Model type:',
-##                        'Method:',
-##			'Date:',
-##                        'Time:',
-##                        'Number of Obs:',
-##                        'df resid',
-##		        'df model',
-##                         )]
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['IRLS']),
-                    ('Norm:', [self.fit_options['norm']]),
-                    ('Scale Est.:', [self.fit_options['scale_est']]),
-                    ('Cov Type:', [self.fit_options['cov']]),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('No. Iterations:', ["%d" % self.fit_history['iteration']])
-                    ]
-        top_right = [('No. Observations:', None),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None)
-                     ]
-
-        if not title is None:
-            title = "Robust linear Model Regression Results"
-
-        #boiler plate
+        # Summary
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
-                          yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=False)
-
-        #diagnostic table is not used yet
-#        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-#                          yname=yname, xname=xname,
-#                          title="")
-
-#add warnings/notes, added to text format only
-        etext =[]
-        wstr = \
-'''If the model instance has been used for another fit with different fit
-parameters, then the fit options might not be the correct ones anymore .'''
-        etext.append(wstr)
-
-        if etext:
-            smry.add_extra_txt(etext)
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title) 
 
         return smry
 
