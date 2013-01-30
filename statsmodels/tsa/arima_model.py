@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import numpy as np
+import pandas as pd
 from scipy import optimize
 from scipy.stats import t, norm
 from scipy.signal import lfilter
@@ -1313,13 +1314,18 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         return forecast, fcasterr, conf_int
 
-    def summary(self, alpha=.05):
-        """Summarize the Model
+    def summary(self, title=None, alpha=.05, float_format="%.4f"):
+        """Summarize the ARIMA Results
 
         Parameters
-        ----------
-        alpha : float, optional
-            Significance level for the confidence intervals.
+        -----------
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
@@ -1329,22 +1335,20 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         See Also
         --------
-        statsmodels.iolib.summary.Summary
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
         """
-        from statsmodels.iolib.summary import Summary
-        model = self.model
-        title = model.__class__.__name__ + ' Model Results'
-        method = model.method
         # get sample TODO: make better sample machinery for estimation
         k_diff = getattr(self, 'k_diff', 0)
-        if 'mle' in method:
+        if 'mle' in self.model.method:
             start = k_diff
         else:
             start = k_diff + self.k_ar
         if self.data.dates is not None:
             dates = self.data.dates
             sample = [dates[start].strftime('%m-%d-%Y')]
-            sample += ['- ' + dates[-1].strftime('%m-%d-%Y')]
+            sample += [dates[-1].strftime('%m-%d-%Y')]
         else:
             sample = str(start) + ' - ' + str(len(self.data.orig_endog))
 
@@ -1353,31 +1357,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             order = str((k_ar, k_ma))
         else:
             order = str((k_ar, k_diff, k_ma))
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', [model.__class__.__name__ + order]),
-                    ('Method:', [method]),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('Sample:', [sample[0]]),
-                    ('', [sample[1]])
-                    ]
 
-        top_right = [
-                     ('No. Observations:', [str(len(self.model.endog))]),
-                     ('Log Likelihood', ["%#5.3f" % self.llf]),
-                     ('S.D. of innovations', ["%#5.3f" % self.sigma2**.5]),
-                     ('AIC', ["%#5.3f" % self.aic]),
-                     ('BIC', ["%#5.3f" % self.bic]),
-                     ('HQIC', ["%#5.3f" % self.hqic])]
-
-        smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                                   title=title)
-        smry.add_table_params(self, alpha=alpha, use_t=False)
-
-        # Make the roots table
-        from statsmodels.iolib.table import SimpleTable
-
+        # Roots table
         if k_ma and k_ar:
             arstubs = ["AR.%d" % i for i in range(1, k_ar + 1)]
             mastubs = ["MA.%d" % i for i in range(1, k_ma + 1)]
@@ -1396,16 +1377,32 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             freq = self.arfreq
         modulus = np.abs(roots)
         data = np.column_stack((roots.real, roots.imag, modulus, freq))
-        roots_table = SimpleTable(data,
-                headers=['           Real', '         Imaginary',
-                        '         Modulus', '        Frequency'],
-                title="Roots",
-                stubs=stubs, data_fmts=["%17.4f", "%+17.4fj", "%17.4f",
-                    "%17.4f"])
+        data = pd.DataFrame(data)
+        data.columns = ['Real', 'Imaginary', 'Modulus', 'Frequency']
+        data.index = stubs
+        
+        # Summary
+        from statsmodels.iolib.summary import (Summary, summary_params,
+                                               summary_model)
+        smry = Summary()
 
-        smry.tables.append(roots_table)
+        # Model info
+        model_info = summary_model(self)
+        model_info['Method:'] = self.model.method
+        model_info['Sample:'] = sample[0]
+        model_info['   '] = sample[-1]
+        model_info['S.D. of innovations:'] = "%#5.3f" % self.sigma2**.5
+        model_info['HQIC:'] = "%#5.3f" % self.hqic
+        model_info['No. Observations:'] = str(len(self.model.endog))
+
+        # Parameters
+        params = summary_params(self)
+        smry.add_dict(model_info)
+        smry.add_df(params, float_format=float_format)
+        smry.add_df(data, float_format="%17.4f")
+        smry.add_title(results=self, title=title)
+
         return smry
-
 
 class ARMAResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
