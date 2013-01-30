@@ -180,7 +180,7 @@ class CountResults(GenericLikelihoodModelResults):
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
         #boiler plate
-        from statsmodels.iolib.summary import Summary
+        from statsmodels.iolib.summary_old import Summary
         smry = Summary()
         # for top of table
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
