@@ -5,7 +5,8 @@ import copy
 import collections
 import StringIO
 import textwrap
-from asciitable import _df_to_ascii
+from table import SimpleTable
+from tableformatting import fmt_latex, fmt_txt
 
 class Summary(object):
     def __init__(self):
@@ -41,15 +42,12 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        settings = {'ncols':df.shape[1], 
-                    'index':index, 'header':header, 
+        settings = {'index':index, 'header':header, 
                     'float_format':float_format, 'align':align}
-        if index:
-            settings['ncols'] += 1
         self.tables.append(df)
         self.settings.append(settings)
 
-    def add_array(self, array, align='l', float_format="%.4f"):
+    def add_array(self, array, align='r', float_format="%.4f"):
         '''Add the contents of a Numpy array to summary table
 
         Parameters
@@ -65,7 +63,7 @@ class Summary(object):
         self.add_df(table, index=False, header=False,
                 float_format=float_format, align=align)
 
-    def add_dict(self, d, ncols=2, align='l'):
+    def add_dict(self, d, ncols=2, align='l', float_format="%.4f"):
         '''Add the contents of a Dict to summary table
 
         Parameters
@@ -79,14 +77,14 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        key = map(str, d.keys())
-        val = map(str, d.values())
-        data = np.array([key, val]).T
-        # Pad if necessary to fill columns
+        keys = [_formatter(x, float_format) for x in d.keys()]
+        vals = [_formatter(x, float_format) for x in d.values()]
+        data = np.array(zip(keys, vals))
+
         if data.shape[0] % ncols != 0:
             pad = ncols - (data.shape[0] % ncols)
             data = np.vstack([data, np.array(pad * [['','']])])
-        # Split and join as multi-columns
+
         data = np.split(data, ncols)
         data = reduce(lambda x,y: np.hstack([x,y]), data)
         self.add_array(data, align=align)
@@ -151,23 +149,16 @@ class Summary(object):
         settings = self.settings
         title = self.title
         extra_txt = self.extra_txt
-        pad_col_list, pad_index_list, widest = _measure_tables(tables, settings)
 
-        tab_ascii = []
-        for i in range(len(tables)):
-            pad_col = pad_col_list[i]
-            pad_index = pad_index_list[i]
-            index = settings[i]['index']
-            header = settings[i]['header']
-            tab = _df_to_ascii(df=tables[i], pad_col=pad_col, 
-                    pad_index=pad_index, header=header, index=index,
-                    float_format=settings[i]['float_format'], 
-                    align=settings[i]['align'])
-            tab_ascii.append(tab)
+        pad_col, pad_index, widest = _measure_tables(tables, settings)
 
         rule_equal = widest * '='
         rule_dash = widest * '-'
-        tab = '\n'.join(tab_ascii)
+
+        simple_tables = _simple_tables(tables, settings, pad_col, pad_index)
+        tab = [x.as_text() for x in simple_tables]
+
+        tab = '\n'.join(tab)
         tab = tab.split('\n')
         tab[0] = rule_equal
         tab.append(rule_equal)
@@ -191,23 +182,34 @@ class Summary(object):
     def as_html(self):
         '''Generate HTML Summary Table
         '''
-        tables = copy.deepcopy(self.tables)
-        for i in range(len(tables)):
-            tables[i] = tables[i].to_html(header=self.settings[i]['header'], 
-                           index=self.settings[i]['index'], 
-                           float_format=self.settings[i]['float_format']) 
-        out = '\n'.join(tables)
-        return out
+
+        tables = self.tables
+        settings = self.settings
+        title = self.title
+
+        simple_tables = _simple_tables(tables, settings)
+        tab = [x.as_html() for x in simple_tables]
+        tab = '\n'.join(tab)
+
+        return tab
 
     def as_latex(self):
         '''Generate LaTeX Summary Table
         '''
-        tables = copy.deepcopy(self.tables)
-        for i in range(len(tables)):
-            tables[i] = tables[i].to_latex(header=self.settings[i]['index'], 
-                                           index=self.settings[i]['index']) 
-            tables[i] = tables[i].replace('\\hline\n', '')
-        out = '\\begin{table}\n' + '\n'.join(tables) + '\\end{table}\n'
+        tables = self.tables
+        settings = self.settings
+        title = self.title
+        if title != None:
+            title = '\\caption{' + title + '} \\\\'
+        else:
+            title = '\\caption{}'
+
+        simple_tables = _simple_tables(tables, settings)
+        tab = [x.as_latex_tabular() for x in simple_tables]
+        tab = '\n\\hline\n'.join(tab)
+
+        out = '\\begin{table}', title, tab, '\\end{table}'
+        out = '\n'.join(out)
         return out
 
 def _measure_tables(tables, settings):
@@ -217,19 +219,16 @@ def _measure_tables(tables, settings):
     column to pad the rest.
     '''
 
-    pad_index = []
-    pad_sep = []
-    tab = []
-    for i in range(len(tables)):
-        tab.append(_df_to_ascii(tables[i], float_format=settings[i]['float_format'], 
-            header=settings[i]['header'], index=settings[i]['index']))
-                
+    simple_tables = _simple_tables(tables, settings)
+    tab = [x.as_text() for x in simple_tables] 
+
     length = [len(x.splitlines()[0]) for x in tab]
     len_max = max(length)
     pad_sep = []
+    pad_index = []
 
     for i in range(len(tab)):
-        nsep = settings[i]['ncols'] - 2
+        nsep = tables[i].shape[1] - 1
         pad = int((len_max - length[i]) / nsep)
         pad_sep.append(pad)
         len_new = length[i] + nsep * pad
@@ -431,60 +430,50 @@ def summary_col(results, float_format='%.4f', model_names=None, stars=True,
 
     return smry
 
-def _format_element(element, float_format, align, length=None):
+def _formatter(element, float_format='%.4f'):
     try:
-        element = float_format % element
+        out = float_format % element
     except:
-        element = str(element)
-    element = element.strip()
-    if length != None:
-        if align == 'c':
-            element = element.center(length)
-        elif align == 'l':
-            element = element.ljust(length)
-        elif align == 'r':
-            element = element.rjust(length)
-        else:
-            raise Exception('align must be l, c or r')
-    return element
+        out = str(element)
+    return out.strip()
 
-def _format_series(series, float_format='%.4f', align='l'):
-    f = lambda x: _format_element(x, float_format, align)
-    max_len = series.apply(f).apply(len).max()
-    f = lambda x: _format_element(x, float_format, align, max_len)
-    out = series.apply(f)
-    return out
 
-def _df_to_ascii(df, align='r', float_format="%.4f", header=True, index=True, sep_table_above=False, sep_table_below=False, sep_table_char='=', sep_header_below=True, sep_header_above=True, sep_header_char='-', pad_col=0, pad_index=0, fixed_width=False):
-    f = lambda x: _format_series(x, float_format, align)
-    dat = df.apply(f)
-    max_len = dat.apply(lambda x: x.apply(len).max()).tolist()
-    col = [str(x) for x in dat.columns.tolist()]
-    idx = [str(x) for x in dat.index.tolist()]
-    for i in range(dat.shape[1]):
-        if fixed_width:
-            col_len = max(max_len)
-        else:
-            col_len = max_len[i]
-        col[i] = col[i].center(col_len)
-    for i in range(dat.shape[1]-1):
-        col[i] = col[i] + pad_col * ' '
-        dat.ix[:,i] = dat.ix[:,i].apply(lambda x: x + pad_col * ' ')
-    idx = [x + pad_index * ' ' for x in idx]  
-    dat.columns = col
-    dat.index = idx
-    tab = dat.to_string(header=header, index=index)
-    tab = tab.splitlines() 
-    width = len(tab[0])
-    sep_table = width * sep_table_char
-    sep_header = width * sep_header_char
-    if sep_header_above:
-        tab[0] = sep_header + '\n' + tab[0]
-    if sep_header_below: 
-        tab[0] = tab[0] + '\n' + sep_header
-    if sep_table_above:
-        tab[0] = sep_table + '\n' + tab[0]
-    if sep_table_below: 
-        tab[-1] = tab[-1] + '\n' + sep_table
-    tab = '\n'.join(tab)
-    return tab
+def _df_to_simpletable(df, align='r', float_format="%.4f", header=True, index=True,
+        table_dec_above='-', table_dec_below=None, header_dec_below='-', 
+        pad_col=0, pad_index=0):
+    dat = df.copy()
+    dat = dat.applymap(lambda x: _formatter(x, float_format))
+    if header:
+        headers = [str(x) for x in dat.columns.tolist()]
+    else: 
+        headers = None
+    if index:
+        stubs = [str(x) + int(pad_index) * ' ' for x in dat.index.tolist()]
+    else: 
+        dat.ix[:,0] = [str(x) + int(pad_index) * ' ' for x in dat.ix[:,0]]
+        stubs = None
+    st = SimpleTable(np.array(dat), headers=headers, stubs=stubs, 
+            ltx_fmt=fmt_latex, txt_fmt=fmt_txt)
+    st.output_formats['latex']['data_aligns'] = align
+    st.output_formats['txt']['data_aligns'] = align
+    st.output_formats['txt']['table_dec_above'] = table_dec_above
+    st.output_formats['txt']['table_dec_below'] = table_dec_below
+    st.output_formats['txt']['header_dec_below'] = header_dec_below
+    st.output_formats['txt']['colsep'] = ' ' * int(pad_col + 1)
+    return st
+
+def _simple_tables(tables, settings, pad_col=None, pad_index=None):
+    simple_tables = []
+    float_format = '%.4f'
+    if pad_col == None:
+        pad_col = [0] * len(tables) 
+    if pad_index == None:
+        pad_index = [0] * len(tables) 
+    for i,v in enumerate(tables):
+        index = settings[i]['index']
+        header = settings[i]['header']
+        align = settings[i]['align']
+        simple_tables.append(_df_to_simpletable(v, align=align,
+            float_format=float_format, header=header, index=index,
+            pad_col=pad_col[i], pad_index=pad_index[i]))
+    return simple_tables
