@@ -2121,7 +2121,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
 
     def summary(self, title=None, xname=None, yname=None, alpha=.05,
-            float_format="%.4f"): 
+            float_format=None): 
         """Summarize the Regression Results
 
         Parameters
@@ -2207,7 +2207,7 @@ class BinaryResults(DiscreteResults):
         return np.histogram2d(actual, pred, bins=2)[0]
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                float_format="%.4f"):
+                float_format=None):
         smry = super(BinaryResults, self).summary(yname=yname, xname=xname,
                 title=title, alpha=alpha, float_format=float_format)
 
@@ -2316,7 +2316,7 @@ class MultinomialResults(DiscreteResults):
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
 
-    def summary(self, alpha=0.05, float_format="%.4f"):
+    def summary(self, alpha=0.05, float_format=None):
         smry = Summary()
         smry.add_dict(summary_model(self))
         # One data frame per value of endog

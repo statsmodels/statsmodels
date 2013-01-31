@@ -1314,7 +1314,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
         return forecast, fcasterr, conf_int
 
-    def summary(self, title=None, alpha=.05, float_format="%.4f"):
+    def summary(self, title=None, alpha=.05, float_format=None):
         """Summarize the ARIMA Results
 
         Parameters

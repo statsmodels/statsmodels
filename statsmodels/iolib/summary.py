@@ -25,7 +25,7 @@ class Summary(object):
         '''Display as HTML in IPython notebook.'''
         return self.as_html()
 
-    def add_df(self, df, index=True, header=True, float_format='%.4f', 
+    def add_df(self, df, index=True, header=True, float_format=None, 
                align='r'):
         '''Add the contents of a DataFrame to summary table
 
@@ -47,7 +47,7 @@ class Summary(object):
         self.tables.append(df)
         self.settings.append(settings)
 
-    def add_array(self, array, align='r', float_format="%.4f"):
+    def add_array(self, array, align='r', float_format=None):
         '''Add the contents of a Numpy array to summary table
 
         Parameters
@@ -63,7 +63,7 @@ class Summary(object):
         self.add_df(table, index=False, header=False,
                 float_format=float_format, align=align)
 
-    def add_dict(self, d, ncols=2, align='l', float_format="%.4f"):
+    def add_dict(self, d, ncols=2, align='l', float_format=None):
         '''Add the contents of a Dict to summary table
 
         Parameters
@@ -112,7 +112,7 @@ class Summary(object):
             except:
                 self.title = '' 
 
-    def add_base(self, results, alpha=0.05, float_format="%.4f", title=None, 
+    def add_base(self, results, alpha=0.05, float_format=None, title=None, 
             xname=None, yname=None):
         '''Try to construct a basic summary instance. 
 
@@ -252,15 +252,13 @@ _model_types = {'OLS' : 'Ordinary least squares',
 def summary_model(results):
     '''Create a dict with information about the model
     '''
-    def time_now(**kwrds):
-        now = datetime.datetime.now()
-        return now.strftime('%Y-%m-%d %H:%M')
     info = collections.OrderedDict()
     info['Model:'] = lambda x: x.model.__class__.__name__
     info['Model Family:'] = lambda x: x.family.__class.__name__
     info['Link Function:'] = lambda x: x.family.link.__class__.__name__
     info['Dependent Variable:'] = lambda x: x.model.endog_names
-    info['Date:'] = time_now()
+    now = datetime.datetime.now()
+    info['Date:'] = lambda x: now.strftime('%Y-%m-%d %H:%M')
     info['No. Observations:'] = lambda x: "%#6d" % x.nobs
     info['Df Model:'] = lambda x: "%#6d" % x.df_model
     info['Df Residuals:'] = lambda x: "%#6d" % x.df_resid
@@ -268,6 +266,7 @@ def summary_model(results):
     info['No. Iterations:'] = lambda x: x.mle_retvals['iterations']
     info['Method:'] = lambda x: x.method
     info['Norm:'] = lambda x: x.fit_options['norm']
+    info['Scale:'] = lambda x: "%#8.5g" % x.scale
     info['Scale Est.:'] = lambda x: x.fit_options['scale_est']
     info['Cov. Type:'] = lambda x: x.fit_options['cov']
     info['R-squared:'] = lambda x: "%#8.3f" % x.rsquared
@@ -282,7 +281,6 @@ def summary_model(results):
     info['Pearson chi2:'] = lambda x: "%#6.3g" % x.pearson_chi2
     info ['F-statistic:'] = lambda x: "%#8.4g" % self.fvalue
     info ['Prob (F-statistic):'] = lambda x: "%#6.3g" % self.f_pvalue
-    info['Scale:'] = lambda x: "%#8.5g" % x.scale
     out = collections.OrderedDict()
     for key in info.keys():
         try: 
@@ -325,7 +323,7 @@ def summary_params(results, alpha=.05, params=None, bse=None, tvalues=None,
 
 
 # Vertical summary instance for multiple models
-def _col_params(result, float_format='%.4f', stars=True):
+def _col_params(result, float_format=None, stars=True):
     '''Stack coefficients and standard errors in single column
     '''
 
@@ -370,7 +368,7 @@ def _col_info(result, info_dict=None):
     out.columns = [str(result.model.endog_names)] 
     return out
 
-def summary_col(results, float_format='%.4f', model_names=None, stars=True,
+def summary_col(results, float_format=None, model_names=None, stars=True,
         info_dict=None):
     '''Add the contents of a Dict to summary table
 
@@ -432,15 +430,21 @@ def summary_col(results, float_format='%.4f', model_names=None, stars=True,
 
     return smry
 
-def _formatter(element, float_format='%.4f'):
+def _formatter(element, float_format=None):
     try:
-        out = float_format % element
+        # statsmodels-wide default values for float formatting
+        if float_format is None:
+            if (abs(element) >= 1e4) or (abs(element) < 1e-4):
+                out = "%4.5g" % element
+            else:
+                out = '%.4f' % element
+        else:
+            out = float_format % element
     except:
         out = str(element)
     return out.strip()
 
-
-def _df_to_simpletable(df, align='r', float_format="%.4f", header=True, index=True,
+def _df_to_simpletable(df, align='r', float_format=None, header=True, index=True,
         table_dec_above='-', table_dec_below=None, header_dec_below='-', 
         pad_col=0, pad_index=0):
     dat = df.copy()

@@ -1160,7 +1160,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
 
     def summary(self, title=None, xname=None, yname=None, alpha=.05,
-            float_format="%.4f"): 
+            float_format=None): 
         """Summarize the Regression Results
 
         Parameters
