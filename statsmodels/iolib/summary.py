@@ -5,8 +5,10 @@ import copy
 import collections
 import StringIO
 import textwrap
+from copy import copy
 from table import SimpleTable
 from tableformatting import fmt_latex, fmt_txt
+from collections import OrderedDict
 
 class Summary(object):
     def __init__(self):
@@ -131,7 +133,7 @@ class Summary(object):
             Name of the dependent variable (optional)
         '''
 
-        param = summary_params(results, alpha=alpha)
+        param = summary_params(results, alpha=alpha, float_format=float_format)
         info = summary_model(results)
         if xname != None:
             param.index = xname
@@ -249,48 +251,49 @@ _model_types = {'OLS' : 'Ordinary least squares',
                'GLM' : 'Generalized linear model'
                }
 
-def summary_model(results):
+def summary_model(results, info_dict=None):
     '''Create a dict with information about the model
     '''
-    info = collections.OrderedDict()
-    info['Model:'] = lambda x: x.model.__class__.__name__
-    info['Model Family:'] = lambda x: x.family.__class.__name__
-    info['Link Function:'] = lambda x: x.family.link.__class__.__name__
-    info['Dependent Variable:'] = lambda x: x.model.endog_names
-    now = datetime.datetime.now()
-    info['Date:'] = lambda x: now.strftime('%Y-%m-%d %H:%M')
-    info['No. Observations:'] = lambda x: "%#6d" % x.nobs
-    info['Df Model:'] = lambda x: "%#6d" % x.df_model
-    info['Df Residuals:'] = lambda x: "%#6d" % x.df_resid
-    info['Converged:'] = lambda x: x.mle_retvals['converged']
-    info['No. Iterations:'] = lambda x: x.mle_retvals['iterations']
-    info['Method:'] = lambda x: x.method
-    info['Norm:'] = lambda x: x.fit_options['norm']
-    info['Scale:'] = lambda x: "%#8.5g" % x.scale
-    info['Scale Est.:'] = lambda x: x.fit_options['scale_est']
-    info['Cov. Type:'] = lambda x: x.fit_options['cov']
-    info['R-squared:'] = lambda x: "%#8.3f" % x.rsquared
-    info['Adj. R-squared:'] = lambda x: "%#8.3f" % x.rsquared_adj
-    info['Pseudo R-squared:'] = lambda x: "%#8.3f" % x.prsquared
-    info['AIC:'] = lambda x: "%8.4f" % x.aic
-    info['BIC:'] = lambda x: "%8.4f" % x.bic
-    info['Log-Likelihood:'] = lambda x: "%#8.5g" % x.llf
-    info['LL-Null:'] = lambda x: "%#8.5g" % x.llnull
-    info['LLR p-value:'] = lambda x: "%#8.5g" % x.llr_pvalue
-    info['Deviance:'] = lambda x: "%#8.5g" % x.deviance 
-    info['Pearson chi2:'] = lambda x: "%#6.3g" % x.pearson_chi2
-    info ['F-statistic:'] = lambda x: "%#8.4g" % self.fvalue
-    info ['Prob (F-statistic):'] = lambda x: "%#6.3g" % self.f_pvalue
+    if info_dict == None:
+        info_dict = collections.OrderedDict()
+        info_dict['Model:'] = lambda x: x.model.__class__.__name__
+        info_dict['Model Family:'] = lambda x: x.family.__class.__name__
+        info_dict['Link Function:'] = lambda x: x.family.link.__class__.__name__
+        info_dict['Dependent Variable:'] = lambda x: x.model.endog_names
+        now = datetime.datetime.now()
+        info_dict['Date:'] = lambda x: now.strftime('%Y-%m-%d %H:%M')
+        info_dict['No. Observations:'] = lambda x: "%#6d" % x.nobs
+        info_dict['Df Model:'] = lambda x: "%#6d" % x.df_model
+        info_dict['Df Residuals:'] = lambda x: "%#6d" % x.df_resid
+        info_dict['Converged:'] = lambda x: x.mle_retvals['converged']
+        info_dict['No. Iterations:'] = lambda x: x.mle_retvals['iterations']
+        info_dict['Method:'] = lambda x: x.method
+        info_dict['Norm:'] = lambda x: x.fit_options['norm']
+        info_dict['Scale:'] = lambda x: _formatter(x.scale)
+        info_dict['Scale Est.:'] = lambda x: x.fit_options['scale_est']
+        info_dict['Cov. Type:'] = lambda x: x.fit_options['cov']
+        info_dict['R-squared:'] = lambda x: _formatter(x.rsquared)
+        info_dict['Adj. R-squared:'] = lambda x: _formatter(x.rsquared_adj)
+        info_dict['Pseudo R-squared:'] = lambda x: _formatter(x.prsquared)
+        info_dict['AIC:'] = lambda x: _formatter(x.aic)
+        info_dict['BIC:'] = lambda x: _formatter(x.bic)
+        info_dict['Log-Likelihood:'] = lambda x: _formatter(x.llf)
+        info_dict['LL-Null:'] = lambda x: _formatter(x.llnull)
+        info_dict['LLR p-value:'] = lambda x: _formatter(x.llr_pvalue)
+        info_dict['Deviance:'] = lambda x: _formatter(x.deviance)
+        info_dict['Pearson chi2:'] = lambda x: _formatter(x.pearson_chi2)
+        info_dict ['F-statistic:'] = lambda x: _formatter(self.fvalue)
+        info_dict ['Prob (F-statistic):'] = lambda x: _formatter(self.f_pvalue)
     out = collections.OrderedDict()
-    for key in info.keys():
+    for key in info_dict.keys():
         try: 
-            out[key] = info[key](results)
+            out[key] = info_dict[key](results)
         except:
             pass 
     return out 
 
-def summary_params(results, alpha=.05, params=None, bse=None, tvalues=None,
-        pvalues=None, confint=None):
+def summary_params(results, alpha=.05, float_format=None, vertical=False,
+        stars=False):
     '''create a summary table of parameters from results instance
 
     Parameters
@@ -305,68 +308,41 @@ def summary_params(results, alpha=.05, params=None, bse=None, tvalues=None,
     -------
     params_table : DataFrame instance
     '''
-    #Parameters part of the summary table
-    vals = [params, bse, tvalues, pvalues, confint]
-    if any([x is None for x in vals]):
-        params = results.params
-        bse = results.bse
-        tvalues = results.tvalues
-        pvalues = results.pvalues
-        confint = results.conf_int(alpha)
-    data = np.array([params, bse, tvalues, pvalues]).T
-    data = np.hstack([data, confint])
-    data = pd.DataFrame(data)
-    data.columns = ['Coef.', 'Std.Err.', 't', 'P>|t|', 
-                    '[' + str(alpha/2), str(1-alpha/2) + ']']
-    data.index = results.model.exog_names
-    return data
 
+    params = results.params
+    bse = results.bse.tolist()
+    tvalues = results.tvalues.tolist()
+    pvalues = results.pvalues.tolist()
+    confint = np.array(results.conf_int(alpha))
+    confint_lb = confint[:,0].tolist()
+    confint_ub = confint[:,1].tolist()
 
-# Vertical summary instance for multiple models
-def _col_params(result, float_format=None, stars=True):
-    '''Stack coefficients and standard errors in single column
-    '''
-
-    # Extract parameters
-    res = summary_params(result)
-    # Format float
-    for col in res.columns[:2]:
-        res[col] = res[col].apply(lambda x: float_format % x)
-    # Std.Errors in parentheses
-    res.ix[:,1] = '(' + res.ix[:,1] + ')'
-    # Significance stars
     if stars:
-        idx = res.ix[:,3] < .1
-        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
-        idx = res.ix[:,3] < .05
-        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
-        idx = res.ix[:,3] < .01
-        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
-    # Stack Coefs and Std.Errors
-    res = res.ix[:,:2]
-    res = res.stack()
-    res = pd.DataFrame(res)
-    res.columns = [str(result.model.endog_names)]
-    return res
+        r = range(len(params))
+        params = [_formatter(x, float_format) for x in params]
+        params = [params[i] + '*' if pvalues[i] < .1 else params[i] for i in r]
+        params = [params[i] + '*' if pvalues[i] < .05 else params[i] for i in r]
+        params = [params[i] + '*' if pvalues[i] < .01 else params[i] for i in r]
 
-def _col_info(result, info_dict=None):
-    '''Stack model info in a column
-    '''
+    pvalues = [x if x >= 2e-16 else '<2e-16' for x in pvalues]
 
-    if info_dict == None:
-        info_dict = {'N': lambda x: str(int(x.nobs)), 
-                    'AIC': lambda x: '%.3f' % x.aic, 
-                    'R2': lambda x: '%.3f' % x.rsquared}
-    out = []
-    for i in info_dict:
-        try:
-            out.append(info_dict[i](result))
-        except:
-            out.append('')
-    out = pd.DataFrame(out)
-    out.index = pd.Index(info_dict.keys())
-    out.columns = [str(result.model.endog_names)] 
-    return out
+    values = [params, bse, tvalues, pvalues, confint_lb, confint_ub]
+    f = lambda x: _formatter(x, float_format)
+    values = [[f(y) for y in x] for x in values]
+    data = pd.DataFrame(values).T
+    data.columns = ['Coef.', 'Std.Err.', 't', 'P>|t|', 
+                    '[' + str(alpha/2), str(1-alpha/2) + ']'] 
+
+    data.index = results.model.exog_names
+
+    if vertical:
+        data = data.ix[:,:2].stack()
+        idx = data.index.get_level_values(1) == 'Std.Err.'
+        data[idx] = '(' + data[idx] + ')'
+        data = pd.DataFrame(data)
+        data.columns = [str(results.model.endog_names)]
+
+    return data
 
 def summary_col(results, float_format=None, model_names=None, stars=True,
         info_dict=None):
@@ -385,45 +361,43 @@ def summary_col(results, float_format=None, model_names=None, stars=True,
         model info 
     '''
 
-    # Coerce to list if user feeds a results instance
     if type(results) != list:
         results = [results]
-    # Params as dataframe columns
-    cols = [_col_params(x, stars=stars, float_format=float_format) for x in results]
+
+    f = lambda x: summary_params(x, stars=stars, float_format=float_format,
+            vertical=True)
+    cols = [f(x) for x in results]
     merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
     summ = reduce(merg, cols)
-    # Index
-    idx1 = summ.index.get_level_values(0).tolist()
-    idx2 = range(1,len(idx1),2)
-    for i in idx2:
-        idx1[i] = ''
-    summ.index = pd.Index(idx1)
-    # Header
+
+    idx = pd.Series(summ.index.get_level_values(0))
+    idx[1::2] = ''
+    summ.index = pd.Index(idx)
+
     if model_names == None:
-        header = []
         try:
-            for r in results:
-                header.append(r.model.endog_names)
+            header = [x.model.endog_names for x in results]
         except:
-            i = 0
-            for r in results:
-                header.append('Model ' + i)
-                i += 1
+            header = ['Model ' + str(x) for x in range(len(results))]
     else:
         header = model_names
-    summ.columns = pd.Index(header)
+    header = pd.Index(header)
+    summ.columns = header
+
     summ = summ.fillna('')
 
-    # Info as dataframe columns
-    cols = [_col_info(x, info_dict) for x in results]
-    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
-    info = reduce(merg, cols)
-    dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
-    dat.columns = summ.columns
-    dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
-    # Summary
+    if info_dict == None:
+        info_dict = {'N':lambda x: str(int(x.nobs)), 
+                     'R2':lambda x: '%.3f' % x.rsquared}
+    info = [summary_model(x, info_dict) for x in results]
+    info = [pd.DataFrame(x.values(), index=x.keys()) for x in info]
+    info = reduce(merg, info)
+    info.columns = header
+
+    out = pd.concat([summ, info])
+    
     smry = Summary()
-    smry.add_df(dat, header=True, align='l')
+    smry.add_df(out)
     smry.add_text('Standard errors in parentheses.')
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
@@ -448,7 +422,8 @@ def _df_to_simpletable(df, align='r', float_format=None, header=True, index=True
         table_dec_above='-', table_dec_below=None, header_dec_below='-', 
         pad_col=0, pad_index=0):
     dat = df.copy()
-    dat = dat.applymap(lambda x: _formatter(x, float_format))
+    for i in range(dat.shape[1]):
+        dat.ix[:,i] = [_formatter(x, float_format) for x in dat.ix[:,i]]
     if header:
         headers = [str(x) for x in dat.columns.tolist()]
     else: 
