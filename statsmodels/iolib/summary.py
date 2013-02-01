@@ -438,8 +438,10 @@ def _df_to_simpletable(df, align='r', float_format=None, header=True, index=True
         table_dec_above='-', table_dec_below=None, header_dec_below='-', 
         pad_col=0, pad_index=0):
     dat = df.copy()
-    for i in range(dat.shape[1]):
-        dat.ix[:,i] = [_formatter(x, float_format) for x in dat.ix[:,i]]
+    columns_bak = dat.columns # unique colnames workaround pandas quirk
+    dat.columns = range(dat.shape[1])
+    dat = dat.applymap(lambda x: _formatter(x, float_format))
+    dat.columns = columns_bak
     if header:
         headers = [str(x) for x in dat.columns.tolist()]
     else: 
