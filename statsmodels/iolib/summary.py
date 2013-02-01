@@ -15,6 +15,7 @@ class Summary(object):
         self.tables = []
         self.settings = []
         self.extra_txt = []
+        self.rule = []
         self.title = None
 
     def __str__(self):
@@ -143,6 +144,12 @@ class Summary(object):
         self.add_df(param, float_format=float_format)
         self.add_title(title=title, results=results)
 
+    def add_rule(self, row):
+        '''In as_text() ascii output, add a horizontal rule below row. Row
+        index starts at 0 (top rule) and includes any existing separators.'''
+
+        self.rule.append(row)
+
     def as_text(self):
         '''Generate ASCII Summary Table
         '''
@@ -179,6 +186,13 @@ class Summary(object):
 
         out = '\n'.join([title, tab, txt])
 
+        if len(self.rule) > 0:
+            self.rule.sort(reverse=True)
+            out = out.splitlines()
+            for row in self.rule:
+                out[row] = out[row] + '\n' + rule_dash
+            out = '\n'.join(out)
+
         return out
 
     def as_html(self):
@@ -202,9 +216,9 @@ class Summary(object):
         settings = self.settings
         title = self.title
         if title != None:
-            title = '\\caption{' + title + '} \\\\'
+            title = '\\caption{' + title + '} \\\\\n%\\label{}'
         else:
-            title = '\\caption{}'
+            title = '%\\caption{}\n%\\label{}'
 
         simple_tables = _simple_tables(tables, settings)
         tab = [x.as_latex_tabular() for x in simple_tables]
@@ -401,6 +415,8 @@ def summary_col(results, float_format=None, model_names=None, stars=True,
     smry.add_text('Standard errors in parentheses.')
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
+
+    smry.add_rule(summ.shape[0] + 3)
 
     return smry
 
