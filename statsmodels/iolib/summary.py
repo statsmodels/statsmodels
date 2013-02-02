@@ -45,6 +45,9 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
+        cols = df.columns.tolist()
+        if len(cols) != len(set(cols)):
+            raise Exception('DataFrame must not include duplicated column names')
         settings = {'index':index, 'header':header, 
                     'float_format':float_format, 'align':align}
         self.tables.append(df)
@@ -353,8 +356,6 @@ def summary_params(results, alpha=.05, float_format=None, vertical=False,
         data = data.ix[:,:2].stack()
         idx = data.index.get_level_values(1) == 'Std.Err.'
         data[idx] = '(' + data[idx] + ')'
-        data = pd.DataFrame(data)
-        data.columns = [str(results.model.endog_names)]
 
     return data
 
@@ -381,37 +382,33 @@ def summary_col(results, float_format=None, model_names=None, stars=True,
     f = lambda x: summary_params(x, stars=stars, float_format=float_format,
             vertical=True)
     cols = [f(x) for x in results]
-    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
-    summ = reduce(merg, cols)
-
-    idx = pd.Series(summ.index.get_level_values(0))
-    idx[1::2] = ''
-    summ.index = pd.Index(idx)
-
-    if model_names == None:
-        try:
-            header = [x.model.endog_names for x in results]
-        except:
-            header = ['Model ' + str(x) for x in range(len(results))]
-    else:
-        header = model_names
-    header = pd.Index(header)
-    summ.columns = header
-
-    summ = summ.fillna('')
-
+    summ = pd.DataFrame(cols).T
+    
     if info_dict == None:
         info_dict = {'N':lambda x: str(int(x.nobs)), 
                      'R2':lambda x: '%.3f' % x.rsquared}
     info = [summary_model(x, info_dict) for x in results]
-    info = [pd.DataFrame(x.values(), index=x.keys()) for x in info]
-    info = reduce(merg, info)
-    info.columns = header
+    info = [pd.Series(x) for x in info]
+    info = pd.DataFrame(info).T
 
     out = pd.concat([summ, info])
-    
+
+    if model_names == None:
+        header = ['Model ' + str(x) for x in range(len(results))]
+    else:
+        header = model_names
+    out.columns = header
+
+    out = out.fillna('')
+
+    idx = pd.Series(summ.index.get_level_values(0).tolist() + info.index.tolist())
+    idx[1:summ.shape[0]:2] = ''
+    out.index = idx
+
     smry = Summary()
     smry.add_df(out)
+    smry
+
     smry.add_text('Standard errors in parentheses.')
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
@@ -434,14 +431,10 @@ def _formatter(element, float_format=None):
         out = str(element)
     return out.strip()
 
-def _df_to_simpletable(df, align='r', float_format=None, header=True, index=True,
+def _df_to_simpletable(dat, align='r', float_format=None, header=True, index=True,
         table_dec_above='-', table_dec_below=None, header_dec_below='-', 
         pad_col=0, pad_index=0):
-    dat = df.copy()
-    columns_bak = dat.columns # unique colnames workaround pandas quirk
-    dat.columns = range(dat.shape[1])
     dat = dat.applymap(lambda x: _formatter(x, float_format))
-    dat.columns = columns_bak
     if header:
         headers = [str(x) for x in dat.columns.tolist()]
     else: 
@@ -476,3 +469,4 @@ def _simple_tables(tables, settings, pad_col=None, pad_index=None):
             float_format=float_format, header=header, index=index,
             pad_col=pad_col[i], pad_index=pad_index[i]))
     return simple_tables
+
