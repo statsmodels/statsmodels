@@ -315,7 +315,7 @@ class PandasData(ModelData):
     def _get_row_labels(self, arr):
         try:
             return arr.index
-        except AttributeError, err:
+        except AttributeError:
             # if we've gotten here it's because endog is pandas and
             # exog is not, so just return the row labels from endog
             return self.orig_endog.index

@@ -2,10 +2,8 @@
 Holds files for l1 regularization of LikelihoodModel, using cvxopt.
 """
 import numpy as np
-import pdb
 import statsmodels.base.l1_solvers_common as l1_solvers_common
 from cvxopt import solvers, matrix
-# pdb.set_trace
 
 
 def fit_l1_cvxopt_cp(
