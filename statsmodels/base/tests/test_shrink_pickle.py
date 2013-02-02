@@ -6,18 +6,19 @@ Created on Fri Mar 09 16:00:27 2012
 Author: Josef Perktold
 """
 
-import pickle, StringIO
+import pickle
 import numpy as np
 import statsmodels.api as sm
 
-from numpy.testing import assert_, assert_almost_equal, assert_equal
+from numpy.testing import assert_
 
 from nose import SkipTest
 import platform
+
+
 iswin = platform.system() == 'Windows'
 npversionless15 = np.__version__ < '1.5'
 winoldnp = iswin & npversionless15
-
 
 
 def check_pickle(obj):
@@ -25,7 +26,7 @@ def check_pickle(obj):
     fh = BytesIO()
     pickle.dump(obj, fh)
     plen = fh.tell()
-    fh.seek(0,0)
+    fh.seek(0, 0)
     res = pickle.load(fh)
     fh.close()
     return res, plen
@@ -44,8 +45,7 @@ class RemoveDataPickle(object):
         x = np.random.randn(nobs, 3)
         x = sm.add_constant(x)
         self.exog = x
-        self.xf = 0.25 * np.ones((2,4))
-
+        self.xf = 0.25 * np.ones((2, 4))
 
     def test_remove_data_pickle(self):
         if winoldnp:
@@ -84,27 +84,23 @@ class RemoveDataPickle(object):
 
     def test_pickle_wrapper(self):
 
-        from statsmodels.iolib.smpickle import save_pickle, load_pickle
-
         from statsmodels.compatnp.py3k import BytesIO
 
-        fh = BytesIO()  #use cPickle with binary content
+        fh = BytesIO()  # use cPickle with binary content
 
-        #test unwrapped results load save pickle
+        # test unwrapped results load save pickle
         self.results._results.save(fh)
-        fh.seek(0,0)
+        fh.seek(0, 0)
         res_unpickled = self.results._results.__class__.load(fh)
         assert_(type(res_unpickled) is type(self.results._results))
 
-        #test wrapped results load save
-        fh.seek(0,0)
-        #save_pickle(self.results, fh)
+        # test wrapped results load save
+        fh.seek(0, 0)
         self.results.save(fh)
-        fh.seek(0,0)
-        #res_unpickled = load_pickle(fh)
+        fh.seek(0, 0)
         res_unpickled = self.results.__class__.load(fh)
         fh.close()
-        #print type(res_unpickled)
+        # print type(res_unpickled)
         assert_(type(res_unpickled) is type(self.results))
 
         before = sorted(self.results.__dict__.keys())
@@ -133,6 +129,7 @@ class TestRemoveDataPickleOLS(RemoveDataPickle):
         y = x.sum(1) + np.random.randn(x.shape[0])
         self.results = sm.OLS(y, self.exog).fit()
 
+
 class TestRemoveDataPickleWLS(RemoveDataPickle):
 
     def setup(self):
@@ -142,21 +139,23 @@ class TestRemoveDataPickleWLS(RemoveDataPickle):
         y = x.sum(1) + np.random.randn(x.shape[0])
         self.results = sm.WLS(y, self.exog, weights=np.ones(len(y))).fit()
 
+
 class TestRemoveDataPicklePoisson(RemoveDataPickle):
 
     def setup(self):
         #fit for each test, because results will be changed by test
         x = self.exog
         np.random.seed(987689)
-        y_count = np.random.poisson(np.exp(x.sum(1)-x.mean()))
-        model = sm.Poisson(y_count, x)#, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
-        #use start_params to converge faster
-        start_params = np.array([ 0.75334818,  0.99425553,  1.00494724,  1.00247112])
+        y_count = np.random.poisson(np.exp(x.sum(1) - x.mean()))
+        model = sm.Poisson(y_count, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        # use start_params to converge faster
+        start_params = np.array([0.75334818, 0.99425553, 1.00494724, 1.00247112])
         self.results = model.fit(start_params=start_params, method='bfgs',
                                  disp=0)
 
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
+
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
@@ -165,12 +164,12 @@ class TestRemoveDataPickleLogit(RemoveDataPickle):
         x = self.exog
         nobs = x.shape[0]
         np.random.seed(987689)
-        y_bin = (np.random.rand(nobs) < 1./(1+np.exp(x.sum(1)-x.mean()))).astype(int)
-        model = sm.Logit(y_bin, x)#, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
-        #use start_params to converge faster
+        y_bin = (np.random.rand(nobs) < 1.0 / (1 + np.exp(x.sum(1) - x.mean()))).astype(int)
+        model = sm.Logit(y_bin, x)  #, exposure=np.ones(nobs), offset=np.zeros(nobs)) #bug with default
+        # use start_params to converge faster
         start_params = np.array([-0.73403806, -1.00901514, -0.97754543, -0.95648212])
-        self.results = model.fit(start_params=start_params, method='bfgs',
-                disp=0)
+        self.results = model.fit(start_params=start_params, method='bfgs', disp=0)
+
 
 class TestRemoveDataPickleRLM(RemoveDataPickle):
 
@@ -180,6 +179,7 @@ class TestRemoveDataPickleRLM(RemoveDataPickle):
         np.random.seed(987689)
         y = x.sum(1) + np.random.randn(x.shape[0])
         self.results = sm.RLM(y, self.exog).fit()
+
 
 class TestRemoveDataPickleGLM(RemoveDataPickle):
 
