@@ -116,16 +116,16 @@ doplots = 1
 if doplots:
     fig1 = smrp.plot_fit(res, 0, y_true=None)
     smrp.plot_fit(res, 1, y_true=None)
-    smrp.plot_partregress(y, exog0, exog_idx=[0,1])
+    smrp.plot_partregress_grid(res, exog_idx=[0,1])
     smrp.plot_regress_exog(res, exog_idx=0)
-    smrp.plot_ccpr(res, exog_idx=[0])
-    smrp.plot_ccpr(res, exog_idx=[0,1])
+    smrp.plot_ccpr(res, exog_idx=0)
+    smrp.plot_ccpr_grid(res, exog_idx=[0,1])
 
 from statsmodels.graphics.tests.test_regressionplots import TestPlot
 tp = TestPlot()
 tp.test_plot_fit()
 
-fig1 = smrp.plot_partregress(y, exog0, exog_idx=[0,1])
+fig1 = smrp.plot_partregress_grid(res, exog_idx=[0,1])
 #add lowess
 ax = fig1.axes[0]
 y0 = ax.get_lines()[0]._y
