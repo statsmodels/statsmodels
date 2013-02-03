@@ -15,7 +15,7 @@ scipy >= 0.7
 
 pandas >= 0.7.1
 
-    pydata.pandas.org
+    pandas.pydata.org
 
 
 Optional Dependencies
