@@ -347,7 +347,7 @@ class TestProbitCG(CheckBinaryResults):
         res2.probit()
         cls.res2 = res2
         cls.res1 = Probit(data.endog, data.exog).fit(method="cg",
-            disp=0, maxiter=500, gtol=1e-06)
+            disp=0, maxiter=500, gtol=1e-08)
 
 class TestProbitNCG(CheckBinaryResults):
     @classmethod
