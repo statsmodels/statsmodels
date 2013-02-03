@@ -2,7 +2,6 @@
 Holds common functions for l1 solvers.
 """
 import numpy as np
-import pdb  # pdb.set_trace()
 
 
 def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
