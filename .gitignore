@@ -3,6 +3,7 @@
 build
 # setup.py dist directory
 ./dist
+dist
 #docs build and others
 #generated  #not yet? generated for dataset not rebuild
 docs/source/generated
