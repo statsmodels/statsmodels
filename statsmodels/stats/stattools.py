@@ -8,8 +8,7 @@ These functions haven't been formally tested.
 
 from scipy import stats
 import numpy as np
-from numpy.testing.decorators import setastest # doesn't work for some reason
-from numpy.testing import dec
+
 
 #TODO: these are pretty straightforward but they should be tested
 def durbin_watson(resids):
@@ -25,9 +24,8 @@ def durbin_watson(resids):
     Durbin Watson statistic.  This is defined as
     sum_(t=2)^(T)((e_t - e_(t-1))^(2))/sum_(t=1)^(T)e_t^(2)
     """
-    diff_resids = np.diff(resids,1)
-    dw = np.dot(diff_resids,diff_resids) / \
-        np.dot(resids,resids);
+    diff_resids = np.diff(resids, 1)
+    dw = np.dot(diff_resids, diff_resids) / np.dot(resids, resids)
     return dw
 
 def omni_normtest(resids, axis=0):
@@ -50,11 +48,14 @@ def omni_normtest(resids, axis=0):
     n = resids.shape[axis]
     if n < 8:
         return np.nan, np.nan
+        return_shape = list(resids.shape)
+        del return_shape[axis]
+        return np.nan * np.zeros(return_shape), np.nan * np.zeros(return_shape)
         raise ValueError(
             "skewtest is not valid with less than 8 observations; %i samples"
             " were given." % int(n))
 
-    return stats.normaltest(resids, axis=0)
+    return stats.normaltest(resids, axis=axis)
 
 def jarque_bera(resids):
     """
@@ -83,8 +84,8 @@ def jarque_bera(resids):
     kurtosis = 3 + stats.kurtosis(resids)
 
     # Calculate the Jarque-Bera test for normality
-    JB = (resids.shape[0]/6.) * (skew**2 + (1/4.)*(kurtosis-3)**2)
-    JBpv = stats.chi2.sf(JB,2);
+    JB = (resids.shape[0] / 6.) * (skew**2 + (1 / 4.) * (kurtosis-3)**2)
+    JBpv = stats.chi2.sf(JB,2)
 
     return JB, JBpv, skew, kurtosis
 
