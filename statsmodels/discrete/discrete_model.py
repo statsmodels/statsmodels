@@ -2323,9 +2323,9 @@ class MultinomialResults(DiscreteResults):
         eqn = self.params.shape[1]
         confint = self.conf_int(alpha)
         for i in range(eqn):
-            coefs = summary_params(self, alpha, self.params[:,i], 
-                    self.bse[:,i], self.tvalues[:,i], self.pvalues[:,i], 
-                    confint[i])
+            coefs = summary_params(self, alpha=alpha, params=self.params[:,i],
+                    bse=self.bse[:,i], tvalues=self.tvalues[:,i],
+                    pvalues=self.pvalues[:,i], confint=confint[i])
             # Header must show value of endog
             level_str =  self.model.endog_names + ' = ' + str(i) 
             coefs[level_str] = coefs.index

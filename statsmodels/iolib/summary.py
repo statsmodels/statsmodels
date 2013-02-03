@@ -144,7 +144,7 @@ class Summary(object):
         if yname != None: 
             info['Dependent Variable:'] = yname
         self.add_dict(info, align='l')
-        self.add_df(param, float_format=float_format)
+        self.add_df(param, float_format=float_format, align='r')
         self.add_title(title=title, results=results)
 
     def add_rule(self, row):
@@ -310,7 +310,9 @@ def summary_model(results, info_dict=None):
     return out 
 
 def summary_params(results, alpha=.05, float_format=None, vertical=False,
-        stars=False):
+        stars=False, params=None, bse=None, tvalues=None, pvalues=None,
+        confint=None):
+
     '''create a summary table of parameters from results instance
 
     Parameters
@@ -326,11 +328,16 @@ def summary_params(results, alpha=.05, float_format=None, vertical=False,
     params_table : DataFrame instance
     '''
 
-    params = results.params
-    bse = results.bse.tolist()
-    tvalues = results.tvalues.tolist()
-    pvalues = results.pvalues.tolist()
-    confint = np.array(results.conf_int(alpha))
+    if params == None:
+        params = results.params
+    if bse == None:
+        bse = results.bse.tolist()
+    if tvalues == None:
+        tvalues = results.tvalues.tolist()
+    if pvalues == None:
+        pvalues = results.pvalues.tolist()
+    if confint == None:
+        confint = np.array(results.conf_int(alpha))
     confint_lb = confint[:,0].tolist()
     confint_ub = confint[:,1].tolist()
 

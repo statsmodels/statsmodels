@@ -1396,7 +1396,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         model_info['No. Observations:'] = str(len(self.model.endog))
 
         # Parameters
-        params = summary_params(self)
+        params = summary_params(self, float_format=float_format)
         smry.add_dict(model_info)
         smry.add_df(params, float_format=float_format)
         smry.add_df(data, float_format=float_format)
