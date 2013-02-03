@@ -115,6 +115,22 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
     return result
 
 
+def _tuplify(obj):
+    return tuple(obj) if numpy.iterable(obj) else (obj,)
+
+
+def _categories_level(keys):
+    """use the Ordered dict to implement a simple ordered set
+    return each level of each category
+    [[key_1_level_1,key_2_level_1],[key_1_level_2,key_2_level_2]]"""
+    res = []
+    for i in zip(*(keys)):
+        tuplefied = _tuplify(i)
+        res.append(list(OrderedDict([(j, None) for j in tuplefied])))
+    return res
+    #return [list(OrderedDict([(j, None) for j in tuple(i)]))
+    #                                        for i in zip(*(keys))]
+
 def hierarchical_split(count_dict, horizontal=True, gap=0.05):
     """
     Split a square in a hierarchical way given a contingency table.
@@ -159,10 +175,11 @@ def hierarchical_split(count_dict, horizontal=True, gap=0.05):
     # use the Ordered dict to implement a simple ordered set
     # return each level of each category
     # [[key_1_level_1,key_2_level_1],[key_1_level_2,key_2_level_2]]
-    categories_levels = [list(OrderedDict([(j, None) for j in i]))
-                                for i in zip(*(count_dict.keys()))]
+    #categories_levels = [list(OrderedDict([(j, None) for j in i]))
+    #                            for i in zip(*(count_dict.keys()))]
+    categories_levels = _categories_level(count_dict.keys())
     L = len(categories_levels)
-    #fill the void in the counting dictionary
+    # fill the void in the counting dictionary
     indexes = product(*categories_levels)
     contingency = OrderedDict([(k, count_dict.get(k, 0)) for k in indexes])
     count_dict = contingency
@@ -209,6 +226,47 @@ def _single_hsv_to_rgb(hsv):
     """Transform a color from the hsv space to the rgb."""
     from matplotlib.colors import hsv_to_rgb
     return hsv_to_rgb(array(hsv).reshape(1, 1, 3)).reshape(3)
+
+
+def _create_default_properties(data):
+    """"create the default properties of the mosaic given the data"""
+    categories_levels = _categories_level(data.keys())
+    Nlevels = len(categories_levels)
+    #first level, the hue
+    L = len(categories_levels[0])
+    #hue = numpy.linspace(1.0, 0.0, L+1)[:-1]
+    hue = numpy.linspace(0.0, 1.0, L + 1)[:-1]
+    #second level, the saturation
+    L = len(categories_levels[1]) if Nlevels > 1 else 1
+    saturation = numpy.linspace(0.5, 1.0, L + 1)[:-1]
+    #third level, the value
+    L = len(categories_levels[2]) if Nlevels > 2 else 1
+    value = numpy.linspace(0.5, 1.0, L + 1)[:-1]
+    #fourth level, the hatch
+    L = len(categories_levels[3]) if Nlevels > 3 else 1
+    hatch = ['', '/', '-', '|', '+'][:L + 1]
+    #convert in list and merge with the levels
+    hue = zip(list(hue), categories_levels[0])
+    saturation = zip(list(saturation),
+                     categories_levels[1] if Nlevels > 1 else [''])
+    value = zip(list(value),
+                     categories_levels[2] if Nlevels > 2 else [''])
+    hatch = zip(list(hatch),
+                     categories_levels[3] if Nlevels > 3 else [''])
+    #create the properties dictionary
+    properties = {}
+    for h, s, v, t in product(hue, saturation, value, hatch):
+        hv, hn = h
+        sv, sn = s
+        vv, vn = v
+        tv, tn = t
+        level = (hn,) + ((sn,) if sn else tuple())
+        level = level + ((vn,) if vn else tuple())
+        level = level + ((tn,) if tn else tuple())
+        hsv = array([hv, sv, vv])
+        prop = {'color': _single_hsv_to_rgb(hsv), 'hatch': tv}
+        properties[level] = prop
+    return properties
 
 
 def mosaic(data, ax=None, horizontal=True, gap=0.005,
@@ -267,13 +325,19 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     """
     from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
+    # create a dictionary with only tuplified keys
+    items = sorted(data.iteritems())
+    data = OrderedDict([_tuplify(k), v] for k, v in items)
+    print "dict_tuplified", data
     rects = hierarchical_split(data, horizontal=horizontal, gap=gap)
     if labelizer is None:
         labelizer = lambda k: "\n".join(k) + "\ncount=" + str(data.get(k, 0))
+    default_props = _create_default_properties(data)
     for k, v in rects.items():
         x, y, w, h = v
         conf = _get_from_partial_key(properties, k, {})
-        Rect = Rectangle((x, y), w, h, **conf)
+        props = conf if conf else default_props[k]
+        Rect = Rectangle((x, y), w, h, **props)
         test = labelizer(k)
         ax.add_patch(Rect)
         ax.text(x + w / 2, y + h / 2, test, ha='center',
@@ -283,3 +347,42 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     ax.set_yticks([])
     ax.set_yticklabels([])
     return fig, rects
+
+
+
+
+import matplotlib.pyplot as pylab
+
+"""display a simple plot of 4 categories of data, splitted in four
+levels with increasing size for each group"""
+# creation of the levels
+#key_set = [['male', 'female'], ['old', 'adult', 'young'], ['worker', 'unemployed'], ['healty', 'ill']]
+# the cartesian product of all the categories is
+# the complete set of categories
+#keys = list(product(*key_set))
+#data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+
+
+
+import pandas as pd
+#mindex = pd.MultiIndex(key_set,[range(len(i)) for i in key_set])
+data = pd.Series(range(1, 4), ['a','b','c'])
+print "series",data
+
+# which colours should I use for the various categories?
+# put it into a dict
+props = {}
+##males and females in blue and red
+#props[('male',)] = {'color': 'b'}
+#props[('female',)] = {'color': 'r'}
+## all the groups corresponding to ill groups have a different color
+#for key in keys:
+#    if 'ill' in key:
+#        if 'male' in key:
+#            props[key] = {'color': 'BlueViolet' , 'hatch': '+'}
+#        else:
+#            props[key] = {'color': 'Crimson' , 'hatch': '+'}
+# mosaic of the data, with given gaps and colors
+mosaic(data, gap=0.05, properties=props)
+pylab.title('syntetic data, 4 categories')
+pylab.show()
