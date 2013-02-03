@@ -643,3 +643,42 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         ax.set_yticklabels([])
     ax.set_title(title)
     return fig, rects
+
+
+
+
+import matplotlib.pyplot as pylab
+
+"""display a simple plot of 4 categories of data, splitted in four
+levels with increasing size for each group"""
+# creation of the levels
+#key_set = [['male', 'female'], ['old', 'adult', 'young'], ['worker', 'unemployed'], ['healty', 'ill']]
+# the cartesian product of all the categories is
+# the complete set of categories
+#keys = list(product(*key_set))
+#data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+
+
+
+import pandas as pd
+#mindex = pd.MultiIndex(key_set,[range(len(i)) for i in key_set])
+data = pd.Series(range(1, 4), ['a','b','c'])
+print "series",data
+
+# which colours should I use for the various categories?
+# put it into a dict
+props = {}
+##males and females in blue and red
+#props[('male',)] = {'color': 'b'}
+#props[('female',)] = {'color': 'r'}
+## all the groups corresponding to ill groups have a different color
+#for key in keys:
+#    if 'ill' in key:
+#        if 'male' in key:
+#            props[key] = {'color': 'BlueViolet' , 'hatch': '+'}
+#        else:
+#            props[key] = {'color': 'Crimson' , 'hatch': '+'}
+# mosaic of the data, with given gaps and colors
+mosaic(data, gap=0.05, properties=props)
+pylab.title('syntetic data, 4 categories')
+pylab.show()
