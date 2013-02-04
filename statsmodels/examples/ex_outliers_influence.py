@@ -1,5 +1,7 @@
 
+import numpy as np
 
+import statsmodels.stats.outliers_influence as oi
 
 
 if __name__ == '__main__':
@@ -89,17 +91,17 @@ if __name__ == '__main__':
         plt.setp(ltext, fontsize='small') # the legend text fontsize
 
 
-    print reset_ramsey(res, degree=3)
+    print oi.reset_ramsey(res, degree=3)
 
     #note, constant in last column
     for i in range(1):
-        print variance_inflation_factor(res.model.exog, i)
+        print oi.variance_inflation_factor(res.model.exog, i)
 
-    infl = OLSInfluence(res_ols)
+    infl = oi.OLSInfluence(res_ols)
     print infl.resid_studentized_external
     print infl.resid_studentized_internal
     print infl.summary_table()
-    print summary_table(res, alpha=0.05)[0]
+    print oi.summary_table(res, alpha=0.05)[0]
 
 '''
 >>> res.resid
