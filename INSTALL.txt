@@ -17,6 +17,10 @@ pandas >= 0.7.1
 
     pydata.pandas.org
 
+Patsy >= 0.1.0
+
+http://patsy.readthedocs.org/en/latest/
+
 
 Optional Dependencies
 ---------------------
