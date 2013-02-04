@@ -660,6 +660,11 @@ def test_outlier_influence_funcs():
     res = OLS(y, x).fit()
     oi.summary_table(res, alpha=0.05)
 
+    res2 = OLS(y, x[:,0]).fit()
+    oi.summary_table(res2, alpha=0.05)
+    infl = res2.get_influence()
+    infl.summary_table()
+
 def test_influence_wrapped():
     from pandas import DataFrame
     from pandas.util.testing import assert_series_equal

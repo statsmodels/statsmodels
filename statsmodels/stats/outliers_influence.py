@@ -650,8 +650,7 @@ class OLSInfluence(object):
                       ('hat diag', self.hat_matrix_diag),
                       ('dffits \ninternal', self.dffits_internal[0]),
                       ("ext.stud.\nresidual", self.resid_studentized_external),
-                      ('dffits', self.dffits[0]),
-                      ('dfbeta\nslope', self.dfbetas[:,1]) #skip needs to partially unravel
+                      ('dffits', self.dffits[0])
                       ]
         colnames, data = zip(*table_raw) #unzip
         data = np.column_stack(data)
