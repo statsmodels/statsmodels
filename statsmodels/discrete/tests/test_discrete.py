@@ -7,9 +7,13 @@ DECIMAL_3 is used because it seems that there is a loss of precision
 in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
+# pylint: disable-msg=E1101
+
 import os
 import numpy as np
-from numpy.testing import *
+from numpy.testing import (assert_, assert_raises, assert_almost_equal,
+                           assert_equal, assert_array_equal)
+
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                  Poisson)
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
@@ -39,6 +43,7 @@ class CheckModelResults(object):
     res2 should be the test results from RModelWrap
     or the results as defined in model_results_data
     """
+
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
