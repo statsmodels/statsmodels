@@ -653,6 +653,12 @@ def grangertest():
     grangertest = dict(fvalue=1.589672703015157, pvalue=0.178717196987075,
                        df=(198,193))
 
+def test_outlier_influence_funcs():
+    #smoke test
+    x = add_constant(np.random.randn(10, 2))
+    y = x.sum(1) + np.random.randn(10)
+    res = OLS(y, x).fit()
+    oi.summary_table(res, alpha=0.05)
 
 def test_influence_wrapped():
     from pandas import DataFrame

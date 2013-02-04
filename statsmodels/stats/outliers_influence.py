@@ -494,6 +494,7 @@ class OLSInfluence(object):
 
             x_i = self.exog[:, endog_idx]
 
+        k_vars = self.exog.shape[1]
         mask = np.arange(k_vars) != drop_idx
         x_noti = self.exog[:, mask]
         res = OLS(x_i, x_noti).fit()
@@ -688,7 +689,7 @@ def summary_table(res, alpha=0.05):
     from scipy import stats
     from statsmodels.sandbox.regression.predstd import wls_prediction_std
 
-    infl = Influence(res)
+    infl = OLSInfluence(res)
 
     #standard error for predicted mean
     #Note: using hat_matrix only works for fitted values
@@ -836,7 +837,7 @@ if __name__ == '__main__':
     for i in range(1):
         print variance_inflation_factor(res.model.exog, i)
 
-    infl = Influence(res_ols)
+    infl = OLSInfluence(res_ols)
     print infl.resid_studentized_external
     print infl.resid_studentized_internal
     print infl.summary_table()
