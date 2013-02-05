@@ -166,8 +166,19 @@ class CheckWeightstats1d(object):
         w1, w2 = self.w1, self.w2
 
         #Note: stats.ttest_ind handles 2d/nd arguments
+        res_sp = stats.ttest_ind(x1r, x2r)
         assert_almost_equal(ttest_ind(x1, x2, weights=(w1, w2))[:2],
-                            stats.ttest_ind(x1r, x2r), 14)
+                            res_sp, 14)
+
+        #check correct ttest independent of user ddof
+        cm = CompareMeans(DescrStatsW(x1, weights=w1, ddof=0),
+                          DescrStatsW(x2, weights=w2, ddof=0))
+        assert_almost_equal(cm.ttest_ind()[:2], res_sp, 14)
+
+        cm = CompareMeans(DescrStatsW(x1, weights=w1, ddof=1),
+                          DescrStatsW(x2, weights=w2, ddof=2))
+        assert_almost_equal(cm.ttest_ind()[:2], res_sp, 14)
+
 
     def test_confint_mean(self):
         #compare confint_mean with ttest
@@ -246,6 +257,25 @@ class TestWeightstats2d_ddof(CheckWeightstats2d):
         self.x1, self.x2 = x1, x2
         self.w1, self.w2 = w1, w2
         self.d1w = DescrStatsW(x1, weights=w1, ddof=1)
+        self.d2w = DescrStatsW(x2, weights=w2, ddof=1)
+        self.x1r = self.d1w.asrepeats()
+        self.x2r = self.d2w.asrepeats()
+
+class TestWeightstats2d_nobs(CheckWeightstats2d):
+
+    @classmethod
+    def setup_class(self):
+        np.random.seed(9876789)
+        n1, n2 = 20,30
+        m1, m2 = 1, 1.2
+        x1 = m1 + np.random.randn(n1, 3)
+        x2 = m2 + np.random.randn(n2, 3)
+        w1 = np.random.randint(1,4, n1)
+        w2 = np.random.randint(1,4, n2)
+
+        self.x1, self.x2 = x1, x2
+        self.w1, self.w2 = w1, w2
+        self.d1w = DescrStatsW(x1, weights=w1, ddof=0)
         self.d2w = DescrStatsW(x2, weights=w2, ddof=1)
         self.x1r = self.d1w.asrepeats()
         self.x2r = self.d2w.asrepeats()
