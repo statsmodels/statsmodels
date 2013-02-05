@@ -59,11 +59,10 @@ def _get_sigma(sigma, nobs):
         cholsigmainv = np.diag(1/sigma**.5)
         sigma = np.diag(sigma)
     else:
+        if sigma.shape != (nobs, nobs):
+            raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
+                             "array of shape %s x %s" % (nobs, nobs))
         cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
-
-    if sigma.shape != (nobs, nobs):
-        raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
-                        "array of shape %s x %s" % (nobs, nobs))
 
     return sigma, cholsigmainv
 
