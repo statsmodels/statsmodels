@@ -1,4 +1,4 @@
-
+# pylint: disable=W0611
 import diagnostic
 from .diagnostic import (
             acorr_ljungbox, acorr_breush_godfrey,
@@ -27,8 +27,11 @@ from .sandwich_covariance import (
             se_cov
             )
 
-from weightstats import DescrStatsW
+from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, tost_ind,
+                         tost_paired)
+from .power import (TTestPower, TTestIndPower, tt_solve_power,
+                   tt_ind_solve_power)
 
-from descriptivestats import Describe
+from .descriptivestats import Describe
 
-from anova import anova_lm
+from .anova import anova_lm
