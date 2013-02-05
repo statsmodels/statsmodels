@@ -56,6 +56,9 @@ def _get_sigma(sigma, nobs):
     if sigma.ndim == 0:
         sigma = np.repeat(sigma, nobs)
     if sigma.ndim == 1:
+        if sigma.shape != (nobs,):
+            raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
+                             "array of shape %s x %s" % (nobs, nobs))
         cholsigmainv = np.diag(1/sigma**.5)
         sigma = np.diag(sigma)
     else:
