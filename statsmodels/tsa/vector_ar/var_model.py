@@ -317,23 +317,20 @@ class VAR(tsbase.TimeSeriesModel):
 
     Parameters
     ----------
-    endog : np.ndarray (structured or homogeneous) or DataFrame
+    endog : array-like
+        1-d endogenous response variable. The independent variable.
     names : array-like
         must match number of columns of endog
     dates : array-like
         must match number of rows of endog
 
-    Notes
-    -----
-    **References**
+    References
+    ----------
     Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
-
-    Returns
-    -------
-    .fit() method returns VARResults object
     """
-    def __init__(self, endog, dates=None, names=None, freq=None):
-        super(VAR, self).__init__(endog, None, dates, freq)
+    def __init__(self, endog, dates=None, names=None, freq=None,
+            missing='none'):
+        super(VAR, self).__init__(endog, None, dates, freq, missing=missing)
         if names is not None:
             import warnings
             warnings.warn("The names argument is deprecated and will be "
@@ -483,7 +480,7 @@ class VAR(tsbase.TimeSeriesModel):
         omega = sse / df_resid
 
         varfit = VARResults(y, z, params, omega, lags, names=self.endog_names,
-                          trend=trend, dates=self._data.dates, model=self)
+                          trend=trend, dates=self.data.dates, model=self)
         return VARResultsWrapper(varfit)
 
     def select_order(self, maxlags=None, verbose=True):
@@ -779,7 +776,6 @@ class VARResults(VARProcess):
     bse
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    coef_names
     cov_params
     dates
     detomega
@@ -842,10 +838,7 @@ class VARResults(VARProcess):
             trendorder = None
         self.k_trend = k_trend
         self.trendorder = trendorder
-
-        #TODO: deprecate coef_names
-        self.coef_names = self.exog_names = util.make_lag_names(names,
-                                                lag_order, k_trend)
+        self.exog_names = util.make_lag_names(names, lag_order, k_trend)
         self.params = params
 
         # Initialize VARProcess parent class
@@ -859,6 +852,15 @@ class VARResults(VARProcess):
         coefs = reshaped.swapaxes(1, 2).copy()
 
         super(VARResults, self).__init__(coefs, intercept, sigma_u, names=names)
+
+    @cache_readonly
+    def coef_names(self):
+        """Coefficient names (deprecated)
+        """
+        from warnings import warn
+        warn("coef_names is deprecated and will be removed in 0.6.0."
+             "Use exog_names", FutureWarning)
+        return self.exog_names
 
     def plot(self):
         """Plot input time series

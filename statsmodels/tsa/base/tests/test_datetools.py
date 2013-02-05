@@ -48,6 +48,24 @@ def test_regex_matching_quarter():
     npt.assert_equal(date_parser(t3), result)
     npt.assert_equal(date_parser(t4), result)
 
+def test_dates_from_range():
+    results = [datetime(1959, 3, 31, 0, 0),
+               datetime(1959, 6, 30, 0, 0),
+               datetime(1959, 9, 30, 0, 0),
+               datetime(1959, 12, 31, 0, 0),
+               datetime(1960, 3, 31, 0, 0),
+               datetime(1960, 6, 30, 0, 0),
+               datetime(1960, 9, 30, 0, 0),
+               datetime(1960, 12, 31, 0, 0),
+               datetime(1961, 3, 31, 0, 0),
+               datetime(1961, 6, 30, 0, 0),
+               datetime(1961, 9, 30, 0, 0),
+               datetime(1961, 12, 31, 0, 0),
+               datetime(1962, 3, 31, 0, 0),
+               datetime(1962, 6, 30, 0, 0)]
+    dt_range = dates_from_range('1959q1', '1962q2')
+    npt.assert_(results == dt_range)
+
 try:
     from pandas import DatetimeIndex
     _pandas_08x = True

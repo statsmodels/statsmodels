@@ -18,7 +18,7 @@ except:
         return 1, np.log(np.linalg.det(x))
 
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
-
+from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.var_model import VARProcess, \
                                                         VARResults
@@ -38,40 +38,35 @@ def svar_ckerr(svar_type, A, B):
         raise ValueError('SVAR of type B or AB but B array not given.')
 
 class SVAR(tsbase.TimeSeriesModel):
-
     """
     Fit VAR and then estimate structural components of A and B, defined:
 
-    .. math:: Ay_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + B\varepsilon_t
+    .. math:: Ay_t = A_1 y_{t-1} + \ldots + A_p y_{t-p} + B\var(\epsilon_t)
 
     Parameters
     ----------
-    endog : np.ndarray (structured or homogenous) or Dataframe
+    endog : array-like
+        1-d endogenous response variable. The independent variable.
     names : array-like
         must match number of columns or endog
     dates : array-like
         must match number of rows of endog
-    svar_type : string
+    svar_type : str
         "A" - estimate structural parameters of A matrix, B assumed = I
         "B" - estimate structural parameters of B matrix, A assumed = I
-        "AB" - estimate structural parameters indicated in both A and
-                B matrix
-    A : neqs x neqs np.ndarray with unknown parameters marked with 'E'
-    B : neqs x neqs np.ndarry with unknown parameters marked with 'E'
+        "AB" - estimate structural parameters indicated in both A and B matrix
+    A : array-like
+        neqs x neqs with unknown parameters marked with 'E' for estimate
+    B : array-like
+        neqs x neqs with unknown parameters marked with 'E' for estimate
 
-    Notes
-    -----
-    **References**
+    References
+    ----------
     Hamilton (1994) Time Series Analysis
-
-    Returns
-    -------
-    .fit() methdo return SVARResults object
     """
-
     def __init__(self, endog, svar_type, names=None, dates=None,
-                freq=None, A=None, B=None):
-        super(SVAR, self).__init__(endog, None, dates, freq)
+                freq=None, A=None, B=None, missing='none'):
+        super(SVAR, self).__init__(endog, None, dates, freq, missing=missing)
         if names is not None:
             import warnings
             warnings.warn("The names argument is deprecated and will be "
@@ -277,7 +272,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         return SVARResults(y, z, var_params, omega, lags,
                             names=self.endog_names, trend=trend,
-                            dates=self._data.dates, model=self,
+                            dates=self.data.dates, model=self,
                            A=A, B=B, A_mask=A_mask, B_mask=B_mask)
 
     def loglike(self, params):
@@ -547,7 +542,6 @@ class SVARResults(SVARProcess, VARResults):
     bse
     coefs : ndarray (p x K x K)
         Estimated A_i matrices, A_i = coefs[i-1]
-    coef_names
     cov_params
     dates
     detomega
@@ -608,7 +602,7 @@ class SVARResults(SVARProcess, VARResults):
         self.k_trend = k_trend
         self.trendorder = trendorder
 
-        self.coef_names = util.make_lag_names(names, lag_order, k_trend)
+        self.exog_names = util.make_lag_names(names, lag_order, k_trend)
         self.params = params
         self.sigma_u = sigma_u
 
@@ -630,6 +624,15 @@ class SVARResults(SVARProcess, VARResults):
 
         super(SVARResults, self).__init__(coefs, intercept, sigma_u, A,
                              B, names=names)
+
+    @cache_readonly
+    def coef_names(self):
+        """Coefficient names (deprecated)
+        """
+        from warnings import warn
+        warn("coef_names is deprecated and will be removed in 0.6.0."
+             "Use exog_names", FutureWarning)
+        return self.exog_names
 
     def irf(self, periods=10, var_order=None):
         """

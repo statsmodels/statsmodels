@@ -1,8 +1,8 @@
 import inspect
 import functools
-import types
 
 import numpy as np
+
 
 class ResultsWrapper(object):
     """
@@ -33,7 +33,7 @@ class ResultsWrapper(object):
             pass
 
         obj = getattr(results, attr)
-        data = results.model._data
+        data = results.model.data
         how = self._wrap_attrs.get(attr)
         if how:
             obj = data.wrap_output(obj, how=how)
@@ -81,11 +81,12 @@ def union_dicts(*dicts):
         result.update(d)
     return result
 
+
 def make_wrapper(func, how):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         results = object.__getattribute__(self, '_results')
-        data = results.model._data
+        data = results.model.data
         return data.wrap_output(func(results, *args, **kwargs), how)
 
     argspec = inspect.getargspec(func)
@@ -101,6 +102,7 @@ def make_wrapper(func, how):
     wrapper.__doc__ = "%s%s\n%s" % (func_name, formatted, wrapper.__doc__)
 
     return wrapper
+
 
 def populate_wrapper(klass, wrapping):
     for meth, how in klass._wrap_methods.iteritems():
@@ -127,8 +129,8 @@ if __name__ == '__main__':
 
     data = sm.datasets.wfs.load()
     # get offset
-    offset = np.log(data.exog[:,-1])
-    exog = data.exog[:,:-1]
+    offset = np.log(data.exog[:, -1])
+    exog = data.exog[:, :-1]
 
     # convert dur to dummy
     exog = sm.tools.categorical(exog, col=0, drop=True)
@@ -138,7 +140,7 @@ if __name__ == '__main__':
     # convert edu to dummy
     exog = sm.tools.categorical(exog, col=0, drop=True)
     # drop reference categories and add intercept
-    exog = sm.add_constant(exog[:,[1,2,3,4,5,7,8,10,11,12]])
+    exog = sm.add_constant(exog[:, [1, 2, 3, 4, 5, 7, 8, 10, 11, 12]], prepend=False)
 
     endog = np.round(data.endog)
     mod = sm.GLM(endog, exog, family=sm.families.Poisson()).fit()

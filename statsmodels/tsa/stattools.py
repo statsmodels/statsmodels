@@ -54,9 +54,9 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
     assumed to be in contiguous columns from low to high lag length with
     the highest lag in the last column.
     """
-#TODO: can tcol be replaced by maxlag + 2?
-#TODO: This could be changed to laggedRHS and exog keyword arguments if this
-#    will be more general.
+    #TODO: can tcol be replaced by maxlag + 2?
+    #TODO: This could be changed to laggedRHS and exog keyword arguments if
+    #    this will be more general.
 
     results = {}
     method = method.lower()
@@ -70,7 +70,7 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         icbest, bestlag = min((v.bic,k) for k,v in results.iteritems())
     elif method == "t-stat":
         lags = sorted(results.keys())[::-1]
-#        stop = stats.norm.ppf(.95)
+        #stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
         for lag in range(startlag + maxlag, startlag - 1, -1):
             icbest = np.abs(results[lag].tvalues[-1])
@@ -276,9 +276,11 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     Parameters
     ----------
     x : array
-       time series data
+        Time series data. Must be 1d.
     unbiased : bool
-       if True, then denominators is n-k, otherwise n
+        If True, then denominators is n-k, otherwise n
+    demean : bool
+        If True, then subtract the mean x from each element of x
     fft : bool
         If True, use FFT convolution.  This method should be preferred
         for long time series.
@@ -288,16 +290,18 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     acovf : array
         autocovariance function
     '''
+    x = np.squeeze(np.asarray(x))
+    if x.ndim > 1:
+        raise ValueError("x must be 1d. Got %d dims." % x.ndim)
     n = len(x)
+
     if demean:
-        xo = x - x.mean();
+        xo = x - x.mean()
     else:
         xo = x
     if unbiased:
-#        xi = np.ones(n);
-#        d = np.correlate(xi, xi, 'full')
-        xi = np.arange(1,n+1)
-        d = np.hstack((xi,xi[:-1][::-1])) # faster, is correlate more general?
+        xi = np.arange(1, n+1)
+        d = np.hstack((xi, xi[:-1][::-1]))
     else:
         d = n
     if fft:
@@ -307,6 +311,7 @@ def acovf(x, unbiased=False, demean=True, fft=False):
         return acov.real
     else:
         return (np.correlate(xo, xo, 'full')/d)[n-1:]
+
 
 def q_stat(x,nobs, type="ljungbox"):
     """
@@ -491,7 +496,7 @@ def pacf_ols(x, nlags=40):
     #maybe we can compare small sample properties with a MonteCarlo
     xlags, x0 = lagmat(x, nlags, original='sep')
     #xlags = sm.add_constant(lagmat(x, nlags), prepend=True)
-    xlags = add_constant(xlags, prepend=True)
+    xlags = add_constant(xlags)
     pacf = [1.]
     for k in range(1, nlags+1):
         res = OLS(x0[k:], xlags[k:,:k+1]).fit()
@@ -794,8 +799,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
         #add constant
         if addconst:
-            dtaown = add_constant(dta[:,1:mxlg+1])
-            dtajoint = add_constant(dta[:,1:])
+            dtaown = add_constant(dta[:,1:mxlg+1], prepend=False)
+            dtajoint = add_constant(dta[:,1:], prepend=False)
         else:
             raise ValueError('Not Implemented')
             dtaown = dta[:,1:mxlg]
@@ -896,9 +901,9 @@ def coint(y1, y2, regression="c"):
     y1 = np.asarray(y1)
     y2 = np.asarray(y2)
     if regression == 'c':
-        y2 = add_constant(y2)
+        y2 = add_constant(y2, prepend=False)
     st1_resid = OLS(y1, y2).fit().resid #stage one residuals
-    lgresid_cons = add_constant(st1_resid[0:-1])
+    lgresid_cons = add_constant(st1_resid[0:-1], prepend=False)
     uroot_reg = OLS(st1_resid[1:], lgresid_cons).fit()
     coint_t = (uroot_reg.params[0]-1)/uroot_reg.bse[0]
     pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)

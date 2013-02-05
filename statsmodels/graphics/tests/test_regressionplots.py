@@ -7,7 +7,8 @@ import nose
 
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
-                  plot_partregress, plot_regress_exog, abline_plot )
+                  plot_partregress, plot_regress_exog, abline_plot,
+                  plot_partregress_grid, plot_ccpr_grid)
 
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
@@ -67,10 +68,11 @@ class TestPlot(object):
         exog = res.model.exog
 
         plot_fit(res, 0, y_true=None)
-        plot_partregress(res, exog_idx=[0,1])
+        plot_partregress_grid(res, exog_idx=[0,1])
         plot_regress_exog(res, exog_idx=0)
-        plot_ccpr(res, exog_idx=[0])
-        plot_ccpr(res, exog_idx=[0,1])
+        plot_ccpr(res, exog_idx=0)
+        plot_ccpr_grid(res, exog_idx=[0])
+        plot_ccpr_grid(res, exog_idx=[0,1])
 
         plt.close('all')
 
@@ -80,7 +82,7 @@ class TestABLine(object):
     @classmethod
     def setupClass(cls):
         np.random.seed(12345)
-        X = sm.add_constant(np.random.normal(0, 20, size=30), prepend=True)
+        X = sm.add_constant(np.random.normal(0, 20, size=30))
         y = np.dot(X, [25, 3.5]) + np.random.normal(0, 30, size=30)
         mod = sm.OLS(y,X).fit()
         cls.X = X

@@ -37,6 +37,12 @@ def configuration(parent_package='', top_path=None):
                       for r,ds,f in os.walk(os.path.join(curdir, 'datasets'))
                       for d in f if not os.path.splitext(d)[1] in
                           ['.py', '.pyc']]
+    # install the dta files for iolib tests
+    extradatafiles += [relpath(os.path.join(r,d),start=curdir)
+                      for r,ds,f in os.walk(os.path.join(curdir,
+                          'iolib/tests/results'))
+                      for d in f if not os.path.splitext(d)[1] in
+                          ['.py', '.pyc']]
     for f in extradatafiles:
         config.add_data_files(f)
 

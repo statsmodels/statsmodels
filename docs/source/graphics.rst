@@ -15,6 +15,8 @@ Goodness of Fit Plots
 
    gofplots.qqplot
    gofplots.qqline
+   gofplots.qqplot_2samples
+   gofplots.ProbPlot
 
 Boxplots
 --------
@@ -55,6 +57,7 @@ Regression Plots
    regressionplots.plot_regress_exog
    regressionplots.plot_partregress
    regressionplots.plot_ccpr
+   regressionplots.abline_plot
 
 Time Series Plots
 -----------------

@@ -7,9 +7,10 @@ cur_dir = os.path.abspath(os.path.dirname(__file__))
 import sys
 sys.path.insert(0, os.path.normpath(os.path.join(cur_dir,
                                         '..', '..', 'tools')))
-from _build import cython, has_c_compiler
+from _build import cython, has_c_compiler # @UnresolvedImport
 sys.path.pop(0)
 del sys
+
 
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import (Configuration,
@@ -27,13 +28,12 @@ def configuration(parent_package='', top_path=None):
     #config.add_data_files('tests/results/results_kde_weights.csv')
     if has_c_compiler():
         cython(['fast_linbin.pyx'], working_path=cur_dir)
-
         config.add_extension('fast_linbin',
                          sources=['fast_linbin.c'],
                          include_dirs=[get_numpy_include_dirs()])
 
-
     return config
+
 
 if __name__ == '__main__':
     from numpy.distutils.core import setup

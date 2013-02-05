@@ -103,6 +103,8 @@ Autogressive Moving-Average Processes (ARMA) and Kalman Filter
 
    arima_model.ARMA
    arima_model.ARMAResults
+   arima_model.ARIMA
+   arima_model.ARIMAResults
    kalmanf.kalmanfilter.KalmanFilter
 
 Vector Autogressive Processes (VAR)

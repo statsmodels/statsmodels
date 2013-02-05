@@ -25,6 +25,7 @@ NOTE        = """
 Number of observations: 6366
 Number of variables: 9
 Variable name definitions:
+
     rate_marriage   : How rate marriage, 1 = very poor, 2 = poor, 3 = fair,
                       4 = good, 5 = very good
     age             : Age
@@ -49,7 +50,7 @@ See the original paper for more details.
 """
 
 import numpy as np
-from statsmodels.tools import datautils as du
+from statsmodels.datasets import utils as du
 from os.path import dirname, abspath
 
 def load():

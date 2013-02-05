@@ -13,9 +13,11 @@ import distributions
 from __init__ import test
 from . import version
 from info import __doc__
-from graphics.gofplots import qqplot
+from graphics.gofplots import qqplot, qqplot_2samples, qqline, ProbPlot
 from .graphics import api as graphics
 from .stats import api as stats
+from .emplike import api as emplike
+
 
 import os
 
@@ -25,9 +27,5 @@ if os.path.exists(chmpath):
         from subprocess import Popen
         p = Popen(chmpath, shell=True)
 
-
 del os
 del chmpath
-
-
-

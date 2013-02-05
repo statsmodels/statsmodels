@@ -49,7 +49,7 @@ def check_dependency_versions(min_versions):
             raise ImportError("statsmodels requires scipy")
     try:
         from pandas.version import version as pversion
-    except:
+    except ImportError:
         raise ImportError("statsmodels requires pandas")
     try:
         assert StrictVersion(strip_rc(npversion)) >= min_versions['numpy']
@@ -172,13 +172,9 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
         os.remove('MANIFEST')
 
     from numpy.distutils.misc_util import Configuration
-    config = Configuration(None, parent_package, top_path,
-                           namespace_packages = ['scikits'])
+    config = Configuration(None, parent_package, top_path)
 
-    config.add_subpackage('scikits')
     config.add_subpackage(DISTNAME)
-    config.add_subpackage('scikits.statsmodels')
-    config.add_data_files('scikits/__init__.py')
     config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
                           'statsmodels/statsmodelsdoc.chm')
 
@@ -211,7 +207,6 @@ if __name__ == "__main__":
           download_url = DOWNLOAD_URL,
           long_description = LONG_DESCRIPTION,
           configuration = configuration,
-          namespace_packages = ['scikits'],
           packages = setuptools.find_packages(),
           include_package_data = True,
           test_suite="nose.collector",

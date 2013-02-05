@@ -8,6 +8,7 @@ PAPER         =
 BUILDDIR      = build
 TOOLSPATH	  = ../tools/
 EXAMPLEBUILD  = examples_rst.py
+FOLDTOC  = fold_toc.py
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -46,6 +47,10 @@ html:
 	@echo "Generating reST from examples folder"
 	$(TOOLSPATH)$(EXAMPLEBUILD)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(TOOLSPATH)$(EXAMPLEBUILD)
+	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
+	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/examples/index.html ../_static
+	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/dev/index.html ../_static
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 

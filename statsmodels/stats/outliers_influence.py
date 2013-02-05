@@ -72,7 +72,7 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
 
     data = np.c_[resid, unadj_p, adj_p[1]]
     if labels is None:
-        labels = getattr(model_results.model._data, 'row_labels', None)
+        labels = getattr(model_results.model.data, 'row_labels', None)
     if labels is not None:
         from pandas import DataFrame
         return DataFrame(data,
@@ -589,7 +589,7 @@ class OLSInfluence(object):
         from pandas import DataFrame
 
         # row and column labels
-        data = self.results.model._data
+        data = self.results.model.data
         row_labels = data.row_labels
         beta_labels = ['dfb_' + i for i in data.xnames]
 
@@ -763,7 +763,7 @@ if __name__ == '__main__':
     varnames = 'weight height age'.split()
 
     endog = data[:,0]
-    exog = sm.add_constant(data[:,2], prepend=True)
+    exog = sm.add_constant(data[:,2])
 
 
     res_ols = sm.OLS(endog, exog).fit()

@@ -1,5 +1,7 @@
 .. _datasets:
 
+.. currentmodule:: statsmodels.datasets
+
 .. ipython:: python
    :suppress:
 
@@ -9,15 +11,36 @@
 The Datasets Package
 ====================
 
-Original Proposal
-~~~~~~~~~~~~~~~~~
+``statsmodels`` provides data sets (i.e. data *and* meta-data) for use in
+examples, tutorials, model testing, etc.
 
-The idea for a datasets package was originally proposed by David Cournapeau and
-can be found :ref:`here <dataset_proposal>` with updates by me (Skipper
-Seabold).
+Using Datasets from R
+---------------------
+
+The `Rdatasets project <http://vincentarelbundock.github.com/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. For example:
+
+.. ipython:: python
+
+   import statsmodels.api as sm
+   duncan_prestige = sm.datasets.get_rdataset("Duncan", "car")
+   print duncan_prestige.__doc__
+   duncan_prestige.data.head(5)
+
+
+R Datasets Function Reference
+-----------------------------
+
+
+.. autosummary::
+   :toctree: ./
+
+   get_rdataset
+   get_data_home
+   clear_data_home
+   
 
 Available Datasets
-~~~~~~~~~~~~~~~~~~
+------------------
 
 .. toctree::
    :maxdepth: 1
@@ -25,28 +48,28 @@ Available Datasets
 
    generated/*
 
-Main Usage
-~~~~~~~~~~
+Usage
+-----
 
-To load a dataset do the following
+Load a dataset:
 
 .. ipython:: python
 
    import statsmodels.api as sm
    data = sm.datasets.longley.load()
 
-The `Dataset` object follows the bunch pattern as explain in the
-:ref:`proposal <dataset_proposal>`.
+The `Dataset` object follows the bunch pattern explained  in :ref:`proposal <dataset_proposal>`.
 
-Most datasets have two attributes of particular interest to users for examples
+Most datasets hold convenient representations of the data in the attributes `endog` and `exog`:
 
 .. ipython:: python
 
-   data.endog
-   data.exog
+   data.endog[:5]
+   data.exog[:5,:]
 
-Univariate datasets, however, do not have an `exog` attribute. You can find
-out the variable names by doing
+Univariate datasets, however, do not have an `exog` attribute.
+
+Variable names can be obtained by typing:
 
 .. ipython:: python
 
@@ -68,7 +91,7 @@ by the `names` attribute.
    data.names
 
 Loading data as pandas objects
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For many users it may be preferable to get the datasets as a pandas DataFrame or
 Series object. Each of the dataset modules is equipped with a ``load_pandas``
@@ -91,7 +114,7 @@ to model results:
    res.summary()
 
 Extra Information
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 
 If you want to know more about the dataset itself, you can access the
 following, again using the Longley dataset as an example ::
@@ -99,7 +122,8 @@ following, again using the Longley dataset as an example ::
     >>> dir(sm.datasets.longley)[:6]
     ['COPYRIGHT', 'DESCRLONG', 'DESCRSHORT', 'NOTE', 'SOURCE', 'TITLE']
 
-How to Add a Dataset
-~~~~~~~~~~~~~~~~~~~~
+Additional information
+----------------------
 
-See the :ref:`notes on adding a dataset <add_data>`.
+* The idea for a datasets package was originally proposed by David Cournapeau and can be found :ref:`here <dataset_proposal>` with updates by Skipper Seabold.
+* To add datasets, see the :ref:`notes on adding a dataset <add_data>`.

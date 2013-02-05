@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import optimize, stats
 from statsmodels.base.data import handle_data
-from statsmodels.tools.tools import recipr
+from statsmodels.tools.tools import recipr, nan_dot
 from statsmodels.stats.contrast import ContrastResults
 from statsmodels.tools.decorators import (resettable_cache,
                                                   cache_readonly)
@@ -10,36 +10,59 @@ from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
 
 
-class Model(object):
-    """
-    A (predictive) statistical model. The class Model itself is not to be used.
-
-    Model lays out the methods expected of any subclass.
-
+_model_params_doc = """\
     Parameters
     ----------
     endog : array-like
-        Endogenous response variable.
+        1-d endogenous response variable. The dependent variable.
     exog : array-like
-        Exogenous design.
+        A nobs x k array where `nobs` is the number of observations and `k`
+        is the number of regressors. An interecept is not included by default
+        and should be added by the user. See `statsmodels.tools.add_constant`."""
+
+_missing_param_doc = """missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none.'"""
+_extra_param_doc = """
+    hasconst : None or bool
+        Indicates whether the RHS includes a user-supplied constant. If True,
+        a constant is not checked for and k_constant is set to 1 and all
+        result statistics are calculated as if a constant is present. If
+        False, a constant is not checked for and k_constant is set to 0.
+        """
+
+class Model(object):
+    __doc__ = """
+    A (predictive) statistical model. Intended to be subclassed not used.
+
+    %(params_doc)s
+    %(extra_params_doc)s
 
     Notes
     -----
     `endog` and `exog` are references to any data provided.  So if the data is
     already stored in numpy arrays and it is changed then `endog` and `exog`
     will change as well.
-    """
-
-    def __init__(self, endog, exog=None):
-        self._data = handle_data(endog, exog)
-        self.exog = self._data.exog
-        self.endog = self._data.endog
+    """ % {'params_doc' : _model_params_doc,
+            'extra_params_doc' : _missing_param_doc + _extra_param_doc}
+    def __init__(self, endog, exog=None, **kwargs):
+        missing = kwargs.pop('missing', 'none')
+        hasconst = kwargs.pop('hasconst', None)
+        self.data = handle_data(endog, exog, missing, hasconst, **kwargs)
+        self.k_constant = self.data.k_constant
+        self.exog = self.data.exog
+        self.endog = self.data.endog
+        # kwargs arrays could have changed, easier to just attach here
+        for key in kwargs:
+            # pop so we don't start keeping all these twice or references
+            setattr(self, key, self.data.__dict__.pop(key))
         self._data_attr = []
-        self._data_attr.extend(['exog', 'endog', '_data.exog', '_data.endog',
-                                '_data._orig_endog', '_data._orig_exog'])
+        self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
+                                'data.orig_endog', 'data.orig_exog'])
 
     @classmethod
-    def from_formula(cls, formula, df, subset=None, *args, **kwargs):
+    def from_formula(cls, formula, data, subset=None, *args, **kwargs):
         """
         Create a Model from a formula and dataframe.
 
@@ -47,7 +70,7 @@ class Model(object):
         ----------
         formula : str or generic Formula object
             The formula specifying the model
-        df : array-like
+        data : array-like
             The data for the model. See Notes.
         subset : array-like
             An array-like object of booleans, integers, or index values that
@@ -64,30 +87,30 @@ class Model(object):
 
         Notes
         ------
-        df must define __getitem__ with the keys in the formula terms
+        data must define __getitem__ with the keys in the formula terms
         args and kwargs are passed on to the model instantiation. E.g.,
         a numpy structured or rec array, a dictionary, or a pandas DataFrame.
         """
-        #TODO: provide a template for args/kwargs from child models
-        #TODO: only accept DataFrames?
+        #TODO: provide a docs template for args/kwargs from child models
+        #TODO: subset could use syntax. issue #469.
         if subset is not None:
-            df= df.ix[subset]
-        endog, exog = handle_formula_data(df, None, formula)
+            data= data.ix[subset]
+        endog, exog = handle_formula_data(data, None, formula)
         mod = cls(endog, exog, *args, **kwargs)
         mod.formula = formula
 
         # since we got a dataframe, attach the original
-        mod._data.frame = df
+        mod.data.frame = data
         return mod
 
 
     @property
     def endog_names(self):
-        return self._data.ynames
+        return self.data.ynames
 
     @property
     def exog_names(self):
-        return self._data.xnames
+        return self.data.xnames
 
     def fit(self):
         """
@@ -109,8 +132,8 @@ class LikelihoodModel(Model):
     Likelihood model is a subclass of Model.
     """
 
-    def __init__(self, endog, exog=None):
-        super(LikelihoodModel, self).__init__(endog, exog)
+    def __init__(self, endog, exog=None, **kwargs):
+        super(LikelihoodModel, self).__init__(endog, exog, **kwargs)
         self.initialize()
 
     def initialize(self):
@@ -153,8 +176,8 @@ class LikelihoodModel(Model):
         raise NotImplementedError
 
     def fit(self, start_params=None, method='newton', maxiter=100,
-            full_output=True, disp=True, fargs=(), callback=None, retall=False,
-            **kwargs):
+            full_output=True, disp=True, fargs=(), callback=None,
+            retall=False, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -167,11 +190,11 @@ class LikelihoodModel(Model):
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
             Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient. `method` determines which solver from
-            scipy.optimize is used.  The explicit arguments in `fit` are passed
-            to the solver.  Each solver has several optional arguments that are
-            not the same across solvers.  See the notes section below (or
-            scipy.optimize) for the available arguments.
+            conjugate gradient.  `method` determines which solver from
+            scipy.optimize is used.  The explicit arguments in `fit` are
+            passed to the solver.  Each solver has several optional arguments
+            that are not the same across solvers.  See the notes section below
+            (or scipy.optimize) for the available arguments.
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -244,8 +267,13 @@ class LikelihoodModel(Model):
                 start_direc : ndarray
                     Initial direction set.
                 """
+        # Extract kwargs specific to fit_regularized calling fit
+        extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
+        cov_params_func = kwargs.setdefault('cov_params_func', None)
+
         Hinv = None  # JP error if full_output=0, Hinv not defined
         methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
+        methods += extra_fit_funcs.keys()
         if start_params is None:
             if hasattr(self, 'start_params'):
                 start_params = self.start_params
@@ -257,17 +285,19 @@ class LikelihoodModel(Model):
                                  "be specified")
 
         if method.lower() not in methods:
-            raise ValueError("Unknown fit method %s" % method)
+            message = "Unknown fit method %s" % method
+            raise ValueError(message)
         method = method.lower()
 
         # TODO: separate args from nonarg taking score and hessian, ie.,
         # user-supplied and numerically evaluated estimate frprime doesn't take
         # args in most (any?) of the optimize function
 
-        f = lambda params, *args: -self.loglike(params, *args)
-        score = lambda params: -self.score(params)
+        nobs = self.endog.shape[0]
+        f = lambda params, *args: -self.loglike(params, *args) / nobs
+        score = lambda params: -self.score(params) / nobs
         try:
-            hess = lambda params: -self.hessian(params)
+            hess = lambda params: -self.hessian(params) / nobs
         except:
             hess = None
 
@@ -279,10 +309,13 @@ class LikelihoodModel(Model):
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell
         }
+        if extra_fit_funcs:
+            fit_funcs.update(extra_fit_funcs)
 
         if method == 'newton':
-            score = lambda params: self.score(params)
-            hess = lambda params: self.hessian(params)
+            score = lambda params: self.score(params) / nobs
+            hess = lambda params: self.hessian(params) / nobs
+            #TODO: why are score and hess positive?
 
         func = fit_funcs[method]
         xopt, retvals = func(f, score, start_params, fargs, kwargs,
@@ -297,8 +330,11 @@ class LikelihoodModel(Model):
         # isn't great
 #        if method == 'bfgs' and full_output:
 #            Hinv = retvals.setdefault('Hinv', 0)
+        # If we have full_output, then compute the inverse Hessian
+        elif cov_params_func:
+            Hinv = cov_params_func(self, xopt, retvals)
         elif method == 'newton' and full_output:
-            Hinv = np.linalg.inv(-retvals['Hessian'])
+            Hinv = np.linalg.inv(-retvals['Hessian']) / nobs
         else:
             try:
                 Hinv = np.linalg.inv(-1 * self.hessian(xopt))
@@ -555,7 +591,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
-                 hessian=None):
+                 hessian=None, missing='none'):
     # let them be none in case user wants to use inheritance
         if loglike:
             self.loglike = loglike
@@ -572,7 +608,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             #try:
             self.nparams = self.df_model = (exog.shape[1]
                                             if np.ndim(exog) == 2 else 1)
-        super(GenericLikelihoodModel, self).__init__(endog, exog)
+        super(GenericLikelihoodModel, self).__init__(endog, exog, missing=missing)
 
     #this is redundant and not used when subclassing
     def initialize(self):
@@ -738,6 +774,7 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
+        self.k_constant = model.k_constant
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
@@ -761,7 +798,7 @@ class Results(object):
         """
         if transform and hasattr(self.model, 'formula') and exog is not None:
             from patsy import dmatrix
-            exog = dmatrix(self.model._data._orig_exog.design_info.builder,
+            exog = dmatrix(self.model.data.orig_exog.design_info.builder,
                     exog)
         return self.model.predict(self.params, exog, *args, **kwargs)
 
@@ -913,7 +950,6 @@ class LikelihoodModelResults(Results):
     def normalized_cov_params(self):
         raise NotImplementedError
 
-    #JP: add methods that are valid generically higher up in class hierarchy
     @cache_readonly
     def llf(self):
         return self.model.loglike(self.params)
@@ -921,60 +957,6 @@ class LikelihoodModelResults(Results):
     @cache_readonly
     def bse(self):
         return np.sqrt(np.diag(self.cov_params()))
-
-    def t(self, column=None):
-        """
-        deprecated: Return the t-statistic for a given parameter estimate.
-
-        FutureWarning: use attribute tvalues instead, t will be removed
-        in the next release
-
-        Parameters
-        ----------
-        column : array-like
-            The columns for which you would like the t-value.
-            Note that this uses Python's indexing conventions.
-
-        See also
-        ---------
-        Use t_test for more complicated t-statistics.
-
-        Examples
-        --------
-        >>> import statsmodels.api as sm
-        >>> data = sm.datasets.longley.load()
-        >>> data.exog = sm.add_constant(data.exog)
-        >>> results = sm.OLS(data.endog, data.exog).fit()
-        >>> results.tvalues
-        array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
-        4.01588981, -3.91080292])
-        >>> results.tvalues[[1,2,4]]
-        array([-1.06951632, -4.13642736, -0.22605114])
-        >>> import numpy as np
-        >>> results.tvalues[np.array([1,2,4]]
-        array([-1.06951632, -4.13642736, -0.22605114])
-
-        """
-        import warnings
-        warnings.warn("`t` will be removed in the next release, use attribute"
-                      "`tvalues` instead", FutureWarning)
-
-        if self.normalized_cov_params is None:
-            raise ValueError('need covariance of parameters for computing T '
-                             'statistics')
-
-        if column is None:
-            column = range(self.params.shape[0])
-
-        column = np.asarray(column)
-        _params = self.params[column]
-        _cov = self.cov_params(column=column)
-        if _cov.ndim == 2:
-            _cov = np.diag(_cov)
-        _t = _params * recipr(np.sqrt(_cov))
-    # repicr drops precision for MNLogit?
-        _t = _params / np.sqrt(_cov)
-        return _t
 
     @cache_readonly
     def tvalues(self):
@@ -988,7 +970,7 @@ class LikelihoodModelResults(Results):
         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
-                   other=None):
+            other=None):
         """
         Returns the variance/covariance matrix.
 
@@ -1032,6 +1014,12 @@ class LikelihoodModelResults(Results):
         (scale) * (X.T X)^(-1)[column][:,column] if column is 1d
 
         """
+        if (hasattr(self, 'mle_settings') and
+            self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
+            dot_fun = nan_dot
+        else:
+            dot_fun = np.dot
+
         if cov_p is None and self.normalized_cov_params is None:
             raise ValueError('need covariance of parameters for computing '
                              '(unnormalized) covariances')
@@ -1061,7 +1049,7 @@ class LikelihoodModelResults(Results):
                 other = r_matrix
             else:
                 other = np.asarray(other)
-            tmp = np.dot(r_matrix, np.dot(cov_p, np.transpose(other)))
+            tmp = dot_fun(r_matrix, dot_fun(cov_p, np.transpose(other)))
             return tmp
         else:  #if r_matrix is None and column is None:
             return cov_p
@@ -1100,9 +1088,9 @@ class LikelihoodModelResults(Results):
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> r = np.zeros_like(results.params)
-        >>> r[4:6] = [1,-1]
+        >>> r[5:] = [1,-1]
         >>> print r
-        [ 0.  0.  0.  0.  1. -1.  0.]
+        [ 0.  0.  0.  0.  0.  1. -1.]
 
         r tests that the coefficients on the 5th and 6th independent
         variable are the same.
@@ -1115,9 +1103,9 @@ class LikelihoodModelResults(Results):
         -1829.2025687192481
         >>> T_test.sd
         455.39079425193762
-        >>> T_test.t
+        >>> T_test.tvalue
         -4.0167754636411717
-        >>> T_test.p
+        >>> T_test.pvalue
         0.0015163772380899498
 
         Alternatively, you can specify the hypothesis tests using a string
@@ -1165,14 +1153,18 @@ class LikelihoodModelResults(Results):
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
+        # nan_dot multiplies with the convention nan * 0 = 0
+
+        # Perform the test
         if num_ttests > 1:
-            _sd = np.sqrt(np.diag(self.cov_params(r_matrix=r_matrix,
-                                                  cov_p=cov_p)))
+            _sd = np.sqrt(np.diag(self.cov_params(
+                r_matrix=r_matrix, cov_p=cov_p)))
         else:
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
         return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                df_denom=self.model.df_resid)
+
 
     #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
@@ -1211,7 +1203,7 @@ class LikelihoodModelResults(Results):
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> A = np.identity(len(results.params))
-        >>> A = A[:-1,:]
+        >>> A = A[1:,:]
 
         This tests that each coefficient is jointly statistically
         significantly different from zero.
@@ -1227,7 +1219,7 @@ class LikelihoodModelResults(Results):
         >>> results.F_p
         4.98403096572e-10
 
-        >>> B = np.array(([0,1,-1,0,0,0,0],[0,0,0,0,1,-1,0]))
+        >>> B = np.array(([0,0,1,-1,0,0,0],[0,0,0,0,0,1,-1]))
 
         This tests that the coefficient on the 2nd and 3rd regressors are
         equal and jointly that the coefficient on the 5th and 6th regressors
@@ -1292,9 +1284,17 @@ class LikelihoodModelResults(Results):
                                  "number of rows")
         Rbq = cparams - q_matrix
         if invcov is None:
-            invcov = np.linalg.inv(self.cov_params(r_matrix=r_matrix,
-                                                   cov_p=cov_p))
-        F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
+            cov_p = self.cov_params(r_matrix=r_matrix, cov_p=cov_p)
+            if np.isnan(cov_p).max():
+                raise ValueError("r_matrix performs f_test for using "
+                    "dimensions that are asymptotically non-normal")
+            invcov = np.linalg.inv(cov_p)
+
+        if (hasattr(self, 'mle_settings') and
+            self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
+            F = nan_dot(nan_dot(Rbq.T, invcov), Rbq) / J
+        else:
+            F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
         return ContrastResults(F=F, df_denom=self.model.df_resid,
                     df_num=invcov.shape[0])
 
@@ -1332,17 +1332,18 @@ class LikelihoodModelResults(Results):
         >>> data.exog = sm.add_constant(data.exog)
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> results.conf_int()
-        array([[ -1.77029035e+02,   2.07152780e+02],
-        [ -1.11581102e-01,   3.99427438e-02],
-        [ -3.12506664e+00,  -9.15392966e-01],
-        [ -1.51794870e+00,  -5.48505034e-01],
-        [ -5.62517214e-01,   4.60309003e-01],
-        [  7.98787515e+02,   2.85951541e+03],
-        [ -5.49652948e+06,  -1.46798779e+06]])
+        array([[-5496529.48322745, -1467987.78596704],
+               [    -177.02903529,      207.15277984],
+               [      -0.1115811 ,        0.03994274],
+               [      -3.12506664,       -0.91539297],
+               [      -1.5179487 ,       -0.54850503],
+               [      -0.56251721,        0.460309  ],
+               [     798.7875153 ,     2859.51541392]])
 
-        >>> results.conf_int(cols=(1,2))
+
+        >>> results.conf_int(cols=(2,3))
         array([[-0.1115811 ,  0.03994274],
-        [-3.12506664, -0.91539297]])
+               [-3.12506664, -0.91539297]])
 
         Notes
         -----
@@ -1362,10 +1363,6 @@ class LikelihoodModelResults(Results):
             lower = self.params[cols] - q * bse[cols]
             upper = self.params[cols] + q * bse[cols]
         return np.asarray(zip(lower, upper))
-
-    @cache_readonly
-    def llf(self):
-        return self.model.loglike(self.params)
 
     def save(self, fname, remove_data=False):
         '''
@@ -1685,3 +1682,5 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.nobs = model.endog.shape[0]
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
+
+

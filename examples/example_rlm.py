@@ -56,7 +56,7 @@ y2[[39,41,43,45,48]] -= 5   # add some outliers (10% of nsample)
 
 #Example: quadratic function with linear truth
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# Note that the quadratic term in OLS regression will capture outlier effects. 
+# Note that the quadratic term in OLS regression will capture outlier effects.
 res = sm.OLS(y2, X).fit()
 print res.params
 print res.bse
@@ -81,7 +81,7 @@ plt.title('blue: true,   red: OLS,   green: RLM')
 #Example: linear function with linear truth
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 # Fit a new OLS model using only the linear term and the constant
-X2 = X[:,[0,2]] 
+X2 = X[:,[0,2]]
 res2 = sm.OLS(y2, X2).fit()
 print res2.params
 print res2.bse

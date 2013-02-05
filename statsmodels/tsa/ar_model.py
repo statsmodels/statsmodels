@@ -63,18 +63,12 @@ def _ar_predict_out_of_sample(y, params, p, k_trend, steps, start=0):
 
 
 class AR(tsbase.TimeSeriesModel):
-    """
-    Autoregressive AR(p) Model
-
-    Parameters
-    ----------
-    endog : array-like
-        Endogenous response variable.
-    date : array-like
-        Dates of the endogenous variable.
-    """
-    def __init__(self, endog, dates=None, freq=None):
-        super(AR, self).__init__(endog, None, dates, freq)
+    __doc__ = tsbase._tsa_doc % {"model" : "Autoregressive AR(p) model",
+            "params" : """endog : array-like
+        1-d endogenous response variable. The independent variable.""",
+        "extra_params" : base._missing_param_doc}
+    def __init__(self, endog, dates=None, freq=None, missing='none'):
+        super(AR, self).__init__(endog, None, dates, freq, missing=missing)
         endog = self.endog # original might not have been an ndarray
         if endog.ndim == 1:
             endog = endog[:,None]
@@ -155,7 +149,7 @@ class AR(tsbase.TimeSeriesModel):
         elif isinstance(start, int):
             start = super(AR, self)._get_predict_start(start)
         else: # should be a date
-            start = _validate(start, k_ar, self._data.dates, method)
+            start = _validate(start, k_ar, self.data.dates, method)
             start = super(AR, self)._get_predict_start(start)
         _check_ar_start(start, k_ar, method, dynamic)
         return start
@@ -910,8 +904,6 @@ if __name__ == "__main__":
 
     #NOTE: pandas can't handle pre-1900 dates
     mod = AR(sunspots, freq='A')
-    #NOTE: If you use timeseries, predict is buggy
-    #mod = AR(sunspots.values, dates=ts_dr, freq='A')
     res = mod.fit(method='mle', maxlag=9)
 
 

@@ -28,7 +28,7 @@ except IOError:
 endog = pet[:,-1]
 group = pet[:,0].astype(int)
 time = pet[:,1].astype(int)
-exog = sm.add_constant(pet[:,2], prepend=True)
+exog = sm.add_constant(pet[:,2])
 res = sm.OLS(endog, exog).fit()
 
 cov01, covg, covt = sw.cov_cluster_2groups(res, group, group2=time)

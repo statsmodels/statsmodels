@@ -682,12 +682,12 @@ def test_arima_predict_mle_dates():
     start, end = 2, 51
     fv = res1.predict('1959Q3', '1971Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_dates[start:end+1])
+    assert_equal(res1.data.predict_dates, cpi_dates[start:end+1])
 
     start, end = 202, 227
     fv = res1.predict('2009Q3', '2015Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_predict_dates)
+    assert_equal(res1.data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
 
@@ -710,12 +710,12 @@ def test_arma_predict_mle_dates():
     start, end = 2, 51
     _ = mod._get_predict_start('1702', False)
     _ = mod._get_predict_end('1751')
-    assert_equal(mod._data.predict_dates, sun_dates[start:end+1])
+    assert_equal(mod.data.predict_dates, sun_dates[start:end+1])
 
     start, end = 308, 333
     _ = mod._get_predict_start('2008', False)
     _ = mod._get_predict_end('2033')
-    assert_equal(mod._data.predict_dates, sun_predict_dates)
+    assert_equal(mod.data.predict_dates, sun_predict_dates)
 
 
 def test_arima_predict_css_dates():
@@ -741,12 +741,12 @@ def test_arima_predict_css_dates():
     start, end = 5, 51
     fv = res1.model.predict(params, '1960Q2', '1971Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_dates[start:end+1])
+    assert_equal(res1.data.predict_dates, cpi_dates[start:end+1])
 
     start, end = 202, 227
     fv = res1.model.predict(params, '2009Q3', '2015Q4', typ='levels')
     assert_almost_equal(fv, fc[start:end+1], DECIMAL_4)
-    assert_equal(res1._data.predict_dates, cpi_predict_dates)
+    assert_equal(res1.data.predict_dates, cpi_predict_dates)
 
     # make sure dynamic works
     start, end = 5, 51
@@ -1577,12 +1577,25 @@ def test_1dexog():
     exog = dta['m1'].values.squeeze()
     mod = ARMA(endog, (1,1), exog).fit(disp=-1)
 
-def arima_predict_bug():
+def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
-    dta = sm.datasets.sunspots.load_pandas().data
-    dta.index = pandas.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
-    arma_mod20 = sm.tsa.ARMA(dta, (2,0)).fit(disp=-1)
+    from statsmodels.datasets import sunspots
+    dta = sunspots.load_pandas().data.SUNACTIVITY
+    dta.index = pandas.Index(dates_from_range('1700', '2008'))
+    arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
+
+def test_arima_predict_q2():
+    # bug with q > 1 for arima predict
+    from statsmodels.datasets import macrodata
+    inv = macrodata.load().data['realinv']
+    arima_mod = ARIMA(np.log(inv), (1,1,2)).fit(start_params=[0,0,0,0], disp=-1)
+    fc, stderr, conf_int = arima_mod.forecast(5)
+    # values copy-pasted from gretl
+    assert_almost_equal(fc,
+                        [7.306320, 7.313825, 7.321749, 7.329827, 7.337962],
+                        5)
+
 
 if __name__ == "__main__":
     import nose

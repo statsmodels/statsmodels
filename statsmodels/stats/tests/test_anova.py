@@ -77,7 +77,7 @@ class TestAnovaLM(object):
         kidney_table.seek(0)
         cls.data = read_table(kidney_table, sep="\s+")
         cls.kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)',
-                        df=cls.data).fit()
+                        data=cls.data).fit()
 
     def test_results(self):
         Df = np.array([1, 2, 2, 54])

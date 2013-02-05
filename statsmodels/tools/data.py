@@ -112,21 +112,6 @@ def _is_using_pandas(endog, exog):
     klasses = (Series, DataFrame, WidePanel)
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
-def _is_using_larry(endog, exog):
-    try:
-        import la
-        return isinstance(endog, la.larry) or isinstance(exog, la.larry)
-    except ImportError:
-        return False
-
-def _is_using_timeseries(endog, exog):
-    try:
-        from scikits.timeseries import TimeSeries as tsTimeSeries
-        return isinstance(endog, tsTimeSeries) or isinstance(exog, tsTimeSeries)
-    except ImportError:
-        # if there is no deprecated scikits.timeseries, it is safe to say NO
-        return False
-
 def _is_array_like(endog, exog):
     try: # do it like this in case of mixed types, ie., ndarray and list
         endog = np.asarray(endog)
@@ -137,5 +122,6 @@ def _is_array_like(endog, exog):
 
 def _is_using_patsy(endog, exog):
     # we get this when a structured array is passed through a formula
-    return is_design_matrix(endog) and is_design_matrix(exog)
+    return (is_design_matrix(endog) and
+            (is_design_matrix(exog) or exog is None))
 

@@ -94,7 +94,7 @@ class TestGradMNLogit(CheckGradLoglike):
         #from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
         exog = data.exog
-        exog = sm.add_constant(exog)
+        exog = sm.add_constant(exog, prepend=False)
         self.mod = sm.MNLogit(data.endog, exog)
 
         #def loglikeflat(self, params):
@@ -103,7 +103,7 @@ class TestGradMNLogit(CheckGradLoglike):
         #self.mod.loglike = loglikeflat  #need instance method
         #self.params = [np.ones((6,6)).ravel()]
         res = self.mod.fit(disp=0)
-        self.params = [res.params.ravel(order='F')]
+        self.params = [res.params.ravel('F')]
 
     def test_hess(self):
         #NOTE: I had to overwrite this to lessen the tolerance
@@ -118,7 +118,7 @@ class TestGradMNLogit(CheckGradLoglike):
             assert_almost_equal(he, hefd, decimal=7)
             hefd = numdiff.approx_fprime(test_params, self.mod.score,
                                          centered=True)
-            assert_almost_equal(he, hefd, decimal=5)
+            assert_almost_equal(he, hefd, decimal=4)
             hefd = numdiff.approx_fprime(test_params, self.mod.score, 1e-9,
                                          centered=False)
             assert_almost_equal(he, hefd, decimal=2)
@@ -139,7 +139,7 @@ class TestGradMNLogit(CheckGradLoglike):
 class TestGradLogit(CheckGradLoglike):
     def __init__(self):
         data = sm.datasets.spector.load()
-        data.exog = sm.add_constant(data.exog)
+        data.exog = sm.add_constant(data.exog, prepend=False)
         #mod = sm.Probit(data.endog, data.exog)
         self.mod = sm.Logit(data.endog, data.exog)
         #res = mod.fit(method="newton")
@@ -319,7 +319,7 @@ if __name__ == '__main__':
     import statsmodels.api as sm
 
     data = sm.datasets.spector.load()
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     #mod = sm.Probit(data.endog, data.exog)
     mod = sm.Logit(data.endog, data.exog)
     #res = mod.fit(method="newton")
@@ -353,12 +353,13 @@ if __name__ == '__main__':
 
     data = sm.datasets.anes96.load()
     exog = data.exog
-    exog = sm.add_constant(exog)
+    exog = sm.add_constant(exog, prepend=False)
     res1 = sm.MNLogit(data.endog, exog).fit(method="newton", disp=0)
 
     datap = sm.datasets.randhie.load()
     nobs = len(datap.endog)
-    exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1))
+    exogp = sm.add_constant(datap.exog.view(float).reshape(nobs,-1),
+                            prepend=False)
     modp = sm.Poisson(datap.endog, exogp)
     resp = modp.fit(method='newton', disp=0)
 

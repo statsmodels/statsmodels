@@ -202,7 +202,7 @@ if __name__ == '__main__':
     import statsmodels.api as sm
     import os
     data = sm.datasets.longley.load()
-    data.exog = sm.add_constant(data.exog)
+    data.exog = sm.add_constant(data.exog, prepend=False)
     sum1 = descstats(data.exog)
     sum1a = descstats(data.exog[:,:1])
 

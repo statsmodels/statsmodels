@@ -32,14 +32,17 @@ Golan, A., Judge, G., and Miller, D.  1996.  Maximum Entropy Econometrics.
 #bias and variance. Technical Report 2003/131 School of Computer Science and Software Engineer-
 #ing, Monash University.
 
-from scipy import maxentropy, stats
+from scipy import stats
 import numpy as np
 from matplotlib import pyplot as plt
 
 #TODO: change these to use maxentutils so that over/underflow is handled
 #with the logsumexp.
 
-from scipy.maxentropy import logsumexp as lse
+try:
+    from scipy.maxentropy import logsumexp as sp_logsumexp
+except:
+    from scipy.misc import logsumexp as sp_logsumexp
 
 def logsumexp(a, axis=None):
     """
@@ -67,12 +70,12 @@ def logsumexp(a, axis=None):
     """
     if axis is None:
         # Use the scipy.maxentropy version.
-        return lse(a)
-    a = asarray(a)
+        return sp_logsumexp(a)
+    a = np.asarray(a)
     shp = list(a.shape)
     shp[axis] = 1
     a_max = a.max(axis=axis)
-    s = log(exp(a - a_max.reshape(shp)).sum(axis=axis))
+    s = np.log(np.exp(a - a_max.reshape(shp)).sum(axis=axis))
     lse  = a_max + s
     return lse
 

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 np.random.seed(9876789)
 
-#OLS Estimation 
+#OLS Estimation
 #--------------
 
 #Artificial data
@@ -19,7 +19,7 @@ beta = np.array([1, 0.1, 10])
 e = np.random.normal(size=nsample)
 
 # Our model needs an intercept so we add a column of 1s:
-X = sm.add_constant(X)
+X = sm.add_constant(X, prepend=False)
 y = np.dot(X, beta) + e
 
 # Inspect data
@@ -34,16 +34,16 @@ results = model.fit()
 print results.summary()
 
 # Quantities of interest can be extracted directly from the fitted model. Type
-# ``dir(results)`` for a full list. Here are some examples:  
+# ``dir(results)`` for a full list. Here are some examples:
 print results.params
 print results.rsquared
 
 #OLS non-linear curve but linear in parameters
 #---------------------------------------------
 
-#Artificial data 
+#Artificial data
 #^^^^^^^^^^^^^^^
-# Non-linear relationship between x and y 
+# Non-linear relationship between x and y
 nsample = 50
 sig = 0.5
 x = np.linspace(0, 20, nsample)
@@ -77,7 +77,7 @@ plt.title('blue: true,   red: OLS')
 #OLS with dummy variables
 #------------------------
 
-#Artificial data 
+#Artificial data
 #^^^^^^^^^^^^^^^^
 # We create 3 groups which will be modelled using dummy variables. Group 0 is
 # the omitted/benchmark category.
@@ -107,7 +107,7 @@ print res2.params
 print res2.bse
 print res.predict()
 
-# Draw a plot to compare the true relationship to OLS predictions. 
+# Draw a plot to compare the true relationship to OLS predictions.
 prstd, iv_l, iv_u = wls_prediction_std(res2)
 plt.figure()
 plt.plot(x, y, 'o', x, y_true, 'b-')
@@ -134,14 +134,14 @@ print res2.f_test(R)
 #^^^^^^
 # We want to test the null hypothesis that the effects of the 2nd and 3rd
 # groups add to zero. The T-test allows us to reject the Null (but note the
-# one-sided p-value): 
+# one-sided p-value):
 R = [0, 1, -1, 0]
 print res2.t_test(R)
 
 #Small group effects
-#^^^^^^^^^^^^^^^^^^^ 
+#^^^^^^^^^^^^^^^^^^^
 # If we generate artificial data with smaller group effects, the T test can no
-# longer reject the Null hypothesis: 
+# longer reject the Null hypothesis:
 beta = [1., 0.3, -0.0, 10]
 y_true = np.dot(X, beta)
 y = y_true + np.random.normal(size=nsample)
@@ -156,11 +156,11 @@ print res3.f_test(R)
 # The Longley dataset is well known to have high multicollinearity, that is,
 # the exogenous predictors are highly correlated. This is problematic because
 # it can affect the stability of our coefficient estimates as we make minor
-# changes to model specification. 
+# changes to model specification.
 from statsmodels.datasets.longley import load
 y = load().endog
 X = load().exog
-X = sm.tools.add_constant(X)
+X = sm.tools.add_constant(X, prepend=False)
 
 #Fit and summary
 #^^^^^^^^^^^^^^^
@@ -172,14 +172,14 @@ print ols_results.summary()
 #^^^^^^^^^^^^^^^^
 # One way to assess multicollinearity is to compute the condition number.
 # Values over 20 are worrisome (see Greene 4.9). The first step is to normalize
-# the independent variables to have unit length: 
+# the independent variables to have unit length:
 norm_x = np.ones_like(X)
 for i in range(int(ols_model.df_model)):
     norm_x[:,i] = X[:,i]/np.linalg.norm(X[:,i])
 norm_xtx = np.dot(norm_x.T,norm_x)
 
 # Then, we take the square root of the ratio of the biggest to the smallest
-# eigen values. 
+# eigen values.
 eigs = np.linalg.eigvals(norm_xtx)
 condition_number = np.sqrt(eigs.max() / eigs.min())
 print condition_number
@@ -187,7 +187,7 @@ print condition_number
 #Dropping an observation
 #^^^^^^^^^^^^^^^^^^^^^^^
 # Greene also points out that dropping a single observation can have a dramatic
-# effect on the coefficient estimates: 
+# effect on the coefficient estimates:
 ols_results2 = sm.OLS(y[:-1], X[:-1,:]).fit()
 print "Percentage change %4.2f%%\n"*7 % tuple([i for i in ols_results.params/ols_results2.params*100 - 100])
 

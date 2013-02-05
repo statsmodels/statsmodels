@@ -19,28 +19,6 @@ The following descriptions are taken from the websites with small adjustments.
 Data Handling
 -------------
 
-Scikits.timeseries
-^^^^^^^^^^^^^^^^^^
-
-http://pypi.python.org/pypi/scikits.timeseries
-
-"Time series manipulation
-
-The scikits.timeseries module provides classes and functions for manipulating,
-reporting, and plotting time series of various frequencies. The focus is on
-convenient data access and manipulation while leveraging the existing
-mathematical functionality in Numpy and SciPy."
-
-Licence: BSD
-Language: Python, C, binary distributions available
-
-
-*Comments*
-
-Timeseries is based on numpys MaskedArray and is designed for handling data
-with missing values. It also includes functions for statistical analysis.
-
-
 Pandas
 ^^^^^^
 

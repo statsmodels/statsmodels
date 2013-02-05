@@ -96,7 +96,7 @@ if 'ex1' in examples:
     print res2.params
 
     import statsmodels.api as sm
-    z = sm.add_constant(w, prepend=True)
+    z = sm.add_constant(w)
     mod3 = GLSHet(y2, X2, exog_var=z)
     res3 = mod3.iterative_fit(8)
     print res3.params
