@@ -708,7 +708,7 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
         low = transform(low)
         upp = transform(upp)
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
-                     DescrStatsW(x2, weights=weights[1], ddof=0))
+                      DescrStatsW(x2, weights=weights[1], ddof=0))
     pval, res = cm.tost_ind(low, upp, usevar=usevar)
     return pval, res[0], res[1]
 
