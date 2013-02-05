@@ -194,7 +194,7 @@ class RLM(base.LikelihoodModel):
             if self.scale_est.lower() == 'stand_mad':
                 return scale.stand_mad(resid)
         elif isinstance(self.scale_est, scale.HuberScale):
-            return scale.hubers_scale(self.df_resid, self.nobs, resid)
+            return self.scale_est(self.df_resid, self.nobs, resid)
         else:
             return scale.scale_est(self, resid)**2
 
