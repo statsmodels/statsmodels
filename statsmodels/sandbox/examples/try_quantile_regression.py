@@ -7,7 +7,7 @@ Author: Josef Perktold
 import numpy as np
 import statsmodels.api as sm
 
-from quantile_regression import quantilereg
+from statsmodels.sandbox.regression.quantile_regression import quantilereg
 
 sige = 5
 nobs, k_vars = 500, 5
