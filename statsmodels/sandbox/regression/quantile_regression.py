@@ -52,123 +52,134 @@ def quantilereg(y,x,p):
     __________________________________________________________________________
     '''
 
-    tstats=0
-    VCboot=0
-    itrat=0
-    PseudoR2=0
-    betaboot=0
+    tstats = 0
+    VCboot = 0
+    itrat = 0
+    PseudoR2 = 0
+    betaboot = 0
 
-    ry=len(y)
-    rx, cx=x.shape
-    x=np.c_[np.ones(rx),x]
-    cx=cx+1
+    ry = len(y)
+    rx, cx = x.shape
+    x = np.c_[np.ones(rx), x]
+    cx = cx + 1
     #______________Finding first estimates by solving the system_______________
     # Some lines of this section is based on a code written by
     # James P. Lesage in Applied Econometrics Using MATLAB(1999).PP. 73-4.
-    itrat=0
-    xstar=x
-    diff=1
-    beta=np.ones(cx)
-    z=np.zeros((rx,cx))
-    while itrat<1000 and diff>1e-6:
-        itrat+=1
-        beta0=beta
-        beta=dot(inv(dot(xstar.T,x)),xstar.T,y)
-        resid=y-dot(x,beta)
-        resid[np.abs(resid)<.000001]=.000001
-        resid[resid<0]=p*resid[resid<0]
-        resid[resid>0]=(1-p)*resid[resid>0]
-        resid=np.abs(resid)
-        for i in range(cx):
-            z[:,i] = x[:,i]/resid
+    itrat = 0
+    xstar = x
+    diff = 1
+    beta = np.ones(cx)
+    z = np.zeros((rx, cx))
+    while itrat < 1000 and diff > 1e-6:
+        itrat += 1
+        beta0 = beta
+        beta = dot(inv(dot(xstar.T, x)), xstar.T, y)
+        resid = y - dot(x, beta)
+        resid[np.abs(resid) < .000001] = .000001
+        resid[resid < 0] = p * resid[resid < 0]
+        resid[resid > 0] = (1 - p) * resid[resid > 0]
+        resid = np.abs(resid)
 
-        xstar=z
-        beta1=beta
-        diff=np.max(np.abs(beta1-beta0))
+        for i in range(cx):
+            z[:,i] = x[:,i] / resid
+
+        xstar = z
+        beta1 = beta
+        diff = np.max(np.abs(beta1 - beta0))
 
     return beta
 
     #_______estimating variances based on Green 2008(quantile regression)______
 
-    e=y-dot(x,beta)
-    iqre=np.percentile(e,0.75)-np.percentile(e,0.25)
-    if p==0.5:
-        h=0.9*np.std(e)/(ry**0.2)
+    e = y - dot(x, beta)
+    iqre = np.percentile(e, 0.75) - np.percentile(e, 0.25)
+    if p == 0.5:
+        h = 0.9 * np.std(e) / (ry**0.2)
     else:
-        h=0.9*np.min(np.std(e),iqre/1.34)/(ry**0.2)
-    u=(e/h)
-    fhat0=(1/(ry*h))*(sum(exp(-u)/((1+exp(-u))**2)))
-    D=np.zeros((ry,ry))
-    DIAGON=np.diag(D)
-    DIAGON[e>0]=(p/fhat0)**2
-    DIAGON[e<=0]=((1-p)/fhat0)**2
-    D=np.diag(DIAGON)
-    VCQ=np.dot(inv(dot(x.T,x)),dot(x.T,D,x),inv(np.dot(x.T,x)))
+        h = 0.9 * np.min(np.std(e), iqre / 1.34) / (ry**0.2)
+
+    u = e / h
+    fhat0 = (1. / (ry * h)) * (np.sum(np.exp(-u) / ((1 + np.exp(-u))**2)))
+    D = np.zeros((ry, ry))
+    DIAGON = np.diag(D)
+    DIAGON[e > 0] = (p / fhat0)**2
+    DIAGON[e <= 0] = ((1-p) / fhat0)**2
+    D = np.diag(DIAGON)
+    VCQ = np.dot(inv(dot(x.T, x)), dot(x.T, D, x), inv(np.dot(x.T, x)))
+    #BUG:dot with 3 arguments
 
     #____________________Standarad errores and t-stats_________________________
 
-    tstats=beta/np.sqrt(np.diag(VCQ))
-    stderrors=np.sqrt(np.diag(VCQ))
-    PValues=2*(1-stats.t.cdf(np.abs(tstats),ry-cx))
+    tstats = beta / np.sqrt(np.diag(VCQ))
+    stderrors = np.sqrt(np.diag(VCQ))
+    PValues = 2 * (1 - stats.t.cdf(np.abs(tstats), ry - cx))
 
     #______________________________ Quasi R square_____________________________
 
-    ef=y-dot(x,beta)
-    ef[ef<0]=(1-p)*ef[ef<0]
-    ef[ef>0]=p*ef[ef>0]
-    ef=np.abs(ef)
+    ef = y - dot(x, beta)
+    ef[ef < 0] = (1 - p) * ef[ef < 0]
+    ef[ef > 0] = p * ef[ef > 0]
+    ef = np.abs(ef)
 
-    ered=y-np.percentile(y,p)
-    ered[ered<0]=(1-p)*ered[ered<0]
-    ered[ered>0]=p*ered[ered>0]
-    ered=np.abs(ered)
+    ered = y-np.percentile(y,p)
+    ered[ered < 0] = (1-p) * ered[ered < 0]
+    ered[ered > 0] = p * ered[ered > 0]
+    ered = np.abs(ered)
 
-    PseudoR2=1-np.sum(ef)/np.sum(ered)
+    PseudoR2 = 1 - np.sum(ef) / np.sum(ered)
 
     #__________________Bootstrap standard deviation (Green 2008)_______________
 
-    betaboot=np.zeros((cx,cx))
+    betaboot = np.zeros((cx, cx))
     for ii in range(100):
-        bootm, estar=bootstrp(1,np.mean,e)
+        bootm, estar = bootstrp(1, np.mean, e)
+        #BUG: bootstrp undefined, matlab function ?
         #
-        ystar=dot(x,beta)+e[estar]
+        ystar = dot(x, beta) + e[estar]
         #
-        itratstar=0
-        xstarstar=x
-        diffstar=1
-        betastar=np.ones(cx)
-        while itratstar<1000 and diffstar>1e-6:
-            itratstar=itratstar+1
-            betastar0=betastar
-            betastar=dot(inv(dot(xstarstar.T,x)),xstarstar.T,ystar)
+        itratstar = 0
+        xstarstar = x
+        diffstar = 1
+        betastar = np.ones(cx)
+        while itratstar < 1000 and diffstar > 1e-6:
+            itratstar = itratstar + 1
+            betastar0 = betastar
+            betastar = dot(inv(dot(xstarstar.T, x)), xstarstar.T, ystar)
             #
-            residstar=ystar-dot(x,betastar)
-            residstar[np.abs(residstar)<.000001]=.000001
-            residstar[residstar<0]=p*residstar[residstar<0]
-            residstar[residstar>0]=(1-p)*residstar[residstar>0]
-            residstar=np.abs(residstar)
-            zstar=np.zeros((rx,cx))
+            residstar = ystar - dot(x, betastar)
+            residstar[np.abs(residstar) < .000001] = .000001
+            residstar[residstar < 0] = p * residstar[residstar < 0]
+            residstar[residstar > 0] = (1 - p) * residstar[residstar > 0]
+            residstar = np.abs(residstar)
+            zstar = np.zeros((rx, cx))
+
             for i in range(cx):
-                zstar[:,i] = x[:,i]/residstar
-            xstarstar=zstar
-            beta1star=betastar
-            diffstar=np.max(np.abs(beta1star-betastar0))
+                zstar[:,i] = x[:,i] / residstar
+
+            xstarstar = zstar
+            beta1star = betastar
+            diffstar = np.max(np.abs(beta1star - betastar0))
         #
-        betaboot=[betaboot + dot((betastar-beta),(betastar-beta).T)]
-    VCboot=(1/100)*betaboot
+        betaboot = [betaboot + dot((betastar - beta), (betastar - beta).T)]
+
+    VCboot = betaboot / 100.
     #
-    tstatsboot=beta/diag(VCboot)**0.5
-    stderrorsboot=diag(VCboot)**0.5
-    PValuesboot=2*(1-stats.t.cdf(np.abs(tstatsboot),ry-cx))
+    tstatsboot = beta / np.diag(VCboot)**0.5
+    stderrorsboot = np.diag(VCboot)**0.5
+    PValuesboot = 2 * (1 - stats.t.cdf(np.abs(tstatsboot), ry - cx))
 
     #_______________________________Display Results____________________________
 
     print
     print(' Results of Quantile Regression')
     print('_'*70)
-    print("%10s %10s %10s %10s %10s %10s %10s" % ['Coef.', 'SE.Ker', 't.Ker', 'P.Ker', 'SE.Boot', 't.Boot', 'P.Boot'])
+    print("%10s %10s %10s %10s %10s %10s %10s" % ('Coef.', 'SE.Ker', 't.Ker',
+                                                  'P.Ker', 'SE.Boot', 't.Boot',
+                                                  'P.Boot'))
     print('_'*70)
-    print("%10f %10f %10f %10f %10f %10f %10f" % [ beta,stderrors,tstats,PValues,stderrorsboot,tstatsboot,PValuesboot])
+    print("%10f %10f %10f %10f %10f %10f %10f" % (beta, stderrors, tstats,
+                                                  PValues, stderrorsboot,
+                                                  tstatsboot, PValuesboot))
     print('_'*70)
     print('Pseudo R2: %10f' % PseudoR2 )
     print('_'*70)
