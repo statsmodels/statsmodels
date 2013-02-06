@@ -14,6 +14,11 @@ import statsmodels.api as sm
 from scipy.linalg import inv
 from statsmodels.tools.tools import chain_dot as dot
 
+def bootstrp(n_boot, func, *args):
+    #matlab imitation, actually not needed
+    pass
+
+
 #function [beta tstats VCboot itrat PseudoR2 betaboot]=quantilereg(y,x,p)
 def quantilereg(y,x,p):
     '''
@@ -58,9 +63,9 @@ def quantilereg(y,x,p):
     PseudoR2 = 0
     betaboot = 0
 
-    ry = len(y)
-    rx, cx = x.shape
-    x = np.c_[np.ones(rx), x]
+    ry = len(y)      # nobs
+    rx, cx = x.shape  #nobs, k_vars
+    x = np.c_[np.ones(rx), x]  # adding constant -> TODO: remove
     cx = cx + 1
     #______________Finding first estimates by solving the system_______________
     # Some lines of this section is based on a code written by
@@ -68,31 +73,39 @@ def quantilereg(y,x,p):
     itrat = 0
     xstar = x
     diff = 1
-    beta = np.ones(cx)
+    beta = np.ones(cx)  # TODO: better start, inf? used only for convergence check
     z = np.zeros((rx, cx))
-    while itrat < 1000 and diff > 1e-6:
+    while itrat < 1000 and diff > 1e-6:   #TODO: Why `and` instead of `or`?
+        # Iterative Weighted Least Squares
         itrat += 1
         beta0 = beta
+        #JP: solve linear system, use pinv or linalg.solve
         beta = dot(inv(dot(xstar.T, x)), xstar.T, y)
         resid = y - dot(x, beta)
+        #JP: bound resid away from zero,
+        #    why not symmetric: * np.sign(resid), shouldn't matter
         resid[np.abs(resid) < .000001] = .000001
         resid[resid < 0] = p * resid[resid < 0]
         resid[resid > 0] = (1 - p) * resid[resid > 0]
-        resid = np.abs(resid)
+        resid = np.abs(resid)  # these are the new weights
 
         for i in range(cx):
+            #TODO: this should just be broadcasting
             z[:,i] = x[:,i] / resid
 
-        xstar = z
-        beta1 = beta
+        xstar = z     #TODO: why do we have z and xstar, z looks unnecessary
+        beta1 = beta  #TODO: doesn't look like it's needed
         diff = np.max(np.abs(beta1 - beta0))
 
     return beta
 
+    #JP: most of the following should go into a Results class
+
     #_______estimating variances based on Green 2008(quantile regression)______
 
     e = y - dot(x, beta)
-    iqre = np.percentile(e, 0.75) - np.percentile(e, 0.25)
+    #JP: the following shows up similarily also in nonparametric
+    iqre = stats.scoreatpercentile(e, 75) - stats.scoreatpercentile(e, 25)
     if p == 0.5:
         h = 0.9 * np.std(e) / (ry**0.2)
     else:
@@ -100,15 +113,16 @@ def quantilereg(y,x,p):
 
     u = e / h
     fhat0 = (1. / (ry * h)) * (np.sum(np.exp(-u) / ((1 + np.exp(-u))**2)))
-    D = np.zeros((ry, ry))
-    DIAGON = np.diag(D)
-    DIAGON[e > 0] = (p / fhat0)**2
-    DIAGON[e <= 0] = ((1-p) / fhat0)**2
-    D = np.diag(DIAGON)
-    VCQ = np.dot(inv(dot(x.T, x)), dot(x.T, D, x), inv(np.dot(x.T, x)))
-    #BUG:dot with 3 arguments
 
-    #____________________Standarad errores and t-stats_________________________
+    #TODO: We don't need D, we can just work with diagon (diagonal 1-D)
+    D = np.zeros((ry, ry))
+    diagon = np.diag(D)
+    diagon[e > 0] = (p / fhat0)**2
+    diagon[e <= 0] = ((1-p) / fhat0)**2
+    D = np.diag(diagon)
+    VCQ = np.dot(inv(dot(x.T, x)), dot(x.T, D, x), inv(np.dot(x.T, x)))
+
+    #____________________Standarad errors and t-stats_________________________
 
     tstats = beta / np.sqrt(np.diag(VCQ))
     stderrors = np.sqrt(np.diag(VCQ))
@@ -121,8 +135,8 @@ def quantilereg(y,x,p):
     ef[ef > 0] = p * ef[ef > 0]
     ef = np.abs(ef)
 
-    ered = y-np.percentile(y,p)
-    ered[ered < 0] = (1-p) * ered[ered < 0]
+    ered = y - stats.scoreatpercentile(y, p * 100)
+    ered[ered < 0] = (1 - p) * ered[ered < 0]
     ered[ered > 0] = p * ered[ered > 0]
     ered = np.abs(ered)
 
@@ -132,9 +146,12 @@ def quantilereg(y,x,p):
 
     betaboot = np.zeros((cx, cx))
     for ii in range(100):
-        bootm, estar = bootstrp(1, np.mean, e)
+        #bootm, estar = bootstrp(1, np.mean, e)
+        #Note bootm is not used, estar is index
         #BUG: bootstrp undefined, matlab function ?
-        #
+        # Parametric Bootstrap
+        # use simple sampling of index instead
+        estar = np.random.randint(0, len(e), size=len(e))
         ystar = dot(x, beta) + e[estar]
         #
         itratstar = 0
@@ -154,6 +171,7 @@ def quantilereg(y,x,p):
             zstar = np.zeros((rx, cx))
 
             for i in range(cx):
+                # TODO: broadcast
                 zstar[:,i] = x[:,i] / residstar
 
             xstarstar = zstar
