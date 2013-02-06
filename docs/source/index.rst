@@ -46,6 +46,7 @@ Basic Documentation
 
     introduction
     gettingstarted
+    example_formulas
     install
     related
 
