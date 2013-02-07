@@ -16,7 +16,7 @@ from itertools import product
 from numpy import iterable, r_, cumsum, array
 from statsmodels.graphics import utils
 
-__all__ = ["mosaic", "hierarchical_split"]
+__all__ = ["mosaic"]
 
 
 def _normalize_split(proportion):
@@ -139,7 +139,7 @@ def _categories_level(keys):
     return res
 
 
-def hierarchical_split(count_dict, horizontal=True, gap=0.05):
+def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     """
     Split a square in a hierarchical way given a contingency table.
 
@@ -302,11 +302,52 @@ def _normalize_data(data):
     data = contingency
     return data
 
+def _statistical_coloring(data):
+    """evaluate colors from the indipendence properties of the matrix
+    It will encounter problem if one category has all zeros"""
+    data = _normalize_data(data)
+    categories_levels = _categories_level(data.keys())
+    Nlevels = len(categories_levels)
+    total = 1.0 * sum(v for v in data.values())
+    # count the proportion of observation
+    # for each level that has the given name
+    # at each level
+    levels_count = []
+    for level_idx in range(Nlevels):
+        proportion = {}
+        for level in categories_levels[level_idx]:
+            proportion[level] = 0.0
+            for key, value in data.items():
+                if level == key[level_idx]:
+                    proportion[level] += value
+            proportion[level] /= total
+        levels_count.append(proportion)
+    # for each key I obtain the expected value
+    # and it's standard deviation from a binomial distribution
+    # under the hipothesys of independence
+    expected = {}
+    for key, value in data.items():
+        base = 1.0
+        for i, k in enumerate(key):
+            base *= levels_count[i][k]
+        expected[key] = base * total, np.sqrt(total * base * (1.0 - base))
+    # now we have the standard deviation of distance from the
+    # expected value for each tile. We create the colors from this
+    sigmas = {k: (data[k] - m) / s for k, (m, s) in expected.items()}
+    props = {}
+    for key, dev in sigmas.items():
+        red = 0.0 if dev < 0 else (dev / (1+dev))
+        blue = 0.0 if dev > 0 else (dev / (-1+dev))
+        green = (1.0 - red - blue) / 2.0
+        hatch = 'x' if dev > 2 else 'o' if dev < -2 else ''
+        props[key] = {'color': [red, green, blue], 'hatch': hatch}
+    return props
+
 
 def mosaic(data, ax=None, horizontal=True, gap=0.005,
-           properties=lambda key: None, labelizer=None, title=''):
-    """
-    Create a mosaic plot from a contingency table.
+           properties=lambda key: None, labelizer=None,
+           title='', statistic=False):
+    """Create a mosaic plot from a contingency table.
 
     It allows to visualize multivariate categorical data in a rigorous
     and informative way.
@@ -346,6 +387,14 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
         color has not been defined, and will use color variation to help
         visually separates the various categories. It should return None
         to indicate that it should use the default property for the tile.
+        A dictionary of the properties for each key can be passed,
+        and it will be internally converted to the correct function
+    statistic: bool, optional (default False)
+        if true will use a crude statistical model to give colors to the plot.
+        If the tile has a containt that is more than 2 standard deviation
+        from the expected value under independence hipotesys, it will
+        go from green to red (for positive deviations, blue otherwise) and
+        will acquire an hatching when crosses the 3 sigma.
     title : string, optional
         The title of the axis
 
@@ -412,7 +461,7 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     create the labels starting from the key tuple
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
-    >>> props = lambda key: {'color': 'r'} if 'a' in key else {'color': 'gray'}
+    >>> props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
     >>> mosaic(data, title='colored dictionary', properties=props)
     >>> pylab.show()
     """
@@ -421,12 +470,18 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     # normalize the data to a dict with tuple of strings as keys
     data = _normalize_data(data)
     # split the graph into different areas
-    rects = hierarchical_split(data, horizontal=horizontal, gap=gap)
+    rects = _hierarchical_split(data, horizontal=horizontal, gap=gap)
     # if there is no specified way to create the labels
     # create a default one
     if labelizer is None:
         labelizer = lambda k: "\n".join(k)
-    default_props = _create_default_properties(data)
+    if statistic:
+        default_props = _statistical_coloring(data)
+    else:
+        default_props = _create_default_properties(data)
+    if isinstance(properties,dict):
+        color_dict = properties
+        properties = lambda key: color_dict.get(key,None)
     for k, v in rects.items():
         # create each rectangle and put a label on it
         x, y, w, h = v
@@ -445,11 +500,21 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     return fig, rects
 
 
+
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
 
-    data = {'a': 10, 'b': 15, 'c': 16}
-    props = lambda key: {'color': 'r'} if 'a' in key else {'color': 'gray'}
-    mosaic(data, title='basic dictionary', properties=props)
+    N = 80
+    data = {('a', 'b'): 2 * N, ('a', 'c'): 4 * N,
+            ('d', 'b'): 3 * N, ('d', 'c'): 3 * N}
 
+
+    #data = array([[1520,266,124,66],
+    #              [234,1512,432,78],
+    #              [117,362,1772,205],
+    #              [36,82,179,492]])
+
+    #props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
+    mosaic(data, title='basic dictionary',
+        statistic=True)
     pylab.show()
