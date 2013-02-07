@@ -3,17 +3,14 @@
 It allows to visualize multivariate categorical data in a rigorous
 and informative way.
 
-for more information you can read:
-    http://www.math.yorku.ca/SCS/Online/mosaics/about.html
-    http://www.theusrus.de/blog/understanding-mosaic-plots/
-    http://www.vicc.org/biostatistics/LuncheonTalks/DrTsai2.pdf
+see the docstring of the mosaic function for more informations.
 """
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from __future__ import division
 
-import numpy
-from collections import OrderedDict
+import numpy as np
+from statsmodels.compatnp.collections import OrderedDict
 from itertools import product
 
 from numpy import iterable, r_, cumsum, array
@@ -37,11 +34,11 @@ def _normalize_split(proportion):
                               "given value: {}".format(proportion))
         else:
             proportion = array([proportion, 1.0 - proportion])
-    proportion = numpy.asarray(proportion, dtype=float)
-    if numpy.any(proportion < 0):
+    proportion = np.asarray(proportion, dtype=float)
+    if np.any(proportion < 0):
         raise ValueError("proportions should be positive,"
                           "given value: {}".format(proportion))
-    if numpy.allclose(proportion, 0):
+    if np.allclose(proportion, 0):
         raise ValueError("at least one proportion should be"
                           "greater than zero".format(proportion))
     # ok, data are meaningful, so go on
@@ -70,7 +67,7 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
     starting = proportions[:-1]
     amplitude = proportions[1:] - starting
     # how much each extrema is going to be displaced due to gaps
-    starting += gap * numpy.arange(len(proportions) - 1)
+    starting += gap * np.arange(len(proportions) - 1)
     # how much the squares plus the gaps are extended
     extension = starting[-1] + amplitude[-1] - starting[0]
     # normalize everything for fit again in the original dimension
@@ -116,7 +113,13 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
 
 
 def _tuplify(obj):
-    return tuple(obj) if numpy.iterable(obj) else (obj,)
+    """convert an object in a tuple of strings (even if it is not iterable,
+    like a single integer number)"""
+    if np.iterable(obj):
+        res = tuple(str(o) for o in obj)
+    else:
+        res = (str(obj),)
+    return res
 
 
 def _categories_level(keys):
@@ -128,8 +131,7 @@ def _categories_level(keys):
         tuplefied = _tuplify(i)
         res.append(list(OrderedDict([(j, None) for j in tuplefied])))
     return res
-    #return [list(OrderedDict([(j, None) for j in tuple(i)]))
-    #                                        for i in zip(*(keys))]
+
 
 def hierarchical_split(count_dict, horizontal=True, gap=0.05):
     """
@@ -165,12 +167,11 @@ def hierarchical_split(count_dict, horizontal=True, gap=0.05):
                 A dictionary containing the result of the split.
                 To each key is associated a 4-tuple of coordinates
                 that are required to create the corresponding rectangle:
+
                     0 - x position of the lower left corner
                     1 - y position of the lower left corner
                     2 - width of the rectangle
                     3 - height of the rectangle
-    labels : dict
-                the center of the labels for each subdivision
     """
     # this is the unit square that we are going to divide
     base_rect = OrderedDict([(tuple(), (0, 0, 1, 1))])
@@ -179,7 +180,7 @@ def hierarchical_split(count_dict, horizontal=True, gap=0.05):
     L = len(categories_levels)
 
     # recreate the gaps vector starting from an int
-    if not numpy.iterable(gap):
+    if not np.iterable(gap):
         gap = [gap / 1.5 ** idx for idx in range(L)]
     # extend if it's too short
     if len(gap) < L:
@@ -209,7 +210,7 @@ def hierarchical_split(count_dict, horizontal=True, gap=0.05):
 
 
 def _get_from_partial_key(dict, key, default):
-    """match a tuple used as a key to a dict to shorter tuple if not found"""
+    """Match a tuple used as a key to a dict to shorter tuple if not found"""
     while key:
         if key in dict:
             return dict[key]
@@ -224,19 +225,24 @@ def _single_hsv_to_rgb(hsv):
 
 
 def _create_default_properties(data):
-    """"create the default properties of the mosaic given the data"""
+    """"Create the default properties of the mosaic given the data
+    first it will varies the color hue (first category) then the color
+    saturation (second category) and then the color value
+    (third category).  If a fourth category is found, it will put
+    decoration on the rectangle.  Doesn't manage more than four
+    level of categories"""
     categories_levels = _categories_level(data.keys())
     Nlevels = len(categories_levels)
     #first level, the hue
     L = len(categories_levels[0])
-    #hue = numpy.linspace(1.0, 0.0, L+1)[:-1]
-    hue = numpy.linspace(0.0, 1.0, L + 2)[:-2]
+    #hue = np.linspace(1.0, 0.0, L+1)[:-1]
+    hue = np.linspace(0.0, 1.0, L + 2)[:-2]
     #second level, the saturation
     L = len(categories_levels[1]) if Nlevels > 1 else 1
-    saturation = numpy.linspace(0.5, 1.0, L + 1)[:-1]
+    saturation = np.linspace(0.5, 1.0, L + 1)[:-1]
     #third level, the value
     L = len(categories_levels[2]) if Nlevels > 2 else 1
-    value = numpy.linspace(0.5, 1.0, L + 1)[:-1]
+    value = np.linspace(0.5, 1.0, L + 1)[:-1]
     #fourth level, the hatch
     L = len(categories_levels[3]) if Nlevels > 3 else 1
     hatch = ['', '/', '-', '|', '+'][:L + 1]
@@ -264,65 +270,32 @@ def _create_default_properties(data):
     return properties
 
 
-#def _label_position(split_rect, horizontal = True):
-#    """find the label position for each category"""
-#    keys = split_rect.keys()
-#    categories_levels = _categories_level(keys)
-#    positions = {}
-#    for level in range(len(categories_levels)):
-#        names = categories_levels[level]
-#        # on which side the label will be on
-#        orientation = (level + int(not horizontal)) % 4
-#        for name in names:
-#            positions[name] = ([],orientation)
-#            for key in keys:
-#                if key[level] == name:
-#                    x, y, w, h = split_rect[key]
-#                    pos = [x + w / 2, y + h / 2]
-#                    if orientation == 0:
-#                        pos[1] = 0.0
-#                    if orientation == 2:
-#                        pos[1] = 1.0
-#                    if orientation == 1:
-#                        pos[0] = 0.0
-#                    if orientation == 3:
-#                        pos[0] = 1.0
-#                    positions[name][0].append(pos)
-#                    if (orientation // 2):
-#                        break
-#    return positions
-
-
 def _normalize_data(data):
-    ##TODO: complete the normalization function and use it
-    """normalize the data to a dict with tuples as keys
+    """normalize the data to a dict with tuples of strings as keys
     right now it works with:
         dictionary with simple keys
         pandas.Series with simple or hierarchical indexes
-    to be implemented:
-        numpy arrays (need info on the name sequence)"""
+        np arrays (need info on the name sequence)
+    """
+    # can it be used as a dictionary?
     try:
         items = data.iteritems()
     except AttributeError:
-        #ok, I cannot use the data as a dictionary
-        #it may be a list of an array and the sequence of names
-        #of the levels
-        if isinstance(data, list) and len(data) == 2:
-            data, names = data
-            temp = {}
-            for idx in numpy.ndindex(data.shape):
-                name = tuple(names[n][i] for n, i in enumerate(idx))
+        # ok, I cannot use the data as a dictionary
+        # it should be an ndarray that I will normalize
+        # inot a dictionary
+        if isinstance(data, np.ndarray):
+            temp = OrderedDict()
+            for idx in np.ndindex(data.shape):
+                name = tuple(i for i in idx)
                 temp[name] = data[idx]
             data = temp
             items = data.iteritems()
-        #or it may be a simple array without labels
-        elif isinstance(data, numpy.ndarray):
-            temp = {}
-            for idx in numpy.ndindex(data.shape):
-                name = tuple(str(i) for i in idx)
-                temp[name] = data[idx]
-            data = temp
-            items = data.iteritems()
+        else:
+            raise TypeError('Data type not recognized, '
+                            'should be a dict or pandas.series'
+                            ' or np.ndarray')
+    # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
     categories_levels = _categories_level(data.keys())
     # fill the void in the counting dictionary
@@ -333,7 +306,7 @@ def _normalize_data(data):
 
 
 def mosaic(data, ax=None, horizontal=True, gap=0.005,
-           properties={}, labelizer=None, title = ''):
+           properties={}, labelizer=None, title=''):
     """
     Create a mosaic plot from a contingency table.
 
@@ -348,7 +321,7 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
 
     Parameters
     ----------
-    data : dict, pandas.Series, numpy.ndarray, [numpy.ndarray, labels]
+    data : dict, pandas.Series, np.ndarray
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
@@ -357,11 +330,8 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
         of the keys will be the same as the one of insertion.
         If a dict of a Series (or any other dict like object)
         is used, it will take the keys as labels.  If a
-        numpy.ndarray is provided, it will generate a simple
-        numerical labels. A tuple (or list) containing the
-        ndarray with the list of labels can be provided.  In this
-        Case the label should be a list of list, where each
-        sublist should be the name of each category for each level.
+        np.ndarray is provided, it will generate a simple
+        numerical labels.
     ax : matplotlib.Axes, optional
         The graph where display the mosaic. If not given, will
         create a new figure
@@ -374,16 +344,18 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
         of subcategories (or if it's a single number) it will extend
         it with exponentially decreasing gaps
     labelizer : function (key) -> string, optional
-        A lambda function that generate the text to display
-        at the center of each tile base on the dataset and the
-        key related to that tile
+        A function that generate the text to display at the center of
+        each tile base on the key of that tile
     properties : dict, optional
         Contains the properties for each tile, using the same
         key as the dataset as index.  The properties are used to
         create a matplotlib.Rectangle.  If the key is not found it
         search for a partial submatch (a more general category).
         For a general value on all categories unless specified use a
-        default dict with the chose aspect.
+        default dict with the chose aspect.  A default properties set
+        will be provided fot the keys whose color has not been defined,
+        and will use color variation to help visually separates the various
+        categories.
     title : string, optional
         The title of the axis
 
@@ -396,8 +368,23 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
                 dataset, that holds a reference to the coordinates of the
                 tile and the Rectangle that represent it
 
+    See Also
+    ----------
+    A Brief History of the Mosaic Display
+        Michael Friendly, York University, Psychology Department
+        Journal of Computational and Graphical Statistics, 2001
+
+    Mosaic Displays for Loglinear Models.
+        Michael Friendly, York University, Psychology Department
+        Proceedings of the Statistical Graphics Section, 1992, 61-68.
+
+    Mosaic displays for multi-way contingecy tables.
+        Michael Friendly, York University, Psychology Department
+        Journal of the american statistical association
+        March 1994, Vol. 89, No. 425, Theory and Methods
+
     Examples
-    --------
+    ----------
     The most simple use case is to take a dictionary and plot the result
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
@@ -414,7 +401,7 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
 
     The same data can be given as a simple or hierarchical indexed Series
 
-    >>> rand = numpy.random.random
+    >>> rand = np.random.random
     >>> from itertools import product
     >>>
     >>> tuples = list(product(['bar', 'baz', 'foo', 'qux'], ['one', 'two']))
@@ -423,34 +410,39 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     >>> mosaic(data, title='hierarchical index series')
     >>> pylab.show()
 
-    The third accepted data structureis the numpy array, for which a
-    very simple index will be created.  It is possible to pass the index in
-    an explicit way
+    The third accepted data structureis the np array, for which a
+    very simple index will be created.
 
-    >>> rand = numpy.random.random
+    >>> rand = np.random.random
     >>> data = 1+rand((2,2))
     >>> mosaic(data, title='random non-labeled array')
     >>> pylab.show()
 
-    >>> labels = [['first', 'second'], ['foo', 'spam']]
-    >>> mosaic([data, labels], title='random labeled array')
-    >>> pylab.show()
+    If you need to modify the labeling you can give a function to
+    create the labels starting from the key tuple
 
+    >>> def labelizer(key):
+            res = ''
+            res += 'first' if key[0]=='0' else 'second'
+            res += '\n'
+            res += 'foo' if key[1]=='0' else 'spam'
+            return res
+    >>> mosaic(data, title='labelized array', labelizer=labelizer)
+    >>> pylab.show()
     """
     from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
-    # create a dictionary with only tuplified keys
-    #items = data.iteritems()
-    #data = OrderedDict([_tuplify(k), v] for k, v in items)
+    #normalize the data to a dict with tuple of strings as keys
     data = _normalize_data(data)
     # split the graph into different areas
     rects = hierarchical_split(data, horizontal=horizontal, gap=gap)
-    #for label, ((x, y), side) in labels.iteritems():
-    #    ax.text(x, y, label, ha='center', va='center', size='smaller')
+    # if there is no specified way to create the labels
+    # create a default one
     if labelizer is None:
         labelizer = lambda k: "\n".join(k)
     default_props = _create_default_properties(data)
     for k, v in rects.items():
+        #create each rectangle and put a label on it
         x, y, w, h = v
         conf = _get_from_partial_key(properties, k, {})
         props = conf if conf else default_props[k]
@@ -471,48 +463,9 @@ if __name__ == '__main__':
     import matplotlib.pyplot as pylab
     import pandas as pd
 
-    data = {'a': 10, 'b': 15, 'c': 16}
-    mosaic(data)
-    pylab.show()
-
-    fig, ax = pylab.subplots(3, 3)
+    fig, ax = pylab.subplots(1)
 
     data = {'a': 10, 'b': 15, 'c': 16}
-    mosaic(data, gap=0.05, title='basic dictionary', ax=ax[0, 0])
-
-    data = pd.Series(data)
-    mosaic(data, gap=0.05, title='basic series', ax=ax[0, 1])
-
-    data = {('a', 'b'): 1, ('a', 'c'): 2, ('d', 'b'): 3, ('d', 'c'): 4}
-    mosaic(data, gap=0.05, title='complete dictionary', ax=ax[1, 0])
-
-    data = pd.Series(data)
-    mosaic(data, gap=0.05, title='complete series', ax=ax[1, 1])
-
-    data = {('a', 'b'): 1, ('a', 'c'): 2, ('d', 'b'): 3}
-    mosaic(data, gap=0.05, title='incomplete dictionary', ax=ax[1, 2])
-
-    # creation of the levels
-    key_set = [['male', 'female'], ['old', 'adult', 'young'],
-               ['worker', 'unemployed'], ['healty', 'ill']]
-    keys = list(product(*key_set))
-    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
-    #use a function to change hiw the label are shown
-    labelizer = lambda k: "".join(n[0].upper() for n in k)
-    mosaic(data, gap=0.05, title='complex dictionary + labelization',
-        ax=ax[0, 2], labelizer=labelizer)
-
-    rand = numpy.random.random
-    data = 1+rand((2,2))
-    mosaic(data, gap=0.05, title='random non-labeled array', ax=ax[2, 0])
-
-    labels = [['first', 'second'], ['foo', 'spam']]
-    mosaic([data, labels], gap=0.05, title='random labeled array', ax=ax[2, 1])
-
-    from itertools import product
-    tuples = list(product(['bar', 'baz', 'foo', 'qux'], ['one', 'two']))
-    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-    data = pd.Series(rand(8), index=index)
-    mosaic(data, gap=0.005, title='hierarchical index series', ax=ax[2, 2])
+    mosaic(data, title='basic dictionary', ax=ax)
 
     pylab.show()
