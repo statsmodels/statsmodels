@@ -662,12 +662,10 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
-    import pandas as pd
-
-    fig, ax = pylab.subplots(1)
 
     data = {'a': 10, 'b': 15, 'c': 16}
-    mosaic(data, title='basic dictionary', ax=ax)
+    props = lambda key: {'color': 'r'} if 'a' in key else {'color': 'gray'}
+    mosaic(data, title='basic dictionary', properties=props)
 
 # which colours should I use for the various categories?
 # put it into a dict
