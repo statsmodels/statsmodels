@@ -62,20 +62,26 @@ def _split_rect(x, y, width, height, proportion, horizontal=True, gap=0.05):
         raise ValueError("dimension of the square less than"
                           "zero w={} h=()".format(w, h))
     proportions = _normalize_split(proportion)
+
     # extract the starting point and the dimension of each subdivision
     # in respect to the unit square
     starting = proportions[:-1]
     amplitude = proportions[1:] - starting
+
     # how much each extrema is going to be displaced due to gaps
     starting += gap * np.arange(len(proportions) - 1)
+
     # how much the squares plus the gaps are extended
     extension = starting[-1] + amplitude[-1] - starting[0]
+
     # normalize everything for fit again in the original dimension
     starting /= extension
     amplitude /= extension
+
     # bring everything to the original square
     starting = (x if horizontal else y) + starting * (w if horizontal else h)
     amplitude = amplitude * (w if horizontal else h)
+
     # create each 4-tuple for each new block
     results = [(s, y, a, h) if horizontal else (x, s, w, a)
                 for s, a in zip(starting, amplitude)]
@@ -147,35 +153,35 @@ def hierarchical_split(count_dict, horizontal=True, gap=0.05):
     Parameters
     ----------
     count_dict : dict
-                Dictionary containing the contingency table.
-                Each category should contain a non-negative number
-                with a tuple as index.  It expects that all the combination
-                of keys to be representes; if that is not true, will
-                automatically consider the missing values as 0
+        Dictionary containing the contingency table.
+        Each category should contain a non-negative number
+        with a tuple as index.  It expects that all the combination
+        of keys to be representes; if that is not true, will
+        automatically consider the missing values as 0
     horizontal : bool
-                The starting direction of the split (by default along
-                the horizontal axis)
+        The starting direction of the split (by default along
+        the horizontal axis)
     gap : float or array of floats
-                The list of gaps to be applied on each subdivision.
-                If the lenght of the given array is less of the number
-                of subcategories (or if it's a single number) it will extend
-                it with exponentially decreasing gaps
+        The list of gaps to be applied on each subdivision.
+        If the lenght of the given array is less of the number
+        of subcategories (or if it's a single number) it will extend
+        it with exponentially decreasing gaps
 
     Returns
     ----------
     base_rect : dict
-                A dictionary containing the result of the split.
-                To each key is associated a 4-tuple of coordinates
-                that are required to create the corresponding rectangle:
+        A dictionary containing the result of the split.
+        To each key is associated a 4-tuple of coordinates
+        that are required to create the corresponding rectangle:
 
-                    0 - x position of the lower left corner
-                    1 - y position of the lower left corner
-                    2 - width of the rectangle
-                    3 - height of the rectangle
+            0 - x position of the lower left corner
+            1 - y position of the lower left corner
+            2 - width of the rectangle
+            3 - height of the rectangle
     """
     # this is the unit square that we are going to divide
     base_rect = OrderedDict([(tuple(), (0, 0, 1, 1))])
-    #get the list of each possible value for each level
+    # get the list of each possible value for each level
     categories_levels = _categories_level(count_dict.keys())
     L = len(categories_levels)
 
@@ -209,15 +215,6 @@ def hierarchical_split(count_dict, horizontal=True, gap=0.05):
     return base_rect
 
 
-def _get_from_partial_key(dict, key, default):
-    """Match a tuple used as a key to a dict to shorter tuple if not found"""
-    while key:
-        if key in dict:
-            return dict[key]
-        key = key[:-1]
-    return default
-
-
 def _single_hsv_to_rgb(hsv):
     """Transform a color from the hsv space to the rgb."""
     from matplotlib.colors import hsv_to_rgb
@@ -233,20 +230,20 @@ def _create_default_properties(data):
     level of categories"""
     categories_levels = _categories_level(data.keys())
     Nlevels = len(categories_levels)
-    #first level, the hue
+    # first level, the hue
     L = len(categories_levels[0])
-    #hue = np.linspace(1.0, 0.0, L+1)[:-1]
+    # hue = np.linspace(1.0, 0.0, L+1)[:-1]
     hue = np.linspace(0.0, 1.0, L + 2)[:-2]
-    #second level, the saturation
+    # second level, the saturation
     L = len(categories_levels[1]) if Nlevels > 1 else 1
     saturation = np.linspace(0.5, 1.0, L + 1)[:-1]
-    #third level, the value
+    # third level, the value
     L = len(categories_levels[2]) if Nlevels > 2 else 1
     value = np.linspace(0.5, 1.0, L + 1)[:-1]
-    #fourth level, the hatch
+    # fourth level, the hatch
     L = len(categories_levels[3]) if Nlevels > 3 else 1
     hatch = ['', '/', '-', '|', '+'][:L + 1]
-    #convert in list and merge with the levels
+    # convert in list and merge with the levels
     hue = zip(list(hue), categories_levels[0])
     saturation = zip(list(saturation),
                      categories_levels[1] if Nlevels > 1 else [''])
@@ -254,7 +251,7 @@ def _create_default_properties(data):
                      categories_levels[2] if Nlevels > 2 else [''])
     hatch = zip(list(hatch),
                      categories_levels[3] if Nlevels > 3 else [''])
-    #create the properties dictionary
+    # create the properties dictionary
     properties = {}
     for h, s, v, t in product(hue, saturation, value, hatch):
         hv, hn = h
@@ -265,7 +262,7 @@ def _create_default_properties(data):
         level = level + ((vn,) if vn else tuple())
         level = level + ((tn,) if tn else tuple())
         hsv = array([hv, sv, vv])
-        prop = {'color': _single_hsv_to_rgb(hsv), 'hatch': tv}
+        prop = {'color': _single_hsv_to_rgb(hsv), 'hatch': tv, 'lw': 0}
         properties[level] = prop
     return properties
 
@@ -273,9 +270,10 @@ def _create_default_properties(data):
 def _normalize_data(data):
     """normalize the data to a dict with tuples of strings as keys
     right now it works with:
-        dictionary with simple keys
-        pandas.Series with simple or hierarchical indexes
-        np arrays (need info on the name sequence)
+
+        0 - dictionary (or equivalent mappable)
+        1 - pandas.Series with simple or hierarchical indexes
+        2 - numpy.ndarrays
     """
     # can it be used as a dictionary?
     try:
@@ -306,18 +304,12 @@ def _normalize_data(data):
 
 
 def mosaic(data, ax=None, horizontal=True, gap=0.005,
-           properties={}, labelizer=None, title=''):
+           properties=lambda key: None, labelizer=None, title=''):
     """
     Create a mosaic plot from a contingency table.
 
     It allows to visualize multivariate categorical data in a rigorous
-    and informative way.  The color scheme can be personalized with the
-    properties keyword.
-
-    for more information you can read:
-        http://www.math.yorku.ca/SCS/Online/mosaics/about.html
-        http://www.theusrus.de/blog/understanding-mosaic-plots/
-        http://www.vicc.org/biostatistics/LuncheonTalks/DrTsai2.pdf
+    and informative way.
 
     Parameters
     ----------
@@ -346,27 +338,25 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     labelizer : function (key) -> string, optional
         A function that generate the text to display at the center of
         each tile base on the key of that tile
-    properties : dict, optional
-        Contains the properties for each tile, using the same
-        key as the dataset as index.  The properties are used to
-        create a matplotlib.Rectangle.  If the key is not found it
-        search for a partial submatch (a more general category).
-        For a general value on all categories unless specified use a
-        default dict with the chose aspect.  A default properties set
-        will be provided fot the keys whose color has not been defined,
-        and will use color variation to help visually separates the various
-        categories.
+    properties : function (key) -> dict, optional
+        A function that for each tile in the mosaic take the key
+        of the tile and returns the dictionary of properties
+        of the generated Rectangle, like color, hatch or similar.
+        A default properties set will be provided fot the keys whose
+        color has not been defined, and will use color variation to help
+        visually separates the various categories. It should return None
+        to indicate that it should use the default property for the tile.
     title : string, optional
         The title of the axis
 
     Returns
     ----------
     fig : matplotlib.Figure
-                The generate figure
+        The generate figure
     rects : dict
-                A dictionary that has the same keys of the original
-                dataset, that holds a reference to the coordinates of the
-                tile and the Rectangle that represent it
+        A dictionary that has the same keys of the original
+        dataset, that holds a reference to the coordinates of the
+        tile and the Rectangle that represent it
 
     See Also
     ----------
@@ -421,18 +411,14 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     If you need to modify the labeling you can give a function to
     create the labels starting from the key tuple
 
-    >>> def labelizer(key):
-            res = ''
-            res += 'first' if key[0]=='0' else 'second'
-            res += '\n'
-            res += 'foo' if key[1]=='0' else 'spam'
-            return res
-    >>> mosaic(data, title='labelized array', labelizer=labelizer)
+    >>> data = {'a': 10, 'b': 15, 'c': 16}
+    >>> props = lambda key: {'color': 'r'} if 'a' in key else {'color': 'gray'}
+    >>> mosaic(data, title='colored dictionary', properties=props)
     >>> pylab.show()
     """
     from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
-    #normalize the data to a dict with tuple of strings as keys
+    # normalize the data to a dict with tuple of strings as keys
     data = _normalize_data(data)
     # split the graph into different areas
     rects = hierarchical_split(data, horizontal=horizontal, gap=gap)
@@ -442,12 +428,12 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
         labelizer = lambda k: "\n".join(k)
     default_props = _create_default_properties(data)
     for k, v in rects.items():
-        #create each rectangle and put a label on it
+        # create each rectangle and put a label on it
         x, y, w, h = v
-        conf = _get_from_partial_key(properties, k, {})
+        conf = properties(k)
         props = conf if conf else default_props[k]
         text = labelizer(k)
-        Rect = Rectangle((x, y), w, h, label=text, lw=0, **props)
+        Rect = Rectangle((x, y), w, h, label=text, **props)
         ax.add_patch(Rect)
         ax.text(x + w / 2, y + h / 2, text, ha='center',
                  va='center', size='smaller')
@@ -461,11 +447,9 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
 
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
-    import pandas as pd
-
-    fig, ax = pylab.subplots(1)
 
     data = {'a': 10, 'b': 15, 'c': 16}
-    mosaic(data, title='basic dictionary', ax=ax)
+    props = lambda key: {'color': 'r'} if 'a' in key else {'color': 'gray'}
+    mosaic(data, title='basic dictionary', properties=props)
 
     pylab.show()
