@@ -320,6 +320,47 @@ def _normalize_data(data, index):
     data = contingency
     return data
 
+def _statistical_coloring(data):
+    """evaluate colors from the indipendence properties of the matrix
+    It will encounter problem if one category has all zeros"""
+    data = _normalize_data(data)
+    categories_levels = _categories_level(data.keys())
+    Nlevels = len(categories_levels)
+    total = 1.0 * sum(v for v in data.values())
+    # count the proportion of observation
+    # for each level that has the given name
+    # at each level
+    levels_count = []
+    for level_idx in range(Nlevels):
+        proportion = {}
+        for level in categories_levels[level_idx]:
+            proportion[level] = 0.0
+            for key, value in data.items():
+                if level == key[level_idx]:
+                    proportion[level] += value
+            proportion[level] /= total
+        levels_count.append(proportion)
+    # for each key I obtain the expected value
+    # and it's standard deviation from a binomial distribution
+    # under the hipothesys of independence
+    expected = {}
+    for key, value in data.items():
+        base = 1.0
+        for i, k in enumerate(key):
+            base *= levels_count[i][k]
+        expected[key] = base * total, np.sqrt(total * base * (1.0 - base))
+    # now we have the standard deviation of distance from the
+    # expected value for each tile. We create the colors from this
+    sigmas = {k: (data[k] - m) / s for k, (m, s) in expected.items()}
+    props = {}
+    for key, dev in sigmas.items():
+        red = 0.0 if dev < 0 else (dev / (1+dev))
+        blue = 0.0 if dev > 0 else (dev / (-1+dev))
+        green = (1.0 - red - blue) / 2.0
+        hatch = 'x' if dev > 2 else 'o' if dev < -2 else ''
+        props[key] = {'color': [red, green, blue], 'hatch': hatch}
+    return props
+
 
 def _normalize_dataframe(dataframe, index):
     """Take a pandas DataFrame and count the element present in the
@@ -660,12 +701,19 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     return fig, rects
 
 
+
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
 
-    data = {'a': 10, 'b': 15, 'c': 16}
-    props = lambda key: {'color': 'r'} if 'a' in key else {'color': 'gray'}
-    mosaic(data, title='basic dictionary', properties=props)
+    N = 80
+    data = {('a', 'b'): 2 * N, ('a', 'c'): 4 * N,
+            ('d', 'b'): 3 * N, ('d', 'c'): 3 * N}
+
+
+    #data = array([[1520,266,124,66],
+    #              [234,1512,432,78],
+    #              [117,362,1772,205],
+    #              [36,82,179,492]])
 
 # which colours should I use for the various categories?
 # put it into a dict
