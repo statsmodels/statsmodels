@@ -645,25 +645,53 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     return fig, rects
 
 
+if __name__ == '__main__':
+    import matplotlib.pyplot as pylab
+    import pandas as pd
 
+    data = {'a': 10, 'b': 15, 'c': 16}
+    mosaic(data)
+    pylab.show()
 
-import matplotlib.pyplot as pylab
+    fig, ax = pylab.subplots(3, 3)
 
-"""display a simple plot of 4 categories of data, splitted in four
-levels with increasing size for each group"""
-# creation of the levels
-#key_set = [['male', 'female'], ['old', 'adult', 'young'], ['worker', 'unemployed'], ['healty', 'ill']]
-# the cartesian product of all the categories is
-# the complete set of categories
-#keys = list(product(*key_set))
-#data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+    data = {'a': 10, 'b': 15, 'c': 16}
+    mosaic(data, gap=0.05, title='basic dictionary', ax=ax[0, 0])
 
+    data = pd.Series(data)
+    mosaic(data, gap=0.05, title='basic series', ax=ax[0, 1])
 
+    data = {('a', 'b'): 1, ('a', 'c'): 2, ('d', 'b'): 3, ('d', 'c'): 4}
+    mosaic(data, gap=0.05, title='complete dictionary', ax=ax[1, 0])
 
-import pandas as pd
-#mindex = pd.MultiIndex(key_set,[range(len(i)) for i in key_set])
-data = pd.Series(range(1, 4), ['a','b','c'])
-print "series",data
+    data = pd.Series(data)
+    mosaic(data, gap=0.05, title='complete series', ax=ax[1, 1])
+
+    data = {('a', 'b'): 1, ('a', 'c'): 2, ('d', 'b'): 3}
+    mosaic(data, gap=0.05, title='incomplete dictionary', ax=ax[1, 2])
+
+    # creation of the levels
+    key_set = [['male', 'female'], ['old', 'adult', 'young'],
+               ['worker', 'unemployed'], ['healty', 'ill']]
+    keys = list(product(*key_set))
+    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+    #use a function to change hiw the label are shown
+    labelizer = lambda k: "".join(n[0].upper() for n in k)
+    mosaic(data, gap=0.05, title='complex dictionary + labelization',
+        ax=ax[0, 2], labelizer=labelizer)
+
+    rand = numpy.random.random
+    data = 1+rand((2,2))
+    mosaic(data, gap=0.05, title='random non-labeled array', ax=ax[2, 0])
+
+    labels = [['first', 'second'], ['foo', 'spam']]
+    mosaic([data, labels], gap=0.05, title='random labeled array', ax=ax[2, 1])
+
+    from itertools import product
+    tuples = list(product(['bar', 'baz', 'foo', 'qux'], ['one', 'two']))
+    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+    data = pd.Series(rand(8), index=index)
+    mosaic(data, gap=0.005, title='hierarchical index series', ax=ax[2, 2])
 
 # which colours should I use for the various categories?
 # put it into a dict
