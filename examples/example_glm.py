@@ -1,5 +1,5 @@
-'''Generalized Linear Models
-'''
+"""Generalized Linear Models
+"""
 import numpy as np
 import statsmodels.api as sm
 from scipy import stats
@@ -57,7 +57,7 @@ diff = resp_75 - resp_25
 
 # The interquartile first difference for the percentage of low income
 # households in a school district is:
-print "%2.4f%%" % (diff * 100)
+print '%2.4f%%' % (diff * 100)
 
 #Plots
 #^^^^^
