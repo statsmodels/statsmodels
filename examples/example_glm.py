@@ -112,7 +112,7 @@ print sm.datasets.scotland.DESCRLONG
 # Load the data and add a constant to the exogenous variables:
 data2 = sm.datasets.scotland.load()
 data2.exog = sm.add_constant(data2.exog, prepend=False)
-print data2.exog[:5,:]
+print data2.exog[:5, :]
 print data2.endog[:5]
 
 #Fit and summary
@@ -128,9 +128,9 @@ print glm_results.summary()
 nobs2 = 100
 x = np.arange(nobs2)
 np.random.seed(54321)
-X = np.column_stack((x, x ** 2))
+X = np.column_stack((x, x**2))
 X = sm.add_constant(X, prepend=False)
-lny = np.exp(-(.03 * x + .0001 * x ** 2 - 1.0)) + .001 * np.random.rand(nobs2)
+lny = np.exp(-(.03 * x + .0001 * x**2 - 1.0)) + .001 * np.random.rand(nobs2)
 
 #Fit and summary
 #^^^^^^^^^^^^^^^

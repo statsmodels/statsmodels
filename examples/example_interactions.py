@@ -156,7 +156,7 @@ plt.ylabel('standardized resids')
 lm_final = ols('S ~ X + C(E)*C(M)',
                data=salary_table.drop([drop_idx])).fit()
 mf = lm_final.model.data.orig_exog
-lstyle = '-', '--'
+lstyle = ['-', '--']
 
 plt.figure(figsize=(6, 6))
 for values, group in factor_groups:
@@ -199,8 +199,8 @@ except:  # don't have data already
 factor_group = minority_table.groupby(['ETHN'])
 
 plt.figure(figsize=(6, 6))
-colors = 'purple', 'green'
-markers = 'o', 'v'
+colors = ['purple', 'green']
+markers = ['o', 'v']
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)

@@ -21,10 +21,8 @@ if rescale > 0:
     data.endog -= data.endog.mean()
     data.exog -= data.exog.mean(0)
 if rescale > 1:
-    data.endog *= 1. / data.endog.std()
-    #data.exog *= 1000./data.exog.var(0)
+    data.endog /= data.endog.std()
     data.exog /= data.exog.std(0)
-    #rescale_ratio = data.exog.var(0)/data.endog.var()
 
 #skip because mean has been removed, but dimension is hardcoded in table
 data.exog = sm.tools.add_constant(data.exog, prepend=False)
