@@ -30,10 +30,12 @@
 
 import numpy as np
 from scipy.stats import nbinom
+
+
 def _ll_nb2(y, X, beta, alph):
     mu = np.exp(np.dot(X, beta))
-    size = 1/alph
-    prob = size/(size+mu)
+    size = 1 / alph
+    prob = size / (size + mu)
     ll = nbinom.logpmf(y, size, prob)
     return ll
 
@@ -44,14 +46,18 @@ def _ll_nb2(y, X, beta, alph):
 #We create a new model class which inherits from ``GenericLikelihoodModel``:
 
 from statsmodels.base.model import GenericLikelihoodModel
+
+
 class NBin(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
         super(NBin, self).__init__(endog, exog, **kwds)
+
     def nloglikeobs(self, params):
         alph = params[-1]
         beta = params[:-1]
         ll = _ll_nb2(self.endog, self.exog, beta, alph)
         return -ll
+
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, **kwds):
         if start_params == None:
             # Reasonable starting values

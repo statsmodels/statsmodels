@@ -10,7 +10,7 @@ spector_data = sm.datasets.spector.load()
 spector_data.exog = sm.add_constant(spector_data.exog, prepend=False)
 
 # Inspect the data:
-spector_data.exog[:5,:]
+spector_data.exog[:5, :]
 spector_data.endog[:5]
 
 # Linear Probability Model (OLS)
@@ -59,7 +59,7 @@ anes_exog = anes_data.exog
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 
 # Inspect the data:
-anes_data.exog[:5,:]
+anes_data.exog[:5, :]
 anes_data.endog[:5]
 
 # Fit MNL model
@@ -75,7 +75,7 @@ print mlogit_margeff.summary()
 # as results.params
 alpha = 10 * np.ones((mlogit_mod.K, mlogit_mod.J - 1))
 # Choose not to regularize the constant
-alpha[-1,:] = 0
+alpha[-1, :] = 0
 mlogit_mod2 = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_l1_res = mlogit_mod2.fit_regularized(method='l1', alpha=alpha)
 print mlogit_l1_res.summary()
@@ -113,5 +113,3 @@ mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=500)
 #.. The below needs a lot of iterations to get it right?
 #.. TODO: Add a technical note on algorithms
 #.. mlogit_res = mlogit_mod.fit(method='ncg') # this takes forever
-
-

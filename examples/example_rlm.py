@@ -24,8 +24,8 @@ huber_t = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
 hub_results = huber_t.fit()
 print hub_results.params
 print hub_results.bse
-print hub_results.summary(yname='y',
-            xname=['var_%d' % i for i in range(len(hub_results.params))])
+varnames = ['var_%d' % i for i in range(len(hub_results.params))]
+print hub_results.summary(yname='y', xname=varnames)
 
 # Huber's T norm with 'H2' covariance matrix
 hub_results2 = huber_t.fit(cov="H2")
@@ -34,7 +34,8 @@ print hub_results2.bse
 
 # Andrew's Wave norm with Huber's Proposal 2 scaling and 'H3' covariance matrix
 andrew_mod = sm.RLM(data.endog, data.exog, M=sm.robust.norms.AndrewWave())
-andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(), cov="H3")
+andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(),
+                                cov="H3")
 print andrew_results.params
 
 # See ``help(sm.RLM.fit)`` for more options and ``module sm.robust.scale`` for
@@ -47,12 +48,12 @@ print andrew_results.params
 #^^^^^^^^^^^^^^^
 nsample = 50
 x1 = np.linspace(0, 20, nsample)
-X = np.c_[x1, (x1-5)**2, np.ones(nsample)]
+X = np.c_[x1, (x1 - 5)**2, np.ones(nsample)]
 sig = 0.3   # smaller error variance makes OLS<->RLM contrast bigger
 beta = [0.5, -0.0, 5.]
 y_true2 = np.dot(X, beta)
-y2 = y_true2 + sig*1. * np.random.normal(size=nsample)
-y2[[39,41,43,45,48]] -= 5   # add some outliers (10% of nsample)
+y2 = y_true2 + sig * 1. * np.random.normal(size=nsample)
+y2[[39, 41, 43, 45, 48]] -= 5   # add some outliers (10% of nsample)
 
 #Example: quadratic function with linear truth
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -81,7 +82,7 @@ plt.title('blue: true,   red: OLS,   green: RLM')
 #Example: linear function with linear truth
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 # Fit a new OLS model using only the linear term and the constant
-X2 = X[:,[0,2]]
+X2 = X[:, [0, 2]]
 res2 = sm.OLS(y2, X2).fit()
 print res2.params
 print res2.bse
@@ -101,4 +102,3 @@ plt.plot(x1, iv_l, 'r--')
 plt.plot(x1, resrlm2.fittedvalues, 'g.-')
 #@savefig rlm_ols_1.png
 plt.title('blue: true,   red: OLS,   green: RLM')
-

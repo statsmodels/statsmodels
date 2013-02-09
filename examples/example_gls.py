@@ -2,7 +2,6 @@
 """
 
 import statsmodels.api as sm
-import numpy as np
 data = sm.datasets.longley.load()
 data.exog = sm.add_constant(data.exog)
 
@@ -70,4 +69,3 @@ print gls_results.params
 print glsar_results.params
 print gls_results.bse
 print glsar_results.bse
-
