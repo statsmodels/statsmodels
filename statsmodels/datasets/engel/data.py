@@ -5,7 +5,7 @@
 __docformat__ = 'restructuredtext'
 
 COPYRIGHT   = """This is public domain."""
-TITLE       = """Engel food expenditure data"""
+TITLE       = """Engel (1857) food expenditure data"""
 SOURCE      = """
 This dataset was used in Koenker and Bassett (1982) and distributed alongside
 the ``quantreg`` package for R.
@@ -19,7 +19,7 @@ http://CRAN.R-project.org/package=quantreg
 
 DESCRSHORT  = """Engel food expenditure data."""
 
-DESCRLONG   = """Data on income and food expenditure for 235 working class households in Belgium."""
+DESCRLONG   = """Data on income and food expenditure for 235 working class households in 1857 Belgium."""
 
 #suggested notes
 NOTE        = """
