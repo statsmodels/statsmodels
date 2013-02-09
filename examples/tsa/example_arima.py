@@ -8,8 +8,8 @@ plt.interactive(False)
 
 # let's examine an ARIMA model of CPI
 
-cpi = load_pandas().data["cpi"]
-dates = dates_from_range("1959q1", "2009q3")
+cpi = load_pandas().data['cpi']
+dates = dates_from_range('1959q1', '2009q3')
 cpi.index = dates
 
 res = ARIMA(cpi, (1, 1, 1), freq='Q').fit()
@@ -32,7 +32,7 @@ confint_pacf = stats.norm.ppf(1 - .025) * np.sqrt(1 / 202.)
 
 fig = plt.figure()
 ax = fig.add_subplot(121)
-ax.set_title("Autocorrelation")
+ax.set_title('Autocorrelation')
 ax.plot(range(41), acf, 'bo', markersize=5)
 ax.vlines(range(41), 0, acf)
 ax.fill_between(range(41), confint_acf[:, 0], confint_acf[:, 1], alpha=.25)

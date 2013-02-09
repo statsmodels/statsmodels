@@ -189,4 +189,4 @@ print condition_number
 # effect on the coefficient estimates:
 ols_results2 = sm.OLS(y[:-1], X[:-1, :]).fit()
 res_dropped = ols_results.params / ols_results2.params * 100 - 100
-print "Percentage change %4.2f%%\n" * 7 % tuple(i for i in res_dropped)
+print 'Percentage change %4.2f%%\n' * 7 % tuple(i for i in res_dropped)

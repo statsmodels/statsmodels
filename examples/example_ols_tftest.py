@@ -62,7 +62,7 @@ betatval = res.tvalues
 betatval[0]
 npt.assert_almost_equal(betatval[0], ttest0.tvalue, decimal=15)
 
-'''
+"""
 # several ttests at the same time
 # currently not checked for this, but it (kind of) works
 >>> ttest0 = res.t_test(R[:2,:])
@@ -91,9 +91,9 @@ array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
 >>> ttest0.t
 array([ 0.17737603, -1.06951632, -4.13642736, -4.82198531, -0.22605114,
         4.01588981])
-'''
+"""
 
-print "\nsimultaneous t-tests"
+print '\nsimultaneous t-tests'
 ttest0 = res.t_test(R2)
 
 t2 = ttest0.tvalue
@@ -177,7 +177,7 @@ ttest = res2.t_test(R7)
 print repr((ttest.tvalue, ttest.pvalue))
 
 
-print "\nExample: 2 categories: replicate stats.glm and stats.ttest_ind"
+print '\nExample: 2 categories: replicate stats.glm and stats.ttest_ind'
 
 mod2 = sm.OLS(y[xcat.flat < 2][:, 0], X[xcat.flat < 2, :][:, (0, -1)])
 res2 = mod2.fit()

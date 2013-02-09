@@ -19,7 +19,7 @@ filelist = ['example_glsar.py', 'example_wls.py', 'example_gls.py',
             # time series
             'tsa/ex_arma2.py', 'tsa/ex_dates.py']
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     #temporarily disable show
     import matplotlib.pyplot as plt
     plt_show = plt.show
@@ -37,14 +37,14 @@ if __name__ == "__main__":
     if 'y' in cont.lower():
         for run_all_f in filelist:
             try:
-                print "\n\nExecuting example file", run_all_f
-                print "-----------------------" + "-" * len(run_all_f)
+                print '\n\nExecuting example file', run_all_f
+                print '-----------------------' + '-' * len(run_all_f)
                 execfile(run_all_f)
             except:
                 # f might be overwritten in the executed file
-                print "**********************" + "*" * len(run_all_f)
-                print "ERROR in example file", run_all_f
-                print "**********************" + "*" * len(run_all_f)
+                print '**********************' + '*' * len(run_all_f)
+                print 'ERROR in example file', run_all_f
+                print '**********************' + '*' * len(run_all_f)
                 if stop_on_error:
                     raise
 

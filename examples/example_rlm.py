@@ -35,7 +35,7 @@ print hub_results2.bse
 # Andrew's Wave norm with Huber's Proposal 2 scaling and 'H3' covariance matrix
 andrew_mod = sm.RLM(data.endog, data.exog, M=sm.robust.norms.AndrewWave())
 andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(),
-                                cov="H3")
+                                cov='H3')
 print andrew_results.params
 
 # See ``help(sm.RLM.fit)`` for more options and ``module sm.robust.scale`` for
