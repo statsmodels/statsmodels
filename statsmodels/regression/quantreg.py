@@ -98,7 +98,7 @@ class QuantReg(RegressionModel):
         beta = np.ones(rank)  # TODO: better start
         diff = 10
 
-        while itrat < 1000 or diff > 1e-6:
+        while itrat < 1000 and diff > 1e-6:
             itrat += 1
             beta0 = beta
             beta = dot(pinv(dot(xstar.T, exog)), xstar.T, endog)
