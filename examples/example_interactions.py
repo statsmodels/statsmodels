@@ -30,7 +30,7 @@ S = salary_table.S
 
 # Take a look at the data
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 symbols = ['D', '^']
 colors = ['r', 'g', 'blue']
 factor_groups = salary_table.groupby(['E', 'M'])
@@ -38,9 +38,9 @@ for values, group in factor_groups:
     i, j = values
     plt.scatter(group['X'], group['S'], marker=symbols[j], color=colors[i - 1],
                s=144)
-plt.xlabel('Experience')
+plt.xlabel('Experience');
 #@savefig raw_data_interactions.png align=center
-plt.ylabel('Salary')
+plt.ylabel('Salary');
 
 # Fit a linear model
 formula = 'S ~ C(E) + C(M) + X'
@@ -67,16 +67,16 @@ df_infl = infl.summary_frame()
 #Now plot the reiduals within the groups separately
 resid = lm.resid
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for values, group in factor_groups:
     i, j = values
     group_num = i * 2 + j - 1  # for plotting purposes
     x = [group_num] * len(group)
     plt.scatter(x, resid[group.index], marker=symbols[j], color=colors[i - 1],
             s=144, edgecolors='black')
-plt.xlabel('Group')
+plt.xlabel('Group');
 #@savefig residual_groups.png align=center
-plt.ylabel('Residuals')
+plt.ylabel('Residuals');
 
 # now we will test some interactions using anova or f_test
 
@@ -102,15 +102,15 @@ interM_lm.model.exog_names
 infl = interM_lm.get_influence()
 resid = infl.resid_studentized_internal
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for values, group in factor_groups:
     i, j = values
     idx = group.index
     plt.scatter(X[idx], resid[idx], marker=symbols[j], color=colors[i - 1],
             s=144, edgecolors='black')
-plt.xlabel('X')
+plt.xlabel('X');
 #@savefig standardized_resids.png align=center
-plt.ylabel('standardized resids')
+plt.ylabel('standardized resids');
 
 # Looks like one observation is an outlier.
 #TODO: do we have Bonferonni outlier test?
@@ -141,15 +141,15 @@ try:
 except:
     resid = interM_lm32.get_influence().summary_frame()['standard_resid']
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for values, group in factor_groups:
     i, j = values
     idx = group.index
     plt.scatter(X[idx], resid[idx], marker=symbols[j], color=colors[i - 1],
             s=144, edgecolors='black')
-plt.xlabel('X[~[32]]')
+plt.xlabel('X[~[32]]');
 #@savefig standardized_drop32.png align=center
-plt.ylabel('standardized resids')
+plt.ylabel('standardized resids');
 
 # Plot the fitted values
 
@@ -158,7 +158,7 @@ lm_final = ols('S ~ X + C(E)*C(M)',
 mf = lm_final.model.data.orig_exog
 lstyle = ['-', '--']
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for values, group in factor_groups:
     i, j = values
     idx = group.index
@@ -167,9 +167,9 @@ for values, group in factor_groups:
     # drop NA because there is no idx 32 in the final model
     plt.plot(mf.X[idx].dropna(), lm_final.fittedvalues[idx].dropna(),
             ls=lstyle[j], color=colors[i - 1])
-plt.xlabel('Experience')
+plt.xlabel('Experience');
 #@savefig fitted_drop32.png align=center
-plt.ylabel('Salary')
+plt.ylabel('Salary');
 
 # From our first look at the data, the difference between Master's and PhD in
 # the management group is different than in the non-management group.
@@ -180,7 +180,7 @@ plt.ylabel('Salary')
 
 U = S - X * interX_lm32.params['X']
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 #@savefig interaction_plot.png align=center
 interaction_plot(E, M, U, colors=['red', 'blue'], markers=['^', 'D'],
         markersize=10, ax=plt.gca())
@@ -198,20 +198,20 @@ except:  # don't have data already
 
 factor_group = minority_table.groupby(['ETHN'])
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 colors = ['purple', 'green']
 markers = ['o', 'v']
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
-plt.xlabel('TEST')
+plt.xlabel('TEST');
 #@savefig group_test.png align=center
-plt.ylabel('JPERF')
+plt.ylabel('JPERF');
 
 min_lm = ols('JPERF ~ TEST', data=minority_table).fit()
 print min_lm.summary()
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
@@ -226,7 +226,7 @@ min_lm2 = ols('JPERF ~ TEST + TEST:ETHN',
 
 print min_lm2.summary()
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
@@ -242,7 +242,7 @@ abline_plot(intercept=min_lm2.params['Intercept'],
 min_lm3 = ols('JPERF ~ TEST + ETHN', data=minority_table).fit()
 print min_lm3.summary()
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
@@ -258,7 +258,7 @@ abline_plot(intercept=min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
 min_lm4 = ols('JPERF ~ TEST * ETHN', data=minority_table).fit()
 print min_lm4.summary()
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 for factor, group in factor_group:
     plt.scatter(group['TEST'], group['JPERF'], color=colors[factor],
                 marker=markers[factor], s=12**2)
@@ -295,7 +295,7 @@ except:
     rehab_table = pandas.read_table(url, delimiter=",")
     rehab_table.to_csv('rehab.table')
 
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 #@savefig plot_boxplot.png align=center
 rehab_table.boxplot('Time', 'Fitness', ax=plt.gca())
 
@@ -322,10 +322,11 @@ print kidney_table.groupby(['Weight', 'Duration']).size()
 # balanced panel
 
 kt = kidney_table
-plt.figure(figsize=(6, 6))
+plt.figure(figsize=(6, 6));
 #@savefig kidney_interactiong.png align=center
 interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days'] + 1),
-                 colors=['red', 'blue'], markers=['D', '^'], ms=10, ax=plt.gca())
+                 colors=['red', 'blue'], markers=['D', '^'], ms=10,
+                 ax=plt.gca())
 
 # You have things available in the calling namespace available
 # in the formula evaluation namespace
