@@ -41,3 +41,15 @@ hash symbol ``#`` are rendered as reST markup.
 
 **IPython magics**: You can use IPython magics by writing a line like this: ``#%timeit X = np.empty((1000,1000))``.
 
+
+Make Life Easier
+~~~~~~~~~~~~~~~~
+
+To save you some time and to make the new examples nicely fit into the existing
+ones consider the following points.
+
+**Look at examples source code** to get a feel for how statsmodels examples should look like.
+
+**PEP8 syntax checker** install a [PEP8] http://pypi.python.org/pypi/pep8 syntax checker for you editor. It will not only make your code look nicer but also serves as `prebugger`.
+
+**build docs** run `tools/example_rst.py` to build the doc and see how your example will be rendered.
