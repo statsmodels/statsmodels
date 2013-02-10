@@ -25,4 +25,4 @@ import pandas
 dates = sm.tsa.datetools.dates_from_range('1980m1', length=nobs)
 y = pandas.TimeSeries(y, index=dates)
 arma_mod = sm.tsa.ARMA(y, freq='M')
-arma_res = arma_mod.fit(order=(2,2), trend='nc', disp=-1)
+arma_res = arma_mod.fit(order=(2, 2), trend='nc', disp=-1)
