@@ -66,7 +66,7 @@ class QuantReg(RegressionModel):
         """
         return Y
 
-    def fit(self, q=.5, kernel='logistic', **kwargs):
+    def fit(self, q=.5, kernel='gau', **kwargs):
         '''Solve by Iterative Weighted Least Squares
 
         Parameters
@@ -89,6 +89,15 @@ class QuantReg(RegressionModel):
 
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
+
+
+        kern_names = ['bet', 'biw', 'cos', 'epa', 'gau', 'log', 'tri', 'trw',
+                      'uni']
+        if kernel not in kern_names:
+            raise Exception("kernel must be 'bet', 'biw', 'cos', 'epa', 'gau', \
+                             'log', 'tri', 'trw' or 'uni'")
+        else:
+            kernel = kernels[kernel]
 
         endog = self.endog
         exog = self.exog
@@ -118,14 +127,9 @@ class QuantReg(RegressionModel):
             h = 0.9 * np.std(e) / (nobs**0.2)
         else:
             h = 0.9 * np.min(np.std(e), iqre / 1.34) / (nobs**0.2)
-        if kernel == 'logistic':
-            u = logistic.pdf(e / h)
-            fhat0 = 1. / (nobs * h) * np.sum(u * (1 - u))
-        elif kernel == 'gaussian':
-            u = e / h
-            fhat0 = 1. / (nobs * h) * np.sum(norm.pdf(u))
-        else:
-            raise Exception('kernel must be logistic or gaussian')
+
+        fhat0 = 1. / (nobs * h) * np.sum(kernel(e / h))
+
         D = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
         D = np.diag(D)
         vcov = dot(pinv(dot(exog.T, exog)), dot(exog.T, D, exog),
@@ -133,6 +137,17 @@ class QuantReg(RegressionModel):
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
         return RegressionResultsWrapper(lfit)
+
+kernels = {}
+kernels['bet'] = lambda u: np.where(np.abs(u) <= 1, .75 * (1 - u) * (1 + u), 0)
+kernels['biw'] = lambda u: 15. / 16 * (1 - u**2)**2 * np.where(np.abs(u) <= 1, 1, 0)
+kernels['cos'] = lambda u: np.where(np.abs(u) <= .5, 1 + np.cos(2 * np.pi * u), 0)
+kernels['epa'] = lambda u: 3. / 4 * (1-u**2) * np.where(np.abs(u) <= 1, 1, 0)
+kernels['gau'] = lambda u: norm.pdf(u)
+kernels['log'] = lambda u: logistic.pdf(u) * (1 - logistic.pdf(u))
+kernels['tri'] = lambda u: np.where(np.abs(u) <= 1, 1 - np.abs(u), 0)
+kernels['trw'] = lambda u: 35. / 32 * (1 - u**2)**3 * np.where(np.abs(u) <= 1, 1, 0)
+kernels['uni'] = lambda u: 1. / 2 * np.where(np.abs(u) <= 1, 1, 0)
 
 class QuantRegResults(RegressionResults):
     '''Results instance for the QuantReg model'''
