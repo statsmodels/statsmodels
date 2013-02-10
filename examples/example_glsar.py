@@ -1,8 +1,8 @@
-'''
+"""
 Generalized Least Squares with AR Errors
 
 6 examples for GLSAR with artificial data
-'''
+"""
 
 #.. note: These examples were written mostly to cross-check results.  It is still being
 #    written, and GLSAR is still being worked on.
@@ -27,7 +27,7 @@ if 0 in examples:
     model = GLSAR(Y, X, 2)
     for i in range(6):
         results = model.fit()
-        print "AR coefficients:", model.rho
+        print 'AR coefficients:', model.rho
         rho, sigma = yule_walker(results.resid, order=model.order)
         model = GLSAR(Y, X, rho)
 

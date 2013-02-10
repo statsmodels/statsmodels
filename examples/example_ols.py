@@ -64,14 +64,14 @@ print res.predict()
 # Draw a plot to compare the true relationship to OLS predictions. Confidence
 # intervals around the predictions are built using the ``wls_prediction_std``
 # command.
-plt.figure()
-plt.plot(x, y, 'o', x, y_true, 'b-')
-prstd, iv_l, iv_u = wls_prediction_std(res)
-plt.plot(x, res.fittedvalues, 'r--.')
-plt.plot(x, iv_u, 'r--')
-plt.plot(x, iv_l, 'r--')
+plt.figure();
+plt.plot(x, y, 'o', x, y_true, 'b-');
+prstd, iv_l, iv_u = wls_prediction_std(res);
+plt.plot(x, res.fittedvalues, 'r--.');
+plt.plot(x, iv_u, 'r--');
+plt.plot(x, iv_l, 'r--');
 #@savefig ols_predict_0.png
-plt.title('blue: true,   red: OLS')
+plt.title('blue: true,   red: OLS');
 
 #OLS with dummy variables
 #------------------------
@@ -107,14 +107,14 @@ print res2.bse
 print res.predict()
 
 # Draw a plot to compare the true relationship to OLS predictions.
-prstd, iv_l, iv_u = wls_prediction_std(res2)
-plt.figure()
-plt.plot(x, y, 'o', x, y_true, 'b-')
-plt.plot(x, res2.fittedvalues, 'r--.')
-plt.plot(x, iv_u, 'r--')
-plt.plot(x, iv_l, 'r--')
+prstd, iv_l, iv_u = wls_prediction_std(res2);
+plt.figure();
+plt.plot(x, y, 'o', x, y_true, 'b-');
+plt.plot(x, res2.fittedvalues, 'r--.');
+plt.plot(x, iv_u, 'r--');
+plt.plot(x, iv_l, 'r--');
 #@savefig ols_predict_1.png
-plt.title('blue: true,   red: OLS')
+plt.title('blue: true,   red: OLS');
 
 #Joint hypothesis tests
 #----------------------

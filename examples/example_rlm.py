@@ -69,15 +69,15 @@ print resrlm.params
 print resrlm.bse
 
 # Draw a plot to compare OLS estimates to the robust estimates
-plt.figure()
-plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
-prstd, iv_l, iv_u = wls_prediction_std(res)
-plt.plot(x1, res.fittedvalues, 'r-')
-plt.plot(x1, iv_u, 'r--')
-plt.plot(x1, iv_l, 'r--')
-plt.plot(x1, resrlm.fittedvalues, 'g.-')
+plt.figure();
+plt.plot(x1, y2, 'o', x1, y_true2, 'b-');
+prstd, iv_l, iv_u = wls_prediction_std(res);
+plt.plot(x1, res.fittedvalues, 'r-');
+plt.plot(x1, iv_u, 'r--');
+plt.plot(x1, iv_l, 'r--');
+plt.plot(x1, resrlm.fittedvalues, 'g.-');
 #@savefig rlm_ols_0.png
-plt.title('blue: true,   red: OLS,   green: RLM')
+plt.title('blue: true,   red: OLS,   green: RLM');
 
 #Example: linear function with linear truth
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -94,11 +94,11 @@ print resrlm2.bse
 
 # Draw a plot to compare OLS estimates to the robust estimates
 prstd, iv_l, iv_u = wls_prediction_std(res2)
-plt.figure()
-plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
-plt.plot(x1, res2.fittedvalues, 'r-')
-plt.plot(x1, iv_u, 'r--')
-plt.plot(x1, iv_l, 'r--')
-plt.plot(x1, resrlm2.fittedvalues, 'g.-')
+plt.figure();
+plt.plot(x1, y2, 'o', x1, y_true2, 'b-');
+plt.plot(x1, res2.fittedvalues, 'r-');
+plt.plot(x1, iv_u, 'r--');
+plt.plot(x1, iv_l, 'r--');
+plt.plot(x1, resrlm2.fittedvalues, 'g.-');
 #@savefig rlm_ols_1.png
-plt.title('blue: true,   red: OLS,   green: RLM')
+plt.title('blue: true,   red: OLS,   green: RLM');

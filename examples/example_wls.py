@@ -66,16 +66,16 @@ tppf = stats.t.ppf(0.975, res_ols.df_resid)
 
 # Draw a plot to compare predicted values in WLS and OLS:
 prstd, iv_l, iv_u = wls_prediction_std(res_wls)
-plt.figure()
-plt.plot(x, y, 'o', x, y_true, 'b-')
-plt.plot(x, res_ols.fittedvalues, 'r--')
-plt.plot(x, res_ols.fittedvalues + tppf * prediction_std, 'r--')
-plt.plot(x, res_ols.fittedvalues - tppf * prediction_std, 'r--')
-plt.plot(x, res_wls.fittedvalues, 'g--.')
-plt.plot(x, iv_u, 'g--')
-plt.plot(x, iv_l, 'g--')
+plt.figure();
+plt.plot(x, y, 'o', x, y_true, 'b-');
+plt.plot(x, res_ols.fittedvalues, 'r--');
+plt.plot(x, res_ols.fittedvalues + tppf * prediction_std, 'r--');
+plt.plot(x, res_ols.fittedvalues - tppf * prediction_std, 'r--');
+plt.plot(x, res_wls.fittedvalues, 'g--.');
+plt.plot(x, iv_u, 'g--');
+plt.plot(x, iv_l, 'g--');
 #@savefig wls_ols_0.png
-plt.title('blue: true, red: OLS, green: WLS')
+plt.title('blue: true, red: OLS, green: WLS');
 
 # Feasible Weighted Least Squares (2-stage FWLS)
 # ----------------------------------------------
@@ -88,5 +88,3 @@ w_est = w.copy()
 w_est[w != 1.] = np.sqrt(var2) / np.sqrt(var1)
 res_fwls = sm.WLS(y, X, 1. / w_est).fit()
 print res_fwls.summary()
-
-#..plt.show()

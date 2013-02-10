@@ -34,8 +34,8 @@ ynewpred = olsres.predict(Xnew)  # predict out of sample
 print ypred
 
 import matplotlib.pyplot as plt
-plt.figure()
-plt.plot(x1, y, 'o', x1, y_true, 'b-')
-plt.plot(np.hstack((x1, x1n)), np.hstack((ypred, ynewpred)), 'r')
+plt.figure();
+plt.plot(x1, y, 'o', x1, y_true, 'b-');
+plt.plot(np.hstack((x1, x1n)), np.hstack((ypred, ynewpred)), 'r');
 #@savefig ols_predict.png
-plt.title('OLS prediction, blue: true and data, fitted/predicted values:red')
+plt.title('OLS prediction, blue: true and data, fitted/predicted values:red');

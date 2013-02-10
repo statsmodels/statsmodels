@@ -37,7 +37,7 @@ factor_groups = salary_table.groupby(['E', 'M'])
 for values, group in factor_groups:
     i, j = values
     plt.scatter(group['X'], group['S'], marker=symbols[j], color=colors[i - 1],
-               s=144)
+                s=144)
 plt.xlabel('Experience');
 #@savefig raw_data_interactions.png align=center
 plt.ylabel('Salary');
@@ -73,7 +73,7 @@ for values, group in factor_groups:
     group_num = i * 2 + j - 1  # for plotting purposes
     x = [group_num] * len(group)
     plt.scatter(x, resid[group.index], marker=symbols[j], color=colors[i - 1],
-            s=144, edgecolors='black')
+                s=144, edgecolors='black')
 plt.xlabel('Group');
 #@savefig residual_groups.png align=center
 plt.ylabel('Residuals');

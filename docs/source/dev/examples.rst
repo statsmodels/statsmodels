@@ -50,6 +50,6 @@ ones consider the following points.
 
 **Look at examples source code** to get a feel for how statsmodels examples should look like.
 
-**PEP8 syntax checker** install a [PEP8] http://pypi.python.org/pypi/pep8 syntax checker for you editor. It will not only make your code look nicer but also serves as `prebugger`.
+**PEP8 syntax checker** install a [PEP8] http://pypi.python.org/pypi/pep8 syntax checker for you editor. It will not only make your code look nicer but also serves as `pre-debugger`. Note that some of doc directives explained above imply pep8 violations. Also, for the sake of readability it's a local convention not to add white spaces around power operators, e.g. `x * 2 + y**2 + z`. 
 
-**build docs** run `tools/example_rst.py` to build the doc and see how your example will be rendered.
+**build docs** run `make html` from the docs directory to see how your example looks in the fully rendered html pages.

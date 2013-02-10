@@ -68,37 +68,39 @@ y = data.endog[:, 0] / data.endog.sum(1)
 yhat = res.mu
 
 # Plot yhat vs y:
-plt.figure()
-plt.scatter(yhat, y)
+plt.figure();
+plt.scatter(yhat, y);
+
 line_fit = sm.OLS(y, sm.add_constant(yhat, prepend=False)).fit().params
 fit = lambda x: line_fit[1] + line_fit[0] * x  # better way in scipy?
-plt.plot(np.linspace(0, 1, nobs), fit(np.linspace(0, 1, nobs)))
-plt.title('Model Fit Plot')
-plt.ylabel('Observed values')
+
+plt.plot(np.linspace(0, 1, nobs), fit(np.linspace(0, 1, nobs)));
+plt.title('Model Fit Plot');
+plt.ylabel('Observed values');
 #@savefig glm_fitted.png
-plt.xlabel('Fitted values')
+plt.xlabel('Fitted values');
 
 # Plot yhat vs. Pearson residuals:
-plt.figure()
-plt.scatter(yhat, res.resid_pearson)
-plt.plot([0.0, 1.0], [0.0, 0.0], 'k-')
-plt.title('Residual Dependence Plot')
-plt.ylabel('Pearson Residuals')
+plt.figure();
+plt.scatter(yhat, res.resid_pearson);
+plt.plot([0.0, 1.0], [0.0, 0.0], 'k-');
+plt.title('Residual Dependence Plot');
+plt.ylabel('Pearson Residuals');
 #@savefig glm_resids.png
-plt.xlabel('Fitted values')
+plt.xlabel('Fitted values');
 
 #Histogram of standardized deviance residuals
-plt.figure()
+plt.figure();
 resid = res.resid_deviance.copy()
 resid_std = (resid - resid.mean()) / resid.std()
-plt.hist(resid_std, bins=25)
+plt.hist(resid_std, bins=25);
 #@savefig glm_hist_res.png
-plt.title('Histogram of standardized deviance residuals')
+plt.title('Histogram of standardized deviance residuals');
 
 #QQ Plot of Deviance Residuals
 from statsmodels import graphics
 #@savefig glm_qqplot.png
-graphics.gofplots.qqplot(resid, line='r')
+graphics.gofplots.qqplot(resid, line='r');
 
 #GLM: Gamma for proportional count response
 #------------------------------------------

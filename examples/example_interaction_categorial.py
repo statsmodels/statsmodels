@@ -3,15 +3,13 @@
 """
 
 # In this example, we will vizualize the interaction between
-# categorical factors. First, categorical data are initialized
-# and then plotted using the interaction_plot function.
-#
-# Author: Denis A. Engemann
-
-
-print __doc__
+# categorical factors. First, we will create some categorical
+# data are initialized. Then plotted using the interaction_plot
+# function which internally recodes the x-factor categories to
+# ingegers.
 
 import numpy as np
+import matplotlib.pyplot as plt
 from statsmodels.graphics.factorplots import interaction_plot
 from pandas import Series
 
@@ -20,8 +18,8 @@ weight = Series(np.repeat(['low', 'hi', 'low', 'hi'], 15), name='weight')
 nutrition = Series(np.repeat(['lo_carb', 'hi_carb'], 30), name='nutrition')
 days = np.log(np.random.randint(1, 30, size=60))
 
-fig = interaction_plot(weight, nutrition, days, colors=['red', 'blue'],
-                       markers=['D', '^'], ms=10)
+plt.figure(figsize=(6, 6));
 
-import matplotlib.pylab as plt
-plt.show()
+#@savefig interaction_plot_categorial.png align=center
+interaction_plot(x=weight, trace=nutrition, response=days,
+                 colors=['red', 'blue'], markers=['D', '^'], ms=10);
