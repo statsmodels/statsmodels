@@ -2,7 +2,6 @@
 """
 import numpy as np
 import statsmodels.api as sm
-import matplotlib
 import matplotlib.pyplot as plt
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 np.random.seed(9876789)
@@ -23,7 +22,7 @@ X = sm.add_constant(X, prepend=False)
 y = np.dot(X, beta) + e
 
 # Inspect data
-print X[:5,:]
+print X[:5, :]
 print y[:5]
 
 #Fit and summary
@@ -47,7 +46,7 @@ print results.rsquared
 nsample = 50
 sig = 0.5
 x = np.linspace(0, 20, nsample)
-X = np.c_[x, np.sin(x), (x-5)**2, np.ones(nsample)]
+X = np.c_[x, np.sin(x), (x - 5)**2, np.ones(nsample)]
 beta = [0.5, 0.5, -0.02, 5.]
 y_true = np.dot(X, beta)
 y = y_true + sig * np.random.normal(size=nsample)
@@ -65,14 +64,14 @@ print res.predict()
 # Draw a plot to compare the true relationship to OLS predictions. Confidence
 # intervals around the predictions are built using the ``wls_prediction_std``
 # command.
-plt.figure()
-plt.plot(x, y, 'o', x, y_true, 'b-')
-prstd, iv_l, iv_u = wls_prediction_std(res)
-plt.plot(x, res.fittedvalues, 'r--.')
-plt.plot(x, iv_u, 'r--')
-plt.plot(x, iv_l, 'r--')
+plt.figure();
+plt.plot(x, y, 'o', x, y_true, 'b-');
+prstd, iv_l, iv_u = wls_prediction_std(res);
+plt.plot(x, res.fittedvalues, 'r--.');
+plt.plot(x, iv_u, 'r--');
+plt.plot(x, iv_l, 'r--');
 #@savefig ols_predict_0.png
-plt.title('blue: true,   red: OLS')
+plt.title('blue: true,   red: OLS');
 
 #OLS with dummy variables
 #------------------------
@@ -85,19 +84,19 @@ nsample = 50
 groups = np.zeros(nsample, int)
 groups[20:40] = 1
 groups[40:] = 2
-dummy = (groups[:,None] == np.unique(groups)).astype(float)
+dummy = (groups[:, None] == np.unique(groups)).astype(float)
 x = np.linspace(0, 20, nsample)
-X = np.c_[x, dummy[:,1:], np.ones(nsample)]
+X = np.c_[x, dummy[:, 1:], np.ones(nsample)]
 beta = [1., 3, -3, 10]
 y_true = np.dot(X, beta)
 e = np.random.normal(size=nsample)
 y = y_true + e
 
 # Inspect the data
-print X[:5,:]
+print X[:5, :]
 print y[:5]
 print groups
-print dummy[:5,:]
+print dummy[:5, :]
 
 #Fit and summary
 #^^^^^^^^^^^^^^^
@@ -108,14 +107,14 @@ print res2.bse
 print res.predict()
 
 # Draw a plot to compare the true relationship to OLS predictions.
-prstd, iv_l, iv_u = wls_prediction_std(res2)
-plt.figure()
-plt.plot(x, y, 'o', x, y_true, 'b-')
-plt.plot(x, res2.fittedvalues, 'r--.')
-plt.plot(x, iv_u, 'r--')
-plt.plot(x, iv_l, 'r--')
+prstd, iv_l, iv_u = wls_prediction_std(res2);
+plt.figure();
+plt.plot(x, y, 'o', x, y_true, 'b-');
+plt.plot(x, res2.fittedvalues, 'r--.');
+plt.plot(x, iv_u, 'r--');
+plt.plot(x, iv_l, 'r--');
 #@savefig ols_predict_1.png
-plt.title('blue: true,   red: OLS')
+plt.title('blue: true,   red: OLS');
 
 #Joint hypothesis tests
 #----------------------
@@ -175,8 +174,8 @@ print ols_results.summary()
 # the independent variables to have unit length:
 norm_x = np.ones_like(X)
 for i in range(int(ols_model.df_model)):
-    norm_x[:,i] = X[:,i]/np.linalg.norm(X[:,i])
-norm_xtx = np.dot(norm_x.T,norm_x)
+    norm_x[:, i] = X[:, i] / np.linalg.norm(X[:, i])
+norm_xtx = np.dot(norm_x.T, norm_x)
 
 # Then, we take the square root of the ratio of the biggest to the smallest
 # eigen values.
@@ -188,6 +187,6 @@ print condition_number
 #^^^^^^^^^^^^^^^^^^^^^^^
 # Greene also points out that dropping a single observation can have a dramatic
 # effect on the coefficient estimates:
-ols_results2 = sm.OLS(y[:-1], X[:-1,:]).fit()
-print "Percentage change %4.2f%%\n"*7 % tuple([i for i in ols_results.params/ols_results2.params*100 - 100])
-
+ols_results2 = sm.OLS(y[:-1], X[:-1, :]).fit()
+res_dropped = ols_results.params / ols_results2.params * 100 - 100
+print 'Percentage change %4.2f%%\n' * 7 % tuple(i for i in res_dropped)

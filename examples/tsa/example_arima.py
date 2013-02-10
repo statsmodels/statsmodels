@@ -8,11 +8,11 @@ plt.interactive(False)
 
 # let's examine an ARIMA model of CPI
 
-cpi = load_pandas().data["cpi"]
-dates = dates_from_range("1959q1", "2009q3")
+cpi = load_pandas().data['cpi']
+dates = dates_from_range('1959q1', '2009q3')
 cpi.index = dates
 
-res = ARIMA(cpi, (1,1,1), freq='Q').fit()
+res = ARIMA(cpi, (1, 1, 1), freq='Q').fit()
 print res.summary()
 
 # we can look at the series
@@ -24,18 +24,18 @@ log_cpi = np.log(cpi)
 # check the ACF and PCF plots
 acf, confint_acf = sm.tsa.acf(log_cpi.diff().values[1:], confint=95)
 # center the confidence intervals about zero
-#confint_acf -= confint_acf.mean(1)[:,None]
+#confint_acf -= confint_acf.mean(1)[:, None]
 pacf = sm.tsa.pacf(log_cpi.diff().values[1:], method='ols')
 # confidence interval is now an option to pacf
 from scipy import stats
-confint_pacf = stats.norm.ppf(1-.025) * np.sqrt(1/202.)
+confint_pacf = stats.norm.ppf(1 - .025) * np.sqrt(1 / 202.)
 
 fig = plt.figure()
 ax = fig.add_subplot(121)
-ax.set_title("Autocorrelation")
+ax.set_title('Autocorrelation')
 ax.plot(range(41), acf, 'bo', markersize=5)
 ax.vlines(range(41), 0, acf)
-ax.fill_between(range(41), confint_acf[:,0], confint_acf[:,1], alpha=.25)
+ax.fill_between(range(41), confint_acf[:, 0], confint_acf[:, 1], alpha=.25)
 fig.tight_layout()
 ax = fig.add_subplot(122, sharey=ax)
 ax.vlines(range(41), 0, pacf)
@@ -49,4 +49,4 @@ ax.fill_between(range(41), -confint_pacf, confint_pacf, alpha=.25)
 
 
 # still some seasonality
-# try an arma(1,1) with ma(4) term
+# try an arma(1, 1) with ma(4) term
