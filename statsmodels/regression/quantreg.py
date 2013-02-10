@@ -66,7 +66,7 @@ class QuantReg(RegressionModel):
         """
         return Y
 
-    def fit(self, q=.5, kernel='gau', **kwargs):
+    def fit(self, q=.5, kernel='epa', bandwidth='hsheather', **kwargs):
         '''Solve by Iterative Weighted Least Squares
 
         Parameters
@@ -90,14 +90,22 @@ class QuantReg(RegressionModel):
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
 
-
         kern_names = ['bet', 'biw', 'cos', 'epa', 'gau', 'log', 'tri', 'trw',
                       'uni']
         if kernel not in kern_names:
-            raise Exception("kernel must be 'bet', 'biw', 'cos', 'epa', 'gau', \
-                             'log', 'tri', 'trw' or 'uni'")
+            raise Exception("kernel must be in " + ', '.join(kern_names))
         else:
             kernel = kernels[kernel]
+
+        bwidth_names = ['hsheather', 'bofinger', 'chamberlain']
+        if bandwidth not in bwidth_names:
+            raise Exception("kernel must be in " + ', '.join(bwidth_names))
+        elif bandwidth == 'hsheather':
+            bandwidth = hall_sheather
+        elif bandwidth == 'bofinger':
+            bandwidth = bofinger
+        else:
+            bandwidth = chamberlain
 
         endog = self.endog
         exog = self.exog
@@ -122,11 +130,12 @@ class QuantReg(RegressionModel):
             diff = np.max(np.abs(beta - beta0))
 
         e = endog - dot(exog, beta)
-        iqre = stats.scoreatpercentile(e, 75) - stats.scoreatpercentile(e, 25)
-        if q == 0.5:
-            h = 0.9 * np.std(e) / (nobs**0.2)
-        else:
-            h = 0.9 * np.min(np.std(e), iqre / 1.34) / (nobs**0.2)
+        # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:
+        #h = 0.9 * np.std(e) / (nobs**0.2)
+        # Instead, we calculate bandwidth as in Stata 12
+        iqre = np.percentile(e, 75) - np.percentile(e, 25)
+        h = bandwidth(nobs, q)
+        h = min(np.std(endog), iqre / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
 
         fhat0 = 1. / (nobs * h) * np.sum(kernel(e / h))
 
@@ -148,6 +157,21 @@ kernels['log'] = lambda u: logistic.pdf(u) * (1 - logistic.pdf(u))
 kernels['tri'] = lambda u: np.where(np.abs(u) <= 1, 1 - np.abs(u), 0)
 kernels['trw'] = lambda u: 35. / 32 * (1 - u**2)**3 * np.where(np.abs(u) <= 1, 1, 0)
 kernels['uni'] = lambda u: 1. / 2 * np.where(np.abs(u) <= 1, 1, 0)
+
+def hall_sheather(n, q, alpha=.05):
+    num = 3 * norm.pdf(norm.ppf(q))**4
+    den = 2 * (2 * norm.ppf(q)**2 + 1)
+    h = n**(-1./3) * norm.ppf(1 - alpha / 2)**(2./3) * (num / den)**(1./3)
+    return h
+
+def bofinger(n, q):
+    num = 9./2 * norm.pdf(2 * norm.ppf(q))**4
+    den = (2 * norm.ppf(q)**2 + 1)**2
+    h = n**(-1./5) * (num/den)**(1./5)
+    return h
+
+def chamberlain(n, q, alpha=.05):
+    return norm.ppf(1-alpha/2) * np.sqrt(q*(1-q)/n)
 
 class QuantRegResults(RegressionResults):
     '''Results instance for the QuantReg model'''
