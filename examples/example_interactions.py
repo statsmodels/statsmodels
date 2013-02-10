@@ -15,13 +15,18 @@ from statsmodels.formula.api import ols
 from statsmodels.graphics.api import interaction_plot, abline_plot
 from statsmodels.stats.anova import anova_lm
 
+
+# load data
+
 try:
-    salary_table = pandas.read_csv('salary.table')
-except:  # recent pandas should be able to read URL
+    salary_table = pandas.read_csv('./salary.table')
+except:
+    print "fetching from website"
     url = 'http://stats191.stanford.edu/data/salary.table'
-    fh = urlopen(url)
-    salary_table = pandas.read_table(fh)
-    salary_table.to_csv('salary.table')
+    #the next line is not necessary with recent version of pandas
+    url = urlopen(url)
+    salary_table = pandas.read_table(url)
+    salary_table.to_csv('salary.table', index=False)
 
 E = salary_table.E
 M = salary_table.M
@@ -29,7 +34,6 @@ X = salary_table.X
 S = salary_table.S
 
 # Take a look at the data
-
 plt.figure(figsize=(6, 6));
 symbols = ['D', '^']
 colors = ['r', 'g', 'blue']
@@ -108,6 +112,7 @@ for values, group in factor_groups:
     idx = group.index
     plt.scatter(X[idx], resid[idx], marker=symbols[j], color=colors[i - 1],
             s=144, edgecolors='black')
+
 plt.xlabel('X');
 #@savefig standardized_resids.png align=center
 plt.ylabel('standardized resids');
