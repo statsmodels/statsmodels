@@ -280,19 +280,15 @@ def _normalize_data(data):
         items = data.iteritems()
     except AttributeError:
         # ok, I cannot use the data as a dictionary
-        # it should be an ndarray that I will normalize
-        # inot a dictionary
-        if isinstance(data, np.ndarray):
-            temp = OrderedDict()
-            for idx in np.ndindex(data.shape):
-                name = tuple(i for i in idx)
-                temp[name] = data[idx]
-            data = temp
-            items = data.iteritems()
-        else:
-            raise TypeError('Data type not recognized, '
-                            'should be a dict or pandas.series'
-                            ' or np.ndarray')
+        # Try to convert it to a numpy array, or die trying
+        data = np.asarray(data)
+        temp = OrderedDict()
+        for idx in np.ndindex(data.shape):
+            name = tuple(i for i in idx)
+            temp[name] = data[idx]
+        data = temp
+        items = data.iteritems()
+
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
     categories_levels = _categories_level(data.keys())
@@ -343,7 +339,7 @@ def _statistical_coloring(data):
         props[key] = {'color': [red, green, blue], 'hatch': hatch}
     return props
 
-
+#TODO: allow generic reordering of the levels
 def mosaic(data, ax=None, horizontal=True, gap=0.005,
            properties=lambda key: None, labelizer=None,
            title='', statistic=False):
