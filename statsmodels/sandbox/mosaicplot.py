@@ -120,8 +120,8 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
 
 def _tuplify(obj):
     """convert an object in a tuple of strings (even if it is not iterable,
-    like a single integer number)"""
-    if np.iterable(obj):
+    like a single integer number, but keep the string healthy)"""
+    if np.iterable(obj) and not isinstance(obj, basestring):
         res = tuple(str(o) for o in obj)
     else:
         res = (str(obj),)
@@ -276,6 +276,12 @@ def _normalize_data(data, index):
         2 - numpy.ndarrays
         3 - everything that can be converted to a numpy array
     """
+    # if data is a dataframe we need to take a completely new road
+    # before coming back here
+    import pandas
+    if isinstance(data, pandas.DataFrame):
+        data = _normalize_dataframe(data, index)
+        index = None
     # can it be used as a dictionary?
     try:
         items = data.iteritems()
@@ -307,6 +313,17 @@ def _normalize_data(data, index):
         contingency[new_key] = value
     data = contingency
     return data
+
+
+def _normalize_dataframe(dataframe, index):
+    #groupby the given keys, extract the same columns and count the element
+    # then collapse them with a mean
+    data = dataframe[index].dropna()
+    grouped = data.groupby(index, sort=False)
+    counted = grouped[index].count()
+    averaged = counted.mean(axis=1)
+    return averaged
+
 
 def _statistical_coloring(data):
     """evaluate colors from the indipendence properties of the matrix
@@ -360,7 +377,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
     Parameters
     ----------
-    data : dict, pandas.Series, np.ndarray
+    data : dict, pandas.Series, np.ndarray, pandas.DataFrame
         The contingency table that contains the data.
         Each category should contain a non-negative number
         with a tuple as index.  It expects that all the combination
@@ -374,7 +391,8 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     index: list, optional
         Gives the preferred order for the category ordering. If not specified
         will default to the given order.  It doesn't support named indexes
-        for hierarchical Series
+        for hierarchical Series.  If a DataFrame is provided, it expects
+        a list with the name of the columns.
     ax : matplotlib.Axes, optional
         The graph where display the mosaic. If not given, will
         create a new figure
@@ -474,6 +492,13 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
     >>> mosaic(data, title='colored dictionary', properties=props)
     >>> pylab.show()
+
+    Using a DataFrame as source, specifying the name of the columns of interest
+    >>> gender = ['male', 'male', 'male', 'female', 'female', 'female']
+    >>> pet = ['cat', 'dog', 'dog', 'cat', 'dog', 'cat']
+    >>> data = pandas.DataFrame({'gender': gender, 'pet': pet})
+    >>> mosaic(data, ['pet', 'gender'])
+    >>> pylab.show()
     """
     from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
@@ -513,6 +538,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
+    import pandas
 
     N = 8
     data = {('male', 'cat'): 2 * N, ('male', 'dog'): 4 * N,
@@ -525,6 +551,12 @@ if __name__ == '__main__':
     #              [36,82,179,492]])
 
     #props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-    mosaic(data, title='basic dictionary, inverted keys',
-        statistic=True, index = [1, 0])
+    #mosaic(data, title='basic dictionary, inverted keys',
+    #    statistic=True, index = [1, 0])
+    #pylab.show()
+
+    gender = ['male', 'male', 'male','female', 'female', 'female']
+    pet = ['cat', 'dog', 'dog','cat', 'dog', 'cat']
+    data = pandas.DataFrame({'gender': gender, 'pet': pet})
+    mosaic(data,['gender'])
     pylab.show()
