@@ -90,8 +90,8 @@ class QuantReg(RegressionModel):
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
 
-        kern_names = ['bet', 'biw', 'cos', 'epa', 'gau', 'log', 'tri', 'trw',
-                      'uni']
+        kern_names = ['bet', 'biw', 'cos', 'epa', 'gau', 'log', 'par', 'tri',
+                      'trw', 'uni']
         if kernel not in kern_names:
             raise Exception("kernel must be in " + ', '.join(kern_names))
         else:
@@ -147,6 +147,11 @@ class QuantReg(RegressionModel):
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
         return RegressionResultsWrapper(lfit)
 
+def _parzen(u):
+    z = np.where(np.abs(u) <= .5, 4./3 - 8. * u**2 + 8. * np.abs(u)**3,
+                               8. * (1 - np.abs(u))**3 / 3.)
+    z[u > 1] = 0
+    return z
 kernels = {}
 kernels['bet'] = lambda u: np.where(np.abs(u) <= 1, .75 * (1 - u) * (1 + u), 0)
 kernels['biw'] = lambda u: 15. / 16 * (1 - u**2)**2 * np.where(np.abs(u) <= 1, 1, 0)
@@ -154,6 +159,7 @@ kernels['cos'] = lambda u: np.where(np.abs(u) <= .5, 1 + np.cos(2 * np.pi * u), 
 kernels['epa'] = lambda u: 3. / 4 * (1-u**2) * np.where(np.abs(u) <= 1, 1, 0)
 kernels['gau'] = lambda u: norm.pdf(u)
 kernels['log'] = lambda u: logistic.pdf(u) * (1 - logistic.pdf(u))
+kernels['par'] = _parzen
 kernels['tri'] = lambda u: np.where(np.abs(u) <= 1, 1 - np.abs(u), 0)
 kernels['trw'] = lambda u: 35. / 32 * (1 - u**2)**3 * np.where(np.abs(u) <= 1, 1, 0)
 kernels['uni'] = lambda u: 1. / 2 * np.where(np.abs(u) <= 1, 1, 0)
