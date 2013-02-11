@@ -267,13 +267,14 @@ def _create_default_properties(data):
     return properties
 
 
-def _normalize_data(data):
+def _normalize_data(data, index):
     """normalize the data to a dict with tuples of strings as keys
     right now it works with:
 
         0 - dictionary (or equivalent mappable)
         1 - pandas.Series with simple or hierarchical indexes
         2 - numpy.ndarrays
+        3 - everything that can be converted to a numpy array
     """
     # can it be used as a dictionary?
     try:
@@ -296,12 +297,21 @@ def _normalize_data(data):
     indexes = product(*categories_levels)
     contingency = OrderedDict([(k, data.get(k, 0)) for k in indexes])
     data = contingency
+    # reorder the keys order according to the one specified by the user
+    # or if the index is None convert it into a simple list
+    # right now it doesn't do any check, but can be modified in the future
+    index = range(len(categories_levels)) if index is None else index
+    contingency = OrderedDict()
+    for key, value in data.iteritems():
+        new_key = tuple(key[i] for i in index)
+        contingency[new_key] = value
+    data = contingency
     return data
 
 def _statistical_coloring(data):
     """evaluate colors from the indipendence properties of the matrix
     It will encounter problem if one category has all zeros"""
-    data = _normalize_data(data)
+    data = _normalize_data(data, None)
     categories_levels = _categories_level(data.keys())
     Nlevels = len(categories_levels)
     total = 1.0 * sum(v for v in data.values())
@@ -340,7 +350,7 @@ def _statistical_coloring(data):
     return props
 
 #TODO: allow generic reordering of the levels
-def mosaic(data, ax=None, horizontal=True, gap=0.005,
+def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
            properties=lambda key: None, labelizer=None,
            title='', statistic=False):
     """Create a mosaic plot from a contingency table.
@@ -361,6 +371,10 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
         is used, it will take the keys as labels.  If a
         np.ndarray is provided, it will generate a simple
         numerical labels.
+    index: list, optional
+        Gives the preferred order for the category ordering. If not specified
+        will default to the given order.  It doesn't support named indexes
+        for hierarchical Series
     ax : matplotlib.Axes, optional
         The graph where display the mosaic. If not given, will
         create a new figure
@@ -464,7 +478,7 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
     from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
     # normalize the data to a dict with tuple of strings as keys
-    data = _normalize_data(data)
+    data = _normalize_data(data, index)
     # split the graph into different areas
     rects = _hierarchical_split(data, horizontal=horizontal, gap=gap)
     # if there is no specified way to create the labels
@@ -500,9 +514,9 @@ def mosaic(data, ax=None, horizontal=True, gap=0.005,
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
 
-    N = 80
-    data = {('a', 'b'): 2 * N, ('a', 'c'): 4 * N,
-            ('d', 'b'): 3 * N, ('d', 'c'): 3 * N}
+    N = 8
+    data = {('male', 'cat'): 2 * N, ('male', 'dog'): 4 * N,
+            ('female', 'cat'): 3 * N, ('female', 'dog'): 3 * N}
 
 
     #data = array([[1520,266,124,66],
@@ -511,6 +525,6 @@ if __name__ == '__main__':
     #              [36,82,179,492]])
 
     #props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-    mosaic(data, title='basic dictionary',
-        statistic=True)
+    mosaic(data, title='basic dictionary, inverted keys',
+        statistic=True, index = [1, 0])
     pylab.show()
