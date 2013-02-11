@@ -3,8 +3,9 @@ from __future__ import division
 from numpy.testing import assert_, assert_raises, dec
 
 # utilities for the tests
-from collections import Counter, OrderedDict
-import numpy
+from statsmodels.compatnp.collections import OrderedDict
+from collections import Counter
+import numpy as np
 from itertools import product
 try:
     import matplotlib.pyplot as pylab
@@ -16,19 +17,46 @@ except:
 # the main drawing function
 from statsmodels.sandbox.mosaicplot import mosaic
 # other functions to be tested for accuracy
-from statsmodels.sandbox.mosaicplot import hierarchical_split
+from statsmodels.sandbox.mosaicplot import _hierarchical_split
 from statsmodels.sandbox.mosaicplot import _reduce_dict
 from statsmodels.sandbox.mosaicplot import _key_splitting
 from statsmodels.sandbox.mosaicplot import _normalize_split
 from statsmodels.sandbox.mosaicplot import _split_rect
 
 
+@dec.skipif(not have_matplotlib)
+def test_data_conversion():
+    # It will not reorder the elements
+    # so the dictionary will look odd
+    # as it key order has the c and b
+    # keys swapped
+    import pylab
+    import pandas
+    fig, ax = pylab.subplots(2, 4)
+    data = {'a': 1, 'b': 2, 'c': 3}
+    mosaic(data, ax=ax[0, 0], title='basic dict')
+    data = pandas.Series(data)
+    mosaic(data, ax=ax[0, 1], title='basic series')
+    data = [1, 2, 3]
+    mosaic(data, ax=ax[0, 2], title='basic list')
+    data = np.asarray(data)
+    mosaic(data, ax=ax[0, 3], title='basic array')
 
+    data = {('a', 'c'): 1, ('b', 'c'): 2, ('a', 'd'): 3, ('b', 'd'): 4}
+    mosaic(data, ax=ax[1, 0], title='compound dict')
+    data = pandas.Series(data)
+    mosaic(data, ax=ax[1, 1], title='compound series')
+    data = [[1, 2], [3, 4]]
+    mosaic(data, ax=ax[1, 2], title='compound list')
+    data = np.array([[1, 2], [3, 4]])
+    mosaic(data, ax=ax[1, 3], title='compound array')
+    pylab.title('testing data conversion (plot 1 of 5)')
+    pylab.show()
 
 @dec.skipif(not have_matplotlib)
-def plot_mosaic_simple():
-    """display a simple plot of 4 categories of data, splitted in four
-    levels with increasing size for each group"""
+def test_mosaic_simple():
+    # display a simple plot of 4 categories of data, splitted in four
+    # levels with increasing size for each group
     # creation of the levels
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
                ['worker', 'unemployed'], ['healty', 'ill'])
@@ -51,13 +79,13 @@ def plot_mosaic_simple():
                 props[key] = {'color': 'Crimson' , 'hatch': '+'}
     # mosaic of the data, with given gaps and colors
     mosaic(data, gap=0.05, properties=props)
-    pylab.title('syntetic data, 4 categories')
+    pylab.title('syntetic data, 4 categories (plot 2 of 5)')
     pylab.show()
 
 
 @dec.skipif(not have_matplotlib)
-def plot_mosaic():
-    """make the same analysis on a known dataset"""
+def test_mosaic():
+    # make the same analysis on a known dataset
     import statsmodels.api as sm
     # load the data and clean it a bit
     affairs = sm.datasets.fair.load_pandas()
@@ -81,13 +109,14 @@ def plot_mosaic():
     data = OrderedDict([k, data[k]] for k in sorted(data.keys()))
     # do the plot (vanilla version version)
     mosaic(data)
-    pylab.title('extraconiugal affairs as function of the marriage status')
+    pylab.title('extramarital affairs as function of the marriage status  (plot 3 of 5)')
     pylab.show()
 
 
-def plot_mosaic_complex():
-    """this show the limits of the current implementation in terms of labeling
-    so it shut off the labels completly"""
+def test_mosaic_complex():
+    #TODO: remove the internet dependency here
+    # this show the limits of the current implementation in terms of labeling
+    # so it shut off the labels completly
     import pylab
     import pandas
     yogurt_url = 'http://vincentarelbundock.github.com/Rdatasets/csv/Ecdat/Yogurt.csv'
@@ -96,19 +125,19 @@ def plot_mosaic_complex():
     names_interesse = ['price_yoplait', 'price_dannon',
                        'price_hiland', 'price_weight']
     names_ridotti = ['yoplait', 'dannon', 'hiland', 'weight']
-    data['cheapest'] = pandas.Series({idx: names_ridotti[numpy.argmin(row)]
+    data['cheapest'] = pandas.Series({idx: names_ridotti[np.argmin(row)]
                                       for idx, row in data[names_interesse].iterrows()})
     count_id = data.groupby(['cheapest', 'choice'])['id'].count()
     data = dict(count_id)
     mosaic(data, horizontal=False, labelizer = lambda *a: "")
-    pylab.title('yogurt preferences data')
+    pylab.title('yogurt preferences data  (plot 4 of 5)')
     pylab.show()
 
 
-def plot_mosaic_very_complex():
-    """make a scattermatrix of mosaic plots to show the correlations between
-    each pair of variable in a dataset. Could be easily converted into a
-    new function that does this automatically based on the type of data"""
+def test_mosaic_very_complex():
+    # make a scattermatrix of mosaic plots to show the correlations between
+    # each pair of variable in a dataset. Could be easily converted into a
+    # new function that does this automatically based on the type of data
     import pylab
     key_name = ['gender', 'age', 'health', 'work']
     key_base = (['male', 'female'], ['old', 'young'],
@@ -142,22 +171,23 @@ def plot_mosaic_very_complex():
                     del temp_data[k]
                 mosaic(temp_data, ax=axes[i, j],
                        properties=props, gap=0.05, horizontal=i > j)
+    pylab.title('old males should look bright red,  (plot 5 of 5)')
     pylab.show()
 
 
-eq = lambda x, y: assert_(numpy.allclose(x, y))
+eq = lambda x, y: assert_(np.allclose(x, y))
 
 
 def test_recursive_split():
     keys = list(product('mf'))
     data = OrderedDict(zip(keys, [1] * len(keys)))
-    res = hierarchical_split(data, gap=0)
+    res = _hierarchical_split(data, gap=0)
     assert_(res.keys() == keys)
     res[('m',)] = (0.0, 0.0, 0.5, 1.0)
     res[('f',)] = (0.5, 0.0, 0.5, 1.0)
     keys = list(product('mf', 'yao'))
     data = OrderedDict(zip(keys, [1] * len(keys)))
-    res = hierarchical_split(data, gap=0)
+    res = _hierarchical_split(data, gap=0)
     assert_(res.keys() == keys)
     res[('m', 'y')] = (0.0, 0.0, 0.5, 1 / 3)
     res[('m', 'a')] = (0.0, 1 / 3, 0.5, 1 / 3)
@@ -357,8 +387,8 @@ if __name__ == '__main__':
     test__key_splitting()
     test__reduce_dict()
     test_recursive_split()
-
-    plot_mosaic_simple()
-    plot_mosaic()
-    plot_mosaic_complex()
-    plot_mosaic_very_complex()
+    test_data_conversion()
+    test_mosaic_simple()
+    test_mosaic()
+    test_mosaic_complex()
+    test_mosaic_very_complex()
