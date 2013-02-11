@@ -32,7 +32,7 @@ def test_data_conversion():
     # keys swapped
     import pylab
     import pandas
-    fig, ax = pylab.subplots(2, 4)
+    fig, ax = pylab.subplots(3, 4)
     data = {'a': 1, 'b': 2, 'c': 3}
     mosaic(data, ax=ax[0, 0], title='basic dict')
     data = pandas.Series(data)
@@ -44,13 +44,18 @@ def test_data_conversion():
 
     data = {('a', 'c'): 1, ('b', 'c'): 2, ('a', 'd'): 3, ('b', 'd'): 4}
     mosaic(data, ax=ax[1, 0], title='compound dict')
+    mosaic(data, ax=ax[2, 0], title='inverted keys dict', index=[1, 0])
     data = pandas.Series(data)
     mosaic(data, ax=ax[1, 1], title='compound series')
+    mosaic(data, ax=ax[2, 1], title='inverted keys series', index=[1, 0])
     data = [[1, 2], [3, 4]]
     mosaic(data, ax=ax[1, 2], title='compound list')
+    mosaic(data, ax=ax[2, 2], title='inverted keys list', index=[1, 0])
     data = np.array([[1, 2], [3, 4]])
     mosaic(data, ax=ax[1, 3], title='compound array')
-    pylab.title('testing data conversion (plot 1 of 5)')
+    mosaic(data, ax=ax[2, 3], title='inverted keys array', index=[1, 0])
+
+    pylab.suptitle('testing data conversion (plot 1 of 5)')
     pylab.show()
 
 @dec.skipif(not have_matplotlib)
@@ -79,7 +84,7 @@ def test_mosaic_simple():
                 props[key] = {'color': 'Crimson' , 'hatch': '+'}
     # mosaic of the data, with given gaps and colors
     mosaic(data, gap=0.05, properties=props)
-    pylab.title('syntetic data, 4 categories (plot 2 of 5)')
+    pylab.suptitle('syntetic data, 4 categories (plot 2 of 5)')
     pylab.show()
 
 
@@ -109,7 +114,7 @@ def test_mosaic():
     data = OrderedDict([k, data[k]] for k in sorted(data.keys()))
     # do the plot (vanilla version version)
     mosaic(data)
-    pylab.title('extramarital affairs as function of the marriage status  (plot 3 of 5)')
+    pylab.suptitle('extramarital affairs as function of the marriage status  (plot 3 of 5)')
     pylab.show()
 
 
@@ -130,7 +135,7 @@ def test_mosaic_complex():
     count_id = data.groupby(['cheapest', 'choice'])['id'].count()
     data = dict(count_id)
     mosaic(data, horizontal=False, labelizer = lambda *a: "")
-    pylab.title('yogurt preferences data  (plot 4 of 5)')
+    pylab.suptitle('yogurt preferences data  (plot 4 of 5)')
     pylab.show()
 
 
@@ -171,7 +176,7 @@ def test_mosaic_very_complex():
                     del temp_data[k]
                 mosaic(temp_data, ax=axes[i, j],
                        properties=props, gap=0.05, horizontal=i > j)
-    pylab.title('old males should look bright red,  (plot 5 of 5)')
+    pylab.suptitle('old males should look bright red,  (plot 5 of 5)')
     pylab.show()
 
 
