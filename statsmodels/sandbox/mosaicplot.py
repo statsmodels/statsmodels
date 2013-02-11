@@ -320,6 +320,17 @@ def _normalize_data(data, index):
     data = contingency
     return data
 
+
+def _normalize_dataframe(dataframe, index):
+    #groupby the given keys, extract the same columns and count the element
+    # then collapse them with a mean
+    data = dataframe[index].dropna()
+    grouped = data.groupby(index, sort=False)
+    counted = grouped[index].count()
+    averaged = counted.mean(axis=1)
+    return averaged
+
+
 def _statistical_coloring(data):
     """evaluate colors from the indipendence properties of the matrix
     It will encounter problem if one category has all zeros"""
@@ -656,6 +667,13 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> data = pandas.DataFrame({'gender': gender, 'pet': pet})
     >>> mosaic(data, ['pet', 'gender'])
     >>> pylab.show()
+
+    Using a DataFrame as source, specifying the name of the columns of interest
+    >>> gender = ['male', 'male', 'male', 'female', 'female', 'female']
+    >>> pet = ['cat', 'dog', 'dog', 'cat', 'dog', 'cat']
+    >>> data = pandas.DataFrame({'gender': gender, 'pet': pet})
+    >>> mosaic(data, ['pet', 'gender'])
+    >>> pylab.show()
     """
     from pylab import Rectangle
     fig, ax = utils.create_mpl_ax(ax)
@@ -704,6 +722,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
+    import pandas
 
     N = 8
     data = {('male', 'cat'): 2 * N, ('male', 'dog'): 4 * N,
