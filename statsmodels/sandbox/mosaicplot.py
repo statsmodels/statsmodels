@@ -323,7 +323,7 @@ def _normalize_data(data, index):
 def _statistical_coloring(data):
     """evaluate colors from the indipendence properties of the matrix
     It will encounter problem if one category has all zeros"""
-    data = _normalize_data(data)
+    data = _normalize_data(data, None)
     categories_levels = _categories_level(data.keys())
     Nlevels = len(categories_levels)
     total = 1.0 * sum(v for v in data.values())
@@ -705,9 +705,9 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
 if __name__ == '__main__':
     import matplotlib.pyplot as pylab
 
-    N = 80
-    data = {('a', 'b'): 2 * N, ('a', 'c'): 4 * N,
-            ('d', 'b'): 3 * N, ('d', 'c'): 3 * N}
+    N = 8
+    data = {('male', 'cat'): 2 * N, ('male', 'dog'): 4 * N,
+            ('female', 'cat'): 3 * N, ('female', 'dog'): 3 * N}
 
 
     #data = array([[1520,266,124,66],
