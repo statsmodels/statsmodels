@@ -133,7 +133,7 @@ class QuantReg(RegressionModel):
         # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:
         #h = 0.9 * np.std(e) / (nobs**0.2)
         # Instead, we calculate bandwidth as in Stata 12
-        iqre = np.percentile(e, 75) - np.percentile(e, 25)
+        iqre = stats.scoreatpercentile(e, 75) - stats.scoreatpercentile(e, 25)
         h = bandwidth(nobs, q)
         h = min(np.std(endog), iqre / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
 
