@@ -35,12 +35,25 @@ class QuantReg(RegressionModel):
     Greene (2008, p.407-408), using either the logistic or gaussian kernels
     (kernel argument of the fit method).
 
-    General References
-    ------------------
+    References
+    ----------
+
+    General:
 
     * Birkes, D. and Y. Dodge(1993). Alternative Methods of Regression, John Wiley and Sons.
     * Green,W. H. (2008). Econometric Analysis. Sixth Edition. International Student Edition.
-    * LeSage, J. P.(1999),Applied Econometrics Using MATLAB,
+    * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
+    * LeSage, J. P.(1999). Applied Econometrics Using MATLAB,
+
+    Kernels:
+
+    * Green (2008) Table 14.2
+
+    Bandwidth selection:
+
+    * Bofinger, E. (1975). Estimation of a density function using order statistics. Australian Journal of Statistics 17: 1–17.
+    * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171–209. Cambridge: Cambridge University Press.
+    * Hall, P., and S. Sheather. (1988). On the distribution of the Studentized quantile. Journal of the Royal Statistical Society, Series B 50: 381–391.
 
     License
     -------
