@@ -32,8 +32,8 @@ def test_data_conversion():
     # keys swapped
     import pylab
     import pandas
-    fig, ax = pylab.subplots(3, 4)
-    data = {'a': 1, 'b': 2, 'c': 3}
+    fig, ax = pylab.subplots(4, 4)
+    data = {'ax': 1, 'bx': 2, 'cx': 3}
     mosaic(data, ax=ax[0, 0], title='basic dict')
     data = pandas.Series(data)
     mosaic(data, ax=ax[0, 1], title='basic series')
@@ -42,7 +42,7 @@ def test_data_conversion():
     data = np.asarray(data)
     mosaic(data, ax=ax[0, 3], title='basic array')
 
-    data = {('a', 'c'): 1, ('b', 'c'): 2, ('a', 'd'): 3, ('b', 'd'): 4}
+    data = {('ax', 'cx'): 1, ('bx', 'cx'): 2, ('ax', 'dx'): 3, ('bx', 'dx'): 4}
     mosaic(data, ax=ax[1, 0], title='compound dict')
     mosaic(data, ax=ax[2, 0], title='inverted keys dict', index=[1, 0])
     data = pandas.Series(data)
@@ -54,6 +54,14 @@ def test_data_conversion():
     data = np.array([[1, 2], [3, 4]])
     mosaic(data, ax=ax[1, 3], title='compound array')
     mosaic(data, ax=ax[2, 3], title='inverted keys array', index=[1, 0])
+
+    gender = ['male', 'male', 'male', 'female', 'female', 'female']
+    pet = ['cat', 'dog', 'dog', 'cat', 'dog', 'cat']
+    data = pandas.DataFrame({'gender': gender, 'pet': pet})
+    mosaic(data, ['gender'], ax=ax[3, 0], title='dataframe by key 1')
+    mosaic(data, ['pet'], ax=ax[3, 1], title='dataframe by key 2')
+    mosaic(data, ['gender', 'pet'], ax=ax[3, 2], title='both keys')
+    mosaic(data, ['pet', 'gender'], ax=ax[3, 3], title='keys inverted')
 
     pylab.suptitle('testing data conversion (plot 1 of 5)')
     pylab.show()
