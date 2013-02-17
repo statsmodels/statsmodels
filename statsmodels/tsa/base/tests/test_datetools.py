@@ -85,6 +85,12 @@ def test_infer_freq():
         m = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['M']).values
         a = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['A']).values
         q = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['Q']).values
+        assert _infer_freq(w) == 'W-SUN'
+        assert _infer_freq(a) == 'A-DEC'
+        assert _infer_freq(q) == 'Q-DEC'
+        assert _infer_freq(w[:3]) == 'W-SUN'
+        assert _infer_freq(a[:3]) == 'A-DEC'
+        assert _infer_freq(q[:3]) == 'Q-DEC'
     else:
         from pandas import DateRange
 
@@ -94,19 +100,18 @@ def test_infer_freq():
         m = DateRange(d1, d2, offset=_freq_to_pandas['M']).values
         a = DateRange(d1, d2, offset=_freq_to_pandas['A']).values
         q = DateRange(d1, d2, offset=_freq_to_pandas['Q']).values
+        assert _infer_freq(w) == 'W'
+        assert _infer_freq(a) == 'A'
+        assert _infer_freq(q) == 'Q'
+        assert _infer_freq(w[:3]) == 'W'
+        assert _infer_freq(a[:3]) == 'A'
+        assert _infer_freq(q[:3]) == 'Q'
 
     assert _infer_freq(b[2:5]) == 'B'
     assert _infer_freq(b[:3]) == 'D'
-
     assert _infer_freq(b) == 'B'
     assert _infer_freq(d) == 'D'
-    assert _infer_freq(w) == 'W'
     assert _infer_freq(m) == 'M'
-    assert _infer_freq(a) == 'A'
-    assert _infer_freq(q) == 'Q'
     assert _infer_freq(d[:3]) == 'D'
-    assert _infer_freq(w[:3]) == 'W'
     assert _infer_freq(m[:3]) == 'M'
-    assert _infer_freq(a[:3]) == 'A'
-    assert _infer_freq(q[:3]) == 'Q'
 
