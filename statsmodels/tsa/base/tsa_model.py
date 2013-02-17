@@ -55,11 +55,12 @@ class TimeSeriesModel(base.LikelihoodModel):
                             "keyword.")
             dates = Index(dates)
         self.data.dates = dates
-        try: #NOTE: Can drop this once we move to pandas >= 0.8.x
-            _freq_to_pandas[freq]
-            self.data.freq = freq
-        except:
-            raise ValueError("freq %s not understood" % freq)
+        if freq:
+            try: #NOTE: Can drop this once we move to pandas >= 0.8.x
+                _freq_to_pandas[freq]
+            except:
+                raise ValueError("freq %s not understood" % freq)
+        self.data.freq = freq
 
     def _get_exog_names(self):
         return self.data.xnames
