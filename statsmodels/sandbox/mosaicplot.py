@@ -120,7 +120,8 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
 
 def _tuplify(obj):
     """convert an object in a tuple of strings (even if it is not iterable,
-    like a single integer number, but keep the string healthy)"""
+    like a single integer number, but keep the string healthy)
+    """
     if np.iterable(obj) and not isinstance(obj, basestring):
         res = tuple(str(o) for o in obj)
     else:
@@ -131,7 +132,8 @@ def _tuplify(obj):
 def _categories_level(keys):
     """use the Ordered dict to implement a simple ordered set
     return each level of each category
-    [[key_1_level_1,key_2_level_1],[key_1_level_2,key_2_level_2]]"""
+    [[key_1_level_1,key_2_level_1],[key_1_level_2,key_2_level_2]]
+    """
     res = []
     for i in zip(*(keys)):
         tuplefied = _tuplify(i)
@@ -227,7 +229,8 @@ def _create_default_properties(data):
     saturation (second category) and then the color value
     (third category).  If a fourth category is found, it will put
     decoration on the rectangle.  Doesn't manage more than four
-    level of categories"""
+    level of categories
+    """
     categories_levels = _categories_level(data.keys())
     Nlevels = len(categories_levels)
     # first level, the hue
@@ -275,11 +278,12 @@ def _normalize_data(data, index):
         1 - pandas.Series with simple or hierarchical indexes
         2 - numpy.ndarrays
         3 - everything that can be converted to a numpy array
+        4 - pandas.DataFrame (via the _normalize_dataframe function)
     """
     # if data is a dataframe we need to take a completely new road
-    # before coming back here
-    import pandas
-    if isinstance(data, pandas.DataFrame):
+    # before coming back here. Use the hasattr to avoid importing
+    # pandas explicitly
+    if hasattr(data, 'pivot') and hasattr(data, 'groupby'):
         data = _normalize_dataframe(data, index)
         index = None
     # can it be used as a dictionary?
@@ -316,6 +320,9 @@ def _normalize_data(data, index):
 
 
 def _normalize_dataframe(dataframe, index):
+    """Take a pandas DataFrame and count the element present in the
+    given columns, return a hierarchical index on those columns
+    """
     #groupby the given keys, extract the same columns and count the element
     # then collapse them with a mean
     data = dataframe[index].dropna()
@@ -327,7 +334,8 @@ def _normalize_dataframe(dataframe, index):
 
 def _statistical_coloring(data):
     """evaluate colors from the indipendence properties of the matrix
-    It will encounter problem if one category has all zeros"""
+    It will encounter problem if one category has all zeros
+    """
     data = _normalize_data(data, None)
     categories_levels = _categories_level(data.keys())
     Nlevels = len(categories_levels)
@@ -359,17 +367,79 @@ def _statistical_coloring(data):
     sigmas = {k: (data[k] - m) / s for k, (m, s) in expected.items()}
     props = {}
     for key, dev in sigmas.items():
-        red = 0.0 if dev < 0 else (dev / (1+dev))
-        blue = 0.0 if dev > 0 else (dev / (-1+dev))
+        red = 0.0 if dev < 0 else (dev / (1 + dev))
+        blue = 0.0 if dev > 0 else (dev / (-1 + dev))
         green = (1.0 - red - blue) / 2.0
         hatch = 'x' if dev > 2 else 'o' if dev < -2 else ''
         props[key] = {'color': [red, green, blue], 'hatch': hatch}
     return props
 
-#TODO: allow generic reordering of the levels
+
+def _create_labels(rects, horizontal):
+    """find the position of the label for each value of each category
+
+    right now it supports only up to the four categories
+    """
+    categories = _categories_level(rects.keys())
+    if len(categories) > 4:
+        msg = ("maximum of 4 level supported for axes labeling..and 4"
+               "is alreay a lot of level, are you sure you need them all?")
+        raise NotImplementedError(msg)
+    labels = {}
+    #keep it fixed as will be used a lot of times
+    items = list(rects.items())
+    vertical = not horizontal
+    #for each level, for each value in the level, take the mean of all
+    #the sublevel that correspond to that partial key
+    for level_idx, level in enumerate(categories):
+        for value in level:
+            #to which level it should refer to get the preceding
+            #values of labels? it's rather a tricky question...
+            #this is dependent on the side. It's a very crude management
+            #but I couldn't think a more general way...
+            if horizontal:
+                if level_idx == 3:
+                    index_select = [-1, -1, -1]
+                else:
+                    index_select = [+0, -1, -1]
+            else:
+                if level_idx == 3:
+                    index_select = [+0, -1, +0]
+                else:
+                    index_select = [-1, -1, -1]
+            #now I create the base key name and append the current value
+            #It will search on all the rects to find the corresponding one
+            #and use them to evaluate the mean position
+            basekey = tuple(categories[i][index_select[i]]
+                            for i in range(level_idx))
+            basekey = basekey + (value,)
+            subset = {k: v for k, v in items if basekey == k[:level_idx + 1]}
+            #now I extract the center of all the tiles and make a weighted
+            #mean of all these center on the area of the tile
+            #this should give me the (more or less) correct position
+            #of the center of the category
+            vals = subset.values()
+            W = sum(w * h for (x, y, w, h) in vals)
+            x_lab = sum((x + w / 2.0) * w * h / W for (x, y, w, h) in vals)
+            y_lab = sum((y + h / 2.0) * w * h / W for (x, y, w, h) in vals)
+            #now base on the ordering, select which position to keep
+            #needs to be written in a more general form of 4 level are enough?
+            #should give also the horizontal and vertical alignment
+            side = (level_idx + vertical) % 4
+            if side == 0:
+                labels[value] = (x_lab, -0.02, 'center', 'top')
+            if side == 1:
+                labels[value] = (-0.02, y_lab, 'right', 'center')
+            if side == 2:
+                labels[value] = (x_lab, 1.0 + 0.02, 'center', 'baseline')
+            if side == 3:
+                labels[value] = (1.0 + 0.02, y_lab, 'left', 'center')
+    return labels
+
+
 def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
            properties=lambda key: None, labelizer=None,
-           title='', statistic=False):
+           title='', statistic=False, axes_label=True):
     """Create a mosaic plot from a contingency table.
 
     It allows to visualize multivariate categorical data in a rigorous
@@ -425,6 +495,9 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         will acquire an hatching when crosses the 3 sigma.
     title : string, optional
         The title of the axis
+    axes_label : boolean, optional
+        Show the name of each value of each category
+        on the axis (default) or hide them.
 
     Returns
     ----------
@@ -485,12 +558,16 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     >>> mosaic(data, title='random non-labeled array')
     >>> pylab.show()
 
-    If you need to modify the labeling you can give a function to
-    create the labels starting from the key tuple
+    If you need to modify the labeling and the coloring you can give
+    a function tocreate the labels and one with the graphical properties
+    starting from the key tuple
 
     >>> data = {'a': 10, 'b': 15, 'c': 16}
     >>> props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-    >>> mosaic(data, title='colored dictionary', properties=props)
+    >>> labelizer = lambda k: {('a',): 'first', ('b',): 'second',
+                               ('c',): 'third'}[k]
+    >>> mosaic(data, title='colored dictionary',
+                properties=props, labelizer=labelizer)
     >>> pylab.show()
 
     Using a DataFrame as source, specifying the name of the columns of interest
@@ -514,9 +591,9 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         default_props = _statistical_coloring(data)
     else:
         default_props = _create_default_properties(data)
-    if isinstance(properties,dict):
+    if isinstance(properties, dict):
         color_dict = properties
-        properties = lambda key: color_dict.get(key,None)
+        properties = lambda key: color_dict.get(key, None)
     for k, v in rects.items():
         # create each rectangle and put a label on it
         x, y, w, h = v
@@ -532,31 +609,10 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     ax.set_yticks([])
     ax.set_yticklabels([])
     ax.set_title(title)
+    if axes_label:
+        labels = _create_labels(rects, horizontal)
+        for label, (x_lab, y_lab, ha, va) in labels.items():
+            ax.text(x_lab, y_lab, label, ha=ha, va=va)
     return fig, rects
 
 
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as pylab
-    import pandas
-
-    N = 8
-    data = {('male', 'cat'): 2 * N, ('male', 'dog'): 4 * N,
-            ('female', 'cat'): 3 * N, ('female', 'dog'): 3 * N}
-
-
-    #data = array([[1520,266,124,66],
-    #              [234,1512,432,78],
-    #              [117,362,1772,205],
-    #              [36,82,179,492]])
-
-    #props = lambda key: {'color': 'r' if 'a' in key else 'gray'}
-    #mosaic(data, title='basic dictionary, inverted keys',
-    #    statistic=True, index = [1, 0])
-    #pylab.show()
-
-    gender = ['male', 'male', 'male','female', 'female', 'female']
-    pet = ['cat', 'dog', 'dog','cat', 'dog', 'cat']
-    data = pandas.DataFrame({'gender': gender, 'pet': pet})
-    mosaic(data,['gender'])
-    pylab.show()
