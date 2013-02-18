@@ -322,6 +322,9 @@ def _normalize_data(data, index):
 
 
 def _normalize_dataframe(dataframe, index):
+    """Take a pandas DataFrame and count the element present in the
+    given columns, return a hierarchical index on those columns
+    """
     #groupby the given keys, extract the same columns and count the element
     # then collapse them with a mean
     data = dataframe[index].dropna()
@@ -333,7 +336,8 @@ def _normalize_dataframe(dataframe, index):
 
 def _statistical_coloring(data):
     """evaluate colors from the indipendence properties of the matrix
-    It will encounter problem if one category has all zeros"""
+    It will encounter problem if one category has all zeros
+    """
     data = _normalize_data(data, None)
     categories_levels = _categories_level(data.keys())
     Nlevels = len(categories_levels)
@@ -365,8 +369,8 @@ def _statistical_coloring(data):
     sigmas = {k: (data[k] - m) / s for k, (m, s) in expected.items()}
     props = {}
     for key, dev in sigmas.items():
-        red = 0.0 if dev < 0 else (dev / (1+dev))
-        blue = 0.0 if dev > 0 else (dev / (-1+dev))
+        red = 0.0 if dev < 0 else (dev / (1 + dev))
+        blue = 0.0 if dev > 0 else (dev / (-1 + dev))
         green = (1.0 - red - blue) / 2.0
         hatch = 'x' if dev > 2 else 'o' if dev < -2 else ''
         props[key] = {'color': [red, green, blue], 'hatch': hatch}
@@ -716,6 +720,10 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         ax.set_yticks([])
         ax.set_yticklabels([])
     ax.set_title(title)
+    if axes_label:
+        labels = _create_labels(rects, horizontal)
+        for label, (x_lab, y_lab, ha, va) in labels.items():
+            ax.text(x_lab, y_lab, label, ha=ha, va=va)
     return fig, rects
 
 
