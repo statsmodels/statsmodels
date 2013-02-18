@@ -1,9 +1,12 @@
 from __future__ import division
 
 from numpy.testing import assert_, assert_raises, dec
+from numpy.testing import run_module_suite
 
 # utilities for the tests
 from statsmodels.compatnp.collections import OrderedDict
+from statsmodels.api import datasets
+
 from collections import Counter
 import numpy as np
 from itertools import product
@@ -12,6 +15,8 @@ try:
     have_matplotlib = True
 except:
     have_matplotlib = False
+
+
 
 
 # the main drawing function
@@ -34,36 +39,36 @@ def test_data_conversion():
     import pandas
     fig, ax = pylab.subplots(4, 4)
     data = {'ax': 1, 'bx': 2, 'cx': 3}
-    mosaic(data, ax=ax[0, 0], title='basic dict')
+    mosaic(data, ax=ax[0, 0], title='basic dict', axes_label=False)
     data = pandas.Series(data)
-    mosaic(data, ax=ax[0, 1], title='basic series')
+    mosaic(data, ax=ax[0, 1], title='basic series', axes_label=False)
     data = [1, 2, 3]
-    mosaic(data, ax=ax[0, 2], title='basic list')
+    mosaic(data, ax=ax[0, 2], title='basic list', axes_label=False)
     data = np.asarray(data)
-    mosaic(data, ax=ax[0, 3], title='basic array')
+    mosaic(data, ax=ax[0, 3], title='basic array', axes_label=False)
 
     data = {('ax', 'cx'): 1, ('bx', 'cx'): 2, ('ax', 'dx'): 3, ('bx', 'dx'): 4}
-    mosaic(data, ax=ax[1, 0], title='compound dict')
-    mosaic(data, ax=ax[2, 0], title='inverted keys dict', index=[1, 0])
+    mosaic(data, ax=ax[1, 0], title='compound dict', axes_label=False)
+    mosaic(data, ax=ax[2, 0], title='inverted keys dict', index=[1, 0], axes_label=False)
     data = pandas.Series(data)
-    mosaic(data, ax=ax[1, 1], title='compound series')
+    mosaic(data, ax=ax[1, 1], title='compound series', axes_label=False)
     mosaic(data, ax=ax[2, 1], title='inverted keys series', index=[1, 0])
     data = [[1, 2], [3, 4]]
-    mosaic(data, ax=ax[1, 2], title='compound list')
+    mosaic(data, ax=ax[1, 2], title='compound list', axes_label=False)
     mosaic(data, ax=ax[2, 2], title='inverted keys list', index=[1, 0])
     data = np.array([[1, 2], [3, 4]])
-    mosaic(data, ax=ax[1, 3], title='compound array')
-    mosaic(data, ax=ax[2, 3], title='inverted keys array', index=[1, 0])
+    mosaic(data, ax=ax[1, 3], title='compound array', axes_label=False)
+    mosaic(data, ax=ax[2, 3], title='inverted keys array', index=[1, 0], axes_label=False)
 
     gender = ['male', 'male', 'male', 'female', 'female', 'female']
     pet = ['cat', 'dog', 'dog', 'cat', 'dog', 'cat']
     data = pandas.DataFrame({'gender': gender, 'pet': pet})
-    mosaic(data, ['gender'], ax=ax[3, 0], title='dataframe by key 1')
-    mosaic(data, ['pet'], ax=ax[3, 1], title='dataframe by key 2')
-    mosaic(data, ['gender', 'pet'], ax=ax[3, 2], title='both keys')
-    mosaic(data, ['pet', 'gender'], ax=ax[3, 3], title='keys inverted')
+    mosaic(data, ['gender'], ax=ax[3, 0], title='dataframe by key 1', axes_label=False)
+    mosaic(data, ['pet'], ax=ax[3, 1], title='dataframe by key 2', axes_label=False)
+    mosaic(data, ['gender', 'pet'], ax=ax[3, 2], title='both keys', axes_label=False)
+    mosaic(data, ['pet', 'gender'], ax=ax[3, 3], title='keys inverted', axes_label=False)
 
-    pylab.suptitle('testing data conversion (plot 1 of 5)')
+    pylab.suptitle('testing data conversion (plot 1 of 4)')
     pylab.show()
 
 @dec.skipif(not have_matplotlib)
@@ -91,62 +96,48 @@ def test_mosaic_simple():
             else:
                 props[key] = {'color': 'Crimson' , 'hatch': '+'}
     # mosaic of the data, with given gaps and colors
-    mosaic(data, gap=0.05, properties=props)
-    pylab.suptitle('syntetic data, 4 categories (plot 2 of 5)')
+    mosaic(data, gap=0.05, properties=props, axes_label=False)
+    pylab.suptitle('syntetic data, 4 categories (plot 2 of 4)')
     pylab.show()
 
 
 @dec.skipif(not have_matplotlib)
 def test_mosaic():
     # make the same analysis on a known dataset
-    import statsmodels.api as sm
+
     # load the data and clean it a bit
-    affairs = sm.datasets.fair.load_pandas()
+    affairs = datasets.fair.load_pandas()
     datas = affairs.exog
-    datas['duration'] = affairs.endog
-    categorical = datas[['rate_marriage', 'religious', 'duration']]
-    # the cheaters are those who had any kind of relationship, even short one
-    categorical['cheater'] = categorical['duration'] > 0
-    del categorical['duration']
-    #change the numbers to a more meaningful description
-    num_to_desc = {1: '1 awful', 2: '2 bad', 3: '3 intermediate',
-                      4: '4 good', 5: '5 wonderful'}
-    categorical['rate_marriage'] = categorical['rate_marriage'].map(
-        num_to_desc)
-    num_to_cat = {1: 'r1', 2: 'r2', 3: 'r3', 4: 'r4'}
-    categorical['religious'] = categorical['religious'].map(num_to_cat)
-    del categorical['religious']
-    # count the data
-    data = Counter(tuple(str(k) for k in v.values)
-                   for k, v in categorical.iterrows())
-    data = OrderedDict([k, data[k]] for k in sorted(data.keys()))
-    # do the plot (vanilla version version)
-    mosaic(data)
-    pylab.suptitle('extramarital affairs as function of the marriage status  (plot 3 of 5)')
+    # any time greater than 0 is cheating
+    datas['cheated'] = affairs.endog > 0
+    # sort by the marriage quality and give meaningful name
+    # [rate_marriage, age, yrs_married, children,
+    # religious, educ, occupation, occupation_husb]
+    datas = datas.sort(['rate_marriage', 'religious'])
+    num_to_desc = {1: 'awful', 2: 'bad', 3: 'intermediate',
+                      4: 'good', 5: 'wonderful'}
+    datas['rate_marriage'] = datas['rate_marriage'].map(num_to_desc)
+    num_to_faith = {1: 'non religious', 2: 'poorly religious', 3: 'religious',
+                      4: 'very religious'}
+    datas['religious'] = datas['religious'].map(num_to_faith)
+    num_to_cheat = {False: 'faithful', True: 'cheated'}
+    datas['cheated'] = datas['cheated'].map(num_to_cheat)
+    # finished cleaning
+    fig, ax = pylab.subplots(2, 2)
+    mosaic(datas, ['rate_marriage', 'cheated'], ax=ax[0, 0],
+                title='by marriage happiness')
+    mosaic(datas, ['religious', 'cheated'], ax=ax[0, 1],
+                title='by religiosity')
+    mosaic(datas, ['rate_marriage', 'religious', 'cheated'], ax=ax[1, 0],
+                title='by both', labelizer=lambda k:'')
+    ax[1, 0].set_xlabel('marriage rating')
+    ax[1, 0].set_ylabel('religion status')
+    mosaic(datas, ['religious', 'rate_marriage'], ax=ax[1, 1],
+                title='inter-dependence', axes_label=False)
+    pylab.suptitle("extramarital affairs (plot 3 of 4)")
     pylab.show()
 
-
-def test_mosaic_complex():
-    #TODO: remove the internet dependency here
-    # this show the limits of the current implementation in terms of labeling
-    # so it shut off the labels completly
-    import pylab
-    import pandas
-    yogurt_url = 'http://vincentarelbundock.github.com/Rdatasets/csv/Ecdat/Yogurt.csv'
-    data = pandas.read_csv(yogurt_url, index_col=0)
-    data.columns = [name.replace('.', '_') for name in data.columns]
-    names_interesse = ['price_yoplait', 'price_dannon',
-                       'price_hiland', 'price_weight']
-    names_ridotti = ['yoplait', 'dannon', 'hiland', 'weight']
-    data['cheapest'] = pandas.Series({idx: names_ridotti[np.argmin(row)]
-                                      for idx, row in data[names_interesse].iterrows()})
-    count_id = data.groupby(['cheapest', 'choice'])['id'].count()
-    data = dict(count_id)
-    mosaic(data, horizontal=False, labelizer = lambda *a: "")
-    pylab.suptitle('yogurt preferences data  (plot 4 of 5)')
-    pylab.show()
-
-
+@dec.skipif(not have_matplotlib)
 def test_mosaic_very_complex():
     # make a scattermatrix of mosaic plots to show the correlations between
     # each pair of variable in a dataset. Could be easily converted into a
@@ -182,9 +173,27 @@ def test_mosaic_very_complex():
                     value = _reduce_dict(temp_data, k[:2])
                     temp_data[k[:2]] = value
                     del temp_data[k]
-                mosaic(temp_data, ax=axes[i, j],
+                mosaic(temp_data, ax=axes[i, j], axes_label=False,
                        properties=props, gap=0.05, horizontal=i > j)
-    pylab.suptitle('old males should look bright red,  (plot 5 of 5)')
+    pylab.suptitle('old males should look bright red,  (plot 4 of 4)')
+    pylab.show()
+
+@dec.skipif(not have_matplotlib)
+def test_axes_labeling():
+    from numpy.random import rand
+    import pylab
+    key_set = (['male', 'female'], ['old', 'adult', 'young'],
+               ['worker', 'unemployed'], ['yes', 'no'])
+    # the cartesian product of all the categories is
+    # the complete set of categories
+    keys = list(product(*key_set))
+    data = OrderedDict(zip(keys, rand(len(keys))))
+    lab = lambda k: ''.join(s[0] for s in k)
+    fig, (ax1, ax2) = pylab.subplots(1, 2, figsize=(16, 8))
+    mosaic(data, ax=ax1, labelizer=lab, horizontal=True)
+    mosaic(data, ax=ax2, labelizer=lab, horizontal=False)
+    #fig.tight_layout()
+    fig.suptitle("correct alignment of the axes labels")
     pylab.show()
 
 
@@ -391,17 +400,4 @@ def test_gap_split():
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
 
-if __name__ == '__main__':
-    test_proportion_normalization()
-    test_false_split()
-    test_rect_pure_split()
-    test_rect_deformed_split()
-    test_gap_split()
-    test__key_splitting()
-    test__reduce_dict()
-    test_recursive_split()
-    test_data_conversion()
-    test_mosaic_simple()
-    test_mosaic()
-    test_mosaic_complex()
-    test_mosaic_very_complex()
+run_module_suite()
