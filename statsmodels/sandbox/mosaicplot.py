@@ -721,9 +721,17 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         ax.set_yticklabels([])
     ax.set_title(title)
     if axes_label:
-        labels = _create_labels(rects, horizontal)
-        for label, (x_lab, y_lab, ha, va) in labels.items():
-            ax.text(x_lab, y_lab, label, ha=ha, va=va)
+        if np.iterable(label_rotation):
+            rotation = label_rotation
+        else:
+            rotation = [label_rotation] * 4
+        labels = _create_labels(rects, horizontal, ax, rotation)
+    else:
+        ax.set_xticks([])
+        ax.set_xticklabels([])
+        ax.set_yticks([])
+        ax.set_yticklabels([])
+    ax.set_title(title)
     return fig, rects
 
 
