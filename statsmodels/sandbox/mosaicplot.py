@@ -339,7 +339,7 @@ def _statistical_coloring(data):
     It will encounter problem if one category has all zeros
     """
     data = _normalize_data(data, None)
-    categories_levels = _categories_level(data.keys())
+    categories_levels = _categories_level(list(data.keys()))
     Nlevels = len(categories_levels)
     total = 1.0 * sum(v for v in data.values())
     # count the proportion of observation
