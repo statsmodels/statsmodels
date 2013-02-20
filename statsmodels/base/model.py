@@ -593,11 +593,11 @@ class GenericLikelihoodModel(LikelihoodModel):
     def __init__(self, endog, exog=None, loglike=None, score=None,
                  hessian=None, missing='none'):
     # let them be none in case user wants to use inheritance
-        if loglike:
+        if not loglike is None:
             self.loglike = loglike
-        if score:
+        if not score is None:
             self.score = score
-        if hessian:
+        if not hessian is None:
             self.hessian = hessian
         self.confint_dist = stats.norm
 
