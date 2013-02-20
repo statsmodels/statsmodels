@@ -521,13 +521,9 @@ class AR(tsbase.TimeSeriesModel):
 
         See also
         --------
-        statsmodels.model.LikelihoodModel.fit for more information
-        on using the solvers.
+        statsmodels.base.model.LikelihoodModel.fit : for more information on using
+            the solvers.
 
-        Notes
-        ------
-        The below is the docstring from
-        statsmodels.LikelihoodModel.fit
         """
         method = method.lower()
         if method not in ['cmle','yw','mle']:
@@ -606,7 +602,6 @@ class AR(tsbase.TimeSeriesModel):
         arfit = ARResults(self, params, normalized_cov_params)
         return ARResultsWrapper(arfit)
 
-    fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
 class ARResults(tsbase.TimeSeriesModelResults):
     """

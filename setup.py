@@ -151,8 +151,8 @@ if not release:
 
 
     if dowrite:
-        a = open(filename, 'w')
         try:
+            a = open(filename, 'w')
             a.write(cnt % {'version': VERSION,
                            'full_version' : FULLVERSION,
                            'git_revision' : GIT_REVISION,

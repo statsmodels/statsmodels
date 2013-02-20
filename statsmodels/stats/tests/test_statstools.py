@@ -73,6 +73,15 @@ def test_omni_normtest():
     kt = stats.kurtosistest(x2)
     assert_almost_equal(kt, st_pv_R[:,2], 12)
 
+def test_omni_normtest_axis():
+    #test axis of omni_normtest
+    x = np.random.randn(15, 3)
+    nt1 = omni_normtest(x)
+    nt2 = omni_normtest(x, axis=0)
+    nt3 = omni_normtest(x.T, axis=1)
+    assert_almost_equal(nt2, nt1, decimal=13)
+    assert_almost_equal(nt3, nt1, decimal=13)
+
 def test_jarque_bera():
     #tests against R fBasics
     st_pv_R = np.array([1.9662677226861689, 0.3741367669648314])

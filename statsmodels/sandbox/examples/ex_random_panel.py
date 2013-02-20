@@ -96,7 +96,8 @@ if 'ex1' in examples:
     cov_clu = sw.cov_cluster(mod2.res_pooled, dgp.groups.astype(int))
     clubse = se_cov(cov_clu)
     cov_uni = sw.cov_nw_panel(mod2.res_pooled, 4, mod2.group.groupidx,
-                              weights_func=sw.weights_uniform)
+                              weights_func=sw.weights_uniform,
+                              use_correction='cluster')
     assert_almost_equal(cov_uni, cov_clu, decimal=7)
 
     #without correction
