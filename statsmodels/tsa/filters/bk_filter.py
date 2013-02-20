@@ -69,5 +69,5 @@ def bkfilter(X, low=6, high=32, K=12):
     bweights -= bweights.mean() # make sure weights sum to zero
     if X.ndim == 2:
         bweights = bweights[:,None]
-    return fftconvolve(bweights, X, mode='valid') # get a centered moving avg/
+    return fftconvolve(X, bweights, mode='valid') # get a centered moving avg/
                                                   # convolution
