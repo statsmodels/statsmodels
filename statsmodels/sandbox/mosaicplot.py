@@ -94,7 +94,7 @@ def _reduce_dict(count_dict, partial_key):
     Given a match for the beginning of the category, it will sum each value.
     """
     L = len(partial_key)
-    count = sum(v for k, v in count_dict.iteritems() if k[:L] == partial_key)
+    count = sum(v for k, v in count_dict.items() if k[:L] == partial_key)
     return count
 
 
@@ -107,7 +107,7 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
     """
     result = OrderedDict()
     L = len(key_subset)
-    for name, (x, y, w, h) in rect_dict.iteritems():
+    for name, (x, y, w, h) in rect_dict.items():
         if key_subset == name[:L]:
             # split base on the values given
             divisions = _split_rect(x, y, w, h, values, horizontal, gap)
@@ -184,7 +184,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     # this is the unit square that we are going to divide
     base_rect = OrderedDict([(tuple(), (0, 0, 1, 1))])
     # get the list of each possible value for each level
-    categories_levels = _categories_level(count_dict.keys())
+    categories_levels = _categories_level(list(count_dict.keys()))
     L = len(categories_levels)
 
     # recreate the gaps vector starting from an int
@@ -231,7 +231,7 @@ def _create_default_properties(data):
     decoration on the rectangle.  Doesn't manage more than four
     level of categories
     """
-    categories_levels = _categories_level(data.keys())
+    categories_levels = _categories_level(list(data.keys()))
     Nlevels = len(categories_levels)
     # first level, the hue
     L = len(categories_levels[0])
@@ -247,13 +247,13 @@ def _create_default_properties(data):
     L = len(categories_levels[3]) if Nlevels > 3 else 1
     hatch = ['', '/', '-', '|', '+'][:L + 1]
     # convert in list and merge with the levels
-    hue = zip(list(hue), categories_levels[0])
-    saturation = zip(list(saturation),
-                     categories_levels[1] if Nlevels > 1 else [''])
-    value = zip(list(value),
-                     categories_levels[2] if Nlevels > 2 else [''])
-    hatch = zip(list(hatch),
-                     categories_levels[3] if Nlevels > 3 else [''])
+    hue = list(zip(list(hue), categories_levels[0]))
+    saturation = list(zip(list(saturation),
+                     categories_levels[1] if Nlevels > 1 else ['']))
+    value = list(zip(list(value),
+                     categories_levels[2] if Nlevels > 2 else ['']))
+    hatch = list(zip(list(hatch),
+                     categories_levels[3] if Nlevels > 3 else ['']))
     # create the properties dictionary
     properties = {}
     for h, s, v, t in product(hue, saturation, value, hatch):
@@ -288,7 +288,7 @@ def _normalize_data(data, index):
         index = None
     # can it be used as a dictionary?
     try:
-        items = data.iteritems()
+        items = data.items()
     except AttributeError:
         # ok, I cannot use the data as a dictionary
         # Try to convert it to a numpy array, or die trying
@@ -298,11 +298,11 @@ def _normalize_data(data, index):
             name = tuple(i for i in idx)
             temp[name] = data[idx]
         data = temp
-        items = data.iteritems()
+        items = data.items()
 
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
-    categories_levels = _categories_level(data.keys())
+    categories_levels = _categories_level(list(data.keys()))
     # fill the void in the counting dictionary
     indexes = product(*categories_levels)
     contingency = OrderedDict([(k, data.get(k, 0)) for k in indexes])
@@ -310,9 +310,9 @@ def _normalize_data(data, index):
     # reorder the keys order according to the one specified by the user
     # or if the index is None convert it into a simple list
     # right now it doesn't do any check, but can be modified in the future
-    index = range(len(categories_levels)) if index is None else index
+    index = list(range(len(categories_levels))) if index is None else index
     contingency = OrderedDict()
-    for key, value in data.iteritems():
+    for key, value in data.items():
         new_key = tuple(key[i] for i in index)
         contingency[new_key] = value
     data = contingency
@@ -337,7 +337,7 @@ def _statistical_coloring(data):
     It will encounter problem if one category has all zeros
     """
     data = _normalize_data(data, None)
-    categories_levels = _categories_level(data.keys())
+    categories_levels = _categories_level(list(data.keys()))
     Nlevels = len(categories_levels)
     total = 1.0 * sum(v for v in data.values())
     # count the proportion of observation
@@ -383,7 +383,7 @@ def _create_labels(rects, horizontal, ax, rotation):
     ax: the axis on which the label should be applied
     rotation: the rotation list for each side
     """
-    categories = _categories_level(rects.keys())
+    categories = _categories_level(list(rects.keys()))
     if len(categories) > 4:
         msg = ("maximum of 4 level supported for axes labeling..and 4"
                "is alreay a lot of level, are you sure you need them all?")
@@ -439,7 +439,7 @@ def _create_labels(rects, horizontal, ax, rotation):
             #mean of all these center on the area of the tile
             #this should give me the (more or less) correct position
             #of the center of the category
-            vals = subset.values()
+            vals = list(subset.values())
             W = sum(w * h for (x, y, w, h) in vals)
             x_lab = sum((x + w / 2.0) * w * h / W for (x, y, w, h) in vals)
             y_lab = sum((y + h / 2.0) * w * h / W for (x, y, w, h) in vals)
@@ -641,23 +641,3 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         ax.set_yticklabels([])
     ax.set_title(title)
     return fig, rects
-
-
-if __name__ == '__main__':
-    from numpy.random import rand
-    import pylab
-    key_set = (['male', 'female'], ['old', 'adult', 'young'],
-               ['worker', 'unemployed'], ['yes', 'no'])
-    # the cartesian product of all the categories is
-    # the complete set of categories
-    keys = list(product(*key_set))
-    data = OrderedDict(zip(keys, rand(len(keys))))
-    lab = lambda k: ''.join(s[0] for s in k)
-    fig, (ax1, ax2) = pylab.subplots(1, 2, figsize=(16, 8))
-    mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
-    mosaic(data, ax=ax2, labelizer=lab, horizontal=False,
-        label_rotation=[0, 45, 90, 0])
-    #fig.tight_layout()
-    fig.suptitle("correct alignment of the axes labels")
-    fig.tight_layout()
-    pylab.show()
