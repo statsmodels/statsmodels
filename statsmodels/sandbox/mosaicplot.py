@@ -375,10 +375,13 @@ def _statistical_coloring(data):
     return props
 
 
-def _create_labels(rects, horizontal):
+def _create_labels(rects, horizontal, ax, rotation):
     """find the position of the label for each value of each category
 
     right now it supports only up to the four categories
+
+    ax: the axis on which the label should be applied
+    rotation: the rotation list for each side
     """
     categories = _categories_level(rects.keys())
     if len(categories) > 4:
@@ -389,9 +392,27 @@ def _create_labels(rects, horizontal):
     #keep it fixed as will be used a lot of times
     items = list(rects.items())
     vertical = not horizontal
+
+    #get the axis ticks and labels locator to put the correct values!
+    ax2 = ax.twinx()
+    ax3 = ax.twiny()
+    #this is the order of execution for horizontal disposition
+    ticks_pos = [ax.set_xticks, ax.set_yticks, ax3.set_xticks, ax2.set_yticks]
+    ticks_lab = [ax.set_xticklabels, ax.set_yticklabels,
+                 ax3.set_xticklabels, ax2.set_yticklabels]
+    #for the vertical one, rotate it by one
+    if vertical:
+        ticks_pos = ticks_pos[1:] + ticks_pos[:1]
+        ticks_lab = ticks_lab[1:] + ticks_lab[:1]
+    #clean them
+    for pos, lab in zip(ticks_pos, ticks_lab):
+        pos([])
+        lab([])
     #for each level, for each value in the level, take the mean of all
     #the sublevel that correspond to that partial key
     for level_idx, level in enumerate(categories):
+        #this dictionary keep the labels only for this level
+        level_ticks = dict()
         for value in level:
             #to which level it should refer to get the preceding
             #values of labels? it's rather a tricky question...
@@ -426,20 +447,18 @@ def _create_labels(rects, horizontal):
             #needs to be written in a more general form of 4 level are enough?
             #should give also the horizontal and vertical alignment
             side = (level_idx + vertical) % 4
-            if side == 0:
-                labels[value] = (x_lab, -0.02, 'center', 'top')
-            if side == 1:
-                labels[value] = (-0.02, y_lab, 'right', 'center')
-            if side == 2:
-                labels[value] = (x_lab, 1.0 + 0.02, 'center', 'baseline')
-            if side == 3:
-                labels[value] = (1.0 + 0.02, y_lab, 'left', 'center')
+            level_ticks[value] = y_lab if side % 2 else x_lab
+        #now we add the labels of this level to the correct axis
+        ticks_pos[level_idx](list(level_ticks.values()))
+        ticks_lab[level_idx](list(level_ticks.keys()),
+                             rotation=rotation[level_idx])
     return labels
 
 
 def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
            properties=lambda key: None, labelizer=None,
-           title='', statistic=False, axes_label=True):
+           title='', statistic=False, axes_label=True,
+           label_rotation=0.0):
     """Create a mosaic plot from a contingency table.
 
     It allows to visualize multivariate categorical data in a rigorous
@@ -493,11 +512,14 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         from the expected value under independence hipotesys, it will
         go from green to red (for positive deviations, blue otherwise) and
         will acquire an hatching when crosses the 3 sigma.
-    title : string, optional
+    title: string, optional
         The title of the axis
-    axes_label : boolean, optional
+    axes_label: boolean, optional
         Show the name of each value of each category
         on the axis (default) or hide them.
+    label_rotation: float or list of float
+        the rotation of the axis label (if present). If a list is given
+        each axis can have a different rotation
 
     Returns
     ----------
@@ -604,15 +626,38 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
         ax.add_patch(Rect)
         ax.text(x + w / 2, y + h / 2, text, ha='center',
                  va='center', size='smaller')
-    ax.set_xticks([])
-    ax.set_xticklabels([])
-    ax.set_yticks([])
-    ax.set_yticklabels([])
-    ax.set_title(title)
+    #creating the labels on the axis
+    #o clearing it
     if axes_label:
-        labels = _create_labels(rects, horizontal)
-        for label, (x_lab, y_lab, ha, va) in labels.items():
-            ax.text(x_lab, y_lab, label, ha=ha, va=va)
+        if np.iterable(label_rotation):
+            rotation = label_rotation
+        else:
+            rotation = [label_rotation] * 4
+        labels = _create_labels(rects, horizontal, ax, rotation)
+    else:
+        ax.set_xticks([])
+        ax.set_xticklabels([])
+        ax.set_yticks([])
+        ax.set_yticklabels([])
+    ax.set_title(title)
     return fig, rects
 
 
+if __name__ == '__main__':
+    from numpy.random import rand
+    import pylab
+    key_set = (['male', 'female'], ['old', 'adult', 'young'],
+               ['worker', 'unemployed'], ['yes', 'no'])
+    # the cartesian product of all the categories is
+    # the complete set of categories
+    keys = list(product(*key_set))
+    data = OrderedDict(zip(keys, rand(len(keys))))
+    lab = lambda k: ''.join(s[0] for s in k)
+    fig, (ax1, ax2) = pylab.subplots(1, 2, figsize=(16, 8))
+    mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
+    mosaic(data, ax=ax2, labelizer=lab, horizontal=False,
+        label_rotation=[0, 45, 90, 0])
+    #fig.tight_layout()
+    fig.suptitle("correct alignment of the axes labels")
+    fig.tight_layout()
+    pylab.show()
