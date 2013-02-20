@@ -190,8 +190,9 @@ def test_axes_labeling():
     data = OrderedDict(zip(keys, rand(len(keys))))
     lab = lambda k: ''.join(s[0] for s in k)
     fig, (ax1, ax2) = pylab.subplots(1, 2, figsize=(16, 8))
-    mosaic(data, ax=ax1, labelizer=lab, horizontal=True)
-    mosaic(data, ax=ax2, labelizer=lab, horizontal=False)
+    mosaic(data, ax=ax1, labelizer=lab, horizontal=True, label_rotation=45)
+    mosaic(data, ax=ax2, labelizer=lab, horizontal=False,
+        label_rotation=[0, 45, 90, 0])
     #fig.tight_layout()
     fig.suptitle("correct alignment of the axes labels")
     pylab.show()
