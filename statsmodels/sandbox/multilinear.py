@@ -123,7 +123,7 @@ def multiOLS(model, dataframe, column_list=None, model_type=ols, **kwargs):
         col_results[col_name] = res
     #mangle them togheter and sort by complexive p-value
     summary = pd.DataFrame(col_results)
-    summary = total.T.sort([('pvals', '_f_test')])
+    summary = summary.T.sort([('pvals', '_f_test')])
     summary.index.name = 'endogenous vars'
     return summary
 
