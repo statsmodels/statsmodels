@@ -16,17 +16,13 @@ def _model2dataframe(colname, model, dataframe, model_type=ols, **kwargs):
     temp_model = colname + ' ~ ' + model
     # create the linear model and perform the fit
     model_result = model_type(temp_model, data=dataframe, **kwargs).fit()
-    # calculate the variance of each parameter
-    # do not use the covariance as it wil be too complicate to move around
-    cov_m = model_result.cov_params()
-    stds = {c: np.sqrt(cov_m[c][c]) for c in cov_m}
     # keeps track of some global statistics
     statistics = {'r2': model_result.rsquared,
                   'adj_r2': model_result.rsquared_adj}
     # put them togher with the result for each term
     result_df = pd.DataFrame({'params': model_result.params,
                               'pvals': model_result.pvalues,
-                              'std': stds,
+                              'std': model_result.bse,
                               'statistics': statistics})
     # add the complexive results for f-value and the total p-value
     fisher_df = pd.DataFrame({'params': {'_f_test': model_result.fvalue},
