@@ -1,24 +1,18 @@
-import patsy
+from patsy import dmatrix
 import pandas as pd
-from statsmodels.formula.api import ols
-import numpy as np
+from statsmodels.api import OLS
+from statsmodels.api.stats import multipletests
 
-
-def _model2dataframe(colname, model, dataframe, model_type=ols, **kwargs):
+def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     """return a series containing the summary of a linear model
-
-    The linear model is defined on a pandas dataframe via the formula
-    syntax, and take separately the columns name and the model description
 
     All the exceding parameters will be redirected to the linear model
     """
-    # string patching the model
-    temp_model = colname + ' ~ ' + model
     # create the linear model and perform the fit
-    model_result = model_type(temp_model, data=dataframe, **kwargs).fit()
+    model_result = model_type(model_endog, model_exog, **kwargs).fit()
     # keeps track of some global statistics
-    statistics = {'r2': model_result.rsquared,
-                  'adj_r2': model_result.rsquared_adj}
+    statistics = pd.Series({'r2': model_result.rsquared,
+                  'adj_r2': model_result.rsquared_adj})
     # put them togher with the result for each term
     result_df = pd.DataFrame({'params': model_result.params,
                               'pvals': model_result.pvalues,
@@ -27,13 +21,12 @@ def _model2dataframe(colname, model, dataframe, model_type=ols, **kwargs):
     # add the complexive results for f-value and the total p-value
     fisher_df = pd.DataFrame({'params': {'_f_test': model_result.fvalue},
                               'pvals': {'_f_test': model_result.f_pvalue}})
-    #merge them and unstack to obtain a hierarchically indexed series
+    # merge them and unstack to obtain a hierarchically indexed series
     res_series = pd.concat([result_df, fisher_df]).unstack()
-    res_series.name = colname
     return res_series.dropna()
 
 
-def multiOLS(model, dataframe, column_list=None, model_type=ols, **kwargs):
+def multiOLS(model, dataframe, column_list=None, model_type=OLS, **kwargs):
     """apply a linear model to several endogenous variables on a dataframe
 
     Take a linear model definition via formula and a dataframe that will be
@@ -53,7 +46,7 @@ def multiOLS(model, dataframe, column_list=None, model_type=ols, **kwargs):
         eligible columns (numerical type and not in the model definition)
     model_type : model class
         The type of model to be used. The default is the linear model.
-        Should be one of the model defined in the formula api.
+        Can be any linear model (OLS, WLS, GLS, etc..)
 
     all the other parameters will be directed to the model creation.
 
@@ -114,11 +107,23 @@ def multiOLS(model, dataframe, column_list=None, model_type=ols, **kwargs):
         column_list = [column_list]
     # perform each model and retrieve the statistics
     col_results = {}
+    # as the model will use always the same endogenous variables
+    # we can create them once and reuse
+    model_exog = dmatrix(model, data=dataframe, return_type="dataframe")
     for col_name in column_list:
-        res = _model2dataframe(col_name, model, dataframe, **kwargs)
+        # it will try to interpret the column name as a valid dataframe
+        # index as it can be several times faster. If it fails it
+        # interpret it as a patsy formula (for example for centering)
+        try:
+            model_endog = dataframe[col_name]
+        except KeyError:
+            model_endog = dmatrix(col_name + ' + 0', data=dataframe)
+        # retrieve the result and store them
+        res = _model2dataframe(model_endog, model_exog, model_type, **kwargs)
         col_results[col_name] = res
-    #mangle them togheter and sort by complexive p-value
+    # mangle them togheter and sort by complexive p-value
     summary = pd.DataFrame(col_results)
+    # order by the p-value: the most useful model first!
     summary = summary.T.sort([('pvals', '_f_test')])
     summary.index.name = 'endogenous vars'
     return summary
