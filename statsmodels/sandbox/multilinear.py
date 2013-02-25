@@ -2,6 +2,8 @@ from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
 from statsmodels.api import stats
+import numpy as np
+from scipy.stats import fisher_exact, chi2_contingency
 
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
@@ -110,6 +112,8 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
     for example the subset of the dataframe on which perform the analysis
     >> multiOLS('GNP + 1', df, subset=df.GNPDEFL > 90)
 
+    Even a single column name can be given without enclosing it in a list
+    >>> multiOLS('GNP + 0', df, 'GNPDEFL')
     """
     # data normalization
     # if None take all the numerical columns that aren't present in the model
@@ -153,17 +157,97 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
         summary['adj_' + key1, key2] = corrected
     return summary
 
-if __name__ == '__main__':
-    import statsmodels.api as sm
 
-    data = sm.datasets.longley.load_pandas()
-    df = data.exog
-    df['TOTEMP'] = data.endog
+def _test_group(pvalues, group, alpha=0.05):
+    """test if the objects in the group are different from the general set.
 
-    print multiOLS('GNP + 0', df, 'GNPDEFL')['adj_pvals', '_f_test']
-    print
-    print multiOLS('GNP + 1', df, ['GNPDEFL', 'TOTEMP', 'POP'])
-    print
-    print multiOLS('GNP + GNPDEFL+0', df)
-    print
-    print multiOLS('GNP + 0', df, ['I(GNPDEFL**2)', 'center(TOTEMP)'])
+    The test is performed on the pvalues set (ad a pandas series) over
+    the group specified via a fisher exact test.
+    """
+    totals = len(pvalues)
+    total_significant = np.sum(pvalues < alpha)
+    cross_index = [c for c in group if c in pvalues.index]
+    # how many are significant and not in the group
+    group_total = len(cross_index)
+    group_sign = len([c for c in cross_index if pvalues[c] < alpha])
+    group_nonsign = group_total - group_sign
+    # how many are significant and not outside the group
+    extern_sign = total_significant - group_sign
+    extern_nonsign = totals - total_significant - group_nonsign
+    # make the fisher test
+    test = fisher_exact
+    table = [[extern_nonsign, extern_sign], [group_nonsign, group_sign]]
+    pvalue = test(np.array(table))[1]
+    # is the group more represented or less?
+    increase = (group_sign / group_total) > (total_significant / totals)
+    return pvalue, increase
+
+
+def multigroup(pvals, groups, alpha=0.05):
+    """Test if the groups given are differently significant than the rest.
+
+    For each group test with an exact fisher test if the fraction of
+    significatively functional models if different from the one expected
+    from the general fraction.
+
+    Parameters
+    ----------
+    pvals: pandas series
+        the pvalus of the variables under analysis
+    groups: dict of list
+        the name of each category of variables under exam.
+        each one is a list of the variables included
+    alpha: float
+        the significance level for the analysis
+
+    Returns
+    -------
+    result_df: pandas dataframe
+        for each group returns:
+
+            pvals - the fisher p value of the test
+            adj_pvals - the adjusted pvals
+            increase - if the group if described better than expected or worse
+
+    Notes
+    -----
+    This test allow to see if a category of variables is generally better
+    suited to be described for the model. For example to see if a predictor
+    gives more information on demographic or economical parameters,
+    by creating two groups containing the endogenous variables of each
+    category.
+
+    This function is conceived for medical dataset with a lot of variables
+    that can be easily grouped into functional groups. This is because
+    The significativity of a group require a rather large number of
+    composing elements.
+
+    Examples
+    --------
+    A toy example on a real dataset, the Guerry dataset from R
+    >>> url = "http://vincentarelbundock.github.com/"
+    >>> url = url + "Rdatasets/csv/HistData/Guerry.csv"
+    >>> df = pd.read_csv(url, index_col='dept')
+
+    evaluate the relationship between the variuos paramenters whith the Wealth
+    >>> pvals = multiOLS('Wealth', df)['adj_pvals', '_f_test']
+
+    define the groups
+    >>> groups['crime'] = ['Crime_prop', 'Infanticide',
+    ...     'Crime_parents', 'Desertion', 'Crime_pers']
+    >>> groups['religion'] = ['Donation_clergy', 'Clergy', 'Donations']
+    >>> groups['wealth'] = ['Commerce', 'Lottery', 'Instruction', 'Literacy']
+
+    do the analysis of the significativity
+    >>> multigroup(pvals, groups)
+    """
+    results = {'pvals': {}, 'increase': {}}
+    for group_name, group_list in groups.iteritems():
+        res = _test_group(pvals, group_list, alpha=alpha)
+        results['pvals'][group_name] = res[0]
+        results['increase'][group_name] = res[1]
+    result_df = pd.DataFrame(results).sort('pvals')
+    smt = stats.multipletests
+    corrected = smt(result_df['pvals'], method='fdr_bh')[1]
+    result_df['adj_pvals'] = corrected
+    return result_df
