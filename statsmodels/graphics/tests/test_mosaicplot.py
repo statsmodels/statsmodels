@@ -16,17 +16,14 @@ try:
 except:
     have_matplotlib = False
 
-
-
-
 # the main drawing function
-from statsmodels.sandbox.mosaicplot import mosaic
+from statsmodels.graphics.mosaicplot import mosaic
 # other functions to be tested for accuracy
-from statsmodels.sandbox.mosaicplot import _hierarchical_split
-from statsmodels.sandbox.mosaicplot import _reduce_dict
-from statsmodels.sandbox.mosaicplot import _key_splitting
-from statsmodels.sandbox.mosaicplot import _normalize_split
-from statsmodels.sandbox.mosaicplot import _split_rect
+from statsmodels.graphics.mosaicplot import _hierarchical_split
+from statsmodels.graphics.mosaicplot import _reduce_dict
+from statsmodels.graphics.mosaicplot import _key_splitting
+from statsmodels.graphics.mosaicplot import _normalize_split
+from statsmodels.graphics.mosaicplot import _split_rect
 
 
 @dec.skipif(not have_matplotlib)
