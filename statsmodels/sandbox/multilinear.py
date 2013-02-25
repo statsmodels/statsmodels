@@ -172,19 +172,20 @@ def _test_group(pvalues, group, alpha=0.05, exact=True):
     total_significant = np.sum(pvalues < alpha)
     cross_index = [c for c in group if c in pvalues.index]
     # how many are significant and not in the group
-    group_total = len(cross_index)
-    group_sign = len([c for c in cross_index if pvalues[c] < alpha])
-    group_nonsign = group_total - group_sign
+    group_total = 1.0 * len(cross_index)
+    group_sign = 1.0 * len([c for c in cross_index if pvalues[c] < alpha])
+    group_nonsign = 1.0 * (group_total - group_sign)
     # how many are significant and not outside the group
-    extern_sign = total_significant - group_sign
-    extern_nonsign = totals - total_significant - group_nonsign
+    extern_sign = 1.0 * (total_significant - group_sign)
+    extern_nonsign = 1.0 * (totals - total_significant - group_nonsign)
     # make the fisher test or the chi squared
     test = fisher_exact if exact else chi2_contingency
     table = [[extern_nonsign, extern_sign], [group_nonsign, group_sign]]
     pvalue = test(np.array(table))[1]
     # is the group more represented or less?
+    part = group_sign, group_nonsign, extern_sign, extern_nonsign
     increase = (group_sign / group_total) > (total_significant / totals)
-    return pvalue, increase
+    return pvalue, increase, part
 
 
 def multigroup(pvals, groups, alpha=0.05, exact=True):
@@ -215,6 +216,10 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
             pvals - the fisher p value of the test
             adj_pvals - the adjusted pvals
             increase - if the group if described better than expected or worse
+            in_sign - significative elements inside the group
+            in_non - non significative elements inside the group
+            out_sign - significative elements outside the group
+            out_non - non significative elements outside the group
 
     Notes
     -----
@@ -248,11 +253,20 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
     do the analysis of the significativity
     >>> multigroup(pvals, groups)
     """
-    results = {'pvals': {}, 'increase': {}}
+    results = {'pvals': {},
+        'increase': {},
+        'in_sign': {},
+        'in_non': {},
+        'out_sign': {},
+        'out_non': {}}
     for group_name, group_list in groups.iteritems():
         res = _test_group(pvals, group_list, alpha, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]
+        results['in_sign'][group_name] = res[2][0]
+        results['in_non'][group_name] = res[2][1]
+        results['out_sign'][group_name] = res[2][2]
+        results['out_non'][group_name] = res[2][3]
     result_df = pd.DataFrame(results).sort('pvals')
     smt = stats.multipletests
     corrected = smt(result_df['pvals'], method='fdr_bh')[1]
