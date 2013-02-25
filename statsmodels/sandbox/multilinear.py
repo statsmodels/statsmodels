@@ -1,7 +1,8 @@
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
-from statsmodels.api.stats import multipletests
+from statsmodels.api import stats
+
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     """return a series containing the summary of a linear model
@@ -26,7 +27,8 @@ def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     return res_series.dropna()
 
 
-def multiOLS(model, dataframe, column_list=None, model_type=OLS, **kwargs):
+def multiOLS(model, dataframe, column_list=None, model_type=OLS,
+    method='fdr_bh', alpha=0.05, **kwargs):
     """apply a linear model to several endogenous variables on a dataframe
 
     Take a linear model definition via formula and a dataframe that will be
@@ -40,13 +42,28 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS, **kwargs):
         formula description of the model
     dataframe : pandas.dataframe
         dataframe where the model will be evaluated
-    column_list : list of strings
+    column_list : list of strings, optional
         Names of the columns to analyze with the model.
         If None (Default) it will perform the function on all the
         eligible columns (numerical type and not in the model definition)
-    model_type : model class
+    model_type : model class, optional
         The type of model to be used. The default is the linear model.
         Can be any linear model (OLS, WLS, GLS, etc..)
+    method: string, optional
+        the method used to perform the pvalue correction for multiple testing.
+        default is the Benjamini/Hochberg, other available methods are:
+
+            `bonferroni` : one-step correction
+            `sidak` : on-step correction
+            `holm-sidak` :
+            `holm` :
+            `simes-hochberg` :
+            `hommel` :
+            `fdr_bh` : Benjamini/Hochberg
+            `fdr_by` : Benjamini/Yekutieli
+
+    alpha: float, optional
+        the significance level used for the pvalue correction (default 0.05)
 
     all the other parameters will be directed to the model creation.
 
@@ -63,8 +80,6 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS, **kwargs):
     The main application of this function is on system biology to perform
     a linear model testing of a lot of different parameters, like the
     different genetic expression of several genes.
-
-    There is no automatic correction of the p-values.
 
     See Also
     --------
@@ -126,6 +141,16 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS, **kwargs):
     # order by the p-value: the most useful model first!
     summary = summary.T.sort([('pvals', '_f_test')])
     summary.index.name = 'endogenous vars'
+    # implementing the pvalue correction method
+    smt = stats.multipletests
+    for (key1, key2) in summary:
+        if key1 != 'pvals':
+            continue
+        p_values = summary[key1, key2]
+        corrected = smt(p_values, method=method, alpha=alpha)[1]
+        # extend the dataframe of results with the column
+        # of the corrected p_values
+        summary['adj_' + key1, key2] = corrected
     return summary
 
 if __name__ == '__main__':
@@ -135,8 +160,10 @@ if __name__ == '__main__':
     df = data.exog
     df['TOTEMP'] = data.endog
 
-    print multiOLS('GNP + 0', df, ['GNPDEFL', 'TOTEMP', 'POP'])
+    print multiOLS('GNP + 0', df, 'GNPDEFL')['adj_pvals', '_f_test']
     print
-    print multiOLS('GNP + 1', df)
+    print multiOLS('GNP + 1', df, ['GNPDEFL', 'TOTEMP', 'POP'])
+    print
+    print multiOLS('GNP + GNPDEFL+0', df)
     print
     print multiOLS('GNP + 0', df, ['I(GNPDEFL**2)', 'center(TOTEMP)'])
