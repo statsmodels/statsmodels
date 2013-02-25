@@ -30,7 +30,7 @@ def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
 
 
 def multiOLS(model, dataframe, column_list=None, model_type=OLS,
-    method='fdr_bh', alpha=0.05, **kwargs):
+    method='fdr_bh', alpha=0.05, subset=None, **kwargs):
     """apply a linear model to several endogenous variables on a dataframe
 
     Take a linear model definition via formula and a dataframe that will be
@@ -66,6 +66,8 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
 
     alpha: float, optional
         the significance level used for the pvalue correction (default 0.05)
+    subset: boolean array
+        the selected rows to be used in the regression
 
     all the other parameters will be directed to the model creation.
 
@@ -108,8 +110,8 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
     conforming to the patsy formula specification
     >>> multiOLS('GNP + 0', df, ['I(GNPDEFL**2)', 'center(TOTEMP)'])
 
-    As the keywords are reported to the linear model, is possible to specify
-    for example the subset of the dataframe on which perform the analysis
+    It is possible to specify the subset of the dataframe
+    on which perform the analysis
     >> multiOLS('GNP + 1', df, subset=df.GNPDEFL > 90)
 
     Even a single column name can be given without enclosing it in a list
@@ -124,6 +126,8 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
     # if it's a single string transform it in a single element list
     if isinstance(column_list, basestring):
         column_list = [column_list]
+    if subset is not None:
+        dataframe = dataframe.ix[subset]
     # perform each model and retrieve the statistics
     col_results = {}
     # as the model will use always the same endogenous variables
