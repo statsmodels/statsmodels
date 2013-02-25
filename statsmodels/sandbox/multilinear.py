@@ -158,7 +158,7 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
     return summary
 
 
-def _test_group(pvalues, group, alpha=0.05):
+def _test_group(pvalues, group, alpha=0.05, exact=True):
     """test if the objects in the group are different from the general set.
 
     The test is performed on the pvalues set (ad a pandas series) over
@@ -174,8 +174,8 @@ def _test_group(pvalues, group, alpha=0.05):
     # how many are significant and not outside the group
     extern_sign = total_significant - group_sign
     extern_nonsign = totals - total_significant - group_nonsign
-    # make the fisher test
-    test = fisher_exact
+    # make the fisher test or the chi squared
+    test = fisher_exact if exact else chi2_contingency
     table = [[extern_nonsign, extern_sign], [group_nonsign, group_sign]]
     pvalue = test(np.array(table))[1]
     # is the group more represented or less?
@@ -183,7 +183,7 @@ def _test_group(pvalues, group, alpha=0.05):
     return pvalue, increase
 
 
-def multigroup(pvals, groups, alpha=0.05):
+def multigroup(pvals, groups, alpha=0.05, exact=True):
     """Test if the groups given are differently significant than the rest.
 
     For each group test with an exact fisher test if the fraction of
@@ -199,6 +199,9 @@ def multigroup(pvals, groups, alpha=0.05):
         each one is a list of the variables included
     alpha: float
         the significance level for the analysis
+    exact: boolean, optional
+        If True (default) use the fisher exact test, otherwise
+        use the chi squared test for contingencies tables.
 
     Returns
     -------
@@ -243,7 +246,7 @@ def multigroup(pvals, groups, alpha=0.05):
     """
     results = {'pvals': {}, 'increase': {}}
     for group_name, group_list in groups.iteritems():
-        res = _test_group(pvals, group_list, alpha=alpha)
+        res = _test_group(pvals, group_list, alpha, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]
     result_df = pd.DataFrame(results).sort('pvals')
