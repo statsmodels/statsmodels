@@ -1,3 +1,16 @@
+"""Analyze a set of multiple variables with a linear models
+
+multiOLS:
+    take a model and test it on a series of variables defined over a
+    pandas dataset, returning a summary for each variable
+
+multigroup:
+    take a boolean vector and the definition of several groups of variables
+    and test if the group has a fraction of true values higher than the
+    rest. It allows to test if the variables in the group are significantly
+    more significant than outside the group.
+"""
+
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
