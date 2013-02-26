@@ -175,18 +175,18 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
     return summary
 
 
-def _test_group(pvalues, group, alpha=0.05, exact=True):
+def _test_group(pvalues, group, exact=True):
     """test if the objects in the group are different from the general set.
 
     The test is performed on the pvalues set (ad a pandas series) over
     the group specified via a fisher exact test.
     """
     totals = len(pvalues)
-    total_significant = np.sum(pvalues < alpha)
+    total_significant = np.sum(pvalues)
     cross_index = [c for c in group if c in pvalues.index]
     # how many are significant and not in the group
     group_total = 1.0 * len(cross_index)
-    group_sign = 1.0 * len([c for c in cross_index if pvalues[c] < alpha])
+    group_sign = 1.0 * len([c for c in cross_index if pvalues[c]])
     group_nonsign = 1.0 * (group_total - group_sign)
     # how many are significant and not outside the group
     extern_sign = 1.0 * (total_significant - group_sign)
@@ -258,6 +258,7 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
     >>> pvals = multiOLS('Wealth', df)['adj_pvals', '_f_test']
 
     define the groups
+    >>> groups = {}
     >>> groups['crime'] = ['Crime_prop', 'Infanticide',
     ...     'Crime_parents', 'Desertion', 'Crime_pers']
     >>> groups['religion'] = ['Donation_clergy', 'Clergy', 'Donations']
@@ -273,7 +274,7 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
         'out_sign': {},
         'out_non': {}}
     for group_name, group_list in groups.iteritems():
-        res = _test_group(pvals, group_list, alpha, exact)
+        res = _test_group(pvals < alpha, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]
         results['in_sign'][group_name] = res[2][0]
@@ -285,3 +286,21 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
     corrected = smt(result_df['pvals'], method='fdr_bh')[1]
     result_df['adj_pvals'] = corrected
     return result_df
+
+if __name__ == '__main__':
+    url = "http://vincentarelbundock.github.com/"
+    url = url + "Rdatasets/csv/HistData/Guerry.csv"
+    df = pd.read_csv(url, index_col='dept')
+
+    #evaluate the relationship between the variuos paramenters whith the Wealth
+    pvals = multiOLS('Wealth', df)['adj_pvals', '_f_test']
+
+    #define the groups
+    groups = {}
+    groups['crime'] = ['Crime_prop', 'Infanticide',
+         'Crime_parents', 'Desertion', 'Crime_pers']
+    groups['religion'] = ['Donation_clergy', 'Clergy', 'Donations']
+    groups['wealth'] = ['Commerce', 'Lottery', 'Instruction', 'Literacy']
+
+    #do the analysis of the significativity
+    print multigroup(pvals, groups)
