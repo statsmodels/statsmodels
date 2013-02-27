@@ -181,8 +181,8 @@ def _test_group(pvalues, group, exact=True):
     The test is performed on the pvalues set (ad a pandas series) over
     the group specified via a fisher exact test.
     """
-    totals = len(pvalues)
-    total_significant = np.sum(pvalues)
+    totals = 1.0 * len(pvalues)
+    total_significant = 1.0 * np.sum(pvalues)
     cross_index = [c for c in group if c in pvalues.index]
     # how many are significant and not in the group
     group_total = 1.0 * len(cross_index)
@@ -201,7 +201,7 @@ def _test_group(pvalues, group, exact=True):
     return pvalue, increase, part
 
 
-def multigroup(pvals, groups, alpha=0.05, exact=True):
+def multigroup(pvals, groups, exact=True):
     """Test if the groups given are differently significant than the rest.
 
     For each group test with an exact fisher test if the fraction of
@@ -210,16 +210,16 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
 
     Parameters
     ----------
-    pvals: pandas series
-        the pvalus of the variables under analysis
+    pvals: pandas series of boolean
+        the significativity of the variables under analysis
     groups: dict of list
         the name of each category of variables under exam.
         each one is a list of the variables included
-    alpha: float
-        the significance level for the analysis
     exact: boolean, optional
         If True (default) use the fisher exact test, otherwise
         use the chi squared test for contingencies tables.
+        For high number of elements in the array the fisher test can
+        be significantly slower than the chi squared.
 
     Returns
     -------
@@ -229,10 +229,10 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
             pvals - the fisher p value of the test
             adj_pvals - the adjusted pvals
             increase - if the group if described better than expected or worse
-            in_sign - significative elements inside the group
-            in_non - non significative elements inside the group
-            out_sign - significative elements outside the group
-            out_non - non significative elements outside the group
+            _in_sign - significative elements inside the group
+            _in_non - non significative elements inside the group
+            _out_sign - significative elements outside the group
+            _out_non - non significative elements outside the group
 
     Notes
     -----
@@ -265,22 +265,22 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
     >>> groups['wealth'] = ['Commerce', 'Lottery', 'Instruction', 'Literacy']
 
     do the analysis of the significativity
-    >>> multigroup(pvals, groups)
+    >>> multigroup(pvals < 0.05, groups)
     """
     results = {'pvals': {},
         'increase': {},
-        'in_sign': {},
-        'in_non': {},
-        'out_sign': {},
-        'out_non': {}}
-    for group_name, group_list in groups.iteritems():
-        res = _test_group(pvals < alpha, group_list, exact)
+        '_in_sign': {},
+        '_in_non': {},
+        '_out_sign': {},
+        '_out_non': {}}
+    for group_name, group_list in groups.items():
+        res = _test_group(pvals, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]
-        results['in_sign'][group_name] = res[2][0]
-        results['in_non'][group_name] = res[2][1]
-        results['out_sign'][group_name] = res[2][2]
-        results['out_non'][group_name] = res[2][3]
+        results['_in_sign'][group_name] = res[2][0]
+        results['_in_non'][group_name] = res[2][1]
+        results['_out_sign'][group_name] = res[2][2]
+        results['_out_non'][group_name] = res[2][3]
     result_df = pd.DataFrame(results).sort('pvals')
     smt = stats.multipletests
     corrected = smt(result_df['pvals'], method='fdr_bh')[1]
@@ -288,19 +288,10 @@ def multigroup(pvals, groups, alpha=0.05, exact=True):
     return result_df
 
 if __name__ == '__main__':
-    url = "http://vincentarelbundock.github.com/"
-    url = url + "Rdatasets/csv/HistData/Guerry.csv"
-    df = pd.read_csv(url, index_col='dept')
-
-    #evaluate the relationship between the variuos paramenters whith the Wealth
-    pvals = multiOLS('Wealth', df)['adj_pvals', '_f_test']
-
-    #define the groups
-    groups = {}
-    groups['crime'] = ['Crime_prop', 'Infanticide',
-         'Crime_parents', 'Desertion', 'Crime_pers']
-    groups['religion'] = ['Donation_clergy', 'Clergy', 'Donations']
-    groups['wealth'] = ['Commerce', 'Lottery', 'Instruction', 'Literacy']
-
-    #do the analysis of the significativity
+    pvals = pd.Series([True, True, True, False, False, False])
+    groups = {'max': [0, 1, 2],
+              'greater': [0, 1, 2, 3],
+              'equal': [1, 2, 3, 4],
+              'lesser': [2, 3, 4, 5],
+              'min': [3, 4, 5]}
     print multigroup(pvals, groups)
