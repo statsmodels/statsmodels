@@ -288,10 +288,8 @@ def multigroup(pvals, groups, exact=True):
     return result_df
 
 if __name__ == '__main__':
-    pvals = pd.Series([True, True, True, False, False, False])
-    groups = {'max': [0, 1, 2],
-              'greater': [0, 1, 2, 3],
-              'equal': [1, 2, 3, 4],
-              'lesser': [2, 3, 4, 5],
-              'min': [3, 4, 5]}
-    print multigroup(pvals, groups)
+    window = 9
+    pvals = pd.Series([True] * window + [False] * window)
+    groups = {'W' + str(i) + '-' + str(i + window - 1):
+            list(range(i, i + window)) for i in range(window + 1)}
+    print multigroup(pvals, groups).sort_index()
