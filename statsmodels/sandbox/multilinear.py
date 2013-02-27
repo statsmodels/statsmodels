@@ -201,7 +201,7 @@ def _test_group(pvalues, group, exact=True):
     return pvalue, increase, part
 
 
-def multigroup(pvals, groups, exact=True):
+def multigroup(pvals, groups, exact=True, alpha=0.05):
     """Test if the groups given are differently significant than the rest.
 
     For each group test with an exact fisher test if the fraction of
@@ -220,6 +220,9 @@ def multigroup(pvals, groups, exact=True):
         use the chi squared test for contingencies tables.
         For high number of elements in the array the fisher test can
         be significantly slower than the chi squared.
+    alpha: float
+        the significativity level for the pvalue correction
+        on the whole set of groups (not inside the groups themselves)
 
     Returns
     -------
@@ -283,7 +286,7 @@ def multigroup(pvals, groups, exact=True):
         results['_out_non'][group_name] = res[2][3]
     result_df = pd.DataFrame(results).sort('pvals')
     smt = stats.multipletests
-    corrected = smt(result_df['pvals'], method='fdr_bh')[1]
+    corrected = smt(result_df['pvals'], method='fdr_bh', alpha=alpha)[1]
     result_df['adj_pvals'] = corrected
     return result_df
 
