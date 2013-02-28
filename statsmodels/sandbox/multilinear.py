@@ -16,7 +16,6 @@ import pandas as pd
 from statsmodels.api import OLS
 from statsmodels.api import stats
 import numpy as np
-from scipy.stats import fisher_exact, chi2_contingency
 
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
@@ -191,6 +190,7 @@ def _test_group(pvalues, group, exact=True):
     The test is performed on the pvalues set (ad a pandas series) over
     the group specified via a fisher exact test.
     """
+    from scipy.stats import fisher_exact, chi2_contingency
     totals = 1.0 * len(pvalues)
     total_significant = 1.0 * np.sum(pvalues)
     cross_index = [c for c in group if c in pvalues.index]
