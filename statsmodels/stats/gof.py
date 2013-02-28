@@ -9,12 +9,16 @@ contains:
 
 
 
-Author: Josef Perktold (josef-pktd)
+Author: Josef Perktold
+License : BSD-3
+
+changes
+-------
+2013-02-25 : add chisquare_power, effectsize and "value"
+
 '''
 
 import numpy as np
-#fix these imports
-import scipy
 from scipy import stats
 
 
@@ -323,3 +327,135 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
     #freq,hsupp = np.histogram(rvs,histsupp,new=True)
     cdfs = distfn.cdf(distsupp,*arg)
     return np.array(freq), n*distmass, histsupp
+
+
+# -*- coding: utf-8 -*-
+"""Extension to chisquare goodness-of-fit test
+
+Created on Mon Feb 25 13:46:53 2013
+
+Author: Josef Perktold
+License: BSD-3
+"""
+
+
+
+def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
+    '''chisquare goodness-of-fit test
+
+    The null hypothesis is that the distance between the expected distribution
+    and the observed frequencies is ``value``. The alternative hypothesis is
+    that the distance is larger than ``value``. ``value`` is normalized in
+    terms of effect size.
+
+    The standard chisquare test has the null hypothesis that ``value=0``, that
+    is the distributions are the same.
+
+
+    Notes
+    -----
+    The case with value greater than zero is similar to an equivalence test,
+    that the exact null hypothesis is replaced by an approximate hypothesis.
+    However, TOST "reverses" null and alternative hypothesis, while here the
+    alternative hypothesis is that the distance (divergence) is larger than a
+    threshold.
+
+    References
+    ----------
+    McLaren, ...
+    Drost,...
+
+    See Also
+    --------
+    powerdiscrepancy
+    scipy.stats.chisquare
+
+    '''
+
+    f_obs = np.asarray(f_obs)
+    n_bins = len(f_obs)
+    nobs = f_obs.sum(0)
+    if f_exp is None:
+        # uniform distribution
+        f_exp = np.empty(n_bins, float)
+        f_exp.fill(nobs / float(n_bins))
+
+    f_exp = np.asarray(f_exp, float)
+
+    chisq = ((f_obs - f_exp)**2 / f_exp).sum(0)
+    if value == 0:
+        pvalue = stats.chi2.sf(chisq, n_bins - 1 - ddof)
+    else:
+        pvalue = stats.ncx2.sf(chisq, n_bins - 1 - ddof, value**2 * nobs)
+
+    if return_basic:
+        return chisq, pvalue
+
+
+def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
+    '''power of chisquare goodness of fit test
+
+    effect size is sqrt of chisquare statistic divided by nobs
+
+    Parameters
+    ----------
+    effect_size : float
+        This is the deviation from the Null of the normalized chi_square
+        statistic .
+    nobs : int or float
+        number of observations
+    n_bins : int (or float)
+        number of bins, or points in the discrete distribution
+    alpha : float in (0,1)
+        significance level of the test, default alpha=0.05
+
+    Returns
+    -------
+    power : float
+        power of the test at given significance level at effect size
+
+    Notes
+    -----
+    This function also works vectorized if all arguments broadcast.
+
+    This can also be used to calculate the power for power divergence test.
+    However, for the range of more extreme values of the power divergence
+    parameter, this power is not a very good approximation for samples of
+    small to medium size (Drost et al. 1989)
+
+    References
+    ----------
+    Drost, ...
+
+    '''
+    crit = stats.chi2.isf(alpha, n_bins - 1 - ddof)
+    power = stats.ncx2.sf(crit, n_bins - 1 - ddof, effect_size**2 * nobs)
+    return power
+
+
+def chisquare_effectsize(probs0, probs1, axis=0):
+    '''effect size for a chisquare goodness-of-fit test
+
+    Parameters
+    ----------
+    probs0 : array_like
+        probabilities or cell frequencies under the Null hypothesis
+    probs1 : array_like
+        probabilities or cell frequencies under the Alternative hypothesis
+        probs0 and probs1 need to have the same length in the ``axis`` dimension.
+        and broadcast in the other dimensions
+        Both probs0 and probs1 are normalized to add to one (in the ``axis``
+        dimension).
+
+    Returns
+    -------
+    effectsize : float
+        effect size of chisquare test
+
+    '''
+    probs0 = np.asarray(probs0, float)
+    probs1 = np.asarray(probs1, float)
+    probs0 = probs0 / probs0.sum(axis)
+    probs1 = probs1 / probs1.sum(axis)
+
+    return np.sqrt(((probs1 - probs0)**2 / probs0).sum(axis))
