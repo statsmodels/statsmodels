@@ -98,6 +98,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
             - pval: the pvalue results of the models. Has the _f_test column
             for the significativity of the whole test.
             - adj_pval: the corrected pvalues via the multitest function.
+            - std: uncertainties of the model parameters
             - statistics: contains the r squared statistics and the adjusted
             r squared.
 
