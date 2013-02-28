@@ -90,7 +90,17 @@ def multiOLS(model, dataframe, column_list=None, model_type=OLS,
         a dataframe containing an extract from the summary of the model
         obtained for each columns. It will give the model complexive f test
         result and p-value, and the regression value and standard deviarion
-        for each of the regressors
+        for each of the regressors. The Dataframe has a hierachical column
+        structure, divided as:
+
+            - params: contains the parameters resulting from the models. Has
+            an additional column named _f_test containing the result of the
+            F test.
+            - pval: the pvalue results of the models. Has the _f_test column
+            for the significativity of the whole test.
+            - adj_pval: the corrected pvalues via the multitest function.
+            - statistics: contains the r squared statistics and the adjusted
+            r squared.
 
     Notes
     -----
@@ -201,7 +211,7 @@ def _test_group(pvalues, group, exact=True):
     return pvalue, increase, part
 
 
-def multigroup(pvals, groups, exact=True, alpha=0.05):
+def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     """Test if the groups given are differently significant than the rest.
 
     For each group test with an exact fisher test if the fraction of
@@ -220,9 +230,13 @@ def multigroup(pvals, groups, exact=True, alpha=0.05):
         use the chi squared test for contingencies tables.
         For high number of elements in the array the fisher test can
         be significantly slower than the chi squared.
-    alpha: float
+    keep_all: boolean, optional
+        if False it will drop those groups where the fraction
+        of positive is below the expected result. If True (default)
+         it will keep all the significant results.
+    alpha: float, optional
         the significativity level for the pvalue correction
-        on the whole set of groups (not inside the groups themselves)
+        on the whole set of groups (not inside the groups themselves).
 
     Returns
     -------
@@ -285,6 +299,8 @@ def multigroup(pvals, groups, exact=True, alpha=0.05):
         results['_out_sign'][group_name] = res[2][2]
         results['_out_non'][group_name] = res[2][3]
     result_df = pd.DataFrame(results).sort('pvals')
+    if not keep_all:
+        result_df = result_df[result_df.increase]
     smt = stats.multipletests
     corrected = smt(result_df['pvals'], method='fdr_bh', alpha=alpha)[1]
     result_df['adj_pvals'] = corrected
@@ -295,4 +311,6 @@ if __name__ == '__main__':
     pvals = pd.Series([True] * window + [False] * window)
     groups = {'W' + str(i) + '-' + str(i + window - 1):
             list(range(i, i + window)) for i in range(window + 1)}
+
     print multigroup(pvals, groups).sort_index()
+    print multigroup(pvals, groups, keep_all=False).sort_index()
