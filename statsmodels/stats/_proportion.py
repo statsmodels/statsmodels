@@ -103,9 +103,9 @@ def confint_proportion(count, nobs, alpha=0.05, method='normal'):
     elif method == 'wilson':
         crit = stats.norm.isf(alpha / 2.)
         crit2 = crit**2
-        denom = 1 + crit2 / 2.
-        center = q_ + crit2 / (2 * nobs) / denom
-        dist = crit * np.sqrt(q_ * (1. - q_) / nobs) + crit2 / (4. * nobs**2)
+        denom = 1 + crit2 / nobs
+        center = (q_ + crit2 / (2 * nobs)) / denom
+        dist = crit * np.sqrt(q_ * (1. - q_) / nobs + crit2 / (4. * nobs**2))
         dist /= denom
         ci_low = center - dist
         ci_upp = center + dist
