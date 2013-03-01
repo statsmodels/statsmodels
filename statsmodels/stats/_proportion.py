@@ -29,6 +29,7 @@ def confint_proportion(count, nobs, alpha=0.05, method='normal'):
          - `agresti_coull` : Agresti-Coull interval
          - `beta` : Clopper-Pearson interval based on Beta distribution
          - `wilson` : Wilson Score interval
+         - `jeffrey` : Jeffrey's Bayesian Interval
          - `binom_test` : experimental, inversion of binom_test
 
     Returns
@@ -109,6 +110,9 @@ def confint_proportion(count, nobs, alpha=0.05, method='normal'):
         dist /= denom
         ci_low = center - dist
         ci_upp = center + dist
+
+    elif method == 'jeffrey':
+        return stats.beta.interval(1 - alpha,  count + 0.5, nobs - count + 0.5)
 
     else:
         raise NotImplementedError('only "normal" is available')

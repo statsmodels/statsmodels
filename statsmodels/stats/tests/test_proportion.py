@@ -6,6 +6,7 @@ Created on Fri Mar 01 14:56:56 2013
 Author: Josef Perktold
 """
 
+import numpy as np
 from numpy.testing import assert_almost_equal
 
 from statsmodels.stats._proportion import confint_proportion
@@ -17,7 +18,8 @@ def test_confint_proportion():
     methods = {'agresti_coull' : 'agresti-coull',
                'normal' : 'asymptotic',
                'beta' : 'exact',
-               'wilson' : 'wilson'
+               'wilson' : 'wilson',
+               'jeffrey' : 'bayes'
                }
 
     for case in res_binom:
@@ -26,6 +28,8 @@ def test_confint_proportion():
             idx = res_binom_methods.index(methods[method])
             res_low = res_binom[case].ci_low[idx]
             res_upp = res_binom[case].ci_upp[idx]
+            if np.isnan(res_low) or np.isnan(res_upp):
+                continue
             ci = confint_proportion(count, nobs, alpha=0.05, method=method)
 
             assert_almost_equal(ci, [res_low, res_upp], decimal=6,
