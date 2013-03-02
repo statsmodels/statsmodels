@@ -288,12 +288,13 @@ class Grouping():
     def __init__(self, index_pandas=None, index_list=None):
         '''
         index_pandas pandas (multi-)index
-        index_list list of arrays, pandas series or lists, all of which are
+        index_list list of numpy arrays, pandas series or lists, all of which are
             of length nobs 
         '''
         if index_list != None:
             try:
-                tup = zip(*args)
+                index_list = [np.array(x) for x in index_list]
+                tup = zip(*index_list)
                 self.index = pd.MultiIndex.from_tuples(tup)
             except:
                 raise Exception("index_list must be a list of lists, pandas series, \
@@ -310,6 +311,19 @@ class Grouping():
 
     def count_categories(self, level=0):
         self.counts = np.bincount(self.index.labels[level])
+
+    def check_index(self, sorted=True, unique=True, index=None):
+        '''Sanity checks'''
+        if not index:
+            index = self.index
+        if sorted:
+            test = pd.DataFrame(range(len(index)), index=index)
+            test_sorted = test.sort()
+            if any(test.index != test_sorted.index):
+                raise Exception('Index suggests that data may not be sorted')
+        if unique:
+            if len(index) != len(index.unique()):
+                raise Exception('Duplicate index entries')
 
     def sort(self, data, index=None):
         '''Applies a (potentially hierarchical) sort operation on a numpy array
