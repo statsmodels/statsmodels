@@ -112,10 +112,11 @@ def confint_proportion(count, nobs, alpha=0.05, method='normal'):
         ci_upp = center + dist
 
     elif method == 'jeffrey':
-        return stats.beta.interval(1 - alpha,  count + 0.5, nobs - count + 0.5)
+        ci_low, ci_upp = stats.beta.interval(1 - alpha,  count + 0.5,
+                                             nobs - count + 0.5)
 
     else:
-        raise NotImplementedError('only "normal" is available')
+        raise NotImplementedError('method "%s" is not available' % method)
     return ci_low, ci_upp
 
 def samplesize_confint(proportion, half_length, alpha=0.05, method='normal'):
@@ -152,12 +153,3 @@ def samplesize_confint(proportion, half_length, alpha=0.05, method='normal'):
         raise NotImplementedError('only "normal" is available')
 
     return n
-
-count = 84
-nobs = n_rep = 10000
-low, upp = confint_proportion(count, nobs, alpha=0.05, method='normal')
-print low, upp
-print low * nobs, upp * nobs
-ci_b = confint_proportion(count, nobs, alpha=0.05, method='binom_test')
-print ci_b
-print np.array(ci_b) * nobs
