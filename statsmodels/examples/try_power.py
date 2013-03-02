@@ -34,4 +34,24 @@ print 'es_abs', es_abs, es_abs - es_abs_R
 value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="two.sided")
 '''
 
+#Note: I use n_bins and ddof instead of df
+# pwr.chisq.test(w=0.289,df=(4-1),N=100,sig.level=0.05)
+chi2_pow = smp.GofChisquarePower().power(0.289, 100, 4, 0.05)
+chi2_pow_R = 0.675077657003721
+print 'chi2_pow', chi2_pow, chi2_pow - chi2_pow_R
 
+chi2_pow = smp.GofChisquarePower().power(0.01, 100, 4, 0.05)
+chi2_pow_R = 0.0505845519208533
+print 'chi2_pow', chi2_pow, chi2_pow - chi2_pow_R
+
+chi2_pow = smp.GofChisquarePower().power(2, 100, 4, 0.05)
+chi2_pow_R = 1
+print 'chi2_pow', chi2_pow, chi2_pow - chi2_pow_R
+
+chi2_pow = smp.GofChisquarePower().power(0.9, 100, 4, 0.05)
+chi2_pow_R = 0.999999999919477
+print 'chi2_pow', chi2_pow, chi2_pow - chi2_pow_R, 'lower precision ?'
+
+chi2_pow = smp.GofChisquarePower().power(0.8, 100, 4, 0.05)
+chi2_pow_R = 0.999999968205591
+print 'chi2_pow', chi2_pow, chi2_pow - chi2_pow_R
