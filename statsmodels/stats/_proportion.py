@@ -153,3 +153,30 @@ def samplesize_confint(proportion, half_length, alpha=0.05, method='normal'):
         raise NotImplementedError('only "normal" is available')
 
     return n
+
+def proportion_effectsize(prob1, prob2, method='normal'):
+    '''effect size for a test comparing two proportions
+
+    for use in power function
+
+    Parameters
+    ----------
+    prob1, prob2: float or array_like
+
+    Returns
+    -------
+    es : float or ndarray
+        effect size
+
+    Notes
+    -----
+    only method='normal' is implemented to match pwr.p2.test
+    see http://www.statmethods.net/stats/power.html
+
+    I think other conversions to normality can be used, but I need to check.
+    '''
+    if method != 'normal':
+        raise ValueError('only "normal" is implemented')
+
+    es = 2 * (np.arcsin(np.sqrt(prob2)) - np.arcsin(np.sqrt(prob1)))
+    return es
