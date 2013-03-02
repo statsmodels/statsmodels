@@ -311,6 +311,27 @@ class Grouping():
     def count_categories(self, level=0):
         self.counts = np.bincount(self.index.labels[level])
 
+    def sort(self, data, index=None):
+        '''Applies a (potentially hierarchical) sort operation on a numpy array
+        or pandas series/dataframe based on the grouping index or a
+        user-suplied index.  Returns an object of the same type as the original
+        data as well as the matching (sorted) Pandas index.  
+        '''
+
+        if not index:
+            index = self.index
+        if type(data) == np.ndarray:
+            out = pd.DataFrame(data, index=index)
+            out = out.sort()
+            return np.array(out), index
+        elif type(data) in [pd.core.series.Series, pd.core.frame.DataFrame]:
+            out.index = index
+            out = out.sort()
+            return out, index
+        else:
+            msg = 'data must be a Numpy array or a Pandas Series/DataFrame'
+            raise Exception(msg)
+
     def transform_dataframe(self, dataframe, function, level=0):
         '''Apply function to each column, by group
         Assumes that the dataframe already has a proper index'''
