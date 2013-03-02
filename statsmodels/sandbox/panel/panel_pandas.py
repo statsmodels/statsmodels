@@ -9,6 +9,7 @@ from statsmodels.regression.linear_model import (RegressionModel,
 from statsmodels.tools.grouputils import Grouping
 
 class PanelLM(RegressionModel):
+    '''Assumes the first level of the index is unit and the second it time'''
     def __init__(self, endog, exog, method='pooling', effects='oneway',
                  unit=None, time=None, hasconst=None, **kwargs):
 
@@ -60,7 +61,12 @@ class PanelLM(RegressionModel):
                 raise Exception('Method must be unit, time, oneway, or twoways')
         elif self.method == 'between':
             f = lambda x: x.mean()
-            out = g.transform_array(data, f, 0)
+            if (self.effects == 'oneway') or (self.effects == 'unit'):
+                out = g.transform_array(data, f, 0)
+            elif (self.effects == 'time'):
+                out = g.transform_array(data, f, 1)
+            else:
+                raise Exception('effects must be unit, time, or oneway')
             return out
         elif self.method == 'fd':
             f = lambda x: (x - x.shift(1))[1:],
