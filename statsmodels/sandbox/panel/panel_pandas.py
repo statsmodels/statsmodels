@@ -11,16 +11,23 @@ from statsmodels.tools.grouputils import Grouping
 class PanelLM(RegressionModel):
     def __init__(self, endog, exog, method='pooling', effects='oneway',
                  unit=None, time=None, hasconst=None, **kwargs):
-        if (time != None) and (unit != None):
-            self.groupings = Grouping(index_list=[unit, time])
-        else:
+
+        if type(exog) in [pd.core.frame.DataFrame, pd.core.series.Series]:
+            self.groupings = Grouping(index_pandas=exog.index)
+        elif type(endog) in [pd.core.frame.DataFrame, pd.core.series.Series]:
             self.groupings = Grouping(index_pandas=endog.index)
-        self.endog = endog
-        self.exog = exog
+        else:
+            self.groupings = Grouping(index_list=[unit, time])
+        self.exog, idx = self.groupings.sort(exog)
+        self.endog, idx = self.groupings.sort(endog)
+        self.groupings.index = idx # relevant index order may have changed
+
         self.method = method
         self.effects = effects
+
         if method == 'swar':
             self.var_u, self.var_e, self.theta = swar_ercomp(self.endog, self.exog)
+
         super(PanelLM, self).__init__(endog, exog, **kwargs)
 
     def initialize(self, unit=None, time=None):
