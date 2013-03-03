@@ -51,8 +51,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     pow_ = stats.nct(df, d*np.sqrt(nobs)).sf(stats.t.isf(alpha_, df))
     return pow_
 
-def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.,
-                 abs_effect=False):
+def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
     '''Calculate power of a normal distributed test statistic
 
     abs_effect is experimental to see if I can match R
@@ -68,10 +67,8 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.,
 
     crit = stats.norm.isf(alpha_)
     pow_ = stats.norm.sf(crit - d*np.sqrt(nobs)/sigma)
-    # could use
-    if abs_effect:
-        crit = stats.norm.ppf(alpha_)
-        pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
+    crit = stats.norm.ppf(alpha_)
+    pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
     return pow_
 
 #module global for now
