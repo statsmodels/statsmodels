@@ -67,8 +67,9 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
 
     crit = stats.norm.isf(alpha_)
     pow_ = stats.norm.sf(crit - d*np.sqrt(nobs)/sigma)
-    crit = stats.norm.ppf(alpha_)
-    pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
+    if alternative in ['two-sided', '2s']:
+        crit = stats.norm.ppf(alpha_)
+        pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
     return pow_
 
 #module global for now
