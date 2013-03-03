@@ -59,3 +59,10 @@ print 'chi2_pow', chi2_pow, chi2_pow - chi2_pow_R
 
 def cohen_es(*args, **kwds):
     print "You better check what's a meaningful effect size for your question."
+
+
+#BUG: after fixing 2.sided option, 2 rejection areas
+tt_pow = smp.TTestPower().power(effect_size=0.01, nobs=nobs, alpha=0.05)
+tt_pow_R = 0.05089485285965
+# value from> pwr.t.test(d=0.01,n=80,sig.level=0.05,type="one.sample",alternative="two.sided")
+print 'tt_pow', tt_pow, tt_pow - tt_pow_R
