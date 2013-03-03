@@ -48,7 +48,11 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     else:
         raise ValueError("alternative has to be 'two-sided' or 'one-sided'")
 
+
     pow_ = stats.nct(df, d*np.sqrt(nobs)).sf(stats.t.isf(alpha_, df))
+    if alternative in ['two-sided', '2s']:
+        crit = stats.t.ppf(alpha_, df)
+        pow_ += stats.nct(df, d*np.sqrt(nobs)).cdf(crit)
     return pow_
 
 def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
