@@ -3,7 +3,7 @@ Using without installing
 
 To use this script from an R session: 
 
-    source('statsmodels.tools.R2nparray.R')
+    source('statsmodels/tools/R2nparray/R/R2nparray.R')
 
 The 3 most useful commands are: cat_items(), convert_items() and
 apply_functions(). To print the content of an R regression to file in a format readable in python, you can:
