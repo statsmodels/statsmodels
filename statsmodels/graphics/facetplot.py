@@ -5,6 +5,7 @@ from collections import Counter
 
 from statsmodels.graphics import mosaicplot
 from statsmodels.graphics.boxplots import violinplot
+from statsmodels.graphics.plot_grids import _make_ellipse
 
 from statsmodels.api import datasets
 from scipy.stats.kde import gaussian_kde
@@ -85,6 +86,12 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
         if y.dtype == float or y.dtype == int:
             kwargs.setdefault('alpha', 0.33)
             plt.scatter(x, y, *args, **kwargs)
+            #add the level to the scatterplot
+            mean = [np.mean(x), np.mean(y)]
+            cov = np.cov(x, y)
+            _make_ellipse(mean, cov, ax, 0.95, 'gray')
+            _make_ellipse(mean, cov, ax, 0.50, 'blue')
+            _make_ellipse(mean, cov, ax, 0.05, 'purple')
             if y.dtype == int:
                 ax.set_yticks([int(i) for i in ax.get_yticks()])
             if x.dtype == int:
@@ -99,7 +106,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
             ax.set_yticklabels(level_k)
     # the exog is categorical
     else:
-        #if the endog is numeric do a boxplot
+        #if the endog is numeric do a violinplot
         if y.dtype == float or y.dtype == int:
             data = pd.DataFrame({'x': y, 'f': x})
             levels = list(data.groupby('f')['x'])
@@ -107,7 +114,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
             level_k = [k for k, v in levels]
             #plt.boxplot(level_v, *args, **kwargs)
             #ax.set_xticklabels(level_k)
-            violinplot(level_v, labels=level_k, ax=ax)
+            violinplot(level_v, level_k, ax=ax, *args, **kwargs)
         #otherwise do a mosaic plot
         else:
             x_name = (x.name or 'x')
@@ -287,8 +294,8 @@ if __name__ == '__main__':
 
     #facet_plot('I(float_1*4) ~ I(float_2 + 3)', data)
 
-    facet_plot('yrs_married ~ religious', affair)
-    facet_plot('yrs_married ~ religious | educ', affair)
-    #facet_plot('yrs_married ~ age |educ', affair)
+    #facet_plot('yrs_married ~ religious', affair)
+    #facet_plot('yrs_married ~ religious | educ', affair)
+    facet_plot('yrs_married ~ age', affair)
 
     plt.show()
