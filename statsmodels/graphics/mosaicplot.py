@@ -288,7 +288,7 @@ def _normalize_data(data, index):
         index = None
     # can it be used as a dictionary?
     try:
-        items = data.items()
+        items = list(data.iteritems())
     except AttributeError:
         # ok, I cannot use the data as a dictionary
         # Try to convert it to a numpy array, or die trying
@@ -299,7 +299,6 @@ def _normalize_data(data, index):
             temp[name] = data[idx]
         data = temp
         items = data.items()
-
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
     categories_levels = _categories_level(list(data.keys()))
