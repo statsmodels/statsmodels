@@ -1,11 +1,8 @@
 from __future__ import division
 
 import numpy as np
-from statsmodels.compatnp.collections import OrderedDict
 from collections import Counter
 
-from numpy import iterable, r_, cumsum, array
-from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
 from statsmodels.api import datasets
 from scipy.stats.kde import gaussian_kde
@@ -14,6 +11,7 @@ import patsy
 import pylab as plt
 import pandas as pd
 
+
 def _auto_hist(data, ax, *args, **kwargs):
     """
     given a pandas series infers the type of data and print
@@ -21,6 +19,7 @@ def _auto_hist(data, ax, *args, **kwargs):
     """
     data = pd.Series(data)
     if data.dtype == float:
+        #make the histogram of the data, very lightly
         ax.hist(data, bins=int(np.sqrt(len(data))), normed=True,
             facecolor='#999999', edgecolor='k', alpha=0.33)
         if len(data)>1:
@@ -41,14 +40,20 @@ def _auto_hist(data, ax, *args, **kwargs):
         # integer or categorical are represented
         # by the same method
         res = Counter(data)
+        #obtain the categories
         key = sorted(res.keys())
-        if isinstance(key[0], int):
+        # if it's numerical fill the keys between the present values
+        if data.dtype == int:
             key = range(min(key), max(key) + 1)
         val = [res[i] for i in key]
+        #set the defaul options
+        # if the user set some of them, his choices has the priority
         kwargs.setdefault('facecolor', '#777777')
         kwargs.setdefault('align', 'center')
         kwargs.setdefault('edgecolor', None)
+        #create the bar plot for the histogram
         ax.bar(range(len(val)), val, *args, **kwargs)
+        #configuration of the ticks and labels
         ax.set_ylabel('Counts')
         ax.set_xticks(range(len(val)))
         ax.set_yticks([int(i) for i in ax.get_yticks()])
@@ -71,8 +76,10 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
         return _auto_hist(x, ax, *args, **kwargs)
     x = pd.Series(x)
     y = pd.Series(y)
+    # the exog is nuumerical
     if x.dtype == float or x.dtype == int:
         #TODO: if both are ints should add a jitter
+        # the endog is numeric too, do a scatterplot
         if y.dtype == float or y.dtype == int:
             kwargs.setdefault('alpha', 0.33)
             plt.scatter(x, y, *args, **kwargs)
@@ -80,6 +87,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
                 ax.set_yticks([int(i) for i in ax.get_yticks()])
             if x.dtype == int:
                 ax.set_xticks([int(i) for i in ax.get_xticks()])
+        # the endog is categorical, do a horizontal boxplot
         else:
             data = pd.DataFrame({'x': x, 'f': y})
             levels = list(data.groupby('f')['x'])
@@ -87,7 +95,9 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
             level_k = [k for k, v in levels]
             plt.boxplot(level_v, vert=False, *args, **kwargs)
             ax.set_yticklabels(level_k)
+    # the exog is categorical
     else:
+        #if the endog is numeric do a boxplot
         if y.dtype == float or y.dtype == int:
             data = pd.DataFrame({'x': y, 'f': x})
             levels = list(data.groupby('f')['x'])
@@ -95,6 +105,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
             level_k = [k for k, v in levels]
             plt.boxplot(level_v, *args, **kwargs)
             ax.set_xticklabels(level_k)
+        #otherwise do a mosaic plot
         else:
             x_name = (x.name or 'x')
             y_name = (y.name or 'y')
@@ -108,17 +119,24 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
 def _formula_split(formula):
     """split the formula of the facet_plot into the y, x and categorical terms
     """
+    # determine the facet component
     if '|' in formula:
         f = formula.split('|')[1].strip()
         formula = formula.split('|')[0]
     else:
         f = None
+
+    #try to obtain the endog and exog variable
     if '~' in formula:
         x = formula.split('~')[1].strip()
         y = formula.split('~')[0].strip()
     else:
         x = None
         y = formula.strip()
+
+    #if there is not exog, swith the two
+    if x is None:
+        x, y = y, x
     return y, x, f
 
 
@@ -127,7 +145,9 @@ def _elements4facet(facet, data):
     """
     if facet is not None:
         facet_list = [f.strip() for f in facet.split()]
-        try:  # try to use it a a hierarchical index for the dataframe
+        try:
+            # try to use it a a hierarchical (or simple)
+            #index for the dataframe
             elements = list(data.groupby(facet_list))
         except KeyError:  # go by patsy
             # create the matrix
@@ -148,8 +168,10 @@ def _array4name(name, data):
     """given a name/patsy formula obtain the dataframe data from it
     """
     try:
+        # try to use it as a valid index
         value = data[name]
     except KeyError:
+        #if it fails try it as a patsy formula
         # the +0 is needed to avoid the intercept column
         value = pd.Series(patsy.dmatrix(name + '+0', data)[:, 0])
         value.name = name
@@ -172,8 +194,6 @@ def facet_plot(formula, data, subset=None, *args, **kwargs):
     """
     fig = plt.figure()
     y, x, facet = _formula_split(formula)
-    if x is None:
-        x, y = y, x
     #if a subset is specified use it to trim the dataframe
     if subset:
         data = data[subset]
@@ -237,8 +257,8 @@ if __name__ == '__main__':
     #_autoplot(data.cat_1, data.cat_2)
     assert _formula_split('y ~ x | f') == ('y', 'x', 'f')
     assert _formula_split('y ~ x') == ('y', 'x', None)
-    assert _formula_split('y | f') == ('y', None, 'f')
-    assert _formula_split('y') == ('y', None, None)
+    assert _formula_split('x | f') == (None, 'x', 'f')
+    assert _formula_split('x') == (None, 'x', None)
 
     # basic facet_plots for variuos combinations
     #facet_plot('int_1 | cat_1', data)
