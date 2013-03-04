@@ -74,6 +74,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
     if x.dtype == float or x.dtype == int:
         #TODO: if both are ints should add a jitter
         if y.dtype == float or y.dtype == int:
+            kwargs.setdefault('alpha', 0.33)
             plt.scatter(x, y, *args, **kwargs)
             if y.dtype == int:
                 ax.set_yticks([int(i) for i in ax.get_yticks()])
@@ -121,7 +122,7 @@ def _formula_split(formula):
     return y, x, f
 
 
-def facet_plot(formula, data, *args, **kwargs):
+def facet_plot(formula, data, subset=None, *args, **kwargs):
     """make a faceted plot of two variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
@@ -139,11 +140,14 @@ def facet_plot(formula, data, *args, **kwargs):
     y, x, facet = _formula_split(formula)
     if x is None:
         x, y = y, x
+    #if a subset is specified use it to trim the dataframe
+    if subset:
+        data = data[subset]
     if facet is not None:
         facet_list = [f.strip() for f in facet.split()]
         try:  # try to use it a a hierarchical index for the dataframe
             elements = list(data.groupby(facet_list))
-        except KeyError: # go by patsy
+        except KeyError:  # go by patsy
             # create the matrix
             matrix = patsy.dmatrix(facet, data, return_type="dataframe")
             elements = []
@@ -165,7 +169,7 @@ def facet_plot(formula, data, *args, **kwargs):
             value_x = value[x]
         except KeyError:
             # the +0 is needed to avoid the intercept column
-            value_x = pd.Series(patsy.dmatrix(x + '+0', value)[:,0])
+            value_x = pd.Series(patsy.dmatrix(x + '+0', value)[:, 0])
             value_x.name = x
         if y is not None:
             # same game with the y variable, try to use it as dataframe
@@ -175,7 +179,7 @@ def facet_plot(formula, data, *args, **kwargs):
                 value_y = value[y]
             except KeyError:
                 # the +0 is needed to avoid the intercept column
-                value_y = pd.Series(patsy.dmatrix(y + '+0', value)[:,0])
+                value_y = pd.Series(patsy.dmatrix(y + '+0', value)[:, 0])
                 value_y.name = y
             _autoplot(value_x, value_y, ax, *args, **kwargs)
         else:
@@ -187,29 +191,31 @@ def facet_plot(formula, data, *args, **kwargs):
 
 if __name__ == '__main__':
     N = 20
-    data = pd.DataFrame({'int_1': plt.randint(0,5,size=N),
-                         'int_2': plt.randint(0,5,size=N),
+    data = pd.DataFrame({'int_1': plt.randint(0, 5, size=N),
+                         'int_2': plt.randint(0, 5, size=N),
                          'float_1': plt.randn(N),
                          'float_2': plt.randn(N),
-                         'cat_1': ['lizard']*7 + ['dog']*7 + ['newt']*6,
-                         'cat_2': (['men']*4 + ['women']*11
-                                  + ['men']*5)})
+                         'cat_1': ['lizard'] * 7 + ['dog'] * 7 + ['newt'] * 6,
+                         'cat_2': (['men'] * 4 + ['women'] * 11
+                                  + ['men'] * 5)})
 
     affair = datasets.fair.load_pandas().data
     rate_marriage = {1: '1 very poor', 2: '2 poor', 3: '3 fair',
     4: '4 good', 5: '5 very good'}
-    affair['rate_marriage'] = affair['rate_marriage'].apply(lambda s: rate_marriage[s])
+    l = lambda s: rate_marriage[s]
+    affair['rate_marriage'] = affair['rate_marriage'].apply(l)
     religious = {1: '1 not', 2: '2 mildly', 3: '3 fairly', 4: '4 strongly'}
     affair['religious'] = affair['religious'].apply(lambda s: religious[s])
     occupation = {1: 'student',
         2: 'farming, agriculture; semi-skilled, or unskilled worker',
-        3: 'white-colloar' ,
+        3: 'white-colloar',
         4: ('teacher counselor social worker, nurse; artist, writers; '
             'technician, skilled worker'),
         5: 'managerial, administrative, business',
         6: 'professional with advanced degree'}
     affair['occupation'] = affair['occupation'].apply(lambda s: occupation[s])
-    affair['occupation_husb'] = affair['occupation_husb'].apply(lambda s: occupation[s])
+    l = lambda s: occupation[s]
+    affair['occupation_husb'] = affair['occupation_husb'].apply(l)
     affair['cheated'] = affair.affairs > 0
 
     #_autoplot(data.int_1)
@@ -239,6 +245,9 @@ if __name__ == '__main__':
     #facet_plot('cat_1 ~ cat_2', data)
     #facet_plot('float_1 ~ float_2 | cat_1', data)
 
+    # it can split even for integer levels!
+    #facet_plot('float_1 ~ float_2 | int_1', data)
+
     #multiple classes for the categorical
     #facet_plot('float_1 | cat_1 cat_2', data)
 
@@ -251,7 +260,7 @@ if __name__ == '__main__':
     facet_plot('I(float_1*4) ~ I(float_2 + 3)', data)
 
     #facet_plot('yrs_married |religious', affair)
-    #facet_plot('yrs_married ~ educ |religious', affair)
+    facet_plot('yrs_married ~ age |educ', affair)
 
 
     plt.show()
