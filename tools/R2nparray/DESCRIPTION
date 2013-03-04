@@ -8,3 +8,6 @@ Description: Writes R matrices, vectors, and scalars to a file as numpy arrays
 License: BSD
 URL: http://www.github.com/statsmodels/statsmodels
 Repository: github
+Collate:
+    'R2nparray-package.R'
+    'R2nparray.R'
