@@ -4,6 +4,8 @@ import numpy as np
 from collections import Counter
 
 from statsmodels.graphics import mosaicplot
+from statsmodels.graphics.boxplots import violinplot
+
 from statsmodels.api import datasets
 from scipy.stats.kde import gaussian_kde
 
@@ -22,7 +24,7 @@ def _auto_hist(data, ax, *args, **kwargs):
         #make the histogram of the data, very lightly
         ax.hist(data, bins=int(np.sqrt(len(data))), normed=True,
             facecolor='#999999', edgecolor='k', alpha=0.33)
-        if len(data)>1:
+        if len(data) > 1:
             # create the density plot
             # if has less than 2 point gives error
             my_pdf = gaussian_kde(data)
@@ -103,8 +105,9 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
             levels = list(data.groupby('f')['x'])
             level_v = [v for k, v in levels]
             level_k = [k for k, v in levels]
-            plt.boxplot(level_v, *args, **kwargs)
-            ax.set_xticklabels(level_k)
+            #plt.boxplot(level_v, *args, **kwargs)
+            #ax.set_xticklabels(level_k)
+            violinplot(level_v, labels=level_k, ax=ax)
         #otherwise do a mosaic plot
         else:
             x_name = (x.name or 'x')
@@ -282,9 +285,10 @@ if __name__ == '__main__':
     #categorical with patsy version 2
     #facet_plot('float_1 | cat_1 * cat_2', data)
 
-    facet_plot('I(float_1*4) ~ I(float_2 + 3)', data)
+    #facet_plot('I(float_1*4) ~ I(float_2 + 3)', data)
 
-    #facet_plot('yrs_married |religious', affair)
-    facet_plot('yrs_married ~ age |educ', affair)
+    facet_plot('yrs_married ~ religious', affair)
+    facet_plot('yrs_married ~ religious | educ', affair)
+    #facet_plot('yrs_married ~ age |educ', affair)
 
     plt.show()
