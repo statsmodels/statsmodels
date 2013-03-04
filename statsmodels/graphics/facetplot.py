@@ -7,9 +7,10 @@ from collections import Counter
 from numpy import iterable, r_, cumsum, array
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
-
+from statsmodels.api import datasets
 from scipy.stats.kde import gaussian_kde
 
+import patsy
 import pylab as plt
 import pandas as pd
 
@@ -22,14 +23,23 @@ def _auto_hist(data, ax, *args, **kwargs):
     if data.dtype == float:
         ax.hist(data, bins=int(np.sqrt(len(data))), normed=True,
             facecolor='#999999', edgecolor='k', alpha=0.33)
-        my_pdf = gaussian_kde(data)
-        x = np.linspace(np.min(data), np.max(data), 100)
-        kwargs.setdefault('facecolor', '#777777')
-        kwargs.setdefault('alpha', 0.66)
-        ax.fill_between(x, my_pdf(x), *args, **kwargs)
+        if len(data)>1:
+            # create the density plot
+            # if has less than 2 point gives error
+            my_pdf = gaussian_kde(data)
+            x = np.linspace(np.min(data), np.max(data), 100)
+            kwargs.setdefault('facecolor', '#777777')
+            kwargs.setdefault('alpha', 0.66)
+            ax.fill_between(x, my_pdf(x), *args, **kwargs)
+        for value in data:
+            # make ticks fot the data
+            ax.axvline(x=value, ymin=0.0, ymax=0.1,
+                linewidth=2, color='#555555', alpha=0.5)
         ax.set_ylim(0.0, None)
         ax.set_ylabel('Density')
     else:
+        # integer or categorical are represented
+        # by the same method
         res = Counter(data)
         key = sorted(res.keys())
         if isinstance(key[0], int):
@@ -47,7 +57,16 @@ def _auto_hist(data, ax, *args, **kwargs):
     ax.set_xlabel(data.name)
     return ax
 
-def _autoplot(x,y=None, ax=None, *args, **kwargs):
+
+def _autoplot(x, y=None, ax=None, *args, **kwargs):
+    """Select automatically the type of plot given the type of x and y
+
+    basically the rules are that if both are numeric, do a scatter
+    if one is numeric and one is categorical do a boxplot
+    if both are categorical do a mosaic plot
+
+    the args and kwargs are redirected to the plot function
+    """
     if y is None or y is x:
         return _auto_hist(x, ax, *args, **kwargs)
     x = pd.Series(x)
@@ -86,6 +105,8 @@ def _autoplot(x,y=None, ax=None, *args, **kwargs):
 
 
 def _formula_split(formula):
+    """split the formula of the facet_plot into the y, x and categorical terms
+    """
     if '|' in formula:
         f = formula.split('|')[1].strip()
         formula = formula.split('|')[0]
@@ -101,21 +122,64 @@ def _formula_split(formula):
 
 
 def facet_plot(formula, data, *args, **kwargs):
+    """make a faceted plot of two variables divided into categories
+
+    the formula should follow the sintax of the faceted plot:
+
+        endog ~ exog | factor
+
+    where both the endog and the factor are optionals.
+    If multiple factors are inserted divided by space the cartesian
+    product of their level will be used.
+
+    All the factor will be treated as patsy formulas, but are limited to
+    monovariate endogenous and exogenous variables.
+    """
     fig = plt.figure()
     y, x, facet = _formula_split(formula)
     if x is None:
         x, y = y, x
     if facet is not None:
-        elements = list(data.groupby(facet))
+        facet_list = [f.strip() for f in facet.split()]
+        try:  # try to use it a a hierarchical index for the dataframe
+            elements = list(data.groupby(facet_list))
+        except KeyError: # go by patsy
+            # create the matrix
+            matrix = patsy.dmatrix(facet, data, return_type="dataframe")
+            elements = []
+            # take every column of the resulting design matrix
+            # and use it to split the dataframe
+            for column in matrix:
+                value = matrix[column]
+                elements.append((column, data[value > 0]))
+    # facet is none, so simply use the whole dataset
     else:
         elements = [['', data]]
+    # automatically select the number of subplots as a square of this side
     side_num = np.ceil(np.sqrt(len(elements)))
+    #for each subplot create the plot
     for idx, (level, value) in enumerate(elements, 1):
         ax = fig.add_subplot(side_num, side_num, idx)
+        #choose if use the name ad a dataframe index or a patsy formula
+        try:
+            value_x = value[x]
+        except KeyError:
+            # the +0 is needed to avoid the intercept column
+            value_x = pd.Series(patsy.dmatrix(x + '+0', value)[:,0])
+            value_x.name = x
         if y is not None:
-            _autoplot(value[x], value[y], ax, *args, **kwargs)
+            # same game with the y variable, try to use it as dataframe
+            # index, if this fail treat it as patsy formula
+            # then do a bidimensional plot
+            try:
+                value_y = value[y]
+            except KeyError:
+                # the +0 is needed to avoid the intercept column
+                value_y = pd.Series(patsy.dmatrix(y + '+0', value)[:,0])
+                value_y.name = y
+            _autoplot(value_x, value_y, ax, *args, **kwargs)
         else:
-            _autoplot(value[x], None, ax, *args, **kwargs)
+            _autoplot(value_x, None, ax, *args, **kwargs)
         ax.set_title(level)
     fig.canvas.set_window_title(formula)
     fig.tight_layout()
@@ -130,6 +194,24 @@ if __name__ == '__main__':
                          'cat_1': ['lizard']*7 + ['dog']*7 + ['newt']*6,
                          'cat_2': (['men']*4 + ['women']*11
                                   + ['men']*5)})
+
+    affair = datasets.fair.load_pandas().data
+    rate_marriage = {1: '1 very poor', 2: '2 poor', 3: '3 fair',
+    4: '4 good', 5: '5 very good'}
+    affair['rate_marriage'] = affair['rate_marriage'].apply(lambda s: rate_marriage[s])
+    religious = {1: '1 not', 2: '2 mildly', 3: '3 fairly', 4: '4 strongly'}
+    affair['religious'] = affair['religious'].apply(lambda s: religious[s])
+    occupation = {1: 'student',
+        2: 'farming, agriculture; semi-skilled, or unskilled worker',
+        3: 'white-colloar' ,
+        4: ('teacher counselor social worker, nurse; artist, writers; '
+            'technician, skilled worker'),
+        5: 'managerial, administrative, business',
+        6: 'professional with advanced degree'}
+    affair['occupation'] = affair['occupation'].apply(lambda s: occupation[s])
+    affair['occupation_husb'] = affair['occupation_husb'].apply(lambda s: occupation[s])
+    affair['cheated'] = affair.affairs > 0
+
     #_autoplot(data.int_1)
     #_autoplot(data.cat_1)
     #_autoplot(data.float_1)
@@ -147,11 +229,29 @@ if __name__ == '__main__':
     assert _formula_split('y | f') == ('y', None, 'f')
     assert _formula_split('y') == ('y', None, None)
 
-    facet_plot('int_1 | cat_1', data)
-    facet_plot('int_1 ~ float_1 | cat_1', data)
-    facet_plot('int_1 ~ float_1 | cat_2', data)
-    facet_plot('int_1 ~ float_1', data)
-    facet_plot('int_1', data)
-    facet_plot('float_1', data, facecolor='r', alpha=1.0)
-    facet_plot('cat_1 ~ cat_2', data)
+    # basic facet_plots for variuos combinations
+    #facet_plot('int_1 | cat_1', data)
+    #facet_plot('int_1 ~ float_1 | cat_1', data)
+    #facet_plot('int_1 ~ float_1 | cat_2', data)
+    #facet_plot('int_1 ~ float_1', data)
+    #facet_plot('int_1', data)
+    #facet_plot('float_1', data, facecolor='r', alpha=1.0)
+    #facet_plot('cat_1 ~ cat_2', data)
+    #facet_plot('float_1 ~ float_2 | cat_1', data)
+
+    #multiple classes for the categorical
+    #facet_plot('float_1 | cat_1 cat_2', data)
+
+    #categorical with patsy
+    #facet_plot('float_1 | cat_1 + cat_2', data)
+
+    #categorical with patsy version 2
+    #facet_plot('float_1 | cat_1 * cat_2', data)
+
+    facet_plot('I(float_1*4) ~ I(float_2 + 3)', data)
+
+    #facet_plot('yrs_married |religious', affair)
+    #facet_plot('yrs_married ~ educ |religious', affair)
+
+
     plt.show()
