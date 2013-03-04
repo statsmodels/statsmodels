@@ -122,6 +122,40 @@ def _formula_split(formula):
     return y, x, f
 
 
+def _elements4facet(facet, data):
+    """obtain a list of (category, subset of the dataframe) given the facet
+    """
+    if facet is not None:
+        facet_list = [f.strip() for f in facet.split()]
+        try:  # try to use it a a hierarchical index for the dataframe
+            elements = list(data.groupby(facet_list))
+        except KeyError:  # go by patsy
+            # create the matrix
+            matrix = patsy.dmatrix(facet, data, return_type="dataframe")
+            elements = []
+            # take every column of the resulting design matrix
+            # and use it to split the dataframe
+            for column in matrix:
+                value = matrix[column]
+                elements.append((column, data[value > 0]))
+    # facet is none, so simply use the whole dataset
+    else:
+        elements = [['', data]]
+    return elements
+
+
+def _array4name(name, data):
+    """given a name/patsy formula obtain the dataframe data from it
+    """
+    try:
+        value = data[name]
+    except KeyError:
+        # the +0 is needed to avoid the intercept column
+        value = pd.Series(patsy.dmatrix(name + '+0', data)[:, 0])
+        value.name = name
+    return value
+
+
 def facet_plot(formula, data, subset=None, *args, **kwargs):
     """make a faceted plot of two variables divided into categories
 
@@ -143,47 +177,18 @@ def facet_plot(formula, data, subset=None, *args, **kwargs):
     #if a subset is specified use it to trim the dataframe
     if subset:
         data = data[subset]
-    if facet is not None:
-        facet_list = [f.strip() for f in facet.split()]
-        try:  # try to use it a a hierarchical index for the dataframe
-            elements = list(data.groupby(facet_list))
-        except KeyError:  # go by patsy
-            # create the matrix
-            matrix = patsy.dmatrix(facet, data, return_type="dataframe")
-            elements = []
-            # take every column of the resulting design matrix
-            # and use it to split the dataframe
-            for column in matrix:
-                value = matrix[column]
-                elements.append((column, data[value > 0]))
-    # facet is none, so simply use the whole dataset
-    else:
-        elements = [['', data]]
+    # obtain a list of (category, subset of the dataframe)
+    elements = _elements4facet(facet, data)
     # automatically select the number of subplots as a square of this side
     side_num = np.ceil(np.sqrt(len(elements)))
     #for each subplot create the plot
     for idx, (level, value) in enumerate(elements, 1):
         ax = fig.add_subplot(side_num, side_num, idx)
         #choose if use the name ad a dataframe index or a patsy formula
-        try:
-            value_x = value[x]
-        except KeyError:
-            # the +0 is needed to avoid the intercept column
-            value_x = pd.Series(patsy.dmatrix(x + '+0', value)[:, 0])
-            value_x.name = x
-        if y is not None:
-            # same game with the y variable, try to use it as dataframe
-            # index, if this fail treat it as patsy formula
-            # then do a bidimensional plot
-            try:
-                value_y = value[y]
-            except KeyError:
-                # the +0 is needed to avoid the intercept column
-                value_y = pd.Series(patsy.dmatrix(y + '+0', value)[:, 0])
-                value_y.name = y
-            _autoplot(value_x, value_y, ax, *args, **kwargs)
-        else:
-            _autoplot(value_x, None, ax, *args, **kwargs)
+        value_x = _array4name(x, value)
+        value_y = _array4name(y, value) if y else None
+        # launch the autoplot
+        _autoplot(value_x, value_y, ax, *args, **kwargs)
         ax.set_title(level)
     fig.canvas.set_window_title(formula)
     fig.tight_layout()
@@ -261,6 +266,5 @@ if __name__ == '__main__':
 
     #facet_plot('yrs_married |religious', affair)
     facet_plot('yrs_married ~ age |educ', affair)
-
 
     plt.show()
