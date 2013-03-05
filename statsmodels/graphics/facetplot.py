@@ -79,7 +79,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
         return _auto_hist(x, ax, *args, **kwargs)
     x = pd.Series(x)
     y = pd.Series(y)
-    # the exog is nuumerical
+    # the exog is numerical
     if x.dtype == float or x.dtype == int:
         #TODO: if both are ints should add a jitter
         # the endog is numeric too, do a scatterplot
@@ -114,7 +114,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
             level_k = [k for k, v in levels]
             #plt.boxplot(level_v, *args, **kwargs)
             #ax.set_xticklabels(level_k)
-            violinplot(level_v, level_k, ax=ax, *args, **kwargs)
+            violinplot(level_v, labels=level_k, ax=ax, *args, **kwargs)
         #otherwise do a mosaic plot
         else:
             x_name = (x.name or 'x')
@@ -296,6 +296,13 @@ if __name__ == '__main__':
 
     #facet_plot('yrs_married ~ religious', affair)
     #facet_plot('yrs_married ~ religious | educ', affair)
-    facet_plot('yrs_married ~ age', affair)
+    #facet_plot('yrs_married ~ age', affair)
 
+    import pandas as pd
+    import pylab as plt
+    data = pd.DataFrame({'x':plt.randn(100),
+                         'y':plt.randn(100),
+                         'c1': ['a']*50 + ['b']*50,
+                         'c2': ['x']*40 + ['y']*50 + ['x']*10})
+    facet_plot('x | c2', data)
     plt.show()
