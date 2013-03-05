@@ -1,8 +1,11 @@
 from __future__ import division
 
+__all__ = ['autoplot', 'facet_plot']
+
 import numpy as np
 from collections import Counter
 
+from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
 from statsmodels.graphics.boxplots import violinplot
 from statsmodels.graphics.plot_grids import _make_ellipse
@@ -66,15 +69,35 @@ def _auto_hist(data, ax, *args, **kwargs):
     return ax
 
 
-def _autoplot(x, y=None, ax=None, *args, **kwargs):
-    """Select automatically the type of plot given the type of x and y
+def autoplot(x, y=None, ax=None, *args, **kwargs):
+    """Select automatically the type of plot given the array x and y
 
-    basically the rules are that if both are numeric, do a scatter
+    The rules are that if both are numeric, do a scatter
     if one is numeric and one is categorical do a boxplot
-    if both are categorical do a mosaic plot
+    if both are categorical do a mosaic plot. If only the x is given
+    do a density plot or an histogram if the data are float or
+    integer/categorical.
 
     the args and kwargs are redirected to the plot function
+
+    Params
+    ======
+    x : array, list or pandas.Series
+        The main array to be plotted
+    y : same as x, optional
+        optional array to be plotted ad dependent variable
+    ax : matplotlib.axes
+        the axes on which draw the plot. If None a new figure will be created
+
+    Returns
+    =======
+    ax : the axes used in the plot
+
+    See Also
+    ========
+    facet_plot: create a figure with subplots of x and y divided by category
     """
+    fig, ax = utils.create_mpl_ax(ax)
     if y is None or y is x:
         return _auto_hist(x, ax, *args, **kwargs)
     x = pd.Series(x)
@@ -85,7 +108,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
         # the endog is numeric too, do a scatterplot
         if y.dtype == float or y.dtype == int:
             kwargs.setdefault('alpha', 0.33)
-            plt.scatter(x, y, *args, **kwargs)
+            ax.scatter(x, y, *args, **kwargs)
             #add the level to the scatterplot
             mean = [np.mean(x), np.mean(y)]
             cov = np.cov(x, y)
@@ -102,7 +125,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
             levels = list(data.groupby('f')['x'])
             level_v = [v for k, v in levels]
             level_k = [k for k, v in levels]
-            plt.boxplot(level_v, vert=False, *args, **kwargs)
+            ax.boxplot(level_v, vert=False, *args, **kwargs)
             ax.set_yticklabels(level_k)
     # the exog is categorical
     else:
@@ -124,6 +147,7 @@ def _autoplot(x, y=None, ax=None, *args, **kwargs):
                     ax=ax, *args, **kwargs)
     ax.set_xlabel(x.name)
     ax.set_ylabel(y.name)
+    return ax
 
 
 def _formula_split(formula):
@@ -218,7 +242,7 @@ def facet_plot(formula, data, subset=None, *args, **kwargs):
         value_x = _array4name(x, value)
         value_y = _array4name(y, value) if y else None
         # launch the autoplot
-        _autoplot(value_x, value_y, ax, *args, **kwargs)
+        autoplot(value_x, value_y, ax, *args, **kwargs)
         ax.set_title(level)
     fig.canvas.set_window_title(formula)
     fig.tight_layout()
@@ -304,5 +328,7 @@ if __name__ == '__main__':
                          'y':plt.randn(100),
                          'c1': ['a']*50 + ['b']*50,
                          'c2': ['x']*40 + ['y']*50 + ['x']*10})
-    facet_plot('x | c2', data)
+    facet_plot('x ~ y| c2', data)
+
+    #autoplot(data['y'],data['x'])
     plt.show()
