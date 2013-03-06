@@ -224,7 +224,6 @@ def _select_rowcolsize(num_of_categories):
             row_num = row_num - 1
         else:
             break
-
     return row_num, col_num
 
 
