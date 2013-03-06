@@ -99,7 +99,11 @@ def autoplot(x, y=None, ax=None, *args, **kwargs):
     """
     fig, ax = utils.create_mpl_ax(ax)
     if y is None or y is x:
-        return _auto_hist(x, ax, *args, **kwargs)
+        try:
+            kwargs.setdefault('ax', ax)
+            return x.__plot__(*args, **kwargs)
+        except AttributeError:
+            return _auto_hist(x, *args, **kwargs)
     x = pd.Series(x)
     y = pd.Series(y)
     # the exog is numerical
