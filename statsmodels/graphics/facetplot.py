@@ -7,7 +7,7 @@ from collections import Counter
 
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
-from statsmodels.graphics.boxplots import violinplot
+from statsmodels.graphics.boxplots import violinplot, beanplot
 from statsmodels.graphics.plot_grids import _make_ellipse
 
 from statsmodels.api import datasets
@@ -18,10 +18,22 @@ import pylab as plt
 import pandas as pd
 
 
-def _auto_hist(data, ax, *args, **kwargs):
+def _jitter(x):
+    """add a little jitter to integer array"""
+    u = x.unique()
+    diff = abs(np.subtract.outer(u, u))
+    diff[diff == 0] = np.max(u)
+    min_diff = np.min(diff)
+    return x + min_diff * 0.4 * (plt.rand(len(x)) - 0.5)
+
+
+def _auto_hist(data, ax, kind=None, *args, **kwargs):
     """
     given a pandas series infers the type of data and print
-    a barplot, an histogram or a density plot given the circumstances
+    a barplot, an histogram or a density plot given the circumstances.
+
+    the kind keyword should let the user choose the type of graphics but it's
+    not implemented yet.
     """
     data = pd.Series(data)
     if data.dtype == float:
@@ -69,7 +81,7 @@ def _auto_hist(data, ax, *args, **kwargs):
     return ax
 
 
-def autoplot(x, y=None, ax=None, *args, **kwargs):
+def autoplot(x, y=None, ax=None, kind=None, *args, **kwargs):
     """Select automatically the type of plot given the array x and y
 
     The rules are that if both are numeric, do a scatter
@@ -86,8 +98,22 @@ def autoplot(x, y=None, ax=None, *args, **kwargs):
         The main array to be plotted
     y : same as x, optional
         optional array to be plotted ad dependent variable
-    ax : matplotlib.axes
+    ax : matplotlib.axes, optional
         the axes on which draw the plot. If None a new figure will be created
+    kind : string, optional
+        Describe the type of plot that should be tried on the data.
+        If given and not valid will raise a TypeError
+        valid values are:
+
+            - ellipse
+            - scatter, points
+            - line
+            - boxplot
+            - violin
+            - beanplot
+            - mosaic
+            - hexbin
+            - matrix
 
     Returns
     =======
@@ -98,9 +124,19 @@ def autoplot(x, y=None, ax=None, *args, **kwargs):
     facet_plot: create a figure with subplots of x and y divided by category
     """
     fig, ax = utils.create_mpl_ax(ax)
+    available_plots = ['scatter', 'ellipse', 'lines', 'points', 'hexbin',
+                        'boxplot', 'violinplot', 'beanplot', 'mosaic',
+                        'matrix']
+    if kind and kind not in available_plots:
+        raise TypeError("the selected plot type " +
+                        "({}) is not recognized,".format(kind) +
+                        "the accepted types are {}".format(available_plots))
+    plot_error = TypeError("the selected plot type "
+                      "({}) is not right for these data".format(kind))
     if y is None or y is x:
         try:
             kwargs.setdefault('ax', ax)
+            kwargs.setdefault('kind', kind)
             return x.__plot__(*args, **kwargs)
         except AttributeError:
             return _auto_hist(x, *args, **kwargs)
@@ -111,44 +147,113 @@ def autoplot(x, y=None, ax=None, *args, **kwargs):
         #TODO: if both are ints should add a jitter
         # the endog is numeric too, do a scatterplot
         if y.dtype == float or y.dtype == int:
-            kwargs.setdefault('alpha', 0.33)
-            ax.scatter(x, y, *args, **kwargs)
+            if kind is None or kind in ['scatter', 'ellipse', 'points']:
+                kwargs.setdefault('alpha', 0.33)
+                _x = _jitter(x) if x.dtype == int else x
+                _y = _jitter(y) if y.dtype == int else y
+                ax.scatter(_x, _y, *args, **kwargs)
+            elif kind in ['lines']:
+                kwargs.setdefault('alpha', 0.5)
+                _x = x.order()
+                _y = y[x.index]
+                ax.plot(_x, _y, *args, **kwargs)
+            elif kind in ['hexbin']:
+                kwargs.setdefault('cmap', plt.cm.binary)
+                kwargs.setdefault('gridsize', 20)
+                ax.hexbin(x, y, *args, **kwargs)
+            else:
+                raise plot_error
             #add the level to the scatterplot
-            mean = [np.mean(x), np.mean(y)]
-            cov = np.cov(x, y)
-            _make_ellipse(mean, cov, ax, 0.95, 'gray')
-            _make_ellipse(mean, cov, ax, 0.50, 'blue')
-            _make_ellipse(mean, cov, ax, 0.05, 'purple')
-            if y.dtype == int:
-                ax.set_yticks([int(i) for i in ax.get_yticks()])
-            if x.dtype == int:
-                ax.set_xticks([int(i) for i in ax.get_xticks()])
+            if kind is None or kind == 'ellipse':
+                mean = [np.mean(x), np.mean(y)]
+                cov = np.cov(x, y)
+                _make_ellipse(mean, cov, ax, 0.95, 'gray')
+                _make_ellipse(mean, cov, ax, 0.50, 'blue')
+                _make_ellipse(mean, cov, ax, 0.05, 'purple')
+            #this gives some problem I don'tunderstand about a fixedlocator
+            #if y.dtype == int:
+            #    ax.set_yticks([int(i) for i in ax.get_yticks()])
+            #if x.dtype == int:
+            #    ax.set_xticks([int(i) for i in ax.get_xticks()])
         # the endog is categorical, do a horizontal boxplot
         else:
             data = pd.DataFrame({'x': x, 'f': y})
             levels = list(data.groupby('f')['x'])
             level_v = [v for k, v in levels]
             level_k = [k for k, v in levels]
-            ax.boxplot(level_v, vert=False, *args, **kwargs)
-            ax.set_yticklabels(level_k)
+            if kind is None or kind in ['boxplot']:
+                kwargs.setdefault('notch', True)
+                kwargs['vert'] = False
+                ax.boxplot(level_v, *args, **kwargs)
+                ax.set_yticklabels(level_k)
+            elif kind in ['points']:
+                levels = y.unique()
+                y_ticks = range(1, 1 + len(levels))
+                num4level = {k: v for k, v in zip(levels, y_ticks)}
+                y = y.apply(lambda l: num4level[l])
+                if x.dtype == int:
+                    x = _jitter(x)
+                kwargs.setdefault('alpha', 0.33)
+                ax.scatter(x, _jitter(y), *args, **kwargs)
+                ax.set_yticks(y_ticks)
+                ax.set_yticklabels(level_k)
+            else:
+                raise plot_error
     # the exog is categorical
     else:
+        data = pd.DataFrame({'x': y, 'f': x})
+        levels = list(data.groupby('f')['x'])
+        level_v = [v for k, v in levels]
+        level_k = [k for k, v in levels]
         #if the endog is numeric do a violinplot
         if y.dtype == float or y.dtype == int:
-            data = pd.DataFrame({'x': y, 'f': x})
-            levels = list(data.groupby('f')['x'])
-            level_v = [v for k, v in levels]
-            level_k = [k for k, v in levels]
-            #plt.boxplot(level_v, *args, **kwargs)
-            #ax.set_xticklabels(level_k)
-            violinplot(level_v, labels=level_k, ax=ax, *args, **kwargs)
+            if kind is None or kind in ['violinplot']:
+                violinplot(level_v, labels=level_k, ax=ax, *args, **kwargs)
+            elif kind in ['boxplot']:
+                ax.boxplot(level_v, *args, **kwargs)
+                ax.set_xticklabels(level_k)
+            elif kind in ['beanplot']:
+                beanplot(level_v, labels=level_k, ax=ax, *args, **kwargs)
+            else:
+                raise plot_error
         #otherwise do a mosaic plot
         else:
-            x_name = (x.name or 'x')
-            y_name = (y.name or 'y')
-            data = pd.DataFrame({x_name: x, y_name: y})
-            mosaicplot.mosaic(data, index=[x_name, y_name],
-                    ax=ax, *args, **kwargs)
+            if kind is None or kind in ['mosaic']:
+                x_name = (x.name or 'x')
+                y_name = (y.name or 'y')
+                data = pd.DataFrame({x_name: x, y_name: y})
+                mosaicplot.mosaic(data, index=[x_name, y_name],
+                        ax=ax, *args, **kwargs)
+            elif kind in ['points', 'matrix']:
+                levels = y.unique()
+                y_ticks = range(1, 1 + len(levels))
+                num4levely = {k: v for k, v in zip(levels, y_ticks)}
+                levels = x.unique()
+                x_ticks = range(1, 1 + len(levels))
+                num4levelx = {k: v for k, v in zip(levels, x_ticks)}
+                level_k_y = [k for k, v in data.groupby('x')['f']]
+                y = y.apply(lambda l: num4levely[l])
+                x = x.apply(lambda l: num4levelx[l])
+                if kind in ['points']:
+                    kwargs.setdefault('alpha', 0.33)
+                    ax.scatter(_jitter(x), _jitter(y), *args, **kwargs)
+                else:
+                    image = np.zeros((len(y_ticks), len(x_ticks)))
+                    for _x, _y in zip(x, y):
+                        image[_y - 1, _x - 1] += 1.0
+                    kwargs.setdefault('interpolation', 'nearest')
+                    kwargs.setdefault('origin', 'lower')
+                    extent = (x_ticks[0] - 0.5, x_ticks[-1] + 0.5,
+                        y_ticks[0] - 0.5, y_ticks[-1] + 0.5)
+                    kwargs.setdefault('extent', extent)
+
+                    ax.imshow(image, *args, **kwargs)
+                ax.set_yticks(y_ticks)
+                ax.set_yticklabels(level_k_y)
+                ax.set_xticks(x_ticks)
+                ax.set_xticklabels(level_k)
+            else:
+                raise plot_error
     ax.set_xlabel(x.name)
     ax.set_ylabel(y.name)
     return ax
@@ -231,7 +336,7 @@ def _select_rowcolsize(num_of_categories):
     return row_num, col_num
 
 
-def facet_plot(formula, data, subset=None, *args, **kwargs):
+def facet_plot(formula, data, subset=None, kind=None, *args, **kwargs):
     """make a faceted plot of two variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
@@ -258,6 +363,14 @@ def facet_plot(formula, data, subset=None, *args, **kwargs):
     # for each subplot create the plot
     base_ax = None
     for idx, (level, value) in enumerate(elements):
+        # adjust the position of the plots, shifting them
+        # for a better display of the axes ticks
+        idx = row_num * col_num - idx - 1
+        if idx // col_num == 0:
+            idx -= row_num * col_num - L
+        my_row = idx // col_num
+        my_col = idx % col_num
+
         ax = fig.add_subplot(row_num, col_num, idx + 1,
                              sharex=base_ax, sharey=base_ax)
         # all the subplots share the same axis with the first one being
@@ -268,27 +381,28 @@ def facet_plot(formula, data, subset=None, *args, **kwargs):
         value_x = _array4name(x, value)
         value_y = _array4name(y, value) if y else None
         # launch the autoplot
-        autoplot(value_x, value_y, ax, *args, **kwargs)
+        autoplot(value_x, value_y, ax, kind=kind, *args, **kwargs)
         #remove the extremal ticks to remove overlaps
         if (value_y is not None and value_y.dtype != object) or value_y is None:
             ax.locator_params(prune='both', axis='y')
         if value_x.dtype != object:
             ax.locator_params(prune='both', axis='x')
         # remove the superfluos info base on the columns
-        my_row = idx // col_num
-        my_col = idx % col_num
         if my_col:
             ax.set_ylabel('')
             plt.setp(ax.get_yticklabels(), visible=False)
         # show the x labels only if it's on the last line
         # or in the one before that and is not hidden by the
         # last row
-        if my_row != row_num - 1 and not (my_row == row_num - 2
-                                        and 0 < L % col_num <= my_col):
+        # Can be simplified moving the x axes on the top
+        #TODO: move the x axis on the top
+        if my_row != row_num - 1:# and not (my_row == row_num - 2
+                                 #       and 0 < L % col_num <= my_col):
             ax.set_xlabel('')
             plt.setp(ax.get_xticklabels(), visible=False)
+
         ax.set_title(level)
-        #ax.set_title("{:.0f}, {:.0f}".format(my_row, my_col))
+        #ax.set_title("{:.0f}, {:.0f}, {:.0f}".format(idx, my_row, my_col))
     fig.canvas.set_window_title(formula)
     fig.subplots_adjust(wspace=0, hspace=0.0)
     fig.tight_layout()
@@ -305,6 +419,7 @@ if __name__ == '__main__':
                                   + ['men'] * 5)})
 
     affair = datasets.fair.load_pandas().data
+    print affair.columns
     rate_marriage = {1: '1 very poor', 2: '2 poor', 3: '3 fair',
     4: '4 good', 5: '5 very good'}
     l = lambda s: rate_marriage[s]
@@ -321,6 +436,8 @@ if __name__ == '__main__':
     affair['occupation'] = affair['occupation'].apply(lambda s: occupation[s])
     l = lambda s: occupation[s]
     affair['occupation_husb'] = affair['occupation_husb'].apply(l)
+    affair['age'] = affair['age'].apply(int)
+    affair['yrs_married'] = affair['yrs_married'].apply(int)
     affair['cheated'] = affair.affairs > 0
 
     #_autoplot(data.int_1)
@@ -366,15 +483,28 @@ if __name__ == '__main__':
 
     #facet_plot('yrs_married ~ religious', affair)
     #facet_plot('yrs_married ~ religious | educ', affair)
-    facet_plot('yrs_married ~ age | religious', affair)
 
+    # test for the different kind of plots
+    #facet_plot('yrs_married ~ age | religious', affair, kind='scatter')
+    #facet_plot('yrs_married ~ age | religious', affair, kind='points')
+    #facet_plot('yrs_married ~ age | religious', affair, kind='ellipse')
+    #facet_plot('rate_marriage ~ age | religious', affair, kind='boxplot')
+    #facet_plot('rate_marriage ~ age | religious', affair, kind='points')
+    #facet_plot('age ~ rate_marriage | religious', affair, kind='boxplot')
+    #facet_plot('age ~ rate_marriage | religious', affair, kind='beanplot')
+    #facet_plot('age ~ rate_marriage | religious', affair, kind='violinplot')
+    #facet_plot('rate_marriage ~ religious', affair, kind='mosaic')
+    #facet_plot('rate_marriage ~ religious', affair, kind='points')
+    facet_plot('rate_marriage ~ religious', affair, kind='matrix')
+    facet_plot('religious ~ rate_marriage', affair, kind='matrix')
     import pandas as pd
     import pylab as plt
-    base_cat = 'abcef'
-    f = 30
+    base_cat = 'abc'
+    f = 300
     data = pd.DataFrame({'x': plt.randn(f * len(base_cat)),
+                         'y': plt.randn(f * len(base_cat)),
                          'c': list(base_cat * f)})
-    facet_plot('x | c', data)
+    #facet_plot('x ~ y| c', data, kind='lines')
 
     #autoplot(data['y'],data['x'])
     plt.show()
