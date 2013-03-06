@@ -212,6 +212,22 @@ def _array4name(name, data):
     return value
 
 
+def _select_rowcolsize(num_of_categories):
+    """given the number of facets select the best structure of subplots
+    """
+    L = num_of_categories
+    side_num = np.ceil(np.sqrt(L))
+    col_num = side_num
+    row_num = side_num
+    while True:
+        if (row_num - 1) * col_num >= L:
+            row_num = row_num - 1
+        else:
+            break
+
+    return row_num, col_num
+
+
 def facet_plot(formula, data, subset=None, *args, **kwargs):
     """make a faceted plot of two variables divided into categories
 
@@ -228,23 +244,50 @@ def facet_plot(formula, data, subset=None, *args, **kwargs):
     """
     fig = plt.figure()
     y, x, facet = _formula_split(formula)
-    #if a subset is specified use it to trim the dataframe
+    # if a subset is specified use it to trim the dataframe
     if subset:
         data = data[subset]
     # obtain a list of (category, subset of the dataframe)
     elements = _elements4facet(facet, data)
     # automatically select the number of subplots as a square of this side
-    side_num = np.ceil(np.sqrt(len(elements)))
-    #for each subplot create the plot
-    for idx, (level, value) in enumerate(elements, 1):
-        ax = fig.add_subplot(side_num, side_num, idx)
-        #choose if use the name ad a dataframe index or a patsy formula
+    L = len(elements)
+    row_num, col_num = _select_rowcolsize(L)
+    # for each subplot create the plot
+    base_ax = None
+    for idx, (level, value) in enumerate(elements):
+        ax = fig.add_subplot(row_num, col_num, idx + 1,
+                             sharex=base_ax, sharey=base_ax)
+        # all the subplots share the same axis with the first one being
+        # of the same variable
+        if not base_ax:
+            base_ax = ax
+        # choose if use the name ad a dataframe index or a patsy formula
         value_x = _array4name(x, value)
         value_y = _array4name(y, value) if y else None
         # launch the autoplot
         autoplot(value_x, value_y, ax, *args, **kwargs)
+        #remove the extremal ticks to remove overlaps
+        if (value_y is not None and value_y.dtype != object) or value_y is None:
+            ax.locator_params(prune='both', axis='y')
+        if value_x.dtype != object:
+            ax.locator_params(prune='both', axis='x')
+        # remove the superfluos info base on the columns
+        my_row = idx // col_num
+        my_col = idx % col_num
+        if my_col:
+            ax.set_ylabel('')
+            plt.setp(ax.get_yticklabels(), visible=False)
+        # show the x labels only if it's on the last line
+        # or in the one before that and is not hidden by the
+        # last row
+        if my_row != row_num - 1 and not (my_row == row_num - 2
+                                        and 0 < L % col_num <= my_col):
+            ax.set_xlabel('')
+            plt.setp(ax.get_xticklabels(), visible=False)
         ax.set_title(level)
+        #ax.set_title("{:.0f}, {:.0f}".format(my_row, my_col))
     fig.canvas.set_window_title(formula)
+    fig.subplots_adjust(wspace=0, hspace=0.0)
     fig.tight_layout()
     return fig
 
@@ -320,15 +363,15 @@ if __name__ == '__main__':
 
     #facet_plot('yrs_married ~ religious', affair)
     #facet_plot('yrs_married ~ religious | educ', affair)
-    #facet_plot('yrs_married ~ age', affair)
+    facet_plot('yrs_married ~ age | religious', affair)
 
     import pandas as pd
     import pylab as plt
-    data = pd.DataFrame({'x':plt.randn(100),
-                         'y':plt.randn(100),
-                         'c1': ['a']*50 + ['b']*50,
-                         'c2': ['x']*40 + ['y']*50 + ['x']*10})
-    facet_plot('x ~ y| c2', data)
+    base_cat = 'abcef'
+    f = 30
+    data = pd.DataFrame({'x': plt.randn(f * len(base_cat)),
+                         'c': list(base_cat * f)})
+    facet_plot('x | c', data)
 
     #autoplot(data['y'],data['x'])
     plt.show()
