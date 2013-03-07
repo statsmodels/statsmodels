@@ -119,7 +119,7 @@ def _auto_hist(data, ax, kind=None, *args, **kwargs):
                        linewidth=2, color='#555555', alpha=0.33)
         #make the histogram of the data, very lightly
         kwargs.setdefault('normed', True)
-        kwargs['alpha'] =  0.33
+        kwargs['alpha'] = 0.33
         kwargs.setdefault('edgecolor', 'k')
         kwargs['facecolor'] = '#999999'
         kwargs.setdefault('bins', int(np.sqrt(len(data))))
@@ -479,26 +479,35 @@ def _elements4facet(facet, data):
     return elements
 
 
-def _array4name(name, data):
+def _array4name(formula, data):
     """given a name/patsy formula obtain the dataframe data from it
     """
-    try:
-        # try to use it as a valid index
-        value = data[name]
-    except KeyError:
-        #if it fails try it as a patsy formula
-        # the +0 is needed to avoid the intercept column
-        dmatrix = patsy.dmatrix(name + '+0', data, return_type="dataframe")
-        # to do monovariate plots this should return a series
-        # the dataframe is kept for future implementation of
-        # multivariate plots
-        if len(dmatrix.columns) == 1:
-            value = pd.Series(dmatrix[dmatrix.columns[0]])
-            #value.name = name
-        else:
-            value = dmatrix
+    result = []
+    for name in formula.split('+'):
+        name = name.strip()
+        try:
+            # try to use it as a valid index
+            value = data[[name]]
+        except KeyError:
+            #if it fails try it as a patsy formula
+            # the +0 is needed to avoid the intercept column
+            value = patsy.dmatrix(name + '+0', data, return_type="dataframe")
             value.name = name
-    return value
+        result.append(value)
+    #merge all the resulting dataframe
+    void = pd.DataFrame(index=result[0].index)
+    for dataframe in result:
+        for col in dataframe:
+            void[col] = dataframe[col]
+            void[col].name = col
+    result = void
+    # to do monovariate plots this should return a series
+    # the dataframe is kept for future implementation of
+    # multivariate plots
+    if len(result.columns) == 1:
+        result = pd.Series(result[result.columns[0]])
+    result.name = formula
+    return result
 
 
 def _select_rowcolsize(num_of_categories):
@@ -706,8 +715,8 @@ def facet_plot(formula, data, kind=None, subset=None,
     return fig
 
 if __name__ == '__main__':
-    from statsmodels.graphics.facetplot import facet_plot
-    N = 1000
+    #from statsmodels.graphics.facetplot import facet_plot
+    N = 5
     data = pd.DataFrame({
         'int_1': plt.randint(0, 10, size=N),
         'int_2': plt.randint(0, 5, size=N),
@@ -716,13 +725,16 @@ if __name__ == '__main__':
         'float_2': abs(plt.randn(N)),
         'cat_1': ['aeiou'[i] for i in plt.randint(0, 5, size=N)],
         'cat_2': ['BCDF'[i] for i in plt.randint(0, 4, size=N)]})
-    #%run -i ~/gitrepo/statsmodels-EnricoGiampieri/statsmodels/graphics/facetplot.py
-    facet_plot("float_1|cat_1", data, 'hist');
 
     assert _formula_split('y ~ x | f') == ('y', 'x', 'f')
     assert _formula_split('y ~ x') == ('y', 'x', None)
     assert _formula_split('x | f') == (None, 'x', 'f')
     assert _formula_split('x') == (None, 'x', None)
+
+    assert all(_array4name('int_1 + int_2', data).columns == ['int_1', 'int_2'])
+    assert all(_array4name('int_1 + cat_2', data).columns == ['int_1', 'cat_2'])
+    assert isinstance(_array4name('cat_2', data), pd.Series)
+    assert isinstance(_array4name('int_1', data), pd.Series)
 
     #facet_plot('cat_1 ~ cat_2', data, kind='boxplot')
     #autoplot(data.int_2, data.float_1, kind='boxplot')
