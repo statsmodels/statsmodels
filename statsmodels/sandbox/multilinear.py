@@ -285,13 +285,20 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     do the analysis of the significativity
     >>> multigroup(pvals < 0.05, groups)
     """
+    pvals = pd.Series(pvals)
+    if len(pvals.unique()) != 2:
+        raise ValueError("the series should be binary")
+    if set(pvals.unique()) not in [{True, False}, {1, 0}, {0.0, 1.0}]:
+        raise ValueError("the series should be binary")
+    if not pvals.index.is_unique:
+        raise ValueError("series with duplicated index is not accepted")
     results = {'pvals': {},
         'increase': {},
         '_in_sign': {},
         '_in_non': {},
         '_out_sign': {},
         '_out_non': {}}
-    for group_name, group_list in groups.items():
+    for group_name, group_list in groups.iteritems():
         res = _test_group(pvals, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]
@@ -307,7 +314,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     result_df['adj_pvals'] = corrected
     return result_df
 
-if __name__ == '__main__':
+if __name__ == '__main__|':
     window = 9
     pvals = pd.Series([True] * window + [False] * window)
     groups = {'W' + str(i) + '-' + str(i + window - 1):
