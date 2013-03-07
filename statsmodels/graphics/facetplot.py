@@ -103,17 +103,19 @@ def autoplot(x, y=None, ax=None, kind=None, *args, **kwargs):
     kind : string, optional
         Describe the type of plot that should be tried on the data.
         If given and not valid will raise a TypeError
-        valid values are:
 
-            - ellipse
-            - scatter, points
-            - line
-            - boxplot
-            - violin
-            - beanplot
-            - mosaic
-            - hexbin
-            - matrix
+    the valid kind of plot is riassumed in this list,
+    where the first element is the default option:
+        numerical exogenous:
+            numerical endogenous:
+                'ellipse', 'points', 'lines', 'hexbin'
+            categorical endogenous:
+                'boxplot', 'points'
+        categorical exogenous:
+            numerical endogenous:
+                'violinplot', 'points', 'boxplot', 'beanplot'
+            categorical endogenous:
+                'mosaic', 'points', 'matrix'
 
     Returns
     =======
@@ -124,7 +126,7 @@ def autoplot(x, y=None, ax=None, kind=None, *args, **kwargs):
     facet_plot: create a figure with subplots of x and y divided by category
     """
     fig, ax = utils.create_mpl_ax(ax)
-    available_plots = ['scatter', 'ellipse', 'lines', 'points', 'hexbin',
+    available_plots = ['ellipse', 'lines', 'points', 'hexbin',
                         'boxplot', 'violinplot', 'beanplot', 'mosaic',
                         'matrix']
     if kind and kind not in available_plots:
@@ -133,6 +135,9 @@ def autoplot(x, y=None, ax=None, kind=None, *args, **kwargs):
                         "the accepted types are {}".format(available_plots))
     plot_error = TypeError("the selected plot type "
                       "({}) is not right for these data".format(kind))
+    if isinstance(x, pd.DataFrame) or isinstance(x, pd.DataFrame):
+        raise NotImplementedError("support for multivariate plots"
+                                  " is not yet implemented")
     if y is None or y is x:
         try:
             kwargs.setdefault('ax', ax)
@@ -147,7 +152,7 @@ def autoplot(x, y=None, ax=None, kind=None, *args, **kwargs):
         #TODO: if both are ints should add a jitter
         # the endog is numeric too, do a scatterplot
         if y.dtype == float or y.dtype == int:
-            if kind is None or kind in ['scatter', 'ellipse', 'points']:
+            if kind is None or kind in ['ellipse', 'points']:
                 kwargs.setdefault('alpha', 0.33)
                 _x = _jitter(x) if x.dtype == int else x
                 _y = _jitter(y) if y.dtype == int else y
@@ -214,6 +219,16 @@ def autoplot(x, y=None, ax=None, kind=None, *args, **kwargs):
                 ax.set_xticklabels(level_k)
             elif kind in ['beanplot']:
                 beanplot(level_v, labels=level_k, ax=ax, *args, **kwargs)
+            elif kind in ['points']:
+                xlevels = x.unique()
+                x_ticks = range(1, 1 + len(xlevels))
+                num4levelx = {k: v for k, v in zip(xlevels, x_ticks)}
+                _x = _jitter(x.apply(lambda l: num4levelx[l]))
+                kwargs.setdefault('alpha', 0.33)
+                _y = _jitter(y) if y.dtype == int else y
+                ax.scatter(_x, _y, *args, **kwargs)
+                ax.set_xticks(x_ticks)
+                ax.set_xticklabels(level_k)
             else:
                 raise plot_error
         #otherwise do a mosaic plot
@@ -225,12 +240,12 @@ def autoplot(x, y=None, ax=None, kind=None, *args, **kwargs):
                 mosaicplot.mosaic(data, index=[x_name, y_name],
                         ax=ax, *args, **kwargs)
             elif kind in ['points', 'matrix']:
-                levels = y.unique()
-                y_ticks = range(1, 1 + len(levels))
-                num4levely = {k: v for k, v in zip(levels, y_ticks)}
-                levels = x.unique()
-                x_ticks = range(1, 1 + len(levels))
-                num4levelx = {k: v for k, v in zip(levels, x_ticks)}
+                ylevels = y.unique()
+                y_ticks = range(1, 1 + len(ylevels))
+                num4levely = {k: v for k, v in zip(ylevels, y_ticks)}
+                xlevels = x.unique()
+                x_ticks = range(1, 1 + len(xlevels))
+                num4levelx = {k: v for k, v in zip(xlevels, x_ticks)}
                 level_k_y = [k for k, v in data.groupby('x')['f']]
                 y = y.apply(lambda l: num4levely[l])
                 x = x.apply(lambda l: num4levelx[l])
@@ -316,8 +331,17 @@ def _array4name(name, data):
     except KeyError:
         #if it fails try it as a patsy formula
         # the +0 is needed to avoid the intercept column
-        value = pd.Series(patsy.dmatrix(name + '+0', data)[:, 0])
-        value.name = name
+        dmatrix = patsy.dmatrix(name + '+0', data, return_type="dataframe")
+        # to do monovariate plots this should return a series
+        # the dataframe is kept for future implementation of
+        # multivariate plots
+        if len(dmatrix) == 1:
+            value = pd.Series(dmatrix[dmatrix.columns[0]])
+            value.name = name
+        else:
+            value = dmatrix
+            value.name = name
+        print value
     return value
 
 
@@ -493,18 +517,19 @@ if __name__ == '__main__':
     #facet_plot('age ~ rate_marriage | religious', affair, kind='boxplot')
     #facet_plot('age ~ rate_marriage | religious', affair, kind='beanplot')
     #facet_plot('age ~ rate_marriage | religious', affair, kind='violinplot')
+    #facet_plot('age ~ rate_marriage | religious', affair, kind='points')
     #facet_plot('rate_marriage ~ religious', affair, kind='mosaic')
     #facet_plot('rate_marriage ~ religious', affair, kind='points')
-    facet_plot('rate_marriage ~ religious', affair, kind='matrix')
-    facet_plot('religious ~ rate_marriage', affair, kind='matrix')
+    #facet_plot('rate_marriage ~ religious', affair, kind='matrix')
     import pandas as pd
     import pylab as plt
     base_cat = 'abc'
-    f = 300
+    f = 10
     data = pd.DataFrame({'x': plt.randn(f * len(base_cat)),
                          'y': plt.randn(f * len(base_cat)),
+                         'z': plt.randn(f * len(base_cat)),
                          'c': list(base_cat * f)})
-    #facet_plot('x ~ y| c', data, kind='lines')
+    facet_plot('y ~ x + z', data, kind='lines')
 
     #autoplot(data['y'],data['x'])
     plt.show()
