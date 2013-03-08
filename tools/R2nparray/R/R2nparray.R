@@ -46,8 +46,7 @@ convert <- function (x, name='default', strict=TRUE) {
 }
 
 convert.default <- function(X, name='default', strict=TRUE){
-    head = sanitize_name(name)
-    head = paste(head, '= ')
+    head = paste(name, '= ')
     mid = paste(deparse(X), collapse='\n')
     out = paste(head, "'''", mid, "'''")
     if(!strict){
@@ -62,9 +61,8 @@ convert.data.frame <- function(X, name='default', strict=TRUE){
 }
 
 convert.numeric <- function(X, name='default', strict=TRUE) {
-    head = sanitize_name(name)
     if (length(X) > 1){
-        head = paste(head, '= np.array([\n')
+        head = paste(name, '= np.array([\n')
         mid = strwrap(paste(X, collapse=', '), width=76, prefix='    ')
         mid = paste(mid, collapse='\n')
         tail = "\n    ])"
@@ -75,16 +73,21 @@ convert.numeric <- function(X, name='default', strict=TRUE) {
         }
         out = paste(head, mid, tail, collapse='\n') 
     }else{
-        out = paste(head, '=', X)
+        out = paste(name, '=', X)
     }
     return(out)
 }
 
 convert.character <- function(X, name='default', strict=TRUE) {
-    head = paste(sanitize_name(name), '= ')
-    mid = paste("'", X, "'", sep='')
-    mid = paste(mid, collapse=', ')
-    out = paste(head, mid)
+    if (length(X) > 1){
+        head = paste(name, '= np.array([\n')
+        mid = paste("'", X, "'", sep='')
+        mid = paste(mid, collapse=', ')
+        tail = "\n    ])"
+        out = paste(head, mid, tail)
+    }else{
+        out = paste(name, " = '", X, "'", sep='')
+    }
     return(out)
 }
 
@@ -98,9 +101,6 @@ sanitize_name <- function(name) {
 }
 
 get_dimnames <- function(mat, prefix="", asstring=FALSE) {
-    if (prefix != "") {
-        prefix = paste(prefix, "_", sep="")
-    }
     dimension_names = c('rownames', 'colnames', 3:100)
     dimn = dimnames(mat)
     if(is.null(dimn)){
@@ -191,6 +191,9 @@ class Bunch(dict):
         dict.__init__(self, kw)
             self.__dict__  = self
 "
+write_header = function(){
+    cat(header)
+}
 
 # Example
 #library(plm)
