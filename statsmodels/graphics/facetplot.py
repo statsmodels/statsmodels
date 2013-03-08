@@ -620,7 +620,7 @@ def _select_rowcolsize(num_of_categories):
 
 
 def facet_plot(formula, data, kind=None, subset=None,
-               drop_na=True, *args, **kwargs):
+               drop_na=True, ax=None, *args, **kwargs):
     """make a faceted plot of two variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
@@ -754,7 +754,10 @@ def facet_plot(formula, data, kind=None, subset=None,
         >>> facet_plot('float_1 ~ float_2 | cat_1', data, kind='lines')
         >>> facet_plot('float_1 ~ int_1 | cat_1', data, kind='boxplot')
     """
-    fig = plt.figure()
+    if not ax:
+        fig = plt.figure()
+    else:
+        fig, ax = utils.create_mpl_ax(ax)
     y, x, facet = _formula_split(formula)
     data = pd.DataFrame(data)
     if drop_na:
@@ -762,6 +765,14 @@ def facet_plot(formula, data, kind=None, subset=None,
     # if a subset is specified use it to trim the dataframe
     if subset:
         data = data[subset]
+    if ax:
+        if facet:
+            raise ValueError('facet are incompatibles with single axes')
+        else:
+            autoplot(_array4name(x, data), _array4name(y, data),
+                     ax=ax, kind=kind, *args, **kwargs)
+            return fig
+
     # obtain a list of (category, subset of the dataframe)
     elements = _elements4facet(facet, data)
     # automatically select the number of subplots as a square of this side
@@ -855,7 +866,7 @@ if __name__ == '__main__':
     #facet_plot('cat_2 ~ cat_1', data)
     #facet_plot('cat_2 ~ float_1', data, 'scatter')
     #facet_plot('float_2 ~ cat_1', data, 'scatter')
-    #facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse')
+    facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse')
     #facet_plot('float_2 ~ float_1:int_3', data)
     #facet_plot('float_1', data)
     #facet_plot('int_2', data)
@@ -870,4 +881,9 @@ if __name__ == '__main__':
     #facet_plot('int_3 ~ cat_1 + cat_2', data)
     #facet_plot('int_2 ~ float_1 + float_2', data)
     facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest')
+    fig = plt.figure()
+    ax = fig.add_subplot(2, 2, 1)
+    facet_plot('cat_2 ~ cat_1', data, ax=ax)
+    #this should give error
+    #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
     plt.show()
