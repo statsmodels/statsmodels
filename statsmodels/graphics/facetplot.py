@@ -317,6 +317,87 @@ def _autoplot_cat2cat(x, y, ax, kind, *args, **kwargs):
         raise plot_error
 
 
+def _build_axes(ax, **kwargs):
+    """This build the axes from information about the figure, row
+    and col position, the index and the base axes from wich to obtain
+    the axis
+    """
+    if isinstance(ax, list):
+        ax = ax[0].add_subplot(ax[1], ax[2], ax[3],
+                               sharex=ax[4], sharey=ax[4], **kwargs)
+    fig, ax = utils.create_mpl_ax(ax)
+    return fig, ax
+
+
+def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
+    """manage the multivariate type of plots
+    """
+    plot_error = TypeError("the selected plot type "
+                           "({}) is not right for these data".format(kind))
+    #raise NotImplementedError("support for multivariate plots"
+    #                          " is not yet implemented")
+    if isinstance(y, pd.Series):
+            y = pd.DataFrame({y.name: y})
+    if isinstance(x, pd.Series):
+            x = pd.DataFrame({x.name: x})
+    if len(x.columns) == 1:
+        fig, ax = _build_axes(ax)
+        colors = ['b', 'g', 'r', 'y', 'm', 'c', 'k']
+        for column, color in zip(y,colors):
+            kwargs['color'] = color
+            autoplot(x[x.columns[0]], y[column],
+                     ax=ax, kind=kind, *args, **kwargs)
+        return ax
+    if kind in ['_scatter', '_lines']:
+        fig, ax = _build_axes(ax, projection='3d')
+        if len(x.columns) != 2:
+            raise plot_error
+        new_x = x[x.columns[0]]
+        new_y = x[x.columns[1]]
+        for column in y:
+            ax.scatter(new_x, new_y, y[column], *args, **kwargs)
+    elif not kind or kind in ['scatter']:
+        fig, ax = _build_axes(ax)
+        if len(x.columns) != 2:
+            raise plot_error
+        new_x = x[x.columns[0]]
+        if new_x.dtype == object:
+            states = sorted(list(new_x.unique()))
+            indexes = dict([(v, states.index(v)) for v in states])
+            new_x = new_x.apply(lambda s: indexes[s])
+            ax.set_xticks(range(len(states)))
+            ax.set_xticklabels(states)
+        new_y = x[x.columns[1]]
+        if new_y.dtype == object:
+            states = sorted(list(new_y.unique()))
+            indexes = dict([(v, states.index(v)) for v in states])
+            new_y = new_y.apply(lambda s: indexes[s])
+            ax.set_yticks(range(len(states)))
+            ax.set_yticklabels(states)
+        if new_y.dtype == int:
+            new_y = _jitter(new_y)
+        if new_x.dtype == int:
+            new_x = _jitter(new_x)
+        color = y[y.columns[0]]
+        if color.dtype == object:
+            states = sorted(list(color.unique()))
+            indexes = dict([(v, states.index(v)) for v in states])
+            color = color.apply(lambda s: indexes[s])
+        area = np.r_[1] if len(y.columns) == 1 else y[y.columns[1]]
+        if area.dtype == object:
+            states = sorted(list(area.unique()))
+            indexes = dict([(v, states.index(v)) for v in states])
+            area = area.apply(lambda s: indexes[s])
+        area /= max(abs(area))/55.0
+        area += 60
+        kwargs.setdefault('alpha', 0.5)
+        kwargs.setdefault('edgecolor', 'none')
+        ax.scatter(new_x, new_y, s=area, c=color, *args, **kwargs)
+    else:
+        raise plot_error
+    return ax
+
+
 def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     """Select automatically the type of plot given the array x and y
 
@@ -357,6 +438,14 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
             -categorical endogenous:
                 'mosaic', 'scatter', 'matrix', 'boxplot'
 
+    There is at a moment only a partial support for multivariate plots:
+        if the endogenous variable is monodimensional and have:
+            multple exogenous, it will try to overlaps the graphs
+            changing colors. Works better for scatter (the default)
+        if there are two endogenous variables and one or two:
+            exogenous, it will create a scatterplot with varying size
+            and color of the plot.
+
     As can be seen the points and boxplot version can be applied in any
     case. It should be noted that even if you can, this doesn't mean
     that you should: The function will not stop the user from creating
@@ -390,17 +479,22 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     >>> autoplot(data.float_1, data.int_2, kind='ellipse')
     >>> autoplot(data.cat_1, data.cat_2, kind='mosaic')
     """
-    fig, ax = utils.create_mpl_ax(ax)
+
     available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
                        'boxplot', 'violinplot', 'beanplot', 'mosaic',
-                       'matrix', 'counter', 'acorr', 'kde', 'hist']
+                       'matrix', 'counter', 'acorr', 'kde', 'hist',
+                       ]
     if kind and kind not in available_plots:
         raise TypeError("the selected plot type " +
                         "({}) is not recognized,".format(kind) +
                         "the accepted types are {}".format(available_plots))
-    if isinstance(x, pd.DataFrame) or isinstance(x, pd.DataFrame):
-        raise NotImplementedError("support for multivariate plots"
-                                  " is not yet implemented")
+    # pass the responsability of managing the multivariate
+    # so the logic is more simple
+    if isinstance(x, pd.DataFrame) or isinstance(y, pd.DataFrame):
+        return _auto_multivariate(x, y, ax, kind, *args, **kwargs)
+    # I create the axes only when I'm sure that it's going to be
+    # a bidimensional, standard plot
+    fig, ax = _build_axes(ax)
     if y is None or y is x:
         kwargs.setdefault('ax', ax)
         kwargs.setdefault('kind', kind)
@@ -574,6 +668,14 @@ def facet_plot(formula, data, kind=None, subset=None,
             -categorical endogenous:
                 'mosaic', 'scatter', 'matrix', 'boxplot'
 
+    There is at a moment only a partial support for multivariate plots:
+        if the endogenous variable is monodimensional and have:
+            multple exogenous, it will try to overlaps the graphs
+            changing colors. Works better for scatter (the default)
+        if there are two endogenous variables and one or two:
+            exogenous, it will create a scatterplot with varying size
+            and color of the plot.
+
     Returns
     =======
     fig: the created matplotlib figure
@@ -668,6 +770,9 @@ def facet_plot(formula, data, kind=None, subset=None,
     # for each subplot create the plot
     base_ax = None
     for idx, (level, value) in enumerate(elements):
+        # choose if use the name ad a dataframe index or a patsy formula
+        value_x = _array4name(x, value)
+        value_y = _array4name(y, value) if y else None
         # adjust the position of the plots, shifting them
         # for a better display of the axes ticks
         idx = row_num * col_num - idx - 1
@@ -675,31 +780,35 @@ def facet_plot(formula, data, kind=None, subset=None,
             idx -= row_num * col_num - L
         my_row = idx // col_num
         my_col = idx % col_num
-        ax = fig.add_subplot(row_num, col_num, idx + 1,
-                             sharex=base_ax, sharey=base_ax)
+
+        # launch the autoplot
+        # I pass the construction to it as it can decide
+        # to build it as a 3d or polar axis
+        ax = [fig, row_num, col_num, idx + 1, base_ax]
+        ax = autoplot(value_x, value_y, ax=ax, kind=kind, *args, **kwargs)
+
+        #ax = fig.add_subplot(row_num, col_num, idx + 1,
+        #                     sharex=base_ax, sharey=base_ax)
         # all the subplots share the same axis with the first one being
         # of the same variable
         if not base_ax:
             base_ax = ax
-        # choose if use the name ad a dataframe index or a patsy formula
-        value_x = _array4name(x, value)
-        value_y = _array4name(y, value) if y else None
-        # launch the autoplot
-        autoplot(value_x, value_y, ax=ax, kind=kind, *args, **kwargs)
+
         # remove the extremal ticks to remove overlaps
         # if the ticks have been fixed it generate a fixedLocator
         # that gives error, so just skip if it fails
-        if ((value_y is not None and value_y.dtype != object)
-                or value_y is None):
-            try:
+        try:
+            if ((value_y is not None and value_y.dtype != object)
+                    or value_y is None):
                 ax.locator_params(prune='both', axis='y')
-            except AttributeError:
-                pass
-        if value_x.dtype != object:
-            try:
+        except AttributeError:
+            pass
+
+        try:
+            if value_x.dtype != object:
                 ax.locator_params(prune='both', axis='x')
-            except AttributeError:
-                pass
+        except AttributeError:
+            pass
         # remove the superfluos info base on the columns
         if my_col:
             ax.set_ylabel('')
@@ -716,35 +825,49 @@ def facet_plot(formula, data, kind=None, subset=None,
 
 if __name__ == '__main__':
     #from statsmodels.graphics.facetplot import facet_plot
-    N = 5
+    N = 1000
     data = pd.DataFrame({
         'int_1': plt.randint(0, 10, size=N),
         'int_2': plt.randint(0, 5, size=N),
         'int_3': plt.randint(1, 3, size=N),
         'float_1': 4 * plt.randn(N),
-        'float_2': abs(plt.randn(N)),
+        'float_2': plt.randn(N),
         'cat_1': ['aeiou'[i] for i in plt.randint(0, 5, size=N)],
         'cat_2': ['BCDF'[i] for i in plt.randint(0, 4, size=N)]})
-
+    data['float_3'] = data['float_1']+data['float_2']+plt.randn(N)
+    data['float_4'] = data['float_1']*data['float_2']+plt.randn(N)
     assert _formula_split('y ~ x | f') == ('y', 'x', 'f')
     assert _formula_split('y ~ x') == ('y', 'x', None)
     assert _formula_split('x | f') == (None, 'x', 'f')
     assert _formula_split('x') == (None, 'x', None)
 
-    assert all(_array4name('int_1 + int_2', data).columns == ['int_1', 'int_2'])
-    assert all(_array4name('int_1 + cat_2', data).columns == ['int_1', 'cat_2'])
+    assert all(_array4name('int_1 + int_2',
+                           data).columns == ['int_1', 'int_2'])
+    assert all(_array4name('int_1 + cat_2',
+                           data).columns == ['int_1', 'cat_2'])
     assert isinstance(_array4name('cat_2', data), pd.Series)
     assert isinstance(_array4name('int_1', data), pd.Series)
 
-    #facet_plot('cat_1 ~ cat_2', data, kind='boxplot')
-    #autoplot(data.int_2, data.float_1, kind='boxplot')
-    #autoplot(data.float_1, data.float_2, kind='ellipse')
-    #autoplot(data.float_1, data.float_2, kind='matrix')
-    #facet_plot('cat_2 ~ cat_1', data, kind='scatter')
-    #facet_plot('cat_2 ~ float_1', data, kind='scatter')
-    #facet_plot('float_2 ~ cat_1', data, kind='scatter')
-    #facet_plot('float_2 ~ float_1', data, kind='scatter')
+    #facet_plot('cat_1 ~ cat_2', data, 'boxplot')
+    #autoplot(data.int_2, data.float_1, 'boxplot')
+    #autoplot(data.float_1, data.float_2, 'ellipse')
+    #autoplot(data.float_1, data.float_2, 'matrix')
+    #facet_plot('cat_2 ~ cat_1', data)
+    #facet_plot('cat_2 ~ float_1', data, 'scatter')
+    #facet_plot('float_2 ~ cat_1', data, 'scatter')
+    #facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse')
     #facet_plot('float_2 ~ float_1:int_3', data)
     #facet_plot('float_1', data)
     #facet_plot('int_2', data)
+    #facet_plot('int_2 ~ float_1 + float_2', data)
+    #facet_plot('int_1 + int_2 ~ float_1 + float_2', data)
+    #facet_plot('int_1 + int_2 ~ float_1 + cat_2', data)
+    #facet_plot('int_1 + int_2 ~ cat_1 + cat_2', data)
+    #facet_plot('float_3 + float_4 ~ float_1 + float_2', data)
+    #facet_plot('float_4 + float_3 ~ float_1 + float_2', data)
+    #facet_plot('float_3 ~ float_1 + float_2', data)
+    #facet_plot('float_4 ~ float_1 + float_2', data)
+    #facet_plot('int_3 ~ cat_1 + cat_2', data)
+    #facet_plot('int_2 ~ float_1 + float_2', data)
+    facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest')
     plt.show()
