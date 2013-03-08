@@ -7,7 +7,6 @@ from numpy.testing import run_module_suite
 from statsmodels.compatnp.collections import OrderedDict
 from statsmodels.api import datasets
 
-from collections import Counter
 import numpy as np
 from itertools import product
 try:
@@ -32,7 +31,6 @@ def test_data_conversion():
     # so the dictionary will look odd
     # as it key order has the c and b
     # keys swapped
-    import pylab
     import pandas
     fig, ax = pylab.subplots(4, 4)
     data = {'ax': 1, 'bx': 2, 'cx': 3}
@@ -66,7 +64,7 @@ def test_data_conversion():
     mosaic(data, ['pet', 'gender'], ax=ax[3, 3], title='keys inverted', axes_label=False)
 
     pylab.suptitle('testing data conversion (plot 1 of 4)')
-    pylab.show()
+    #pylab.show()
 
 @dec.skipif(not have_matplotlib)
 def test_mosaic_simple():
@@ -95,7 +93,7 @@ def test_mosaic_simple():
     # mosaic of the data, with given gaps and colors
     mosaic(data, gap=0.05, properties=props, axes_label=False)
     pylab.suptitle('syntetic data, 4 categories (plot 2 of 4)')
-    pylab.show()
+    #pylab.show()
 
 
 @dec.skipif(not have_matplotlib)
@@ -132,14 +130,13 @@ def test_mosaic():
     mosaic(datas, ['religious', 'rate_marriage'], ax=ax[1, 1],
                 title='inter-dependence', axes_label=False)
     pylab.suptitle("extramarital affairs (plot 3 of 4)")
-    pylab.show()
+    #pylab.show()
 
 @dec.skipif(not have_matplotlib)
 def test_mosaic_very_complex():
     # make a scattermatrix of mosaic plots to show the correlations between
     # each pair of variable in a dataset. Could be easily converted into a
     # new function that does this automatically based on the type of data
-    import pylab
     key_name = ['gender', 'age', 'health', 'work']
     key_base = (['male', 'female'], ['old', 'young'],
                     ['healty', 'ill'], ['work', 'unemployed'])
@@ -173,12 +170,11 @@ def test_mosaic_very_complex():
                 mosaic(temp_data, ax=axes[i, j], axes_label=False,
                        properties=props, gap=0.05, horizontal=i > j)
     pylab.suptitle('old males should look bright red,  (plot 4 of 4)')
-    pylab.show()
+    #pylab.show()
 
 @dec.skipif(not have_matplotlib)
 def test_axes_labeling():
     from numpy.random import rand
-    import pylab
     key_set = (['male', 'female'], ['old', 'adult', 'young'],
                ['worker', 'unemployed'], ['yes', 'no'])
     # the cartesian product of all the categories is
@@ -192,7 +188,7 @@ def test_axes_labeling():
         label_rotation=[0, 45, 90, 0])
     #fig.tight_layout()
     fig.suptitle("correct alignment of the axes labels")
-    pylab.show()
+    #pylab.show()
 
 
 eq = lambda x, y: assert_(np.allclose(x, y))
@@ -397,5 +393,5 @@ def test_gap_split():
     conf_h = dict(proportion=[1, 2], gap=1.0, horizontal=True)
     eq(_split_rect(*pure_square, **conf_h), h_2split)
 
-
-run_module_suite()
+if __name__ == '__main__':
+    run_module_suite()
