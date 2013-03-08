@@ -1,6 +1,6 @@
 from __future__ import division
 
-__all__ = ['autoplot', 'facet_plot']
+__all__ = ['facet_plot']
 
 import numpy as np
 from collections import Counter
@@ -17,6 +17,10 @@ import patsy
 import pylab as plt
 import pandas as pd
 
+available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
+                   'boxplot', 'violinplot', 'beanplot', 'mosaic',
+                   'matrix', 'counter', 'acorr', 'kde', 'hist',
+                   'trisurf', 'wireframe', 'scatter_coded']
 
 ##########################################################
 # HELPERS FUNCTIONS
@@ -24,18 +28,38 @@ import pandas as pd
 
 
 def _jitter(x, jitter_level=1.0):
-    """add a little jitter to integer array"""
+    """add a little noise to a (tipically integer valued) array
+
+    the jitter_value parameter represent the amount of noise to
+    be added. 1.0 means to take d/5, where d is the smallest distance
+    between the values.
+
+    is similar to the jitter function of R, aside that it doesn't
+    refactor if the level is set to 0.0 (just remove the jittering)
+    """
     u = x.unique()
     diff = abs(np.subtract.outer(u, u))
     diff[diff == 0] = np.max(u)
     min_diff = np.min(diff)
-    return x + jitter_level * min_diff * 0.4 * (plt.rand(len(x)) - 0.5)
+    return x + jitter_level * min_diff * 0.2 * (plt.rand(len(x)) - 0.5)
 
 
 def _build_axes(ax, **kwargs):
-    """This build the axes from information about the figure, row
-    and col position, the index and the base axes from wich to obtain
-    the axis
+    """This build the axes under various conditions.
+
+    If the requested axis is a 3d one it will return a reference to
+    the old Axes3D for compatibility
+
+    The axis given can be an axis or a list containing info
+    for the creation of the subplot. It contains
+
+        -figure
+        -row number
+        -column number
+        -axis from which to clone the x and y axis
+
+    If a normal axis is given but a 3d one is required it will delete the
+    old one and replace it in the same position.
     """
     if kwargs.get('projection', None) == '3d':
         if isinstance(ax, list):
@@ -49,36 +73,56 @@ def _build_axes(ax, **kwargs):
         fig.delaxes(temp_ax)
         ax = Axes3D(fig, rect)
         # remove the strange color pathch
-        ax.set_axis_bgcolor(fig.get_facecolor())
+        ax.set_axis_bgcolor('none')
     else:
         if isinstance(ax, list):
             fig = ax[0]
             ax = fig.add_subplot(ax[1], ax[2], ax[3],
-                                   sharex=ax[4], sharey=ax[4], **kwargs)
-
+                                 sharex=ax[4], sharey=ax[4], **kwargs)
         else:
             fig, ax = utils.create_mpl_ax(ax)
     return fig, ax
 
 
-def _make_numeric(data, ax, dir, jitter=True):
-    """if the data type is categorical convert it to integer
-    and set the correct ticking in the given axes
+def _make_numeric(data, ax, dir, jitter=1.0, globalstatus=None):
+    """transform the array into a numerical one if it's categorical
+
+    If the data is numerical do nothing, otherwhise it will replace
+    the values in the array with integers corresponding to the original
+    level sorted. If an axis is given along with a direction,
+    it will modify the axes ticks and ticklabels accordingly.
+
+    It will jitter the data unless they are floats (jittering floats
+    doesn't really make sense, while it's useful on ints for displaying reason)
+
+    TODO: it should use the globalstatus variable to make a sensible
+    ordering about the number and type of present values.
+    It should not create the dictionary anew but rather take an existing
+    one for each axis and fill it progressively, so that all the subplots
+    has the minimum required number of states to keep all axes sincronized
     """
     if data.dtype == object:
         states = sorted(list(data.unique()))
         indexes = dict([(v, states.index(v)) for v in states])
         data = data.apply(lambda s: indexes[s])
-        data = _jitter(data, jitter)
         if ax:
             labels = range(len(states))
             ax.__getattribute__('set_{}ticks'.format(dir))(labels)
             ax.__getattribute__('set_{}ticklabels'.format(dir))(states)
+    if data.dtype != float:
+        data = _jitter(data, jitter)
     return data
 
 
 def _formula_split(formula):
     """split the formula of the facet_plot into the y, x and categorical terms
+
+    the formula should be in the form:
+
+        [endo ~] exog [| faceting]
+
+    if there is no endogenous variable than the exogenous is taken
+    as the variable under examination.
     """
     # determine the facet component
     if '|' in formula:
@@ -94,7 +138,6 @@ def _formula_split(formula):
     else:
         x = None
         y = formula.strip()
-
     #if there is not exog, swith the two
     if x is None:
         x, y = y, x
@@ -103,6 +146,32 @@ def _formula_split(formula):
 
 def _elements4facet(facet, data):
     """obtain a list of (category, subset of the dataframe) given the facet
+
+    it will do a groupby over the dataframe to subdivide it into levels.
+
+    This is the origin of a nasty problem:
+    If for some reason a category level is not present in one of the facets
+    than all the indexing will be put off and strange things will happen.
+    I'm not sure how to treat this:
+
+        - warning the user about the problem and keep going
+        (but there will be wrongly named axes)
+        - raising an error if the categorie count are differents
+        (but it look a little too much rigid)
+        - try to force every category plot to use the same categories,
+        but this can get messy for two reasons: one is that I should
+        break the already fragile isolation of the code, letting low
+        level procedure be aware of the big plan, and even if I do that
+        there is the risk that for very complex system catagories there
+        will be a huge amount of white space (and some plots can complain
+        loudly if categories are empty)
+        - disconnect the axis of the plots: this will be the easiest, but
+        will force me to keep the labels on all the subplots,
+        and this too is very ugly.
+
+    A solution strategy is the use of a semiglobal status, i.e. a dictionary
+    moved around in the facet_plot function and used to correct the indexing.
+    The complete proposal is in the help of the function _make_numeric
     """
     if facet is not None:
         facet_list = [f.strip() for f in facet.split()]
@@ -127,6 +196,19 @@ def _elements4facet(facet, data):
 
 def _array4name(formula, data):
     """given a name/patsy formula obtain the dataframe data from it
+
+    It will do its best to load the given string as a combination of pandas
+    columns and resort to patsy only if no other solution is found.
+    This is especially important dealing with categorical data, as
+    patsy break them into several columns, destroying they usefulness.
+
+    To do this it try to split the formula around sum terms and
+    try to load each term a column. If this fail patsy will be invoked
+    to transform it. The result from each name is recombined into a single
+    DataFrame.
+
+    If the dataframe has only one column, it will be returned as a series
+    to sinplify monovariate plotting.
     """
     if not formula:
         return None
@@ -160,6 +242,8 @@ def _array4name(formula, data):
 
 def _select_rowcolsize(num_of_categories):
     """given the number of facets select the best structure of subplots
+
+    try to fill them in the square and remove all the superfluos rows.
     """
     L = num_of_categories
     side_num = np.ceil(np.sqrt(L))
@@ -176,18 +260,24 @@ def _select_rowcolsize(num_of_categories):
 ##########################################################
 # DATA PLOTTING FUNCTIONS
 ##########################################################
+# Right now the function guess the data type and then based on that
+# create the plot. I guess it will be better in the long term to
+# create a function for each plot kind and let it choose the
+# correct visualization given the data. This may allow to reduce
+# the code redundancies and the bourden of replicating the same code
+# over and over for those plot types that can be used in a lot of contests
+# like the scatter plot, the line plot and the matrix.
+# smaller plot kind can benefit too by implementing a simpler
+# selection strategy. It will also make the functions a lot more testable,
+# as they can be easily divided in functional blocks and tested with all
+# the parameter combination
 
-
-def _auto_hist(data, ax, kind=None, *args, **kwargs):
-    """
-    given a pandas series infers the type of data and print
-    a barplot, an histogram or a density plot given the circumstances.
-
-    the kind keyword should let the user choose the type of graphics but it's
-    not implemented yet.
+def _auto_hist(data, ax, kind=None, y_label=True, *args, **kwargs):
+    """Given a series it try to plot it according to the kind keyword or guess
     """
     plot_error = TypeError("the selected plot type "
                            "({}) is not right for these data".format(kind))
+    kwargs['label'] = data.name
     data = pd.Series(data)
     if kind in ['matrix']:
         states = sorted(list(data.unique()))
@@ -202,9 +292,9 @@ def _auto_hist(data, ax, kind=None, *args, **kwargs):
         kwargs.setdefault('cmap', plt.cm.binary)
         ax.imshow(transitions, *args, **kwargs)
         ax.set_xticks(range(L))
-        ax.set_yticks(range(L))
         ax.set_xticklabels(states)
         ax.set_yticklabels(states)
+        ax.set_yticks(range(L))
     elif kind in ['scatter']:
         if data.dtype == object:
             states = sorted(list(data.unique()))
@@ -214,6 +304,7 @@ def _auto_hist(data, ax, kind=None, *args, **kwargs):
             ax.set_yticklabels(states)
         kwargs.setdefault('alpha', 0.33)
         ax.scatter(data.index, data, *args, **kwargs)
+        ax.set_ylabel('values')
     elif kind in ['lines']:
         if data.dtype == object:
             states = sorted(list(data.unique()))
@@ -222,7 +313,8 @@ def _auto_hist(data, ax, kind=None, *args, **kwargs):
             ax.set_yticks(range(len(states)))
             ax.set_yticklabels(states)
         kwargs.setdefault('alpha', 0.33)
-        ax.plot(data.index, data, *args, **kwargs)
+        ax.plot(data.order(), *args, **kwargs)
+        ax.set_ylabel('values')
     elif kind in ['counter'] or (not kind and data.dtype != float):
         # integer or categorical are represented
         # by the same method
@@ -289,15 +381,18 @@ def _auto_hist(data, ax, kind=None, *args, **kwargs):
         ax.hist(data, *args, **kwargs)
         ax.set_ylim(0.0, None)
         ax.set_ylabel('Density')
-    ax.set_xlabel(data.name)
+    #in this contest the quantity being mixed is the x, not the y
+    if y_label:
+        ax.set_xlabel(data.name)
     return ax
 
 
-def _autoplot_num2num(x, y, ax, kind, *args, **kwargs):
+def _autoplot_num2num(x, y, ax, kind, y_label=True, *args, **kwargs):
     """take care of the numerical x Vs numerical y plotting
     """
     plot_error = TypeError("the selected plot type "
                            "({}) is not right for these data".format(kind))
+    kwargs['label'] = y.name
     if kind is None or kind in ['ellipse', 'scatter']:
         kwargs.setdefault('alpha', 0.33)
         _x = _jitter(x) if x.dtype == int else x
@@ -359,11 +454,12 @@ def _autoplot_num2num(x, y, ax, kind, *args, **kwargs):
         ax.set_xticks([int(i) for i in ax.get_xticks()])
 
 
-def _autoplot_num2cat(x, y, ax, kind, *args, **kwargs):
+def _autoplot_num2cat(x, y, ax, kind, y_label=True, *args, **kwargs):
     """take care of the numerical x Vs categorical y plotting
     """
     plot_error = TypeError("the selected plot type "
                            "({}) is not right for these data".format(kind))
+    kwargs['label'] = y.name
     data = pd.DataFrame({'x': x, 'f': y})
     levels = list(data.groupby('f')['x'])
     level_v = [v for k, v in levels]
@@ -388,11 +484,12 @@ def _autoplot_num2cat(x, y, ax, kind, *args, **kwargs):
         raise plot_error
 
 
-def _autoplot_cat2num(x, y, ax, kind, *args, **kwargs):
+def _autoplot_cat2num(x, y, ax, kind, y_label=True, *args, **kwargs):
     """take care of the categorical x Vs numerical y plotting
     """
     plot_error = TypeError("the selected plot type "
                            "({}) is not right for these data".format(kind))
+    kwargs['label'] = y.name
     data = pd.DataFrame({'x': y, 'f': x})
     levels = list(data.groupby('f')['x'])
     level_v = [v for k, v in levels]
@@ -418,11 +515,12 @@ def _autoplot_cat2num(x, y, ax, kind, *args, **kwargs):
         raise plot_error
 
 
-def _autoplot_cat2cat(x, y, ax, kind, *args, **kwargs):
+def _autoplot_cat2cat(x, y, ax, kind, y_label=True, *args, **kwargs):
     """take care of the categorical x Vs categorical y plotting
     """
     plot_error = TypeError("the selected plot type "
                            "({}) is not right for these data".format(kind))
+    #kwargs['label'] = y.name
     data = pd.DataFrame({'x': y, 'f': x})
     levels = list(data.groupby('f')['x'])
     level_v = [v for k, v in levels]
@@ -469,8 +567,8 @@ def _autoplot_cat2cat(x, y, ax, kind, *args, **kwargs):
         raise plot_error
 
 
-def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
-    """manage the multivariate type of plots
+def _auto_multivariate(x, y, ax, kind, y_label=True, *args, **kwargs):
+    """manage the multivariate types of plots, mainly scatter or lines
     """
     plot_error = TypeError("the selected plot type "
                            "({}) is not right for these data".format(kind))
@@ -481,13 +579,36 @@ def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
     if isinstance(x, pd.Series):
             x = pd.DataFrame({x.name: x})
     if len(x.columns) == 1:
+        #same exogenous variable, multiple endogenous
         fig, ax = _build_axes(ax)
         colors = ['b', 'g', 'r', 'y', 'm', 'c', 'k']
         for column, color in zip(y, colors):
             kwargs['color'] = color
-            autoplot(x[x.columns[0]], y[column],
-                     ax=ax, kind=kind, *args, **kwargs)
+            _autoplot(x[x.columns[0]], y[column],
+                      ax=ax, kind=kind, y_label=False, *args, **kwargs)
+            for t_ax in fig.axes:
+                    t_ax.legend().set_visible(False)
+                    plt.draw()
+            leg = ax.legend(bbox_to_anchor=(0, 0, 1, 1),
+                            bbox_transform=fig.transFigure)
+            leg.get_frame().set_alpha(0.0)
         return ax
+    if y is None:
+        #only exogenous
+        fig, ax = _build_axes(ax)
+        colors = ['b', 'g', 'r', 'y', 'm', 'c', 'k']
+        for column, color in zip(x, colors):
+            kwargs['color'] = color
+            _autoplot(x[column], None, ax=ax, kind=kind,
+                      y_label=False, *args, **kwargs)
+            for t_ax in fig.axes:
+                    t_ax.legend().set_visible(False)
+                    plt.draw()
+            leg = ax.legend(bbox_to_anchor=(0, 0, 1, 1),
+                            bbox_transform=fig.transFigure)
+            leg.get_frame().set_alpha(0.0)
+        return ax
+    # ok, so we must do a real multivariate plot
     if not kind or kind in ['scatter', 'lines', 'trisurf', 'wireframe']:
         fig, ax = _build_axes(ax, projection='3d')
 
@@ -577,7 +698,7 @@ def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
 ##########################################################
 
 
-def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
+def _autoplot(x, y=None, kind=None, ax=None, y_label=True, *args, **kwargs):
     """Select automatically the type of plot given the array x and y
 
     The rules are that if both are numeric, do a scatter
@@ -599,31 +720,8 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     kind : string, optional
         Describe the type of plot that should be tried on the data.
         If given and not valid will raise a TypeError
-
-    the valid kind of plot is riassumed in this list,
-    where the first element is the default option:
-        -numerical exogenous:
-            -isolated:
-                'matrix', 'scatter', 'lines', 'hist', 'kde', 'counter', 'acorr'
-            -numerical endogenous:
-                'ellipse', 'scatter', 'lines', 'hexbin', 'boxplot', 'matrix'
-            -categorical endogenous:
-                'boxplot', 'scatter'
-        -categorical exogenous:
-            -isolated:
-                'matrix', 'scatter', 'lines', 'counter'
-            -numerical endogenous:
-                'violinplot', 'scatter', 'boxplot', 'beanplot'
-            -categorical endogenous:
-                'mosaic', 'scatter', 'matrix', 'boxplot'
-
-    There is at a moment only a partial support for multivariate plots:
-        if the endogenous variable is monodimensional and have:
-            multple exogenous, it will try to overlaps the graphs
-            changing colors. Works better for scatter (the default)
-        if there are two endogenous variables and one or two:
-            exogenous, it will create a scatterplot with varying size
-            and color of the plot.
+    y_label: boolean
+        Is a flag to avoid creating the y label for multivariateplot
 
     As can be seen the points and boxplot version can be applied in any
     case. It should be noted that even if you can, this doesn't mean
@@ -658,11 +756,6 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     >>> autoplot(data.float_1, data.int_2, kind='ellipse')
     >>> autoplot(data.cat_1, data.cat_2, kind='mosaic')
     """
-
-    available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
-                       'boxplot', 'violinplot', 'beanplot', 'mosaic',
-                       'matrix', 'counter', 'acorr', 'kde', 'hist',
-                       'trisurf', 'wireframe', 'scatter_coded']
     if kind and kind not in available_plots:
         raise TypeError("the selected plot type " +
                         "({}) is not recognized,".format(kind) +
@@ -670,13 +763,15 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     # pass the responsability of managing the multivariate
     # so the logic is more simple
     if isinstance(x, pd.DataFrame) or isinstance(y, pd.DataFrame):
-        return _auto_multivariate(x, y, ax, kind, *args, **kwargs)
+        return _auto_multivariate(x, y, ax, kind,
+                                  y_label=y_label, *args, **kwargs)
     # I create the axes only when I'm sure that it's going to be
     # a bidimensional, standard plot
     fig, ax = _build_axes(ax)
     if y is None or y is x:
         kwargs.setdefault('ax', ax)
         kwargs.setdefault('kind', kind)
+        kwargs['y_label'] = y_label
         try:
             return x.__plot__(*args, **kwargs)
         except AttributeError:
@@ -687,26 +782,27 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     if x.dtype == float or x.dtype == int:
         # the endog is numeric too, do a scatterplot
         if y.dtype == float or y.dtype == int:
-            _autoplot_num2num(x, y, ax, kind, *args, **kwargs)
+            _autoplot_num2num(x, y, ax, kind, y_label=y_label, *args, **kwargs)
         # the endog is categorical, do a horizontal boxplot
         else:
-            _autoplot_num2cat(x, y, ax, kind, *args, **kwargs)
+            _autoplot_num2cat(x, y, ax, kind, y_label=y_label, *args, **kwargs)
     # the exog is categorical
     else:
         #if the endog is numeric do a violinplot
         if y.dtype == float or y.dtype == int:
-            _autoplot_cat2num(x, y, ax, kind, *args, **kwargs)
+            _autoplot_cat2num(x, y, ax, kind, y_label=y_label, *args, **kwargs)
         #otherwise do a mosaic plot
         else:
-            _autoplot_cat2cat(x, y, ax, kind, *args, **kwargs)
+            _autoplot_cat2cat(x, y, ax, kind, y_label=y_label, *args, **kwargs)
     ax.set_xlabel(x.name)
-    ax.set_ylabel(y.name)
+    if y_label:
+        ax.set_ylabel(y.name)
     return ax
 
 
 def facet_plot(formula, data, kind=None, subset=None,
-               drop_na=True, ax=None, *args, **kwargs):
-    """make a faceted plot of two variables divided into categories
+               drop_na=True, ax=None, jitter=1.0, *args, **kwargs):
+    """make a faceted plot of two set of variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
 
@@ -714,10 +810,8 @@ def facet_plot(formula, data, kind=None, subset=None,
 
     where both the endog and the factor are optionals.
     If multiple factors are inserted divided by space the cartesian
-    product of their level will be used.
-
-    All the factor will be treated as patsy formulas, but are limited to
-    monovariate endogenous and exogenous variables.
+    product of their level will be used. All the factor will be
+    treated as patsy formulas.
 
     Parameters
     ==========
@@ -733,8 +827,12 @@ def facet_plot(formula, data, kind=None, subset=None,
         specified will try and guess the best one.
     drop_na: boolean, optional
         Drop the nan values in the dataframe,defaul to True
+    jitter: float, optional
+        Manage the amount of jitter for integer and categorical numbers
+        a value o 0.0 means no jittering, while a jitter of 1.0
+        is one fifth of the smallest distance between two elements.
 
-    the args and kwargs will be redirected to the specific plot
+    the other args and kwargs will be redirected to the specific plot
 
     the valid kind of plot is riassumed in this list,
     where the first element is the default option:
@@ -752,14 +850,15 @@ def facet_plot(formula, data, kind=None, subset=None,
                 'violinplot', 'scatter', 'boxplot', 'beanplot'
             -categorical endogenous:
                 'mosaic', 'scatter', 'matrix', 'boxplot'
+        -multivariate:
+            'scatter', 'lines', 'wireframe', 'scatter_coded', 'trisurf'
 
-    There is at a moment only a partial support for multivariate plots:
-        if the endogenous variable is monodimensional and have:
-            multple exogenous, it will try to overlaps the graphs
-            changing colors. Works better for scatter (the default)
-        if there are two endogenous variables and one or two:
-            exogenous, it will create a scatterplot with varying size
-            and color of the plot.
+    For the isolated variables the 'matrix' plot correspond to a
+    markov transition matrix. Each cell contains the frequency of the observed
+    succession of the two labels. The 'counter' create a different bin
+    for each value of the variable, while the 'hist' try to find a good
+    number of bins. 'lines' is the line plot of the sorted values,
+    (similar to a qqplot).
 
     Returns
     =======
@@ -767,10 +866,7 @@ def facet_plot(formula, data, kind=None, subset=None,
 
     See Also
     ========
-    autoplot:
-        the function that does all the heavy lifting of guessing
-        and that can be used as a standalone function. The function
-        is concettually based on the lattice library of R
+    The function is concettually based on the lattice library of R
 
         - http://www.statmethods.net/advgraphs/trellis.html
         - http://cran.r-project.org/web/packages/lattice/index.html
@@ -856,8 +952,8 @@ def facet_plot(formula, data, kind=None, subset=None,
         if facet:
             raise ValueError('facet are incompatibles with single axes')
         else:
-            autoplot(_array4name(x, data), _array4name(y, data),
-                     ax=ax, kind=kind, *args, **kwargs)
+            _autoplot(_array4name(x, data), _array4name(y, data),
+                      ax=ax, kind=kind, jitter=jitter, *args, **kwargs)
             return fig
 
     # obtain a list of (category, subset of the dataframe)
@@ -883,15 +979,11 @@ def facet_plot(formula, data, kind=None, subset=None,
         # I pass the construction to it as it can decide
         # to build it as a 3d or polar axis
         ax = [fig, row_num, col_num, idx + 1, base_ax]
-        ax = autoplot(value_x, value_y, ax=ax, kind=kind, *args, **kwargs)
-
-        #ax = fig.add_subplot(row_num, col_num, idx + 1,
-        #                     sharex=base_ax, sharey=base_ax)
+        ax = _autoplot(value_x, value_y, ax=ax, kind=kind, *args, **kwargs)
         # all the subplots share the same axis with the first one being
         # of the same variable
         if not base_ax:
             base_ax = ax
-
         # remove the extremal ticks to remove overlaps
         # if the ticks have been fixed it generate a fixedLocator
         # that gives error, so just skip if it fails
@@ -912,6 +1004,7 @@ def facet_plot(formula, data, kind=None, subset=None,
             ax.set_ylabel('')
             plt.setp(ax.get_yticklabels(), visible=False)
         # show the x labels only if it's on the last line
+        #the 3d axes have the right to keep their axes labels
         if my_row != row_num - 1 and not isinstance(ax, Axes3D):
             ax.set_xlabel('')
             plt.setp(ax.get_xticklabels(), visible=False)
@@ -922,6 +1015,38 @@ def facet_plot(formula, data, kind=None, subset=None,
         fig.canvas.set_window_title(formula)
     return fig
 
+
+#def _oracle(x, y):
+#    """Guess the best plot type for the given endog and exog data
+#
+#    return the name of the plot kind if can decide, an empty string otherwise.
+#    Will test the meaningful of the plot requested.
+#
+#    It's still unfinished, as it have to reimplement all the logic scattered
+#    here and there
+#
+#    Later will became the major player in the guessing.
+#    """
+#    if y is None:
+#        # zero variate plot
+#        if isinstance(x, pd.Series):
+#            if x.dtype == float:
+#                return 'kde'
+#            else:
+#                return 'counter'
+#        if all(x[col].dtype != object for col in x):
+#            return 'scatter'
+#        elif all(x[col].dtype != float for col in x):
+#            return 'counter'
+#        else:
+#            # cannot decide
+#            return ''
+#    elif isinstance(x, pd.Series):
+#        #monovariate plot
+#        if x.dtype != object:
+#            pass
+#    return ''
+
 if __name__ == '__main__':
     from statsmodels.graphics.facetplot import facet_plot
     N = 1000
@@ -931,6 +1056,7 @@ if __name__ == '__main__':
         'int_3': plt.randint(1, 3, size=N),
         'float_1': 4 * plt.randn(N),
         'float_2': plt.randn(N),
+        'float_5': plt.rand(N),
         'cat_1': ['aeiou'[i] for i in plt.randint(0, 5, size=N)],
         'cat_2': ['BCDF'[i] for i in plt.randint(0, 4, size=N)],
         'sin': np.sin(np.r_[0.0:10.0:N*1j]),
@@ -940,6 +1066,13 @@ if __name__ == '__main__':
     data['float_3'] = data['float_1']+data['float_2']+plt.randn(N)
     data['float_4'] = data['float_1']*data['float_2']+plt.randn(N)
 
+    #facet_plot('float_1', data, 'scatter')
+    #facet_plot('int_1', data, 'scatter')
+    #facet_plot('cat_1', data, 'lines')
+    facet_plot('float_5 ~ cat_1', data, 'scatter')
+    facet_plot('float_5 + float_1 ~ cat_1', data, 'scatter')
+    facet_plot('cat_2 ~ cat_1', data)
+
     #facet_plot('float_4 + float_3 ~ float_1 + float_2 | cat_2', data)
     #facet_plot('cat_2 ~ float_1 + float_2 | cat_1', data)
     #facet_plot('float_4 + float_3 ~ cat_1 + float_2', data)
@@ -947,8 +1080,8 @@ if __name__ == '__main__':
     #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=False)
     #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=True)
     #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=0.5)
-    facet_plot('float_4 ~ cat_1 + cat_2', data)
-    #facet_plot('float_3 ~ float_1 + float_2 | cat_2', data, 'scatter')
+    #facet_plot('float_4 ~ cat_1 | cat_1', data)
+    facet_plot('float_3 ~ float_1 + float_2 | cat_2', data, 'scatter')
     #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'lines');
     #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'scatter_coded');
     #facet_plot('float_4 ~ float_1 + cat_1 | cat_2', data, 'scatter_coded');
@@ -975,7 +1108,7 @@ if __name__ == '__main__':
     #facet_plot('cat_2 ~ cat_1', data)
     #facet_plot('cat_2 ~ float_1', data, 'scatter')
     #facet_plot('float_2 ~ cat_1', data, 'scatter')
-    facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse');
+    #facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse');
     #facet_plot('float_2 ~ float_1:int_3', data)
     #facet_plot('float_1', data)
     #facet_plot('int_2', data)
@@ -983,27 +1116,25 @@ if __name__ == '__main__':
     #facet_plot('int_1 + int_2 ~ float_1 + float_2', data)
     #facet_plot('int_1 + int_2 ~ float_1 + cat_2', data)
     #facet_plot('int_1 + int_2 ~ cat_1 + cat_2', data)
-    #facet_plot('float_3 + float_4 ~ float_1 + float_2', data)
+    #facet_plot('float_3 + float_4 ~ float_1 + float_2 | cat_1', data)
     #facet_plot('float_4 + float_3 ~ float_1 + float_2', data)
     #facet_plot('float_3 ~ float_1 + float_2', data)
 
     #facet_plot('int_3 ~ cat_1 + cat_2', data)
     #facet_plot('int_2 ~ float_1 + float_2', data)
-    facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
+    #facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
 
-
-
-    fig = plt.figure()
-    ax = fig.add_subplot(2, 2, 1)
-    facet_plot('cat_2 ~ cat_1', data, ax=ax)
-    ax = fig.add_subplot(2, 2, 2)
-    facet_plot('cat_1', data, ax=ax)
-    ax = fig.add_subplot(2, 2, 3)
-    facet_plot('sin ~ lin', data, 'lines', ax=ax)
-    ax = fig.add_subplot(2, 2, 4)
-    facet_plot('float_1 ~ cat_1 + float_2', data, ax=ax, jitter=0.2)
-    fig.tight_layout()
-    fig.canvas.set_window_title('mixed facet_plots')
-    #this should give error
-    #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
+#    fig = plt.figure()
+#    ax = fig.add_subplot(2, 2, 1)
+#    facet_plot('cat_2 ~ cat_1', data, ax=ax)
+#    ax = fig.add_subplot(2, 2, 2)
+#    facet_plot('cat_1', data, ax=ax)
+#    ax = fig.add_subplot(2, 2, 3)
+#    facet_plot('sin ~ lin', data, 'lines', ax=ax)
+#    ax = fig.add_subplot(2, 2, 4)
+#    facet_plot('float_1 ~ cat_1 + float_2', data, ax=ax, jitter=0.2)
+#    fig.tight_layout()
+#    fig.canvas.set_window_title('mixed facet_plots')
+#    #this should give error
+#    #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
     plt.show()
