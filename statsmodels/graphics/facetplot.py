@@ -37,20 +37,27 @@ def _build_axes(ax, **kwargs):
     and col position, the index and the base axes from wich to obtain
     the axis
     """
-    if isinstance(ax, list):
-        if kwargs.get('projection', None) == '3d':
+    if kwargs.get('projection', None) == '3d':
+        if isinstance(ax, list):
             #the new version doesn't work, patch up with the older one
             fig = ax[0]
             temp_ax = fig.add_subplot(ax[1], ax[2], ax[3])
-            rect = temp_ax.get_position()
-            fig.delaxes(temp_ax)
-            ax = Axes3D(fig, rect)
-            # remove the strange color pathch
-            ax.set_axis_bgcolor(fig.get_facecolor())
         else:
-            ax = ax[0].add_subplot(ax[1], ax[2], ax[3],
+            temp_ax = ax
+            fig, ax = utils.create_mpl_ax(ax)
+        rect = temp_ax.get_position()
+        fig.delaxes(temp_ax)
+        ax = Axes3D(fig, rect)
+        # remove the strange color pathch
+        ax.set_axis_bgcolor(fig.get_facecolor())
+    else:
+        if isinstance(ax, list):
+            fig = ax[0]
+            ax = fig.add_subplot(ax[1], ax[2], ax[3],
                                    sharex=ax[4], sharey=ax[4], **kwargs)
-    fig, ax = utils.create_mpl_ax(ax)
+
+        else:
+            fig, ax = utils.create_mpl_ax(ax)
     return fig, ax
 
 
@@ -936,11 +943,11 @@ if __name__ == '__main__':
     #facet_plot('float_4 + float_3 ~ float_1 + float_2 | cat_2', data)
     #facet_plot('cat_2 ~ float_1 + float_2 | cat_1', data)
     #facet_plot('float_4 + float_3 ~ cat_1 + float_2', data)
-    facet_plot('float_4 ~ float_1 + cat_2', data, jitter=0.5)
+    #facet_plot('float_4 ~ float_1 + cat_2', data, jitter=0.5)
     #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=False)
     #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=True)
     #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=0.5)
-    #facet_plot('float_4 ~ cat_1 + cat_2', data)
+    facet_plot('float_4 ~ cat_1 + cat_2', data)
     #facet_plot('float_3 ~ float_1 + float_2 | cat_2', data, 'scatter')
     #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'lines');
     #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'scatter_coded');
@@ -968,7 +975,7 @@ if __name__ == '__main__':
     #facet_plot('cat_2 ~ cat_1', data)
     #facet_plot('cat_2 ~ float_1', data, 'scatter')
     #facet_plot('float_2 ~ cat_1', data, 'scatter')
-    #facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse');
+    facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse');
     #facet_plot('float_2 ~ float_1:int_3', data)
     #facet_plot('float_1', data)
     #facet_plot('int_2', data)
@@ -982,7 +989,9 @@ if __name__ == '__main__':
 
     #facet_plot('int_3 ~ cat_1 + cat_2', data)
     #facet_plot('int_2 ~ float_1 + float_2', data)
-    #facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
+    facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
+
+
 
     fig = plt.figure()
     ax = fig.add_subplot(2, 2, 1)
@@ -992,8 +1001,9 @@ if __name__ == '__main__':
     ax = fig.add_subplot(2, 2, 3)
     facet_plot('sin ~ lin', data, 'lines', ax=ax)
     ax = fig.add_subplot(2, 2, 4)
-    facet_plot('float_1 ~ cat_1', data, ax=ax)
+    facet_plot('float_1 ~ cat_1 + float_2', data, ax=ax, jitter=0.2)
     fig.tight_layout()
+    fig.canvas.set_window_title('mixed facet_plots')
     #this should give error
     #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
     plt.show()
