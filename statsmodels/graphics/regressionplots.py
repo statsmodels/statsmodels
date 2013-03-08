@@ -485,7 +485,7 @@ def plot_ccpr(results, exog_idx, ax=None):
     from statsmodels.tools.tools import add_constant
     mod = OLS(x1beta, add_constant(x1)).fit()
     params = mod.params
-    fig = abline_plot(*params, ax=ax)
+    fig = abline_plot(*params, **dict(ax=ax))
     #ax.plot(x1, x1beta, '-')
     ax.set_title('Component and component plus residual plot')
     ax.set_ylabel("Residual + %s*beta_%d" % (exog_name, exog_idx))
