@@ -121,6 +121,8 @@ def _elements4facet(facet, data):
 def _array4name(formula, data):
     """given a name/patsy formula obtain the dataframe data from it
     """
+    if not formula:
+        return None
     result = []
     for name in formula.split('+'):
         name = name.strip()
@@ -500,8 +502,6 @@ def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
             new_z = y[column]
             kwargs['label'] = column
             new_z = _make_numeric(new_z, ax, 'z', jitter=jitter)
-            #if new_z.dtype == object:
-            #    raise plot_error
             if not kind or kind == 'scatter':
                 kwargs.setdefault('marker', 'o')
                 kwargs.setdefault('linestyle', 'none')
@@ -834,8 +834,10 @@ def facet_plot(formula, data, kind=None, subset=None,
     """
     if not ax:
         fig = plt.figure()
+        PARTIAL = False
     else:
         fig, ax = utils.create_mpl_ax(ax)
+        PARTIAL = True
     y, x, facet = _formula_split(formula)
     data = pd.DataFrame(data)
     if drop_na:
@@ -906,9 +908,11 @@ def facet_plot(formula, data, kind=None, subset=None,
         if my_row != row_num - 1 and not isinstance(ax, Axes3D):
             ax.set_xlabel('')
             plt.setp(ax.get_xticklabels(), visible=False)
-        ax.set_title(level)
-    fig.canvas.set_window_title(formula)
-    fig.subplots_adjust(wspace=0, hspace=0.2)
+        if not PARTIAL:
+            ax.set_title(level)
+    if not PARTIAL:
+        fig.subplots_adjust(wspace=0, hspace=0.2)
+        fig.canvas.set_window_title(formula)
     return fig
 
 if __name__ == '__main__':
@@ -932,10 +936,10 @@ if __name__ == '__main__':
     #facet_plot('float_4 + float_3 ~ float_1 + float_2 | cat_2', data)
     #facet_plot('cat_2 ~ float_1 + float_2 | cat_1', data)
     #facet_plot('float_4 + float_3 ~ cat_1 + float_2', data)
-    #facet_plot('float_4 + float_3 ~ float_1 + cat_2', data)
-    facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=False)
-    facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=True)
-    facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=0.5)
+    facet_plot('float_4 ~ float_1 + cat_2', data, jitter=0.5)
+    #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=False)
+    #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=True)
+    #facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=0.5)
     #facet_plot('float_4 ~ cat_1 + cat_2', data)
     #facet_plot('float_3 ~ float_1 + float_2 | cat_2', data, 'scatter')
     #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'lines');
@@ -943,7 +947,7 @@ if __name__ == '__main__':
     #facet_plot('float_4 ~ float_1 + cat_1 | cat_2', data, 'scatter_coded');
     #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'wireframe');
     #facet_plot('lin ~ cos + sin | cat_2', data, 'lines');
-    #facet_plot('lin2 + lin ~ cos + sin | cat_2', data, 'wireframe');
+    facet_plot('lin2 + lin:int_3 ~ cos + sin | cat_2', data, 'wireframe')
 
     assert _formula_split('y ~ x | f') == ('y', 'x', 'f')
     assert _formula_split('y ~ x') == ('y', 'x', None)
@@ -980,9 +984,16 @@ if __name__ == '__main__':
     #facet_plot('int_2 ~ float_1 + float_2', data)
     #facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
 
-    #fig = plt.figure()
-    #ax = fig.add_subplot(2, 2, 1)
-    #facet_plot('cat_2 ~ cat_1', data, ax=ax)
+    fig = plt.figure()
+    ax = fig.add_subplot(2, 2, 1)
+    facet_plot('cat_2 ~ cat_1', data, ax=ax)
+    ax = fig.add_subplot(2, 2, 2)
+    facet_plot('cat_1', data, ax=ax)
+    ax = fig.add_subplot(2, 2, 3)
+    facet_plot('sin ~ lin', data, 'lines', ax=ax)
+    ax = fig.add_subplot(2, 2, 4)
+    facet_plot('float_1 ~ cat_1', data, ax=ax)
+    fig.tight_layout()
     #this should give error
     #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
     plt.show()
