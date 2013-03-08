@@ -363,7 +363,7 @@ def _statistical_coloring(data):
         expected[key] = base * total, np.sqrt(total * base * (1.0 - base))
     # now we have the standard deviation of distance from the
     # expected value for each tile. We create the colors from this
-    sigmas = {k: (data[k] - m) / s for k, (m, s) in expected.items()}
+    sigmas = dict((k, (data[k] - m) / s) for k, (m, s) in expected.items())
     props = {}
     for key, dev in sigmas.items():
         red = 0.0 if dev < 0 else (dev / (1 + dev))
@@ -433,7 +433,8 @@ def _create_labels(rects, horizontal, ax, rotation):
             basekey = tuple(categories[i][index_select[i]]
                             for i in range(level_idx))
             basekey = basekey + (value,)
-            subset = {k: v for k, v in items if basekey == k[:level_idx + 1]}
+            subset = dict((k, v) for k, v in items
+                          if basekey == k[:level_idx + 1])
             #now I extract the center of all the tiles and make a weighted
             #mean of all these center on the area of the tile
             #this should give me the (more or less) correct position
