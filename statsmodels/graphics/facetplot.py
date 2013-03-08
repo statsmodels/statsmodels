@@ -4,6 +4,7 @@ __all__ = ['autoplot', 'facet_plot']
 
 import numpy as np
 from collections import Counter
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
@@ -17,13 +18,155 @@ import pylab as plt
 import pandas as pd
 
 
-def _jitter(x):
+##########################################################
+# HELPERS FUNCTIONS
+##########################################################
+
+
+def _jitter(x, jitter_level=1.0):
     """add a little jitter to integer array"""
     u = x.unique()
     diff = abs(np.subtract.outer(u, u))
     diff[diff == 0] = np.max(u)
     min_diff = np.min(diff)
-    return x + min_diff * 0.4 * (plt.rand(len(x)) - 0.5)
+    return x + jitter_level * min_diff * 0.4 * (plt.rand(len(x)) - 0.5)
+
+
+def _build_axes(ax, **kwargs):
+    """This build the axes from information about the figure, row
+    and col position, the index and the base axes from wich to obtain
+    the axis
+    """
+    if isinstance(ax, list):
+        if kwargs.get('projection', None) == '3d':
+            #the new version doesn't work, patch up with the older one
+            fig = ax[0]
+            temp_ax = fig.add_subplot(ax[1], ax[2], ax[3])
+            rect = temp_ax.get_position()
+            fig.delaxes(temp_ax)
+            ax = Axes3D(fig, rect)
+            # remove the strange color pathch
+            ax.set_axis_bgcolor(fig.get_facecolor())
+        else:
+            ax = ax[0].add_subplot(ax[1], ax[2], ax[3],
+                                   sharex=ax[4], sharey=ax[4], **kwargs)
+    fig, ax = utils.create_mpl_ax(ax)
+    return fig, ax
+
+
+def _make_numeric(data, ax, dir, jitter=True):
+    """if the data type is categorical convert it to integer
+    and set the correct ticking in the given axes
+    """
+    if data.dtype == object:
+        states = sorted(list(data.unique()))
+        indexes = dict([(v, states.index(v)) for v in states])
+        data = data.apply(lambda s: indexes[s])
+        data = _jitter(data, jitter)
+        if ax:
+            labels = range(len(states))
+            ax.__getattribute__('set_{}ticks'.format(dir))(labels)
+            ax.__getattribute__('set_{}ticklabels'.format(dir))(states)
+    return data
+
+
+def _formula_split(formula):
+    """split the formula of the facet_plot into the y, x and categorical terms
+    """
+    # determine the facet component
+    if '|' in formula:
+        f = formula.split('|')[1].strip()
+        formula = formula.split('|')[0]
+    else:
+        f = None
+
+    #try to obtain the endog and exog variable
+    if '~' in formula:
+        x = formula.split('~')[1].strip()
+        y = formula.split('~')[0].strip()
+    else:
+        x = None
+        y = formula.strip()
+
+    #if there is not exog, swith the two
+    if x is None:
+        x, y = y, x
+    return y, x, f
+
+
+def _elements4facet(facet, data):
+    """obtain a list of (category, subset of the dataframe) given the facet
+    """
+    if facet is not None:
+        facet_list = [f.strip() for f in facet.split()]
+        try:
+            # try to use it a a hierarchical (or simple)
+            #index for the dataframe
+            elements = list(data.groupby(facet_list))
+        except KeyError:  # go by patsy
+            # create the matrix
+            matrix = patsy.dmatrix(facet, data, return_type="dataframe")
+            elements = []
+            # take every column of the resulting design matrix
+            # and use it to split the dataframe
+            for column in matrix:
+                value = matrix[column]
+                elements.append((column, data[value > 0]))
+    # facet is none, so simply use the whole dataset
+    else:
+        elements = [['', data]]
+    return elements
+
+
+def _array4name(formula, data):
+    """given a name/patsy formula obtain the dataframe data from it
+    """
+    result = []
+    for name in formula.split('+'):
+        name = name.strip()
+        try:
+            # try to use it as a valid index
+            value = data[[name]]
+        except KeyError:
+            #if it fails try it as a patsy formula
+            # the +0 is needed to avoid the intercept column
+            value = patsy.dmatrix(name + '+0', data, return_type="dataframe")
+            value.name = name
+        result.append(value)
+    #merge all the resulting dataframe
+    void = pd.DataFrame(index=result[0].index)
+    for dataframe in result:
+        for col in dataframe:
+            void[col] = dataframe[col]
+            void[col].name = col
+    result = void
+    # to do monovariate plots this should return a series
+    # the dataframe is kept for future implementation of
+    # multivariate plots
+    if len(result.columns) == 1:
+        result = pd.Series(result[result.columns[0]])
+    result.name = formula
+    return result
+
+
+def _select_rowcolsize(num_of_categories):
+    """given the number of facets select the best structure of subplots
+    """
+    L = num_of_categories
+    side_num = np.ceil(np.sqrt(L))
+    col_num = side_num
+    row_num = side_num
+    while True:
+        if (row_num - 1) * col_num >= L:
+            row_num = row_num - 1
+        else:
+            break
+    return row_num, col_num
+
+
+##########################################################
+# DATA PLOTTING FUNCTIONS
+##########################################################
 
 
 def _auto_hist(data, ax, kind=None, *args, **kwargs):
@@ -317,18 +460,6 @@ def _autoplot_cat2cat(x, y, ax, kind, *args, **kwargs):
         raise plot_error
 
 
-def _build_axes(ax, **kwargs):
-    """This build the axes from information about the figure, row
-    and col position, the index and the base axes from wich to obtain
-    the axis
-    """
-    if isinstance(ax, list):
-        ax = ax[0].add_subplot(ax[1], ax[2], ax[3],
-                               sharex=ax[4], sharey=ax[4], **kwargs)
-    fig, ax = utils.create_mpl_ax(ax)
-    return fig, ax
-
-
 def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
     """manage the multivariate type of plots
     """
@@ -343,37 +474,73 @@ def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
     if len(x.columns) == 1:
         fig, ax = _build_axes(ax)
         colors = ['b', 'g', 'r', 'y', 'm', 'c', 'k']
-        for column, color in zip(y,colors):
+        for column, color in zip(y, colors):
             kwargs['color'] = color
             autoplot(x[x.columns[0]], y[column],
                      ax=ax, kind=kind, *args, **kwargs)
         return ax
-    if kind in ['_scatter', '_lines']:
+    if not kind or kind in ['scatter', 'lines', 'trisurf', 'wireframe']:
         fig, ax = _build_axes(ax, projection='3d')
+
         if len(x.columns) != 2:
             raise plot_error
         new_x = x[x.columns[0]]
         new_y = x[x.columns[1]]
-        for column in y:
-            ax.scatter(new_x, new_y, y[column], *args, **kwargs)
-    elif not kind or kind in ['scatter']:
+        # this is ugly, but it's a workaround the uncorrect placements
+        # of the labels
+        linespacing = 3.0
+        ax.set_xlabel('\n'+x.columns[0], linespacing=linespacing)
+        ax.set_ylabel('\n'+x.columns[1], linespacing=linespacing)
+        jitter = kwargs.pop('jitter', 1.0)
+        new_x = _make_numeric(new_x, ax, 'x', jitter=jitter)
+        new_y = _make_numeric(new_y, ax, 'y', jitter=jitter)
+        colors = ['b', 'g', 'r', 'y', 'm', 'c', 'k']
+        kwargs.setdefault('alpha', 0.3)
+        for column, color in zip(y, colors):
+            new_z = y[column]
+            kwargs['label'] = column
+            new_z = _make_numeric(new_z, ax, 'z', jitter=jitter)
+            #if new_z.dtype == object:
+            #    raise plot_error
+            if not kind or kind == 'scatter':
+                kwargs.setdefault('marker', 'o')
+                kwargs.setdefault('linestyle', 'none')
+                ax.plot(new_x, new_y, zs=new_z,
+                        color=color, *args, **kwargs)
+            elif kind == 'trisurf':
+                ax.plot_trisurf(new_x, new_y, new_z,
+                                color=color, *args, **kwargs)
+            elif kind == 'wireframe':
+                ax.plot_wireframe(new_x, new_y, new_z,
+                                  color=color, *args, **kwargs)
+            elif kind == 'lines':
+                ax.plot(new_x, new_y, zs=new_z,
+                        color=color, *args, **kwargs)
+            else:
+                raise plot_error
+        # create legends or put labels, this is the choice
+        if len(y.columns) > 1:
+            # position the label outside the plot, and make it unique
+            # among the subplots
+            # make it transparent to not break the visual
+            #remove all the previous legends to avoid overlappings
+            for t_ax in fig.axes:
+                t_ax.legend().set_visible(False)
+                plt.draw()
+            leg = ax.legend(bbox_to_anchor=(0, 0, 1, 1),
+                            bbox_transform=fig.transFigure)
+            leg.get_frame().set_alpha(0.0)
+        else:
+            ax.set_zlabel('\n'+y.columns[0], linespacing=linespacing)
+    elif kind in ['scatter_coded']:
         fig, ax = _build_axes(ax)
         if len(x.columns) != 2:
             raise plot_error
+        jitter = kwargs.pop('jitter', 1.0)
         new_x = x[x.columns[0]]
-        if new_x.dtype == object:
-            states = sorted(list(new_x.unique()))
-            indexes = dict([(v, states.index(v)) for v in states])
-            new_x = new_x.apply(lambda s: indexes[s])
-            ax.set_xticks(range(len(states)))
-            ax.set_xticklabels(states)
+        new_x = _make_numeric(new_x, ax, 'x', jitter=jitter)
         new_y = x[x.columns[1]]
-        if new_y.dtype == object:
-            states = sorted(list(new_y.unique()))
-            indexes = dict([(v, states.index(v)) for v in states])
-            new_y = new_y.apply(lambda s: indexes[s])
-            ax.set_yticks(range(len(states)))
-            ax.set_yticklabels(states)
+        new_y = _make_numeric(new_y, ax, 'y', jitter=jitter)
         if new_y.dtype == int:
             new_y = _jitter(new_y)
         if new_x.dtype == int:
@@ -396,6 +563,11 @@ def _auto_multivariate(x, y, ax, kind, *args, **kwargs):
     else:
         raise plot_error
     return ax
+
+
+##########################################################
+# THE PRINCIPAL FUNCTIONS
+##########################################################
 
 
 def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
@@ -483,7 +655,7 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
                        'boxplot', 'violinplot', 'beanplot', 'mosaic',
                        'matrix', 'counter', 'acorr', 'kde', 'hist',
-                       ]
+                       'trisurf', 'wireframe', 'scatter_coded']
     if kind and kind not in available_plots:
         raise TypeError("the selected plot type " +
                         "({}) is not recognized,".format(kind) +
@@ -523,100 +695,6 @@ def autoplot(x, y=None, kind=None, ax=None, *args, **kwargs):
     ax.set_xlabel(x.name)
     ax.set_ylabel(y.name)
     return ax
-
-
-def _formula_split(formula):
-    """split the formula of the facet_plot into the y, x and categorical terms
-    """
-    # determine the facet component
-    if '|' in formula:
-        f = formula.split('|')[1].strip()
-        formula = formula.split('|')[0]
-    else:
-        f = None
-
-    #try to obtain the endog and exog variable
-    if '~' in formula:
-        x = formula.split('~')[1].strip()
-        y = formula.split('~')[0].strip()
-    else:
-        x = None
-        y = formula.strip()
-
-    #if there is not exog, swith the two
-    if x is None:
-        x, y = y, x
-    return y, x, f
-
-
-def _elements4facet(facet, data):
-    """obtain a list of (category, subset of the dataframe) given the facet
-    """
-    if facet is not None:
-        facet_list = [f.strip() for f in facet.split()]
-        try:
-            # try to use it a a hierarchical (or simple)
-            #index for the dataframe
-            elements = list(data.groupby(facet_list))
-        except KeyError:  # go by patsy
-            # create the matrix
-            matrix = patsy.dmatrix(facet, data, return_type="dataframe")
-            elements = []
-            # take every column of the resulting design matrix
-            # and use it to split the dataframe
-            for column in matrix:
-                value = matrix[column]
-                elements.append((column, data[value > 0]))
-    # facet is none, so simply use the whole dataset
-    else:
-        elements = [['', data]]
-    return elements
-
-
-def _array4name(formula, data):
-    """given a name/patsy formula obtain the dataframe data from it
-    """
-    result = []
-    for name in formula.split('+'):
-        name = name.strip()
-        try:
-            # try to use it as a valid index
-            value = data[[name]]
-        except KeyError:
-            #if it fails try it as a patsy formula
-            # the +0 is needed to avoid the intercept column
-            value = patsy.dmatrix(name + '+0', data, return_type="dataframe")
-            value.name = name
-        result.append(value)
-    #merge all the resulting dataframe
-    void = pd.DataFrame(index=result[0].index)
-    for dataframe in result:
-        for col in dataframe:
-            void[col] = dataframe[col]
-            void[col].name = col
-    result = void
-    # to do monovariate plots this should return a series
-    # the dataframe is kept for future implementation of
-    # multivariate plots
-    if len(result.columns) == 1:
-        result = pd.Series(result[result.columns[0]])
-    result.name = formula
-    return result
-
-
-def _select_rowcolsize(num_of_categories):
-    """given the number of facets select the best structure of subplots
-    """
-    L = num_of_categories
-    side_num = np.ceil(np.sqrt(L))
-    col_num = side_num
-    row_num = side_num
-    while True:
-        if (row_num - 1) * col_num >= L:
-            row_num = row_num - 1
-        else:
-            break
-    return row_num, col_num
 
 
 def facet_plot(formula, data, kind=None, subset=None,
@@ -821,21 +899,20 @@ def facet_plot(formula, data, kind=None, subset=None,
         except AttributeError:
             pass
         # remove the superfluos info base on the columns
-        if my_col:
+        if my_col and not isinstance(ax, Axes3D):
             ax.set_ylabel('')
             plt.setp(ax.get_yticklabels(), visible=False)
         # show the x labels only if it's on the last line
-        if my_row != row_num - 1:
+        if my_row != row_num - 1 and not isinstance(ax, Axes3D):
             ax.set_xlabel('')
             plt.setp(ax.get_xticklabels(), visible=False)
         ax.set_title(level)
     fig.canvas.set_window_title(formula)
-    fig.subplots_adjust(wspace=0, hspace=0.0)
-    fig.tight_layout()
+    fig.subplots_adjust(wspace=0, hspace=0.2)
     return fig
 
 if __name__ == '__main__':
-    #from statsmodels.graphics.facetplot import facet_plot
+    from statsmodels.graphics.facetplot import facet_plot
     N = 1000
     data = pd.DataFrame({
         'int_1': plt.randint(0, 10, size=N),
@@ -844,9 +921,30 @@ if __name__ == '__main__':
         'float_1': 4 * plt.randn(N),
         'float_2': plt.randn(N),
         'cat_1': ['aeiou'[i] for i in plt.randint(0, 5, size=N)],
-        'cat_2': ['BCDF'[i] for i in plt.randint(0, 4, size=N)]})
+        'cat_2': ['BCDF'[i] for i in plt.randint(0, 4, size=N)],
+        'sin': np.sin(np.r_[0.0:10.0:N*1j]),
+        'cos': np.cos(np.r_[0.0:10.0:N*1j]),
+        'lin': np.r_[0.0:10.0:N*1j],
+        'lin2': 0.5*np.r_[0.0:10.0:N*1j], })
     data['float_3'] = data['float_1']+data['float_2']+plt.randn(N)
     data['float_4'] = data['float_1']*data['float_2']+plt.randn(N)
+
+    #facet_plot('float_4 + float_3 ~ float_1 + float_2 | cat_2', data)
+    #facet_plot('cat_2 ~ float_1 + float_2 | cat_1', data)
+    #facet_plot('float_4 + float_3 ~ cat_1 + float_2', data)
+    #facet_plot('float_4 + float_3 ~ float_1 + cat_2', data)
+    facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=False)
+    facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=True)
+    facet_plot('float_4 + float_3 ~ cat_1 + cat_2', data, jitter=0.5)
+    #facet_plot('float_4 ~ cat_1 + cat_2', data)
+    #facet_plot('float_3 ~ float_1 + float_2 | cat_2', data, 'scatter')
+    #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'lines');
+    #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'scatter_coded');
+    #facet_plot('float_4 ~ float_1 + cat_1 | cat_2', data, 'scatter_coded');
+    #facet_plot('float_4 ~ float_1 + float_2 | cat_2', data, 'wireframe');
+    #facet_plot('lin ~ cos + sin | cat_2', data, 'lines');
+    #facet_plot('lin2 + lin ~ cos + sin | cat_2', data, 'wireframe');
+
     assert _formula_split('y ~ x | f') == ('y', 'x', 'f')
     assert _formula_split('y ~ x') == ('y', 'x', None)
     assert _formula_split('x | f') == (None, 'x', 'f')
@@ -866,7 +964,7 @@ if __name__ == '__main__':
     #facet_plot('cat_2 ~ cat_1', data)
     #facet_plot('cat_2 ~ float_1', data, 'scatter')
     #facet_plot('float_2 ~ cat_1', data, 'scatter')
-    facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse')
+    #facet_plot('float_2 ~ float_1 | cat_1', data, 'ellipse');
     #facet_plot('float_2 ~ float_1:int_3', data)
     #facet_plot('float_1', data)
     #facet_plot('int_2', data)
@@ -877,13 +975,14 @@ if __name__ == '__main__':
     #facet_plot('float_3 + float_4 ~ float_1 + float_2', data)
     #facet_plot('float_4 + float_3 ~ float_1 + float_2', data)
     #facet_plot('float_3 ~ float_1 + float_2', data)
-    #facet_plot('float_4 ~ float_1 + float_2', data)
+
     #facet_plot('int_3 ~ cat_1 + cat_2', data)
     #facet_plot('int_2 ~ float_1 + float_2', data)
-    facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest')
-    fig = plt.figure()
-    ax = fig.add_subplot(2, 2, 1)
-    facet_plot('cat_2 ~ cat_1', data, ax=ax)
+    #facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
+
+    #fig = plt.figure()
+    #ax = fig.add_subplot(2, 2, 1)
+    #facet_plot('cat_2 ~ cat_1', data, ax=ax)
     #this should give error
     #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
     plt.show()
