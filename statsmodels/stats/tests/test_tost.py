@@ -368,13 +368,13 @@ res2 = smws.tost_paired(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, transform=Non
 res = smws.tost_ind(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, usevar='separate')
 
 
-class CheckTost(object):
+class CheckTostMixin(object):
 
     def test_pval(self):
         assert_almost_equal(self.res1.pvalue, self.res2.p_value, decimal=13)
         #assert_almost_equal(self.res1.df, self.res2.df, decimal=13)
 
-class TestTostp1(CheckTost):
+class TestTostp1(CheckTostMixin):
     #paired var1
     def __init__(self):
         self.res2 = tost_clinic_paired_1
@@ -405,7 +405,7 @@ class TestTostp1(CheckTost):
                             decimal=13)
 
 
-class TestTostp2(CheckTost):
+class TestTostp2(CheckTostMixin):
     #paired var2
     def __init__(self):
         self.res2 = tost_clinic_paired
@@ -414,7 +414,7 @@ class TestTostp2(CheckTost):
         res = smws.tost_paired(x, y, -0.6, 0.6, transform=None)
         self.res1.pvalue = res[0]
 
-class TestTosti1(CheckTost):
+class TestTosti1(CheckTostMixin):
     def __init__(self):
         self.res2 = tost_clinic_indep_1
         x, y = clinic[:15, 2], clinic[15:, 2]
@@ -422,7 +422,7 @@ class TestTosti1(CheckTost):
         res = smws.tost_ind(x, y, -0.6, 0.6, usevar='separate')
         self.res1.pvalue = res[0]
 
-class TestTosti2(CheckTost):
+class TestTosti2(CheckTostMixin):
     def __init__(self):
         self.res2 = tost_clinic_indep
         x, y = clinic[:15, 3], clinic[15:, 3]
@@ -430,7 +430,7 @@ class TestTosti2(CheckTost):
         res = smws.tost_ind(x, y, -0.6, 0.6, usevar='separate')
         self.res1.pvalue = res[0]
 
-class TestTostip1(CheckTost):
+class TestTostip1(CheckTostMixin):
     def __init__(self):
         self.res2 = tost_clinic_indep_1_pooled
         x, y = clinic[:15, 2], clinic[15:, 2]
@@ -438,7 +438,7 @@ class TestTostip1(CheckTost):
         res = smws.tost_ind(x, y, -0.6, 0.6, usevar='pooled')
         self.res1.pvalue = res[0]
 
-class TestTostip2(CheckTost):
+class TestTostip2(CheckTostMixin):
     def __init__(self):
         self.res2 = tost_clinic_indep_2_pooled
         x, y = clinic[:15, 3], clinic[15:, 3]
@@ -486,7 +486,7 @@ def test_tost_asym():
                               transform=np.exp)
 
     resall = smws.ttest_ind(clinic[15:, 2:7], clinic[:15, 2:7],
-                              diff=[-1.0, -1.0, -1.5, -1.5, -1.5])
+                              value=[-1.0, -1.0, -1.5, -1.5, -1.5])
 
     #k on 1: compare all with reference
     resall = smws.tost_ind(clinic[15:, 2:7], clinic[:15, 2:3],
@@ -508,7 +508,7 @@ def test_ttest():
     t2 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate')
     all_tests.append((t2, ttest_clinic_indep_1_l))
     t3 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate',
-                        diff=1)
+                        value=1)
     all_tests.append((t3, ttest_clinic_indep_1_l_mu))
 
     for res1, res2 in all_tests:
