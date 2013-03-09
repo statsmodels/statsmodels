@@ -172,12 +172,39 @@ class CheckWeightstats1d(object):
 
         #check correct ttest independent of user ddof
         cm = CompareMeans(DescrStatsW(x1, weights=w1, ddof=0),
-                          DescrStatsW(x2, weights=w2, ddof=0))
+                          DescrStatsW(x2, weights=w2, ddof=1))
         assert_almost_equal(cm.ttest_ind()[:2], res_sp, 14)
 
         cm = CompareMeans(DescrStatsW(x1, weights=w1, ddof=1),
                           DescrStatsW(x2, weights=w2, ddof=2))
         assert_almost_equal(cm.ttest_ind()[:2], res_sp, 14)
+
+
+        cm0 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=0),
+                          DescrStatsW(x2, weights=w2, ddof=0))
+        cm1 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=0),
+                          DescrStatsW(x2, weights=w2, ddof=1))
+        cm2 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=1),
+                          DescrStatsW(x2, weights=w2, ddof=2))
+
+        res0 = cm0.ttest_ind(usevar='separate')
+        res1 = cm1.ttest_ind(usevar='separate')
+        res2 = cm2.ttest_ind(usevar='separate')
+        assert_almost_equal(res1, res0, 14)
+        assert_almost_equal(res2, res0, 14)
+
+        #check confint independent of user ddof
+        res0 = cm0.confint_diff(usevar='pooled')
+        res1 = cm1.confint_diff(usevar='pooled')
+        res2 = cm2.confint_diff(usevar='pooled')
+        assert_almost_equal(res1, res0, 14)
+        assert_almost_equal(res2, res0, 14)
+
+        res0 = cm0.confint_diff(usevar='separate')
+        res1 = cm1.confint_diff(usevar='separate')
+        res2 = cm2.confint_diff(usevar='separate')
+        assert_almost_equal(res1, res0, 14)
+        assert_almost_equal(res2, res0, 14)
 
 
     def test_confint_mean(self):

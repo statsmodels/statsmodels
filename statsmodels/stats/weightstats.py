@@ -181,6 +181,14 @@ class DescrStatsW(object):
         return self.sumsquares / (self.sum_weights - self.ddof)
 
     @OneTimeProperty
+    def _var(self):
+        '''variance without degrees of freedom correction
+
+        used for statistical tests with controlled ddof
+        '''
+        return self.sumsquares / self.sum_weights
+
+    @OneTimeProperty
     def std(self):
         '''standard deviation with default degrees of freedom correction
         '''
@@ -389,10 +397,10 @@ class CompareMeans(object):
 
     formulas should also be correct for unweighted means
 
-    not sure what happens if we have several variables.
-    at least, tost test works for multi-endpoint comparison: If d1 and d2
-    have the same number of rows, then each column of the data in d1 is
-    compared with the corresponding column in d2.
+
+    The tests and the confidence interval work for multi-endpoint comparison:
+    If d1 and d2 have the same number of rows, then each column of the data
+    in d1 is compared with the corresponding column in d2.
 
 
     extend to any number of groups or write a version that works in that
@@ -403,7 +411,10 @@ class CompareMeans(object):
     d1, d2 : instances of DescrStatsW
 
 
-    TODO: check: I think this assumes ddof=0 in each DescrStatsW instance
+    Notes
+    -----
+    The result for the statistical tests and the confidence interval are
+    independent of the user specified ddof.
 
     '''
 
@@ -424,7 +435,7 @@ class CompareMeans(object):
         #formula assumes var has ddof=0, so we subtract ddof=1 now
         d1 = self.d1
         d2 = self.d2
-        return np.sqrt(d1.var / (d1.nobs-1) + d2.var / (d2.nobs-1))
+        return np.sqrt(d1._var / (d1.nobs-1) + d2._var / (d2.nobs-1))
 
     @OneTimeProperty
     def std_meandiff_pooledvar(self):
@@ -449,9 +460,8 @@ class CompareMeans(object):
         d2 = self.d2
         #this follows blindly the SPSS manual
         #except I assume var has ddof=0
-        #I should check d1.ddof, d2.ddof
-        sem1 = d1.var / (d1.nobs-1)
-        sem2 = d2.var / (d2.nobs-1)
+        sem1 = d1._var / (d1.nobs-1)
+        sem2 = d2._var / (d2.nobs-1)
         semsum = sem1 + sem2
         z1 = (sem1 / semsum)**2 / (d1.nobs - 1)
         z2 = (sem2 / semsum)**2 / (d2.nobs - 1)
@@ -493,6 +503,10 @@ class CompareMeans(object):
         df : int or float
             degrees of freedom used in the t-test
 
+        Notes
+        -----
+        The result is independent of the user specified ddof.
+
         '''
         d1 = self.d1
         d2 = self.d2
@@ -532,6 +546,10 @@ class CompareMeans(object):
         -------
         lower, upper : floats
             lower and upper limits of the confidence interval
+
+        Notes
+        -----
+        The result is independent of the user specified ddof.
 
         '''
         d1 = self.d1
