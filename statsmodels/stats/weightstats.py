@@ -256,7 +256,7 @@ class DescrStatsW(object):
         upper = self.mean + tcrit * self.std_mean
         return lower, upper
 
-    def ttest_mean(self, value, alternative='two-sided'):
+    def ttest_mean(self, value=0, alternative='two-sided'):
         '''ttest of Null hypothesis that mean is equal to value.
 
         The alternative hypothesis H1 is defined by the following
