@@ -15,7 +15,8 @@ import multicomp
 from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage)
 from .multicomp import tukeyhsd
 import gof
-from .gof import powerdiscrepancy, gof_chisquare_discrete
+from .gof import (powerdiscrepancy, gof_chisquare_discrete,
+                  chisquare_effectsize)
 import stattools
 from .stattools import durbin_watson, omni_normtest, jarque_bera
 
@@ -29,8 +30,9 @@ from .sandwich_covariance import (
 
 from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, tost_ind,
                          tost_paired)
-from .power import (TTestPower, TTestIndPower, tt_solve_power,
-                   tt_ind_solve_power)
+from .power import (TTestPower, TTestIndPower, GofChisquarePower,
+                    NormalIndPower, tt_solve_power, tt_ind_solve_power,
+                    zt_ind_solve_power)
 
 from .descriptivestats import Describe
 

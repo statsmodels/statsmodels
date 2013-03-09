@@ -390,6 +390,8 @@ def chisquare(f_obs, f_exp=None, value=0, ddof=0, return_basic=True):
 
     if return_basic:
         return chisq, pvalue
+    else:
+        return chisq, pvalue    #TODO: replace with TestResults
 
 
 def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
