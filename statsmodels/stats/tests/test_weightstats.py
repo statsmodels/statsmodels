@@ -7,6 +7,7 @@ update 2012-09-09:
      - I don't remember what all the commented out code is doing
      - should be refactored to use generator or inherited tests
      - still gaps in test coverage
+       - value/diff in ttest_ind is not tested directly (used by tost)
      - what about pandas data structures?
 
 Author: Josef Perktold

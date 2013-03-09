@@ -431,8 +431,7 @@ class CompareMeans(object):
 
     @OneTimeProperty
     def std_meandiff_separatevar(self):
-        #note I have too little control so far over ddof since it's an option
-        #formula assumes var has ddof=0, so we subtract ddof=1 now
+        #this uses ``_var`` to use ddof=0 for formula
         d1 = self.d1
         d2 = self.d2
         return np.sqrt(d1._var / (d1.nobs-1) + d2._var / (d2.nobs-1))
@@ -442,8 +441,7 @@ class CompareMeans(object):
         '''variance assuming equal variance in both data sets
 
         '''
-        #uses d1.ddof, d2.ddof which should be one for the ttest
-        #hardcoding ddof=1 for varpooled
+        #this uses ``_var`` to use ddof=0 for formula
 
         d1 = self.d1
         d2 = self.d2
@@ -459,7 +457,7 @@ class CompareMeans(object):
         d1 = self.d1
         d2 = self.d2
         #this follows blindly the SPSS manual
-        #except I assume var has ddof=0
+        #except I use  ``_var`` which has ddof=0
         sem1 = d1._var / (d1.nobs-1)
         sem2 = d2._var / (d2.nobs-1)
         semsum = sem1 + sem2
@@ -468,7 +466,7 @@ class CompareMeans(object):
         dof = 1. / (z1 + z2)
         return dof
 
-    def ttest_ind(self, alternative='two-sided', usevar='pooled', diff=0):
+    def ttest_ind(self, alternative='two-sided', usevar='pooled', value=0):
         '''ttest for the null hypothesis of identical means
 
         this should also be the same as onewaygls, except for ddof differences
@@ -490,7 +488,7 @@ class CompareMeans(object):
         weights : tuple of None or ndarrays
             Case weights for the two samples. For details on weights see
             ``DescrStatsW``
-        diff : float
+        value : float
             difference between the means under the Null hypothesis.
 
 
@@ -519,20 +517,21 @@ class CompareMeans(object):
             dof = self.dof_satt()
 
         tstat, pval = _tstat_generic(d1.mean, d2.mean, stdm, dof, alternative,
-                                    diff=diff)
+                                    diff=value)
 
         return tstat, pval, dof
 
     def confint_diff(self, alpha=0.05, alternative='two-sided',
                      usevar='pooled'):
-        '''confidence intevall for the difference in means
+        '''confidence interval for the difference in means
 
         Parameters
         ----------
         alpha: float
             1-alpha is the confidence level for the interval
         alternative : string
-            The alternative hypothesis, H1, has to be one of the following
+            The alternative hypothesis, H1, has to be one of the following :
+
             'two-sided': H1: difference in means not equal to value (default)
             'larger' :   H1: difference in means larger than value
             'smaller' :  H1: difference in means smaller than value
@@ -610,7 +609,7 @@ class CompareMeans(object):
 
 
 def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
-                      weights=(None, None), diff=0):
+                      weights=(None, None), value=0):
     '''ttest independent sample
 
     convenience function that uses the classes and throws away the intermediate
@@ -635,7 +634,7 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     weights : tuple of None or ndarrays
         Case weights for the two samples. For details on weights see
         ``DescrStatsW``
-    diff : float
+    value : float
         difference between the means under the Null hypothesis.
 
 
@@ -651,7 +650,8 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     '''
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                      DescrStatsW(x2, weights=weights[1], ddof=0))
-    tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar, diff=diff)
+    tstat, pval, dof = cm.ttest_ind(alternative=alternative, usevar=usevar,
+                                    value=value)
 
     return tstat, pval, dof
 
@@ -667,7 +667,7 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
 
     where m1, m2 are the means, expected values of the two samples.
 
-    If the pvalue is smaller than a threshold,say 0.05, then we reject the
+    If the pvalue is smaller than a threshold, say 0.05, then we reject the
     hypothesis that the difference between the two samples is larger than the
     the thresholds given by low and upp.
 
