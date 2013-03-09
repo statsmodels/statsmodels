@@ -590,8 +590,8 @@ class CompareMeans(object):
         t2, pv2 : tuple of floats
             test statistic and pvalue for upper threshold test
         '''
-        tt1 = self.ttest_ind(alternative='larger', usevar=usevar, diff=low)
-        tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, diff=upp)
+        tt1 = self.ttest_ind(alternative='larger', usevar=usevar, value=low)
+        tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, value=upp)
         #TODO: remove tuple return, use same as for function tost_ind
         return np.maximum(tt1[1], tt2[1]), (tt1, tt2)
 
