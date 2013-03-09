@@ -370,7 +370,10 @@ class CheckPowerMixin(object):
     def test_roots(self):
         kwds = copy.copy(self.kwds)
         kwds.update(self.kwds_extra)
+        # kwds_extra are used as argument, but not as target for root
         for key in self.kwds:
+            # keep print to check whether tests are really executed
+            #print 'testing roots', key
             value = kwds[key]
             kwds[key] = None
 

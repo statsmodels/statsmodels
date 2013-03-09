@@ -14,6 +14,8 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 import statsmodels.stats.power as smp
+#from .test_weightstats import CheckPowerMixin
+from statsmodels.stats.tests.test_weightstats import CheckPowerMixin, Holder
 
 
 def test_normal_power_explicit():
@@ -47,3 +49,56 @@ def test_normal_power_explicit():
     norm_pow_R = 0.0438089705093578
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="less")
     assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
+
+class TestNormalIndPower(CheckPowerMixin):
+
+    def __init__(self):
+
+        #> example from above
+        # results copied not directly from R
+        res2 = Holder()
+        res2.n = 80
+        res2.d = 0.3
+        res2.sig_level = 0.05
+        res2.power = 0.475100870572638
+        res2.alternative = 'two.sided'
+        res2.note = 'NULL'
+        res2.method = 'two sample power calculation'
+        self.res2 = res2
+
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
+        self.kwds_extra = {}
+        self.cls = smp.NormalIndPower
+
+class TestNormalIndPower_onesamp(CheckPowerMixin):
+
+    def __init__(self):
+        # forcing one-sample by using ratio=0
+        #> example from above
+        # results copied not directly from R
+        res2 = Holder()
+        res2.n = 40
+        res2.d = 0.3
+        res2.sig_level = 0.05
+        res2.power = 0.475100870572638
+        res2.alternative = 'two.sided'
+        res2.note = 'NULL'
+        res2.method = 'two sample power calculation'
+        self.res2 = res2
+
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power}
+        # keyword for which we don't look for root:
+        self.kwds_extra = {'ratio': 0}
+
+        self.cls = smp.NormalIndPower
+
+if __name__ == '__main__':
+    test_normal_power_explicit()
+    nt = TestNormalIndPower()
+    nt.test_power()
+    nt.test_roots()
+    nt = TestNormalIndPower_onesamp()
+    nt.test_power()
+    nt.test_roots()
