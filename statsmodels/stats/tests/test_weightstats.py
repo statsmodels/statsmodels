@@ -130,6 +130,37 @@ class TestWeightstats(object):
 ##        resss = stats.levene(x1r_2d, x2r_2d)
 ##        assert_almost_equal(ressm[:2], resss, 14)
 
+    def test_weightstats_ddof_tests(self):
+        # explicit test that ttest and confint are independent of ddof
+        # one sample case
+        x1_2d = self.x1_2d
+        w1 = self.w1
+
+        d1w_d0 = DescrStatsW(x1_2d, weights=w1, ddof=0)
+        d1w_d1 = DescrStatsW(x1_2d, weights=w1, ddof=1)
+        d1w_d2 = DescrStatsW(x1_2d, weights=w1, ddof=2)
+
+        #check confint independent of user ddof
+        res0 = d1w_d0.ttest_mean()
+        res1 = d1w_d1.ttest_mean()
+        res2 = d1w_d2.ttest_mean()
+        # concatenate into one array with np.r_
+        assert_almost_equal(np.r_[res1], np.r_[res0], 14)
+        assert_almost_equal(np.r_[res2], np.r_[res0], 14)
+
+        res0 = d1w_d0.ttest_mean(0.5)
+        res1 = d1w_d1.ttest_mean(0.5)
+        res2 = d1w_d2.ttest_mean(0.5)
+        assert_almost_equal(np.r_[res1], np.r_[res0], 14)
+        assert_almost_equal(np.r_[res2], np.r_[res0], 14)
+
+        #check confint independent of user ddof
+        res0 = d1w_d0.confint_mean()
+        res1 = d1w_d1.confint_mean()
+        res2 = d1w_d2.confint_mean()
+        assert_almost_equal(res1, res0, 14)
+        assert_almost_equal(res2, res0, 14)
+
 
 class CheckWeightstats1dMixin(object):
 
