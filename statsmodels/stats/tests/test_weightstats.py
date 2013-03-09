@@ -131,7 +131,7 @@ class TestWeightstats(object):
 ##        assert_almost_equal(ressm[:2], resss, 14)
 
 
-class CheckWeightstats1d(object):
+class CheckWeightstats1dMixin(object):
 
     def test_basic(self):
         x1r = self.x1r
@@ -220,7 +220,7 @@ class CheckWeightstats1d(object):
         t, p, d = d1w.ttest_mean(np.vstack((low, upp)))
         assert_almost_equal(p, alpha * np.ones(p.shape), 8)
 
-class CheckWeightstats2d(CheckWeightstats1d):
+class CheckWeightstats2dMixin(CheckWeightstats1dMixin):
 
     def test_corr(self):
         x1r = self.x1r
@@ -229,7 +229,7 @@ class CheckWeightstats2d(CheckWeightstats1d):
         assert_almost_equal(np.corrcoef(x1r.T), d1w.corrcoef, 14)
 
 
-class TestWeightstats1d_ddof(CheckWeightstats1d):
+class TestWeightstats1d_ddof(CheckWeightstats1dMixin):
 
     @classmethod
     def setup_class(self):
@@ -249,7 +249,7 @@ class TestWeightstats1d_ddof(CheckWeightstats1d):
         self.x2r = self.d2w.asrepeats()
 
 
-class TestWeightstats2d(CheckWeightstats2d):
+class TestWeightstats2d(CheckWeightstats2dMixin):
 
     @classmethod
     def setup_class(self):
@@ -270,7 +270,7 @@ class TestWeightstats2d(CheckWeightstats2d):
         self.x1r = self.d1w.asrepeats()
         self.x2r = self.d2w.asrepeats()
 
-class TestWeightstats2d_ddof(CheckWeightstats2d):
+class TestWeightstats2d_ddof(CheckWeightstats2dMixin):
 
     @classmethod
     def setup_class(self):
@@ -289,7 +289,7 @@ class TestWeightstats2d_ddof(CheckWeightstats2d):
         self.x1r = self.d1w.asrepeats()
         self.x2r = self.d2w.asrepeats()
 
-class TestWeightstats2d_nobs(CheckWeightstats2d):
+class TestWeightstats2d_nobs(CheckWeightstats2dMixin):
 
     @classmethod
     def setup_class(self):
@@ -326,7 +326,7 @@ def test_ttest_ind_with_uneq_var():
     assert_almost_equal([t,p], [tr, pr], 13)
 
 
-class CheckPower(object):
+class CheckPowerMixin(object):
 
     def test_power(self):
         #test against R results
@@ -348,7 +348,7 @@ class CheckPower(object):
             kwds[key] = value  #reset dict
 
 
-class TestTTPowerOneS1(CheckPower):
+class TestTTPowerOneS1(CheckPowerMixin):
 
     def __init__(self):
 
@@ -369,7 +369,7 @@ class TestTTPowerOneS1(CheckPower):
         self.kwds_extra = {}
         self.cls = TTestPower
 
-class TestTTPowerOneS2(CheckPower):
+class TestTTPowerOneS2(CheckPowerMixin):
 
     def __init__(self):
 
@@ -392,7 +392,7 @@ class TestTTPowerOneS2(CheckPower):
         self.kwds_extra = {'alternative': 'one-sided'}
         self.cls = TTestPower
 
-class TestTTPowerTwoS1(CheckPower):
+class TestTTPowerTwoS1(CheckPowerMixin):
 
     def __init__(self):
 
@@ -413,7 +413,7 @@ class TestTTPowerTwoS1(CheckPower):
         self.kwds_extra = {}
         self.cls = TTestIndPower
 
-class TestTTPowerTwoS2(CheckPower):
+class TestTTPowerTwoS2(CheckPowerMixin):
 
     def __init__(self):
 
