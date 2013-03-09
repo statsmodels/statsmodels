@@ -127,6 +127,7 @@ some tests for goodness of fit for univariate distributions
    powerdiscrepancy
    gof_chisquare_discrete
    gof_binning_discrete
+   chisquare_effectsize
 
 .. currentmodule:: statsmodels.stats.diagnostic
 
@@ -245,8 +246,19 @@ for any one of the parameters of the power equations.
 
    TTestIndPower
    TTestPower
+   GofChisquarePower
+   NormalIndPower
    tt_solve_power
    tt_ind_solve_power
+   zt_ind_solve_power
+
+.. currentmodule:: statsmodels.stats._proportion
+
+.. autosummary::
+   :toctree: generated
+
+   confint_proportion
+   proportion_effectsize
 
 
 Moment Helpers
@@ -268,4 +280,6 @@ kurtosis and cummulants.
    mnc2mvsk
    mvsk2mc
    mvsk2mnc
+   cov2corr
+   se_cov
 
