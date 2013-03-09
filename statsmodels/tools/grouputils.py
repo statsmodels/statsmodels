@@ -349,6 +349,7 @@ class Grouping():
             out = out.sort()
             return np.array(out), index
         elif type(data) in [pd.core.series.Series, pd.core.frame.DataFrame]:
+            out = data
             out.index = index
             out = out.sort()
             return out, index
