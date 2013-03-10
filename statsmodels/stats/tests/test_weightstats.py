@@ -381,6 +381,18 @@ class CheckPowerMixin(object):
             assert_almost_equal(result, value, decimal=3, err_msg=key+' failed')
             kwds[key] = value  #reset dict
 
+#''' test cases
+#one sample
+#               two-sided one-sided
+#large power     OneS1      OneS3
+#small power     OneS2      OneS4
+#
+#two sample
+#               two-sided one-sided
+#large power     TwoS1       TwoS3
+#small power     TwoS2       TwoS4
+#small p, ratio  TwoS4       TwoS5
+#'''
 
 class TestTTPowerOneS1(CheckPowerMixin):
 
@@ -396,19 +408,39 @@ class TestTTPowerOneS1(CheckPowerMixin):
         res2.alternative = 'two.sided'
         res2.note = 'NULL'
         res2.method = 'One-sample t test power calculation'
-        self.res2 = res2
 
+        self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'beta':res2.power}
         self.kwds_extra = {}
         self.cls = TTestPower
 
 class TestTTPowerOneS2(CheckPowerMixin):
+    # case with small power
 
     def __init__(self):
 
-        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
-        #> cat_items(p, prefix='tt_power2_1.')
+        res2 = Holder()
+        #> p = pwr.t.test(d=0.2,n=20,sig.level=0.05,type="one.sample",alternative="two.sided")
+        #> cat_items(p, "res2.")
+        res2.n = 20
+        res2.d = 0.2
+        res2.sig_level = 0.05
+        res2.power = 0.1359562887679666
+        res2.alternative = 'two.sided'
+        res2.note = '''NULL'''
+        res2.method = 'One-sample t test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power}
+        self.kwds_extra = {}
+        self.cls = TTestPower
+
+class TestTTPowerOneS3(CheckPowerMixin):
+
+    def __init__(self):
+
         res2 = Holder()
         #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="greater")
         #> cat_items(p, prefix='tt_power1_1g.')
@@ -419,12 +451,78 @@ class TestTTPowerOneS2(CheckPowerMixin):
         res2.alternative = 'greater'
         res2.note = 'NULL'
         res2.method = 'One-sample t test power calculation'
-        self.res2 = res2
 
+        self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'beta': res2.power}
         self.kwds_extra = {'alternative': 'one-sided'}
         self.cls = TTestPower
+
+class TestTTPowerOneS4(CheckPowerMixin):
+
+    def __init__(self):
+
+        res2 = Holder()
+        #> p = pwr.t.test(d=0.05,n=20,sig.level=0.05,type="one.sample",alternative="greater")
+        #> cat_items(p, "res2.")
+        res2.n = 20
+        res2.d = 0.05
+        res2.sig_level = 0.05
+        res2.power = 0.0764888785042198
+        res2.alternative = 'greater'
+        res2.note = '''NULL'''
+        res2.method = 'One-sample t test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
+                     'alpha': res2.sig_level, 'beta': res2.power}
+        self.kwds_extra = {'alternative': 'one-sided'}
+        self.cls = TTestPower
+
+class _estTTPowerOneS5(CheckPowerMixin):
+    # case one-sided less, not implemented yet
+
+    def __init__(self):
+
+        res2 = Holder()
+        #> p = pwr.t.test(d=0.2,n=20,sig.level=0.05,type="one.sample",alternative="less")
+        #> cat_items(p, "res2.")
+        res2.n = 20
+        res2.d = 0.2
+        res2.sig_level = 0.05
+        res2.power = 0.006063932667926375
+        res2.alternative = 'less'
+        res2.note = '''NULL'''
+        res2.method = 'One-sample t test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
+                     'alpha': res2.sig_level, 'beta': res2.power}
+        self.kwds_extra = {'alternative': 'one-sided'}
+        self.cls = TTestPower
+
+class _estTTPowerOneS6(CheckPowerMixin):
+    # case one-sided less, negative effect size, not implemented yet
+
+    def __init__(self):
+
+        res2 = Holder()
+        #> p = pwr.t.test(d=-0.2,n=20,sig.level=0.05,type="one.sample",alternative="less")
+        #> cat_items(p, "res2.")
+        res2.n = 20
+        res2.d = -0.2
+        res2.sig_level = 0.05
+        res2.power = 0.21707518167191
+        res2.alternative = 'less'
+        res2.note = '''NULL'''
+        res2.method = 'One-sample t test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
+                     'alpha': res2.sig_level, 'beta': res2.power}
+        self.kwds_extra = {'alternative': 'one-sided'}
+        self.cls = TTestPower
+
 
 class TestTTPowerTwoS1(CheckPowerMixin):
 
@@ -440,8 +538,8 @@ class TestTTPowerTwoS1(CheckPowerMixin):
         res2.alternative = 'two.sided'
         res2.note = 'n is number in *each* group'
         res2.method = 'Two-sample t test power calculation'
-        self.res2 = res2
 
+        self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'beta': res2.power, 'ratio': 1}
         self.kwds_extra = {}
@@ -451,8 +549,27 @@ class TestTTPowerTwoS2(CheckPowerMixin):
 
     def __init__(self):
 
-        #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="two.sided")
-        #> cat_items(p, prefix='tt_power2_1.')
+        res2 = Holder()
+        #> p = pwr.t.test(d=0.1,n=20,sig.level=0.05,type="two.sample",alternative="two.sided")
+        #> cat_items(p, "res2.")
+        res2.n = 20
+        res2.d = 0.1
+        res2.sig_level = 0.05
+        res2.power = 0.06095912465411235
+        res2.alternative = 'two.sided'
+        res2.note = 'n is number in *each* group'
+        res2.method = 'Two-sample t test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta': res2.power, 'ratio': 1}
+        self.kwds_extra = {}
+        self.cls = TTestIndPower
+
+class TestTTPowerTwoS3(CheckPowerMixin):
+
+    def __init__(self):
+
         res2 = Holder()
         #> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="greater")
         #> cat_items(p, prefix='tt_power2_1g.')
@@ -463,12 +580,79 @@ class TestTTPowerTwoS2(CheckPowerMixin):
         res2.alternative = 'greater'
         res2.note = 'n is number in *each* group'
         res2.method = 'Two-sample t test power calculation'
-        self.res2 = res2
 
+        self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
         self.kwds_extra = {'alternative': 'one-sided'}
         self.cls = TTestIndPower
+
+class TestTTPowerTwoS4(CheckPowerMixin):
+    # case with small power
+
+    def __init__(self):
+
+        res2 = Holder()
+        #> p = pwr.t.test(d=0.01,n=30,sig.level=0.05,type="two.sample",alternative="greater")
+        #> cat_items(p, "res2.")
+        res2.n = 30
+        res2.d = 0.01
+        res2.sig_level = 0.05
+        res2.power = 0.0540740302835667
+        res2.alternative = 'greater'
+        res2.note = 'n is number in *each* group'
+        res2.method = 'Two-sample t test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power}
+        self.kwds_extra = {'alternative': 'one-sided'}
+        self.cls = TTestIndPower
+
+class TestTTPowerTwoS5(CheckPowerMixin):
+    # case with unequal n, ratio>1
+
+    def __init__(self):
+
+        res2 = Holder()
+        #> p = pwr.t2n.test(d=0.1,n1=20, n2=30,sig.level=0.05,alternative="two.sided")
+        #> cat_items(p, "res2.")
+        res2.n1 = 20
+        res2.n2 = 30
+        res2.d = 0.1
+        res2.sig_level = 0.05
+        res2.power = 0.0633081832564667
+        res2.alternative = 'two.sided'
+        res2.method = 't test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n1,
+                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1.5}
+        self.kwds_extra = {'alternative': 'two-sided'}
+        self.cls = TTestIndPower
+
+class TestTTPowerTwoS6(CheckPowerMixin):
+    # case with unequal n, ratio>1
+
+    def __init__(self):
+
+        res2 = Holder()
+        #> p = pwr.t2n.test(d=0.1,n1=20, n2=30,sig.level=0.05,alternative="greater")
+        #> cat_items(p, "res2.")
+        res2.n1 = 20
+        res2.n2 = 30
+        res2.d = 0.1
+        res2.sig_level = 0.05
+        res2.power = 0.09623589080917805
+        res2.alternative = 'greater'
+        res2.method = 't test power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n1,
+                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1.5}
+        self.kwds_extra = {'alternative': 'one-sided'}
+        self.cls = TTestIndPower
+
 
 #Note: compared to R power, I only added one-sided which is the same as greater
 '''
