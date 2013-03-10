@@ -547,6 +547,7 @@ class GofChisquarePower(Power):
         '''
         return super(GofChisquarePower, self).solve_power(effect_size=effect_size,
                                                       nobs=nobs,
+                                                      n_bins=n_bins,
                                                       alpha=alpha,
                                                       beta=beta)
 

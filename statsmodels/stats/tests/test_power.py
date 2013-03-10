@@ -85,14 +85,36 @@ class TestNormalIndPower_onesamp(CheckPowerMixin):
         res2.alternative = 'two.sided'
         res2.note = 'NULL'
         res2.method = 'two sample power calculation'
-        self.res2 = res2
 
+        self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'beta':res2.power}
         # keyword for which we don't look for root:
         self.kwds_extra = {'ratio': 0}
 
         self.cls = smp.NormalIndPower
+
+class TestChisquarePower(CheckPowerMixin):
+
+    def __init__(self):
+        # one example from test_gof, results_power
+        res2 = Holder()
+        res2.w = 0.1
+        res2.N = 5
+        res2.df = 4
+        res2.sig_level = 0.05
+        res2.power = 0.05246644635810126
+        res2.method = 'Chi squared power calculation'
+        res2.note = 'N is the number of observations'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.w, 'nobs': res2.N,
+                     'alpha': res2.sig_level, 'beta':res2.power}
+        # keyword for which we don't look for root:
+        # solving for n_bins doesn't work, will not be used in regular usage
+        self.kwds_extra = {'n_bins': res2.df + 1}
+
+        self.cls = smp.GofChisquarePower
 
 if __name__ == '__main__':
     test_normal_power_explicit()
