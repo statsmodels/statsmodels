@@ -26,6 +26,8 @@ class PanelLM(RegressionModel):
         self.method = method
         self.effects = effects
 
+        self.panel_balanced = True # TODO: no hard code True
+
         if method == 'swar':
             self.var_u, self.var_e, self.theta = swar_ercomp(self.endog, self.exog)
 
@@ -136,11 +138,13 @@ class PanelLMResults(RegressionResults):
                                                            self.model.wexog)
         return resid
 
+    def predict(self):
+        return self.model.predict(self.params, self.model.wexog)
+
     @cache_readonly
     def fvalue(self):
         f = self.mse_model/self.mse_resid
-        if self.model.method == 'between':
-            # TODO: Why is this correct (from Stata)?
+        if self.model.method != 'within':
             f = f / 2.
         return f
 
