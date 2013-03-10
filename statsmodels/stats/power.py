@@ -18,7 +18,7 @@ beta   0.8 0.8
 TODO:
 refactoring
  - rename beta -> power,    beta (type 2 error is beta = 1-power)
- - I think the currentl implementation can handle any kinds of extra keywords
+ - I think the current implementation can handle any kinds of extra keywords
    (except for maybe raising meaningful exceptions
  - streamline code, I think internally classes can be merged
    how to extend to k-sample tests?
@@ -58,7 +58,6 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
 def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
     '''Calculate power of a normal distributed test statistic
 
-    abs_effect is experimental to see if I can match R
     '''
     d = effect_size
 
@@ -110,13 +109,17 @@ class Power(object):
 
         '''
         #TODO: maybe use explicit kwds,
-        #      nicer but requires inspect? and not generic across tests
-        #TODO: use explicit calculation for beta=None
+        #    nicer but requires inspect? and not generic across tests
+        #    I'm duplicating this in the subclass to get informative docstring
         key = [k for k,v in kwds.iteritems() if v is None]
         #print kwds, key;
         if len(key) != 1:
             raise ValueError('need exactly one keyword that is None')
         key = key[0]
+
+        if key == 'beta':
+            del kwds['beta']
+            return self.power(**kwds)
 
         def func(x):
             kwds[key] = x
@@ -146,13 +149,13 @@ class TTestPower(Power):
     '''
 
     def power(self, effect_size, nobs, alpha, df=None, alternative='two-sided'):
-        '''Calculate the power of a t-test for two independent sample
+        '''Calculate the power of a t-test for one sample or paired samples.
 
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
-            by the standard deviation. effect size has to be positive.
+            standardized effect size, mean divided by the standard deviation.
+            effect size has to be positive.
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
@@ -194,8 +197,8 @@ class TTestPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
-            by the standard deviation. effect size has to be positive.
+            standardized effect size, mean divided by the standard deviation.
+            effect size has to be positive.
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
@@ -248,8 +251,8 @@ class TTestIndPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
-            by the standard deviation. effect size has to be positive.
+            standardized effect size, difference between the two means divided
+            by the standard deviation. `effect_size` has to be positive.
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
@@ -260,8 +263,8 @@ class TTestIndPower(Power):
         ratio : float
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
-            arguments it has to be explicitely set to None.
+            The default for ratio is 1; to solve for ratio given the other
+            arguments, it has to be explicitly set to None.
         df : int or float
             degrees of freedom. By default this is None, and the df from the
             ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
@@ -301,8 +304,8 @@ class TTestIndPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
-            by the standard deviation.
+            standardized effect size, difference between the two means divided
+            by the standard deviation. `effect_size` has to be positive.
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
@@ -317,8 +320,8 @@ class TTestIndPower(Power):
         ratio : float
             ratio of the number of observations in sample 2 relative to
             sample 1. see description of nobs1
-            The default for ratio is 1; to solve for ration given the other
-            arguments it has to be explicitely set to None.
+            The default for ratio is 1; to solve for ratio given the other
+            arguments it has to be explicitly set to None.
         alternative : string, 'two-sided' (default) or 'one-sided'
             extra argument to choose whether the power is calculated for a
             two-sided (default) or one sided test.
@@ -328,7 +331,7 @@ class TTestIndPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes
@@ -349,7 +352,7 @@ class TTestIndPower(Power):
                                                       alternative=alternative)
 
 class NormalIndPower(Power):
-    '''Statistical Power calculations for t-test for two independent sample
+    '''Statistical Power calculations for z-test for two independent samples.
 
     currently only uses pooled variance
 
@@ -363,7 +366,7 @@ class NormalIndPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
+            standardized effect size, difference between the two means divided
             by the standard deviation. effect size has to be positive.
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
@@ -414,8 +417,10 @@ class NormalIndPower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
+            standardized effect size, difference between the two means divided
             by the standard deviation.
+            If ratio=0, then this is the standardized mean in the one sample
+            test.
         nobs1 : int or float
             number of observations of sample 1. The number of observations of
             sample two is ratio times the size of sample 1,
@@ -443,7 +448,7 @@ class NormalIndPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes
@@ -477,8 +482,8 @@ class GofChisquarePower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
-            by the standard deviation. effect size has to be positive.
+            standardized effect size, according to Cohen's definition.
+            see :func:`statsmodels.stats.gof.chisquare_effectsize`
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
@@ -514,8 +519,8 @@ class GofChisquarePower(Power):
         Parameters
         ----------
         effect_size : float
-            standardize effect size, difference between the two means divided
-            by the standard deviation. effect size has to be positive.
+            standardized effect size, according to Cohen's definition.
+            see :func:`statsmodels.stats.gof.chisquare_effectsize`
         nobs : int or float
             sample size, number of observations.
         alpha : float in interval (0,1)
@@ -532,7 +537,7 @@ class GofChisquarePower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
 
         Notes
