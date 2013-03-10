@@ -87,6 +87,7 @@ class TestWithin(CheckModelResults):
     def setupClass(cls):
         from results_panel import within
         data = statsmodels.datasets.grunfeld.load_pandas().data
+        data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital - 1", data=data,
@@ -101,6 +102,7 @@ class TestBetween(CheckModelResults):
     def setupClass(cls):
         from results_panel import between
         data = statsmodels.datasets.grunfeld.load_pandas().data 
+        data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital", data=data,
@@ -115,6 +117,7 @@ class TestRandom(CheckModelResults):
     def setupClass(cls):
         from results_panel import swar1w
         data = statsmodels.datasets.grunfeld.load_pandas().data 
+        data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital", data=data,
@@ -129,6 +132,7 @@ class TestPooling(CheckModelResults):
     def setupClass(cls):
         from results_panel import pooling
         data = statsmodels.datasets.grunfeld.load_pandas().data 
+        data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital", data=data,
