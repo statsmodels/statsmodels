@@ -68,10 +68,6 @@ class PanelLM(RegressionModel):
             else:
                 raise Exception('effects must be unit, time, or oneway')
             return out
-        elif self.method == 'fd':
-            f = lambda x: (x - x.shift(1))[1:],
-            out = g.transform_array(data, f, 0)
-            return out
         elif self.method == 'pooling':
             return data
         elif self.method == 'swar':
