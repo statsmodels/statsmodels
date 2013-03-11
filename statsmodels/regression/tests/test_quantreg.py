@@ -1,19 +1,18 @@
 import os
-import statsmodels.api as sm
 import numpy as np
-from numpy.testing import *
-import statsmodels
-from statsmodels.regression.quantreg import QuantReg
-from patsy import dmatrices
 import pandas as pd
+import statsmodels.api as sm
+from numpy.testing import *
 from patsy import dmatrices
 from statsmodels.regression.quantreg import QuantReg
-import statsmodels.api as sm
-from patsy import dmatrices
-import statsmodels.api as sm
-from statsmodels.regression.quantreg import QuantReg
-#from results_quantreg import *
-execfile('results_quantreg.py') # Importing mixes table row order
+from results_quantreg import (
+      biweight_chamberlain, biweight_hsheather, biweight_bofinger,
+      cosine_chamberlain, cosine_hsheather, cosine_bofinger,
+      gaussian_chamberlain, gaussian_hsheather, gaussian_bofinger,
+      epanechnikov_chamberlain, epanechnikov_hsheather, epanechnikov_bofinger,
+      parzen_chamberlain, parzen_hsheather, parzen_bofinger,
+      rectangle_chamberlain, rectangle_hsheather, rectangle_bofinger,
+      triangle_chamberlain, triangle_hsheather, triangle_bofinger)
 
 DECIMAL_14 = 14
 DECIMAL_10 = 10
@@ -71,10 +70,10 @@ d = {('biw','bofinger'): biweight_bofinger,
      ('tri','hsheather'): triangle_hsheather,
      ('epa', 'bofinger'): epanechnikov_bofinger,
      ('epa', 'chamberlain'): epanechnikov_chamberlain,
-     ('epa', 'hsheather'): epanechnikov_hsheather,
+     ('epa', 'hsheather'): epanechnikov_hsheather
      #('epa2', 'bofinger'): epan2_bofinger,
-     ('epa2', 'chamberlain'): epan2_chamberlain,
-     ('epa2', 'hsheather'): epan2_hsheather
+     #('epa2', 'chamberlain'): epan2_chamberlain,
+     #('epa2', 'hsheather'): epan2_hsheather
      }
 
 def setup_fun(kernel='gau', bandwidth='bofinger'):
