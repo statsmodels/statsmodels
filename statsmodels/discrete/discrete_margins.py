@@ -515,7 +515,7 @@ class DiscreteMargins(object):
                 ('Method:', [method]),
                 ('At:', [self.margeff_options['at']]),]
 
-        from statsmodels.iolib.summary import (Summary, summary_params,
+        from statsmodels.iolib.summary_old import (Summary, summary_params,
                                                 table_extend)
         exog_names = model.exog_names[:] # copy
         smry = Summary()

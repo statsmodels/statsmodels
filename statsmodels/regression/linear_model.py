@@ -1161,20 +1161,23 @@ class RegressionResults(base.LikelihoodModelResults):
         return lrstat, lr_pvalue, lrdf
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, title=None, xname=None, yname=None, alpha=.05,
+            float_format=None): 
         """Summarize the Regression Results
 
         Parameters
         -----------
-        yname : string, optional
-            Default is `y`
-        xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)
         title : string, optional
             Title for the top table. If not None, then this replaces the
             default title
         alpha : float
             significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary 
 
         Returns
         -------
@@ -1188,307 +1191,48 @@ class RegressionResults(base.LikelihoodModelResults):
             results
 
         """
-
-        #TODO: import where we need it (for now), add as cached attributes
-        from statsmodels.stats.stattools import (jarque_bera,
-                omni_normtest, durbin_watson)
+        # Diagnostics
+        from statsmodels.stats.stattools import (jarque_bera, 
+                                                 omni_normtest, 
+                                                 durbin_watson)
+        from numpy.linalg import (cond, eigvalsh)
+        from collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
-
-        #TODO: reuse condno from somewhere else ?
-        #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
-        wexog = self.model.wexog
-        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
+        dw = durbin_watson(self.wresid)
+        condno = cond(self.model.wexog)
+        eigvals = eigvalsh(np.dot(self.model.wexog.T, self.model.wexog))
         eigvals = np.sort(eigvals) #in increasing order
-        condno = np.sqrt(eigvals[-1]/eigvals[0])
+        diagnostic = OrderedDict([
+                     ('Omnibus:',  "%.3f" % omni),
+                     ('Prob(Omnibus):', "%.3f" % omnipv),
+                     ('Skew:', "%.3f" % skew),
+                     ('Kurtosis:', "%.3f" % kurtosis),
+                     ('Durbin-Watson:', "%.3f" % dw),
+                     ('Jarque-Bera (JB):', "%.3f" % jb),
+                     ('Prob(JB):', "%.3f" % jbpv), 
+                     ('Condition No.:', "%.0f" % condno)
+                     ])
 
-        self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
-                          omni=omni, omnipv=omnipv, condno=condno,
-                          mineigval=eigvals[0])
-
-        #TODO not used yet
-        #diagn_left_header = ['Models stats']
-        #diagn_right_header = ['Residual stats']
-
-        #TODO: requiring list/iterable is a bit annoying
-        #need more control over formatting
-        #TODO: default don't work if it's not identically spelled
-
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['Least Squares']),
-                    ('Date:', None),
-                    ('Time:', None),
-                    ('No. Observations:', None),
-                    ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
-                    ('Df Model:', None), #[self.df_model])
-                    ]
-
-        top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
-                     ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
-                     ('F-statistic:', ["%#8.4g" % self.fvalue] ),
-                     ('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
-                     ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
-                     ('AIC:', ["%#8.4g" % self.aic]),
-                     ('BIC:', ["%#8.4g" % self.bic])
-                     ]
-
-        diagn_left = [('Omnibus:', ["%#6.3f" % omni]),
-                      ('Prob(Omnibus):', ["%#6.3f" % omnipv]),
-                      ('Skew:', ["%#6.3f" % skew]),
-                      ('Kurtosis:', ["%#6.3f" % kurtosis])
-                      ]
-
-        diagn_right = [('Durbin-Watson:', ["%#8.3f" % durbin_watson(self.wresid)]),
-                       ('Jarque-Bera (JB):', ["%#8.3f" % jb]),
-                       ('Prob(JB):', ["%#8.3g" % jbpv]),
-                       ('Cond. No.', ["%#8.3g" % condno])
-                       ]
-
-
-        if title is None:
-            title = self.model.__class__.__name__ + ' ' + "Regression Results"
-
-        #create summary table instance
+        # Summary
         from statsmodels.iolib.summary import Summary
         smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
-                             use_t=True)
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title) 
+        smry.add_dict(diagnostic)
 
-        smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
-                          yname=yname, xname=xname,
-                          title="")
-
-        #add warnings/notes, added to text format only
-        etext =[]
+        # Warnings
         if eigvals[0] < 1e-10:
-            wstr = "The smallest eigenvalue is %6.3g. This might indicate "
-            wstr += "that there are\n"
-            wstr = "strong multicollinearity problems or that the design "
-            wstr += "matrix is singular."
-            wstr = wstr % eigvals[0]
-            etext.append(wstr)
-        elif condno > 1000:  #TODO: what is recommended
-            wstr = "The condition number is large, %6.3g. This might "
-            wstr += "indicate that there are\n"
-            wstr += "strong multicollinearity or other numerical "
-            wstr += "problems."
-            wstr = wstr % condno
-            etext.append(wstr)
-
-        if etext:
-            smry.add_extra_txt(etext)
+            warn = "The smallest eigenvalue is %6.3g. This might indicate that\
+            there are strong multicollinearity problems or that the design\
+            matrix is singular." % eigvals[0]
+            smry.add_text(warn)
+        if condno > 1000:  
+            warn = "* The condition number is large (%.g). This might indicate \
+            strong multicollinearity or other numerical problems." % condno
+            smry.add_text(warn)
 
         return smry
-
-        #top = summary_top(self, gleft=topleft, gright=diagn_left, #[],
-        #                  yname=yname, xname=xname,
-        #                  title=self.model.__class__.__name__ + ' ' +
-        #                  "Regression Results")
-        #par = summary_params(self, yname=yname, xname=xname, alpha=.05,
-        #                     use_t=False)
-        #
-        #diagn = summary_top(self, gleft=diagn_left, gright=diagn_right,
-        #                  yname=yname, xname=xname,
-        #                  title="Linear Model")
-        #
-        #return summary_return([top, par, diagn], return_fmt=return_fmt)
-
-
-    def summary_old(self, yname=None, xname=None, returns='text'):
-        """returns a string that summarizes the regression results
-
-        Parameters
-        -----------
-        yname : string, optional
-            Default is `Y`
-        xname : list of strings, optional
-            Default is `X.#` for # in p the number of regressors
-
-        Returns
-        -------
-        String summarizing the fit of a linear model.
-
-        Examples
-        --------
-        >>> import statsmodels.api as sm
-        >>> data = sm.datasets.longley.load()
-        >>> data.exog = sm.add_constant(data.exog)
-        >>> ols_results = sm.OLS(data.endog, data.exog).fit()
-        >>> print ols_results.summary()
-        ...
-
-        Notes
-        -----
-        All residual statistics are calculated on whitened residuals.
-        """
-        import time
-        from statsmodels.iolib.table import SimpleTable
-        from statsmodels.stats.stattools import (jarque_bera,
-                omni_normtest, durbin_watson)
-
-        if yname is None:
-            yname = self.model.endog_names
-        if xname is None:
-            xname = self.model.exog_names
-        modeltype = self.model.__class__.__name__
-
-        llf, aic, bic = self.llf, self.aic, self.bic
-        JB, JBpv, skew, kurtosis = jarque_bera(self.wresid)
-        omni, omnipv = omni_normtest(self.wresid)
-
-        t = time.localtime()
-
-        part1_fmt = dict(
-            data_fmts = ["%s"],
-            empty_cell = '',
-            colwidths = 15,
-            colsep=' ',
-            row_pre = '| ',
-            row_post = '|',
-            table_dec_above='=',
-            table_dec_below='',
-            header_dec_below=None,
-            header_fmt = '%s',
-            stub_fmt = '%s',
-            title_align='c',
-            header_align = 'r',
-            data_aligns = "r",
-            stubs_align = "l",
-            fmt = 'txt'
-        )
-        part2_fmt = dict(
-            #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-            data_fmts = ["%#10.4g","%#10.4g","%#6.4f","%#6.4f"],
-            #data_fmts = ["%#15.4F","%#15.4F","%#15.4F","%#14.4G"],
-            empty_cell = '',
-            colwidths = 14,
-            colsep=' ',
-            row_pre = '| ',
-            row_post = ' |',
-            table_dec_above='=',
-            table_dec_below='=',
-            header_dec_below='-',
-            header_fmt = '%s',
-            stub_fmt = '%s',
-            title_align='c',
-            header_align = 'r',
-            data_aligns = 'r',
-            stubs_align = 'l',
-            fmt = 'txt'
-        )
-        part3_fmt = dict(
-            #data_fmts = ["%#12.6g","%#12.6g","%#10.4g","%#5.4g"],
-            data_fmts = ["%#10.4g","%#10.4g","%#10.4g","%#6.4g"],
-            empty_cell = '',
-            colwidths = 15,
-            colsep='   ',
-            row_pre = '| ',
-            row_post = '  |',
-            table_dec_above=None,
-            table_dec_below='-',
-            header_dec_below='-',
-            header_fmt = '%s',
-            stub_fmt = '%s',
-            title_align='c',
-            header_align = 'r',
-            data_aligns = 'r',
-            stubs_align = 'l',
-            fmt = 'txt'
-        )
-
-        # Print the first part of the summary table
-        part1data = [[yname],
-                     [modeltype],
-                     ['Least Squares'],
-                     [time.strftime("%a, %d %b %Y",t)],
-                     [time.strftime("%H:%M:%S",t)],
-                     [self.nobs],
-                     [self.df_resid],
-                     [self.df_model]]
-        part1header = None
-        part1title = 'Summary of Regression Results'
-        part1stubs = ('Dependent Variable:',
-                      'Model:',
-                      'Method:',
-                      'Date:',
-                      'Time:',
-                      '# obs:',
-                      'Df residuals:',
-                      'Df model:')
-        part1 = SimpleTable(part1data,
-                            part1header,
-                            part1stubs,
-                            title=part1title,
-                            txt_fmt = part1_fmt)
-
-        ########  summary Part 2   #######
-
-        part2data = zip([self.params[i] for i in range(len(xname))],
-                        [self.bse[i] for i in range(len(xname))],
-                        [self.tvalues[i] for i in range(len(xname))],
-                        [self.pvalues[i] for i in range(len(xname))])
-        part2header = ('coefficient', 'std. error', 't-statistic', 'prob.')
-        part2stubs = xname
-        #dfmt={'data_fmt':["%#12.6g","%#12.6g","%#10.4g","%#5.4g"]}
-        part2 = SimpleTable(part2data,
-                            part2header,
-                            part2stubs,
-                            title=None,
-                            txt_fmt = part2_fmt)
-
-        #self.summary2 = part2
-        ########  summary Part 3   #######
-
-        part3Lheader = ['Models stats']
-        part3Rheader = ['Residual stats']
-        part3Lstubs = ('R-squared:',
-                       'Adjusted R-squared:',
-                       'F-statistic:',
-                       'Prob (F-statistic):',
-                       'Log likelihood:',
-                       'AIC criterion:',
-                       'BIC criterion:',)
-        part3Rstubs = ('Durbin-Watson:',
-                       'Omnibus:',
-                       'Prob(Omnibus):',
-                       'JB:',
-                       'Prob(JB):',
-                       'Skew:',
-                       'Kurtosis:')
-        part3Ldata = [[self.rsquared], [self.rsquared_adj],
-                      [self.fvalue],
-                      [self.f_pvalue],
-                      [llf],
-                      [aic],
-                      [bic]]
-        part3Rdata = [[durbin_watson(self.wresid)],
-                      [omni],
-                      [omnipv],
-                      [JB],
-                      [JBpv],
-                      [skew],
-                      [kurtosis]]
-        part3L = SimpleTable(part3Ldata, part3Lheader, part3Lstubs,
-                             txt_fmt = part3_fmt)
-        part3R = SimpleTable(part3Rdata, part3Rheader, part3Rstubs,
-                             txt_fmt = part3_fmt)
-        part3L.extend_right(part3R)
-        ########  Return Summary Tables ########
-        # join table parts then print
-        if returns == 'text':
-            return str(part1) + '\n' +  str(part2) + '\n' + str(part3L)
-        elif returns == 'tables':
-            return [part1, part2 ,part3L]
-        elif returns == 'csv':
-            return part1.as_csv() + '\n' + part2.as_csv() + '\n' + \
-                   part3L.as_csv()
-        elif returns == 'latex':
-            print('not available yet')
-        elif returns == 'html':
-            print('not available yet')
 
 class OLSResults(RegressionResults):
     """
