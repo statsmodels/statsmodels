@@ -43,16 +43,18 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
 
     if alternative in ['two-sided', '2s']:
         alpha_ = alpha / 2.  #no inplace changes, doesn't work
-    elif alternative in ['one-sided', '1s']:
+    elif alternative in ['one-sided', '1s', 'smaller', 'larger']:
         alpha_ = alpha
     else:
         raise ValueError("alternative has to be 'two-sided' or 'one-sided'")
 
-
-    pow_ = stats.nct(df, d*np.sqrt(nobs)).sf(stats.t.isf(alpha_, df))
-    if alternative in ['two-sided', '2s']:
-        crit = stats.t.ppf(alpha_, df)
-        pow_ += stats.nct(df, d*np.sqrt(nobs)).cdf(crit)
+    pow_ = 0
+    if alternative in ['two-sided', '2s', 'one-sided', '1s', 'larger']:
+        crit_upp = stats.t.isf(alpha_, df)
+        pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
+    if alternative in ['two-sided', '2s', 'smaller']:
+        crit_low = stats.t.ppf(alpha_, df)
+        pow_ += stats.nct._cdf(crit_low, df, d*np.sqrt(nobs))
     return pow_
 
 def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):

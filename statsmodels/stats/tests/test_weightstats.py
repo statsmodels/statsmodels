@@ -479,7 +479,7 @@ class TestTTPowerOneS4(CheckPowerMixin):
         self.kwds_extra = {'alternative': 'one-sided'}
         self.cls = TTestPower
 
-class _estTTPowerOneS5(CheckPowerMixin):
+class TestTTPowerOneS5(CheckPowerMixin):
     # case one-sided less, not implemented yet
 
     def __init__(self):
@@ -498,10 +498,10 @@ class _estTTPowerOneS5(CheckPowerMixin):
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'beta': res2.power}
-        self.kwds_extra = {'alternative': 'one-sided'}
+        self.kwds_extra = {'alternative': 'smaller'}
         self.cls = TTestPower
 
-class _estTTPowerOneS6(CheckPowerMixin):
+class TestTTPowerOneS6(CheckPowerMixin):
     # case one-sided less, negative effect size, not implemented yet
 
     def __init__(self):
@@ -520,7 +520,7 @@ class _estTTPowerOneS6(CheckPowerMixin):
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'beta': res2.power}
-        self.kwds_extra = {'alternative': 'one-sided'}
+        self.kwds_extra = {'alternative': 'smaller'}
         self.cls = TTestPower
 
 
