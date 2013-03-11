@@ -163,7 +163,7 @@ class QuantReg(RegressionModel):
 def _parzen(u):
     z = np.where(np.abs(u) <= .5, 4./3 - 8. * u**2 + 8. * np.abs(u)**3,
                                8. * (1 - np.abs(u))**3 / 3.)
-    z[u > 1] = 0
+    z[np.abs(u) > 1] = 0
     return z
 kernels = {}
 kernels['bet'] = lambda u: np.where(np.abs(u) <= 1, .75 * (1 - u) * (1 + u), 0) 
