@@ -51,9 +51,9 @@ class QuantReg(RegressionModel):
 
     Bandwidth selection:
 
-    * Bofinger, E. (1975). Estimation of a density function using order statistics. Australian Journal of Statistics 17: 1–17.
-    * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171–209. Cambridge: Cambridge University Press.
-    * Hall, P., and S. Sheather. (1988). On the distribution of the Studentized quantile. Journal of the Royal Statistical Society, Series B 50: 381–391.
+    * Bofinger, E. (1975). Estimation of a density function using order statistics. Australian Journal of Statistics 17: 1-17.
+    * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171-209. Cambridge: Cambridge University Press.
+    * Hall, P., and S. Sheather. (1988). On the distribution of the Studentized quantile. Journal of the Royal Statistical Society, Series B 50: 381-391.
 
     License
     -------
@@ -106,7 +106,8 @@ class QuantReg(RegressionModel):
         kern_names = ['bet', 'biw', 'cos', 'epa', 'gau', 'log', 'par', 'tri',
                       'trw', 'uni']
         if kernel not in kern_names:
-            raise Exception("kernel must be in " + ', '.join(kern_names))
+            #raise Exception("kernel must be in " + ', '.join(kern_names))
+            raise Exception("kernel " + kernel)
         else:
             kernel = kernels[kernel]
 
