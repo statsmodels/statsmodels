@@ -152,6 +152,9 @@ class QuantReg(RegressionModel):
 
         fhat0 = 1. / (nobs * h) * np.sum(kernel(e / h))
 
+        self.sparsity = 1. / fhat0
+        self.bandwidth = h
+
         D = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
         D = np.diag(D)
         vcov = dot(pinv(dot(exog.T, exog)), dot(exog.T, D, exog),
@@ -207,6 +210,12 @@ class QuantRegResults(RegressionResults):
         ered = np.abs(ered)
         return 1 - np.sum(e) / np.sum(ered)
 
+    @cache_readonly
+    def sparsity(self):
+        return self.model.sparsity
+    @cache_readonly
+    def bandwidth(self):
+        return self.model.bandwidth
     @cache_readonly
     def scale(self):
         return 1.

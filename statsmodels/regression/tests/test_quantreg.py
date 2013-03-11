@@ -29,6 +29,12 @@ class CheckModelResults(object):
     def test_params(self):
         assert_almost_equal(np.array(self.res1.params.ix[idx]), 
                             self.res2.table[:,0], DECIMAL_3)
+    def sparsity(self):
+        assert_almost_equal(np.array(self.res1.sparsity), 
+                            self.res2.sparsity, DECIMAL_3)
+    def bandwidth(self):
+        assert_almost_equal(np.array(self.res1.bandwidth), 
+                            self.res2.bandwidth, DECIMAL_3)
     def test_bse(self):
         assert_almost_equal(np.array(self.res1.bse.ix[idx]), 
                             self.res2.table[:,1], DECIMAL_3)
@@ -76,7 +82,6 @@ def setup_fun(kernel='gau', bandwidth='bofinger'):
     y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
     statsm = QuantReg(y, X).fit(kernel=kernel, bandwidth=bandwidth)
     stata = d[(kernel, bandwidth)]
-    stata.table = stata.table[[1,0],:]
     return statsm, stata
 
 class TestEpanechnikovBofinger(CheckModelResults):
