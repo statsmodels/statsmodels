@@ -12,6 +12,8 @@ import statsmodels.api as sm
 from patsy import dmatrices
 import statsmodels.api as sm
 from statsmodels.regression.quantreg import QuantReg
+#from results_quantreg import *
+execfile('results_quantreg.py') # Importing mixes table row order
 
 DECIMAL_14 = 14
 DECIMAL_10 = 10
@@ -42,9 +44,6 @@ class CheckModelResults(object):
     def test_prsquared(self):
         assert_almost_equal(self.res1.prsquared, self.res2.psrsquared, DECIMAL_3)
 
-
-
-from results_quantreg import *
 
 d = {('biw','bofinger'): biweight_bofinger,
      ('biw','chamberlain'): biweight_chamberlain,
@@ -80,6 +79,21 @@ def setup_fun(kernel='gau', bandwidth='bofinger'):
     stata.table = stata.table[[1,0],:]
     return statsm, stata
 
+class TestEpanechnikovBofinger(CheckModelResults):
+    @classmethod
+    def setUp(cls):
+        cls.res1, cls.res2 = setup_fun('epa', 'bofinger')
+
+class TestEpanechnikovChamberlain(CheckModelResults):
+    @classmethod
+    def setUp(cls):
+        cls.res1, cls.res2 = setup_fun('epa', 'chamberlain')
+
+class TestEpanechnikovHsheather(CheckModelResults):
+    @classmethod
+    def setUp(cls):
+        cls.res1, cls.res2 = setup_fun('epa', 'hsheather')
+
 class TestGaussianBofinger(CheckModelResults):
     @classmethod
     def setUp(cls):
@@ -94,7 +108,6 @@ class TestGaussianHsheather(CheckModelResults):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('gau', 'hsheather')
-
 
 class TestBiweightBofinger(CheckModelResults):
     @classmethod
