@@ -403,7 +403,7 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
     ----------
     effect_size : float
         This is the deviation from the Null of the normalized chi_square
-        statistic .
+        statistic. This follows Cohen's definition (sqrt).
     nobs : int or float
         number of observations
     n_bins : int (or float)
@@ -429,6 +429,11 @@ def chisquare_power(effect_size, nobs, n_bins, alpha=0.05, ddof=0):
     ----------
     Drost, ...
 
+    See Also
+    --------
+    chisquare_effectsize
+    statsmodels.stats.GofChisquarePower
+
     '''
     crit = stats.chi2.isf(alpha, n_bins - 1 - ddof)
     power = stats.ncx2.sf(crit, n_bins - 1 - ddof, effect_size**2 * nobs)
@@ -451,8 +456,10 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
     correction : None or tuple (nobs, df)
         If None, then the effect size is the chisquare statistic divide by
         the number of observations.
-        I the correction is a tuple (nobs, df), then the effectsize is
-        corrected to have less bias and a smaller variance.
+        If the correction is a tuple (nobs, df), then the effectsize is
+        corrected to have less bias and a smaller variance. However, the
+        correction can make the effectsize negative. In that case, the
+        effectsize is set to zero.
         Pederson and Johnson (1990) as referenced in McLaren et all. (1994)
     cohen : bool
         If True, then the square root is returned as in the definition of the
@@ -478,7 +485,7 @@ def chisquare_effectsize(probs0, probs1, correction=None, cohen=True, axis=0):
     if correction is not None:
         nobs, df = correction
         diff = ((probs1 - probs0) / probs0).sum(axis)
-        d2 = (d2 * nobs - diff - df) / (nobs - 1.)
+        d2 = np.maximum((d2 * nobs - diff - df) / (nobs - 1.), 0)
 
     if cohen:
         return np.sqrt(d2)
