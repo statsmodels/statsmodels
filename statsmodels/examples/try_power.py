@@ -14,7 +14,7 @@ import statsmodels.stats._proportion as smpr
 sigma=1; d=0.3; nobs=80; alpha=0.05
 print smp.normal_power(d, nobs/2, 0.05)
 print smp.NormalIndPower().power(d, nobs, 0.05)
-print smp.NormalIndPower().solve_power(effect_size=0.3, nobs1=80, alpha=0.05, beta=None)
+print smp.NormalIndPower().solve_power(effect_size=0.3, nobs1=80, alpha=0.05, power=None)
 print 0.475100870572638, 'R'
 
 norm_pow = smp.normal_power(-0.01, nobs/2, 0.05)
@@ -22,14 +22,14 @@ norm_pow_R = 0.05045832927039234
 #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="two.sided")
 print 'norm_pow', norm_pow, norm_pow - norm_pow_R
 
-norm_pow = smp.NormalIndPower().power(0.01, nobs, 0.05, alternative="1s")
+norm_pow = smp.NormalIndPower().power(0.01, nobs, 0.05, alternative="larger")
 norm_pow_R = 0.056869534873146124
 #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="greater")
 print 'norm_pow', norm_pow, norm_pow - norm_pow_R
 
 # Note: negative effect size is same as switching one-sided alternative
 # TODO: should I switch to larger/smaller instead of "one-sided" options
-norm_pow = smp.NormalIndPower().power(-0.01, nobs, 0.05, alternative="1s")
+norm_pow = smp.NormalIndPower().power(-0.01, nobs, 0.05, alternative="larger")
 norm_pow_R = 0.0438089705093578
 #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="less")
 print 'norm_pow', norm_pow, norm_pow - norm_pow_R

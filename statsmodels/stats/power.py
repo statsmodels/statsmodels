@@ -12,12 +12,12 @@ roundtrip - root with respect to all variables
 nobs   33.367204205 33.367204205
 effect 0.5 0.5
 alpha  0.05 0.05
-beta   0.8 0.8
+power   0.8 0.8
 
 
 TODO:
 refactoring
- - rename beta -> power,    beta (type 2 error is beta = 1-power)
+ - rename beta -> power,    beta (type 2 error is beta = 1-power)  DONE
  - I think the current implementation can handle any kinds of extra keywords
    (except for maybe raising meaningful exceptions
  - streamline code, I think internally classes can be merged
@@ -83,7 +83,7 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
     return pow_
 
 #module global for now
-start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15, beta=0.6,
+start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15, power=0.6,
                  nobs1=10, ratio=1)
 #TODO: nobs1 and ratio are for ttest_ind,
 #      need start_ttp for each test/class separately, added default start_value
@@ -103,14 +103,14 @@ class Power(object):
         raise NotImplementedError
 
     def _power_identity(self, *args, **kwds):
-        beta_ = kwds.pop('beta')
-        return self.power(*args, **kwds) - beta_
+        power_ = kwds.pop('power')
+        return self.power(*args, **kwds) - power_
 
     def solve_power(self, **kwds):
         '''solve for any one of the parameters of a t-test
 
         for t-test the keywords are:
-            effect_size, nobs, alpha, beta
+            effect_size, nobs, alpha, power
 
         exactly one needs to be ``None``, all others need numeric values
 
@@ -124,8 +124,8 @@ class Power(object):
             raise ValueError('need exactly one keyword that is None')
         key = key[0]
 
-        if key == 'beta':
-            del kwds['beta']
+        if key == 'power':
+            del kwds['power']
             return self.power(**kwds)
 
         def func(x):
@@ -144,7 +144,7 @@ class Power(object):
         val, infodict, ier, msg = optimize.fsolve(func, start_value, full_output=True) #scalar
         if ier != 1:
             print infodict
-            if key in ['alpha', 'beta']:
+            if key in ['alpha', 'power']:
                 val, r = optimize.brentq(func, 1e-8, 1-1e-8, full_output=True) #scalar
                 if not r.converged:
                     print r
@@ -189,12 +189,12 @@ class TTestPower(Power):
                            alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
-    def solve_power(self, effect_size=None, nobs=None, alpha=None, beta=None,
+    def solve_power(self, effect_size=None, nobs=None, alpha=None, power=None,
                     alternative='two-sided'):
         '''solve for any one parameter of the power of a one sample t-test
 
         for the one sample t-test the keywords are:
-            effect_size, nobs, alpha, beta
+            effect_size, nobs, alpha, power
 
         Exactly one needs to be ``None``, all others need numeric values.
 
@@ -212,7 +212,7 @@ class TTestPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        beta : float in interval (0,1)
+        power : float in interval (0,1)
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
@@ -232,7 +232,7 @@ class TTestPower(Power):
         -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or beta ``brentq`` is used.
+        root, then for alpha or power ``brentq`` is used.
         However, there can still be cases where this fails.
         If it becomes necessary, then we will add options to control the root
         finding in future.
@@ -241,7 +241,7 @@ class TTestPower(Power):
         return super(TTestPower, self).solve_power(effect_size=effect_size,
                                                       nobs=nobs,
                                                       alpha=alpha,
-                                                      beta=beta,
+                                                      power=power,
                                                       alternative=alternative)
 
 class TTestIndPower(Power):
@@ -300,12 +300,12 @@ class TTestIndPower(Power):
                            alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
-    def solve_power(self, effect_size=None, nobs1=None, alpha=None, beta=None,
+    def solve_power(self, effect_size=None, nobs1=None, alpha=None, power=None,
                     ratio=1., alternative='two-sided'):
         '''solve for any one parameter of the power of a two sample t-test
 
         for t-test the keywords are:
-            effect_size, nobs1, alpha, beta, ratio
+            effect_size, nobs1, alpha, power, ratio
 
         exactly one needs to be ``None``, all others need numeric values
 
@@ -321,7 +321,7 @@ class TTestIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        beta : float in interval (0,1)
+        power : float in interval (0,1)
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
@@ -346,7 +346,7 @@ class TTestIndPower(Power):
         -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or beta ``brentq`` is used.
+        root, then for alpha or power ``brentq`` is used.
         However, there can still be cases where this fails.
         If it becomes necessary, then we will add options to control the root
         finding in future.
@@ -355,7 +355,7 @@ class TTestIndPower(Power):
         return super(TTestIndPower, self).solve_power(effect_size=effect_size,
                                                       nobs1=nobs1,
                                                       alpha=alpha,
-                                                      beta=beta,
+                                                      power=power,
                                                       ratio=ratio,
                                                       alternative=alternative)
 
@@ -413,12 +413,12 @@ class NormalIndPower(Power):
         return normal_power(effect_size, nobs, alpha, alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
-    def solve_power(self, effect_size=None, nobs1=None, alpha=None, beta=None,
+    def solve_power(self, effect_size=None, nobs1=None, alpha=None, power=None,
                     ratio=1., alternative='two-sided'):
         '''solve for any one parameter of the power of a two sample z-test
 
         for z-test the keywords are:
-            effect_size, nobs1, alpha, beta, ratio
+            effect_size, nobs1, alpha, power, ratio
 
         exactly one needs to be ``None``, all others need numeric values
 
@@ -438,7 +438,7 @@ class NormalIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        beta : float in interval (0,1)
+        power : float in interval (0,1)
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
@@ -463,7 +463,7 @@ class NormalIndPower(Power):
         -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or beta ``brentq`` is used.
+        root, then for alpha or power ``brentq`` is used.
         However, there can still be cases where this fails.
         If it becomes necessary, then we will add options to control the root
         finding in future.
@@ -472,7 +472,7 @@ class NormalIndPower(Power):
         return super(NormalIndPower, self).solve_power(effect_size=effect_size,
                                                       nobs1=nobs1,
                                                       alpha=alpha,
-                                                      beta=beta,
+                                                      power=power,
                                                       ratio=ratio,
                                                       alternative=alternative)
 
@@ -513,11 +513,11 @@ class GofChisquarePower(Power):
 
     #method is only added to have explicit keywords and docstring
     def solve_power(self, effect_size=None, nobs=None, alpha=None,
-                    beta=None, n_bins=2):
+                    power=None, n_bins=2):
         '''solve for any one parameter of the power of a one sample chisquare-test
 
         for the one sample chisquare-test the keywords are:
-            effect_size, nobs, alpha, beta
+            effect_size, nobs, alpha, power
 
         Exactly one needs to be ``None``, all others need numeric values.
 
@@ -534,7 +534,7 @@ class GofChisquarePower(Power):
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        beta : float in interval (0,1)
+        power : float in interval (0,1)
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
@@ -552,7 +552,7 @@ class GofChisquarePower(Power):
         -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or beta ``brentq`` is used.
+        root, then for alpha or power ``brentq`` is used.
         However, there can still be cases where this fails.
         If it becomes necessary, then we will add options to control the root
         finding in future.
@@ -562,7 +562,7 @@ class GofChisquarePower(Power):
                                                       nobs=nobs,
                                                       n_bins=n_bins,
                                                       alpha=alpha,
-                                                      beta=beta)
+                                                      power=power)
 
 class _GofChisquareIndPower(Power):
     '''Statistical Power calculations for chisquare goodness-of-fit test
@@ -615,12 +615,12 @@ class _GofChisquareIndPower(Power):
         return normal_power(effect_size, nobs, alpha, alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
-    def solve_power(self, effect_size=None, nobs1=None, alpha=None, beta=None,
+    def solve_power(self, effect_size=None, nobs1=None, alpha=None, power=None,
                     ratio=1., alternative='two-sided'):
         '''solve for any one parameter of the power of a two sample z-test
 
         for z-test the keywords are:
-            effect_size, nobs1, alpha, beta, ratio
+            effect_size, nobs1, alpha, power, ratio
 
         exactly one needs to be ``None``, all others need numeric values
 
@@ -636,7 +636,7 @@ class _GofChisquareIndPower(Power):
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        beta : float in interval (0,1)
+        power : float in interval (0,1)
             power of the test, e.g. 0.8, is one minus the probability of a
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
@@ -661,7 +661,7 @@ class _GofChisquareIndPower(Power):
         -----
         The function uses scipy.optimize for finding the value that satisfies
         the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or beta ``brentq`` is used.
+        root, then for alpha or power ``brentq`` is used.
         However, there can still be cases where this fails.
         If it becomes necessary, then we will add options to control the root
         finding in future.
@@ -670,7 +670,7 @@ class _GofChisquareIndPower(Power):
         return super(_GofChisquareIndPower, self).solve_power(effect_size=effect_size,
                                                       nobs1=nobs1,
                                                       alpha=alpha,
-                                                      beta=beta,
+                                                      power=power,
                                                       ratio=ratio,
                                                       alternative=alternative)
 
@@ -680,50 +680,50 @@ tt_ind_solve_power = TTestIndPower().solve_power
 zt_ind_solve_power = NormalIndPower().solve_power
 
 if __name__ == '__main__':
-    effect_size, alpha, beta = 0.5, 0.05, 0.8
+    effect_size, alpha, power = 0.5, 0.05, 0.8
 
     ttest_pow = TTestPower()
     print '\nroundtrip - root with respect to all variables'
     print '\n       calculated, desired'
 
-    nobs_p = ttest_pow.solve_power(effect_size=effect_size, nobs=None, alpha=alpha, beta=beta)
+    nobs_p = ttest_pow.solve_power(effect_size=effect_size, nobs=None, alpha=alpha, power=power)
     print 'nobs  ', nobs_p
-    print 'effect', ttest_pow.solve_power(effect_size=None, nobs=nobs_p, alpha=alpha, beta=beta), effect_size
+    print 'effect', ttest_pow.solve_power(effect_size=None, nobs=nobs_p, alpha=alpha, power=power), effect_size
 
-    print 'alpha ', ttest_pow.solve_power(effect_size=effect_size, nobs=nobs_p, alpha=None, beta=beta), alpha
-    print 'beta  ', ttest_pow.solve_power(effect_size=effect_size, nobs=nobs_p, alpha=alpha, beta=None), beta
+    print 'alpha ', ttest_pow.solve_power(effect_size=effect_size, nobs=nobs_p, alpha=None, power=power), alpha
+    print 'power  ', ttest_pow.solve_power(effect_size=effect_size, nobs=nobs_p, alpha=alpha, power=None), power
 
     print '\nroundtrip - root with respect to all variables'
     print '\n       calculated, desired'
 
-    print 'nobs  ', tt_solve_power(effect_size=effect_size, nobs=None, alpha=alpha, beta=beta), nobs_p
-    print 'effect', tt_solve_power(effect_size=None, nobs=nobs_p, alpha=alpha, beta=beta), effect_size
+    print 'nobs  ', tt_solve_power(effect_size=effect_size, nobs=None, alpha=alpha, power=power), nobs_p
+    print 'effect', tt_solve_power(effect_size=None, nobs=nobs_p, alpha=alpha, power=power), effect_size
 
-    print 'alpha ', tt_solve_power(effect_size=effect_size, nobs=nobs_p, alpha=None, beta=beta), alpha
-    print 'beta  ', tt_solve_power(effect_size=effect_size, nobs=nobs_p, alpha=alpha, beta=None), beta
+    print 'alpha ', tt_solve_power(effect_size=effect_size, nobs=nobs_p, alpha=None, power=power), alpha
+    print 'power  ', tt_solve_power(effect_size=effect_size, nobs=nobs_p, alpha=alpha, power=None), power
 
     print '\none sided'
-    nobs_p1 = tt_solve_power(effect_size=effect_size, nobs=None, alpha=alpha, beta=beta, alternative='1s')
+    nobs_p1 = tt_solve_power(effect_size=effect_size, nobs=None, alpha=alpha, power=power, alternative='1s')
     print 'nobs  ', nobs_p1
-    print 'effect', tt_solve_power(effect_size=None, nobs=nobs_p1, alpha=alpha, beta=beta, alternative='1s'), effect_size
-    print 'alpha ', tt_solve_power(effect_size=effect_size, nobs=nobs_p1, alpha=None, beta=beta, alternative='1s'), alpha
-    print 'beta  ', tt_solve_power(effect_size=effect_size, nobs=nobs_p1, alpha=alpha, beta=None, alternative='1s'), beta
+    print 'effect', tt_solve_power(effect_size=None, nobs=nobs_p1, alpha=alpha, power=power, alternative='1s'), effect_size
+    print 'alpha ', tt_solve_power(effect_size=effect_size, nobs=nobs_p1, alpha=None, power=power, alternative='1s'), alpha
+    print 'power  ', tt_solve_power(effect_size=effect_size, nobs=nobs_p1, alpha=alpha, power=None, alternative='1s'), power
 
-    #start_ttp = dict(effect_size=0.01, nobs1=10., alpha=0.15, beta=0.6)
+    #start_ttp = dict(effect_size=0.01, nobs1=10., alpha=0.15, power=0.6)
 
     ttind_solve_power = TTestIndPower().solve_power
 
     print '\nroundtrip - root with respect to all variables'
     print '\n       calculated, desired'
 
-    nobs_p2 = ttind_solve_power(effect_size=effect_size, nobs1=None, alpha=alpha, beta=beta)
+    nobs_p2 = ttind_solve_power(effect_size=effect_size, nobs1=None, alpha=alpha, power=power)
     print 'nobs  ', nobs_p2
-    print 'effect', ttind_solve_power(effect_size=None, nobs1=nobs_p2, alpha=alpha, beta=beta), effect_size
+    print 'effect', ttind_solve_power(effect_size=None, nobs1=nobs_p2, alpha=alpha, power=power), effect_size
 
-    print 'alpha ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=None, beta=beta), alpha
-    print 'beta  ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, beta=None), beta
-    print 'ratio  ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, beta=beta, ratio=None), 1
+    print 'alpha ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=None, power=power), alpha
+    print 'power  ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, power=None), power
+    print 'ratio  ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, power=power, ratio=None), 1
 
     print '\ncheck ratio'
-    print 'smaller beta', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, beta=0.7, ratio=None), '< 1'
-    print 'larger beta ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, beta=0.9, ratio=None), '> 1'
+    print 'smaller power', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, power=0.7, ratio=None), '< 1'
+    print 'larger power ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, power=0.9, ratio=None), '> 1'

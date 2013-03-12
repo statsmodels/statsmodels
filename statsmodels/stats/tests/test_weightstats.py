@@ -362,7 +362,7 @@ class CheckPowerMixin(object):
     def test_power(self):
         #test against R results
         kwds = copy.copy(self.kwds)
-        del kwds['beta']
+        del kwds['power']
         kwds.update(self.kwds_extra)
         res1 = self.cls()
         assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=6)
@@ -411,7 +411,7 @@ class TestTTPowerOneS1(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power}
+                     'alpha': res2.sig_level, 'power':res2.power}
         self.kwds_extra = {}
         self.cls = TTestPower
 
@@ -433,7 +433,7 @@ class TestTTPowerOneS2(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power}
+                     'alpha': res2.sig_level, 'power':res2.power}
         self.kwds_extra = {}
         self.cls = TTestPower
 
@@ -454,7 +454,7 @@ class TestTTPowerOneS3(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
-                     'alpha': res2.sig_level, 'beta': res2.power}
+                     'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'larger'}
         self.cls = TTestPower
 
@@ -475,7 +475,7 @@ class TestTTPowerOneS4(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
-                     'alpha': res2.sig_level, 'beta': res2.power}
+                     'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'larger'}
         self.cls = TTestPower
 
@@ -497,7 +497,7 @@ class TestTTPowerOneS5(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
-                     'alpha': res2.sig_level, 'beta': res2.power}
+                     'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'smaller'}
         self.cls = TTestPower
 
@@ -519,7 +519,7 @@ class TestTTPowerOneS6(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
-                     'alpha': res2.sig_level, 'beta': res2.power}
+                     'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'smaller'}
         self.cls = TTestPower
 
@@ -541,7 +541,7 @@ class TestTTPowerTwoS1(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta': res2.power, 'ratio': 1}
+                     'alpha': res2.sig_level, 'power': res2.power, 'ratio': 1}
         self.kwds_extra = {}
         self.cls = TTestIndPower
 
@@ -562,7 +562,7 @@ class TestTTPowerTwoS2(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta': res2.power, 'ratio': 1}
+                     'alpha': res2.sig_level, 'power': res2.power, 'ratio': 1}
         self.kwds_extra = {}
         self.cls = TTestIndPower
 
@@ -583,7 +583,7 @@ class TestTTPowerTwoS3(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
+                     'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1}
         self.kwds_extra = {'alternative': 'larger'}
         self.cls = TTestIndPower
 
@@ -605,7 +605,7 @@ class TestTTPowerTwoS4(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power}
+                     'alpha': res2.sig_level, 'power':res2.power}
         self.kwds_extra = {'alternative': 'larger'}
         self.cls = TTestIndPower
 
@@ -627,7 +627,7 @@ class TestTTPowerTwoS5(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n1,
-                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1.5}
+                     'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1.5}
         self.kwds_extra = {'alternative': 'two-sided'}
         self.cls = TTestIndPower
 
@@ -649,7 +649,7 @@ class TestTTPowerTwoS6(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n1,
-                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1.5}
+                     'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1.5}
         self.kwds_extra = {'alternative': 'larger'}
         self.cls = TTestIndPower
 
