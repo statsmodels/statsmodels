@@ -14,7 +14,7 @@ from results_quantreg import (
       #rectangle_chamberlain, rectangle_hsheather, rectangle_bofinger,
       #triangle_chamberlain, triangle_hsheather, triangle_bofinger,
       #epanechnikov_chamberlain, epanechnikov_hsheather, epanechnikov_bofinger,
-      Rquantreg)
+      epanechnikov_hsheather_q01, Rquantreg)
 
 idx = ['income', 'Intercept']
 class CheckModelResults(object):
@@ -84,6 +84,14 @@ def test_fitted_residuals():
     assert_almost_equal(np.array(res.predict()), Rquantreg.fittedvalues, 5)
     assert_almost_equal(np.array(res.resid), Rquantreg.residuals, 5)
 
+class TestEpanechnikovHsheatherQ01(CheckModelResults):
+    @classmethod
+    def setUp(cls):
+        data = sm.datasets.engel.load_pandas().data
+        y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
+        cls.res1 = QuantReg(y, X).fit(q=.1, kernel='epa', bandwidth='hsheather')
+        cls.res2 = epanechnikov_hsheather_q01
+ 
 class TestEpanechnikovBofinger(CheckModelResults):
     @classmethod
     def setUp(cls):

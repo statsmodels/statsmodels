@@ -4,6 +4,26 @@ class Bunch(dict):
         dict.__init__(self, kw)
         self.__dict__  = self
 
+epanechnikov_hsheather_q01 = Bunch()
+epanechnikov_hsheather_q01.table = np.array([
+    [.4017658 , .0136341 ,  29.47 , 0.000  ,  .3749039  , .4286276],
+    [110.1416 , 15.14371 ,   7.27 , 0.000  ,  80.30547  , 139.9777]
+    ])
+epanechnikov_hsheather_q01.psrsquared     =    0.4948
+epanechnikov_hsheather_q01.rank =  2
+epanechnikov_hsheather_q01.sparsity =  360.9719513308299
+epanechnikov_hsheather_q01.bwidth =  .0560677849109995
+epanechnikov_hsheather_q01.kbwidth =  72.91378434141886
+epanechnikov_hsheather_q01.df_m =  1
+epanechnikov_hsheather_q01.df_r =  233
+epanechnikov_hsheather_q01.f_r =  .0027702983467641
+epanechnikov_hsheather_q01.N =  235
+epanechnikov_hsheather_q01.q_v =  338.0013732910156
+epanechnikov_hsheather_q01.q =  .1
+epanechnikov_hsheather_q01.sum_rdev =  15320.03958740234
+epanechnikov_hsheather_q01.sum_adev =  7739.864242445656
+epanechnikov_hsheather_q01.convcode =  0
+
 biweight_bofinger = Bunch()
 biweight_bofinger.table = np.array([
     [ .5601805 , .0136491 , 41.04 , 0.000 , .533289 , .5870719],
@@ -614,3 +634,4 @@ Rquantreg.residuals = np.array([
     168.076643464964, 157.44822913826, 28.387531965303, 19.3926869633912,
     -28.3781151570223, 124.288724993746, 113.917339005042, 215.240302135105 
     ])
+
