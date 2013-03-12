@@ -43,13 +43,14 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
 
     if alternative in ['two-sided', '2s']:
         alpha_ = alpha / 2.  #no inplace changes, doesn't work
-    elif alternative in ['one-sided', '1s', 'smaller', 'larger']:
+    elif alternative in ['smaller', 'larger']:
         alpha_ = alpha
     else:
-        raise ValueError("alternative has to be 'two-sided' or 'one-sided'")
+        raise ValueError("alternative has to be 'two-sided', 'larger' " +
+                         "or 'smaller'")
 
     pow_ = 0
-    if alternative in ['two-sided', '2s', 'one-sided', '1s', 'larger']:
+    if alternative in ['two-sided', '2s', 'larger']:
         crit_upp = stats.t.isf(alpha_, df)
         # use private methods, generic methods return nan with negative d
         pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
@@ -66,13 +67,14 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
 
     if alternative in ['two-sided', '2s']:
         alpha_ = alpha / 2.  #no inplace changes, doesn't work
-    elif alternative in ['one-sided', '1s', 'smaller', 'larger']:
+    elif alternative in ['smaller', 'larger']:
         alpha_ = alpha
     else:
-        raise ValueError("alternative has to be 'two-sided' or 'one-sided'")
+        raise ValueError("alternative has to be 'two-sided', 'larger' " +
+                         "or 'smaller'")
 
     pow_ = 0
-    if alternative in ['two-sided', '2s', 'one-sided', '1s', 'larger']:
+    if alternative in ['two-sided', '2s', 'larger']:
         crit = stats.norm.isf(alpha_)
         pow_ = stats.norm.sf(crit - d*np.sqrt(nobs)/sigma)
     if alternative in ['two-sided', '2s', 'smaller']:
@@ -169,10 +171,11 @@ class TTestPower(Power):
         df : int or float
             degrees of freedom. By default this is None, and the df from the
             one sample or paired ttest is used, ``df = nobs1 - 1``
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : string, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
+            .
 
         Returns
         -------
@@ -273,10 +276,10 @@ class TTestIndPower(Power):
         df : int or float
             degrees of freedom. By default this is None, and the df from the
             ttest with pooled variance is used, ``df = (nobs1 - 1 + nobs2 - 1)``
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : string, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
 
         Returns
         -------
@@ -327,10 +330,10 @@ class TTestIndPower(Power):
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : string, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
 
         Returns
         -------
@@ -387,10 +390,10 @@ class NormalIndPower(Power):
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ratio given the other
             arguments it has to be explicitly set to None.
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : string, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
 
         Returns
         -------
@@ -444,10 +447,10 @@ class NormalIndPower(Power):
             sample 1. see description of nobs1
             The default for ratio is 1; to solve for ration given the other
             arguments it has to be explicitly set to None.
-        alternative : string, 'two-sided' (default) or 'one-sided'
+        alternative : string, 'two-sided' (default), 'larger', 'smaller'
             extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test.
-            'one-sided' assumes we are in the relevant tail.
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
 
         Returns
         -------
