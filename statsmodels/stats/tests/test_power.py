@@ -38,14 +38,16 @@ def test_normal_power_explicit():
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="two.sided")
     assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
 
-    norm_pow = smp.NormalIndPower().power(0.01, nobs, 0.05, alternative="1s")
+    norm_pow = smp.NormalIndPower().power(0.01, nobs, 0.05,
+                                          alternative="larger")
     norm_pow_R = 0.056869534873146124
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="greater")
     assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
 
     # Note: negative effect size is same as switching one-sided alternative
     # TODO: should I switch to larger/smaller instead of "one-sided" options
-    norm_pow = smp.NormalIndPower().power(-0.01, nobs, 0.05, alternative="1s")
+    norm_pow = smp.NormalIndPower().power(-0.01, nobs, 0.05,
+                                          alternative="larger")
     norm_pow_R = 0.0438089705093578
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="less")
     assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
