@@ -50,7 +50,7 @@ def test_normal_power_explicit():
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="less")
     assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
 
-class TestNormalIndPower(CheckPowerMixin):
+class TestNormalIndPower1(CheckPowerMixin):
 
     def __init__(self):
 
@@ -64,14 +64,35 @@ class TestNormalIndPower(CheckPowerMixin):
         res2.alternative = 'two.sided'
         res2.note = 'NULL'
         res2.method = 'two sample power calculation'
-        self.res2 = res2
 
+        self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
         self.kwds_extra = {}
         self.cls = smp.NormalIndPower
 
-class TestNormalIndPower_onesamp(CheckPowerMixin):
+class TestNormalIndPower2(CheckPowerMixin):
+
+    def __init__(self):
+        res2 = Holder()
+        #> np = pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="less")
+        #> cat_items(np, "res2.")
+        res2.h = 0.01
+        res2.n = 80
+        res2.sig_level = 0.05
+        res2.power = 0.0438089705093578
+        res2.alternative = 'less'
+        res2.method = ('Difference of proportion power calculation for' +
+                      ' binomial distribution (arcsine transformation)')
+        res2.note = 'same sample sizes'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.h, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
+        self.kwds_extra = {'alternative':'smaller'}
+        self.cls = smp.NormalIndPower
+
+class TestNormalIndPower_onesamp1(CheckPowerMixin):
 
     def __init__(self):
         # forcing one-sample by using ratio=0
@@ -93,6 +114,31 @@ class TestNormalIndPower_onesamp(CheckPowerMixin):
         self.kwds_extra = {'ratio': 0}
 
         self.cls = smp.NormalIndPower
+
+class TestNormalIndPower_onesamp2(CheckPowerMixin):
+    # Note: same power as two sample case with twice as many observations
+
+    def __init__(self):
+        # forcing one-sample by using ratio=0
+        res2 = Holder()
+        #> np = pwr.norm.test(d=0.01,n=40,sig.level=0.05,alternative="less")
+        #> cat_items(np, "res2.")
+        res2.d = 0.01
+        res2.n = 40
+        res2.sig_level = 0.05
+        res2.power = 0.0438089705093578
+        res2.alternative = 'less'
+        res2.method = 'Mean power calculation for normal distribution with known variance'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
+                     'alpha': res2.sig_level, 'beta':res2.power}
+        # keyword for which we don't look for root:
+        self.kwds_extra = {'ratio': 0, 'alternative':'smaller'}
+
+        self.cls = smp.NormalIndPower
+
+
 
 class TestChisquarePower(CheckPowerMixin):
 

@@ -51,6 +51,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     pow_ = 0
     if alternative in ['two-sided', '2s', 'one-sided', '1s', 'larger']:
         crit_upp = stats.t.isf(alpha_, df)
+        # use private methods, generic methods return nan with negative d
         pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
     if alternative in ['two-sided', '2s', 'smaller']:
         crit_low = stats.t.ppf(alpha_, df)
@@ -65,14 +66,16 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
 
     if alternative in ['two-sided', '2s']:
         alpha_ = alpha / 2.  #no inplace changes, doesn't work
-    elif alternative in ['one-sided', '1s']:
+    elif alternative in ['one-sided', '1s', 'smaller', 'larger']:
         alpha_ = alpha
     else:
         raise ValueError("alternative has to be 'two-sided' or 'one-sided'")
 
-    crit = stats.norm.isf(alpha_)
-    pow_ = stats.norm.sf(crit - d*np.sqrt(nobs)/sigma)
-    if alternative in ['two-sided', '2s']:
+    pow_ = 0
+    if alternative in ['two-sided', '2s', 'one-sided', '1s', 'larger']:
+        crit = stats.norm.isf(alpha_)
+        pow_ = stats.norm.sf(crit - d*np.sqrt(nobs)/sigma)
+    if alternative in ['two-sided', '2s', 'smaller']:
         crit = stats.norm.ppf(alpha_)
         pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
     return pow_
