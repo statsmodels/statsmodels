@@ -82,6 +82,38 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
         pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
     return pow_
 
+def ftest_power_k(effect_size, nobs, alpha, k_groups=2, df=None):
+    '''power for ftest for one way anova with k equal sized groups
+
+    nobs total sample size, sum over all groups
+
+    should be general nobs observations, k_groups restrictions ???
+    '''
+    df_numer = nobs - k_groups
+    df_denom = k_groups - 1
+    crit = stats.f.isf(alpha, df_denom, df_numer)
+    pow_ = stats.ncf.sf(crit, df_denom, df_numer, effect_size**2 * nobs)
+    return pow_#, crit
+
+def ftest_power(effect_size, df_numer, df_denom, alpha, ncc=1):
+    '''power for ftest
+
+    sample size is given implicitly by df_numer
+
+    set ncc=0 to match t-test, or f-test in LikelihoodModelResults
+    ncc=1 matches the non-centrality parameter in R::pwr::pwr.f2.test
+
+    ftest_power with ncc=0 should also be correct for f_test in regression
+    models, with df_num and d_denom as defined there. (not verified yet)
+
+    '''
+
+    nc = effect_size**2 * (df_denom + df_numer + ncc)
+    crit = stats.f.isf(alpha, df_denom, df_numer)
+    pow_ = stats.ncf.sf(crit, df_denom, df_numer, nc)
+    return pow_ #, crit, nc
+
+
 #module global for now
 start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15, power=0.6,
                  nobs1=10, ratio=1)

@@ -164,6 +164,76 @@ class TestChisquarePower(CheckPowerMixin):
 
         self.cls = smp.GofChisquarePower
 
+
+def test_ftest_power():
+    #equivalence ftest, ttest
+
+    for alpha in [0.01, 0.05, 0.1, 0.20, 0.50]:
+        res0 = smp.ttest_power(0.01, 200, alpha)
+        res1 = smp.ftest_power(0.01, 199, 1, alpha=alpha, ncc=0)
+        assert_almost_equal(res1, res0, decimal=6)
+
+
+    #example from Gplus documentation F-test ANOVA
+    #Total sample size:200
+    #Effect size "f":0.25
+    #Beta/alpha ratio:1
+    #Result:
+    #Alpha:0.1592
+    #Power (1-beta):0.8408
+    #Critical F:1.4762
+    #Lambda: 12.50000
+    res1 = smp.ftest_power_k(0.25, 200, 0.1592, k_groups=10)
+    res0 = 0.8408
+    assert_almost_equal(res1, res0, decimal=4)
+
+
+    # TODO: no class yet
+    # examples agains R::pwr
+    res2 = Holder()
+    #> rf = pwr.f2.test(u=5, v=199, f2=0.1**2, sig.level=0.01)
+    #> cat_items(rf, "res2.")
+    res2.u = 5
+    res2.v = 199
+    res2.f2 = 0.01
+    res2.sig_level = 0.01
+    res2.power = 0.0494137732920332
+    res2.method = 'Multiple regression power calculation'
+
+    res1 = smp.ftest_power(np.sqrt(res2.f2), res2.v, res2.u,
+                           alpha=res2.sig_level, ncc=1)
+    assert_almost_equal(res1, res2.power, decimal=5)
+
+    res2 = Holder()
+    #> rf = pwr.f2.test(u=5, v=199, f2=0.3**2, sig.level=0.01)
+    #> cat_items(rf, "res2.")
+    res2.u = 5
+    res2.v = 199
+    res2.f2 = 0.09
+    res2.sig_level = 0.01
+    res2.power = 0.7967191006290872
+    res2.method = 'Multiple regression power calculation'
+
+    res1 = smp.ftest_power(np.sqrt(res2.f2), res2.v, res2.u,
+                           alpha=res2.sig_level, ncc=1)
+    assert_almost_equal(res1, res2.power, decimal=5)
+
+    res2 = Holder()
+    #> rf = pwr.f2.test(u=5, v=19, f2=0.3**2, sig.level=0.1)
+    #> cat_items(rf, "res2.")
+    res2.u = 5
+    res2.v = 19
+    res2.f2 = 0.09
+    res2.sig_level = 0.1
+    res2.power = 0.235454222377575
+    res2.method = 'Multiple regression power calculation'
+
+    res1 = smp.ftest_power(np.sqrt(res2.f2), res2.v, res2.u,
+                           alpha=res2.sig_level, ncc=1)
+    assert_almost_equal(res1, res2.power, decimal=5)
+
+
+
 if __name__ == '__main__':
     test_normal_power_explicit()
     nt = TestNormalIndPower1()
