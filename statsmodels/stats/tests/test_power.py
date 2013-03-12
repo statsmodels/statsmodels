@@ -26,7 +26,7 @@ def test_normal_power_explicit():
     alpha = 0.05
     res1 = smp.normal_power(d, nobs/2., 0.05)
     res2 = smp.NormalIndPower().power(d, nobs, 0.05)
-    res3 = smp.NormalIndPower().solve_power(effect_size=0.3, nobs1=80, alpha=0.05, beta=None)
+    res3 = smp.NormalIndPower().solve_power(effect_size=0.3, nobs1=80, alpha=0.05, power=None)
     res_R = 0.475100870572638
     assert_almost_equal(res1, res_R, decimal=13)
     assert_almost_equal(res2, res_R, decimal=13)
@@ -69,7 +69,7 @@ class TestNormalIndPower1(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
+                     'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1}
         self.kwds_extra = {}
         self.cls = smp.NormalIndPower
 
@@ -90,7 +90,7 @@ class TestNormalIndPower2(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.h, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power, 'ratio': 1}
+                     'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1}
         self.kwds_extra = {'alternative':'smaller'}
         self.cls = smp.NormalIndPower
 
@@ -111,7 +111,7 @@ class TestNormalIndPower_onesamp1(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power}
+                     'alpha': res2.sig_level, 'power':res2.power}
         # keyword for which we don't look for root:
         self.kwds_extra = {'ratio': 0}
 
@@ -134,7 +134,7 @@ class TestNormalIndPower_onesamp2(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
-                     'alpha': res2.sig_level, 'beta':res2.power}
+                     'alpha': res2.sig_level, 'power':res2.power}
         # keyword for which we don't look for root:
         self.kwds_extra = {'ratio': 0, 'alternative':'smaller'}
 
@@ -157,7 +157,7 @@ class TestChisquarePower(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.w, 'nobs': res2.N,
-                     'alpha': res2.sig_level, 'beta':res2.power}
+                     'alpha': res2.sig_level, 'power':res2.power}
         # keyword for which we don't look for root:
         # solving for n_bins doesn't work, will not be used in regular usage
         self.kwds_extra = {'n_bins': res2.df + 1}
@@ -166,9 +166,9 @@ class TestChisquarePower(CheckPowerMixin):
 
 if __name__ == '__main__':
     test_normal_power_explicit()
-    nt = TestNormalIndPower()
+    nt = TestNormalIndPower1()
     nt.test_power()
     nt.test_roots()
-    nt = TestNormalIndPower_onesamp()
+    nt = TestNormalIndPower_onesamp1()
     nt.test_power()
     nt.test_roots()
