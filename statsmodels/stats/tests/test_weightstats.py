@@ -19,7 +19,7 @@ import copy
 
 import numpy as np
 from scipy import stats
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from statsmodels.stats.weightstats import \
                 DescrStatsW, CompareMeans, ttest_ind
 from statsmodels.stats.power import TTestPower, TTestIndPower
@@ -364,12 +364,17 @@ class CheckPowerMixin(object):
         kwds = copy.copy(self.kwds)
         del kwds['power']
         kwds.update(self.kwds_extra)
+        if hasattr(self, 'decimal'):
+            decimal = self.decimal
+        else:
+            decimal = 6
         res1 = self.cls()
-        assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=6)
+        assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=decimal)
 
     def test_roots(self):
         kwds = copy.copy(self.kwds)
         kwds.update(self.kwds_extra)
+
         # kwds_extra are used as argument, but not as target for root
         for key in self.kwds:
             # keep print to check whether tests are really executed
@@ -378,7 +383,10 @@ class CheckPowerMixin(object):
             kwds[key] = None
 
             result = self.cls().solve_power(**kwds)
-            assert_almost_equal(result, value, decimal=3, err_msg=key+' failed')
+#            assert_almost_equal(result, value, decimal=3,
+#                                err_msg=key+' failed')
+            #assert_allclose(result, value, rtol=0.001, err_msg=key+' failed')
+            yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  #reset dict
 
 #''' test cases

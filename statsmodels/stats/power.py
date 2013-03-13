@@ -115,7 +115,7 @@ def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
 
 
 #module global for now
-start_ttp = dict(effect_size=0.01, nobs=20., alpha=0.15, power=0.6,
+start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15, power=0.6,
                  nobs1=20, ratio=1)
 #TODO: nobs1 and ratio are for ttest_ind,
 #      need start_ttp for each test/class separately, added default start_value
@@ -130,6 +130,8 @@ class Power(object):
 
     so far this could all be class methods
     '''
+    # TODO: class attribute ? see if it works
+    start_ttp = start_ttp
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -673,11 +675,40 @@ class FTestAnovaPower(Power):
         finding in future.
 
         '''
+        # update start values for root finding
+        if not k_groups is None:
+            self.start_ttp['nobs'] = k_groups * 10
+        # first attempt at special casing
+        if effect_size is None:
+            return self._solve_effect_size(effect_size=effect_size,
+                                           nobs=nobs,
+                                           alpha=alpha,
+                                           k_groups=k_groups,
+                                           power=power)
+
         return super(FTestAnovaPower, self).solve_power(effect_size=effect_size,
                                                       nobs=nobs,
                                                       alpha=alpha,
                                                       k_groups=k_groups,
                                                       power=power)
+
+    def _solve_effect_size(self, effect_size=None, nobs=None, alpha=None,
+                           power=None, k_groups=2):
+        '''experimental, test failure in solve_power for effect_size
+        '''
+        def func(x):
+            effect_size = x
+            return self._power_identity(effect_size=effect_size,
+                                          nobs=nobs,
+                                          alpha=alpha,
+                                          k_groups=k_groups,
+                                          power=power)
+
+        val, r = optimize.brentq(func, 1e-8, 1-1e-8, full_output=True)
+        if not r.converged:
+            print r
+        return val
+
 
 class GofChisquarePower(Power):
     '''Statistical Power calculations for one sample chisquare test

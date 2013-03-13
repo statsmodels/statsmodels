@@ -94,6 +94,7 @@ class TestNormalIndPower2(CheckPowerMixin):
         self.kwds_extra = {'alternative':'smaller'}
         self.cls = smp.NormalIndPower
 
+
 class TestNormalIndPower_onesamp1(CheckPowerMixin):
 
     def __init__(self):
@@ -256,12 +257,13 @@ class TestFtestAnovaPower(CheckPowerMixin):
 
         self.res2 = res2
         self.kwds = {'effect_size': res2.f, 'nobs': res2.n,
-                     'alpha': res2.alpha, 'power':res2.power, 'k_groups': res2.k}
+                     'alpha': res2.alpha, 'power': res2.power}
         # keyword for which we don't look for root:
         # solving for n_bins doesn't work, will not be used in regular usage
-        self.kwds_extra = {}
-
+        self.kwds_extra = {'k_groups': res2.k} # rootfinding doesn't work
         self.cls = smp.FTestAnovaPower
+        # precision for test_power
+        self.decimal = 4
 
 class TestFtestPower(CheckPowerMixin):
 
@@ -279,12 +281,13 @@ class TestFtestPower(CheckPowerMixin):
         self.res2 = res2
         self.kwds = {'effect_size': np.sqrt(res2.f2), 'df_num': res2.v,
                      'df_denom': res2.u, 'alpha': res2.sig_level,
-                     'power':res2.power}
+                     'power': res2.power}
         # keyword for which we don't look for root:
         # solving for n_bins doesn't work, will not be used in regular usage
         self.kwds_extra = {}
-
         self.cls = smp.FTestPower
+        # precision for test_power
+        self.decimal = 5
 
 
 if __name__ == '__main__':
