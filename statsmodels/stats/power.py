@@ -114,14 +114,6 @@ def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
     return pow_ #, crit, nc
 
 
-#module global for now
-start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15, power=0.6,
-                 nobs1=20, ratio=1)
-#TODO: nobs1 and ratio are for ttest_ind,
-#      need start_ttp for each test/class separately, added default start_value
-#possible rootfinding problem for effect_size, starting small seems to work
-
-
 #class based implementation
 #--------------------------
 
@@ -130,8 +122,17 @@ class Power(object):
 
     so far this could all be class methods
     '''
-    # TODO: class attribute ? see if it works
-    start_ttp = start_ttp
+
+    def __init__(self):
+        # used only for instance level start values
+        self.start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15,
+                              power=0.6, nobs1=10., ratio=1,
+                              df_num=10, df_denom=3   # for FTestPower
+                              )
+        # TODO: nobs1 and ratio are for ttest_ind,
+        #      need start_ttp for each test/class separately,
+        # possible rootfinding problem for effect_size, starting small seems to
+        # work
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -164,21 +165,25 @@ class Power(object):
 
         def func(x):
             kwds[key] = x
-            return self._power_identity(**kwds)
+            fval = self._power_identity(**kwds)
+            if np.isnan(fval):
+                return np.inf
+            else:
+                return fval
 
         #TODO: I'm using the following so I get a warning when start_ttp is not defined
         try:
-            start_value = start_ttp[key]
+            start_value = self.start_ttp[key]
         except KeyError:
             start_value = 0.9
-            print 'Warning: using default start_value'
+            print 'Warning: using default start_value for', key
 
         #TODO: check more cases to make this robust
         #return optimize.newton(func, start_value).item() #scalar
         val, infodict, ier, msg = optimize.fsolve(func, start_value, full_output=True) #scalar
         if ier != 1:
-            print infodict
-            if key in ['alpha', 'power']:
+            #print infodict
+            if key in ['alpha', 'power', 'effect_size']:
                 val, r = optimize.brentq(func, 1e-8, 1-1e-8, full_output=True) #scalar
                 if not r.converged:
                     print r
@@ -219,6 +224,8 @@ class TTestPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
        '''
+        # for debugging
+        #print 'calling ttest power with', (effect_size, nobs, alpha, df, alternative)
         return ttest_power(effect_size, nobs, alpha, df=df,
                            alternative=alternative)
 
@@ -272,6 +279,8 @@ class TTestPower(Power):
         finding in future.
 
         '''
+        # for debugging
+        #print 'calling ttest solve with', (effect_size, nobs, alpha, power, alternative)
         return super(TTestPower, self).solve_power(effect_size=effect_size,
                                                       nobs=nobs,
                                                       alpha=alpha,
