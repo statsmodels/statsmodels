@@ -82,23 +82,23 @@ def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
         pow_ += stats.norm.cdf(crit - d*np.sqrt(nobs)/sigma)
     return pow_
 
-def ftest_power_k(effect_size, nobs, alpha, k_groups=2, df=None):
+def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     '''power for ftest for one way anova with k equal sized groups
 
     nobs total sample size, sum over all groups
 
     should be general nobs observations, k_groups restrictions ???
     '''
-    df_numer = nobs - k_groups
+    df_num = nobs - k_groups
     df_denom = k_groups - 1
-    crit = stats.f.isf(alpha, df_denom, df_numer)
-    pow_ = stats.ncf.sf(crit, df_denom, df_numer, effect_size**2 * nobs)
+    crit = stats.f.isf(alpha, df_denom, df_num)
+    pow_ = stats.ncf.sf(crit, df_denom, df_num, effect_size**2 * nobs)
     return pow_#, crit
 
-def ftest_power(effect_size, df_numer, df_denom, alpha, ncc=1):
+def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
     '''power for ftest
 
-    sample size is given implicitly by df_numer
+    sample size is given implicitly by df_num
 
     set ncc=0 to match t-test, or f-test in LikelihoodModelResults
     ncc=1 matches the non-centrality parameter in R::pwr::pwr.f2.test
@@ -108,15 +108,15 @@ def ftest_power(effect_size, df_numer, df_denom, alpha, ncc=1):
 
     '''
 
-    nc = effect_size**2 * (df_denom + df_numer + ncc)
-    crit = stats.f.isf(alpha, df_denom, df_numer)
-    pow_ = stats.ncf.sf(crit, df_denom, df_numer, nc)
+    nc = effect_size**2 * (df_denom + df_num + ncc)
+    crit = stats.f.isf(alpha, df_denom, df_num)
+    pow_ = stats.ncf.sf(crit, df_denom, df_num, nc)
     return pow_ #, crit, nc
 
 
 #module global for now
-start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15, power=0.6,
-                 nobs1=10, ratio=1)
+start_ttp = dict(effect_size=0.01, nobs=20., alpha=0.15, power=0.6,
+                 nobs1=20, ratio=1)
 #TODO: nobs1 and ratio are for ttest_ind,
 #      need start_ttp for each test/class separately, added default start_value
 #possible rootfinding problem for effect_size, starting small seems to work
@@ -507,6 +507,177 @@ class NormalIndPower(Power):
                                                       power=power,
                                                       ratio=ratio,
                                                       alternative=alternative)
+
+
+class FTestPower(Power):
+    '''Statistical Power calculations for one sample or paired sample t-test
+
+    '''
+
+    def power(self, effect_size, df_num, df_denom, alpha, ncc=1):
+        '''Calculate the power of a F-test.
+
+        Parameters
+        ----------
+        effect_size : float
+            standardized effect size, mean divided by the standard deviation.
+            effect size has to be positive.
+        nobs : int or float
+            sample size, number of observations.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        df : int or float
+            degrees of freedom. By default this is None, and the df from the
+            one sample or paired ttest is used, ``df = nobs1 - 1``
+        alternative : string, 'two-sided' (default), 'larger', 'smaller'
+            extra argument to choose whether the power is calculated for a
+            two-sided (default) or one sided test. The one-sided test can be
+            either 'larger', 'smaller'.
+            .
+
+        Returns
+        -------
+        power : float
+            Power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+       '''
+        return ftest_power(effect_size, df_num, df_denom, alpha, ncc=1)
+
+    #method is only added to have explicit keywords and docstring
+    def solve_power(self, effect_size=None, df_num=None, df_denom=None,
+                    nobs=None, alpha=None, power=None, ncc=1):
+        '''solve for any one parameter of the power of a F-test
+
+        for the one sample F-test the keywords are:
+            effect_size, df_num, df_denom, alpha, power
+
+        Exactly one needs to be ``None``, all others need numeric values.
+
+
+        Parameters
+        ----------
+        effect_size : float
+            standardized effect size, mean divided by the standard deviation.
+            effect size has to be positive.
+        nobs : int or float
+            sample size, number of observations.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        power : float in interval (0,1)
+            power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+        alternative : string, 'two-sided' (default) or 'one-sided'
+            extra argument to choose whether the power is calculated for a
+            two-sided (default) or one sided test.
+            'one-sided' assumes we are in the relevant tail.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter that was set to None in the call. The
+            value solves the power equation given the remainding parameters.
+
+
+        Notes
+        -----
+        The function uses scipy.optimize for finding the value that satisfies
+        the power equation. It first uses ``fsolve``. If it fails to find a
+        root, then for alpha or power ``brentq`` is used.
+        However, there can still be cases where this fails.
+        If it becomes necessary, then we will add options to control the root
+        finding in future.
+
+        '''
+        return super(FTestPower, self).solve_power(effect_size=effect_size,
+                                                      df_num=df_num,
+                                                      df_denom=df_denom,
+                                                      alpha=alpha,
+                                                      power=power)
+
+class FTestAnovaPower(Power):
+    '''Statistical Power calculations for one sample or paired sample t-test
+
+    '''
+
+    def power(self, effect_size, nobs, alpha, k_groups=2):
+        '''Calculate the power of a F-test for one factor ANOVA.
+
+        Parameters
+        ----------
+        effect_size : float
+            standardized effect size, mean divided by the standard deviation.
+            effect size has to be positive.
+        nobs : int or float
+            sample size, number of observations.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        k_groups : int or float
+            number of groups in the ANOVA or k-sample comparison. Default is 2.
+
+        Returns
+        -------
+        power : float
+            Power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+       '''
+        return ftest_anova_power(effect_size, nobs, alpha, k_groups=k_groups)
+
+    #method is only added to have explicit keywords and docstring
+    def solve_power(self, effect_size=None, nobs=None, alpha=None, power=None,
+                    k_groups=2):
+        '''solve for any one parameter of the power of a F-test
+
+        for the one sample F-test the keywords are:
+            effect_size, nobs, alpha, power
+
+        Exactly one needs to be ``None``, all others need numeric values.
+
+
+        Parameters
+        ----------
+        effect_size : float
+            standardized effect size, mean divided by the standard deviation.
+            effect size has to be positive.
+        nobs : int or float
+            sample size, number of observations.
+        alpha : float in interval (0,1)
+            significance level, e.g. 0.05, is the probability of a type I
+            error, that is wrong rejections if the Null Hypothesis is true.
+        power : float in interval (0,1)
+            power of the test, e.g. 0.8, is one minus the probability of a
+            type II error. Power is the probability that the test correctly
+            rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+        Returns
+        -------
+        value : float
+            The value of the parameter that was set to None in the call. The
+            value solves the power equation given the remainding parameters.
+
+
+        Notes
+        -----
+        The function uses scipy.optimize for finding the value that satisfies
+        the power equation. It first uses ``fsolve``. If it fails to find a
+        root, then for alpha or power ``brentq`` is used.
+        However, there can still be cases where this fails.
+        If it becomes necessary, then we will add options to control the root
+        finding in future.
+
+        '''
+        return super(FTestAnovaPower, self).solve_power(effect_size=effect_size,
+                                                      nobs=nobs,
+                                                      alpha=alpha,
+                                                      k_groups=k_groups,
+                                                      power=power)
 
 class GofChisquarePower(Power):
     '''Statistical Power calculations for one sample chisquare test
