@@ -183,7 +183,7 @@ def test_ftest_power():
     #Power (1-beta):0.8408
     #Critical F:1.4762
     #Lambda: 12.50000
-    res1 = smp.ftest_power_k(0.25, 200, 0.1592, k_groups=10)
+    res1 = smp.ftest_anova_power(0.25, 200, 0.1592, k_groups=10)
     res0 = 0.8408
     assert_almost_equal(res1, res0, decimal=4)
 
@@ -232,6 +232,59 @@ def test_ftest_power():
                            alpha=res2.sig_level, ncc=1)
     assert_almost_equal(res1, res2.power, decimal=5)
 
+# class based version of two above test for Ftest
+class TestFtestAnovaPower(CheckPowerMixin):
+
+    def __init__(self):
+        res2 = Holder()
+        #example from Gplus documentation F-test ANOVA
+        #Total sample size:200
+        #Effect size "f":0.25
+        #Beta/alpha ratio:1
+        #Result:
+        #Alpha:0.1592
+        #Power (1-beta):0.8408
+        #Critical F:1.4762
+        #Lambda: 12.50000
+        #converted to res2 by hand
+        res2.f = 0.25
+        res2.n = 200
+        res2.k = 10
+        res2.alpha = 0.1592
+        res2.power = 0.8408
+        res2.method = 'Multiple regression power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': res2.f, 'nobs': res2.n,
+                     'alpha': res2.alpha, 'power':res2.power, 'k_groups': res2.k}
+        # keyword for which we don't look for root:
+        # solving for n_bins doesn't work, will not be used in regular usage
+        self.kwds_extra = {}
+
+        self.cls = smp.FTestAnovaPower
+
+class TestFtestPower(CheckPowerMixin):
+
+    def __init__(self):
+        res2 = Holder()
+        #> rf = pwr.f2.test(u=5, v=19, f2=0.3**2, sig.level=0.1)
+        #> cat_items(rf, "res2.")
+        res2.u = 5
+        res2.v = 19
+        res2.f2 = 0.09
+        res2.sig_level = 0.1
+        res2.power = 0.235454222377575
+        res2.method = 'Multiple regression power calculation'
+
+        self.res2 = res2
+        self.kwds = {'effect_size': np.sqrt(res2.f2), 'df_num': res2.v,
+                     'df_denom': res2.u, 'alpha': res2.sig_level,
+                     'power':res2.power}
+        # keyword for which we don't look for root:
+        # solving for n_bins doesn't work, will not be used in regular usage
+        self.kwds_extra = {}
+
+        self.cls = smp.FTestPower
 
 
 if __name__ == '__main__':
