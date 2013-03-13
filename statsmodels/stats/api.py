@@ -1,4 +1,4 @@
-
+# pylint: disable=W0611
 import diagnostic
 from .diagnostic import (
             acorr_ljungbox, acorr_breush_godfrey,
@@ -15,7 +15,8 @@ import multicomp
 from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage)
 from .multicomp import tukeyhsd
 import gof
-from .gof import powerdiscrepancy, gof_chisquare_discrete
+from .gof import (powerdiscrepancy, gof_chisquare_discrete,
+                  chisquare_effectsize)
 import stattools
 from .stattools import durbin_watson, omni_normtest, jarque_bera
 
@@ -27,8 +28,12 @@ from .sandwich_covariance import (
             se_cov
             )
 
-from weightstats import DescrStatsW
+from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, tost_ind,
+                         tost_paired)
+from .power import (TTestPower, TTestIndPower, GofChisquarePower,
+                    NormalIndPower, FTestAnovaPower, FTestPower,
+                    tt_solve_power, tt_ind_solve_power, zt_ind_solve_power)
 
-from descriptivestats import Describe
+from .descriptivestats import Describe
 
-from anova import anova_lm
+from .anova import anova_lm
