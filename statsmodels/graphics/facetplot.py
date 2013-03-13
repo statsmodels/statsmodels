@@ -1146,7 +1146,6 @@ def _oracle(x, y):
 
 
 def kind_violinplot(x, y, ax=None, categories={}, *args, **kwargs):
-    print "entered in the plit-centric violinplot"
     if (y is None or not isinstance(x, pd.Series) or
             not isinstance(y, pd.Series)):
         raise TypeError('the violinplot is not adeguate for this data')
@@ -1160,14 +1159,18 @@ def kind_violinplot(x, y, ax=None, categories={}, *args, **kwargs):
     levels = categories[x.name]
 
     #take for each level how many data are in that level
-    level_idx_v_l = [(idx, y[x == l]) for idx, l in enumerate(levels)]
+    level_idx_v_l = [(idx, y[x == l], l) for idx, l in enumerate(levels)]
     #select only those that have some data
     level_idx_v_l = [iv for iv in level_idx_v_l if len(iv[1])]
 
-    x = _make_numeric(x, ax, 'x', categories=categories)
+    # I  use the single violin plot for
+
     for pos, val, name in level_idx_v_l:
         _single_violin(ax, pos=pos, pos_data=val,
                        width=0.33, side='both', plot_opts={})
+        ax.boxplot([val], notch=1, positions=[pos], vert=1, widths=[0.33])
+    x = _make_numeric(x, ax, 'x', categories=categories)
+    ax.set_xlim(-1, len(levels))
     return ax
 
 
