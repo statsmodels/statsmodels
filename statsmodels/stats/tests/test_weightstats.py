@@ -15,14 +15,11 @@ License: BSD (3-clause)
 
 '''
 
-import copy
-
 import numpy as np
 from scipy import stats
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from statsmodels.stats.weightstats import \
                 DescrStatsW, CompareMeans, ttest_ind
-from statsmodels.stats.power import TTestPower, TTestIndPower
 
 class Holder(object):
     pass
@@ -355,31 +352,4 @@ def test_ttest_ind_with_uneq_var():
     tr = -0.2108663315950719
     t, p, df = ttest_ind(a, b, usevar='separate')
     assert_almost_equal([t,p], [tr, pr], 13)
-
-
-
-
-#Note: compared to R power, I only added one-sided which is the same as greater
-'''
-#------------
-> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="one.sample",alternative="less")
-> cat_items(p, prefix='tt_power1_1l.')
-tt_power1_1l.n = 30
-tt_power1_1l.d = 1
-tt_power1_1l.sig_level = 0.05
-tt_power1_1l.power = 1.277755679041093e-12
-tt_power1_1l.alternative = 'less'
-tt_power1_1l.note = 'NULL'
-tt_power1_1l.method = 'One-sample t test power calculation'
-> p = pwr.t.test(d=1,n=30,sig.level=0.05,type="two.sample",alternative="less")
-> cat_items(p, prefix='tt_power2_1l.')
-tt_power2_1l.n = 30
-tt_power2_1l.d = 1
-tt_power2_1l.sig_level = 0.05
-tt_power2_1l.power = 2.203160931468773e-08
-tt_power2_1l.alternative = 'less'
-tt_power2_1l.note = 'n is number in *each* group'
-tt_power2_1l.method = 'Two-sample t test power calculation'
-
-'''
 

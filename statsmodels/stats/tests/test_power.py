@@ -2,7 +2,6 @@
 """Tests for statistical power calculations
 
 Note:
-    test for ttest power are in test_weightstats.py
     tests for chisquare power are in test_gof.py
 
 Created on Sat Mar 09 08:44:49 2013
@@ -10,12 +9,14 @@ Created on Sat Mar 09 08:44:49 2013
 Author: Josef Perktold
 """
 
+import copy
+
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_allclose
 
 import statsmodels.stats.power as smp
 #from .test_weightstats import CheckPowerMixin
-from statsmodels.stats.tests.test_weightstats import CheckPowerMixin, Holder
+from statsmodels.stats.tests.test_weightstats import Holder
 
 class CheckPowerMixin(object):
 
@@ -43,11 +44,10 @@ class CheckPowerMixin(object):
             kwds[key] = None
 
             result = self.cls().solve_power(**kwds)
-#            assert_almost_equal(result, value, decimal=3,
-#                                err_msg=key+' failed')
-            #assert_allclose(result, value, rtol=0.001, err_msg=key+' failed')
-            yield assert_allclose, result, value, 0.001, 0, key+' failed'
-            kwds[key] = value  #reset dict
+            assert_allclose(result, value, rtol=0.001, err_msg=key+' failed')
+            # yield can be used to investigate specific errors
+            #yield assert_allclose, result, value, 0.001, 0, key+' failed'
+            kwds[key] = value  # reset dict
 
 #''' test cases
 #one sample
@@ -81,7 +81,7 @@ class TestTTPowerOneS1(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'power':res2.power}
         self.kwds_extra = {}
-        self.cls = TTestPower
+        self.cls = smp.TTestPower
 
 class TestTTPowerOneS2(CheckPowerMixin):
     # case with small power
@@ -103,7 +103,7 @@ class TestTTPowerOneS2(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'power':res2.power}
         self.kwds_extra = {}
-        self.cls = TTestPower
+        self.cls = smp.TTestPower
 
 class TestTTPowerOneS3(CheckPowerMixin):
 
@@ -124,7 +124,7 @@ class TestTTPowerOneS3(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'larger'}
-        self.cls = TTestPower
+        self.cls = smp.TTestPower
 
 class TestTTPowerOneS4(CheckPowerMixin):
 
@@ -145,7 +145,7 @@ class TestTTPowerOneS4(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'larger'}
-        self.cls = TTestPower
+        self.cls = smp.TTestPower
 
 class TestTTPowerOneS5(CheckPowerMixin):
     # case one-sided less, not implemented yet
@@ -167,7 +167,7 @@ class TestTTPowerOneS5(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'smaller'}
-        self.cls = TTestPower
+        self.cls = smp.TTestPower
 
 class TestTTPowerOneS6(CheckPowerMixin):
     # case one-sided less, negative effect size, not implemented yet
@@ -189,7 +189,7 @@ class TestTTPowerOneS6(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs': res2.n,
                      'alpha': res2.sig_level, 'power': res2.power}
         self.kwds_extra = {'alternative': 'smaller'}
-        self.cls = TTestPower
+        self.cls = smp.TTestPower
 
 
 class TestTTPowerTwoS1(CheckPowerMixin):
@@ -211,7 +211,7 @@ class TestTTPowerTwoS1(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'power': res2.power, 'ratio': 1}
         self.kwds_extra = {}
-        self.cls = TTestIndPower
+        self.cls = smp.TTestIndPower
 
 class TestTTPowerTwoS2(CheckPowerMixin):
 
@@ -232,7 +232,7 @@ class TestTTPowerTwoS2(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'power': res2.power, 'ratio': 1}
         self.kwds_extra = {}
-        self.cls = TTestIndPower
+        self.cls = smp.TTestIndPower
 
 class TestTTPowerTwoS3(CheckPowerMixin):
 
@@ -253,7 +253,7 @@ class TestTTPowerTwoS3(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1}
         self.kwds_extra = {'alternative': 'larger'}
-        self.cls = TTestIndPower
+        self.cls = smp.TTestIndPower
 
 class TestTTPowerTwoS4(CheckPowerMixin):
     # case with small power
@@ -275,7 +275,7 @@ class TestTTPowerTwoS4(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n,
                      'alpha': res2.sig_level, 'power':res2.power}
         self.kwds_extra = {'alternative': 'larger'}
-        self.cls = TTestIndPower
+        self.cls = smp.TTestIndPower
 
 class TestTTPowerTwoS5(CheckPowerMixin):
     # case with unequal n, ratio>1
@@ -297,7 +297,7 @@ class TestTTPowerTwoS5(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n1,
                      'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1.5}
         self.kwds_extra = {'alternative': 'two-sided'}
-        self.cls = TTestIndPower
+        self.cls = smp.TTestIndPower
 
 class TestTTPowerTwoS6(CheckPowerMixin):
     # case with unequal n, ratio>1
@@ -319,7 +319,7 @@ class TestTTPowerTwoS6(CheckPowerMixin):
         self.kwds = {'effect_size': res2.d, 'nobs1': res2.n1,
                      'alpha': res2.sig_level, 'power':res2.power, 'ratio': 1.5}
         self.kwds_extra = {'alternative': 'larger'}
-        self.cls = TTestIndPower
+        self.cls = smp.TTestIndPower
 
 
 
