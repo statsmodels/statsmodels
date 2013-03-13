@@ -503,12 +503,6 @@ def _select_rowcolsize(num_of_categories):
     return row_num, col_num
 
 
-
-####################################################
-# NEW IMPLEMENTATION,  PLOT CENTRIC
-####################################################
-
-
 def _analyze_categories(x):
     """given a series or a dataframe it will keep all the levels
     for all the categorical variables:
@@ -526,6 +520,25 @@ def _analyze_categories(x):
             if x[col].dtype == object:
                 results[col] = sorted(x[col].unique())
     return results
+
+
+def _multi_legend(ax):
+    """create a single legend for all the subaxes of the facet"""
+    fig = ax.figure
+    for t_ax in fig.axes:
+        leg = t_ax.legend()
+        if leg:
+            leg.set_visible(False)
+            plt.draw()
+    leg = ax.legend(bbox_to_anchor=(0, 0, 1, 1),
+                    bbox_transform=fig.transFigure)
+    if leg:
+        leg.get_frame().set_alpha(0.0)
+
+
+####################################################
+# NEW IMPLEMENTATION,  PLOT CENTRIC
+####################################################
 
 
 def _oracle(x, y):
@@ -547,7 +560,7 @@ def _oracle(x, y):
             else:
                 return 'counter'
         if all(x[col].dtype != object for col in x):
-            return 'scatter'
+            return 'kde'
         elif all(x[col].dtype != float for col in x):
             return 'counter'
         else:
@@ -590,19 +603,69 @@ def _oracle(x, y):
                     return 'scatter'
     else:
         # the exog is multivariate
-        # can't decide better than try the scatterplot
-        # for everything, can be improved
-        return 'scatter'
+        # can't decide better than the data-function
+        # so let them
+        return ''
     return ''
 
 
+def kind_kde(x, y, ax=None, categories={}, *args, **kwargs):
+    """make the kernel density estimation of a single variable"""
+    if y is not None:
+        if not isinstance(y, pd.Series) or not isinstance(x, pd.Series):
+            raise TypeError('the kde plot is not appropriate for this data')
+        if x.dtype == object or y.dtype == object:
+            raise TypeError('the kde plot is only for numerical variables')
+        fig, ax = _build_axes(ax, projection='3d')
+        x_grid, y_grid = plt.mgrid[min(x):max(x):100j, min(y):max(y):100j]
+        data = np.vstack([x.values, y.values])
+        print data.shape
+        my_pdf = gaussian_kde(data)
+
+        z = my_pdf([x_grid.ravel(), y_grid.ravel()]).reshape((100, 100))
+        ax.plot_surface(x_grid, y_grid, z, cmap=plt.cm.jet)
+        linespacing = 3.0
+        ax.set_zlabel('\nDensity', linespacing=linespacing)
+        ax.set_ylabel('\n'+y.name, linespacing=linespacing)
+        ax.set_xlabel('\n'+x.name, linespacing=linespacing)
+        return ax
+    if isinstance(x, pd.Series):
+        x = pd.DataFrame({x.name: x})
+    fig, ax = _build_axes(ax)
+    colors = ['#777777', 'b', 'g', 'r', 'c', 'm', 'y', 'k']
+    for column, color in zip(x, colors):
+        data = x[column]
+        if data.dtype == object:
+            raise TypeError('the kde plot is only for numerical variables')
+        # create the density plot
+        # if has less than 2 point gives error
+        my_pdf = gaussian_kde(data)
+        border = 0.1 * (np.max(data) - np.min(data))
+        base_x = np.linspace(np.min(data) - border, np.max(data)+border, 100)
+        ax.fill_between(base_x, my_pdf(base_x),
+                        facecolor=kwargs.get('facecolor', color),
+                        edgecolor=kwargs.get('edgecolor', color),
+                        alpha=kwargs.get('alpha', 0.33))
+        ax.plot(base_x, my_pdf(base_x), color=color, label=column)
+        #make the histogram of the data, very lightly
+    if len(x.columns) == 1:
+        ax.set_xlabel(x.columns[0])
+    ax.set_ylim(0.0, None)
+    ax.set_ylabel('Density')
+    _multi_legend(ax)
+    return ax
+
+
 def kind_violinplot(x, y, ax=None, categories={}, *args, **kwargs):
+    """perform the violinplot on monovariate data, vertical or horizontals"""
     if (y is None or not isinstance(x, pd.Series) or
             not isinstance(y, pd.Series)):
         raise TypeError('the violinplot is not adeguate for this data')
-
+    xlab = x.name
+    ylab = y.name
     if x.dtype == object or y.dtype != object:
         vertical = True
+
     elif x.dtype != object or y.dtype == object:
         vertical = False
         x, y = y, x
@@ -635,6 +698,8 @@ def kind_violinplot(x, y, ax=None, categories={}, *args, **kwargs):
         ax.set_xlim(-1, len(levels))
     else:
         ax.set_ylim(-1, len(levels))
+    ax.set_ylabel(ylab)
+    ax.set_xlabel(xlab)
     return ax
 
 
@@ -648,6 +713,7 @@ class _default_dict(dict):
 
 registered_plots = _default_dict()
 registered_plots['violinplot'] = kind_violinplot
+registered_plots['kde'] = kind_kde
 
 
 ###################################################
