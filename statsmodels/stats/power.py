@@ -521,7 +521,7 @@ class NormalIndPower(Power):
 
 
 class FTestPower(Power):
-    '''Statistical Power calculations for one sample or paired sample t-test
+    '''Statistical Power calculations for generic F-test
 
     '''
 
@@ -611,7 +611,7 @@ class FTestPower(Power):
                                                       power=power)
 
 class FTestAnovaPower(Power):
-    '''Statistical Power calculations for one sample or paired sample t-test
+    '''Statistical Power calculations F-test for one factor balanced ANOVA
 
     '''
 

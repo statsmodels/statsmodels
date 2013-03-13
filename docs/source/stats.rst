@@ -232,9 +232,12 @@ two one-sided tests, which have as null hypothesis that the means are not
    tost_paired
 
 The :mod:`power` module currently implements power and sample size calculations
-for the t-tests. The implementation is class based, but the module also provides
-two shortcut functions, ``tt_solve_power`` and ``tt_ind_solve_power`` to solve
-for any one of the parameters of the power equations.
+for the t-tests, normal based test, F-tests and Chisquare goodness of fit test.
+The implementation is class based, but the module also provides
+three shortcut functions, ``tt_solve_power``, ``tt_ind_solve_power`` and
+``zt_ind_solve_power`` to solve for any one of the parameters of the power
+equations.
+
 
 .. currentmodule:: statsmodels.stats.power
 
@@ -245,9 +248,14 @@ for any one of the parameters of the power equations.
    TTestPower
    GofChisquarePower
    NormalIndPower
+   FTestAnovaPower
+   FTestPower
    tt_solve_power
    tt_ind_solve_power
    zt_ind_solve_power
+
+Also available are confidence intervals for proportions, and effect size for
+proportions that can be used with NormalIndPower.
 
 .. currentmodule:: statsmodels.stats._proportion
 

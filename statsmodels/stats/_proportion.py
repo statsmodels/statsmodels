@@ -13,7 +13,7 @@ from scipy import stats, optimize
 def confint_proportion(count, nobs, alpha=0.05, method='normal'):
     '''confidence interval for a binomial proportion
 
-    Paremeters
+    Parameters
     ----------
     count : int or array
         number of successes
@@ -47,6 +47,7 @@ def confint_proportion(count, nobs, alpha=0.05, method='normal'):
 
     Method "binom_test" directly inverts the binomial test in scipy.stats.
     which has discrete steps.
+
     TODO: binom_test intervals raise an exception in small samples if one
        interval bound is close to zero or one.
 
@@ -174,6 +175,7 @@ def proportion_effectsize(prob1, prob2, method='normal'):
     see http://www.statmethods.net/stats/power.html
 
     I think other conversions to normality can be used, but I need to check.
+
     '''
     if method != 'normal':
         raise ValueError('only "normal" is implemented')

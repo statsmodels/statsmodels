@@ -31,8 +31,8 @@ from .sandwich_covariance import (
 from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, tost_ind,
                          tost_paired)
 from .power import (TTestPower, TTestIndPower, GofChisquarePower,
-                    NormalIndPower, tt_solve_power, tt_ind_solve_power,
-                    zt_ind_solve_power)
+                    NormalIndPower, FTestAnovaPower, FTestPower,
+                    tt_solve_power, tt_ind_solve_power, zt_ind_solve_power)
 
 from .descriptivestats import Describe
 
