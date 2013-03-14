@@ -1,4 +1,4 @@
-from numpy.testing import *
+from numpy.testing import assert_equal
 import warnings
 
 __all__ = ['resettable_cache','cache_readonly', 'cache_writable']
