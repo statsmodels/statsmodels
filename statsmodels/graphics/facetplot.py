@@ -286,8 +286,8 @@ def _jitter(x, jitter_level=1.0):
     diff = abs(np.subtract.outer(u, u))
     diff[diff == 0] = np.max(u)
     min_diff = np.min(diff)
-    return x + jitter_level * min_diff * 0.2 * (plt.rand(len(x)) - 0.5)
-
+    res = x + jitter_level * min_diff * 0.2 * (plt.rand(len(x)) - 0.5)
+    return res
 
 def _build_axes(ax, **kwargs):
     """This build the axes under various conditions.
@@ -357,6 +357,9 @@ def _make_numeric(data, ax, dir, jitter=1.0, categories=None):
             ax.__getattribute__('set_{}ticklabels'.format(dir))(states)
     if data.dtype != float:
         data = _jitter(data, jitter)
+        if not jitter:
+            # if the jitter is 0 return exactly a int series
+            data = data.apply(int)
     return data
 
 
@@ -609,7 +612,151 @@ def _oracle(x, y):
     return ''
 
 
-def kind_kde(x, y, ax=None, categories={}, *args, **kwargs):
+def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+    kwargs.pop('kind')
+    if y is not None:
+        fig, ax = _build_axes(ax)
+        x = _make_numeric(x, ax, 'x', 0.0, categories)
+        y = _make_numeric(y, ax, 'y', 0.0, categories)
+        if x.dtype == float:
+            nbinsx = np.round(np.sqrt(len(x)))
+        else:
+            nbinsx = max(x.unique()) - min(x.unique()) + 1
+        Db_x = 0.5 * (max(x) - min(x)) / (nbinsx - 1)
+
+        bins_x = np.linspace(min(x)-1-Db_x, max(x)+1+Db_x, nbinsx+3)
+
+        if y.dtype == float:
+            nbinsy = np.round(np.sqrt(len(y)))
+        else:
+            nbinsy = max(y.unique()) - min(y.unique()) + 1
+        Db_y = 0.5 * (max(y) - min(y)) / (nbinsy - 1)
+
+        bins_y = np.linspace(min(y)-1-Db_y, max(y)+1+Db_y, nbinsy+3)
+
+        matrix, xedges, yedges = np.histogram2d(x, y, bins=[bins_x, bins_y])
+        kwargs.setdefault('interpolation', 'nearest')
+        kwargs.setdefault('origin', 'lower')
+        kwargs.setdefault('cmap', plt.cm.binary)
+        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        kwargs.setdefault('extent', extent)
+        kwargs.setdefault('aspect', 'auto')
+        img = ax.imshow(matrix.T, *args, **kwargs)
+        plt.colorbar(img)
+        if y.dtype != float and y.dtype != float:
+            ylim = ax.get_ylim()
+            ax.set_ylim([int(ylim[0]+1)-0.5, int(ylim[1]-1)+0.5])
+            xlim = ax.get_xlim()
+            ax.set_xlim([int(xlim[0]+1)-0.5, int(xlim[1]-1)+0.5])
+
+    else:
+        fig, ax = _build_axes(ax)
+        _make_numeric(x, ax, 'x', 0.0, categories)
+        _make_numeric(x, ax, 'y', 0.0, categories)
+        states = categories.get(x.name, x.unique())
+        states = sorted(list(states))
+        indexes = dict([(v, states.index(v)) for v in states])
+        print indexes
+        L = len(states)
+        transitions = np.zeros((L, L))
+        for d0, d1 in zip(x[:-1], x[1:]):
+            transitions[indexes[d0], indexes[d1]] += 1
+        transitions /= sum(transitions)
+        kwargs.setdefault('interpolation', 'nearest')
+        kwargs.setdefault('origin', 'lower')
+        kwargs.setdefault('cmap', plt.cm.binary)
+        img = ax.imshow(transitions, *args, **kwargs)
+        plt.colorbar(img)
+    return ax
+
+
+def kind_lines(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+    kwargs['marker'] = None
+    kwargs['linestyle'] = '-'
+    return kind_scatter(x, y, ax=ax, categories=categories,
+                        jitter=jitter, order=True, *args, **kwargs)
+
+
+def kind_scatter(x, y, ax=None, categories={},
+                 jitter=1.0, order=False, *args, **kwargs):
+    if y is None:
+        #zero-variate
+        if isinstance(x, pd.Series):
+            x = pd.DataFrame({x.name: x})
+        fig, ax = _build_axes(ax)
+        colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        for column, color in zip(x, colors):
+            data = x[column]
+            if data.dtype == object and len(x.columns) > 1:
+                raise TypeError('scatter cannot mix categorical and numerical')
+            else:
+                data = _make_numeric(data, ax, 'y', jitter, categories)
+            if order:
+                data = pd.Series(sorted(data.values), index=data.index)
+            ax.plot(data.index, data,
+                    color=kwargs.get('color', color),
+                    alpha=kwargs.get('alpha', 0.5),
+                    marker=kwargs.get('marker', 'o'),
+                    linestyle=kwargs.get('linestyle', 'none'),
+                    label=column)
+        if len(x.columns) == 1:
+            ax.set_xlabel(x.columns[0])
+        _multi_legend(ax)
+        ax.set_ylabel('Value')
+        return ax
+    if isinstance(x, pd.Series):
+        #monovariate classic
+        fig, ax = _build_axes(ax)
+        x = _make_numeric(x, ax, 'x', jitter, categories)
+        if order:
+            x = x.order()
+        if isinstance(y, pd.Series):
+            y = pd.DataFrame({y.name: y})
+        colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        for column, color in zip(y, colors):
+            data = y[column]
+            if data.dtype == object and len(y.columns) > 1:
+                raise TypeError('scatter cannot mix categorical and numerical')
+            data = _make_numeric(data, ax, 'y', jitter, categories)
+            ax.plot(x, data,
+                    color=kwargs.get('color', color),
+                    alpha=kwargs.get('alpha', 0.5),
+                    marker=kwargs.get('marker', 'o'),
+                    linestyle=kwargs.get('linestyle', 'none'),
+                    label=column)
+        _multi_legend(ax)
+        ax.set_xlabel(x.name)
+        return ax
+    if isinstance(x, pd.DataFrame) and len(x.columns) == 2:
+        fig, ax = _build_axes(ax, projection='3d')
+        new_y = x[x.columns[1]]
+        new_x = x[x.columns[0]]
+        new_x = _make_numeric(new_x, ax, 'x', jitter, categories)
+        new_y = _make_numeric(new_y, ax, 'y', jitter, categories)
+        z = pd.DataFrame({y.name: y}) if isinstance(y, pd.Series) else y
+        colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+        for column, color in zip(z, colors):
+            data = z[column]
+            if data.dtype == object and len(z.columns) > 1:
+                raise TypeError('scatter cannot mix categorical and numerical')
+            data = _make_numeric(data, ax, 'z', jitter, categories)
+            ax.plot(new_x, new_y, zs=data,
+                    color=kwargs.get('color', color),
+                    alpha=kwargs.get('alpha', 0.5),
+                    marker=kwargs.get('marker', 'o'),
+                    linestyle=kwargs.get('linestyle', 'none'),
+                    label=column)
+        _multi_legend(ax)
+        ax.set_xlabel(new_x.name)
+        ax.set_ylabel(new_y.name)
+        if len(z.columns) == 1:
+            ax.set_zlabel(z.columns[0])
+        return ax
+    else:
+        raise TypeError("scatter can't manage this kind of data")
+
+
+def kind_kde(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     """make the kernel density estimation of a single variable"""
     if y is not None:
         if not isinstance(y, pd.Series) or not isinstance(x, pd.Series):
@@ -619,7 +766,6 @@ def kind_kde(x, y, ax=None, categories={}, *args, **kwargs):
         fig, ax = _build_axes(ax, projection='3d')
         x_grid, y_grid = plt.mgrid[min(x):max(x):100j, min(y):max(y):100j]
         data = np.vstack([x.values, y.values])
-        print data.shape
         my_pdf = gaussian_kde(data)
 
         z = my_pdf([x_grid.ravel(), y_grid.ravel()]).reshape((100, 100))
@@ -656,7 +802,7 @@ def kind_kde(x, y, ax=None, categories={}, *args, **kwargs):
     return ax
 
 
-def kind_violinplot(x, y, ax=None, categories={}, *args, **kwargs):
+def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     """perform the violinplot on monovariate data, vertical or horizontals"""
     if (y is None or not isinstance(x, pd.Series) or
             not isinstance(y, pd.Series)):
@@ -714,8 +860,14 @@ class _default_dict(dict):
 registered_plots = _default_dict()
 registered_plots['violinplot'] = kind_violinplot
 registered_plots['kde'] = kind_kde
+registered_plots['scatter'] = kind_scatter
+registered_plots['lines'] = kind_lines
+registered_plots['matrix'] = kind_matrix
 
-
+# ancora da fare
+#['ellipse' 'hexbin', 'boxplot', 'beanplot', 'mosaic',
+#'counter', 'acorr', 'kde', 'hist', 'trisurf',
+#'wireframe', 'scatter_coded']
 ###################################################
 # DATA CENTRIC AUTOPLOT
 ###################################################
