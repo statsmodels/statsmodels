@@ -506,7 +506,7 @@ class RLMResults(base.LikelihoodModelResults):
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
-        smry.add_table_params(self, yname=yname, xname=xname, alpha=.05,
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
                              use_t=False)
 
         #diagnostic table is not used yet
