@@ -321,7 +321,10 @@ class PandasData(ModelData):
             return self.orig_endog.index
 
     def attach_columns(self, result):
-        if result.squeeze().ndim <= 1 and len(result) > 1:
+        # this can either be a 1d array or a scalar
+        # don't squeeze because it might be a 2d row array
+        # if it needs a squeeze, the bug is elsewhere
+        if result.ndim <= 1:
             return Series(result, index=self.xnames)
         else: # for e.g., confidence intervals
             return DataFrame(result, index=self.xnames)
