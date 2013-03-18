@@ -1,6 +1,7 @@
 """
 Test functions for models.regression
 """
+import pandas
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_, assert_approx_equal,
                             assert_raises, assert_equal)
@@ -635,6 +636,15 @@ def test_const_indicator():
     mod = OLS(y, X, hasconst=True).fit()
     assert_almost_equal(modc.rsquared, mod.rsquared, 12)
 
+def test_706():
+    # make sure one regressor pandas Series gets passed to DataFrame
+    # for conf_int.
+    y = pandas.Series(np.random.randn(10))
+    x = pandas.Series(np.ones(10))
+    res = OLS(y,x).fit()
+    conf_int = res.conf_int()
+    np.testing.assert_equal(conf_int.shape, (1, 2))
+    np.testing.assert_(isinstance(conf_int, pandas.DataFrame))
 
 if __name__=="__main__":
 
