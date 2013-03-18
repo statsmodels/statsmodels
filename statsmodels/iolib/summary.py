@@ -574,7 +574,7 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
                              txt_fmt = txt_fmt)
 
 
-def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
+def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
                           use_t=True, keep_headers=True, endog_cols=False):
                           #skip_headers2=True):
     '''summary table for parameters that are 2d, e.g. multi-equation models
@@ -647,7 +647,7 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.95,
 #            skiph = False
         skiph = False
         tble = summary_params(restup, yname=endog_names[eq],
-                              xname=exog_names, alpha=.05, use_t=use_t,
+                              xname=exog_names, alpha=alpha, use_t=use_t,
                               skip_header=skiph)
 
         tables.append(tble)

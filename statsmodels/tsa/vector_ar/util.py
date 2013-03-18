@@ -149,9 +149,9 @@ def parse_lutkepohl_data(path): # pragma: no cover
 
     offset = offsets[freq]
     try:
-        from pandas import DatetimeIndex
+        from pandas import DatetimeIndex   # pylint: disable=E0611
         date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
-    except ImportError, err:
+    except ImportError:
         from pandas import DateRange
         date_range = DateRange(start_date, offset=offset, periods=n)
 
@@ -231,7 +231,6 @@ def vech(A):
     vechvec: vector of all elements on and below diagonal
     """
 
-def vech(A):
     length=A.shape[1]
     vechvec=[]
     for i in xrange(length):
