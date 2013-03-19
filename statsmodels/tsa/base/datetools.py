@@ -257,7 +257,7 @@ def _infer_freq(dates):
     try:
         from pandas.tseries.api import infer_freq
         freq = infer_freq(dates)
-        return _pandas_mapping.get(freq, freq)
+        return freq
     except ImportError:
         pass
 
@@ -284,11 +284,3 @@ def _infer_freq(dates):
         return 'A'
     else:
         return
-
-_pandas_mapping = {
-    'A-DEC': 'A',
-    'Q-DEC': 'Q',
-    'W-SUN': 'W',
-    'Q-MAR' : 'Q'
-}
-
