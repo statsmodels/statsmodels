@@ -187,8 +187,14 @@ if __name__ == '__main__':
     OverflowError: (34, 'Result too large')
     '''
 
+    try:
+        print brentq_expanding(funcn, args=(-50000,), low= -40000, upp=-10000)
+    except Exception, e:
+        print e
+
     #
-    from numpy.testing import assert_allclose
+    from numpy.testing import assert_allclose, assert_raises
+
     cases = [
         (0, {}),
         (50, {}),
@@ -212,7 +218,20 @@ if __name__ == '__main__':
             print '%10d'%a, ['dec', 'inc'][f is func], res - a
             assert_allclose(res, a, rtol=1e-5)
 
-    try:
-        print brentq_expanding(funcn, args=(-50000,), low= -40000, upp=-10000)
-    except Exception, e:
-        print e
+    # wrong sign for start bounds
+    # doesn't raise yet during development TODO: activate this
+    # it kind of works in some cases, but not correctly or in a useful way
+    #assert_raises(ValueError, brentq_expanding, func, args=(-500,), start_upp=-1000)
+    #assert_raises(ValueError, brentq_expanding, func, args=(500,), start_low=1000)
+
+    # low upp given, but doesn't bound root, leave brentq exception
+    # ValueError: f(a) and f(b) must have different signs
+    assert_raises(ValueError, brentq_expanding, funcn, args=(-50000,), low= -40000, upp=-10000)
+
+    # max_it too low to find root bounds
+    # ValueError: f(a) and f(b) must have different signs
+    assert_raises(ValueError, brentq_expanding, func, args=(-50000,), max_it=2)
+
+    # maxiter_bq too low
+    # RuntimeError: Failed to converge after 3 iterations.
+    assert_raises(RuntimeError, brentq_expanding, func, args=(-50000,), maxiter_bq=3)
