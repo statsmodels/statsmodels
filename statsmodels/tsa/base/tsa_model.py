@@ -7,14 +7,7 @@ from pandas import Index
 from pandas import datetools as pandas_datetools
 import datetime
 
-_freqs = ['B','D','W','M','A', 'Q']
-
 _freq_to_pandas = datetools._freq_to_pandas
-
-def _check_freq(freq):
-    if freq and freq not in _freqs:
-        raise ValueError("freq %s not understood" % freq)
-    return freq
 
 _tsa_doc = """
     %(model)s
@@ -25,8 +18,9 @@ _tsa_doc = """
     dates : array-like of datetime, optional
         An array-like object of datetime objects. If a pandas object is given
         for endog or exog, it is assumed to have a DateIndex.
-    freq : str, {'B', 'D', 'W', 'M', 'A', 'Q'}, optional
-        The frequency of the time-series. This is optional if dates are given.
+    freq : str, optional
+        The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
+        'M', 'A', or 'Q'. This is optional if dates are given.
     %(extra_params)s
 """
 
@@ -35,7 +29,6 @@ _model_doc = "Timeseries model base class"
 _generic_params = base._model_params_doc
 _missing_param_doc = base._missing_param_doc
 
-#REPLACE frequencies with either timeseries or pandas conventions
 class TimeSeriesModel(base.LikelihoodModel):
 
     __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
@@ -62,9 +55,12 @@ class TimeSeriesModel(base.LikelihoodModel):
                             "keyword.")
             dates = Index(dates)
         self.data.dates = dates
-        self.data.freq = _check_freq(freq) #TODO: drop if can get info from dates
-        #TODO: still gonna need some more sophisticated handling here
-
+        if freq:
+            try: #NOTE: Can drop this once we move to pandas >= 0.8.x
+                _freq_to_pandas[freq]
+            except:
+                raise ValueError("freq %s not understood" % freq)
+        self.data.freq = freq
 
     def _get_exog_names(self):
         return self.data.xnames
