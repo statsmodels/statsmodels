@@ -78,7 +78,7 @@ class QuantReg(RegressionModel):
         """
         return Y
 
-    def fit(self, q=.5, kernel='epa', bandwidth='hsheather', **kwargs):
+    def fit(self, q=.5, vcov='robust', kernel='epa', bandwidth='hsheather', **kwargs):
         '''Solve by Iterative Weighted Least Squares
 
         Parameters
@@ -153,10 +153,15 @@ class QuantReg(RegressionModel):
         self.sparsity = 1. / fhat0
         self.bandwidth = h
 
-        D = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
-        D = np.diag(D)
-        vcov = dot(pinv(dot(exog.T, exog)), dot(exog.T, D, exog),
-                   pinv(dot(exog.T, exog)))
+        if vcov == 'robust':
+            D = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
+            D = np.diag(D)
+            vcov = dot(pinv(dot(exog.T, exog)), dot(exog.T, D, exog),
+                       pinv(dot(exog.T, exog)))
+        elif vcov == 'iid':
+            vcov = self.sparsity**2 * self.q * (1-self.q) * pinv(dot(exog.T, exog))
+        else:
+            raise Exception("vcov must be 'robust' or 'iid'")
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
         return RegressionResultsWrapper(lfit)

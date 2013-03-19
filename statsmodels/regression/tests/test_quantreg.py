@@ -19,10 +19,10 @@ from results_quantreg import (
 idx = ['income', 'Intercept']
 class CheckModelResults(object):
     def test_params(self):
-        assert_allclose(np.array(self.res1.params.ix[idx]), 
+        assert_allclose(np.ravel(self.res1.params.ix[idx]), 
                             self.res2.table[:,0], rtol=1e-3)
     def test_bse(self):
-        assert_allclose(np.array(self.res1.bse.ix[idx]), 
+        assert_allclose(np.ravel(self.res1.bse.ix[idx]), 
                             self.res2.table[:,1], rtol=1e-3)
     def test_conf_int(self):
         assert_allclose(self.res1.conf_int().ix[idx], 
@@ -72,7 +72,7 @@ d = {('biw','bofinger'): biweight_bofinger,
 def setup_fun(kernel='gau', bandwidth='bofinger'):
     data = sm.datasets.engel.load_pandas().data
     y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
-    statsm = QuantReg(y, X).fit(kernel=kernel, bandwidth=bandwidth)
+    statsm = QuantReg(y, X).fit(vcov='iid', kernel=kernel, bandwidth=bandwidth)
     stata = d[(kernel, bandwidth)]
     return statsm, stata
 
@@ -89,7 +89,7 @@ class TestEpanechnikovHsheatherQ01(CheckModelResults):
     def setUp(cls):
         data = sm.datasets.engel.load_pandas().data
         y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
-        cls.res1 = QuantReg(y, X).fit(q=.1, kernel='epa', bandwidth='hsheather')
+        cls.res1 = QuantReg(y, X).fit(q=.1, vcov='iid', kernel='epa', bandwidth='hsheather')
         cls.res2 = epanechnikov_hsheather_q01
  
 class TestEpanechnikovBofinger(CheckModelResults):
