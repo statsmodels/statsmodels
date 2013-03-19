@@ -8,7 +8,7 @@ import numpy.testing as npt
 try:
     from pandas import DatetimeIndex
     _pandas_08x = True
-except ImportError, err:
+except ImportError:
     _pandas_08x = False
 
 def test_pandas_nodates_index():
