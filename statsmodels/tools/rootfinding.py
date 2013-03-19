@@ -15,7 +15,45 @@ DEBUG = False
 def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                      start_low=None, start_upp=None, increasing=None,
                      max_it=100, maxiter_bq=100):
-    #assumes monotonically increasing ``func``
+    '''find the root of a function in one variable by expanding and brentq
+
+    Assumes function ``func`` is monotonic.
+
+    Parameter
+    ---------
+    func : callable
+        function for which we find the root ``x`` such that ``func(x) = 0``
+    low : float or None
+        lower bound for brentq
+    upp : float or None
+        upper bound for brentq
+    args : tuple
+        optional additional arguments for ``func``
+    xtol : float
+        parameter x tolerance given to brentq
+    start_low : float (positive) or None
+        starting bound for expansion with increasing ``x``. It needs to be
+        positive. If None, then it is set to 1.
+    start_upp : float (negative) or None
+        starting bound for expansion with decreasing ``x``. It needs to be
+        negative. If None, then it is set to -1.
+    increasing : bool or None
+        If None, then the function is evaluated at the initial bounds to
+        determine wether the function is increasing or not. If increasing is
+        True (False), then it is assumed that the function is monotonically
+        increasing (decreasing).
+    max_it : int
+        maximum number of expansion steps
+    maxiter_bq : int
+        maximum number of iterations of brentq.
+
+    Returns
+    -------
+    x : float
+        root of the function, value at which ``func(x) = 0``.
+
+    '''
+
 
     left, right = low, upp  #alias
 
@@ -133,8 +171,21 @@ if __name__ == '__main__':
         print brentq_expanding(funcn, args=(500000,), low=300000, upp=700000)
         print brentq_expanding(funcn, args=(-50000,), low= -70000, upp=-10000)
 
-        print brentq_expanding(func, args=(1.234e30,), xtol=1e10, increasing=True, maxiter_bq=200)
+        print brentq_expanding(func, args=(1.234e30,), xtol=1e10,
+                               increasing=True, maxiter_bq=200)
 
+
+    print brentq_expanding(func, args=(-50000,), start_low=-10000)
+    print brentq_expanding(func, args=(-500,), start_upp=-100)
+    ''' it still works
+    raise ValueError('start_upp needs to be positive')
+    -499.999996336
+    '''
+    ''' this doesn't work
+    >>> print brentq_expanding(func, args=(-500,), start_upp=-1000)
+    raise ValueError('start_upp needs to be positive')
+    OverflowError: (34, 'Result too large')
+    '''
 
     #
     from numpy.testing import assert_allclose
@@ -160,3 +211,8 @@ if __name__ == '__main__':
             res = brentq_expanding(f, args=(a,), **kwds)
             print '%10d'%a, ['dec', 'inc'][f is func], res - a
             assert_allclose(res, a, rtol=1e-5)
+
+    try:
+        print brentq_expanding(funcn, args=(-50000,), low= -40000, upp=-10000)
+    except Exception, e:
+        print e
