@@ -110,27 +110,53 @@ def func2(x, a):
     print 'evaluating at %g, fval = %f' % (x, f)
     return f
 
-print brentq_expanding(func, args=(0,), increasing=True)
+if __name__ == '__main__':
+    print brentq_expanding(func, args=(0,), increasing=True)
 
-print brentq_expanding(funcn, args=(0,), increasing=False)
-print brentq_expanding(funcn, args=(-50,), increasing=False)
+    print brentq_expanding(funcn, args=(0,), increasing=False)
+    print brentq_expanding(funcn, args=(-50,), increasing=False)
 
-print brentq_expanding(func, args=(20,))
-print brentq_expanding(funcn, args=(20,))
-print brentq_expanding(func, args=(500000,))
+    print brentq_expanding(func, args=(20,))
+    print brentq_expanding(funcn, args=(20,))
+    print brentq_expanding(func, args=(500000,))
 
-# one bound
-print brentq_expanding(func, args=(500000,), low=10000)
-print brentq_expanding(func, args=(-50000,), upp=-1000)
+    # one bound
+    print brentq_expanding(func, args=(500000,), low=10000)
+    print brentq_expanding(func, args=(-50000,), upp=-1000)
 
-print brentq_expanding(funcn, args=(500000,), low=10000)
-print brentq_expanding(funcn, args=(-50000,), upp=-1000)
+    print brentq_expanding(funcn, args=(500000,), low=10000)
+    print brentq_expanding(funcn, args=(-50000,), upp=-1000)
 
-# both bounds
-# hits maxiter in brentq if bounds too wide
-print brentq_expanding(func, args=(500000,), low=300000, upp=700000)
-print brentq_expanding(func, args=(-50000,), low= -70000, upp=-1000)
-print brentq_expanding(funcn, args=(500000,), low=300000, upp=700000)
-print brentq_expanding(funcn, args=(-50000,), low= -70000, upp=-10000)
+    # both bounds
+    # hits maxiter in brentq if bounds too wide
+    print brentq_expanding(func, args=(500000,), low=300000, upp=700000)
+    print brentq_expanding(func, args=(-50000,), low= -70000, upp=-1000)
+    print brentq_expanding(funcn, args=(500000,), low=300000, upp=700000)
+    print brentq_expanding(funcn, args=(-50000,), low= -70000, upp=-10000)
 
-print brentq_expanding(func, args=(1.234e30,), xtol=1e10, increasing=True, maxiter_bq=200)
+    print brentq_expanding(func, args=(1.234e30,), xtol=1e10, increasing=True, maxiter_bq=200)
+
+
+    #
+    from numpy.testing import assert_allclose
+    cases = [
+        (0, {}),
+        (50, {}),
+        (-50, {}),
+        (500000, dict(low=10000)),
+        (-50000, dict(upp=-1000)),
+        (500000, dict(low=300000, upp=700000)),
+        (-50000, dict(low= -70000, upp=-1000))
+        ]
+
+    funcs = [(func, None),
+             (func, True),
+             (funcn, None),
+             (funcn, False)]
+
+    for func, inc in funcs:
+        for a, kwds in cases:
+            kw = {'increasing':inc}
+            kw.update(kwds)
+            res = brentq_expanding(func, args=(a,), **kwds)
+            assert_allclose(res, a, rtol=1e-5)
