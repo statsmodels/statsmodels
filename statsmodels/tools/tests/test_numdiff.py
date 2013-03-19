@@ -39,7 +39,7 @@ def fun2(beta, y, x):
 
 
 #ravel() added because of MNLogit 2d params
-class CheckGradLoglike(object):
+class CheckGradLoglikeMixin(object):
     def test_score(self):
         for test_params in self.params:
             sc = self.mod.score(test_params)
@@ -89,7 +89,7 @@ class CheckGradLoglike(object):
             assert_almost_equal(he, hecs, decimal=4)
 
 
-class TestGradMNLogit(CheckGradLoglike):
+class TestGradMNLogit(CheckGradLoglikeMixin):
     def __init__(self):
         #from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
@@ -136,7 +136,7 @@ class TestGradMNLogit(CheckGradLoglike):
             hecs = numdiff.approx_hess3(test_params, self.mod.loglike, 1e-4)
             assert_almost_equal(he, hecs, decimal=0)
 
-class TestGradLogit(CheckGradLoglike):
+class TestGradLogit(CheckGradLoglikeMixin):
     def __init__(self):
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
@@ -149,7 +149,7 @@ class TestGradLogit(CheckGradLoglike):
         ##hess = mod.hessian
 
 
-class CheckDerivative(object):
+class CheckDerivativeMixin(object):
     def __init__(self):
         nobs = 200
         #x = np.arange(nobs*3).reshape(nobs,-1)
@@ -236,7 +236,7 @@ class CheckDerivative(object):
                 assert_almost_equal(hetrue, hecs, decimal=DEC6)
 
 
-class TestDerivativeFun(CheckDerivative):
+class TestDerivativeFun(CheckDerivativeMixin):
     def init(self):
         xkols = np.dot(np.linalg.pinv(self.x), self.y)
         self.params = [np.array([1.,1.,1.]), xkols]
@@ -250,7 +250,7 @@ class TestDerivativeFun(CheckDerivative):
         return np.zeros((3,3))   #make it (3,3), because test fails with scalar 0
         #why is precision only DEC3
 
-class TestDerivativeFun2(CheckDerivative):
+class TestDerivativeFun2(CheckDerivativeMixin):
     def init(self):
         xkols = np.dot(np.linalg.pinv(self.x), self.y)
         self.params = [np.array([1.,1.,1.]), xkols]
@@ -268,7 +268,7 @@ class TestDerivativeFun2(CheckDerivative):
         x = self.x
         return 2*np.dot(x.T, x)
 
-class TestDerivativeFun1(CheckDerivative):
+class TestDerivativeFun1(CheckDerivativeMixin):
     def init(self):
         xkols = np.dot(np.linalg.pinv(self.x), self.y)
         self.params = [np.array([1.,1.,1.]), xkols]
@@ -282,7 +282,7 @@ class TestDerivativeFun1(CheckDerivative):
     def hesstrue(self, params):
         return None
         y, x = self.y, self.x
-        return (-x*2*(y-np.dot(x, parms))[:,None])  #TODO: check shape
+        return (-x*2*(y-np.dot(x, params))[:,None])  #TODO: check shape
 
 
 if __name__ == '__main__':

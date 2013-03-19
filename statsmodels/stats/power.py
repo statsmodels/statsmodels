@@ -181,7 +181,8 @@ class Power(object):
         #TODO: check more cases to make this robust
         #return optimize.newton(func, start_value).item() #scalar
         val, infodict, ier, msg = optimize.fsolve(func, start_value, full_output=True) #scalar
-        if ier != 1:
+        fval = infodict['fvec']
+        if ier != 1 or np.abs(fval) > 1e-4:
             #print infodict
             if key in ['alpha', 'power', 'effect_size']:
                 val, r = optimize.brentq(func, 1e-8, 1-1e-8, full_output=True) #scalar
