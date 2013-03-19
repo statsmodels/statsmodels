@@ -18,7 +18,8 @@ DEBUG = False
 # based on scipy.stats.distributions._ppf_single_call
 def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                      start_low=None, start_upp=None, increasing=None,
-                     max_it=100, maxiter_bq=100):
+                     max_it=100, maxiter_bq=100, factor=10,
+                     full_output=False):
     '''find the root of a function in one variable by expanding and brentq
 
     Assumes function ``func`` is monotonic.
@@ -47,14 +48,34 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         True (False), then it is assumed that the function is monotonically
         increasing (decreasing).
     max_it : int
-        maximum number of expansion steps
+        maximum number of expansion steps.
     maxiter_bq : int
         maximum number of iterations of brentq.
+    factor : float
+        expansion factor for step of shifting the bounds interval, default is
+        10.
+    full_output : bool, optional
+        If full_output is False, the root is returned. If full_output is True,
+        the return value is (x, r), where x is the root, and r is a
+        RootResults object.
+
 
     Returns
     -------
     x : float
         root of the function, value at which ``func(x) = 0``.
+    info : RootResult (optional)
+        returned if ``full_output`` is True.
+        attributes:
+
+         - start_bounds : starting bounds for expansion stage
+         - brentq_bounds : bounds used with ``brentq``
+         - iterations_expand : number of iterations in expansion stage
+         - converged : True if brentq converged.
+         - flag : return status, 'converged' if brentq converged
+         - function_calls : number of function calls by ``brentq``
+         - iterations : number of iterations in ``brentq``
+
 
     Notes
     -----
@@ -65,9 +86,8 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     directly specifying ``increasing`` can make it possible to move the
     expansion in the right direction.
 
-
-
     '''
+    #TODO: rtol is missing, what does it do?
 
 
     left, right = low, upp  #alias
@@ -114,7 +134,6 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         left, right = right, left
 
     n_it = 0
-    factor = 10.
     if left is None:
         left = sl
         while func(left, *args) > 0:
@@ -138,9 +157,23 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         print 'Warning: max_it reached'
         #TODO: use Warnings
 
-    return optimize.brentq(func, \
-                           left, right, args=args,
-                           xtol=xtol, maxiter=maxiter_bq)
+    res = optimize.brentq(func, left, right, args=args,
+                          xtol=xtol, maxiter=maxiter_bq,
+                          full_output=full_output)
+    if full_output:
+        val = res[0]
+        info = res[1]
+        #exp_info = {'n_it' : n_it,
+        #            'start_bounds' : (sl, su)}
+        #info.update(exp_info)
+        info.iterations_expand = n_it
+        info.start_bounds = (sl, su)
+        info.brentq_bounds = (left, right)
+        return val, info
+    else:
+        return res
+
+
 
 
 def func(x, a):
@@ -207,8 +240,12 @@ if __name__ == '__main__':
     except Exception, e:
         print e
 
+    val, info = brentq_expanding(func, args=(500,), full_output=True)
+    print val
+    print vars(info)
+
     #
-    from numpy.testing import assert_allclose, assert_raises
+    from numpy.testing import assert_allclose, assert_equal, assert_raises
 
     cases = [
         (0, {}),
@@ -250,3 +287,15 @@ if __name__ == '__main__':
     # maxiter_bq too low
     # RuntimeError: Failed to converge after 3 iterations.
     assert_raises(RuntimeError, brentq_expanding, func, args=(-50000,), maxiter_bq=3)
+
+    # test for full_output
+    a = 500
+    val, info = brentq_expanding(func, args=(a,), full_output=True)
+    assert_allclose(val, a, rtol=1e-5)
+    info1 = {'iterations': 63, 'start_bounds': (-1, 1),
+             'brentq_bounds': (100, 1000), 'flag': 'converged',
+             'function_calls': 64, 'iterations_expand': 3, 'converged': True}
+    for k in info1:
+        assert_equal(info1[k], info.__dict__[k])
+
+    assert_allclose(info.root, a, rtol=1e-5)
