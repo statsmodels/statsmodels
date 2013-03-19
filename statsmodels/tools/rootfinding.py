@@ -4,6 +4,10 @@
 Created on Mon Mar 18 15:48:23 2013
 Author: Josef Perktold
 
+TODO:
+  - test behavior if nans or infs are encountered during the evaluation.
+  - rewrite core loop to use for...except instead of while.
+
 """
 
 import numpy as np
@@ -51,6 +55,17 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     -------
     x : float
         root of the function, value at which ``func(x) = 0``.
+
+    Notes
+    -----
+    If increasing is None, then whether the function is monotonically
+    increasing or decreasing is inferred from evaluating the function at the
+    initial bounds. This can fail if there is numerically no variation in the
+    data in this range. In this case, using different starting bounds or
+    directly specifying ``increasing`` can make it possible to move the
+    expansion in the right direction.
+
+
 
     '''
 
