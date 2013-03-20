@@ -1,16 +1,34 @@
 #!/usr/bin/env python
+
+'''
+Quantile regression model
+
+Model parameters are estimated using iterated reweighted least squares. The
+asymptotic covariance matrix estimated using kernel density estimation. 
+
+Author: Vincent Arel-Bundock
+License: BSD-3
+Created: 2013-03-19
+
+The original IRLS function was written for Matlab by Shapour Mohammadi,
+University of Tehran, 2008 (shmohammadi@gmail.com), with some lines based on
+code written by James P. Lesage in Applied Econometrics Using MATLAB(1999).PP.
+73-4.  Translated to python with permission from original author by Christian
+Prinoth (christian at prinoth dot name).
+'''
+
 import numpy as np
+import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import logistic, norm
-from statsmodels.tools.tools import chain_dot as dot
+from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
                                                  RegressionResultsWrapper)
 
 class QuantReg(RegressionModel):
-
     '''Quantile Regression
 
     Estimate a quantile regression model using iterative reweighted least
@@ -18,7 +36,6 @@ class QuantReg(RegressionModel):
 
     Parameters
     ----------
-
     endog : array or dataframe
         endogenous/response variable
     exog : array or dataframe
@@ -26,7 +43,6 @@ class QuantReg(RegressionModel):
 
     Notes
     -----
-    
     The Least Absolute Deviation (LAD) estimator is a special case where
     quantile is set to 0.5 (q argument of the fit method). 
 
@@ -36,7 +52,6 @@ class QuantReg(RegressionModel):
 
     References
     ----------
-
     General:
 
     * Birkes, D. and Y. Dodge(1993). Alternative Methods of Regression, John Wiley and Sons.
@@ -54,17 +69,8 @@ class QuantReg(RegressionModel):
     * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171-209. Cambridge: Cambridge University Press.
     * Hall, P., and S. Sheather. (1988). On the distribution of the Studentized quantile. Journal of the Royal Statistical Society, Series B 50: 381-391.
 
-    License
-    -------
-
-    Original Matlab code by Shapour Mohammadi, University of Tehran, 2008
-    (shmohammadi@gmail.com). First translation to python with permission from
-    original author by Christian Prinoth (christian at prinoth dot name).
-    Further adapted and modified by the statsmodels team.
-
     Keywords
     --------
-
     Keywords: Least Absolute Deviation(LAD) Regression, Quantile Regression,
     Regression, Robust Estimation.
     '''
@@ -83,40 +89,36 @@ class QuantReg(RegressionModel):
 
         Parameters
         ----------
-
         q : float
             Quantile must be between 0 and 1
-        vcov : string
-            robust : heteroskedasticity robust standard errors (as suggested in
-                     Greene 6th edition)
-            iid : iid errors (as in Stata 12)
-        kernel : string, Kernel to use in the estimation of the asymptotic
-                 covariance
-            epa: Epanechnikov
-            cos: Cosine
-            gau: Gaussian
-            par: Parzene
+        vcov : string, method used to calculate the variance-covariance matrix
+               of the parameters. Default is ``robust``
+
+               robust : heteroskedasticity robust standard errors (as suggested in
+                        Greene 6th edition)
+               iid : iid errors (as in Stata 12)
+        kernel : string, kernel to use in the kernel density estimation for the
+                 asymptotic covariance matrix 
+
+                 epa: Epanechnikov
+                 cos: Cosine
+                 gau: Gaussian
+                 par: Parzene
         bandwidth: string, Bandwidth selection method in kernel density
                    estimation for asymptotic covariance estimate (full
                    references in QuantReg docstring)
-            hsheather: Hall-Sheather (1988)
-            bofinger: Bofinger (1975)
-            chamberlain: Chamberlain (1994)
-            
-        Notes
-        -----
 
-        Some lines of this section are based on a code written by
-        James P. Lesage in Applied Econometrics Using MATLAB(1999).PP. 73-4.
+                   hsheather: Hall-Sheather (1988)
+                   bofinger: Bofinger (1975)
+                   chamberlain: Chamberlain (1994)
         '''
 
-        self.q = q
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
 
         kern_names = ['biw', 'cos', 'epa', 'gau', 'par' ]  
         if kernel not in kern_names:
-            raise Exception("kernel must be in " + ', '.join(kern_names))
+            raise Exception("kernel must be one of " + ', '.join(kern_names))
         else:
             kernel = kernels[kernel]
 
@@ -133,16 +135,19 @@ class QuantReg(RegressionModel):
         exog = self.exog
         nobs = self.nobs
         rank = self.rank
-        itrat = 0
+        n_iter = 0
         xstar = exog
         beta = np.ones(rank)  # TODO: better start
         diff = 10
 
-        while itrat < 1000 and diff > 1e-6:
-            itrat += 1
+        max_iter = 1000
+        while n_iter < max_iter and diff > 1e-6:
+            n_iter += 1
             beta0 = beta
-            beta = dot(pinv(dot(xstar.T, exog)), xstar.T, endog)
-            resid = endog - dot(exog, beta)
+            xtx = np.dot(xstar.T, exog)
+            xty = np.dot(xstar.T, endog)
+            beta = np.dot(pinv(xtx), xty)
+            resid = endog - np.dot(exog, beta)
             #JP: bound resid away from zero,
             #    why not symmetric: * np.sign(resid), shouldn't matter
             resid[np.abs(resid) < .000001] = .000001
@@ -151,7 +156,10 @@ class QuantReg(RegressionModel):
             xstar = exog / resid[:, np.newaxis]
             diff = np.max(np.abs(beta - beta0))
 
-        e = endog - dot(exog, beta)
+        if n_iter == max_iter:
+            warnings.warn("Maximum number of iterations (1000) reached.")
+
+        e = endog - np.dot(exog, beta)
         # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:
         #h = 0.9 * np.std(e) / (nobs**0.2)
         # Instead, we calculate bandwidth as in Stata 12
@@ -161,20 +169,23 @@ class QuantReg(RegressionModel):
 
         fhat0 = 1. / (nobs * h) * np.sum(kernel(e / h))
 
-        self.sparsity = 1. / fhat0
-        self.bandwidth = h
-
         if vcov == 'robust':
-            D = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
-            D = np.diag(D)
-            vcov = dot(pinv(dot(exog.T, exog)), dot(exog.T, D, exog),
-                       pinv(dot(exog.T, exog)))
+            d = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
+            xtxi = pinv(np.dot(exog.T, exog))
+            xtdx = np.dot(exog.T * d[np.newaxis,:], exog)
+            vcov = chain_dot(xtxi, xtdx, xtxi)
         elif vcov == 'iid':
-            vcov = self.sparsity**2 * self.q * (1-self.q) * pinv(dot(exog.T, exog))
+            vcov = (1. / fhat0)**2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
         else:
             raise Exception("vcov must be 'robust' or 'iid'")
 
         lfit = QuantRegResults(self, beta, normalized_cov_params=vcov)
+
+        lfit.q = q
+        lfit.iterations = n_iter
+        lfit.sparsity = 1. / fhat0
+        lfit.bandwidth = h
+
         return RegressionResultsWrapper(lfit)
 
 def _parzen(u):
@@ -195,41 +206,36 @@ kernels['par'] = _parzen
 #kernels['uni'] = lambda u: 1. / 2 * np.where(np.abs(u) <= 1, 1, 0)
 
 def hall_sheather(n, q, alpha=.05):
-    num = 1.5 * norm.pdf(norm.ppf(q))**2.
-    den = 2. * norm.ppf(q)**2. + 1.
-    h = n**(-1./3) * norm.ppf(1. - alpha / 2.)**(2./3) * (num / den)**(1./3)
+    z = norm.ppf(q)
+    num = 1.5 * norm.pdf(z)**2.
+    den = 2. * z**2. + 1.
+    h = n**(-1. / 3) * norm.ppf(1. - alpha / 2.)**(2./3) * (num / den)**(1./3)
     return h
 
 def bofinger(n, q):
-    num = 9./2 * norm.pdf(2 * norm.ppf(q))**4
+    num = 9. / 2 * norm.pdf(2 * norm.ppf(q))**4
     den = (2 * norm.ppf(q)**2 + 1)**2
-    h = n**(-1./5) * (num/den)**(1./5)
+    h = n**(-1. / 5) * (num / den)**(1. / 5)
     return h
 
 def chamberlain(n, q, alpha=.05):
-    return norm.ppf(1-alpha/2) * np.sqrt(q*(1-q)/n)
+    return norm.ppf(1 - alpha / 2) * np.sqrt(q*(1 - q) / n)
 
 class QuantRegResults(RegressionResults):
     '''Results instance for the QuantReg model'''
 
     @cache_readonly
     def prsquared(self):
-        q = self.model.q
+        q = self.q
         endog = self.model.endog
         e = self.resid
-        e = np.where(e < 0, (1-q) * e, q * e)
+        e = np.where(e < 0, (1 - q) * e, q * e)
         e = np.abs(e)
         ered = endog - stats.scoreatpercentile(endog, q * 100)
-        ered = np.where(ered < 0, (1-q) * ered, q * ered)
+        ered = np.where(ered < 0, (1 - q) * ered, q * ered)
         ered = np.abs(ered)
         return 1 - np.sum(e) / np.sum(ered)
 
-    @cache_readonly
-    def sparsity(self):
-        return self.model.sparsity
-    @cache_readonly
-    def bandwidth(self):
-        return self.model.bandwidth
     @cache_readonly
     def scale(self):
         return 1.
