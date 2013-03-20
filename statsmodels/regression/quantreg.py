@@ -44,11 +44,11 @@ class QuantReg(RegressionModel):
     * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
     * LeSage, J. P.(1999). Applied Econometrics Using MATLAB,
 
-    Kernels: 
+    Kernels (used by the fit method): 
     
     * Green (2008) Table 14.2
 
-    Bandwidth selection: 
+    Bandwidth selection (used by the fit method): 
 
     * Bofinger, E. (1975). Estimation of a density function using order statistics. Australian Journal of Statistics 17: 1-17.
     * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171-209. Cambridge: Cambridge University Press.
@@ -85,20 +85,32 @@ class QuantReg(RegressionModel):
         ----------
 
         q : float
-            quantile must be between 0 and 1
-        kernel : string ('logistic' or 'gaussian')
-            kernel to use for computation of estimate asymptotic covariance
-            matrix 
+            Quantile must be between 0 and 1
+        vcov : string
+            robust : heteroskedasticity robust standard errors (as suggested in
+                     Greene 6th edition)
+            iid : iid errors (as in Stata 12)
+        kernel : string, Kernel to use in the estimation of the asymptotic
+                 covariance
+            epa: Epanechnikov
+            cos: Cosine
+            gau: Gaussian
+            par: Parzene
+        bandwidth: string, Bandwidth selection method in kernel density
+                   estimation for asymptotic covariance estimate (full
+                   references in QuantReg docstring)
+            hsheather: Hall-Sheather (1988)
+            bofinger: Bofinger (1975)
+            chamberlain: Chamberlain (1994)
             
         Notes
         -----
 
-        Some lines of this section is based on a code written by
+        Some lines of this section are based on a code written by
         James P. Lesage in Applied Econometrics Using MATLAB(1999).PP. 73-4.
         '''
 
         self.q = q
-
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
 
@@ -108,15 +120,14 @@ class QuantReg(RegressionModel):
         else:
             kernel = kernels[kernel]
 
-        bwidth_names = ['hsheather', 'bofinger', 'chamberlain']
-        if bandwidth not in bwidth_names:
-            raise Exception("kernel must be in " + ', '.join(bwidth_names))
-        elif bandwidth == 'hsheather':
+        if bandwidth == 'hsheather':
             bandwidth = hall_sheather
         elif bandwidth == 'bofinger':
             bandwidth = bofinger
-        else:
+        elif bandwidth == 'chamberlain':
             bandwidth = chamberlain
+        else:
+            raise Exception("bandwidth must be in 'hsheather', 'bofinger', 'chamberlain'")
 
         endog = self.endog
         exog = self.exog
