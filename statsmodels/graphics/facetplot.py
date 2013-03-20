@@ -177,6 +177,24 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         >>> y = x + 2*x**2 +randn(10)
         >>> facet_plot('y ~ x')
         >>> facet_plot('y ~ x', kind='kde')
+
+    The procedure used to manage the formula allow it to use both patsy
+    style modification:
+
+        >>> facet_plot('y ~ I(x**2)')
+
+    and non standard names like those using special characters (using unicode)
+    and non valid python names
+
+        >>> data[u'à'] = plt.randn(N)
+        >>> facet_plot(u' float_1 ~ à ', data)
+
+        >>> data['x.1'] = plt.randn(N)
+        >>> facet_plot(u' float_1 ~ x.1 ', data)
+
+        >>> data['x 1'] = plt.randn(N)
+        >>> facet_plot(' float_1 ~ x 1 ', data)
+
     """
     if not ax:
         fig = plt.figure()
