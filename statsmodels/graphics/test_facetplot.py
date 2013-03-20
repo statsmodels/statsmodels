@@ -158,6 +158,51 @@ def _test_matrix():
     plt.show()
     plt.close("all")
 
+
+def _test_insertion_in_axes():
+    fig = plt.figure()
+    ax = fig.add_subplot(2, 2, 1)
+    facet_plot('cat_2 ~ cat_1', data, ax=ax)
+    ax = fig.add_subplot(2, 2, 2)
+    facet_plot('cat_1', data, ax=ax)
+    ax = fig.add_subplot(2, 2, 3)
+    facet_plot('sin ~ lin', data, 'lines', ax=ax)
+    ax = fig.add_subplot(2, 2, 4)
+    facet_plot('float_1 ~ cat_1 + float_2', data, ax=ax, jitter=0.2)
+    fig.tight_layout()
+    fig.canvas.set_window_title('mixed facet_plots')
+    plt.show()
+    plt.close("all")
+    #this should give error
+    #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
+
+
+def _test_create_dataframe():
+    float_1 = plt.randn(100)
+    # can pass a normal dictionary to the creator
+    facet_plot('float_1', {'float_1': float_1})
+    # will drop the nan automatically
+    float_1[0] = np.nan
+    facet_plot('float_1', {'float_1': float_1})
+    # subsetting the data
+    facet_plot('float_1', {'float_1': float_1}, subset=(float_1 > 0))
+    # capture the environment to explore it
+    facet_plot('float_1')
+    # can I also subset it?
+    facet_plot('float_1', subset=(float_1 > 0))
+    # will return error as the nan value create an error
+    #facet_plot('float_1', {'float_1': float_1}, drop_na=False)
+    plt.show()
+    plt.close("all")
+
+
+def _test_evalenvironmentcapture():
+    #placeholder for successive tests of the automatic environment capture
+    import patsy
+    from statsmodels.graphics import facetplot
+    float_1 = plt.randn(10)
+    facetplot._array4name('float_1', patsy.EvalEnvironment.capture().namespace)
+
 if __name__ == "__main__":
     run_module_suite()
 
@@ -208,22 +253,3 @@ if __name__ == "__main__":
 #facet_plot('int_2 ~ float_1 + float_2', data)
 #facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
 
-#fig = plt.figure()
-#ax = fig.add_subplot(2, 2, 1)
-#facet_plot('cat_2 ~ cat_1', data, ax=ax)
-#ax = fig.add_subplot(2, 2, 2)
-#facet_plot('cat_1', data, ax=ax)
-#ax = fig.add_subplot(2, 2, 3)
-#facet_plot('sin ~ lin', data, 'lines', ax=ax)
-#ax = fig.add_subplot(2, 2, 4)
-#facet_plot('float_1 ~ cat_1 + float_2', data, ax=ax, jitter=0.2)
-#fig.tight_layout()
-#fig.canvas.set_window_title('mixed facet_plots')
-##this should give error
-##facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
-
-def _test_evalenvironmentcapture():
-    import patsy
-    from statsmodels.graphics import facetplot
-    float_1 = plt.randn(10)
-    facetplot._array4name('float_1', patsy.EvalEnvironment.capture().namespace)
