@@ -196,13 +196,6 @@ def _test_create_dataframe():
     plt.close("all")
 
 
-def _test_evalenvironmentcapture():
-    #placeholder for successive tests of the automatic environment capture
-    import patsy
-    from statsmodels.graphics import facetplot
-    float_1 = plt.randn(10)
-    facetplot._array4name('float_1', patsy.EvalEnvironment.capture().namespace)
-
 if __name__ == "__main__":
     run_module_suite()
 
