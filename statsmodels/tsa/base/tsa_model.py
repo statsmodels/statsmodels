@@ -186,10 +186,6 @@ class TimeSeriesModel(base.LikelihoodModel):
 
             self._make_predict_dates()
 
-        #elif isinstance(end, int) and dates is not None and freq is None):
-        #    raise
-
-
         elif isinstance(end, int):
             nobs = len(self.data.endog) - 1 # is an index
             if end > nobs:
