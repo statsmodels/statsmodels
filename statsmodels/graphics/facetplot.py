@@ -27,7 +27,7 @@ available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
 ##########################################################
 
 
-def facet_plot(formula, data, kind=None, subset=None,
+def facet_plot(formula, data=None, kind=None, subset=None,
                drop_na=True, ax=None, jitter=1.0,
                include_total=False, *args, **kwargs):
     """make a faceted plot of two set of variables divided into categories
@@ -45,8 +45,12 @@ def facet_plot(formula, data, kind=None, subset=None,
     ==========
     formula: string formula like
         The plot description using the patsy formula syntax
-    data: dict like object or pandas.Dataframe
-        The dataframe over which the formula should be evaluated
+    data: dict like object or pandas.Dataframe, optional
+        The dataframe over which the formula should be evaluated.
+        It it's None the current environment will be captured
+        and the formula will be evaluated in it. WARNING: this
+        option is thought to be used only in interactive exploration,
+        usage in a script can lead (rarely but possible) to some hideous bug!
     subset: boolean array, optional
         The True position indicates which rows of the dataframe should
         be used (it should be used to select only a part of the dataset)
@@ -165,6 +169,14 @@ def facet_plot(formula, data, kind=None, subset=None,
         >>> facet_plot('float_1 ~ float_2 | cat_1', data, kind='matrix')
         >>> facet_plot('float_1 ~ float_2 | cat_1', data, kind='lines')
         >>> facet_plot('float_1 ~ int_1 | cat_1', data, kind='boxplot')
+
+    for exploratory analysis is possible to use the function to explore:
+    the current environment
+
+        >>> x = randn(10)
+        >>> y = x + 2*x**2 +randn(10)
+        >>> facet_plot('y ~ x')
+        >>> facet_plot('y ~ x', kind='kde')
     """
     if not ax:
         fig = plt.figure()
@@ -174,23 +186,28 @@ def facet_plot(formula, data, kind=None, subset=None,
         PARTIAL = True
     y, x, facet = _formula_split(formula)
 
-    #if data is None:
-    #    data = EvalEnvironment.capture(1)
+    if data is None:
+        data = patsy.EvalEnvironment.capture(1).namespace
 
-    data = pd.DataFrame(data)
-    if drop_na:
-        data = data.dropna()
-    # if a subset is specified use it to trim the dataframe
-    if subset:
-        data = data[subset]
-    if not len(data):
-        raise TypeError("""empty dataframe. Check the
-                        subset and drop_na options for possible causes""")
     #create the x and y values of the arrays
     #these are only functional to the oracle
     #and the analysis of the categories
     value_x = _array4name(x, data)
     value_y = _array4name(y, data)
+    value_f = _array4name(facet, data)
+    #reconstruct the dataframe from the pieces created before
+    to_concat = [pd.DataFrame(serie) for serie in [value_x, value_y, value_f]]
+    data = pd.concat(to_concat, axis=1)
+    # reduce the size of the dataframe by removing the nan and
+    # subsetting it
+    if subset is not None:
+        data = data[subset]
+    if drop_na:
+        data = data.dropna()
+    # if a subset is specified use it to trim the dataframe
+    if not len(data):
+        raise TypeError("""empty dataframe. Check the
+                        subset and drop_na options for possible causes""")
     #interrogate the oracle: which plot it's the best?
     #only if one is not specified by default, should give the same
     #results of the choice used in the data-centric functions
@@ -207,7 +224,7 @@ def facet_plot(formula, data, kind=None, subset=None,
         if facet:
             raise ValueError('facet are incompatibles with single axes')
         else:
-            plot_function(_array4name(x, data), _array4name(y, data),
+            plot_function(value_x, value_y,
                           ax=ax, kind=kind, jitter=jitter,
                           categories=categories, *args, **kwargs)
             return fig
@@ -223,6 +240,8 @@ def facet_plot(formula, data, kind=None, subset=None,
     base_ax = None
     for idx, (level, value) in enumerate(elements):
         # choose if use the name ad a dataframe index or a patsy formula
+        # this could be avoided using the information from before the
+        # join, but for now it stays here
         value_x = _array4name(x, value)
         value_y = _array4name(y, value) if y else None
         # adjust the position of the plots, shifting them
@@ -673,6 +692,7 @@ def kind_scatter(x, y, ax=None, categories={},
         if isinstance(x, pd.Series):
             x = pd.DataFrame({x.name: x})
         fig, ax = _build_axes(ax)
+        ax.margins(0.05)
         colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         for column, color in zip(x, colors):
             data = x[column]
@@ -696,6 +716,7 @@ def kind_scatter(x, y, ax=None, categories={},
     if isinstance(x, pd.Series):
         #monovariate classic
         fig, ax = _build_axes(ax)
+        ax.margins(0.05)
         x = _make_numeric(x, ax, 'x', jitter, categories)
         if order:
             x = x.order()
