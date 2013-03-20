@@ -4,8 +4,8 @@ import pandas as pd
 import statsmodels.api as sm
 from numpy.testing import *
 from patsy import dmatrices
-from statsmodels.regression.quantreg import QuantReg
-from results_quantreg import (
+from statsmodels.regression.quantile_regression import QuantReg
+from results_quantile_regression import (
       biweight_chamberlain, biweight_hsheather, biweight_bofinger,
       cosine_chamberlain, cosine_hsheather, cosine_bofinger,
       gaussian_chamberlain, gaussian_hsheather, gaussian_bofinger,
