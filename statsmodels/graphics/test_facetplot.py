@@ -29,7 +29,7 @@ data['float_3'] = data['float_1']+data['float_2']+plt.randn(N)
 data['float_4'] = data['float_1']*data['float_2']+plt.randn(N)
 
 
-def _test_formula_split():
+def test_formula_split():
     from statsmodels.graphics.facetplot import _formula_split
     #test the formula split
     assert _formula_split('y ~ x | f') == ('y', 'x', 'f')
@@ -39,7 +39,7 @@ def _test_formula_split():
 
 
 # analyze_categories
-def _test_analyze_categories():
+def test_analyze_categories():
     from statsmodels.graphics.facetplot import _analyze_categories
     assert _analyze_categories(data.int_1) == {}
     assert _analyze_categories(data.float_1) == {}
@@ -52,7 +52,7 @@ def _test_analyze_categories():
                 'cat_2': ['B', 'C', 'D', 'F']})
 
 
-def _test_array4name():
+def test_array4name():
     from statsmodels.graphics.facetplot import _array4name
     #test the array4name
     assert all(_array4name('int_1 + int_2',
@@ -66,7 +66,7 @@ def _test_array4name():
 #######################################
 # test the oracle
 ####################
-def _test_oracle():
+def test_oracle():
     from statsmodels.graphics.facetplot import _oracle
     # single dimension
     assert _oracle(data.float_1, None) == 'kde'
@@ -149,7 +149,7 @@ def _test_line():
     plt.close("all")
 
 
-def test_matrix():
+def _test_matrix():
     facet_plot('cat_1', data, 'matrix')
     facet_plot('int_1', data, 'matrix')
     facet_plot('int_1 ~ float_2 | cat_1', data, 'matrix')
@@ -222,4 +222,8 @@ if __name__ == "__main__":
 ##this should give error
 ##facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
 
-
+def _test_evalenvironmentcapture():
+    import patsy
+    from statsmodels.graphics import facetplot
+    float_1 = plt.randn(10)
+    facetplot._array4name('float_1', patsy.EvalEnvironment.capture().namespace)
