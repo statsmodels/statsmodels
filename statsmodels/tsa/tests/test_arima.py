@@ -1596,6 +1596,54 @@ def test_arima_predict_q2():
                         [7.306320, 7.313825, 7.321749, 7.329827, 7.337962],
                         5)
 
+def test_arima_predict_pandas_nofreq():
+    # this is issue 712
+    try:
+        from pandas.tseries.api import infer_freq
+    except ImportError:
+        import nose
+        raise nose.SkipTest
+    from pandas import DataFrame, DatetimeIndex
+    dates = ["2010-01-04", "2010-01-05", "2010-01-06", "2010-01-07",
+             "2010-01-08", "2010-01-11", "2010-01-12", "2010-01-11",
+             "2010-01-12", "2010-01-13", "2010-01-17"]
+    close = [626.75, 623.99, 608.26, 594.1, 602.02, 601.11, 590.48, 587.09,
+             589.85, 580.0,587.62]
+    data = DataFrame(close, index=DatetimeIndex(dates), columns=["close"])
+
+    #TODO: fix this names bug for non-string names names
+    arma = ARMA(data, order=(1,0)).fit(disp=-1)
+
+    # first check that in-sample prediction works
+    predict = arma.predict()
+    assert_(predict.index.equals(data.index))
+
+    # check that this raises an exception when date not on index
+    assert_raises(ValueError, arma.predict, start="2010-1-9", end=10)
+    assert_raises(ValueError, arma.predict, start="2010-1-9", end="2010-1-17")
+
+    # raise because end not on index
+    assert_raises(ValueError, arma.predict, start="2010-1-4", end="2010-1-10")
+    # raise because end not on index
+    assert_raises(ValueError, arma.predict, start=3, end="2010-1-10")
+
+    predict = arma.predict(start="2010-1-7", end=10) # should be of length 10
+    assert_(len(predict) == 8)
+    assert_(predict.index.equals(data.index[3:10+1]))
+
+    predict = arma.predict(start="2010-1-7", end=14)
+    assert_(predict.index.equals(pandas.Index(range(3, 15))))
+
+    predict = arma.predict(start=3, end=14)
+    assert_(predict.index.equals(pandas.Index(range(3, 15))))
+
+    # end can be a date if it's in the sample and on the index
+    # predict dates is just a slice of the dates index then
+    predict = arma.predict(start="2010-1-6", end="2010-1-13")
+    assert_(predict.index.equals(data.index[2:10]))
+    predict = arma.predict(start=2, end="2010-1-13")
+    assert_(predict.index.equals(data.index[2:10]))
+
 
 if __name__ == "__main__":
     import nose

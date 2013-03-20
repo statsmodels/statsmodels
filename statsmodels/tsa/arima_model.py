@@ -477,7 +477,9 @@ class ARMA(tsbase.TimeSeriesModel):
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
             the first forecast is start. Can also be a date string to
-            parse or a datetime type.
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requested, exog must be given.
@@ -1251,8 +1253,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             parse or a datetime type.
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type.
+            the last forecast is end. Can also be a date string to parse or a
+            datetime type.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requestion, exog must be given.
@@ -1429,7 +1431,9 @@ class ARIMAResults(ARMAResults):
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
             the first forecast is start. Can also be a date string to
-            parse or a datetime type.
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requestion, exog must be given.
