@@ -173,13 +173,22 @@ def facet_plot(formula, data, kind=None, subset=None,
         fig, ax = utils.create_mpl_ax(ax)
         PARTIAL = True
     y, x, facet = _formula_split(formula)
+
+    #if data is None:
+    #    data = EvalEnvironment.capture(1)
+
     data = pd.DataFrame(data)
     if drop_na:
         data = data.dropna()
     # if a subset is specified use it to trim the dataframe
     if subset:
         data = data[subset]
+    if not len(data):
+        raise TypeError("""empty dataframe. Check the
+                        subset and drop_na options for possible causes""")
     #create the x and y values of the arrays
+    #these are only functional to the oracle
+    #and the analysis of the categories
     value_x = _array4name(x, data)
     value_y = _array4name(y, data)
     #interrogate the oracle: which plot it's the best?
@@ -289,6 +298,7 @@ def _jitter(x, jitter_level=1.0):
     res = x + jitter_level * min_diff * 0.2 * (plt.rand(len(x)) - 0.5)
     return res
 
+
 def _build_axes(ax, **kwargs):
     """This build the axes under various conditions.
 
@@ -397,30 +407,6 @@ def _elements4facet(facet, data):
     """obtain a list of (category, subset of the dataframe) given the facet
 
     it will do a groupby over the dataframe to subdivide it into levels.
-
-    This is the origin of a nasty problem:
-    If for some reason a category level is not present in one of the facets
-    than all the indexing will be put off and strange things will happen.
-    I'm not sure how to treat this:
-
-        - warning the user about the problem and keep going
-        (but there will be wrongly named axes)
-        - raising an error if the categorie count are differents
-        (but it look a little too much rigid)
-        - try to force every category plot to use the same categories,
-        but this can get messy for two reasons: one is that I should
-        break the already fragile isolation of the code, letting low
-        level procedure be aware of the big plan, and even if I do that
-        there is the risk that for very complex system catagories there
-        will be a huge amount of white space (and some plots can complain
-        loudly if categories are empty)
-        - disconnect the axis of the plots: this will be the easiest, but
-        will force me to keep the labels on all the subplots,
-        and this too is very ugly.
-
-    A solution strategy is the use of a semiglobal status, i.e. a dictionary
-    moved around in the facet_plot function and used to correct the indexing.
-    The complete proposal is in the help of the function _make_numeric
     """
     if facet is not None:
         facet_list = [f.strip() for f in facet.split()]
@@ -457,7 +443,7 @@ def _array4name(formula, data):
     DataFrame.
 
     If the dataframe has only one column, it will be returned as a series
-    to sinplify monovariate plotting.
+    to simplify monovariate plotting.
     """
     if not formula:
         return None
@@ -466,7 +452,10 @@ def _array4name(formula, data):
         name = name.strip()
         try:
             # try to use it as a valid index
-            value = data[[name]]
+            # it expect it to be a proper
+            # dataframe, even if this come from something
+            # that is not
+            value = pd.DataFrame(data[name])
         except KeyError:
             #if it fails try it as a patsy formula
             # the +0 is needed to avoid the intercept column
@@ -820,8 +809,6 @@ def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
 
     # ok, data is clean, create the axes and do the plot
     fig, ax = _build_axes(ax)
-    kwargs.pop('kind')
-    kwargs.pop('jitter')
     kwargs.pop('y_label', None)
     levels = categories[x.name]
 
