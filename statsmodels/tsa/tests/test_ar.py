@@ -8,6 +8,7 @@ from numpy.testing import (assert_almost_equal, assert_equal, #assert_allclose,
 from results import results_ar
 import numpy as np
 import numpy.testing as npt
+from pandas import Series, Index
 
 DECIMAL_6 = 6
 DECIMAL_5 = 5
@@ -223,7 +224,6 @@ def test_ar_dates():
     # just make sure they work
     data = sm.datasets.sunspots.load()
     dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
-    from pandas import Series
     endog = Series(data.endog, index=dates)
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
@@ -235,6 +235,14 @@ def test_ar_dates():
         pass
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
+
+def test_ar_named_series():
+    dates = sm.tsa.datetools.dates_from_range("2011m1", length=72)
+    y = Series(np.random.randn(72), name="foobar", index=dates)
+    results = sm.tsa.AR(y).fit(2)
+    assert_(results.params.index.equals(Index(["const", "L1.foobar",
+                                               "L2.foobar"])))
+
 
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):
