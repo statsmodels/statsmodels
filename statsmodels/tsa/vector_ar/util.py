@@ -54,6 +54,8 @@ def make_lag_names(names, lag_order, trendorder=1):
 
     """
     lag_names = []
+    if isinstance(names, basestring): # python 3?
+        names = [names]
 
     # take care of lagged endogenous names
     for i in range(1, lag_order + 1):
