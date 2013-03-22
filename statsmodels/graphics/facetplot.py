@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import division
 
 __all__ = ['facet_plot']
@@ -12,10 +13,13 @@ from statsmodels.graphics.boxplots import violinplot, beanplot, _single_violin
 from statsmodels.graphics.plot_grids import _make_ellipse
 
 from scipy.stats.kde import gaussian_kde
+from scipy.stats import poisson
 
 import patsy
 import pylab as plt
 import pandas as pd
+
+from scipy.stats import spearmanr
 
 available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
                    'boxplot', 'violinplot', 'beanplot', 'mosaic',
@@ -28,7 +32,7 @@ available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
 
 
 def facet_plot(formula, data=None, kind=None, subset=None,
-               drop_na=True, ax=None, jitter=1.0,
+               drop_na=True, ax=None, jitter=1.0, facet_grid=False,
                include_total=False, *args, **kwargs):
     """make a faceted plot of two set of variables divided into categories
 
@@ -66,6 +70,10 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     include_total: boolean, optional
         if set to True include an additional facet that contains:
         all the values without subdivisions.
+    facet_grid: boolean, optional
+        try to put the variuos level of the faceting on a regular grid.
+        Using a bivariate facet will create a matrix with columns and
+        rows for each level of each category.
 
     the other args and kwargs will be redirected to the specific plot
 
@@ -142,15 +150,11 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         >>> facet_plot('I(float_1 + float_2) ~ int_1', data)
 
     Multiple categorical variable are supported,
-    using the cartesian product of the levels
-
-        >>> facet_plot('float_1 | cat_1 cat_2', data)
-
-    of any combination of level as categorical variables
+    using the cartesian product of the levels. Note that in the contest
+    of faceting the + sign is required and represent the combination
+    of all the possible levels
 
         >>> facet_plot('float_1 | cat_1 + cat_2', data)
-        >>> facet_plot('float_1 | cat_1 * cat_2', data)
-        >>> facet_plot('I(float_1*4) ~ I(float_2 + 3)', data)
 
     At last, the possibility to insert a certain kind of plot
     for example, using all the available types on a combination
@@ -216,6 +220,8 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     #reconstruct the dataframe from the pieces created before
     to_concat = [pd.DataFrame(serie) for serie in [value_x, value_y, value_f]]
     data = pd.concat(to_concat, axis=1)
+    # can happen to have multiple identical columns, so drop them
+    data = pd.DataFrame({col: val for col, val in data.iteritems()})
     # reduce the size of the dataframe by removing the nan and
     # subsetting it
     if subset is not None:
@@ -236,6 +242,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     #create a dictionary with all the levels for all the categories
     categories = _analyze_categories(value_x)
     categories.update(_analyze_categories(value_y))
+    categories.update(_analyze_categories(value_f))
     #if it's on a single axis make a single autoplot
     # not very smooth
     if ax:
@@ -253,7 +260,22 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         elements.append(['__TOTAL__', data])
     # automatically select the number of subplots as a square of this side
     L = len(elements)
-    row_num, col_num = _select_rowcolsize(L)
+    if facet_grid:
+        if include_total:
+            raise ValueError('option facet_grid is not compatible with'
+                             ' option include_total.')
+        #if it's only a series, force it into a row
+        if isinstance(value_f, pd.Series):
+            row_num, col_num = 1, len(categories[value_f.name])
+        else:
+        #create a regular grid
+            lengths = [ len(categories[c]) for c in value_f.columns ]
+            if len(value_f.columns)==2:
+                row_num, col_num = lengths[1], lengths[0]
+            else:
+                row_num, col_num = _select_rowcolsize(L)
+    else:
+        row_num, col_num = _select_rowcolsize(L)
     # for each subplot create the plot
     base_ax = None
     for idx, (level, value) in enumerate(elements):
@@ -306,7 +328,10 @@ def facet_plot(formula, data=None, kind=None, subset=None,
             ax.set_xlabel('')
             plt.setp(ax.get_xticklabels(), visible=False)
         if not PARTIAL:
-            ax.set_title(level)
+            if isinstance(level, tuple):
+                ax.set_title(" ".join(level))
+            else:
+                ax.set_title(level)
     if not PARTIAL:
         fig.subplots_adjust(wspace=0, hspace=0.2)
         fig.canvas.set_window_title(formula)
@@ -447,6 +472,7 @@ def _elements4facet(facet, data):
     """
     if facet is not None:
         facet_list = [f.strip() for f in facet.split()]
+        facet_list = [f for f in facet_list if f != '+']
         try:
             # try to use it a a hierarchical (or simple)
             #index for the dataframe
@@ -492,7 +518,7 @@ def _array4name(formula, data):
             # it expect it to be a proper
             # dataframe, even if this come from something
             # that is not
-            value = pd.DataFrame(data[name])
+            value = pd.DataFrame({name:data[name]})
         except KeyError:
             #if it fails try it as a patsy formula
             # the +0 is needed to avoid the intercept column
@@ -534,7 +560,8 @@ def _select_rowcolsize(num_of_categories):
 
 def _analyze_categories(x):
     """given a series or a dataframe it will keep all the levels
-    for all the categorical variables:
+    for all the variables. It is not space friendly but It's needed
+    to mantain the various transformation of data:
 
     This help the underlying functions to keep tracks of the total levels
     """
@@ -542,12 +569,10 @@ def _analyze_categories(x):
     if x is None:
         return results
     if isinstance(x, pd.Series):
-        if x.dtype == object:
-            results[x.name] = sorted(x.unique())
+        results[x.name] = sorted(x.unique())
     else:
         for col in x:
-            if x[col].dtype == object:
-                results[col] = sorted(x[col].unique())
+            results[col] = sorted(x[col].unique())
     return results
 
 
@@ -638,6 +663,76 @@ def _oracle(x, y):
     return ''
 
 
+def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+    kwargs.pop('kind')
+    if y is not None or not isinstance(x, pd.Series):
+        raise TypeError('counter can only work with a single array')
+    fig, ax = _build_axes(ax)
+    res = x.value_counts()
+    res = res.sort_index()
+    as_categorical = kwargs.pop('as_categorical',False)
+    if as_categorical:
+        x = x.astype(object)
+    is_categorical = x.dtype == object
+    #obtain the categories
+    if is_categorical:
+        key = categories[x.name]
+    else:
+        key = list(res.index)
+        # if it's numerical fill the keys between the present values
+        key = range(int(min(key)), int(max(key) + 1))
+    res = pd.Series({k:res.get(k,0) for k in key}).sort_index()
+    x = _make_numeric(x, ax, 'x', jitter, categories)
+    val = np.array([res[i] for i in key])
+    #set the defaul options
+    # if the user set some of them, his choices has the priority
+    kwargs.setdefault('facecolor', '#777777')
+    kwargs.setdefault('align', 'center')
+    kwargs.setdefault('edgecolor', None)
+    #create the bar plot for the histogram
+    min_value = 0 if is_categorical else min(key)
+    base_indices = range(min_value, min_value + len(val))
+    #estimate the uncertainty by poisson percentiles
+    confidence = kwargs.pop('confidence',0.9)
+    yerr = abs(poisson.interval(confidence, val) - val)
+    # if the observed value is 0 the error is nan
+    yerr[np.isnan(yerr)] = 0
+    error_kw = dict(ecolor='#444444')
+    ax.bar(base_indices, val, yerr=yerr, error_kw=error_kw, *args, **kwargs)
+
+    #configuration of the ticks and labels
+    ax.set_ylabel('Counts')
+    #ax.set_xlim(min(key) - 0.75, max(key) + 0.75)
+    ax.set_ylim(0.0, max(max(res.values)*1.1, ax.get_ylim()[1]))
+    ax.margins(0.075, None)
+    ax.set_axisbelow(True)
+    ax.grid(True, axis='y')
+    ax.grid(False, axis='x')
+    return ax
+
+
+def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+    kwargs.pop('kind')
+    if y is None:
+        raise TypeError('an endogenous variable is '
+                        'required for the hexbin plot')
+    if isinstance(x, pd.DataFrame) or isinstance(y, pd.DataFrame):
+        raise TypeError('hexbin plot is defined only for monovariate plots')
+    fig, ax = _build_axes(ax)
+    y_data = _make_numeric(y, ax, 'y', jitter, categories)
+    x_data = _make_numeric(x, ax, 'x', jitter, categories)
+    kwargs.setdefault('cmap', plt.cm.jet)
+    kwargs.setdefault('gridsize', 20)
+    img = ax.hexbin(x_data, y_data, *args, **kwargs)
+    plt.colorbar(img)
+    ax.set_ylabel(y.name)
+    ax.set_xlabel(x.name)
+    ax.margins(0.05)
+    ax.set_axis_bgcolor(kwargs['cmap'](0))
+
+    return ax
+
+
 def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     kwargs.pop('kind')
     if y is not None:
@@ -693,6 +788,51 @@ def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
         kwargs.setdefault('cmap', plt.cm.binary)
         img = ax.imshow(transitions, *args, **kwargs)
         plt.colorbar(img)
+    return ax
+
+
+def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+    kwargs.pop('kind')
+    if y is None:
+        raise TypeError('an endogenous variable is '
+                        'required for the ellipse plot')
+    if isinstance(x, pd.DataFrame) or isinstance(y, pd.DataFrame):
+        raise TypeError('ellipse plot is defined only for monovariate plots')
+    fig, ax = _build_axes(ax)
+    y_data = _make_numeric(y, ax, 'y', jitter, categories)
+    x_data = _make_numeric(x, ax, 'x', jitter, categories)
+    ax.plot(x_data, y_data,
+            color=kwargs.get('color', 'b'),
+            alpha=kwargs.get('alpha', 0.5),
+            marker=kwargs.get('marker', 'o'),
+            linestyle=kwargs.get('linestyle', 'none'))
+    mean = [np.mean(x_data), np.mean(y_data)]
+    cov = np.cov(x_data, y_data)
+    _make_ellipse(mean, cov, ax, 0.95, 'gray')
+    art = ax.artists[-1]
+    art.set_facecolor('gray')
+    art.set_alpha(0.125)
+    art.set_zorder(5)
+    _make_ellipse(mean, cov, ax, 0.50, 'blue')
+    art = ax.artists[-1]
+    art.set_facecolor('blue')
+    art.set_alpha(0.25)
+    art.set_zorder(6)
+    _make_ellipse(mean, cov, ax, 0.05, 'purple')
+    art = ax.artists[-1]
+    art.set_facecolor('purple')
+    art.set_alpha(0.5)
+    art.set_zorder(7)
+    ax.set_ylabel(y.name)
+    ax.set_xlabel(x.name)
+    ax.margins(0.05)
+    spearman = spearmanr(x_data, y_data)[0]
+    ax.text(0.5, 0.98, "spearman: {:.3f}".format(spearman),
+            horizontalalignment='center',
+            verticalalignment='top',
+            transform=ax.transAxes,
+            bbox={'facecolor': 'white', 'alpha': 0.5,
+                  'pad': 5, 'edgecolor': 'none'})
     return ax
 
 
@@ -875,6 +1015,59 @@ def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     return ax
 
 
+def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+    """perform the boxplot on monovariate data, vertical or horizontals.
+    Should be expanded to manage multivariate data. For multivariate
+    data should put the barplots one next to the other for each series"""
+    fig, ax = _build_axes(ax)
+    if y is None:
+        raise TypeError('the boxplot is not adeguate for this data')
+    xlab = x.name
+    ylab = y.name
+    if isinstance(x, pd.Series) and x.dtype == object:
+        vertical = True
+        ax.set_xlabel(xlab)
+    elif isinstance(y, pd.Series) and y.dtype == object:
+        vertical = False
+        x, y = y, x
+        ax.set_ylabel(ylab)
+    else:
+        raise TypeError('the boxplot is not adeguate for this data')
+    y = pd.DataFrame(y)
+    L = len(y.columns)
+    if L == 1:
+        if vertical:
+            ax.set_ylabel(ylab)
+        else:
+            ax.set_xlabel(xlab)
+    # ok, data is clean, create the axes and do the plot
+    kwargs.pop('y_label', None)
+    levels = categories[xlab if vertical else ylab]
+    deltas = [0] if L == 1 else np.linspace(-0.2, 0.2, L)
+    colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
+    for index, (col_name, values) in enumerate(y.iteritems()):
+        #take for each level how many data are in that level
+        level_idx_v_l = [(idx, values[x == l], l)
+                         for idx, l in enumerate(levels)]
+        #select only those that have some data
+        level_idx_v_l = [iv for iv in level_idx_v_l if len(iv[1])]
+        # create a single boxplot at the time, allow for more control
+        for pos, val, name in level_idx_v_l:
+            positions = [pos+deltas[index]]
+            widths = [0.3/L]
+            artist = ax.boxplot([val], notch=1, positions=positions,
+                                vert=vertical, widths=widths,
+                                patch_artist=True)
+            artist['boxes'][0].set_facecolor(colors[index])
+            artist['boxes'][0].set_alpha(0.5)
+    x = _make_numeric(x, ax,
+                      'x' if vertical else 'y', categories=categories)
+    if vertical:
+        ax.set_xlim(-1, len(levels))
+    else:
+        ax.set_ylim(-1, len(levels))
+    # here I should find a way to insert the legend...
+    return ax
 ###################################################
 # CREATING THE DICTIONARY WITH ALL THE PLOT FUNCTIONS DEFINED
 ###################################################
@@ -885,10 +1078,14 @@ class _default_dict(dict):
 
 registered_plots = _default_dict()
 registered_plots['violinplot'] = kind_violinplot
+registered_plots['boxplot'] = kind_boxplot
 registered_plots['kde'] = kind_kde
 registered_plots['scatter'] = kind_scatter
 registered_plots['lines'] = kind_lines
 registered_plots['matrix'] = kind_matrix
+registered_plots['ellipse'] = kind_ellipse
+registered_plots['hexbin'] = kind_hexbin
+registered_plots['counter'] = kind_counter
 
 # ancora da fare
 #['ellipse' 'hexbin', 'boxplot', 'beanplot', 'mosaic',
