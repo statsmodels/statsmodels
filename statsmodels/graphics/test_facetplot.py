@@ -62,7 +62,23 @@ def test_formula_split():
     assert _formula_split('x | f') == (None, 'x', 'f')
     assert _formula_split('x') == (None, 'x', None)
 
-
+@with_setup(my_setup)
+def test_stack_by():
+    from statsmodels.graphics.facetplot import _stack_by
+    small = data[['cat_1', 'cat_2', 'cat_3']]
+    reduced = _stack_by(small, 'cat_3')
+    expected_col = ['cat_1 : 0', 'cat_1 : 1', 'cat_2 : 0', 'cat_2 : 1']
+    assert sorted(reduced.columns) == expected_col
+    reduced = _stack_by(small, ['cat_2', 'cat_3'])
+    expected_col = ['cat_1 : B / 0',
+                    'cat_1 : B / 1',
+                    'cat_1 : C / 0',
+                    'cat_1 : C / 1',
+                    'cat_1 : D / 0',
+                    'cat_1 : D / 1',
+                    'cat_1 : F / 0',
+                    'cat_1 : F / 1']
+    assert sorted(reduced.columns) == expected_col
 # analyze_categories
 
 @with_setup(my_setup)
@@ -382,6 +398,19 @@ class Test_corr(base4test):
     def test_hist_simple(self):
         fig = facet_plot('float_1 | cat_1', self.data, kind='corr')
         fig = facet_plot('sin | cat_1', self.data, kind='corr')
+        plt.show()
+
+#@nottest
+class Test_stack_faced(base4test):
+    def _test_stack_faced_scatter(self):
+        fig = facet_plot('float_1 ~ float_2 | cat_3', self.data, kind='scatter')
+        fig = facet_plot('float_1 ~ float_2 | cat_3', self.data,
+                         kind='scatter', stack_facet=True)
+        plt.show()
+    def test_stack_faced_boxplot(self):
+        fig = facet_plot('int_4 ~ cat_2 | cat_3', self.data, kind='boxplot')
+        fig = facet_plot('int_4 ~ cat_2 | cat_3', self.data,
+                         kind='boxplot', stack_facet=True)
         plt.show()
 
 if __name__ == "__main__":
