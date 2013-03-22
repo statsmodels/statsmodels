@@ -21,11 +21,6 @@ import pandas as pd
 from scipy.stats import spearmanr
 from itertools import product
 
-available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
-                   'boxplot', 'violinplot', 'beanplot', 'mosaic',
-                   'matrix', 'counter', 'acorr', 'kde', 'hist',
-                   'trisurf', 'wireframe', 'scatter_coded']
-
 ##########################################################
 # THE PRINCIPAL FUNCTIONS
 ##########################################################
@@ -38,12 +33,9 @@ def facet_plot(formula, data=None, kind=None, subset=None,
 
     the formula should follow the sintax of the faceted plot:
 
-        endog ~ exog | factor
+        endogs ~ exogs | factors
 
     where both the endog and the factor are optionals.
-    If multiple factors are inserted divided by space the cartesian
-    product of their level will be used. All the factor will be
-    treated as patsy formulas.
 
     Parameters
     ==========
@@ -1139,10 +1131,10 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
         raise TypeError('the boxplot is not adeguate for this data')
     xlab = x.name
     ylab = y.name
-    if isinstance(x, pd.Series) and x.dtype == object:
+    if isinstance(x, pd.Series) and x.dtype != float:
         vertical = True
         ax.set_xlabel(xlab)
-    elif isinstance(y, pd.Series) and y.dtype == object:
+    elif isinstance(y, pd.Series) and y.dtype != float:
         vertical = False
         x, y = y, x
         ax.set_ylabel(ylab)
@@ -1175,14 +1167,19 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
                                 patch_artist=True)
             artist['boxes'][0].set_facecolor(colors[index])
             artist['boxes'][0].set_alpha(0.5)
-    x = _make_numeric(x, ax,
-                      'x' if vertical else 'y', categories=categories)
+    if x.dtype == int:
+        ax.set_xticks(range(len(levels)))
+        ax.set_xticklabels(levels)
+    x = _make_numeric(x, ax, 'x' if vertical else 'y', categories=categories)
+
     if vertical:
         ax.set_xlim(-1, len(levels))
     else:
         ax.set_ylim(-1, len(levels))
     # here I should find a way to insert the legend...
     return ax
+
+
 ###################################################
 # CREATING THE DICTIONARY WITH ALL THE PLOT FUNCTIONS DEFINED
 ###################################################
