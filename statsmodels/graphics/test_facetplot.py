@@ -152,6 +152,7 @@ def test_boxplot():
     facet_plot('float_1 + float_3 + float_2 ~ cat_1 | cat_2', data, kind='boxplot')
     facet_plot('cat_1 ~ float_1 + float_3 + float_2 | cat_2', data, kind='boxplot')
     facet_plot('float_1 + float_3 + float_2 + float_4 ~ cat_1 | cat_2', data, kind='boxplot')
+    facet_plot('float_1 ~ int_1 | cat_2', data, kind='boxplot')
     plt.show()
     plt.close("all")
 
@@ -267,7 +268,6 @@ def test_create_dataframe():
     plt.show()
     plt.close("all")
 
-
 class TestSpecialNames(base4test):
     def test_names_unicode(self):
         fig = facet_plot(u'float_1 ~ àèéòù', self.data)
@@ -377,6 +377,7 @@ class Test_mosaic(base4test):
         fig = facet_plot('cat_1 + cat_2| cat_3', self.data, 'mosaic')
         plt.show()
 
+@nottest
 class Test_corr(base4test):
     def test_hist_simple(self):
         fig = facet_plot('float_1 | cat_1', self.data, kind='corr')
@@ -430,21 +431,3 @@ if __name__ == "__main__":
 #facet_plot('int_3 ~ cat_1 + cat_2', data)
 #facet_plot('int_2 ~ float_1 + float_2', data)
 #facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
-
-#os.chdir('/home/enrico/lavoro/markage/dati 08-02-13')
-#with open('MARK-AGE Database 08.02.2013.csv', 'rb') as f:
-#    markage = pd.read_csv(f, encoding='latin', engine='python',
-#                          true_values=['Y', 'yes'], false_values=['N', 'no'],
-#                          na_values=['na', 'NaN', '', 'nan', ' ', 'nap'])
-##rimuove le linee vuote per via della codifica e aggiusta l'indice
-#markage = markage[-markage.gender.isnull()]
-#markage.index = range(len(markage))
-#print markage.columns[:5]
-##facet_plot('AgeClass5 | gender + subject_group ', markage,
-##           'counter', as_categorical=1)
-#markage['AgeClass5'] = markage['AgeClass5'].astype(int)
-#markage['AgeClass10'] = markage['AgeClass10'].astype(int)
-##facet_plot('AgeClass5 | subject_group + gender', markage,
-##           'counter', as_categorical=True, facet_grid=True)
-#facet_plot('AgeClass5 | subject_group', markage, 'hist')
-#plt.show()
