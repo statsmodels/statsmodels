@@ -424,6 +424,7 @@ print markage.columns[:5]
 #facet_plot('AgeClass5 | gender + subject_group ', markage,
 #           'counter', as_categorical=1)
 markage['AgeClass5'] = markage['AgeClass5'].astype(int)
-facet_plot('AgeClass5 | research_center', markage,
+markage['AgeClass10'] = markage['AgeClass10'].astype(int)
+facet_plot('AgeClass5 | subject_group + gender', markage,
            'counter', as_categorical=True, facet_grid=True)
 plt.show()
