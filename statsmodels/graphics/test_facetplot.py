@@ -368,12 +368,19 @@ class Test_hist(base4test):
         fig = facet_plot('float_1 + float_2 + int_1', self.data, 'hist')
         #plt.show()
 
+@nottest
 class Test_mosaic(base4test):
     def test_hist_simple(self):
         fig = facet_plot('cat_1', self.data, 'mosaic')
         fig = facet_plot('cat_1 + cat_2', self.data, 'mosaic')
         fig = facet_plot('cat_1 + cat_2 + cat_3', self.data, 'mosaic')
         fig = facet_plot('cat_1 + cat_2| cat_3', self.data, 'mosaic')
+        plt.show()
+
+class Test_corr(base4test):
+    def test_hist_simple(self):
+        fig = facet_plot('float_1 | cat_1', self.data, kind='corr')
+        fig = facet_plot('sin | cat_1', self.data, kind='corr')
         plt.show()
 
 if __name__ == "__main__":
