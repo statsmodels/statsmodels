@@ -336,7 +336,7 @@ def test_counter():
     plt.show()
     plt.close("all")
 
-
+@nottest
 class Test_counter(base4test):
     def test_labeling_simple_1(self):
         # the data is plit in two groups, I should have
@@ -360,16 +360,21 @@ class Test_counter(base4test):
         expected = sorted(self.data['int_4'].unique())
         assert labels == expected
 
-#my_setup()
-#test_counter()
-#plt.close("all")
-
+@nottest
 class Test_hist(base4test):
     def test_hist_simple(self):
         fig = facet_plot('float_1', self.data, 'hist')
         fig = facet_plot('float_1 + float_2', self.data, 'hist')
         fig = facet_plot('float_1 + float_2 + int_1', self.data, 'hist')
         #plt.show()
+
+class Test_mosaic(base4test):
+    def test_hist_simple(self):
+        fig = facet_plot('cat_1', self.data, 'mosaic')
+        fig = facet_plot('cat_1 + cat_2', self.data, 'mosaic')
+        fig = facet_plot('cat_1 + cat_2 + cat_3', self.data, 'mosaic')
+        fig = facet_plot('cat_1 + cat_2| cat_3', self.data, 'mosaic')
+        plt.show()
 
 if __name__ == "__main__":
     run_module_suite()

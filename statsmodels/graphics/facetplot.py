@@ -359,12 +359,14 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         except AttributeError:
             pass
         # remove the superfluos info base on the columns
-        if my_col and not isinstance(ax, Axes3D):
+        if (my_col and not isinstance(ax, Axes3D)
+                and not kind=='mosaic'):
             ax.set_ylabel('')
             plt.setp(ax.get_yticklabels(), visible=False)
         # show the x labels only if it's on the last line
         #the 3d axes have the right to keep their axes labels
-        if my_row != row_num - 1 and not isinstance(ax, Axes3D):
+        if (my_row != row_num - 1 and not isinstance(ax, Axes3D)
+                and not kind=='mosaic'):
             ax.set_xlabel('')
             plt.setp(ax.get_xticklabels(), visible=False)
         if not PARTIAL:
@@ -373,7 +375,9 @@ def facet_plot(formula, data=None, kind=None, subset=None,
             else:
                 ax.set_title(level, y=title_y)
     if not PARTIAL:
-        fig.subplots_adjust(wspace=0, hspace=0.2)
+        wspace = 0.2 if kind == 'mosaic' else 0.0
+        hspace = 0.2
+        fig.subplots_adjust(wspace=wspace, hspace=hspace)
         fig.canvas.set_window_title(formula)
     return fig
 
@@ -702,6 +706,20 @@ def _oracle(x, y):
         return ''
     return ''
 
+
+def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+    # I can also merge the x with the y, but should I??
+    if y is not None:
+        raise TypeError('mosaic do not accept endogenous variables')
+    if isinstance(x, pd.Series):
+        x = pd.DataFrame({x.name: x})
+    # the various axes should not be related or trouble happens!!!
+    if isinstance(ax, list):
+        ax[-1]=None
+    fig, ax = _build_axes(ax)
+    data = x.sort()
+    mosaicplot.mosaic(data, ax=ax, *args, **kwargs)
+    return ax
 
 def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     """make the kernel density estimation of a single variable"""
@@ -1168,6 +1186,7 @@ registered_plots['ellipse'] = kind_ellipse
 registered_plots['hexbin'] = kind_hexbin
 registered_plots['counter'] = kind_counter
 registered_plots['hist'] = kind_hist
+registered_plots['mosaic'] = kind_mosaic
 
 facet_plot.registered_plots = registered_plots
 # ancora da fare
