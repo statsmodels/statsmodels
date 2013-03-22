@@ -28,7 +28,8 @@ from itertools import product
 
 def facet_plot(formula, data=None, kind=None, subset=None,
                drop_na=True, ax=None, jitter=1.0, facet_grid=False,
-               include_total=False, title_y=1.0, *args, **kwargs):
+               include_total=False, title_y=1.0, stack_facet=False,
+               *args, **kwargs):
     """make a faceted plot of two set of variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
@@ -71,6 +72,9 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     title_y: float, optional
         Put the title of each facet at a certain height in each facet.
         the default is to put it above the facet
+    stack_facet: boolean, optional
+        Try to compress all the facet into a single axis.
+        Will almost surely create a dataframe with some nan.
 
     the other args and kwargs will be redirected to the specific plot
 
@@ -215,11 +219,20 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         data = patsy.EvalEnvironment.capture(1).namespace
 
     #create the x and y values of the arrays
-    #these are only functional to the oracle
-    #and the analysis of the categories
     value_x = _array4name(x, data)
     value_y = _array4name(y, data)
     value_f = _array4name(facet, data)
+    if stack_facet:
+        if isinstance(value_f, pd.Series):
+            value_f = pd.DataFrame({value_f.name: value_f})
+        if isinstance(value_y, pd.Series):
+            value_y = pd.DataFrame({value_y.name: value_y})
+        data_y = pd.concat([value_y, value_f], axis=1)
+        data_y = _stack_by(data_y, tuple(value_f.columns))
+        value_y = data_y
+        value_f = None
+        facet = None
+        y = " + ".join(list(value_y.columns))
     #reconstruct the dataframe from the pieces created before
     to_concat = [pd.DataFrame(serie) for serie in [value_x, value_y, value_f]]
     data = pd.concat(to_concat, axis=1)
@@ -622,6 +635,22 @@ def _multi_legend(ax):
     if leg:
         leg.get_frame().set_alpha(0.0)
 
+
+def _stack_by(df, keys):
+    if not hasattr(keys, '__iter__') or isinstance(keys, basestring):
+        keys = (keys,)
+    residui = [c for c in df.columns if c not in keys]
+    results = []
+    for k, g in df.groupby(keys):
+        g = g[residui]
+        if isinstance(k, tuple):
+            addendum = " / ".join(str(c) for c in k)
+        else:
+            addendum = str(k)
+        g.columns = [col+' : '+addendum for col in g.columns]
+        g.index = range(len(g))
+        results.append(g)
+    return pd.concat(results, axis=1)
 
 ####################################################
 # NEW IMPLEMENTATION,  PLOT CENTRIC
@@ -1167,6 +1196,9 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
                                 patch_artist=True)
             artist['boxes'][0].set_facecolor(colors[index])
             artist['boxes'][0].set_alpha(0.5)
+            temp_args = {} if pos!=0 else {'label':col_name}
+            ax.scatter(positions, [np.mean(val)],
+                       color=colors[index], **temp_args)
     if x.dtype == int:
         ax.set_xticks(range(len(levels)))
         ax.set_xticklabels(levels)
@@ -1177,6 +1209,7 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     else:
         ax.set_ylim(-1, len(levels))
     # here I should find a way to insert the legend...
+    _multi_legend(ax)
     return ax
 
 
