@@ -20,7 +20,7 @@ import pylab as plt
 import pandas as pd
 
 from scipy.stats import spearmanr
-from itertools import product, takewhile
+from itertools import product
 
 available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
                    'boxplot', 'violinplot', 'beanplot', 'mosaic',
@@ -252,7 +252,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     # go back to the old version
     plot_function = registered_plots[kind]
     if plot_function == _autoplot:
-        kwargs['kind']=kind
+        kwargs['kind'] = kind
     #create a dictionary with all the levels for all the categories
     categories = _analyze_categories(value_x)
     categories.update(_analyze_categories(value_y))
@@ -305,7 +305,8 @@ def facet_plot(formula, data=None, kind=None, subset=None,
             elif len(value_f.columns) == 3:
                 row_num, col_num = lengths[0], lengths[1] * lengths[2]
             elif len(value_f.columns) == 4:
-                row_num, col_num = lengths[0] * lengths[1], lengths[2] * lengths[3]
+                row_num, col_num = (lengths[0] * lengths[1],
+                                    lengths[2] * lengths[3])
             # gives up and revert to the normal "fluexed" analysis
             # why the hell are ht euser trying to use more than 5 level
             # of faceting?!?
@@ -360,13 +361,13 @@ def facet_plot(formula, data=None, kind=None, subset=None,
             pass
         # remove the superfluos info base on the columns
         if (my_col and not isinstance(ax, Axes3D)
-                and not kind=='mosaic'):
+                and not kind == 'mosaic'):
             ax.set_ylabel('')
             plt.setp(ax.get_yticklabels(), visible=False)
         # show the x labels only if it's on the last line
         #the 3d axes have the right to keep their axes labels
         if (my_row != row_num - 1 and not isinstance(ax, Axes3D)
-                and not kind=='mosaic'):
+                and not kind == 'mosaic'):
             ax.set_xlabel('')
             plt.setp(ax.get_xticklabels(), visible=False)
         if not PARTIAL:
@@ -562,7 +563,7 @@ def _array4name(formula, data):
             # it expect it to be a proper
             # dataframe, even if this come from something
             # that is not
-            value = pd.DataFrame({name:data[name]})
+            value = pd.DataFrame({name: data[name]})
         except KeyError:
             #if it fails try it as a patsy formula
             # the +0 is needed to avoid the intercept column
@@ -707,6 +708,23 @@ def _oracle(x, y):
     return ''
 
 
+def kind_corr(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+    if y is not None:
+        raise TypeError('corr do not accept endogenous variables')
+    if not isinstance(x, pd.Series):
+        raise TypeError('corr do not accept multiple exogenous variables')
+    if x.dtype == object:
+            raise TypeError('corr do not accept categorical variables')
+    fig, ax = _build_axes(ax)
+    ax.acorr(x.values*1.0, maxlags=None, *args, **kwargs)
+    ax.set_ylabel('correlation')
+    #lim = max(abs(i) for i in ax.get_xlim())
+    #ax.set_xlim(-lim, lim)
+    ax.set_ylim(None, 1.01)
+    ax.set_xlabel(x.name)
+    return ax
+
+
 def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     # I can also merge the x with the y, but should I??
     if y is not None:
@@ -715,17 +733,19 @@ def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
         x = pd.DataFrame({x.name: x})
     # the various axes should not be related or trouble happens!!!
     if isinstance(ax, list):
-        ax[-1]=None
+        ax[-1] = None
     fig, ax = _build_axes(ax)
     data = x.sort()
     mosaicplot.mosaic(data, ax=ax, *args, **kwargs)
     return ax
 
+
 def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     """make the kernel density estimation of a single variable"""
     # compute the number of bin by means of the rule, but should also
     # implement something like
-    # https://github.com/astroML/astroML/blob/master/astroML/density_estimation/bayesian_blocks.py
+    # https://github.com/astroML/
+    # astroML/blob/master/astroML/density_estimation/bayesian_blocks.py
     # http://jakevdp.github.com/blog/2012/09/12/dynamic-programming-in-python/
     if y is not None:
         if not isinstance(y, pd.Series) or not isinstance(x, pd.Series):
@@ -745,13 +765,14 @@ def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
             raise TypeError('the hist plot is only for numerical variables')
         kwargs.setdefault('normed', True)
         kwargs.setdefault('alpha', 0.5)
-        kwargs['edgecolor']= color
+        kwargs['edgecolor'] = color
         kwargs['facecolor'] = color
-        kwargs.setdefault('histtype','stepfilled')
+        kwargs.setdefault('histtype', 'stepfilled')
         # using the Friedman Draconis rule for the number of bins
         values = data.values
-        IQR = abs(scoreatpercentile(values, 25) - scoreatpercentile(values, 75))
-        bin_size= 2*IQR*len(values)**(-1.0/3)
+        IQR = abs(scoreatpercentile(values, 25)
+                  - scoreatpercentile(values, 75))
+        bin_size = 2 * IQR * len(values) ** (-1.0 / 3)
         bin_num = int((data.max()-data.min())/bin_size)
         kwargs.setdefault('bins', bin_num)
         kwargs['label'] = column
@@ -772,7 +793,7 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     fig, ax = _build_axes(ax)
     res = x.value_counts()
     res = res.sort_index()
-    as_categorical = kwargs.pop('as_categorical',False)
+    as_categorical = kwargs.pop('as_categorical', False)
     if as_categorical:
         x = x.astype(object)
     is_categorical = x.dtype == object
@@ -783,7 +804,7 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
         key = list(res.index)
         # if it's numerical fill the keys between the present values
         key = range(int(min(key)), int(max(key) + 1))
-    res = pd.Series({k:res.get(k,0) for k in key}).sort_index()
+    res = pd.Series({k: res.get(k, 0) for k in key}).sort_index()
     x = _make_numeric(x, ax, 'x', jitter, categories)
     val = np.array([res[i] for i in key])
     #set the defaul options
@@ -795,7 +816,7 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     min_value = 0 if is_categorical else min(key)
     base_indices = range(min_value, min_value + len(val))
     #estimate the uncertainty by poisson percentiles
-    confidence = kwargs.pop('confidence',0.9)
+    confidence = kwargs.pop('confidence', 0.9)
     yerr = abs(poisson.interval(confidence, val) - val)
     # if the observed value is 0 the error is nan
     yerr[np.isnan(yerr)] = 0
@@ -1187,7 +1208,7 @@ registered_plots['hexbin'] = kind_hexbin
 registered_plots['counter'] = kind_counter
 registered_plots['hist'] = kind_hist
 registered_plots['mosaic'] = kind_mosaic
-
+registered_plots['corr'] = kind_corr
 facet_plot.registered_plots = registered_plots
 # ancora da fare
 #['ellipse' 'hexbin', 'boxplot', 'beanplot', 'mosaic',
