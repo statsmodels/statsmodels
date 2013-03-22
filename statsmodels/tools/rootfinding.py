@@ -6,6 +6,7 @@ Author: Josef Perktold
 
 TODO:
   - test behavior if nans or infs are encountered during the evaluation.
+    now partially robust to nans, if increasing can be determined or is given.
   - rewrite core loop to use for...except instead of while.
 
 """
@@ -86,6 +87,8 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     directly specifying ``increasing`` can make it possible to move the
     expansion in the right direction.
 
+    If
+
     '''
     #TODO: rtol is missing, what does it do?
 
@@ -122,7 +125,35 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         assert sl < su  # check during developement
         f_low = func(sl, *args)
         f_upp = func(su, *args)
+        # possibly func returns nan
+        delta = su - sl
+        if np.isnan(f_low):
+            # try just 3 points to find ``increasing``
+            # don't change sl because brentq can handle one nan bound
+            for fraction in [0.25, 0.5, 0.75]:
+                sl_ = sl + fraction * delta
+                f_low = func(sl_, *args)
+                if not np.isnan(f_low):
+                    break
+            else:
+                raise ValueError('could not determine whether function is ' +
+                                 'increasing based on starting interval.' +
+                                 '\nspecify increasing or change starting ' +
+                                 'bounds')
+        if np.isnan(f_upp):
+            for fraction in [0.25, 0.5, 0.75]:
+                su_ = su + fraction * delta
+                f_upp = func(su_, *args)
+                if not np.isnan(f_upp):
+                    break
+            else:
+                raise ValueError('could not determine whether function is' +
+                                 'increasing based on starting interval.' +
+                                 '\nspecify increasing or change starting ' +
+                                 'bounds')
+
         increasing = (f_low < f_upp)
+
 
     if DEBUG:
         print 'low, upp', low, upp
@@ -134,16 +165,17 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         left, right = right, left
 
     n_it = 0
-    if left is None:
+    if left is None: # and sl != 0:
         left = sl
         while func(left, *args) > 0:
+            #condition is also false if func returns nan
             right = left
             left *= factor
             if n_it >= max_it:
                 break
             n_it += 1
         # left is now such that func(left) < q
-    if right is None:
+    if right is None: # and su !=0:
         right = su
         while func(right, *args) < 0:
             left = right
@@ -155,7 +187,16 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
 
     if n_it >= max_it:
         print 'Warning: max_it reached'
-        #TODO: use Warnings
+        #TODO: use Warnings, Note: brentq might still work even with max_it
+        f_low = func(sl, *args)
+        f_upp = func(su, *args)
+        if np.isnan(f_low) and np.isnan(f_upp):
+            # can we still get here?
+            raise ValueError('max_it reached' +
+                             '\nthe function values at boths bounds are NaN' +
+                             '\nchange the starting bounds, set bounds' +
+                             'or increase max_it')
+
 
     res = optimize.brentq(func, left, right, args=args,
                           xtol=xtol, maxiter=maxiter_bq,
@@ -169,15 +210,22 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         info.iterations_expand = n_it
         info.start_bounds = (sl, su)
         info.brentq_bounds = (left, right)
+        info.increasing = increasing
         return val, info
     else:
         return res
 
 
 
-
 def func(x, a):
     f = (x - a)**3
+    if DEBUG: print 'evaluating at %g, fval = %f' % (x, f)
+    return f
+
+def func_nan(x, a, b):
+    x = np.atleast_1d(x)
+    f = (x - 1.*a)**3
+    f[x < b] = np.nan
     if DEBUG: print 'evaluating at %f, fval = %f' % (x, f)
     return f
 
@@ -288,6 +336,9 @@ if __name__ == '__main__':
     # RuntimeError: Failed to converge after 3 iterations.
     assert_raises(RuntimeError, brentq_expanding, func, args=(-50000,), maxiter_bq=3)
 
+    # cannot determin whether increasing, all 4 low trial points return nan
+    assert_raises(ValueError, brentq_expanding, func_nan, args=(-20, 0.6))
+
     # test for full_output
     a = 500
     val, info = brentq_expanding(func, args=(a,), full_output=True)
@@ -299,3 +350,9 @@ if __name__ == '__main__':
         assert_equal(info1[k], info.__dict__[k])
 
     assert_allclose(info.root, a, rtol=1e-5)
+
+    print brentq_expanding(func_nan, args=(20,0), increasing=True)
+    print brentq_expanding(func_nan, args=(20,0))
+    # In the next point 0 is minumum, below is nan
+    print brentq_expanding(func_nan, args=(-20,0), increasing=True)
+    print brentq_expanding(func_nan, args=(-20,0))
