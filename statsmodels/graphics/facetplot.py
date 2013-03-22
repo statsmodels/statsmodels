@@ -20,6 +20,7 @@ import pylab as plt
 import pandas as pd
 
 from scipy.stats import spearmanr
+from itertools import product, takewhile
 
 available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
                    'boxplot', 'violinplot', 'beanplot', 'mosaic',
@@ -33,7 +34,7 @@ available_plots = ['ellipse', 'lines', 'scatter', 'hexbin',
 
 def facet_plot(formula, data=None, kind=None, subset=None,
                drop_na=True, ax=None, jitter=1.0, facet_grid=False,
-               include_total=False, *args, **kwargs):
+               include_total=False, title_y=1.0, *args, **kwargs):
     """make a faceted plot of two set of variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
@@ -73,7 +74,12 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     facet_grid: boolean, optional
         try to put the variuos level of the faceting on a regular grid.
         Using a bivariate facet will create a matrix with columns and
-        rows for each level of each category.
+        rows for each level of each category. If a combination
+        of levels is not present it will leave an empty space.
+        (default False)
+    title_y: float, optional
+        Put the title of each facet at a certain height in each facet.
+        the default is to put it above the facet
 
     the other args and kwargs will be redirected to the specific plot
 
@@ -248,37 +254,65 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     if ax:
         if facet:
             raise ValueError('facet are incompatibles with single axes')
-        else:
-            plot_function(value_x, value_y,
-                          ax=ax, kind=kind, jitter=jitter,
-                          categories=categories, *args, **kwargs)
-            return fig
+        plot_function(value_x, value_y,
+                      ax=ax, kind=kind, jitter=jitter,
+                      categories=categories, *args, **kwargs)
+        return fig
 
     # obtain a list of (category, subset of the dataframe)
     elements = _elements4facet(facet, data)
     if include_total:
         elements.append(['__TOTAL__', data])
-    # automatically select the number of subplots as a square of this side
+    # automatically select the number of subplots
+    # it may ust optimize given the number of facets or try
+    # to create a regular grid. Works fine for monovariate,
+    # if the multivariate is incomplete it do not work properly
+    # as some categories are missing from the elements vector
     L = len(elements)
     if facet_grid:
-        if include_total:
-            raise ValueError('option facet_grid is not compatible with'
-                             ' option include_total.')
         #if it's only a series, force it into a row
+        # if include total is set, add one more space
         if isinstance(value_f, pd.Series):
-            row_num, col_num = 1, len(categories[value_f.name])
+            row_num, col_num = 1, len(categories[value_f.name]) + include_total
         else:
         #create a regular grid
-            lengths = [ len(categories[c]) for c in value_f.columns ]
-            if len(value_f.columns)==2:
-                row_num, col_num = lengths[1], lengths[0]
+            if include_total:
+                raise ValueError('option facet_grid is not compatible with'
+                                 ' option include_total if multivariate'
+                                 ' faceting is used')
+            lengths = [len(categories[c]) for c in value_f.columns]
+            #needs to complete the elements array or it will leave
+                #holes in the grid
+            cat_val = [ categories[col] for col in value_f.columns ]
+            for couple in product(*cat_val):
+                for cat_name, data in elements:
+                    if cat_name == couple:
+                        break
+                else:
+                    elements.append([couple, None])
+            elements = sorted(elements, key=lambda c: c[0])
+            L = len(elements)
+            if len(value_f.columns) == 2:
+                row_num, col_num = lengths[0], lengths[1]
+            elif len(value_f.columns) == 3:
+                row_num, col_num = lengths[0], lengths[1] * lengths[2]
+            elif len(value_f.columns) == 4:
+                row_num, col_num = lengths[0] * lengths[1], lengths[2] * lengths[3]
+            # gives up and revert to the normal "fluexed" analysis
+            # why the hell are ht euser trying to use more than 5 level
+            # of faceting?!?
             else:
                 row_num, col_num = _select_rowcolsize(L)
     else:
         row_num, col_num = _select_rowcolsize(L)
     # for each subplot create the plot
     base_ax = None
+    missing_at_start = sum(1 for _ in takewhile(lambda c: c is None, elements))
     for idx, (level, value) in enumerate(elements):
+        # if in a grid and a missing set is encountered, skype the axix
+        # completly
+        if value is None:
+            continue
         # choose if use the name ad a dataframe index or a patsy formula
         # this could be avoided using the information from before the
         # join, but for now it stays here
@@ -329,9 +363,9 @@ def facet_plot(formula, data=None, kind=None, subset=None,
             plt.setp(ax.get_xticklabels(), visible=False)
         if not PARTIAL:
             if isinstance(level, tuple):
-                ax.set_title(" ".join(level))
+                ax.set_title(" ".join(str(lev) for lev in level), y=title_y)
             else:
-                ax.set_title(level)
+                ax.set_title(level, y=title_y)
     if not PARTIAL:
         fig.subplots_adjust(wspace=0, hspace=0.2)
         fig.canvas.set_window_title(formula)
