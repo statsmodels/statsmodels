@@ -13,7 +13,7 @@ from statsmodels.graphics.boxplots import violinplot, beanplot, _single_violin
 from statsmodels.graphics.plot_grids import _make_ellipse
 
 from scipy.stats.kde import gaussian_kde
-from scipy.stats import poisson
+from scipy.stats import poisson, scoreatpercentile
 
 import patsy
 import pylab as plt
@@ -119,6 +119,12 @@ def facet_plot(formula, data=None, kind=None, subset=None,
 
         - http://www.statmethods.net/advgraphs/trellis.html
         - http://cran.r-project.org/web/packages/lattice/index.html
+
+    the functions that implement each type of plots can be accesses by the
+    attribute. Look there for information about the plot
+    behavior and possible arguments.
+
+        facet_plot.registered_plots
 
     Examples
     ========
@@ -245,6 +251,8 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     # now try to use the data-centric functions...if it's not available
     # go back to the old version
     plot_function = registered_plots[kind]
+    if plot_function == _autoplot:
+        kwargs['kind']=kind
     #create a dictionary with all the levels for all the categories
     categories = _analyze_categories(value_x)
     categories.update(_analyze_categories(value_y))
@@ -255,7 +263,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         if facet:
             raise ValueError('facet are incompatibles with single axes')
         plot_function(value_x, value_y,
-                      ax=ax, kind=kind, jitter=jitter,
+                      ax=ax,  jitter=jitter,
                       categories=categories, *args, **kwargs)
         return fig
 
@@ -283,7 +291,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
             lengths = [len(categories[c]) for c in value_f.columns]
             #needs to complete the elements array or it will leave
                 #holes in the grid
-            cat_val = [ categories[col] for col in value_f.columns ]
+            cat_val = [categories[col] for col in value_f.columns]
             for couple in product(*cat_val):
                 for cat_name, data in elements:
                     if cat_name == couple:
@@ -307,7 +315,6 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         row_num, col_num = _select_rowcolsize(L)
     # for each subplot create the plot
     base_ax = None
-    missing_at_start = sum(1 for _ in takewhile(lambda c: c is None, elements))
     for idx, (level, value) in enumerate(elements):
         # if in a grid and a missing set is encountered, skype the axix
         # completly
@@ -331,8 +338,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         # to build it as a 3d or polar axis
         ax = [fig, row_num, col_num, idx + 1, base_ax]
         ax = plot_function(value_x, value_y, ax=ax, jitter=jitter,
-                           kind=kind, *args, categories=categories,
-                           **kwargs)
+                           categories=categories, *args, **kwargs)
         # all the subplots share the same axis with the first one being
         # of the same variable
         if not base_ax:
@@ -697,8 +703,52 @@ def _oracle(x, y):
     return ''
 
 
+def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+    """make the kernel density estimation of a single variable"""
+    # compute the number of bin by means of the rule, but should also
+    # implement something like
+    # https://github.com/astroML/astroML/blob/master/astroML/density_estimation/bayesian_blocks.py
+    # http://jakevdp.github.com/blog/2012/09/12/dynamic-programming-in-python/
+    if y is not None:
+        if not isinstance(y, pd.Series) or not isinstance(x, pd.Series):
+            raise TypeError('the hist plot is not appropriate for this data')
+        if x.dtype == object or y.dtype == object:
+            raise TypeError('the hist plot is only for numerical variables')
+        #here should redirect to the multivariate implementation
+        raise NotImplementedError('multidimensional histogram not yet '
+                                  'implemented, try using the matrix plot')
+    if isinstance(x, pd.Series):
+        x = pd.DataFrame({x.name: x})
+    fig, ax = _build_axes(ax)
+    colors = ['#777777', 'b', 'g', 'r', 'c', 'm', 'y', 'k']
+    for column, color in zip(x, colors):
+        data = x[column]
+        if data.dtype == object:
+            raise TypeError('the hist plot is only for numerical variables')
+        kwargs.setdefault('normed', True)
+        kwargs.setdefault('alpha', 0.5)
+        kwargs['edgecolor']= color
+        kwargs['facecolor'] = color
+        kwargs.setdefault('histtype','stepfilled')
+        # using the Friedman Draconis rule for the number of bins
+        values = data.values
+        IQR = abs(scoreatpercentile(values, 25) - scoreatpercentile(values, 75))
+        bin_size= 2*IQR*len(values)**(-1.0/3)
+        bin_num = int((data.max()-data.min())/bin_size)
+        kwargs.setdefault('bins', bin_num)
+        kwargs['label'] = column
+        ax.hist(data, *args, **kwargs)
+        #ax.set_ylim(0.0, None)
+        ax.set_ylabel('Density')
+    if len(x.columns) == 1:
+        ax.set_xlabel(x.columns[0])
+    #ax.set_ylim(0.0, None)
+    ax.set_ylabel('Density')
+    _multi_legend(ax)
+    return ax
+
+
 def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
-    kwargs.pop('kind')
     if y is not None or not isinstance(x, pd.Series):
         raise TypeError('counter can only work with a single array')
     fig, ax = _build_axes(ax)
@@ -746,7 +796,6 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
 
 
 def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
-    kwargs.pop('kind')
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the hexbin plot')
@@ -763,12 +812,10 @@ def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     ax.set_xlabel(x.name)
     ax.margins(0.05)
     ax.set_axis_bgcolor(kwargs['cmap'](0))
-
     return ax
 
 
 def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
-    kwargs.pop('kind')
     if y is not None:
         fig, ax = _build_axes(ax)
         x = _make_numeric(x, ax, 'x', 0.0, categories)
@@ -826,7 +873,6 @@ def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
 
 
 def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
-    kwargs.pop('kind')
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the ellipse plot')
@@ -1106,6 +1152,7 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
 # CREATING THE DICTIONARY WITH ALL THE PLOT FUNCTIONS DEFINED
 ###################################################
 
+
 class _default_dict(dict):
     def __missing__(self, key):
         return _autoplot
@@ -1120,7 +1167,9 @@ registered_plots['matrix'] = kind_matrix
 registered_plots['ellipse'] = kind_ellipse
 registered_plots['hexbin'] = kind_hexbin
 registered_plots['counter'] = kind_counter
+registered_plots['hist'] = kind_hist
 
+facet_plot.registered_plots = registered_plots
 # ancora da fare
 #['ellipse' 'hexbin', 'boxplot', 'beanplot', 'mosaic',
 #'counter', 'acorr', 'kde', 'hist', 'trisurf',

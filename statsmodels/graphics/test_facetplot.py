@@ -364,7 +364,14 @@ class Test_counter(base4test):
 #test_counter()
 #plt.close("all")
 
-if __name__ == "#__main__":
+class Test_hist(base4test):
+    def test_hist_simple(self):
+        fig = facet_plot('float_1', self.data, 'hist')
+        fig = facet_plot('float_1 + float_2', self.data, 'hist')
+        fig = facet_plot('float_1 + float_2 + int_1', self.data, 'hist')
+        #plt.show()
+
+if __name__ == "__main__":
     run_module_suite()
 
 #facet_plot('float_1', data, 'scatter')
@@ -412,19 +419,20 @@ if __name__ == "#__main__":
 #facet_plot('int_2 ~ float_1 + float_2', data)
 #facet_plot('int_1 ~  int_2', data, 'matrix', interpolation='nearest');
 
-os.chdir('/home/enrico/lavoro/markage/dati 08-02-13')
-with open('MARK-AGE Database 08.02.2013.csv', 'rb') as f:
-    markage = pd.read_csv(f, encoding='latin', engine='python',
-                          true_values=['Y', 'yes'], false_values=['N', 'no'],
-                          na_values=['na', 'NaN', '', 'nan', ' ', 'nap'])
-#rimuove le linee vuote per via della codifica e aggiusta l'indice
-markage = markage[-markage.gender.isnull()]
-markage.index = range(len(markage))
-print markage.columns[:5]
-#facet_plot('AgeClass5 | gender + subject_group ', markage,
-#           'counter', as_categorical=1)
-markage['AgeClass5'] = markage['AgeClass5'].astype(int)
-markage['AgeClass10'] = markage['AgeClass10'].astype(int)
-facet_plot('AgeClass5 | subject_group + gender', markage,
-           'counter', as_categorical=True, facet_grid=True)
-plt.show()
+#os.chdir('/home/enrico/lavoro/markage/dati 08-02-13')
+#with open('MARK-AGE Database 08.02.2013.csv', 'rb') as f:
+#    markage = pd.read_csv(f, encoding='latin', engine='python',
+#                          true_values=['Y', 'yes'], false_values=['N', 'no'],
+#                          na_values=['na', 'NaN', '', 'nan', ' ', 'nap'])
+##rimuove le linee vuote per via della codifica e aggiusta l'indice
+#markage = markage[-markage.gender.isnull()]
+#markage.index = range(len(markage))
+#print markage.columns[:5]
+##facet_plot('AgeClass5 | gender + subject_group ', markage,
+##           'counter', as_categorical=1)
+#markage['AgeClass5'] = markage['AgeClass5'].astype(int)
+#markage['AgeClass10'] = markage['AgeClass10'].astype(int)
+##facet_plot('AgeClass5 | subject_group + gender', markage,
+##           'counter', as_categorical=True, facet_grid=True)
+#facet_plot('AgeClass5 | subject_group', markage, 'hist')
+#plt.show()
