@@ -195,22 +195,47 @@ class Power(object):
 #        if key in ['ratio']:
 #            fit_kwds = dict(low=1e-8, start_upp=2)
 
-        val, res = brentq_expanding(func, full_output=True, **fit_kwds)
-        if not res.converged:
-            raise ValueError('did not converge')
-        else:
-            return val
+        fit_res = []
+        try:
+            val, res = brentq_expanding(func, full_output=True, **fit_kwds)
+            failed = False
+            fit_res.append(res)
+        except ValueError:
+            failed = True
+            fit_res.append(None)
 
-        #TODO: check more cases to make this robust
-        #return optimize.newton(func, start_value).item() #scalar
-        val, infodict, ier, msg = optimize.fsolve(func, start_value, full_output=True) #scalar
-        fval = infodict['fvec']
-        if ier != 1 or np.abs(fval) > 1e-4:
-            #print infodict
-            if key in ['alpha', 'power', 'effect_size']:
-                val, r = optimize.brentq(func, 1e-8, 1-1e-8, full_output=True) #scalar
-                if not r.converged:
-                    print r
+        success = None
+        if (not failed) and res.converged:
+            success = 1
+        else:
+#            import warnings
+#            warnings.warn('First solver' +
+#                          ['did not converge', 'failed (exception)'][failed])
+            # try backup
+            #TODO: check more cases to make this robust
+            val, infodict, ier, msg = optimize.fsolve(func, start_value,
+                                                      full_output=True) #scalar
+            fval = infodict['fvec']
+            fit_res.append(infodict)
+            if ier == 1 and np.abs(fval) < 1e-4 :
+                success = 1
+            else:
+                #print infodict
+                if key in ['alpha', 'power', 'effect_size']:
+                    val, r = optimize.brentq(func, 1e-8, 1-1e-8,
+                                             full_output=True) #scalar
+                    if not r.converged:
+                        success = 0
+                    fit_res.append(r)
+                else:
+                    success = 0
+
+        if not success == 1:
+            import warnings
+            warnings.warn('finding solution failed')
+
+        #attach fit_res, for reading only, should be needed only for debugging
+        self.last_fit_res = fit_res
         return val
 
 class TTestPower(Power):
