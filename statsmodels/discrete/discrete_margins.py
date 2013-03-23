@@ -369,7 +369,6 @@ class Margins(object):
         self._cache = resettable_cache()
         self.results = results
         self.dist = dist
-        self._get_margeff = get_margeff
         self.get_margeff(margeff_args)
 
     def _reset(self):
@@ -377,7 +376,7 @@ class Margins(object):
 
     def get_margeff(self, *args, **kwargs):
         self._reset()
-        self.margeff = self._get_margeff(*args)
+        self.margeff = self.get_margeff(*args)
 
     @cache_readonly
     def tvalues(self):
@@ -426,10 +425,6 @@ class DiscreteMargins(object):
 
     def _reset(self):
         self._cache = resettable_cache()
-
-    def get_margeff(self, *args, **kwargs):
-        self._reset()
-        self.margeff = self._get_margeff(*args, **kwargs)
 
     @cache_readonly
     def tvalues(self):
