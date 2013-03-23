@@ -160,8 +160,12 @@ class Power(object):
         *attaches*
 
         cache_fit_res : list
-            Return information of the up to three solvers that have been tried.
-            Caches the last result.
+            Cache of the result of the root finding procedure for the latest
+            call to ``solve_power``, mainly for debugging purposes.
+            The first element is the success indicator, one if successful.
+            The remaining elements contain the return information of the up to
+            three solvers that have been tried.
+
 
         '''
         #TODO: maybe use explicit kwds,
@@ -238,9 +242,11 @@ class Power(object):
 
         if not success == 1:
             import warnings
-            warnings.warn('finding solution failed')
+            from statsmodels.tools.sm_exceptions import ConvergenceWarning
+            warnings.warn('finding solution failed', ConvergenceWarning)
 
         #attach fit_res, for reading only, should be needed only for debugging
+        fit_res.insert(0, success)
         self.cache_fit_res = fit_res
         return val
 
@@ -326,8 +332,11 @@ class TTestPower(Power):
         *attaches*
 
         cache_fit_res : list
-            Return information of the up to three solvers that have been tried.
-            Caches the last result.
+            Cache of the result of the root finding procedure for the latest
+            call to ``solve_power``, mainly for debugging purposes.
+            The first element is the success indicator, one if successful.
+            The remaining elements contain the return information of the up to
+            three solvers that have been tried.
 
         Notes
         -----
