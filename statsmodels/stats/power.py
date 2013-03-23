@@ -33,7 +33,6 @@ refactoring
 import numpy as np
 from scipy import stats, optimize
 from statsmodels.tools.rootfinding import brentq_expanding
-from statsmodels.tools import rootfinding # for debugging
 
 def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     '''Calculate power of a ttest
@@ -138,7 +137,7 @@ class Power(object):
         for key in ['nobs', 'nobs1', 'df_num', 'df_denom']:
             self.start_bqexp[key] = dict(low=2., start_upp=50.)
         for key in ['df_denom']:
-            self.start_bqexp[key] = dict(increasing=False, low=2.)
+            self.start_bqexp[key] = dict(low=1., start_upp=50.)
         for key in ['ratio']:
             self.start_bqexp[key] = dict(low=1e-8, start_upp=2)
 
@@ -197,14 +196,6 @@ class Power(object):
             print 'Warning: using default start_value for', key
 
         fit_kwds = self.start_bqexp[key]
-#        if key in ['nobs', 'nobs1', 'df_num', 'df_denom']:
-#            #fit_kwds = dict(increasing=True, low=2., start_upp=50.)
-#            fit_kwds = dict(low=2., start_upp=50.)
-#        if key in ['df_denom']:
-#            fit_kwds = dict(increasing=False, low=2.)
-#        if key in ['ratio']:
-#            fit_kwds = dict(low=1e-8, start_upp=2)
-
         fit_res = []
         try:
             val, res = brentq_expanding(func, full_output=True, **fit_kwds)
@@ -218,9 +209,6 @@ class Power(object):
         if (not failed) and res.converged:
             success = 1
         else:
-#            import warnings
-#            warnings.warn('First solver' +
-#                          ['did not converge', 'failed (exception)'][failed])
             # try backup
             #TODO: check more cases to make this robust
             val, infodict, ier, msg = optimize.fsolve(func, start_value,

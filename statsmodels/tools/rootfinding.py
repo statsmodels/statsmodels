@@ -127,15 +127,13 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         f_upp = func(su, *args)
 
         # special case for F-distribution (symmetric around zero for effect size)
-        # doesn't work
-#        if sl == -1 and su == 1:
-#            f_low = func(sl, *args)
-#            f_upp = func(su, *args)
-        if np.max(np.abs(f_upp - f_low)) < 1e-15:
+        # chisquare also takes an indefinite time (didn't wait see if it returns)
+        if np.max(np.abs(f_upp - f_low)) < 1e-15 and sl == -1 and su == 1:
             sl = 1e-8
             f_low = func(sl, *args)
             increasing = (f_low < f_upp)
-            #print 'symm', sl, su, f_low, f_upp
+            if DEBUG:
+                print 'symm', sl, su, f_low, f_upp
 
 
         # possibly func returns nan
@@ -179,7 +177,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         left, right = right, left
 
     n_it = 0
-    if left is None: # and sl != 0:
+    if left is None and sl != 0:
         left = sl
         while func(left, *args) > 0:
             #condition is also false if func returns nan
@@ -189,7 +187,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
                 break
             n_it += 1
         # left is now such that func(left) < q
-    if right is None: # and su !=0:
+    if right is None and su !=0:
         right = su
         while func(right, *args) < 0:
             left = right
@@ -200,7 +198,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         # right is now such that func(right) > q
 
     if n_it >= max_it:
-        print 'Warning: max_it reached'
+        #print 'Warning: max_it reached'
         #TODO: use Warnings, Note: brentq might still work even with max_it
         f_low = func(sl, *args)
         f_upp = func(su, *args)
@@ -218,9 +216,6 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
     if full_output:
         val = res[0]
         info = res[1]
-        #exp_info = {'n_it' : n_it,
-        #            'start_bounds' : (sl, su)}
-        #info.update(exp_info)
         info.iterations_expand = n_it
         info.start_bounds = (sl, su)
         info.brentq_bounds = (left, right)
