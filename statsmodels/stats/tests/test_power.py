@@ -629,7 +629,18 @@ def test_power_solver():
     assert_equal(nip.cache_fit_res[0], 1)
     assert_equal(len(nip.cache_fit_res), 4)
 
-    # using nobs, one backup (fsolve)
+    # I let this case fail, could be fixed for some statistical tests
+    # (we shouldn't get here in the first place)
+    # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
+    assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
+                  power=0.005, ratio=1, alternative='larger')
+
+def test_power_solver_warn():
+    # messing up the solver to trigger warning
+
+    pow_ = 0.69219411243824214 # from previous function
+    nip = smp.NormalIndPower()
+    # using nobs, has one backup (fsolve)
     nip.start_bqexp['nobs1'] = {'upp': 50, 'low': -20}
     val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
                           alternative='larger')
@@ -639,24 +650,19 @@ def test_power_solver():
 
     # case that has convergence failure, and should warn
     nip.start_ttp['nobs1'] = np.nan
-    val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
-                          alternative='larger')
-    #TODO: I don't manage to get this to work now
-    #      assert_warns doesn't catch the warning
-#    from statsmodels.tools.sm_exceptions import ConvergenceWarning
-#    assert_warns(ConvergenceWarning, nip.solve_power, 0.1, nobs1=None,
-#                  alpha=0.01, power=pow_, ratio=1, alternative='larger')
-    val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
-                          alternative='larger')
-    assert_equal(nip.cache_fit_res[0], 0)
-    assert_equal(len(nip.cache_fit_res), 3)
 
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+    assert_warns(ConvergenceWarning, nip.solve_power, 0.1, nobs1=None,
+                  alpha=0.01, power=pow_, ratio=1, alternative='larger')
 
-    # I let this case fail, could be fixed for some statistical tests
-    # (we shouldn't get here in the first place)
-    # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
-    assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
-                  power=0.005, ratio=1, alternative='larger')
+    import warnings
+    with warnings.catch_warnings():  # python >= 2.6
+        warnings.simplefilter("ignore")
+        val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
+                              alternative='larger')
+        assert_equal(nip.cache_fit_res[0], 0)
+        assert_equal(len(nip.cache_fit_res), 3)
+
 
 
 if __name__ == '__main__':
