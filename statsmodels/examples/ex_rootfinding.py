@@ -73,7 +73,11 @@ if __name__ == '__main__':
 
 
     print brentq_expanding(func, args=(-50000,), start_low=-10000)
-    print brentq_expanding(func, args=(-500,), start_upp=-100)
+    try:
+        print brentq_expanding(func, args=(-500,), start_upp=-100)
+    except ValueError:
+        print 'raised ValueError start_upp needs to be positive'
+
     ''' it still works
     raise ValueError('start_upp needs to be positive')
     -499.999996336

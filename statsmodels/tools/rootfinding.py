@@ -100,7 +100,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         su = upp
     elif start_upp is not None:
         if start_upp < 0:
-            print "raise ValueError('start_upp needs to be positive')"
+            raise ValueError('start_upp needs to be positive')
         su = start_upp
     else:
         su = 1.
@@ -110,7 +110,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         sl = low
     elif start_low is not None:
         if start_low > 0:
-            print "raise ValueError('start_low needs to be negative')"
+            raise ValueError('start_low needs to be negative')
         sl = start_low
     else:
         sl = min(-1., su - 1.)

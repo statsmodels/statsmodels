@@ -6,8 +6,29 @@ Created on Sat Mar 23 13:34:19 2013
 Author: Josef Perktold
 """
 
-    from numpy.testing import assert_allclose, assert_equal, assert_raises
+import numpy as np
+from statsmodels.tools.rootfinding import brentq_expanding
 
+from numpy.testing import assert_allclose, assert_equal, assert_raises
+
+def func(x, a):
+    f = (x - a)**3
+    return f
+
+def func_nan(x, a, b):
+    x = np.atleast_1d(x)
+    f = (x - 1.*a)**3
+    f[x < b] = np.nan
+    return f
+
+
+
+def funcn(x, a):
+    f = -(x - a)**3
+    return f
+
+
+def test_brentq_expanding():
     cases = [
         (0, {}),
         (50, {}),
@@ -28,7 +49,7 @@ Author: Josef Perktold
             kw = {'increasing':inc}
             kw.update(kwds)
             res = brentq_expanding(f, args=(a,), **kwds)
-            print '%10d'%a, ['dec', 'inc'][f is func], res - a
+            #print '%10d'%a, ['dec', 'inc'][f is func], res - a
             assert_allclose(res, a, rtol=1e-5)
 
     # wrong sign for start bounds
