@@ -17,7 +17,7 @@ from scipy.stats import poisson, scoreatpercentile
 import patsy
 import pylab as plt
 import pandas as pd
-
+import re
 from scipy.stats import spearmanr
 from itertools import product
 
@@ -626,6 +626,20 @@ def _array4name(formula, data):
     return result
 
 
+Q_find = re.compile(""".*?(Q[(]["'](.*?)["'][)]).*?""")
+I_find = re.compile(""".*?(I[(](.*?)[)]).*?""")
+def _beautify(s):
+    """remove the utilities Q and I from the formula, just for show"""
+    k = s
+    while Q_find.findall(k):
+        for old, new in Q_find.findall(k):
+            k = k.replace(old,new)
+    while I_find.findall(k):
+        for old, new in I_find.findall(k):
+            k = k.replace(old,new)
+    return k
+
+
 def _select_rowcolsize(num_of_categories):
     """given the number of facets select the best structure of subplots
 
@@ -1056,9 +1070,9 @@ def kind_scatter(x, y, ax=None, categories={},
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(data.index, data, label=column, **kwargs)
+            ax.plot(data.index, data, label=_beautify(column), **kwargs)
         if len(x.columns) == 1:
-            ax.set_xlabel(x.columns[0])
+            ax.set_xlabel(_beautify(x.columns[0]))
         _multi_legend(ax)
         ax.set_ylabel('Value')
         return ax
@@ -1080,9 +1094,9 @@ def kind_scatter(x, y, ax=None, categories={},
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(x, data, label=column, **kwargs)
+            ax.plot(x, data, label=_beautify(column), **kwargs)
         _multi_legend(ax)
-        ax.set_xlabel(x.name)
+        ax.set_xlabel(_beautify(x.name))
         return ax
     if isinstance(x, pd.DataFrame) and len(x.columns) == 2:
         fig, ax = _build_axes(ax, projection='3d')
@@ -1101,12 +1115,12 @@ def kind_scatter(x, y, ax=None, categories={},
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(new_x, new_y, zs=data, label=column, **kwargs)
+            ax.plot(new_x, new_y, zs=data, label=_beautify(column), **kwargs)
         _multi_legend(ax)
-        ax.set_xlabel(new_x.name)
-        ax.set_ylabel(new_y.name)
+        ax.set_xlabel(_beautify(new_x.name))
+        ax.set_ylabel(_beautify(new_y.name))
         if len(z.columns) == 1:
-            ax.set_zlabel(z.columns[0])
+            ax.set_zlabel(_beautify(z.columns[0]))
         return ax
     else:
         raise TypeError("scatter can't manage this kind of data")
