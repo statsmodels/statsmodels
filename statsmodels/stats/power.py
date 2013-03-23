@@ -234,8 +234,7 @@ class Power(object):
                 if key in ['alpha', 'power', 'effect_size']:
                     val, r = optimize.brentq(func, 1e-8, 1-1e-8,
                                              full_output=True) #scalar
-                    if not r.converged:
-                        success = 0
+                    success = 1 if r.converged else 0
                     fit_res.append(r)
                 else:
                     success = 0
