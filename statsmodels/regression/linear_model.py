@@ -249,7 +249,7 @@ class GLS(RegressionModel):
     >>> print gls_results.summary()
 
     """ % {'params' : base._model_params_doc,
-           'extra_params' : base._extra_param_doc}
+           'extra_params' : base._missing_param_doc + base._extra_param_doc}
 
     def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None):
     #TODO: add options igls, for iterative fgls if sigma is None
@@ -370,7 +370,7 @@ class WLS(RegressionModel):
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
     """ % {'params' : base._model_params_doc,
-           'extra_params' : base._extra_param_doc}
+           'extra_params' : base._missing_param_doc + base._extra_param_doc}
 
     def __init__(self, endog, exog, weights=1., missing='none', hasconst=None):
         weights = np.array(weights)
@@ -472,7 +472,7 @@ class OLS(WLS):
     -----
     No constant is added by the model unless you are using formulas.
     """ % {'params' : base._model_params_doc,
-           'extra_params' : base._extra_param_doc}
+           'extra_params' : base._missing_param_doc + base._extra_param_doc}
     #TODO: change example to use datasets.  This was the point of datasets!
     def __init__(self, endog, exog=None, missing='none', hasconst=None):
         super(OLS, self).__init__(endog, exog, missing=missing,
