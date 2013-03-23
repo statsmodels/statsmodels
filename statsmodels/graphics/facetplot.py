@@ -28,15 +28,23 @@ from itertools import product
 
 def facet_plot(formula, data=None, kind=None, subset=None,
                drop_na=True, ax=None, jitter=1.0, facet_grid=False,
-               include_total=False, title_y=1.0, stack_facet=False,
+               include_total=False, title_y=1.0,
                *args, **kwargs):
     """make a faceted plot of two set of variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
 
-        endogs ~ exogs | factors
+        endogs ~ exogs | factors ~ projections
 
-    where both the endog and the factor are optionals.
+    where the endogs, the factors and the projections are optionals.
+    The factor will divide the data in several subplot, one for each value of
+    the factor (or for each combination for multiple factors).
+    The projections will divide the data in several subset plotted in the
+    same subplots.
+
+    The data will be plotted accordingly to the selected kind of plot.
+    The data can be taken from a pandas dataframe or from the environment
+    for interactive user.
 
     Parameters
     ==========
@@ -61,8 +69,8 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         a value o 0.0 means no jittering, while a jitter of 1.0
         is one fifth of the smallest distance between two elements.
     include_total: boolean, optional
-        if set to True include an additional facet that contains:
-        all the values without subdivisions.
+        if set to True include an additional facet that contains
+        all the values without subdivisions (aside from the projections).
     facet_grid: boolean, optional
         try to put the variuos level of the faceting on a regular grid.
         Using a bivariate facet will create a matrix with columns and
@@ -72,9 +80,6 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     title_y: float, optional
         Put the title of each facet at a certain height in each facet.
         the default is to put it above the facet
-    stack_facet: boolean, optional
-        Try to compress all the facet into a single axis.
-        Will almost surely create a dataframe with some nan.
 
     the other args and kwargs will be redirected to the specific plot
 
@@ -120,6 +125,16 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     behavior and possible arguments.
 
         facet_plot.registered_plots
+
+    Notes
+    =====
+
+    The formula is not interpreted directly with patsy to preserve the
+    categorical variables. This means that sometimes the interpretation
+    of formulas can be different and raise errors about not finding
+    the variables as you defined them. To avoid this the solution is
+    to follow PEP8 even in the formula as put a space around operators
+    and a space after commas.
 
     Examples
     ========
@@ -213,36 +228,45 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     else:
         fig, ax = utils.create_mpl_ax(ax)
         PARTIAL = True
-    y, x, facet = _formula_split(formula)
-
+    y, x, facet, projection = _formula_split(formula)
     if data is None:
         data = patsy.EvalEnvironment.capture(1).namespace
-
     #create the x and y values of the arrays
     value_x = _array4name(x, data)
     value_y = _array4name(y, data)
     value_f = _array4name(facet, data)
-    if stack_facet:
-        if isinstance(value_f, pd.Series):
-            value_f = pd.DataFrame({value_f.name: value_f})
-        if isinstance(value_y, pd.Series):
-            value_y = pd.DataFrame({value_y.name: value_y})
-        data_y = pd.concat([value_y, value_f], axis=1)
-        data_y = _stack_by(data_y, tuple(value_f.columns))
-        value_y = data_y
-        value_f = None
-        facet = None
-        y = " + ".join(list(value_y.columns))
+    value_p = _array4name(projection, data)
+    if value_f is not None and isinstance(value_f, pd.Series):
+        value_f = pd.DataFrame({value_f.name: value_f})
+    if value_p is not None and isinstance(value_p, pd.Series):
+        value_p = pd.DataFrame({value_p.name: value_p})
+    if value_y is not None and isinstance(value_y, pd.Series):
+        value_y = pd.DataFrame({value_y.name: value_y})
+    if isinstance(value_x, pd.Series):
+        value_x = pd.DataFrame({value_x.name: value_x})
+
+    if value_p is not None:
+        to_project = value_y if value_y is not None else value_x
+        data_p = pd.concat([to_project, value_p], axis=1)
+        data_p = _stack_by(data_p, list(value_p.columns))
+        if value_y is not None:
+            value_y = data_p
+            y = " + ".join(list(value_y.columns))
+        else:
+            value_x = data_p
+            x = " + ".join(list(value_x.columns))
+
     #reconstruct the dataframe from the pieces created before
-    to_concat = [pd.DataFrame(serie) for serie in [value_x, value_y, value_f]]
-    data = pd.concat(to_concat, axis=1)
+    data = pd.concat([value_x, value_y, value_f], axis=1)
     # can happen to have multiple identical columns, so drop them
     data = pd.DataFrame({col: val for col, val in data.iteritems()})
     # reduce the size of the dataframe by removing the nan and
     # subsetting it
     if subset is not None:
         data = data[subset]
-    if drop_na:
+    # drop the NAN, it doesn't make sense if the projection is on
+    # as it will create a lot of NANs
+    if drop_na and value_p is None:
         data = data.dropna()
     # if a subset is specified use it to trim the dataframe
     if not len(data):
@@ -252,6 +276,10 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     #only if one is not specified by default, should give the same
     #results of the choice used in the data-centric functions
     kind = kind or _oracle(value_x, value_y)
+    if not kind:
+        raise ValueError("the oracle couldn't determine the best plot, "
+                         "please choose betwenn: {}".format(
+                         facet_plot.registered_plots.keys()))
     # now try to use the data-centric functions...if it's not available
     # go back to the old version
     plot_function = registered_plots[kind]
@@ -484,7 +512,7 @@ def _make_numeric(data, ax, dir, jitter=1.0, categories=None):
 def _formula_split(formula):
     """split the formula of the facet_plot into the y, x and categorical terms
 
-    the formula should be in the form:
+    the formula should be in the form:_formula_split
 
         [endo ~] exog [| faceting]
 
@@ -492,8 +520,17 @@ def _formula_split(formula):
     as the variable under examination.
     """
     # determine the facet component
+    p = None
     if '|' in formula:
-        f = formula.split('|')[1].strip()
+        facet = formula.split('|')[1].strip()
+        if '~' in facet:
+            temp = facet.split('~')
+            f = temp[0].strip()
+            p = temp[1].strip()
+            f = f if f else None
+            p = p if p else None
+        else:
+            f = facet
         formula = formula.split('|')[0]
     else:
         f = None
@@ -508,7 +545,7 @@ def _formula_split(formula):
     #if there is not exog, swith the two
     if x is None:
         x, y = y, x
-    return y, x, f
+    return y, x, f, p
 
 
 def _elements4facet(facet, data):
@@ -558,17 +595,24 @@ def _array4name(formula, data):
         return None
     result = []
     for name in formula.split('+'):
+        #name = name.strip()
+        #this should allow to follow the same structure as patsy
         name = name.strip()
+        try:
+            name = patsy.EvalFactor(name, {}).code
+        except SyntaxError:
+            pass
         try:
             # try to use it as a valid index
             # it expect it to be a proper
             # dataframe, even if this come from something
             # that is not
             value = pd.DataFrame({name: data[name]})
+            value.name = name
         except KeyError:
             #if it fails try it as a patsy formula
             # the +0 is needed to avoid the intercept column
-            value = patsy.dmatrix(name + '+0', data, return_type="dataframe")
+            value = patsy.dmatrix(name + ' + 0', data, return_type="dataframe")
             value.name = name
         result.append(value)
     #merge all the resulting dataframe
@@ -578,11 +622,6 @@ def _array4name(formula, data):
             void[col] = dataframe[col]
             void[col].name = col
     result = void
-    # to do monovariate plots this should return a series
-    # the dataframe is kept for future implementation of
-    # multivariate plots
-    if len(result.columns) == 1:
-        result = pd.Series(result[result.columns[0]])
     result.name = formula
     return result
 
@@ -614,16 +653,17 @@ def _analyze_categories(x):
     results = {}
     if x is None:
         return results
-    if isinstance(x, pd.Series):
-        results[x.name] = sorted(x.unique())
-    else:
-        for col in x:
-            results[col] = sorted(x[col].unique())
+    #if isinstance(x, pd.Series):
+    for col in x:
+        results[col] = sorted(x[col].dropna().unique())
     return results
 
 
 def _multi_legend(ax):
     """create a single legend for all the subaxes of the facet"""
+    #FIXME: use ax.get_legend_handles_labels()
+    # return the list of objects and labels
+    # and make a merge of them
     fig = ax.figure
     for t_ax in fig.axes:
         leg = t_ax.legend()
@@ -647,8 +687,8 @@ def _stack_by(df, keys):
             addendum = " / ".join(str(c) for c in k)
         else:
             addendum = str(k)
-        g.columns = [col+' : '+addendum for col in g.columns]
-        g.index = range(len(g))
+        g.columns = ['Q("'+col+' : '+addendum+'")' for col in g.columns]
+        #g.index = range(len(g))
         results.append(g)
     return pd.concat(results, axis=1)
 
@@ -670,8 +710,9 @@ def _oracle(x, y):
     """
     if y is None:
         # zero variate plot
-        if isinstance(x, pd.Series):
-            if x.dtype == float:
+        #if isinstance(x, pd.Series):
+        if len(x.columns) == 1:
+            if x.icol(0).dtype == float:
                 return 'kde'
             else:
                 return 'counter'
@@ -682,12 +723,12 @@ def _oracle(x, y):
         else:
             # cannot decide
             return ''
-    elif isinstance(x, pd.Series):
+    elif len(x.columns) == 1:
         #monovariate plot
-        if x.dtype == object:
+        if x.icol(0).dtype == object:
             #categorical one
-            if isinstance(y, pd.Series):
-                if y.dtype == object:
+            if len(y.columns) == 1:
+                if y.icol(0).dtype == object:
                     return 'mosaic'
                 else:
                     return 'violinplot'
@@ -704,9 +745,9 @@ def _oracle(x, y):
                     return ''
         else:
             #numerical one
-            if isinstance(y, pd.Series):
+            if len(y.columns) == 1:
                 #monovariate
-                if y.dtype == object:
+                if y.icol(0).dtype == object:
                     return 'violinplot'
                 else:
                     return 'scatter'
@@ -728,10 +769,14 @@ def _oracle(x, y):
 def kind_corr(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     if y is not None:
         raise TypeError('corr do not accept endogenous variables')
-    if not isinstance(x, pd.Series):
+    if not len(x.columns) == 1:
         raise TypeError('corr do not accept multiple exogenous variables')
+    x = x.icol(0)
     if x.dtype == object:
             raise TypeError('corr do not accept categorical variables')
+    x = x.dropna()
+    if not len(x):
+        raise ValueError('the chosen variable is empty or has only nan values')
     fig, ax = _build_axes(ax)
     ax.acorr(x.values*1.0, maxlags=None, *args, **kwargs)
     ax.set_ylabel('correlation')
@@ -746,8 +791,6 @@ def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     # I can also merge the x with the y, but should I??
     if y is not None:
         raise TypeError('mosaic do not accept endogenous variables')
-    if isinstance(x, pd.Series):
-        x = pd.DataFrame({x.name: x})
     # the various axes should not be related or trouble happens!!!
     if isinstance(ax, list):
         ax[-1] = None
@@ -765,19 +808,21 @@ def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     # astroML/blob/master/astroML/density_estimation/bayesian_blocks.py
     # http://jakevdp.github.com/blog/2012/09/12/dynamic-programming-in-python/
     if y is not None:
-        if not isinstance(y, pd.Series) or not isinstance(x, pd.Series):
+        if not len(y.columns) == 1 or not len(x.columns) == 1:
             raise TypeError('the hist plot is not appropriate for this data')
+        y = y.icol(0)
+        x = x.icol(0)
         if x.dtype == object or y.dtype == object:
             raise TypeError('the hist plot is only for numerical variables')
         #here should redirect to the multivariate implementation
         raise NotImplementedError('multidimensional histogram not yet '
                                   'implemented, try using the matrix plot')
-    if isinstance(x, pd.Series):
-        x = pd.DataFrame({x.name: x})
     fig, ax = _build_axes(ax)
     colors = ['#777777', 'b', 'g', 'r', 'c', 'm', 'y', 'k']
     for column, color in zip(x, colors):
-        data = x[column]
+        data = x[column].dropna()
+        if not len(data):
+            continue
         if data.dtype == object:
             raise TypeError('the hist plot is only for numerical variables')
         kwargs.setdefault('normed', True)
@@ -805,9 +850,12 @@ def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
 
 
 def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
-    if y is not None or not isinstance(x, pd.Series):
+    if y is not None or not len(x.columns) == 1:
         raise TypeError('counter can only work with a single array')
     fig, ax = _build_axes(ax)
+    x = x.icol(0).dropna()
+    if not len(x):
+        raise ValueError('the chosen variable is empty or has only nan values')
     res = x.value_counts()
     res = res.sort_index()
     as_categorical = kwargs.pop('as_categorical', False)
@@ -855,12 +903,16 @@ def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the hexbin plot')
-    if isinstance(x, pd.DataFrame) or isinstance(y, pd.DataFrame):
+    if len(x.columns) > 1 or len(y.columns) > 1:
         raise TypeError('hexbin plot is defined only for monovariate plots')
+    x = x.icol(0)
+    y = y.icol(0)
     fig, ax = _build_axes(ax)
     y_data = _make_numeric(y, ax, 'y', jitter, categories)
     x_data = _make_numeric(x, ax, 'x', jitter, categories)
     kwargs.setdefault('cmap', plt.cm.jet)
+    if isinstance(kwargs['cmap'], basestring):
+        kwargs['cmap'] = plt.get_cmap(kwargs['cmap'])
     kwargs.setdefault('gridsize', 20)
     img = ax.hexbin(x_data, y_data, *args, **kwargs)
     plt.colorbar(img)
@@ -872,7 +924,11 @@ def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
 
 
 def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+    if len(x.columns) > 1:
+        raise TypeError('matrix plot is defined only for monovariate plots')
     if y is not None:
+        x = x.icol(0)
+        y = y.icol(0)
         fig, ax = _build_axes(ax)
         x = _make_numeric(x, ax, 'x', 0.0, categories)
         y = _make_numeric(y, ax, 'y', 0.0, categories)
@@ -909,12 +965,12 @@ def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
 
     else:
         fig, ax = _build_axes(ax)
+        x = x.icol(0)
         _make_numeric(x, ax, 'x', 0.0, categories)
         _make_numeric(x, ax, 'y', 0.0, categories)
         states = categories.get(x.name, x.unique())
         states = sorted(list(states))
         indexes = dict([(v, states.index(v)) for v in states])
-        print indexes
         L = len(states)
         transitions = np.zeros((L, L))
         for d0, d1 in zip(x[:-1], x[1:]):
@@ -932,8 +988,10 @@ def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the ellipse plot')
-    if isinstance(x, pd.DataFrame) or isinstance(y, pd.DataFrame):
+    if len(x.columns) > 1 or len(y.columns) > 1:
         raise TypeError('ellipse plot is defined only for monovariate plots')
+    x = x.icol(0)
+    y = y.icol(0)
     fig, ax = _build_axes(ax)
     y_data = _make_numeric(y, ax, 'y', jitter, categories)
     x_data = _make_numeric(x, ax, 'x', jitter, categories)
@@ -983,8 +1041,6 @@ def kind_scatter(x, y, ax=None, categories={},
                  jitter=1.0, order=False, *args, **kwargs):
     if y is None:
         #zero-variate
-        if isinstance(x, pd.Series):
-            x = pd.DataFrame({x.name: x})
         fig, ax = _build_axes(ax)
         ax.margins(0.05)
         colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
@@ -996,38 +1052,35 @@ def kind_scatter(x, y, ax=None, categories={},
                 data = _make_numeric(data, ax, 'y', jitter, categories)
             if order:
                 data = pd.Series(sorted(data.values), index=data.index)
-            ax.plot(data.index, data,
-                    color=kwargs.get('color', color),
-                    alpha=kwargs.get('alpha', 0.5),
-                    marker=kwargs.get('marker', 'o'),
-                    linestyle=kwargs.get('linestyle', 'none'),
-                    label=column)
+            kwargs['color'] = color
+            kwargs.setdefault('alpha', 0.5)
+            kwargs.setdefault('marker', 'o')
+            kwargs.setdefault('linestyle', 'none')
+            ax.plot(data.index, data, label=column, **kwargs)
         if len(x.columns) == 1:
             ax.set_xlabel(x.columns[0])
         _multi_legend(ax)
         ax.set_ylabel('Value')
         return ax
-    if isinstance(x, pd.Series):
+    if len(x.columns) == 1:
+        x = x.icol(0)
         #monovariate classic
         fig, ax = _build_axes(ax)
         ax.margins(0.05)
         x = _make_numeric(x, ax, 'x', jitter, categories)
         if order:
             x = x.order()
-        if isinstance(y, pd.Series):
-            y = pd.DataFrame({y.name: y})
         colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
         for column, color in zip(y, colors):
             data = y[column]
             if data.dtype == object and len(y.columns) > 1:
                 raise TypeError('scatter cannot mix categorical and numerical')
             data = _make_numeric(data, ax, 'y', jitter, categories)
-            ax.plot(x, data,
-                    color=kwargs.get('color', color),
-                    alpha=kwargs.get('alpha', 0.5),
-                    marker=kwargs.get('marker', 'o'),
-                    linestyle=kwargs.get('linestyle', 'none'),
-                    label=column)
+            kwargs['color'] = color
+            kwargs.setdefault('alpha', 0.5)
+            kwargs.setdefault('marker', 'o')
+            kwargs.setdefault('linestyle', 'none')
+            ax.plot(x, data, label=column, **kwargs)
         _multi_legend(ax)
         ax.set_xlabel(x.name)
         return ax
@@ -1044,12 +1097,11 @@ def kind_scatter(x, y, ax=None, categories={},
             if data.dtype == object and len(z.columns) > 1:
                 raise TypeError('scatter cannot mix categorical and numerical')
             data = _make_numeric(data, ax, 'z', jitter, categories)
-            ax.plot(new_x, new_y, zs=data,
-                    color=kwargs.get('color', color),
-                    alpha=kwargs.get('alpha', 0.5),
-                    marker=kwargs.get('marker', 'o'),
-                    linestyle=kwargs.get('linestyle', 'none'),
-                    label=column)
+            kwargs['color'] = color
+            kwargs.setdefault('alpha', 0.5)
+            kwargs.setdefault('marker', 'o')
+            kwargs.setdefault('linestyle', 'none')
+            ax.plot(new_x, new_y, zs=data, label=column, **kwargs)
         _multi_legend(ax)
         ax.set_xlabel(new_x.name)
         ax.set_ylabel(new_y.name)
@@ -1063,13 +1115,17 @@ def kind_scatter(x, y, ax=None, categories={},
 def kind_kde(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     """make the kernel density estimation of a single variable"""
     if y is not None:
-        if not isinstance(y, pd.Series) or not isinstance(x, pd.Series):
+        if not len(y.columns) == 1 or not len(x.columns) == 1:
             raise TypeError('the kde plot is not appropriate for this data')
+        x = x.icol(0)
+        y = y.icol(0)
         if x.dtype == object or y.dtype == object:
             raise TypeError('the kde plot is only for numerical variables')
         fig, ax = _build_axes(ax, projection='3d')
         x_grid, y_grid = plt.mgrid[min(x):max(x):100j, min(y):max(y):100j]
-        data = np.vstack([x.values, y.values])
+        data = pd.DataFrame(np.vstack([x.values, y.values]))
+        data = data.dropna()
+        data = data.values
         my_pdf = gaussian_kde(data)
 
         z = my_pdf([x_grid.ravel(), y_grid.ravel()]).reshape((100, 100))
@@ -1079,12 +1135,12 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
         ax.set_ylabel('\n'+y.name, linespacing=linespacing)
         ax.set_xlabel('\n'+x.name, linespacing=linespacing)
         return ax
-    if isinstance(x, pd.Series):
-        x = pd.DataFrame({x.name: x})
     fig, ax = _build_axes(ax)
     colors = ['#777777', 'b', 'g', 'r', 'c', 'm', 'y', 'k']
     for column, color in zip(x, colors):
-        data = x[column]
+        data = x[column].dropna()
+        if not len(data):
+            continue
         if data.dtype == object:
             raise TypeError('the kde plot is only for numerical variables')
         # create the density plot
@@ -1108,9 +1164,11 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
 
 def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     """perform the violinplot on monovariate data, vertical or horizontals"""
-    if (y is None or not isinstance(x, pd.Series) or
-            not isinstance(y, pd.Series)):
+    if (y is None or not len(x.columns) == 1 or
+            not len(y.columns) == 1):
         raise TypeError('the violinplot is not adeguate for this data')
+    x = x.icol(0)
+    y = y.icol(0)
     xlab = x.name
     ylab = y.name
     if x.dtype == object or y.dtype != object:
@@ -1160,16 +1218,16 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
         raise TypeError('the boxplot is not adeguate for this data')
     xlab = x.name
     ylab = y.name
-    if isinstance(x, pd.Series) and x.dtype != float:
+    if len(x.columns) == 1 and x.icol(0).dtype != float:
         vertical = True
         ax.set_xlabel(xlab)
-    elif isinstance(y, pd.Series) and y.dtype != float:
+    elif len(y.columns) == 1 and y.icol(0).dtype != float:
         vertical = False
         x, y = y, x
         ax.set_ylabel(ylab)
     else:
         raise TypeError('the boxplot is not adeguate for this data')
-    y = pd.DataFrame(y)
+    x = x.icol(0)
     L = len(y.columns)
     if L == 1:
         if vertical:
@@ -1183,7 +1241,7 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
     for index, (col_name, values) in enumerate(y.iteritems()):
         #take for each level how many data are in that level
-        level_idx_v_l = [(idx, values[x == l], l)
+        level_idx_v_l = [(idx, values[x == l].dropna(), l)
                          for idx, l in enumerate(levels)]
         #select only those that have some data
         level_idx_v_l = [iv for iv in level_idx_v_l if len(iv[1])]
@@ -1191,14 +1249,19 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
         for pos, val, name in level_idx_v_l:
             positions = [pos+deltas[index]]
             widths = [0.3/L]
-            artist = ax.boxplot([val], notch=1, positions=positions,
+            notch = kwargs.setdefault('notch', True)
+            artist = ax.boxplot([val], notch=notch, positions=positions,
                                 vert=vertical, widths=widths,
                                 patch_artist=True)
             artist['boxes'][0].set_facecolor(colors[index])
             artist['boxes'][0].set_alpha(0.5)
-            temp_args = {} if pos!=0 else {'label':col_name}
-            ax.scatter(positions, [np.mean(val)],
-                       color=colors[index], **temp_args)
+            temp_args = {} if pos != 0 else {'label': col_name}
+            if vertical:
+                ax.scatter(positions, [np.mean(val)],
+                           color=colors[index], **temp_args)
+            else:
+                ax.scatter([np.mean(val)], positions,
+                           color=colors[index], **temp_args)
     if x.dtype == int:
         ax.set_xticks(range(len(levels)))
         ax.set_xticklabels(levels)
