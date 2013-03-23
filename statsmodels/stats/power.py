@@ -32,7 +32,8 @@ refactoring
 
 import numpy as np
 from scipy import stats, optimize
-
+from statsmodels.tools.rootfinding import brentq_expanding
+from statsmodels.tools import rootfinding # for debugging
 
 def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     '''Calculate power of a ttest
@@ -107,7 +108,6 @@ def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
     models, with df_num and d_denom as defined there. (not verified yet)
 
     '''
-
     nc = effect_size**2 * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_denom, df_num)
     pow_ = stats.ncf.sf(crit, df_denom, df_num, nc)
@@ -133,6 +133,14 @@ class Power(object):
         #      need start_ttp for each test/class separately,
         # possible rootfinding problem for effect_size, starting small seems to
         # work
+        from collections import defaultdict
+        self.start_bqexp = defaultdict(dict)
+        for key in ['nobs', 'nobs1', 'df_num', 'df_denom']:
+            self.start_bqexp[key] = dict(low=2., start_upp=50.)
+        for key in ['df_denom']:
+            self.start_bqexp[key] = dict(increasing=False, low=2.)
+        for key in ['ratio']:
+            self.start_bqexp[key] = dict(low=1e-8, start_upp=2)
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -177,6 +185,21 @@ class Power(object):
         except KeyError:
             start_value = 0.9
             print 'Warning: using default start_value for', key
+
+        fit_kwds = self.start_bqexp[key]
+#        if key in ['nobs', 'nobs1', 'df_num', 'df_denom']:
+#            #fit_kwds = dict(increasing=True, low=2., start_upp=50.)
+#            fit_kwds = dict(low=2., start_upp=50.)
+#        if key in ['df_denom']:
+#            fit_kwds = dict(increasing=False, low=2.)
+#        if key in ['ratio']:
+#            fit_kwds = dict(low=1e-8, start_upp=2)
+
+        val, res = brentq_expanding(func, full_output=True, **fit_kwds)
+        if not res.converged:
+            raise ValueError('did not converge')
+        else:
+            return val
 
         #TODO: check more cases to make this robust
         #return optimize.newton(func, start_value).item() #scalar
@@ -556,7 +579,10 @@ class FTestPower(Power):
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
        '''
-        return ftest_power(effect_size, df_num, df_denom, alpha, ncc=1)
+
+        pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=1)
+        #print effect_size, df_num, df_denom, alpha, pow_
+        return pow_
 
     #method is only added to have explicit keywords and docstring
     def solve_power(self, effect_size=None, df_num=None, df_denom=None,
@@ -688,6 +714,8 @@ class FTestAnovaPower(Power):
         # update start values for root finding
         if not k_groups is None:
             self.start_ttp['nobs'] = k_groups * 10
+            self.start_bqexp['nobs'] = dict(low=k_groups * 2,
+                                            start_upp=k_groups * 10)
         # first attempt at special casing
         if effect_size is None:
             return self._solve_effect_size(effect_size=effect_size,
