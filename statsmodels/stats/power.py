@@ -157,6 +157,12 @@ class Power(object):
 
         exactly one needs to be ``None``, all others need numeric values
 
+        *attaches*
+
+        cache_fit_res : list
+            Return information of the up to three solvers that have been tried.
+            Caches the last result.
+
         '''
         #TODO: maybe use explicit kwds,
         #    nicer but requires inspect? and not generic across tests
@@ -235,7 +241,7 @@ class Power(object):
             warnings.warn('finding solution failed')
 
         #attach fit_res, for reading only, should be needed only for debugging
-        self.last_fit_res = fit_res
+        self.cache_fit_res = fit_res
         return val
 
 class TTestPower(Power):
@@ -315,17 +321,22 @@ class TTestPower(Power):
         -------
         value : float
             The value of the parameter that was set to None in the call. The
-            value solves the power equation given the remainding parameters.
+            value solves the power equation given the remaining parameters.
 
+        *attaches*
+
+        cache_fit_res : list
+            Return information of the up to three solvers that have been tried.
+            Caches the last result.
 
         Notes
         -----
         The function uses scipy.optimize for finding the value that satisfies
-        the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or power ``brentq`` is used.
-        However, there can still be cases where this fails.
-        If it becomes necessary, then we will add options to control the root
-        finding in future.
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
 
         '''
         # for debugging
@@ -437,11 +448,11 @@ class TTestIndPower(Power):
         Notes
         -----
         The function uses scipy.optimize for finding the value that satisfies
-        the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or power ``brentq`` is used.
-        However, there can still be cases where this fails.
-        If it becomes necessary, then we will add options to control the root
-        finding in future.
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
 
         '''
         return super(TTestIndPower, self).solve_power(effect_size=effect_size,
@@ -554,11 +565,11 @@ class NormalIndPower(Power):
         Notes
         -----
         The function uses scipy.optimize for finding the value that satisfies
-        the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or power ``brentq`` is used.
-        However, there can still be cases where this fails.
-        If it becomes necessary, then we will add options to control the root
-        finding in future.
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
 
         '''
         return super(NormalIndPower, self).solve_power(effect_size=effect_size,
@@ -649,11 +660,11 @@ class FTestPower(Power):
         Notes
         -----
         The function uses scipy.optimize for finding the value that satisfies
-        the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or power ``brentq`` is used.
-        However, there can still be cases where this fails.
-        If it becomes necessary, then we will add options to control the root
-        finding in future.
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
 
         '''
         return super(FTestPower, self).solve_power(effect_size=effect_size,
@@ -729,11 +740,11 @@ class FTestAnovaPower(Power):
         Notes
         -----
         The function uses scipy.optimize for finding the value that satisfies
-        the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or power ``brentq`` is used.
-        However, there can still be cases where this fails.
-        If it becomes necessary, then we will add options to control the root
-        finding in future.
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
 
         '''
         # update start values for root finding
@@ -848,11 +859,11 @@ class GofChisquarePower(Power):
         Notes
         -----
         The function uses scipy.optimize for finding the value that satisfies
-        the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or power ``brentq`` is used.
-        However, there can still be cases where this fails.
-        If it becomes necessary, then we will add options to control the root
-        finding in future.
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
 
         '''
         return super(GofChisquarePower, self).solve_power(effect_size=effect_size,
@@ -957,11 +968,11 @@ class _GofChisquareIndPower(Power):
         Notes
         -----
         The function uses scipy.optimize for finding the value that satisfies
-        the power equation. It first uses ``fsolve``. If it fails to find a
-        root, then for alpha or power ``brentq`` is used.
-        However, there can still be cases where this fails.
-        If it becomes necessary, then we will add options to control the root
-        finding in future.
+        the power equation. It first uses ``brentq`` with a prior search for
+        bounds. If this fails to find a root, ``fsolve`` is used. If ``fsolve``
+        also fails, then, for ``alpha``, ``power`` and ``effect_size``,
+        ``brentq`` with fixed bounds is used. However, there can still be cases
+        where this fails.
 
         '''
         return super(_GofChisquareIndPower, self).solve_power(effect_size=effect_size,
