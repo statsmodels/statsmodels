@@ -12,7 +12,8 @@ Author: Josef Perktold
 import copy
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
+                           assert_equal, assert_warns)
 
 import statsmodels.stats.power as smp
 #from .test_weightstats import CheckPowerMixin
@@ -593,6 +594,75 @@ class TestFtestPower(CheckPowerMixin):
         self.cls = smp.FTestPower
         # precision for test_power
         self.decimal = 5
+
+
+def test_power_solver():
+    # messing up the solver to trigger backup
+
+    nip = smp.NormalIndPower()
+
+    # check result
+    es0 = 0.1
+    pow_ = nip.solve_power(es0, nobs1=1600, alpha=0.01, power=None, ratio=1,
+                           alternative='larger')
+    # value is regression test
+    assert_almost_equal(pow_, 0.69219411243824214, decimal=5)
+    es = nip.solve_power(None, nobs1=1600, alpha=0.01, power=pow_, ratio=1,
+                         alternative='larger')
+    assert_almost_equal(es, es0, decimal=4)
+    assert_equal(nip.cache_fit_res[0], 1)
+    assert_equal(len(nip.cache_fit_res), 2)
+
+    # cause first optimizer to fail
+    nip.start_bqexp['effect_size'] = {'upp': -10, 'low': -20}
+    nip.start_ttp['effect_size'] = 0.14
+    es = nip.solve_power(None, nobs1=1600, alpha=0.01, power=pow_, ratio=1,
+                         alternative='larger')
+    assert_almost_equal(es, es0, decimal=4)
+    assert_equal(nip.cache_fit_res[0], 1)
+    assert_equal(len(nip.cache_fit_res), 3, err_msg=repr(nip.cache_fit_res))
+
+    nip.start_ttp['effect_size'] = np.nan
+    es = nip.solve_power(None, nobs1=1600, alpha=0.01, power=pow_, ratio=1,
+                         alternative='larger')
+    assert_almost_equal(es, es0, decimal=4)
+    assert_equal(nip.cache_fit_res[0], 1)
+    assert_equal(len(nip.cache_fit_res), 4)
+
+    # I let this case fail, could be fixed for some statistical tests
+    # (we shouldn't get here in the first place)
+    # effect size is negative, but last stage brentq uses [1e-8, 1-1e-8]
+    assert_raises(ValueError, nip.solve_power, None, nobs1=1600, alpha=0.01,
+                  power=0.005, ratio=1, alternative='larger')
+
+def test_power_solver_warn():
+    # messing up the solver to trigger warning
+
+    pow_ = 0.69219411243824214 # from previous function
+    nip = smp.NormalIndPower()
+    # using nobs, has one backup (fsolve)
+    nip.start_bqexp['nobs1'] = {'upp': 50, 'low': -20}
+    val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
+                          alternative='larger')
+    assert_almost_equal(val, 1600, decimal=4)
+    assert_equal(nip.cache_fit_res[0], 1)
+    assert_equal(len(nip.cache_fit_res), 3)
+
+    # case that has convergence failure, and should warn
+    nip.start_ttp['nobs1'] = np.nan
+
+    from statsmodels.tools.sm_exceptions import ConvergenceWarning
+    assert_warns(ConvergenceWarning, nip.solve_power, 0.1, nobs1=None,
+                  alpha=0.01, power=pow_, ratio=1, alternative='larger')
+
+    import warnings
+    with warnings.catch_warnings():  # python >= 2.6
+        warnings.simplefilter("ignore")
+        val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,
+                              alternative='larger')
+        assert_equal(nip.cache_fit_res[0], 0)
+        assert_equal(len(nip.cache_fit_res), 3)
+
 
 
 if __name__ == '__main__':
