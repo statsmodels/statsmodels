@@ -13,6 +13,7 @@ from nose.tools import with_setup
 from nose.tools import nottest
 import os
 
+from statsmodels.graphics.facetplot import _beautify
 
 def my_setup():
     # ok, it's ugly to use globals, but it's only for this time, I promise :)
@@ -425,20 +426,29 @@ class Test_stack_faced(base4test):
         fig = facet_plot('int_4 ~ cat_2 | cat_1 ~ cat_3', self.data, kind='boxplot')
 
 
-#@nottest
+@nottest
 class Test_IQ(base4test):
-    __show__ = True
-    def test_IQ_pass_1(self):
-        fig = facet_plot('I(Q("float_1")**0.5) ~ float_2 | cat_3', self.data, kind='scatter')
+    __show__ = False
+    def test_IQ_1(self):
+        fig = facet_plot('I(Q("float_1")**0.5) ~ float_2 | Q("cat_3")', self.data, kind='scatter')
         plt.draw()
 
-    def test_IQ_fail(self):
-        fig = facet_plot('I(Q("float_1")**0.5) + float_2 ~ float_3 | cat_3', self.data, kind='scatter')
+    def test_IQ_2(self):
+        fig = facet_plot('I(Q("float_1")**0.5) + I(float_2) ~ float_3 | cat_3', self.data, kind='scatter')
         plt.draw()
 
-    def test_IQ_pass_2(self):
-        fig = facet_plot('I(Q("float_1") ** 0.5) + float_2 ~ float_3 | cat_3', self.data, kind='scatter')
+    def test_IQ_3(self):
+        fig = facet_plot('I(Q("float_1") ** 0.5) + I(5*standardize(float_2)) ~ float_3 | I(cat_3)', self.data, kind='scatter')
         plt.draw()
+
+@nottest
+class Test_beautify(base4test):
+    def test_beutify_1(self):
+        s = 'I(Q("float_1") ** 0.5) + I(float_2) ~ Q("float_3") | cat_3'
+        assert 'float_1 ** 0.5 + float_2 ~ float_3 | cat_3' == _beautify(s)
+    def test_beutify_1(self):
+        s = "whather comes to mind, with Q, I, and () or ( op )"
+        assert s == _beautify(s)
 
 if __name__ == "__main__":
     run_module_suite()
