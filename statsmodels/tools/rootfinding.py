@@ -103,7 +103,7 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
             print "raise ValueError('start_upp needs to be positive')"
         su = start_upp
     else:
-        su = 1
+        su = 1.
 
 
     if low is not None:
@@ -113,11 +113,11 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
             print "raise ValueError('start_low needs to be negative')"
         sl = start_low
     else:
-        sl = min(-1, su - 1)
+        sl = min(-1., su - 1.)
 
     # need sl < su
     if upp is None:
-        su = max(su, sl + 1)
+        su = max(su, sl + 1.)
 
 
     # increasing or not ?
@@ -125,6 +125,19 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         assert sl < su  # check during developement
         f_low = func(sl, *args)
         f_upp = func(su, *args)
+
+        # special case for F-distribution (symmetric around zero for effect size)
+        # doesn't work
+#        if sl == -1 and su == 1:
+#            f_low = func(sl, *args)
+#            f_upp = func(su, *args)
+        if np.max(np.abs(f_upp - f_low)) < 1e-15:
+            sl = 1e-8
+            f_low = func(sl, *args)
+            increasing = (f_low < f_upp)
+            #print 'symm', sl, su, f_low, f_upp
+
+
         # possibly func returns nan
         delta = su - sl
         if np.isnan(f_low):
@@ -155,8 +168,9 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
         increasing = (f_low < f_upp)
 
 
+
     if DEBUG:
-        print 'low, upp', low, upp
+        print 'low, upp', low, upp, func(sl, *args), func(su, *args)
         print 'increasing', increasing
         print 'sl, su', sl, su
 
