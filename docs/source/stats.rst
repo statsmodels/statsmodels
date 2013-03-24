@@ -175,10 +175,16 @@ to one way ANOVA, but still in developement
 
    multipletests
    fdrcorrection0
-   tukeyhsd
 
    GroupsStats
    MultiComparison
+
+.. currentmodule:: statsmodels.stats.multicomp
+
+.. autosummary::
+   :toctree: generated/
+
+   pairwise_tukeyhsd
 
 The following functions are not (yet) public (here for my own benefit, JP)
 
