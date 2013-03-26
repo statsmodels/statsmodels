@@ -32,7 +32,7 @@ _missing_param_doc = base._missing_param_doc
 class TimeSeriesModel(base.LikelihoodModel):
 
     __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
-                          "extra_params" : base._missing_param_doc}
+                          "extra_params" : _missing_param_doc}
 
     def __init__(self, endog, exog=None, dates=None, freq=None, missing='none'):
         super(TimeSeriesModel, self).__init__(endog, exog, missing=missing)
