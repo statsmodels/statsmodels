@@ -387,28 +387,44 @@ class SimpleTable(list):
         return '\n'.join(formatted_rows)
     def as_latex_tabular(self, **fmt_dict):
         '''Return string, the table as a LaTeX tabular environment.
-        Note: will equire the booktabs package.'''
+        Note: will require the booktabs package.'''
         #fetch the text format, override with fmt_dict
         fmt = self._get_fmt('latex', **fmt_dict)
-        aligns = self[-1].get_aligns('latex', **fmt)
-        formatted_rows = [ r'\begin{tabular}{%s}' % aligns ]
-
-        table_dec_above = fmt['table_dec_above']
-        if table_dec_above:
-            formatted_rows.append(table_dec_above)
-
-        formatted_rows.extend(
-            row.as_string(output_format='latex', **fmt) for row in self )
-
-        table_dec_below = fmt['table_dec_below']
-        if table_dec_below:
-            formatted_rows.append(table_dec_below)
-
-        formatted_rows.append(r'\end{tabular}')
+        
+        formatted_rows = ["\\begin{center}"]
+        
+        table_dec_above = fmt['table_dec_above'] or ''
+        table_dec_below = fmt['table_dec_below'] or ''
+        
+        prev_aligns = None
+        last = None
+        for row in self + [last]:
+            if row == last:
+                aligns = None
+            else:
+                aligns = row.get_aligns('latex', **fmt)
+            
+            if aligns != prev_aligns:
+                # When the number/type of columns changes...
+                if prev_aligns:
+                    # ... if there is a tabular to close, close it...
+                    formatted_rows.append(table_dec_below)
+                    formatted_rows.append( r'\end{tabular}' )
+                if aligns:
+                    # ... and if there are more lines, open a new one:
+                    formatted_rows.append( r'\begin{tabular}{%s}' % aligns )
+                    if not prev_aligns:
+                        # (with a nice line if it's the top of the whole table)
+                        formatted_rows.append(table_dec_above)
+            if row != last:
+                formatted_rows.append(
+                    row.as_string(output_format='latex', **fmt) )
+            prev_aligns = aligns
         #tabular does not support caption, but make it available for figure environment
         if self.title:
             title = r'%%\caption{%s}' % self.title
             formatted_rows.append(title)
+        formatted_rows.append( "\\end{center}" )
         return '\n'.join(formatted_rows)
         """
         if fmt_dict['strip_backslash']:
@@ -822,6 +838,7 @@ default_latex_fmt = dict(
         #stubs_align = 'l',   #deprecated; use data_fmts
         stub_align = 'l',
         header_align = 'c',
+        empty_align = 'l',
         #labeled formats
         header_fmt = r'\textbf{%s}', #deprecated; just use 'header'
         stub_fmt = r'\textbf{%s}', #deprecated; just use 'stub'
