@@ -1,8 +1,10 @@
 Release History
 ===============
 
-0.5.0-dev
----------
+0.5.0
+-----
+*Main Changes and Additions*
+* Add patsy dependency
 
 *Compatibility and Deprecation*
 

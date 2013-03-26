@@ -52,6 +52,11 @@ def check_dependency_versions(min_versions):
     except ImportError:
         raise ImportError("statsmodels requires pandas")
     try:
+        from patsy import __version__ as patsy_version
+    except ImportError:
+        raise ImportError("statsmodels requires patsy")
+
+    try:
         assert StrictVersion(strip_rc(npversion)) >= min_versions['numpy']
     except AssertionError:
         raise ImportError("Numpy version is %s. Requires >= %s" %
@@ -69,6 +74,13 @@ def check_dependency_versions(min_versions):
     except AssertionError:
         raise ImportError("Pandas version is %s. Requires >= %s" %
                 (pversion, min_versions['pandas']))
+
+    try: # patsy dev looks like 0.1.0+dev
+        pversion = re.match("\d*\.\d*\.\d*", patsy_version).group()
+        assert StrictVersion(pversion) >= min_versions['patsy']
+    except AssertionError:
+        raise ImportError("Patsy version is %s. Requires >= %s" %
+                (pversion, min_versions["patsy"]))
 
 
 MAJ = 0
@@ -192,6 +204,7 @@ if __name__ == "__main__":
         'numpy' : '1.4.0',
         'scipy' : '0.7.0',
         'pandas' : '0.7.1',
+        'patsy' : '0.1.0',
                    }
 
     check_dependency_versions(min_versions)
