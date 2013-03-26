@@ -1,3 +1,5 @@
+:orphan:
+
 Patsy: Contrast Coding Systems for categorical variables
 ===========================================================
 

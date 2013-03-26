@@ -165,8 +165,8 @@ def mnc2mvsk(args):
 def cov2corr(cov):
     '''convert covariance matrix to correlation matrix
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     cov : array_like, 2d
         covariance matrix, see Notes
 

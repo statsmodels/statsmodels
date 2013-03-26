@@ -78,8 +78,8 @@ class TableDist(object):
     def _critvals(self, n):
         '''rows of the table, linearly interpolated for given sample size
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         n : float
             sample size, second parameter of the table
 
@@ -170,8 +170,8 @@ class TableDist(object):
 
         use two sequential 1d interpolation, first by n then by prob
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         prob : array_like
             probabilities corresponding to the definition of table columns
         n : int or float
@@ -209,8 +209,8 @@ class TableDist(object):
 
         uses Rbf to interpolate critical values as function of `prob` and `n`
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         prob : array_like
             probabilities corresponding to the definition of table columns
         n : int or float

@@ -292,8 +292,8 @@ class _OptFuncts(object):
         It calls test_var and when called by an optimizer,
         finds the value of sig2_0 that is chi2.ppf(significance-level)
 
-        Parameter
-        --------
+        Parameters
+        ----------
         var_test : float
             Hypothesized value of the variance
 
