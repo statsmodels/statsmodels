@@ -25,8 +25,8 @@ def brentq_expanding(func, low=None, upp=None, args=(), xtol=1e-5,
 
     Assumes function ``func`` is monotonic.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     func : callable
         function for which we find the root ``x`` such that ``func(x) = 0``
     low : float or None

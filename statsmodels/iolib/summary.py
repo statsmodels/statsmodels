@@ -512,8 +512,8 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
 
     This allows interleaving of parameters with bse and/or tvalues
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     result : result instance
         the result instance with params and attributes in extras
     extras : list of strings
@@ -579,8 +579,8 @@ def summary_params_2dflat(result, endog_names=None, exog_names=None, alpha=0.05,
                           #skip_headers2=True):
     '''summary table for parameters that are 2d, e.g. multi-equation models
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     result : result instance
         the result instance with params, bse, tvalues and conf_int
     endog_names : None or list of strings
@@ -667,8 +667,8 @@ def table_extend(tables, keep_headers=True):
     This function returns the merged table as a deepcopy, in contrast to the
     SimpleTable extend method.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     tables : list of SimpleTable instances
     keep_headers : bool
         If true, then all headers are kept. If falls, then the headers of
