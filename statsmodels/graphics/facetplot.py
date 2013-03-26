@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
-
 __all__ = ['facet_plot']
 
 import numpy as np
@@ -21,6 +20,9 @@ import re
 from scipy.stats import spearmanr
 from itertools import product
 
+import sys
+
+import logging
 ##########################################################
 # THE PRINCIPAL FUNCTIONS
 ##########################################################
@@ -28,8 +30,8 @@ from itertools import product
 
 def facet_plot(formula, data=None, kind=None, subset=None,
                drop_na=True, ax=None, jitter=1.0, facet_grid=False,
-               include_total=False, title_y=1.0,
-               *args, **kwargs):
+               include_total=False, title_y=1.0, strict_patsy=False,
+               **kwargs):
     """make a faceted plot of two set of variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
@@ -80,6 +82,11 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     title_y: float, optional
         Put the title of each facet at a certain height in each facet.
         the default is to put it above the facet
+    strict_patsy: boolean, optional
+        Interpret the exogenous variables as a complete patsy formula
+        instead of the mixed method. Can be useful to describe some
+        kind of functional modification or interaction between the data
+        but will lose information about the categorical variables
 
     the other args and kwargs will be redirected to the specific plot
 
@@ -129,12 +136,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     Notes
     =====
 
-    The formula is not interpreted directly with patsy to preserve the
-    categorical variables. This means that sometimes the interpretation
-    of formulas can be different and raise errors about not finding
-    the variables as you defined them. To avoid this the solution is
-    to follow PEP8 even in the formula as put a space around operators
-    and a space after commas.
+    Explains problems about unicode in patsy
 
     Examples
     ========
@@ -222,6 +224,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         >>> facet_plot(' float_1 ~ x 1 ', data)
 
     """
+    formula = unicode(formula)
     if not ax:
         fig = plt.figure()
         PARTIAL = False
@@ -232,29 +235,32 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     if data is None:
         data = patsy.EvalEnvironment.capture(1).namespace
     #create the x and y values of the arrays
-    value_x = _array4name(x, data)
-    value_y = _array4name(y, data)
+    value_y = _array4name(y, data, strict_patsy, intercept=False)
+    value_x = _array4name(x, data, strict_patsy)
     value_f = _array4name(facet, data)
     value_p = _array4name(projection, data)
-    if value_f is not None and isinstance(value_f, pd.Series):
-        value_f = pd.DataFrame({value_f.name: value_f})
-    if value_p is not None and isinstance(value_p, pd.Series):
-        value_p = pd.DataFrame({value_p.name: value_p})
-    if value_y is not None and isinstance(value_y, pd.Series):
-        value_y = pd.DataFrame({value_y.name: value_y})
-    if isinstance(value_x, pd.Series):
-        value_x = pd.DataFrame({value_x.name: value_x})
+    #create the x dataframe with patsy of the modified versione
+    # recreate the expression based on the columns of the relative dataframes
 
+    def as_formula(df):
+        return (u" + ".join(unicode(c) for c in df.columns)
+                if df is not None else None)
+    y = as_formula(value_y)
+    x = as_formula(value_x)
+    facet = as_formula(value_f)
+    projection = as_formula(value_p)
+
+    # make the projections, grouping the data on the given categories
     if value_p is not None:
         to_project = value_y if value_y is not None else value_x
         data_p = pd.concat([to_project, value_p], axis=1)
         data_p = _stack_by(data_p, list(value_p.columns))
         if value_y is not None:
             value_y = data_p
-            y = " + ".join(list(value_y.columns))
+            y = u" + ".join(list(value_y.columns))
         else:
             value_x = data_p
-            x = " + ".join(list(value_x.columns))
+            x = u" + ".join(list(value_x.columns))
 
     #reconstruct the dataframe from the pieces created before
     data = pd.concat([value_x, value_y, value_f], axis=1)
@@ -280,8 +286,8 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         raise ValueError("the oracle couldn't determine the best plot, "
                          "please choose betwenn: {}".format(
                          facet_plot.registered_plots.keys()))
-    # now try to use the data-centric functions...if it's not available
-    # go back to the old version
+    # load the function among the available ones, troubles
+    # can happens if the user chooses something not present
     plot_function = registered_plots[kind]
     #create a dictionary with all the levels for all the categories
     categories = _analyze_categories(value_x)
@@ -293,13 +299,13 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         if facet:
             raise ValueError('facet are incompatibles with single axes')
         plot_function(value_x, value_y,
-                      ax=ax,  jitter=jitter,
-                      categories=categories, *args, **kwargs)
+                      ax=ax,  jitter=jitter, facet=u'__TOTAL__',
+                      categories=categories, **kwargs)
         return fig
     # obtain a list of (category, subset of the dataframe)
     elements = _elements4facet(facet, data)
     if include_total:
-        elements.append(['__TOTAL__', data])
+        elements.append([u'__TOTAL__', data])
     # automatically select the number of subplots
     # it may ust optimize given the number of facets or try
     # to create a regular grid. Works fine for monovariate,
@@ -366,9 +372,10 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         # launch the autoplot
         # I pass the construction to it as it can decide
         # to build it as a 3d or polar axis
+        level = level if level not in ['', None] else u'__TOTAL__'
         ax = [fig, row_num, col_num, idx + 1, base_ax]
         ax = plot_function(value_x, value_y, ax=ax, jitter=jitter,
-                           categories=categories, *args, **kwargs)
+                           categories=categories, facet=level, **kwargs)
         # all the subplots share the same axis with the first one being
         # of the same variable
         if not base_ax:
@@ -382,7 +389,6 @@ def facet_plot(formula, data=None, kind=None, subset=None,
                 ax.locator_params(prune='both', axis='y')
         except AttributeError:
             pass
-
         try:
             if value_x.dtype != object:
                 ax.locator_params(prune='both', axis='x')
@@ -391,14 +397,15 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         # remove the superfluos info base on the columns
         if (my_col and not isinstance(ax, Axes3D)
                 and not kind == 'mosaic'):
-            ax.set_ylabel('')
+            ax.get_yaxis().get_label().set_visible(False)
             plt.setp(ax.get_yticklabels(), visible=False)
         # show the x labels only if it's on the last line
         #the 3d axes have the right to keep their axes labels
         if (my_row != row_num - 1 and not isinstance(ax, Axes3D)
                 and not kind == 'mosaic'):
-            ax.set_xlabel('')
+            ax.get_xaxis().get_label().set_visible(False)
             plt.setp(ax.get_xticklabels(), visible=False)
+
         if not PARTIAL:
             if isinstance(level, tuple):
                 ax.set_title(" ".join(str(lev) for lev in level), y=title_y)
@@ -571,11 +578,30 @@ def _elements4facet(facet, data):
                 elements.append((column, data[value > 0]))
     # facet is none, so simply use the whole dataset
     else:
-        elements = [['', data]]
+        elements = [[u'', data]]
     return elements
 
 
-def _array4name(formula, data):
+def _formula_terms(formula, use_intercept=True):
+    """analyze a formula and split it into terms using patsy"""
+    env = patsy.EvalEnvironment({})
+    terms = patsy.ModelDesc.from_formula(formula, env).rhs_termlist
+    factors = [t.factors for t in terms]
+    intercept = (patsy.EvalFactor(u'Intercept', env),)
+    if use_intercept:
+        factors = [f if f else intercept for f in factors]
+    else:
+        factors = [f for f in factors if f]
+    factors = [u":".join(c.code for c in f) for f in factors]
+    factors = [patsy.EvalFactor(f, {}).code.strip() for f in factors]
+    results = []
+    for f in factors:
+        if f not in results:
+            results.append(f)
+    return sorted(unicode(c) for c in results)
+
+
+def _array4name(formula, data, strict_patsy=False, intercept=True):
     """given a name/patsy formula obtain the dataframe data from it
 
     It will do its best to load the given string as a combination of pandas
@@ -591,15 +617,30 @@ def _array4name(formula, data):
     If the dataframe has only one column, it will be returned as a series
     to simplify monovariate plotting.
     """
+    #if patsy is off, keep the intercept out
+    intercept = strict_patsy and intercept
     if not formula:
         return None
+    if strict_patsy:
+        if not intercept:
+            formula = formula + u' +0'
+        #FIXME: need to create the formula here, or unicode will bite
+        value = patsy.dmatrix(formula, data, return_type="dataframe")
+        pEF = patsy.EvalFactor
+        value.columns = [unicode(pEF(c, {}).code.strip())
+                         for c in value.columns]
+        value.name = formula
+        return value
     result = []
-    for name in formula.split('+'):
+
+    pEF = lambda s: unicode(patsy.EvalFactor(s, {}).code)
+    for name in _formula_terms(formula, intercept):
         #name = name.strip()
         #this should allow to follow the same structure as patsy
         name = name.strip()
+        logging.warning(u'name: {}, {}'.format(name, type(name)))
         try:
-            name = patsy.EvalFactor(name, {}).code
+            name = pEF(name)
         except SyntaxError:
             pass
         try:
@@ -607,12 +648,20 @@ def _array4name(formula, data):
             # it expect it to be a proper
             # dataframe, even if this come from something
             # that is not
-            value = pd.DataFrame({name: data[name]})
-            value.name = name
+
+            if name in data:
+                value = pd.DataFrame({name: data[name]})
+                value.name = name
+            else:
+                name_mod = _beautify(name, 0)
+                value = pd.DataFrame({name: data[name_mod]})
+                value.name = name
         except KeyError:
-            #if it fails try it as a patsy formula
-            # the +0 is needed to avoid the intercept column
-            value = patsy.dmatrix(name + ' + 0', data, return_type="dataframe")
+            # if it fails try it as a patsy formula
+            #if sys.version_info[0]==2:
+            #name = name.encode('unicode-escape')
+            value = patsy.dmatrix(name+'+0', data, return_type="dataframe")
+            value.columns = [pEF(c) for c in value.columns]
             value.name = name
         result.append(value)
     #merge all the resulting dataframe
@@ -626,17 +675,23 @@ def _array4name(formula, data):
     return result
 
 
-Q_find = re.compile(""".*?(Q[(]["'](.*?)["'][)]).*?""")
-I_find = re.compile(""".*?(I[(](.*?)[)]).*?""")
-def _beautify(s):
+Q_find = re.compile(u""".*?(Q[(]["'](.*?)["'][)]).*?""")
+Qu_find = re.compile(u""".*?(Q[(]u["'](.*?)["'][)]).*?""")
+I_find = re.compile(u""".*?(I[(](.*?)[)]).*?""")
+
+
+def _beautify(s, remove_I=True):
     """remove the utilities Q and I from the formula, just for show"""
     k = s
     while Q_find.findall(k):
         for old, new in Q_find.findall(k):
-            k = k.replace(old,new)
-    while I_find.findall(k):
+            k = k.replace(old, new)
+    while Qu_find.findall(k):
+        for old, new in Qu_find.findall(k):
+            k = k.replace(old, new)
+    while remove_I and I_find.findall(k):
         for old, new in I_find.findall(k):
-            k = k.replace(old,new)
+            k = k.replace(old, new)
     return k
 
 
@@ -698,10 +753,10 @@ def _stack_by(df, keys):
     for k, g in df.groupby(keys):
         g = g[residui]
         if isinstance(k, tuple):
-            addendum = " / ".join(str(c) for c in k)
+            addendum = u": ".join(unicode(c) for c in k)
         else:
-            addendum = str(k)
-        g.columns = ['Q("'+col+' : '+addendum+'")' for col in g.columns]
+            addendum = unicode(k)
+        g.columns = [u'Q("'+col+u': '+addendum+u'")' for col in g.columns]
         #g.index = range(len(g))
         results.append(g)
     return pd.concat(results, axis=1)
@@ -780,28 +835,30 @@ def _oracle(x, y):
     return ''
 
 
-def kind_corr(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
-    if y is not None:
-        raise TypeError('corr do not accept endogenous variables')
+def kind_corr(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     if not len(x.columns) == 1:
         raise TypeError('corr do not accept multiple exogenous variables')
+    if y is not None:
+        if not len(y.columns) == 1:
+            raise TypeError('corr do not accept multiple endogenous variables')
+        y = y.icol(0)
+        if y.dtype == object:
+            raise TypeError('corr do not accept categorical variables')
     x = x.icol(0)
     if x.dtype == object:
             raise TypeError('corr do not accept categorical variables')
-    x = x.dropna()
-    if not len(x):
-        raise ValueError('the chosen variable is empty or has only nan values')
     fig, ax = _build_axes(ax)
-    ax.acorr(x.values*1.0, maxlags=None, *args, **kwargs)
+    if y is None:
+        ax.acorr(x.values, maxlags=None, **kwargs)
+        ax.set_xlabel(x.name)
+    else:
+        ax.xcorr(x.values, y.values, maxlags=None, **kwargs)
+        ax.set_xlabel("{} Vs {}".format(x.name, y.name))
     ax.set_ylabel('correlation')
-    #lim = max(abs(i) for i in ax.get_xlim())
-    #ax.set_xlim(-lim, lim)
-    ax.set_ylim(None, 1.01)
-    ax.set_xlabel(x.name)
     return ax
 
 
-def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     # I can also merge the x with the y, but should I??
     if y is not None:
         raise TypeError('mosaic do not accept endogenous variables')
@@ -810,11 +867,11 @@ def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
         ax[-1] = None
     fig, ax = _build_axes(ax)
     data = x.sort()
-    mosaicplot.mosaic(data, ax=ax, *args, **kwargs)
+    mosaicplot.mosaic(data, ax=ax, **kwargs)
     return ax
 
 
-def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+def kind_hist(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     """make the kernel density estimation of a single variable"""
     # compute the number of bin by means of the rule, but should also
     # implement something like
@@ -852,7 +909,7 @@ def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
         bin_num = int((data.max()-data.min())/bin_size)
         kwargs.setdefault('bins', bin_num)
         kwargs['label'] = column
-        ax.hist(data, *args, **kwargs)
+        ax.hist(data, **kwargs)
         #ax.set_ylim(0.0, None)
         ax.set_ylabel('Density')
     if len(x.columns) == 1:
@@ -863,7 +920,7 @@ def kind_hist(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     return ax
 
 
-def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+def kind_counter(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     if y is not None or not len(x.columns) == 1:
         raise TypeError('counter can only work with a single array')
     fig, ax = _build_axes(ax)
@@ -900,7 +957,7 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     # if the observed value is 0 the error is nan
     yerr[np.isnan(yerr)] = 0
     error_kw = dict(ecolor='#444444')
-    ax.bar(base_indices, val, yerr=yerr, error_kw=error_kw, *args, **kwargs)
+    ax.bar(base_indices, val, yerr=yerr, error_kw=error_kw, **kwargs)
 
     #configuration of the ticks and labels
     ax.set_ylabel('Counts')
@@ -913,7 +970,7 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     return ax
 
 
-def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the hexbin plot')
@@ -928,7 +985,7 @@ def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     if isinstance(kwargs['cmap'], basestring):
         kwargs['cmap'] = plt.get_cmap(kwargs['cmap'])
     kwargs.setdefault('gridsize', 20)
-    img = ax.hexbin(x_data, y_data, *args, **kwargs)
+    img = ax.hexbin(x_data, y_data, **kwargs)
     plt.colorbar(img)
     ax.set_ylabel(y.name)
     ax.set_xlabel(x.name)
@@ -937,7 +994,7 @@ def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
     return ax
 
 
-def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
+def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     if len(x.columns) > 1:
         raise TypeError('matrix plot is defined only for monovariate plots')
     if y is not None:
@@ -969,7 +1026,7 @@ def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         kwargs.setdefault('extent', extent)
         kwargs.setdefault('aspect', 'auto')
-        img = ax.imshow(matrix.T, *args, **kwargs)
+        img = ax.imshow(matrix.T, **kwargs)
         plt.colorbar(img)
         if y.dtype != float and y.dtype != float:
             ylim = ax.get_ylim()
@@ -993,12 +1050,12 @@ def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, *args, **kwargs):
         kwargs.setdefault('interpolation', 'nearest')
         kwargs.setdefault('origin', 'lower')
         kwargs.setdefault('cmap', plt.cm.binary)
-        img = ax.imshow(transitions, *args, **kwargs)
+        img = ax.imshow(transitions, **kwargs)
         plt.colorbar(img)
     return ax
 
 
-def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the ellipse plot')
@@ -1013,7 +1070,7 @@ def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
             color=kwargs.get('color', 'b'),
             alpha=kwargs.get('alpha', 0.5),
             marker=kwargs.get('marker', 'o'),
-            linestyle=kwargs.get('linestyle', 'none'))
+            linestyle=kwargs.get('linestyle', 'none'), **kwargs)
     mean = [np.mean(x_data), np.mean(y_data)]
     cov = np.cov(x_data, y_data)
     _make_ellipse(mean, cov, ax, 0.95, 'gray')
@@ -1044,15 +1101,15 @@ def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     return ax
 
 
-def kind_lines(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+def kind_lines(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     kwargs['marker'] = None
     kwargs['linestyle'] = '-'
     return kind_scatter(x, y, ax=ax, categories=categories,
-                        jitter=jitter, order=True, *args, **kwargs)
+                        jitter=jitter, facet=facet, order=True, **kwargs)
 
 
-def kind_scatter(x, y, ax=None, categories={},
-                 jitter=1.0, order=False, *args, **kwargs):
+def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+    order = kwargs.pop('order', False)
     if y is None:
         #zero-variate
         fig, ax = _build_axes(ax)
@@ -1126,7 +1183,7 @@ def kind_scatter(x, y, ax=None, categories={},
         raise TypeError("scatter can't manage this kind of data")
 
 
-def kind_kde(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+def kind_kde(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     """make the kernel density estimation of a single variable"""
     if y is not None:
         if not len(y.columns) == 1 or not len(x.columns) == 1:
@@ -1166,7 +1223,7 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
                         facecolor=kwargs.get('facecolor', color),
                         edgecolor=kwargs.get('edgecolor', color),
                         alpha=kwargs.get('alpha', 0.33))
-        ax.plot(base_x, my_pdf(base_x), color=color, label=column)
+        ax.plot(base_x, my_pdf(base_x), color=color, label=column, **kwargs)
         #make the histogram of the data, very lightly
     if len(x.columns) == 1:
         ax.set_xlabel(x.columns[0])
@@ -1176,7 +1233,7 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     return ax
 
 
-def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     """perform the violinplot on monovariate data, vertical or horizontals"""
     if (y is None or not len(x.columns) == 1 or
             not len(y.columns) == 1):
@@ -1209,9 +1266,9 @@ def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     for pos, val, name in level_idx_v_l:
         _single_violin(ax, pos=pos, pos_data=val,
                        width=0.33, side='both',
-                       plot_opts={}, vertical=vertical)
+                       plot_opts={}, vertical=vertical, **kwargs)
         ax.boxplot([val], notch=1, positions=[pos],
-                   vert=vertical, widths=[0.33])
+                   vert=vertical, widths=[0.33], **kwargs)
     x = _make_numeric(x, ax,
                       'x' if vertical else 'y', categories=categories)
     if vertical:
@@ -1223,7 +1280,7 @@ def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     return ax
 
 
-def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
+def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     """perform the boxplot on monovariate data, vertical or horizontals.
     Should be expanded to manage multivariate data. For multivariate
     data should put the barplots one next to the other for each series"""
@@ -1234,20 +1291,20 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     ylab = y.name
     if len(x.columns) == 1 and x.icol(0).dtype != float:
         vertical = True
-        ax.set_xlabel(xlab)
+        ax.set_xlabel(_beautify(xlab))
     elif len(y.columns) == 1 and y.icol(0).dtype != float:
         vertical = False
         x, y = y, x
-        ax.set_ylabel(ylab)
+        ax.set_ylabel(_beautify(ylab))
     else:
         raise TypeError('the boxplot is not adeguate for this data')
     x = x.icol(0)
     L = len(y.columns)
     if L == 1:
         if vertical:
-            ax.set_ylabel(ylab)
+            ax.set_ylabel(_beautify(ylab))
         else:
-            ax.set_xlabel(xlab)
+            ax.set_xlabel(_beautify(xlab))
     # ok, data is clean, create the axes and do the plot
     kwargs.pop('y_label', None)
     levels = categories[xlab if vertical else ylab]
@@ -1266,10 +1323,10 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
             notch = kwargs.setdefault('notch', True)
             artist = ax.boxplot([val], notch=notch, positions=positions,
                                 vert=vertical, widths=widths,
-                                patch_artist=True)
+                                patch_artist=True, **kwargs)
             artist['boxes'][0].set_facecolor(colors[index])
             artist['boxes'][0].set_alpha(0.5)
-            temp_args = {} if pos != 0 else {'label': col_name}
+            temp_args = {} if pos != 0 else {'label': _beautify(col_name)}
             if vertical:
                 ax.scatter(positions, [np.mean(val)],
                            color=colors[index], **temp_args)
@@ -1289,6 +1346,47 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, *args, **kwargs):
     _multi_legend(ax)
     return ax
 
+from statsmodels.api import OLS
+def kind_ols(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+    if y is None:
+        raise TypeError("can implement the GLM only on a single endog")
+    fig, ax = _build_axes(ax)
+    model = OLS(y, x).fit()
+    y_est = model.fittedvalues
+    if isinstance(y_est, pd.Series):
+        y_est = pd.DataFrame({'estimated': y_est})
+    print y_est
+    if len(y.columns) == 1:
+        kind_ellipse(y_est, y, ax=ax, categories={},
+                     jitter=1.0, facet=facet, **kwargs)
+    else:
+        kind_scatter(y_est, y, ax=ax, categories={},
+                     jitter=1.0, facet=facet, **kwargs)
+    return ax
+
+
+def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+    if not len(x.columns) == 1:
+        raise TypeError('psd do not accept multiple exogenous variables')
+    if y is not None:
+        if not len(y.columns) == 1:
+            raise TypeError('psd do not accept multiple endogenous variables')
+        y = y.icol(0)
+        if y.dtype == object:
+            raise TypeError('psd do not accept categorical variables')
+    x = x.icol(0)
+    if x.dtype == object:
+            raise TypeError('psd do not accept categorical variables')
+    fig, ax = _build_axes(ax)
+    if y is None:
+        ax.psd(x.values, **kwargs)
+        ax.set_ylabel('power spectral density')
+        ax.set_xlabel(x.name)
+    else:
+        ax.csd(x.values, y.values, **kwargs)
+        ax.set_ylabel('cross spectral density')
+        ax.set_xlabel("{} Vs {}".format(x.name, y.name))
+    return ax
 
 ###################################################
 # CREATING THE DICTIONARY WITH ALL THE PLOT FUNCTIONS DEFINED
@@ -1313,6 +1411,8 @@ registered_plots['counter'] = kind_counter
 registered_plots['hist'] = kind_hist
 registered_plots['mosaic'] = kind_mosaic
 registered_plots['corr'] = kind_corr
+registered_plots['ols'] = kind_ols
+registered_plots['psd'] = kind_psd
 facet_plot.registered_plots = registered_plots
 
 # still to implement
@@ -1320,3 +1420,24 @@ facet_plot.registered_plots = registered_plots
 # 'trisurf',
 # 'wireframe'
 # 'scatter_coded'
+
+#####################################################################
+# DEBUG FUNCTIONS
+#####################################################################
+def _dump(x, y, ax, **kwargs):
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    if isinstance(ax, list):
+        fig, row, col, idx, base = ax
+        ax = fig.add_subplot(row, col, idx, sharex=base, sharey=base)
+    logging.info("\nfacet: {}".format(kwargs.get('facet',"no facet obtained")))
+    logging.info("\ndump of the data:\nX:\n{}\nY:\n{}".format(x, y))
+    return ax
+
+def _null(x, y, ax, **kwargs):
+    if isinstance(ax, list):
+        fig, row, col, idx, base = ax
+        ax = fig.add_subplot(row, col, idx, sharex=base, sharey=base)
+    return ax
+facet_plot.registered_plots['_dump'] = _dump
+facet_plot.registered_plots['_null'] = _null
