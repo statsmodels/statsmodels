@@ -665,6 +665,11 @@ class Cell(object):
             datatype = datatype % len(data_fmts) #constrain to indexes
             content = data_fmts[datatype] % data
         elif datatype in fmt:
+            if "replacements" in fmt:
+                if isinstance( data, str ):
+                    for repl in fmt["replacements"]:
+                        data = data.replace( repl, fmt["replacements"][repl] )
+            
             dfmt = fmt.get(datatype)
             try:
                 content = dfmt % data
@@ -824,7 +829,8 @@ default_latex_fmt = dict(
         header = r'\textbf{%s}',
         stub = r'\textbf{%s}',
         empty = '',
-        missing = '--'
+        missing = '--',
+        replacements = {"%" : "\%", ">" : "$>$", "|" : "$|$"}
         )
 default_fmts = dict(
 html= default_html_fmt,
