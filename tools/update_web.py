@@ -21,7 +21,7 @@ from email.MIMEText import MIMEText
 
 ######### INITIAL SETUP ##########
 
-#hard-coded "curren working directory" ie., you will need file permissions
+#hard-coded "current working directory" ie., you will need file permissions
 #for this folder
 script = os.path.abspath(sys.argv[0])
 dname = os.path.abspath(os.path.dirname(script))
@@ -32,7 +32,7 @@ os.chdir(dname)
 # hard-coded git branch names
 repo = 'git://github.com/statsmodels/statsmodels.git'
 stable_trunk = 'master'
-last_release = 'v0.4.0'
+last_release = 'v0.4.3'
 branches = [stable_trunk]
 # change last_release above and uncomment the below to update for a release
 #branches = [stable_trunk, last_release]
@@ -151,23 +151,27 @@ def install_branch(branch):
 
 def build_docs(branch):
     """
-    Changes into gitdname and builds the docs using sphinx in the
-    BUILDENV virtualenv
+    Changes into gitdname and builds the docs using BUILDENV virtualenv
     """
     os.chdir(os.path.join(gitdname, 'docs'))
     sphinx_dir = os.path.join(virtual_dir,'bin')
-    #NOTE: don't use make.py, just use make and specify which sphinx
-    #    retcode = subprocess.call([virtual_python,'make.py','html',
-    #        '--sphinx_dir='+sphinx_dir])
     retcode = subprocess.call("make clean", shell=True)
     if retcode != 0:
         os.chdir(dname)
         msg = """Could not clean the html docs for branch %s""" % branch
         raise Exception(msg)
-    #retcode = subprocess.call(" ".join(['make','html',
-    #    'SPHINXBUILD='+sphinx_dir+'/sphinx-build']), shell=True,
-    retcode = subprocess.call(" ".join(['make','html',
-        'SPHINXBUILD=/usr/local/bin/sphinx-build']), shell=True,
+    #NOTE: The python call in the below makes sure that it uses the Python
+    # that is referenced after entering the virtualenv
+    sphinx_call = " ".join(['make','html',
+                        "SPHINXBUILD=' python /usr/local/bin/sphinx-build'"])
+    activate = os.path.join(virtual_dir, "bin", "activate")
+    activate_virtualenv = ". " + activate
+    #NOTE: You have to enter virtualenv in the same call. As soon as the
+    # child process is done, the env variables from activate are lost.
+    # getting the correct env from bin/activate and passing to env is
+    # annoying
+    retcode = subprocess.call(" && ".join([activate_virtualenv, sphinx_call]),
+                                shell=True,
         env = {'MATPLOTLIBRC' : # put this in the environment to use local rc
                '/home/skipper/statsmodels/statsmodels/tools/'})
     if retcode != 0:
@@ -223,13 +227,6 @@ def upload_pdf(branch):
         raise Exception(msg)
     os.chdir(dname)
 
-def activate_virtualenv():
-    activate = os.path.join(virtual_dir, "bin", "activate")
-    retcode = subprocess.call("source "+activate, shell=True)
-
-def deactivate_virtualenv():
-    retcode = subprocess.call("deactivate", shell=True)
-
 def email_me(status='ok'):
     if status == 'ok':
         message = """
@@ -264,14 +261,11 @@ def main():
             create_virtualenv()
             create_update_gitdir()
             install_branch(branch)
-            activate_virtualenv() # so sphinx-build uses that python
             build_docs(branch)
-            deactivate_virtualenv()
             upload_docs(branch)
     #        build_pdf(new_branch_dir)
     #        upload_pdf(branch, new_branch_dir)
         except Exception as status:
-            #import pdb; pdb.set_trace()
             msg += str(status) + '\n'
 
     if msg == '': # if it doesn't something went wrong and was caught above
