@@ -997,11 +997,6 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     convert_dates : bool
         If convert_dates is True, then Stata formatted dates will be converted
         to datetime types according to the variable's format.
-
-    Notes
-    ------
-    The tC Stata Internal Format for dates is not handled. These values
-    will be returned in SIF even if convert_dates is True.
     """
     if isinstance(fname, basestring):
         fhd = StataReader(open(fname, 'rb'), missing_values=False,
