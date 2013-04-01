@@ -58,6 +58,8 @@ Regression Plots
    regressionplots.plot_partregress
    regressionplots.plot_ccpr
    regressionplots.abline_plot
+   regressionplots.influence_plot
+   regressionplots.plot_leverage_resid2
 
 Time Series Plots
 -----------------
