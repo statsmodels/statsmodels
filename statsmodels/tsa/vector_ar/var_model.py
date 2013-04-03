@@ -318,7 +318,7 @@ class VAR(tsbase.TimeSeriesModel):
     Parameters
     ----------
     endog : array-like
-        1-d endogenous response variable. The independent variable.
+        2-d endogenous response variable. The independent variable.
     names : array-like
         must match number of columns of endog
     dates : array-like
