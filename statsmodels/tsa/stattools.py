@@ -8,14 +8,14 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant
 from tsatools import lagmat, lagmat2ds, add_trend
 #from statsmodels.sandbox.tsa import var
-from adfvalues import *
+from adfvalues import mackinnonp, mackinnoncrit
 #from statsmodels.sandbox.rls import RLS
 
 #NOTE: now in two places to avoid circular import
 #TODO: I like the bunch pattern for this too.
 class ResultsStore(object):
     def __str__(self):
-        return self._str
+        return self._str  # pylint: disable=E1101
 
 def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         fitargs=(), regresults=False):
@@ -199,7 +199,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
     xdiff = np.diff(x)
     xdall = lagmat(xdiff[:,None], maxlag, trim='both', original='in')
-    nobs = xdall.shape[0]
+    nobs = xdall.shape[0]  # pylint: disable=E1103
 
     xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
     xdshort = xdiff[-nobs:]
@@ -211,7 +211,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             fullRHS = add_trend(xdall, regression, prepend=True)
         else:
             fullRHS = xdall
-        startlag = fullRHS.shape[1] - xdall.shape[1] + 1 # 1 for level
+        startlag = fullRHS.shape[1] - xdall.shape[1] + 1 # 1 for level  # pylint: disable=E1103
         #search for lag length with smallest information criteria
         #Note: use the same number of observations to have comparable IC
         #aic and bic: smaller is better
@@ -228,7 +228,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
 
         #rerun ols with best autolag
         xdall = lagmat(xdiff[:,None], bestlag, trim='both', original='in')
-        nobs = xdall.shape[0]
+        nobs = xdall.shape[0]   # pylint: disable=E1103
         xdall[:,0] = x[-nobs-1:-1] # replace 0 xdiff with level of x
         xdshort = xdiff[-nobs:]
         usedlag = bestlag

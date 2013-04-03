@@ -12,7 +12,7 @@ from statsmodels.discrete.discrete_model import Poisson
 
 DEC = 1
 
-class Compare(object):
+class CompareMixin(object):
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.res_glm.params, DEC)
@@ -32,7 +32,7 @@ class Compare(object):
         #assert_almost_equal(self.res.params, self.res_discrete.params)
 
 
-class TestPoissonMLE(Compare):
+class TestPoissonMLE(CompareMixin):
 
     def __init__(self):
 
@@ -59,7 +59,7 @@ class TestPoissonMLE(Compare):
 
 
 
-class TestPoissonOffset(Compare):
+class TestPoissonOffset(CompareMixin):
     #this uses the first exog to construct an offset variable
     def __init__(self):
 
@@ -100,7 +100,7 @@ class TestPoissonOffset(Compare):
         #assert_almost_equal(self.res.tval, self.res_glm.t()[1:], DEC)
         #assert_almost_equal(self.res.params, self.res_discrete.params)
 
-class TestPoissonZi(Compare):
+class TestPoissonZi(CompareMixin):
     #this uses the first exog to construct an offset variable
     def __init__(self):
 

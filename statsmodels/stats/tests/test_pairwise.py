@@ -141,7 +141,7 @@ def get_thsd(mci, alpha=0.05):
     assert_almost_equal(var_, var2, decimal=14)
     return resi
 
-class CheckTuckeyHSD(object):
+class CheckTuckeyHSDMixin(object):
 
     @classmethod
     def setup_class_(self):
@@ -169,7 +169,7 @@ class CheckTuckeyHSD(object):
 
 
 
-class TestTuckeyHSD2(CheckTuckeyHSD):
+class TestTuckeyHSD2(CheckTuckeyHSDMixin):
 
     @classmethod
     def setup_class(self):
@@ -187,7 +187,7 @@ class TestTuckeyHSD2(CheckTuckeyHSD):
         self.reject2 = pvals < 0.05
 
 
-class TestTuckeyHSD2s(CheckTuckeyHSD):
+class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
 
     @classmethod
     def setup_class(self):
@@ -208,7 +208,7 @@ class TestTuckeyHSD2s(CheckTuckeyHSD):
         self.reject2 = pvals < 0.01
 
 
-class TestTuckeyHSD3(CheckTuckeyHSD):
+class TestTuckeyHSD3(CheckTuckeyHSDMixin):
 
     @classmethod
     def setup_class(self):
@@ -288,6 +288,7 @@ if __name__ == '__main__':
     1 - 2	-4.600	-8.249	-0.951	***
     1 - 3	-0.260	-3.909	3.389	'''
 
+    import StringIO
     dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
 
     sas_ = dta5[[1,3,2]]

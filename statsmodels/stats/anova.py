@@ -321,7 +321,7 @@ def anova_lm(*args, **kwargs):
 
     # if given a single model
     if len(args) == 1:
-        return anova_lm_single(*args, **kwargs)
+        return anova_single(*args, **kwargs)
 
     # received multiple fitted models
 

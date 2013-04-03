@@ -207,7 +207,8 @@ class GenericKDE (object):
             for i in xrange(n_blocks):
                 res.append(_compute_subset(class_type, data, bw, co, do,
                                            n_cvars, ix_ord, ix_unord, n_sub,
-                                           class_vars, self.randomize))
+                                           class_vars, self.randomize,
+                                           bounds[i]))
 
         for i in xrange(n_blocks):
             sample_scale[i, :] = res[i][0]

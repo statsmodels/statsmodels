@@ -28,6 +28,9 @@ def _index_date(date, dates):
     prediction can start one out.
 
     Currently used to validate prediction start dates.
+
+    If there dates are not of a fixed-frequency and date is not on the
+    existing dates, then a ValueError is raised.
     """
     if isinstance(date, basestring):
         date = date_parser(date)
@@ -35,11 +38,22 @@ def _index_date(date, dates):
         return dates.get_loc(date)
     except KeyError, err:
         freq = _infer_freq(dates)
+        if freq is None:
+            #TODO: try to intelligently roll forward onto a date in the
+            # index. Waiting to drop pandas 0.7.x support so this is
+            # cleaner to do.
+            raise ValueError("There is no frequency for these dates and "
+                             "date %s is not in dates index. Try giving a "
+                             "date that is in the dates index or use "
+                             "an integer" % date)
+
         # we can start prediction at the end of endog
         if _idx_from_dates(dates[-1], date, freq) == 1:
             return len(dates)
 
-        raise ValueError("date %s not in date index" % date)
+        raise ValueError("date %s not in date index. Try giving a "
+                         "date that is in the dates index or use an integer"
+                         % date)
 
 def _date_from_idx(d1, idx, freq):
     """
@@ -257,7 +271,7 @@ def _infer_freq(dates):
     try:
         from pandas.tseries.api import infer_freq
         freq = infer_freq(dates)
-        return _pandas_mapping.get(freq, freq)
+        return freq
     except ImportError:
         pass
 
@@ -284,11 +298,3 @@ def _infer_freq(dates):
         return 'A'
     else:
         return
-
-_pandas_mapping = {
-    'A-DEC': 'A',
-    'Q-DEC': 'Q',
-    'W-SUN': 'W',
-    'Q-MAR' : 'Q'
-}
-

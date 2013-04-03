@@ -477,7 +477,9 @@ class ARMA(tsbase.TimeSeriesModel):
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
             the first forecast is start. Can also be a date string to
-            parse or a datetime type.
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requested, exog must be given.
@@ -635,8 +637,9 @@ class ARMA(tsbase.TimeSeriesModel):
 
         See also
         --------
-        statsmodels.model.LikelihoodModel.fit for more information
-        on using the solvers.
+        statsmodels.base.model.LikelihoodModel.fit : for more information
+            on using the solvers.
+        ARMAResults : results class returned by fit
 
         Notes
         ------
@@ -645,8 +648,6 @@ class ARMA(tsbase.TimeSeriesModel):
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
-        The below is the docstring from
-        `statsmodels.LikelihoodModel.fit`
         """
         if order is not None:
             import warnings
@@ -730,7 +731,6 @@ class ARMA(tsbase.TimeSeriesModel):
         armafit = ARMAResults(self, params, normalized_cov_params)
         return ARMAResultsWrapper(armafit)
 
-    fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
 #NOTE: the length of endog changes when we give a difference to fit
 #so model methods are not the same on unfit models as fit ones
@@ -846,12 +846,13 @@ class ARIMA(ARMA):
 
         Returns
         -------
-        `statsmodels.tsa.arima.ARMAResults` class
+        `statsmodels.tsa.arima.ARIMAResults` class
 
         See also
         --------
-        statsmodels.model.LikelihoodModel.fit for more information
-        on using the solvers.
+        statsmodels.base.model.LikelihoodModel.fit : for more information
+            on using the solvers.
+        ARIMAResults : results class returned by fit
 
         Notes
         ------
@@ -860,8 +861,6 @@ class ARIMA(ARMA):
         P = dot(inv(identity(m**2)-kron(T,T)),dot(R,R.T).ravel('F')).reshape(r,
         r, order = 'F')
 
-        The below is the docstring from
-        `statsmodels.LikelihoodModel.fit`
         """
         arima_fit = super(ARIMA, self).fit(None,
                                start_params, trend, method,
@@ -1254,8 +1253,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             parse or a datetime type.
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type.
+            the last forecast is end. Can also be a date string to parse or a
+            datetime type.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requestion, exog must be given.
@@ -1432,7 +1431,9 @@ class ARIMAResults(ARMAResults):
         end : int, str, or datetime
             Zero-indexed observation number at which to end forecasting, ie.,
             the first forecast is start. Can also be a date string to
-            parse or a datetime type.
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
             requestion, exog must be given.

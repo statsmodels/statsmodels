@@ -505,7 +505,7 @@ def mcnemar(x, y, exact='auto', correction=True):
         two paired data samples
     exact : bool or 'auto'
     correction : bool
-        If true then a continuity corection is used for the approximate
+        If true then a continuity correction is used for the approximate
         chisquare distribution.
 
     Returns

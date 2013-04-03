@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.random as R
-from numpy.testing import *
+from numpy.testing import assert_almost_equal, assert_equal
 from statsmodels.stats.contrast import Contrast
 
 class TestContrast(object):
@@ -35,7 +35,4 @@ class TestContrast(object):
         X2 = np.column_stack((self.X, self.X[:,5]))
         c = Contrast(self.X[:,5],X2)
         #TODO: I don't think this should be estimable?  isestimable correct?
-
-if __name__=="__main__":
-    run_module_suite()
 

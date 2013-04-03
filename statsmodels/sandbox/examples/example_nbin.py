@@ -186,7 +186,7 @@ class CountResults(GenericLikelihoodModelResults):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right, #[],
                           yname=yname, xname=xname, title=title)
         # for parameters, etc
-        smry.add_table_params(self, yname=yname_list, xname=xname, alpha=.05,
+        smry.add_table_params(self, yname=yname_list, xname=xname, alpha=alpha,
                              use_t=True)
         return smry
 

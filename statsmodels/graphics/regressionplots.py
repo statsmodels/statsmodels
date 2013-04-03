@@ -17,12 +17,14 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
+from statsmodels.tools.tools import maybe_unwrap_results
 
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
            'add_lowess', 'abline_plot', 'influence_plot',
            'plot_leverage_resid2']
+
 
 #TODO: consider moving to influence module
 def _high_leverage(results):
@@ -86,6 +88,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     fig, ax = utils.create_mpl_ax(ax)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
+    results = maybe_unwrap_results(results)
 
     #maybe add option for wendog, wexog
     y = results.model.endog
@@ -99,10 +102,11 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
         ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
     title = 'Fitted values versus %s' % exog_name
 
-    prstd, iv_l, iv_u = wls_prediction_std(results._results)
+    prstd, iv_l, iv_u = wls_prediction_std(results)
     ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
             label='fitted', **kwargs)
-    ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k', alpha=.7)
+    ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k',
+            alpha=.7)
     #ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
     #                    color='k')
     ax.set_title(title)
@@ -138,11 +142,12 @@ def plot_regress_exog(results, exog_idx, fig=None):
     fig = utils.create_mpl_fig(fig)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
+    results = maybe_unwrap_results(results)
 
     #maybe add option for wendog, wexog
     y_name = results.model.endog_names
     x1 = results.model.exog[:,exog_idx]
-    prstd, iv_l, iv_u = wls_prediction_std(results._results)
+    prstd, iv_l, iv_u = wls_prediction_std(results)
 
     ax = fig.add_subplot(2,2,1)
     ax.plot(x1, results.model.endog, 'o', color='b', alpha=0.9, label=y_name)
@@ -477,15 +482,16 @@ def plot_ccpr(results, exog_idx, ax=None):
     fig, ax = utils.create_mpl_ax(ax)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
+    results = maybe_unwrap_results(results)
 
     x1 = results.model.exog[:, exog_idx]
     #namestr = ' for %s' % self.name if self.name else ''
-    x1beta = x1*results._results.params[exog_idx]
+    x1beta = x1*results.params[exog_idx]
     ax.plot(x1, x1beta + results.resid, 'o')
     from statsmodels.tools.tools import add_constant
     mod = OLS(x1beta, add_constant(x1)).fit()
     params = mod.params
-    fig = abline_plot(*params, ax=ax)
+    fig = abline_plot(*params, **dict(ax=ax))
     #ax.plot(x1, x1beta, '-')
     ax.set_title('Component and component plus residual plot')
     ax.set_ylabel("Residual + %s*beta_%d" % (exog_name, exog_idx))

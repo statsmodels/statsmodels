@@ -315,13 +315,16 @@ class PandasData(ModelData):
     def _get_row_labels(self, arr):
         try:
             return arr.index
-        except AttributeError, err:
+        except AttributeError:
             # if we've gotten here it's because endog is pandas and
             # exog is not, so just return the row labels from endog
             return self.orig_endog.index
 
     def attach_columns(self, result):
-        if result.squeeze().ndim <= 1:
+        # this can either be a 1d array or a scalar
+        # don't squeeze because it might be a 2d row array
+        # if it needs a squeeze, the bug is elsewhere
+        if result.ndim <= 1:
             return Series(result, index=self.xnames)
         else: # for e.g., confidence intervals
             return DataFrame(result, index=self.xnames)

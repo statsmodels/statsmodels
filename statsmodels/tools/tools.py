@@ -523,3 +523,12 @@ def nan_dot(A, B):
     C[should_be_nan] = np.nan
 
     return C
+
+def maybe_unwrap_results(results):
+    """
+    Gets raw results back from wrapped results.
+
+    Can be used in plotting functions or other post-estimation type
+    routines.
+    """
+    return getattr(results, '_results', results)
