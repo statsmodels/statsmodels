@@ -1114,7 +1114,7 @@ class LikelihoodModelResults(Results):
         >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
         >>> results = ols(formula, dta).fit()
         >>> hypotheses = 'GNPDEFL = GNP, UNEMP = 2, YEAR/1829 = 1'
-        >>> t_test = results.new_t_test(hypotheses)
+        >>> t_test = results.t_test(hypotheses)
         >>> print t_test
 
         See also
@@ -1237,7 +1237,7 @@ class LikelihoodModelResults(Results):
         >>> formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
         >>> results = ols(formula, dta).fit()
         >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
-        >>> f_test = results.new_f_test(hypotheses)
+        >>> f_test = results.f_test(hypotheses)
         >>> print f_test
 
         See also
