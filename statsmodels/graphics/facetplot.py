@@ -704,11 +704,8 @@ def _select_rowcolsize(num_of_categories):
     side_num = np.ceil(np.sqrt(L))
     col_num = side_num
     row_num = side_num
-    while True:
-        if (row_num - 1) * col_num >= L:
-            row_num = row_num - 1
-        else:
-            break
+    while (row_num - 1) * col_num >= L:
+        row_num = row_num - 1
     return row_num, col_num
 
 
