@@ -371,15 +371,6 @@ class BinaryModel(DiscreteModel):
         else:
             return np.dot(exog, params)
 
-    def fit(self, start_params=None, method='newton', maxiter=35,
-            full_output=1, disp=1, callback=None, **kwargs):
-        bnryfit = super(BinaryModel, self).fit(start_params=start_params,
-                method=method, maxiter=maxiter, full_output=full_output,
-                disp=disp, callback=callback, **kwargs)
-        discretefit = BinaryResults(self, bnryfit)
-        return BinaryResultsWrapper(discretefit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
-
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -1185,6 +1176,15 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        bnryfit = super(Logit, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = LogitResults(self, bnryfit)
+        return BinaryResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
 class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
@@ -1394,6 +1394,15 @@ class Probit(BinaryModel):
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
+
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        bnryfit = super(Probit, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = ProbitResults(self, bnryfit)
+        return BinaryResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
 
 class MNLogit(MultinomialModel):
     __doc__ = """
@@ -1872,23 +1881,33 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid_dev(self):
-        model = self.model
-        endog = model.endog
-        exog = model.exog
-        #        M = # of individuals that share a covariate pattern
-        # so M[i] = 2 for i = the two individuals who share a covariate pattern
-        # use unique row pattern?
-        #TODO: is this common to all models?
-        # logit uses Pearson, should have options
         #These are the deviance residuals
+        #model = self.model
+        endog = self.model.endog
+        #exog = model.exog
+        # M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = two share a covariate pattern
         M = 1
-        p = model.predict(self.params)
-        Y_0 = np.where(exog == 0)
-        Y_M = np.where(exog == M)
-        res = np.zeros_like(endog)
+        p = self.predict()
+        #Y_0 = np.where(exog == 0)
+        #Y_M = np.where(exog == M)
+        #NOTE: Common covariate patterns are not yet handled
         res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
                 endog*np.sqrt(2*M*np.abs(np.log(p)))
         return res
+
+    @cache_readonly
+    def resid_pearson(self):
+        # Perason residuals
+        #model = self.model
+        endog = self.model.endog
+        #exog = model.exog
+        # M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = two share a covariate pattern
+        # use unique row pattern?
+        M = 1
+        p = self.predict()
+        return (endog - p)/np.sqrt(p*(1-p))
 
     @cache_readonly
     def fittedvalues(self):
@@ -2270,6 +2289,23 @@ class BinaryResults(DiscreteResults):
             smry.add_extra_txt(etext)
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
+
+class LogitResults(BinaryResults):
+    @cache_readonly
+    def resid_generalized(self):
+        # Generalized residuals
+        return self.model.endog - self.predict()
+
+class ProbitResults(BinaryResults):
+    @cache_readonly
+    def resid_generalized(self):
+        # generalized residuals
+        model = self.model
+        endog = model.endog
+        XB = self.predict(linear=True)
+        pdf = model.pdf(XB)
+        cdf = model.cdf(XB)
+        return endog * pdf/cdf - (1-endog)*pdf/(1-cdf)
 
 class L1BinaryResults(BinaryResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
