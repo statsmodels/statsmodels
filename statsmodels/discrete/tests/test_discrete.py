@@ -114,6 +114,15 @@ class CheckBinaryResults(CheckModelResults):
     def test_pred_table(self):
         assert_array_equal(self.res1.pred_table(), self.res2.pred_table)
 
+    def test_resid_dev(self):
+        assert_almost_equal(self.res1.resid_dev, self.res2.resid_dev,
+                DECIMAL_4)
+
+    def test_resid_generalized(self):
+        assert_almost_equal(self.res1.resid_generalized,
+                            self.res2.resid_generalized, DECIMAL_4)
+
+
 class CheckMargEff(object):
     """
     Test marginal effects (margeff) and its options
@@ -301,10 +310,6 @@ class TestProbitNewton(CheckBinaryResults):
     #def test_predict(self):
     #    assert_almost_equal(self.res1.model.predict(self.res1.params),
     #            self.res2.predict, DECIMAL_4)
-
-    def test_resid(self):
-        assert_almost_equal(self.res1.resid_dev, self.res2.resid, DECIMAL_4)
-
 
 class TestProbitBFGS(CheckBinaryResults):
 
@@ -697,6 +702,10 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         res2 = Spector()
         res2.logit()
         cls.res2 = res2
+
+    def test_resid_pearson(self):
+        assert_almost_equal(self.res1.resid_pearson,
+                            self.res2.resid_pearson, 5)
 
     def test_nodummy_exog1(self):
         me = self.res1.get_margeff(atexog={0 : 2.0, 2 : 1.})
