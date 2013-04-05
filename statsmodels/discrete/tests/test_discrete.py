@@ -303,7 +303,7 @@ class TestProbitNewton(CheckBinaryResults):
     #            self.res2.predict, DECIMAL_4)
 
     def test_resid(self):
-        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
+        assert_almost_equal(self.res1.resid_dev, self.res2.resid, DECIMAL_4)
 
 
 class TestProbitBFGS(CheckBinaryResults):

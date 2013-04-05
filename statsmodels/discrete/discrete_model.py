@@ -1865,17 +1865,25 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def resid(self):
+        import warnings
+        warnings.warn("This attribute is deprecated and will be removed in "
+                      "0.6.0. Use resid_dev instead.", FutureWarning)
+        return resid_dev
+
+    @cache_readonly
+    def resid_dev(self):
         model = self.model
         endog = model.endog
         exog = model.exog
         #        M = # of individuals that share a covariate pattern
         # so M[i] = 2 for i = the two individuals who share a covariate pattern
         # use unique row pattern?
-        #TODO: is this common to all models?  logit uses Pearson, should have options
+        #TODO: is this common to all models?
+        # logit uses Pearson, should have options
         #These are the deviance residuals
         M = 1
         p = model.predict(self.params)
-        Y_0 = np.where(exog==0)
+        Y_0 = np.where(exog == 0)
         Y_M = np.where(exog == M)
         res = np.zeros_like(endog)
         res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
