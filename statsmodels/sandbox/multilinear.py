@@ -208,7 +208,9 @@ def _test_group(pvalues, group, exact=True):
     pvalue = test(np.array(table))[1]
     # is the group more represented or less?
     part = group_sign, group_nonsign, extern_sign, extern_nonsign
-    increase = (group_sign / group_total) > (total_significant / totals)
+    #increase = (group_sign / group_total) > (total_significant / totals)
+    increase = np.log((totals * group_sign)
+                      / (total_significant * group_total))
     return pvalue, increase, part
 
 
@@ -246,7 +248,8 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
 
             pvals - the fisher p value of the test
             adj_pvals - the adjusted pvals
-            increase - if the group if described better than expected or worse
+            increase - the log of the odd ratio between the
+                internal significant ratio versus the external one
             _in_sign - significative elements inside the group
             _in_non - non significative elements inside the group
             _out_sign - significative elements outside the group
