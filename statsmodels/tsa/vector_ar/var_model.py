@@ -318,7 +318,7 @@ class VAR(tsbase.TimeSeriesModel):
     Parameters
     ----------
     endog : array-like
-        1-d endogenous response variable. The independent variable.
+        2-d endogenous response variable. The independent variable.
     names : array-like
         must match number of columns of endog
     dates : array-like
@@ -331,6 +331,8 @@ class VAR(tsbase.TimeSeriesModel):
     def __init__(self, endog, dates=None, names=None, freq=None,
             missing='none'):
         super(VAR, self).__init__(endog, None, dates, freq, missing=missing)
+        if self.endog.ndim == 1:
+            raise ValueError("Only gave one variable to VAR")
         if names is not None:
             import warnings
             warnings.warn("The names argument is deprecated and will be "
