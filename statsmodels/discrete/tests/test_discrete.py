@@ -739,10 +739,10 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
-#        import scipy
-#        major, minor, micro = scipy.__version__.split('.')[:3]
-#        if int(minor) < 9:
-#            raise SkipTest
+        #import scipy
+        #major, minor, micro = scipy.__version__.split('.')[:3]
+        #if int(minor) < 9:
+        #    raise SkipTest
         #Skip this unconditionally for release 0.3.0
         #since there are still problems with scipy 0.9.0 on some machines
         #Ralf on mailing list 2011-03-26
