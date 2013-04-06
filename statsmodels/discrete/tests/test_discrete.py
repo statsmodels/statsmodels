@@ -897,6 +897,9 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
                 [   9.,    7.,    1.,    0.,    0.,   18.,  140.]]
         assert_array_equal(self.res1.pred_table(), pred)
 
+    def test_resid(self):
+        assert_array_equal(self.res1.resid, self.res2.resid)
+
 def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     iris_dir = os.path.join(cur_dir, '..', '..', 'genmod', 'tests', 'results')

@@ -203,6 +203,9 @@ class Anes():
             [.0318251305, .1085637405, .0062400589, .0699123044, .0201045606,
                 .3727166284]]).T
 
+        # taken from gretl
+        self.resid = np.loadtxt(os.path.join(cur_dir,'mnlogit_resid.csv'),
+                                delimiter=",")
 
 
 class DiscreteL1(object):
