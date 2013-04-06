@@ -2393,6 +2393,12 @@ class MultinomialResults(DiscreteResults):
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
 
+    @cache_readonly
+    def resid(self):
+        # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
+        return (self.model.wendog.argmax(1) !=
+                self.predict().argmax(1)).astype(float)
+
 class L1MultinomialResults(MultinomialResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
         "A results class for multinomial data fit by l1 regularization",
