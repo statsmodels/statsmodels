@@ -1873,43 +1873,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         return null.llf
 
     @cache_readonly
-    def resid(self):
-        import warnings
-        warnings.warn("This attribute is deprecated and will be removed in "
-                      "0.6.0. Use resid_dev instead.", FutureWarning)
-        return resid_dev
-
-    @cache_readonly
-    def resid_dev(self):
-        #These are the deviance residuals
-        #model = self.model
-        endog = self.model.endog
-        #exog = model.exog
-        # M = # of individuals that share a covariate pattern
-        # so M[i] = 2 for i = two share a covariate pattern
-        M = 1
-        p = self.predict()
-        #Y_0 = np.where(exog == 0)
-        #Y_M = np.where(exog == M)
-        #NOTE: Common covariate patterns are not yet handled
-        res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
-                endog*np.sqrt(2*M*np.abs(np.log(p)))
-        return res
-
-    @cache_readonly
-    def resid_pearson(self):
-        # Perason residuals
-        #model = self.model
-        endog = self.model.endog
-        #exog = model.exog
-        # M = # of individuals that share a covariate pattern
-        # so M[i] = 2 for i = two share a covariate pattern
-        # use unique row pattern?
-        M = 1
-        p = self.predict()
-        return (endog - p)/np.sqrt(p*(1-p))
-
-    @cache_readonly
     def fittedvalues(self):
         return np.dot(self.model.exog, self.params)
 
@@ -2214,7 +2177,9 @@ class DiscreteResults(base.LikelihoodModelResults):
 
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for count data", "extra_attr" : ""}
-    pass
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.predict()
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
@@ -2289,6 +2254,43 @@ class BinaryResults(DiscreteResults):
             smry.add_extra_txt(etext)
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
+
+    @cache_readonly
+    def resid(self):
+        import warnings
+        warnings.warn("This attribute is deprecated and will be removed in "
+                      "0.6.0. Use resid_dev instead.", FutureWarning)
+        return self.resid_dev
+
+    @cache_readonly
+    def resid_dev(self):
+        #These are the deviance residuals
+        #model = self.model
+        endog = self.model.endog
+        #exog = model.exog
+        # M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = two share a covariate pattern
+        M = 1
+        p = self.predict()
+        #Y_0 = np.where(exog == 0)
+        #Y_M = np.where(exog == M)
+        #NOTE: Common covariate patterns are not yet handled
+        res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
+                endog*np.sqrt(2*M*np.abs(np.log(p)))
+        return res
+
+    @cache_readonly
+    def resid_pearson(self):
+        # Perason residuals
+        #model = self.model
+        endog = self.model.endog
+        #exog = model.exog
+        # M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = two share a covariate pattern
+        # use unique row pattern?
+        M = 1
+        p = self.predict()
+        return (endog - p)/np.sqrt(p*(1-p))
 
 class LogitResults(BinaryResults):
     @cache_readonly
