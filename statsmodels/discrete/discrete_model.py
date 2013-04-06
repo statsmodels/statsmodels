@@ -38,6 +38,9 @@ try:
 except ImportError:
     have_cvxopt = False
 
+#TODO: When we eventually get user-settable precision, we need to change
+#      this
+FLOAT_EPS = np.finfo(float).eps
 
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
@@ -1269,8 +1272,8 @@ class Probit(BinaryModel):
 
         q = 2*self.endog - 1
         X = self.exog
-        return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),1e-20,
-            1)))
+        return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),
+            FLOAT_EPS, 1)))
 
     def loglikeobs(self, params):
         """
@@ -1299,7 +1302,7 @@ class Probit(BinaryModel):
 
         q = 2*self.endog - 1
         X = self.exog
-        return np.log(np.clip(self.cdf(q*np.dot(X,params)), 1e-20, 1))
+        return np.log(np.clip(self.cdf(q*np.dot(X,params)), FLOAT_EPS, 1))
 
 
     def score(self, params):
@@ -1329,7 +1332,7 @@ class Probit(BinaryModel):
         XB = np.dot(X,params)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
-        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), 1e-20, 1-1e-20)
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return np.dot(L,X)
 
     def jac(self, params):
@@ -1361,7 +1364,7 @@ class Probit(BinaryModel):
         XB = np.dot(X,params)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
-        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), 1e-20, 1-1e-20)
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return L[:,None] * X
 
     def hessian(self, params):
