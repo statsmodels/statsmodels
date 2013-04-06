@@ -2295,6 +2295,10 @@ class BinaryResults(DiscreteResults):
         p = self.predict()
         return (endog - p)/np.sqrt(p*(1-p))
 
+    @cache_readonly
+    def resid_response(self):
+        return self.model.endog - self.predict()
+
 class LogitResults(BinaryResults):
     @cache_readonly
     def resid_generalized(self):
