@@ -593,7 +593,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
             disp=0, tol=1e-15)
-#
+
     def test_t_test(self):
         m = self.m
         kvars = self.kvars
