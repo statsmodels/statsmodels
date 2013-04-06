@@ -36,7 +36,6 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
-iswindows = 'win' in platform.lower()
 
 class CheckModelResults(object):
     """
@@ -349,8 +348,6 @@ class TestProbitPowell(CheckBinaryResults):
 class TestProbitCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
-        if iswindows:   # does this work with classmethod?
-            raise SkipTest("fmin_cg sometimes fails to converge on windows")
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
