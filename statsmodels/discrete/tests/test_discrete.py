@@ -781,6 +781,9 @@ class TestPoissonNewton(CheckModelResults):
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_overall_se, DECIMAL_4)
 
+    def test_resid(self):
+        assert_almost_equal(self.res1.resid, self.res2.resid, 2)
+
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
     def setupClass(cls):

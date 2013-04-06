@@ -775,4 +775,7 @@ class RandHIE():
                                            .0351582168, .0016652181,
                                            .0264611158, .0437974779,
                                            .0752099666]
+        # taken from gretl
+        self.resid = np.loadtxt(os.path.join(cur_dir,'poisson_resid.csv'),
+                                delimiter=",")
 
