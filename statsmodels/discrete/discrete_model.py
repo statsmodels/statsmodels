@@ -677,7 +677,6 @@ class CountModel(DiscreteModel):
             return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
         else:
             return np.dot(exog, params) + exposure + offset
-            return super(CountModel, self).predict(params, exog, linear)
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -2182,6 +2181,18 @@ class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for count data", "extra_attr" : ""}
     @cache_readonly
     def resid(self):
+        """
+        Residuals
+
+        Notes
+        -----
+        The residuals for Count models are defined as
+
+        .. math:: y - p
+
+        where :math:`p = \\exp(X\\beta)`. Any exposure and offset variables
+        are also handled.
+        """
         return self.model.endog - self.predict()
 
 class L1CountResults(DiscreteResults):
@@ -2267,6 +2278,22 @@ class BinaryResults(DiscreteResults):
 
     @cache_readonly
     def resid_dev(self):
+        """
+        Deviance residuals
+
+        Notes
+        -----
+        Deviance residuals are defined
+
+        .. math:: d_j = \\pm\\left(2\\left[Y_j\\ln\\left(\\frac{Y_j}{M_jp_j}\\right) + (M_j - Y_j\\ln\\left(\\frac{M_j-Y_j}{M_j(1-p_j)} \\right) \\right] \\right)^{1/2}
+
+        where
+
+        :math:`p_j = cdf(X\\beta)` and :math:`M_j` is the total number of
+        observations sharing the covariate pattern :math:`j`.
+
+        For now :math:`M_j` is always set to 1.
+        """
         #These are the deviance residuals
         #model = self.model
         endog = self.model.endog
@@ -2284,7 +2311,21 @@ class BinaryResults(DiscreteResults):
 
     @cache_readonly
     def resid_pearson(self):
-        # Perason residuals
+        """
+        Pearson residuals
+
+        Notes
+        -----
+        Pearson residuals are defined to be
+
+        .. math:: r_j = \\frac{(y - M_jp_j)}{\\sqrt{M_jp_j(1-p_j)}}
+
+        where :math:`p_j=cdf(X\\beta)` and :math:`M_j` is the total number of
+        observations sharing the covariate pattern :math:`j`.
+
+        For now :math:`M_j` is always set to 1.
+        """
+        # Pearson residuals
         #model = self.model
         endog = self.model.endog
         #exog = model.exog
@@ -2293,21 +2334,53 @@ class BinaryResults(DiscreteResults):
         # use unique row pattern?
         M = 1
         p = self.predict()
-        return (endog - p)/np.sqrt(p*(1-p))
+        return (endog - M*p)/np.sqrt(M*p*(1-p))
 
     @cache_readonly
     def resid_response(self):
+        """
+        The response residuals
+
+        Notes
+        -----
+        Response residuals are defined to be
+
+        .. math:: y - p
+
+        where :math:`p=cdf(X\\beta)`.
+        """
         return self.model.endog - self.predict()
 
 class LogitResults(BinaryResults):
     @cache_readonly
     def resid_generalized(self):
+        """
+        Generalized residuals
+
+        Notes
+        -----
+        The generalized residuals for the Logit model are defined
+
+        .. math:: y - p
+
+        where :math:`p=cdf(X\\beta)`. This is the same as the `resid_response`
+        for the Logit model.
+        """
         # Generalized residuals
         return self.model.endog - self.predict()
 
 class ProbitResults(BinaryResults):
     @cache_readonly
     def resid_generalized(self):
+        """
+        Generalized residuals
+
+        Notes
+        -----
+        The generalized residuals for the Probit model are defined
+
+        .. math:: y\\frac{\phi(X\\beta)}{\\Phi(X\\beta)}-(1-y)\\frac{\\phi(X\\beta)}{1-\\Phi(X\\beta)}
+        """
         # generalized residuals
         model = self.model
         endog = model.endog
@@ -2402,6 +2475,22 @@ class MultinomialResults(DiscreteResults):
 
     @cache_readonly
     def resid(self):
+        """
+        Residuals
+
+        Notes
+        -----
+        The residuals for the multinomial model are defined as
+
+        .. math:: argmax(y_i) \\neq argmax(p_i)
+
+        where :math:`argmax(y_i)` is the index of the category for the
+        endogenous variable and :math:`argmax(p_i)` is the index of the
+        predicted probabilities for each category. That is, the residual
+        is a binary indicator that is 0 if the category with the highest
+        predicted probability is the same as that of the observed variable
+        and 1 otherwise.
+        """
         # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
         return (self.model.wendog.argmax(1) !=
                 self.predict().argmax(1)).astype(float)
