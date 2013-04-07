@@ -86,6 +86,7 @@ class test_SimpleTable(unittest.TestCase):
     def test_ltx_fmt1(self):
         """Limited test of custom ltx_fmt"""
         desired = r"""
+\begin{center}
 \begin{tabular}{lcc}
 \toprule
                & \textbf{header1} & \textbf{header2}  \\
@@ -94,6 +95,7 @@ class test_SimpleTable(unittest.TestCase):
 \textbf{stub2} &        2         &      3.333        \\
 \bottomrule
 \end{tabular}
+\end{center}
 """
         actual = '\n%s\n' % tbl.as_latex_tabular()
         #print(actual)

@@ -646,6 +646,59 @@ def test_706():
     np.testing.assert_equal(conf_int.shape, (1, 2))
     np.testing.assert_(isinstance(conf_int, pandas.DataFrame))
 
+def test_summary():
+    # test 734
+    import re
+    dta = longley.load_pandas()
+    X = dta.exog
+    X["constant"] = 1
+    y = dta.endog
+    res = OLS(y, X).fit()
+    table = res.summary().as_latex()
+    # replace the date and time
+    table = re.sub("(?<=\n\\\\textbf\{Date:\}             &).+?&",
+                   " Sun, 07 Apr 2013 &", table)
+    table = re.sub("(?<=\n\\\\textbf\{Time:\}             &).+?&",
+                   "     13:46:07     &", table)
+
+    expected = """\\begin{center}
+\\begin{tabular}{lclc}
+\\toprule
+\\textbf{Dep. Variable:}    &      TOTEMP      & \\textbf{  R-squared:         } &     0.995   \\\\
+\\textbf{Model:}            &       OLS        & \\textbf{  Adj. R-squared:    } &     0.992   \\\\
+\\textbf{Method:}           &  Least Squares   & \\textbf{  F-statistic:       } &     330.3   \\\\
+\\textbf{Date:}             & Sun, 07 Apr 2013 & \\textbf{  Prob (F-statistic):} &  4.98e-10   \\\\
+\\textbf{Time:}             &     13:46:07     & \\textbf{  Log-Likelihood:    } &   -109.62   \\\\
+\\textbf{No. Observations:} &          16      & \\textbf{  AIC:               } &     233.2   \\\\
+\\textbf{Df Residuals:}     &           9      & \\textbf{  BIC:               } &     238.6   \\\\
+\\bottomrule
+\\end{tabular}
+\\begin{tabular}{lccccc}
+                  & \\textbf{coef} & \\textbf{std err} & \\textbf{t} & \\textbf{P$>$$|$t$|$} & \\textbf{[95.0\\% Conf. Int.]}  \\\\
+\\midrule
+\\textbf{GNPDEFL}  &      15.0619  &       84.915     &     0.177  &         0.863        &      -177.029   207.153       \\\\
+\\textbf{GNP}      &      -0.0358  &        0.033     &    -1.070  &         0.313        &        -0.112     0.040       \\\\
+\\textbf{UNEMP}    &      -2.0202  &        0.488     &    -4.136  &         0.003        &        -3.125    -0.915       \\\\
+\\textbf{ARMED}    &      -1.0332  &        0.214     &    -4.822  &         0.001        &        -1.518    -0.549       \\\\
+\\textbf{POP}      &      -0.0511  &        0.226     &    -0.226  &         0.826        &        -0.563     0.460       \\\\
+\\textbf{YEAR}     &    1829.1515  &      455.478     &     4.016  &         0.003        &       798.788  2859.515       \\\\
+\\textbf{constant} &   -3.482e+06  &      8.9e+05     &    -3.911  &         0.004        &      -5.5e+06 -1.47e+06       \\\\
+\\bottomrule
+\\end{tabular}
+\\begin{tabular}{lclc}
+\\textbf{Omnibus:}       &  0.749 & \\textbf{  Durbin-Watson:     } &    2.559  \\\\
+\\textbf{Prob(Omnibus):} &  0.688 & \\textbf{  Jarque-Bera (JB):  } &    0.684  \\\\
+\\textbf{Skew:}          &  0.420 & \\textbf{  Prob(JB):          } &    0.710  \\\\
+\\textbf{Kurtosis:}      &  2.434 & \\textbf{  Cond. No.          } & 4.86e+09  \\\\
+\\bottomrule
+\\end{tabular}
+%\\caption{OLS Regression Results}
+\\end{center}"""
+    assert_equal(table, expected)
+
+
+
+
 if __name__=="__main__":
 
     import nose
