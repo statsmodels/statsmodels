@@ -71,6 +71,16 @@ The specific model classes are:
    MNLogit
    Poisson
 
+The specific result classes are:
+
+.. autosummary::
+   :toctree: generated/
+
+   LogitResults
+   ProbitResults
+   CountResults
+   MultinomialResults
+
 :class:`DiscreteModel` is a superclass of all discrete regression models. The
 estimation results are returned as an instance of one of the subclasses of
 :class:`DiscreteResults`. Each category of models, binary, count and
@@ -87,7 +97,4 @@ methods and attributes defined by :class:`DiscreteModel` and
    BinaryModel
    BinaryResults
    CountModel
-   CountResults
    MultinomialModel
-   MultinomialResults
-

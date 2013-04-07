@@ -38,6 +38,9 @@ try:
 except ImportError:
     have_cvxopt = False
 
+#TODO: When we eventually get user-settable precision, we need to change
+#      this
+FLOAT_EPS = np.finfo(float).eps
 
 #TODO: add options for the parameter covariance/variance
 # ie., OIM, EIM, and BHHH see Green 21.4
@@ -371,15 +374,6 @@ class BinaryModel(DiscreteModel):
         else:
             return np.dot(exog, params)
 
-    def fit(self, start_params=None, method='newton', maxiter=35,
-            full_output=1, disp=1, callback=None, **kwargs):
-        bnryfit = super(BinaryModel, self).fit(start_params=start_params,
-                method=method, maxiter=maxiter, full_output=full_output,
-                disp=disp, callback=callback, **kwargs)
-        discretefit = BinaryResults(self, bnryfit)
-        return BinaryResultsWrapper(discretefit)
-    fit.__doc__ = DiscreteModel.fit.__doc__
-
     def fit_regularized(self, start_params=None, method='l1',
             maxiter='defined_by_method', full_output=1, disp=1, callback=None,
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
@@ -683,7 +677,6 @@ class CountModel(DiscreteModel):
             return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
         else:
             return np.dot(exog, params) + exposure + offset
-            return super(CountModel, self).predict(params, exog, linear)
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -1185,6 +1178,15 @@ class Logit(BinaryModel):
         L = self.cdf(np.dot(X,params))
         return -np.dot(L*(1-L)*X.T,X)
 
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        bnryfit = super(Logit, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = LogitResults(self, bnryfit)
+        return BinaryResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
+
 class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
@@ -1269,8 +1271,8 @@ class Probit(BinaryModel):
 
         q = 2*self.endog - 1
         X = self.exog
-        return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),1e-20,
-            1)))
+        return np.sum(np.log(np.clip(self.cdf(q*np.dot(X,params)),
+            FLOAT_EPS, 1)))
 
     def loglikeobs(self, params):
         """
@@ -1299,7 +1301,7 @@ class Probit(BinaryModel):
 
         q = 2*self.endog - 1
         X = self.exog
-        return np.log(np.clip(self.cdf(q*np.dot(X,params)), 1e-20, 1))
+        return np.log(np.clip(self.cdf(q*np.dot(X,params)), FLOAT_EPS, 1))
 
 
     def score(self, params):
@@ -1329,7 +1331,7 @@ class Probit(BinaryModel):
         XB = np.dot(X,params)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
-        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), 1e-20, 1-1e-20)
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return np.dot(L,X)
 
     def jac(self, params):
@@ -1361,7 +1363,7 @@ class Probit(BinaryModel):
         XB = np.dot(X,params)
         q = 2*y - 1
         # clip to get rid of invalid divide complaint
-        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), 1e-20, 1-1e-20)
+        L = q*self.pdf(q*XB)/np.clip(self.cdf(q*XB), FLOAT_EPS, 1 - FLOAT_EPS)
         return L[:,None] * X
 
     def hessian(self, params):
@@ -1394,6 +1396,15 @@ class Probit(BinaryModel):
         q = 2*self.endog - 1
         L = q*self.pdf(q*XB)/self.cdf(q*XB)
         return np.dot(-L*(L+XB)*X.T,X)
+
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        bnryfit = super(Probit, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = ProbitResults(self, bnryfit)
+        return BinaryResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
 
 class MNLogit(MultinomialModel):
     __doc__ = """
@@ -1864,25 +1875,6 @@ class DiscreteResults(base.LikelihoodModelResults):
         return null.llf
 
     @cache_readonly
-    def resid(self):
-        model = self.model
-        endog = model.endog
-        exog = model.exog
-        #        M = # of individuals that share a covariate pattern
-        # so M[i] = 2 for i = the two individuals who share a covariate pattern
-        # use unique row pattern?
-        #TODO: is this common to all models?  logit uses Pearson, should have options
-        #These are the deviance residuals
-        M = 1
-        p = model.predict(self.params)
-        Y_0 = np.where(exog==0)
-        Y_M = np.where(exog == M)
-        res = np.zeros_like(endog)
-        res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
-                endog*np.sqrt(2*M*np.abs(np.log(p)))
-        return res
-
-    @cache_readonly
     def fittedvalues(self):
         return np.dot(self.model.exog, self.params)
 
@@ -2187,7 +2179,21 @@ class DiscreteResults(base.LikelihoodModelResults):
 
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for count data", "extra_attr" : ""}
-    pass
+    @cache_readonly
+    def resid(self):
+        """
+        Residuals
+
+        Notes
+        -----
+        The residuals for Count models are defined as
+
+        .. math:: y - p
+
+        where :math:`p = \\exp(X\\beta)`. Any exposure and offset variables
+        are also handled.
+        """
+        return self.model.endog - self.predict()
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
@@ -2262,6 +2268,126 @@ class BinaryResults(DiscreteResults):
             smry.add_extra_txt(etext)
         return smry
     summary.__doc__ = DiscreteResults.summary.__doc__
+
+    @cache_readonly
+    def resid(self):
+        import warnings
+        warnings.warn("This attribute is deprecated and will be removed in "
+                      "0.6.0. Use resid_dev instead.", FutureWarning)
+        return self.resid_dev
+
+    @cache_readonly
+    def resid_dev(self):
+        """
+        Deviance residuals
+
+        Notes
+        -----
+        Deviance residuals are defined
+
+        .. math:: d_j = \\pm\\left(2\\left[Y_j\\ln\\left(\\frac{Y_j}{M_jp_j}\\right) + (M_j - Y_j\\ln\\left(\\frac{M_j-Y_j}{M_j(1-p_j)} \\right) \\right] \\right)^{1/2}
+
+        where
+
+        :math:`p_j = cdf(X\\beta)` and :math:`M_j` is the total number of
+        observations sharing the covariate pattern :math:`j`.
+
+        For now :math:`M_j` is always set to 1.
+        """
+        #These are the deviance residuals
+        #model = self.model
+        endog = self.model.endog
+        #exog = model.exog
+        # M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = two share a covariate pattern
+        M = 1
+        p = self.predict()
+        #Y_0 = np.where(exog == 0)
+        #Y_M = np.where(exog == M)
+        #NOTE: Common covariate patterns are not yet handled
+        res = -(1-endog)*np.sqrt(2*M*np.abs(np.log(1-p))) + \
+                endog*np.sqrt(2*M*np.abs(np.log(p)))
+        return res
+
+    @cache_readonly
+    def resid_pearson(self):
+        """
+        Pearson residuals
+
+        Notes
+        -----
+        Pearson residuals are defined to be
+
+        .. math:: r_j = \\frac{(y - M_jp_j)}{\\sqrt{M_jp_j(1-p_j)}}
+
+        where :math:`p_j=cdf(X\\beta)` and :math:`M_j` is the total number of
+        observations sharing the covariate pattern :math:`j`.
+
+        For now :math:`M_j` is always set to 1.
+        """
+        # Pearson residuals
+        #model = self.model
+        endog = self.model.endog
+        #exog = model.exog
+        # M = # of individuals that share a covariate pattern
+        # so M[i] = 2 for i = two share a covariate pattern
+        # use unique row pattern?
+        M = 1
+        p = self.predict()
+        return (endog - M*p)/np.sqrt(M*p*(1-p))
+
+    @cache_readonly
+    def resid_response(self):
+        """
+        The response residuals
+
+        Notes
+        -----
+        Response residuals are defined to be
+
+        .. math:: y - p
+
+        where :math:`p=cdf(X\\beta)`.
+        """
+        return self.model.endog - self.predict()
+
+class LogitResults(BinaryResults):
+    @cache_readonly
+    def resid_generalized(self):
+        """
+        Generalized residuals
+
+        Notes
+        -----
+        The generalized residuals for the Logit model are defined
+
+        .. math:: y - p
+
+        where :math:`p=cdf(X\\beta)`. This is the same as the `resid_response`
+        for the Logit model.
+        """
+        # Generalized residuals
+        return self.model.endog - self.predict()
+
+class ProbitResults(BinaryResults):
+    @cache_readonly
+    def resid_generalized(self):
+        """
+        Generalized residuals
+
+        Notes
+        -----
+        The generalized residuals for the Probit model are defined
+
+        .. math:: y\\frac{\phi(X\\beta)}{\\Phi(X\\beta)}-(1-y)\\frac{\\phi(X\\beta)}{1-\\Phi(X\\beta)}
+        """
+        # generalized residuals
+        model = self.model
+        endog = model.endog
+        XB = self.predict(linear=True)
+        pdf = model.pdf(XB)
+        cdf = model.cdf(XB)
+        return endog * pdf/cdf - (1-endog)*pdf/(1-cdf)
 
 class L1BinaryResults(BinaryResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
@@ -2346,6 +2472,28 @@ class MultinomialResults(DiscreteResults):
 
     def margeff(self):
         raise NotImplementedError("Use get_margeff instead")
+
+    @cache_readonly
+    def resid_misclassified(self):
+        """
+        Residuals indicating which observations are misclassified.
+
+        Notes
+        -----
+        The residuals for the multinomial model are defined as
+
+        .. math:: argmax(y_i) \\neq argmax(p_i)
+
+        where :math:`argmax(y_i)` is the index of the category for the
+        endogenous variable and :math:`argmax(p_i)` is the index of the
+        predicted probabilities for each category. That is, the residual
+        is a binary indicator that is 0 if the category with the highest
+        predicted probability is the same as that of the observed variable
+        and 1 otherwise.
+        """
+        # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
+        return (self.model.wendog.argmax(1) !=
+                self.predict().argmax(1)).astype(float)
 
 class L1MultinomialResults(MultinomialResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :

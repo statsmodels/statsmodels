@@ -36,7 +36,6 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
-iswindows = 'win' in platform.lower()
 
 class CheckModelResults(object):
     """
@@ -113,6 +112,18 @@ class CheckModelResults(object):
 class CheckBinaryResults(CheckModelResults):
     def test_pred_table(self):
         assert_array_equal(self.res1.pred_table(), self.res2.pred_table)
+
+    def test_resid_dev(self):
+        assert_almost_equal(self.res1.resid_dev, self.res2.resid_dev,
+                DECIMAL_4)
+
+    def test_resid_generalized(self):
+        assert_almost_equal(self.res1.resid_generalized,
+                            self.res2.resid_generalized, DECIMAL_4)
+
+    def smoke_test_resid_response(self):
+        self.res1.resid_response
+
 
 class CheckMargEff(object):
     """
@@ -302,10 +313,6 @@ class TestProbitNewton(CheckBinaryResults):
     #    assert_almost_equal(self.res1.model.predict(self.res1.params),
     #            self.res2.predict, DECIMAL_4)
 
-    def test_resid(self):
-        assert_almost_equal(self.res1.resid, self.res2.resid, DECIMAL_4)
-
-
 class TestProbitBFGS(CheckBinaryResults):
 
     @classmethod
@@ -344,8 +351,6 @@ class TestProbitPowell(CheckBinaryResults):
 class TestProbitCG(CheckBinaryResults):
     @classmethod
     def setupClass(cls):
-        if iswindows:   # does this work with classmethod?
-            raise SkipTest("fmin_cg sometimes fails to converge on windows")
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
@@ -588,7 +593,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
             disp=0, tol=1e-15)
-#
+
     def test_t_test(self):
         m = self.m
         kvars = self.kvars
@@ -698,6 +703,10 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
         res2.logit()
         cls.res2 = res2
 
+    def test_resid_pearson(self):
+        assert_almost_equal(self.res1.resid_pearson,
+                            self.res2.resid_pearson, 5)
+
     def test_nodummy_exog1(self):
         me = self.res1.get_margeff(atexog={0 : 2.0, 2 : 1.})
         assert_almost_equal(me.margeff,
@@ -730,10 +739,10 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
-#        import scipy
-#        major, minor, micro = scipy.__version__.split('.')[:3]
-#        if int(minor) < 9:
-#            raise SkipTest
+        #import scipy
+        #major, minor, micro = scipy.__version__.split('.')[:3]
+        #if int(minor) < 9:
+        #    raise SkipTest
         #Skip this unconditionally for release 0.3.0
         #since there are still problems with scipy 0.9.0 on some machines
         #Ralf on mailing list 2011-03-26
@@ -771,6 +780,9 @@ class TestPoissonNewton(CheckModelResults):
                 self.res2.margeff_dummy_overall, DECIMAL_4)
         assert_almost_equal(me.margeff_se,
                 self.res2.margeff_dummy_overall_se, DECIMAL_4)
+
+    def test_resid(self):
+        assert_almost_equal(self.res1.resid, self.res2.resid, 2)
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
@@ -884,6 +896,9 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
                 [  22.,   25.,    1.,    0.,    0.,   31.,   71.],
                 [   9.,    7.,    1.,    0.,    0.,   18.,  140.]]
         assert_array_equal(self.res1.pred_table(), pred)
+
+    def test_resid(self):
+        assert_array_equal(self.res1.resid_misclassified, self.res2.resid)
 
 def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
