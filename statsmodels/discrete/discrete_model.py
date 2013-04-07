@@ -2474,9 +2474,9 @@ class MultinomialResults(DiscreteResults):
         raise NotImplementedError("Use get_margeff instead")
 
     @cache_readonly
-    def resid(self):
+    def resid_misclassified(self):
         """
-        Residuals
+        Residuals indicating which observations are misclassified.
 
         Notes
         -----
