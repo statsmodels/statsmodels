@@ -87,39 +87,36 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
 
     Examples
     --------
-    Load the Statewide Crime data set and perform linear regression with 
-    'poverty' and 'hs_grad' as variables and 'muder' as the response
+    Load the Statewide Crime data set and perform linear regression with
+    `poverty` and `hs_grad` as variables and `murder` as the response
 
     >>> import statsmodels.api as sm
     >>> import matplotlib.pyplot as plt
     >>> import numpy as np
 
-    >>> data = sm.datasets.statecrime.load()
-    >>> murder = data['data']['murder']
-    >>> poverty = data['data']['poverty']
-    >>> hs_grad = data['data']['hs_grad']
+    >>> data = sm.datasets.statecrime.load_pandas().data
+    >>> murder = data['murder']
+    >>> X = data[['poverty', 'hs_grad']]
 
-    >>> X = np.column_stack((poverty, hs_grad))
-    >>> X = sm.add_constant(X, prepend=False)
+    >>> X["constant"] = 1
     >>> y = murder
     >>> model = sm.OLS(y, X)
     >>> results = model.fit()
 
     Create a plot just for the variable 'Poverty':
 
-    >>> fig = plt.figure()
-    >>> ax = fig.add_subplot(111)
-    >>> res = sm.graphics.plot_fit(results, 0, ax=ax)
+    >>> fig, ax = plt.subplots()
+    >>> fig = sm.graphics.plot_fit(results, 0, ax=ax)
     >>> ax.set_ylabel("Murder Rate")
-    >>> ax.axes.set_xlabel("Poverty Level")
-    >>> ax.axes.set_title("Linear Regression")
+    >>> ax.set_xlabel("Poverty Level")
+    >>> ax.set_title("Linear Regression")
 
     >>> plt.show()
 
     .. plot:: plots/graphics_plot_fit_ex.py
 
     """
-    
+
     fig, ax = utils.create_mpl_ax(ax)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
@@ -147,7 +144,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     ax.set_title(title)
     ax.set_xlabel(exog_name)
     ax.set_ylabel(results.model.endog_names)
-    ax.legend(loc='best')
+    ax.legend(loc='best', numpoints=1)
 
     return fig
 
@@ -717,7 +714,7 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
         recommended to leave external as True.
     alpha : float
         The alpha value to identify large studentized residuals. Large means
-        |resid_studentized| > t.ppf(1-alpha/2, dof=results.df_resid)
+        abs(resid_studentized) > t.ppf(1-alpha/2, dof=results.df_resid)
     criterion : str {'DFFITS', 'Cooks'}
         Which criterion to base the size of the points on. Options are
         DFFITS or Cook's D.
