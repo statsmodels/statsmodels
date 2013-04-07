@@ -1644,6 +1644,63 @@ def test_arima_predict_pandas_nofreq():
     predict = arma.predict(start=2, end="2010-1-13")
     assert_(predict.index.equals(data.index[2:10]))
 
+def test_arima_predict_exog():
+    # fix 625
+    #from statsmodels.tsa.arima_process import arma_generate_sample
+    #arparams = np.array([1, -.45, .25])
+    #maparams = np.array([1, .15])
+    #nobs = 100
+    #np.random.seed(123)
+    #y = arma_generate_sample(arparams, maparams, nobs, burnin=100)
+
+    ## make an exogenous trend
+    #X = np.array(range(nobs)) / 20.0
+    ## add a constant
+    #y += 2.5
+
+    from pandas import read_csv
+    arima_forecasts = read_csv(current_path + "/results/"
+                            "results_arima_exog_forecasts_mle.csv")
+    y = arima_forecasts["y"].dropna()
+    X = np.arange(len(y) + 25)/20.
+    predict_expected = arima_forecasts["predict"]
+    arma_res = ARMA(y.values, order=(2,1), exog=X[:100]).fit(trend="c",
+                                                             disp=-1)
+    # no exog for in-sample
+    predict = arma_res.predict()
+    assert_almost_equal(predict, predict_expected.values[:100], 6)
+
+
+    # params from gretl
+    params = np.array([2.786912485145725, -0.122650190196475,
+                       0.533223846028938, -0.319344321763337,
+                       0.132883233000064])
+
+    # exog for out-of-sample and in-sample dynamic
+    predict = arma_res.model.predict(params, end=124, exog=X[100:])
+    #NOTE: There must be something slightly off to get only this precision
+    # out of sample, but I don't know what
+    assert_almost_equal(predict, predict_expected.values, 3)
+
+    # conditional sum of squares
+    #arima_forecasts = read_csv(current_path + "/results/"
+    #                        "results_arima_exog_forecasts_css.csv")
+    #predict_expected = arima_forecasts["predict"].dropna()
+    #arma_res = ARMA(y.values, order=(2,1), exog=X[:100]).fit(trend="c",
+    #                                                         method="css",
+    #                                                         disp=-1)
+
+    #params = np.array([2.152350033809826, -0.103602399018814,
+    #                   0.566716580421188, -0.326208009247944,
+    #                   0.102142932143421])
+    #predict = arma_res.model.predict(params)
+    ## in-sample
+    #assert_almost_equal(predict, predict_expected.values[:98], 6)
+
+
+    #predict = arma_res.model.predict(params, end=124, exog=X[100:])
+    ## exog for out-of-sample and in-sample dynamic
+    #assert_almost_equal(predict, predict_expected.values, 3)
 
 if __name__ == "__main__":
     import nose
