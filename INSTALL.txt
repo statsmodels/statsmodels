@@ -21,6 +21,10 @@ patsy >= 0.1.0
 
     patsy.readthedocs.org
 
+Patsy >= 0.1.0
+
+http://patsy.readthedocs.org/en/latest/
+
 
 Optional Dependencies
 ---------------------
