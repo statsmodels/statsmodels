@@ -56,7 +56,7 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     x0 = ax.get_lines()[lines_idx]._x
     lres = lowess(y0, x0, frac=frac, **lowess_kwargs)
     ax.plot(lres[:,0], lres[:,1], 'r', lw=1.5)
-    return fig
+    return ax.figure
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
