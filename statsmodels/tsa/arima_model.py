@@ -84,15 +84,19 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
     y = endog
     if k_trend == 1:
         # use expectation not constant
-        mu = trendparam * (1 - arparams.sum())
-        mu = np.array([mu]*steps)
+        if k_exog > 0:
+            if exog.ndim == 1:
+                exog = exog[:, None]
+                #TODO: technically should only hold for MLE not
+                # conditional model. See #274.
+            mu = ((trendparam + np.dot(exog, exparams)[:,None]) *
+                (1 - arparams.sum()))
+
+        else:
+            mu = trendparam * (1 - arparams.sum())
+            mu = np.array([mu]*steps)
     else:
         mu = np.zeros(steps)
-
-    if k_exog > 0:
-        if exog.ndim == 1:
-            exog = exog[:, None]
-        mu += np.dot(exog, exparams)[:,None]
 
     endog = np.zeros(p + steps - 1)
 
@@ -514,6 +518,9 @@ class ARMA(tsbase.TimeSeriesModel):
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
+            # dynamic in-sample can use existing in-sample exog
+            if out_of_sample == 0 and self.k_exog != 0:
+                exog = self.exog[start:end+1, self.k_trend:]
             out_of_sample += end - start + 1
             return _arma_predict_out_of_sample(params, out_of_sample, resid,
                     k_ar, self.k_ma, self.k_trend, self.k_exog, endog, exog,
