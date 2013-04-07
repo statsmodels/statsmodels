@@ -17,14 +17,12 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
 from statsmodels.graphics import utils
 from statsmodels.nonparametric.smoothers_lowess import lowess
-from statsmodels.tools.tools import maybe_unwrap_results
 
 
 __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
            'plot_regress_exog', 'plot_partregress_grid', 'plot_ccpr_grid',
            'add_lowess', 'abline_plot', 'influence_plot',
            'plot_leverage_resid2']
-
 
 #TODO: consider moving to influence module
 def _high_leverage(results):
@@ -56,7 +54,7 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     x0 = ax.get_lines()[lines_idx]._x
     lres = lowess(y0, x0, frac=frac, **lowess_kwargs)
     ax.plot(lres[:,0], lres[:,1], 'r', lw=1.5)
-    return fig
+    return ax.figure
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
@@ -84,11 +82,45 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     fig : Matplotlib figure instance
         If `ax` is None, the created figure.  Otherwise the figure to which
         `ax` is connected.
+
+    Examples
+    --------
+    Load the Statewide Crime data set and perform linear regression with 
+    'poverty' and 'hs_grad' as variables and 'muder' as the response
+
+    >>> import statsmodels.api as sm
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+
+    >>> data = sm.datasets.statecrime.load()
+    >>> murder = data['data']['murder']
+    >>> poverty = data['data']['poverty']
+    >>> hs_grad = data['data']['hs_grad']
+
+    >>> X = np.column_stack((poverty, hs_grad))
+    >>> X = sm.add_constant(X, prepend=False)
+    >>> y = murder
+    >>> model = sm.OLS(y, X)
+    >>> results = model.fit()
+
+    Create a plot just for the variable 'Poverty':
+
+    >>> fig = plt.figure()
+    >>> ax = fig.add_subplot(111)
+    >>> res = sm.graphics.plot_fit(results, 0, ax=ax)
+    >>> ax.set_ylabel("Murder Rate")
+    >>> ax.axes.set_xlabel("Poverty Level")
+    >>> ax.axes.set_title("Linear Regression")
+
+    >>> plt.show()
+
+    .. plot:: plots/graphics_plot_fit_ex.py
+
     """
+    
     fig, ax = utils.create_mpl_ax(ax)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
-    results = maybe_unwrap_results(results)
 
     #maybe add option for wendog, wexog
     y = results.model.endog
@@ -102,11 +134,10 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
         ax.plot(x1, y_true[x1_argsort], 'b-', label='True values')
     title = 'Fitted values versus %s' % exog_name
 
-    prstd, iv_l, iv_u = wls_prediction_std(results)
+    prstd, iv_l, iv_u = wls_prediction_std(results._results)
     ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
             label='fitted', **kwargs)
-    ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k',
-            alpha=.7)
+    ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k', alpha=.7)
     #ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
     #                    color='k')
     ax.set_title(title)
@@ -142,12 +173,11 @@ def plot_regress_exog(results, exog_idx, fig=None):
     fig = utils.create_mpl_fig(fig)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
-    results = maybe_unwrap_results(results)
 
     #maybe add option for wendog, wexog
     y_name = results.model.endog_names
     x1 = results.model.exog[:,exog_idx]
-    prstd, iv_l, iv_u = wls_prediction_std(results)
+    prstd, iv_l, iv_u = wls_prediction_std(results._results)
 
     ax = fig.add_subplot(2,2,1)
     ax.plot(x1, results.model.endog, 'o', color='b', alpha=0.9, label=y_name)
@@ -347,7 +377,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
                             **label_kwargs)
 
     if ret_coords:
-        return fig, (res_axis.resid, res_yaxis.resid)
+        return fig, (res_axisx.resid, res_yaxis.resid)
     else:
         return fig
 
@@ -482,11 +512,10 @@ def plot_ccpr(results, exog_idx, ax=None):
     fig, ax = utils.create_mpl_ax(ax)
 
     exog_name, exog_idx = utils.maybe_name_or_idx(exog_idx, results.model)
-    results = maybe_unwrap_results(results)
 
     x1 = results.model.exog[:, exog_idx]
     #namestr = ' for %s' % self.name if self.name else ''
-    x1beta = x1*results.params[exog_idx]
+    x1beta = x1*results._results.params[exog_idx]
     ax.plot(x1, x1beta + results.resid, 'o')
     from statsmodels.tools.tools import add_constant
     mod = OLS(x1beta, add_constant(x1)).fit()
