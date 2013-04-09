@@ -189,7 +189,7 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
     """
     if q:
         resid = np.zeros(q)
-        if start and 'mle' in method or start == p:
+        if start and 'mle' in method or (start == p and not start == 0):
             resid[:q] = errors[start-q:start]
         elif start:
             resid[:q] = errors[start-q-p:start-p]
