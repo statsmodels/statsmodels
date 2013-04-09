@@ -1668,7 +1668,7 @@ def test_arima_predict_exog():
                                                              disp=-1)
     # no exog for in-sample
     predict = arma_res.predict()
-    assert_almost_equal(predict, predict_expected.values[:100], 6)
+    assert_almost_equal(predict, predict_expected.values[:100], 5)
 
 
     # params from gretl
