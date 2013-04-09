@@ -202,7 +202,7 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
     if k_trend == 1:
         # use expectation not constant
         if k_exog > 0:
-            if exog.ndim == 1:
+            if k_exog == 1 and exog.ndim == 1:
                 exog = exog[:, None]
                 #TODO: technically should only hold for MLE not
                 # conditional model. See #274.
