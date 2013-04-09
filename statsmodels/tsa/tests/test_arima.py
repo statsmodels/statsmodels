@@ -1667,6 +1667,11 @@ def test_arima_predict_exog():
     predict_expected = arima_forecasts["predict"]
     arma_res = ARMA(y.values, order=(2,1), exog=X[:100]).fit(trend="c",
                                                              disp=-1)
+    # params from gretl
+    params = np.array([2.786912485145725, -0.122650190196475,
+                       0.533223846028938, -0.319344321763337,
+                       0.132883233000064])
+    assert_almost_equal(arma_res.params, params, 6)
     # no exog for in-sample
     predict = arma_res.predict()
     assert_almost_equal(predict, predict_expected.values[:100], 5)
@@ -1674,10 +1679,6 @@ def test_arima_predict_exog():
     # check 626
     assert_(len(arma_res.model.exog_names) == 5)
 
-    # params from gretl
-    params = np.array([2.786912485145725, -0.122650190196475,
-                       0.533223846028938, -0.319344321763337,
-                       0.132883233000064])
 
     # exog for out-of-sample and in-sample dynamic
     predict = arma_res.model.predict(params, end=124, exog=X[100:])
@@ -1725,6 +1726,48 @@ def test_arima_predict_noma():
     arma = ARMA(data, order=(0,1))
     arma_res = arma.fit(disp=-1)
     arma_res.forecast(1)
+
+def test_arimax():
+    from statsmodels.datasets.macrodata import load_pandas
+    dta = load_pandas().data
+    dates = dates_from_range("1959Q1", length=len(dta))
+    dta.index = cpi_dates
+    dta = dta[["realdpi", "m1", "realgdp"]]
+    y = dta.pop("realdpi")
+
+    # 1 exog
+    #X = dta.ix[1:]["m1"]
+    #res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
+    #params = [23.902305009084373, 0.024650911502790, -0.162140641341602,
+    #          0.165262136028113, -0.066667022903974]
+    #assert_almost_equal(res.params.values, params, 6)
+
+
+    # 2 exog
+    X = dta.ix[1:]
+    res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
+
+    # from gretl
+    #params = [13.113976653926638, -0.003792125069387,  0.004123504809217,
+    #          -0.199213760940898,  0.151563643588008, -0.033088661096699]
+    # from stata
+    params = [13.125915, -.00376819, .00411971, -.19921564, .15154342,
+              -.0330833]
+    stata_llf = -1076.108661881485
+    #assert_almost_equal(res.params.values, params, 4)
+
+    # This shows that it's an optimizer problem and not a problem in the code
+    assert_almost_equal(res.model.loglike(np.array(params)), stata_llf, 8)
+
+    X = dta.diff().dropna()
+    res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
+
+    # gretl won't estimate this - looks like maybe a bug on their part,
+    # but we can just fine, we're close to Stata's answer
+    # from Stata
+    params = [19.565671, .3265397, .36286534, -1.0113403, -.15722464,
+              .69360046]
+    assert_almost_equal(res.params.values, params, 3)
 
 if __name__ == "__main__":
     import nose
