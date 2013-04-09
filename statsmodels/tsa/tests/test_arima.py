@@ -1700,6 +1700,20 @@ def test_arima_predict_exog():
     ## exog for out-of-sample and in-sample dynamic
     #assert_almost_equal(predict, predict_expected.values, 3)
 
+def test_arima_no_diff():
+    # issue 736
+    # smoke test, predict will break if we have ARIMAResults but
+    # ARMA model, need ARIMA(p, 0, q) to return an ARMA in init.
+    from statsmodels.tsa.arima_process import arma_generate_sample
+    ar = [1, -.75, .15, .35]
+    ma = [1, .25, .9]
+    y = arma_generate_sample(ar, ma, 100)
+    mod = ARIMA(y, (3, 0, 2))
+    assert_(isinstance(mod, ARMA))
+    res = mod.fit(disp=-1)
+    # smoke test just to be sure
+    res.predict()
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
