@@ -309,6 +309,7 @@ def _unpack_order(order):
 
 def _make_arma_names(data, k_trend, order, exog_names):
     k_ar, k_ma = order
+    exog_names = exog_names or []
     ar_lag_names = util.make_lag_names([data.ynames], k_ar, 0)
     ar_lag_names = [''.join(('ar.', i))
                               for i in ar_lag_names]
