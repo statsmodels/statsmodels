@@ -75,19 +75,20 @@ sign_test.__doc__ = _sign_test_doc
 class Describe(object):
     '''
     Calculates descriptive statistics for data.
-    Defaults to a basic set of statistics, "all" can be specified, or a list can
-    be given.
 
-    dataset : can be either a structured or ndarray (Larry?), observations in
-              rows, variables in columns.
+    Defaults to a basic set of statistics, "all" can be specified, or a list
+    can be given.
 
-
+    Parameters
+    ----------
+    dataset : array-like
+        2D dataset for descriptive statistics.
     '''
     def __init__(self, dataset):
         self.dataset = dataset
 
-        #better if this is initially a list to define order, or use an ordered dict
-        # First position is the function
+        #better if this is initially a list to define order, or use an
+        # ordered dict. First position is the function
         # Second position is the tuple/list of column names/numbers
         # third is are the results in order of the columns
         self.univariate = dict(
@@ -104,18 +105,20 @@ class Describe(object):
             skew = [stats.skew, None, None],
             uss = [stats.ss, None, None],
             kurtosis = [stats.kurtosis, None, None],
-            percentiles = [self._percentiles, None, None], #BUG: not single value
+            percentiles = [self._percentiles, None, None],
+            #BUG: not single value
             #sign_test_M = [self.sign_test_m, None, None],
             #sign_test_P = [self.sign_test_p, None, None]
         )
-#TODO: Basic stats for strings
+
+        #TODO: Basic stats for strings
         #self.strings = dict(
             #unique = [np.unique, None, None],
             #number_uniq = [len(
             #most = [
             #least = [
 
-#TODO: Multivariate
+        #TODO: Multivariate
         #self.multivariate = dict(
             #corrcoef(x[, y, rowvar, bias]),
             #cov(m[, y, rowvar, bias]),
@@ -146,11 +149,12 @@ class Describe(object):
 
     def _is_dtype_like(self, col):
         """
-        Check whether self.dataset.[col][0] behaves like a string, numbern unknown.
-        `numpy.lib._iotools._is_string_like`
+        Check whether self.dataset.[col][0] behaves like a string, numbern
+        unknown. `numpy.lib._iotools._is_string_like`
         """
         def string_like():
-#TODO: not sure what the result is if the first item is some type of missing value
+        #TODO: not sure what the result is if the first item is some type of
+        #      missing value
             try:
                 self.dataset[col][0] + ''
             except (TypeError, ValueError):
@@ -173,30 +177,36 @@ class Describe(object):
     #@property
     def summary(self, stats='basic', columns='all', orientation='auto'):
         """
-        prints a table of summary statistics and stores the stats.
-        stats: The desired statistics, A list[] or 'basic' or 'all' are options
-               'basic' = ('obs', 'mean', 'std', 'min', 'max')
-               'all' = ('obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'mode',
-                        'meadian', 'skew', 'uss', 'kurtosis', 'percentiles')
-        Columns: The columns/variables to report the statistics, default is 'all'
-                 structured array: specify the column names
-                                summary(stats='basic', columns=['alpha', 'beta'])
-                standard array: Specifiy column numbers (NEED TO TEST)
+        Return a summary of descriptive statistics.
 
-        percentiles currently broken
-        mode requires mode_val and mode_bin separately
+        Parameters
+        -----------
+        stats: list or str
+            The desired statistics, Accepts 'basic' or 'all' or a list.
+               'basic' = ('obs', 'mean', 'std', 'min', 'max')
+               'all' = ('obs', 'mean', 'std', 'min', 'max', 'ptp', 'var',
+                        'mode', 'meadian', 'skew', 'uss', 'kurtosis',
+                        'percentiles')
+        columns : list or str
+          The columns/variables to report the statistics, default is 'all'
+          If an object with named columns is given, you may specify the
+          column names. For example
         """
+        #NOTE
+        # standard array: Specifiy column numbers (NEED TO TEST)
+        # percentiles currently broken
+        # mode requires mode_val and mode_bin separately
         if self._arraytype == None:
             self._array_typer()
-
 
         if stats == 'basic':
             stats = ('obs', 'mean', 'std', 'min', 'max')
         elif stats == 'all':
             #stats = self.univariate.keys()
             #dict doesn't keep an order, use full list instead
-            stats = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var', 'mode_val', 'mode_bin',
-                        'median', 'uss', 'skew', 'kurtosis', 'percentiles']
+            stats = ['obs', 'mean', 'std', 'min', 'max', 'ptp', 'var',
+                     'mode_val', 'mode_bin', 'median', 'uss', 'skew',
+                     'kurtosis', 'percentiles']
         else:
             for astat in stats:
                 pass
@@ -207,9 +217,9 @@ class Describe(object):
         #bad naming
         import scipy.stats
         #BUG: the following has all per the same per=99
-##        perdict = dict(('perc_%2d'%per, [lambda x: scipy.stats.scoreatpercentile(x, per),
-##                                         None, None])
-##                        for per in (1,5,10,25,50,75,90,95,99))
+        ##perdict = dict(('perc_%2d'%per, [lambda x:
+         #      scipy.stats.scoreatpercentile(x, per), None, None])
+        ##          for per in (1,5,10,25,50,75,90,95,99))
 
         def _fun(per):
             return lambda x: scipy.stats.scoreatpercentile(x, per)
@@ -224,14 +234,17 @@ class Describe(object):
 
 
 
-        #JP: this doesn't allow a change in sequence, sequence in stats is ignored
+        #JP: this doesn't allow a change in sequence, sequence in stats is
+        #ignored
         #this is just an if condition
-        if any([aitem[1] for aitem in self.univariate.items() if aitem[0] in stats]):
+        if any([aitem[1] for aitem in self.univariate.items() if aitem[0] in
+                stats]):
             if columns == 'all':
                 self._columns_list = []
                 if self._arraytype == 'sctruct':
                     self._columns_list = self.dataset.dtype.names
-                    #self._columns_list = [col for col in self.dataset.dtype.names if
+                    #self._columns_list = [col for col in
+                    #                      self.dataset.dtype.names if
                             #(self._is_dtype_like(col)=='number')]
                 else:
                     self._columns_list = range(self.dataset.shape[1])
@@ -244,26 +257,27 @@ class Describe(object):
                     assert self._is_dtype_like(self.dataset) == 'number'
 
             columstypes = self.dataset.dtype
-#TODO: do we need to make sure they dtype is float64 ?
+            #TODO: do we need to make sure they dtype is float64 ?
             for  astat in stats:
                 calc = self.univariate[astat]
                 if self._arraytype == 'sctruct':
                     calc[1] =  self._columns_list
                     calc[2] = [calc[0](self.dataset[col]) for col in
-                               self._columns_list if (self._is_dtype_like(col) ==
+                            self._columns_list if (self._is_dtype_like(col) ==
                                                       'number')]
                     #calc[2].append([len(np.unique(self.dataset[col])) for col
                                    #in self._columns_list if
                                    #self._is_dtype_like(col)=='string']
                 else:
                     calc[1] = ['Col '+str(col) for col in self._columns_list]
-                    calc[2] = [calc[0](self.dataset[:,col]) for col in self._columns_list]
+                    calc[2] = [calc[0](self.dataset[:,col]) for col in
+                               self._columns_list]
             return self.print_summary(stats, orientation=orientation)
         else:
             return self.print_summary(stats, orientation=orientation)
 
     def print_summary(self, stats, orientation='auto'):
-#TODO: need to specify a table formating for the numbers, using defualt
+        #TODO: need to specify a table formating for the numbers, using defualt
         title = 'Summary Statistics'
         header = stats
         stubs = self.univariate['obs'][1]
@@ -289,15 +303,13 @@ class Describe(object):
     def sign_test(self, samp, mu0=0):
         return sign_test(samp, mu0)
     sign_test.__doc__ = _sign_test_doc
-#TODO: There must be a better way but formating the stats of a fuction that
-#      returns 2 values is a problem.
+    #TODO: There must be a better way but formating the stats of a fuction that
+    #      returns 2 values is a problem.
     #def sign_test_m(samp,mu0=0):
         #return self.sign_test(samp,mu0)[0]
     #def sign_test_p(samp,mu0=0):
         #return self.sign_test(samp,mu0)[1]
 
-########################################
-########################################
 if __name__ == "__main__":
     #unittest.main()
     t1 = Describe(data4)
