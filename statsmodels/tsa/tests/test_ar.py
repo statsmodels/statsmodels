@@ -213,11 +213,33 @@ class TestAutolagAR(object):
         for lag in range(1,16+1):
             endog_tmp = endog[16-lag:]
             r = AR(endog_tmp).fit(maxlag=lag)
-            results.append([r.aic, r.hqic, r.bic, r.fpe])
-        cls.res1 = np.asarray(results).T.reshape(4,-1, order='C')
+            # See issue #324 for why we're doing these corrections vs. R
+            # results
+            k_ar = r.k_ar
+            k_trend = r.k_trend
+            log_sigma2 = np.log(r.sigma2)
+            #import ipdb; ipdb.set_trace()
+            aic = r.aic
+            aic = (aic - log_sigma2) * (1 + k_ar)/(1 + k_ar + k_trend)
+            aic += log_sigma2
+
+            hqic = r.hqic
+            hqic = (hqic - log_sigma2) * (1 + k_ar)/(1 + k_ar + k_trend)
+            hqic += log_sigma2
+
+            bic = r.bic
+            bic = (bic - log_sigma2) * (1 + k_ar)/(1 + k_ar + k_trend)
+            bic += log_sigma2
+
+
+            results.append([aic, hqic, bic, r.fpe])
+        res1 = np.asarray(results).T.reshape(4,-1, order='C')
+        # aic correction to match R
+        cls.res1 = res1
         cls.res2 = results_ar.ARLagResults("const").ic
 
     def test_ic(self):
+
         npt.assert_almost_equal(self.res1, self.res2, DECIMAL_6)
 
 def test_ar_dates():

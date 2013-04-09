@@ -629,10 +629,10 @@ class ARResults(tsbase.TimeSeriesModelResults):
 
     aic : float
         Akaike Information Criterion using Lutkephol's definition.
-        :math:`log(sigma) + 2*(1+k_ar)/nobs`
+        :math:`log(sigma) + 2*(1 + k_ar + k_trend)/nobs`
     bic : float
         Bayes Information Criterion
-        :math:`\\log(\\sigma) + (1+k_ar)*\\log(nobs)/nobs`
+        :math:`\\log(\\sigma) + (1 + k_ar + k_trend)*\\log(nobs)/nobs`
     bse : array
         The standard errors of the estimated parameters. If `method` is 'cmle',
         then the standard errors that are returned are the OLS standard errors
@@ -737,7 +737,8 @@ class ARResults(tsbase.TimeSeriesModelResults):
         # Lutkepohl
         #return np.log(self.sigma2) + 1./self.model.nobs * self.k_ar
         # Include constant as estimated free parameter and double the loss
-        return np.log(self.sigma2) + 2 * (1 + self.k_ar)/self.nobs
+        return np.log(self.sigma2) + 2 * (1 + self.k_trend +
+                                              self.k_ar)/self.nobs
         # Stata defintion
         #nobs = self.nobs
         #return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
@@ -749,7 +750,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         # return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
         # R uses all estimated parameters rather than just lags
         return np.log(self.sigma2) + 2 * np.log(np.log(nobs))/nobs * \
-                (1 + self.k_ar)
+                (1 + self.k_ar + self.k_trend)
         # Stata
         #nobs = self.nobs
         #return -2 * self.llf/nobs + 2 * np.log(np.log(nobs))/nobs * \
@@ -769,7 +770,8 @@ class ARResults(tsbase.TimeSeriesModelResults):
         # Lutkepohl
         #return np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
         # Include constant as est. free parameter
-        return np.log(self.sigma2) + (1 + self.k_ar) * np.log(nobs)/nobs
+        return np.log(self.sigma2) + (1 + self.k_ar +
+                                      self.k_trend) * np.log(nobs)/nobs
         # Stata
         # return -2 * self.llf/nobs + np.log(nobs)/nobs * (self.k_ar + \
         #       self.k_trend)
