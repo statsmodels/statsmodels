@@ -243,6 +243,13 @@ def test_ar_named_series():
     assert_(results.params.index.equals(Index(["const", "L1.foobar",
                                                "L2.foobar"])))
 
+def test_ar_start_params():
+    # fix 236
+    # smoke test
+    data = sm.datasets.sunspots.load()
+    res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10.),
+                             method="mle", disp=-1)
+
 
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):
