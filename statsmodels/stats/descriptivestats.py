@@ -3,7 +3,7 @@ import numpy as np
 from scipy import stats
 #from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.table import SimpleTable
-
+from statsmodels.tools.decorators import nottest
 
 def _kurtosis(a):
     '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
@@ -62,6 +62,7 @@ _sign_test_doc = '''
     scipy.stats.wilcoxon
     '''
 
+@nottest
 def sign_test(samp, mu0=0):
     samp = np.asarray(samp)
     pos = np.sum(samp > mu0)
