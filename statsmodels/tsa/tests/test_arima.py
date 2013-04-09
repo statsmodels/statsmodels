@@ -1678,9 +1678,7 @@ def test_arima_predict_exog():
 
     # exog for out-of-sample and in-sample dynamic
     predict = arma_res.model.predict(params, end=124, exog=X[100:])
-    #NOTE: There must be something slightly off to get only this precision
-    # out of sample, but I don't know what
-    assert_almost_equal(predict, predict_expected.values, 3)
+    assert_almost_equal(predict, predict_expected.values, 6)
 
     # conditional sum of squares
     #arima_forecasts = read_csv(current_path + "/results/"
