@@ -705,14 +705,13 @@ class ARMA(tsbase.TimeSeriesModel):
             Whehter to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
-            Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs', 'newton'
-            (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient),
-            'ncg' (non-conjugate gradient), and 'powell'.
-            The limited memory BFGS uses m=30 to approximate the Hessian,
-            projected gradient tolerance of 1e-7 and factr = 1e3.  These
-            cannot currently be changed for l_bfgs.  See notes for more
-            information.
+            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
+            'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
+            (conjugate gradient), 'ncg' (non-conjugate gradient), and
+            'powell'. By default, the limited memory BFGS uses m=12 to
+            approximate the Hessian, projected gradient tolerance of 1e-8 and
+            factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
             The maximum number of function evaluations. Default is 35.
         tol : float
@@ -810,8 +809,11 @@ class ARMA(tsbase.TimeSeriesModel):
 
         if solver is None:  # use default limited memory bfgs
             bounds = [(None,)*2]*(k_ar+k_ma+k)
+            pgtol = kwargs.get('pgtol', 1e-8)
+            factr = kwargs.get('factr', 1e2)
+            m = kwargs.get('m', 12)
             mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=12, pgtol=1e-8, factr=1e2,
+                    approx_grad=True, m=m, pgtol=pgtol, factr=factr,
                     bounds=bounds, iprint=disp)
             self.mlefit = mlefit
             params = mlefit[0]
@@ -931,14 +933,13 @@ class ARIMA(ARMA):
             Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
-            Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs', 'newton'
-            (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient),
-            'ncg' (non-conjugate gradient), and 'powell'.
-            The limited memory BFGS uses m=30 to approximate the Hessian,
-            projected gradient tolerance of 1e-7 and factr = 1e3.  These
-            cannot currently be changed for l_bfgs.  See notes for more
-            information.
+            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
+            'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
+            (conjugate gradient), 'ncg' (non-conjugate gradient), and
+            'powell'. By default, the limited memory BFGS uses m=12 to
+            approximate the Hessian, projected gradient tolerance of 1e-8 and
+            factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
             The maximum number of function evaluations. Default is 35.
         tol : float
