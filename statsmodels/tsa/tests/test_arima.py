@@ -1723,7 +1723,7 @@ def test_arima_predict_noma():
     ma = [1]
     data = arma_generate_sample(ar, ma, 100)
     arma = ARMA(data, order=(0,1))
-    arma_res = arma.fit()
+    arma_res = arma.fit(disp=-1)
     arma_res.forecast(1)
 
 if __name__ == "__main__":
