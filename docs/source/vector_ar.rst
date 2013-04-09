@@ -43,13 +43,21 @@ explicitly:
 ::
 
     # some example data
-    >>> mdata = sm.datasets.macrodata.load().data
-    >>> mdata = mdata[['realgdp','realcons','realinv']]
-    >>> names = mdata.dtype.names
-    >>> data = mdata.view((float,3))
-    >>> data = np.diff(np.log(data), axis=0)
+    >>> import pandas
+    >>> mdata = sm.datasets.macrodata.load_pandas().data
 
-    >>> model = VAR(data, names=names)
+    # prepare the dates index
+    >>> dates = mdata[['year', 'quarter']].astype(int).astype(str)
+    >>> quarterly = dates["year"] + "Q" + dates["quarter"]
+    >>> from statsmodels.tsa.base.datetools import dates_from_str
+    >>> quarterly = dates_from_str(quarterly)
+
+    >>> mdata = mdata[['realgdp','realcons','realinv']]
+    >>> mdata.index = pandas.DatetimeIndex(quarterly)
+    >>> data = np.log(mdata).diff().dropna()
+
+    # make a VAR model
+    >>> model = VAR(data)
 
 .. note::
 
@@ -155,30 +163,30 @@ implemented the latter, accessable through the :class:`VAR` class:
 ::
 
     >>> model.select_order(15)
-                     VAR Order Selection
+                     VAR Order Selection                  
     ======================================================
                 aic          bic          fpe         hqic
     ------------------------------------------------------
-    0        -27.64       -27.59    9.960e-13       -27.62
-    1        -27.94      -27.74*    7.372e-13      -27.86*
-    2        -27.93       -27.58    7.421e-13       -27.79
-    3        -27.92       -27.43    7.476e-13       -27.72
-    4        -27.94       -27.29    7.328e-13       -27.68
-    5        -27.97       -27.17    7.107e-13       -27.65
-    6        -27.94       -26.99    7.324e-13       -27.56
-    7        -27.93       -26.82    7.418e-13       -27.48
-    8        -27.93       -26.66    7.475e-13       -27.41
-    9       -27.98*       -26.56   7.101e-13*       -27.40
-    10       -27.93       -26.36    7.458e-13       -27.29
-    11       -27.88       -26.15    7.850e-13       -27.18
-    12       -27.84       -25.94    8.271e-13       -27.07
-    13       -27.80       -25.74    8.594e-13       -26.97
-    14       -27.79       -25.57    8.733e-13       -26.89
+    0        -27.70       -27.65    9.358e-13       -27.68
+    1        -28.02      -27.82*    6.745e-13      -27.94*
+    2        -28.03       -27.66    6.732e-13       -27.88
+    3       -28.04*       -27.52   6.651e-13*       -27.83
+    4        -28.03       -27.36    6.681e-13       -27.76
+    5        -28.02       -27.19    6.773e-13       -27.69
+    6        -27.97       -26.98    7.147e-13       -27.57
+    7        -27.93       -26.79    7.446e-13       -27.47
+    8        -27.94       -26.64    7.407e-13       -27.41
+    9        -27.96       -26.50    7.280e-13       -27.37
+    10       -27.91       -26.30    7.629e-13       -27.26
+    11       -27.86       -26.09    8.076e-13       -27.14
+    12       -27.83       -25.91    8.316e-13       -27.05
+    13       -27.80       -25.73    8.594e-13       -26.96
+    14       -27.80       -25.57    8.627e-13       -26.90
     15       -27.81       -25.43    8.599e-13       -26.85
     ======================================================
     * Minimum
 
-    {'aic': 9, 'bic': 1, 'fpe': 9, 'hqic': 1}
+    {'aic': 3, 'bic': 1, 'fpe': 3, 'hqic': 1}
 
 When calling the `fit` function, one can pass a maximum number of lags and the
 order criterion to use for order selection:
@@ -202,12 +210,13 @@ to specify the "initial value" for the forecast:
 
 ::
 
-    >>> results.forecast(data[lag_order:], 5)
-    array([[ 0.00503,  0.00537,  0.00512],
-           [ 0.00594,  0.00785, -0.00302],
-           [ 0.00663,  0.00764,  0.00393],
-           [ 0.00732,  0.00797,  0.00657],
-           [ 0.00733,  0.00809,  0.0065 ]])
+    >>> lag_order = results.k_ar
+    >>> results.forecast(data.values[-lagorder:], 5)
+    array([[ 0.00616044,  0.00500006,  0.00916198],
+           [ 0.00427559,  0.00344836, -0.00238478],
+           [ 0.00416634,  0.0070728 , -0.01193629],
+           [ 0.00557873,  0.00642784,  0.00147152],
+           [ 0.00626431,  0.00666715,  0.00379567]])
 
 The `forecast_interval` function will produce the above forecast along with
 asymptotic standard errors. These can be visualized using the `plot_forecast`
@@ -287,26 +296,27 @@ These are computed via the `fevd` function up through a total number of steps ah
     FEVD for realgdp
           realgdp  realcons   realinv
     0    1.000000  0.000000  0.000000
-    1    0.863082  0.130030  0.006888
-    2    0.816610  0.176750  0.006639
-    3    0.808872  0.181086  0.010042
-    4    0.803461  0.185049  0.011490
+    1    0.864889  0.129253  0.005858
+    2    0.816725  0.177898  0.005378
+    3    0.793647  0.197590  0.008763
+    4    0.777279  0.208127  0.014594
 
     FEVD for realcons
           realgdp  realcons   realinv
-    0    0.363990  0.636010  0.000000
-    1    0.369771  0.623928  0.006301
-    2    0.367706  0.616831  0.015463
-    3    0.367450  0.615517  0.017033
-    4    0.367197  0.614903  0.017901
+    0    0.359877  0.640123  0.000000
+    1    0.358767  0.635420  0.005813
+    2    0.348044  0.645138  0.006817
+    3    0.319913  0.653609  0.026478
+    4    0.317407  0.652180  0.030414
 
     FEVD for realinv
           realgdp  realcons   realinv
-    0    0.563584  0.161984  0.274432
-    1    0.471910  0.307875  0.220215
-    2    0.463240  0.328467  0.208292
-    3    0.462148  0.328914  0.208938
-    4    0.461211  0.330359  0.208430
+    0    0.577021  0.152783  0.270196
+    1    0.488158  0.293622  0.218220
+    2    0.478727  0.314398  0.206874
+    3    0.477182  0.315564  0.207254
+    4    0.466741  0.324135  0.209124
+
 
 They can also be visualized through the returned :class:`FEVD` object:
 
@@ -336,22 +346,23 @@ F-test.
 
 ::
 
-    >>> est.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
+    >>> results.test_causality('realgdp', ['realinv', 'realcons'], kind='f')
     Granger causality f-test
     =============================================================
        Test statistic   Critical Value          p-value        df
     -------------------------------------------------------------
-             9.904841         2.387325            0.000  (4, 579)
+             6.999888         2.114554            0.000  (6, 567)
     =============================================================
     H_0: ['realinv', 'realcons'] do not Granger-cause realgdp
     Conclusion: reject H_0 at 5.00% significance level
-
+    [88]: 
     {'conclusion': 'reject',
-     'crit_value': 2.3873247573799259,
-     'df': (4, 579),
-     'pvalue': 9.3171720876318303e-08,
-     'signif': 0.050000000000000003,
-     'statistic': 9.9048411456983949}
+     'crit_value': 2.1145543864562706,
+     'df': (6, 567),
+     'pvalue': 3.3805963773886478e-07,
+     'signif': 0.05,
+     'statistic': 6.9998875522543473}
+
 
 Normality
 ~~~~~~~~~
