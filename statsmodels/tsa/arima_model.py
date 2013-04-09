@@ -979,9 +979,6 @@ class ARIMA(ARMA):
         arima_fit = super(ARIMA, self).fit(None, start_params, trend,
                                method, transparams, solver, maxiter,
                                full_output, disp, callback, **kwargs)
-        if self.k_diff == 0:#TODO: what do to here?
-            #Overide results methods or just return ARMA?
-            return arima_fit
         normalized_cov_params = None #TODO: fix this?
         arima_fit = ARIMAResults(self, arima_fit._results.params,
                                        normalized_cov_params)
