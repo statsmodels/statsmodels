@@ -307,13 +307,8 @@ def _unpack_order(order):
     k_lags = max(k_ar, k_ma+1)
     return k_ar, k_ma, order, k_lags
 
-def _make_arma_names(data, k_trend, order):
+def _make_arma_names(data, k_trend, order, exog_names):
     k_ar, k_ma = order
-    exog = data.exog
-    if exog is not None:
-        exog_names = data._get_names(data.orig_exog) or []
-    else:
-        exog_names = []
     ar_lag_names = util.make_lag_names([data.ynames], k_ar, 0)
     ar_lag_names = [''.join(('ar.', i))
                               for i in ar_lag_names]
@@ -791,7 +786,8 @@ class ARMA(tsbase.TimeSeriesModel):
         self.exog = exog    # overwrites original exog from __init__
 
         # (re)set names for this model
-        self.exog_names = _make_arma_names(self.data, k_trend, (k_ar, k_ma))
+        self.exog_names = _make_arma_names(self.data, k_trend, (k_ar, k_ma),
+                                           self.exog_names)
         k = k_trend + k_exog
 
 
