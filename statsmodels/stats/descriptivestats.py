@@ -27,6 +27,50 @@ def _skew(a):
         res = np.nan
     return res
 
+_sign_test_doc = '''
+    Signs test.
+
+    Parameters
+    ----------
+    samp : array-like
+        1d array. The sample for which you want to perform the signs
+        test.
+    mu0 : float
+        See Notes for the definition of the sign test. mu0 is 0 by
+        default, but it is common to set it to the median.
+
+    Returns
+    ---------
+    M, p-value
+
+    Notes
+    -----
+    The signs test returns
+
+    M = (N(+) - N(-))/2
+
+    where N(+) is the number of values above `mu0`, N(-) is the number of
+    values below.  Values equal to `mu0` are discarded.
+
+    The p-value for M is calculated using the binomial distrubution
+    and can be intrepreted the same as for a t-test. The test-statistic
+    is distributed Binom(min(N(+), N(-)), n_trials, .5) where n_trials
+    equals N(+) + N(-).
+
+    See Also
+    ---------
+    scipy.stats.wilcoxon
+    '''
+
+def sign_test(samp, mu0=0):
+    samp = np.asarray(samp)
+    pos = np.sum(samp > mu0)
+    neg = np.sum(samp < mu0)
+    M = (pos-neg)/2.
+    p = stats.binom_test(min(pos,neg), pos+neg, .5)
+    return M, p
+sign_test.__doc__ = _sign_test_doc
+
 class Describe(object):
     '''
     Calculates descriptive statistics for data.
@@ -241,39 +285,9 @@ class Describe(object):
         return table
 
 
-    def sign_test(samp,mu0=0):
-        '''
-        Signs test with mu0=0 by default (though
-        the median is often used in practice)
-
-        Parameters
-        ----------
-        samp
-
-        mu0
-
-        Returns
-        ---------
-        M, p-value
-
-        where
-
-        M=(N(+) - N(-))/2, N(+) is the number of values above Mu0,
-        N(-) is the number of values below.  Values equal to Mu0
-        are discarded.
-
-        The p-value for M is calculated using the binomial distrubution
-        and can be intrepreted the same as for a t-test.
-
-        See Also
-        ---------
-        scipy.stats.wilcoxon
-        '''
-        pos=np.sum(samp>mu0)
-        neg=np.sum(samp<mu0)
-        M=(pos-neg)/2.
-        p=stats.binom_test(min(pos,neg),pos+neg,.5)
-        return M, p
+    def sign_test(self, samp, mu0=0):
+        return sign_test(samp, mu0)
+    sign_test.__doc__ = _sign_test_doc
 #TODO: There must be a better way but formating the stats of a fuction that
 #      returns 2 values is a problem.
     #def sign_test_m(samp,mu0=0):
