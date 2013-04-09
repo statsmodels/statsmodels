@@ -30,6 +30,25 @@ try:
 except:
     fast_kalman = 0
 
+_armax_notes = """
+
+        Notes
+        -----
+        If exogenous variables are given, then the model that is fit is
+
+        .. math::
+
+           \\phi(L)(y_t - X_t\\beta) = \\theta(L)\epsilon_t
+
+        where :math:`\\phi` and :math:`\\theta` are polynomials in the lag
+        operator, :math:`L`. This is the regression model with ARMA errors,
+        or ARMAX model. This specification is used, whether or not the model
+        is fit using conditional sum of square or maximum-likelihood, using
+        the `method` argument in :meth:`statsmodels.tsa.arima_model.%(Model)s.fit`. Therefore, for now, `css`
+        and `mle` refer to estimation methods only. This may change for the
+        case of the `css` model in future versions.
+"""
+
 _arma_params = """\
     endog : array-like
         The endogenous variable.
@@ -322,7 +341,8 @@ def _make_arma_exog(endog, exog, trend):
 class ARMA(tsbase.TimeSeriesModel):
 
     __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
-                    "params" : _arma_params, "extra_params" : ""}
+                    "params" : _arma_params, "extra_params" : "",
+                    "extra_sections" : _armax_notes % {"Model" : "ARMA"}}
 
     def __init__(self, endog, order=None, exog=None, dates=None, freq=None,
                         missing='none'):
@@ -711,7 +731,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        `statsmodels.tsa.arima.ARMAResults` class
+        statsmodels.tsa.arima_model.ARMAResults class
 
         See also
         --------
@@ -816,7 +836,8 @@ class ARMA(tsbase.TimeSeriesModel):
 class ARIMA(ARMA):
 
     __doc__ = tsbase._tsa_doc % {"model" : _arima_model,
-            "params" : _arima_params, "extra_params" : ""}
+            "params" : _arima_params, "extra_params" : "",
+            "extra_sections" : _armax_notes % {"Model" : "ARIMA"}}
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                        missing='none'):

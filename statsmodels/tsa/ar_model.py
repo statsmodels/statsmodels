@@ -66,7 +66,8 @@ class AR(tsbase.TimeSeriesModel):
     __doc__ = tsbase._tsa_doc % {"model" : "Autoregressive AR(p) model",
             "params" : """endog : array-like
         1-d endogenous response variable. The independent variable.""",
-        "extra_params" : base._missing_param_doc}
+        "extra_params" : base._missing_param_doc,
+        "extra_sections" : ""}
     def __init__(self, endog, dates=None, freq=None, missing='none'):
         super(AR, self).__init__(endog, None, dates, freq, missing=missing)
         endog = self.endog # original might not have been an ndarray
