@@ -567,9 +567,14 @@ class AR(tsbase.TimeSeriesModel):
             self.sigma2 = arfit.ssr/arfit.nobs #needed for predict fcasterr
         if method == "mle":
             self.nobs = nobs
-            if not start_params:
+            if start_params is None:
                 start_params = OLS(Y,X).fit().params
-                start_params = self._invtransparams(start_params)
+            else:
+                if len(start_params) != k_trend + k_ar:
+                    raise ValueError("Length of start params is %d. There"
+                            " are %d parameters." % (len(start_params),
+                                                     k_trend + k_ar))
+            start_params = self._invtransparams(start_params)
             loglike = lambda params : -self.loglike(params)
             if solver == None:  # use limited memory bfgs
                 bounds = [(None,)*2]*(k_ar+k)
