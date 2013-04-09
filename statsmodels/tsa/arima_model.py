@@ -55,6 +55,104 @@ _arima_params = """\
         An optional arry of exogenous variables. This should *not* include a
         constant or trend. You can specify this in the `fit` method."""
 
+_predict_notes = """
+        Notes
+        -----
+        Use the results predict method instead.
+"""
+
+_results_notes = """
+        Notes
+        -----
+        It is recommended to use dates with the time-series models, as the
+        below will probably make clear. However, if ARIMA is used without
+        dates and/or `start` and `end` are given as indices, then these
+        indices are in terms of the *original*, undifferenced series. Ie.,
+        given some undifferenced observations::
+
+         1970Q1, 1
+         1970Q2, 1.5
+         1970Q3, 1.25
+         1970Q4, 2.25
+         1971Q1, 1.2
+         1971Q2, 4.1
+
+        1970Q1 is observation 0 in the original series. However, if we fit an
+        ARIMA(p,1,q) model then we lose this first observation through
+        differencing. Therefore, the first observation we can forecast (if
+        using exact MLE) is index 1. In the differenced series this is index
+        0, but we refer to it as 1 from the original series.
+"""
+
+_predict = """
+        %(Model)s model in-sample and out-of-sample prediction
+
+        Parameters
+        ----------
+        %(params)s
+        start : int, str, or datetime
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction.
+        exog : array-like, optional
+            If the model is an ARMAX and out-of-sample forecasting is
+            requested, exog must be given.
+        dynamic : bool, optional
+            The `dynamic` keyword affects in-sample prediction. If dynamic
+            is False, then the in-sample lagged values are used for
+            prediction. If `dynamic` is True, then in-sample forecasts are
+            used in place of lagged dependent variables. The first forecasted
+            value is `start`.
+        %(extra_params)s
+
+        Returns
+        -------
+        predict : array
+            The predicted values.
+        %(extra_section)s
+"""
+
+_arma_predict = _predict % {"Model" : "ARMA",
+        "params" : """
+        params : array-like
+            The fitted parameters of the model.""",
+        "extra_params" : "",
+        "extra_section" : _predict_notes}
+
+_arma_results_predict = _predict % {"Model" : "ARMA", "params" : "",
+        "extra_params" : "", "extra_section" : _results_notes}
+
+_arima_predict = _predict % {"Model" : "ARIMA",
+        "params" : """
+        params : array-like
+            The fitted parameters of the model.""",
+        "extra_params" :
+"""
+        typ : str {'linear', 'levels'}
+            - 'linear' : Linear prediction in terms of the differenced
+              endogenous variables.
+            - 'levels' : Predict the levels of the original endogenous
+              variables.""",
+        "extra_section" : _predict_notes}
+
+_arima_results_predict = _predict % {"Model" : "ARIMA",
+        "params" : "",
+        "extra_params" : """typ : str {'linear', 'levels'}
+            - 'linear' : Linear prediction in terms of the differenced
+              endogenous variables.
+            - 'levels' : Predict the levels of the original endogenous
+              variables.
+""",
+        "extra_section" : _results_notes}
+
+
+
 def _check_arima_start(start, k_ar, k_diff, method, dynamic):
     if start < 0:
         raise ValueError("The start index %d of the original series "
@@ -470,37 +568,6 @@ class ARMA(tsbase.TimeSeriesModel):
         return errors.squeeze()
 
     def predict(self, params, start=None, end=None, exog=None, dynamic=False):
-        """
-        In-sample and out-of-sample prediction.
-
-        Parameters
-        ----------
-        params : array-like
-            The fitted parameters of the model.
-        start : int, str, or datetime
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type.
-        end : int, str, or datetime
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type. However, if the dates index does not
-            have a fixed frequency, end must be an integer index if you
-            want out of sample prediction.
-        exog : array-like, optional
-            If the model is an ARMAX and out-of-sample forecasting is
-            requested, exog must be given.
-        dynamic : bool, optional
-            The `dynamic` keyword affects in-sample prediction. If dynamic
-            is False, then the in-sample lagged values are used for
-            prediction. If `dynamic` is True, then in-sample forecasts are
-            used in place of lagged dependent variables. The first forecasted
-            value is `start`.
-
-        Notes
-        ------
-        Consider using the results prediction.
-        """
         method = getattr(self, 'method', 'mle') # don't assume fit
         #params = np.asarray(params)
 
@@ -535,6 +602,7 @@ class ARMA(tsbase.TimeSeriesModel):
                                         method=method)
             predictedvalues = np.r_[predictedvalues, forecastvalues]
         return predictedvalues
+    predict.__doc__ = _arma_predict
 
     def loglike(self, params):
         """
@@ -872,8 +940,7 @@ class ARIMA(ARMA):
         r, order = 'F')
 
         """
-        arima_fit = super(ARIMA, self).fit(None,
-                               start_params, trend, method,
+        arima_fit = super(ARIMA, self).fit(None, trend, method,
                                transparams, solver, maxiter, full_output,
                                disp, callback, **kwargs)
         if self.k_diff == 0:#TODO: what do to here?
@@ -887,62 +954,6 @@ class ARIMA(ARMA):
 
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
-        """
-        ARIMA model prediction
-
-        Parameters
-        ----------
-        params : array
-            The parameters of the model
-        start : int, str, or datetime
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. See notes. Can also be a date string
-            to parse or a datetime type.
-        end : int, str, or datetime
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the last forecast is end. Can also be a date string to
-            parse or a datetime type.
-        exog : array-like, optional
-            If the model is an ARMAX and out-of-sample forecasting is
-            requestion, exog must be given.
-        typ : str {'linear', 'levels'}, optional
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.
-        dynamic : bool, optional
-            The `dynamic` keyword affects in-sample prediction. If dynamic
-            is False, then the in-sample lagged values are used for
-            prediction. If `dynamic` is True, then in-sample forecasts are
-            used in place of lagged dependent variables. The first forecasted
-            value is `start`.
-
-        Returns
-        -------
-        predict : array
-            The predicted values.
-
-        Notes
-        -----
-        It is recommended to use dates with the time-series models, as the
-        below will probably make clear. However, if ARIMA is used without
-        dates and/or `start` and `end` are given as indices, then these
-        indices are in terms of the *original*, undifferenced series. Ie.,
-        given some undifferenced observations::
-
-         1970Q1, 1
-         1970Q2, 1.5
-         1970Q3, 1.25
-         1970Q4, 2.25
-         1971Q1, 1.2
-         1971Q2, 4.1
-
-        1970Q1 is observation 0 in the original series. However, if we fit an
-        ARIMA(p,1,q) model then we lose this first observation through
-        differencing. Therefore, the first observation we can forecast (if
-        using exact MLE) is index 1. In the differenced series this is index
-        0, but we refer to it as 1 from the original series.
-        """
         # go ahead and convert to an index for easier checking
         if isinstance(start, (basestring, datetime)):
             start = _index_date(start, self.data.dates)
@@ -1019,6 +1030,8 @@ class ARIMA(ARMA):
 
         else: # pragma : no cover
             raise ValueError("typ %s not understood" % typ)
+
+    predict.__doc__ = _arima_predict
 
 class ARMAResults(tsbase.TimeSeriesModelResults):
     """
@@ -1252,31 +1265,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         return t.sf(np.abs(self.tvalues), df_resid) * 2
 
     def predict(self, start=None, end=None, exog=None, dynamic=False):
-        """
-        In-sample and out-of-sample prediction.
-
-        Parameters
-        ----------
-        start : int, str, or datetime
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type.
-        end : int, str, or datetime
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the last forecast is end. Can also be a date string to parse or a
-            datetime type.
-        exog : array-like, optional
-            If the model is an ARMAX and out-of-sample forecasting is
-            requestion, exog must be given.
-        dynamic : bool, optional
-            The `dynamic` keyword affects in-sample prediction. If dynamic
-            is False, then the in-sample lagged values are used for
-            prediction. If `dynamic` is True, then in-sample forecasts are
-            used in place of lagged dependent variables. The first forecasted
-            value is `start`.
-
-        """
         return self.model.predict(self.params, start, end, exog, dynamic)
+    predict.__doc__ = _arma_results_predict
 
     def forecast(self, steps=1, exog=None, alpha=.05):
         """
@@ -1429,36 +1419,8 @@ wrap.populate_wrapper(ARMAResultsWrapper, ARMAResults)
 class ARIMAResults(ARMAResults):
     def predict(self, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
-        """
-        ARIMA model in-sample and out-of-sample prediction
-
-        Parameters
-        ----------
-        start : int, str, or datetime
-            Zero-indexed observation number at which to start forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type.
-        end : int, str, or datetime
-            Zero-indexed observation number at which to end forecasting, ie.,
-            the first forecast is start. Can also be a date string to
-            parse or a datetime type. However, if the dates index does not
-            have a fixed frequency, end must be an integer index if you
-            want out of sample prediction.
-        exog : array-like, optional
-            If the model is an ARMAX and out-of-sample forecasting is
-            requestion, exog must be given.
-        typ : str {'linear', 'levels'}
-            - 'linear' : Linear prediction in terms of the differenced
-              endogenous variables.
-            - 'levels' : Predict the levels of the original endogenous
-              variables.
-
-        Returns
-        -------
-        predict : array
-            The predicted values.
-        """
         return self.model.predict(self.params, start, end, exog, typ, dynamic)
+    predict.__doc__ = _arima_results_predict
 
     def forecast(self, steps=1, exog=None, alpha=.05):
         """
