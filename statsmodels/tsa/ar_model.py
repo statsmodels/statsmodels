@@ -702,7 +702,8 @@ class ARResults(tsbase.TimeSeriesModelResults):
             trendorder = k_trend - 1
         self.trendorder = 1
         #TODO: cmle vs mle?
-        self.df_resid = self.model.df_resid = n_totobs - k_ar - k_trend
+        self.df_model = k_ar + k_trend
+        self.df_resid = self.model.df_resid = n_totobs - self.df_model
 
     @cache_writable()
     def sigma2(self):
@@ -737,8 +738,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         # Lutkepohl
         #return np.log(self.sigma2) + 1./self.model.nobs * self.k_ar
         # Include constant as estimated free parameter and double the loss
-        return np.log(self.sigma2) + 2 * (1 + self.k_trend +
-                                              self.k_ar)/self.nobs
+        return np.log(self.sigma2) + 2 * (1 + self.df_model)/self.nobs
         # Stata defintion
         #nobs = self.nobs
         #return -2 * self.llf/nobs + 2 * (self.k_ar+self.k_trend)/nobs
@@ -750,7 +750,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         # return np.log(self.sigma2)+ 2 * np.log(np.log(nobs))/nobs * self.k_ar
         # R uses all estimated parameters rather than just lags
         return np.log(self.sigma2) + 2 * np.log(np.log(nobs))/nobs * \
-                (1 + self.k_ar + self.k_trend)
+                (1 + self.df_model)
         # Stata
         #nobs = self.nobs
         #return -2 * self.llf/nobs + 2 * np.log(np.log(nobs))/nobs * \
@@ -759,10 +759,9 @@ class ARResults(tsbase.TimeSeriesModelResults):
     @cache_readonly
     def fpe(self):
         nobs = self.nobs
-        k_ar = self.k_ar
-        k_trend = self.k_trend
+        df_model = self.df_model
         #Lutkepohl
-        return ((nobs+k_ar+k_trend)/(nobs-k_ar-k_trend))*self.sigma2
+        return ((nobs+df_model)/(nobs-df_model))*self.sigma2
 
     @cache_readonly
     def bic(self):
@@ -770,8 +769,7 @@ class ARResults(tsbase.TimeSeriesModelResults):
         # Lutkepohl
         #return np.log(self.sigma2) + np.log(nobs)/nobs * self.k_ar
         # Include constant as est. free parameter
-        return np.log(self.sigma2) + (1 + self.k_ar +
-                                      self.k_trend) * np.log(nobs)/nobs
+        return np.log(self.sigma2) + (1 + self.df_model) * np.log(nobs)/nobs
         # Stata
         # return -2 * self.llf/nobs + np.log(nobs)/nobs * (self.k_ar + \
         #       self.k_trend)
