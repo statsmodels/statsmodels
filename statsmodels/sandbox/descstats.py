@@ -4,6 +4,7 @@ Glue for returning descriptive statistics.
 import numpy as np
 from scipy import stats
 import os
+from statsmodels.stats.descriptivestats import sign_test
 
 #############################################
 #
@@ -11,40 +12,6 @@ import os
 #       Univariate Descriptive Statistics
 #============================================
 #
-
-def sign_test(samp,mu0=0):
-        '''
-        Signs test with mu0=0 by default (though
-        the median is often used in practice)
-
-        Parameters
-        ----------
-        samp
-
-        mu0
-
-        Returns
-        ---------
-        M, p-value
-
-        where
-
-        M=(N(+) - N(-))/2, N(+) is the number of values above Mu0,
-        N(-) is the number of values below.  Values equal to Mu0
-        are discarded.
-
-        The p-value for M is calculated using the binomial distrubution
-        and can be intrepreted the same as for a t-test.
-
-        See Also
-        ---------
-        scipy.stats.wilcoxon
-        '''
-        pos=np.sum(samp>mu0)
-        neg=np.sum(samp<mu0)
-        M=(pos-neg)/2.
-        p=stats.binom_test(min(pos,neg),pos+neg,.5)
-        return M, p
 
 def descstats(data, cols=None, axis=0):
     '''
