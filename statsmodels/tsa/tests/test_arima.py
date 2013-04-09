@@ -9,6 +9,7 @@ from statsmodels.tsa.base.datetools import dates_from_range
 from results import results_arma, results_arima
 import os
 from statsmodels.tsa.base import datetools
+from statsmodels.tsa.arima_process import arma_generate_sample
 import pandas
 try:
     from statsmodels.tsa.kalmanf import kalman_loglike
@@ -1704,7 +1705,6 @@ def test_arima_no_diff():
     # issue 736
     # smoke test, predict will break if we have ARIMAResults but
     # ARMA model, need ARIMA(p, 0, q) to return an ARMA in init.
-    from statsmodels.tsa.arima_process import arma_generate_sample
     ar = [1, -.75, .15, .35]
     ma = [1, .25, .9]
     y = arma_generate_sample(ar, ma, 100)
@@ -1713,6 +1713,16 @@ def test_arima_no_diff():
     res = mod.fit(disp=-1)
     # smoke test just to be sure
     res.predict()
+
+def test_arima_predict_noma():
+    # issue 657
+    # smoke test
+    ar = [1, .75]
+    ma = [1]
+    data = arma_generate_sample(ar, ma, 100)
+    arma = ARMA(data, order=(0,1))
+    arma_res = arma.fit()
+    arma_res.forecast(1)
 
 if __name__ == "__main__":
     import nose
