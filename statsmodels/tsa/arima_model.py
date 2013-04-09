@@ -961,9 +961,9 @@ class ARIMA(ARMA):
         r, order = 'F')
 
         """
-        arima_fit = super(ARIMA, self).fit(None, trend, method,
-                               transparams, solver, maxiter, full_output,
-                               disp, callback, **kwargs)
+        arima_fit = super(ARIMA, self).fit(None, start_params, trend,
+                               method, transparams, solver, maxiter,
+                               full_output, disp, callback, **kwargs)
         if self.k_diff == 0:#TODO: what do to here?
             #Overide results methods or just return ARMA?
             return arima_fit
