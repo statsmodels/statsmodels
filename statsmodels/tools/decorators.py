@@ -190,6 +190,14 @@ class OneTimeProperty(object):
         setattr(obj, self.name, val)
         return val
 
+try:
+    from nose.tools import nottest
+except ImportError:
+    # make a dummy decorator so people that don't have nose installed
+    # don't get an error
+    def nottest(fn):
+        return fn
+
 
 if __name__ == "__main__":
 ### Tests resettable_cache ----------------------------------------------------

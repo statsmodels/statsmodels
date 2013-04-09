@@ -150,6 +150,13 @@ Non-Parametric Tests
    cochran_q
    Runs
 
+.. currentmodule:: statsmodels.stats.descriptivestats
+
+.. autosummary::
+   :toctree: generated/
+
+   sign_test
+
 
 Multiple Tests and Multiple Comparison Procedures
 -------------------------------------------------
