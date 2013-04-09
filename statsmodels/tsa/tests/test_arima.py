@@ -1646,7 +1646,7 @@ def test_arima_predict_pandas_nofreq():
     assert_(predict.index.equals(data.index[2:10]))
 
 def test_arima_predict_exog():
-    # fix 625
+    # check 625 and 626
     #from statsmodels.tsa.arima_process import arma_generate_sample
     #arparams = np.array([1, -.45, .25])
     #maparams = np.array([1, .15])
@@ -1671,6 +1671,8 @@ def test_arima_predict_exog():
     predict = arma_res.predict()
     assert_almost_equal(predict, predict_expected.values[:100], 5)
 
+    # check 626
+    assert_(len(arma_res.model.exog_names) == 5)
 
     # params from gretl
     params = np.array([2.786912485145725, -0.122650190196475,
