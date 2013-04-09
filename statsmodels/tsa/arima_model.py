@@ -202,12 +202,12 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
     if k_trend == 1:
         # use expectation not constant
         if k_exog > 0:
-            if k_exog == 1 and exog.ndim == 1:
-                exog = exog[:, None]
-                #TODO: technically should only hold for MLE not
-                # conditional model. See #274.
-            mu = ((trendparam + np.dot(exog, exparams)[:,None]) *
-                (1 - arparams.sum()))
+            #TODO: technically should only hold for MLE not
+            # conditional model. See #274.
+            X = lagmat(np.dot(exog, exparams), p, original='in', trim='both')
+            mu = trendparam * (1 - arparams.sum())
+            # arparams were reversed in unpack for ease later
+            mu = mu + (np.r_[1, -arparams[::-1]]*X).sum(1)[:,None]
 
         else:
             mu = trendparam * (1 - arparams.sum())
@@ -601,13 +601,19 @@ class ARMA(tsbase.TimeSeriesModel):
         resid = self.geterrors(params)
         k_ar = self.k_ar
 
+        if out_of_sample != 0 and self.k_exog > 0:
+            if self.k_exog == 1 and exog.ndim == 1:
+                exog = exog[:,None]
+                # we need the last k_ar exog for the lag-polynomial
+            if self.k_exog > 0:
+                # need the last k_ar exog for the lag-polynomial
+                exog = np.row_stack((self.exog[-k_ar:, self.k_trend:], exog))
+
+
         if dynamic:
             #TODO: now that predict does dynamic in-sample it should
             # also return error estimates and confidence intervals
             # but how? len(endog) is not tot_obs
-            # dynamic in-sample can use existing in-sample exog
-            if out_of_sample == 0 and self.k_exog != 0:
-                exog = self.exog[start:end+1, self.k_trend:]
             out_of_sample += end - start + 1
             return _arma_predict_out_of_sample(params, out_of_sample, resid,
                     k_ar, self.k_ma, self.k_trend, self.k_exog, endog, exog,
