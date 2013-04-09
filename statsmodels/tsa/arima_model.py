@@ -845,10 +845,19 @@ class ARIMA(ARMA):
             "params" : _arima_params, "extra_params" : "",
             "extra_sections" : _armax_notes % {"Model" : "ARIMA"}}
 
+    def __new__(cls, endog, order, exog=None, dates=None, freq=None,
+                       missing='none'):
+        p, d, q = order
+        if d == 0: # then we just use an ARMA model
+            return ARMA(endog, (p,q), exog, dates, freq, missing)
+        else:
+            return super(ARIMA, cls).__new__(cls, endog, order, exog, dates,
+                                             freq, missing)
+
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                        missing='none'):
         p,d,q = order
-        super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq)
+        super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq, missing)
         self.k_diff = d
         self.endog = np.diff(self.endog, n=d)
         self.data.ynames = 'D.' + self.endog_names
