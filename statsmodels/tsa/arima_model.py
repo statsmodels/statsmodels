@@ -781,7 +781,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
         # (re)set trend and handle exogenous variables
         # always pass original exog
-        k_trend, exog = _make_arma_exog(endog, self.data.exog, trend)
+        k_trend, exog = _make_arma_exog(endog, self.exog, trend)
 
         self.k_trend = k_trend
         self.exog = exog    # overwrites original exog from __init__
@@ -857,6 +857,8 @@ class ARIMA(ARMA):
         super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq, missing)
         self.k_diff = d
         self.endog = np.diff(self.endog, n=d)
+        if exog is not None:
+            self.exog = self.exog[d:]
         self.data.ynames = 'D.' + self.endog_names
         # what about exog, should we difference it automatically before
         # super call?

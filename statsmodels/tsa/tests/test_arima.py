@@ -1744,22 +1744,22 @@ def test_arimax():
 
 
     # 2 exog
-    X = dta.ix[1:]
+    X = dta
     res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
 
     # from gretl
     #params = [13.113976653926638, -0.003792125069387,  0.004123504809217,
     #          -0.199213760940898,  0.151563643588008, -0.033088661096699]
-    # from stata
-    params = [13.125915, -.00376819, .00411971, -.19921564, .15154342,
-              -.0330833]
-    stata_llf = -1076.108661881485
+    # from stata using double
+    stata_llf = -1076.108614859121
+    params = [13.1259220104, -0.00376814509403812, 0.00411970083135622,
+              -0.19921477896158524, 0.15154396192855729, -0.03308400760360837]
     #assert_almost_equal(res.params.values, params, 4)
 
     # This shows that it's an optimizer problem and not a problem in the code
-    assert_almost_equal(res.model.loglike(np.array(params)), stata_llf, 8)
+    assert_almost_equal(res.model.loglike(np.array(params)), stata_llf, 6)
 
-    X = dta.diff().dropna()
+    X = dta.diff()
     res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
 
     # gretl won't estimate this - looks like maybe a bug on their part,
@@ -1767,6 +1767,10 @@ def test_arimax():
     # from Stata
     params = [19.565671, .3265397, .36286534, -1.0113403, -.15722464,
               .69360046]
+    params = [19.5656863783347, 0.32653841355833396198,
+              0.36286527042965188716, -1.01133792126884,
+              -0.15722368379307766206, 0.69359822544092153418]
+
     assert_almost_equal(res.params.values, params, 3)
 
 if __name__ == "__main__":
