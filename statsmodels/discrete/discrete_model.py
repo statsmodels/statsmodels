@@ -2528,7 +2528,13 @@ class L1CountResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(L1CountResultsWrapper, L1CountResults)
 
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
-    pass
+    _attrs = {"resid_dev" : "rows",
+              "resid_generalized" : "rows",
+              "resid_pearson" : "rows",
+              "resid_response" : "rows"
+              }
+    _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
+                                   _attrs)
 wrap.populate_wrapper(BinaryResultsWrapper, BinaryResults)
 
 class L1BinaryResultsWrapper(lm.RegressionResultsWrapper):
@@ -2536,7 +2542,9 @@ class L1BinaryResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(L1BinaryResultsWrapper, L1BinaryResults)
 
 class MultinomialResultsWrapper(lm.RegressionResultsWrapper):
-    pass
+    _attrs = {"resid_misclassified" : "rows"}
+    _wrap_attrs = wrap.union_dicts(lm.RegressionResultsWrapper._wrap_attrs,
+            _attrs)
 wrap.populate_wrapper(MultinomialResultsWrapper, MultinomialResults)
 
 class L1MultinomialResultsWrapper(lm.RegressionResultsWrapper):
