@@ -506,7 +506,8 @@ if __name__ == "__main__":
         'pandas' : '0.7.1',
         'patsy' : '0.1.0',
                    }
-    if sys.version_info[1] >= 3:  # 3.3 needs numpy 1.7+
+    if sys.version_info[0] == 3 and sys.version_info[1] >= 3:
+        # 3.3 needs numpy 1.7+
         min_versions.update({"numpy" : "1.7.0b2"})
 
     check_dependency_versions(min_versions)
