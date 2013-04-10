@@ -247,8 +247,8 @@ class CleanCommand(Command):
         self.all = True
         self._clean_me = []
         self._clean_trees = []
-        self._clean_exclude = ["statsmodels/src/bspline_ext.c",
-                               "statsmodels/src/bspline_impl.c"]
+        self._clean_exclude = ["bspline_ext.c",
+                               "bspline_impl.c"]
 
         for root, dirs, files in list(os.walk('statsmodels')):
             for f in files:
