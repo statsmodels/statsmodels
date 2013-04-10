@@ -1,19 +1,62 @@
 """
-setuptools must be installed first. If you do not have setuptools installed
-please download and install it from http://pypi.python.org/pypi/setuptools
+Much of the build system code was adapted from work done by the pandas
+developers [1], which was in turn based on work done in pyzmq [2] and lxml [3].
+
+[1] http://pandas.pydata.org
+[2] http://zeromq.github.io/pyzmq/
+[3] http://lxml.de/
 """
 
 import os
+from os.path import splitext, basename, join as pjoin
 import sys
 import subprocess
 import re
-import setuptools
-from numpy.distutils.core import setup
-import numpy
+
+# may need to work around setuptools bug by providing a fake Pyrex
+try:
+    import Cython
+    sys.path.insert(0, pjoin(os.path.dirname(__file__), "fake_pyrex"))
+except ImportError:
+    pass
+
+# try bootstrapping setuptools if it doesn't exist
+try:
+    import pkg_resources
+    try:
+        pkg_resources.require("setuptools>=0.6c5")
+    except pkg_resources.VersionConflict:
+        from ez_setup import use_setuptools
+        use_setuptools(version="0.6c5")
+    from setuptools import setup, Command, find_packages
+    _have_setuptools = True
+except ImportError:
+    # no setuptools installed
+    from distutils.core import setup, Command
+    _have_setuptools = False
+
+setuptools_kwargs = {}
+if sys.version_info[0] >= 3:
+    setuptools_kwargs = {'use_2to3': True,
+                         'zip_safe': False,
+                         #'use_2to3_exclude_fixers': [],
+                         }
+    if not _have_setuptools:
+        sys.exit("need setuptools/distribute for Py3k"
+                 "\n$ pip install distribute")
+
+else:
+    setuptools_kwargs = {
+        'install_requires': [],
+        'zip_safe': False,
+    }
+
+    if not _have_setuptools:
+        setuptools_kwargs = {}
 
 curdir = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(curdir, "README.txt")).read()
-CHANGES = open(os.path.join(curdir, "CHANGES.txt")).read()
+README = open(pjoin(curdir, "README.txt")).read()
+CHANGES = open(pjoin(curdir, "CHANGES.txt")).read()
 
 DISTNAME = 'statsmodels'
 DESCRIPTION = 'Statistical computations and models for use with SciPy'
@@ -23,6 +66,29 @@ MAINTAINER_EMAIL ='pystatsmodels@googlegroups.com'
 URL = 'http://statsmodels.sourceforge.net/'
 LICENSE = 'BSD License'
 DOWNLOAD_URL = ''
+
+from distutils.extension import Extension
+from distutils.command.build import build
+from distutils.command.sdist import sdist
+from distutils.command.build_ext import build_ext as _build_ext
+
+try:
+    from Cython.Distutils import build_ext as _build_ext
+    # from Cython.Distutils import Extension # to get pyrex debugging symbols
+    cython = True
+except ImportError:
+    cython = False
+
+
+class build_ext(_build_ext):
+    def build_extensions(self):
+        numpy_incl = pkg_resources.resource_filename('numpy', 'core/include')
+
+        for ext in self.extensions:
+            if (hasattr(ext, 'include_dirs') and
+                    not numpy_incl in ext.include_dirs):
+                ext.include_dirs.append(numpy_incl)
+        _build_ext.build_extensions(self)
 
 
 def strip_rc(version):
@@ -127,7 +193,7 @@ def git_version():
     return GIT_REVISION
 
 def write_version_py(filename='statsmodels/version.py'):
-    cnt = "\n".join("",
+    cnt = "\n".join(["",
                     "# THIS FILE IS GENERATED FROM SETUP.PY",
                     "short_version = '%(version)s'",
                     "version = '%(version)s'",
@@ -135,7 +201,7 @@ def write_version_py(filename='statsmodels/version.py'):
                     "git_revision = '%(git_revision)s'",
                     "release = %(isrelease)s", "",
                     "if not release:",
-                    "    version = full_version")
+                    "    version = full_version"])
     # Adding the git rev number needs to be done inside write_version_py(),
     # otherwise the import of numpy.version messes up the build under Python 3.
     FULLVERSION = VERSION
@@ -192,6 +258,247 @@ def configuration(parent_package='', top_path=None, package_name=DISTNAME):
 
     return config
 
+
+class CleanCommand(Command):
+    """Custom distutils command to clean the .so and .pyc files."""
+
+    user_options = [("all", "a", "")]
+
+    def initialize_options(self):
+        self.all = True
+        self._clean_me = []
+        self._clean_trees = []
+        self._clean_exclude = ["statsmodels/src/bspline_ext.c",
+                               "statsmodels/src/bspline_impl.c"]
+
+        for root, dirs, files in list(os.walk('statsmodels')):
+            for f in files:
+                if f in self._clean_exclude:
+                    continue
+                if os.path.splitext(f)[-1] in ('.pyc', '.so', '.o',
+                                               '.pyo',
+                                               '.pyd', '.c', '.orig'):
+                    self._clean_me.append(pjoin(root, f))
+            for d in dirs:
+                if d == '__pycache__':
+                    self._clean_trees.append(pjoin(root, d))
+
+        for d in ('build',):
+            if os.path.exists(d):
+                self._clean_trees.append(d)
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        for clean_me in self._clean_me:
+            try:
+                os.unlink(clean_me)
+            except Exception:
+                pass
+        for clean_tree in self._clean_trees:
+            try:
+                shutil.rmtree(clean_tree)
+            except Exception:
+                pass
+
+
+class CheckSDist(sdist):
+    """Custom sdist that ensures Cython has compiled all pyx files to c."""
+
+    _pyxfiles = ['statsmodels/nonparametric/linbin.pyx',
+                 'statsmodels/tsa/kalmanf/kalman_loglike.pyx']
+
+    def initialize_options(self):
+        sdist.initialize_options(self)
+
+        '''
+        self._pyxfiles = []
+        for root, dirs, files in os.walk('statsmodels'):
+            for f in files:
+                if f.endswith('.pyx'):
+                    self._pyxfiles.append(pjoin(root, f))
+        '''
+
+    def run(self):
+        if 'cython' in cmdclass:
+            self.run_command('cython')
+        else:
+            for pyxfile in self._pyxfiles:
+                cfile = pyxfile[:-3] + 'c'
+                msg = "C-source file '%s' not found." % (cfile) +\
+                    " Run 'setup.py cython' before sdist."
+                assert os.path.isfile(cfile), msg
+        sdist.run(self)
+
+
+class CheckingBuildExt(build_ext):
+    """Subclass build_ext to get clearer report if Cython is necessary."""
+
+    def check_cython_extensions(self, extensions):
+        for ext in extensions:
+            for src in ext.sources:
+                if not os.path.exists(src):
+                    raise Exception("""Cython-generated file '%s' not found.
+        Cython is required to compile statsmodels from a development branch.
+        Please install Cython or download a source release of statsmodels.
+                """ % src)
+
+    def build_extensions(self):
+        self.check_cython_extensions(self.extensions)
+        build_ext.build_extensions(self)
+
+
+class CythonCommand(build_ext):
+    """Custom distutils command subclassed from Cython.Distutils.build_ext
+    to compile pyx->c, and stop there. All this does is override the
+    C-compile method build_extension() with a no-op."""
+    def build_extension(self, ext):
+        pass
+
+
+class DummyBuildSrc(Command):
+    """ numpy's build_src command interferes with Cython's build_ext.
+    """
+    user_options = []
+
+    def initialize_options(self):
+        self.py_modules_dict = {}
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        pass
+
+
+cmdclass = {'clean': CleanCommand,
+            'build': build,
+            'sdist': CheckSDist}
+
+if cython:
+    suffix = ".pyx"
+    cmdclass["build_ext"] = CheckingBuildExt
+    cmdclass["cython"] = CythonCommand
+else:
+    suffix = ".c"
+    cmdclass["build_src"] = DummyBuildSrc
+    cmdclass["build_ext"] = CheckingBuildExt
+
+lib_depends = []
+
+def srcpath(name=None, suffix='.pyx', subdir='src'):
+    return pjoin('statsmodels', subdir, name + suffix)
+
+if suffix == ".pyx":
+    lib_depends = [srcpath(f, suffix=".pyx") for f in lib_depends]
+else:
+    lib_depends = []
+
+common_include = []
+
+# some linux distros require it
+libraries = ['m'] if 'win32' not in sys.platform else []
+
+ext_data = dict(
+        kalman_loglike = {"pyxfile" : "tsa/kalmanf/kalman_loglike",
+                  "depends" : [],
+                  "sources" : []},
+
+        linbin = {"pyxfile" : "nonparametric/linbin",
+                 "depends" : [],
+                 "sources" : []}
+        )
+
+extensions = []
+for name, data in ext_data.items():
+    sources = [srcpath(data['pyxfile'], suffix=suffix, subdir='')]
+    pxds = [pxd(x) for x in data.get('pxdfiles', [])]
+    destdir = ".".join(os.path.dirname(data["pyxfile"]).split("/"))
+    if suffix == '.pyx' and pxds:
+        sources.extend(pxds)
+
+    sources.extend(data.get('sources', []))
+
+    include = data.get('include', common_include)
+
+    obj = Extension('statsmodels.%s.%s' % (destdir, name),
+                    sources=sources,
+                    depends=data.get('depends', []),
+                    include_dirs=include)
+
+    extensions.append(obj)
+
+if suffix == '.pyx' and 'setuptools' in sys.modules:
+    # undo dumb setuptools bug clobbering .pyx sources back to .c
+    for ext in extensions:
+        if ext.sources[0].endswith('.c'):
+            root, _ = os.path.splitext(ext.sources[0])
+            ext.sources[0] = root + suffix
+
+if _have_setuptools:
+    setuptools_kwargs["test_suite"] = "nose.collector"
+
+try:
+    from os.path import relpath
+except ImportError: # python 2.5
+
+    def relpath(path, start=os.curdir):
+        """Return a relative version of a path"""
+        if not path:
+            raise ValueError("no path specified")
+        start_list = os.path.abspath(start).split(os.path.sep)
+        path_list = os.path.abspath(path).split(os.path.sep)
+        # Work out how much of the filepath is shared by start and path.
+        i = len(os.path.commonprefix([start_list, path_list]))
+        rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
+        if not rel_list:
+            return os.curdir
+        return pjoin(*rel_list)
+
+package_data = {}
+
+def add_data_file_with_target_dir(f):
+    """
+    data_file needs to be in format
+    [(target_install_dir, [source_file, source_file]),
+     ...]
+
+    We almost always want the target install directory to be the same as
+    where it is in the source.
+    """
+    target = os.path.split(f)[0]
+    return target, [f]
+
+def get_data_files():
+    # Do we really need to install these or just put them in MANIFEST?
+    data_files = ['statsmodels/stats/libqsturng/CH.r',
+                  'statsmodels/stats/libqsturng/LICENSE.txt']
+
+    #TODO: we should just use globbing and only install what we need
+
+    # install the datasets
+    data_files += [relpath(pjoin(r,f), start=curdir)
+                for r,ds,fs in os.walk(pjoin(curdir, 'statsmodels/datasets'))
+                for f in fs if not f.endswith((".py", ".pyc"))]
+
+    # add all the tests and results files
+    for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
+        #NOTE: data is for vector_ar but should be removed after a refactor
+        if r.endswith(('tests', 'results', 'data')) and 'sandbox' not in r:
+            for f in fs:
+                if not f.endswith((".py", ".pyc", ".c", ".pyx", ".so")):
+                    data_files += [relpath(pjoin(r, f), start = curdir)]
+
+    # put it in target_dir, source form
+    data_files = [add_data_file_with_target_dir(f) for f in data_files]
+
+    # optimize their inclusion by unique keys for target dirs
+    data_dict = {}
+    [data_dict[p].append(f[0]) if p in data_dict else data_dict.update({p : f})
+     for p, f in data_files]
+    return data_files
+
 if __name__ == "__main__":
     min_versions = {
         'numpy' : '1.4.0',
@@ -199,24 +506,28 @@ if __name__ == "__main__":
         'pandas' : '0.7.1',
         'patsy' : '0.1.0',
                    }
+    if sys.version_info[1] >= 3:  # 3.3 needs numpy 1.7+
+        min_versions.update({"numpy" : "1.7.0b2"})
 
     check_dependency_versions(min_versions)
     write_version_py()
-    setup(
-          name = DISTNAME,
+
+    #NOTE: In 2.7 these are all added to MANIFEST if MANIFEST is not given
+    data_files = get_data_files()
+
+    setup(name = DISTNAME,
           version = VERSION,
-          maintainer  = MAINTAINER,
+          maintainer = MAINTAINER,
+          packages = find_packages(),
+          ext_modules = extensions,
           maintainer_email = MAINTAINER_EMAIL,
           description = DESCRIPTION,
           license = LICENSE,
           url = URL,
           download_url = DOWNLOAD_URL,
           long_description = LONG_DESCRIPTION,
-          configuration = configuration,
-          packages = setuptools.find_packages(),
-          include_package_data = True,
-          test_suite="nose.collector",
-          zip_safe = False, # the package can not run out of an .egg file bc of
-          # nose tests
           classifiers = classifiers,
-          cmdclass={'build_py': build_py})
+          platforms = 'any',
+          cmdclass = cmdclass,
+          data_files = data_files,
+          **setuptools_kwargs)
