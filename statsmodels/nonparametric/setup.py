@@ -1,9 +1,5 @@
 #! /usr/bin/env python
 
-import os.path
-
-cur_dir = os.path.abspath(os.path.dirname(__file__))
-
 def configuration(parent_package='', top_path=None):
     from numpy.distutils.misc_util import (Configuration,
                                         get_numpy_include_dirs)
@@ -18,7 +14,6 @@ def configuration(parent_package='', top_path=None):
     #config.add_data_files('tests/results/results_kde.csv')
     #config.add_data_files('tests/results/results_kde_fft.csv')
     #config.add_data_files('tests/results/results_kde_weights.csv')
-    cython(['linbin.pyx'], working_path=cur_dir)
     config.add_extension('linbin',
                      sources=['linbin.c'],
                      include_dirs=[get_numpy_include_dirs()])
