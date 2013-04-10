@@ -100,7 +100,13 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
 
     elif method.lower() in ['hs', 'holm-sidak']:
         notreject = pvals > alphacSidak
-        notrejectmin = np.min(np.nonzero(notreject))
+
+        nr_index = np.nonzero(notreject)[0]
+        if nr_index.size == 0:
+            # nonreject is empty, all rejected
+            notrejectmin = 0
+        else:
+            notrejectmin = np.min(nr_index)
         notreject[notrejectmin:] = True
         reject = ~notreject
         pvals_corrected = None  # not yet implemented
@@ -110,7 +116,12 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
 
     elif method.lower() in ['h', 'holm']:
         notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
-        notrejectmin = np.min(np.nonzero(notreject))
+        nr_index = np.nonzero(notreject)[0]
+        if nr_index.size == 0:
+            # nonreject is empty, all rejected
+            notrejectmin = 0
+        else:
+            notrejectmin = np.min(nr_index)
         notreject[notrejectmin:] = True
         reject = ~notreject
         pvals_corrected = None  # not yet implemented
