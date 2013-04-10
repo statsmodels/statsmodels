@@ -238,27 +238,6 @@ except ImportError:
     from distutils.command.build_py import build_py
 
 
-def configuration(parent_package='', top_path=None, package_name=DISTNAME):
-    if os.path.exists('MANIFEST'):
-        os.remove('MANIFEST')
-
-    from numpy.distutils.misc_util import Configuration
-    config = Configuration(None, parent_package, top_path)
-
-    config.add_subpackage(DISTNAME)
-    config.add_data_files('docs/build/htmlhelp/statsmodelsdoc.chm',
-                          'statsmodels/statsmodelsdoc.chm')
-
-    config.set_options(
-            ignore_setup_xxx_py = True,
-            assume_default_configuration = True,
-            delegate_options_to_subpackages = True,
-            quiet = False,
-            )
-
-    return config
-
-
 class CleanCommand(Command):
     """Custom distutils command to clean the .so and .pyc files."""
 
@@ -456,50 +435,34 @@ except ImportError: # python 2.5
             return os.curdir
         return pjoin(*rel_list)
 
-package_data = {}
-
-def add_data_file_with_target_dir(f):
-    """
-    data_file needs to be in format
-    [(target_install_dir, [source_file, source_file]),
-     ...]
-
-    We almost always want the target install directory to be the same as
-    where it is in the source.
-    """
-    target = os.path.split(f)[0]
-    return target, [f]
-
 def get_data_files():
     # Do we really need to install these or just put them in MANIFEST?
-    data_files = ['statsmodels/stats/libqsturng/CH.r',
-                  'statsmodels/stats/libqsturng/LICENSE.txt']
 
     #TODO: we should just use globbing and only install what we need
-
+    sep = os.path.sep
     # install the datasets
-    data_files += [relpath(pjoin(r,f), start=curdir)
-                for r,ds,fs in os.walk(pjoin(curdir, 'statsmodels/datasets'))
-                for f in fs if not f.endswith((".py", ".pyc"))]
-
+    data_files = {}
+    root = pjoin(curdir, "statsmodels", "datasets")
+    for i in os.listdir(root):
+        if i is "tests":
+            continue
+        path = pjoin(root, i)
+        if os.path.isdir(path):
+            data_files.update({relpath(path).replace(sep, ".") : ["*.csv",
+                                                                  "*.dta"]})
     # add all the tests and results files
     for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
         #NOTE: data is for vector_ar but should be removed after a refactor
-        if r.endswith(('tests', 'results', 'data')) and 'sandbox' not in r:
-            for f in fs:
-                if not f.endswith((".py", ".pyc", ".c", ".pyx", ".so")):
-                    data_files += [relpath(pjoin(r, f), start = curdir)]
+        if r.endswith('results') and 'sandbox' not in r:
+            data_files.update({relpath(r).replace(sep, ".") : ["*.csv",
+                                                                  "*.txt"]})
 
-    # put it in target_dir, source form
-    data_files = [add_data_file_with_target_dir(f) for f in data_files]
-
-    # optimize their inclusion by unique keys for target dirs
-    data_dict = {}
-    [data_dict[p].append(f[0]) if p in data_dict else data_dict.update({p : f})
-     for p, f in data_files]
     return data_files
 
 if __name__ == "__main__":
+    if os.path.exists('MANIFEST'):
+        os.unlink('MANIFEST')
+
     min_versions = {
         'numpy' : '1.4.0',
         'scipy' : '0.7.0',
@@ -513,13 +476,31 @@ if __name__ == "__main__":
     check_dependency_versions(min_versions)
     write_version_py()
 
-    #NOTE: In 2.7 these are all added to MANIFEST if MANIFEST is not given
-    data_files = get_data_files()
+    # this adds *.csv and *.dta files in datasets folders
+    # and *.csv and *.txt files in test/results folders
+    package_data = get_data_files()
+    packages = find_packages()
+    packages.append("statsmodels.tsa.vector_ar.data")
+
+    package_data["statsmodels.datasets.tests"].append("*.zip")
+    package_data["statsmodels.iolib.tests.results"].append("*.dta")
+    package_data["statsmodels.stats.tests.results"].append("*.json")
+    package_data["statsmodels.tsa.vector_ar.tests.results"].append("*.npz")
+    # data files that don't follow the tests/results pattern. should fix.
+    package_data.update({"statsmodels.stats.tests" : ["*.txt"]})
+    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
+    package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
+    # Why are we installing this stuff?
+    package_data.update({"statsmodels.libqstrung" : ["*.r, *.txt"]})
+
+    #TODO: deal with this. Not sure if it ever worked for bdists
+    #('docs/build/htmlhelp/statsmodelsdoc.chm',
+    # 'statsmodels/statsmodelsdoc.chm')
 
     setup(name = DISTNAME,
           version = VERSION,
           maintainer = MAINTAINER,
-          packages = find_packages(),
+          #packages = find_packages(),
           ext_modules = extensions,
           maintainer_email = MAINTAINER_EMAIL,
           description = DESCRIPTION,
@@ -530,5 +511,6 @@ if __name__ == "__main__":
           classifiers = classifiers,
           platforms = 'any',
           cmdclass = cmdclass,
-          data_files = data_files,
+          packages = packages,
+          package_data = package_data,
           **setuptools_kwargs)
