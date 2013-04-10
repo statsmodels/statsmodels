@@ -29,12 +29,7 @@ import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, ones
 from numpy.linalg import inv, pinv
 from statsmodels.tools.tools import chain_dot
-try:
-    from . import kalman_loglike
-    fast_kalman = 1
-except:
-    fast_kalman = 0
-#TODO: change to use only Cython when we switch
+from . import kalman_loglike
 
 #Fast filtering and smoothing for multivariate state space models
 # and The Riksbank -- Strid and Walentin (2008)
@@ -574,60 +569,16 @@ class KalmanFilter(object):
                   paramsdtype):
         """
         Returns just the errors of the Kalman Filter
-
-        Note that if fast_kalman isn't available this returns the errors,
-        F, and loglikelihood for use in loglike.
         """
-        if fast_kalman:
-            if issubdtype(paramsdtype, float):
-                return kalman_loglike.kalman_filter_double(y, k, k_ar, k_ma,
-                                    k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
-            elif issubdtype(paramsdtype, complex):
-                return kalman_loglike.kalman_filter_complex(y, k, k_ar, k_ma,
-                                    k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
-            else:
-                raise TypeError("dtype %s is not supported "
-                                "Please file a bug report" % paramsdtype)
+        if issubdtype(paramsdtype, float):
+            return kalman_loglike.kalman_filter_double(y, k, k_ar, k_ma,
+                                k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
+        elif issubdtype(paramsdtype, complex):
+            return kalman_loglike.kalman_filter_complex(y, k, k_ar, k_ma,
+                                k_lags, int(nobs), Z_mat, R_mat, T_mat)[0]
         else:
-            # initial state and its variance
-            alpha = zeros((m,1)) # if constant (I-T)**-1 * c
-            Q_0 = dot(inv(identity(m**2)-kron(T_mat,T_mat)),
-                                dot(R_mat,R_mat.T).ravel('F'))
-            #TODO: above is only valid if Eigenvalues of T_mat are inside the
-            # unit circle, if not then Q_0 = kappa * eye(m**2)
-           # w/ kappa some large value say 1e7, but DK recommends not doing this
-            # for a diffuse prior
-            # Note that we enforce stationarity
-            Q_0 = Q_0.reshape(k_lags,k_lags,order='F')
-            P = Q_0
-            sigma2 = 0
-            loglikelihood = 0
-            v = zeros((nobs,1), dtype=paramsdtype)
-            F = ones((nobs,1), dtype=paramsdtype)
-            #NOTE: can only do quick recursions if Z is time-invariant
-            #so could have recursions for pure ARMA vs ARMAX
-#            for i in xrange(int(nobs)):
-            F_mat = 0
-            i = 0
-            while not F_mat == 1 and i < nobs:
-                # Predict
-                v_mat = y[i] - dot(Z_mat,alpha) # one-step forecast error
-                v[i] = v_mat
-                F_mat = dot(dot(Z_mat, P), Z_mat.T)
-                F[i] = F_mat
-                Finv = 1./F_mat # always scalar for univariate series
-                K = dot(dot(dot(T_mat,P),Z_mat.T),Finv) # Kalman Gain Matrix
-                # update state
-                alpha = dot(T_mat, alpha) + dot(K,v_mat)
-                L = T_mat - dot(K,Z_mat)
-                P = dot(dot(T_mat, P), L.T) + dot(R_mat, R_mat.T)
-                loglikelihood += log(F_mat)
-                i += 1
-            for i in xrange(i,int(nobs)):
-                v_mat = y[i] - dot(Z_mat, alpha)
-                v[i] = v_mat
-                alpha = dot(T_mat, alpha) + dot(K, v_mat)
-        return v, F, loglikelihood
+            raise TypeError("dtype %s is not supported "
+                            "Please file a bug report" % paramsdtype)
 
     @classmethod
     def _init_kalman_state(cls, params, arma_model):
@@ -685,24 +636,17 @@ class KalmanFilter(object):
         (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat, T_mat,
                 paramsdtype) = cls._init_kalman_state(params, arma_model)
 
-        if fast_kalman:
-            if issubdtype(paramsdtype, float):
-                loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
-                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
-                                        R_mat, T_mat)
-            elif issubdtype(paramsdtype, complex):
-                loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
-                                        k_ar, k_ma, k_lags, int(nobs), Z_mat,
-                                        R_mat, T_mat)
-            else:
-                raise TypeError("This dtype %s is not supported "
-                                " Please files a bug report." % paramsdtype)
+        if issubdtype(paramsdtype, float):
+            loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
+                                    k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                    R_mat, T_mat)
+        elif issubdtype(paramsdtype, complex):
+            loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
+                                    k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                    R_mat, T_mat)
         else:
-            v,F, loglikelihood = cls.geterrors(y, k, k_ar, k_ma, k_lags, nobs,
-                Z_mat, m, R_mat, T_mat, paramsdtype)
-            sigma2 = 1./nobs * np.sum(v**2 / F)
-            loglike = -.5 *(loglikelihood + nobs*log(sigma2))
-            loglike -= nobs/2. * (log(2*pi) + 1)
+            raise TypeError("This dtype %s is not supported "
+                            " Please files a bug report." % paramsdtype)
         arma_model.sigma2 = sigma2
         return loglike.item() # return a scalar not a 0d array
 
