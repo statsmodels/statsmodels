@@ -127,17 +127,15 @@ def git_version():
     return GIT_REVISION
 
 def write_version_py(filename='statsmodels/version.py'):
-    cnt = """
-# THIS FILE IS GENERATED FROM SETUP.PY
-short_version = '%(version)s'
-version = '%(version)s'
-full_version = '%(full_version)s'
-git_revision = '%(git_revision)s'
-release = %(isrelease)s
-
-if not release:
-    version = full_version
-"""
+    cnt = "\n".join("",
+                    "# THIS FILE IS GENERATED FROM SETUP.PY",
+                    "short_version = '%(version)s'",
+                    "version = '%(version)s'",
+                    "full_version = '%(full_version)s'",
+                    "git_revision = '%(git_revision)s'",
+                    "release = %(isrelease)s", "",
+                    "if not release:",
+                    "    version = full_version")
     # Adding the git rev number needs to be done inside write_version_py(),
     # otherwise the import of numpy.version messes up the build under Python 3.
     FULLVERSION = VERSION
@@ -148,13 +146,8 @@ if not release:
         # must be a source distribution, use existing version file
         try:
             from statsmodels.version import git_revision as GIT_REVISION
-            #print "debug import success GIT_REVISION", GIT_REVISION
         except ImportError:
             dowrite = False
-            #changed: if we are not in a git repository then don't update version.py
-##            raise ImportError("Unable to import git_revision. Try removing " \
-##                              "statsmodels/version.py and the build directory " \
-##                              "before building.")
     else:
         GIT_REVISION = "Unknown"
 
