@@ -22,6 +22,7 @@ _tsa_doc = """
         The frequency of the time-series. A Pandas offset or 'B', 'D', 'W',
         'M', 'A', or 'Q'. This is optional if dates are given.
     %(extra_params)s
+    %(extra_sections)s
 """
 
 _model_doc = "Timeseries model base class"
@@ -32,7 +33,8 @@ _missing_param_doc = base._missing_param_doc
 class TimeSeriesModel(base.LikelihoodModel):
 
     __doc__ = _tsa_doc % {"model" : _model_doc, "params" : _generic_params,
-                          "extra_params" : _missing_param_doc}
+                          "extra_params" : _missing_param_doc,
+                          "extra_sections" : ""}
 
     def __init__(self, endog, exog=None, dates=None, freq=None, missing='none'):
         super(TimeSeriesModel, self).__init__(endog, exog, missing=missing)
