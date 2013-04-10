@@ -21,10 +21,7 @@ from statsmodels.tools.decorators import (cache_readonly,
                                                     resettable_cache)
 import bandwidths
 from kdetools import (forrt, revrt, silverman_transform, counts)
-try:
-    from fast_linbin import linbin
-except ImportError:
-    from kdetools import linbin
+from linbin import fast_linbin
 
 #### Kernels Switch for estimators ####
 
@@ -482,7 +479,7 @@ def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
 #    binned /= (nobs)*delta**2 # normalize binned to sum to 1/delta
 
 #NOTE: THE ABOVE IS WRONG, JUST TRY WITH LINEAR BINNING
-    binned = linbin(X,a,b,gridsize)/(delta*nobs)
+    binned = fast_linbin(X,a,b,gridsize)/(delta*nobs)
 
     # step 2 compute FFT of the weights, using Munro (1976) FFT convention
     y = forrt(binned)
