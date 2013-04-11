@@ -439,9 +439,6 @@ except ImportError: # python 2.5
         return pjoin(*rel_list)
 
 def get_data_files():
-    # Do we really need to install these or just put them in MANIFEST?
-
-    #TODO: we should just use globbing and only install what we need
     sep = os.path.sep
     # install the datasets
     data_files = {}
@@ -455,10 +452,9 @@ def get_data_files():
                                                                   "*.dta"]})
     # add all the tests and results files
     for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
-        #NOTE: data is for vector_ar but should be removed after a refactor
         if r.endswith('results') and 'sandbox' not in r:
             data_files.update({relpath(r).replace(sep, ".") : ["*.csv",
-                                                                  "*.txt"]})
+                                                               "*.txt"]})
 
     return data_files
 
@@ -503,7 +499,6 @@ if __name__ == "__main__":
     setup(name = DISTNAME,
           version = VERSION,
           maintainer = MAINTAINER,
-          #packages = find_packages(),
           ext_modules = extensions,
           maintainer_email = MAINTAINER_EMAIL,
           description = DESCRIPTION,
