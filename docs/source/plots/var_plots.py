@@ -2,13 +2,22 @@ import numpy as np
 
 from statsmodels.tsa.api import VAR
 from statsmodels.api import datasets as ds
+from statsmodels.tsa.base.datetools import dates_from_str
 
-mdata = ds.macrodata.load().data[['realgdp', 'realcons', 'realinv']]
-names = mdata.dtype.names
-data = mdata.view((float,3))
-data = np.diff(np.log(data), axis=0)
 
-model = VAR(data, names=names)
+import pandas
+mdata = ds.macrodata.load_pandas().data
+
+# prepare the dates index
+dates = mdata[['year', 'quarter']].astype(int).astype(str)
+quarterly = dates["year"] + "Q" + dates["quarter"]
+quarterly = dates_from_str(quarterly)
+
+mdata = mdata[['realgdp','realcons','realinv']]
+mdata.index = pandas.DatetimeIndex(quarterly)
+data = np.log(mdata).diff().dropna()
+
+model = VAR(data)
 est = model.fit(maxlags=2)
 
 def plot_input():
