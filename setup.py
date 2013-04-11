@@ -389,6 +389,9 @@ ext_data = dict(
                  "sources" : []}
         )
 
+def pxd(name):
+    return os.path.abspath(pjoin('pandas', name + '.pxd'))
+
 extensions = []
 for name, data in ext_data.items():
     sources = [srcpath(data['pyxfile'], suffix=suffix, subdir='')]
