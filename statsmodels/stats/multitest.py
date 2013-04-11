@@ -38,13 +38,14 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         full name or initial letters. Available methods are ::
 
         `bonferroni` : one-step correction
-        `sidak` : on-step correction
-        `holm-sidak` :
-        `holm` :
-        `simes-hochberg` :
-        `hommel` :
-        `fdr_bh` : Benjamini/Hochberg
-        `fdr_by` : Benjamini/Yekutieli
+        `sidak` : one-step correction
+        `holm-sidak` : step down method using Sidak adjustments
+        `holm` : step-down method using Bonferroni adjustments
+        `simes-hochberg` : step-up method  (independent)
+        `hommel` : closed method based on Simes tests (non-negative)
+        `fdr_bh` : Benjamini/Hochberg  (non-negative)
+        `fdr_by` : Benjamini/Yekutieli (negative)
+        'fdr_twostage' : two stage fdr correction (non-negative)
 
     returnsorted : bool
          not tested, return sorted p-values instead of original sequence
@@ -56,13 +57,18 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     pvals_corrected : array
         p-values corrected for multiple tests
     alphacSidak: float
-        corrected pvalue with Sidak method
+        corrected alpha for Sidak method
     alphacBonf: float
-        corrected pvalue with Sidak method
-
+        corrected alpha for Bonferroni method
 
     Notes
     -----
+    Except for 'fdr_twostage', the p-value correction is independent of the
+    alpha specified as argument. In these cases the corrected p-values
+    can also be compared with a different alpha. In the case of 'fdr_twostage',
+    the corrected p-values are specific to the given alpha, see
+    ``fdrcorrection_twostage``.
+
     all corrected pvalues now tested against R.
     insufficient "cosmetic" tests yet
     new procedure 'fdr_gbs' not verified yet, p-values derived from scratch not
@@ -161,6 +167,9 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         #delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
                                                  method='n')
+    elif method.lower() in ['fdr_2s', 'fdr_twostage']:
+        #delegate, call with sorted pvals
+        reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha)[:2]
 
     elif method.lower() in ['fdr_gbs']:
         #adaptive stepdown in Favrilov, Benjamini, Sarkar, Annals of Statistics 2009
@@ -174,7 +183,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         pvals_corrected_raw = np.maximum.accumulate(q) #up requirementd
 
         pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
-        reject = pvals_corrected < alpha
+        reject = pvals_corrected <= alpha
 
     else:
         raise ValueError('method not recognized')
@@ -286,8 +295,16 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
 
     Notes
     -----
-    The returned corrected p-values, are from the last stage of the fdr_bh linear step-up
-    procedure (fdrcorrection0 with method='indep')
+    The returned corrected p-values are specific to the given alpha, they
+    cannot be used for a different alpha.
+
+    The returned corrected p-values are from the last stage of the fdr_bh
+    linear step-up procedure (fdrcorrection0 with method='indep') corrected
+    for the estimated fraction of true hypotheses.
+    This means that the rejection decision can be obtained with
+    ``pval_corrected <= alpha``, where ``alpha`` is the origianal significance
+    level.
+    (Note: This has changed from earlier versions (<0.5.0) of statsmodels.)
 
     BKY described several other multi-stage methods, which would be easy to implement.
     However, in their simulation the simple two-stage method (with iter=False) was the
@@ -316,5 +333,9 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
         elif ri < ri_old:
             raise RuntimeError(" oops - shouldn't be here")
         ri_old = ri
+
+    # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
+    # decision is then pvalscorr < alpha  (or <=)
+    pvalscorr *= ntests0 * 1.0 /  ntests
 
     return rej, pvalscorr, ntests - ri, alpha_stages
