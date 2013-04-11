@@ -91,7 +91,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
     alphacBonf = alphaf / float(ntests)
     if method.lower() in ['b', 'bonf', 'bonferroni']:
-        reject = pvals < alphacBonf
+        reject = pvals <= alphacBonf
         pvals_corrected = pvals * float(ntests)  # not sure
 
     elif method.lower() in ['s', 'sidak']:
@@ -99,12 +99,14 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         pvals_corrected = 1 - np.power((1. - pvals), ntests)  # not sure
 
     elif method.lower() in ['hs', 'holm-sidak']:
-        notreject = pvals > alphacSidak
+        alphacSidak_all = 1 - np.power((1. - alphaf),
+                                       1./np.arange(ntests, 0, -1))
+        notreject = pvals > alphacSidak_all
 
         nr_index = np.nonzero(notreject)[0]
         if nr_index.size == 0:
             # nonreject is empty, all rejected
-            notrejectmin = 0
+            notrejectmin = len(pvals)
         else:
             notrejectmin = np.min(nr_index)
         notreject[notrejectmin:] = True
@@ -119,7 +121,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         nr_index = np.nonzero(notreject)[0]
         if nr_index.size == 0:
             # nonreject is empty, all rejected
-            notrejectmin = 0
+            notrejectmin = len(pvals)
         else:
             notrejectmin = np.min(nr_index)
         notreject[notrejectmin:] = True
@@ -131,7 +133,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
 
     elif method.lower() in ['sh', 'simes-hochberg']:
         alphash = alphaf / np.arange(ntests, 0, -1)
-        reject = pvals < alphash
+        reject = pvals <= alphash
         rejind = np.nonzero(reject)
         if rejind[0].size > 0:
             rejectmax = np.max(np.nonzero(reject))
@@ -149,7 +151,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
             a[-m:] = np.maximum(a[-m:], cim)
             a[:-m] = np.maximum(a[:-m], np.minimum(m * pvals[:-m], cim))
         pvals_corrected = a
-        reject = a < alphaf
+        reject = a <= alphaf
 
     elif method.lower() in ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp']:
         #delegate, call with sorted pvals

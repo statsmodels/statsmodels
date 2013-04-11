@@ -1,6 +1,6 @@
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_
 
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage)
@@ -52,6 +52,23 @@ res_multtest = np.array([[  5.2365677720800003e-05,   5.2365677720800005e-04,
                   9.6783382430900000e-01,   1.0000000000000000e+00]])
 
 
+res_multtest2_columns = ['rawp', 'Bonferroni', 'Holm', 'Hochberg', 'SidakSS', 'SidakSD',
+                'BH', 'BY', 'ABH', 'TSBH_0.05']
+
+NA = np.nan
+# all rejections, except for Bonferroni and Sidak
+res_multtest2 = np.array([
+     0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.012, 0.024, 0.036, 0.048,
+     0.06, 0.072, 0.012, 0.02, 0.024, 0.024, 0.024, 0.024, 0.012, 0.012,
+     0.012, 0.012, 0.012, 0.012, 0.01194015976019192, 0.02376127616613988,
+     0.03546430060660932, 0.04705017875634587, 0.058519850599,
+     0.06987425045000606, 0.01194015976019192, 0.01984063872102404,
+     0.02378486270400004, 0.023808512, 0.023808512, 0.023808512, 0.012,
+     0.012, 0.012, 0.012, 0.012, 0.012, 0.0294, 0.0294, 0.0294, 0.0294,
+     0.0294, 0.0294, NA, NA, NA, NA, NA, NA, 0, 0, 0, 0, 0, 0
+    ]).reshape(6,10, order='F')
+
+
 def test_multi_pvalcorrection():
     #test against R package multtest mt.rawp2adjp
     #because of sort this doesn't check correct sequence - TODO: rewrite DONE
@@ -70,6 +87,41 @@ def test_multi_pvalcorrection():
     assert_almost_equal(pvalscorr, res_multtest[:,7], 15)
     pvalscorr = np.sort(fdrcorrection(pval0, method='i')[1])
     assert_almost_equal(pvalscorr, res_multtest[:,6], 15)
+
+def test_multi_pvalcorrection2():
+    #test against R package multtest mt.rawp2adjp
+    # case with all rejections except for 'b' and 's'
+    # second part: consistency test for reject boolean and pvalscorr
+    rmethods = {'rawp':(0,'pval'), 'Bonferroni':(1,'b'), 'Holm':(2,'h'),
+                'Hochberg':(3,'sh'), 'SidakSS':(4,'s'), 'SidakSD':(5,'hs'),
+                'BH':(6,'fdr_i'), 'BY':(7,'fdr_n')}
+
+    pval0 = res_multtest2[:,0]
+    alpha = 0.05
+
+    for k,v in rmethods.items():
+        if v[1] in ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']:
+            reject, pvalscorr = multipletests(pval0, alpha=alpha, method=v[1])[:2]
+            assert_almost_equal(pvalscorr, res_multtest2[:,v[0]], 15)
+            assert_equal(reject, pvalscorr <= alpha)
+            if v[1] not in ['b', 's']:
+                assert_(np.all(reject))
+
+            # test cases that reject is equal to pvalscorr <= alpha
+            for ii in range(11):
+                pval1 = np.hstack((np.linspace(0.0001, 0.0100, ii),
+                                   np.linspace(0.5001, 0.11, 10-ii)))
+                reject, pvalscorr = multipletests(pval1, alpha=alpha,
+                                                  method=v[1])[:2]
+                #print 'reject.sum', v[1], reject.sum()
+                msg = 'case %s rejected:%d\npvalscorr=%r' % (v[1], reject.sum(),
+                                                             pvalscorr)
+                assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
+
+    pvalscorr = np.sort(fdrcorrection(pval0, method='n')[1])
+    assert_almost_equal(pvalscorr, res_multtest2[:,7], 15)
+    pvalscorr = np.sort(fdrcorrection(pval0, method='i')[1])
+    assert_almost_equal(pvalscorr, res_multtest2[:,6], 15)
 
 def test_hommel():
     #tested agains R stats p_adjust(pval0, method='hommel')
