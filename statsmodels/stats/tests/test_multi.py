@@ -135,7 +135,7 @@ class TestMultiTests2(CheckMultiTestsMixin):
 class TestMultiTests3(CheckMultiTestsMixin):
     def __init__(self):
         self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
-                         'fdr_twostage']
+                         'fdr_tsbh']
         self.alpha = 0.05
         self.res2 = res_multtest3
 
@@ -144,7 +144,7 @@ def test_pvalcorrection_reject():
 
     for alpha in [0.01, 0.05, 0.1]:
         for method in ['b', 's', 'sh', 'hs', 'h', 'hommel', 'fdr_i', 'fdr_n',
-                       'fdr_twostage']:
+                       'fdr_tsbky', 'fdr_tsbh']:
             for ii in range(11):
                 pval1 = np.hstack((np.linspace(0.0001, 0.0100, ii),
                                    np.linspace(0.05001, 0.11, 10 - ii)))

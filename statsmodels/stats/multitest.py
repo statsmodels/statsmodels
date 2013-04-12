@@ -45,7 +45,8 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         `hommel` : closed method based on Simes tests (non-negative)
         `fdr_bh` : Benjamini/Hochberg  (non-negative)
         `fdr_by` : Benjamini/Yekutieli (negative)
-        'fdr_twostage' : two stage fdr correction (non-negative)
+        'fdr_tsbh' : two stage fdr correction (non-negative)
+        'fdr_tsbky' : two stage fdr correction (non-negative)
 
     returnsorted : bool
          not tested, return sorted p-values instead of original sequence
@@ -167,9 +168,14 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         #delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
                                                  method='n')
-    elif method.lower() in ['fdr_2s', 'fdr_twostage']:
+    elif method.lower() in ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage']:
         #delegate, call with sorted pvals
-        reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha)[:2]
+        reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
+                                                         method='bky')[:2]
+    elif method.lower() in ['fdr_tsbh', 'fdr_2sbh']:
+        #delegate, call with sorted pvals
+        reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
+                                                         method='bh')[:2]
 
     elif method.lower() in ['fdr_gbs']:
         #adaptive stepdown in Favrilov, Benjamini, Sarkar, Annals of Statistics 2009
@@ -266,7 +272,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep'):
     return reject[sortrevind], pvals_corrected[sortrevind]
     #return reject[pvals_sortind.argsort()]
 
-def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
+def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False):
     '''(iterated) two stage linear step-up procedure with estimation of number of true
     hypotheses
 
@@ -278,7 +284,14 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
         set of p-values of the individual tests.
     alpha : float
         error rate
-    method : {'indep', 'negcorr')
+    method : {'bky', 'bh')
+         see Notes for details
+
+        'bky' : implements the procedure in Definition 6 of Benjamini, Krieger
+           and Yekuteli 2006
+        'bh' : implements the two stage method of Benjamini and Hochberg
+
+    iter ; bool
 
     Returns
     -------
@@ -312,7 +325,12 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
 
     '''
     ntests = len(pvals)
-    alpha_prime = alpha/(1.+alpha)
+    if method == 'bky':
+        alpha_prime = alpha/(1.+alpha)
+    elif method == 'bh':
+        alpha_prime = alpha
+    else:
+        raise ValueError("only 'bky' and 'bh' are available as method")
     rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_prime, method='indep')
     r1 = rej.sum()
     if (r1 == 0) or (r1 == ntests):
@@ -336,5 +354,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
     # make adjustment to pvalscorr to reflect estimated number of Non-Null cases
     # decision is then pvalscorr < alpha  (or <=)
     pvalscorr *= ntests0 * 1.0 /  ntests
+    if method == 'bky':
+        pvalscorr *= (1. + alpha)
 
     return rej, pvalscorr, ntests - ri, alpha_stages
