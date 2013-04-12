@@ -255,12 +255,10 @@ def fdrcorrection(pvals, alpha=0.05, method='indep'):
 ##        ecdffactor = ecdf(pvals_sorted)/cm
     else:
         raise ValueError('only indep and necorr implemented')
-    reject = pvals_sorted < ecdffactor*alpha
+    reject = pvals_sorted <= ecdffactor*alpha
     if reject.any():
         rejectmax = max(np.nonzero(reject)[0])
-    else:
-        rejectmax = 0
-    reject[:rejectmax] = True
+        reject[:rejectmax] = True
 
     pvals_corrected_raw = pvals_sorted / ecdffactor
     pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
@@ -314,7 +312,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
 
     '''
     ntests = len(pvals)
-    alpha_prime = alpha/(1+alpha)
+    alpha_prime = alpha/(1.+alpha)
     rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_prime, method='indep')
     r1 = rej.sum()
     if (r1 == 0) or (r1 == ntests):
@@ -322,7 +320,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
     ri_old = r1
     alpha_stages = [alpha_prime]
     while 1:
-        ntests0 = ntests - ri_old
+        ntests0 = 1.0 * ntests - ri_old
         alpha_star = alpha_prime * ntests / ntests0
         alpha_stages.append(alpha_star)
         #print ntests0, alpha_star
@@ -331,6 +329,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, iter=False):
         if (not iter) or ri == ri_old:
             break
         elif ri < ri_old:
+            # prevent cycles and endless loops
             raise RuntimeError(" oops - shouldn't be here")
         ri_old = ri
 
