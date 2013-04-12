@@ -275,14 +275,15 @@ def _reordered(self, order):
     endog_lagged = self.endog_lagged
     params = self.params
     sigma_u = self.sigma_u
-    names = self.names
+    names = self.endog_names
     k_ar = self.k_ar
     endog_new = np.zeros([np.size(endog,0),np.size(endog,1)])
-    endog_lagged_new = np.zeros([np.size(endog_lagged,0), np.size(endog_lagged,1)])
-    params_new_inc, params_new = [np.zeros([np.size(params,0), np.size(params,1)])
-                                  for i in range(2)]
-    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u,0), np.size(sigma_u,1)])
-                                    for i in range(2)]
+    endog_lagged_new = np.zeros([np.size(endog_lagged,0),
+                                 np.size(endog_lagged,1)])
+    params_new_inc, params_new = [np.zeros([np.size(params,0),
+                                  np.size(params,1)]) for i in range(2)]
+    sigma_u_new_inc, sigma_u_new = [np.zeros([np.size(sigma_u,0),
+                                    np.size(sigma_u,1)]) for i in range(2)]
     num_end = len(self.params[0])
     names_new = []
 
@@ -547,7 +548,7 @@ class VARProcess(object):
 
     def get_eq_index(self, name):
         "Return integer position of requested equation name"
-        return util.get_index(self.names, name)
+        return util.get_index(self.endog_names, name)
 
     def __str__(self):
         output = ('VAR(%d) process for %d-dimensional response y_t'
@@ -868,7 +869,7 @@ class VARResults(VARProcess):
     def plot(self):
         """Plot input time series
         """
-        plotting.plot_mts(self.y, names=self.names, index=self.dates)
+        plotting.plot_mts(self.y, names=self.endog_names, index=self.dates)
 
     @property
     def df_model(self):
@@ -1035,7 +1036,8 @@ class VARResults(VARProcess):
         """
         mid, lower, upper = self.forecast_interval(self.y[-self.k_ar:], steps,
                                                    alpha=alpha)
-        plotting.plot_var_forc(self.y, mid, lower, upper, names=self.names,
+        plotting.plot_var_forc(self.y, mid, lower, upper,
+                               names=self.endog_names,
                                plot_stderr=plot_stderr)
 
     # Forecast error covariance functions
@@ -1295,7 +1297,7 @@ class VARResults(VARProcess):
         if isinstance(order[0], string_types):
             order_new = []
             for i, nam in enumerate(order):
-                order_new.append(self.names.index(order[i]))
+                order_new.append(self.endog_names.index(order[i]))
             order = order_new
         return _reordered(self, order)
 
@@ -1558,7 +1560,7 @@ class FEVD(object):
 
         self.model = model
         self.neqs = model.neqs
-        self.names = model.names
+        self.names = model.endog_names
 
         self.irfobj = model.irf(var_decomp=P, periods=periods)
         self.orth_irfs = self.irfobj.orth_irfs
@@ -1583,9 +1585,9 @@ class FEVD(object):
 
         rng = lrange(self.periods)
         for i in range(self.neqs):
-            ppm = output.pprint_matrix(self.decomp[i], rng, self.names)
+            ppm = output.pprint_matrix(self.decomp[i], rng, self.endog_names)
 
-            buf.write('FEVD for %s\n' % self.names[i])
+            buf.write('FEVD for %s\n' % self.endog_names[i])
             buf.write(ppm + '\n')
 
         print(buf.getvalue())
@@ -1631,12 +1633,12 @@ class FEVD(object):
                 lower = this_limits[j - 1] if j > 0 else 0
                 upper = this_limits[j]
                 handle = ax.bar(ticks, upper - lower, bottom=lower,
-                                color=colors[j], label=self.names[j],
+                                color=colors[j], label=self.endog_names[j],
                                 **plot_kwds)
 
                 handles.append(handle)
 
-            ax.set_title(self.names[i])
+            ax.set_title(self.endog_names[i])
 
         # just use the last axis to get handles for plotting
         handles, labels = ax.get_legend_handles_labels()
