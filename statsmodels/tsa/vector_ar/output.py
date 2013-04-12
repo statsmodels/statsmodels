@@ -138,7 +138,7 @@ class VARSummary(object):
         model = self.model
         k = model.neqs
 
-        Xnames = self.model.coef_names
+        Xnames = self.model.exog_names
 
         data = zip(model.params.T.ravel(),
                    model.stderr.T.ravel(),
