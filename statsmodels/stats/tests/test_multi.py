@@ -1,3 +1,17 @@
+'''Tests for multipletests and fdr pvalue corrections
+
+Author : Josef Perktold
+
+
+['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n', 'fdr_tsbh']
+are tested against R:multtest
+
+'hommel' is tested against R stats p_adjust (not available in multtest
+
+'fdr_gbs', 'fdr_2sbky' I did not find them in R, currently tested for
+    consistency only
+
+'''
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal, assert_
@@ -58,7 +72,7 @@ res_multtest2_columns = ['rawp', 'Bonferroni', 'Holm', 'Hochberg', 'SidakSS', 'S
 rmethods = {'rawp':(0,'pval'), 'Bonferroni':(1,'b'), 'Holm':(2,'h'),
             'Hochberg':(3,'sh'), 'SidakSS':(4,'s'), 'SidakSD':(5,'hs'),
             'BH':(6,'fdr_i'), 'BY':(7,'fdr_n'),
-            'TSBH_0.05':(9, 'fdr_twostage')}
+            'TSBH_0.05':(9, 'fdr_tsbh')}
 
 NA = np.nan
 # all rejections, except for Bonferroni and Sidak
@@ -98,10 +112,6 @@ res_multtest3 = np.array([
 class CheckMultiTestsMixin(object):
     def test_multi_pvalcorrection(self):
         #test against R package multtest mt.rawp2adjp
-        #because of sort this doesn't check correct sequence - TODO: rewrite DONE
-        rmethods = {'rawp':(0,'pval'), 'Bonferroni':(1,'b'), 'Holm':(2,'h'),
-                    'Hochberg':(3,'sh'), 'SidakSS':(4,'s'), 'SidakSD':(5,'hs'),
-                    'BH':(6,'fdr_i'), 'BY':(7,'fdr_n')}
 
         res_multtest = self.res2
         pval0 = res_multtest[:,0]
@@ -144,10 +154,11 @@ def test_pvalcorrection_reject():
 
     for alpha in [0.01, 0.05, 0.1]:
         for method in ['b', 's', 'sh', 'hs', 'h', 'hommel', 'fdr_i', 'fdr_n',
-                       'fdr_tsbky', 'fdr_tsbh']:
+                       'fdr_tsbky', 'fdr_tsbh', 'fdr_gbs']:
             for ii in range(11):
                 pval1 = np.hstack((np.linspace(0.0001, 0.0100, ii),
                                    np.linspace(0.05001, 0.11, 10 - ii)))
+                # using .05001 instead of 0.05 to avoid edge case issue #768
                 reject, pvalscorr = multipletests(pval1, alpha=alpha,
                                                   method=method)[:2]
                 #print 'reject.sum', v[1], reject.sum()
@@ -189,8 +200,8 @@ def test_hommel():
     assert_equal(rej, result_ho < 0.1)  #booleans
 
 def test_fdr_bky():
-    #test for fdrcorrection_twostage
-    #example from BKY
+    # test for fdrcorrection_twostage
+    # example from BKY
     pvals = [0.0001, 0.0004, 0.0019, 0.0095, 0.0201, 0.0278, 0.0298, 0.0344, 0.0459,
              0.3240, 0.4262, 0.5719, 0.6528, 0.7590, 1.000 ]
 
@@ -241,9 +252,3 @@ def test_tukeyhsd():
     assert_almost_equal(confint, res[:, 1:3], decimal=2)
     assert_equal(reject, res[:, 3]<0.05)
 
-
-if __name__ == '__main__':
-    test_multi_pvalcorrection()
-    test_hommel()
-    test_fdr_bky()
-    test_tukeyhsd()
