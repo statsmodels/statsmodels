@@ -34,7 +34,7 @@ class BaseIRAnalysis(object):
         self.order = order
 
         if P is None:
-            sigma = model.sigma_u
+            cov_resid = model.cov_resid
 
             # TODO, may be difficult at the moment
             # if order is not None:
@@ -44,7 +44,7 @@ class BaseIRAnalysis(object):
             #     if sigma.shape != model.sigma_u.shape:
             #         raise ValueError('variable order is wrong length')
 
-            P = la.cholesky(sigma)
+            P = la.cholesky(cov_resid)
 
         self.P = P
 
@@ -237,8 +237,8 @@ class IRAnalysis(BaseIRAnalysis):
         BaseIRAnalysis.__init__(self, model, P=P, periods=periods,
                                 order=order, svar=svar)
 
-        self.cov_a = model._cov_alpha
-        self.cov_sig = model._cov_sigma
+        self.cov_a = model._cov_params_ex_trend
+        self.cov_sig = model._cov_cov_resid
 
         # memoize dict for G matrix function
         self._g_memo = {}

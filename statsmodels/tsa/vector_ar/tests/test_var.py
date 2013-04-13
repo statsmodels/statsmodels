@@ -76,7 +76,7 @@ class CheckVAR(object):
         assert_almost_equal(self.res1.fpe, self.res2.fpe)
 
     def test_detsig(self):
-        assert_almost_equal(self.res1.detomega, self.res2.detsig)
+        assert_almost_equal(self.res1.det_cov_resid, self.res2.detsig)
 
     def test_bse(self):
         assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
@@ -108,9 +108,9 @@ class RResults(object):
         from .results.results_var_data import var_results
         data = var_results.__dict__
 
-        self.names = data['coefs'].dtype.names
-        self.params = data['coefs'].view((float, len(self.names)))
-        self.stderr = data['stderr'].view((float, len(self.names)))
+        self.endog_names = data['coefs'].dtype.names
+        self.params = data['coefs'].view((float, len(self.endog_names)))
+        self.stderr = data['stderr'].view((float, len(self.endog_names)))
 
         self.irf = data['irf'].item()
         self.orth_irf = data['orthirf'].item()
@@ -125,7 +125,7 @@ class RResults(object):
         self.hqic = crit['hqic'][0]
         self.fpe = crit['fpe'][0]
 
-        self.detomega = data['detomega'][0]
+        self.det_cov_resid = data['detomega'][0]
         self.loglike = data['loglike'][0]
 
         self.nahead = int(data['nahead'][0])
@@ -172,7 +172,7 @@ class CheckIRF(object):
 
     def _check_irfs(self, py_irfs, r_irfs):
         for i, name in enumerate(self.res.names):
-            ref_irfs = r_irfs[name].view((float, self.k))
+            ref_irfs = r_irfs[name].view((float, self.neqs))
             res_irfs = py_irfs[:, :, i]
             assert_almost_equal(ref_irfs, res_irfs)
 
@@ -238,10 +238,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
         cls.data = get_macrodata()
         cls.model = VAR(cls.data)
-        cls.names = cls.model.names
+        cls.endog_names = cls.model.endog_names
 
         cls.ref = RResults()
-        cls.k = len(cls.ref.names)
+        cls.neqs = len(cls.ref.endog_names)
         cls.res = cls.model.fit(maxlags=cls.p)
 
         cls.irf = cls.res.irf(cls.ref.nirfs)
@@ -256,15 +256,15 @@ class TestVARResults(CheckIRF, CheckFEVD):
         res = model.fit(self.p)
 
     def test_names(self):
-        assert_equal(self.model.names, self.ref.names)
+        assert_equal(self.model.endog_names, self.ref.endog_names)
 
-        model2 = VAR(self.data, names=self.names)
-        assert_equal(model2.names, self.ref.names)
+        model2 = VAR(self.data)
+        assert_equal(model2.endog_names, self.ref.endog_names)
 
     def test_get_eq_index(self):
         assert(type(self.res.names) is list)
 
-        for i, name in enumerate(self.names):
+        for i, name in enumerate(self.endog_names):
             idx = self.res.get_eq_index(i)
             idx2 = self.res.get_eq_index(name)
 
@@ -299,7 +299,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
 
     def test_detsig(self):
-        assert_almost_equal(self.res.detomega, self.ref.detomega)
+        assert_almost_equal(self.res.det_cov_resid, self.ref.det_cov_resid)
 
     def test_aic(self):
         assert_almost_equal(self.res.aic, self.ref.aic)
@@ -316,6 +316,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_lagorder_select(self):
         ics = ['aic', 'fpe', 'hqic', 'bic']
 
+        #TODO: this resets exog_names in model
         for ic in ics:
             res = self.model.fit(maxlags=10, ic=ic, verbose=True)
 
@@ -340,12 +341,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_causality(self):
         causedby = self.ref.causality['causedby']
 
-        for i, name in enumerate(self.names):
-            variables = self.names[:i] + self.names[i + 1:]
+        for i, name in enumerate(self.endog_names):
+            variables = self.endog_names[:i] + self.endog_names[i + 1:]
             result = self.res.test_causality(name, variables, kind='f')
             assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
 
-            rng = lrange(self.k)
+            rng = lrange(self.neqs)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
             assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
@@ -354,7 +355,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             result = self.res.test_causality(name, variables, kind='wald')
 
         # corner cases
-        _ = self.res.test_causality(self.names[0], self.names[1])
+        _ = self.res.test_causality(self.endog_names[0], self.endog_names[1])
         _ = self.res.test_causality(0, 1)
 
         assert_raises(Exception,self.res.test_causality, 0, 1, kind='foo')
@@ -383,10 +384,10 @@ class TestVARResults(CheckIRF, CheckFEVD):
         acorrs = self.res.acorr(10)
 
     def test_forecast(self):
-        point = self.res.forecast(self.res.y[-5:], 5)
+        point = self.res.forecast(self.res.Y[-5:], 5)
 
     def test_forecast_interval(self):
-        y = self.res.y[:-self.p:]
+        y = self.res.Y[:-self.p:]
         point, lower, upper = self.res.forecast_interval(y, 5)
 
     def test_plot_sim(self):
@@ -420,20 +421,23 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_reorder(self):
         #manually reorder
         data = self.data.view((float,3))
-        names = self.names
-        data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1), data[:,1,None], axis=1)
+        names = self.endog_names
+        data2 = np.append(np.append(data[:,2,None], data[:,0,None], axis=1),
+                          data[:,1,None], axis=1)
         names2 = []
         names2.append(names[2])
         names2.append(names[0])
         names2.append(names[1])
-        res2 = VAR(data2,names=names2).fit(maxlags=self.p)
+        from pandas import DataFrame
+        data2 = DataFrame(data2, columns=names2)
+        res2 = VAR(data2.to_records(index=False)).fit(maxlags=self.p)
 
         #use reorder function
         res3 = self.res.reorder(['realinv','realgdp', 'realcons'])
 
         #check if the main results match
         assert_almost_equal(res2.params, res3.params)
-        assert_almost_equal(res2.sigma_u, res3.sigma_u)
+        assert_almost_equal(res2.cov_resid, res3.cov_resid)
         assert_almost_equal(res2.bic, res3.bic)
         assert_almost_equal(res2.stderr, res3.stderr)
 
@@ -514,8 +518,9 @@ class TestVARResultsLutkepohl(object):
         adj_data = np.diff(np.log(data), axis=0)
         # est = VAR(adj_data, p=2, dates=dates[1:], names=names)
 
-        self.model = VAR(adj_data[:-16], dates=dates[1:-16], names=names,
-                freq='Q')
+        from pandas import DataFrame
+        dta= DataFrame(adj_data[:-16], index=dates[1:-16], columns=names)
+        self.model = VAR(dta)
         self.res = self.model.fit(maxlags=self.p)
         self.irf = self.res.irf(10)
         self.lut = E1_Results()
