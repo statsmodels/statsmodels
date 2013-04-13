@@ -10,12 +10,13 @@ import statsmodels.tsa.tsatools as tsa
 
 #-------------------------------------------------------------------------------
 # Auxiliary functions for estimation
-def get_var_endog(y, lags, trend='c', has_constant='skip'):
+
+def get_lagged_y(y, lags, trend='c', has_constant='skip'):
     """
     Make predictor matrix for VAR(p) process
 
-    Z := (Z_0, ..., Z_T).T (T x Kp)
-    Z_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
+    X := (X_0, ..., X_T).T (T x Kp)
+    X_t = [1 y_t y_{t-1} ... y_{t - p + 1}] (Kp x 1)
 
     Ref: Lutkepohl p.70 (transposed)
 
@@ -23,14 +24,15 @@ def get_var_endog(y, lags, trend='c', has_constant='skip'):
     """
     nobs = len(y)
     # Ravel C order, need to put in descending order
-    Z = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
+    X = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
 
     # Add constant, trend, etc.
     if trend != 'nc':
-        Z = tsa.add_trend(Z, prepend=True, trend=trend,
+        X = tsa.add_trend(X, prepend=True, trend=trend,
                           has_constant=has_constant)
 
-    return Z
+
+    return X
 
 def get_trendorder(trend='c'):
     # Handle constant, etc.
@@ -205,9 +207,10 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
 def get_index(lst, name):
     try:
         result = lst.index(name)
-    except Exception:
+
+    except ValueError:
         if not isinstance(name, (int, long)):
-            raise
+            raise ValueError("No variable named %s in endog_names" %name)
         result = name
     return result
     #method used repeatedly in Sims-Zha error bands
