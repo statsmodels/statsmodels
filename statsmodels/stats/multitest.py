@@ -326,17 +326,21 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False):
     '''
     ntests = len(pvals)
     if method == 'bky':
-        alpha_prime = alpha/(1.+alpha)
+        fact = (1.+alpha)
+        alpha_prime = alpha / fact
     elif method == 'bh':
+        fact = 1.
         alpha_prime = alpha
     else:
         raise ValueError("only 'bky' and 'bh' are available as method")
+
+    alpha_stages = [alpha_prime]
     rej, pvalscorr = fdrcorrection(pvals, alpha=alpha_prime, method='indep')
     r1 = rej.sum()
     if (r1 == 0) or (r1 == ntests):
-        return rej, pvalscorr, ntests - r1
+        return rej, pvalscorr * fact, ntests - r1, alpha_stages
     ri_old = r1
-    alpha_stages = [alpha_prime]
+
     while 1:
         ntests0 = 1.0 * ntests - ri_old
         alpha_star = alpha_prime * ntests / ntests0
