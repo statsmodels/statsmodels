@@ -99,11 +99,11 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     alphacBonf = alphaf / float(ntests)
     if method.lower() in ['b', 'bonf', 'bonferroni']:
         reject = pvals <= alphacBonf
-        pvals_corrected = pvals * float(ntests)  # not sure
+        pvals_corrected = pvals * float(ntests)
 
     elif method.lower() in ['s', 'sidak']:
         reject = pvals < alphacSidak
-        pvals_corrected = 1 - np.power((1. - pvals), ntests)  # not sure
+        pvals_corrected = 1 - np.power((1. - pvals), ntests)
 
     elif method.lower() in ['hs', 'holm-sidak']:
         alphacSidak_all = 1 - np.power((1. - alphaf),
@@ -118,13 +118,12 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
             notrejectmin = np.min(nr_index)
         notreject[notrejectmin:] = True
         reject = ~notreject
-        pvals_corrected = None  # not yet implemented
-        #TODO: new not tested, mainly guessing by analogy
-        pvals_corrected_raw = 1 - np.power((1. - pvals), np.arange(ntests, 0, -1))#ntests) # from "sidak" #pvals / alphacSidak * alphaf
+        pvals_corrected_raw = 1 - np.power((1. - pvals),
+                                           np.arange(ntests, 0, -1))
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
 
     elif method.lower() in ['h', 'holm']:
-        notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
+        notreject = pvals > alphaf / np.arange(ntests, 0, -1)
         nr_index = np.nonzero(notreject)[0]
         if nr_index.size == 0:
             # nonreject is empty, all rejected
@@ -133,9 +132,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
             notrejectmin = np.min(nr_index)
         notreject[notrejectmin:] = True
         reject = ~notreject
-        pvals_corrected = None  # not yet implemented
-        #TODO: new not tested, mainly guessing by analogy
-        pvals_corrected_raw = pvals * np.arange(ntests, 0, -1) #ntests) # from "sidak" #pvals / alphacSidak * alphaf
+        pvals_corrected_raw = pvals * np.arange(ntests, 0, -1)
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
 
     elif method.lower() in ['sh', 'simes-hochberg']:
@@ -145,9 +142,6 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         if rejind[0].size > 0:
             rejectmax = np.max(np.nonzero(reject))
             reject[:rejectmax] = True
-        #check else
-        pvals_corrected = None  # not yet implemented
-        #TODO: new not tested, mainly guessing by analogy, looks ok in 1 example
         pvals_corrected_raw = np.arange(ntests, 0, -1) * pvals
         pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
 
@@ -161,19 +155,19 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         reject = a <= alphaf
 
     elif method.lower() in ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp']:
-        #delegate, call with sorted pvals
+        # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
                                                  method='indep')
     elif method.lower() in ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr']:
-        #delegate, call with sorted pvals
+        # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
                                                  method='n')
     elif method.lower() in ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage']:
-        #delegate, call with sorted pvals
+        # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
                                                          method='bky')[:2]
     elif method.lower() in ['fdr_tsbh', 'fdr_2sbh']:
-        #delegate, call with sorted pvals
+        # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
                                                          method='bh')[:2]
 
