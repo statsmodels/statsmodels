@@ -120,7 +120,7 @@ def check_dependency_versions(min_versions):
     try:
         from patsy import __version__ as patsy_version
     except ImportError:
-        raise ImportError("statsmodels requires patsy")
+        raise ImportError("statsmodels requires patsy. http://patsy.readthedocs.org")
 
     try:
         assert StrictVersion(strip_rc(npversion)) >= min_versions['numpy']
