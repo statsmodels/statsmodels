@@ -102,7 +102,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         pvals_corrected = pvals * float(ntests)
 
     elif method.lower() in ['s', 'sidak']:
-        reject = pvals < alphacSidak
+        reject = pvals <= alphacSidak
         pvals_corrected = 1 - np.power((1. - pvals), ntests)
 
     elif method.lower() in ['hs', 'holm-sidak']:
@@ -172,7 +172,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
                                                          method='bh')[:2]
 
     elif method.lower() in ['fdr_gbs']:
-        #adaptive stepdown in Favrilov, Benjamini, Sarkar, Annals of Statistics 2009
+        #adaptive stepdown in Gavrilov, Benjamini, Sarkar, Annals of Statistics 2009
 ##        notreject = pvals > alphaf / np.arange(ntests, 0, -1) #alphacSidak
 ##        notrejectmin = np.min(np.nonzero(notreject))
 ##        notreject[notrejectmin:] = True
