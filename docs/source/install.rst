@@ -37,7 +37,7 @@ If you are not able to follow the build instructions below, we upload nightly bu
 Installation from Source
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-While not strictly necessary for 0.4, it is recommended that you will have a C compiler installed to take advantage of Cython code where available. You can follow the instructions below to get a C compiler setup for Windows.
+You will need a C compiler installed to build statsmodels. If you are building from the github source and not a source release, then you will also need Cython. You can follow the instructions below to get a C compiler setup for Windows.
 
 Linux
 ^^^^^
@@ -98,7 +98,7 @@ Dependencies
 * `SciPy <http://www.scipy.org/>`__ >= 0.7
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
 * `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
-* `Cython <http://cython.org/>`__ >= 15.1, Still optional but recommended for building from non-source distributions. That is, it will be used when building the source from github and not from a zipped source distribution archive.
+* `Cython <http://cython.org/>`__ >= 15.1, Needed if you want to build the code from github and not a source distribution.
 
 .. tested with Python 2.5., 2.6, 2.7 and 3.2
 .. (tested with numpy 1.4.1, 1.5.1 and 1.6.0, scipy 0.7.2, 0.8.0, 0.9.0)
