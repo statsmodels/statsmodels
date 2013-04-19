@@ -192,7 +192,7 @@ def git_version():
 
     return GIT_REVISION
 
-def write_version_py(filename='statsmodels/version.py'):
+def write_version_py(filename=pjoin(curdir, 'statsmodels/version.py')):
     cnt = "\n".join(["",
                     "# THIS FILE IS GENERATED FROM SETUP.PY",
                     "short_version = '%(version)s'",
