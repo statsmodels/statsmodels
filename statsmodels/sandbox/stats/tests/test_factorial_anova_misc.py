@@ -16,7 +16,6 @@ class Test_noncentrality_parameter(unittest.TestCase):
         d = 890.
         self.assertAlmostEqual(r, d)
     
-Test_noncentrality_parameter
 class Test_observed_power(unittest.TestCase):
     def test1(self):
         # from http://zoe.bme.gatech.edu/~bv20/public/samplesize.pdf
