@@ -224,10 +224,13 @@ def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
     return power, (k_low, k_upp, z_low, z_upp)
 
 
-def tost_binom_prop(x1, low, upp, x2=None):
-    '''exact tost using binomial distribution
+def binom_tost(count, nobs, low, upp):
+    '''exact tost for one proportion using binomial distribution
     '''
-    pass
+    # binom_test_stat only returns pval
+    tt1 = binom_test_stat(count, nobs, alternative='larger', p=low)
+    tt2 = binom_test_stat(count, nobs, alternative='smaller', p=upp)
+    return np.maximum(tt1, tt2), tt1, tt2,
 
 
 def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
@@ -305,7 +308,7 @@ def binom_test_stat(n_success, nobs, p=0.5, alternative='2-sided'):
     return pval
 
 
-def binom_tost_power(low, upp, nobs, p_alt=None, alpha=0.05):
+def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
     if p_alt is None:
         p_alt = 0.5 * (low + upp)
     x_low, x_upp = binom_tost_reject_interval(low, upp, nobs, alpha=alpha)

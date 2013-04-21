@@ -181,7 +181,15 @@ def test_binom_test():
         # only p-value is returned
         res = smprop.binom_test_stat(51, 235, p=1. / 6, alternative=alt)
         #assert_almost_equal(res[0], res0.statistic)
-        assert_almost_equal(res, res0.p_value)
+        assert_almost_equal(res, res0.p_value, decimal=13)
+
+    # R binom_test returns Copper-Pearson confint
+    ci_2s = smprop.confint_proportion(51, 235, alpha=0.05, method='beta')
+    ci_low, ci_upp = smprop.confint_proportion(51, 235, alpha=0.1,
+                                               method='beta')
+    assert_almost_equal(ci_2s, binom_test_2sided.conf_int, decimal=13)
+    assert_almost_equal(ci_upp, binom_test_less.conf_int[1], decimal=13)
+    assert_almost_equal(ci_low, binom_test_greater.conf_int[0], decimal=13)
 
 
 
