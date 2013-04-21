@@ -72,6 +72,7 @@ Table of Contents
    glm
    rlm
    discretemod
+   anova
    tsa
    stats
    nonparametric

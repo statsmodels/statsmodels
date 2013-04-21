@@ -271,13 +271,10 @@ def anova_lm(*args, **kwargs):
     """
     ANOVA table for one or more fitted linear models.
 
-    Parmeters
+    Parameters
     ---------
     args : fitted linear model results instance
         One or more fitted linear models
-
-    **kwargs**
-
     scale : float
         Estimate of variance, If None, will be estimated from the largest
         model. Default is None.
@@ -297,11 +294,27 @@ def anova_lm(*args, **kwargs):
     Notes
     -----
     Model statistics are given in the order of args. Models must have
-    a formula_str attribute.
+    been fit using the formula api.
 
     See Also
     --------
     model_results.compare_f_test, model_results.compare_lm_test
+
+    Example
+    -------
+    >>> import statsmodels.api as sm
+    >>> from statsmodels.formula.api import ols
+
+    >>> moore = sm.datasets.get_rdataset("Moore", "car",
+    ...                                  cache=True) # load data
+    >>> data = moore.data
+    >>> data = data.rename(columns={"partner.status" :
+    ...                             "partner_status"}) # make name pythonic
+    >>> moore_lm = ols('conformity ~ C(fcategory, Sum)*C(partner_status, Sum)',
+    ...                 data=data).fit()
+
+    >>> table = sm.stats.anova_lm(moore_lm, typ=2) # Type 2 ANOVA DataFrame
+    >>> print table
     """
     typ = kwargs.get('typ', 1)
 
