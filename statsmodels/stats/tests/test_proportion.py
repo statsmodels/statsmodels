@@ -39,9 +39,22 @@ def test_confint_proportion():
 
 class CheckProportionMixin(object):
     def test_proptest(self):
+        # equality of k-samples
         pt = smprop.proportions_chisquare(self.n_success, self.nobs, value=None)
-        assert_almost_equal(pt[0], self.res_prop_test.statistic, decimal=10)
-        assert_almost_equal(pt[1], self.res_prop_test.p_value, decimal=10)
+        assert_almost_equal(pt[0], self.res_prop_test.statistic, decimal=13)
+        assert_almost_equal(pt[1], self.res_prop_test.p_value, decimal=13)
+
+        # several against value
+        pt = smprop.proportions_chisquare(self.n_success, self.nobs,
+                                    value=self.res_prop_test_val.null_value[0])
+        assert_almost_equal(pt[0], self.res_prop_test_val.statistic, decimal=13)
+        assert_almost_equal(pt[1], self.res_prop_test_val.p_value, decimal=13)
+
+        # one proportion against value
+        pt = smprop.proportions_chisquare(self.n_success[0], self.nobs[0],
+                                    value=self.res_prop_test_1.null_value)
+        assert_almost_equal(pt[0], self.res_prop_test_1.statistic, decimal=13)
+        assert_almost_equal(pt[1], self.res_prop_test_1.p_value, decimal=13)
 
     def test_pairwiseproptest(self):
         ppt = smprop.proportions_chisquare_allpairs(self.n_success, self.nobs,
@@ -80,6 +93,45 @@ class TestProportion(CheckProportionMixin):
                                'without continuity correction'
         res_prop_test.data_name = 'smokers2 out of patients'
         self.res_prop_test = res_prop_test
+
+        #> pt = prop.test(smokers2, patients, p=rep(c(0.9), 4), correct=FALSE)
+        #> cat_items(pt, "res_prop_test_val.")
+        res_prop_test_val = Holder()
+        res_prop_test_val.statistic = np.array([
+             13.20305530710751
+            ]).reshape(1,1, order='F')
+        res_prop_test_val.parameter = np.array([
+             4
+            ]).reshape(1,1, order='F')
+        res_prop_test_val.p_value = 0.010325090041836
+        res_prop_test_val.estimate = np.array([
+             0.848837209302326, 0.967741935483871, 0.838235294117647,
+             0.9146341463414634
+            ]).reshape(4,1, order='F')
+        res_prop_test_val.null_value = np.array([
+             0.9, 0.9, 0.9, 0.9
+            ]).reshape(4,1, order='F')
+        res_prop_test_val.conf_int = '''NULL'''
+        res_prop_test_val.alternative = 'two.sided'
+        res_prop_test_val.method = '4-sample test for given proportions without continuity correction'
+        res_prop_test_val.data_name = 'smokers2 out of patients, null probabilities rep(c(0.9), 4)'
+        self.res_prop_test_val = res_prop_test_val
+
+        #> pt = prop.test(smokers2[1], patients[1], p=0.9, correct=FALSE)
+        #> cat_items(pt, "res_prop_test_1.")
+        res_prop_test_1 = Holder()
+        res_prop_test_1.statistic = 2.501291989664086
+        res_prop_test_1.parameter = 1
+        res_prop_test_1.p_value = 0.113752943640092
+        res_prop_test_1.estimate = 0.848837209302326
+        res_prop_test_1.null_value = 0.9
+        res_prop_test_1.conf_int = np.array([0.758364348004061,
+                                             0.9094787701686766])
+        res_prop_test_1.alternative = 'two.sided'
+        res_prop_test_1.method = '1-sample proportions test without continuity correction'
+        res_prop_test_1.data_name = 'smokers2[1] out of patients[1], null probability 0.9'
+        self.res_prop_test_1 = res_prop_test_1
+
 
 
 if __name__ == '__main__':
