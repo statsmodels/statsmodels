@@ -133,6 +133,57 @@ class TestProportion(CheckProportionMixin):
         self.res_prop_test_1 = res_prop_test_1
 
 
+def test_binom_test():
+    #> bt = binom.test(51,235,(1/6),alternative="less")
+    #> cat_items(bt, "binom_test_less.")
+    binom_test_less = Holder()
+    binom_test_less.statistic = 51
+    binom_test_less.parameter = 235
+    binom_test_less.p_value = 0.982022657605858
+    binom_test_less.conf_int = [0, 0.2659460862574313]
+    binom_test_less.estimate = 0.2170212765957447
+    binom_test_less.null_value = 1. / 6
+    binom_test_less.alternative = 'less'
+    binom_test_less.method = 'Exact binomial test'
+    binom_test_less.data_name = '51 and 235'
+
+    #> bt = binom.test(51,235,(1/6),alternative="greater")
+    #> cat_items(bt, "binom_test_greater.")
+    binom_test_greater = Holder()
+    binom_test_greater.statistic = 51
+    binom_test_greater.parameter = 235
+    binom_test_greater.p_value = 0.02654424571169085
+    binom_test_greater.conf_int = [0.1735252778065201, 1]
+    binom_test_greater.estimate = 0.2170212765957447
+    binom_test_greater.null_value = 1. / 6
+    binom_test_greater.alternative = 'greater'
+    binom_test_greater.method = 'Exact binomial test'
+    binom_test_greater.data_name = '51 and 235'
+
+    #> bt = binom.test(51,235,(1/6),alternative="t")
+    #> cat_items(bt, "binom_test_2sided.")
+    binom_test_2sided = Holder()
+    binom_test_2sided.statistic = 51
+    binom_test_2sided.parameter = 235
+    binom_test_2sided.p_value = 0.0437479701823997
+    binom_test_2sided.conf_int = [0.1660633298083073, 0.2752683640289254]
+    binom_test_2sided.estimate = 0.2170212765957447
+    binom_test_2sided.null_value = 1. / 6
+    binom_test_2sided.alternative = 'two.sided'
+    binom_test_2sided.method = 'Exact binomial test'
+    binom_test_2sided.data_name = '51 and 235'
+
+    alltests = [('larger', binom_test_greater),
+                ('smaller', binom_test_less),
+                ('2-sided', binom_test_2sided)]
+
+    for alt, res0 in alltests:
+        # only p-value is returned
+        res = smprop.binom_test_stat(51, 235, p=1. / 6, alternative=alt)
+        #assert_almost_equal(res[0], res0.statistic)
+        assert_almost_equal(res, res0.p_value)
+
+
 
 if __name__ == '__main__':
     test_confint_proportion()
