@@ -272,6 +272,14 @@ def test_ar_start_params():
     res = AR(data.endog).fit(maxlag=9, start_params=0.1*np.ones(10.),
                              method="mle", disp=-1)
 
+def test_ar_series():
+    # smoke test for 773
+    dta = sm.datasets.macrodata.load_pandas().data["cpi"].diff().dropna()
+    dates = sm.tsa.datetools.dates_from_range("1959Q1", length=len(dta))
+    dta.index = dates
+    ar = AR(dta).fit(maxlags=15)
+    ar.bse
+
 
 #TODO: likelihood for ARX model?
 #class TestAutolagARX(object):

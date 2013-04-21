@@ -153,6 +153,7 @@ class AR(tsbase.TimeSeriesModel):
             start = _validate(start, k_ar, self.data.dates, method)
             start = super(AR, self)._get_predict_start(start)
         _check_ar_start(start, k_ar, method, dynamic)
+        self._set_predict_start_date(start)
         return start
 
     def predict(self, params, start=None, end=None, dynamic=False):
