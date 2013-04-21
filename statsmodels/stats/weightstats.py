@@ -392,6 +392,42 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
 
     return lower, upper
 
+
+def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
+    '''generic (normal) z-test to save typing'''
+    #TODO: diff convention has wrong sign
+    zstat = (value1 - value2 - diff) / std_diff
+    if alternative in ['two-sided', '2-sided', '2']:
+        pvalue = stats.norm.sf(np.abs(zstat))*2
+    elif alternative in ['larger', 'l']:
+        pvalue = stats.norm.sf(zstat)
+    elif alternative in ['smaller', 's']:
+        pvalue = stats.norm.cdf(zstat)
+    else:
+        raise ValueError('invalid alternative')
+    return zstat, pvalue
+
+def _zconfint_generic(mean, std_mean, alpha, alternative):
+    '''generic normal-confint to save typing'''
+
+    if alternative in ['two-sided', '2-sided', '2']:
+        zcrit = stats.norm.ppf(1 - alpha / 2.)
+        lower = mean - zcrit * std_mean
+        upper = mean + zcrit * std_mean
+    elif alternative in ['larger', 'l']:
+        zcrit = stats.norm.ppf(alpha)
+        lower = mean + zcrit * std_mean
+        upper = np.inf
+    elif alternative in ['smaller', 's']:
+        zcrit = stats.norm.ppf(1 - alpha)
+        lower = -np.inf
+        upper = mean + zcrit * std_mean
+    else:
+        raise ValueError('invalid alternative')
+
+    return lower, upper
+
+
 class CompareMeans(object):
     '''class for two sample comparison
 
@@ -787,4 +823,88 @@ def tost_paired(x1, x2, low, upp, transform=None, weights=None):
     t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
     return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
+
+def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled'):
+    '''test for mean based on normal distribution, one or two samples
+    '''
+    #usevar is not used, always pooled
+    x1 = np.asarray(x1)
+    nobs1 = x1.shape[0]
+    x1_mean = x1.mean(0)
+    x1_var = x1.var(0)
+    if x2 is not None:
+        x2 = np.asarray(x2)
+        nobs2 = x2.shape[0]
+        x2_mean = x2.mean(0)
+        x2_var = x2.var(0)
+        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2)
+    else:
+        var_pooled = x1_var / nobs1
+        x2_mean = 0
+
+    std_diff = np.sqrt(var_pooled)
+    #stat = x1_mean - x2_mean - value
+    return _zstat_generic(x1_mean, x2_mean, std_diff, alternative, diff=value)
+
+def confint_ztest(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
+                  usevar='pooled'):
+    '''confidence interval based on normal distribution z-test
+
+    Notes
+    -----
+    checked only for 1 sample case
+    '''
+    #usevar is not used, always pooled
+    # mostly duplicate code from ztest
+    x1 = np.asarray(x1)
+    nobs1 = x1.shape[0]
+    x1_mean = x1.mean(0)
+    x1_var = x1.var(0)
+    if x2 is not None:
+        x2 = np.asarray(x2)
+        nobs2 = x2.shape[0]
+        x2_mean = x2.mean(0)
+        x2_var = x2.var(0)
+        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2)
+    else:
+        var_pooled = x1_var / nobs1
+        x2_mean = 0
+
+    std_diff = np.sqrt(var_pooled)
+    ci = _zconfint_generic(x1_mean - x2_mean - value, std_diff, alpha, alternative)
+    return ci
+
+def ztost(x1, low, upp, x2=None, usevar='pooled'):
+    '''Equivalence test based on normal distribution
+
+    Parameters
+    ----------
+    x1 : array_like
+        one sample or first sample for 2 independent samples
+    low, upp : float
+        equivalence interval low < m1 - m2 < upp
+    x1 : array_like or None
+        second sample for 2 independent samples test. If None, then a
+        one-sample test is performed.
+    usevar : string, 'pooled'
+        If ``pooled``, then the standard deviation of the samples is assumed to be
+        the same. Only pooled is currently implemented.
+
+    Returns
+    -------
+    pvalue : float
+        pvalue of the non-equivalence test
+    t1, pv1 : tuple of floats
+        test statistic and pvalue for lower threshold test
+    t2, pv2 : tuple of floats
+        test statistic and pvalue for upper threshold test
+
+    Notes
+    -----
+    checked only for 1 sample case
+
+    '''
+    tt1 = ztest(x1, x2, alternative='larger', usevar=usevar, value=low)
+    tt2 = ztest(x1, x2, alternative='smaller', usevar=usevar, value=upp)
+    return np.maximum(tt1[1], tt2[1]), tt1, tt2,
 
