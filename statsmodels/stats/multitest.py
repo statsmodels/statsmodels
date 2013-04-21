@@ -7,6 +7,7 @@ License: BSD-3
 '''
 
 
+from statsmodels.compatnp.collections import OrderedDict
 
 import numpy as np
 
@@ -22,6 +23,39 @@ def _ecdf(x):
     '''
     nobs = len(x)
     return np.arange(1,nobs+1)/float(nobs)
+
+multitest_methods_names = {'b': 'Bonferroni',
+                           's': 'Sidak',
+                           'h': 'Holm',
+                           'hs': 'Holm-Sidak',
+                           'sh': 'Simes-Hochberg',
+                           'ho': 'Hommel',
+                           'fdr_bh': 'FDR Benjamini-Hochberg',
+                           'fdr_by': 'FDR Benjamini-Yekutieli',
+                           'fdr_tsbh': 'FDR 2-stage Benjamini-Hochberg',
+                           'fdr_tsbky': 'FDR 2-stage Benjamini-Krieger-Yekutieli',
+                           'fdr_gbs': 'FDR adaptive Gavrilov-Benjamini-Sarkar'
+                           }
+
+_alias_list = [['b', 'bonf', 'bonferroni'],
+               ['s', 'sidak'],
+               ['h', 'holm'],
+               ['hs', 'holm-sidak'],
+               ['sh', 'simes-hochberg'],
+               ['ho', 'hommel'],
+               ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp'],
+               ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr'],
+               ['fdr_tsbh', 'fdr_2sbh'],
+               ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage'],
+               ['fdr_gbs']
+               ]
+
+
+multitest_alias = OrderedDict()
+for m in _alias_list:
+    multitest_alias[m[0]] = m[0]
+    for a in m[1:]:
+        multitest_alias[m[0]] = a
 
 def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     '''test results and p-value correction for multiple tests
