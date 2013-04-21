@@ -95,6 +95,14 @@ The prompt should change colors to green. Then proceed as usual to install::
 
 For 7.1, the instructions are exactly the same, except you use the download link provided above and make sure you are using SDK 7.1.
 
+If you want to accomplish the same without opening up the SDK CMD SHELL, then you can use these commands at the CMD Prompt or in a batch file.::
+
+    setlocal EnableDelayedExpansion
+    CALL "C:\Program Files\Microsoft SDKs\Windows\v7.0\Bin\SetEnv.cmd" /x64 /release
+    set DISTUTILS_USE_SDK=1
+
+Replace `/x64` with `/x86` and `v7.0` with `v7.1` as needed.
+
 
 Dependencies
 ~~~~~~~~~~~~
