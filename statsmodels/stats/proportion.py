@@ -483,7 +483,7 @@ def proportions_chisquare_allpairs(n_success, nobs, value=None,
     all_pairs = zip(*np.triu_indices(4, 1))
     pvals = [proportions_chisquare(n_success[list(pair)], nobs[list(pair)])[1]
                for pair in all_pairs]
-    return pvals, all_pairs
+    return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
 
 def proportions_chisquare_pairscontrol(n_success, nobs, value=None,
                                    multitest_method='hs'):
@@ -497,4 +497,4 @@ def proportions_chisquare_pairscontrol(n_success, nobs, value=None,
     all_pairs = [(0, k) for k in range(1, len(n_success))]
     pvals = [proportions_chisquare(n_success[list(pair)], nobs[list(pair)])[1]
                for pair in all_pairs]
-    return pvals, all_pairs
+    return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)

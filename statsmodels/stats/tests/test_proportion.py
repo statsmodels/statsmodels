@@ -46,10 +46,10 @@ class CheckProportionMixin(object):
     def test_pairwiseproptest(self):
         ppt = smprop.proportions_chisquare_allpairs(self.n_success, self.nobs,
                                   value=None, multitest_method=None)
-        assert_almost_equal(ppt[0], self.res_ppt_pvals_raw)
+        assert_almost_equal(ppt.pvals_raw, self.res_ppt_pvals_raw)
         ppt = smprop.proportions_chisquare_allpairs(self.n_success, self.nobs,
                                   value=None, multitest_method='h')
-        assert_almost_equal(ppt[0], self.res_ppt_pvals_raw)
+        assert_almost_equal(ppt.pval_corrected(), self.res_ppt_pvals_holm)
 
 class TestProportion(CheckProportionMixin):
     def setup(self):
@@ -60,7 +60,7 @@ class TestProportion(CheckProportionMixin):
                  0.00533824886503131, 0.8327574849753566, 0.1880573726722516,
                  0.002026764254350234, 0.1309487516334318, 0.1076118730631731
                 ])
-        res_ppt_pvals_holm = np.array([
+        self.res_ppt_pvals_holm = np.array([
                  0.02669124432515654, 0.8327574849753566, 0.4304474922526926,
                  0.0121605855261014, 0.4304474922526926, 0.4304474922526926
                 ])
