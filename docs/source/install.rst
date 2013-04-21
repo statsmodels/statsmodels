@@ -68,11 +68,15 @@ Then in the statsmodels directory do::
 
 OR
 
-You can build 32-bit or 64-bit versions of the code using the Microsoft SDK. Detailed instructions can be found on the Cython wiki `here <http://wiki.cython.org/64BitCythonExtensionsOnWindows>`__. The gist of these instructions follow. You will need to download the free Windows SDK C/C++ compiler from Microsoft. You must use the **Microsoft Windows SDK for Windows 7 and .NET Framework 3.5 SP1** to be comptible with Python 2.6, 2.7, 3.1, and 3.2. Other Python versions are as yet untested. Please report results to the mailing list. The link for the 3.5 version is
+You can build 32-bit or 64-bit versions of the code using the Microsoft SDK. Detailed instructions can be found on the Cython wiki `here <http://wiki.cython.org/64BitCythonExtensionsOnWindows>`__. The gist of these instructions follow. You will need to download the free Windows SDK C/C++ compiler from Microsoft. You must use the **Microsoft Windows SDK for Windows 7 and .NET Framework 3.5 SP1** to be comptible with Python 2.6, 2.7, 3.1, and 3.2. The link for the 3.5 SP1 version is
 
 `http://www.microsoft.com/downloads/en/details.aspx?familyid=71DEB800-C591-4F97-A900-BEA146E4FAE1&displaylang=en <http://www.microsoft.com/downloads/en/details.aspx?familyid=71DEB800-C591-4F97-A900-BEA146E4FAE1&displaylang=en>`__
 
-Get the ISO file GRMSDKX_EN_DVD.iso for AMD64. After you install this, open the SDK Command Shell (Start -> All Programs -> Microsoft Windows SDK v7.0 -> CMD Shell). CD to the statsmodels directory and type::
+For Python 3.3, you need to use the **Microsoft Windows SDK for Windows 7 and .NET Framework 4**, available from
+
+`http://www.microsoft.com/en-us/download/details.aspx?id=8279 <http://www.microsoft.com/en-us/download/details.aspx?id=8279>`__
+
+For 7.0, get the ISO file GRMSDKX_EN_DVD.iso for AMD64. After you install this, open the SDK Command Shell (Start -> All Programs -> Microsoft Windows SDK v7.0 -> CMD Shell). CD to the statsmodels directory and type::
 
     set DISTUTILS_USE_SDK=1
 
@@ -88,6 +92,8 @@ The prompt should change colors to green. Then proceed as usual to install::
 
     python setup.py build
     python setup.py install
+
+For 7.1, the instructions are exactly the same, except you use the download link provided above and make sure you are using SDK 7.1.
 
 
 Dependencies
