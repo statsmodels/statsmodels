@@ -9,7 +9,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_almost_equal
 
-from statsmodels.stats._proportion import confint_proportion
+from statsmodels.stats.proportion import confint_proportion
 
 
 
