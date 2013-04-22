@@ -191,31 +191,35 @@ def std_prop(p, nobs):
     return np.sqrt(p * (1. - p) / nobs)
 
 def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
-                 alpha=0.05, discrete=True, dist='norm', nobs=None):
+                 alpha=0.05, discrete=True, dist='norm', nobs=None,
+                 continuity=0, critval_continuity=0):
     '''Generic statistical power function for normal based equivalence test
     '''
+    # TODO: refactor structure, separate norm and binom better
+    if not isinstance(continuity, tuple):
+        continuity = (continuity, continuity)
     crit = stats.norm.isf(alpha)
     k_low = mean_low + np.sqrt(var_low) * crit
     k_upp = mean_upp - np.sqrt(var_upp) * crit
-    if discrete:
-        k_low = np.ceil(k_low * nobs)
-        k_upp = np.trunc(k_upp * nobs)
+    if discrete or dist == 'binom':
+        k_low = np.ceil(k_low * nobs + 0.5 * critval_continuity)
+        k_upp = np.trunc(k_upp * nobs - 0.5 * critval_continuity)
         if dist == 'norm':
             #need proportion
-            k_low = k_low * 1. / nobs
+            k_low = (k_low) * 1. / nobs #-1 to match PASS
             k_upp = k_upp * 1. / nobs
-    else:
-        if dist == 'binom':
-            #need counts
-            k_low *= nobs
-            k_upp *= nobs
+#    else:
+#        if dist == 'binom':
+#            #need counts
+#            k_low *= nobs
+#            k_upp *= nobs
     #print mean_low, np.sqrt(var_low), crit, var_low
     #print mean_upp, np.sqrt(var_upp), crit, var_upp
     if np.any(k_low > k_upp):   #vectorize
         print "no overlap, power is zero, TODO"
     std_alt = np.sqrt(var_alt)
-    z_low = (k_low - mean_alt) / std_alt
-    z_upp = (k_upp - mean_alt) / std_alt
+    z_low = (k_low - mean_alt - continuity[0] * 0.5 / nobs) / std_alt
+    z_upp = (k_upp - mean_alt + continuity[1] * 0.5 / nobs) / std_alt
     if dist == 'norm':
         power = stats.norm.cdf(z_upp) - stats.norm.cdf(z_low)
     elif dist == 'binom':
@@ -316,9 +320,10 @@ def power_binom_tost(low, upp, nobs, p_alt=None, alpha=0.05):
                      stats.binom.cdf(x_low-1, nobs, p_alt))
     return power
 
-def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, variance_prop=None,
-                     discrete=True, dist='norm'):
-    '''Statistical power of proportions test based on normal distribution
+def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
+                     variance_prop=None, discrete=True, continuity=0,
+                     critval_continuity=0):
+    '''Power of proportions equivalence test based on normal distribution
 
     Parameter
     ---------
@@ -330,12 +335,30 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, variance_prop=None,
         proportion under the alternative
     alpha : float in (0,1)
         significance level of the test
+    dist : string in ['norm', 'binom']
+        This defines the distribution to evalute the power of the test. The
+        critical values of the TOST test are always based on the normal
+        approximation, but the distribution for the power can be either the
+        normal (default) or the binomial (exact) distribution.
     variance_prop : None or float in (0,1)
         If this is None, then the variances for the two one sided tests are
         based on the proportions equal to the equivalence limits.
         If variance_prop is given, then it is used to calculate the variance
         for the TOST statistics. If this is based on an sample, then the
         estimated proportion can be used.
+    discrete : bool
+        If true, then the critical values of the rejection region are converted
+        to integers. If dist is "binom", this is automatically assumed.
+        If discrete is false, then the TOST critical values are used as
+        floating point numbers, and the power is calculated based on the
+        rejection region that is not discretized.
+    continuity : bool or float
+        adjust the rejection region for the normal power probability. This has
+        and effect only if ``dist='norm'``
+    critval_continuity : bool or float
+        If this is non-zero, then the critical values of the tost rejection
+        region are adjusted before converting to integers. This affects both
+        distributions, ``dist='norm'`` and ``dist='binom'``.
 
     Returns
     -------
@@ -347,10 +370,28 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, variance_prop=None,
 
     Notes
     -----
-    No benchmark case available yet for testing.
-    Result is within 2 to 3 percent of an example of PASS.
+    In small samples the power for the ``discrete`` version, has a sawtooth
+    pattern as a function of the number of observations. As a consequence,
+    small changes in the number of observations or in the normal approximation
+    can have a large effect on the power.
 
-    works vectorized (for n)
+    ``continuity`` and ``critval_continuity`` are added to match some results
+    of PASS, and are mainly to investigate the sensitivity of the ztost power
+    to small changes in the rejection region. From my interpretation of the
+    equations in the SAS manual, both are zero in SAS.
+
+    works vectorized
+
+    **verification:**
+
+    The ``dist='binom'`` results match PASS,
+    The ``dist='norm'`` results look reasonable, but no benchmark is available.
+
+    References
+    ----------
+    SAS Manual: Chapter 68: The Power Procedure, Computational Resources
+    PASS Chapter 110: Equivalence Tests for One Proportion.
+
     '''
     mean_low = low
     var_low = std_prop(low, nobs)**2
@@ -361,7 +402,8 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, variance_prop=None,
     if variance_prop is not None:
         var_low = var_upp = std_prop(variance_prop, nobs)**2
     power = _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
-                 alpha=alpha, discrete=discrete, dist=dist, nobs=nobs)
+                 alpha=alpha, discrete=discrete, dist=dist, nobs=nobs,
+                 continuity=continuity, critval_continuity=critval_continuity)
     return power
 
 def _table_proportion(n_success, nobs):

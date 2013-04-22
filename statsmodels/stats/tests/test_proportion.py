@@ -214,5 +214,101 @@ def test_power_binom_tost():
     # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
+def test_power_ztost_prop():
+    power = smprop.power_ztost_prop(0.1, 0.9, 10, p_alt=0.6, alpha=0.05,
+                         discrete=True, dist='binom')[0]
+    assert_almost_equal(power, 0.8204, decimal=4) # PASS example
+
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=False,
+                                    dist='binom')[0]
+
+    res_power = np.array([ 0., 0., 0., 0.0889, 0.2356, 0.4770, 0.5530,
+        0.6154,  0.7365,  0.7708])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+    # with critval_continuity correction
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=False,
+                                    dist='binom', variance_prop=None,
+                                    continuity=2, critval_continuity=1)[0]
+
+    res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
+                          0.6154, 0.6674, 0.7708])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=False,
+                                    dist='binom', variance_prop=0.5,
+                                    critval_continuity=1)[0]
+
+    res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
+                          0.6154, 0.6674, 0.7112])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+def test_power_ztost_prop_norm():
+    # regression test for normal distribution
+    # from a rough comparison, the results and variations look reasonable
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=False,
+                                    dist='norm', variance_prop=0.5,
+                                    continuity=0, critval_continuity=0)[0]
+
+    res_power = np.array([0., 0., 0., 0.11450013,  0.27752006, 0.41495922,
+                          0.52944621,  0.62382638,  0.70092914,  0.76341806])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+    # regression test for normal distribution
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=False,
+                                    dist='norm', variance_prop=0.5,
+                                    continuity=1, critval_continuity=0)[0]
+
+    res_power = np.array([0., 0., 0.02667562,  0.20189793,  0.35099606,
+                          0.47608598,  0.57981118,  0.66496683,  0.73427591,
+                          0.79026127])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+    # regression test for normal distribution
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=True,
+                                    dist='norm', variance_prop=0.5,
+                                    continuity=1, critval_continuity=0)[0]
+
+    res_power = np.array([0., 0., 0., 0.08902071,  0.23582284, 0.35192313,
+                          0.55312718,  0.61549537,  0.66743625,  0.77066806])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+    # regression test for normal distribution
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=True,
+                                    dist='norm', variance_prop=0.5,
+                                    continuity=1, critval_continuity=1)[0]
+
+    res_power = np.array([0., 0., 0., 0.08902071,  0.23582284, 0.35192313,
+                          0.44588687,  0.61549537,  0.66743625,  0.71115563])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+    # regression test for normal distribution
+    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                    p_alt=0.5, alpha=0.05, discrete=True,
+                                    dist='norm', variance_prop=None,
+                                    continuity=0, critval_continuity=0)[0]
+
+    res_power = np.array([0., 0., 0., 0., 0.15851942, 0.41611758,
+                          0.5010377 ,  0.5708047 ,  0.70328247,  0.74210096])
+    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+
+
+
 if __name__ == '__main__':
     test_confint_proportion()
