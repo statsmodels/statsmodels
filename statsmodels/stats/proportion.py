@@ -185,15 +185,34 @@ def proportion_effectsize(prob1, prob2, method='normal'):
     es = 2 * (np.arcsin(np.sqrt(prob2)) - np.arcsin(np.sqrt(prob1)))
     return es
 
-def std_prop(p, nobs):
+def std_prop(prop, nobs):
     '''standard error for the estimate of a proportion
+
+    This is just ``np.sqrt(p * (1. - p) / nobs)``
+
+    Parameters
+    ----------
+    prop : array_like
+        proportion
+    nobs : int, array_like
+        number of observations
+
+    Returns
+    -------
+    std : array_like
+        standard error for a proportion of nobs independent observations
     '''
-    return np.sqrt(p * (1. - p) / nobs)
+    return np.sqrt(prop * (1. - prop) / nobs)
 
 def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
                  alpha=0.05, discrete=True, dist='norm', nobs=None,
                  continuity=0, critval_continuity=0):
     '''Generic statistical power function for normal based equivalence test
+
+    This includes options to adjust the normal approximation and can use
+    the binomial to evaluate the probability of the rejection region
+
+    see power_ztost_prob for a description of the options
     '''
     # TODO: refactor structure, separate norm and binom better
     if not isinstance(continuity, tuple):
@@ -229,11 +248,28 @@ def _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
 
 
 def binom_tost(count, nobs, low, upp):
-    '''exact tost for one proportion using binomial distribution
+    '''exact TOST test for one proportion using binomial distribution
+
+    Parameters
+    ----------
+    n_success : integer or array_like
+        the number of successes in nobs trials.
+    nobs : integer
+        the number of trials or observations.
+    low, upp : floats
+        lower and upper limit of equivalence region
+
+    Returns
+    -------
+    pvalue : float
+        p-value of equivalence test
+    pval_low, pval_upp : floats
+        p-values of lower and upper one-sided tests
+
     '''
     # binom_test_stat only returns pval
-    tt1 = binom_test_stat(count, nobs, alternative='larger', p=low)
-    tt2 = binom_test_stat(count, nobs, alternative='smaller', p=upp)
+    tt1 = binom_test_stat(count, nobs, alternative='larger', prop=low)
+    tt2 = binom_test_stat(count, nobs, alternative='smaller', prop=upp)
     return np.maximum(tt1, tt2), tt1, tt2,
 
 
@@ -245,6 +281,18 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
 
     The interval might be empty with `r_upp < r_low`.
 
+    Parameters
+    ----------
+    low, upp : floats
+        lower and upper limit of equivalence region
+    nobs : integer
+        the number of trials or observations.
+
+    Returns
+    -------
+    x_low, x_upp : float
+        lower and upper bound of rejection region
+
     '''
     x_low = stats.binom.isf(alpha, nobs, low) + 1
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
@@ -254,6 +302,19 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='2-sided'):
     '''rejection region for binomial test for one sample proportion
 
     The interval includes the end points of the rejection region.
+
+    Parameters
+    ----------
+    value : float
+        proportion under the Null hypothesis
+    nobs : integer
+        the number of trials or observations.
+
+
+    Returns
+    -------
+    x_low, x_upp : float
+        lower and upper bound of rejection region
 
 
     '''
@@ -272,7 +333,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='2-sided'):
 
     return x_low, x_upp
 
-def binom_test_stat(n_success, nobs, p=0.5, alternative='2-sided'):
+def binom_test_stat(n_success, nobs, prop=0.5, alternative='2-sided'):
     '''Perform a test that the probability of success is p.
 
     This is an exact, two-sided test of the null hypothesis
@@ -285,9 +346,12 @@ def binom_test_stat(n_success, nobs, p=0.5, alternative='2-sided'):
         the number of successes in nobs trials.
     nobs : integer
         the number of trials or observations.
-    p : float, optional
-        The hypothesized probability of success.  0 <= p <= 1. The
-        default value is p = 0.5
+    prop : float, optional
+        The probability of success under the null hypothesis,
+        `0 <= prop <= 1`. The default value is `prop = 0.5`
+    alternative : string in ['2-sided', 'smaller', 'larger']
+        alternative hypothesis, which can be two-sided or either one of the
+        one-sided tests.
 
     Returns
     -------
@@ -296,16 +360,18 @@ def binom_test_stat(n_success, nobs, p=0.5, alternative='2-sided'):
 
     Notes
     -----
-    This uses scipy.stats.binom_test for the two sided alternative.
+    This uses scipy.stats.binom_test for the two-sided alternative.
+
     '''
-    if np.any(p > 1.0) or np.any(p < 0.0):
+
+    if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
     if alternative in ['2s', '2-sided']:
-        pval = stats.binom_test(n_success, n=nobs, p=p)
+        pval = stats.binom_test(n_success, n=nobs, p=prop)
     elif alternative in ['l', 'larger']:
-        pval = stats.binom.sf(n_success-1, nobs, p)
+        pval = stats.binom.sf(n_success-1, nobs, prop)
     elif alternative in ['s', 'smaller']:
-        pval = stats.binom.cdf(n_success, nobs, p)
+        pval = stats.binom.cdf(n_success, nobs, prop)
     else:
         raise ValueError('alternative not recognized\n'
                          'should be 2-sided, larger or smaller')
@@ -404,10 +470,30 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
     power = _power_ztost(mean_low, var_low, mean_upp, var_upp, mean_alt, var_alt,
                  alpha=alpha, discrete=discrete, dist=dist, nobs=nobs,
                  continuity=continuity, critval_continuity=critval_continuity)
-    return power
+    return np.maximum(power[0], 0), power[1:]
+
 
 def _table_proportion(n_success, nobs):
     '''create a k by 2 contingency table for proportion
+
+    helper function for proportions_chisquare
+
+    Parameters
+    ----------
+    n_success : integer or array_like
+        the number of successes in nobs trials.
+    nobs : integer
+        the number of trials or observations.
+
+    Returns
+    -------
+    table : ndarray
+        (k, 2) contingency table
+
+    Notes
+    -----
+    recent scipy has more elaborate contingency table functions
+
     '''
     table = np.column_stack((n_success, nobs - n_success))
     expected = table.sum(0) * table.sum(1)[:,None] * 1. / table.sum()
@@ -419,10 +505,43 @@ def _table_proportion(n_success, nobs):
 def proportions_chisquare(n_success, nobs, value=None):
     '''test for proportions based on chisquare test
 
+    Parameters
+    ----------
+    n_success : integer or array_like
+        the number of successes in nobs trials. If this is array_like, then
+        the assumption is that this represents the number of successes for
+        each independent sample
+    nobs : integer
+        the number of trials or observations, with the same length as
+        n_success.
+    value : None or float or array_like
+
+    Returns
+    -------
+    chi2stat : float
+        test statistic for the chisquare test
+    p-value : float
+        p-value for the chisquare test
+    (table, expected)
+        table is a (k, 2) contingency table, ``expected`` is the corresponding
+        table of counts that are expected under independence with given
+        margins
+
+
     Notes
     -----
     Recent version of scipy.stats have a chisquare test for independence in
     contingency tables.
+
+    This function provides a similar interface to chisquare tests as
+    ``prop.test`` in R, however without the option for Yates continuity
+    correction.
+
+    n_success can be the count for the number of events for a single proportion,
+    or the counts for several independent proportions. If value is given, then
+    all proportions are jointly tested against this value. If value is not
+    given and n_success and nobs are not scalar, then the null hypothesis is
+    that all samples have the same proportion.
 
     '''
     nobs = np.atleast_1d(nobs)
@@ -516,13 +635,37 @@ class AllPairsResults(object):
 
 
 
-def proportions_chisquare_allpairs(n_success, nobs, value=None,
-                                   multitest_method='hs'):
+def proportions_chisquare_allpairs(n_success, nobs, multitest_method='hs'):
     '''chisquare test of proportions for all pairs of k samples
+
+    Performs a chisquare test for proportions for all pairwise comparisons.
+    The alternative is two-sided
+
+    Parameters
+    ----------
+    n_success : integer or array_like
+        the number of successes in nobs trials.
+    nobs : integer
+        the number of trials or observations.
+    prop : float, optional
+        The probability of success under the null hypothesis,
+        `0 <= prop <= 1`. The default value is `prop = 0.5`
+    multitest_method : string
+        This chooses the method for the multiple testing p-value correction,
+        that is used as default in the results.
+        It can be any method that is available in  ``multipletesting``.
+        The default is Holm-Sidak 'hs'.
+
+    Returns
+    -------
+    result : AllPairsResults instance
+        The returned results instance has several statistics, such as p-values,
+        attached, and additional methods for using a non-default
+        ``multitest_method``.
 
     Notes
     -----
-    no Yates correction
+    Yates continuity correction is not available.
     '''
     #all_pairs = map(list, zip(*np.triu_indices(4, 1)))
     all_pairs = zip(*np.triu_indices(4, 1))
@@ -531,15 +674,53 @@ def proportions_chisquare_allpairs(n_success, nobs, value=None,
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
 
 def proportions_chisquare_pairscontrol(n_success, nobs, value=None,
-                                   multitest_method='hs'):
-    '''chisquare test of proportions for pairs of k samples compared to standard
+                               multitest_method='hs', alternative='2-sided'):
+    '''chisquare test of proportions for pairs of k samples compared to control
+
+    Performs a chisquare test for proportions for pairwise comparisons with a
+    control (Dunnet's test). The control is assumed to be the first element
+    of ``n_success`` and ``nobs``. The alternative is two-sided, larger or
+    smaller.
+
+    Parameters
+    ----------
+    n_success : integer or array_like
+        the number of successes in nobs trials.
+    nobs : integer
+        the number of trials or observations.
+    prop : float, optional
+        The probability of success under the null hypothesis,
+        `0 <= prop <= 1`. The default value is `prop = 0.5`
+    multitest_method : string
+        This chooses the method for the multiple testing p-value correction,
+        that is used as default in the results.
+        It can be any method that is available in  ``multipletesting``.
+        The default is Holm-Sidak 'hs'.
+    alternative : string in ['2-sided', 'smaller', 'larger']
+        alternative hypothesis, which can be two-sided or either one of the
+        one-sided tests.
+
+    Returns
+    -------
+    result : AllPairsResults instance
+        The returned results instance has several statistics, such as p-values,
+        attached, and additional methods for using a non-default
+        ``multitest_method``.
+
 
     Notes
     -----
-    no Yates correction
+    Yates continuity correction is not available.
+
+    ``value`` and ``alternative`` options are not yet implemented.
+
     '''
+    if (value is not None) or (not alternative in ['2-sided', '2', '2s']):
+        raise NotImplementedError
     #all_pairs = map(list, zip(*np.triu_indices(4, 1)))
     all_pairs = [(0, k) for k in range(1, len(n_success))]
-    pvals = [proportions_chisquare(n_success[list(pair)], nobs[list(pair)])[1]
+    pvals = [proportions_chisquare(n_success[list(pair)], nobs[list(pair)],
+                                   #alternative=alternative)[1]
+                                   )[1]
                for pair in all_pairs]
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
