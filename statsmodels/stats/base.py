@@ -58,6 +58,7 @@ class AllPairsResults(object):
                                                for pairs in all_pairs]
 
     def pval_corrected(self, method=None):
+        import statsmodels.stats.multitest as smt
         if method is None:
             method = self.multitest_method
         #TODO: breaks with method=None
@@ -75,6 +76,7 @@ class AllPairsResults(object):
         return pvals_mat
 
     def summary(self):
+        import statsmodels.stats.multitest as smt
         maxlevel = max((len(ss) for ss in self.all_pairs_names))
 
         text = 'Corrected p-values using %s p-value correction\n\n' % \
