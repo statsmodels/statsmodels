@@ -162,3 +162,4 @@ if __name__ == '__main__':
     test_jarque_bera()
     test_shapiro()
     test_adnorm()
+    test_durbin_watson_pandas()
