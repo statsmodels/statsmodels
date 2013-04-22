@@ -24,6 +24,7 @@ def durbin_watson(resids):
     Durbin Watson statistic.  This is defined as
     sum_(t=2)^(T)((e_t - e_(t-1))^(2))/sum_(t=1)^(T)e_t^(2)
     """
+    resids=np.asarray(resids)
     diff_resids = np.diff(resids, 1)
     dw = np.dot(diff_resids, diff_resids) / np.dot(resids, resids)
     return dw

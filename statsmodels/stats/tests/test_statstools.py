@@ -1,6 +1,7 @@
 
 
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_almost_equal
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                             durbin_watson)
@@ -150,6 +151,10 @@ def test_adnorm():
                    axis=1)
     assert_almost_equal(ad, np.column_stack(st_pv), 11)
 
+def test_durbin_watson_pandas():
+    x=np.random.randn(50)
+    x_series=pd.Series(x)
+    assert_almost_equal(durbin_watson(x), durbin_watson(x_series), decimal=13)
 
 if __name__ == '__main__':
     test_durbin_watson()
@@ -157,3 +162,4 @@ if __name__ == '__main__':
     test_jarque_bera()
     test_shapiro()
     test_adnorm()
+    test_durbin_watson_pandas()
