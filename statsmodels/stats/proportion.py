@@ -253,7 +253,7 @@ def binom_tost(count, nobs, low, upp):
 
     Parameters
     ----------
-    n_success : integer or array_like
+    count : integer or array_like
         the number of successes in nobs trials.
     nobs : integer
         the number of trials or observations.
@@ -334,7 +334,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='2-sided'):
 
     return x_low, x_upp
 
-def binom_test_stat(n_success, nobs, prop=0.5, alternative='2-sided'):
+def binom_test_stat(count, nobs, prop=0.5, alternative='2-sided'):
     '''Perform a test that the probability of success is p.
 
     This is an exact, two-sided test of the null hypothesis
@@ -343,7 +343,7 @@ def binom_test_stat(n_success, nobs, prop=0.5, alternative='2-sided'):
 
     Parameters
     ----------
-    n_success : integer or array_like
+    count : integer or array_like
         the number of successes in nobs trials.
     nobs : integer
         the number of trials or observations.
@@ -368,11 +368,11 @@ def binom_test_stat(n_success, nobs, prop=0.5, alternative='2-sided'):
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
     if alternative in ['2s', '2-sided']:
-        pval = stats.binom_test(n_success, n=nobs, p=prop)
+        pval = stats.binom_test(count, n=nobs, p=prop)
     elif alternative in ['l', 'larger']:
-        pval = stats.binom.sf(n_success-1, nobs, prop)
+        pval = stats.binom.sf(count-1, nobs, prop)
     elif alternative in ['s', 'smaller']:
-        pval = stats.binom.cdf(n_success, nobs, prop)
+        pval = stats.binom.cdf(count, nobs, prop)
     else:
         raise ValueError('alternative not recognized\n'
                          'should be 2-sided, larger or smaller')
@@ -474,14 +474,14 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
     return np.maximum(power[0], 0), power[1:]
 
 
-def _table_proportion(n_success, nobs):
+def _table_proportion(count, nobs):
     '''create a k by 2 contingency table for proportion
 
     helper function for proportions_chisquare
 
     Parameters
     ----------
-    n_success : integer or array_like
+    count : integer or array_like
         the number of successes in nobs trials.
     nobs : integer
         the number of trials or observations.
@@ -496,25 +496,25 @@ def _table_proportion(n_success, nobs):
     recent scipy has more elaborate contingency table functions
 
     '''
-    table = np.column_stack((n_success, nobs - n_success))
+    table = np.column_stack((count, nobs - count))
     expected = table.sum(0) * table.sum(1)[:,None] * 1. / table.sum()
     n_rows = table.shape[0]
     return table, expected, n_rows
 
 
 
-def proportions_chisquare(n_success, nobs, value=None):
+def proportions_chisquare(count, nobs, value=None):
     '''test for proportions based on chisquare test
 
     Parameters
     ----------
-    n_success : integer or array_like
+    count : integer or array_like
         the number of successes in nobs trials. If this is array_like, then
         the assumption is that this represents the number of successes for
         each independent sample
     nobs : integer
         the number of trials or observations, with the same length as
-        n_success.
+        count.
     value : None or float or array_like
 
     Returns
@@ -538,15 +538,15 @@ def proportions_chisquare(n_success, nobs, value=None):
     ``prop.test`` in R, however without the option for Yates continuity
     correction.
 
-    n_success can be the count for the number of events for a single proportion,
+    count can be the count for the number of events for a single proportion,
     or the counts for several independent proportions. If value is given, then
     all proportions are jointly tested against this value. If value is not
-    given and n_success and nobs are not scalar, then the null hypothesis is
+    given and count and nobs are not scalar, then the null hypothesis is
     that all samples have the same proportion.
 
     '''
     nobs = np.atleast_1d(nobs)
-    table, expected, n_rows = _table_proportion(n_success, nobs)
+    table, expected, n_rows = _table_proportion(count, nobs)
     if value is not None:
         expected = np.column_stack((nobs * value, nobs * (1 - value)))
         ddof = n_rows - 1
@@ -561,7 +561,7 @@ def proportions_chisquare(n_success, nobs, value=None):
 
 
 
-def proportions_chisquare_allpairs(n_success, nobs, multitest_method='hs'):
+def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
     '''chisquare test of proportions for all pairs of k samples
 
     Performs a chisquare test for proportions for all pairwise comparisons.
@@ -569,7 +569,7 @@ def proportions_chisquare_allpairs(n_success, nobs, multitest_method='hs'):
 
     Parameters
     ----------
-    n_success : integer or array_like
+    count : integer or array_like
         the number of successes in nobs trials.
     nobs : integer
         the number of trials or observations.
@@ -595,22 +595,22 @@ def proportions_chisquare_allpairs(n_success, nobs, multitest_method='hs'):
     '''
     #all_pairs = map(list, zip(*np.triu_indices(4, 1)))
     all_pairs = zip(*np.triu_indices(4, 1))
-    pvals = [proportions_chisquare(n_success[list(pair)], nobs[list(pair)])[1]
+    pvals = [proportions_chisquare(count[list(pair)], nobs[list(pair)])[1]
                for pair in all_pairs]
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
 
-def proportions_chisquare_pairscontrol(n_success, nobs, value=None,
+def proportions_chisquare_pairscontrol(count, nobs, value=None,
                                multitest_method='hs', alternative='2-sided'):
     '''chisquare test of proportions for pairs of k samples compared to control
 
     Performs a chisquare test for proportions for pairwise comparisons with a
     control (Dunnet's test). The control is assumed to be the first element
-    of ``n_success`` and ``nobs``. The alternative is two-sided, larger or
+    of ``count`` and ``nobs``. The alternative is two-sided, larger or
     smaller.
 
     Parameters
     ----------
-    n_success : integer or array_like
+    count : integer or array_like
         the number of successes in nobs trials.
     nobs : integer
         the number of trials or observations.
@@ -644,8 +644,8 @@ def proportions_chisquare_pairscontrol(n_success, nobs, value=None,
     if (value is not None) or (not alternative in ['2-sided', '2', '2s']):
         raise NotImplementedError
     #all_pairs = map(list, zip(*np.triu_indices(4, 1)))
-    all_pairs = [(0, k) for k in range(1, len(n_success))]
-    pvals = [proportions_chisquare(n_success[list(pair)], nobs[list(pair)],
+    all_pairs = [(0, k) for k in range(1, len(count))]
+    pvals = [proportions_chisquare(count[list(pair)], nobs[list(pair)],
                                    #alternative=alternative)[1]
                                    )[1]
                for pair in all_pairs]
