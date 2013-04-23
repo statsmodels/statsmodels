@@ -192,7 +192,23 @@ def test_binom_test():
     assert_almost_equal(ci_low, binom_test_greater.conf_int[0], decimal=13)
 
 def test_binom_tost():
-    pass
+    # consistency check with two different implementation,
+    # confint_proportion is tested against R
+    # no reference case from other package available
+    ci = smprop.confint_proportion(10, 20, method='beta', alpha=0.1)
+    bt = smprop.binom_tost(10, 20, *ci)
+    assert_almost_equal(bt, [0.05] * 3, decimal=12)
+
+    ci = smprop.confint_proportion(5, 20, method='beta', alpha=0.1)
+    bt = smprop.binom_tost(5, 20, *ci)
+    assert_almost_equal(bt, [0.05] * 3, decimal=12)
+
+    # vectorized, TODO: observed proportion = 0 returns nan
+    ci = smprop.confint_proportion(np.arange(1, 20), 20, method='beta',
+                                   alpha=0.05)
+    bt = smprop.binom_tost(np.arange(1, 20), 20, *ci)
+    bt = np.asarray(bt)
+    assert_almost_equal(bt, 0.025 * np.ones(bt.shape), decimal=12)
 
 def test_power_binom_tost():
     # comparison numbers from PASS manual
