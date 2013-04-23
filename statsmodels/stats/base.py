@@ -25,14 +25,13 @@ class AllPairsResults(object):
         optional names of the levels or groups
     n_levels : None or int
         If None, then the number of levels or groups is inferred from the
-        other arguments. It can be explicitly specified, if it is not a
-        standard all pairs comparison.
+        other arguments. It can be explicitly specified, if the inferred
+        number is incorrect.
 
     Notes
     -----
-    It should be possible to use this for other pairwise comparisons, for
-    example all others compared to a control (Dunnet).
-
+    This class can also be used for other pairwise comparisons, for example
+    comparing several treatments to a control (as in Dunnet's test).
 
     '''
 
@@ -58,6 +57,12 @@ class AllPairsResults(object):
                                                for pairs in all_pairs]
 
     def pval_corrected(self, method=None):
+        '''p-values corrected for multiple testing problem
+
+        This uses the default p-value correction of the instance stored in
+        ``self.multitest_method`` if method is None.
+
+        '''
         import statsmodels.stats.multitest as smt
         if method is None:
             method = self.multitest_method
@@ -68,6 +73,10 @@ class AllPairsResults(object):
         return self.summary()
 
     def pval_table(self):
+        '''create a (n_levels, n_levels) array with corrected p_values
+
+        this needs to improve, similar to R pairwise output
+        '''
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
         # if we don't assume we have all pairs
@@ -76,6 +85,11 @@ class AllPairsResults(object):
         return pvals_mat
 
     def summary(self):
+        '''returns text summarizing the results
+
+        uses the default pvalue correction of the instance stored in
+        ``self.multitest_method``
+        '''
         import statsmodels.stats.multitest as smt
         maxlevel = max((len(ss) for ss in self.all_pairs_names))
 
