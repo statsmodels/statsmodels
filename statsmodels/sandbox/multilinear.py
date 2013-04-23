@@ -16,7 +16,7 @@ import pandas as pd
 from statsmodels.api import OLS
 from statsmodels.api import stats
 import numpy as np
-
+import logging
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     """return a series containing the summary of a linear model
@@ -185,7 +185,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
     return summary
 
 
-def _test_group(pvalues, group, exact=True):
+def _test_group(pvalues, group_name, group, exact=True):
     """test if the objects in the group are different from the general set.
 
     The test is performed on the pvalues set (ad a pandas series) over
@@ -195,6 +195,12 @@ def _test_group(pvalues, group, exact=True):
     totals = 1.0 * len(pvalues)
     total_significant = 1.0 * np.sum(pvalues)
     cross_index = [c for c in group if c in pvalues.index]
+    missing = [c for c in group if c not in pvalues.index]
+    if missing:
+        s = ('the test is not well defined if the group '
+             'has elements not presents in the significativity '
+             'array. group name: {}, missing elements: {}')
+        logging.warning(s.format(group_name, missing))
     # how many are significant and not in the group
     group_total = 1.0 * len(cross_index)
     group_sign = 1.0 * len([c for c in cross_index if pvalues[c]])
@@ -300,7 +306,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         '_out_sign': {},
         '_out_non': {}}
     for group_name, group_list in groups.iteritems():
-        res = _test_group(pvals, group_list, exact)
+        res = _test_group(pvals, group_name, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]
         results['_in_sign'][group_name] = res[2][0]
