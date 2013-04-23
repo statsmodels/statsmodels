@@ -7,7 +7,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_array_less
 
 from statsmodels.stats.proportion import confint_proportion
 import statsmodels.stats.proportion as smprop
@@ -191,6 +191,8 @@ def test_binom_test():
     assert_almost_equal(ci_upp, binom_test_less.conf_int[1], decimal=13)
     assert_almost_equal(ci_low, binom_test_greater.conf_int[0], decimal=13)
 
+def test_binom_tost():
+    pass
 
 def test_power_binom_tost():
     # comparison numbers from PASS manual
@@ -248,6 +250,23 @@ def test_power_ztost_prop():
                           0.6154, 0.6674, 0.7112])
     # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+
+def test_ztost():
+    xfair = np.repeat([1,0], [228, 762-228])
+
+    # comparing to SAS last output at
+    # http://support.sas.com/documentation/cdl/en/procstat/63104/HTML/default/viewer.htm#procstat_freq_sect028.htm
+    # confidence interval for tost
+    # generic ztost is moved to weightstats
+    from statsmodels.stats.weightstats import confint_ztest, ztost
+    ci01 = confint_ztest(xfair, alpha=0.1)
+    assert_almost_equal(ci01,  [0.2719, 0.3265], 4)
+    res = ztost(xfair, 0.18, 0.38)
+
+    assert_almost_equal(res[1][0], 7.1865, 4)
+    assert_almost_equal(res[2][0], -4.8701, 4)
+    assert_array_less(res[0], 0.0001)
+
 
 def test_power_ztost_prop_norm():
     # regression test for normal distribution
