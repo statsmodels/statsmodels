@@ -353,3 +353,21 @@ class AFTRes(object):
         self.test_beta0 = (.132511, 0.7158323)
         self.test_beta1 = (.297951, .5851693)
         self.test_joint = (11.8068, 0.002730147)
+
+class OriginResults(object):
+    """
+    These results are from Bruce Hansen's Matlab package.
+    To replicate the results, the exogenous variables were scaled
+    down by 10**-2 and the results were then rescaled.
+
+    These tests must also test likelihood functions because the
+    llr when conducting hypothesis tests is the MLE while
+    restricting the intercept to 0. Matlab's generic package always
+    uses the unrestricted MLE.
+    """
+    def __init__(self):
+        self.test_params = np.array([0, .00351861])
+        self.test_llf = -1719.793173  # llf when testing param = .0034
+        self.test_llf_hat = -1717.95833 # llf when origin=0
+        self.test_llf_hypoth = -2*(self.test_llf-self.test_llf_hat)
+        self.test_llf_conf = -1719.879077  # The likelihood function at conf_vals
