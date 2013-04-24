@@ -176,7 +176,7 @@ class OriginResults(RegressionResults):
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
 
-        print_weights : bool
+        return_weights : bool
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False
 
