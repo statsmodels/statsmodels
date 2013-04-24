@@ -8,7 +8,7 @@ import unittest
 import pandas
 import numpy as np
 
-from statsmodels.sandbox.stats import factorial_anova as anova
+from statsmodels.sandbox.stats import repanova as anova
 
 class Test_noncentrality_parameter(unittest.TestCase):
     def test1(self):
