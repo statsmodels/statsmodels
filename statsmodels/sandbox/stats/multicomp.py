@@ -86,6 +86,7 @@ import numpy as np
 import math
 import copy
 from scipy import stats
+import matplotlib.pyplot as plt
 from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
@@ -633,7 +634,7 @@ class MultiComparison(object):
         
         RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
         return np.sqrt(RMSE)
-        
+
     def getranks(self):
         '''convert data to rankdata and attach
 
@@ -797,10 +798,10 @@ class MultiComparison(object):
         """
         if q_crit != None: self.q_crit = q_crit
         if getattr(self, 'q_crit', None) == None:
-            raise AttributeError, "Please perform tukeyhsd() or provide q_crit before plotting hochberg intervals"
+            raise AttributeError, "Please perform tukeyhsd() or provide q_crit before computing hochberg intervals"
 
         if S == None:
-            S = self.mse()
+            S = self._group_rmse()
         
         # Set initial variables
         ng = self.ngroups
