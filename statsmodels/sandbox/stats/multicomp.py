@@ -859,11 +859,10 @@ class MultiComparison(object):
         for i in range(len(means)):
             if self.groupsunique[i] == comparison_name: continue
         
-            if minrange[i] < minrange[midx] < maxrange[i] or \
-                        minrange[i] < maxrange[midx] < maxrange[i]:
-                nsigidx.append(i)
-            else:
+            if min(maxrange[i], maxrange[midx]) - max(minrange[i], minrange[midx]) < 0:
                 sigidx.append(i)
+            else:
+                nsigidx.append(i)
                 
         #Plot the master comparison
         plt.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', color='b', ecolor='b')
