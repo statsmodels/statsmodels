@@ -590,7 +590,7 @@ class MultiComparison(object):
 
     '''
 
-    def __init__(self, data, groups):
+    def __init__(self, data, groups, group_order=None):
         """
         :data: an array of independent data samples
         :groups: a numpy array of group labels corresponding to each data point
@@ -630,7 +630,25 @@ class MultiComparison(object):
                                  useranks=True)
         self.rankdata = self.ranks.groupmeanfilter
 
+    def _group_rmse(self):
+        """Compute the root mean square error the multi-group data.
 
+        RMSE in eval_measures.py does not perform correction for deg. freedom, using this 
+            to be consistent with Matlab implementation
+    
+        :data: an np.array containing the raw values for each group
+        :labels: np.array of string labels identifying which group data belongs to
+    
+        :returns: float value of RMSE
+        """
+        SE = 0
+        for name in self.groupsunique:
+            vals = self.data[np.where(self.groups==name)]
+            avg = np.mean(vals)
+            SE += (np.sum((vals-avg)**2))  
+        
+        RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
+        return np.sqrt(RMSE)
 
     def kruskal(self, pairs=None, multimethod='T'):
         '''
@@ -741,6 +759,13 @@ class MultiComparison(object):
         var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
         res = tukeyhsd(means, nobs, var_, df=None, alpha=alpha, q_crit=None)
 
+        self.reject = res[1][1]
+        self.meandiffs = res[1][2]
+        self.std_pairs = res[1][3]
+        self.confint = res[1][4]
+        self.q_crit = res[1][5] #store q_crit value
+        self.df_total = res[1][6]
+
         resarr = np.array(zip(res[0][0], res[0][1],
                                   np.round(res[2],4),
                                   np.round(res[4][:,0],4),
@@ -755,13 +780,55 @@ class MultiComparison(object):
         summtab = SimpleTable(resarr, headers=resarr.dtype.names)
         summtab.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
 
-        return summtab, res
+        return summtab
 
+    def hochberg_tukeyhsd_intervals(self, q_crit=None, S=None):
+        """Compute graphical confidence intervals for visual multiple comparisons.
+    
+        :data: a np.array of the raw data to be analyzed
+        :labels: a np.array of the string labels corresponding to each data element
+        :q_crit: the Q critical value generated from a Tukey HSD computation
+        :S: (optional) the Mean Square Error for all groups.
+    
+        :returns: tuple of results
+            [0] = the hochberg intervals for each group
+            [1] = names of each group
+            [2] = the S value for all groups
+        """
+        if q_crit != None: self.q_crit = q_crit
+        if getattr(self, 'q_crit', None) == None:
+            raise AttributeError, "Please perform tukeyhsd() or provide q_crit before plotting hochberg intervals"
 
+        if S == None:
+            S = self.mse()
+        
+        # Set initial variables
+        ng = self.ngroups
+        
+        # Compute dij for all pairwise comparisons ala hochberg p. 95
+        gvar = S**2/self.groupstats.groupnobs
+        d12 = np.sqrt(gvar[self.pairindices[0]] + gvar[self.pairindices[1]])
+        
+        # Create the full d matrix given all known dij vals
+        d = np.zeros((ng, ng)).reshape((1, ng**2))
+        inds = np.ravel_multi_index(self.pairindices, (ng, ng))
+        d[0][inds] = d12
+        d = d.reshape((ng, ng))
+        d = d + d.conj().T
+        
+        # Compute the two global sums from hochberg eq 3.32 
+        sum1 = np.sum(d12)
+        sum2 = np.sum(d, axis=0)
+        
+        if (ng > 2):
+            w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
+        else:
+            w = sum1 * ones(2, 1) / 2 #just copied this from Matlab...not sure for groups of <=2
+                                      #you maybe shouldn't be using Multiple Comparisons anyways...        
+        self.halfwidths = (self.q_crit/np.sqrt(2))*w 
+        self.S = S
 
-
-
-
+        
 
 
 
