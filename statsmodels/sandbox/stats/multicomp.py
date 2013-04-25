@@ -867,9 +867,11 @@ class MultiComparison(object):
         #Plot the master comparison
         plt.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', color='b', ecolor='b')
         #Plot those that are significantly different
-        plt.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', linestyle='None', color='r', ecolor='r')
+        if len(sigidx) != 0:
+            plt.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', linestyle='None', color='r', ecolor='r')
         #Plot those that are not significantly different
-        plt.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', linestyle='None', color='0.5', ecolor='0.5')
+        if len(nsigidx) != 0:
+            plt.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', linestyle='None', color='0.5', ecolor='0.5')
         
         #ax1.set_autoscale_on(True)
         r = np.max(maxrange) - np.min(minrange) 
