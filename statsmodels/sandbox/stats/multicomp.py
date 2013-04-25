@@ -760,12 +760,12 @@ class MultiComparison(object):
         var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
         res = tukeyhsd(means, nobs, var_, df=None, alpha=alpha, q_crit=None)
 
-        self.reject = res[1][1]
-        self.meandiffs = res[1][2]
-        self.std_pairs = res[1][3]
-        self.confint = res[1][4]
-        self.q_crit = res[1][5] #store q_crit value
-        self.df_total = res[1][6]
+        self.reject = res[1]
+        self.meandiffs = res[2]
+        self.std_pairs = res[3]
+        self.confint = res[4]
+        self.q_crit = res[5]
+        self.df_total = res[6]
 
         resarr = np.array(zip(res[0][0], res[0][1],
                                   np.round(res[2],4),
