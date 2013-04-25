@@ -590,13 +590,29 @@ class MultiComparison(object):
 
     '''
 
-    def __init__(self, x, groups):
-        self.data = x
+    def __init__(self, data, groups):
+        """
+        :data: an array of independent data samples
+        :groups: a numpy array of group labels corresponding to each data point
+        :group_order: (optional) a list of strings providing the desired order 
+            for the results to be reported in.
+        """
+        self.data = data
         self.groups = groups
-        self.groupsunique, self.groupintlab = np.unique(groups, return_inverse=True)
-        self.datali = [x[groups == k] for k in self.groupsunique]
+
+        # Allow for user-provided sorting of groups
+        if group_order == None:
+            self.groupsunique, self.groupintlab = np.unique(groups, return_inverse=True)
+        else:
+            self.groupsunique = np.array(group_order)
+            self.groupintlab = np.zeros(len(data))
+            for name in self.groupsunique:
+                self.groupintlab[np.where(self.groups==name)[0]] = np.where(self.groupsunique==name)[0]
+                
+        self.datali = [data[self.groups == k] for k in self.groupsunique]
         self.pairindices = np.triu_indices(len(self.groupsunique),1)  #tuple
-        self.nobs = x.shape[0]
+        self.nobs = self.data.shape[0]
+        self.ngroups = len(self.groupsunique)
 
     def getranks(self):
         '''convert data to rankdata and attach
