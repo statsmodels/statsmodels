@@ -614,22 +614,6 @@ class MultiComparison(object):
         self.nobs = self.data.shape[0]
         self.ngroups = len(self.groupsunique)
 
-    def getranks(self):
-        '''convert data to rankdata and attach
-
-
-        This creates rankdata as it is used for non-parametric tests, where
-        in the case of ties the average rank is assigned.
-
-
-        '''
-        #bug: the next should use self.groupintlab instead of self.groups
-        #update: looks fixed
-        #self.ranks = GroupsStats(np.column_stack([self.data, self.groups]),
-        self.ranks = GroupsStats(np.column_stack([self.data, self.groupintlab]),
-                                 useranks=True)
-        self.rankdata = self.ranks.groupmeanfilter
-
     def _group_rmse(self):
         """Compute the root mean square error the multi-group data.
 
@@ -649,6 +633,22 @@ class MultiComparison(object):
         
         RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
         return np.sqrt(RMSE)
+        
+    def getranks(self):
+        '''convert data to rankdata and attach
+
+
+        This creates rankdata as it is used for non-parametric tests, where
+        in the case of ties the average rank is assigned.
+
+
+        '''
+        #bug: the next should use self.groupintlab instead of self.groups
+        #update: looks fixed
+        #self.ranks = GroupsStats(np.column_stack([self.data, self.groups]),
+        self.ranks = GroupsStats(np.column_stack([self.data, self.groupintlab]),
+                                 useranks=True)
+        self.rankdata = self.ranks.groupmeanfilter
 
     def kruskal(self, pairs=None, multimethod='T'):
         '''
@@ -828,7 +828,60 @@ class MultiComparison(object):
         self.halfwidths = (self.q_crit/np.sqrt(2))*w 
         self.S = S
 
+    def plot_hochberg(self, comparison_name, figsize=(10,6)):
+        """Plot each group mean along with a confidence interval to visually identify significant differences.
+
+        Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups, 
+        showing a graph of the CI between each group will quickly get enormous. Instead, we can visualize inter-
+        group CI's with a single interval for each group mean. Hochberg et al. 
+        (Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: John Wiley & Sons, 1987.) 
+        first proposed this idea, and it has been succesfully implemented in Matlab's multcompare. This plot 
+        essentially tries to mimic Matlab's visualizaion. 
+
+        Note: this is currently only applicable for a 1-way anova with between 2 and 10 groups. Further, one must
+        have comptued the halfwidths previously using hochberg_tukeyhsd_intervals.
+
+        :comparison_name: the group label name by which the color coding should be set for significance
+        :figsize: (optional) the size of the plotted figure
+        """
+        means = self.groupstats.groupmean
+        fig = plt.figure(figsize=figsize)
+        #fig.canvas.set_window_title('A Boxplot Example')
+        ax1 = fig.add_subplot(111)
         
+        midx = np.where(self.groupsunique==comparison_name)[0]
+        sigidx = []
+        nsigidx = []
+        minrange = [means[i]-self.halfwidths[i] for i in range(len(means))]
+        maxrange = [means[i]+self.halfwidths[i] for i in range(len(means))]
+        
+        for i in range(len(means)):
+            if self.groupsunique[i] == comparison_name: continue
+        
+            if minrange[i] < minrange[midx] < maxrange[i] or \
+                        minrange[i] < maxrange[midx] < maxrange[i]:
+                nsigidx.append(i)
+            else:
+                sigidx.append(i)
+                
+        #Plot the master comparison
+        plt.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', color='b', ecolor='b')
+        #Plot those that are significantly different
+        plt.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', linestyle='None', color='r', ecolor='r')
+        #Plot those that are not significantly different
+        plt.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', linestyle='None', color='0.5', ecolor='0.5')
+        
+        #ax1.set_autoscale_on(True)
+        r = np.max(maxrange) - np.min(minrange) 
+        p = plt.ylim([-1, self.ngroups])
+        p = plt.xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.]) 
+        p = plt.title('Multiple Comparisons against %s'%comparison_name)
+        ax1.set_yticklabels(np.insert(self.groupsunique, 0, ''))
+        
+    def plot_tukeyhsd_intervals(self, comparison_name, q_crit=None, S=None, figsize=(10, 6)):
+        """Wrapper for both calculating hochberg intervals and plotting them"""
+        self.hochberg_tukeyhsd_intervals(q_crit, S)
+        self.plot_hochberg(comparison_name, figsize)        
 
 
 
