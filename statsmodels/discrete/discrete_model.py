@@ -166,9 +166,9 @@ class DiscreteModel(base.LikelihoodModel):
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
-            maxiter='defined_by_method', full_output=1, disp=True, callback=None,
-            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            qc_tol=0.03, qc_verbose=False, **kwargs):
+            maxiter='defined_by_method', full_output=1, disp=True,
+            callback=None, alpha=0, trim_mode='auto', auto_trim_tol=0.01,
+            size_trim_tol=1e-4, qc_tol=0.03, qc_verbose=False, **kwargs):
         """
         Fit the model using a regularized maximum likelihood.
         The regularization method AND the solver used is determined by the
@@ -1733,7 +1733,8 @@ class NegativeBinomial(CountModel):
 
     Greene, W. 2008. "Functional forms for the negtive binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
-    Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University Press.
+    Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
+        Press.
     """
 
     def _check_inputs(self, offset, exposure, endog):
@@ -1744,7 +1745,8 @@ class NegativeBinomial(CountModel):
         mu = np.exp(np.dot(self.exog, params))
         size = np.exp(lnalpha)**-1 * mu**Q
         prob = size/(size+mu)
-        coeff = gammaln(size+self.endog) - gammaln(self.endog+1) - gammaln(size)
+        coeff = (gammaln(size+self.endog) - gammaln(self.endog+1) -
+                 gammaln(size))
         llf = coeff + size*np.log(prob) + self.endog*np.log(1-prob)
         return llf
 
@@ -1761,8 +1763,8 @@ class NegativeBinomial(CountModel):
         """
         Loglikelihood for negative binomial model
 
-        Following notation in Greene (2008), with negative binomial heterogeneity
-        parameter :math:`\\alpha`:
+        Following notation in Greene (2008), with negative binomial
+        heterogeneity parameter :math:`\\alpha`:
 
         .. math::
 
@@ -1775,8 +1777,8 @@ class NegativeBinomial(CountModel):
 
         Notes
         -----
-        The ancillary parameter is assumed to be the last element of
-        the params vector
+        The ancillary parameter is assumed to be the last element of the
+        params vector
         """
         llf = np.sum(self.loglikeobs(params))
         return llf
@@ -1794,7 +1796,7 @@ class NegativeBinomial(CountModel):
         dparams = exog*a1 * (y-mu)/(mu+a1)
 
         da1 = -1*np.exp(lnalpha)**-2
-        dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
+        dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
 
         #multiply above by constant outside of the sum to reduce rounding error
@@ -1824,10 +1826,10 @@ class NegativeBinomial(CountModel):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(-exog[:,i,None]*exog[:,j,None] *\
-                                const_arr, axis=0)
+                hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
+                                       const_arr, axis=0)
         hess_arr[np.triu_indices(dim, k=1)] = hess_arr.T[np.triu_indices(dim,
-                                                        k =1)]
+                                                                         k=1)]
 
         # for dl/dparams dalpha
         da1 = -1*np.exp(lnalpha)**-2
@@ -1838,11 +1840,11 @@ class NegativeBinomial(CountModel):
         # for dl/dalpha dalpha
         #NOTE: polygamma(1,x) is the trigamma function
         da2 = 2*np.exp(lnalpha)**-3
-        dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) + \
+        dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) +
                     np.log(a1) - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
-        dada = (da2*dalpha/da1 + da1**2 * (special.polygamma(1, a1+y) - \
-                    special.polygamma(1,a1) + 1/a1 -1/(a1+mu) + \
-                    (y-mu)/(mu+a1)**2)).sum()
+        dada = (da2 * dalpha/da1 + da1**2 * (special.polygamma(1, a1+y) -
+                    special.polygamma(1, a1) + 1/a1 - 1/(a1 + mu) +
+                    (y - mu)/(mu + a1)**2)).sum()
         hess_arr[-1,-1] = dada
 
         return hess_arr
@@ -1859,7 +1861,8 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime(params, self.loglikeobs)
         return sc
 
-    def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None, **kwargs):
+    def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None,
+                       **kwargs):
         super(CountModel, self).__init__(endog, exog, **kwargs)
         self.ll = ll
         self._initialize()
@@ -1880,7 +1883,8 @@ class NegativeBinomial(CountModel):
             self.score = self._score_approx
             self.loglikeobs = self._ll_geometric
         else:
-            raise NotImplementedError("Likelihood type must nb1, nb2 or geometric")
+            raise NotImplementedError("Likelihood type must nb1, nb2 or "
+                                      "geometric")
 
     # Workaround to pickle instance methods
     def __getstate__(self):
@@ -2258,7 +2262,9 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
 class CountResults(DiscreteResults):
-    __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for count data", "extra_attr" : ""}
+    __doc__ = _discrete_results_docs % {
+                    "one_line_description" : "A results class for count data",
+                    "extra_attr" : ""}
     @cache_readonly
     def resid(self):
         """
