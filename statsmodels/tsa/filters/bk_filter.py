@@ -1,5 +1,8 @@
+from __future__ import absolute_import
+
 import numpy as np
 from scipy.signal import fftconvolve
+from .utils import _maybe_get_pandas_wrapper
 
 def bkfilter(X, low=6, high=32, K=12):
     """
@@ -51,12 +54,13 @@ def bkfilter(X, low=6, high=32, K=12):
     >>> X = dta.data['realinv']
     >>> Y = sm.tsa.filters.bkfilter(X, 6, 24, 12)
     """
-#TODO: change the docstring to ..math::?
-#TODO: allow windowing functions to correct for Gibb's Phenomenon?
-# adjust bweights (symmetrically) by below before demeaning
-# Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
+    #TODO: change the docstring to ..math::?
+    #TODO: allow windowing functions to correct for Gibb's Phenomenon?
+    # adjust bweights (symmetrically) by below before demeaning
+    # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
     if low < 2:
         raise ValueError("low cannot be less than 2")
+    _pandas_wrapper = _maybe_get_pandas_wrapper(X, K)
     X = np.asarray(X)
     omega_1 = 2.*np.pi/high # convert from freq. to periodicity
     omega_2 = 2.*np.pi/low
@@ -69,5 +73,9 @@ def bkfilter(X, low=6, high=32, K=12):
     bweights -= bweights.mean() # make sure weights sum to zero
     if X.ndim == 2:
         bweights = bweights[:,None]
-    return fftconvolve(X, bweights, mode='valid') # get a centered moving avg/
-                                                  # convolution
+    X = fftconvolve(X, bweights, mode='valid') # get a centered moving avg/
+                                               # convolution
+    if _pandas_wrapper is not None:
+        return _pandas_wrapper(X)
+
+    return X

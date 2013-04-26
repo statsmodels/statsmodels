@@ -1,6 +1,10 @@
-from numpy.testing import assert_almost_equal
+from datetime import datetime
+
+from numpy.testing import assert_almost_equal, assert_equal
 from numpy import array, column_stack
 from statsmodels.datasets import macrodata
+from statsmodels.tsa.base.datetools import dates_from_range
+from pandas import Series, Index, DataFrame
 from statsmodels.tsa.filters import bkfilter, hpfilter, cffilter
 
 def test_bking1d():
@@ -540,6 +544,57 @@ def test_cfitz_filter():
     #do 1d
     cyc, trend = cffilter(dta[:,1])
     assert_almost_equal(cyc, cfilt_res[:,1], 8)
+
+def test_bking_pandas():
+    # 1d
+    dta = macrodata.load_pandas().data
+    index = Index(dates_from_range('1959Q1', '2009Q3'))
+    dta.index = index
+    filtered = bkfilter(dta["infl"])
+    nd_filtered = bkfilter(dta['infl'].values)
+    assert_equal(filtered.values, nd_filtered)
+    assert_equal(filtered.index[0], datetime(1962, 3, 31))
+    assert_equal(filtered.index[-1], datetime(2006, 9, 30))
+    assert_equal(filtered.name, "infl")
+
+    #2d
+    filtered = bkfilter(dta[["infl","unemp"]])
+    nd_filtered = bkfilter(dta[['infl', 'unemp']].values)
+    assert_equal(filtered.values, nd_filtered)
+    assert_equal(filtered.index[0], datetime(1962, 3, 31))
+    assert_equal(filtered.index[-1], datetime(2006, 9, 30))
+    assert_equal(filtered.columns.values, ["infl", "unemp"])
+
+def test_cfitz_pandas():
+    # 1d
+    dta = macrodata.load_pandas().data
+    index = Index(dates_from_range('1959Q1', '2009Q3'))
+    dta.index = index
+    cycle, trend = cffilter(dta["infl"])
+    ndcycle, ndtrend = cffilter(dta['infl'].values)
+    assert_equal(cycle.values, ndcycle)
+    assert_equal(cycle.index[0], datetime(1959, 3, 31))
+    assert_equal(cycle.index[-1], datetime(2009, 9, 30))
+    assert_equal(cycle.name, "infl")
+
+    #2d
+    cycle, trend = cffilter(dta[["infl","unemp"]])
+    ndcycle, ndtrend = cffilter(dta[['infl', 'unemp']].values)
+    assert_equal(cycle.values, ndcycle)
+    assert_equal(cycle.index[0], datetime(1959, 3, 31))
+    assert_equal(cycle.index[-1], datetime(2009, 9, 30))
+    assert_equal(cycle.columns.values, ["infl", "unemp"])
+
+def test_hpfilter_pandas():
+    dta = macrodata.load_pandas().data
+    index = Index(dates_from_range('1959Q1', '2009Q3'))
+    dta.index = index
+    cycle, trend = hpfilter(dta["realgdp"])
+    ndcycle, ndtrend = hpfilter(dta['realgdp'].values)
+    assert_equal(cycle.values, ndcycle)
+    assert_equal(cycle.index[0], datetime(1959, 3, 31))
+    assert_equal(cycle.index[-1], datetime(2009, 9, 30))
+    assert_equal(cycle.name, "realgdp")
 
 if __name__ == "__main__":
     import nose
