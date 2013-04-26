@@ -986,9 +986,6 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
 
-class NbReg(DiscreteModel):
-    pass
-
 class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
