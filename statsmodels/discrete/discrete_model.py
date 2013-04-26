@@ -1735,7 +1735,7 @@ class NegativeBinomial(CountModel):
     """
     def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None,
                        **kwargs):
-        super(CountModel, self).__init__(endog, exog, **kwargs)
+        super(NegativeBinomial, self).__init__(endog, exog, **kwargs)
         self.ll = ll
         self._initialize()
         if ll in ['nb2', 'nb1']:
