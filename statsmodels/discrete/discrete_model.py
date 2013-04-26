@@ -1733,6 +1733,42 @@ class NegativeBinomial(CountModel):
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
     """
+    def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None,
+                       **kwargs):
+        super(CountModel, self).__init__(endog, exog, **kwargs)
+        self.ll = ll
+        self._initialize()
+        if ll in ['nb2', 'nb1']:
+            self.exog_names.append('lnalpha')
+
+    def _initialize(self):
+        if self.ll=='nb2':
+            self.hessian = self._hessian_nb2
+            self.score = self._score_nb2
+            self.loglikeobs = self._ll_nb2
+        elif self.ll=='nb1':
+            self.hessian = self._hessian_approx
+            self.score = self._score_approx
+            self.loglikeobs = self._ll_nb1
+        elif self.ll=='geometric':
+            self.hessian = self._hessian_approx
+            self.score = self._score_approx
+            self.loglikeobs = self._ll_geometric
+        else:
+            raise NotImplementedError("Likelihood type must nb1, nb2 or "
+                                      "geometric")
+
+    # Workaround to pickle instance methods
+    def __getstate__(self):
+        odict = self.__dict__.copy() # copy the dict since we change it
+        del odict['hessian']
+        del odict['score']
+        del odict['loglikeobs']
+        return odict
+
+    def __setstate__(self, indict):
+        self.__dict__.update(indict)
+        self._initialize()
 
     def _check_inputs(self, offset, exposure, endog):
         if offset is not None or exposure is not None:
@@ -1857,43 +1893,6 @@ class NegativeBinomial(CountModel):
     def scoreobs(self, params):
         sc = approx_fprime(params, self.loglikeobs)
         return sc
-
-    def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None,
-                       **kwargs):
-        super(CountModel, self).__init__(endog, exog, **kwargs)
-        self.ll = ll
-        self._initialize()
-        if ll in ['nb2', 'nb1']:
-            self.exog_names.append('lnalpha')
-
-    def _initialize(self):
-        if self.ll=='nb2':
-            self.hessian = self._hessian_nb2
-            self.score = self._score_nb2
-            self.loglikeobs = self._ll_nb2
-        elif self.ll=='nb1':
-            self.hessian = self._hessian_approx
-            self.score = self._score_approx
-            self.loglikeobs = self._ll_nb1
-        elif self.ll=='geometric':
-            self.hessian = self._hessian_approx
-            self.score = self._score_approx
-            self.loglikeobs = self._ll_geometric
-        else:
-            raise NotImplementedError("Likelihood type must nb1, nb2 or "
-                                      "geometric")
-
-    # Workaround to pickle instance methods
-    def __getstate__(self):
-        odict = self.__dict__.copy() # copy the dict since we change it
-        del odict['hessian']
-        del odict['score']
-        del odict['loglikeobs']
-        return odict
-
-    def __setstate__(self, indict):
-        self.__dict__.update(indict)
-        self._initialize()
 
     def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
             disp=1):
