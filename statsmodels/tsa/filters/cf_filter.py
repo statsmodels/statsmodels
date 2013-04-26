@@ -36,8 +36,8 @@ def cffilter(X, low=6, high=32, drift=True):
     trend : array
         The trend in the data with the cycles removed.
     """
-#TODO: cythonize/vectorize loop?, add ability for symmetric filter,
-#      and estimates of theta other than random walk.
+    #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
+    #      and estimates of theta other than random walk.
     if low < 2:
         raise ValueError("low must be >= 2")
     X = np.asanyarray(X)
