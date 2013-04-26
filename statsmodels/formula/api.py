@@ -18,3 +18,5 @@ from statsmodels.discrete.discrete_model import Probit
 probit = Probit.from_formula
 from statsmodels.discrete.discrete_model import Poisson
 poisson = Poisson.from_formula
+from statsmodels.regression.quantile_regression import QuantReg
+quantreg = QuantReg.from_formula
