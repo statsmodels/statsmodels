@@ -1,4 +1,7 @@
+from __future__ import absolute_import
+
 import numpy as np
+from .utils import _maybe_get_pandas_wrapper
 
 # the data is sampled quarterly, so cut-off frequency of 18
 
@@ -36,10 +39,11 @@ def cffilter(X, low=6, high=32, drift=True):
     trend : array
         The trend in the data with the cycles removed.
     """
-#TODO: cythonize/vectorize loop?, add ability for symmetric filter,
-#      and estimates of theta other than random walk.
+    #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
+    #      and estimates of theta other than random walk.
     if low < 2:
         raise ValueError("low must be >= 2")
+    _pandas_wrapper = _maybe_get_pandas_wrapper(X)
     X = np.asanyarray(X)
     if X.ndim == 1:
         X = X[:,None]
@@ -63,7 +67,13 @@ def cffilter(X, low=6, high=32, drift=True):
         y[i] = Bj[0] * X[i] + np.dot(Bj[1:-i-2].T,X[i+1:-1]) + B*X[-1] + \
                 np.dot(Bj[1:i].T, X[1:i][::-1]) + A*X[0]
     y = y.squeeze()
-    return y, X.squeeze()-y
+
+    cycle, trend = y, X.squeeze()-y
+
+    if _pandas_wrapper is not None:
+        return _pandas_wrapper(cycle), _pandas_wrapper(trend)
+
+    return cycle, trend
 
 if __name__ == "__main__":
     import statsmodels as sm
