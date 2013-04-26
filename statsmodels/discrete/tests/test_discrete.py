@@ -883,13 +883,7 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     def no_info(self):
         pass
 
-<<<<<<< HEAD
-    test_bic = test_jac = test_df_model = test_predict = no_info
-    test_predict_xb = test_llf = test_llnull = test_llr = no_info
-    test_llr_pvalue = test_pvalues = test_aic = test_conf_int = test_dof = no_info
-=======
     test_jac = no_info
->>>>>>> TST: smoke tests where R result not avail
 
 
 class TestNegativeBinomialGeometricBFGS(CheckModelResults):
@@ -946,14 +940,6 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     def no_info(self):
         pass
     test_jac = no_info
-
-<<<<<<< HEAD
-    test_bse = test_aic = test_params = test_conf_int = test_zstat = no_info
-    test_bic = test_jac = test_dof = test_df_model = no_info
-    test_predict_xb = test_llf = test_llnull = test_llr = no_info
-    test_llr_pvalue = no_info
-=======
->>>>>>> TST: smoke tests where R result not avail
 
 class TestMNLogitNewtonBaseZero(CheckModelResults):
     @classmethod
