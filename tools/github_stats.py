@@ -52,10 +52,11 @@ def get_paged_request(url):
         url = links.get('next')
     return results
 
-def get_issues(project="ipython/ipython", state="closed", pulls=False):
+def get_issues(project="statsmodels/statsmodels", state="closed", pulls=False):
     """Get a list of the issues from the Github API."""
     which = 'pulls' if pulls else 'issues'
-    url = "https://api.github.com/repos/%s/%s?state=%s&per_page=%i" % (project, which, state, PER_PAGE)
+    url = ("https://api.github.com/repos/%s/%s?state=%s&per_page=%i" %
+                                    (project, which, state, PER_PAGE))
     return get_paged_request(url)
 
 
@@ -80,19 +81,27 @@ def is_pull_request(issue):
     return 'pull_request_url' in issue
 
 
-def issues_closed_since(period=timedelta(days=365), project="ipython/ipython", pulls=False):
-    """Get all issues closed since a particular point in time. period
-can either be a datetime object, or a timedelta object. In the
-latter case, it is used as a time before the present."""
+def issues_closed_since(period=timedelta(days=365),
+                        project="statsmodels/statsmodels", pulls=False):
+    """
+    Get all issues closed since a particular point in time. period
+    can either be a datetime object, or a timedelta object. In the
+    latter case, it is used as a time before the present."""
 
     which = 'pulls' if pulls else 'issues'
 
     if isinstance(period, timedelta):
         period = datetime.now() - period
-    url = "https://api.github.com/repos/%s/%s?state=closed&sort=updated&since=%s&per_page=%i" % (project, which, period.strftime(ISO8601), PER_PAGE)
+    url = ("https://api.github.com/repos/%s/%s?state=closed"
+           "&sort=updated&since=%s&per_page=%i" % (project,
+                                                   which,
+                                                   period.strftime(ISO8601),
+                                                   PER_PAGE))
     allclosed = get_paged_request(url)
-    # allclosed = get_issues(project=project, state='closed', pulls=pulls, since=period)
-    filtered = [i for i in allclosed if _parse_datetime(i['closed_at']) > period]
+    # allclosed = get_issues(project=project, state='closed',
+    #                        pulls=pulls, since=period)
+    filtered = [i for i in allclosed if
+                _parse_datetime(i['closed_at']) > period]
 
     # exclude rejected PRs
     if pulls:
@@ -144,13 +153,15 @@ if __name__ == "__main__":
     else:
         since = datetime.now() - timedelta(days=days)
 
-    print("fetching GitHub stats since %s (tag: %s)" % (since, tag), file=sys.stderr)
+    print("fetching GitHub stats since %s (tag: %s)" % (since, tag),
+          file=sys.stderr)
     # turn off to play interactively without redownloading, use %run -i
     if 1:
         issues = issues_closed_since(since, pulls=False)
         pulls = issues_closed_since(since, pulls=True)
 
-    # For regular reports, it's nice to show them in reverse chronological order
+    # For regular reports, it's nice to show them in reverse
+    # chronological order
     issues = sorted_by_field(issues, reverse=True)
     pulls = sorted_by_field(pulls, reverse=True)
 
@@ -163,7 +174,8 @@ if __name__ == "__main__":
     today = datetime.today().strftime("%Y/%m/%d")
     print("GitHub stats for %s - %s (tag: %s)" % (since_day, today, tag))
     print()
-    print("These lists are automatically generated, and may be incomplete or contain duplicates.")
+    print("These lists are automatically generated, and may be incomplete"
+          " or contain duplicates.")
     print()
     if tag:
         # print git info, in addition to GitHub info:
@@ -175,13 +187,15 @@ if __name__ == "__main__":
         all_authors = check_output(author_cmd).splitlines()
         unique_authors = sorted(set(all_authors))
 
-        print("The following %i authors contributed %i commits." % (len(unique_authors), ncommits))
+        print("The following %i authors contributed %i commits." %
+              (len(unique_authors), ncommits))
         print()
         print('\n'.join(unique_authors))
         print()
 
     print()
-    print("We closed a total of %d issues, %d pull requests and %d regular issues;\n"
+    print("We closed a total of %d issues, %d pull requests and %d regular "
+          "issues;\n"
           "this is the full list (generated with the script \n"
           ":file:`tools/github_stats.py`):" % (n_total, n_pulls, n_issues))
     print()
