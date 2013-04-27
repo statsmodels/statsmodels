@@ -2466,6 +2466,9 @@ class BinaryResults(DiscreteResults):
         return self.model.endog - self.predict()
 
 class LogitResults(BinaryResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Logit Model",
+                    "extra_attr" : ""}
     @cache_readonly
     def resid_generalized(self):
         """
@@ -2484,6 +2487,9 @@ class LogitResults(BinaryResults):
         return self.model.endog - self.predict()
 
 class ProbitResults(BinaryResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Probit Model",
+                    "extra_attr" : ""}
     @cache_readonly
     def resid_generalized(self):
         """
