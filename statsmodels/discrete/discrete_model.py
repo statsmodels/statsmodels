@@ -1715,13 +1715,6 @@ class NegativeBinomial(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    loglike_method : string
-        Log-likelihood type. 'nb2','nb1', or 'geometric'.
-        Fitted value :math:`\\mu`
-        Heterogeneity parameter :math:`\\alpha`
-        nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
-        nb1: Variance equal to :math:`\\mu + \\alpha\\mu`
-        geometric: Variance equal to :math:`\\mu + \\mu^2`
 
     References
     ----------
@@ -1732,7 +1725,16 @@ class NegativeBinomial(CountModel):
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
-    """
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """loglike_method : string
+        Log-likelihood type. 'nb2','nb1', or 'geometric'.
+        Fitted value :math:`\\mu`
+        Heterogeneity parameter :math:`\\alpha`
+        nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
+        nb1: Variance equal to :math:`\\mu + \\alpha\\mu`
+        geometric: Variance equal to :math:`\\mu + \\mu^2`
+    """ + base._missing_param_doc}
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
                        exposure=None, missing='none'):
         super(NegativeBinomial, self).__init__(endog, exog, offset=offset,
