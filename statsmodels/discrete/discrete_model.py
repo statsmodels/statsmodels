@@ -1743,17 +1743,19 @@ class NegativeBinomial(CountModel):
         self.loglike_method = loglike_method
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
-            self.exog_names.append('lnalpha')
+            self.exog_names.append('alpha')
 
     def _initialize(self):
         if self.loglike_method == 'nb2':
             self.hessian = self._hessian_nb2
             self.score = self._score_nb2
             self.loglikeobs = self._ll_nb2
+            self._transparams = True # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'nb1':
             self.hessian = self._hessian_approx
             self.score = self._score_approx
             self.loglikeobs = self._ll_nb1
+            self._transparams = True # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'geometric':
             self.hessian = self._hessian_approx
             self.score = self._score_approx
@@ -1774,9 +1776,9 @@ class NegativeBinomial(CountModel):
         self.__dict__.update(indict)
         self._initialize()
 
-    def _ll_nbin(self, params, lnalpha, Q=0):
+    def _ll_nbin(self, params, alpha, Q=0):
         mu = np.exp(np.dot(self.exog, params))
-        size = np.exp(lnalpha)**-1 * mu**Q
+        size = alpha**-1 * mu**Q
         prob = size/(size+mu)
         coeff = (gammaln(size+self.endog) - gammaln(self.endog+1) -
                  gammaln(size))
@@ -1784,13 +1786,22 @@ class NegativeBinomial(CountModel):
         return llf
 
     def _ll_nb2(self, params):
-        return self._ll_nbin(params[:-1], params[-1], Q=0)
+        if self._transparams: # got lnalpha during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        return self._ll_nbin(params[:-1], alpha, Q=0)
 
     def _ll_nb1(self, params):
-        return self._ll_nbin(params[:-1], params[-1], Q=1)
+        if self._transparams: # got lnalpha during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        return self._ll_nbin(params[:-1], alpha, Q=1)
 
     def _ll_geometric(self, params):
-        return self._ll_nbin(params, 0, 0)
+        # we give alpha of 1 because it's actually log(alpha) where alpha=0
+        return self._ll_nbin(params, 1, 0)
 
     def loglike(self, params):
         r"""
@@ -1829,36 +1840,38 @@ class NegativeBinomial(CountModel):
         llf = np.sum(self.loglikeobs(params))
         return llf
 
-    def _score_nb2(self, params, full=False):
+    def _score_nb2(self, params):
         """
         Score vector for NB2 model
         """
-        lnalpha = params[-1]
+        if self._transparams: # lnalpha came in during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        a1 = alpha**-1
         params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
         y = self.endog[:,None]
         exog = self.exog
         mu = np.exp(np.dot(exog, params))[:,None]
         dparams = exog*a1 * (y-mu)/(mu+a1)
 
-        da1 = -1*np.exp(lnalpha)**-2
+        da1 = -alpha**-2
         dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
 
-        #multiply above by constant outside of the sum to reduce rounding error
-        if full:
-            return np.column_stack([dparams, dalpha])
-        #JP: what's full, and why is there no da1?
-
+        #multiply above by constant outside sum to reduce rounding error
         return np.r_[dparams.sum(0), da1*dalpha.sum()]
 
     def _hessian_nb2(self, params):
         """
         Hessian of NB2 model.
         """
-        lnalpha = params[-1]
+        if self._transparams: # lnalpha came in during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        a1 = alpha**-1
         params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
 
         exog = self.exog
         y = self.endog[:,None]
@@ -1878,14 +1891,14 @@ class NegativeBinomial(CountModel):
         hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         # for dl/dparams dalpha
-        da1 = -1*np.exp(lnalpha)**-2
+        da1 = -alpha**-2
         dldpda = np.sum(mu*exog*(y-mu)*da1/(mu+a1)**2 , axis=0)
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
         # for dl/dalpha dalpha
         #NOTE: polygamma(1,x) is the trigamma function
-        da2 = 2*np.exp(lnalpha)**-3
+        da2 = 2*alpha**-3
         dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) +
                     np.log(a1) - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
         dada = (da2 * dalpha/da1 + da1**2 * (special.polygamma(1, a1+y) -
@@ -1920,6 +1933,9 @@ class NegativeBinomial(CountModel):
                         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
             # mlefit is a wrapped counts results
+            self._transparams = False # don't need to transform anymore now
+            # change from lnalpha to alpha
+            mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
             nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
             return NegativeBinomialAncillaryResultsWrapper(nbinfit)
         else:
@@ -2297,19 +2313,18 @@ class NegativeBinomialAncillaryResults(CountResults):
         "one_line_description" : "A results class for NegativeBinomial 1 and 2",
                     "extra_attr" : ""}
     def __init__(self, model, mlefit):
-        self.alpha = np.exp(mlefit.params[-1])
         super(NegativeBinomialAncillaryResults, self).__init__(model, mlefit)
 
     @cache_readonly
-    def bse(self):
-        # bse_lnalpha is in terms of alpha, change it
-        stand_errs = np.sqrt(np.diag(self.cov_params()))
+    def lnalpha(self):
+        return np.log(self.params[-1])
+
+    @cache_readonly
+    def lnalpha_std_err(self):
         if self.model.loglike_method == "nb2":
-            self.alpha_std_err = stand_errs[-1]
-            stand_errs[-1] /= self.alpha
+            return self.bse[-1] / self.params[-1]
         elif self.model.loglike_method == "nb1":
-            self.alpha_std_err = stand_errs[-1] * self.alpha
-        return stand_errs
+            return self.bse[-1] * self.params[-1]
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :

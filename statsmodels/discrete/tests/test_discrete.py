@@ -807,9 +807,10 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
 
     def test_alpha(self):
         self.res1.bse # attaches alpha_std_err
-        assert_almost_equal(self.res1.alpha, self.res2.alpha, DECIMAL_4)
-        assert_almost_equal(self.res1.alpha_std_err,
-                            self.res2.alpha_std_err, DECIMAL_4)
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
+                            DECIMAL_4)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
 
     def test_conf_int(self):
         assert_almost_equal(self.res1.conf_int()[:-1,:], self.res2.conf_int, DECIMAL_3)
@@ -847,11 +848,11 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
     def test_zstat(self):
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
 
-    def test_alpha(self):
+    def test_lnalpha(self):
         self.res1.bse # attaches alpha_std_err
-        assert_almost_equal(self.res1.alpha, self.res2.alpha, 3)
-        assert_almost_equal(self.res1.alpha_std_err,
-                            self.res2.alpha_std_err, DECIMAL_4)
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
