@@ -633,7 +633,7 @@ class CountModel(DiscreteModel):
     def __init__(self, endog, exog, offset=None, exposure=None, missing='none'):
         self._check_inputs(offset, exposure, endog) # attaches if needed
         super(CountModel, self).__init__(endog, exog, missing=missing,
-                offset=offset, exposure=exposure)
+                offset=self.offset, exposure=self.exposure)
         if offset is None:
             delattr(self, 'offset')
         if exposure is None:
