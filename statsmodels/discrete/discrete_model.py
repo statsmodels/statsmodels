@@ -1821,6 +1821,10 @@ class NegativeBinomial(CountModel):
            w_i &= g_i/(g_i + \lambda_i) \\
            r_i &= \theta / (\theta+\lambda_i) \\
            ln \mathcal{L}_i &= ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
+
+        where :math`Q=0` for NB2 and geometric and :math:`Q=1` for NB1.
+        For the geometric, :math:`\alpha=0` as well.
+
         """
         llf = np.sum(self.loglikeobs(params))
         return llf
