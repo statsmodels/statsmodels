@@ -2287,9 +2287,10 @@ class NegativeBinomialAncillaryResults(CountResults):
     @cache_readonly
     def bse(self):
         # bse_lnalpha is in terms of alpha, change it
-        stand_errs = super(NegativeBinomialAncillaryResults, self).bse
+        stand_errs = np.sqrt(np.diag(self.cov_params()))
         self.alpha_std_err = stand_errs[-1]
-        stand_errs[-1] /= self.alpha
+        if self.model.loglike_method == "nb2":
+            stand_errs[-1] /= self.alpha
         return stand_errs
 
 class L1CountResults(DiscreteResults):
