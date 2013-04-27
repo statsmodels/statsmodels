@@ -244,6 +244,10 @@ latex_documents = [
 # If false, no module index is generated.
 #latex_domain_indices = True
 
+# pngmath options
+# http://sphinx-doc.org/ext/math.html#module-sphinx.ext.pngmath
+pngmath_latex_preamble=r'\usepackage[active]{preview}' # + other custom stuff for inline math, such as non-default math fonts etc.
+pngmath_use_preview=True
 
 # -- Options for manual page output --------------------------------------------
 
