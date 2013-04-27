@@ -1704,7 +1704,7 @@ class MNLogit(MultinomialModel):
 
 class NegativeBinomial(CountModel):
     __doc__ = """
-    Negative Binomial model for count data
+    Negative Binomial Model for count data
 
     %(params)s
     %(extra_params)s
@@ -1793,25 +1793,34 @@ class NegativeBinomial(CountModel):
         return self._ll_nbin(params, 0, 0)
 
     def loglike(self, params):
-        """
+        r"""
         Loglikelihood for negative binomial model
 
-        Following notation in Greene (2008), with negative binomial
-        heterogeneity parameter :math:`\\alpha`:
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model. If `loglike_method` is nb1 or
+            nb2, then the ancillary parameter is expected to be the
+            last element.
 
-        .. math::
-
-            \\lambda_i = exp(X\\beta)\\\\
-            \\theta = 1 / \\alpha \\\\
-            g_i = \\theta \lambda_i^Q \\\\
-            w_i = g_i/(g_i + \lambda_i) \\\\
-            r_i = \\theta / (\\theta+\lambda_i) \\\\
-            ln \mathcal{L}_i = ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
+        Returns
+        -------
+        llf : float
+            The loglikelihood value at `params`
 
         Notes
         -----
-        The ancillary parameter is assumed to be the last element of the
-        params vector
+        Following notation in Greene (2008), with negative binomial
+        heterogeneity parameter :math:`\alpha`:
+
+        .. math::
+
+           \lambda_i &= exp(X\beta) \\
+           \theta &= 1 / \alpha \\
+           g_i &= \theta \lambda_i^Q \\
+           w_i &= g_i/(g_i + \lambda_i) \\
+           r_i &= \theta / (\theta+\lambda_i) \\
+           ln \mathcal{L}_i &= ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
         """
         llf = np.sum(self.loglikeobs(params))
         return llf
