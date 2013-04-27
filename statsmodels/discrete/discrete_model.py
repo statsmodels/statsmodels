@@ -2291,6 +2291,8 @@ class NegativeBinomialAncillaryResults(CountResults):
         self.alpha_std_err = stand_errs[-1]
         if self.model.loglike_method == "nb2":
             stand_errs[-1] /= self.alpha
+        elif self.model.loglike_method == "nb1":
+            stand_errs[-1] *= self.alpha
         return stand_errs
 
 class L1CountResults(DiscreteResults):
