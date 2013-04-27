@@ -1734,8 +1734,10 @@ class NegativeBinomial(CountModel):
         Press.
     """
     def __init__(self, endog, exog, loglike_method='nb2', offset=None,
-                       exposure=None, **kwargs):
-        super(NegativeBinomial, self).__init__(endog, exog, **kwargs)
+                       exposure=None, missing='none'):
+        super(NegativeBinomial, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               missing=missing)
         self.loglike_method = loglike_method
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
@@ -1769,10 +1771,6 @@ class NegativeBinomial(CountModel):
     def __setstate__(self, indict):
         self.__dict__.update(indict)
         self._initialize()
-
-    def _check_inputs(self, offset, exposure, endog):
-        if offset is not None or exposure is not None:
-            raise ValueError("offset and exposure not implemented yet")
 
     def _ll_nbin(self, params, lnalpha, Q=0):
         mu = np.exp(np.dot(self.exog, params))
