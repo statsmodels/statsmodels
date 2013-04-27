@@ -1874,8 +1874,8 @@ class NegativeBinomial(CountModel):
                     continue
                 hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
                                        const_arr, axis=0)
-        hess_arr[np.triu_indices(dim, k=1)] = hess_arr.T[np.triu_indices(dim,
-                                                                         k=1)]
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         # for dl/dparams dalpha
         da1 = -1*np.exp(lnalpha)**-2
