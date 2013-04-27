@@ -798,11 +798,18 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
     def test_jac(self):
         pass
 
+    #NOTE: The bse is much closer precitions to stata
     def test_bse(self):
-        assert_almost_equal(self.res1.bse[:-1], self.res2.bse, DECIMAL_3)
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
 
     def test_params(self):
-        assert_almost_equal(self.res1.params[:-1], self.res2.params, DECIMAL_4)
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.alpha, self.res2.alpha, DECIMAL_4)
+        assert_almost_equal(self.res1.alpha_std_err,
+                            self.res2.alpha_std_err, DECIMAL_4)
 
     def test_conf_int(self):
         assert_almost_equal(self.res1.conf_int()[:-1,:], self.res2.conf_int, DECIMAL_3)
@@ -831,10 +838,23 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method='bfgs', disp=0)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method='ncg',
+                   maxiter=100, disp=0)
         res2 = RandHIE()
         res2.negativebinomial_nb1_bfgs()
         cls.res2 = res2
+
+    def test_zstat(self):
+        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.alpha, self.res2.alpha, 3)
+        assert_almost_equal(self.res1.alpha_std_err,
+                            self.res2.alpha_std_err, DECIMAL_4)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
 
     def test_jac(self):
         pass
