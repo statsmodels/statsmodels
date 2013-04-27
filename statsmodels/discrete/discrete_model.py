@@ -2286,11 +2286,11 @@ class NegativeBinomialAncillaryResults(CountResults):
     def bse(self):
         # bse_lnalpha is in terms of alpha, change it
         stand_errs = np.sqrt(np.diag(self.cov_params()))
-        self.alpha_std_err = stand_errs[-1]
         if self.model.loglike_method == "nb2":
+            self.alpha_std_err = stand_errs[-1]
             stand_errs[-1] /= self.alpha
         elif self.model.loglike_method == "nb1":
-            stand_errs[-1] *= self.alpha
+            self.alpha_std_err = stand_errs[-1] * self.alpha
         return stand_errs
 
 class L1CountResults(DiscreteResults):
