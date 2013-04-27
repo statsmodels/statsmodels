@@ -771,7 +771,7 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson model for count data
 
-    %(params)s
+%(params)s
     %(extra_params)s
 
     Attributes
@@ -990,7 +990,7 @@ class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
 
-    %(params)s
+%(params)s
     %(extra_params)s
 
     Attributes
@@ -1191,7 +1191,7 @@ class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
 
-    %(params)s
+%(params)s
     %(extra_params)s
 
     Attributes
@@ -1706,7 +1706,7 @@ class NegativeBinomial(CountModel):
     __doc__ = """
     Negative Binomial Model for count data
 
-    %(params)s
+%(params)s
     %(extra_params)s
 
     Attributes
