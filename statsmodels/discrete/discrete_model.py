@@ -2289,6 +2289,9 @@ class CountResults(DiscreteResults):
         return self.model.endog - self.predict()
 
 class NegativeBinomialAncillaryResults(CountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for NegativeBinomial 1 and 2",
+                    "extra_attr" : ""}
     def __init__(self, model, mlefit):
         self.alpha = np.exp(mlefit.params[-1])
         super(NegativeBinomialAncillaryResults, self).__init__(model, mlefit)
