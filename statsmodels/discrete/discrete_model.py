@@ -1908,7 +1908,12 @@ class NegativeBinomial(CountModel):
                         method=method, tol=tol, disp=disp,
                         callback=lambda x:x)
                         # TODO: Fix NBin _check_perfect_pred
-        return mlefit
+        if self.ll.startswith('nb'):
+            # mlefit is a wrapped counts results
+            nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
+            return NegativeBinomialAncillaryResultsWrapper(nbinfit)
+        else:
+            return mlefit
 
 ### Results Class ###
 
@@ -2277,6 +2282,19 @@ class CountResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+class NegativeBinomialAncillaryResults(CountResults):
+    def __init__(self, model, mlefit):
+        self.alpha = np.exp(mlefit.params[-1])
+        super(NegativeBinomialAncillaryResults, self).__init__(model, mlefit)
+
+    @cache_readonly
+    def bse(self):
+        # bse_lnalpha is in terms of alpha, change it
+        stand_errs = super(NegativeBinomialAncillaryResults, self).bse
+        self.alpha_std_err = stand_errs[-1]
+        stand_errs[-1] /= self.alpha
+        return stand_errs
+
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
@@ -2606,6 +2624,11 @@ wrap.populate_wrapper(OrderedResultsWrapper, OrderedResults)
 class CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
+
+class NegativeBinomialAncillaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(NegativeBinomialAncillaryResultsWrapper,
+                      NegativeBinomialAncillaryResults)
 
 class L1CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
