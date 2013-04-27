@@ -1715,7 +1715,7 @@ class NegativeBinomial(CountModel):
         A reference to the endogenous response variable
     exog : array
         A reference to the exogenous design.
-    ll : string
+    loglike_method : string
         Log-likelihood type. 'nb2','nb1', or 'geometric'.
         Fitted value :math:`\\mu`
         Heterogeneity parameter :math:`\\alpha`
@@ -1733,24 +1733,24 @@ class NegativeBinomial(CountModel):
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
     """
-    def __init__(self, endog, exog, ll='nb2', offset=None, exposure=None,
-                       **kwargs):
+    def __init__(self, endog, exog, loglike_method='nb2', offset=None,
+                       exposure=None, **kwargs):
         super(NegativeBinomial, self).__init__(endog, exog, **kwargs)
-        self.ll = ll
+        self.loglike_method = loglike_method
         self._initialize()
-        if ll in ['nb2', 'nb1']:
+        if loglike_method in ['nb2', 'nb1']:
             self.exog_names.append('lnalpha')
 
     def _initialize(self):
-        if self.ll=='nb2':
+        if self.loglike_method == 'nb2':
             self.hessian = self._hessian_nb2
             self.score = self._score_nb2
             self.loglikeobs = self._ll_nb2
-        elif self.ll=='nb1':
+        elif self.loglike_method == 'nb1':
             self.hessian = self._hessian_approx
             self.score = self._score_approx
             self.loglikeobs = self._ll_nb1
-        elif self.ll=='geometric':
+        elif self.loglike_method == 'geometric':
             self.hessian = self._hessian_approx
             self.score = self._score_approx
             self.loglikeobs = self._ll_geometric
@@ -1899,16 +1899,13 @@ class NegativeBinomial(CountModel):
         if start_params == None:
             # Use poisson fit as first guess.
             start_params = Poisson(self.endog, self.exog).fit(disp=0).params
-            if self.ll == 'nb1':
+            if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
-            elif self.ll == 'nb2':
-                start_params = np.append(start_params, 0.1)
-        mlefit = super(NegativeBinomial, self).fit(
-                        start_params=start_params, maxiter=maxiter,
-                        method=method, tol=tol, disp=disp,
+        mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
+                        maxiter=maxiter, method=method, tol=tol, disp=disp,
                         callback=lambda x:x)
                         # TODO: Fix NBin _check_perfect_pred
-        if self.ll.startswith('nb'):
+        if self.loglike_method.startswith('nb'):
             # mlefit is a wrapped counts results
             nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
             return NegativeBinomialAncillaryResultsWrapper(nbinfit)
