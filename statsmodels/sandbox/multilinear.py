@@ -221,11 +221,12 @@ def _test_group(pvalues, group_name, group, exact=True):
 
 
 def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
-    """Test if the groups given are differently significant than the rest.
+    """Test if the given groups are different from the total partition.
 
-    For each group test with an exact fisher test if the fraction of
-    significatively functional models if different from the one expected
-    from the general fraction.
+    Given a boolean array test if each group has a proportion of positives
+    different than the complexive proportion.
+    The test can be done as an exact Fisher test or approximated as a
+    Chi squared test for more speed.
 
     Parameters
     ----------
@@ -320,12 +321,3 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     corrected = smt(result_df['pvals'], method='fdr_bh', alpha=alpha)[1]
     result_df['adj_pvals'] = corrected
     return result_df
-
-if __name__ == '__main__|':
-    window = 9
-    pvals = pd.Series([True] * window + [False] * window)
-    groups = {'W' + str(i) + '-' + str(i + window - 1):
-            list(range(i, i + window)) for i in range(window + 1)}
-
-    print multigroup(pvals, groups).sort_index()
-    print multigroup(pvals, groups, keep_all=False).sort_index()
