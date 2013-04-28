@@ -813,19 +813,24 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
                             self.res2.lnalpha_std_err, DECIMAL_4)
 
     def test_conf_int(self):
-        assert_almost_equal(self.res1.conf_int()[:-1,:], self.res2.conf_int, DECIMAL_3)
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_3)
 
     def test_zstat(self): # Low precision because Z vs. t
-        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues, DECIMAL_2)
+        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
+                            DECIMAL_2)
 
     def test_fittedvalues(self):
-        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_almost_equal(self.res1.fittedvalues[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
 
     def test_predict(self):
-        assert_almost_equal(self.res1.predict()[:10], np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+        assert_almost_equal(self.res1.predict()[:10],
+                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
 
     def test_predict_xb(self):
-        assert_almost_equal(self.res1.predict(linear=True)[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_almost_equal(self.res1.predict(linear=True)[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
 
     def no_info(self):
         pass
@@ -856,6 +861,12 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
 
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_3)
 
     def test_jac(self):
         pass
@@ -923,7 +934,8 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
         cls.res2 = res2
 
     def test_bic(self):
-        assert_almost_equal(self.res1.fittedvalues[:10], self.res2.fittedvalues[:10], DECIMAL_3)
+        assert_almost_equal(self.res1.fittedvalues[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
 
     def test_aic(self):
         assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_1)
