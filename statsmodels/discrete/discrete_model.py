@@ -1778,12 +1778,13 @@ class NegativeBinomial(CountModel):
         self._initialize()
 
     def _ll_nbin(self, params, alpha, Q=0):
+        endog = self.endog
         mu = np.exp(np.dot(self.exog, params))
         size = 1/alpha * mu**Q
         prob = size/(size+mu)
-        coeff = (gammaln(size+self.endog) - gammaln(self.endog+1) -
+        coeff = (gammaln(size+endog) - gammaln(endog+1) -
                  gammaln(size))
-        llf = coeff + size*np.log(prob) + self.endog*np.log(1-prob)
+        llf = coeff + size*np.log(prob) + endog*np.log(1-prob)
         return llf
 
     def _ll_nb2(self, params):
