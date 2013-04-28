@@ -1939,6 +1939,15 @@ class NegativeBinomial(CountModel):
             self._transparams = False # don't need to transform anymore now
             # change from lnalpha to alpha
             mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+            # need to overwrite normalized_cov_params bc it's in terms of
+            # lnalpha due to use of approximation. done in Model.fit.
+            # *Really* stupid to calculate this twice...
+            # TODO: Remove normalized_cov_params from Model.fit and put
+            # it in results
+            if self.loglike_method == 'nb1':
+                Hinv = np.linalg.inv(-1*self.hessian(mlefit._results.params))
+                mlefit._results.normalized_cov_params = Hinv
+
             nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
             return NegativeBinomialAncillaryResultsWrapper(nbinfit)
         else:
@@ -2324,10 +2333,7 @@ class NegativeBinomialAncillaryResults(CountResults):
 
     @cache_readonly
     def lnalpha_std_err(self):
-        if self.model.loglike_method == "nb2":
-            return self.bse[-1] / self.params[-1]
-        elif self.model.loglike_method == "nb1":
-            return self.bse[-1] * self.params[-1]
+        return self.bse[-1] / self.params[-1]
 
     @cache_readonly
     def aic(self):
