@@ -866,7 +866,7 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
         # the bse for alpha is not high precision from the hessian
         # approximation
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
-                            DECIMAL_3)
+                            DECIMAL_2)
 
     def test_jac(self):
         pass
