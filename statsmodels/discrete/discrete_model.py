@@ -1922,16 +1922,17 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
-    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
-            disp=1):
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
         if start_params == None:
             # Use poisson fit as first guess.
             start_params = Poisson(self.endog, self.exog).fit(disp=0).params
             if self.loglike_method.startswith('nb'):
                 start_params = np.append(start_params, 0.1)
         mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
-                        maxiter=maxiter, method=method, tol=tol, disp=disp,
-                        callback=lambda x:x)
+                        maxiter=maxiter, method=method, disp=disp,
+                        full_output=full_output, callback=lambda x:x,
+                        **kwargs)
                         # TODO: Fix NBin _check_perfect_pred
         if self.loglike_method.startswith('nb'):
             # mlefit is a wrapped counts results
@@ -2327,6 +2328,17 @@ class NegativeBinomialAncillaryResults(CountResults):
             return self.bse[-1] / self.params[-1]
         elif self.model.loglike_method == "nb1":
             return self.bse[-1] * self.params[-1]
+
+    @cache_readonly
+    def aic(self):
+        # + 1 because we estimate alpha
+        return -2*(self.llf - (self.df_model + self.k_constant + 1))
+
+    @cache_readonly
+    def bic(self):
+        # + 1 because we estimate alpha
+        return -2*self.llf + np.log(self.nobs)*(self.df_model +
+                                                self.k_constant + 1)
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
