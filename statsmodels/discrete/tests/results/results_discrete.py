@@ -816,7 +816,7 @@ class RandHIE():
             0.937038051489553, 0.937038051489553, 0.937038051489553,
             0.937038051489553]
         #self.aic = 86789.3241530713 # This is what R reports
-        self.aic = 86787.3241530713 # TODO: Check what AIC should be
+        self.aic = 86789.32415307125484 # from Stata
         self.df_resid = 20180
         self.df_model = 9
         # R conf_int: 1.96 * bse, not profile likelihood via R's confint()
@@ -831,11 +831,10 @@ class RandHIE():
             [-0.05299754, 0.087501899],
             [ 0.03272210, 0.323199478],
             [ 0.61448669, 0.712625487]]
-        # Smoke tests TODO: check against other stats package
-        self.bic = 86866.453587507145
-        self.llnull = -44199.27443567125
-        self.llr = 1631.2247109484306
-        self.llf = -43383.662080197035
+        self.bic = 86876.36652289562335 # stata
+        self.llnull = -44199.27443563430279 # stata
+        self.llr = 1631.224718197351 # stata
+        self.llf = -43383.66207653563 # stata
         self.df_model = 9.0
         self.llr_pvalue = 0.0
 
@@ -881,19 +880,20 @@ class RandHIE():
             [ 0.004791495, 0.2191522271],
             [ 3.607387349, 3.8543518219],
             [ 0.715478301, 0.7996419867]]
-        # Smoke tests TODO: check against other stats package
-        self.aic = 86577.512366139053
-        self.bic = 86656.641793252129
-        self.llnull = -44199.27443567125
-        self.llr = 1841.0365052034467
-        self.llf = -43278.756183069527
+        # from Stata
+        self.llf = -43278.75612911823
+        self.llnull = -44199.2744356343
+        self.llr = 1841.036613032149
+        self.aic = 86579.51225823645655
+        self.bic = 86666.55462806082505
         self.llr_pvalue = 0.0
         self.df_model = 9.0
         self.df_resid = 20180.0
-        self.pvalues = [3.65557865e-034,   5.24431864e-051,   1.42921171e-034,
-             2.09797259e-026,   1.15949461e-015,   1.56785415e-193,
-             4.71746349e-002,   1.04731854e-001,   4.07534831e-002,
-             1.95504975e-272,   0.00000000e+000]
+        # Smoke tests TODO: check against other stats package
+        self.pvalues = [3.65557865e-034,   5.24431864e-051,
+             1.42921171e-034, 2.09797259e-026,   1.15949461e-015,
+             1.56785415e-193, 4.71746349e-002,   1.04731854e-001,
+             4.07534831e-002, 1.95504975e-272,   0.00000000e+000]
         self.conf_int = [[ -7.58299742e-02,  -5.48182192e-02],
            [ -3.34554207e-01,  -2.57330864e-01],
            [  3.45988606e-02,   4.77623293e-02],
