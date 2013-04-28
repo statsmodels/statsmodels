@@ -28,7 +28,8 @@ from statsmodels.regression.linear_model import OLS
 from scipy import stats, special, optimize  # opt just for nbin
 from scipy.stats import nbinom
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from statsmodels.tools.numdiff import (approx_fprime, approx_hess)
+from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
+                                       approx_hess_cs, approx_fprime_cs)
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
@@ -1909,15 +1910,15 @@ class NegativeBinomial(CountModel):
         return hess_arr
 
     def _hessian_approx(self, params):
-        hess = approx_hess(params, self.loglike)
+        hess = approx_hess_cs(params, self.loglike)
         return hess
 
     def _score_approx(self, params):
-        sc = approx_fprime(params, self.loglike)
+        sc = approx_fprime_cs(params, self.loglike)
         return sc
 
     def scoreobs(self, params):
-        sc = approx_fprime(params, self.loglikeobs)
+        sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
     def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08,
