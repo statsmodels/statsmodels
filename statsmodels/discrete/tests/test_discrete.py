@@ -844,8 +844,9 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method='ncg',
-                   maxiter=100, disp=0)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method="bfgs",
+                                                                 maxiter=100,
+                                                                 disp=0)
         res2 = RandHIE()
         res2.negativebinomial_nb1_bfgs()
         cls.res2 = res2
