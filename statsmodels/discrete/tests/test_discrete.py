@@ -843,7 +843,8 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method="newton",
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(
+                                                            method="newton",
                                                                  maxiter=100,
                                                                  disp=0)
         res2 = RandHIE()
@@ -860,7 +861,7 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
                             self.res2.lnalpha_std_err, DECIMAL_4)
 
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_conf_int(self):
         # the bse for alpha is not high precision from the hessian
@@ -883,7 +884,8 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
         from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
-        cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='bfgs', disp=0)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(
+                                                method='bfgs', disp=0)
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
@@ -954,7 +956,7 @@ class TestNegativeBinomialNB1BFGS(CheckModelResults):
                             self.res2.lnalpha_std_err, DECIMAL_4)
 
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_conf_int(self):
         # the bse for alpha is not high precision from the hessian
