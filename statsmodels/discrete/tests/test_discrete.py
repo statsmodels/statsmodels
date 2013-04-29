@@ -784,6 +784,99 @@ class TestPoissonNewton(CheckModelResults):
     def test_resid(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, 2)
 
+class TestNegativeBinomialNB2Newton(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='newton', disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb2_bfgs()
+        cls.res2 = res2
+
+    def test_jac(self):
+        pass
+
+    #NOTE: The bse is much closer precitions to stata
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_3)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_alpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha,
+                            DECIMAL_4)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
+
+    def test_conf_int(self):
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_3)
+
+    def test_zstat(self): # Low precision because Z vs. t
+        assert_almost_equal(self.res1.pvalues[:-1], self.res2.pvalues,
+                            DECIMAL_2)
+
+    def test_fittedvalues(self):
+        assert_almost_equal(self.res1.fittedvalues[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def test_predict(self):
+        assert_almost_equal(self.res1.predict()[:10],
+                            np.exp(self.res2.fittedvalues[:10]), DECIMAL_3)
+
+    def test_predict_xb(self):
+        assert_almost_equal(self.res1.predict(linear=True)[:10],
+                            self.res2.fittedvalues[:10], DECIMAL_3)
+
+    def no_info(self):
+        pass
+
+    test_jac = no_info
+
+class TestNegativeBinomialNB1Newton(CheckModelResults):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import RandHIE
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method="newton",
+                                                                 maxiter=100,
+                                                                 disp=0)
+        res2 = RandHIE()
+        res2.negativebinomial_nb1_bfgs()
+        cls.res2 = res2
+
+    def test_zstat(self):
+        assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_1)
+
+    def test_lnalpha(self):
+        self.res1.bse # attaches alpha_std_err
+        assert_almost_equal(self.res1.lnalpha, self.res2.lnalpha, 3)
+        assert_almost_equal(self.res1.lnalpha_std_err,
+                            self.res2.lnalpha_std_err, DECIMAL_4)
+
+    def test_params(self):
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_3)
+
+    def test_conf_int(self):
+        # the bse for alpha is not high precision from the hessian
+        # approximation
+        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                            DECIMAL_2)
+
+    def test_jac(self):
+        pass
+
+    def test_predict(self):
+        pass
+
+    def test_predict_xb(self):
+        pass
+
 class TestNegativeBinomialNB2BFGS(CheckModelResults):
     @classmethod
     def setupClass(cls):
