@@ -1847,8 +1847,6 @@ class NegativeBinomial(CountModel):
         y = self.endog[:,None]
         mu = np.exp(np.dot(exog, params))[:,None]
         dparams = exog * (y-mu)/(mu+1)
-
-        #multiply above by constant outside sum to reduce rounding error
         return dparams.sum(0)
 
     def _score_nbin(self, params, Q=0):
