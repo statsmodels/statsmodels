@@ -1749,17 +1749,17 @@ class NegativeBinomial(CountModel):
     def _initialize(self):
         if self.loglike_method == 'nb2':
             self.hessian = self._hessian_nb2
-            self.score = self._score_nb2
+            self.score = self._score_nbin
             self.loglikeobs = self._ll_nb2
             self._transparams = True # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'nb1':
-            self.hessian = self._hessian_approx
-            self.score = self._score_approx
+            self.hessian = self._hessian_nb1
+            self.score = self._score_nb1
             self.loglikeobs = self._ll_nb1
             self._transparams = True # transform lnalpha -> alpha in fit
         elif self.loglike_method == 'geometric':
-            self.hessian = self._hessian_approx
-            self.score = self._score_approx
+            self.hessian = self._hessian_geom
+            self.score = self._score_geom
             self.loglikeobs = self._ll_geometric
         else:
             raise NotImplementedError("Likelihood type must nb1, nb2 or "
@@ -1842,7 +1842,16 @@ class NegativeBinomial(CountModel):
         llf = np.sum(self.loglikeobs(params))
         return llf
 
-    def _score_nb2(self, params):
+    def _score_geom(self, params):
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
+        dparams = exog * (y-mu)/(mu+1)
+
+        #multiply above by constant outside sum to reduce rounding error
+        return dparams.sum(0)
+
+    def _score_nbin(self, params, Q=0):
         """
         Score vector for NB2 model
         """
@@ -1850,19 +1859,120 @@ class NegativeBinomial(CountModel):
             alpha = np.exp(params[-1])
         else:
             alpha = params[-1]
-        a1 = 1/alpha
         params = params[:-1]
-        y = self.endog[:,None]
         exog = self.exog
+        y = self.endog[:,None]
         mu = np.exp(np.dot(exog, params))[:,None]
-        dparams = exog*a1 * (y-mu)/(mu+a1)
+        a1 = 1/alpha * mu**Q
+        if Q: # nb1
+            dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) +
+                       special.digamma(y + mu/alpha) -
+                       special.digamma(mu/alpha))
+            dalpha = ((alpha*(y - mu*np.log(1/(alpha + 1)) -
+                              mu*(special.digamma(y + mu/alpha) -
+                              special.digamma(mu/alpha) + 1)) -
+                       mu*(np.log(1/(alpha + 1)) +
+                           special.digamma(y + mu/alpha) -
+                           special.digamma(mu/alpha)))/
+                       (alpha**2*(alpha + 1))).sum()
 
-        da1 = -alpha**-2
-        dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
-                        - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
+        else: # nb2
+            dparams = exog*a1 * (y-mu)/(mu+a1)
+            da1 = -alpha**-2
+            dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
+                        - np.log(a1+mu) - (a1+y)/(a1+mu) + 1).sum()*da1
 
         #multiply above by constant outside sum to reduce rounding error
-        return np.r_[dparams.sum(0), da1*dalpha.sum()]
+        return np.r_[dparams.sum(0), dalpha]
+
+    def _score_nb1(self, params):
+        return self._score_nbin(params, Q=1)
+
+    def _hessian_geom(self, params):
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
+
+        # for dl/dparams dparams
+        dim = exog.shape[1]
+        hess_arr = np.empty((dim, dim))
+        const_arr = mu*(1+y)/(mu+1)**2
+        for i in range(dim):
+            for j in range(dim):
+                if j > i:
+                    continue
+                hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
+                                       const_arr, axis=0)
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+        return hess_arr
+
+
+    def _hessian_nb1(self, params):
+        """
+        Hessian of NB1 model.
+        """
+        if self._transparams: # lnalpha came in during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+
+        params = params[:-1]
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
+
+        a1 = mu/alpha
+
+        # for dl/dparams dparams
+        dim = exog.shape[1]
+        hess_arr = np.empty((dim+1,dim+1))
+        #const_arr = a1*mu*(a1+y)/(mu+a1)**2
+        # not all of dparams
+        dparams = exog/alpha*(np.log(1/(alpha + 1)) +
+                              special.digamma(y + mu/alpha) -
+                              special.digamma(mu/alpha))
+
+        dmudb = exog*mu
+        xmu_alpha = exog*mu/alpha
+        trigamma = (special.polygamma(1, mu/alpha + y) -
+                    special.polygamma(1, mu/alpha))
+        for i in range(dim):
+            for j in range(dim):
+                if j > i:
+                    continue
+                hess_arr[i,j] = np.sum(dparams[:,i,None] * dmudb[:,j,None] +
+                                 xmu_alpha[:,i,None] * xmu_alpha[:,j,None] *
+                                 trigamma, axis=0)
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+
+        # for dl/dparams dalpha
+        da1 = -alpha**-2
+        dldpda = np.sum(-mu/alpha * dparams + exog*mu/alpha *
+                        (-trigamma*mu/alpha**2 - 1/(alpha+1)), axis=0)
+
+        hess_arr[-1,:-1] = dldpda
+        hess_arr[:-1,-1] = dldpda
+
+        # for dl/dalpha dalpha
+        digamma_part = (special.digamma(y + mu/alpha) -
+                        special.digamma(mu/alpha))
+
+        log_alpha = np.log(1/(alpha+1))
+        alpha3 = alpha**3
+        alpha2 = alpha**2
+        mu2 = mu**2
+        dada = ((alpha3*mu*(2*log_alpha + 2*digamma_part + 3) -
+                2*alpha3*y + alpha2*mu2*trigamma +
+                4*alpha2*mu*(log_alpha + digamma_part) +
+                alpha2 * (2*mu - y) +
+                2*alpha*mu2*trigamma +
+                2*alpha*mu*(log_alpha + digamma_part) +
+                mu2*trigamma)/(alpha**4*(alpha2 + 2*alpha + 1)))
+        hess_arr[-1,-1] = dada.sum()
+
+        return hess_arr
 
     def _hessian_nb2(self, params):
         """
@@ -1910,14 +2020,7 @@ class NegativeBinomial(CountModel):
 
         return hess_arr
 
-    def _hessian_approx(self, params):
-        hess = approx_hess_cs(params, self.loglike)
-        return hess
-
-    def _score_approx(self, params):
-        sc = approx_fprime_cs(params, self.loglike)
-        return sc
-
+    #TODO: replace this with analytic where is it used?
     def scoreobs(self, params):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
