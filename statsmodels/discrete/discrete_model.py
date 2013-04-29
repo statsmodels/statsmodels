@@ -2025,7 +2025,7 @@ class NegativeBinomial(CountModel):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 
-    def fit(self, start_params=None, method='newton', maxiter=35,
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         if start_params == None:
             # Use poisson fit as first guess.
