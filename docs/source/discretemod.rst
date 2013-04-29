@@ -70,6 +70,7 @@ The specific model classes are:
    Probit
    MNLogit
    Poisson
+   NegativeBinomial
 
 The specific result classes are:
 
@@ -80,6 +81,7 @@ The specific result classes are:
    ProbitResults
    CountResults
    MultinomialResults
+   NegativeBinomialAncillaryResults
 
 :class:`DiscreteModel` is a superclass of all discrete regression models. The
 estimation results are returned as an instance of one of the subclasses of

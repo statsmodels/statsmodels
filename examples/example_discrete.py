@@ -103,6 +103,14 @@ alpha = 0.1 * len(rand_data.endog) * np.ones(rand_exog.shape[1])
 alpha[-1] = 0
 poisson_l1_res = poisson_mod2.fit_regularized(method='l1', alpha=alpha)
 
+# Negative binomial model
+#------------------------
+
+# The negative binomial model gives slightly different results: 
+mod_nbin = sm.NegativeBinomial(rand_data.endog, rand_exog)
+res_nbin = mod_nbin.fit(disp=False)
+print res_nbin.summary()
+
 #Alternative solvers
 #-------------------
 
