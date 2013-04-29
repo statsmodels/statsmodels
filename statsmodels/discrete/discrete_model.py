@@ -7,8 +7,8 @@ dependent variables.
 General References
 --------------------
 
-A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`.  Cambridge,
-    1998
+A.C. Cameron and P.K. Trivedi.  `Regression Analysis of Count Data`.
+    Cambridge, 1998
 
 G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
     Cambridge, 1983.
@@ -16,17 +16,20 @@ G.S. Madalla. `Limited-Dependent and Qualitative Variables in Econometrics`.
 W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 """
 
-__all__ = ["Poisson","Logit","Probit","MNLogit"]
+__all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
 import numpy as np
 from scipy.special import gammaln
-from scipy import stats, special, optimize # opt just for nbin
+from scipy import stats, special, optimize  # opt just for nbin
 import statsmodels.tools.tools as tools
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from statsmodels.regression.linear_model import OLS
-from scipy import stats, special, optimize # opt just for nbin
+from scipy import stats, special, optimize  # opt just for nbin
+from scipy.stats import nbinom
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
+                                       approx_hess_cs, approx_fprime_cs)
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
@@ -101,6 +104,7 @@ _l1_results_attr = """    nnz_params : Integer
 
 #### Private Model Classes ####
 
+
 class DiscreteModel(base.LikelihoodModel):
     """
     Abstract class for discrete choice models.
@@ -119,7 +123,7 @@ class DiscreteModel(base.LikelihoodModel):
         statsmodels.model.LikelihoodModel.__init__
         and should contain any preprocessing that needs to be done for a model.
         """
-        self.df_model = float(tools.rank(self.exog) - 1) # assumes constant
+        self.df_model = float(tools.rank(self.exog) - 1)  # assumes constant
         self.df_resid = float(self.exog.shape[0] - tools.rank(self.exog))
 
     def cdf(self, X):
@@ -136,7 +140,7 @@ class DiscreteModel(base.LikelihoodModel):
 
     def _check_perfect_pred(self, params):
         endog = self.endog
-        fittedvalues = self.cdf(np.dot(self.exog, params))
+        fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
         if (self.raise_on_perfect_prediction and
                 np.allclose(fittedvalues - endog, 0)):
             msg = "Perfect separation detected, results not available"
@@ -154,6 +158,7 @@ class DiscreteModel(base.LikelihoodModel):
             callback = self._check_perfect_pred
         else:
             pass # make a function factory to have multiple call-backs
+
         mlefit = super(DiscreteModel, self).fit(start_params=start_params,
                 method=method, maxiter=maxiter, full_output=full_output,
                 disp=disp, callback=callback, **kwargs)
@@ -162,9 +167,9 @@ class DiscreteModel(base.LikelihoodModel):
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
-            maxiter='defined_by_method', full_output=1, disp=True, callback=None,
-            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
-            qc_tol=0.03, qc_verbose=False, **kwargs):
+            maxiter='defined_by_method', full_output=1, disp=True,
+            callback=None, alpha=0, trim_mode='auto', auto_trim_tol=0.01,
+            size_trim_tol=1e-4, qc_tol=0.03, qc_verbose=False, **kwargs):
         """
         Fit the model using a regularized maximum likelihood.
         The regularization method AND the solver used is determined by the
@@ -674,9 +679,9 @@ class CountModel(DiscreteModel):
                 offset = 0
 
         if not linear:
-            return np.exp(np.dot(exog, params) + exposure + offset) # not cdf
+            return np.exp(np.dot(exog, params[:exog.shape[1]]) + exposure + offset) # not cdf
         else:
-            return np.dot(exog, params) + exposure + offset
+            return np.dot(exog, params[:exog.shape[1]]) + exposure + offset
 
     def _derivative_predict(self, params, exog=None, transform='dydx'):
         """
@@ -767,7 +772,7 @@ class Poisson(CountModel):
     __doc__ = """
     Poisson model for count data
 
-    %(params)s
+%(params)s
     %(extra_params)s
 
     Attributes
@@ -860,7 +865,6 @@ class Poisson(CountModel):
         exposure = getattr(self, "exposure", 0)
         XB = np.dot(self.exog, params) + offset + exposure
         endog = self.endog
-        #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return np.sum(-np.exp(XB) +  endog*XB - gammaln(endog+1))
 
     def loglikeobs(self, params):
@@ -983,14 +987,11 @@ class Poisson(CountModel):
         L = np.exp(np.dot(X,params) + exposure + offset)
         return -np.dot(L*X.T, X)
 
-class NbReg(DiscreteModel):
-    pass
-
 class Logit(BinaryModel):
     __doc__ = """
     Binary choice logit model
 
-    %(params)s
+%(params)s
     %(extra_params)s
 
     Attributes
@@ -1191,7 +1192,7 @@ class Probit(BinaryModel):
     __doc__ = """
     Binary choice Probit model
 
-    %(params)s
+%(params)s
     %(extra_params)s
 
     Attributes
@@ -1702,92 +1703,289 @@ class MNLogit(MultinomialModel):
 #        return mlefit
 #
 
-class NBin(CountModel):
-    """
-    Negative Binomial model.
-    """
-    #def pdf(self, X, alpha):
-    #    a1 = alpha**-1
-    #    term1 = special.gamma(X + a1)/(special.agamma(X+1)*special.gamma(a1))
+class NegativeBinomial(CountModel):
+    __doc__ = """
+    Negative Binomial Model for count data
 
-    def _check_inputs(self, offset, exposure):
-        if offset is not None or exposure is not None:
-            raise ValueError("offset and exposure not implemented yet")
+%(params)s
+    %(extra_params)s
+
+    Attributes
+    -----------
+    endog : array
+        A reference to the endogenous response variable
+    exog : array
+        A reference to the exogenous design.
+
+    References
+    ----------
+
+    References:
+
+    Greene, W. 2008. "Functional forms for the negtive binomial model
+        for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
+    Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
+        Press.
+    """ % {'params' : base._model_params_doc,
+           'extra_params' :
+           """loglike_method : string
+        Log-likelihood type. 'nb2','nb1', or 'geometric'.
+        Fitted value :math:`\\mu`
+        Heterogeneity parameter :math:`\\alpha`
+        nb2: Variance equal to :math:`\\mu + \\alpha\\mu^2` (most common)
+        nb1: Variance equal to :math:`\\mu + \\alpha\\mu`
+        geometric: Variance equal to :math:`\\mu + \\mu^2`
+    """ + base._missing_param_doc}
+    def __init__(self, endog, exog, loglike_method='nb2', offset=None,
+                       exposure=None, missing='none'):
+        super(NegativeBinomial, self).__init__(endog, exog, offset=offset,
+                                               exposure=exposure,
+                                               missing=missing)
+        self.loglike_method = loglike_method
+        self._initialize()
+        if loglike_method in ['nb2', 'nb1']:
+            self.exog_names.append('alpha')
+
+    def _initialize(self):
+        if self.loglike_method == 'nb2':
+            self.hessian = self._hessian_nb2
+            self.score = self._score_nbin
+            self.loglikeobs = self._ll_nb2
+            self._transparams = True # transform lnalpha -> alpha in fit
+        elif self.loglike_method == 'nb1':
+            self.hessian = self._hessian_nb1
+            self.score = self._score_nb1
+            self.loglikeobs = self._ll_nb1
+            self._transparams = True # transform lnalpha -> alpha in fit
+        elif self.loglike_method == 'geometric':
+            self.hessian = self._hessian_geom
+            self.score = self._score_geom
+            self.loglikeobs = self._ll_geometric
+        else:
+            raise NotImplementedError("Likelihood type must nb1, nb2 or "
+                                      "geometric")
+
+    # Workaround to pickle instance methods
+    def __getstate__(self):
+        odict = self.__dict__.copy() # copy the dict since we change it
+        del odict['hessian']
+        del odict['score']
+        del odict['loglikeobs']
+        return odict
+
+    def __setstate__(self, indict):
+        self.__dict__.update(indict)
+        self._initialize()
+
+    def _ll_nbin(self, params, alpha, Q=0):
+        endog = self.endog
+        mu = np.exp(np.dot(self.exog, params))
+        size = 1/alpha * mu**Q
+        prob = size/(size+mu)
+        coeff = (gammaln(size+endog) - gammaln(endog+1) -
+                 gammaln(size))
+        llf = coeff + size*np.log(prob) + endog*np.log(1-prob)
+        return llf
+
+    def _ll_nb2(self, params):
+        if self._transparams: # got lnalpha during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        return self._ll_nbin(params[:-1], alpha, Q=0)
+
+    def _ll_nb1(self, params):
+        if self._transparams: # got lnalpha during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        return self._ll_nbin(params[:-1], alpha, Q=1)
+
+    def _ll_geometric(self, params):
+        # we give alpha of 1 because it's actually log(alpha) where alpha=0
+        return self._ll_nbin(params, 1, 0)
 
     def loglike(self, params):
-        """
+        r"""
         Loglikelihood for negative binomial model
+
+        Parameters
+        ----------
+        params : array-like
+            The parameters of the model. If `loglike_method` is nb1 or
+            nb2, then the ancillary parameter is expected to be the
+            last element.
+
+        Returns
+        -------
+        llf : float
+            The loglikelihood value at `params`
 
         Notes
         -----
-        The ancillary parameter is assumed to be the last element of
-        the params vector
+        Following notation in Greene (2008), with negative binomial
+        heterogeneity parameter :math:`\alpha`:
+
+        .. math::
+
+           \lambda_i &= exp(X\beta) \\
+           \theta &= 1 / \alpha \\
+           g_i &= \theta \lambda_i^Q \\
+           w_i &= g_i/(g_i + \lambda_i) \\
+           r_i &= \theta / (\theta+\lambda_i) \\
+           ln \mathcal{L}_i &= ln \Gamma(y_i+g_i) - ln \Gamma(1+y_i) + g_iln (r_i) + y_i ln(1-r_i)
+
+        where :math`Q=0` for NB2 and geometric and :math:`Q=1` for NB1.
+        For the geometric, :math:`\alpha=0` as well.
+
         """
-        lnalpha = params[-1]
-        params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
-        y = self.endog
-        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
-        mu = np.exp(np.dot(self.exog,params))
-        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
-        llf = np.sum(J+pdf)
+        llf = np.sum(self.loglikeobs(params))
         return llf
 
-    def loglikeobs(self, params):
-        """
-        Loglikelihood for negative binomial model
+    def _score_geom(self, params):
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
+        dparams = exog * (y-mu)/(mu+1)
+        return dparams.sum(0)
 
-        Notes
-        -----
-        The ancillary parameter is assumed to be the last element of
-        the params vector
-        """
-        lnalpha = params[-1]
-        params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
-        y = self.endog
-        J = special.gammaln(y+a1) - special.gammaln(a1) - special.gammaln(y+1)
-        mu = np.exp(np.dot(self.exog,params))
-        pdf = a1*np.log(a1/(a1+mu)) + y*np.log(mu/(mu+a1))
-        llf = J + pdf
-        return llf
-
-    def score(self, params, full=False):
+    def _score_nbin(self, params, Q=0):
         """
         Score vector for NB2 model
         """
-        lnalpha = params[-1]
+        if self._transparams: # lnalpha came in during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
         params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
-        y = self.endog[:,None]
         exog = self.exog
-        mu = np.exp(np.dot(exog,params))[:,None]
-        dparams = exog*a1 * (y-mu)/(mu+a1)
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
+        a1 = 1/alpha * mu**Q
+        if Q: # nb1
+            dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) +
+                       special.digamma(y + mu/alpha) -
+                       special.digamma(mu/alpha))
+            dalpha = ((alpha*(y - mu*np.log(1/(alpha + 1)) -
+                              mu*(special.digamma(y + mu/alpha) -
+                              special.digamma(mu/alpha) + 1)) -
+                       mu*(np.log(1/(alpha + 1)) +
+                           special.digamma(y + mu/alpha) -
+                           special.digamma(mu/alpha)))/
+                       (alpha**2*(alpha + 1))).sum()
+
+        else: # nb2
+            dparams = exog*a1 * (y-mu)/(mu+a1)
+            da1 = -alpha**-2
+            dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)
+                        - np.log(a1+mu) - (a1+y)/(a1+mu) + 1).sum()*da1
+
+        #multiply above by constant outside sum to reduce rounding error
+        return np.r_[dparams.sum(0), dalpha]
+
+    def _score_nb1(self, params):
+        return self._score_nbin(params, Q=1)
+
+    def _hessian_geom(self, params):
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
+
+        # for dl/dparams dparams
+        dim = exog.shape[1]
+        hess_arr = np.empty((dim, dim))
+        const_arr = mu*(1+y)/(mu+1)**2
+        for i in range(dim):
+            for j in range(dim):
+                if j > i:
+                    continue
+                hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
+                                       const_arr, axis=0)
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+        return hess_arr
 
 
+    def _hessian_nb1(self, params):
+        """
+        Hessian of NB1 model.
+        """
+        if self._transparams: # lnalpha came in during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
 
-        da1 = -1*np.exp(lnalpha)**-2
-        dalpha = (special.digamma(a1+y) - special.digamma(a1) + np.log(a1)\
-                        - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
+        params = params[:-1]
+        exog = self.exog
+        y = self.endog[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
 
-        #multiply above by constant outside of the sum to reduce rounding error
-        if full:
-            return np.column_stack([dparams, dalpha])
-        #JP: what's full, and why is there no da1?
+        a1 = mu/alpha
 
-        return np.r_[dparams.sum(0), da1*dalpha.sum()]
+        # for dl/dparams dparams
+        dim = exog.shape[1]
+        hess_arr = np.empty((dim+1,dim+1))
+        #const_arr = a1*mu*(a1+y)/(mu+a1)**2
+        # not all of dparams
+        dparams = exog/alpha*(np.log(1/(alpha + 1)) +
+                              special.digamma(y + mu/alpha) -
+                              special.digamma(mu/alpha))
 
-    def hessian(self, params):
+        dmudb = exog*mu
+        xmu_alpha = exog*mu/alpha
+        trigamma = (special.polygamma(1, mu/alpha + y) -
+                    special.polygamma(1, mu/alpha))
+        for i in range(dim):
+            for j in range(dim):
+                if j > i:
+                    continue
+                hess_arr[i,j] = np.sum(dparams[:,i,None] * dmudb[:,j,None] +
+                                 xmu_alpha[:,i,None] * xmu_alpha[:,j,None] *
+                                 trigamma, axis=0)
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
+
+        # for dl/dparams dalpha
+        da1 = -alpha**-2
+        dldpda = np.sum(-mu/alpha * dparams + exog*mu/alpha *
+                        (-trigamma*mu/alpha**2 - 1/(alpha+1)), axis=0)
+
+        hess_arr[-1,:-1] = dldpda
+        hess_arr[:-1,-1] = dldpda
+
+        # for dl/dalpha dalpha
+        digamma_part = (special.digamma(y + mu/alpha) -
+                        special.digamma(mu/alpha))
+
+        log_alpha = np.log(1/(alpha+1))
+        alpha3 = alpha**3
+        alpha2 = alpha**2
+        mu2 = mu**2
+        dada = ((alpha3*mu*(2*log_alpha + 2*digamma_part + 3) -
+                2*alpha3*y + alpha2*mu2*trigamma +
+                4*alpha2*mu*(log_alpha + digamma_part) +
+                alpha2 * (2*mu - y) +
+                2*alpha*mu2*trigamma +
+                2*alpha*mu*(log_alpha + digamma_part) +
+                mu2*trigamma)/(alpha**4*(alpha2 + 2*alpha + 1)))
+        hess_arr[-1,-1] = dada.sum()
+
+        return hess_arr
+
+    def _hessian_nb2(self, params):
         """
         Hessian of NB2 model.
         """
-        lnalpha = params[-1]
+        if self._transparams: # lnalpha came in during fit
+            alpha = np.exp(params[-1])
+        else:
+            alpha = params[-1]
+        a1 = 1/alpha
         params = params[:-1]
-        a1 = np.exp(lnalpha)**-1
 
         exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog,params))[:,None]
+        mu = np.exp(np.dot(exog, params))[:,None]
 
         # for dl/dparams dparams
         dim = exog.shape[1]
@@ -1797,39 +1995,63 @@ class NBin(CountModel):
             for j in range(dim):
                 if j > i:
                     continue
-                hess_arr[i,j] = np.sum(-exog[:,i,None]*exog[:,j,None] *\
-                                const_arr, axis=0)
-        hess_arr[np.triu_indices(dim, k=1)] = hess_arr.T[np.triu_indices(dim,
-                                                        k =1)]
+                hess_arr[i,j] = np.sum(-exog[:,i,None] * exog[:,j,None] *
+                                       const_arr, axis=0)
+        tri_idx = np.triu_indices(dim, k=1)
+        hess_arr[tri_idx] = hess_arr.T[tri_idx]
 
         # for dl/dparams dalpha
-        da1 = -1*np.exp(lnalpha)**-2
+        da1 = -alpha**-2
         dldpda = np.sum(mu*exog*(y-mu)*da1/(mu+a1)**2 , axis=0)
         hess_arr[-1,:-1] = dldpda
         hess_arr[:-1,-1] = dldpda
 
         # for dl/dalpha dalpha
         #NOTE: polygamma(1,x) is the trigamma function
-        da2 = 2*np.exp(lnalpha)**-3
-        dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) + \
+        da2 = 2*alpha**-3
+        dalpha = da1 * (special.digamma(a1+y) - special.digamma(a1) +
                     np.log(a1) - np.log(a1+mu) - (a1+y)/(a1+mu) + 1)
-        dada = (da2*dalpha/da1 + da1**2 * (special.polygamma(1,a1+y) - \
-                    special.polygamma(1,a1) + 1/a1 -1/(a1+mu) + \
-                    (y-mu)/(mu+a1)**2)).sum()
+        dada = (da2 * dalpha/da1 + da1**2 * (special.polygamma(1, a1+y) -
+                    special.polygamma(1, a1) + 1/a1 - 1/(a1 + mu) +
+                    (y - mu)/(mu + a1)**2)).sum()
         hess_arr[-1,-1] = dada
 
         return hess_arr
 
+    #TODO: replace this with analytic where is it used?
+    def scoreobs(self, params):
+        sc = approx_fprime_cs(params, self.loglikeobs)
+        return sc
 
-    def fit(self, start_params=None, maxiter=35, method='bfgs', tol=1e-08):
-        # start_params = [0]*(self.exog.shape[1])+[1]
-        # Use poisson fit as first guess.
-        start_params = Poisson(self.endog, self.exog).fit(disp=0).params
-        start_params = np.r_[start_params, 0.1]
-        mlefit = super(NegBinTwo, self).fit(start_params=start_params,
-                maxiter=maxiter, method=method, tol=tol)
-        return mlefit
+    def fit(self, start_params=None, method='bfgs', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        if self.loglike_method.startswith('nb') and method not in ['newton',
+                                                                   'ncg']:
+            self._transparams = True # in case same Model instance is refit
+        elif self.loglike_method.startswith('nb'): # method is newton/ncg
+            self._transparams = False # because we need to step in alpha space
 
+        if start_params == None:
+            # Use poisson fit as first guess.
+            start_params = Poisson(self.endog, self.exog).fit(disp=0).params
+            if self.loglike_method.startswith('nb'):
+                start_params = np.append(start_params, 0.1)
+        mlefit = super(NegativeBinomial, self).fit(start_params=start_params,
+                        maxiter=maxiter, method=method, disp=disp,
+                        full_output=full_output, callback=lambda x:x,
+                        **kwargs)
+                        # TODO: Fix NBin _check_perfect_pred
+        if self.loglike_method.startswith('nb'):
+            # mlefit is a wrapped counts results
+            self._transparams = False # don't need to transform anymore now
+            # change from lnalpha to alpha
+            if method not in ["newton", "ncg"]:
+                mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+
+            nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
+            return NegativeBinomialAncillaryResultsWrapper(nbinfit)
+        else:
+            return mlefit
 
 ### Results Class ###
 
@@ -1837,6 +2059,7 @@ class DiscreteResults(base.LikelihoodModelResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
         "A results class for the discrete dependent variable models.",
         "extra_attr" : ""}
+
     def __init__(self, model, mlefit):
         #super(DiscreteResults, self).__init__(model, params,
         #        np.linalg.inv(-hessian), scale=1.)
@@ -1876,7 +2099,7 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fittedvalues(self):
-        return np.dot(self.model.exog, self.params)
+        return np.dot(self.model.exog, self.params[:self.model.exog.shape[1]])
 
     @cache_readonly
     def aic(self):
@@ -2178,7 +2401,9 @@ class DiscreteResults(base.LikelihoodModelResults):
         return smry
 
 class CountResults(DiscreteResults):
-    __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for count data", "extra_attr" : ""}
+    __doc__ = _discrete_results_docs % {
+                    "one_line_description" : "A results class for count data",
+                    "extra_attr" : ""}
     @cache_readonly
     def resid(self):
         """
@@ -2195,11 +2420,38 @@ class CountResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
+class NegativeBinomialAncillaryResults(CountResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for NegativeBinomial 1 and 2",
+                    "extra_attr" : ""}
+    def __init__(self, model, mlefit):
+        super(NegativeBinomialAncillaryResults, self).__init__(model, mlefit)
+
+    @cache_readonly
+    def lnalpha(self):
+        return np.log(self.params[-1])
+
+    @cache_readonly
+    def lnalpha_std_err(self):
+        return self.bse[-1] / self.params[-1]
+
+    @cache_readonly
+    def aic(self):
+        # + 1 because we estimate alpha
+        return -2*(self.llf - (self.df_model + self.k_constant + 1))
+
+    @cache_readonly
+    def bic(self):
+        # + 1 because we estimate alpha
+        return -2*self.llf + np.log(self.nobs)*(self.df_model +
+                                                self.k_constant + 1)
+
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
             "A results class for count data fit by l1 regularization",
             "extra_attr" : _l1_results_attr}
         #discretefit = CountResults(self, cntfit)
+
     def __init__(self, model, cntfit):
         super(L1CountResults, self).__init__(model, cntfit)
         # self.trimmed is a boolean array with T/F telling whether or not that
@@ -2219,6 +2471,7 @@ class OrderedResults(DiscreteResults):
 
 class BinaryResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for binary data", "extra_attr" : ""}
+
     def pred_table(self, threshold=.5):
         """
         Prediction table
@@ -2257,7 +2510,7 @@ class BinaryResults(DiscreteResults):
             wstr += "not exist and the parameters\n"
             wstr += "are not identified."
             etext.append(wstr)
-        elif predclose_frac > 0.1:  #TODO: get better diagnosis
+        elif predclose_frac > 0.1:  # TODO: get better diagnosis
             wstr = "Possibly complete quasi-separation: A fraction "
             wstr += "%4.2f of observations can be\n" % predclose_frac
             wstr += "perfectly predicted. This might indicate that there "
@@ -2352,6 +2605,9 @@ class BinaryResults(DiscreteResults):
         return self.model.endog - self.predict()
 
 class LogitResults(BinaryResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Logit Model",
+                    "extra_attr" : ""}
     @cache_readonly
     def resid_generalized(self):
         """
@@ -2370,6 +2626,9 @@ class LogitResults(BinaryResults):
         return self.model.endog - self.predict()
 
 class ProbitResults(BinaryResults):
+    __doc__ = _discrete_results_docs % {
+        "one_line_description" : "A results class for Probit Model",
+                    "extra_attr" : ""}
     @cache_readonly
     def resid_generalized(self):
         """
@@ -2523,6 +2782,11 @@ class CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
 
+class NegativeBinomialAncillaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(NegativeBinomialAncillaryResultsWrapper,
+                      NegativeBinomialAncillaryResults)
+
 class L1CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(L1CountResultsWrapper, L1CountResults)
@@ -2584,7 +2848,7 @@ if __name__=="__main__":
 #    endog2 = np.array(endog>=1, dtype=float)
 # skipped for now, binary poisson results look off?
     data = sm.datasets.randhie.load()
-    nbreg = NBin
+    nbreg = NegativeBinomial
     mod = nbreg(data.endog, data.exog.view((float,9)))
 #FROM STATA:
     params = np.asarray([-.05654133,  -.21214282, .0878311, -.02991813, .22903632,
@@ -2604,5 +2868,3 @@ if __name__=="__main__":
 #    np.sqrt(np.diag(-np.linalg.inv(approx_hess_cs(np.r_[params,lnalpha], mod.loglike))))
 #NOTE: this is the hessian in terms of alpha _not_ lnalpha
     hess_arr = mod.hessian(res1)
-
-
