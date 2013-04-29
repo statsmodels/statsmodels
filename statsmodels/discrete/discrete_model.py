@@ -2025,8 +2025,11 @@ class NegativeBinomial(CountModel):
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
-        if self.loglike_method.startswith('nb'):
+        if self.loglike_method.startswith('nb') and method != 'newton':
             self._transparams = True # in case same Model instance is refit
+        elif self.loglike_method.startswith('nb'): # method is newton
+            self._transparams = False # because we need to step in alpha space
+
         if start_params == None:
             # Use poisson fit as first guess.
             start_params = Poisson(self.endog, self.exog).fit(disp=0).params
@@ -2041,7 +2044,9 @@ class NegativeBinomial(CountModel):
             # mlefit is a wrapped counts results
             self._transparams = False # don't need to transform anymore now
             # change from lnalpha to alpha
-            mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+            if method != "newton":
+                mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
+
             nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
             return NegativeBinomialAncillaryResultsWrapper(nbinfit)
         else:
