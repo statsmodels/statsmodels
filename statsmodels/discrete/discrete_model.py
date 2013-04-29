@@ -2025,6 +2025,8 @@ class NegativeBinomial(CountModel):
 
     def fit(self, start_params=None, method='bfgs', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
+        if self.loglike_method.startswith('nb'):
+            self._transparams = True # in case same Model instance is refit
         if start_params == None:
             # Use poisson fit as first guess.
             start_params = Poisson(self.endog, self.exog).fit(disp=0).params
