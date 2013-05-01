@@ -152,6 +152,8 @@ if __name__ == "__main__":
 
     else: # process the whole directory
         for root, dirnames, filenames in os.walk(example_dir):
+            if 'notebooks' in root:
+                continue
             for example in filenames:
                 example_file = os.path.join(root, example)
                 whole_file = open(example_file, 'r').read()
