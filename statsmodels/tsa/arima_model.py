@@ -416,9 +416,25 @@ class ARMA(tsbase.TimeSeriesModel):
                 start_params[k:k+p+q] = coefs
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
-        if q==0 and p != 0:
+        if q == 0 and p != 0:
+            #NOTE: the problem might be in yule wlaker
             arcoefs = yule_walker(endog, order=p)[0]
             start_params[k:k+p] = arcoefs
+
+        # check AR coefficients
+        if p and not np.all(np.abs(np.roots(start_params[k:k+p+1])) < 1):
+            raise ValueError("The computed initial AR coefficients are not "
+                             "stationary\nYou should induce stationarity, "
+                             "choose a different model order, or you can\n"
+                             "pass your own start_params.")
+        # check MA coefficients
+        elif q and not np.all(np.abs(np.roots(start_params[k+p:])) < 1):
+            raise ValueError("The computed initial MA coefficients are not "
+                             "invertible\nYou should induce invertibility, "
+                             "choose a different model order, or you can\n"
+                             "pass your own start_params.")
+
+        # check MA coefficients
         return start_params
 
     def _fit_start_params(self, order, method):
