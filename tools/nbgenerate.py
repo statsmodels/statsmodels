@@ -273,6 +273,8 @@ if __name__ == '__main__':
                 # indent for insertion into raw html block in rST
                 html_out = "\n".join(["   "+i for i in html_out.split("\n")])
                 with io.open(new_html, "w", encoding="utf-8") as f:
+                    f.write(u"Dummy Title\n")
+                    f.write(u"===========\n\n")
                     f.write(notebook_template.substitute(body=html_out))
             hash_funcs.update_hash_dict(filehash, fname_only)
     except:

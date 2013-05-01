@@ -26,3 +26,12 @@ The Examples
    :glob:
 
    generated/*
+
+Notebook Examples
+-----------------
+
+.. toctree::
+   :maxdepth: 3
+   :glob:
+
+   notebooks/generated/*
