@@ -269,12 +269,20 @@ if __name__ == '__main__':
             elif OUTPUT == "html":
                 from notebook_output_template import notebook_template
                 new_html = os.path.join(rst_target_dir, fname_only+".rst")
+                # get the title out of the notebook because sphinx needs it
+                title_cell = nb['worksheets'][0]['cells'].pop(0)
+                try:
+                    assert title_cell['cell_type'] == 'heading'
+                except:
+                    print "Title not in first cell for ", fname_only
+                    print "Not generating rST"
+
                 html_out = nb2html(nb)
                 # indent for insertion into raw html block in rST
                 html_out = "\n".join(["   "+i for i in html_out.split("\n")])
                 with io.open(new_html, "w", encoding="utf-8") as f:
-                    f.write(u"Dummy Title\n")
-                    f.write(u"===========\n\n")
+                    f.write(title_cell["source"]+u"\n")
+                    f.write(u"="*len(title_cell["source"])+u"\n\n")
                     f.write(notebook_template.substitute(body=html_out))
             hash_funcs.update_hash_dict(filehash, fname_only)
     except:
