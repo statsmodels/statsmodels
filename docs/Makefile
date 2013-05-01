@@ -8,6 +8,7 @@ PAPER         =
 BUILDDIR      = build
 TOOLSPATH	  = ../tools/
 EXAMPLEBUILD  = examples_rst.py
+NOTEBOOKBUILD = nbgenerate.py
 FOLDTOC  = fold_toc.py
 
 # Internal variables.
@@ -40,12 +41,15 @@ clean:
 	-rm -rf $(BUILDDIR)/*
 	-rm -rf source/generated/
 	-rm source/examples/generated/*
+	-rm -rf source/examples/notebooks/generated/*
 	-rm -rf ../tools/hash_dict.pickle
 
 html:
 	# generate the examples rst files
 	@echo "Generating reST from examples folder"
 	$(TOOLSPATH)$(EXAMPLEBUILD)
+	@echo "Generating notebooks from examples/notebooks folder" 
+	$(TOOLSPATH)$(NOTEBOOKBUILD)
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	$(TOOLSPATH)$(EXAMPLEBUILD)
 	$(TOOLSPATH)$(FOLDTOC) $(BUILDDIR)/html/index.html
