@@ -272,7 +272,7 @@ def anova_lm(*args, **kwargs):
     ANOVA table for one or more fitted linear models.
 
     Parameters
-    ---------
+    ----------
     args : fitted linear model results instance
         One or more fitted linear models
     scale : float
@@ -300,8 +300,8 @@ def anova_lm(*args, **kwargs):
     --------
     model_results.compare_f_test, model_results.compare_lm_test
 
-    Example
-    -------
+    Examples
+    --------
     >>> import statsmodels.api as sm
     >>> from statsmodels.formula.api import ols
 
