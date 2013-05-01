@@ -417,7 +417,6 @@ class ARMA(tsbase.TimeSeriesModel):
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
         if q == 0 and p != 0:
-            #NOTE: the problem might be in yule wlaker
             arcoefs = yule_walker(endog, order=p)[0]
             start_params[k:k+p] = arcoefs
 
