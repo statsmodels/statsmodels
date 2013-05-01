@@ -395,8 +395,24 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
 
 def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
     '''generic (normal) z-test to save typing'''
+    #todo: this should just use stat = (value1 - value2 - diff) as argument
     #TODO: diff convention has wrong sign
     zstat = (value1 - value2 - diff) / std_diff
+    if alternative in ['two-sided', '2-sided', '2']:
+        pvalue = stats.norm.sf(np.abs(zstat))*2
+    elif alternative in ['larger', 'l']:
+        pvalue = stats.norm.sf(zstat)
+    elif alternative in ['smaller', 's']:
+        pvalue = stats.norm.cdf(zstat)
+    else:
+        raise ValueError('invalid alternative')
+    return zstat, pvalue
+
+def _zstat_generic2(value, std_diff, alternative):
+    '''generic (normal) z-test to save typing'''
+    #todo: this should just use stat = (value1 - value2 - diff) as argument
+    #TODO: diff convention has wrong sign
+    zstat = value / std_diff
     if alternative in ['two-sided', '2-sided', '2']:
         pvalue = stats.norm.sf(np.abs(zstat))*2
     elif alternative in ['larger', 'l']:

@@ -343,7 +343,19 @@ def test_power_ztost_prop_norm():
     assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
 
+def test_proportion_ztests():
+    # currently only consistency test with proportions chisquare
+    # Note: alternative handling is generic
 
+    res1 = smprop.proportions_ztest(15, 20., value=0.5, prop_var=0.5)
+    res2 = smprop.proportions_chisquare(15, 20., value=0.5)
+    assert_almost_equal(res1[1], res2[1], decimal=13)
+
+    res1 = smprop.proportions_ztest(np.asarray([15, 10]), np.asarray([20., 20]),
+                                 value=0, prop_var=None)
+    res2 = smprop.proportions_chisquare(np.asarray([15, 10]), np.asarray([20., 20]))
+    # test only p-value
+    assert_almost_equal(res1[1], res2[1], decimal=13)
 
 if __name__ == '__main__':
     test_confint_proportion()

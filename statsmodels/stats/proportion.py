@@ -502,6 +502,73 @@ def _table_proportion(count, nobs):
     return table, expected, n_rows
 
 
+def proportions_ztest(count, nobs, value=None, alternative='2-sided',
+                      prop_var=False):
+    '''test for proportions based on normal (z) test
+
+    Parameters
+    ----------
+    count : integer or array_like
+        the number of successes in nobs trials. If this is array_like, then
+        the assumption is that this represents the number of successes for
+        each independent sample
+    nobs : integer
+        the number of trials or observations, with the same length as
+        count.
+    value : None or float or array_like
+        This is the value of the null hypothesis equal to the proportion in the
+        case of a one sample test. In the case of a two-sample test, the
+        null hypothesis is that prop[0] - prop[1] = value, where prop is the
+        proportion in the two samples
+    alternative : string in ['2-sided', 'smaller', 'larger']
+        The alternative hypothesis can be either two-sided or one of the one-
+        sided tests, smaller means that the alternative hypothesis is
+        ``prop < value` and larger means ``prop > value``, or the corresponding
+        inequality for the two sample test.
+
+    Returns
+    -------
+    zstat : float
+        test statistic for the z-test
+    p-value : float
+        p-value for the z-test
+
+
+    Notes
+    -----
+    This uses a simple normal test for proportions. It should be the same as
+    running the mean z-test on the data encoded 1 for event and 0 for no event,
+    so that the sum corresponds to count.
+
+    In the one and two sample cases with two-sided alternative, this test
+    produces the same p-value as ``proportions_chisquare``, since the
+    chisquare is the distribution of the square of a standard normal
+    distribution.
+    (TODO: verify that this really holds)
+
+    TODO: add continuity correction or other improvements for small samples.
+
+    '''
+    prop = count * 1. / nobs
+    k_sample = np.size(prop)
+    if k_sample == 1:
+        diff = prop - value
+    elif k_sample == 2:
+        diff = prop[0] - prop[1] - value
+    else:
+        msg = 'more than two samples are not implemented yet'
+        raise NotImplementedError(msg)
+
+    p_pooled = np.sum(count) * 1. / np.sum(nobs)
+
+    nobs_fact = np.sum(1. / nobs)
+    if prop_var:
+        p_pooled = prop_var
+    var_ = p_pooled * (1 - p_pooled) * nobs_fact
+    std_diff = np.sqrt(var_)
+    from statsmodels.stats.weightstats import _zstat_generic2
+    return _zstat_generic2(diff, std_diff, alternative)
+
 
 def proportions_chisquare(count, nobs, value=None):
     '''test for proportions based on chisquare test
