@@ -294,8 +294,8 @@ if __name__ == '__main__':
                     f.write(u"="*len(title_cell["source"])+u"\n\n")
                     f.write(notebook_template.substitute(body=html_out))
             hash_funcs.update_hash_dict(filehash, fname_only)
-    except:
-        raise
+    except Exception, err:
+        raise err
 
     finally:
         os.chdir(cur_dir)
