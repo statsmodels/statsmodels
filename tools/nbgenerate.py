@@ -26,7 +26,7 @@ except ImportError:
 from IPython.nbformat.current import reads, write, NotebookNode
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
-gi
+
 # for conversion of .ipynb -> html/rst
 
 from IPython.config import Config
@@ -70,9 +70,12 @@ class NotebookRunner:
                         extra_arguments=extra_args)
         try:
             kc = km.client()
+            kc.start_channels()
+            iopub = kc.iopub_channel
         except AttributeError: # still on 0.13
             kc = km
-        kc.start_channels()
+            kc.start_channels()
+            iopub = kc.sub_channel
         shell = kc.shell_channel
         # make sure it's working
         shell.execute("pass")
@@ -84,6 +87,7 @@ class NotebookRunner:
 
         self.kc = kc
         self.km = km
+        self.iopub = iopub
 
     def __iter__(self):
         notebooks = [os.path.join(self.notebook_dir, i)
@@ -147,7 +151,7 @@ class NotebookRunner:
         """
         """
         shell = self.kc.shell_channel
-        iopub = self.kc.iopub_channel
+        iopub = self.iopub
         cells = 0
         errors = 0
         exec_count = 1
@@ -251,7 +255,7 @@ if __name__ == '__main__':
             # This edits the notebook cells inplace
             notebook_runner(nb)
             # for debugging writes ipynb file with output
-            #new_ipynb = "%s_generated%s" % (base, ext)
+            #new_ipynb = "%s_generated%s" % (base, ".ipynb")
             #with io.open(new_ipynb, "w", encoding="utf-8") as f:
             #    write(nb, f, "json")
 
