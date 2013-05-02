@@ -421,13 +421,15 @@ class ARMA(tsbase.TimeSeriesModel):
             start_params[k:k+p] = arcoefs
 
         # check AR coefficients
-        if p and not np.all(np.abs(np.roots(start_params[k:k+p+1])) < 1):
+        if p and not np.all(np.abs(np.roots(np.r_[1,
+                                        -start_params[k:k+p]])) < 1):
             raise ValueError("The computed initial AR coefficients are not "
                              "stationary\nYou should induce stationarity, "
                              "choose a different model order, or you can\n"
                              "pass your own start_params.")
         # check MA coefficients
-        elif q and not np.all(np.abs(np.roots(start_params[k+p:])) < 1):
+        elif q and not np.all(np.abs(np.roots(np.r_[1,
+                                            start_params[k+p:]])) < 1):
             raise ValueError("The computed initial MA coefficients are not "
                              "invertible\nYou should induce invertibility, "
                              "choose a different model order, or you can\n"
