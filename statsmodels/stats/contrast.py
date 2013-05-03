@@ -24,7 +24,7 @@ class ContrastResults(object):
             self.sd = sd
             self.effect = effect
             self.df_denom = df_denom
-            self.pvalue = student_t.sf(np.abs(t), df_denom)
+            self.pvalue = student_t.sf(np.abs(t), df_denom) * 2
 
     def __array__(self):
         if hasattr(self, "fvalue"):

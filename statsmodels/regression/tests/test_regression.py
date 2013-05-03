@@ -323,9 +323,9 @@ class TestTtest(object):
         assert_almost_equal(self.Ttest.sd, self.res1.bse, DECIMAL_4)
 
     def test_pvalue(self):
-        assert_almost_equal(self.Ttest.pvalue,
-                student_t.sf(np.abs(self.res1.tvalues),self.res1.model.df_resid),
-                    DECIMAL_4)
+        assert_almost_equal(self.Ttest.pvalue, student_t.sf(
+                        np.abs(self.res1.tvalues), self.res1.model.df_resid)*2,
+                        DECIMAL_4)
 
     def test_df_denom(self):
         assert_equal(self.Ttest.df_denom, self.res1.model.df_resid)
@@ -357,7 +357,7 @@ class TestTtest2(object):
         assert_almost_equal(self.Ttest1.sd, 455.39079425195314, DECIMAL_4)
 
     def test_pvalue(self):
-        assert_almost_equal(self.Ttest1.pvalue, 0.0015163772380932246,
+        assert_almost_equal(self.Ttest1.pvalue, 2*0.0015163772380932246,
             DECIMAL_4)
 
     def test_df_denom(self):
