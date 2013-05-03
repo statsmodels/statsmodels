@@ -584,6 +584,149 @@ class GroupsStats(object):
     def groupvarwithin(self):
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
+class TukeyHSDResults(object):
+    """Contains and allows further examination of Tukey HSD results 
+
+    Can also compute and plot additional post-hoc evaluations using this results class
+    """
+    def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None, std_pairs=None, 
+                    confint=None, df_total=None):
+        self._multicomp = mc_object
+        self.results_table = results_table
+        self.q_crit = q_crit
+        self.reject = reject
+        self.meandiffs = meandiffs
+        self.std_pairs = std_pairs
+        self.confint = confint
+        self.df_total = df_total
+        # Taken out of _multicomp for ease of access for unknowledgeable users
+        self.data = self._multicomp.data
+        self.groups =self._multicomp.groups
+        self.groupsunique = self._multicomp.groupsunique
+
+    def rmseofgroup(self):
+        """Compute the root mean square error the multi-group data.
+
+        RMSE in eval_measures.py does not perform correction for deg. freedom, using this 
+            to be consistent with Matlab implementation
+    
+        :data: an np.array containing the raw values for each group
+        :labels: np.array of string labels identifying which group data belongs to
+    
+        :returns: float value of RMSE
+        """
+        SE = 0
+        for name in self.groupsunique:
+            vals = self.data[np.where(self.groups==name)]
+            avg = np.mean(vals)
+            SE += (np.sum((vals-avg)**2))  
+        
+        RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
+        return np.sqrt(RMSE)
+
+    def hochberg_tukeyhsd_intervals(self, q_crit=None, S=None):
+        """Compute graphical confidence intervals for visual multiple comparisons.
+    
+        :data: a np.array of the raw data to be analyzed
+        :labels: a np.array of the string labels corresponding to each data element
+        :q_crit: the Q critical value generated from a Tukey HSD computation
+        :S: (optional) the Mean Square Error for all groups.
+    
+        self.halfwidths is the important byproduct of hcohberg; these are the widths
+        of the CIs for each group mean that allow simultaneous comparisons among all groups
+        """
+        if q_crit != None: self.q_crit = q_crit
+        if getattr(self, 'q_crit', None) == None:
+            raise AttributeError, "Please provide q_crit before computing hochberg intervals"
+
+        if S == None:
+            S = self.rmseofgroup()
+        
+        # Set initial variables
+        ng = len(self.groupsunique)
+        
+        # Compute dij for all pairwise comparisons ala hochberg p. 95
+        gvar = S**2/self._multicomp.groupstats.groupnobs
+        d12 = np.sqrt(gvar[self._multicomp.pairindices[0]] + gvar[self._multicomp.pairindices[1]])
+        
+        # Create the full d matrix given all known dij vals
+        d = np.zeros((ng, ng)).reshape((1, ng**2))
+        inds = np.ravel_multi_index(self._multicomp.pairindices, (ng, ng))
+        d[0][inds] = d12
+        d = d.reshape((ng, ng))
+        d = d + d.conj().T
+        
+        # Compute the two global sums from hochberg eq 3.32 
+        sum1 = np.sum(d12)
+        sum2 = np.sum(d, axis=0)
+        
+        if (ng > 2):
+            w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
+        else:
+            w = sum1 * ones(2, 1) / 2 #just copied this from Matlab...not sure for groups of <=2
+                                      #you maybe shouldn't be using Multiple Comparisons anyways...        
+        self.halfwidths = (self.q_crit/np.sqrt(2))*w 
+        self.S = S
+
+    def plot_hochberg(self, comparison_name, figsize=(10,6)):
+        """Plot each group mean along with a confidence interval to visually identify significant differences.
+
+        Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups, 
+        showing a graph of the CI between each group will require 15 CIs. Instead, we can visualize inter-
+        group CI's with a single interval for each group mean. Hochberg et al. first proposed this idea, and it 
+        has been succesfully implemented in Matlab's multcompare. This plot essentially tries to mimic Matlab's 
+        visualizaion. 
+        (Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: John Wiley & Sons, 1987.)
+
+        Note: this is currently only applicable for a 1-way anova with between 2 and 10 groups. Further, one must
+        have comptued the halfwidths previously using hochberg_tukeyhsd_intervals.
+
+        :comparison_name: the group label name to be colored blue. All other means will be colored red (for 
+            significantly different) or gray (for insignificant)
+        :figsize: (optional) the size of the plotted figure
+        """
+        means = self._multicomp.groupstats.groupmean
+        fig = plt.figure(figsize=figsize)
+        #fig.canvas.set_window_title('A Boxplot Example')
+        ax1 = fig.add_subplot(111)
+        
+        midx = np.where(self.groupsunique==comparison_name)[0]
+        sigidx = []
+        nsigidx = []
+        minrange = [means[i]-self.halfwidths[i] for i in range(len(means))]
+        maxrange = [means[i]+self.halfwidths[i] for i in range(len(means))]
+        
+        for i in range(len(means)):
+            if self.groupsunique[i] == comparison_name: continue
+        
+            if min(maxrange[i], maxrange[midx]) - max(minrange[i], minrange[midx]) < 0:
+                sigidx.append(i)
+            else:
+                nsigidx.append(i)
+                
+        #Plot the master comparison
+        plt.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', color='b', ecolor='b')
+        #Plot those that are significantly different
+        if len(sigidx) > 0:
+            plt.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', linestyle='None', color='r', ecolor='r')
+        #Plot those that are not significantly different
+        if len(nsigidx) > 0:
+            plt.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', linestyle='None', color='0.5', ecolor='0.5')
+        
+        #ax1.set_autoscale_on(True)
+        r = np.max(maxrange) - np.min(minrange) 
+        p = plt.ylim([-1, self._multicomp.ngroups])
+        p = plt.xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.]) 
+        p = plt.title('Multiple Comparisons against %s'%comparison_name)
+        ax1.set_yticklabels(np.insert(self.groupsunique, 0, ''))
+        
+
+    def plot_tukeyhsd_intervals(self, comparison_name, q_crit=None, S=None, figsize=(10, 6)):
+        """Wrapper for both calculating hochberg intervals and plotting them"""
+        self.hochberg_tukeyhsd_intervals(q_crit, S)
+        self.plot_hochberg(comparison_name, figsize)
+
+
 
 class MultiComparison(object):
     '''Tests for multiple comparisons
@@ -614,26 +757,6 @@ class MultiComparison(object):
         self.pairindices = np.triu_indices(len(self.groupsunique),1)  #tuple
         self.nobs = self.data.shape[0]
         self.ngroups = len(self.groupsunique)
-
-    def _group_rmse(self):
-        """Compute the root mean square error the multi-group data.
-
-        RMSE in eval_measures.py does not perform correction for deg. freedom, using this 
-            to be consistent with Matlab implementation
-    
-        :data: an np.array containing the raw values for each group
-        :labels: np.array of string labels identifying which group data belongs to
-    
-        :returns: float value of RMSE
-        """
-        SE = 0
-        for name in self.groupsunique:
-            vals = self.data[np.where(self.groups==name)]
-            avg = np.mean(vals)
-            SE += (np.sum((vals-avg)**2))  
-        
-        RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
-        return np.sqrt(RMSE)
 
     def getranks(self):
         '''convert data to rankdata and attach
@@ -741,11 +864,11 @@ class MultiComparison(object):
                               ('pval_corr',float),
                               ('reject', np.bool8)])
         from statsmodels.iolib.table import SimpleTable
-        summtab = SimpleTable(resarr, headers=resarr.dtype.names)
-        summtab.title = 'Test Multiple Comparison %s \n%s%4.2f method=%s' % (testfunc.__name__,
+        results_table = SimpleTable(resarr, headers=resarr.dtype.names)
+        results_table.title = 'Test Multiple Comparison %s \n%s%4.2f method=%s' % (testfunc.__name__,
                         'FWER=', alpha, method) + \
                         '\nalphacSidak=%4.2f, alphacBonf=%5.3f' % (alphacSidak, alphacBonf)
-        return summtab, (res, reject, pvals_corrected, alphacSidak, alphacBonf), resarr
+        return results_table, (res, reject, pvals_corrected, alphacSidak, alphacBonf), resarr
 
 
     def tukeyhsd(self, alpha=0.05):
@@ -760,13 +883,6 @@ class MultiComparison(object):
         var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
         res = tukeyhsd(means, nobs, var_, df=None, alpha=alpha, q_crit=None)
 
-        self.reject = res[1]
-        self.meandiffs = res[2]
-        self.std_pairs = res[3]
-        self.confint = res[4]
-        self.q_crit = res[5]
-        self.df_total = res[6]
-
         resarr = np.array(zip(res[0][0], res[0][1],
                                   np.round(res[2],4),
                                   np.round(res[4][:,0],4),
@@ -778,112 +894,12 @@ class MultiComparison(object):
                               ('lower',float),
                               ('upper',float),
                               ('reject', np.bool8)])
-        summtab = SimpleTable(resarr, headers=resarr.dtype.names)
-        summtab.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
+        results_table = SimpleTable(resarr, headers=resarr.dtype.names)
+        results_table.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
 
-        return summtab
+        return results_table
 
-    def hochberg_tukeyhsd_intervals(self, q_crit=None, S=None):
-        """Compute graphical confidence intervals for visual multiple comparisons.
-    
-        :data: a np.array of the raw data to be analyzed
-        :labels: a np.array of the string labels corresponding to each data element
-        :q_crit: the Q critical value generated from a Tukey HSD computation
-        :S: (optional) the Mean Square Error for all groups.
-    
-        :returns: tuple of results
-            [0] = the hochberg intervals for each group
-            [1] = names of each group
-            [2] = the S value for all groups
-        """
-        if q_crit != None: self.q_crit = q_crit
-        if getattr(self, 'q_crit', None) == None:
-            raise AttributeError, "Please perform tukeyhsd() or provide q_crit before computing hochberg intervals"
 
-        if S == None:
-            S = self._group_rmse()
-        
-        # Set initial variables
-        ng = self.ngroups
-        
-        # Compute dij for all pairwise comparisons ala hochberg p. 95
-        gvar = S**2/self.groupstats.groupnobs
-        d12 = np.sqrt(gvar[self.pairindices[0]] + gvar[self.pairindices[1]])
-        
-        # Create the full d matrix given all known dij vals
-        d = np.zeros((ng, ng)).reshape((1, ng**2))
-        inds = np.ravel_multi_index(self.pairindices, (ng, ng))
-        d[0][inds] = d12
-        d = d.reshape((ng, ng))
-        d = d + d.conj().T
-        
-        # Compute the two global sums from hochberg eq 3.32 
-        sum1 = np.sum(d12)
-        sum2 = np.sum(d, axis=0)
-        
-        if (ng > 2):
-            w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
-        else:
-            w = sum1 * ones(2, 1) / 2 #just copied this from Matlab...not sure for groups of <=2
-                                      #you maybe shouldn't be using Multiple Comparisons anyways...        
-        self.halfwidths = (self.q_crit/np.sqrt(2))*w 
-        self.S = S
-
-    def plot_hochberg(self, comparison_name, figsize=(10,6)):
-        """Plot each group mean along with a confidence interval to visually identify significant differences.
-
-        Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups, 
-        showing a graph of the CI between each group will quickly get enormous. Instead, we can visualize inter-
-        group CI's with a single interval for each group mean. Hochberg et al. 
-        (Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: John Wiley & Sons, 1987.) 
-        first proposed this idea, and it has been succesfully implemented in Matlab's multcompare. This plot 
-        essentially tries to mimic Matlab's visualizaion. 
-
-        Note: this is currently only applicable for a 1-way anova with between 2 and 10 groups. Further, one must
-        have comptued the halfwidths previously using hochberg_tukeyhsd_intervals.
-
-        :comparison_name: the group label name by which the color coding should be set for significance
-        :figsize: (optional) the size of the plotted figure
-        """
-        means = self.groupstats.groupmean
-        fig = plt.figure(figsize=figsize)
-        #fig.canvas.set_window_title('A Boxplot Example')
-        ax1 = fig.add_subplot(111)
-        
-        midx = np.where(self.groupsunique==comparison_name)[0]
-        sigidx = []
-        nsigidx = []
-        minrange = [means[i]-self.halfwidths[i] for i in range(len(means))]
-        maxrange = [means[i]+self.halfwidths[i] for i in range(len(means))]
-        
-        for i in range(len(means)):
-            if self.groupsunique[i] == comparison_name: continue
-        
-            if min(maxrange[i], maxrange[midx]) - max(minrange[i], minrange[midx]) < 0:
-                sigidx.append(i)
-            else:
-                nsigidx.append(i)
-                
-        #Plot the master comparison
-        plt.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', color='b', ecolor='b')
-        #Plot those that are significantly different
-        if len(sigidx) > 0:
-            plt.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', linestyle='None', color='r', ecolor='r')
-        #Plot those that are not significantly different
-        if len(nsigidx) > 0:
-            plt.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', linestyle='None', color='0.5', ecolor='0.5')
-        
-        #ax1.set_autoscale_on(True)
-        r = np.max(maxrange) - np.min(minrange) 
-        p = plt.ylim([-1, self.ngroups])
-        p = plt.xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.]) 
-        p = plt.title('Multiple Comparisons against %s'%comparison_name)
-        ax1.set_yticklabels(np.insert(self.groupsunique, 0, ''))
-        
-    def plot_tukeyhsd_intervals(self, comparison_name, q_crit=None, S=None, figsize=(10, 6)):
-        """Wrapper for both calculating hochberg intervals and plotting them"""
-        self.hochberg_tukeyhsd_intervals(q_crit, S)
-        self.plot_hochberg(comparison_name, figsize)        
 
 
 
