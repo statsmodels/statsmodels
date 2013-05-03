@@ -30,16 +30,21 @@ cur_dir = os.path.abspath(os.path.dirname(__file__))
 # for conversion of .ipynb -> html/rst
 
 from IPython.config import Config
-if os.path.exists("/home/skipper/src/nbconvert"):
-    if not os.path.exists(os.path.join(cur_dir, "nbconvert")):
-        os.symlink("/home/skipper/src/nbconvert",
+try:
+    from nbconvert.converters.template import ConverterTemplate
+    from nbconvert.converters.rst import ConverterRST
+except ImportError:
+    if os.path.exists("/home/skipper/src/nbconvert"):
+        if not os.path.exists(os.path.join(cur_dir, "nbconvert")):
+            os.symlink("/home/skipper/src/nbconvert",
                os.path.join(cur_dir, "nbconvert"))
-else:
-    from warnings import warn
-    warn("Notebook examples not built. Update paths in tools/nbgenerate.py")
-    sys.exit(0)
-from nbconvert.converters.template import ConverterTemplate
-from nbconvert.converters.rst import ConverterRST
+        from nbconvert.converters.template import ConverterTemplate
+        from nbconvert.converters.rst import ConverterRST
+    else:
+        from warnings import warn
+        warn("Notebook examples not built. Add nbconvert to path or update "
+             "paths in tools/nbgenerate.py")
+        sys.exit(0)
 
 import hash_funcs
 
