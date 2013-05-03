@@ -19,6 +19,7 @@ from .graphics import api as graphics
 from .stats import api as stats
 from .emplike import api as emplike
 
+from .formula import api as formula
 
 import os
 
