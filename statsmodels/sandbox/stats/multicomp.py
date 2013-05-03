@@ -590,7 +590,7 @@ class TukeyHSDResults(object):
     Can also compute and plot additional post-hoc evaluations using this results class
     """
     def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None, std_pairs=None, 
-                    confint=None, df_total=None):
+            confint=None, df_total=None, reject2=None):
         self._multicomp = mc_object
         self.results_table = results_table
         self.q_crit = q_crit
@@ -599,6 +599,7 @@ class TukeyHSDResults(object):
         self.std_pairs = std_pairs
         self.confint = confint
         self.df_total = df_total
+        self.reject2 = reject2
         # Taken out of _multicomp for ease of access for unknowledgeable users
         self.data = self._multicomp.data
         self.groups =self._multicomp.groups
@@ -624,7 +625,7 @@ class TukeyHSDResults(object):
         RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
         return np.sqrt(RMSE)
 
-    def hochberg_tukeyhsd_intervals(self, q_crit=None, S=None):
+    def compute_intervals(self, q_crit=None, S=None):
         """Compute graphical confidence intervals for visual multiple comparisons.
     
         :data: a np.array of the raw data to be analyzed
@@ -637,7 +638,7 @@ class TukeyHSDResults(object):
         """
         if q_crit != None: self.q_crit = q_crit
         if getattr(self, 'q_crit', None) == None:
-            raise AttributeError, "Please provide q_crit before computing hochberg intervals"
+            raise AttributeError, "Provide q_crit value before computing hochberg intervals"
 
         if S == None:
             S = self.rmseofgroup()
@@ -666,25 +667,15 @@ class TukeyHSDResults(object):
             w = sum1 * ones(2, 1) / 2 #just copied this from Matlab...not sure for groups of <=2
                                       #you maybe shouldn't be using Multiple Comparisons anyways...        
         self.halfwidths = (self.q_crit/np.sqrt(2))*w 
-        self.S = S
 
-    def plot_hochberg(self, comparison_name, figsize=(10,6)):
-        """Plot each group mean along with a confidence interval to visually identify significant differences.
+    def plot_intervals(self, comparison_name, figsize=(10,6)):
+        """Perform the plotting, color coding to visualize Hochberg intervals
 
-        Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups, 
-        showing a graph of the CI between each group will require 15 CIs. Instead, we can visualize inter-
-        group CI's with a single interval for each group mean. Hochberg et al. first proposed this idea, and it 
-        has been succesfully implemented in Matlab's multcompare. This plot essentially tries to mimic Matlab's 
-        visualizaion. 
-        (Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: John Wiley & Sons, 1987.)
-
-        Note: this is currently only applicable for a 1-way anova with between 2 and 10 groups. Further, one must
-        have comptued the halfwidths previously using hochberg_tukeyhsd_intervals.
-
-        :comparison_name: the group label name to be colored blue. All other means will be colored red (for 
-            significantly different) or gray (for insignificant)
-        :figsize: (optional) the size of the plotted figure
+        :comparison_name: a string master group name that others should be compared to
+        :figsize: (optional) tupe of the size of the figure generated
         """
+        if getattr(self, 'halfwidths', None) == None:
+            raise AttributeError, "Perform compute_intervals before plotting"
         means = self._multicomp.groupstats.groupmean
         fig = plt.figure(figsize=figsize)
         #fig.canvas.set_window_title('A Boxplot Example')
@@ -721,10 +712,27 @@ class TukeyHSDResults(object):
         ax1.set_yticklabels(np.insert(self.groupsunique, 0, ''))
         
 
-    def plot_tukeyhsd_intervals(self, comparison_name, q_crit=None, S=None, figsize=(10, 6)):
-        """Wrapper for both calculating hochberg intervals and plotting them"""
-        self.hochberg_tukeyhsd_intervals(q_crit, S)
-        self.plot_hochberg(comparison_name, figsize)
+    def compute_plot_intervals(self, comparison_name, q_crit=None, S=None, figsize=(10, 6)):
+        """Compute and plot each group mean along with their CIs to visually identify significant differences.
+
+        Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups, 
+        showing a graph of the CI between each group will require 15 CIs. Instead, we can visualize inter-
+        group CI's with a single interval for each group mean. Hochberg et al. first proposed this idea, and it 
+        has been succesfully implemented in Matlab's multcompare. This plot essentially tries to mimic Matlab's 
+        visualizaion. 
+        (Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: John Wiley & Sons, 1987.)
+
+        Note: this is currently only applicable for a 1-way anova with between 2 and 10 groups. Further, one must
+        have comptued the halfwidths previously using compute_hochberg_intervals.
+
+        :comparison_name: the group label name to be colored blue. All other means will be colored red (for 
+            significantly different) or gray (for insignificant)
+        :q_crit: (optional) was likely calculated during tukeyhsd, but an alternative can be provided here.
+        :S: (optional) the group RMSE 
+        :figsize: (optional) the size of the plotted figure
+        """
+        self.compute_intervals(q_crit, S)
+        self.plot_intervals(comparison_name, figsize)
 
 
 
@@ -778,7 +786,19 @@ class MultiComparison(object):
         '''
         pairwise comparison for kruskal-wallis test
 
-        This is just a reimplementation of scipy.stats.kruskal and does
+        This is just a reimplementation of scestfunc is calculated for all pairs
+        and the p-values are adjusted by methods in multipletests. The p-value
+        correction is generic and based only on the p-values, and does not
+        take any special structure of the hypotheses into account.
+
+        Parameters
+        ----------
+        testfunc : function
+            A test function for two (independent) samples. It is assumed that
+            the return value on position pvalidx is the p-value.
+        alpha : float
+            familywise error rate
+        method : stringipy.stats.kruskal and does
         not yet use a multiple comparison correction.
 
         '''
@@ -805,19 +825,7 @@ class MultiComparison(object):
     def allpairtest(self, testfunc, alpha=0.05, method='bonf', pvalidx=1):
         '''run a pairwise test on all pairs with multiple test correction
 
-        The statistical test given in testfunc is calculated for all pairs
-        and the p-values are adjusted by methods in multipletests. The p-value
-        correction is generic and based only on the p-values, and does not
-        take any special structure of the hypotheses into account.
-
-        Parameters
-        ----------
-        testfunc : function
-            A test function for two (independent) samples. It is assumed that
-            the return value on position pvalidx is the p-value.
-        alpha : float
-            familywise error rate
-        method : string
+        The statistical test given in t
             This specifies the method for the p-value correction. Any method
             of multipletests is possible.
         pvalidx : int (default: 1)
@@ -881,6 +889,8 @@ class MultiComparison(object):
         nobs = self.groupstats.groupnobs
         #var_ = self.groupstats.groupvarwithin() #possibly an error in varcorrection in this case
         var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
+        #res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs, 4:confint, 5:q_crit,
+        #6:df_total, 7:reject2 
         res = tukeyhsd(means, nobs, var_, df=None, alpha=alpha, q_crit=None)
 
         resarr = np.array(zip(res[0][0], res[0][1],
@@ -897,9 +907,7 @@ class MultiComparison(object):
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
 
-        return results_table
-
-
+        return TukeyHSDResults(self, results_table, res[5], res[1], res[2], res[3], res[4], res[6], res[7])
 
 
 
