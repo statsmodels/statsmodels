@@ -237,6 +237,58 @@ class Power(object):
         self.cache_fit_res = fit_res
         return val
 
+    def plot_power(self, dep_var='nobs', nobs=None, effect_size=None,
+                   alpha=0.05, ax=None, title=None, plt_kwds=None, **kwds):
+        '''plot power with numbeer of observations or effectsize on x-axis
+
+
+        TODO: maybe add line variable, if we want more than nobs and effectsize
+        '''
+        #if pwr_kwds is None:
+        #    pwr_kwds = {}
+        from statsmodels.graphics import utils
+        from statsmodels.graphics.plottools import rainbow
+        fig, ax = utils.create_mpl_ax(ax)
+        import matplotlib.pyplot as plt
+        colormap = plt.cm.Dark2 #winter_r
+        plt_alpha = 1 #0.75
+        lw = 2
+        if dep_var == 'nobs':
+            colors = rainbow(len(effect_size))
+            colors = [colormap(i) for i in np.linspace(0, 0.9, len(effect_size))]
+            for ii, es in enumerate(effect_size):
+                power = self.power(es, nobs, alpha, **kwds)
+                ax.plot(nobs, power, lw=lw, alpha=plt_alpha,
+                        color=colors[ii], label='es=%4.2F' % es)
+                xlabel = 'Number of Observations'
+        elif dep_var in ['effect size', 'effect_size', 'es']:
+            colors = rainbow(len(nobs))
+            colors = [colormap(i) for i in np.linspace(0, 0.9, len(nobs))]
+            for ii, n in enumerate(nobs):
+                power = self.power(effect_size, n, alpha, **kwds)
+                ax.plot(effect_size, power, lw=lw, alpha=plt_alpha,
+                        color=colors[ii], label='N=%4.2F' % n)
+                xlabel = 'Effect Size'
+        elif dep_var in ['alpha']:
+            # experimental nobs as defining separate lines
+            colors = rainbow(len(nobs))
+
+            for ii, n in enumerate(nobs):
+                power = self.power(effect_size, n, alpha, **kwds)
+                ax.plot(alpha, power, lw=lw, alpha=plt_alpha,
+                        color=colors[ii], label='N=%4.2F' % n)
+                xlabel = 'alpha'
+        else:
+            raise ValueError('depvar not implemented')
+
+        if title is None:
+            title = 'Power of Test'
+        ax.set_xlabel(xlabel)
+        ax.set_title(title)
+        ax.legend(loc='lower right')
+        return fig
+
+
 class TTestPower(Power):
     '''Statistical Power calculations for one sample or paired sample t-test
 
