@@ -130,6 +130,7 @@ h1 small{font-size:22.75px;}
 h2 small{font-size:16.25px;}
 h3 small{font-size:13px;}
 h4 small{font-size:13px;}
+h1 a, h2 a, h3 a, h4 a, h5 a, h6 a {color: #000000;}
 .page-header{padding-bottom:9px;margin:20px 0 30px;border-bottom:1px solid #eeeeee;}
 ul,ol{padding:0;margin:0 0 10px 25px;}
 ul ul,ul ol,ol ol,ol ul{margin-bottom:0;}
