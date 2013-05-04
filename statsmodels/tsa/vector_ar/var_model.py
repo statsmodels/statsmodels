@@ -570,8 +570,7 @@ class VAR(tsbase.TimeSeriesModel):
 
     def select_order(self, maxlags=None, verbose=True):
         """
-        Compute lag order selections based on each of the available information
-        criteria
+        Compute lag order selections based on each information criteria
 
         Parameters
         ----------
