@@ -33,6 +33,33 @@ class CheckPowerMixin(object):
         res1 = self.cls()
         assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=decimal)
 
+    def test_positional(self):
+
+        res1 = self.cls()
+
+
+        kwds = copy.copy(self.kwds)
+        del kwds['power']
+        kwds.update(self.kwds_extra)
+
+        # positional args
+        if hasattr(self, 'args_names'):
+            args_names = self.args_names
+        else:
+            nobs_ = 'nobs' if 'nobs' in kwds else 'nobs1'
+            args_names = ['effect_size', nobs_, 'alpha']
+
+        # pop positional args
+        args = [kwds.pop(arg) for arg in args_names]
+
+        if hasattr(self, 'decimal'):
+            decimal = self.decimal
+        else:
+            decimal = 6
+
+        res = res1.power(*args, **kwds)
+        assert_almost_equal(res, self.res2.power, decimal=decimal)
+
     def test_roots(self):
         kwds = copy.copy(self.kwds)
         kwds.update(self.kwds_extra)
@@ -471,6 +498,21 @@ class TestChisquarePower(CheckPowerMixin):
 
         self.cls = smp.GofChisquarePower
 
+    def _test_positional(self):
+
+        res1 = self.cls()
+        args_names = ['effect_size','nobs', 'alpha', 'n_bins']
+        kwds = copy.copy(self.kwds)
+        del kwds['power']
+        kwds.update(self.kwds_extra)
+        args = [kwds[arg] for arg in args_names]
+        if hasattr(self, 'decimal'):
+            decimal = self.decimal
+        else:
+            decimal = 6
+        assert_almost_equal(res1.power(*args), self.res2.power, decimal=decimal)
+
+
 
 def test_ftest_power():
     #equivalence ftest, ttest
@@ -567,9 +609,12 @@ class TestFtestAnovaPower(CheckPowerMixin):
         # keyword for which we don't look for root:
         # solving for n_bins doesn't work, will not be used in regular usage
         self.kwds_extra = {'k_groups': res2.k} # rootfinding doesn't work
+        #self.args_names = ['effect_size','nobs', 'alpha']#, 'k_groups']
         self.cls = smp.FTestAnovaPower
         # precision for test_power
         self.decimal = 4
+
+
 
 class TestFtestPower(CheckPowerMixin):
 
@@ -591,6 +636,7 @@ class TestFtestPower(CheckPowerMixin):
         # keyword for which we don't look for root:
         # solving for n_bins doesn't work, will not be used in regular usage
         self.kwds_extra = {}
+        self.args_names = ['effect_size', 'df_num', 'df_denom', 'alpha']
         self.cls = smp.FTestPower
         # precision for test_power
         self.decimal = 5

@@ -875,7 +875,7 @@ class GofChisquarePower(Power):
 
     '''
 
-    def power(self, effect_size, nobs, n_bins, alpha, ddof=0):
+    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):
               #alternative='two-sided'):
         '''Calculate the power of a chisquare test for one sample
 
