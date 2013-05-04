@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#pylint: disable-msg=W0142
 """Statistical power, solving for nobs, ... - trial version
 
 Created on Sat Jan 12 21:48:06 2013
@@ -734,7 +735,7 @@ class FTestPower(Power):
         models, with df_num and d_denom as defined there. (not verified yet)
         '''
 
-        pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=1)
+        pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=ncc)
         #print effect_size, df_num, df_denom, alpha, pow_
         return pow_
 
@@ -789,7 +790,8 @@ class FTestPower(Power):
                                                       df_num=df_num,
                                                       df_denom=df_denom,
                                                       alpha=alpha,
-                                                      power=power)
+                                                      power=power,
+                                                      ncc=ncc)
 
 class FTestAnovaPower(Power):
     '''Statistical Power calculations F-test for one factor balanced ANOVA
