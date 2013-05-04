@@ -40,13 +40,9 @@ help:
 clean:
 	-rm -rf $(BUILDDIR)/*
 	-rm -rf source/generated/
+	-rm -rf source/dev/generated/
 
-cleanall:
-	-rm -rf $(BUILDDIR)/*
-	-rm -rf source/generated/
-	-rm source/examples/generated/*
-	-rm -rf source/examples/notebooks/generated/*
-	-rm -rf ../tools/hash_dict.pickle
+cleanall: clean cleancache
 
 cleancache:
 	-rm source/examples/generated/*
