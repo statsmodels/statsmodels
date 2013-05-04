@@ -238,6 +238,8 @@ def nb2rst(nb, files_dir):
 if __name__ == '__main__':
     rst_target_dir = os.path.join(cur_dir, '..',
                         'docs/source/examples/notebooks/generated/')
+    if not os.path.exists(rst_target_dir):
+        os.makedirs(rst_target_dir)
 
     parser = _get_parser()
     arg_ns, other_args = parser.parse_known_args()
