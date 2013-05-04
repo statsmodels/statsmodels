@@ -55,7 +55,7 @@ multitest_alias = OrderedDict()
 for m in _alias_list:
     multitest_alias[m[0]] = m[0]
     for a in m[1:]:
-        multitest_alias[m[0]] = a
+        multitest_alias[a] = m[0]
 
 def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     '''test results and p-value correction for multiple tests
