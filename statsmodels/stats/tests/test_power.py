@@ -539,7 +539,7 @@ class TestChisquarePower(CheckPowerMixin):
         kwds.update(self.kwds_extra)
         args = [kwds[arg] for arg in args_names]
         if hasattr(self, 'decimal'):
-            decimal = self.decimal
+            decimal = self.decimal #pylint: disable-msg=E1101
         else:
             decimal = 6
         assert_almost_equal(res1.power(*args), self.res2.power, decimal=decimal)

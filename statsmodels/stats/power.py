@@ -288,7 +288,7 @@ class Power(object):
         from statsmodels.graphics.plottools import rainbow
         fig, ax = utils.create_mpl_ax(ax)
         import matplotlib.pyplot as plt
-        colormap = plt.cm.Dark2 #winter_r
+        colormap = plt.cm.Dark2 #pylint: disable-msg=E1101
         plt_alpha = 1 #0.75
         lw = 2
         if dep_var == 'nobs':
