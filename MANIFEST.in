@@ -6,7 +6,6 @@ include MANIFEST.in
 recursive-exclude build *
 recursive-exclude dist *
 recursive-exclude tools *
-include tools/_build.py
 include tools/examples_rst.py
 include tools/hash_funcs.py
 

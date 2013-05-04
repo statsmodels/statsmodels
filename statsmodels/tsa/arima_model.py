@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+# for 2to3 with extensions
+
 from datetime import datetime
 
 import numpy as np
@@ -24,11 +27,7 @@ from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
         approx_hess_cs)
 from statsmodels.tsa.base.datetools import _index_date
 from statsmodels.tsa.kalmanf import KalmanFilter
-try:
-    from kalmanf import kalman_loglike
-    fast_kalman = 1
-except:
-    fast_kalman = 0
+from .kalmanf import kalman_loglike
 
 _armax_notes = """
 

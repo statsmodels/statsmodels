@@ -14,7 +14,7 @@ ctypedef np.int_t INT
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
+def fast_linbin(np.ndarray[DOUBLE] X, double a, double b, int M, int trunc=1):
     """
     Linear Binning as described in Fan and Marron (1994)
     """
