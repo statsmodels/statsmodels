@@ -15,9 +15,20 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
                            assert_equal, assert_warns)
 
+
 import statsmodels.stats.power as smp
 #from .test_weightstats import CheckPowerMixin
 from statsmodels.stats.tests.test_weightstats import Holder
+
+# for testing plots
+import nose
+from numpy.testing import dec
+try:
+    import matplotlib.pyplot as plt  #makes plt available for test functions
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
 
 class CheckPowerMixin(object):
 
@@ -76,6 +87,27 @@ class CheckPowerMixin(object):
             # yield can be used to investigate specific errors
             #yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
+
+    @dec.skipif(not have_matplotlib)
+    def test_power_plot(self):
+        if self.cls == smp.FTestPower:
+            raise nose.SkipTest('skip FTestPower plot_power')
+        fig = plt.figure()
+        ax = fig.add_subplot(2,1,1)
+        fig = self.cls().plot_power(dep_var='nobs',
+                                  nobs= np.arange(2, 100),
+                                  effect_size=np.array([0.1, 0.2, 0.3, 0.5, 1]),
+                                  #alternative='larger',
+                                  ax=ax, title='Power of t-Test',
+                                  **self.kwds_extra)
+        ax = fig.add_subplot(2,1,2)
+        fig = self.cls().plot_power(dep_var='es',
+                                  nobs=np.array([10, 20, 30, 50, 70, 100]),
+                                  effect_size=np.linspace(0.01, 2, 51),
+                                  #alternative='larger',
+                                  ax=ax, title='',
+                                  **self.kwds_extra)
+        plt.close('all')
 
 #''' test cases
 #one sample
