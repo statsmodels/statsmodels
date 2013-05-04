@@ -29,10 +29,15 @@ If you want to keep up to date with the source on github just periodically do::
 
 in the statsmodels directory.
 
+Windows Nightly Binaries
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you are not able to follow the build instructions below, we upload nightly builds of the GitHub repository to `http://statsmodels.sourceforge.net/binaries/ <http://statsmodels.sourceforge.net/binaries/>`__.
+
 Installation from Source
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-While not strictly necessary for 0.4, it is recommended that you will have a C compiler installed to take advantage of Cython code where available. You can follow the instructions below to get a C compiler setup for Windows.
+You will need a C compiler installed to build statsmodels. If you are building from the github source and not a source release, then you will also need Cython. You can follow the instructions below to get a C compiler setup for Windows.
 
 Linux
 ^^^^^
@@ -63,11 +68,15 @@ Then in the statsmodels directory do::
 
 OR
 
-You can build 32-bit or 64-bit versions of the code using the Microsoft SDK. Detailed instructions can be found on the Cython wiki `here <http://wiki.cython.org/64BitCythonExtensionsOnWindows>`__. The gist of these instructions follow. You will need to download the free Windows SDK C/C++ compiler from Microsoft. You must use the **Microsoft Windows SDK for Windows 7 and .NET Framework 3.5 SP1** to be comptible with Python 2.6, 2.7, 3.1, and 3.2. Other Python versions are as yet untested. Please report results to the mailing list. The link for the 3.5 version is
+You can build 32-bit or 64-bit versions of the code using the Microsoft SDK. Detailed instructions can be found on the Cython wiki `here <http://wiki.cython.org/64BitCythonExtensionsOnWindows>`__. The gist of these instructions follow. You will need to download the free Windows SDK C/C++ compiler from Microsoft. You must use the **Microsoft Windows SDK for Windows 7 and .NET Framework 3.5 SP1** to be comptible with Python 2.6, 2.7, 3.1, and 3.2. The link for the 3.5 SP1 version is
 
 `http://www.microsoft.com/downloads/en/details.aspx?familyid=71DEB800-C591-4F97-A900-BEA146E4FAE1&displaylang=en <http://www.microsoft.com/downloads/en/details.aspx?familyid=71DEB800-C591-4F97-A900-BEA146E4FAE1&displaylang=en>`__
 
-Get the ISO file GRMSDKX_EN_DVD.iso for AMD64. After you install this, open the SDK Command Shell (Start -> All Programs -> Microsoft Windows SDK v7.0 -> CMD Shell). CD to the statsmodels directory and type::
+For Python 3.3, you need to use the **Microsoft Windows SDK for Windows 7 and .NET Framework 4**, available from
+
+`http://www.microsoft.com/en-us/download/details.aspx?id=8279 <http://www.microsoft.com/en-us/download/details.aspx?id=8279>`__
+
+For 7.0, get the ISO file GRMSDKX_EN_DVD.iso for AMD64. After you install this, open the SDK Command Shell (Start -> All Programs -> Microsoft Windows SDK v7.0 -> CMD Shell). CD to the statsmodels directory and type::
 
     set DISTUTILS_USE_SDK=1
 
@@ -84,6 +93,16 @@ The prompt should change colors to green. Then proceed as usual to install::
     python setup.py build
     python setup.py install
 
+For 7.1, the instructions are exactly the same, except you use the download link provided above and make sure you are using SDK 7.1.
+
+If you want to accomplish the same without opening up the SDK CMD SHELL, then you can use these commands at the CMD Prompt or in a batch file.::
+
+    setlocal EnableDelayedExpansion
+    CALL "C:\Program Files\Microsoft SDKs\Windows\v7.0\Bin\SetEnv.cmd" /x64 /release
+    set DISTUTILS_USE_SDK=1
+
+Replace `/x64` with `/x86` and `v7.0` with `v7.1` as needed.
+
 
 Dependencies
 ~~~~~~~~~~~~
@@ -93,7 +112,7 @@ Dependencies
 * `SciPy <http://www.scipy.org/>`__ >= 0.7
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
 * `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
-* `Cython <http://cython.org/>`__ >= 15.1, Still optional but recommended for building from non-source distributions. That is, it will be used when building the source from github and not from a zipped source distribution archive.
+* `Cython <http://cython.org/>`__ >= 15.1, Needed if you want to build the code from github and not a source distribution.
 
 .. tested with Python 2.5., 2.6, 2.7 and 3.2
 .. (tested with numpy 1.4.1, 1.5.1 and 1.6.0, scipy 0.7.2, 0.8.0, 0.9.0)
