@@ -96,16 +96,41 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     return pow_#, crit
 
 def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
-    '''power for ftest
+    '''Calculate the power of a F-test.
+
+    Parameters
+    ----------
+    effect_size : float
+        standardized effect size, mean divided by the standard deviation.
+        effect size has to be positive.
+    df_num : int or float
+        numerator degrees of freedom.
+    df_denom : int or float
+        denominator degrees of freedom.
+    alpha : float in interval (0,1)
+        significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    ncc : int
+        degrees of freedom correction for non-centrality parameter.
+        see Notes
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g. 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+    Notes
+    -----
 
     sample size is given implicitly by df_num
 
-    set ncc=0 to match t-test, or f-test in LikelihoodModelResults
+    set ncc=0 to match t-test, or f-test in LikelihoodModelResults.
     ncc=1 matches the non-centrality parameter in R::pwr::pwr.f2.test
 
     ftest_power with ncc=0 should also be correct for f_test in regression
     models, with df_num and d_denom as defined there. (not verified yet)
-
     '''
     nc = effect_size**2 * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_denom, df_num)
@@ -679,19 +704,16 @@ class FTestPower(Power):
         effect_size : float
             standardized effect size, mean divided by the standard deviation.
             effect size has to be positive.
-        nobs : int or float
-            sample size, number of observations.
+        df_num : int or float
+            numerator degrees of freedom.
+        df_denom : int or float
+            denominator degrees of freedom.
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        df : int or float
-            degrees of freedom. By default this is None, and the df from the
-            one sample or paired ttest is used, ``df = nobs1 - 1``
-        alternative : string, 'two-sided' (default), 'larger', 'smaller'
-            extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test. The one-sided test can be
-            either 'larger', 'smaller'.
-            .
+        ncc : int
+            degrees of freedom correction for non-centrality parameter.
+            see Notes
 
         Returns
         -------
@@ -700,7 +722,17 @@ class FTestPower(Power):
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
-       '''
+        Notes
+        -----
+
+        sample size is given implicitly by df_num
+
+        set ncc=0 to match t-test, or f-test in LikelihoodModelResults.
+        ncc=1 matches the non-centrality parameter in R::pwr::pwr.f2.test
+
+        ftest_power with ncc=0 should also be correct for f_test in regression
+        models, with df_num and d_denom as defined there. (not verified yet)
+        '''
 
         pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=1)
         #print effect_size, df_num, df_denom, alpha, pow_
