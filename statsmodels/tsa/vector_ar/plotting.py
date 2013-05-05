@@ -117,7 +117,7 @@ def plot_var_forc(prior, forc, err_upper, err_lower, index=None, names=None,
         if names is not None:
             ax.set_title(names[j])
 
-        ax.legend(loc='upper right')
+        ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05), ncol=3)
 
 #TODO: Docs
 def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
