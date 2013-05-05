@@ -44,6 +44,11 @@ def test_samplesize_confidenceinterval_prop():
     res = smprop.samplesize_confint_proportion(12./nobs, (ci[1] - ci[0]) / 2)
     assert_almost_equal(res, nobs, decimal=13)
 
+def test_proportion_effect_size():
+    # example from blog
+    es = smprop.proportion_effectsize(0.5, 0.4)
+    assert_almost_equal(es, 0.2013579207903309, decimal=13)
+
 class CheckProportionMixin(object):
     def test_proptest(self):
         # equality of k-samples

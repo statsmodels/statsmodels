@@ -159,32 +159,43 @@ def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
 
     return n
 
-def proportion_effectsize(prob1, prob2, method='normal'):
+def proportion_effectsize(prop1, prop2, method='normal'):
     '''effect size for a test comparing two proportions
 
     for use in power function
 
     Parameters
     ----------
-    prob1, prob2: float or array_like
+    prop1, prop2: float or array_like
 
     Returns
     -------
     es : float or ndarray
-        effect size
+        effect size for (transformed) prop1 - prop2
 
     Notes
     -----
     only method='normal' is implemented to match pwr.p2.test
     see http://www.statmethods.net/stats/power.html
 
+    Effect size for `normal` is defined as ::
+
+        2 * (arcsin(sqrt(prop1)) - arcsin(sqrt(prop2)))
+
     I think other conversions to normality can be used, but I need to check.
+
+    Examples
+    --------
+    >>> smpr.proportion_effectsize(0.5, 0.4)
+    0.20135792079033088
+    >>> smpr.proportion_effectsize([0.3, 0.4, 0.5], 0.4)
+    array([-0.21015893,  0.        ,  0.20135792])
 
     '''
     if method != 'normal':
         raise ValueError('only "normal" is implemented')
 
-    es = 2 * (np.arcsin(np.sqrt(prob2)) - np.arcsin(np.sqrt(prob1)))
+    es = 2 * (np.arcsin(np.sqrt(prop1)) - np.arcsin(np.sqrt(prop2)))
     return es
 
 def std_prop(prop, nobs):
