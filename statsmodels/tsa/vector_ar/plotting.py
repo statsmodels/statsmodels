@@ -189,7 +189,7 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, err_bound=None,
     for i in range(neqs):
         if names is not None:
             axes[i, 0].set_ylabel(names[i])
-            axes[0, i].set_xlabel(names[i])
+            axes[0, i].set_title(names[i])
         for j in range(neqs):
             ax = axes[i, j]
             acorr_plot(acorr[:, i, j], linewidth=linewidth, ax=ax, **kwargs)

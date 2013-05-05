@@ -947,7 +947,8 @@ class VARProcess(object):
 
     def plot_acorr(self, nlags=10, linewidth=8):
         "Plot theoretical autocorrelation function"
-        plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth)
+        plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth,
+                                 names=self.model.endog_names)
 
     def forecast(self, y, steps):
         """Produce linear minimum MSE forecasts for desired number of steps
