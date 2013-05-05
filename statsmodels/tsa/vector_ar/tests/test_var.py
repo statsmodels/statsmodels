@@ -27,6 +27,8 @@ DECIMAL_4 = 4
 DECIMAL_3 = 3
 DECIMAL_2 = 2
 
+#TODO: test_whiteness and test_normality needs a test
+
 class CheckVAR(object):
     # just so pylint won't complain
     res1 = None
