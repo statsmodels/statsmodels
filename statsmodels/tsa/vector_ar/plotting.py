@@ -195,9 +195,8 @@ def plot_full_acorr(acorr, fontsize=8, linewidth=8, err_bound=None,
             acorr_plot(acorr[:, i, j], linewidth=linewidth, ax=ax, **kwargs)
 
             if err_bound is not None:
-                #TODO: are the error bounds always symmetric?
-                ax.axhline(err_bound[:, i, j], color='k', linestyle='--')
-                ax.axhline(-err_bound[:, i, j], color='k', linestyle='--')
+                ax.axhline(err_bound, color='k', linestyle='--')
+                ax.axhline(-err_bound, color='k', linestyle='--')
 
     adjust_subplots(fig)
     config.revert()
