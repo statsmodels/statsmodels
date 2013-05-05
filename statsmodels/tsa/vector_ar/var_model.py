@@ -174,10 +174,17 @@ def forecast(y, coefs, trend_coefs, steps):
 
     Parameters
     ----------
-    y :
-    coefs :
-    trend_coefs :
-    steps :
+    y : ndarray (k_ar x neqs)
+        The initial values to use for the forecasts.
+    coefs : ndarray (k_ar x neqs x neqs)
+        Each of the k_ar matrices are for lag 1, ... , lag k_ar. Where the
+        columns are the variable and the rows are the equations.
+        Ie., coefs[i-1] is the estimated A_i matrix. See VARResults Notes.
+    trend_coefs : ndarray
+        1d or 2d array. If 1d, should be of length neqs and is assumed to be
+        a vector of constants. If 2d should be of shape k_trend x neqs.
+    steps : int
+        Number of steps ahead to forecast
 
     Returns
     -------
@@ -185,10 +192,11 @@ def forecast(y, coefs, trend_coefs, steps):
 
     Notes
     -----
-    Lutkepohl p. 37
-
     Also used by DynamicVAR class
     """
+    #TODO: give math not a page in a book
+    # Lutkepohl p. 37
+    y = np.asarray(y) # handle pandas but not structured arrays, oh well.
     p = len(coefs)
     k = len(coefs[0])
     # initial value
@@ -952,22 +960,33 @@ class VARProcess(object):
         plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth,
                                  names=self.model.endog_names)
 
-    def forecast(self, Y=None, steps=1):
+    def forecast(self, y=None, steps=1):
         """Minimum MSE forecasts for desired number of steps
 
         Parameters
         ----------
-        y : ndarray (p x k)
+        y : ndarray (k_ar x neqs)
+            Deprecated. The initial values to use for the forecasts. If None,
+            the last k_ar values of the original endogenous variables are
+            used. Use statsmodels.tsa.var.forecast instead if you need to
+            give y values.
         steps : int
+            The number of steps ahead to forecast.
 
         Returns
         -------
         forecasts : ndarray (steps x neqs)
-
-        Notes
-        -----
-        Lutkepohl pp 37-38
+            The forecasted values.
         """
+        #TODO: give the math instead the reference in Notes
+        # Lutkepohl pp 37-38
+
+        if y is not None:
+            warn("The use of y is deprecated and will be removed in 0.6.0. "
+                 "If you want to give initial values use "
+                 "statsmodels.tsa.var.forecast.")
+        else:
+            y = self.model.Y[-self.k_ar:]
         return forecast(y, self.coefs, self.trend_coefs, steps)
 
     def mse(self, steps):
@@ -1010,20 +1029,24 @@ class VARProcess(object):
         inds = np.arange(self.neqs)
         return covs[:, inds, inds]
 
-    def forecast_interval(self, y, steps, alpha=0.05):
+    def forecast_interval(self, y=None, steps=1, alpha=0.05):
         """Construct forecast interval estimates assuming the y are Gaussian
 
         Parameters
         ----------
-
-        Notes
-        -----
-        Lutkepohl pp. 39-40
+        y : ndarray (k_ar x neqs)
+            Deprecated. The initial values to use for the forecasts. If None,
+            the last k_ar values of the original endogenous variables are
+            used.
+        steps : int
+            The number of steps ahead to forecast.
 
         Returns
         -------
         (lower, mid, upper) : (ndarray, ndarray, ndarray)
         """
+        #NOTE: use math not a page number
+        #Lutkepohl pp. 39-40
         assert(0 < alpha < 1)
         q = util.norm_signif_level(alpha)
 
@@ -1411,16 +1434,18 @@ class VARResults(VARProcess):
         """
         return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
 
-    #TODO: docs
     def plot_forecast(self, steps, alpha=0.05, plot_stderr=True, ax=None):
         """
-        Plot forecast
+        Plot forecasts
 
         Parameters
         ----------
         steps : int
+            The number of steps ahead to forecast.
         alpha : float
+            The significance level for the confidence intervals.
         plot_stderr : bool
+            Whether or not to plot the standard error bars.
         ax : matplotlib.axes, optional
             An existing matplotlib.axes instance. Should be a list of axes of
             length `neqs`
@@ -1430,8 +1455,7 @@ class VARResults(VARProcess):
         fig : `matplotlib.figure`
             The figure that contains the axes
         """
-        mid, lower, upper = self.forecast_interval(self.Y[-self.k_ar:], steps,
-                                                   alpha=alpha)
+        mid, lower, upper = self.forecast_interval(None, steps, alpha=alpha)
         plotting.plot_var_forc(self.Y, mid, lower, upper,
                                names=self.model.endog_names,
                                plot_stderr=plot_stderr)
