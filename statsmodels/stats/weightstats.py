@@ -283,7 +283,7 @@ class DescrStatsW(object):
 
         return tstat, pvalue, dof
 
-    def tost(self, low, upp):
+    def ttost(self, low, upp):
         '''test of (non-)equivalence of one sample
 
         TOST: two one-sided t tests
@@ -617,7 +617,7 @@ class CompareMeans(object):
                                alternative=alternative)
         return res
 
-    def tost_ind(self, low, upp, usevar='pooled'):
+    def ttost_ind(self, low, upp, usevar='pooled'):
         '''test of (non-)equivalence for two independent samples
 
         Parameters
@@ -708,7 +708,7 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
     return tstat, pval, dof
 
 
-def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
+def ttost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
              transform=None):
     '''test of (non-)equivalence for two independent samples
 
@@ -779,10 +779,10 @@ def tost_ind(x1, x2, low, upp, usevar='pooled', weights=(None, None),
         upp = transform(upp)
     cm = CompareMeans(DescrStatsW(x1, weights=weights[0], ddof=0),
                       DescrStatsW(x2, weights=weights[1], ddof=0))
-    pval, res = cm.tost_ind(low, upp, usevar=usevar)
+    pval, res = cm.ttost_ind(low, upp, usevar=usevar)
     return pval, res[0], res[1]
 
-def tost_paired(x1, x2, low, upp, transform=None, weights=None):
+def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
     '''test of (non-)equivalence for two dependent, paired sample
 
     TOST: two one-sided t tests
