@@ -752,6 +752,8 @@ class VAR(tsbase.TimeSeriesModel):
 
         return selected_orders
 
+select_order = VAR.select_order # convenience function
+
 #-----------------------------------------------------------------------------
 # VARProcess class: for known or unknown VAR process
 
