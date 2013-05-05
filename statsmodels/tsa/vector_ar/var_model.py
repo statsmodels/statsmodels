@@ -24,6 +24,7 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.linalg import logdet_symm
 from statsmodels.tsa.tsatools import vec, unvec
+from statsmodels.tools import data as data_util
 
 from statsmodels.tsa.vector_ar.irf import IRAnalysis
 from statsmodels.tsa.vector_ar.output import VARSummary
@@ -343,6 +344,8 @@ _var_params_doc = """Y : array-like
         2-d endogenous response variable. The independent variable.
     dates : array-like
         must match number of rows of endog
+    nlags : int
+        The number of lags to use in the model fitting.
     names : array-like
         Names is deprecated. Use a DataFrame or a structured array to give
         names to VAR. Must match number of columns of endog"""
@@ -353,21 +356,85 @@ _var_reference_doc = """
     ----------
     Lutkepohl (2005) New Introduction to Multiple Time Series Analysis"""
 
+def _get_info_criteria(cov_resid_mle, nobs, neqs, k_ar, k_trend):
+    free_params = k_ar * neqs ** 2 + neqs * k_trend
+    df_resid = nobs - (neqs * k_ar + k_trend)
+    df_model = neqs * k_ar + k_trend
+    ld = util.get_logdet(cov_resid_mle)
+
+    # See Lutkepohl pp. 146-150
+
+    aic = ld + (2. / nobs) * free_params
+    bic = ld + (np.log(nobs) / nobs) * free_params
+    hqic = ld + (2. * np.log(np.log(nobs)) / nobs) * free_params
+    fpe = ((nobs + df_model) / df_resid) ** neqs * np.exp(ld)
+    return aic, bic, hqic, fpe
+
+def _estimate_var_ic(Y, k_ar, k_trend, trim=0, trend='c'):
+    """
+    Helper function to fit VAR that aids in lag order selection
+    """
+    Y = Y[trim:]
+    X = util.get_lagged_y(Y, k_ar, trend=trend)
+    Y_sample = Y[k_ar:]
+
+    #TODO check -QR is O(k**3) and SVD is O(nobs*k**2)
+    params = np.linalg.lstsq(X, Y_sample)[0]
+    resid = Y_sample - np.dot(X, params)
+
+    nobs, neqs = Y_sample.shape
+
+    # MLE estimate of covariance matrix of residuals
+    cov_resid_mle = np.dot(resid.T, resid) / nobs
+    return _get_info_criteria(cov_resid_mle, nobs, neqs, k_ar, k_trend)
+
+def select_order_fit(Y, maxlags=None, ic="aic", trend="c", verbose=True):
+    Y_array = np.asarray(Y)
+    if data_util._is_structured_ndarray(Y_array):
+        Y_array = Y_array.view((float, len(Y_array.dtype)))
+
+    if maxlags is None:
+        maxlags = int(round(12*(len(Y)/100.)**(1/4.)))
+
+    k_trend = util.get_trendorder(trend)
+    ics = defaultdict(list)
+    for k_ar in range(maxlags + 1):
+        # exclude some periods so same nobs used for each lag order
+        res = _estimate_var_ic(Y_array, k_ar, k_trend, trim=maxlags - k_ar,
+                               trend=trend)
+        ics["aic"].append(res[0])
+        ics["bic"].append(res[1])
+        ics["hqic"].append(res[2])
+        ics["fpe"].append(res[3])
+
+    selected_orders = dict((k, mat(v).argmin())
+                           for k, v in ics.iteritems())
+    try:
+        nlags = selected_orders[ic]
+    except:
+        KeyError("ic %s is not understood" % ic)
+    return VAR(Y, nlags).fit(trend=trend)
 
 class VAR(tsbase.TimeSeriesModel):
     __doc__ = tsbase._tsa_doc % {"model" : _var_model_doc,
                                  "params" : _var_params_doc,
                                  "extra_params" : tsbase._missing_param_doc,
                                  "extra_sections" : _var_reference_doc}
-    def __init__(self, Y, dates=None, names=None, freq=None, missing='none'):
+    def __init__(self, Y, nlags=None, dates=None, names=None, freq=None,
+                 missing='none'):
+        if nlags is None:
+            warn("In the 0.6.0 release nlags will not be optional in the "
+                 "model constructor.", FutureWarning)
+        else:
+            self.k_ar = nlags
         super(VAR, self).__init__(Y, None, dates, freq, missing=missing)
         if self.endog.ndim == 1:
             raise ValueError("Only one variable given to VAR. Expects > 1.")
         if names is not None:
             import warnings
             warnings.warn("The names argument is deprecated and will be "
-                    "removed in 0.6.0. Use a pandas object or structured "
-                    "array for names.", FutureWarning)
+                          "removed in 0.6.0. Use a pandas object or structured "
+                          "array for names.", FutureWarning)
             self.names = names
         else:
             self.names = self.endog_names
@@ -504,13 +571,29 @@ class VAR(tsbase.TimeSeriesModel):
         -----
         Fits the VAR model using OLS.
         """
-        k_ar = maxlags
+        if maxlags is not None:
+            warn("The maxlags argument to fit is deprecated. Please use the "
+                 "model constructor argument nlags. maxlags overwrites nlags"
+                 " given in the model constructor.", FutureWarning)
+
+            k_ar = maxlags
+        else:
+            try:
+                assert hasattr(self, "k_ar")
+            except:
+                raise ValueError("Please give nlags to the model constructor "
+                        "before calling fit.")
+            k_ar = self.k_ar
 
         if trend not in ['c', 'ct', 'ctt', 'nc']:
             raise ValueError("trend '{}' not supported for VAR".format(trend))
 
         if ic is not None:
-            selections = self.select_order(maxlags=maxlags, verbose=verbose)
+            warn("The ic argument to fit is deprecated. Please use the "
+                 "select_order classmethod or select_order_fit instead.",
+                 FutureWarning)
+            selections = self.select_order(self.Y, maxlags=maxlags,
+                                           verbose=verbose)
             if ic not in selections:
                 raise Exception("%s not recognized, must be among %s"
                                 % (ic, sorted(selections)))
@@ -568,31 +651,60 @@ class VAR(tsbase.TimeSeriesModel):
         #TODO: remove names - need them right now for _reorder
         return VARResultsWrapper(varfit)
 
-    def select_order(self, maxlags=None, verbose=True):
+    @classmethod
+    def select_order(self, Y=None, maxlags=None, verbose=True, trend='c'):
         """
         Compute lag order selections based on each information criteria
 
         Parameters
         ----------
+        Y : array-like
+            The endogenous variables.
         maxlags : int
             if None, defaults to 12 * (nobs/100.)**(1./4)
         verbose : bool, default True
             If True, print table of info criteria and selected orders
+        trend : str {"c", "ct", "ctt", "nc"}
+            Available options are:
+
+            * "c" - add constant
+            * "ct" - constant and trend
+            * "ctt" - constant, linear and quadratic trend
+            * "nc" - co constant, no trend
+
+            Note that these are prepended to the columns of X.
 
         Returns
         -------
         selections : dict {info_crit -> selected_order}
         """
+        if Y is None:
+            warn("The Y argument will not be optional in 0.6.0",
+                 FutureWarning)
+            Y_array = self.Y
+        else: # deal with Y as pandas
+            Y_array = np.asarray(Y)
+            if data_util._is_structured_ndarray(Y_array):
+                Y_array = Y_array.view((float, len(Y_array.dtype)))
+
+        if hasattr(self, "k_ar"):
+            warn("In the 0.6.0 release you will not be able to use "
+                 "this method on a model instance.", FutureWarning)
+
         if maxlags is None:
-            maxlags = int(round(12*(len(self.Y)/100.)**(1/4.)))
+            maxlags = int(round(12*(len(Y)/100.)**(1/4.)))
+
+        k_trend = util.get_trendorder(trend)
 
         ics = defaultdict(list)
         for k_ar in range(maxlags + 1):
             # exclude some periods so same nobs used for each lag order
-            result = self._estimate_var(k_ar, offset=maxlags - k_ar)
-
-            for k, v in iteritems(result.info_criteria):
-                ics[k].append(v)
+            res = _estimate_var_ic(Y_array, k_ar, k_trend,
+                                   trim=maxlags - k_ar, trend=trend)
+            ics["aic"].append(res[0])
+            ics["bic"].append(res[1])
+            ics["hqic"].append(res[2])
+            ics["fpe"].append(res[3])
 
         selected_orders = dict((k, mat(v).argmin())
                                for k, v in iteritems(ics))
@@ -1001,7 +1113,14 @@ class VARResults(VARProcess):
             trendorder = None
         self.k_trend = k_trend
         self.trendorder = trendorder
-        self.exog_names = util.make_lag_names(names, k_ar, k_trend)
+        if model.exog_names is not None:
+            warn("This model instance has previously been fit. The "
+                 "model.exog_names will be changed, but the previous result "
+                 "instance's will still be correct. This will be fixed with "
+                 "changes for 0.6.0.", FutureWarning)
+        self.exog_names = self.model.exog_names = util.make_lag_names(names,
+                                                                      k_ar,
+                                                                      k_trend)
         #TODO: do we need to attach this to model?
         # what is data.exog_names is going to be none, but maybe that's ok
         # what are the expectations of the wrappers?
@@ -1025,7 +1144,6 @@ class VARResults(VARProcess):
     @cache_readonly
     def coef_names(self):
         "Coefficient names (deprecated)"
-        from warnings import warn
         warn("coef_names is deprecated and will be removed in 0.6.0."
              "Use exog_names", FutureWarning)
         return self.exog_names
@@ -1563,6 +1681,7 @@ class VARResults(VARProcess):
             for i, nam in enumerate(order):
                 order_new.append(self.model.endog_names.index(order[i]))
             order = order_new
+            self.model.data.xnames = None #TODO: remove when deprecated fixed
         return _reordered(self, order)
 
 #-------------------------------------------------------------------------------
@@ -2009,7 +2128,6 @@ def _acovs_to_acorrs(acovs):
 if __name__ == '__main__':
     import statsmodels.api as sm
     from statsmodels.tsa.vector_ar.util import parse_lutkepohl_data
-    import statsmodels.tools.data as data_util
 
     np.set_printoptions(linewidth=140, precision=5)
 
