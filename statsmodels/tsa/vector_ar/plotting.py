@@ -253,20 +253,46 @@ def adjust_subplots(fig, **kwds):
 #-------------------------------------------------------------------------------
 # Multiple impulse response (cum_effects, etc.) cplots
 
-#TODO: Docs
 def irf_grid_plot(values, stderr, impcol, rescol, names, title,
-                  signif=0.05, hlines=None, subplot_params=None,
-                  plot_params=None, figsize=(10,10), stderr_type='asym'):
+                  stderr_type='asym', signif=0.05, hlines=None,
+                  subplot_kwargs=None, figsize=(10,10), fontsize=12,
+                  **kwargs):
     """
-    Reusable function to make flexible grid plots of impulse responses and
-    comulative effects
+    Make flexible grid plots of impulse responses and cumulative effects
 
+    Parameters
+    ----------
     values : ndarray
         Values to plot of shape (`nobs` + 1) x `neqs` x `neqs`
     stderr : ndarray
         Standard errors of shape (`nobs` x `neqs` x `neqs`)
+    impcol : str or int
+        The variable providing the impulse
+    rescol : str or int
+        The variable affected by the impulse
+    names : list
+        Then names of the endogenous variables
+    title : str
+        The title of the plot
+    stderr_type : str {"asym", "mc", "sz1", "sz2", "sz3"}
+        The type of standard errors.
+
+        * asym : Aymptotic standard errors.
+        * mc : Monte Carlo
+        * sz1 : Sims-Zha 1
+        * sz2 : Sims-Zha 2
+        * sz3 : Sims-Zha 3
+    signif : float
+        The significance level of the confidence intervals
     hlines : ndarray
         Shape (`neqs` x `neqs`)
+    subplot_kwargs : dict
+        Passed to subplot creation.
+    figsize : tuple
+        The size of the figure
+    fontsize : int
+        The font size for the plot titles.
+
 
     Return
     ------
@@ -274,15 +300,14 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
         The `matplotlib.figure` instance that contains the axes.
     """
 
-    if subplot_params is None:
-        subplot_params = {}
-    if plot_params is None:
-        plot_params = {}
+    if subplot_kwargs is None:
+        subplot_kwargs = {}
 
     nrows, ncols, to_plot = _get_irf_plot_config(names, impcol, rescol)
 
     fig, axes = _create_mpl_subplots(None, nrows, ncols, sharex=True,
-                                     squeeze=False, figsize=figsize)
+                                     squeeze=False, figsize=figsize,
+                                     subplot_kw=subplot_kwargs)
 
     # fill out space
     adjust_subplots(fig)
@@ -316,8 +341,7 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
         if hlines is not None:
             ax.axhline(hlines[i,j], color='k')
 
-        sz = subplot_params.get('fontsize', 12)
-        ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=sz)
+        ax.set_title(subtitle_temp % (names[j], names[i]), fontsize=fontsize)
 
     return fig
 

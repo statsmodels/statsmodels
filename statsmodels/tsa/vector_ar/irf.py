@@ -78,10 +78,9 @@ class BaseIRAnalysis(object):
     def cum_effect_cov(self, *args, **kwargs):
         raise NotImplementedError
 
-    def plot(self, orth=False, impulse=None, response=None,
-             signif=0.05, plot_params=None, subplot_params=None,
-             plot_stderr=True, stderr_type='asym', repl=1000,
-             seed=None, component=None):
+    def plot(self, orth=False, impulse=None, response=None, signif=0.05,
+             subplot_kwargs=None, plot_stderr=True, stderr_type='asym',
+             repl=1000, seed=None, component=None, figsize=(10,10)):
         """
         Plot impulse responses
 
@@ -95,21 +94,19 @@ class BaseIRAnalysis(object):
             variable affected by the impulse
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
-        subplot_params : dict
-            To pass to subplot plotting funcions. Example: if fonts are too big,
-            pass {'fontsize' : 8} or some number to your taste.
-        plot_params : dict
-
+        subplot_kwargs : dict
+            To pass to matplotlib.add_subplot
         plot_stderr: bool, default True
             Plot standard impulse response error bands
         stderr_type: string
             'asym': default, computes asymptotic standard errors
             'mc': monte carlo standard errors (use rpl)
         repl: int, default 1000
-            Number of replications for Monte Carlo and Sims-Zha standard errors
+            Number of replications for monte carlo standard errors
         seed: int
-            np.random.seed for Monte Carlo replications
-        component: array or vector of principal component indices
+            Seed for Monte Carlo replications
+        component: array
+            Array of components or principal component indices
         """
         periods = self.periods
         model = self.model
@@ -121,9 +118,11 @@ class BaseIRAnalysis(object):
         if orth:
             title = 'Impulse responses (orthogonalized)'
             irfs = self.orth_irfs
+
         elif svar:
             title = 'Impulse responses (structural)'
             irfs = self.svar_irfs
+
         else:
             title = 'Impulse responses'
             irfs = self.irfs
@@ -131,40 +130,40 @@ class BaseIRAnalysis(object):
         if plot_stderr == False:
             stderr = None
 
-        elif stderr_type not in ['asym', 'mc', 'sz1', 'sz2','sz3']:
-            raise ValueError("Error type must be either 'asym', 'mc','sz1','sz2', or 'sz3'")
+        elif stderr_type == 'asym':
+            stderr = self.cov(orth=orth)
+
+        elif stderr_type == 'mc':
+            stderr = self.errband_mc(orth=orth, svar=svar,
+                                     repl=repl, signif=signif,
+                                     seed=seed)
+        elif stderr_type == 'sz1':
+            stderr = self.err_band_sz1(orth=orth, svar=svar,
+                                       repl=repl, signif=signif,
+                                       seed=seed,
+                                       component=component)
+        elif stderr_type == 'sz2':
+            stderr = self.err_band_sz2(orth=orth, svar=svar,
+                                       repl=repl, signif=signif,
+                                       seed=seed,
+                                       component=component)
+        elif stderr_type == 'sz3':
+            stderr = self.err_band_sz3(orth=orth, svar=svar,
+                                       repl=repl, signif=signif,
+                                       seed=seed,
+                                       component=component)
         else:
-            if stderr_type == 'asym':
-                stderr = self.cov(orth=orth)
-            if stderr_type == 'mc':
-                stderr = self.errband_mc(orth=orth, svar=svar,
-                                         repl=repl, signif=signif,
-                                         seed=seed)
-            if stderr_type == 'sz1':
-                stderr = self.err_band_sz1(orth=orth, svar=svar,
-                                           repl=repl, signif=signif,
-                                           seed=seed,
-                                           component=component)
-            if stderr_type == 'sz2':
-                stderr = self.err_band_sz2(orth=orth, svar=svar,
-                                           repl=repl, signif=signif,
-                                           seed=seed,
-                                           component=component)
-            if stderr_type == 'sz3':
-                stderr = self.err_band_sz3(orth=orth, svar=svar,
-                                           repl=repl, signif=signif,
-                                           seed=seed,
-                                           component=component)
+            raise ValueError("stderr_type %s not understood" % stderr_type)
 
         plotting.irf_grid_plot(irfs, stderr, impulse, response,
                                self.model.names, title, signif=signif,
-                               subplot_params=subplot_params,
-                               plot_params=plot_params, stderr_type=stderr_type)
+                               subplot_kwargs=subplot_kwargs,
+                               stderr_type=stderr_type, figsize=figsize)
 
     def plot_cum_effects(self, orth=False, impulse=None, response=None,
-                         signif=0.05, plot_params=None,
-                         subplot_params=None, plot_stderr=True,
-                         stderr_type='asym', repl=1000, seed=None):
+                         signif=0.05, subplot_kwargs=None, plot_stderr=True,
+                         stderr_type='asym', repl=1000, seed=None,
+                         figsize=(10,10)):
         """
         Plot cumulative impulse response functions
 
@@ -178,11 +177,8 @@ class BaseIRAnalysis(object):
             variable affected by the impulse
         signif : float (0 < signif < 1)
             Significance level for error bars, defaults to 95% CI
-        subplot_params : dict
-            To pass to subplot plotting funcions. Example: if fonts are too big,
-            pass {'fontsize' : 8} or some number to your taste.
-        plot_params : dict
-
+        subplot_kwargs : dict
+            To pass to matplotlib.add_subplot
         plot_stderr: bool, default True
             Plot standard impulse response error bands
         stderr_type: string
@@ -191,8 +187,7 @@ class BaseIRAnalysis(object):
         repl: int, default 1000
             Number of replications for monte carlo standard errors
         seed: int
-            np.random.seed for Monte Carlo replications
-
+            Seed for Monte Carlo replications
         """
 
         if orth:
@@ -217,8 +212,9 @@ class BaseIRAnalysis(object):
 
         plotting.irf_grid_plot(cum_effects, stderr, impulse, response,
                                self.model.names, title, signif=signif,
-                               hlines=lr_effects, subplot_params=subplot_params,
-                               plot_params=plot_params, stderr_type=stderr_type)
+                               hlines=lr_effects,
+                               subplot_kwargs=subplot_kwargs,
+                               stderr_type=stderr_type, figsize=figsize)
 
 class IRAnalysis(BaseIRAnalysis):
     """
