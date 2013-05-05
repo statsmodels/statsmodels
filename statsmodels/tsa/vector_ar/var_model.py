@@ -1725,10 +1725,72 @@ class VARResults(VARProcess):
 #-------------------------------------------------------------------------------
 # VAR Diagnostics: Granger-causality, whiteness of residuals, normality, etc.
 
-    def test_causality(self, equation, variables, kind='f', signif=0.05,
+    def test_causality_all(self, kind='F', signif=0.05):
+        """
+        Returns a DataFrame with tests for all equations and variables.
+
+        Parameters
+        ----------
+        kind : str {'F', 'Wald'}
+            Perform F-test or Wald (Chi-sq) test
+        signif : float, default 5%
+            Significance level for computing critical values for test,
+            defaulting to standard 0.95 level
+
+        Returns
+        -------
+        tbl : DataFrame
+            A hierarchical index DataFrame with tests for each equation
+            for each variable.
+
+        Notes
+        -----
+        If an F-test is requested, then the degrees of freedom given in the
+        results table will be the denominator degrees of freedom. The
+        """
+        kind = kind.lower()
+        if kind == 'f':
+            columns = ['F', 'df1', 'df2', 'prob(>F)']
+        elif kind == 'wald':
+            columns = ['chi2', 'df', 'prob(>chi2)']
+        else:
+            raise ValueError("kind %s not understood" % kind)
+        from pandas import DataFrame, MultiIndex
+        table = DataFrame(np.zeros((9,len(columns))), columns=columns)
+        index = []
+        variables = self.model.endog_names
+        i = 0
+        for vari in variables:
+            others = []
+            for j, ex_vari in enumerate(variables):
+                if vari == ex_vari: # don't want to test this
+                    continue
+                others.append(ex_vari)
+                res = self.test_causality(vari, ex_vari, kind=kind,
+                                          verbose=False)
+                if kind == 'f':
+                    row = (res['statistic'],) + res['df'] + (res['pvalue'],)
+                else:
+                    row = (res['statistic'], res['df'], res['pvalue'])
+                table.ix[[i], columns] = row
+                i += 1
+                index.append([vari, ex_vari])
+            res = self.test_causality(vari, others, kind=kind, verbose=False)
+            if kind == 'f':
+                row = (res['statistic'],) + res['df'] + (res['pvalue'],)
+            else:
+                row = (res['statistic'], res['df'], res['pvalue'])
+            table.ix[[i], columns] = row
+            index.append([vari, 'ALL'])
+            i += 1
+        table.index = MultiIndex.from_tuples(index, names=['Equation',
+                                                           'Excluded'])
+
+        return table
+
+    def test_causality(self, equation, variables, kind='F', signif=0.05,
                        verbose=True):
-        """Compute test statistic for null hypothesis of Granger-noncausality,
-        general function to test joint Granger-causality of multiple variables
+        """Test for Granger causality
 
         Parameters
         ----------
@@ -1736,7 +1798,7 @@ class VARResults(VARProcess):
             Equation to test for causality
         variables : sequence (of strings or ints)
             List, tuple, etc. of variables to test for Granger-causality
-        kind : {'f', 'wald'}
+        kind : str {'F', 'wald'}
             Perform F-test or Wald (chi-sq) test
         signif : float, default 5%
             Significance level for computing critical values for test,
@@ -1753,6 +1815,11 @@ class VARResults(VARProcess):
         Returns
         -------
         results : dict
+            The results of the Granger Causality test
+
+        See Also
+        --------
+        `statsmodels.tsa.vector_ar.var_model.VARResults.test_causality_all`
         """
         if isinstance(variables, (string_types, int, np.integer)):
             variables = [variables]
