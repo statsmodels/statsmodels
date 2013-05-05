@@ -941,9 +941,8 @@ class VARProcess(object):
         plotting.plot_full_acorr(self.acorr(nlags=nlags), linewidth=linewidth,
                                  names=self.model.endog_names)
 
-    def forecast(self, y, steps):
-        """Produce linear minimum MSE forecasts for desired number of steps
-        ahead, using prior values y
+    def forecast(self, Y=None, steps=1):
+        """Minimum MSE forecasts for desired number of steps
 
         Parameters
         ----------
