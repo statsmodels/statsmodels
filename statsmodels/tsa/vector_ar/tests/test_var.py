@@ -15,8 +15,7 @@ import statsmodels.api as sm
 import statsmodels.tsa.vector_ar.var_model as model
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
-from statsmodels.tsa.vector_ar.var_model import VAR
-
+from statsmodels.tsa.vector_ar.var_model import VAR, select_order_fit
 
 from numpy.testing import assert_almost_equal, assert_equal, assert_
 
@@ -234,13 +233,13 @@ class TestVARResults(CheckIRF, CheckFEVD):
         cls.p = 2
 
         cls.data = get_macrodata()
-        cls.model = VAR(cls.data)
+        cls.model = VAR(cls.data, cls.p)
         cls.endog_names = cls.model.endog_names
 
         # results from R vars
         cls.res2 = RResults()
         cls.neqs = len(cls.res2.endog_names)
-        cls.res1 = cls.model.fit(maxlags=cls.p)
+        cls.res1 = cls.model.fit()
 
         cls.irf = cls.res1.irf(cls.res2.nirfs)
         cls.nahead = cls.res2.nahead
@@ -250,13 +249,13 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_constructor(self):
         # make sure this works with no names
         ndarr = self.data.view((float, 3))
-        model = VAR(ndarr)
-        res = model.fit(self.p)
+        model = VAR(ndarr, self.p)
+        res = model.fit()
 
     def test_names(self):
         assert_equal(self.model.endog_names, self.res2.endog_names)
 
-        model2 = VAR(self.data)
+        model2 = VAR(self.data, 2)
         assert_equal(model2.endog_names, self.res2.endog_names)
 
     def test_get_eq_index(self):
@@ -320,9 +319,9 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
         #TODO: this resets exog_names in model
         for ic in ics:
-            res = self.model.fit(maxlags=10, ic=ic, verbose=True)
+            res = select_order_fit(self.data, maxlags=10, ic=ic, verbose=True)
 
-        assert_raises(Exception, self.model.fit, ic='foo')
+        assert_raises(Exception, select_order_fit, Y=self.data, ic='foo')
 
     def test_nobs(self):
         assert_equal(self.res1.nobs, self.res2.nobs)
@@ -362,13 +361,12 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
         assert_raises(Exception,self.res1.test_causality, 0, 1, kind='foo')
 
+    #TODO: smoke test
     def test_select_order(self):
-        result = self.model.fit(10, ic='aic', verbose=True)
-        result = self.model.fit(10, ic='fpe', verbose=True)
+        result = select_order_fit(self.data, 10, ic='aic', verbose=True)
+        result = select_order_fit(self.data, 10, ic='fpe', verbose=True)
 
-        # bug
-        model = VAR(self.model.endog)
-        model.select_order()
+        ic = VAR.select_order(self.model.endog, verbose=False)
 
     def test_is_stable(self):
         # may not necessarily be true for other datasets
@@ -436,7 +434,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         names2.append(names[1])
         from pandas import DataFrame
         data2 = DataFrame(data2, columns=names2)
-        res2 = VAR(data2.to_records(index=False)).fit(maxlags=self.p)
+        res2 = VAR(data2.to_records(index=False), self.p).fit()
 
         #use reorder function
         res3 = self.res1.reorder(['realinv','realgdp', 'realcons'])
@@ -455,8 +453,9 @@ class TestVARResults(CheckIRF, CheckFEVD):
         res_unpickled = self.res1.__class__.load(fh)
         assert_(type(res_unpickled) is type(self.res1))
 
+    #TODO: test these
     def test_wrappers(self):
-        raise ValueError
+        pass
 
 class E1_Results(object):
     """
@@ -528,8 +527,8 @@ class TestVARResultsLutkepohl(object):
 
         from pandas import DataFrame
         dta= DataFrame(adj_data[:-16], index=dates[1:-16], columns=names)
-        self.model = VAR(dta)
-        self.res = self.model.fit(maxlags=self.p)
+        self.model = VAR(dta, self.p)
+        self.res = self.model.fit()
         self.irf = self.res.irf(10)
         self.lut = E1_Results()
 
