@@ -389,12 +389,11 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     #TODO: smoke test
     def test_forecast(self):
-        point = self.res1.forecast(self.res1.Y[-5:], 5)
+        point = self.res1.forecast(y=None, steps=5)
 
     #TODO: smoke test
     def test_forecast_interval(self):
-        y = self.res1.Y[:-self.p:]
-        point, lower, upper = self.res1.forecast_interval(y, 5)
+        point, lower, upper = self.res1.forecast_interval(y=None, steps=5)
 
     def test_plot_sim(self):
         if not have_matplotlib():
