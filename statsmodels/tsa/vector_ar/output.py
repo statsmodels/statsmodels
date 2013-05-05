@@ -167,7 +167,7 @@ class VARSummary(object):
 
     def _resid_info(self):
         buf = StringIO()
-        names = self.results.endog_names
+        names = self.results.model.endog_names
 
         buf.write("Correlation matrix of residuals" + '\n')
         buf.write(pprint_matrix(self.results.resid_corr, names, names) + '\n')
