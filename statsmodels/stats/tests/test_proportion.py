@@ -37,6 +37,13 @@ def test_confint_proportion():
             assert_almost_equal(ci, [res_low, res_upp], decimal=6,
                                 err_msg=repr(case) + method)
 
+def test_samplesize_confidenceinterval_prop():
+    #consistency test for samplesize to achieve confidence_interval
+    nobs = 20
+    ci = smprop.confint_proportion(12, nobs, alpha=0.05, method='normal')
+    res = smprop.samplesize_confint_proportion(12./nobs, (ci[1] - ci[0]) / 2)
+    assert_almost_equal(res, nobs, decimal=13)
+
 class CheckProportionMixin(object):
     def test_proptest(self):
         # equality of k-samples
@@ -63,6 +70,11 @@ class CheckProportionMixin(object):
         ppt = smprop.proportions_chisquare_allpairs(self.n_success, self.nobs,
                                   multitest_method='h')
         assert_almost_equal(ppt.pval_corrected(), self.res_ppt_pvals_holm)
+
+        pptd = smprop.proportions_chisquare_pairscontrol(self.n_success,
+                                  self.nobs, multitest_method='hommel')
+        assert_almost_equal(pptd.pvals_raw, ppt.pvals_raw[:len(self.nobs) - 1],
+                            decimal=13)
 
 class TestProportion(CheckProportionMixin):
     def setup(self):
@@ -190,6 +202,53 @@ def test_binom_test():
     assert_almost_equal(ci_2s, binom_test_2sided.conf_int, decimal=13)
     assert_almost_equal(ci_upp, binom_test_less.conf_int[1], decimal=13)
     assert_almost_equal(ci_low, binom_test_greater.conf_int[0], decimal=13)
+
+
+def test_binom_rejection_interval():
+    # consistency check with binom_test
+    # some code duplication but limit checks are different
+    alpha = 0.05
+    nobs = 200
+    prop = 12./20
+    alternative='smaller'
+    ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
+                                                       alternative=alternative)
+    assert_equal(ci_upp, nobs)
+    pval = smprop.binom_test_stat(ci_low, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(pval, alpha)
+    pval = smprop.binom_test_stat(ci_low + 1, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(alpha, pval)
+
+    alternative='larger'
+    ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
+                                                       alternative=alternative)
+    assert_equal(ci_low, 0)
+    pval = smprop.binom_test_stat(ci_upp, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(pval, alpha)
+    pval = smprop.binom_test_stat(ci_upp - 1, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(alpha, pval)
+
+    alternative='2-sided'
+    ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
+                                                       alternative=alternative)
+    pval = smprop.binom_test_stat(ci_upp, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(pval, alpha)
+    pval = smprop.binom_test_stat(ci_upp - 1, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(alpha, pval)
+    pval = smprop.binom_test_stat(ci_upp, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(pval, alpha)
+    pval = smprop.binom_test_stat(ci_upp - 1, nobs, prop=prop,
+                                  alternative=alternative)
+    assert_array_less(alpha, pval)
+
+
 
 def test_binom_tost():
     # consistency check with two different implementation,

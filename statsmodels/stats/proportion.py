@@ -123,7 +123,8 @@ def confint_proportion(count, nobs, alpha=0.05, method='normal'):
         raise NotImplementedError('method "%s" is not available' % method)
     return ci_low, ci_upp
 
-def samplesize_confint(proportion, half_length, alpha=0.05, method='normal'):
+def samplesize_confint_proportion(proportion, half_length, alpha=0.05,
+                                  method='normal'):
     '''find sample size to get desired confidence interval length
 
     Parameters
@@ -134,7 +135,7 @@ def samplesize_confint(proportion, half_length, alpha=0.05, method='normal'):
         desired half length of the confidence interval
     alpha : float in (0, 1)
         significance level, default 0.05,
-        coverage of the interval is (approximately) ``1 - alpha``
+        coverage of the two-sided interval is (approximately) ``1 - alpha``
     method : string in ['normal']
         method to use for confidence interval,
         currently only normal approximation
@@ -320,14 +321,14 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='2-sided'):
 
     '''
     if alternative in ['2s', '2-sided']:
-        alternative = '2s'
+        alternative = '2s'  # normalize alternative name
         alpha = alpha / 2
 
-    if alternative in ['2s', 'larger']:
+    if alternative in ['2s', 'smaller']:
         x_low = stats.binom.ppf(alpha, nobs, value) - 1
     else:
         x_low = 0
-    if alternative in ['2s', 'smaller']:
+    if alternative in ['2s', 'larger']:
         x_upp = stats.binom.isf(alpha, nobs, value) + 1
     else :
         x_upp = nobs
