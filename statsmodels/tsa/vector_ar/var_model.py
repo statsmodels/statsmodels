@@ -368,6 +368,10 @@ def _get_info_criteria(cov_resid_mle, nobs, neqs, k_ar, k_trend):
 def _estimate_var_ic(Y, k_ar, k_trend, trim=0, trend='c'):
     """
     Helper function to fit VAR that aids in lag order selection
+
+    Y is expected to be an array.
+    trim is number of variables to trim from the beginning of Y. It's used
+    so that the ICs are comparable across fits with different lags.
     """
     Y = Y[trim:]
     X = util.get_lagged_y(Y, k_ar, trend=trend)
@@ -383,7 +387,41 @@ def _estimate_var_ic(Y, k_ar, k_trend, trim=0, trend='c'):
     cov_resid_mle = np.dot(resid.T, resid) / nobs
     return _get_info_criteria(cov_resid_mle, nobs, neqs, k_ar, k_trend)
 
-def select_order_fit(Y, maxlags=None, ic="aic", trend="c", verbose=True):
+def select_order_fit(Y, maxlags=None, ic="aic", trend="c", verbose=False):
+    """
+    Return results from the best lag order according to information criterion
+
+    Parameters
+    ----------
+    Y : array-like
+        The endogenous variables
+    maxlags : int
+        Maximum number of lags to check for order selection, defaults to
+        12 * (nobs/100.)**(1./4), see select_order function
+    ic : {'aic', 'fpe', 'hqic', 'bic', None}
+        Information criterion to use for VAR order selection:
+
+        * aic : Akaike
+        * fpe : Final prediction error
+        * hqic : Hannan-Quinn
+        * bic : Bayesian a.k.a. Schwarz
+    trend : str {"c", "ct", "ctt", "nc"}
+        Available options are:
+
+        * "c" - add constant
+        * "ct" - constant and trend
+        * "ctt" - constant, linear and quadratic trend
+        * "nc" - co constant, no trend
+
+        Note that these are prepended to the columns of X.
+    verbose : bool
+        Print order selection output to the screen. Default is False.
+
+    Returns
+    -------
+    fitted : VARResults
+        A VARResults instance using the best lag order indicated by `ic`.
+    """
     Y_array = np.asarray(Y)
     if data_util._is_structured_ndarray(Y_array):
         Y_array = Y_array.view((float, len(Y_array.dtype)))
