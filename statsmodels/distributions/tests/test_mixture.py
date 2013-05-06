@@ -33,6 +33,7 @@ class TestMixtureDistributions():
                 np.array([res.std(),res.mean(),res.var()]),
                 np.array([1.874,1.733,3.512]),
                 decimal=1)
+
     def test_mixture_pdf(self):
         mix = MixtureDistribution()
         grid = np.linspace(-4,4, 10)
