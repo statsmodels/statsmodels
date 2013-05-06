@@ -1193,6 +1193,10 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
                                          names=names)
 
     @cache_readonly
+    def normalized_cov_params(self):
+        return self.cov_params()
+
+    @cache_readonly
     def coef_names(self):
         "Coefficient names (deprecated)"
         warn("coef_names is deprecated and will be removed in 0.6.0."
@@ -1327,10 +1331,15 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         """
         return self.cov_resid * self.df_resid / self.nobs
 
-    @cache_readonly
-    def cov_params(self):
+    def cov_params(self, r_matrix=None, *args, **kwargs):
         """
         Estimated variance-covariance of model coefficients
+
+        Parameters
+        ----------
+        r_matrix : array-like
+            Can be 1d, or 2d. If `r_matrix` is not None the covariance is
+            r_matrix kron((X.T X)^(-1), cov_resid) r_matrix.T
 
         Returns
         -------
@@ -1346,8 +1355,14 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         See VARModel or the VAR documentation for the definition of the A
         matrices.
         """
+        #TODO: This should inherit from a systems of equations model
+        #      and this should be in the super class
         X = self.X
-        return np.kron(L.inv(np.dot(X.T, X)), self.cov_resid)
+        cov = np.kron(L.inv(np.dot(X.T, X)), self.cov_resid)
+        if r_matrix is not None:
+            return np.dot(np.dot(r_matrix, cov), r_matrix)
+        else:
+            return cov
 
     def cov_ybar(self):
         r"""
@@ -1380,7 +1395,7 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         """
         i = self.neqs*self.k_trend
         # drop trend variables
-        return self.cov_params[i:,i:]
+        return self.cov_params()[i:,i:]
 
     @cache_readonly
     def _cov_cov_resid(self):
@@ -1401,7 +1416,7 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
     @cache_readonly
     def stderr(self):
         "Standard errors of coefficients"
-        stderr = np.sqrt(np.diag(self.cov_params))
+        stderr = np.sqrt(np.diag(self.cov_params()))
         return stderr.reshape((self.df_model, self.neqs), order='C')
 
     bse = stderr  # statsmodels interface?
@@ -1859,7 +1874,7 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
 
         # Lutkepohl 3.6.5
         Cb = np.dot(C, vec(self.params.T))
-        middle = L.inv(chain_dot(C, self.cov_params, C.T))
+        middle = L.inv(chain_dot(C, self.cov_params(), C.T))
 
         # wald statistic
         lam_wald = statistic = chain_dot(Cb, middle, Cb)
@@ -2101,18 +2116,22 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         idx = np.argsort(np.abs(roots))[::-1] # sort by reverse modulus
         return roots[idx]
 
+    def t_test(*args, **kwargs):
+        raise NotImplementedError
+
+    def f_test(*args, **kwargs):
+        raise NotImplementedError
+
 class VARResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov2d',
-              'params' : 'columns_eq', 'pvalues' : 'columns_eq',
-              'tvalues' : 'columns_eq', 'cov_resid' : 'cov_eq',
-              'cov_resid_mle' : 'cov_eq',
+    _attrs = {'bse' : 'columns_eq', 'params' : 'columns_eq',
+              'pvalues' : 'columns_eq', 'tvalues' : 'columns_eq',
+              'cov_resid' : 'cov_eq', 'cov_resid_mle' : 'cov_eq',
               'stderr' : 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                     _attrs)
-    _methods = {'conf_int' : 'columns_eq'}
+    _methods = {'conf_int' : 'columns_eq', 'cov_params' : 'cov2d'}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
-    _wrap_methods.pop('cov_params') # not yet a method in VARResults
 wrap.populate_wrapper(VARResultsWrapper, VARResults)
 
 class FEVD(object):
