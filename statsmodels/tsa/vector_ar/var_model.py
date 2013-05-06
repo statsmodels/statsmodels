@@ -1591,6 +1591,7 @@ class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
         Array of simulated impulse response functions
 
         """
+        #TODO: notes -> references
         neqs = self.neqs
         mean = self.mean()
         k_ar = self.k_ar
@@ -2129,7 +2130,7 @@ class VARResultsWrapper(wrap.ResultsWrapper):
               'stderr' : 'columns_eq'}
     _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
                                     _attrs)
-    _methods = {}
+    _methods = {'conf_int' : 'columns_eq'}
     _wrap_methods = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_methods,
                                      _methods)
     _wrap_methods.pop('cov_params') # not yet a method in VARResults

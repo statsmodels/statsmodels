@@ -529,7 +529,14 @@ class PandasData(ModelData):
             return DataFrame(result, index=self.param_names)
 
     def attach_columns_eq(self, result):
-        return DataFrame(result, index=self.xnames, columns=self.ynames)
+        if result.ndim <= 2:
+            return DataFrame(result, index=self.xnames, columns=self.ynames)
+        else: # for e.g., confidence intervals in systems of equations
+            from pandas import MultiIndex
+            #TODO: handle MNLogit, see cov2d below
+            idx = [(i,j) for i in self.ynames for j in self.xnames]
+            index = MultiIndex.from_tuples(idx, names=["equation", "variable"])
+            return DataFrame(result.reshape(-1, 2), index=index)
 
     def attach_cov(self, result):
         return DataFrame(result, index=self.param_names,
