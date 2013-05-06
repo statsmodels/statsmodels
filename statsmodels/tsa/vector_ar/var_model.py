@@ -1421,6 +1421,11 @@ class VARResults(VARProcess):
 
     bse = stderr  # statsmodels interface?
 
+    def conf_int(self, alpha=.05, cols=None):
+        confint = super(VARResults, self).conf_int(alpha=alpha,
+                                                            cols=cols)
+        return confint.transpose(2,0,1)
+
     @cache_readonly
     def tvalues(self):
         "t statistics of coefficients"
@@ -2117,7 +2122,7 @@ class VARResults(VARProcess):
         return roots[idx]
 
 class VARResultsWrapper(wrap.ResultsWrapper):
-    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov',
+    _attrs = {'bse' : 'columns_eq', 'cov_params' : 'cov2d',
               'params' : 'columns_eq', 'pvalues' : 'columns_eq',
               'tvalues' : 'columns_eq', 'cov_resid' : 'cov_eq',
               'cov_resid_mle' : 'cov_eq',

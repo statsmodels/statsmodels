@@ -421,6 +421,8 @@ class ModelData(object):
             return self.attach_generic_columns_2d(obj, names)
         elif how == 'ynames':
             return self.attach_ynames(obj)
+        elif how == "cov2d":
+            return self.attach_cov2d(obj)
         else:
             return obj
 
@@ -434,6 +436,9 @@ class ModelData(object):
         return result
 
     def attach_cov_eq(self, result):
+        return result
+
+    def attach_cov2d(self, result):
         return result
 
     def attach_rows(self, result):
@@ -529,6 +534,17 @@ class PandasData(ModelData):
     def attach_cov(self, result):
         return DataFrame(result, index=self.param_names,
                          columns=self.param_names)
+
+    def attach_cov2d(self, result):
+        # wraps parameters for systems of equations, VAR, MNLogit, etc.
+
+        #TODO: attach this to data in MNLogit.cov_params
+        #if hasattr(self, '_choice_names'): # MNLogit
+        #    ynames = self._choice_names
+        #else:
+        ynames = self.ynames
+        names = ['.'.join((i,j)) for i in ynames for j in self.xnames]
+        return DataFrame(result, index=names, columns=names)
 
     def attach_cov_eq(self, result):
         return DataFrame(result, index=self.ynames, columns=self.ynames)
