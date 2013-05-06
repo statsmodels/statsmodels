@@ -1052,7 +1052,7 @@ class VARProcess(object):
 # VARResults class
 
 
-class VARResults(VARProcess):
+class VARResults(VARProcess, tsbase.TimeSeriesModelResults):
     """The results instances of a fitted VAR(p) model.
 
     Parameters
