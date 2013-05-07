@@ -729,7 +729,7 @@ class TukeyHSDResults(object):
 
 
     def compute_plot_intervals(self, comparison_name=None, q_crit=None, ax=None, figsize=(10, 6), xlabel=None,
-                                        yabel=None):
+                                        ylabel=None):
         """Compute and plot each group mean along with their CIs to visually identify significant differences.
 
         Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups,
