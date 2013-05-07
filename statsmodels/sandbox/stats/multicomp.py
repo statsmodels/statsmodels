@@ -86,12 +86,11 @@ import numpy as np
 import math
 import copy
 from scipy import stats
-import matplotlib.pyplot as plt
 from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
-
+from statsmodels.graphics import utils
 
 
 qcrit = '''
@@ -668,18 +667,19 @@ class TukeyHSDResults(object):
                                       #you maybe shouldn't be using Multiple Comparisons anyways...
         self.halfwidths = (self.q_crit/np.sqrt(2))*w
 
-    def plot_intervals(self, comparison_name, figsize=(10,6)):
+    def plot_intervals(self, comparison_name, ax=None, figsize=(10,6)):
         """Perform the plotting, color coding to visualize Hochberg intervals
 
         :comparison_name: a string master group name that others should be compared to
         :figsize: (optional) tupe of the size of the figure generated
         """
+        import matplotlib.pyplot as plt
+
+        fig, ax1 = utils.create_mpl_ax(ax)
+        fig.set_size_inches(figsize)
         if getattr(self, 'halfwidths', None) == None:
             raise AttributeError, "Perform compute_intervals before plotting"
         means = self._multicomp.groupstats.groupmean
-        fig = plt.figure(figsize=figsize)
-        #fig.canvas.set_window_title('A Boxplot Example')
-        ax1 = fig.add_subplot(111)
 
         midx = np.where(self.groupsunique==comparison_name)[0]
         sigidx = []
@@ -696,23 +696,24 @@ class TukeyHSDResults(object):
                 nsigidx.append(i)
 
         #Plot the master comparison
-        plt.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', color='b', ecolor='b')
+        ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', color='b', ecolor='b')
         #Plot those that are significantly different
         if len(sigidx) > 0:
-            plt.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', linestyle='None', color='r', ecolor='r')
+            ax1.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', linestyle='None', color='r', ecolor='r')
         #Plot those that are not significantly different
         if len(nsigidx) > 0:
-            plt.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', linestyle='None', color='0.5', ecolor='0.5')
+            ax1.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', linestyle='None', color='0.5', ecolor='0.5')
 
         #ax1.set_autoscale_on(True)
         r = np.max(maxrange) - np.min(minrange)
-        p = plt.ylim([-1, self._multicomp.ngroups])
-        p = plt.xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.])
-        p = plt.title('Multiple Comparisons against %s'%comparison_name)
+        p = ax1.set_ylim([-1, self._multicomp.ngroups])
+        p = ax1.set_xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.])
+        p = ax1.set_title('Multiple Comparisons against %s'%comparison_name)
         ax1.set_yticklabels(np.insert(self.groupsunique, 0, ''))
+        return fig
 
 
-    def compute_plot_intervals(self, comparison_name, q_crit=None, S=None, figsize=(10, 6)):
+    def compute_plot_intervals(self, comparison_name, q_crit=None, S=None, figsize=(10, 6), ax=None):
         """Compute and plot each group mean along with their CIs to visually identify significant differences.
 
         Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups,
@@ -731,8 +732,8 @@ class TukeyHSDResults(object):
         :S: (optional) the group RMSE
         :figsize: (optional) the size of the plotted figure
         """
-        self.compute_intervals(q_crit, S)
-        self.plot_intervals(comparison_name, figsize)
+        self.compute_intervals(q_crit=q_crit, S=S)
+        return self.plot_intervals(comparison_name, figsize=figsize, ax=ax)
 
 
 
