@@ -270,7 +270,7 @@ def arma_acovf(ar, ma, nobs=10):
     return acovf[:nobs]
 
 def arma_acf(ar, ma, nobs=10):
-    '''theoretical autocovariance function of ARMA process
+    '''theoretical autocorrelation function of ARMA process
 
     Parameters
     ----------
@@ -282,7 +282,7 @@ def arma_acf(ar, ma, nobs=10):
     Returns
     -------
     acovf : array
-        autocovariance of ARMA process given by ar, ma
+        autocorrelation of ARMA process given by ar, ma
 
 
     See Also
