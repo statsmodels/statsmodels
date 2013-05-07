@@ -624,13 +624,10 @@ class TukeyHSDResults(object):
         RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
         return np.sqrt(RMSE)
 
-    def compute_intervals(self, q_crit=None, S=None):
+    def compute_intervals(self, q_crit=None):
         """Compute graphical confidence intervals for visual multiple comparisons.
 
-        :data: a np.array of the raw data to be analyzed
-        :labels: a np.array of the string labels corresponding to each data element
         :q_crit: the Q critical value generated from a Tukey HSD computation
-        :S: (optional) the Mean Square Error for all groups.
 
         self.halfwidths is the important byproduct of hcohberg; these are the widths
         of the CIs for each group mean that allow simultaneous comparisons among all groups
@@ -639,8 +636,7 @@ class TukeyHSDResults(object):
         if getattr(self, 'q_crit', None) == None:
             raise AttributeError, "Provide q_crit value before computing hochberg intervals"
 
-        if S == None:
-            S = self.rmseofgroup()
+        S = self.rmseofgroup()
 
         # Set initial variables
         ng = len(self.groupsunique)
@@ -732,8 +728,8 @@ class TukeyHSDResults(object):
         return fig
 
 
-    def compute_plot_intervals(self, comparison_name=None, q_crit=None, S=None, ax=None, figsize=(10, 6), xlabel=None,
-                                        ylabel=None):
+    def compute_plot_intervals(self, comparison_name=None, q_crit=None, ax=None, figsize=(10, 6), xlabel=None,
+                                        yabel=None):
         """Compute and plot each group mean along with their CIs to visually identify significant differences.
 
         Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups,
@@ -744,15 +740,18 @@ class TukeyHSDResults(object):
         (Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: John Wiley & Sons, 1987.)
 
         Note: this is currently only applicable for a 1-way anova with between 2 and 10 groups. Further, one must
-        have comptued the halfwidths previously using compute_hochberg_intervals.
+        have comptued the halfwidths previously using compute_intervals.
 
-        :comparison_name: the group label name to be colored blue. All other means will be colored red (for
-            significantly different) or gray (for insignificant)
-        :q_crit: (optional) was likely calculated during tukeyhsd, but an alternative can be provided here.
-        :S: (optional) the group RMSE
-        :figsize: (optional) the size of the plotted figure
+        :comparison_name: if provided, plot_intervals will color code all groups that are
+            significantly different from the comparison_name red, and will color code insignificant groups gray.
+            Otherwise, all intervals will just be plotted in black.
+        :q_crit: was likely calculated during tukeyhsd, but an alternative can be provided here.
+        :ax: a matplotlib axis on which to attach the plot
+        :figsize: tupe of the size of the figure generated
+        :xlabel: a str used as x axis label
+        :ylabel: a str used for y axis label
         """
-        self.compute_intervals(q_crit, S)
+        self.compute_intervals(q_crit)
         return self.plot_intervals(comparison_name, ax, figsize, xlabel, ylabel)
 
 
