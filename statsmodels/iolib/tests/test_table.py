@@ -3,6 +3,8 @@ import unittest
 from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 from statsmodels.iolib.table import default_latex_fmt
 from statsmodels.iolib.table import default_html_fmt
+import pandas
+from statsmodels.regression.linear_model import OLS
 
 ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
@@ -152,6 +154,31 @@ stub R2 C2  40.95038  40.65765
 """
             actual = '\n%s\n' % tbl.as_html()
             self.assertEqual(actual, desired)
+    
+    def test_regression_with_tuples(self):
+        i = pandas.Series( [1,2,3,4]*10 , name="i")
+        y = pandas.Series( [1,2,3,4,5]*8, name="y")
+        x = pandas.Series( [1,2,3,4,5,6,7,8]*5, name="x")
+
+        df = pandas.DataFrame( index=i.index )
+        df = df.join( i )
+        endo = df.join( y )
+        exo = df.join( x )
+        endo_groups = endo.groupby( ("i",) )
+        exo_groups = exo.groupby( ("i",) )
+        exo_Df = exo_groups.agg( [np.sum, np.max] )
+        endo_Df = endo_groups.agg( [np.sum, np.max] )
+        reg = OLS(exo_Df[[("x", "sum")]],endo_Df).fit()
+        interesting_lines = []
+        for line in str( reg.summary() ).splitlines():
+            if "('" in line:
+                interesting_lines.append( line[:38] )
+        
+        desired = ["Dep. Variable:           ('x', 'sum') ",
+                   "('y', 'sum')      1.4595      0.209   ",
+                   "('y', 'amax')     0.2432      0.035   "]
+        
+        self.assertEqual( desired, interesting_lines  )
 
 
 if __name__ == "__main__":
