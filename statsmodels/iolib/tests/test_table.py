@@ -4,7 +4,7 @@ from statsmodels.iolib.table import SimpleTable, default_txt_fmt
 from statsmodels.iolib.table import default_latex_fmt
 from statsmodels.iolib.table import default_html_fmt
 import pandas
-from statsmodels.api import OLS
+from statsmodels.regression.linear_model import OLS
 
 ltx_fmt1 = default_latex_fmt.copy()
 html_fmt1 = default_html_fmt.copy()
