@@ -679,7 +679,7 @@ class Cell(object):
         data_aligns = fmt.get('data_aligns','c')
         if isinstance(datatype, int):
             datatype = datatype % len(data_fmts) #constrain to indexes
-            content = data_fmts[datatype] % (data,)
+            content = data_fmts[datatype] % data
         elif datatype in fmt:
             if "replacements" in fmt:
                 if isinstance( data, str ):
@@ -688,7 +688,7 @@ class Cell(object):
             
             dfmt = fmt.get(datatype)
             try:
-                content = dfmt % (data,)
+                content = dfmt % data
             except TypeError: #dfmt is not a substitution string
                 content = dfmt
         else:
