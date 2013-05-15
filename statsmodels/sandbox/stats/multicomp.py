@@ -909,7 +909,7 @@ class MultiComparison(object):
         var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
         #res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs, 4:confint, 5:q_crit,
         #6:df_total, 7:reject2 
-        res = tukeyhsd(means, self.nobs, var_, df=None, alpha=alpha, q_crit=None)
+        res = tukeyhsd(means, self.groupstats.groupnobs, var_, df=None, alpha=alpha, q_crit=None)
 
         resarr = np.array(zip(res[0][0], res[0][1],
                                   np.round(res[2],4),
