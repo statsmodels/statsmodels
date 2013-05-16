@@ -589,7 +589,7 @@ class TukeyHSDResults(object):
     Can also compute and plot additional post-hoc evaluations using this results class
     """
     def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None, std_pairs=None, 
-            confint=None, df_total=None, reject2=None):
+            confint=None, df_total=None, reject2=None, variance=None):
         self._multicomp = mc_object
         self._results_table = results_table
         self.q_crit = q_crit
@@ -599,6 +599,7 @@ class TukeyHSDResults(object):
         self.confint = confint
         self.df_total = df_total
         self.reject2 = reject2
+        self.variance = variance
         # Taken out of _multicomp for ease of access for unknowledgeable users
         self.data = self._multicomp.data
         self.groups =self._multicomp.groups
@@ -609,26 +610,6 @@ class TukeyHSDResults(object):
 
     def summary(self):
         print self._results_table
-
-    def rmse(self):
-        """Compute the root mean square error the multi-group data.
-    
-        :data: an np.array containing the raw values for each group
-        :labels: np.array of string labels identifying which group data belongs to
-    
-        :returns: float value of RMSE
-        """
-        # RMSE in eval_measures.py does not perform correction for deg. freedom, using this 
-        # to be consistent with Matlab implementation
-        SE = 0
-        for name in self.groupsunique:
-            vals = self.data[np.where(self.groups==name)]
-            avg = np.mean(vals)
-            SE += (np.sum((vals-avg)**2))  
-        
-        RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
-        return np.sqrt(RMSE)
-        var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
 
     def compute_intervals(self, q_crit=None):
         """Compute graphical confidence intervals for visual multiple comparisons.
@@ -641,11 +622,10 @@ class TukeyHSDResults(object):
         if q_crit != None: self.q_crit = q_crit
         if getattr(self, 'q_crit', None) == None:
             raise AttributeError, "Provide q_crit value before computing hochberg intervals"
-
-        S = self.rmse()
         
         # Set initial variables
         ng = len(self.groupsunique)
+        S = np.sqrt(self.variance)
         
         # Compute dij for all pairwise comparisons ala hochberg p. 95
         gvar = S**2/self._multicomp.groupstats.groupnobs
@@ -932,7 +912,7 @@ class MultiComparison(object):
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
         results_table.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
 
-        return TukeyHSDResults(self, results_table, res[5], res[1], res[2], res[3], res[4], res[6], res[7])
+        return TukeyHSDResults(self, results_table, res[5], res[1], res[2], res[3], res[4], res[6], res[7], var_)
 
 
 
