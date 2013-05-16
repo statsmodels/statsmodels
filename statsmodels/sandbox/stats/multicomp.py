@@ -591,7 +591,7 @@ class TukeyHSDResults(object):
     def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None, std_pairs=None,
             confint=None, df_total=None, reject2=None):
         self._multicomp = mc_object
-        self.results_table = results_table
+        self._results_table = results_table
         self.q_crit = q_crit
         self.reject = reject
         self.meandiffs = meandiffs
@@ -604,17 +604,22 @@ class TukeyHSDResults(object):
         self.groups =self._multicomp.groups
         self.groupsunique = self._multicomp.groupsunique
 
-    def rmseofgroup(self):
-        """Compute the root mean square error the multi-group data.
+    def __str__(self):
+        return self._results_table
 
-        RMSE in eval_measures.py does not perform correction for deg. freedom, using this
-            to be consistent with Matlab implementation
+    def summary(self):
+        print self._results_table
+
+    def rmse(self):
+        """Compute the root mean square error the multi-group data.
 
         :data: an np.array containing the raw values for each group
         :labels: np.array of string labels identifying which group data belongs to
 
         :returns: float value of RMSE
         """
+        # RMSE in eval_measures.py does not perform correction for deg. freedom, using this
+        # to be consistent with Matlab implementation
         SE = 0
         for name in self.groupsunique:
             vals = self.data[np.where(self.groups==name)]
@@ -636,7 +641,7 @@ class TukeyHSDResults(object):
         if getattr(self, 'q_crit', None) == None:
             raise AttributeError, "Provide q_crit value before computing hochberg intervals"
 
-        S = self.rmseofgroup()
+        S = self.rmse()
 
         # Set initial variables
         ng = len(self.groupsunique)
@@ -806,19 +811,7 @@ class MultiComparison(object):
         '''
         pairwise comparison for kruskal-wallis test
 
-        This is just a reimplementation of scestfunc is calculated for all pairs
-        and the p-values are adjusted by methods in multipletests. The p-value
-        correction is generic and based only on the p-values, and does not
-        take any special structure of the hypotheses into account.
-
-        Parameters
-        ----------
-        testfunc : function
-            A test function for two (independent) samples. It is assumed that
-            the return value on position pvalidx is the p-value.
-        alpha : float
-            familywise error rate
-        method : stringipy.stats.kruskal and does
+        This is just a reimplementation of scipy.stats.kruskal and does
         not yet use a multiple comparison correction.
 
         '''
@@ -845,7 +838,19 @@ class MultiComparison(object):
     def allpairtest(self, testfunc, alpha=0.05, method='bonf', pvalidx=1):
         '''run a pairwise test on all pairs with multiple test correction
 
-        The statistical test given in t
+        The statistical test given in testfunc is calculated for all pairs
+        and the p-values are adjusted by methods in multipletests. The p-value
+        correction is generic and based only on the p-values, and does not
+        take any special structure of the hypotheses into account.
+
+        Parameters
+        ----------
+        testfunc : function
+            A test function for two (independent) samples. It is assumed that
+            the return value on position pvalidx is the p-value.
+        alpha : float
+            familywise error rate
+        method : string
             This specifies the method for the p-value correction. Any method
             of multipletests is possible.
         pvalidx : int (default: 1)
