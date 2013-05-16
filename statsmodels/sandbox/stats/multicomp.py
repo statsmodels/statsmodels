@@ -605,7 +605,7 @@ class TukeyHSDResults(object):
         self.groupsunique = self._multicomp.groupsunique
 
     def __str__(self):
-        return self._results_table
+        return str(self._results_table)
 
     def summary(self):
         print self._results_table
@@ -628,6 +628,7 @@ class TukeyHSDResults(object):
 
         RMSE = SE/((len(self.data)-len(self.groupsunique))) #correct for deg. freedom
         return np.sqrt(RMSE)
+        var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
 
     def compute_intervals(self, q_crit=None):
         """Compute graphical confidence intervals for visual multiple comparisons.
@@ -690,19 +691,19 @@ class TukeyHSDResults(object):
             raise AttributeError, "Perform compute_intervals before plotting"
         means = self._multicomp.groupstats.groupmean
 
-        midx = np.where(self.groupsunique==comparison_name)[0]
+
         sigidx = []
         nsigidx = []
         minrange = [means[i]-self.halfwidths[i] for i in range(len(means))]
         maxrange = [means[i]+self.halfwidths[i] for i in range(len(means))]
 
-
-        if comparison_name == None:
+        if comparison_name is None:
             ax1.set_title('Multiple Comparisons Between Groups')
             ax1.errorbar(means, range(len(means)), xerr=self.halfwidths, marker='o',
                             linestyle='None', color='k', ecolor='k')
 
         else:
+            midx = np.where(self.groupsunique==comparison_name)[0]
             for i in range(len(means)):
                 if self.groupsunique[i] == comparison_name: continue
                 if min(maxrange[i], maxrange[midx]) - max(minrange[i], minrange[midx]) < 0:
