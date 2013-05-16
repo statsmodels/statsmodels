@@ -625,17 +625,14 @@ class TukeyHSDResults(object):
         
         # Set initial variables
         ng = len(self.groupsunique)
-        S = np.sqrt(self.variance)
-        
+
         # Compute dij for all pairwise comparisons ala hochberg p. 95
-        gvar = S**2/self._multicomp.groupstats.groupnobs
+        gvar = self.variance/self._multicomp.groupstats.groupnobs
         d12 = np.sqrt(gvar[self._multicomp.pairindices[0]] + gvar[self._multicomp.pairindices[1]])
         
         # Create the full d matrix given all known dij vals
-        d = np.zeros((ng, ng)).reshape((1, ng**2))
-        inds = np.ravel_multi_index(self._multicomp.pairindices, (ng, ng))
-        d[0][inds] = d12
-        d = d.reshape((ng, ng))
+        d = np.zeros((ng, ng))
+        d[self._multicomp.pairindices] = d12
         d = d + d.conj().T
         
         # Compute the two global sums from hochberg eq 3.32 
@@ -645,8 +642,8 @@ class TukeyHSDResults(object):
         if (ng > 2):
             w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
         else:
-            w = sum1 * ones(2, 1) / 2 #just copied this from Matlab...not sure for groups of <=2
-                                      #you maybe shouldn't be using Multiple Comparisons anyways...        
+            w = sum1 * ones(2, 1) / 2 
+                 
         self.halfwidths = (self.q_crit/np.sqrt(2))*w 
 
     def plot_intervals(self, comparison_name=None, ax=None, figsize=(10,6), xlabel=None, ylabel=None):
@@ -707,7 +704,7 @@ class TukeyHSDResults(object):
         r = np.max(maxrange) - np.min(minrange) 
         ax1.set_ylim([-1, self._multicomp.ngroups])
         ax1.set_xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.]) 
-        ax1.set_yticklabels(np.insert(self.groupsunique, 0, ''))
+        ax1.set_yticklabels(np.insert(self.groupsunique.astype(str), 0, ''))
         ax1.set_xlabel(xlabel if xlabel != None else '')
         ax1.set_ylabel(ylabel if ylabel != None else '')
         return fig
