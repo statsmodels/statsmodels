@@ -643,7 +643,7 @@ class TukeyHSDResults(object):
             w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
         else:
             w = sum1 * ones(2, 1) / 2 
-                 
+
         self.halfwidths = (self.q_crit/np.sqrt(2))*w 
 
     def plot_intervals(self, comparison_name=None, ax=None, figsize=(10,6), xlabel=None, ylabel=None):
@@ -679,6 +679,8 @@ class TukeyHSDResults(object):
                             linestyle='None', color='k', ecolor='k')
 
         else:   
+            if comparison_name not in self.groupsunique: 
+                raise ValueError, 'comparison_name not found in group names.'
             midx = np.where(self.groupsunique==comparison_name)[0]
             for i in range(len(means)):
                 if self.groupsunique[i] == comparison_name: continue
