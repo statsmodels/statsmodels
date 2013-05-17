@@ -682,6 +682,8 @@ class TukeyHSDResults(object):
                             linestyle='None', color='k', ecolor='k')
 
         else:
+            if comparison_name not in self.groupsunique:
+                raise ValueError, 'comparison_name not found in group names.'
             midx = np.where(self.groupsunique==comparison_name)[0]
             for i in range(len(means)):
                 if self.groupsunique[i] == comparison_name: continue
