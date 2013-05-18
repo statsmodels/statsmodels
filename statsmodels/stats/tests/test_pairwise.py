@@ -149,14 +149,9 @@ class CheckTuckeyHSDMixin(object):
         self.res = self.mc.tukeyhsd(alpha=self.alpha)
 
     def test_multicomptukey(self):
-        meandiff1 = self.res[1][2]
-        assert_almost_equal(meandiff1, self.meandiff2, decimal=14)
-
-        confint1 = self.res[1][4]
-        assert_almost_equal(confint1, self.confint2, decimal=2)
-
-        reject1 = self.res[1][1]
-        assert_equal(reject1, self.reject2)
+        assert_almost_equal(self.res.meandiffs, self.meandiff2, decimal=14)
+        assert_almost_equal(self.res.confint, self.confint2, decimal=2)
+        assert_equal(self.res.reject, self.reject2)
 
     def test_group_tukey(self):
         res_t = get_thsd(self.mc,alpha=self.alpha)
@@ -165,7 +160,7 @@ class CheckTuckeyHSDMixin(object):
     def test_shortcut_function(self):
         #check wrapper function
         res = pairwise_tukeyhsd(self.endog, self.groups, alpha=self.alpha)
-        assert_almost_equal(res[1][4], self.res[1][4], decimal=14)
+        assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
 
 
@@ -229,15 +224,15 @@ if __name__ == '__main__':
 
     mc = multi.MultiComparison(dta['Rust'], dta['Brand'])
     res = mc.tukeyhsd()
-    print res[0]
+    print res
 
     mc2 = multi.MultiComparison(dta2['StressReduction'], dta2['Treatment'])
     res2 = mc2.tukeyhsd()
-    print res2[0]
+    print res2
 
     mc2s = multi.MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
     res2s = mc2s.tukeyhsd()
-    print res2s[0]
+    print res2s
     res2s_001 = mc2s.tukeyhsd(alpha=0.01)
     #R result
     tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
@@ -245,7 +240,7 @@ if __name__ == '__main__':
 
     mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
     res3 = mc3.tukeyhsd()
-    print res3[0]
+    print res3
 
     for mci in [mc, mc2, mc3]:
         get_thsd(mci)
