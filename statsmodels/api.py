@@ -21,6 +21,8 @@ from .emplike import api as emplike
 
 from .formula import api as formula
 
+from .iolib.smpickle import load_pickle as load
+
 import os
 
 chmpath = os.path.join(os.path.dirname(__file__), 'statsmodelsdoc.chm')
