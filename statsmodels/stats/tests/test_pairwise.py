@@ -149,14 +149,9 @@ class CheckTuckeyHSDMixin(object):
         self.res = self.mc.tukeyhsd(alpha=self.alpha)
 
     def test_multicomptukey(self):
-        meandiff1 = self.res[1][2]
-        assert_almost_equal(meandiff1, self.meandiff2, decimal=14)
-
-        confint1 = self.res[1][4]
-        assert_almost_equal(confint1, self.confint2, decimal=2)
-
-        reject1 = self.res[1][1]
-        assert_equal(reject1, self.reject2)
+        assert_almost_equal(self.res.meandiffs, self.meandiff2, decimal=14)
+        assert_almost_equal(self.res.confint, self.confint2, decimal=2)
+        assert_equal(self.res.reject, self.reject2)
 
     def test_group_tukey(self):
         res_t = get_thsd(self.mc,alpha=self.alpha)
@@ -165,7 +160,7 @@ class CheckTuckeyHSDMixin(object):
     def test_shortcut_function(self):
         #check wrapper function
         res = pairwise_tukeyhsd(self.endog, self.groups, alpha=self.alpha)
-        assert_almost_equal(res[1][4], self.res[1][4], decimal=14)
+        assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
 
 class TestTuckeyHSD2(CheckTuckeyHSDMixin):
@@ -226,4 +221,3 @@ class TestTuckeyHSD3(CheckTuckeyHSDMixin):
         self.meandiff2 = sas_['mean']
         self.confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
         self.reject2 = sas_['sig'] == asbytes('***')
-
