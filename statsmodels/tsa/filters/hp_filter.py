@@ -1,7 +1,10 @@
+from __future__ import absolute_import
+
 from scipy import sparse
 from scipy.sparse import dia_matrix, eye as speye
 from scipy.sparse.linalg import spsolve
 import numpy as np
+from .utils import _maybe_get_pandas_wrapper
 
 def hpfilter(X, lamb=1600):
     """
@@ -59,6 +62,7 @@ def hpfilter(X, lamb=1600):
         Filter for the Frequency of Observations." `The Review of Economics and
         Statistics`, 84(2), 371-80.
     """
+    _pandas_wrapper = _maybe_get_pandas_wrapper(X)
     X = np.asarray(X, float)
     if X.ndim > 1:
         X = X.squeeze()
@@ -83,4 +87,6 @@ def hpfilter(X, lamb=1600):
     else:
         trend = spsolve(I+lamb*K.T.dot(K), X, use_umfpack=use_umfpack)
     cycle = X-trend
+    if _pandas_wrapper is not None:
+        return _pandas_wrapper(cycle), _pandas_wrapper(trend)
     return cycle, trend

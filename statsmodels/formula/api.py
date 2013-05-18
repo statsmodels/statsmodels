@@ -18,3 +18,5 @@ from statsmodels.discrete.discrete_model import Probit
 probit = Probit.from_formula
 from statsmodels.discrete.discrete_model import Poisson
 poisson = Poisson.from_formula
+from statsmodels.discrete.discrete_model import NegativeBinomial
+negativebinomial = NegativeBinomial.from_formula

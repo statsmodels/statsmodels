@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+# for 2to3 with extensions
+
 from datetime import datetime
 
 import numpy as np
@@ -24,11 +27,7 @@ from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
         approx_hess_cs)
 from statsmodels.tsa.base.datetools import _index_date
 from statsmodels.tsa.kalmanf import KalmanFilter
-try:
-    from kalmanf import kalman_loglike
-    fast_kalman = 1
-except:
-    fast_kalman = 0
+from .kalmanf import kalman_loglike
 
 _armax_notes = """
 
@@ -416,9 +415,26 @@ class ARMA(tsbase.TimeSeriesModel):
                 start_params[k:k+p+q] = coefs
             else:
                 start_params[k+p:k+p+q] = yule_walker(endog, order=q)[0]
-        if q==0 and p != 0:
+        if q == 0 and p != 0:
             arcoefs = yule_walker(endog, order=p)[0]
             start_params[k:k+p] = arcoefs
+
+        # check AR coefficients
+        if p and not np.all(np.abs(np.roots(np.r_[1,
+                                        -start_params[k:k+p]])) < 1):
+            raise ValueError("The computed initial AR coefficients are not "
+                             "stationary\nYou should induce stationarity, "
+                             "choose a different model order, or you can\n"
+                             "pass your own start_params.")
+        # check MA coefficients
+        elif q and not np.all(np.abs(np.roots(np.r_[1,
+                                            start_params[k+p:]])) < 1):
+            raise ValueError("The computed initial MA coefficients are not "
+                             "invertible\nYou should induce invertibility, "
+                             "choose a different model order, or you can\n"
+                             "pass your own start_params.")
+
+        # check MA coefficients
         return start_params
 
     def _fit_start_params(self, order, method):

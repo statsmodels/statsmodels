@@ -35,25 +35,6 @@ def silverman_transform(bw, M, RANGE):
     kern_est = np.r_[FAC,FAC[1:-1]]
     return kern_est
 
-def linbin(X,a,b,M, trunc=1):
-    """
-    Linear Binning as described in Fan and Marron (1994)
-    """
-    gcnts = np.zeros(M)
-    delta = (b-a)/(M-1)
-
-    for x in X:
-        lxi = ((x - a)/delta) # +1
-        li = int(lxi)
-        rem = lxi - li
-        if li > 1 and li < M:
-            gcnts[li] = gcnts[li] + 1-rem
-            gcnts[li+1] = gcnts[li+1] + rem
-        if li > M and trunc == 0:
-            gcnts[M] = gncts[M] + 1
-
-    return gcnts
-
 def counts(x,v):
     """
     Counts the number of elements of x that fall within the grid points v

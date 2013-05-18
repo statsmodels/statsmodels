@@ -81,8 +81,8 @@ class ELOriginRegress(object):
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
         ls_params = np.hstack((0, unrestricted_fit.params))
-        ls_llr = restricted_fit.el_test(ls_params, np.arange(self.nvar + 1, dtype=int))[0]
-        return OriginResults(restricted_model, params, beta_hat_llr, ls_llr)
+        llf = np.sum(np.log(restricted_el[2]))
+        return OriginResults(restricted_model, params, beta_hat_llr, llf)
 
     def predict(self, params, exog=None):
         if exog is None:
@@ -103,8 +103,12 @@ class OriginResults(RegressionResults):
         Fitted parameters
 
     est_llr : float
-        The log likelihood of model with the intercept restricted to 0 at the
-        maximum likelihood estimates of the parameters
+        The log likelihood ratio of the model with the intercept restricted to
+        0 at the maximum likelihood estimates of the parameters.
+        llr_restricted/llr_unrestricted
+
+    llf_el : float
+        The log likelihood of the fitted model with the intercept restricted to 0.
 
     Attributes
     ----------
@@ -115,7 +119,10 @@ class OriginResults(RegressionResults):
         Fitted parameter
 
     llr : float
-        The log likelihood ratio of the maximum likelihood estimate
+        The log likelihood ratio of the maximum empirical likelihood estimate
+
+    llf_el : float
+        The log likelihood of the fitted model with the intercept restricted to 0
 
     Notes
     -----
@@ -148,11 +155,11 @@ class OriginResults(RegressionResults):
     >>> # No covariance matrix so normal inference is not valid
 
     """
-    def __init__(self, model, params, est_llr, ls_llr):
+    def __init__(self, model, params, est_llr, llf_el):
         self.model = model
         self.params = np.squeeze(params)
         self.llr = est_llr
-
+        self.llf_el = llf_el
     def el_test(self, b0_vals, param_nums, method='nm',
                             stochastic_exog=1, return_weights=0):
         """
@@ -169,7 +176,7 @@ class OriginResults(RegressionResults):
             indexing but the '0' parameter refers to the intercept term,
             which is assumed 0.  Therefore, param_num should be > 0.
 
-        print_weights : bool
+        return_weights : bool
             If true, returns the weights that optimize the likelihood
             ratio at b0_vals.  Default is False
 

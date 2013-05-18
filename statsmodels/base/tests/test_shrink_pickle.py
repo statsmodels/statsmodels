@@ -156,6 +156,15 @@ class TestRemoveDataPicklePoisson(RemoveDataPickle):
         #TODO: temporary, fixed in master
         self.predict_kwds = dict(exposure=1, offset=0)
 
+class TestRemoveDataPickleNegativeBinomial(RemoveDataPickle):
+
+    def setup(self):
+        #fit for each test, because results will be changed by test
+        np.random.seed(987689)
+        data = sm.datasets.randhie.load()
+        exog = sm.add_constant(data.exog, prepend=False)
+        mod = sm.NegativeBinomial(data.endog, data.exog)
+        self.results = mod.fit(disp=0)
 
 class TestRemoveDataPickleLogit(RemoveDataPickle):
 
@@ -193,6 +202,7 @@ class TestRemoveDataPickleGLM(RemoveDataPickle):
 if __name__ == '__main__':
     for cls in [TestRemoveDataPickleOLS, TestRemoveDataPickleWLS,
                 TestRemoveDataPicklePoisson,
+                TestRemoveDataPickleNegativeBinomial,
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:
         print cls

@@ -6,7 +6,8 @@ from .genmod.generalized_linear_model import GLM
 from .genmod import families
 import robust
 from .robust.robust_linear_model import RLM
-from .discrete.discrete_model import Poisson, Logit, Probit, MNLogit
+from .discrete.discrete_model import (Poisson, Logit, Probit, MNLogit,
+                                      NegativeBinomial)
 from .tsa import api as tsa
 from .nonparametric import api as nonparametric
 import distributions
@@ -18,6 +19,7 @@ from .graphics import api as graphics
 from .stats import api as stats
 from .emplike import api as emplike
 
+from .formula import api as formula
 
 import os
 
