@@ -11,7 +11,6 @@ import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
 from statsmodels.stats.libqsturng import qsturng
-from statsmodels.graphics import utils
 
 ss = '''\
   43.9  1   1
