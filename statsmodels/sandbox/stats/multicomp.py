@@ -677,8 +677,7 @@ class TukeyHSDResults(object):
         maxrange = [means[i]+self.halfwidths[i] for i in range(len(means))]
 
         if comparison_name is None:
-            ax1.set_title('Multiple Comparisons Between Groups')
-            ax1.errorbar(means, range(len(means)), xerr=self.halfwidths, marker='o',
+            ax1.errorbar(means, range(len(means)), xerr=self.halfwidths, marker='o', 
                             linestyle='None', color='k', ecolor='k')
 
         else:
@@ -692,8 +691,7 @@ class TukeyHSDResults(object):
                 else:
                     nsigidx.append(i)
             #Plot the master comparison
-            ax1.set_title('Multiple Comparisons against %s'%comparison_name)
-            ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None',
+            ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', 
                                 color='b', ecolor='b')
             ax1.plot([minrange[midx]]*2, [-1, self._multicomp.ngroups], linestyle='--', color='0.7')
             ax1.plot([maxrange[midx]]*2, [-1, self._multicomp.ngroups], linestyle='--', color='0.7')
@@ -705,8 +703,9 @@ class TukeyHSDResults(object):
             if len(nsigidx) > 0:
                 ax1.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o',
                                 linestyle='None', color='0.5', ecolor='0.5')
-
-        r = np.max(maxrange) - np.min(minrange)
+        
+        ax1.set_title('Multiple Comparisons Between All Pairs (Tukey)')    
+        r = np.max(maxrange) - np.min(minrange) 
         ax1.set_ylim([-1, self._multicomp.ngroups])
         ax1.set_xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.])
         ax1.set_yticklabels(np.insert(self.groupsunique.astype(str), 0, ''))
