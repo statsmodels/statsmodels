@@ -280,7 +280,7 @@ if __name__ == '__main__':
     res2s_001 = mc2s.tukeyhsd(alpha=0.01)
     #R result
     tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
-    assert_almost_equal(res2s_001[1][4], tukeyhsd2s[:,1:3], decimal=3)
+    assert_almost_equal(res2s_001.confint, tukeyhsd2s[:,1:3], decimal=3)
 
     mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
     res3 = mc3.tukeyhsd()
@@ -331,12 +331,12 @@ if __name__ == '__main__':
     dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
 
     sas_ = dta5[[1,3,2]]
-    confint1 = res3[1][4]
+    confint1 = res3.confint
     confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
     assert_almost_equal(confint1, confint2, decimal=2)
-    reject1 = res3[1][1]
+    reject1 = res3.reject
     reject2 = sas_['sig'] == '***'
     assert_equal(reject1, reject2)
-    meandiff1 = res3[1][2]
+    meandiff1 = res3.meandiffs
     meandiff2 = sas_['mean']
     assert_almost_equal(meandiff1, meandiff2, decimal=14)
