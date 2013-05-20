@@ -247,7 +247,7 @@ class TestTuckeyHSD4(CheckTuckeyHSDMixin):
         self.groups = cyl_labels
         self.alpha = 0.05
         self.setup_class_()
-        self.res.compute_intervals()
+        self.res._simultaneous_ci()
 
         #from Matlab
         self.halfwidth2 = np.array([1.5228335685980883, 0.9794949704444682, 0.78673802805533644,
