@@ -161,7 +161,7 @@ res4 = tukeyhsd4.tukeyhsd()
 print res4
 try:
     import matplotlib.pyplot as plt
-    fig = res4.compute_plot_intervals("USA")
+    fig = res4.plot_simultaneous("USA")
     plt.show()
 except Exception as e:
     print e

@@ -588,8 +588,8 @@ class TukeyHSDResults(object):
 
     Can also compute and plot additional post-hoc evaluations using this results class
     """
-    def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None, std_pairs=None, 
-            confint=None, df_total=None, reject2=None, variance=None):
+    def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None, 
+            std_pairs=None, confint=None, df_total=None, reject2=None, variance=None):
         self._multicomp = mc_object
         self._results_table = results_table
         self.q_crit = q_crit
@@ -611,61 +611,74 @@ class TukeyHSDResults(object):
     def summary(self):
         print self._results_table
 
-    def compute_intervals(self, q_crit=None):
-        """Compute graphical confidence intervals for visual multiple comparisons.
-    
-        :q_crit: the Q critical value generated from a Tukey HSD computation
-    
-        self.halfwidths is the important byproduct of hcohberg; these are the widths
-        of the CIs for each group mean that allow simultaneous comparisons among all groups
+    def _simultaneous_ci(self):
+        self.halfwidths = simultaneous_ci(self.q_crit, self.variance, 
+                            self._multicomp.groupstats.groupnobs,
+                            self._multicomp.pairindices)
+
+    def plot_simultaneous(self, comparison_name=None, ax=None, figsize=(10,6), xlabel=None, 
+                            ylabel=None):
+        """Plot a universal ci of each group mean to visiualize significant differences.
+
+        Parameters
+        ----------
+        comparison_name : string, optional
+            if provided, plot_intervals will color code all groups that are significantly different
+            from the comparison_name red, and will color code insignificant groups gray. Otherwise,
+            all intervals will just be plotted in black.
+        ax : matplotlib axis, optional
+            An axis handle on which to attach the plot
+        figsize : tuple, optional
+            tuple for the size of the figure generated
+        xlabel : string, optional
+            Name to be displayed on x axis
+        ylabel : string, optional
+            Name to be displayed on y axis
+
+        Returns
+        -------
+        fig : Matplotlib Figure object
+            handle to figure object containing interval plots
+
+        Notes
+        -----
+        Multiple comparison tests are nice, but lack a good way to be visualized. If you 
+        have, say, 6 groups, showing a graph of the means between each group will require 15 
+        CIs. Instead, we can visualize inter-group differences with a single interval for each 
+        group mean. Hochberg et al. [1] first proposed this idea and used Tukey's Q critical value
+        to compute the interval widths. Unlike plotting the differences in the means and their 
+        respective CIs, any two pairs can be compared for significance by looking for overlap. 
+
+        References
+        ----------
+        .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: 
+               John Wiley & Sons, 1987.
+
+        Examples
+        --------
+        >>> from statsmodels.examples.try_tukey_hsd import cylinders, cyl_labels
+        >>> from statsmodels.stats.multicomp import MultiComparison
+        >>> cardata = MultiComparison(cylinders, cyl_labels)
+        >>> results = cardata.tukeyhsd()
+        >>> results.plot_simultaneous()
+        <matplotlib.figure.Figure at 0x...>
+
+        This example shows an example plot comparing significant differences in group means. 
+        Significant differences at the alpha=0.05 level can be identified by intervals that
+        do not overlap (i.e. USA vs Japan, USA vs Germany). 
+
+        >>> results.plot_simultaneous(comparison_name="USA")
+        <matplotlib.figure.Figure at 0x...>
+        
+        Optionally provide one of the group names to color code the plot to highlight group 
+        means different from comparison_name.
+
         """
-        if q_crit != None: self.q_crit = q_crit
-        if getattr(self, 'q_crit', None) == None:
-            raise AttributeError, "Provide q_crit value before computing hochberg intervals"
-        
-        # Set initial variables
-        ng = len(self.groupsunique)
-
-        # Compute dij for all pairwise comparisons ala hochberg p. 95
-        gvar = self.variance/self._multicomp.groupstats.groupnobs
-        d12 = np.sqrt(gvar[self._multicomp.pairindices[0]] + gvar[self._multicomp.pairindices[1]])
-        
-        # Create the full d matrix given all known dij vals
-        d = np.zeros((ng, ng))
-        d[self._multicomp.pairindices] = d12
-        d = d + d.conj().T
-        
-        # Compute the two global sums from hochberg eq 3.32 
-        sum1 = np.sum(d12)
-        sum2 = np.sum(d, axis=0)
-        
-        if (ng > 2):
-            w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
-        else:
-            w = sum1 * ones(2, 1) / 2 
-
-        self.halfwidths = (self.q_crit/np.sqrt(2))*w 
-
-    def plot_intervals(self, comparison_name=None, ax=None, figsize=(10,6), xlabel=None, ylabel=None):
-        """Perform the plotting, color coding to visualize Hochberg intervals
-
-        :comparison_name: (optional) if provided, plot_intervals will color code all groups that are
-            significantly different from the comparison_name red, and will color code insig-
-            nificant groups gray. Otherwise, all intervals will just be plotted in black.
-        :ax: (optional) a matplotlib axis on which to attach the plot
-        :figsize: (optional) tupe of the size of the figure generated
-        :xlabel: a str used as x axis label
-        :ylabel: a str used for y axis label
-
-        :returns: the figure containing the plots
-        """
-        import matplotlib.pyplot as plt
-
         fig, ax1 = utils.create_mpl_ax(ax)
-        if figsize != None:
+        if figsize is not None:
             fig.set_size_inches(figsize)
-        if getattr(self, 'halfwidths', None) == None:
-            raise AttributeError, "Perform compute_intervals before plotting"
+        if getattr(self, 'halfwidths', None) is None:
+            self._simultaneous_ci()
         means = self._multicomp.groupstats.groupmean
         
         sigidx = []
@@ -676,7 +689,6 @@ class TukeyHSDResults(object):
         if comparison_name is None:
             ax1.errorbar(means, range(len(means)), xerr=self.halfwidths, marker='o', 
                             linestyle='None', color='k', ecolor='k')
-
         else:   
             if comparison_name not in self.groupsunique: 
                 raise ValueError, 'comparison_name not found in group names.'
@@ -709,34 +721,6 @@ class TukeyHSDResults(object):
         ax1.set_xlabel(xlabel if xlabel != None else '')
         ax1.set_ylabel(ylabel if ylabel != None else '')
         return fig
-        
-
-    def compute_plot_intervals(self, comparison_name=None, q_crit=None, ax=None, figsize=(10, 6), xlabel=None, 
-                                        ylabel=None):
-        """Compute and plot each group mean along with their CIs to visually identify significant differences.
-
-        Multiple comparison tests are nice, but lack a good way to be visualized. If you have, say, 6 groups, 
-        showing a graph of the CI between each group will require 15 CIs. Instead, we can visualize inter-
-        group CI's with a single interval for each group mean. Hochberg et al. first proposed this idea, and it 
-        has been succesfully implemented in Matlab's multcompare. This plot essentially tries to mimic Matlab's 
-        visualizaion. 
-        (Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: John Wiley & Sons, 1987.)
-
-        Note: this is currently only applicable for a 1-way anova with between 2 and 10 groups. Further, one must
-        have comptued the halfwidths previously using compute_intervals.
-
-        :comparison_name: if provided, plot_intervals will color code all groups that are
-            significantly different from the comparison_name red, and will color code insignificant groups gray. 
-            Otherwise, all intervals will just be plotted in black.
-        :q_crit: was likely calculated during tukeyhsd, but an alternative can be provided here.
-        :ax: a matplotlib axis on which to attach the plot
-        :figsize: tupe of the size of the figure generated
-        :xlabel: a str used as x axis label
-        :ylabel: a str used for y axis label
-        """
-        self.compute_intervals(q_crit)
-        return self.plot_intervals(comparison_name, ax, figsize, xlabel, ylabel)
-
 
 
 class MultiComparison(object):
@@ -747,10 +731,14 @@ class MultiComparison(object):
 
     def __init__(self, data, groups, group_order=None):
         """
-        :data: an array of independent data samples
-        :groups: a numpy array of group labels corresponding to each data point
-        :group_order: (optional) a list of strings providing the desired order 
-            for the results to be reported in.
+        Parameters
+        ----------
+        data : array
+            independent data samples
+        groups : array
+            group labels corresponding to each data point
+        group_order : list of strings, optional 
+            the desired order for the group mean results to be reported in.
         """
         self.data = data
         self.groups = groups
@@ -759,6 +747,10 @@ class MultiComparison(object):
         if group_order == None:
             self.groupsunique, self.groupintlab = np.unique(groups, return_inverse=True)
         else:
+            #check if group_order has any names not in groups
+            for grp in group_order:
+                if grp not in groups: 
+                    raise ValueError, "group_order value '%s' not found in groups"%grp
             self.groupsunique = np.array(group_order)
             self.groupintlab = np.zeros(len(data))
             for name in self.groupsunique:
@@ -883,7 +875,18 @@ class MultiComparison(object):
 
 
     def tukeyhsd(self, alpha=0.05):
-        #unfinished
+        """Tukey's range test to compare all pairs group means and test for significance
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Value of FWER at which to calculate HSD.
+
+        Returns
+        -------
+        results : TukeyHSDResults instance
+            A results class containing relevant data and some post-hoc calculations
+        """
         self.groupstats = GroupsStats(
                             np.column_stack([self.data, self.groupintlab]),
                             useranks=False)
@@ -1208,6 +1211,69 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
 
     return (idx1, idx2), reject, meandiffs, std_pairs, confint, q_crit, \
            df_total, reject2
+
+def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
+    """Compute simultaneous confidence intervals for comparison of means.
+    
+    q_crit value is generated from tukey hsd test. Variance is considered 
+    across all groups. Returned halfwidths can be thought of as uncertainty 
+    intervals around each group mean. They allow for simultaneous 
+    comparison of pairwise significance among any pairs (by checking for 
+    overlap)
+
+    Parameters
+    ----------
+    q_crit : float
+        The Q critical value studentized range statistic from Tukey's HSD
+    var : float
+        The group variance
+    groupnobs : array-like object
+        Number of observations contained in each group. 
+    pairindices : tuple of lists, optional
+        Indices corresponding to the upper triangle of matrix. Computed 
+        here if not supplied
+
+    Returns
+    -------
+    halfwidths : ndarray
+        Half the width of each confidence interval for each group given in 
+        groupnobs
+
+    See Also
+    --------
+    MultiComparison : statistics class providing significance tests
+    tukeyhsd : among other things, computes q_crit value
+
+    References
+    ----------
+    .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. 
+           Hoboken, NJ: John Wiley & Sons, 1987.)
+    """  
+    # Set initial variables
+    ng = len(groupnobs)
+    if pairindices == None: 
+        pairindices = np.triu_indices(ng, 1)
+
+    # Compute dij for all pairwise comparisons ala hochberg p. 95
+    gvar = var/groupnobs
+
+    d12 = np.sqrt(gvar[pairindices[0]] + gvar[pairindices[1]])
+        
+    # Create the full d matrix given all known dij vals
+    d = np.zeros((ng, ng))
+    d[pairindices] = d12
+    d = d + d.conj().T
+        
+    # Compute the two global sums from hochberg eq 3.32 
+    sum1 = np.sum(d12)
+    sum2 = np.sum(d, axis=0)
+        
+    if (ng > 2):
+        w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
+    else:
+        w = sum1 * ones(2, 1) / 2 
+        
+    return (q_crit/np.sqrt(2))*w 
 
 def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
     '''pairwise distance matrix, outsourced from tukeyhsd
