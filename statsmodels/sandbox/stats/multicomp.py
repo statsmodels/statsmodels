@@ -90,33 +90,33 @@ from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
-
+from statsmodels.graphics import utils
 
 
 qcrit = '''
-	2 		3 		4 		5 		6 		7 		8 		9 		10
-5 	3.64 5.70 	4.60 6.98 	5.22 7.80 	5.67 8.42 	6.03 8.91 	6.33 9.32 	6.58 9.67 	6.80 9.97 	6.99 10.24
-6 	3.46 5.24 	4.34 6.33 	4.90 7.03 	5.30 7.56 	5.63 7.97 	5.90 8.32 	6.12 8.61 	6.32 8.87 	6.49 9.10
-7 	3.34 4.95 	4.16 5.92 	4.68 6.54 	5.06 7.01 	5.36 7.37 	5.61 7.68 	5.82 7.94 	6.00 8.17 	6.16 8.37
-8 	3.26 4.75 	4.04 5.64 	4.53 6.20 	4.89 6.62 	5.17 6.96 	5.40 7.24       5.60 7.47 	5.77 7.68 	5.92 7.86
-9 	3.20 4.60 	3.95 5.43 	4.41 5.96 	4.76 6.35 	5.02 6.66 	5.24 6.91       5.43 7.13 	5.59 7.33 	5.74 7.49
-10 	3.15 4.48 	3.88 5.27 	4.33 5.77 	4.65 6.14 	4.91 6.43 	5.12 6.67       5.30 6.87 	5.46 7.05 	5.60 7.21
-11 	3.11 4.39 	3.82 5.15 	4.26 5.62 	4.57 5.97 	4.82 6.25 	5.03 6.48	5.20 6.67 	5.35 6.84 	5.49 6.99
-12 	3.08 4.32 	3.77 5.05 	4.20 5.50 	4.51 5.84 	4.75 6.10 	4.95 6.32	5.12 6.51 	5.27 6.67 	5.39 6.81
-13 	3.06 4.26 	3.73 4.96 	4.15 5.40 	4.45 5.73 	4.69 5.98 	4.88 6.19	5.05 6.37 	5.19 6.53 	5.32 6.67
-14 	3.03 4.21 	3.70 4.89 	4.11 5.32 	4.41 5.63 	4.64 5.88 	4.83 6.08	4.99 6.26 	5.13 6.41 	5.25 6.54
-15 	3.01 4.17 	3.67 4.84 	4.08 5.25 	4.37 5.56 	4.59 5.80 	4.78 5.99	4.94 6.16 	5.08 6.31 	5.20 6.44
-16 	3.00 4.13 	3.65 4.79 	4.05 5.19 	4.33 5.49 	4.56 5.72 	4.74 5.92	4.90 6.08 	5.03 6.22 	5.15 6.35
-17 	2.98 4.10 	3.63 4.74 	4.02 5.14 	4.30 5.43 	4.52 5.66 	4.70 5.85	4.86 6.01 	4.99 6.15 	5.11 6.27
-18 	2.97 4.07 	3.61 4.70 	4.00 5.09 	4.28 5.38 	4.49 5.60 	4.67 5.79	4.82 5.94 	4.96 6.08 	5.07 6.20
-19 	2.96 4.05 	3.59 4.67 	3.98 5.05 	4.25 5.33 	4.47 5.55 	4.65 5.73	4.79 5.89 	4.92 6.02 	5.04 6.14
-20 	2.95 4.02 	3.58 4.64 	3.96 5.02 	4.23 5.29 	4.45 5.51 	4.62 5.69	4.77 5.84 	4.90 5.97 	5.01 6.09
-24 	2.92 3.96 	3.53 4.55 	3.90 4.91 	4.17 5.17 	4.37 5.37 	4.54 5.54	4.68 5.69 	4.81 5.81 	4.92 5.92
-30 	2.89 3.89 	3.49 4.45 	3.85 4.80 	4.10 5.05 	4.30 5.24 	4.46 5.40	4.60 5.54 	4.72 5.65 	4.82 5.76
-40 	2.86 3.82 	3.44 4.37 	3.79 4.70 	4.04 4.93 	4.23 5.11 	4.39 5.26	4.52 5.39 	4.63 5.50 	4.73 5.60
-60 	2.83 3.76 	3.40 4.28 	3.74 4.59 	3.98 4.82 	4.16 4.99 	4.31 5.13	4.44 5.25 	4.55 5.36 	4.65 5.45
-120 	2.80 3.70 	3.36 4.20 	3.68 4.50 	3.92 4.71 	4.10 4.87 	4.24 5.01	4.36 5.12 	4.47 5.21 	4.56 5.30
-infinity 	2.77 3.64 	3.31 4.12 	3.63 4.40 	3.86 4.60 	4.03 4.76 	4.17 4.88 	4.29 4.99 	4.39 5.08 	4.47 5.16
+  2     3     4     5     6     7     8     9     10
+5   3.64 5.70   4.60 6.98   5.22 7.80   5.67 8.42   6.03 8.91   6.33 9.32   6.58 9.67   6.80 9.97   6.99 10.24
+6   3.46 5.24   4.34 6.33   4.90 7.03   5.30 7.56   5.63 7.97   5.90 8.32   6.12 8.61   6.32 8.87   6.49 9.10
+7   3.34 4.95   4.16 5.92   4.68 6.54   5.06 7.01   5.36 7.37   5.61 7.68   5.82 7.94   6.00 8.17   6.16 8.37
+8   3.26 4.75   4.04 5.64   4.53 6.20   4.89 6.62   5.17 6.96   5.40 7.24       5.60 7.47   5.77 7.68   5.92 7.86
+9   3.20 4.60   3.95 5.43   4.41 5.96   4.76 6.35   5.02 6.66   5.24 6.91       5.43 7.13   5.59 7.33   5.74 7.49
+10  3.15 4.48   3.88 5.27   4.33 5.77   4.65 6.14   4.91 6.43   5.12 6.67       5.30 6.87   5.46 7.05   5.60 7.21
+11  3.11 4.39   3.82 5.15   4.26 5.62   4.57 5.97   4.82 6.25   5.03 6.48 5.20 6.67   5.35 6.84   5.49 6.99
+12  3.08 4.32   3.77 5.05   4.20 5.50   4.51 5.84   4.75 6.10   4.95 6.32 5.12 6.51   5.27 6.67   5.39 6.81
+13  3.06 4.26   3.73 4.96   4.15 5.40   4.45 5.73   4.69 5.98   4.88 6.19 5.05 6.37   5.19 6.53   5.32 6.67
+14  3.03 4.21   3.70 4.89   4.11 5.32   4.41 5.63   4.64 5.88   4.83 6.08 4.99 6.26   5.13 6.41   5.25 6.54
+15  3.01 4.17   3.67 4.84   4.08 5.25   4.37 5.56   4.59 5.80   4.78 5.99 4.94 6.16   5.08 6.31   5.20 6.44
+16  3.00 4.13   3.65 4.79   4.05 5.19   4.33 5.49   4.56 5.72   4.74 5.92 4.90 6.08   5.03 6.22   5.15 6.35
+17  2.98 4.10   3.63 4.74   4.02 5.14   4.30 5.43   4.52 5.66   4.70 5.85 4.86 6.01   4.99 6.15   5.11 6.27
+18  2.97 4.07   3.61 4.70   4.00 5.09   4.28 5.38   4.49 5.60   4.67 5.79 4.82 5.94   4.96 6.08   5.07 6.20
+19  2.96 4.05   3.59 4.67   3.98 5.05   4.25 5.33   4.47 5.55   4.65 5.73 4.79 5.89   4.92 6.02   5.04 6.14
+20  2.95 4.02   3.58 4.64   3.96 5.02   4.23 5.29   4.45 5.51   4.62 5.69 4.77 5.84   4.90 5.97   5.01 6.09
+24  2.92 3.96   3.53 4.55   3.90 4.91   4.17 5.17   4.37 5.37   4.54 5.54 4.68 5.69   4.81 5.81   4.92 5.92
+30  2.89 3.89   3.49 4.45   3.85 4.80   4.10 5.05   4.30 5.24   4.46 5.40 4.60 5.54   4.72 5.65   4.82 5.76
+40  2.86 3.82   3.44 4.37   3.79 4.70   4.04 4.93   4.23 5.11   4.39 5.26 4.52 5.39   4.63 5.50   4.73 5.60
+60  2.83 3.76   3.40 4.28   3.74 4.59   3.98 4.82   4.16 4.99   4.31 5.13 4.44 5.25   4.55 5.36   4.65 5.45
+120   2.80 3.70   3.36 4.20   3.68 4.50   3.92 4.71   4.10 4.87   4.24 5.01 4.36 5.12   4.47 5.21   4.56 5.30
+infinity  2.77 3.64   3.31 4.12   3.63 4.40   3.86 4.60   4.03 4.76   4.17 4.88   4.29 4.99   4.39 5.08   4.47 5.16
 '''
 
 res = [line.split() for line in qcrit.replace('infinity','9999').split('\n')]
@@ -583,6 +583,145 @@ class GroupsStats(object):
     def groupvarwithin(self):
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
+class TukeyHSDResults(object):
+    """Contains and allows further examination of Tukey HSD results 
+
+    Can also compute and plot additional post-hoc evaluations using this results class
+    """
+    def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None, 
+            std_pairs=None, confint=None, df_total=None, reject2=None, variance=None):
+        self._multicomp = mc_object
+        self._results_table = results_table
+        self.q_crit = q_crit
+        self.reject = reject
+        self.meandiffs = meandiffs
+        self.std_pairs = std_pairs
+        self.confint = confint
+        self.df_total = df_total
+        self.reject2 = reject2
+        self.variance = variance
+        # Taken out of _multicomp for ease of access for unknowledgeable users
+        self.data = self._multicomp.data
+        self.groups =self._multicomp.groups
+        self.groupsunique = self._multicomp.groupsunique
+
+    def __str__(self):
+        return str(self._results_table)
+
+    def summary(self):
+        print self._results_table
+
+    def _simultaneous_ci(self):
+        self.halfwidths = simultaneous_ci(self.q_crit, self.variance, 
+                            self._multicomp.groupstats.groupnobs,
+                            self._multicomp.pairindices)
+
+    def plot_simultaneous(self, comparison_name=None, ax=None, figsize=(10,6), xlabel=None, 
+                            ylabel=None):
+        """Plot a universal ci of each group mean to visiualize significant differences.
+
+        Parameters
+        ----------
+        comparison_name : string, optional
+            if provided, plot_intervals will color code all groups that are significantly different
+            from the comparison_name red, and will color code insignificant groups gray. Otherwise,
+            all intervals will just be plotted in black.
+        ax : matplotlib axis, optional
+            An axis handle on which to attach the plot
+        figsize : tuple, optional
+            tuple for the size of the figure generated
+        xlabel : string, optional
+            Name to be displayed on x axis
+        ylabel : string, optional
+            Name to be displayed on y axis
+
+        Returns
+        -------
+        fig : Matplotlib Figure object
+            handle to figure object containing interval plots
+
+        Notes
+        -----
+        Multiple comparison tests are nice, but lack a good way to be visualized. If you 
+        have, say, 6 groups, showing a graph of the means between each group will require 15 
+        CIs. Instead, we can visualize inter-group differences with a single interval for each 
+        group mean. Hochberg et al. [1] first proposed this idea and used Tukey's Q critical value
+        to compute the interval widths. Unlike plotting the differences in the means and their 
+        respective CIs, any two pairs can be compared for significance by looking for overlap. 
+
+        References
+        ----------
+        .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ: 
+               John Wiley & Sons, 1987.
+
+        Examples
+        --------
+        >>> from statsmodels.examples.try_tukey_hsd import cylinders, cyl_labels
+        >>> from statsmodels.stats.multicomp import MultiComparison
+        >>> cardata = MultiComparison(cylinders, cyl_labels)
+        >>> results = cardata.tukeyhsd()
+        >>> results.plot_simultaneous()
+        <matplotlib.figure.Figure at 0x...>
+
+        This example shows an example plot comparing significant differences in group means. 
+        Significant differences at the alpha=0.05 level can be identified by intervals that
+        do not overlap (i.e. USA vs Japan, USA vs Germany). 
+
+        >>> results.plot_simultaneous(comparison_name="USA")
+        <matplotlib.figure.Figure at 0x...>
+        
+        Optionally provide one of the group names to color code the plot to highlight group 
+        means different from comparison_name.
+
+        """
+        fig, ax1 = utils.create_mpl_ax(ax)
+        if figsize is not None:
+            fig.set_size_inches(figsize)
+        if getattr(self, 'halfwidths', None) is None:
+            self._simultaneous_ci()
+        means = self._multicomp.groupstats.groupmean
+        
+        sigidx = []
+        nsigidx = []
+        minrange = [means[i]-self.halfwidths[i] for i in range(len(means))]
+        maxrange = [means[i]+self.halfwidths[i] for i in range(len(means))]
+        
+        if comparison_name is None:
+            ax1.errorbar(means, range(len(means)), xerr=self.halfwidths, marker='o', 
+                            linestyle='None', color='k', ecolor='k')
+        else:   
+            if comparison_name not in self.groupsunique: 
+                raise ValueError, 'comparison_name not found in group names.'
+            midx = np.where(self.groupsunique==comparison_name)[0]
+            for i in range(len(means)):
+                if self.groupsunique[i] == comparison_name: continue
+                if min(maxrange[i], maxrange[midx]) - max(minrange[i], minrange[midx]) < 0:
+                    sigidx.append(i)
+                else:
+                    nsigidx.append(i) 
+            #Plot the master comparison
+            ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None', 
+                                color='b', ecolor='b')
+            ax1.plot([minrange[midx]]*2, [-1, self._multicomp.ngroups], linestyle='--', color='0.7')
+            ax1.plot([maxrange[midx]]*2, [-1, self._multicomp.ngroups], linestyle='--', color='0.7')
+            #Plot those that are significantly different
+            if len(sigidx) > 0:
+                ax1.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o', 
+                                linestyle='None', color='r', ecolor='r')
+            #Plot those that are not significantly different
+            if len(nsigidx) > 0:
+                ax1.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o', 
+                                linestyle='None', color='0.5', ecolor='0.5')
+        
+        ax1.set_title('Multiple Comparisons Between All Pairs (Tukey)')    
+        r = np.max(maxrange) - np.min(minrange) 
+        ax1.set_ylim([-1, self._multicomp.ngroups])
+        ax1.set_xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.]) 
+        ax1.set_yticklabels(np.insert(self.groupsunique.astype(str), 0, ''))
+        ax1.set_xlabel(xlabel if xlabel != None else '')
+        ax1.set_ylabel(ylabel if ylabel != None else '')
+        return fig
+
 
 class MultiComparison(object):
     '''Tests for multiple comparisons
@@ -590,13 +729,37 @@ class MultiComparison(object):
 
     '''
 
-    def __init__(self, x, groups):
-        self.data = x
+    def __init__(self, data, groups, group_order=None):
+        """
+        Parameters
+        ----------
+        data : array
+            independent data samples
+        groups : array
+            group labels corresponding to each data point
+        group_order : list of strings, optional 
+            the desired order for the group mean results to be reported in.
+        """
+        self.data = data
         self.groups = groups
-        self.groupsunique, self.groupintlab = np.unique(groups, return_inverse=True)
-        self.datali = [x[groups == k] for k in self.groupsunique]
+
+        # Allow for user-provided sorting of groups
+        if group_order == None:
+            self.groupsunique, self.groupintlab = np.unique(groups, return_inverse=True)
+        else:
+            #check if group_order has any names not in groups
+            for grp in group_order:
+                if grp not in groups: 
+                    raise ValueError, "group_order value '%s' not found in groups"%grp
+            self.groupsunique = np.array(group_order)
+            self.groupintlab = np.zeros(len(data))
+            for name in self.groupsunique:
+                self.groupintlab[np.where(self.groups==name)[0]] = np.where(self.groupsunique==name)[0]
+                
+        self.datali = [data[self.groups == k] for k in self.groupsunique]
         self.pairindices = np.triu_indices(len(self.groupsunique),1)  #tuple
-        self.nobs = x.shape[0]
+        self.nobs = self.data.shape[0]
+        self.ngroups = len(self.groupsunique)
 
     def getranks(self):
         '''convert data to rankdata and attach
@@ -613,8 +776,6 @@ class MultiComparison(object):
         self.ranks = GroupsStats(np.column_stack([self.data, self.groupintlab]),
                                  useranks=True)
         self.rankdata = self.ranks.groupmeanfilter
-
-
 
     def kruskal(self, pairs=None, multimethod='T'):
         '''
@@ -706,15 +867,26 @@ class MultiComparison(object):
                               ('pval_corr',float),
                               ('reject', np.bool8)])
         from statsmodels.iolib.table import SimpleTable
-        summtab = SimpleTable(resarr, headers=resarr.dtype.names)
-        summtab.title = 'Test Multiple Comparison %s \n%s%4.2f method=%s' % (testfunc.__name__,
+        results_table = SimpleTable(resarr, headers=resarr.dtype.names)
+        results_table.title = 'Test Multiple Comparison %s \n%s%4.2f method=%s' % (testfunc.__name__,
                         'FWER=', alpha, method) + \
                         '\nalphacSidak=%4.2f, alphacBonf=%5.3f' % (alphacSidak, alphacBonf)
-        return summtab, (res, reject, pvals_corrected, alphacSidak, alphacBonf), resarr
+        return results_table, (res, reject, pvals_corrected, alphacSidak, alphacBonf), resarr
 
 
     def tukeyhsd(self, alpha=0.05):
-        #unfinished
+        """Tukey's range test to compare all pairs group means and test for significance
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Value of FWER at which to calculate HSD.
+
+        Returns
+        -------
+        results : TukeyHSDResults instance
+            A results class containing relevant data and some post-hoc calculations
+        """
         self.groupstats = GroupsStats(
                             np.column_stack([self.data, self.groupintlab]),
                             useranks=False)
@@ -723,6 +895,8 @@ class MultiComparison(object):
         nobs = self.groupstats.groupnobs
         #var_ = self.groupstats.groupvarwithin() #possibly an error in varcorrection in this case
         var_ = np.var(self.groupstats.groupdemean(), ddof=len(means))
+        #res contains: 0:(idx1, idx2), 1:reject, 2:meandiffs, 3: std_pairs, 4:confint, 5:q_crit,
+        #6:df_total, 7:reject2 
         res = tukeyhsd(means, nobs, var_, df=None, alpha=alpha, q_crit=None)
 
         resarr = np.array(zip(res[0][0], res[0][1],
@@ -736,16 +910,10 @@ class MultiComparison(object):
                               ('lower',float),
                               ('upper',float),
                               ('reject', np.bool8)])
-        summtab = SimpleTable(resarr, headers=resarr.dtype.names)
-        summtab.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
+        results_table = SimpleTable(resarr, headers=resarr.dtype.names)
+        results_table.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
 
-        return summtab, res
-
-
-
-
-
-
+        return TukeyHSDResults(self, results_table, res[5], res[1], res[2], res[3], res[4], res[6], res[7], var_)
 
 
 
@@ -1043,6 +1211,69 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
 
     return (idx1, idx2), reject, meandiffs, std_pairs, confint, q_crit, \
            df_total, reject2
+
+def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
+    """Compute simultaneous confidence intervals for comparison of means.
+    
+    q_crit value is generated from tukey hsd test. Variance is considered 
+    across all groups. Returned halfwidths can be thought of as uncertainty 
+    intervals around each group mean. They allow for simultaneous 
+    comparison of pairwise significance among any pairs (by checking for 
+    overlap)
+
+    Parameters
+    ----------
+    q_crit : float
+        The Q critical value studentized range statistic from Tukey's HSD
+    var : float
+        The group variance
+    groupnobs : array-like object
+        Number of observations contained in each group. 
+    pairindices : tuple of lists, optional
+        Indices corresponding to the upper triangle of matrix. Computed 
+        here if not supplied
+
+    Returns
+    -------
+    halfwidths : ndarray
+        Half the width of each confidence interval for each group given in 
+        groupnobs
+
+    See Also
+    --------
+    MultiComparison : statistics class providing significance tests
+    tukeyhsd : among other things, computes q_crit value
+
+    References
+    ----------
+    .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. 
+           Hoboken, NJ: John Wiley & Sons, 1987.)
+    """  
+    # Set initial variables
+    ng = len(groupnobs)
+    if pairindices == None: 
+        pairindices = np.triu_indices(ng, 1)
+
+    # Compute dij for all pairwise comparisons ala hochberg p. 95
+    gvar = var/groupnobs
+
+    d12 = np.sqrt(gvar[pairindices[0]] + gvar[pairindices[1]])
+        
+    # Create the full d matrix given all known dij vals
+    d = np.zeros((ng, ng))
+    d[pairindices] = d12
+    d = d + d.conj().T
+        
+    # Compute the two global sums from hochberg eq 3.32 
+    sum1 = np.sum(d12)
+    sum2 = np.sum(d, axis=0)
+        
+    if (ng > 2):
+        w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
+    else:
+        w = sum1 * ones(2, 1) / 2 
+        
+    return (q_crit/np.sqrt(2))*w 
 
 def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
     '''pairwise distance matrix, outsourced from tukeyhsd
