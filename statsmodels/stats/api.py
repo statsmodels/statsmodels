@@ -28,8 +28,8 @@ from .sandwich_covariance import (
             se_cov
             )
 
-from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, tost_ind,
-                         tost_paired)
+from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, ttost_ind,
+                         ttost_paired)
 from .power import (TTestPower, TTestIndPower, GofChisquarePower,
                     NormalIndPower, FTestAnovaPower, FTestPower,
                     tt_solve_power, tt_ind_solve_power, zt_ind_solve_power)
