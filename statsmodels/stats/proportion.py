@@ -537,6 +537,12 @@ def proportions_ztest(count, nobs, value=None, alternative='2-sided',
         sided tests, smaller means that the alternative hypothesis is
         ``prop < value` and larger means ``prop > value``, or the corresponding
         inequality for the two sample test.
+    prop_var : False or float in (0, 1)
+        If prop_var is false, then the variance of the proportion estimate is
+        calculated based on the sample proportion. Alternatively, a proportion
+        can be specified to calculate this variance. Common use case is to
+        use the proportion under the Null hypothesis to specify the variance
+        of the proportion estimate.
 
     Returns
     -------
@@ -581,6 +587,56 @@ def proportions_ztest(count, nobs, value=None, alternative='2-sided',
     from statsmodels.stats.weightstats import _zstat_generic2
     return _zstat_generic2(diff, std_diff, alternative)
 
+def proportions_ztost(count, nobs, low, upp, x2=None, prop_var='pooled'):
+    '''Equivalence test based on normal distribution
+
+    Parameters
+    ----------
+    count : integer or array_like
+        the number of successes in nobs trials. If this is array_like, then
+        the assumption is that this represents the number of successes for
+        each independent sample
+    nobs : integer
+        the number of trials or observations, with the same length as
+        count.
+    low, upp : float
+        equivalence interval low < prop1 - prop2 < upp
+    x1 : array_like or None
+        second sample for 2 independent samples test. If None, then a
+        one-sample test is performed.
+    usevar : string, 'pooled'
+        If ``pooled``, then the standard deviation of the samples is assumed to be
+        the same. Only pooled is currently implemented.
+
+    Returns
+    -------
+    pvalue : float
+        pvalue of the non-equivalence test
+    t1, pv1 : tuple of floats
+        test statistic and pvalue for lower threshold test
+    t2, pv2 : tuple of floats
+        test statistic and pvalue for upper threshold test
+
+    Notes
+    -----
+    checked only for 1 sample case
+
+    '''
+    if prop_var == 'limits':
+        prop_var_low = low
+        prop_var_upp = upp
+    elif prop_var == 'sample':
+        prop_var_low = prop_var_upp = False  #ztest uses sample
+    elif prop_var == 'null':
+        prop_var_low = prop_var_upp = 0.5 * (low + upp)
+    elif np.isreal(prop_var):
+        prop_var_low = prop_var_upp = prop_var
+
+    tt1 = proportions_ztest(count, nobs, alternative='larger',
+                            prop_var=prop_var_low, value=low)
+    tt2 = proportions_ztest(count, nobs, alternative='smaller',
+                            prop_var=prop_var_upp, value=upp)
+    return np.maximum(tt1[1], tt2[1]), tt1, tt2,
 
 def proportions_chisquare(count, nobs, value=None):
     '''test for proportions based on chisquare test

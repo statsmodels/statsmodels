@@ -283,7 +283,7 @@ class DescrStatsW(object):
 
         return tstat, pvalue, dof
 
-    def ttost(self, low, upp):
+    def ttost_mean(self, low, upp):
         '''test of (non-)equivalence of one sample
 
         TOST: two one-sided t tests
@@ -319,6 +319,102 @@ class DescrStatsW(object):
         t2, pv2, df2 = self.ttest_mean(upp, alternative='smaller')
         return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
+    def ztest_mean(self, value=0, alternative='two-sided'):
+        '''z-test of Null hypothesis that mean is equal to value.
+
+        The alternative hypothesis H1 is defined by the following
+        'two-sided': H1: mean not equal to value
+        'larger' :   H1: mean larger than value
+        'smaller' :  H1: mean smaller than value
+
+        Parameters
+        ----------
+        value : float or array
+            the hypothesized value for the mean
+
+        Returns
+        -------
+        zstat
+        pvalue
+
+        Notes
+        -----
+        This uses the same degrees of freedom correction as the t-test in the
+        calculation of the standard error of the mean, i.e it uses
+        `(sum_weights - 1)` instead of `sum_weights` in the denominator.
+        See Examples below for the difference.
+
+        Examples
+        --------
+
+        z-test on a proportion, with 20 observations, 15 of those are our event
+
+        >>> x1 = [0, 1]
+        >>> w1 = [5, 15]
+        >>> d1 = smws.DescrStatsW(x1, w1)
+        >>> d1.ztest_mean(0.5)
+        (2.5166114784235836, 0.011848940928347452)
+
+        This differs from the proportions_ztest because of the degrees of
+        freedom correction:
+
+        >>> smprop.proportions_ztest(15, 20., value=0.5)
+        (2.5819888974716112, 0.009823274507519247).
+
+        We can replicate the results from ``proportions_ztest`` if we increase
+        the weights to have artificially one more observation:
+
+        >>> smws.DescrStatsW(x1, np.array(w1)*21./20).ztest_mean(0.5)
+        (2.5819888974716116, 0.0098232745075192366)
+
+        '''
+        #TODO: check direction with R, smaller=less, larger=greater
+        tstat = (self.mean - value) / self.std_mean
+        #TODO: use outsourced
+        if alternative == 'two-sided':
+            pvalue = stats.norm.sf(np.abs(tstat))*2
+        elif alternative == 'larger':
+            pvalue = stats.norm.sf(tstat)
+        elif alternative == 'smaller':
+            pvalue = stats.norm.cdf(tstat)
+
+        return tstat, pvalue
+
+    def ztost_mean(self, low, upp):
+        '''test of (non-)equivalence of one sample, based on z-test
+
+        TOST: two one-sided z-tests
+
+        null hypothesis:  m < low or m > upp
+        alternative hypothesis:  low < m < upp
+
+        where m is the expected value of the sample (mean of the population).
+
+        If the pvalue is smaller than a threshold, say 0.05, then we reject the
+        hypothesis that the expected value of the sample (mean of the
+        population) is outside of the interval given by thresholds low and upp.
+
+        Parameters
+        ----------
+        low, upp : float
+            equivalence interval low < mean < upp
+
+        Returns
+        -------
+        pvalue : float
+            pvalue of the non-equivalence test
+        t1, pv1 : tuple
+            test statistic, pvalue and degrees of freedom for lower threshold
+            test
+        t2, pv2 : tuple
+            test statistic, pvalue and degrees of freedom for upper threshold
+            test
+
+        '''
+
+        t1, pv1 = self.ztest_mean(low, alternative='larger')
+        t2, pv2 = self.ztest_mean(upp, alternative='smaller')
+        return np.maximum(pv1, pv2), (t1, pv1), (t2, pv2)
 
     def get_compare(self, other, weights=None):
         '''return an instance of CompareMeans with self and other
@@ -537,9 +633,6 @@ class CompareMeans(object):
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
-        weights : tuple of None or ndarrays
-            Case weights for the two samples. For details on weights see
-            ``DescrStatsW``
         value : float
             difference between the means under the Null hypothesis.
 
@@ -572,6 +665,49 @@ class CompareMeans(object):
                                     diff=value)
 
         return tstat, pval, dof
+
+    def ztest_ind(self, alternative='two-sided', usevar='pooled', value=0):
+        '''z-test for the null hypothesis of identical means
+
+        Parameters
+        ----------
+        x1, x2 : array_like, 1-D or 2-D
+            two independent samples, see notes for 2-D case
+        alternative : string
+            The alternative hypothesis, H1, has to be one of the following
+            'two-sided': H1: difference in means not equal to value (default)
+            'larger' :   H1: difference in means larger than value
+            'smaller' :  H1: difference in means smaller than value
+
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is assumed to be
+            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+            of freedom is used
+        value : float
+            difference between the means under the Null hypothesis.
+
+        Returns
+        -------
+        tstat : float
+            test statisic
+        pvalue : float
+            pvalue of the t-test
+        df : int or float
+            degrees of freedom used in the t-test
+
+        '''
+        d1 = self.d1
+        d2 = self.d2
+
+        if usevar == 'pooled':
+            stdm = self.std_meandiff_pooledvar
+        elif usevar == 'separate':
+            stdm = self.std_meandiff_separatevar
+
+        tstat, pval = _zstat_generic(d1.mean, d2.mean, stdm, alternative,
+                                     diff=value)
+
+        return tstat, pval
 
     def confint_diff(self, alpha=0.05, alternative='two-sided',
                      usevar='pooled'):
@@ -618,7 +754,8 @@ class CompareMeans(object):
         return res
 
     def ttost_ind(self, low, upp, usevar='pooled'):
-        '''test of (non-)equivalence for two independent samples
+        '''
+        test of equivalence for two independent samples, base on t-test
 
         Parameters
         ----------
@@ -646,6 +783,37 @@ class CompareMeans(object):
         tt2 = self.ttest_ind(alternative='smaller', usevar=usevar, value=upp)
         #TODO: remove tuple return, use same as for function tost_ind
         return np.maximum(tt1[1], tt2[1]), (tt1, tt2)
+
+    def ztost_ind(self, low, upp, usevar='pooled'):
+        '''
+        test of equivalence for two independent samples, based on z-test
+
+        Parameters
+        ----------
+        low, upp : float
+            equivalence interval low < m1 - m2 < upp
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is assumed to be
+            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+            of freedom is used
+        transform : None or function
+            If None (default), then the data is not transformed. Given a function,
+            sample data and thresholds are transformed. If transform is log, then
+            the equivalence interval is in ratio: low < m1 / m2 < upp
+
+        Returns
+        -------
+        pvalue : float
+            pvalue of the non-equivalence test
+        t1, pv1 : tuple of floats
+            test statistic and pvalue for lower threshold test
+        t2, pv2 : tuple of floats
+            test statistic and pvalue for upper threshold test
+        '''
+        tt1 = self.ztest_ind(alternative='larger', usevar=usevar, value=low)
+        tt2 = self.ztest_ind(alternative='smaller', usevar=usevar, value=upp)
+        #TODO: remove tuple return, use same as for function tost_ind
+        return np.maximum(tt1[1], tt2[1]), tt1, tt2
 
     #tost.__doc__ = tost_ind.__doc__
 
