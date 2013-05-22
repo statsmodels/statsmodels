@@ -543,6 +543,7 @@ def proportions_ztest(count, nobs, value=None, alternative='2-sided',
         can be specified to calculate this variance. Common use case is to
         use the proportion under the Null hypothesis to specify the variance
         of the proportion estimate.
+        TODO: change options similar to propotion_ztost ?
 
     Returns
     -------
@@ -587,7 +588,7 @@ def proportions_ztest(count, nobs, value=None, alternative='2-sided',
     from statsmodels.stats.weightstats import _zstat_generic2
     return _zstat_generic2(diff, std_diff, alternative)
 
-def proportions_ztost(count, nobs, low, upp, x2=None, prop_var='pooled'):
+def proportions_ztost(count, nobs, low, upp, prop_var='sample'):
     '''Equivalence test based on normal distribution
 
     Parameters
@@ -601,12 +602,11 @@ def proportions_ztost(count, nobs, low, upp, x2=None, prop_var='pooled'):
         count.
     low, upp : float
         equivalence interval low < prop1 - prop2 < upp
-    x1 : array_like or None
-        second sample for 2 independent samples test. If None, then a
-        one-sample test is performed.
-    usevar : string, 'pooled'
-        If ``pooled``, then the standard deviation of the samples is assumed to be
-        the same. Only pooled is currently implemented.
+    prop_var : string or float in (0, 1)
+        prop_var determines which proportion is used for the calculation
+        of the standard deviation of the proportion estimate
+        The available options for string are 'sample' (default), 'null' and
+        'limits'. If prop_var is a float, then it is used directly.
 
     Returns
     -------

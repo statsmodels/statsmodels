@@ -353,3 +353,22 @@ def test_ttest_ind_with_uneq_var():
     t, p, df = ttest_ind(a, b, usevar='separate')
     assert_almost_equal([t,p], [tr, pr], 13)
 
+def test_ztest_ztost():
+    # compare weightstats with separately tested proportion ztest ztost
+    import statsmodels.stats.proportion as smprop
+
+    x1 = [0, 1]
+    w1 = [5, 15]
+
+    res2 = smprop.proportions_ztest(15, 20., value=0.5)
+    d1 = DescrStatsW(x1, w1)
+    res1 = d1.ztest_mean(0.5)
+    assert_allclose(res1, res2, rtol=0.03, atol=0.003)
+
+    d2 = DescrStatsW(x1, np.array(w1)*21./20)
+    res1 = d2.ztest_mean(0.5)
+    assert_almost_equal(res1, res2, decimal=12)
+
+    res1 = d2.ztost_mean(0.4, 0.6)
+    res2 = smprop.proportions_ztost(15, 20., 0.4, 0.6)
+    assert_almost_equal(res1[0], res2[0], decimal=12)
