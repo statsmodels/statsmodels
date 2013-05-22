@@ -1010,6 +1010,12 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
 
 def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled'):
     '''test for mean based on normal distribution, one or two samples
+
+    In the case of two samples, the samples are assumed to be independent.
+
+    usevar not implemented, is always pooled in two sample case
+    use CompareMeans instead.
+    TODO: this should delegate to CompareMeans like ttest_ind
     '''
     #usevar is not used, always pooled
     x1 = np.asarray(x1)
@@ -1021,7 +1027,8 @@ def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled'):
         nobs2 = x2.shape[0]
         x2_mean = x2.mean(0)
         x2_var = x2.var(0)
-        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2)
+        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2 - 2)
+        var_pooled *= (1. / nobs1 + 1. / nobs2)
     else:
         var_pooled = x1_var / nobs1
         x2_mean = 0
@@ -1037,6 +1044,8 @@ def confint_ztest(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
     Notes
     -----
     checked only for 1 sample case
+
+    usevar not implemented, is always pooled in two sample case
     '''
     #usevar is not used, always pooled
     # mostly duplicate code from ztest
@@ -1050,6 +1059,7 @@ def confint_ztest(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
         x2_mean = x2.mean(0)
         x2_var = x2.var(0)
         var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2)
+        var_pooled *= (1. / nobs1 + 1. / nobs2)
     else:
         var_pooled = x1_var / nobs1
         x2_mean = 0

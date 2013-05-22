@@ -19,7 +19,7 @@ import numpy as np
 from scipy import stats
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from statsmodels.stats.weightstats import \
-                DescrStatsW, CompareMeans, ttest_ind
+                DescrStatsW, CompareMeans, ttest_ind, ztest
 
 class Holder(object):
     pass
@@ -372,3 +372,17 @@ def test_ztest_ztost():
     res1 = d2.ztost_mean(0.4, 0.6)
     res2 = smprop.proportions_ztost(15, 20., 0.4, 0.6)
     assert_almost_equal(res1[0], res2[0], decimal=12)
+
+    x2 = [0, 1]
+    w2 = [10, 10]
+    #d2 = DescrStatsW(x1, np.array(w1)*21./20)
+    d2 = DescrStatsW(x2, w2)
+    res1 = ztest(d1.asrepeats(), d2.asrepeats())
+    res2 = smprop.proportions_chisquare(np.asarray([15, 10]),
+                                        np.asarray([20., 20]))
+    #TODO: check this is this difference expected?, see test_proportion
+    assert_allclose(res1[1], res2[1], rtol=0.03)
+
+    res1a = CompareMeans(d1, d2).ztest_ind()
+    assert_allclose(res1a[1], res2[1], rtol=0.03)
+    assert_almost_equal(res1a, res1, decimal=12)
