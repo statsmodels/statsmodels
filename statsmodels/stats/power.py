@@ -148,7 +148,8 @@ class Power(object):
     so far this could all be class methods
     '''
 
-    def __init__(self):
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
         # used only for instance level start values
         self.start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15,
                               power=0.6, nobs1=10., ratio=1,
@@ -581,6 +582,9 @@ class NormalIndPower(Power):
 
     '''
 
+    def __init__(self, ddof=0, **kwds):
+        self.ddof = ddof
+        super(NormalIndPower, self).__init__(**kwds)
 
     def power(self, effect_size, nobs1, alpha, ratio=1,
               alternative='two-sided'):
@@ -619,12 +623,15 @@ class NormalIndPower(Power):
 
         '''
 
+        ddof = self.ddof  # for correlation, ddof=3
+
+        # get effective nobs, factor for std of test statistic
         if ratio > 0:
             nobs2 = nobs1*ratio
             #equivalent to nobs = n1*n2/(n1+n2)=n1*ratio/(1+ratio)
-            nobs = 1./ (1. / nobs1 + 1. / nobs2)
+            nobs = 1./ (1. / (nobs1 - ddof) + 1. / (nobs2 - ddof))
         else:
-            nobs = nobs1
+            nobs = nobs1 - ddof
         return normal_power(effect_size, nobs, alpha, alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
