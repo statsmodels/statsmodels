@@ -1044,10 +1044,11 @@ class _GofChisquareIndPower(Power):
 
         '''
 
+        from statsmodels.stats.gof import chisquare_power
         nobs2 = nobs1*ratio
         #equivalent to nobs = n1*n2/(n1+n2)=n1*ratio/(1+ratio)
         nobs = 1./ (1. / nobs1 + 1. / nobs2)
-        return normal_power(effect_size, nobs, alpha, alternative=alternative)
+        return chisquare_power(effect_size, nobs, alpha, alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
     def solve_power(self, effect_size=None, nobs1=None, alpha=None, power=None,
