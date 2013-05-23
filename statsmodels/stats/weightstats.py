@@ -50,7 +50,7 @@ class DescrStatsW(object):
     corresponds to the sample size.
 
     This is essentially the same as replicating each observations by its
-    weight, if the weights are integers, often called case weights.
+    weight, if the weights are integers, often called case or frequency weights.
 
     Parameters
     ----------
@@ -226,9 +226,6 @@ class DescrStatsW(object):
         return std / np.sqrt(self.sum_weights - 1)
 
 
-    def std_var(self):
-        pass
-
     def confint_mean(self, alpha=0.05, alternative='two-sided'):
         '''two-sided confidence interval for weighted mean of data
 
@@ -238,7 +235,16 @@ class DescrStatsW(object):
         Parameters
         ----------
         alpha : float
-            level of the test, confidence level is ``1-alpha``
+            significance level for the confidence interval, coverage is
+            ``1-alpha``
+        alternative : string
+            This specifies the alternative hypothesis for the test that
+            corresponds to the confidence interval.
+            The alternative hypothesis, H1, has to be one of the following
+
+              'two-sided': H1: mean not equal to value (default)
+              'larger' :   H1: mean larger than value
+              'smaller' :  H1: mean smaller than value
 
         Returns
         -------
@@ -267,7 +273,16 @@ class DescrStatsW(object):
         Parameters
         ----------
         alpha : float
-            level of the test, confidence level is ``1-alpha``
+            significance level for the confidence interval, coverage is
+            ``1-alpha``
+        alternative : string
+            This specifies the alternative hypothesis for the test that
+            corresponds to the confidence interval.
+            The alternative hypothesis, H1, has to be one of the following
+
+              'two-sided': H1: mean not equal to value (default)
+              'larger' :   H1: mean larger than value
+              'smaller' :  H1: mean smaller than value
 
         Returns
         -------
@@ -295,6 +310,20 @@ class DescrStatsW(object):
         ----------
         value : float or array
             the hypothesized value for the mean
+        alternative : string
+            The alternative hypothesis, H1, has to be one of the following
+
+              'two-sided': H1: mean not equal to value (default)
+              'larger' :   H1: mean larger than value
+              'smaller' :  H1: mean smaller than value
+
+        Returns
+        -------
+        tstat : float
+            test statisic
+        pvalue : float
+            pvalue of the t-test
+        df : int or float
 
         '''
         #TODO: check direction with R, smaller=less, larger=greater
@@ -358,11 +387,19 @@ class DescrStatsW(object):
         ----------
         value : float or array
             the hypothesized value for the mean
+        alternative : string
+            The alternative hypothesis, H1, has to be one of the following
+
+              'two-sided': H1: mean not equal to value (default)
+              'larger' :   H1: mean larger than value
+              'smaller' :  H1: mean smaller than value
 
         Returns
         -------
-        zstat
-        pvalue
+        tstat : float
+            test statisic
+        pvalue : float
+            pvalue of the t-test
 
         Notes
         -----
@@ -395,7 +432,6 @@ class DescrStatsW(object):
         (2.5819888974716116, 0.0098232745075192366)
 
         '''
-        #TODO: check direction with R, smaller=less, larger=greater
         tstat = (self.mean - value) / self.std_mean
         #TODO: use outsourced
         if alternative == 'two-sided':
@@ -431,11 +467,9 @@ class DescrStatsW(object):
         pvalue : float
             pvalue of the non-equivalence test
         t1, pv1 : tuple
-            test statistic, pvalue and degrees of freedom for lower threshold
-            test
+            test statistic and p-value for lower threshold test
         t2, pv2 : tuple
-            test statistic, pvalue and degrees of freedom for upper threshold
-            test
+            test statistic and p-value for upper threshold test
 
         '''
 
@@ -518,9 +552,9 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
 
 def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
     '''generic (normal) z-test to save typing
-    
+
     can be used as ztest based on summary statistics
-    
+
     '''
     zstat = (value1 - value2 - diff) / std_diff
     if alternative in ['two-sided', '2-sided', '2s']:
@@ -535,7 +569,7 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
 
 def _zstat_generic2(value, std_diff, alternative):
     '''generic (normal) z-test to save typing
-        
+
     can be used as ztest based on summary statistics
     '''
     zstat = value / std_diff
@@ -573,26 +607,21 @@ def _zconfint_generic(mean, std_mean, alpha, alternative):
 class CompareMeans(object):
     '''class for two sample comparison
 
-    formulas should also be correct for unweighted means
-
-
     The tests and the confidence interval work for multi-endpoint comparison:
     If d1 and d2 have the same number of rows, then each column of the data
     in d1 is compared with the corresponding column in d2.
-
-
-    extend to any number of groups or write a version that works in that
-    case, like in SAS and SPSS.
 
     Parameters
     ----------
     d1, d2 : instances of DescrStatsW
 
-
     Notes
     -----
     The result for the statistical tests and the confidence interval are
     independent of the user specified ddof.
+
+    TODO: Extend to any number of groups or write a version that works in that
+    case, like in SAS and SPSS.
 
     '''
 
@@ -749,9 +778,12 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        alpha: float
-            1-alpha is the confidence level for the interval
+        alpha : float
+            significance level for the confidence interval, coverage is
+            ``1-alpha``
         alternative : string
+            This specifies the alternative hypothesis for the test that
+            corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following :
 
             'two-sided': H1: difference in means not equal to value (default)
@@ -795,9 +827,12 @@ class CompareMeans(object):
 
         Parameters
         ----------
-        alpha: float
-            1-alpha is the confidence level for the interval
+        alpha : float
+            significance level for the confidence interval, coverage is
+            ``1-alpha``
         alternative : string
+            This specifies the alternative hypothesis for the test that
+            corresponds to the confidence interval.
             The alternative hypothesis, H1, has to be one of the following :
 
             'two-sided': H1: difference in means not equal to value (default)
@@ -845,10 +880,6 @@ class CompareMeans(object):
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
-        transform : None or function
-            If None (default), then the data is not transformed. Given a function,
-            sample data and thresholds are transformed. If transform is log, then
-            the equivalence interval is in ratio: low < m1 / m2 < upp
 
         Returns
         -------
@@ -876,10 +907,6 @@ class CompareMeans(object):
             If ``pooled``, then the standard deviation of the samples is assumed to be
             the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
             of freedom is used
-        transform : None or function
-            If None (default), then the data is not transformed. Given a function,
-            sample data and thresholds are transformed. If transform is log, then
-            the equivalence interval is in ratio: low < m1 / m2 < upp
 
         Returns
         -------
@@ -923,9 +950,10 @@ def ttest_ind(x1, x2, alternative='two-sided', usevar='pooled',
         two independent samples, see notes for 2-D case
     alternative : string
         The alternative hypothesis, H1, has to be one of the following
-        'two-sided': H1: difference in means not equal to value (default)
-        'larger' :   H1: difference in means larger than value
-        'smaller' :  H1: difference in means smaller than value
+
+           'two-sided': H1: difference in means not equal to value (default)
+           'larger' :   H1: difference in means larger than value
+           'smaller' :  H1: difference in means smaller than value
 
     usevar : string, 'pooled' or 'unequal'
         If ``pooled``, then the standard deviation of the samples is assumed to be
@@ -1096,13 +1124,20 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
     Parameters
     ----------
     x1, x2 : array_like, 1-D or 2-D
-        two independent samples, see notes for 2-D case
+        two independent samples
     value : float
         In the one sample case, value is the mean of x1 under the Null
         hypothesis.
         In the two sample case, value is the difference between mean of x1 and
         mean of x2 under the Null hypothesis. The test statistic is
         `x1_mean - x2_mean - value`.
+    alternative : string
+        The alternative hypothesis, H1, has to be one of the following
+
+           'two-sided': H1: difference in means not equal to value (default)
+           'larger' :   H1: difference in means larger than value
+           'smaller' :  H1: difference in means smaller than value
+
     usevar : string, 'pooled'
         Currently, only 'pooled' is implemented.
         If ``pooled``, then the standard deviation of the samples is assumed to be
@@ -1112,7 +1147,9 @@ def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
         estimate. In the case of comparing means this is one, however it can
         be adjusted for testing other statistics (proportion, correlation)
 
-        tstat : float
+    Returns
+    -------
+    tstat : float
         test statisic
     pvalue : float
         pvalue of the t-test
@@ -1157,7 +1194,22 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
 
     Parameters
     ----------
-    same as in ztest
+    x1, x2 : array_like, 1-D or 2-D
+        two independent samples, see notes for 2-D case
+    value : float
+        In the one sample case, value is the mean of x1 under the Null
+        hypothesis.
+        In the two sample case, value is the difference between mean of x1 and
+        mean of x2 under the Null hypothesis. The test statistic is
+        `x1_mean - x2_mean - value`.
+    usevar : string, 'pooled'
+        Currently, only 'pooled' is implemented.
+        If ``pooled``, then the standard deviation of the samples is assumed to be
+        the same. see CompareMeans.ztest_ind for different options.
+    ddof : int
+        Degrees of freedom use in the calculation of the variance of the mean
+        estimate. In the case of comparing means this is one, however it can
+        be adjusted for testing other statistics (proportion, correlation)
 
     Notes
     -----
@@ -1212,8 +1264,8 @@ def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
         second sample for 2 independent samples test. If None, then a
         one-sample test is performed.
     usevar : string, 'pooled'
-        If ``pooled``, then the standard deviation of the samples is assumed to be
-        the same. Only pooled is currently implemented.
+        If `pooled`, then the standard deviation of the samples is assumed to be
+        the same. Only `pooled` is currently implemented.
 
     Returns
     -------
