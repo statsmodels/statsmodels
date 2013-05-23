@@ -1077,7 +1077,8 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
     return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
-def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled'):
+def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled',
+          ddof=1.):
     '''test for mean based on normal distribution, one or two samples
 
     In the case of two samples, the samples are assumed to be independent.
@@ -1096,10 +1097,11 @@ def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled'):
         nobs2 = x2.shape[0]
         x2_mean = x2.mean(0)
         x2_var = x2.var(0)
-        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2 - 2)
+        var_pooled = (nobs1 * x1_var + nobs2 * x2_var)
+        var_pooled /= (nobs1 + nobs2 - 2 * ddof)
         var_pooled *= (1. / nobs1 + 1. / nobs2)
     else:
-        var_pooled = x1_var / nobs1
+        var_pooled = x1_var / (nobs1 - ddof)
         x2_mean = 0
 
     std_diff = np.sqrt(var_pooled)
@@ -1107,7 +1109,7 @@ def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled'):
     return _zstat_generic(x1_mean, x2_mean, std_diff, alternative, diff=value)
 
 def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
-                  usevar='pooled'):
+                  usevar='pooled', ddof=1.):
     '''confidence interval based on normal distribution z-test
 
     Parameters
@@ -1140,17 +1142,18 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
         nobs2 = x2.shape[0]
         x2_mean = x2.mean(0)
         x2_var = x2.var(0)
-        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2 - 2)
+        var_pooled = (nobs1 * x1_var + nobs2 * x2_var)
+        var_pooled /= (nobs1 + nobs2 - 2 * ddof)
         var_pooled *= (1. / nobs1 + 1. / nobs2)
     else:
-        var_pooled = x1_var / nobs1
+        var_pooled = x1_var / (nobs1 - ddof)
         x2_mean = 0
 
     std_diff = np.sqrt(var_pooled)
     ci = _zconfint_generic(x1_mean - x2_mean - value, std_diff, alpha, alternative)
     return ci
 
-def ztost(x1, low, upp, x2=None, usevar='pooled'):
+def ztost(x1, low, upp, x2=None, usevar='pooled', ddof=1.):
     '''Equivalence test based on normal distribution
 
     Parameters
@@ -1180,7 +1183,9 @@ def ztost(x1, low, upp, x2=None, usevar='pooled'):
     checked only for 1 sample case
 
     '''
-    tt1 = ztest(x1, x2, alternative='larger', usevar=usevar, value=low)
-    tt2 = ztest(x1, x2, alternative='smaller', usevar=usevar, value=upp)
+    tt1 = ztest(x1, x2, alternative='larger', usevar=usevar, value=low,
+                ddof=ddof)
+    tt2 = ztest(x1, x2, alternative='smaller', usevar=usevar, value=upp,
+                ddof=ddof)
     return np.maximum(tt1[1], tt2[1]), tt1, tt2,
 

@@ -464,11 +464,48 @@ ztest_smaller_mu.alternative = 'less'
 ztest_smaller_mu.method = 'Two-sample z-Test'
 ztest_smaller_mu.data_name = 'x and y'
 
+#> zt = z.test(x, sigma.x=0.46436662631627995, mu=6.4, alternative="two.sided")
+#> cat_items(zt, "ztest_mu_1s.")
+ztest_mu_1s = Holder()
+ztest_mu_1s.statistic = 4.415212090914452
+ztest_mu_1s.p_value = 1.009110038015147e-05
+ztest_mu_1s.conf_int = np.array([6.74376372125119, 7.29259991511245])
+ztest_mu_1s.estimate = 7.01818181818182
+ztest_mu_1s.null_value = 6.4
+ztest_mu_1s.alternative = 'two.sided'
+ztest_mu_1s.method = 'One-sample z-Test'
+ztest_mu_1s.data_name = 'x'
+
+#> zt = z.test(x, sigma.x=0.46436662631627995, mu=7.4, alternative="less")
+#> cat_items(zt, "ztest_smaller_mu_1s.")
+ztest_smaller_mu_1s = Holder()
+ztest_smaller_mu_1s.statistic = -2.727042762035397
+ztest_smaller_mu_1s.p_value = 0.00319523783881176
+ztest_smaller_mu_1s.conf_int = np.array([np.nan, 7.248480744895716])
+ztest_smaller_mu_1s.estimate = 7.01818181818182
+ztest_smaller_mu_1s.null_value = 7.4
+ztest_smaller_mu_1s.alternative = 'less'
+ztest_smaller_mu_1s.method = 'One-sample z-Test'
+ztest_smaller_mu_1s.data_name = 'x'
+
+#> zt = z.test(x, sigma.x=0.46436662631627995, mu=6.4, alternative="greater")
+#> cat_items(zt, "ztest_greater_mu_1s.")
+ztest_larger_mu_1s = Holder()
+ztest_larger_mu_1s.statistic = 4.415212090914452
+ztest_larger_mu_1s.p_value = 5.045550190097003e-06
+ztest_larger_mu_1s.conf_int = np.array([6.78788289146792, np.nan])
+ztest_larger_mu_1s.estimate = 7.01818181818182
+ztest_larger_mu_1s.null_value = 6.4
+ztest_larger_mu_1s.alternative = 'greater'
+ztest_larger_mu_1s.method = 'One-sample z-Test'
+ztest_larger_mu_1s.data_name = 'x'
+
+
 alternatives = {'less' : 'smaller',
                 'greater' : 'larger',
                 'two.sided' : 'two-sided'}
 
-class TestCheckZTestMixin(object):
+class TestZTest(object):
     # all examples use the same data
     # no weights used in tests
 
@@ -498,16 +535,16 @@ class TestCheckZTestMixin(object):
             assert_allclose(zstat, tc.statistic, rtol=1e-10)
             assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
 
-            # Note: value is shifting our confidence interval in zconfint
-            ci = zconfint(x1, x2, value=0,
-                                alternative=alternatives[tc.alternative])
-
             #overwrite nan in R's confint
             tc_conf_int = tc.conf_int.copy()
             if np.isnan(tc_conf_int[0]):
                 tc_conf_int[0] = - np.inf
             if np.isnan(tc_conf_int[1]):
                 tc_conf_int[1] = np.inf
+
+            # Note: value is shifting our confidence interval in zconfint
+            ci = zconfint(x1, x2, value=0,
+                                alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int, rtol=1e-10)
 
             ci = cm.zconfint_diff(alternative=alternatives[tc.alternative])
@@ -516,3 +553,31 @@ class TestCheckZTestMixin(object):
             ci = zconfint(x1, x2, value=tc.null_value,
                                 alternative=alternatives[tc.alternative])
             assert_allclose(ci, tc_conf_int - tc.null_value, rtol=1e-10)
+
+        # 1 sample test copy-paste
+        d1 = self.d1
+        for tc in [ztest_mu_1s, ztest_smaller_mu_1s, ztest_larger_mu_1s]:
+            zstat, pval = ztest(x1, value=tc.null_value,
+                                alternative=alternatives[tc.alternative])
+            assert_allclose(zstat, tc.statistic, rtol=1e-10)
+            assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
+
+            zstat, pval = d1.ztest_mean(value=tc.null_value,
+                                       alternative=alternatives[tc.alternative])
+            assert_allclose(zstat, tc.statistic, rtol=1e-10)
+            assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
+
+            #overwrite nan in R's confint
+            tc_conf_int = tc.conf_int.copy()
+            if np.isnan(tc_conf_int[0]):
+                tc_conf_int[0] = - np.inf
+            if np.isnan(tc_conf_int[1]):
+                tc_conf_int[1] = np.inf
+
+            # Note: value is shifting our confidence interval in zconfint
+            ci = zconfint(x1, value=0,
+                                alternative=alternatives[tc.alternative])
+            assert_allclose(ci, tc_conf_int, rtol=1e-10)
+
+            ci = d1.zconfint_mean(alternative=alternatives[tc.alternative])
+            assert_allclose(ci, tc_conf_int, rtol=1e-10)

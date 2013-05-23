@@ -339,9 +339,9 @@ def test_ztost():
     # confidence interval for tost
     # generic ztost is moved to weightstats
     from statsmodels.stats.weightstats import zconfint, ztost
-    ci01 = zconfint(xfair, alpha=0.1)
+    ci01 = zconfint(xfair, alpha=0.1, ddof=0)
     assert_almost_equal(ci01,  [0.2719, 0.3265], 4)
-    res = ztost(xfair, 0.18, 0.38)
+    res = ztost(xfair, 0.18, 0.38, ddof=0)
 
     assert_almost_equal(res[1][0], 7.1865, 4)
     assert_almost_equal(res[2][0], -4.8701, 4)
