@@ -338,8 +338,8 @@ def test_ztost():
     # http://support.sas.com/documentation/cdl/en/procstat/63104/HTML/default/viewer.htm#procstat_freq_sect028.htm
     # confidence interval for tost
     # generic ztost is moved to weightstats
-    from statsmodels.stats.weightstats import confint_ztest, ztost
-    ci01 = confint_ztest(xfair, alpha=0.1)
+    from statsmodels.stats.weightstats import zconfint, ztost
+    ci01 = zconfint(xfair, alpha=0.1)
     assert_almost_equal(ci01,  [0.2719, 0.3265], 4)
     res = ztost(xfair, 0.18, 0.38)
 

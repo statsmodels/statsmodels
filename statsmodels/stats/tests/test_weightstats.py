@@ -19,7 +19,8 @@ import numpy as np
 from scipy import stats
 from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from statsmodels.stats.weightstats import \
-                DescrStatsW, CompareMeans, ttest_ind, ztest
+                DescrStatsW, CompareMeans, ttest_ind, ztest, zconfint
+#import statsmodels.stats.weightstats as smws
 
 class Holder(object):
     pass
@@ -386,3 +387,132 @@ def test_ztest_ztost():
     res1a = CompareMeans(d1, d2).ztest_ind()
     assert_allclose(res1a[1], res2[1], rtol=0.03)
     assert_almost_equal(res1a, res1, decimal=12)
+
+
+###### test for ztest and z confidence interval against R BSDA z.test
+# Note: I needed to calculate the pooled standard deviation for R
+#       std = np.std(np.concatenate((x-x.mean(),y-y.mean())), ddof=2)
+
+#> zt = z.test(x, sigma.x=0.57676142668828667, y, sigma.y=0.57676142668828667)
+#> cat_items(zt, "ztest.")
+ztest_ = Holder()
+ztest_.statistic = 6.55109865675183
+ztest_.p_value = 5.711530850508982e-11
+ztest_.conf_int = np.array([1.230415246535603, 2.280948389828034])
+ztest_.estimate = np.array([7.01818181818182, 5.2625])
+ztest_.null_value = 0
+ztest_.alternative = 'two.sided'
+ztest_.method = 'Two-sample z-Test'
+ztest_.data_name = 'x and y'
+#> zt = z.test(x, sigma.x=0.57676142668828667, y, sigma.y=0.57676142668828667, alternative="less")
+#> cat_items(zt, "ztest_smaller.")
+ztest_smaller = Holder()
+ztest_smaller.statistic = 6.55109865675183
+ztest_smaller.p_value = 0.999999999971442
+ztest_smaller.conf_int = np.array([np.nan, 2.196499421109045])
+ztest_smaller.estimate = np.array([7.01818181818182, 5.2625])
+ztest_smaller.null_value = 0
+ztest_smaller.alternative = 'less'
+ztest_smaller.method = 'Two-sample z-Test'
+ztest_smaller.data_name = 'x and y'
+#> zt = z.test(x, sigma.x=0.57676142668828667, y, sigma.y=0.57676142668828667, alternative="greater")
+#> cat_items(zt, "ztest_larger.")
+ztest_larger = Holder()
+ztest_larger.statistic = 6.55109865675183
+ztest_larger.p_value = 2.855760072861813e-11
+ztest_larger.conf_int = np.array([1.314864215254592, np.nan])
+ztest_larger.estimate = np.array([7.01818181818182, 5.2625 ])
+ztest_larger.null_value = 0
+ztest_larger.alternative = 'greater'
+ztest_larger.method = 'Two-sample z-Test'
+ztest_larger.data_name = 'x and y'
+
+
+#> zt = z.test(x, sigma.x=0.57676142668828667, y, sigma.y=0.57676142668828667, mu=1, alternative="two.sided")
+#> cat_items(zt, "ztest_mu.")
+ztest_mu = Holder()
+ztest_mu.statistic = 2.81972854805176
+ztest_mu.p_value = 0.00480642898427981
+ztest_mu.conf_int = np.array([1.230415246535603, 2.280948389828034])
+ztest_mu.estimate = np.array([7.01818181818182, 5.2625])
+ztest_mu.null_value = 1
+ztest_mu.alternative = 'two.sided'
+ztest_mu.method = 'Two-sample z-Test'
+ztest_mu.data_name = 'x and y'
+
+#> zt = z.test(x, sigma.x=0.57676142668828667, y, sigma.y=0.57676142668828667, mu=1, alternative="greater")
+#> cat_items(zt, "ztest_larger_mu.")
+ztest_larger_mu = Holder()
+ztest_larger_mu.statistic = 2.81972854805176
+ztest_larger_mu.p_value = 0.002403214492139871
+ztest_larger_mu.conf_int = np.array([1.314864215254592, np.nan])
+ztest_larger_mu.estimate = np.array([7.01818181818182, 5.2625])
+ztest_larger_mu.null_value = 1
+ztest_larger_mu.alternative = 'greater'
+ztest_larger_mu.method = 'Two-sample z-Test'
+ztest_larger_mu.data_name = 'x and y'
+
+#> zt = z.test(x, sigma.x=0.57676142668828667, y, sigma.y=0.57676142668828667, mu=2, alternative="less")
+#> cat_items(zt, "ztest_smaller_mu.")
+ztest_smaller_mu = Holder()
+ztest_smaller_mu.statistic = -0.911641560648313
+ztest_smaller_mu.p_value = 0.1809787183191324
+ztest_smaller_mu.conf_int = np.array([np.nan, 2.196499421109045])
+ztest_smaller_mu.estimate = np.array([7.01818181818182, 5.2625])
+ztest_smaller_mu.null_value = 2
+ztest_smaller_mu.alternative = 'less'
+ztest_smaller_mu.method = 'Two-sample z-Test'
+ztest_smaller_mu.data_name = 'x and y'
+
+alternatives = {'less' : 'smaller',
+                'greater' : 'larger',
+                'two.sided' : 'two-sided'}
+
+class TestCheckZTestMixin(object):
+    # all examples use the same data
+    # no weights used in tests
+
+    @classmethod
+    def setup_class(cls):
+        cls.x1 = np.array([7.8, 6.6, 6.5, 7.4, 7.3, 7., 6.4, 7.1, 6.7, 7.6, 6.8])
+        cls.x2 = np.array([4.5, 5.4, 6.1, 6.1, 5.4, 5., 4.1, 5.5])
+        cls.d1 = DescrStatsW(cls.x1)
+        cls.d2 = DescrStatsW(cls.x2)
+        cls.cm = CompareMeans(cls.d1, cls.d2)
+
+    def test(self):
+        x1, x2 = self.x1, self.x2
+        cm = self.cm
+
+        # tc : test cases
+        for tc in [ztest_, ztest_smaller, ztest_larger,
+                   ztest_mu, ztest_smaller_mu, ztest_larger_mu]:
+
+            zstat, pval = ztest(x1, x2, value=tc.null_value,
+                                alternative=alternatives[tc.alternative])
+            assert_allclose(zstat, tc.statistic, rtol=1e-10)
+            assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
+
+            zstat, pval = cm.ztest_ind(value=tc.null_value,
+                                       alternative=alternatives[tc.alternative])
+            assert_allclose(zstat, tc.statistic, rtol=1e-10)
+            assert_allclose(pval, tc.p_value, rtol=1e-10, atol=1e-16)
+
+            # Note: value is shifting our confidence interval in zconfint
+            ci = zconfint(x1, x2, value=0,
+                                alternative=alternatives[tc.alternative])
+
+            #overwrite nan in R's confint
+            tc_conf_int = tc.conf_int.copy()
+            if np.isnan(tc_conf_int[0]):
+                tc_conf_int[0] = - np.inf
+            if np.isnan(tc_conf_int[1]):
+                tc_conf_int[1] = np.inf
+            assert_allclose(ci, tc_conf_int, rtol=1e-10)
+
+            ci = cm.zconfint_diff(alternative=alternatives[tc.alternative])
+            assert_allclose(ci, tc_conf_int, rtol=1e-10)
+
+            ci = zconfint(x1, x2, value=tc.null_value,
+                                alternative=alternatives[tc.alternative])
+            assert_allclose(ci, tc_conf_int - tc.null_value, rtol=1e-10)

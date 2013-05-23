@@ -229,7 +229,7 @@ class DescrStatsW(object):
     def std_var(self):
         pass
 
-    def confint_mean(self, alpha=0.05):
+    def confint_mean(self, alpha=0.05, alternative='two-sided'):
         '''two-sided confidence interval for weighted mean of data
 
         If the data is 2d, then these are separate confidence intervals
@@ -239,6 +239,7 @@ class DescrStatsW(object):
         ----------
         alpha : float
             level of the test, confidence level is ``1-alpha``
+
         Returns
         -------
         lower, upper : floats or ndarrays
@@ -251,10 +252,36 @@ class DescrStatsW(object):
         '''
         #TODO: add asymmetric
         dof = self.sum_weights - 1
-        tcrit = stats.t.ppf(1-alpha/2., dof)
-        lower = self.mean - tcrit * self.std_mean
-        upper = self.mean + tcrit * self.std_mean
-        return lower, upper
+        ci = _tconfint_generic(self.mean, self.std_mean, dof, alpha,
+                               alternative)
+        return ci
+
+
+    def zconfint_mean(self, alpha=0.05, alternative='two-sided'):
+        '''two-sided confidence interval for weighted mean of data
+
+        Confidence interval is based on normal distribution.
+        If the data is 2d, then these are separate confidence intervals
+        for each column.
+
+        Parameters
+        ----------
+        alpha : float
+            level of the test, confidence level is ``1-alpha``
+
+        Returns
+        -------
+        lower, upper : floats or ndarrays
+            lower and upper bound of confidence interval
+
+        Notes
+        -----
+        In a previous version, statsmodels 0.4, alpha was the confidence
+        level, e.g. 0.95
+        '''
+
+        return _zconfint_generic(self.mean, self.std_mean, alpha, alternative)
+
 
     def ttest_mean(self, value=0, alternative='two-sided'):
         '''ttest of Null hypothesis that mean is equal to value.
@@ -753,6 +780,48 @@ class CompareMeans(object):
                                alternative=alternative)
         return res
 
+    def zconfint_diff(self, alpha=0.05, alternative='two-sided',
+                     usevar='pooled'):
+        '''confidence interval for the difference in means
+
+        Parameters
+        ----------
+        alpha: float
+            1-alpha is the confidence level for the interval
+        alternative : string
+            The alternative hypothesis, H1, has to be one of the following :
+
+            'two-sided': H1: difference in means not equal to value (default)
+            'larger' :   H1: difference in means larger than value
+            'smaller' :  H1: difference in means smaller than value
+
+        usevar : string, 'pooled' or 'unequal'
+            If ``pooled``, then the standard deviation of the samples is assumed to be
+            the same. If ``unequal``, then Welsh ttest with Satterthwait degrees
+            of freedom is used
+
+        Returns
+        -------
+        lower, upper : floats
+            lower and upper limits of the confidence interval
+
+        Notes
+        -----
+        The result is independent of the user specified ddof.
+
+        '''
+        d1 = self.d1
+        d2 = self.d2
+        diff = d1.mean - d2.mean
+        if usevar == 'pooled':
+            std_diff = self.std_meandiff_pooledvar
+        elif usevar == 'separate':
+            std_diff = self.std_meandiff_separatevar
+
+        res = _zconfint_generic(diff, std_diff, alpha=alpha,
+                               alternative=alternative)
+        return res
+
     def ttost_ind(self, low, upp, usevar='pooled'):
         '''
         test of equivalence for two independent samples, base on t-test
@@ -1037,15 +1106,28 @@ def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled'):
     #stat = x1_mean - x2_mean - value
     return _zstat_generic(x1_mean, x2_mean, std_diff, alternative, diff=value)
 
-def confint_ztest(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
+def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
                   usevar='pooled'):
     '''confidence interval based on normal distribution z-test
+
+    Parameters
+    ----------
+    same as in ztest
 
     Notes
     -----
     checked only for 1 sample case
 
     usevar not implemented, is always pooled in two sample case
+
+    ``value`` shifts the confidence interval so it is centered at
+    `x1_mean - x2_mean - value`
+
+    See Also
+    --------
+    ztest
+    CompareMeans
+
     '''
     #usevar is not used, always pooled
     # mostly duplicate code from ztest
@@ -1058,7 +1140,7 @@ def confint_ztest(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
         nobs2 = x2.shape[0]
         x2_mean = x2.mean(0)
         x2_var = x2.var(0)
-        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2)
+        var_pooled = (nobs1 * x1_var + nobs2 * x2_var) / (nobs1 + nobs2 - 2)
         var_pooled *= (1. / nobs1 + 1. / nobs2)
     else:
         var_pooled = x1_var / nobs1
