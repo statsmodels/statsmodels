@@ -483,9 +483,9 @@ class DescrStatsW(object):
 
 def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
     '''generic ttest to save typing'''
-    #TODO: diff convention has wrong sign
+
     tstat = (value1 - value2 - diff) / std_diff
-    if alternative in ['two-sided', '2-sided', '2']:
+    if alternative in ['two-sided', '2-sided', '2s']:
         pvalue = stats.t.sf(np.abs(tstat), dof)*2
     elif alternative in ['larger', 'l']:
         pvalue = stats.t.sf(tstat, dof)
@@ -498,7 +498,7 @@ def _tstat_generic(value1, value2, std_diff, dof, alternative, diff=0):
 def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
     '''generic t-confint to save typing'''
 
-    if alternative in ['two-sided', '2-sided', '2']:
+    if alternative in ['two-sided', '2-sided', '2s']:
         tcrit = stats.t.ppf(1 - alpha / 2., dof)
         lower = mean - tcrit * std_mean
         upper = mean + tcrit * std_mean
@@ -517,11 +517,13 @@ def _tconfint_generic(mean, std_mean, dof, alpha, alternative):
 
 
 def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
-    '''generic (normal) z-test to save typing'''
-    #todo: this should just use stat = (value1 - value2 - diff) as argument
-    #TODO: diff convention has wrong sign
+    '''generic (normal) z-test to save typing
+    
+    can be used as ztest based on summary statistics
+    
+    '''
     zstat = (value1 - value2 - diff) / std_diff
-    if alternative in ['two-sided', '2-sided', '2']:
+    if alternative in ['two-sided', '2-sided', '2s']:
         pvalue = stats.norm.sf(np.abs(zstat))*2
     elif alternative in ['larger', 'l']:
         pvalue = stats.norm.sf(zstat)
@@ -532,11 +534,12 @@ def _zstat_generic(value1, value2, std_diff, alternative, diff=0):
     return zstat, pvalue
 
 def _zstat_generic2(value, std_diff, alternative):
-    '''generic (normal) z-test to save typing'''
-    #todo: this should just use stat = (value1 - value2 - diff) as argument
-    #TODO: diff convention has wrong sign
+    '''generic (normal) z-test to save typing
+        
+    can be used as ztest based on summary statistics
+    '''
     zstat = value / std_diff
-    if alternative in ['two-sided', '2-sided', '2']:
+    if alternative in ['two-sided', '2-sided', '2s']:
         pvalue = stats.norm.sf(np.abs(zstat))*2
     elif alternative in ['larger', 'l']:
         pvalue = stats.norm.sf(zstat)
@@ -549,7 +552,7 @@ def _zstat_generic2(value, std_diff, alternative):
 def _zconfint_generic(mean, std_mean, alpha, alternative):
     '''generic normal-confint to save typing'''
 
-    if alternative in ['two-sided', '2-sided', '2']:
+    if alternative in ['two-sided', '2-sided', '2s']:
         zcrit = stats.norm.ppf(1 - alpha / 2.)
         lower = mean - zcrit * std_mean
         upper = mean + zcrit * std_mean
@@ -1084,7 +1087,7 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
     return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
 
-def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled',
+def ztest(x1, x2=None, value=0, alternative='two-sided', usevar='pooled',
           ddof=1.):
     '''test for mean based on normal distribution, one or two samples
 
@@ -1148,7 +1151,7 @@ def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled',
     #stat = x1_mean - x2_mean - value
     return _zstat_generic(x1_mean, x2_mean, std_diff, alternative, diff=value)
 
-def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
+def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='two-sided',
                   usevar='pooled', ddof=1.):
     '''confidence interval based on normal distribution z-test
 

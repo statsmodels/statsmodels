@@ -192,7 +192,7 @@ def test_binom_test():
 
     alltests = [('larger', binom_test_greater),
                 ('smaller', binom_test_less),
-                ('2-sided', binom_test_2sided)]
+                ('two-sided', binom_test_2sided)]
 
     for alt, res0 in alltests:
         # only p-value is returned
@@ -237,7 +237,7 @@ def test_binom_rejection_interval():
                                   alternative=alternative)
     assert_array_less(alpha, pval)
 
-    alternative='2-sided'
+    alternative='two-sided'
     ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
                                                        alternative=alternative)
     pval = smprop.binom_test_stat(ci_upp, nobs, prop=prop,

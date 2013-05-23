@@ -311,7 +311,7 @@ def binom_tost_reject_interval(low, upp, nobs, alpha=0.05):
     x_upp = stats.binom.ppf(alpha, nobs, upp) - 1
     return x_low, x_upp
 
-def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='2-sided'):
+def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='two-sided'):
     '''rejection region for binomial test for one sample proportion
 
     The interval includes the end points of the rejection region.
@@ -331,7 +331,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='2-sided'):
 
 
     '''
-    if alternative in ['2s', '2-sided']:
+    if alternative in ['2s', 'two-sided']:
         alternative = '2s'  # normalize alternative name
         alpha = alpha / 2
 
@@ -346,7 +346,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='2-sided'):
 
     return x_low, x_upp
 
-def binom_test_stat(count, nobs, prop=0.5, alternative='2-sided'):
+def binom_test_stat(count, nobs, prop=0.5, alternative='two-sided'):
     '''Perform a test that the probability of success is p.
 
     This is an exact, two-sided test of the null hypothesis
@@ -362,7 +362,7 @@ def binom_test_stat(count, nobs, prop=0.5, alternative='2-sided'):
     prop : float, optional
         The probability of success under the null hypothesis,
         `0 <= prop <= 1`. The default value is `prop = 0.5`
-    alternative : string in ['2-sided', 'smaller', 'larger']
+    alternative : string in ['two-sided', 'smaller', 'larger']
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
@@ -379,7 +379,7 @@ def binom_test_stat(count, nobs, prop=0.5, alternative='2-sided'):
 
     if np.any(prop > 1.0) or np.any(prop < 0.0):
         raise ValueError("p must be in range [0,1]")
-    if alternative in ['2s', '2-sided']:
+    if alternative in ['2s', 'two-sided']:
         pval = stats.binom_test(count, n=nobs, p=prop)
     elif alternative in ['l', 'larger']:
         pval = stats.binom.sf(count-1, nobs, prop)
@@ -387,7 +387,7 @@ def binom_test_stat(count, nobs, prop=0.5, alternative='2-sided'):
         pval = stats.binom.cdf(count, nobs, prop)
     else:
         raise ValueError('alternative not recognized\n'
-                         'should be 2-sided, larger or smaller')
+                         'should be two-sided, larger or smaller')
     return pval
 
 
@@ -514,7 +514,7 @@ def _table_proportion(count, nobs):
     return table, expected, n_rows
 
 
-def proportions_ztest(count, nobs, value=None, alternative='2-sided',
+def proportions_ztest(count, nobs, value=None, alternative='two-sided',
                       prop_var=False):
     '''test for proportions based on normal (z) test
 
@@ -532,7 +532,7 @@ def proportions_ztest(count, nobs, value=None, alternative='2-sided',
         case of a one sample test. In the case of a two-sample test, the
         null hypothesis is that prop[0] - prop[1] = value, where prop is the
         proportion in the two samples
-    alternative : string in ['2-sided', 'smaller', 'larger']
+    alternative : string in ['two-sided', 'smaller', 'larger']
         The alternative hypothesis can be either two-sided or one of the one-
         sided tests, smaller means that the alternative hypothesis is
         ``prop < value` and larger means ``prop > value``, or the corresponding
@@ -735,7 +735,7 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
 
 def proportions_chisquare_pairscontrol(count, nobs, value=None,
-                               multitest_method='hs', alternative='2-sided'):
+                               multitest_method='hs', alternative='two-sided'):
     '''chisquare test of proportions for pairs of k samples compared to control
 
     Performs a chisquare test for proportions for pairwise comparisons with a
@@ -757,7 +757,7 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
         that is used as default in the results.
         It can be any method that is available in  ``multipletesting``.
         The default is Holm-Sidak 'hs'.
-    alternative : string in ['2-sided', 'smaller', 'larger']
+    alternative : string in ['two-sided', 'smaller', 'larger']
         alternative hypothesis, which can be two-sided or either one of the
         one-sided tests.
 
@@ -776,7 +776,7 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
     ``value`` and ``alternative`` options are not yet implemented.
 
     '''
-    if (value is not None) or (not alternative in ['2-sided', '2', '2s']):
+    if (value is not None) or (not alternative in ['two-sided', '2s']):
         raise NotImplementedError
     #all_pairs = map(list, zip(*np.triu_indices(4, 1)))
     all_pairs = [(0, k) for k in range(1, len(count))]
