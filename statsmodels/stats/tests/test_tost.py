@@ -365,7 +365,7 @@ ttest_clinic_indep_1_two_mu_pooled.data_name = 'clinic$var1[1:15] and clinic$var
 
 res1 = smws.ttost_paired(clinic[:15, 2], clinic[15:, 2], -0.6, 0.6, transform=None)
 res2 = smws.ttost_paired(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, transform=None)
-res = smws.ttost_ind(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, usevar='separate')
+res = smws.ttost_ind(clinic[:15, 3], clinic[15:, 3], -0.6, 0.6, usevar='unequal')
 
 
 class CheckTostMixin(object):
@@ -419,7 +419,7 @@ class TestTosti1(CheckTostMixin):
         self.res2 = tost_clinic_indep_1
         x, y = clinic[:15, 2], clinic[15:, 2]
         self.res1 = Holder()
-        res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='separate')
+        res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='unequal')
         self.res1.pvalue = res[0]
 
 class TestTosti2(CheckTostMixin):
@@ -427,7 +427,7 @@ class TestTosti2(CheckTostMixin):
         self.res2 = tost_clinic_indep
         x, y = clinic[:15, 3], clinic[15:, 3]
         self.res1 = Holder()
-        res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='separate')
+        res = smws.ttost_ind(x, y, -0.6, 0.6, usevar='unequal')
         self.res1.pvalue = res[0]
 
 class TestTostip1(CheckTostMixin):
@@ -454,29 +454,29 @@ def test_tost_log():
     resp = smws.ttost_paired(x1, x2, 0.8, 1.25, transform=np.log)
     assert_almost_equal(resp[0], tost_clinic_1_paired.p_value, 13)
 
-    resi = smws.ttost_ind(x1, x2, 0.8, 1.25, transform=np.log, usevar='separate')
+    resi = smws.ttost_ind(x1, x2, 0.8, 1.25, transform=np.log, usevar='unequal')
     assert_almost_equal(resi[0], tost_clinic_1_indep.p_value, 13)
 
 def test_tost_asym():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
     #Note: x1, x2 reversed by definition in multeq.dif
     assert_almost_equal(x2.mean() - x1.mean(), tost_clinic_1_asym.estimate, 13)
-    resa = smws.ttost_ind(x2, x1, -1.5, 0.6, usevar='separate')
+    resa = smws.ttost_ind(x2, x1, -1.5, 0.6, usevar='unequal')
     assert_almost_equal(resa[0], tost_clinic_1_asym.p_value, 13)
 
     #multi-endpoints, asymmetric bounds, vectorized
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
                            [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
-                           usevar='separate')
+                           usevar='unequal')
     assert_almost_equal(resall[0], tost_clinic_all_no_multi.p_value, 13)
 
     #SMOKE tests: foe multi-endpoint vectorized, k on k
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
                            [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
-                           usevar='separate', transform=np.log)
+                           usevar='unequal', transform=np.log)
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:7],
                            [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
-                           usevar='separate', transform=np.exp)
+                           usevar='unequal', transform=np.exp)
 
     resall = smws.ttost_paired(clinic[15:, 2:7], clinic[:15, 2:7],
                               [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6,
@@ -490,24 +490,24 @@ def test_tost_asym():
 
     #k on 1: compare all with reference
     resall = smws.ttost_ind(clinic[15:, 2:7], clinic[:15, 2:3],
-                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6, usevar='separate')
+                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6, usevar='unequal')
     resa3_2 = smws.ttost_ind(clinic[15:, 3:4], clinic[:15, 2:3],
-                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6, usevar='separate')
+                           [-1.0, -1.0, -1.5, -1.5, -1.5], 0.6, usevar='unequal')
     assert_almost_equal(resall[0][1], resa3_2[0][1], decimal=13)
     resall = smws.ttost_ind(clinic[15:, 2], clinic[:15, 2],
-                           [-1.0, -0.5, -0.7, -1.5, -1.5], 0.6, usevar='separate')
+                           [-1.0, -0.5, -0.7, -1.5, -1.5], 0.6, usevar='unequal')
     resall = smws.ttost_ind(clinic[15:, 2], clinic[:15, 2],
                            [-1.0, -0.5, -0.7, -1.5, -1.5],
-                           np.repeat(0.6,5), usevar='separate')
+                           np.repeat(0.6,5), usevar='unequal')
 
 def test_ttest():
     x1, x2 = clinic[:15, 2], clinic[15:, 2]
     all_tests = []
-    t1 = smws.ttest_ind(x1, x2, alternative='larger', usevar='separate')
+    t1 = smws.ttest_ind(x1, x2, alternative='larger', usevar='unequal')
     all_tests.append((t1, ttest_clinic_indep_1_g))
-    t2 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate')
+    t2 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='unequal')
     all_tests.append((t2, ttest_clinic_indep_1_l))
-    t3 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='separate',
+    t3 = smws.ttest_ind(x1, x2, alternative='smaller', usevar='unequal',
                         value=1)
     all_tests.append((t3, ttest_clinic_indep_1_l_mu))
 
@@ -517,13 +517,13 @@ def test_ttest():
         #assert_almost_equal(res1[2], res2.df, decimal=13)
 
     cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))
-    ci = cm.confint_diff(alternative='two-sided', usevar='separate')
+    ci = cm.confint_diff(alternative='two-sided', usevar='unequal')
     assert_almost_equal(ci, ttest_clinic_indep_1_two_mu.conf_int, decimal=13)
     ci = cm.confint_diff(alternative='two-sided', usevar='pooled')
     assert_almost_equal(ci, ttest_clinic_indep_1_two_mu_pooled.conf_int, decimal=13)
-    ci = cm.confint_diff(alternative='smaller', usevar='separate')
+    ci = cm.confint_diff(alternative='smaller', usevar='unequal')
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_l.conf_int, decimal=13)
-    ci = cm.confint_diff(alternative='larger', usevar='separate')
+    ci = cm.confint_diff(alternative='larger', usevar='unequal')
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_g.conf_int, decimal=13)
 
 

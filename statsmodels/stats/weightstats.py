@@ -684,9 +684,11 @@ class CompareMeans(object):
         if usevar == 'pooled':
             stdm = self.std_meandiff_pooledvar
             dof = (d1.nobs - 1 + d2.nobs - 1)
-        elif usevar == 'separate':
+        elif usevar == 'unequal':
             stdm = self.std_meandiff_separatevar
             dof = self.dof_satt()
+        else:
+            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         tstat, pval = _tstat_generic(d1.mean, d2.mean, stdm, dof, alternative,
                                     diff=value)
@@ -728,8 +730,10 @@ class CompareMeans(object):
 
         if usevar == 'pooled':
             stdm = self.std_meandiff_pooledvar
-        elif usevar == 'separate':
+        elif usevar == 'unequal':
             stdm = self.std_meandiff_separatevar
+        else:
+            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         tstat, pval = _zstat_generic(d1.mean, d2.mean, stdm, alternative,
                                      diff=value)
@@ -772,9 +776,11 @@ class CompareMeans(object):
         if usevar == 'pooled':
             std_diff = self.std_meandiff_pooledvar
             dof = (d1.nobs - 1 + d2.nobs - 1)
-        elif usevar == 'separate':
+        elif usevar == 'unequal':
             std_diff = self.std_meandiff_separatevar
             dof = self.dof_satt()
+        else:
+            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         res = _tconfint_generic(diff, std_diff, dof, alpha=alpha,
                                alternative=alternative)
@@ -815,8 +821,10 @@ class CompareMeans(object):
         diff = d1.mean - d2.mean
         if usevar == 'pooled':
             std_diff = self.std_meandiff_pooledvar
-        elif usevar == 'separate':
+        elif usevar == 'unequal':
             std_diff = self.std_meandiff_separatevar
+        else:
+            raise ValueError('usevar can only be "pooled" or "unequal"')
 
         res = _zconfint_generic(diff, std_diff, alpha=alpha,
                                alternative=alternative)
@@ -1072,7 +1080,6 @@ def ttost_paired(x1, x2, low, upp, transform=None, weights=None):
         low = transform(low)
         upp = transform(upp)
     dd = DescrStatsW(x1 - x2, weights=weights, ddof=0)
-    #TODO: add tost as method to DescrStatsW
     t1, pv1, df1 = dd.ttest_mean(low, alternative='larger')
     t2, pv2, df2 = dd.ttest_mean(upp, alternative='smaller')
     return np.maximum(pv1, pv2), (t1, pv1, df1), (t2, pv2, df2)
@@ -1083,11 +1090,44 @@ def ztest(x1, x2=None, value=0, alternative='2-sided', usevar='pooled',
 
     In the case of two samples, the samples are assumed to be independent.
 
+    Parameters
+    ----------
+    x1, x2 : array_like, 1-D or 2-D
+        two independent samples, see notes for 2-D case
+    value : float
+        In the one sample case, value is the mean of x1 under the Null
+        hypothesis.
+        In the two sample case, value is the difference between mean of x1 and
+        mean of x2 under the Null hypothesis. The test statistic is
+        `x1_mean - x2_mean - value`.
+    usevar : string, 'pooled'
+        Currently, only 'pooled' is implemented.
+        If ``pooled``, then the standard deviation of the samples is assumed to be
+        the same. see CompareMeans.ztest_ind for different options.
+    ddof : int
+        Degrees of freedom use in the calculation of the variance of the mean
+        estimate. In the case of comparing means this is one, however it can
+        be adjusted for testing other statistics (proportion, correlation)
+
+        tstat : float
+        test statisic
+    pvalue : float
+        pvalue of the t-test
+
+    Notes
+    -----
     usevar not implemented, is always pooled in two sample case
     use CompareMeans instead.
-    TODO: this should delegate to CompareMeans like ttest_ind
+
     '''
+    # TODO: this should delegate to CompareMeans like ttest_ind
+    #       However that does not implement ddof
+
     #usevar is not used, always pooled
+
+    if usevar != 'pooled':
+        raise NotImplementedError('only usevar="pooled" is implemented')
+
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
     x1_mean = x1.mean(0)
@@ -1133,6 +1173,9 @@ def zconfint(x1, x2=None, value=0, alpha=0.05, alternative='2-sided',
     '''
     #usevar is not used, always pooled
     # mostly duplicate code from ztest
+
+    if usevar != 'pooled':
+        raise NotImplementedError('only usevar="pooled" is implemented')
     x1 = np.asarray(x1)
     nobs1 = x1.shape[0]
     x1_mean = x1.mean(0)

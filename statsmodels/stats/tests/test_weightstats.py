@@ -51,12 +51,12 @@ class TestWeightstats(object):
 
         d1 = DescrStatsW(x1)
 #        print ttest_ind(x1, x2)
-#        print ttest_ind(x1, x2, usevar='separate')
-#        #print ttest_ind(x1, x2, usevar='separate')
+#        print ttest_ind(x1, x2, usevar='unequal')
+#        #print ttest_ind(x1, x2, usevar='unequal')
 #        print stats.ttest_ind(x1, x2)
-#        print ttest_ind(x1, x2, usevar='separate', alternative='larger')
-#        print ttest_ind(x1, x2, usevar='separate', alternative='smaller')
-#        print ttest_ind(x1, x2, usevar='separate', weights=(w1_, w2_))
+#        print ttest_ind(x1, x2, usevar='unequal', alternative='larger')
+#        print ttest_ind(x1, x2, usevar='unequal', alternative='smaller')
+#        print ttest_ind(x1, x2, usevar='unequal', weights=(w1_, w2_))
 #        print stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2])
         assert_almost_equal(ttest_ind(x1, x2, weights=(w1_, w2_))[:2],
                             stats.ttest_ind(np.r_[x1, x1], np.r_[x2,x2]))
@@ -217,9 +217,9 @@ class CheckWeightstats1dMixin(object):
         cm2 = CompareMeans(DescrStatsW(x1, weights=w1, ddof=1),
                           DescrStatsW(x2, weights=w2, ddof=2))
 
-        res0 = cm0.ttest_ind(usevar='separate')
-        res1 = cm1.ttest_ind(usevar='separate')
-        res2 = cm2.ttest_ind(usevar='separate')
+        res0 = cm0.ttest_ind(usevar='unequal')
+        res1 = cm1.ttest_ind(usevar='unequal')
+        res2 = cm2.ttest_ind(usevar='unequal')
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
@@ -230,9 +230,9 @@ class CheckWeightstats1dMixin(object):
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
-        res0 = cm0.confint_diff(usevar='separate')
-        res1 = cm1.confint_diff(usevar='separate')
-        res2 = cm2.confint_diff(usevar='separate')
+        res0 = cm0.confint_diff(usevar='unequal')
+        res1 = cm1.confint_diff(usevar='unequal')
+        res2 = cm2.confint_diff(usevar='unequal')
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
@@ -345,13 +345,13 @@ def test_ttest_ind_with_uneq_var():
     b = (1.1, 2.9, 4.2)
     pr = 0.53619490753126731
     tr = -0.68649512735572582
-    t, p, df = ttest_ind(a, b, usevar='separate')
+    t, p, df = ttest_ind(a, b, usevar='unequal')
     assert_almost_equal([t,p], [tr, pr], 13)
 
     a = (1, 2, 3, 4)
     pr = 0.84354139131608286
     tr = -0.2108663315950719
-    t, p, df = ttest_ind(a, b, usevar='separate')
+    t, p, df = ttest_ind(a, b, usevar='unequal')
     assert_almost_equal([t,p], [tr, pr], 13)
 
 def test_ztest_ztost():
