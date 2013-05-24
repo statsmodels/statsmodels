@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#pylint: disable-msg=W0142
 """Statistical power, solving for nobs, ... - trial version
 
 Created on Sat Jan 12 21:48:06 2013
@@ -96,16 +97,41 @@ def ftest_anova_power(effect_size, nobs, alpha, k_groups=2, df=None):
     return pow_#, crit
 
 def ftest_power(effect_size, df_num, df_denom, alpha, ncc=1):
-    '''power for ftest
+    '''Calculate the power of a F-test.
+
+    Parameters
+    ----------
+    effect_size : float
+        standardized effect size, mean divided by the standard deviation.
+        effect size has to be positive.
+    df_num : int or float
+        numerator degrees of freedom.
+    df_denom : int or float
+        denominator degrees of freedom.
+    alpha : float in interval (0,1)
+        significance level, e.g. 0.05, is the probability of a type I
+        error, that is wrong rejections if the Null Hypothesis is true.
+    ncc : int
+        degrees of freedom correction for non-centrality parameter.
+        see Notes
+
+    Returns
+    -------
+    power : float
+        Power of the test, e.g. 0.8, is one minus the probability of a
+        type II error. Power is the probability that the test correctly
+        rejects the Null Hypothesis if the Alternative Hypothesis is true.
+
+    Notes
+    -----
 
     sample size is given implicitly by df_num
 
-    set ncc=0 to match t-test, or f-test in LikelihoodModelResults
+    set ncc=0 to match t-test, or f-test in LikelihoodModelResults.
     ncc=1 matches the non-centrality parameter in R::pwr::pwr.f2.test
 
     ftest_power with ncc=0 should also be correct for f_test in regression
     models, with df_num and d_denom as defined there. (not verified yet)
-
     '''
     nc = effect_size**2 * (df_denom + df_num + ncc)
     crit = stats.f.isf(alpha, df_denom, df_num)
@@ -122,7 +148,8 @@ class Power(object):
     so far this could all be class methods
     '''
 
-    def __init__(self):
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
         # used only for instance level start values
         self.start_ttp = dict(effect_size=0.01, nobs=10., alpha=0.15,
                               power=0.6, nobs1=10., ratio=1,
@@ -236,6 +263,96 @@ class Power(object):
         fit_res.insert(0, success)
         self.cache_fit_res = fit_res
         return val
+
+    def plot_power(self, dep_var='nobs', nobs=None, effect_size=None,
+                   alpha=0.05, ax=None, title=None, plt_kwds=None, **kwds):
+        '''plot power with number of observations or effect size on x-axis
+
+        Parameters
+        ----------
+        dep_var : string in ['nobs', 'effect_size', 'alpha']
+            This specifies which variable is used for the horizontal axis.
+            If dep_var='nobs' (default), then one curve is created for each
+            value of ``effect_size``. If dep_var='effect_size' or alpha, then
+            one curve is created for each value of ``nobs``.
+        nobs : scalar or array_like
+            specifies the values of the number of observations in the plot
+        effect_size : scalar or array_like
+            specifies the values of the effect_size in the plot
+        alpha : float or array_like
+            The significance level (type I error) used in the power
+            calculation. Can only be more than a scalar, if ``dep_var='alpha'``
+        ax : None or axis instance
+            If ax is None, than a matplotlib figure is created. If ax is a
+            matplotlib axis instance, then it is reused, and the plot elements
+            are created with it.
+        title : string
+            title for the axis. Use an empty string, ``''``, to avoid a title.
+        plt_kwds : None or dict
+            not used yet
+        kwds : optional keywords for power function
+            These remaining keyword arguments are used as arguments to the
+            power function. Many power function support ``alternative`` as a
+            keyword argument, two-sample test support ``ratio``.
+
+        Returns
+        -------
+        fig : matplotlib figure instance
+
+        Notes
+        -----
+        This works only for classes where the ``power`` method has
+        ``effect_size``, ``nobs`` and ``alpha`` as the first three arguments.
+        If the second argument is ``nobs1``, then the number of observations
+        in the plot are those for the first sample.
+        TODO: fix this for FTestPower and GofChisquarePower
+
+        TODO: maybe add line variable, if we want more than nobs and effectsize
+        '''
+        #if pwr_kwds is None:
+        #    pwr_kwds = {}
+        from statsmodels.graphics import utils
+        from statsmodels.graphics.plottools import rainbow
+        fig, ax = utils.create_mpl_ax(ax)
+        import matplotlib.pyplot as plt
+        colormap = plt.cm.Dark2 #pylint: disable-msg=E1101
+        plt_alpha = 1 #0.75
+        lw = 2
+        if dep_var == 'nobs':
+            colors = rainbow(len(effect_size))
+            colors = [colormap(i) for i in np.linspace(0, 0.9, len(effect_size))]
+            for ii, es in enumerate(effect_size):
+                power = self.power(es, nobs, alpha, **kwds)
+                ax.plot(nobs, power, lw=lw, alpha=plt_alpha,
+                        color=colors[ii], label='es=%4.2F' % es)
+                xlabel = 'Number of Observations'
+        elif dep_var in ['effect size', 'effect_size', 'es']:
+            colors = rainbow(len(nobs))
+            colors = [colormap(i) for i in np.linspace(0, 0.9, len(nobs))]
+            for ii, n in enumerate(nobs):
+                power = self.power(effect_size, n, alpha, **kwds)
+                ax.plot(effect_size, power, lw=lw, alpha=plt_alpha,
+                        color=colors[ii], label='N=%4.2F' % n)
+                xlabel = 'Effect Size'
+        elif dep_var in ['alpha']:
+            # experimental nobs as defining separate lines
+            colors = rainbow(len(nobs))
+
+            for ii, n in enumerate(nobs):
+                power = self.power(effect_size, n, alpha, **kwds)
+                ax.plot(alpha, power, lw=lw, alpha=plt_alpha,
+                        color=colors[ii], label='N=%4.2F' % n)
+                xlabel = 'alpha'
+        else:
+            raise ValueError('depvar not implemented')
+
+        if title is None:
+            title = 'Power of Test'
+        ax.set_xlabel(xlabel)
+        ax.set_title(title)
+        ax.legend(loc='lower right')
+        return fig
+
 
 class TTestPower(Power):
     '''Statistical Power calculations for one sample or paired sample t-test
@@ -465,6 +582,9 @@ class NormalIndPower(Power):
 
     '''
 
+    def __init__(self, ddof=0, **kwds):
+        self.ddof = ddof
+        super(NormalIndPower, self).__init__(**kwds)
 
     def power(self, effect_size, nobs1, alpha, ratio=1,
               alternative='two-sided'):
@@ -503,12 +623,15 @@ class NormalIndPower(Power):
 
         '''
 
+        ddof = self.ddof  # for correlation, ddof=3
+
+        # get effective nobs, factor for std of test statistic
         if ratio > 0:
             nobs2 = nobs1*ratio
             #equivalent to nobs = n1*n2/(n1+n2)=n1*ratio/(1+ratio)
-            nobs = 1./ (1. / nobs1 + 1. / nobs2)
+            nobs = 1./ (1. / (nobs1 - ddof) + 1. / (nobs2 - ddof))
         else:
-            nobs = nobs1
+            nobs = nobs1 - ddof
         return normal_power(effect_size, nobs, alpha, alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
@@ -589,19 +712,16 @@ class FTestPower(Power):
         effect_size : float
             standardized effect size, mean divided by the standard deviation.
             effect size has to be positive.
-        nobs : int or float
-            sample size, number of observations.
+        df_num : int or float
+            numerator degrees of freedom.
+        df_denom : int or float
+            denominator degrees of freedom.
         alpha : float in interval (0,1)
             significance level, e.g. 0.05, is the probability of a type I
             error, that is wrong rejections if the Null Hypothesis is true.
-        df : int or float
-            degrees of freedom. By default this is None, and the df from the
-            one sample or paired ttest is used, ``df = nobs1 - 1``
-        alternative : string, 'two-sided' (default), 'larger', 'smaller'
-            extra argument to choose whether the power is calculated for a
-            two-sided (default) or one sided test. The one-sided test can be
-            either 'larger', 'smaller'.
-            .
+        ncc : int
+            degrees of freedom correction for non-centrality parameter.
+            see Notes
 
         Returns
         -------
@@ -610,9 +730,19 @@ class FTestPower(Power):
             type II error. Power is the probability that the test correctly
             rejects the Null Hypothesis if the Alternative Hypothesis is true.
 
-       '''
+        Notes
+        -----
 
-        pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=1)
+        sample size is given implicitly by df_num
+
+        set ncc=0 to match t-test, or f-test in LikelihoodModelResults.
+        ncc=1 matches the non-centrality parameter in R::pwr::pwr.f2.test
+
+        ftest_power with ncc=0 should also be correct for f_test in regression
+        models, with df_num and d_denom as defined there. (not verified yet)
+        '''
+
+        pow_ = ftest_power(effect_size, df_num, df_denom, alpha, ncc=ncc)
         #print effect_size, df_num, df_denom, alpha, pow_
         return pow_
 
@@ -667,7 +797,8 @@ class FTestPower(Power):
                                                       df_num=df_num,
                                                       df_denom=df_denom,
                                                       alpha=alpha,
-                                                      power=power)
+                                                      power=power,
+                                                      ncc=ncc)
 
 class FTestAnovaPower(Power):
     '''Statistical Power calculations F-test for one factor balanced ANOVA
@@ -785,7 +916,7 @@ class GofChisquarePower(Power):
 
     '''
 
-    def power(self, effect_size, nobs, n_bins, alpha, ddof=0):
+    def power(self, effect_size, nobs, alpha, n_bins, ddof=0):
               #alternative='two-sided'):
         '''Calculate the power of a chisquare test for one sample
 
@@ -913,10 +1044,11 @@ class _GofChisquareIndPower(Power):
 
         '''
 
+        from statsmodels.stats.gof import chisquare_power
         nobs2 = nobs1*ratio
         #equivalent to nobs = n1*n2/(n1+n2)=n1*ratio/(1+ratio)
         nobs = 1./ (1. / nobs1 + 1. / nobs2)
-        return normal_power(effect_size, nobs, alpha, alternative=alternative)
+        return chisquare_power(effect_size, nobs, alpha)
 
     #method is only added to have explicit keywords and docstring
     def solve_power(self, effect_size=None, nobs1=None, alpha=None, power=None,
