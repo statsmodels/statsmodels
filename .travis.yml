@@ -27,6 +27,7 @@ install:
          sudo python3 setup.py install ;
          cd .. ;
       else
+         sudo apt-get install $PYTHON-dateutil ;
          sudo apt-get install cython ;
       fi
     - sudo easy_install$PYSUF -U pandas
