@@ -196,7 +196,7 @@ def test_binom_test():
 
     for alt, res0 in alltests:
         # only p-value is returned
-        res = smprop.binom_test_stat(51, 235, prop=1. / 6, alternative=alt)
+        res = smprop.binom_test(51, 235, prop=1. / 6, alternative=alt)
         #assert_almost_equal(res[0], res0.statistic)
         assert_almost_equal(res, res0.p_value, decimal=13)
 
@@ -219,10 +219,10 @@ def test_binom_rejection_interval():
     ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
                                                        alternative=alternative)
     assert_equal(ci_upp, nobs)
-    pval = smprop.binom_test_stat(ci_low, nobs, prop=prop,
+    pval = smprop.binom_test(ci_low, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(pval, alpha)
-    pval = smprop.binom_test_stat(ci_low + 1, nobs, prop=prop,
+    pval = smprop.binom_test(ci_low + 1, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(alpha, pval)
 
@@ -230,26 +230,26 @@ def test_binom_rejection_interval():
     ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
                                                        alternative=alternative)
     assert_equal(ci_low, 0)
-    pval = smprop.binom_test_stat(ci_upp, nobs, prop=prop,
+    pval = smprop.binom_test(ci_upp, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(pval, alpha)
-    pval = smprop.binom_test_stat(ci_upp - 1, nobs, prop=prop,
+    pval = smprop.binom_test(ci_upp - 1, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(alpha, pval)
 
     alternative='two-sided'
     ci_low, ci_upp = smprop.binom_test_reject_interval(prop, nobs, alpha=alpha,
                                                        alternative=alternative)
-    pval = smprop.binom_test_stat(ci_upp, nobs, prop=prop,
+    pval = smprop.binom_test(ci_upp, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(pval, alpha)
-    pval = smprop.binom_test_stat(ci_upp - 1, nobs, prop=prop,
+    pval = smprop.binom_test(ci_upp - 1, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(alpha, pval)
-    pval = smprop.binom_test_stat(ci_upp, nobs, prop=prop,
+    pval = smprop.binom_test(ci_upp, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(pval, alpha)
-    pval = smprop.binom_test_stat(ci_upp - 1, nobs, prop=prop,
+    pval = smprop.binom_test(ci_upp - 1, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(alpha, pval)
 

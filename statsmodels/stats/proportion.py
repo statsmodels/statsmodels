@@ -11,7 +11,7 @@ import numpy as np
 from scipy import stats, optimize
 
 from statsmodels.stats.base import AllPairsResults
-import statsmodels.stats.multitest as smt
+#import statsmodels.stats.multitest as smt
 
 def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     '''confidence interval for a binomial proportion
@@ -281,8 +281,8 @@ def binom_tost(count, nobs, low, upp):
 
     '''
     # binom_test_stat only returns pval
-    tt1 = binom_test_stat(count, nobs, alternative='larger', prop=low)
-    tt2 = binom_test_stat(count, nobs, alternative='smaller', prop=upp)
+    tt1 = binom_test(count, nobs, alternative='larger', prop=low)
+    tt2 = binom_test(count, nobs, alternative='smaller', prop=upp)
     return np.maximum(tt1, tt2), tt1, tt2,
 
 
@@ -346,7 +346,7 @@ def binom_test_reject_interval(value, nobs, alpha=0.05, alternative='two-sided')
 
     return x_low, x_upp
 
-def binom_test_stat(count, nobs, prop=0.5, alternative='two-sided'):
+def binom_test(count, nobs, prop=0.5, alternative='two-sided'):
     '''Perform a test that the probability of success is p.
 
     This is an exact, two-sided test of the null hypothesis

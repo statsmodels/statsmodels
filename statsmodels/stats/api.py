@@ -31,9 +31,10 @@ from .sandwich_covariance import (
 from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, ttost_ind,
                          ttost_paired, ztest, ztost, zconfint)
 
-from .proportion import (binom_test_reject_interval, binom_test_stat,
-            binom_tost, binom_tost_reject_interval, confint_proportion,
-            power_binom_tost, power_ztost_prop, proportion_effectsize,
+from .proportion import (binom_test_reject_interval, binom_test,
+            binom_tost, binom_tost_reject_interval,
+            power_binom_tost, power_ztost_prop,
+            proportion_confint, proportion_effectsize,
             proportions_chisquare, proportions_chisquare_allpairs,
             proportions_chisquare_pairscontrol, proportions_ztest,
             proportions_ztost)
