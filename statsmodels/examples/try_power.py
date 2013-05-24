@@ -9,7 +9,7 @@ Author: Josef Perktold
 import numpy as np
 
 import statsmodels.stats.power as smp
-import statsmodels.stats._proportion as smpr
+import statsmodels.stats.proportion as smpr
 
 sigma=1; d=0.3; nobs=80; alpha=0.05
 print smp.normal_power(d, nobs/2, 0.05)

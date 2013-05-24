@@ -1,6 +1,20 @@
+'''Tests for multipletests and fdr pvalue corrections
+
+Author : Josef Perktold
+
+
+['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n', 'fdr_tsbh']
+are tested against R:multtest
+
+'hommel' is tested against R stats p_adjust (not available in multtest
+
+'fdr_gbs', 'fdr_2sbky' I did not find them in R, currently tested for
+    consistency only
+
+'''
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_
 
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage)
@@ -10,7 +24,7 @@ pval0 = np.array([0.838541367553 , 0.642193923795 , 0.680845947633 ,
         0.967833824309 , 0.71626938238 , 0.177096952723 , 5.23656777208e-005 ,
         0.0202732688798 , 0.00028140506198 , 0.0149877310796])
 
-res_multtest = np.array([[  5.2365677720800003e-05,   5.2365677720800005e-04,
+res_multtest1 = np.array([[  5.2365677720800003e-05,   5.2365677720800005e-04,
                   5.2365677720800005e-04,   5.2365677720800005e-04,
                   5.2353339704891422e-04,   5.2353339704891422e-04,
                   5.2365677720800005e-04,   1.5337740764175588e-03],
@@ -52,24 +66,184 @@ res_multtest = np.array([[  5.2365677720800003e-05,   5.2365677720800005e-04,
                   9.6783382430900000e-01,   1.0000000000000000e+00]])
 
 
-def test_multi_pvalcorrection():
-    #test against R package multtest mt.rawp2adjp
-    #because of sort this doesn't check correct sequence - TODO: rewrite DONE
-    rmethods = {'rawp':(0,'pval'), 'Bonferroni':(1,'b'), 'Holm':(2,'h'),
-                'Hochberg':(3,'sh'), 'SidakSS':(4,'s'), 'SidakSD':(5,'hs'),
-                'BH':(6,'fdr_i'), 'BY':(7,'fdr_n')}
+res_multtest2_columns = ['rawp', 'Bonferroni', 'Holm', 'Hochberg', 'SidakSS', 'SidakSD',
+                'BH', 'BY', 'ABH', 'TSBH_0.05']
 
-    for k,v in rmethods.items():
-        if v[1] in ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']:
-            #pvalscorr = np.sort(multipletests(pval0, alpha=0.1, method=v[1])[1])
-            r_sortindex = [6, 8, 9, 7, 5, 1, 2, 4, 0, 3]
-            pvalscorr = multipletests(pval0, alpha=0.1, method=v[1])[1][r_sortindex]
-            assert_almost_equal(pvalscorr, res_multtest[:,v[0]], 15)
+rmethods = {'rawp':(0,'pval'), 'Bonferroni':(1,'b'), 'Holm':(2,'h'),
+            'Hochberg':(3,'sh'), 'SidakSS':(4,'s'), 'SidakSD':(5,'hs'),
+            'BH':(6,'fdr_i'), 'BY':(7,'fdr_n'),
+            'TSBH_0.05':(9, 'fdr_tsbh')}
 
-    pvalscorr = np.sort(fdrcorrection(pval0, method='n')[1])
-    assert_almost_equal(pvalscorr, res_multtest[:,7], 15)
-    pvalscorr = np.sort(fdrcorrection(pval0, method='i')[1])
-    assert_almost_equal(pvalscorr, res_multtest[:,6], 15)
+NA = np.nan
+# all rejections, except for Bonferroni and Sidak
+res_multtest2 = np.array([
+     0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.012, 0.024, 0.036, 0.048,
+     0.06, 0.072, 0.012, 0.02, 0.024, 0.024, 0.024, 0.024, 0.012, 0.012,
+     0.012, 0.012, 0.012, 0.012, 0.01194015976019192, 0.02376127616613988,
+     0.03546430060660932, 0.04705017875634587, 0.058519850599,
+     0.06987425045000606, 0.01194015976019192, 0.01984063872102404,
+     0.02378486270400004, 0.023808512, 0.023808512, 0.023808512, 0.012,
+     0.012, 0.012, 0.012, 0.012, 0.012, 0.0294, 0.0294, 0.0294, 0.0294,
+     0.0294, 0.0294, NA, NA, NA, NA, NA, NA, 0, 0, 0, 0, 0, 0
+    ]).reshape(6,10, order='F')
+
+res_multtest3 = np.array([
+     0.001, 0.002, 0.003, 0.004, 0.005, 0.05, 0.06, 0.07, 0.08, 0.09, 0.01,
+     0.02, 0.03, 0.04, 0.05, 0.5, 0.6, 0.7, 0.8, 0.9, 0.01, 0.018, 0.024,
+     0.028, 0.03, 0.25, 0.25, 0.25, 0.25, 0.25, 0.01, 0.018, 0.024, 0.028,
+     0.03, 0.09, 0.09, 0.09, 0.09, 0.09, 0.00995511979025177,
+     0.01982095664805061, 0.02959822305108317, 0.03928762649718986,
+     0.04888986953422814, 0.4012630607616213, 0.4613848859051006,
+     0.5160176928207072, 0.5656115457763677, 0.6105838818818925,
+     0.00995511979025177, 0.0178566699880266, 0.02374950634358763,
+     0.02766623106147537, 0.02962749064373438, 0.2262190625000001,
+     0.2262190625000001, 0.2262190625000001, 0.2262190625000001,
+     0.2262190625000001, 0.01, 0.01, 0.01, 0.01, 0.01, 0.08333333333333334,
+     0.0857142857142857, 0.0875, 0.0888888888888889, 0.09,
+     0.02928968253968254, 0.02928968253968254, 0.02928968253968254,
+     0.02928968253968254, 0.02928968253968254, 0.2440806878306878,
+     0.2510544217687075, 0.2562847222222222, 0.2603527336860670,
+     0.2636071428571428, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 0.005,
+     0.005, 0.005, 0.005, 0.005, 0.04166666666666667, 0.04285714285714286,
+     0.04375, 0.04444444444444445, 0.045
+    ]).reshape(10,10, order='F')
+
+res0_large = np.array([
+     0.00031612, 0.0003965, 0.00048442, 0.00051932, 0.00101436, 0.00121506,
+     0.0014516, 0.00265684, 0.00430043, 0.01743686, 0.02080285, 0.02785414,
+     0.0327198, 0.03494679, 0.04206808, 0.08067095, 0.23882767, 0.28352304,
+     0.36140401, 0.43565145, 0.44866768, 0.45368782, 0.48282088,
+     0.49223781, 0.55451638, 0.6207473, 0.71847853, 0.72424145, 0.85950263,
+     0.89032747, 0.0094836, 0.011895, 0.0145326, 0.0155796, 0.0304308,
+     0.0364518, 0.043548, 0.0797052, 0.1290129, 0.5231058, 0.6240855,
+     0.8356242, 0.981594, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+     1, 0.0094836, 0.0114985, 0.01356376, 0.01402164, 0.02637336,
+     0.0303765, 0.0348384, 0.06110732, 0.09460946, 0.36617406, 0.416057,
+     0.52922866, 0.5889564, 0.59409543, 0.67308928, 1, 1, 1, 1, 1, 1, 1, 1,
+     1, 1, 1, 1, 1, 1, 1, 0.0094836, 0.0114985, 0.01356376, 0.01402164,
+     0.02637336, 0.0303765, 0.0348384, 0.06110732, 0.09460946, 0.36617406,
+     0.416057, 0.52922866, 0.5889564, 0.59409543, 0.67308928, 0.89032747,
+     0.89032747, 0.89032747, 0.89032747, 0.89032747, 0.89032747,
+     0.89032747, 0.89032747, 0.89032747, 0.89032747, 0.89032747,
+     0.89032747, 0.89032747, 0.89032747, 0.89032747, 0.009440257627368331,
+     0.01182686507401931, 0.01443098172617119, 0.01546285007478554,
+     0.02998742566629453, 0.03581680249125385, 0.04264369065603335,
+     0.0767094173291795, 0.1212818694859857, 0.410051586220387,
+     0.4677640287633493, 0.5715077903157826, 0.631388450393325,
+     0.656016359012282, 0.724552174001554, 0.919808283456286,
+     0.999721715014484, 0.9999547032674126, 0.9999985652190126,
+     0.999999964809746, 0.999999982525548, 0.999999986719131,
+     0.999999997434160, 0.999999998521536, 0.999999999970829,
+     0.999999999999767, 1, 1, 1, 1, 0.009440257627368331,
+     0.01143489901147732, 0.0134754287611275, 0.01392738605848343,
+     0.0260416568490015, 0.02993768724817902, 0.0342629726119179,
+     0.0593542206208364, 0.09045742964699988, 0.308853956167216,
+     0.343245865702423, 0.4153483370083637, 0.4505333180190900,
+     0.453775200643535, 0.497247406680671, 0.71681858015803,
+     0.978083969553718, 0.986889206426321, 0.995400461639735,
+     0.9981506396214986, 0.9981506396214986, 0.9981506396214986,
+     0.9981506396214986, 0.9981506396214986, 0.9981506396214986,
+     0.9981506396214986, 0.9981506396214986, 0.9981506396214986,
+     0.9981506396214986, 0.9981506396214986, 0.0038949, 0.0038949,
+     0.0038949, 0.0038949, 0.0060753, 0.0060753, 0.006221142857142857,
+     0.00996315, 0.01433476666666667, 0.05231058, 0.05673504545454545,
+     0.06963535, 0.07488597857142856, 0.07488597857142856, 0.08413616,
+     0.15125803125, 0.421460594117647, 0.4725384, 0.570637910526316,
+     0.6152972625, 0.6152972625, 0.6152972625, 0.6152972625, 0.6152972625,
+     0.665419656, 0.7162468846153845, 0.775972982142857, 0.775972982142857,
+     0.889140651724138, 0.89032747, 0.01556007537622183,
+     0.01556007537622183, 0.01556007537622183, 0.01556007537622183,
+     0.02427074531648065, 0.02427074531648065, 0.02485338565390302,
+     0.0398026560334295, 0.0572672083580799, 0.2089800939109816,
+     0.2266557764630925, 0.2781923271071372, 0.2991685206792373,
+     0.2991685206792373, 0.336122876445059, 0.6042738882921044, 1, 1, 1, 1,
+     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.00220711, 0.00220711, 0.00220711,
+     0.00220711, 0.00344267, 0.00344267, 0.003525314285714285, 0.005645785,
+     0.00812303444444444, 0.029642662, 0.0321498590909091,
+     0.03946003166666667, 0.04243538785714285, 0.04243538785714285,
+     0.0476771573333333, 0.085712884375, 0.23882767, 0.26777176,
+     0.323361482631579, 0.34866844875, 0.34866844875, 0.34866844875,
+     0.34866844875, 0.34866844875, 0.3770711384, 0.4058732346153846,
+     0.4397180232142857, 0.4397180232142857, 0.503846369310345,
+     0.504518899666667, 0.00272643, 0.00272643, 0.00272643, 0.00272643,
+     0.00425271, 0.00425271, 0.0043548, 0.006974205, 0.01003433666666667,
+     0.036617406, 0.03971453181818182, 0.048744745, 0.052420185,
+     0.052420185, 0.058895312, 0.105880621875, 0.295022415882353,
+     0.33077688, 0.399446537368421, 0.43070808375, 0.43070808375,
+     0.43070808375, 0.43070808375, 0.43070808375, 0.4657937592,
+     0.5013728192307692, 0.5431810875, 0.5431810875, 0.622398456206897,
+     0.623229229
+    ]).reshape(30,10, order='F')
+
+
+class CheckMultiTestsMixin(object):
+    def test_multi_pvalcorrection(self):
+        #test against R package multtest mt.rawp2adjp
+
+        res_multtest = self.res2
+        pval0 = res_multtest[:,0]
+
+        for k,v in rmethods.items():
+            if v[1] in self.methods:
+                reject, pvalscorr = multipletests(pval0,
+                                                  alpha=self.alpha,
+                                                  method=v[1])[:2]
+                assert_almost_equal(pvalscorr, res_multtest[:,v[0]], 15)
+                assert_equal(reject, pvalscorr <= self.alpha)
+
+        pvalscorr = np.sort(fdrcorrection(pval0, method='n')[1])
+        assert_almost_equal(pvalscorr, res_multtest[:,7], 15)
+        pvalscorr = np.sort(fdrcorrection(pval0, method='i')[1])
+        assert_almost_equal(pvalscorr, res_multtest[:,6], 15)
+
+class TestMultiTests1(CheckMultiTestsMixin):
+    def __init__(self):
+        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        self.alpha = 0.1
+        self.res2 = res_multtest1
+
+class TestMultiTests2(CheckMultiTestsMixin):
+    # case: all hypothesis rejected (except 'b' and 's'
+    def __init__(self):
+        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n']
+        self.alpha = 0.05
+        self.res2 = res_multtest2
+
+class TestMultiTests3(CheckMultiTestsMixin):
+    def __init__(self):
+        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
+                         'fdr_tsbh']
+        self.alpha = 0.05
+        self.res2 = res0_large
+
+class TestMultiTests4(CheckMultiTestsMixin):
+    # in simulations, all two stage fdr, fdr_tsbky, fdr_tsbh, fdr_gbs, have in
+    # some cases (cases with large Alternative) an FDR that looks too large
+    # this is the first case #rejected = 12, DGP : has 10 false
+    def __init__(self):
+        self.methods =  ['b', 's', 'sh', 'hs', 'h', 'fdr_i', 'fdr_n',
+                         'fdr_tsbh']
+        self.alpha = 0.05
+        self.res2 = res_multtest3
+
+def test_pvalcorrection_reject():
+    # consistency test for reject boolean and pvalscorr
+
+    for alpha in [0.01, 0.05, 0.1]:
+        for method in ['b', 's', 'sh', 'hs', 'h', 'hommel', 'fdr_i', 'fdr_n',
+                       'fdr_tsbky', 'fdr_tsbh', 'fdr_gbs']:
+            for ii in range(11):
+                pval1 = np.hstack((np.linspace(0.0001, 0.0100, ii),
+                                   np.linspace(0.05001, 0.11, 10 - ii)))
+                # using .05001 instead of 0.05 to avoid edge case issue #768
+                reject, pvalscorr = multipletests(pval1, alpha=alpha,
+                                                  method=method)[:2]
+                #print 'reject.sum', v[1], reject.sum()
+                msg = 'case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r' % (
+                                 method, alpha, reject.sum(), pval1, pvalscorr)
+                #assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
+                yield assert_equal, reject, pvalscorr <= alpha, msg
+
 
 def test_hommel():
     #tested agains R stats p_adjust(pval0, method='hommel')
@@ -103,8 +277,8 @@ def test_hommel():
     assert_equal(rej, result_ho < 0.1)  #booleans
 
 def test_fdr_bky():
-    #test for fdrcorrection_twostage
-    #example from BKY
+    # test for fdrcorrection_twostage
+    # example from BKY
     pvals = [0.0001, 0.0004, 0.0019, 0.0095, 0.0201, 0.0278, 0.0298, 0.0344, 0.0459,
              0.3240, 0.4262, 0.5719, 0.6528, 0.7590, 1.000 ]
 
@@ -155,9 +329,3 @@ def test_tukeyhsd():
     assert_almost_equal(confint, res[:, 1:3], decimal=2)
     assert_equal(reject, res[:, 3]<0.05)
 
-
-if __name__ == '__main__':
-    test_multi_pvalcorrection()
-    test_hommel()
-    test_fdr_bky()
-    test_tukeyhsd()

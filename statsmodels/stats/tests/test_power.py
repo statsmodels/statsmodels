@@ -15,9 +15,20 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
                            assert_equal, assert_warns)
 
+
 import statsmodels.stats.power as smp
 #from .test_weightstats import CheckPowerMixin
 from statsmodels.stats.tests.test_weightstats import Holder
+
+# for testing plots
+import nose
+from numpy.testing import dec
+try:
+    import matplotlib.pyplot as plt  #makes plt available for test functions
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
 
 class CheckPowerMixin(object):
 
@@ -32,6 +43,33 @@ class CheckPowerMixin(object):
             decimal = 6
         res1 = self.cls()
         assert_almost_equal(res1.power(**kwds), self.res2.power, decimal=decimal)
+
+    def test_positional(self):
+
+        res1 = self.cls()
+
+
+        kwds = copy.copy(self.kwds)
+        del kwds['power']
+        kwds.update(self.kwds_extra)
+
+        # positional args
+        if hasattr(self, 'args_names'):
+            args_names = self.args_names
+        else:
+            nobs_ = 'nobs' if 'nobs' in kwds else 'nobs1'
+            args_names = ['effect_size', nobs_, 'alpha']
+
+        # pop positional args
+        args = [kwds.pop(arg) for arg in args_names]
+
+        if hasattr(self, 'decimal'):
+            decimal = self.decimal
+        else:
+            decimal = 6
+
+        res = res1.power(*args, **kwds)
+        assert_almost_equal(res, self.res2.power, decimal=decimal)
 
     def test_roots(self):
         kwds = copy.copy(self.kwds)
@@ -49,6 +87,27 @@ class CheckPowerMixin(object):
             # yield can be used to investigate specific errors
             #yield assert_allclose, result, value, 0.001, 0, key+' failed'
             kwds[key] = value  # reset dict
+
+    @dec.skipif(not have_matplotlib)
+    def test_power_plot(self):
+        if self.cls == smp.FTestPower:
+            raise nose.SkipTest('skip FTestPower plot_power')
+        fig = plt.figure()
+        ax = fig.add_subplot(2,1,1)
+        fig = self.cls().plot_power(dep_var='nobs',
+                                  nobs= np.arange(2, 100),
+                                  effect_size=np.array([0.1, 0.2, 0.3, 0.5, 1]),
+                                  #alternative='larger',
+                                  ax=ax, title='Power of t-Test',
+                                  **self.kwds_extra)
+        ax = fig.add_subplot(2,1,2)
+        fig = self.cls().plot_power(dep_var='es',
+                                  nobs=np.array([10, 20, 30, 50, 70, 100]),
+                                  effect_size=np.linspace(0.01, 2, 51),
+                                  #alternative='larger',
+                                  ax=ax, title='',
+                                  **self.kwds_extra)
+        plt.close('all')
 
 #''' test cases
 #one sample
@@ -471,6 +530,21 @@ class TestChisquarePower(CheckPowerMixin):
 
         self.cls = smp.GofChisquarePower
 
+    def _test_positional(self):
+
+        res1 = self.cls()
+        args_names = ['effect_size','nobs', 'alpha', 'n_bins']
+        kwds = copy.copy(self.kwds)
+        del kwds['power']
+        kwds.update(self.kwds_extra)
+        args = [kwds[arg] for arg in args_names]
+        if hasattr(self, 'decimal'):
+            decimal = self.decimal #pylint: disable-msg=E1101
+        else:
+            decimal = 6
+        assert_almost_equal(res1.power(*args), self.res2.power, decimal=decimal)
+
+
 
 def test_ftest_power():
     #equivalence ftest, ttest
@@ -567,9 +641,12 @@ class TestFtestAnovaPower(CheckPowerMixin):
         # keyword for which we don't look for root:
         # solving for n_bins doesn't work, will not be used in regular usage
         self.kwds_extra = {'k_groups': res2.k} # rootfinding doesn't work
+        #self.args_names = ['effect_size','nobs', 'alpha']#, 'k_groups']
         self.cls = smp.FTestAnovaPower
         # precision for test_power
         self.decimal = 4
+
+
 
 class TestFtestPower(CheckPowerMixin):
 
@@ -591,6 +668,7 @@ class TestFtestPower(CheckPowerMixin):
         # keyword for which we don't look for root:
         # solving for n_bins doesn't work, will not be used in regular usage
         self.kwds_extra = {}
+        self.args_names = ['effect_size', 'df_num', 'df_denom', 'alpha']
         self.cls = smp.FTestPower
         # precision for test_power
         self.decimal = 5
