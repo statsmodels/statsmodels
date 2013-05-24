@@ -13,7 +13,7 @@ from scipy import stats, optimize
 from statsmodels.stats.base import AllPairsResults
 import statsmodels.stats.multitest as smt
 
-def confint_proportion(count, nobs, alpha=0.05, method='normal'):
+def proportion_confint(count, nobs, alpha=0.05, method='normal'):
     '''confidence interval for a binomial proportion
 
     Parameters

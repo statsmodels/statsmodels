@@ -29,7 +29,15 @@ from .sandwich_covariance import (
             )
 
 from .weightstats import (DescrStatsW, CompareMeans, ttest_ind, ttost_ind,
-                         ttost_paired)
+                         ttost_paired, ztest, ztost, zconfint)
+
+from .proportion import (binom_test_reject_interval, binom_test_stat,
+            binom_tost, binom_tost_reject_interval, confint_proportion,
+            power_binom_tost, power_ztost_prop, proportion_effectsize,
+            proportions_chisquare, proportions_chisquare_allpairs,
+            proportions_chisquare_pairscontrol, proportions_ztest,
+            proportions_ztost)
+
 from .power import (TTestPower, TTestIndPower, GofChisquarePower,
                     NormalIndPower, FTestAnovaPower, FTestPower,
                     tt_solve_power, tt_ind_solve_power, zt_ind_solve_power)

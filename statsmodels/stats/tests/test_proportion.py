@@ -9,7 +9,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal, assert_array_less
 
-from statsmodels.stats.proportion import confint_proportion
+from statsmodels.stats.proportion import proportion_confint
 import statsmodels.stats.proportion as smprop
 
 class Holder(object):
@@ -32,7 +32,7 @@ def test_confint_proportion():
             res_upp = res_binom[case].ci_upp[idx]
             if np.isnan(res_low) or np.isnan(res_upp):
                 continue
-            ci = confint_proportion(count, nobs, alpha=0.05, method=method)
+            ci = proportion_confint(count, nobs, alpha=0.05, method=method)
 
             assert_almost_equal(ci, [res_low, res_upp], decimal=6,
                                 err_msg=repr(case) + method)
@@ -40,7 +40,7 @@ def test_confint_proportion():
 def test_samplesize_confidenceinterval_prop():
     #consistency test for samplesize to achieve confidence_interval
     nobs = 20
-    ci = smprop.confint_proportion(12, nobs, alpha=0.05, method='normal')
+    ci = smprop.proportion_confint(12, nobs, alpha=0.05, method='normal')
     res = smprop.samplesize_confint_proportion(12./nobs, (ci[1] - ci[0]) / 2)
     assert_almost_equal(res, nobs, decimal=13)
 
@@ -201,8 +201,8 @@ def test_binom_test():
         assert_almost_equal(res, res0.p_value, decimal=13)
 
     # R binom_test returns Copper-Pearson confint
-    ci_2s = smprop.confint_proportion(51, 235, alpha=0.05, method='beta')
-    ci_low, ci_upp = smprop.confint_proportion(51, 235, alpha=0.1,
+    ci_2s = smprop.proportion_confint(51, 235, alpha=0.05, method='beta')
+    ci_low, ci_upp = smprop.proportion_confint(51, 235, alpha=0.1,
                                                method='beta')
     assert_almost_equal(ci_2s, binom_test_2sided.conf_int, decimal=13)
     assert_almost_equal(ci_upp, binom_test_less.conf_int[1], decimal=13)
@@ -257,18 +257,18 @@ def test_binom_rejection_interval():
 
 def test_binom_tost():
     # consistency check with two different implementation,
-    # confint_proportion is tested against R
+    # proportion_confint is tested against R
     # no reference case from other package available
-    ci = smprop.confint_proportion(10, 20, method='beta', alpha=0.1)
+    ci = smprop.proportion_confint(10, 20, method='beta', alpha=0.1)
     bt = smprop.binom_tost(10, 20, *ci)
     assert_almost_equal(bt, [0.05] * 3, decimal=12)
 
-    ci = smprop.confint_proportion(5, 20, method='beta', alpha=0.1)
+    ci = smprop.proportion_confint(5, 20, method='beta', alpha=0.1)
     bt = smprop.binom_tost(5, 20, *ci)
     assert_almost_equal(bt, [0.05] * 3, decimal=12)
 
     # vectorized, TODO: observed proportion = 0 returns nan
-    ci = smprop.confint_proportion(np.arange(1, 20), 20, method='beta',
+    ci = smprop.proportion_confint(np.arange(1, 20), 20, method='beta',
                                    alpha=0.05)
     bt = smprop.binom_tost(np.arange(1, 20), 20, *ci)
     bt = np.asarray(bt)
