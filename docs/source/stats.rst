@@ -186,7 +186,7 @@ to one way ANOVA, but still in developement
 
    pairwise_tukeyhsd
 
-The following functions are not (yet) public (here for my own benefit, JP)
+The following functions are not (yet) public
 
 .. currentmodule:: statsmodels.sandbox.stats.multicomp
 
@@ -241,8 +241,29 @@ two one-sided tests, which have as null hypothesis that the means are not
    DescrStatsW
    CompareMeans
    ttest_ind
-   tost_ind
-   tost_paired
+   ttost_ind
+   ttost_paired
+   ztest
+   ztost
+   zconfint
+
+weightstats also contains tests and confidence intervals based on summary
+data
+
+.. currentmodule:: statsmodels.stats.weightstats
+
+.. autosummary::
+   :toctree: generated/
+
+   _tconfint_generic
+   _tstat_generic
+   _zconfint_generic
+   _zstat_generic
+   _zstat_generic2
+
+
+Power and Sample Size Calculations
+----------------------------------
 
 The :mod:`power` module currently implements power and sample size calculations
 for the t-tests, normal based test, F-tests and Chisquare goodness of fit test.
@@ -267,16 +288,38 @@ equations.
    tt_ind_solve_power
    zt_ind_solve_power
 
-Also available are confidence intervals for proportions, and effect size for
+
+Proportion
+----------
+
+
+Also available are hypothesis test, confidence intervals and effect size for
 proportions that can be used with NormalIndPower.
 
-.. currentmodule:: statsmodels.stats._proportion
+.. currentmodule:: statsmodels.stats.proportion
 
 .. autosummary::
    :toctree: generated
 
-   confint_proportion
+   proportion_confint
    proportion_effectsize
+
+   binom_test
+   binom_test_reject_interval
+   binom_tost
+   binom_tost_reject_interval
+
+
+   proportions_ztest
+   proportions_ztost
+   proportions_chisquare
+   proportions_chisquare_allpairs
+   proportions_chisquare_pairscontrol
+
+   proportion_effectsize
+   power_binom_tost
+   power_ztost_prop
+   samplesize_confint_proportion
 
 
 Moment Helpers
