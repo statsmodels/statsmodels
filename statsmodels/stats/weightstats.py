@@ -226,7 +226,7 @@ class DescrStatsW(object):
         return std / np.sqrt(self.sum_weights - 1)
 
 
-    def confint_mean(self, alpha=0.05, alternative='two-sided'):
+    def tconfint_mean(self, alpha=0.05, alternative='two-sided'):
         '''two-sided confidence interval for weighted mean of data
 
         If the data is 2d, then these are separate confidence intervals
@@ -772,7 +772,7 @@ class CompareMeans(object):
 
         return tstat, pval
 
-    def confint_diff(self, alpha=0.05, alternative='two-sided',
+    def tconfint_diff(self, alpha=0.05, alternative='two-sided',
                      usevar='pooled'):
         '''confidence interval for the difference in means
 

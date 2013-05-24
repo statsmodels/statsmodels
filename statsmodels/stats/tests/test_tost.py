@@ -385,8 +385,8 @@ class TestTostp1(CheckTostMixin):
         #self.res1.df = res[1][-1] not yet
         res_ds = smws.DescrStatsW(x1 - x2, weights=None, ddof=0)
         #tost confint 2*alpha TODO: check again
-        self.res1.confint_diff = res_ds.confint_mean(0.1)
-        self.res1.confint_05 = res_ds.confint_mean(0.05)
+        self.res1.tconfint_diff = res_ds.tconfint_mean(0.1)
+        self.res1.confint_05 = res_ds.tconfint_mean(0.05)
         self.res1.mean_diff = res_ds.mean
         self.res1.std_mean_diff = res_ds.std_mean
 
@@ -394,7 +394,7 @@ class TestTostp1(CheckTostMixin):
 
     def test_special(self):
         #TODO: add attributes to other cases and move to superclass
-        assert_almost_equal(self.res1.confint_diff, self.res2.ci_diff,
+        assert_almost_equal(self.res1.tconfint_diff, self.res2.ci_diff,
                             decimal=13)
         assert_almost_equal(self.res1.mean_diff, self.res2.mean_diff,
                             decimal=13)
@@ -517,13 +517,13 @@ def test_ttest():
         #assert_almost_equal(res1[2], res2.df, decimal=13)
 
     cm = smws.CompareMeans(smws.DescrStatsW(x1), smws.DescrStatsW(x2))
-    ci = cm.confint_diff(alternative='two-sided', usevar='unequal')
+    ci = cm.tconfint_diff(alternative='two-sided', usevar='unequal')
     assert_almost_equal(ci, ttest_clinic_indep_1_two_mu.conf_int, decimal=13)
-    ci = cm.confint_diff(alternative='two-sided', usevar='pooled')
+    ci = cm.tconfint_diff(alternative='two-sided', usevar='pooled')
     assert_almost_equal(ci, ttest_clinic_indep_1_two_mu_pooled.conf_int, decimal=13)
-    ci = cm.confint_diff(alternative='smaller', usevar='unequal')
+    ci = cm.tconfint_diff(alternative='smaller', usevar='unequal')
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_l.conf_int, decimal=13)
-    ci = cm.confint_diff(alternative='larger', usevar='unequal')
+    ci = cm.tconfint_diff(alternative='larger', usevar='unequal')
     assert_almost_equal_inf(ci, ttest_clinic_indep_1_g.conf_int, decimal=13)
 
 

@@ -153,9 +153,9 @@ class TestWeightstats(object):
         assert_almost_equal(np.r_[res2], np.r_[res0], 14)
 
         #check confint independent of user ddof
-        res0 = d1w_d0.confint_mean()
-        res1 = d1w_d1.confint_mean()
-        res2 = d1w_d2.confint_mean()
+        res0 = d1w_d0.tconfint_mean()
+        res1 = d1w_d1.tconfint_mean()
+        res2 = d1w_d2.tconfint_mean()
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
@@ -224,15 +224,15 @@ class CheckWeightstats1dMixin(object):
         assert_almost_equal(res2, res0, 14)
 
         #check confint independent of user ddof
-        res0 = cm0.confint_diff(usevar='pooled')
-        res1 = cm1.confint_diff(usevar='pooled')
-        res2 = cm2.confint_diff(usevar='pooled')
+        res0 = cm0.tconfint_diff(usevar='pooled')
+        res1 = cm1.tconfint_diff(usevar='pooled')
+        res2 = cm2.tconfint_diff(usevar='pooled')
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
-        res0 = cm0.confint_diff(usevar='unequal')
-        res1 = cm1.confint_diff(usevar='unequal')
-        res2 = cm2.confint_diff(usevar='unequal')
+        res0 = cm0.tconfint_diff(usevar='unequal')
+        res1 = cm1.tconfint_diff(usevar='unequal')
+        res2 = cm2.tconfint_diff(usevar='unequal')
         assert_almost_equal(res1, res0, 14)
         assert_almost_equal(res2, res0, 14)
 
@@ -241,7 +241,7 @@ class CheckWeightstats1dMixin(object):
         #compare confint_mean with ttest
         d1w = self.d1w
         alpha = 0.05
-        low, upp = d1w.confint_mean()
+        low, upp = d1w.tconfint_mean()
         t, p, d = d1w.ttest_mean(low)
         assert_almost_equal(p, alpha * np.ones(p.shape), 8)
         t, p, d = d1w.ttest_mean(upp)
