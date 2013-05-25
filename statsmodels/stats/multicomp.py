@@ -23,17 +23,15 @@ def pairwise_tukeyhsd(endog, groups, alpha=0.05):
 
     Returns
     -------
-    table : SimpleTable instance
-        table for printing
-    tukeyhsd_res : list
-        contains detailed results from tukeyhsd function
-        [(idx1, idx2), reject, meandiffs, std_pairs, confint, q_crit,
-           df_total, reject2]
+    results : TukeyHSDResults instance
+        A results class containing relevant data and some post-hoc
+        calculations
 
     See Also
     --------
     MultiComparison
     tukeyhsd
+    statsmodels.sandbox.stats.multicomp.TukeyHSDResults
 
     '''
 

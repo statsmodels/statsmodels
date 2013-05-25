@@ -112,6 +112,19 @@ ss5 = '''\
 1 - 2\t-4.600\t-8.249\t-0.951\t***
 1 - 3\t-0.260\t-3.909\t3.389\t'''
 
+cylinders = np.array([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 6, 6, 6, 4, 4,
+                    4, 4, 4, 4, 6, 8, 8, 8, 8, 4, 4, 4, 4, 8, 8, 8, 8, 6, 6, 6, 6, 4, 4, 4, 4, 6, 6,
+                    6, 6, 4, 4, 4, 4, 4, 8, 4, 6, 6, 8, 8, 8, 8, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+                    4, 4, 4, 4, 4, 4, 4, 6, 6, 4, 6, 4, 4, 4, 4, 4, 4, 4, 4])
+cyl_labels = np.array(['USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'France',
+    'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Japan',
+    'Germany', 'France', 'Germany', 'Sweden', 'Germany', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany',
+    'USA', 'USA', 'France', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany',
+    'Japan', 'USA', 'USA', 'USA', 'USA', 'Germany', 'Japan', 'Japan', 'USA', 'Sweden', 'USA', 'France',
+    'Japan', 'Germany', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA',
+    'Germany', 'Japan', 'Japan', 'USA', 'USA', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'USA',
+    'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Germany', 'USA', 'USA', 'USA'])
+
 #accommodate recfromtxt for python 3.2, requires bytes
 ss = asbytes(ss)
 ss2 = asbytes(ss2)
@@ -136,8 +149,10 @@ def get_thsd(mci, alpha=0.05):
     resi = tukeyhsd(means, nobs, var_, df=None, alpha=alpha,
                     q_crit=qsturng(1-alpha, len(means), (nobs-1).sum()))
     #print resi[4]
-    var2 = (mci.groupstats.groupvarwithin() * (nobs - 1)).sum() \
-                                                        / (nobs - 1).sum()
+    var2 = (mci.groupstats.groupvarwithin() * (nobs - 1.)).sum() \
+                                                        / (nobs - 1.).sum()
+    #print nobs, (nobs - 1).sum()
+    #print mci.groupstats.groupvarwithin()
     assert_almost_equal(var_, var2, decimal=14)
     return resi
 
@@ -149,23 +164,18 @@ class CheckTuckeyHSDMixin(object):
         self.res = self.mc.tukeyhsd(alpha=self.alpha)
 
     def test_multicomptukey(self):
-        meandiff1 = self.res[1][2]
-        assert_almost_equal(meandiff1, self.meandiff2, decimal=14)
-
-        confint1 = self.res[1][4]
-        assert_almost_equal(confint1, self.confint2, decimal=2)
-
-        reject1 = self.res[1][1]
-        assert_equal(reject1, self.reject2)
+        assert_almost_equal(self.res.meandiffs, self.meandiff2, decimal=14)
+        assert_almost_equal(self.res.confint, self.confint2, decimal=2)
+        assert_equal(self.res.reject, self.reject2)
 
     def test_group_tukey(self):
-        res_t = get_thsd(self.mc,alpha=self.alpha)
+        res_t = get_thsd(self.mc, alpha=self.alpha)
         assert_almost_equal(res_t[4], self.confint2, decimal=2)
 
     def test_shortcut_function(self):
         #check wrapper function
         res = pairwise_tukeyhsd(self.endog, self.groups, alpha=self.alpha)
-        assert_almost_equal(res[1][4], self.res[1][4], decimal=14)
+        assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
 
 class TestTuckeyHSD2(CheckTuckeyHSDMixin):
@@ -227,3 +237,30 @@ class TestTuckeyHSD3(CheckTuckeyHSDMixin):
         self.confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
         self.reject2 = sas_['sig'] == asbytes('***')
 
+
+class TestTuckeyHSD4(CheckTuckeyHSDMixin):
+
+    @classmethod
+    def setup_class(self):
+        #unbalanced case verified in Matlab
+        self.endog = cylinders
+        self.groups = cyl_labels
+        self.alpha = 0.05
+        self.setup_class_()
+        self.res._simultaneous_ci()
+
+        #from Matlab
+        self.halfwidth2 = np.array([1.5228335685980883, 0.9794949704444682, 0.78673802805533644,
+                                    2.3321237694566364, 0.57355135882752939])
+        self.meandiff2 = np.array([0.22222222222222232, 0.13333333333333375, 0.0, 2.2898550724637685,
+                            -0.088888888888888573, -0.22222222222222232, 2.0676328502415462,
+                            -0.13333333333333375, 2.1565217391304348, 2.2898550724637685])
+        self.confint2 = np.array([-2.32022210717, 2.76466655161, -2.247517583, 2.51418424967,
+                            -3.66405224956, 3.66405224956, 0.113960166573, 4.46574997835,
+                            -1.87278583908, 1.6950080613, -3.529655688, 3.08521124356, 0.568180988881,
+                            3.5670847116, -3.31822643175, 3.05155976508, 0.951206924521, 3.36183655374,
+                             -0.74487911754, 5.32458926247]).reshape(10,2)
+        self.reject2 = np.array([False, False, False,  True, False, False,  True, False,  True, False])
+
+    def test_hochberg_intervals(self):
+        assert_almost_equal(self.res.halfwidths, self.halfwidth2, 14)

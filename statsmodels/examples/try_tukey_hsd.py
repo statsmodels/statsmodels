@@ -104,6 +104,19 @@ ss3 = '''\
 3 26.2
 3 27.8'''
 
+cylinders = np.array([8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 8, 8, 8, 8, 8, 8, 8, 8, 8, 4, 6, 6, 6, 4, 4, 
+                    4, 4, 4, 4, 6, 8, 8, 8, 8, 4, 4, 4, 4, 8, 8, 8, 8, 6, 6, 6, 6, 4, 4, 4, 4, 6, 6, 
+                    6, 6, 4, 4, 4, 4, 4, 8, 4, 6, 6, 8, 8, 8, 8, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 
+                    4, 4, 4, 4, 4, 4, 4, 6, 6, 4, 6, 4, 4, 4, 4, 4, 4, 4, 4])
+cyl_labels = np.array(['USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'France', 
+    'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Japan', 
+    'Germany', 'France', 'Germany', 'Sweden', 'Germany', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany', 
+    'USA', 'USA', 'France', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'Germany', 
+    'Japan', 'USA', 'USA', 'USA', 'USA', 'Germany', 'Japan', 'Japan', 'USA', 'Sweden', 'USA', 'France', 
+    'Japan', 'Germany', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 'USA', 
+    'Germany', 'Japan', 'Japan', 'USA', 'USA', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'Japan', 'USA', 
+    'USA', 'USA', 'USA', 'Japan', 'USA', 'USA', 'USA', 'Germany', 'USA', 'USA', 'USA'])
+
 dta = np.recfromtxt(StringIO.StringIO(ss), names=("Rust","Brand","Replication"))
 dta2 = np.recfromtxt(StringIO.StringIO(ss2), names = ("idx", "Treatment", "StressReduction"))
 dta3 = np.recfromtxt(StringIO.StringIO(ss3), names = ("Brand", "Relief"))
@@ -125,23 +138,33 @@ def get_thsd(mci):
 
 mc = multi.MultiComparison(dta['Rust'], dta['Brand'])
 res = mc.tukeyhsd()
-print res[0]
+print res
 
 mc2 = multi.MultiComparison(dta2['StressReduction'], dta2['Treatment'])
 res2 = mc2.tukeyhsd()
-print res2[0]
+print res2
 
 mc2s = multi.MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
 res2s = mc2s.tukeyhsd()
-print res2s[0]
+print res2s
 res2s_001 = mc2s.tukeyhsd(alpha=0.01)
 #R result
 tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
-assert_almost_equal(res2s_001[1][4], tukeyhsd2s[:,1:3], decimal=3)
+assert_almost_equal(res2s_001.confint, tukeyhsd2s[:,1:3], decimal=3)
 
 mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
 res3 = mc3.tukeyhsd()
-print res3[0]
+print res3
+
+tukeyhsd4 = multi.MultiComparison(cylinders, cyl_labels, group_order=["Sweden", "Japan", "Germany", "France", "USA"])
+res4 = tukeyhsd4.tukeyhsd()
+print res4
+try:
+    import matplotlib.pyplot as plt
+    fig = res4.plot_simultaneous("USA")
+    plt.show()
+except Exception as e:
+    print e
 
 for mci in [mc, mc2, mc3]:
     get_thsd(mci)
@@ -187,12 +210,13 @@ ss5 = '''\
 dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
 
 sas_ = dta5[[1,3,2]]
-confint1 = res3[1][4]
+confint1 = res3.confint
 confint2 = sas_[['lower','upper']].view(float).reshape((3,2))
 assert_almost_equal(confint1, confint2, decimal=2)
-reject1 = res3[1][1]
+reject1 = res3.reject
 reject2 = sas_['sig'] == '***'
 assert_equal(reject1, reject2)
-meandiff1 = res3[1][2]
+meandiff1 = res3.meandiffs
 meandiff2 = sas_['mean']
 assert_almost_equal(meandiff1, meandiff2, decimal=14)
+
