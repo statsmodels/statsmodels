@@ -586,10 +586,12 @@ class GroupsStats(object):
 class TukeyHSDResults(object):
     """Contains and allows further examination of Tukey HSD results
 
-    Can also compute and plot additional post-hoc evaluations using this results class
+    Can also compute and plot additional post-hoc evaluations using this
+    results class
     """
-    def __init__(self, mc_object, results_table, q_crit, reject=None, meandiffs=None,
-            std_pairs=None, confint=None, df_total=None, reject2=None, variance=None):
+    def __init__(self, mc_object, results_table, q_crit, reject=None,
+                 meandiffs=None, std_pairs=None, confint=None, df_total=None,
+                 reject2=None, variance=None):
 
         self._multicomp = mc_object
         self._results_table = results_table
@@ -610,6 +612,8 @@ class TukeyHSDResults(object):
         return str(self._results_table)
 
     def summary(self):
+        '''Summary table that can be printed
+        '''
         return self._results_table
 
 
@@ -620,8 +624,8 @@ class TukeyHSDResults(object):
                             self._multicomp.groupstats.groupnobs,
                             self._multicomp.pairindices)
 
-    def plot_simultaneous(self, comparison_name=None, ax=None, figsize=(10,6), xlabel=None,
-                            ylabel=None):
+    def plot_simultaneous(self, comparison_name=None, ax=None, figsize=(10,6),
+                          xlabel=None, ylabel=None):
         """Plot a universal confidence interval of each group mean
 
         Visiualize significant differences in a plot with one confidence
@@ -650,17 +654,20 @@ class TukeyHSDResults(object):
 
         Notes
         -----
-        Multiple comparison tests are nice, but lack a good way to be visualized. If you
-        have, say, 6 groups, showing a graph of the means between each group will require 15
-        CIs. Instead, we can visualize inter-group differences with a single interval for each
-        group mean. Hochberg et al. [1] first proposed this idea and used Tukey's Q critical value
-        to compute the interval widths. Unlike plotting the differences in the means and their
-        respective CIs, any two pairs can be compared for significance by looking for overlap.
+        Multiple comparison tests are nice, but lack a good way to be
+        visualized. If you have, say, 6 groups, showing a graph of the means
+        between each group will require 15 confidence intervals.
+        Instead, we can visualize inter-group differences with a single
+        interval for each group mean. Hochberg et al. [1] first proposed this
+        idea and used Tukey's Q critical value to compute the interval widths.
+        Unlike plotting the differences in the means and their respective
+        confidence intervals, any two pairs can be compared for significance
+        by looking for overlap.
 
         References
         ----------
-        .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures. Hoboken, NJ:
-               John Wiley & Sons, 1987.
+        .. [1] Hochberg, Y., and A. C. Tamhane. Multiple Comparison Procedures.
+               Hoboken, NJ: John Wiley & Sons, 1987.
 
         Examples
         --------
@@ -679,8 +686,8 @@ class TukeyHSDResults(object):
         >>> results.plot_simultaneous(comparison_name="USA")
         <matplotlib.figure.Figure at 0x...>
 
-        Optionally provide one of the group names to color code the plot to highlight group
-        means different from comparison_name.
+        Optionally provide one of the group names to color code the plot to
+        highlight group means different from comparison_name.
 
         """
         fig, ax1 = utils.create_mpl_ax(ax)
@@ -693,43 +700,49 @@ class TukeyHSDResults(object):
 
         sigidx = []
         nsigidx = []
-        minrange = [means[i]-self.halfwidths[i] for i in range(len(means))]
-        maxrange = [means[i]+self.halfwidths[i] for i in range(len(means))]
+        minrange = [means[i] - self.halfwidths[i] for i in range(len(means))]
+        maxrange = [means[i] + self.halfwidths[i] for i in range(len(means))]
 
         if comparison_name is None:
-            ax1.errorbar(means, range(len(means)), xerr=self.halfwidths, marker='o',
-                            linestyle='None', color='k', ecolor='k')
+            ax1.errorbar(means, range(len(means)), xerr=self.halfwidths,
+                         marker='o', linestyle='None', color='k', ecolor='k')
         else:
             if comparison_name not in self.groupsunique:
                 raise ValueError, 'comparison_name not found in group names.'
             midx = np.where(self.groupsunique==comparison_name)[0]
             for i in range(len(means)):
-                if self.groupsunique[i] == comparison_name: continue
-                if min(maxrange[i], maxrange[midx]) - max(minrange[i], minrange[midx]) < 0:
+                if self.groupsunique[i] == comparison_name:
+                    continue
+                if (min(maxrange[i], maxrange[midx]) -
+                                         max(minrange[i], minrange[midx]) < 0):
                     sigidx.append(i)
                 else:
                     nsigidx.append(i)
             #Plot the master comparison
-            ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx], marker='o', linestyle='None',
-                                color='b', ecolor='b')
-            ax1.plot([minrange[midx]]*2, [-1, self._multicomp.ngroups], linestyle='--', color='0.7')
-            ax1.plot([maxrange[midx]]*2, [-1, self._multicomp.ngroups], linestyle='--', color='0.7')
+            ax1.errorbar(means[midx], midx, xerr=self.halfwidths[midx],
+                         marker='o', linestyle='None', color='b', ecolor='b')
+            ax1.plot([minrange[midx]]*2, [-1, self._multicomp.ngroups],
+                     linestyle='--', color='0.7')
+            ax1.plot([maxrange[midx]]*2, [-1, self._multicomp.ngroups],
+                     linestyle='--', color='0.7')
             #Plot those that are significantly different
             if len(sigidx) > 0:
-                ax1.errorbar(means[sigidx], sigidx, xerr=self.halfwidths[sigidx], marker='o',
-                                linestyle='None', color='r', ecolor='r')
+                ax1.errorbar(means[sigidx], sigidx,
+                             xerr=self.halfwidths[sigidx], marker='o',
+                             linestyle='None', color='r', ecolor='r')
             #Plot those that are not significantly different
             if len(nsigidx) > 0:
-                ax1.errorbar(means[nsigidx], nsigidx, xerr=self.halfwidths[nsigidx], marker='o',
-                                linestyle='None', color='0.5', ecolor='0.5')
+                ax1.errorbar(means[nsigidx], nsigidx,
+                             xerr=self.halfwidths[nsigidx], marker='o',
+                             linestyle='None', color='0.5', ecolor='0.5')
 
         ax1.set_title('Multiple Comparisons Between All Pairs (Tukey)')
         r = np.max(maxrange) - np.min(minrange)
         ax1.set_ylim([-1, self._multicomp.ngroups])
-        ax1.set_xlim([np.min(minrange)-r/10., np.max(maxrange)+r/10.])
+        ax1.set_xlim([np.min(minrange) - r / 10., np.max(maxrange) + r / 10.])
         ax1.set_yticklabels(np.insert(self.groupsunique.astype(str), 0, ''))
-        ax1.set_xlabel(xlabel if xlabel != None else '')
-        ax1.set_ylabel(ylabel if ylabel != None else '')
+        ax1.set_xlabel(xlabel if xlabel is not None else '')
+        ax1.set_ylabel(ylabel if ylabel is not None else '')
         return fig
 
 
@@ -754,19 +767,22 @@ class MultiComparison(object):
 
         # Allow for user-provided sorting of groups
         if group_order is None:
-            self.groupsunique, self.groupintlab = np.unique(groups, return_inverse=True)
+            self.groupsunique, self.groupintlab = np.unique(groups,
+                                                            return_inverse=True)
         else:
             #check if group_order has any names not in groups
             for grp in group_order:
                 if grp not in groups:
-                    raise ValueError, "group_order value '%s' not found in groups"%grp
+                    raise ValueError(
+                            "group_order value '%s' not found in groups"%grp)
             self.groupsunique = np.array(group_order)
             self.groupintlab = np.zeros(len(data))
             for name in self.groupsunique:
-                self.groupintlab[np.where(self.groups==name)[0]] = np.where(self.groupsunique==name)[0]
+                idx = np.where(self.groups == name)[0]
+                self.groupintlab[idx] = np.where(self.groupsunique == name)[0]
 
         self.datali = [data[self.groups == k] for k in self.groupsunique]
-        self.pairindices = np.triu_indices(len(self.groupsunique),1)  #tuple
+        self.pairindices = np.triu_indices(len(self.groupsunique), 1)  #tuple
         self.nobs = self.data.shape[0]
         self.ngroups = len(self.groupsunique)
 
@@ -801,17 +817,18 @@ class MultiComparison(object):
 
 
         # simultaneous/separate treatment of multiple tests
-        f=(tot*(tot+1.)/12.)/stats.tiecorrect(self.rankdata) #(xranks)
+        f=(tot * (tot + 1.) / 12.) / stats.tiecorrect(self.rankdata) #(xranks)
         print 'MultiComparison.kruskal'
         for i,j in zip(*self.pairindices):
             #pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
-            se = np.sqrt(f * np.sum(1./groupnobs[[i,j]] )) #np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
-            Q = pdiff/se
+            se = np.sqrt(f * np.sum(1. / groupnobs[[i,j]] )) #np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
+            Q = pdiff / se
 
-            print i,j, pdiff, se, pdiff/se, pdiff/se>2.6310,
-            print stats.norm.sf(Q)*2
-            return stats.norm.sf(Q)*2
+            # TODO : print statments, fix
+            print i,j, pdiff, se, pdiff / se, pdiff / se > 2.6310,
+            print stats.norm.sf(Q) * 2
+            return stats.norm.sf(Q) * 2
 
 
     def allpairtest(self, testfunc, alpha=0.05, method='bonf', pvalidx=1):
@@ -849,7 +866,7 @@ class MultiComparison(object):
             res.append(testfunc(self.datali[i], self.datali[j]))
         res = np.array(res)
         reject, pvals_corrected, alphacSidak, alphacBonf = \
-                multipletests(res[:,pvalidx], alpha=0.05, method=method)
+                multipletests(res[:, pvalidx], alpha=0.05, method=method)
         #print np.column_stack([res[:,0],res[:,1], reject, pvals_corrected])
 
         i1, i2 = self.pairindices
@@ -877,10 +894,14 @@ class MultiComparison(object):
                               ('reject', np.bool8)])
         from statsmodels.iolib.table import SimpleTable
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
-        results_table.title = 'Test Multiple Comparison %s \n%s%4.2f method=%s' % (testfunc.__name__,
-                        'FWER=', alpha, method) + \
-                        '\nalphacSidak=%4.2f, alphacBonf=%5.3f' % (alphacSidak, alphacBonf)
-        return results_table, (res, reject, pvals_corrected, alphacSidak, alphacBonf), resarr
+        results_table.title = (
+                          'Test Multiple Comparison %s \n%s%4.2f method=%s'
+                              % (testfunc.__name__, 'FWER=', alpha, method) +
+                          '\nalphacSidak=%4.2f, alphacBonf=%5.3f'
+                              % (alphacSidak, alphacBonf))
+
+        return results_table, (res, reject, pvals_corrected,
+                               alphacSidak, alphacBonf), resarr
 
 
     def tukeyhsd(self, alpha=0.05):
@@ -910,8 +931,8 @@ class MultiComparison(object):
 
         resarr = np.array(zip(res[0][0], res[0][1],
                                   np.round(res[2],4),
-                                  np.round(res[4][:,0],4),
-                                  np.round(res[4][:,1],4),
+                                  np.round(res[4][:, 0],4),
+                                  np.round(res[4][:, 1],4),
                                   res[1]),
                        dtype=[('group1', int),
                               ('group2', int),
@@ -920,9 +941,11 @@ class MultiComparison(object):
                               ('upper',float),
                               ('reject', np.bool8)])
         results_table = SimpleTable(resarr, headers=resarr.dtype.names)
-        results_table.title = 'Multiple Comparison of Means - Tukey HSD, FWER=%4.2f' % alpha
+        results_table.title = 'Multiple Comparison of Means - Tukey HSD,' + \
+                              'FWER=%4.2f' % alpha
 
-        return TukeyHSDResults(self, results_table, res[5], res[1], res[2], res[3], res[4], res[6], res[7], var_)
+        return TukeyHSDResults(self, results_table, res[5], res[1], res[2],
+                               res[3], res[4], res[6], res[7], var_)
 
 
 
@@ -1264,7 +1287,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
         pairindices = np.triu_indices(ng, 1)
 
     # Compute dij for all pairwise comparisons ala hochberg p. 95
-    gvar = var/groupnobs
+    gvar = var / groupnobs
 
     d12 = np.sqrt(gvar[pairindices[0]] + gvar[pairindices[1]])
 
@@ -1282,7 +1305,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
     else:
         w = sum1 * ones(2, 1) / 2.
 
-    return (q_crit/np.sqrt(2))*w
+    return (q_crit / np.sqrt(2))*w
 
 def distance_st_range(mean_all, nobs_all, var_all, df=None, triu=False):
     '''pairwise distance matrix, outsourced from tukeyhsd
