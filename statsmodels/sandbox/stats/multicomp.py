@@ -610,26 +610,32 @@ class TukeyHSDResults(object):
         return str(self._results_table)
 
     def summary(self):
-        print self._results_table
+        return self._results_table
 
 
     def _simultaneous_ci(self):
+        """Compute simultaneous confidence intervals for comparison of means.
+        """
         self.halfwidths = simultaneous_ci(self.q_crit, self.variance,
                             self._multicomp.groupstats.groupnobs,
                             self._multicomp.pairindices)
 
     def plot_simultaneous(self, comparison_name=None, ax=None, figsize=(10,6), xlabel=None,
                             ylabel=None):
-        """Plot a universal ci of each group mean to visiualize significant differences.
+        """Plot a universal confidence interval of each group mean
+
+        Visiualize significant differences in a plot with one confidence
+        interval per group instead of all pairwise confidence intervals.
 
         Parameters
         ----------
         comparison_name : string, optional
-            if provided, plot_intervals will color code all groups that are significantly different
-            from the comparison_name red, and will color code insignificant groups gray. Otherwise,
-            all intervals will just be plotted in black.
+            if provided, plot_intervals will color code all groups that are
+            significantly different from the comparison_name red, and will
+            color code insignificant groups gray. Otherwise, all intervals will
+            just be plotted in black.
         ax : matplotlib axis, optional
-            An axis handle on which to attach the plot
+            An axis handle on which to attach the plot.
         figsize : tuple, optional
             tuple for the size of the figure generated
         xlabel : string, optional
@@ -665,9 +671,10 @@ class TukeyHSDResults(object):
         >>> results.plot_simultaneous()
         <matplotlib.figure.Figure at 0x...>
 
-        This example shows an example plot comparing significant differences in group means.
-        Significant differences at the alpha=0.05 level can be identified by intervals that
-        do not overlap (i.e. USA vs Japan, USA vs Germany).
+        This example shows an example plot comparing significant differences
+        in group means. Significant differences at the alpha=0.05 level can be
+        identified by intervals that do not overlap (i.e. USA vs Japan,
+        USA vs Germany).
 
         >>> results.plot_simultaneous(comparison_name="USA")
         <matplotlib.figure.Figure at 0x...>
@@ -730,27 +737,23 @@ class TukeyHSDResults(object):
 class MultiComparison(object):
     '''Tests for multiple comparisons
 
+    Parameters
+    ----------
+    data : array
+        independent data samples
+    groups : array
+        group labels corresponding to each data point
+    group_order : list of strings, optional
+        the desired order for the group mean results to be reported in.
 
     '''
 
     def __init__(self, data, groups, group_order=None):
-        """
-
-        Parameters
-        ----------
-        data : array
-            independent data samples
-        groups : array
-            group labels corresponding to each data point
-        group_order : list of strings, optional
-            the desired order for the group mean results to be reported in.
-
-        """
-        self.data = data
-        self.groups = groups
+        self.data = np.asarray(data)
+        self.groups = np.asarray(groups)
 
         # Allow for user-provided sorting of groups
-        if group_order == None:
+        if group_order is None:
             self.groupsunique, self.groupintlab = np.unique(groups, return_inverse=True)
         else:
             #check if group_order has any names not in groups
@@ -881,7 +884,7 @@ class MultiComparison(object):
 
 
     def tukeyhsd(self, alpha=0.05):
-        """Tukey's range test to compare all pairs group means and test for significance
+        """Tukey's range test to compare means of all pairs of groups
 
         Parameters
         ----------
@@ -891,7 +894,8 @@ class MultiComparison(object):
         Returns
         -------
         results : TukeyHSDResults instance
-            A results class containing relevant data and some post-hoc calculations
+            A results class containing relevant data and some post-hoc
+            calculations
         """
         self.groupstats = GroupsStats(
                             np.column_stack([self.data, self.groupintlab]),
@@ -1256,7 +1260,7 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
     """
     # Set initial variables
     ng = len(groupnobs)
-    if pairindices == None:
+    if pairindices is None:
         pairindices = np.triu_indices(ng, 1)
 
     # Compute dij for all pairwise comparisons ala hochberg p. 95
@@ -1274,9 +1278,9 @@ def simultaneous_ci(q_crit, var, groupnobs, pairindices=None):
     sum2 = np.sum(d, axis=0)
 
     if (ng > 2):
-        w = ((ng-1)*sum2 - sum1) / ((ng-1)*(ng-2))
+        w = ((ng-1.) * sum2 - sum1) / ((ng - 1.) * (ng - 2.))
     else:
-        w = sum1 * ones(2, 1) / 2
+        w = sum1 * ones(2, 1) / 2.
 
     return (q_crit/np.sqrt(2))*w
 

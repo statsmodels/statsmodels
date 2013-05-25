@@ -149,10 +149,10 @@ def get_thsd(mci, alpha=0.05):
     resi = tukeyhsd(means, nobs, var_, df=None, alpha=alpha,
                     q_crit=qsturng(1-alpha, len(means), (nobs-1).sum()))
     #print resi[4]
-    var2 = (mci.groupstats.groupvarwithin() * (nobs - 1)).sum() \
-                                                        / (nobs - 1).sum()
-    print nobs, (nobs - 1).sum()
-    print mci.groupstats.groupvarwithin()
+    var2 = (mci.groupstats.groupvarwithin() * (nobs - 1.)).sum() \
+                                                        / (nobs - 1.).sum()
+    #print nobs, (nobs - 1).sum()
+    #print mci.groupstats.groupvarwithin()
     assert_almost_equal(var_, var2, decimal=14)
     return resi
 
