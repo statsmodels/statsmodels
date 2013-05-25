@@ -588,6 +588,27 @@ class TukeyHSDResults(object):
 
     Can also compute and plot additional post-hoc evaluations using this
     results class
+
+    Attributes
+    ----------
+    reject : array of boolean, True if we reject Null for group pair
+    meandiffs : pairwise mean differences
+    confint : confidence interval for pairwise mean differences
+    std_pairs : standard deviation of pairwise mean differences
+    q_crit : critical value of studentized range statistic at given alpha
+    halfwidths : half widths of simultaneous confidence interval (available
+        after call to `plot_simultaneous`
+
+
+    Other attributes contain information about the data from the
+    MultiComparison instance :
+
+    data
+    df_total
+    groups
+    groupsunique
+    variance
+
     """
     def __init__(self, mc_object, results_table, q_crit, reject=None,
                  meandiffs=None, std_pairs=None, confint=None, df_total=None,
@@ -1237,7 +1258,7 @@ def tukeyhsd(mean_all, nobs_all, var_all, df=None, alpha=0.05, q_crit=None):
 
     reject = st_range > q_crit
     crit_int = std_pairs * q_crit
-    reject2 = meandiffs > crit_int
+    reject2 = np.abs(meandiffs) > crit_int
 
     confint = np.column_stack((meandiffs - crit_int, meandiffs + crit_int))
 
