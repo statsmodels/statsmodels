@@ -584,10 +584,10 @@ class GroupsStats(object):
         return self.groupsswithin()/(self.groupnobs-1) #.sum()
 
 class TukeyHSDResults(object):
-    """Contains and allows further examination of Tukey HSD results
+    """Results from Tukey HSD test, with additional plot methods
 
     Can also compute and plot additional post-hoc evaluations using this
-    results class
+    results class.
 
     Attributes
     ----------
@@ -596,18 +596,14 @@ class TukeyHSDResults(object):
     confint : confidence interval for pairwise mean differences
     std_pairs : standard deviation of pairwise mean differences
     q_crit : critical value of studentized range statistic at given alpha
-    halfwidths : half widths of simultaneous confidence interval (available
-        after call to `plot_simultaneous`
+    halfwidths : half widths of simultaneous confidence interval
 
+    Notes
+    -----
+    halfwidths is only available after call to `plot_simultaneous`.
 
     Other attributes contain information about the data from the
-    MultiComparison instance :
-
-    data
-    df_total
-    groups
-    groupsunique
-    variance
+    MultiComparison instance: data, df_total, groups, groupsunique, variance.
 
     """
     def __init__(self, mc_object, results_table, q_crit, reject=None,

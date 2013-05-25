@@ -178,6 +178,7 @@ to one way ANOVA, but still in developement
 
    GroupsStats
    MultiComparison
+   TukeyHSDResults
 
 .. currentmodule:: statsmodels.stats.multicomp
 
