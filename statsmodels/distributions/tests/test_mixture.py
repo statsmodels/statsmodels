@@ -3,22 +3,23 @@
 
 import numpy as np
 import numpy.testing as npt
-from statsmodels.distributions.mixture_rvs import mv_mixture_rvs, MixtureDistribution
+from statsmodels.distributions.mixture_rvs import (mv_mixture_rvs,
+                                                   MixtureDistribution)
 import statsmodels.sandbox.distributions.mv_normal as mvd
 from scipy import stats
 
-class TestMixtureDistributions():
+class TestMixtureDistributions(object):
 
     def test_mixture_rvs_random(self):
-        # We use a sample of 1M observations to compare using up to 2 decimal
-        # precission with confidence
+        # Test only medium small sample at 1 decimal
+        np.random.seed(0)
         mix = MixtureDistribution()
-        res = mix.rvs([.75,.25], 1000000, dist=[stats.norm, stats.norm], kwargs =
+        res = mix.rvs([.75,.25], 1000, dist=[stats.norm, stats.norm], kwargs =
                 (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
         npt.assert_almost_equal(
                 np.array([res.std(),res.mean(),res.var()]),
                 np.array([1,-0.5,1]),
-                decimal=2)
+                decimal=1)
 
     def test_mv_mixture_rvs_random(self):
         cov3 = np.array([[ 1.  ,  0.5 ,  0.75],
@@ -28,7 +29,8 @@ class TestMixtureDistributions():
         mu2 = np.array([4, 2.0, 2.0])
         mvn3 = mvd.MVNormal(mu, cov3)
         mvn32 = mvd.MVNormal(mu2, cov3/2.)
-        res = mv_mixture_rvs([0.4, 0.6], 1000000, [mvn3, mvn32], 3)
+        np.random.seed(0)
+        res = mv_mixture_rvs([0.4, 0.6], 5000, [mvn3, mvn32], 3)
         npt.assert_almost_equal(
                 np.array([res.std(),res.mean(),res.var()]),
                 np.array([1.874,1.733,3.512]),
