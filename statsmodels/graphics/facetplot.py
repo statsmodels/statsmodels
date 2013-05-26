@@ -590,20 +590,21 @@ def _elements4facet(facet, data):
 def _formula_terms(formula, use_intercept=True):
     """analyze a formula and split it into terms using patsy"""
     env = patsy.EvalEnvironment({})
-    terms = patsy.ModelDesc.from_formula(formula, env).rhs_termlist
+    terms = patsy.ModelDesc.from_formula(bytes(formula), env).rhs_termlist
     factors = [t.factors for t in terms]
-    intercept = (patsy.EvalFactor(u'Intercept', env),)
+    intercept = (patsy.EvalFactor(b'Intercept', env),)
     if use_intercept:
         factors = [f if f else intercept for f in factors]
     else:
         factors = [f for f in factors if f]
-    factors = [u":".join(c.code for c in f) for f in factors]
+    factors = [bytes(u":").join(c.code for c in f) for f in factors]
     factors = [patsy.EvalFactor(f, {}).code.strip() for f in factors]
     results = []
     for f in factors:
         if f not in results:
             results.append(f)
-    return sorted(unicode(c) for c in results)
+    return sorted(c for c in results)
+    #return sorted(unicode(c) for c in results)
 
 
 def _array4name(formula, data, strict_patsy=False, intercept=True):
@@ -643,7 +644,7 @@ def _array4name(formula, data, strict_patsy=False, intercept=True):
         #name = name.strip()
         #this should allow to follow the same structure as patsy
         name = name.strip()
-        logging.warning(u'name: {}, {}'.format(name, type(name)))
+        logging.warning(u'name: {0}, {1}'.format(name, type(name)))
         try:
             name = pEF(name)
         except SyntaxError:
@@ -855,7 +856,7 @@ def kind_corr(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
         ax.set_xlabel(x.name)
     else:
         ax.xcorr(x.values, y.values, maxlags=None, **kwargs)
-        ax.set_xlabel("{} Vs {}".format(x.name, y.name))
+        ax.set_xlabel("{0} Vs {1}".format(x.name, y.name))
     ax.set_ylabel('correlation')
     return ax
 
@@ -1387,7 +1388,7 @@ def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     else:
         ax.csd(x.values, y.values, **kwargs)
         ax.set_ylabel('cross spectral density')
-        ax.set_xlabel("{} Vs {}".format(x.name, y.name))
+        ax.set_xlabel("{0} Vs {1}".format(x.name, y.name))
     return ax
 
 ###################################################
