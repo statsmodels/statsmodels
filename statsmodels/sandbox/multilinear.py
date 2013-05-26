@@ -191,7 +191,13 @@ def _test_group(pvalues, group_name, group, exact=True):
     The test is performed on the pvalues set (ad a pandas series) over
     the group specified via a fisher exact test.
     """
-    from scipy.stats import fisher_exact, chi2_contingency
+    from scipy.stats import fisher_exact
+    try:
+        from scipy.stats import chi2_contingency
+    except ImportError:
+        def chi2_contingency(*args, **kwds):
+            raise ValueError('exact=False is not available with old scipy')
+
     totals = 1.0 * len(pvalues)
     total_significant = 1.0 * np.sum(pvalues)
     cross_index = [c for c in group if c in pvalues.index]
@@ -298,7 +304,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
     pvals = pd.Series(pvals)
     if not (set(pvals.unique()) <= set([False, True])):
         raise ValueError("the series should be binary")
-    if not pvals.index.is_unique:
+    if hasattr(pvals.index, 'is_unique') and not pvals.index.is_unique:
         raise ValueError("series with duplicated index is not accepted")
     results = {'pvals': {},
         'increase': {},
