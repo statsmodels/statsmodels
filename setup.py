@@ -286,6 +286,7 @@ class CheckSDist(sdist):
     """Custom sdist that ensures Cython has compiled all pyx files to c."""
 
     _pyxfiles = ['statsmodels/nonparametric/linbin.pyx',
+                 'statsmodels/nonparametric/smoothers_lowess',
                  'statsmodels/tsa/kalmanf/kalman_loglike.pyx']
 
     def initialize_options(self):
@@ -385,6 +386,9 @@ ext_data = dict(
                   "sources" : []},
 
         linbin = {"pyxfile" : "nonparametric/linbin",
+                 "depends" : [],
+                 "sources" : []},
+        smoothers_lowess = {"pyxfile" : "nonparametric/smoothers_lowess",
                  "depends" : [],
                  "sources" : []}
         )
