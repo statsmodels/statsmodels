@@ -3,7 +3,13 @@ from __future__ import division
 __all__ = ['facet_plot']
 
 import numpy as np
-from mpl_toolkits.mplot3d.axes3d import Axes3D
+
+try:
+    import pylab as plt
+    from mpl_toolkits.mplot3d.axes3d import Axes3D
+    have_matplotlib = True
+except:
+    have_matplotlib = False
 
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
@@ -14,7 +20,6 @@ from scipy.stats.kde import gaussian_kde
 from scipy.stats import poisson, scoreatpercentile
 
 import patsy
-import pylab as plt
 import pandas as pd
 import re
 from scipy.stats import spearmanr
