@@ -30,9 +30,6 @@ class  TestLowess(object):
         import statsmodels.api as sm
         lowess1 = sm.nonparametric.lowess
         assert_(lowess is lowess1)
-        #backwards compatible for 0.4
-        from statsmodels.nonparametric.lowess import lowess as lowess2
-        assert_(lowess is lowess2)
 
 
     def test_simple(self):
