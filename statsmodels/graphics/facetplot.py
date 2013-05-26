@@ -265,7 +265,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     #reconstruct the dataframe from the pieces created before
     data = pd.concat([value_x, value_y, value_f], axis=1)
     # can happen to have multiple identical columns, so drop them
-    data = pd.DataFrame({col: val for col, val in data.iteritems()})
+    data = pd.DataFrame(dict(((col, val) for col, val in data.iteritems())))
     # reduce the size of the dataframe by removing the nan and
     # subsetting it
     if subset is not None:
@@ -937,7 +937,7 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs)
         key = list(res.index)
         # if it's numerical fill the keys between the present values
         key = range(int(min(key)), int(max(key) + 1))
-    res = pd.Series({k: res.get(k, 0) for k in key}).sort_index()
+    res = pd.Series(dict(((k, res.get(k, 0)) for k in key))).sort_index()
     x = _make_numeric(x, ax, 'x', jitter, categories)
     val = np.array([res[i] for i in key])
     #set the defaul options
