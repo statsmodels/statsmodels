@@ -144,7 +144,7 @@ print 'diff', mvt3_cdf1 - 0.1946217
 assert_array_almost_equal(mvt3_cdf0, 0.3026855, decimal=5)
 assert_array_almost_equal(mvt3_cdf1, 0.1946217, decimal=5)
 
-import statsmodels.sandbox.distributions.mixture_rvs as mix
+import statsmodels.distributions.mixture_rvs as mix
 mu2 = np.array([4, 2.0, 2.0])
 mvn32 = mvd.MVNormal(mu2, cov3/2., 4)
 md = mix.mv_mixture_rvs([0.4, 0.6], 5, [mvt3, mvt3n], 3)
