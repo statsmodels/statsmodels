@@ -6,20 +6,26 @@ Created on Wed Mar 13 11:34:21 2013
 """
 
 import pandas as pd
-import pylab as plt
 import numpy as np
 from numpy.testing import run_module_suite
 from statsmodels.graphics.facetplot import facet_plot
 from nose.tools import with_setup
 from nose.tools import nottest
+from nose import SkipTest
 import os
 import logging
 from statsmodels.graphics.facetplot import _formula_terms
 from statsmodels.graphics.facetplot import _beautify
 
-#It's less pretty but make easier tests
-import matplotlib as mpl
-mpl.rcParams['axes.unicode_minus']=False
+try:
+    import matplotlib.pylab as plt
+    #It's less pretty but make easier tests
+    import matplotlib as mpl
+    mpl.rcParams['axes.unicode_minus']=False
+    have_matplotlib = True
+except:
+    have_matplotlib = False
+
 
 def my_setup():
     # ok, it's ugly to use globals, but it's only for this time, I promise :)
@@ -50,6 +56,8 @@ def my_setup():
 
 class base4test(object):
     def setUp(self):
+        if not have_matplotlib:
+            raise SkipTest('matplotlib not available')
         global N
         global data
         my_setup()
