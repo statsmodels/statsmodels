@@ -107,24 +107,22 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
 
     >>> import numpy as np
     >>> import statsmodels.api as sm
-    >>> import cylowess
-    >>> lowess = cylowess.lowess
+    >>> lowess = sm.nonparametric.lowess
     >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)
     >>> y = np.sin(x) + np.random.normal(size=len(x))
-    >>> z = lowess(y,x)
-    >>> w = lowess(y,x, frac=1./3)
+    >>> z = lowess(y, x)
+    >>> w = lowess(y, x, frac=1./3)
 
     This gives a similar comparison for when it is 0 vs not.
 
     >>> import numpy as np
     >>> import scipy.stats as stats
     >>> import statsmodels.api as sm
-    >>> import cylowess
-    >>> lowess = cylowess.lowess
+    >>> lowess = sm.nonparametric.lowess
     >>> x = np.random.uniform(low = -2*np.pi, high = 2*np.pi, size=500)
     >>> y = np.sin(x) + stats.cauchy.rvs(size=len(x))
-    >>> z = lowess(y,x, frac= 1./3, it=0)
-    >>> w = lowess(y,x, frac=1./3)
+    >>> z = lowess(y, x, frac= 1./3, it=0)
+    >>> w = lowess(y, x, frac=1./3)
 
     '''
     cdef:
@@ -225,8 +223,7 @@ def update_neighborhood(np.ndarray[DTYPE_t, ndim = 1] x,
                         Py_ssize_t left_end,
                         Py_ssize_t right_end):
     '''
-    Find the indices bounding the k-nearest-neighbors of the current
-    point.
+    Find the indices bounding the k-nearest-neighbors of the current point.
 
     Parameters
     ----------

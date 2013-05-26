@@ -22,7 +22,6 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 rpath = os.path.join(curdir, 'results')
 
 
-
 class  TestLowess(object):
 
     def test_import(self):
@@ -84,11 +83,11 @@ class  TestLowess(object):
 
         expected_lowess_del0 = np.array([test_data['x'], test_data['out_0']]).T
         expected_lowess_delRdef = np.array([test_data['x'], test_data['out_Rdef']]).T
-	expected_lowess_del1 = np.array([test_data['x'], test_data['out_1']]).T
+        expected_lowess_del1 = np.array([test_data['x'], test_data['out_1']]).T
 
-        actual_lowess_del0    = lowess(test_data['y'], test_data['x'], frac = 0.1)
-        actual_lowess_delRdef = lowess(test_data['y'], test_data['x'], frac = 0.1,
-				       delta = 0.01 * np.ptp(test_data['x']))
+        actual_lowess_del0    = lowess(test_data['y'], test_data['x'], frac=0.1)
+        actual_lowess_delRdef = lowess(test_data['y'], test_data['x'], frac=0.1,
+                       delta = 0.01 * np.ptp(test_data['x']))
         actual_lowess_del1    = lowess(test_data['y'], test_data['x'], frac = 0.1, delta = 1.0)
 
         assert_almost_equal(expected_lowess_del0, actual_lowess_del0, decimal = testdec)
@@ -99,4 +98,3 @@ class  TestLowess(object):
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
-
