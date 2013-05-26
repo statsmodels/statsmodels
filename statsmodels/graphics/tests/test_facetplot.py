@@ -33,26 +33,26 @@ def my_setup():
     global data
     N = 1000
     data = pd.DataFrame({
-        'int_1': plt.randint(5, 15, size=N),
-        'int_2': plt.randint(-3, 2, size=N),
-        'int_3': plt.randint(2, 5, size=N),
-        'float_1': 4 * plt.randn(N),
-        'float_2': plt.randn(N),
-        'float_5': plt.rand(N),
-        'cat_1': ['aeiou'[i] for i in plt.randint(0, 5, size=N)],
-        'cat_2': ['BCDF'[i] for i in plt.randint(0, 4, size=N)],
+        'int_1': np.random.randint(5, 15, size=N),
+        'int_2': np.random.randint(-3, 2, size=N),
+        'int_3': np.random.randint(2, 5, size=N),
+        'float_1': 4 * np.random.randn(N),
+        'float_2': np.random.randn(N),
+        'float_5': np.random.rand(N),
+        'cat_1': ['aeiou'[i] for i in np.random.randint(0, 5, size=N)],
+        'cat_2': ['BCDF'[i] for i in np.random.randint(0, 4, size=N)],
         'cat_3': np.r_[np.ones(N//2), np.zeros(N//2)].astype(int),
         'sin': np.sin(np.r_[0.0:10.0:N*1j]),
         'cos': np.cos(np.r_[0.0:10.0:N*1j]),
         'lin': np.r_[0.0:10.0:N*1j],
         'lin2': 0.5*np.r_[0.0:10.0:N*1j], })
-    data['float_3'] = data['float_1']+data['float_2']+plt.randn(N)
-    data['float_4'] = data['float_1']*data['float_2']+plt.randn(N)
+    data['float_3'] = data['float_1']+data['float_2']+np.random.randn(N)
+    data['float_4'] = data['float_1']*data['float_2']+np.random.randn(N)
     data['int_4'] = data['int_1'] + data['cat_3'] * 30
-    data[u'àèéòù'] = plt.randn(N)
-    data['x.1'] = plt.randn(N)
-    data['x 1'] = plt.randn(N)
-    data['x%&$1'] = plt.randn(N)
+    data[u'àèéòù'] = np.random.randn(N)
+    data['x.1'] = np.random.randn(N)
+    data['x 1'] = np.random.randn(N)
+    data['x%&$1'] = np.random.randn(N)
 
 class base4test(object):
     def setUp(self):
@@ -349,33 +349,33 @@ class Test_axes_insertion(base4test):
 class Test_create_dataframe(base4test):
     __show__ = True
     def test_database_1(self):
-        float_1 = plt.randn(100)
+        float_1 = np.random.randn(100)
         facet_plot('float_1', {'float_1': float_1})
 
     def test_database_2(self):
-        float_1 = plt.randn(100)
+        float_1 = np.random.randn(100)
         float_1[0] = np.nan
         facet_plot('float_1', {'float_1': float_1})
 
     def test_database_3(self):
-        float_1 = plt.randn(100)
+        float_1 = np.random.randn(100)
         float_1[0] = np.nan
         facet_plot('float_1', {'float_1': float_1}, subset=(float_1 > 0))
 
     def test_database_4(self):
-        float_1 = plt.randn(100)
+        float_1 = np.random.randn(100)
         facet_plot('float_1')
 
     def test_database_5(self):
-        float_1 = plt.randn(100)
+        float_1 = np.random.randn(100)
         facet_plot('I(float_1**2)')
 
     def test_database_6(self):
-        float_1 = plt.randn(100)
+        float_1 = np.random.randn(100)
         facet_plot('float_1', subset=(float_1 > 0))
 
     def test_database_7(self):
-        float_1 = plt.randn(100)
+        float_1 = np.random.randn(100)
         facet_plot('np.log(float_1) + float_1')
 
 
@@ -391,16 +391,16 @@ class TestSpecialNames(base4test):
         plt.show()
 
     def test_names_unicode_3(self):
-        data = {'float_1': plt.randn(20),
-                'float_2': plt.randn(20),
-                'àèéòù': plt.randn(20)}
+        data = {'float_1': np.random.randn(20),
+                'float_2': np.random.randn(20),
+                'àèéòù': np.random.randn(20)}
         fig = facet_plot('float_1*Q("àèéòù") ~ float_2', data, kind='scatter')
         plt.show()
 
     def test_names_unicode_4(self):
-        data = {'float_1': plt.randn(20),
-                'float_2': plt.randn(20),
-                'dose μ/ml': plt.randn(20)}
+        data = {'float_1': np.random.randn(20),
+                'float_2': np.random.randn(20),
+                'dose μ/ml': np.random.randn(20)}
         fig = facet_plot('float_1*Q("dose μ/ml") ~ float_2', data, kind='scatter')
         plt.show()
 

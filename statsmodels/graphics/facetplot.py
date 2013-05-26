@@ -4,9 +4,11 @@ __all__ = ['facet_plot']
 
 import numpy as np
 try:
+    import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d.axes3d import Axes3D
-except ImportError:
-    pass
+    have_matplotlib = True
+except:
+    have_matplotlib = False
 
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
@@ -17,7 +19,6 @@ from scipy.stats.kde import gaussian_kde
 from scipy.stats import poisson, scoreatpercentile
 
 import patsy
-import pylab as plt
 import pandas as pd
 import re
 from scipy.stats import spearmanr
