@@ -246,12 +246,9 @@ class QuantRegResults(RegressionResults):
         ered = np.abs(ered)
         return 1 - np.sum(e) / np.sum(ered)
 
-    @cache_readonly
+    #@cache_readonly
     def scale(self):
         return 1.
-    #@cache_readonly
-    #def aic(self):
-        #return np.nan
 
     @cache_readonly
     def bic(self):
@@ -269,6 +266,30 @@ class QuantRegResults(RegressionResults):
     def rsquared(self):
         return np.nan
 
+    @cache_readonly
+    def rsquared_adj(self):
+        return np.nan
+
+    @cache_readonly
+    def mse(self):
+        return np.nan
+
+    @cache_readonly
+    def mse_model(self):
+        return np.nan
+
+    @cache_readonly
+    def mse_total(self):
+        return np.nan
+
+    @cache_readonly
+    def centered_tss(self):
+        return np.nan
+
+    @cache_readonly
+    def uncentered_tss(self):
+        return np.nan
+    
     @cache_readonly
     def HC0_se(self):
         raise NotImplementedError
