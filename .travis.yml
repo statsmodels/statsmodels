@@ -30,11 +30,12 @@ install:
          sudo apt-get install cython ;
       fi
     - echo ${DISTRIB_CODENAME}
-    - wget -O- http://neuro.debian.net/lists/${DISTRIB_CODENAME}.us-nh.full | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
+    - wget -O- http://neuro.debian.net/lists/precise.us-nh.full | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
     - sudo apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
     - sudo apt-get update -qq
     - sudo apt-get install $PYTHON-dateutil
-    - sudo apt-get install $PYTHON-pandas $PYTHON-pandas-lib
+    - sudo apt-get install $PYTHON-pandas
+    - sudo apt-get install $PYTHON-pandas-lib
     - sudo easy_install$PYSUF -U patsy
 script:
     - sudo $PYTHON setup.py install
