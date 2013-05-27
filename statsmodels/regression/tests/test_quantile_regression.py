@@ -24,6 +24,9 @@ class CheckModelResults(object):
     def test_bse(self):
         assert_allclose(np.ravel(self.res1.bse.ix[idx]),
                             self.res2.table[:,1], rtol=1e-3)
+    def test_pvalues(self):
+        assert_allclose(np.ravel(np.round(self.res1.pvalues.ix[idx], 3)),
+                            self.res2.table[:,3], rtol=1e-3)
     def test_conf_int(self):
         assert_allclose(self.res1.conf_int().ix[idx],
                 self.res2.table[:,-2:], rtol=1e-3)
