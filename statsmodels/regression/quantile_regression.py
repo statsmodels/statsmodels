@@ -4,7 +4,7 @@
 Quantile regression model
 
 Model parameters are estimated using iterated reweighted least squares. The
-asymptotic covariance matrix estimated using kernel density estimation. 
+asymptotic covariance matrix estimated using kernel density estimation.
 
 Author: Vincent Arel-Bundock
 License: BSD-3
@@ -21,34 +21,35 @@ import numpy as np
 import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
-from scipy.stats import logistic, norm
+from scipy.stats import norm
 from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
                                                  RegressionResultsWrapper)
 
+
 class QuantReg(RegressionModel):
     '''Quantile Regression
 
     Estimate a quantile regression model using iterative reweighted least
-    squares. 
+    squares.
 
     Parameters
     ----------
     endog : array or dataframe
         endogenous/response variable
     exog : array or dataframe
-        exogenous/explanatory variable(s) 
+        exogenous/explanatory variable(s)
 
     Notes
     -----
     The Least Absolute Deviation (LAD) estimator is a special case where
-    quantile is set to 0.5 (q argument of the fit method). 
+    quantile is set to 0.5 (q argument of the fit method).
 
     The asymptotic covariance matrix is estimated following the procedure in
     Greene (2008, p.407-408), using either the logistic or gaussian kernels
-    (kernel argument of the fit method). 
+    (kernel argument of the fit method).
 
     References
     ----------
@@ -59,11 +60,11 @@ class QuantReg(RegressionModel):
     * Koenker, R. (2005). Quantile Regression. New York: Cambridge University Press.
     * LeSage, J. P.(1999). Applied Econometrics Using MATLAB,
 
-    Kernels (used by the fit method): 
-    
+    Kernels (used by the fit method):
+
     * Green (2008) Table 14.2
 
-    Bandwidth selection (used by the fit method): 
+    Bandwidth selection (used by the fit method):
 
     * Bofinger, E. (1975). Estimation of a density function using order statistics. Australian Journal of Statistics 17: 1-17.
     * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171-209. Cambridge: Cambridge University Press.
@@ -78,13 +79,14 @@ class QuantReg(RegressionModel):
     def __init__(self, endog, exog):
         super(QuantReg, self).__init__(endog, exog)
 
-    def whiten(self, Y):
+    def whiten(self, data):
         """
-        QuantReg model whitener does nothing: returns Y.
+        QuantReg model whitener does nothing: returns data.
         """
-        return Y
+        return data
 
-    def fit(self, q=.5, vcov='robust', kernel='epa', bandwidth='hsheather', **kwargs):
+    def fit(self, q=.5, vcov='robust', kernel='epa', bandwidth='hsheather',
+            **kwargs):
         '''Solve by Iterative Weighted Least Squares
 
         Parameters
@@ -94,11 +96,11 @@ class QuantReg(RegressionModel):
         vcov : string, method used to calculate the variance-covariance matrix
                of the parameters. Default is ``robust``
 
-               robust : heteroskedasticity robust standard errors (as suggested in
-                        Greene 6th edition)
+               robust : heteroskedasticity robust standard errors (as suggested
+                        in Greene 6th edition)
                iid : iid errors (as in Stata 12)
         kernel : string, kernel to use in the kernel density estimation for the
-                 asymptotic covariance matrix 
+                 asymptotic covariance matrix
 
                  epa: Epanechnikov
                  cos: Cosine
@@ -116,7 +118,7 @@ class QuantReg(RegressionModel):
         if q < 0 or q > 1:
             raise Exception('p must be between 0 and 1')
 
-        kern_names = ['biw', 'cos', 'epa', 'gau', 'par' ]  
+        kern_names = ['biw', 'cos', 'epa', 'gau', 'par']
         if kernel not in kern_names:
             raise Exception("kernel must be one of " + ', '.join(kern_names))
         else:
@@ -161,18 +163,19 @@ class QuantReg(RegressionModel):
 
         e = endog - np.dot(exog, beta)
         # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:
-        #h = 0.9 * np.std(e) / (nobs**0.2)
+        # h = 0.9 * np.std(e) / (nobs**0.2)
         # Instead, we calculate bandwidth as in Stata 12
         iqre = stats.scoreatpercentile(e, 75) - stats.scoreatpercentile(e, 25)
         h = bandwidth(nobs, q)
-        h = min(np.std(endog), iqre / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h)) 
+        h = min(np.std(endog),
+                iqre / 1.34) * (norm.ppf(q + h) - norm.ppf(q - h))
 
         fhat0 = 1. / (nobs * h) * np.sum(kernel(e / h))
 
         if vcov == 'robust':
             d = np.where(e > 0, (q/fhat0)**2, ((1-q)/fhat0)**2)
             xtxi = pinv(np.dot(exog.T, exog))
-            xtdx = np.dot(exog.T * d[np.newaxis,:], exog)
+            xtdx = np.dot(exog.T * d[np.newaxis, :], exog)
             vcov = chain_dot(xtxi, xtdx, xtxi)
         elif vcov == 'iid':
             vcov = (1. / fhat0)**2 * q * (1 - q) * pinv(np.dot(exog.T, exog))
@@ -188,22 +191,26 @@ class QuantReg(RegressionModel):
 
         return RegressionResultsWrapper(lfit)
 
+
 def _parzen(u):
     z = np.where(np.abs(u) <= .5, 4./3 - 8. * u**2 + 8. * np.abs(u)**3,
-                               8. * (1 - np.abs(u))**3 / 3.)
+                 8. * (1 - np.abs(u))**3 / 3.)
     z[np.abs(u) > 1] = 0
     return z
+
+
 kernels = {}
 kernels['biw'] = lambda u: 15. / 16 * (1 - u**2)**2 * np.where(np.abs(u) <= 1, 1, 0)
 kernels['cos'] = lambda u: np.where(np.abs(u) <= .5, 1 + np.cos(2 * np.pi * u), 0)
 kernels['epa'] = lambda u: 3. / 4 * (1-u**2) * np.where(np.abs(u) <= 1, 1, 0)
 kernels['gau'] = lambda u: norm.pdf(u)
 kernels['par'] = _parzen
-#kernels['bet'] = lambda u: np.where(np.abs(u) <= 1, .75 * (1 - u) * (1 + u), 0) 
+#kernels['bet'] = lambda u: np.where(np.abs(u) <= 1, .75 * (1 - u) * (1 + u), 0)
 #kernels['log'] = lambda u: logistic.pdf(u) * (1 - logistic.pdf(u))
 #kernels['tri'] = lambda u: np.where(np.abs(u) <= 1, 1 - np.abs(u), 0)
 #kernels['trw'] = lambda u: 35. / 32 * (1 - u**2)**3 * np.where(np.abs(u) <= 1, 1, 0)
 #kernels['uni'] = lambda u: 1. / 2 * np.where(np.abs(u) <= 1, 1, 0)
+
 
 def hall_sheather(n, q, alpha=.05):
     z = norm.ppf(q)
@@ -212,14 +219,17 @@ def hall_sheather(n, q, alpha=.05):
     h = n**(-1. / 3) * norm.ppf(1. - alpha / 2.)**(2./3) * (num / den)**(1./3)
     return h
 
+
 def bofinger(n, q):
     num = 9. / 2 * norm.pdf(2 * norm.ppf(q))**4
     den = (2 * norm.ppf(q)**2 + 1)**2
     h = n**(-1. / 5) * (num / den)**(1. / 5)
     return h
 
+
 def chamberlain(n, q, alpha=.05):
     return norm.ppf(1 - alpha / 2) * np.sqrt(q*(1 - q) / n)
+
 
 class QuantRegResults(RegressionResults):
     '''Results instance for the QuantReg model'''
@@ -242,27 +252,35 @@ class QuantRegResults(RegressionResults):
     #@cache_readonly
     #def aic(self):
         #return np.nan
+
     @cache_readonly
     def bic(self):
         return np.nan
+
     @cache_readonly
     def aic(self):
         return np.nan
+
     @cache_readonly
     def llf(self):
         return np.nan
+
     @cache_readonly
     def rsquared(self):
         return np.nan
+
     @cache_readonly
     def HC0_se(self):
         raise NotImplementedError
+
     @cache_readonly
     def HC1_se(self):
         raise NotImplementedError
+
     @cache_readonly
     def HC2_se(self):
         raise NotImplementedError
+
     @cache_readonly
     def HC3_se(self):
         raise NotImplementedError
