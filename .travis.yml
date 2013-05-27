@@ -34,8 +34,8 @@ install:
     - sudo apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
     - sudo apt-get update -qq
     - sudo apt-get install $PYTHON-dateutil
-    - sudo apt-get install $PYTHON-pandas
-    - sudo apt-get install $PYTHON-pandas-lib
+    - sudo apt-get --no-install-recommends install $PYTHON-pandas
+    - sudo apt-get --no-install-recommends install $PYTHON-pandas-lib
     - sudo easy_install$PYSUF -U patsy
 script:
     - sudo $PYTHON setup.py install
