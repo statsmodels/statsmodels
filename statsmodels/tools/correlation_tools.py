@@ -130,7 +130,7 @@ def clipped_corr(corr, threshold=1e-15):
     x_new = x_new / x_std / x_std[:,None]
     return x_new
 
-def nearest_cov(cov, method='clipped', threshold=1e-15, nfact=100,
+def nearest_cov(cov, method='clipped', threshold=1e-15, n_fact=100,
                 return_all=False):
 
     '''
@@ -195,7 +195,7 @@ def nearest_cov(cov, method='clipped', threshold=1e-15, nfact=100,
     if method == 'clipped':
         corr_ = clipped_corr(cov_, threshold=threshold)
     elif method == 'nearest':
-        corr_ = clipped_corr(cov_, threshold=threshold, nfact=nfact)
+        corr_ = nearest_corr(cov_, threshold=threshold, n_fact=n_fact)
 
     cov_ = corr2cov(corr_, std_)
 
