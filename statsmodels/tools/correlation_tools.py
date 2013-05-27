@@ -16,7 +16,7 @@ def clip_evals(x, value=0): #threshold=0, value=0):
     return x_new, clipped
 
 
-def nearest_corr(corr, threshold=1e-15, n_fact=100):
+def corr_nearest(corr, threshold=1e-15, n_fact=100):
     '''
     Find the nearest correlation matrix that is positive semi-definite
 
@@ -44,15 +44,15 @@ def nearest_corr(corr, threshold=1e-15, n_fact=100):
     might be negative, but zero within a numerical error, for example in the
     range of -1e-16.
 
-    Assumes input covariance matrix is symmetric.
+    Assumes input correlation matrix is symmetric.
 
     Stops after the first step if correlation matrix is already positive
     semi-definite.
 
     See Also
     --------
-    clipped_corr
-    nearest_cov
+    corr_clipped
+    cov_nearest
 
 
     '''
@@ -74,12 +74,12 @@ def nearest_corr(corr, threshold=1e-15, n_fact=100):
         x_new = x_psd.copy()
         x_new[diag_idx, diag_idx] = 1
     else:
-        #print "maximum iteration reached"
-        pass
+        import warnings
+        warnings.warn('maximum iteration reached')
 
     return x_new
 
-def clipped_corr(corr, threshold=1e-15):
+def corr_clipped(corr, threshold=1e-15):
     '''
     Find the nearest correlation matrix that is positive semi-definite
 
@@ -107,17 +107,17 @@ def clipped_corr(corr, threshold=1e-15):
     might be negative, but zero within a numerical error, for example in the
     range of -1e-16.
 
-    Assumes input covariance matrix is symmetric.
+    Assumes input correlation matrix is symmetric.
 
     Stops after the first step if correlation matrix is already positive
     semi-definite.
 
     See Also
     --------
-    clipped_corr
-    nearest_cov
-    40 or more times faster in simple example with a bit larger
-    approximation error
+    corr_nearest
+    cov_nearest
+        40 or more times faster in simple example with a bit larger
+        approximation error
 
 
     '''
@@ -130,7 +130,7 @@ def clipped_corr(corr, threshold=1e-15):
     x_new = x_new / x_std / x_std[:,None]
     return x_new
 
-def nearest_cov(cov, method='clipped', threshold=1e-15, n_fact=100,
+def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
                 return_all=False):
 
     '''
@@ -185,17 +185,17 @@ def nearest_cov(cov, method='clipped', threshold=1e-15, n_fact=100,
 
     See Also
     --------
-    nearest_corr
-    clipped_corr
+    corr_nearest
+    corr_clipped
 
     '''
 
     from statsmodels.stats.moment_helpers import cov2corr, corr2cov
     cov_, std_ = cov2corr(cov, return_std=True)
     if method == 'clipped':
-        corr_ = clipped_corr(cov_, threshold=threshold)
+        corr_ = corr_clipped(cov_, threshold=threshold)
     elif method == 'nearest':
-        corr_ = nearest_corr(cov_, threshold=threshold, n_fact=n_fact)
+        corr_ = corr_nearest(cov_, threshold=threshold, n_fact=n_fact)
 
     cov_ = corr2cov(corr_, std_)
 

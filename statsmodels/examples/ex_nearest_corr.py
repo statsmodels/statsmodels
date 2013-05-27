@@ -7,14 +7,14 @@ Author: Josef Perktold
 
 
 TODO:
-    add examples for nearest_cov from script log
+    add examples for cov_nearest from script log
     convert to tests
 
 """
 
 import numpy as np
 from statsmodels.tools.correlation_tools import (
-                 nearest_corr, clipped_corr, nearest_cov)
+                 corr_nearest, corr_clipped, cov_nearest)
 
 examples = ['all']
 
@@ -26,15 +26,15 @@ if 'all' in examples:
     n_fact = 2
 
     print np.linalg.eigvals(x)
-    y = nearest_corr(x, n_fact=100)
+    y = corr_nearest(x, n_fact=100)
     print np.linalg.eigvals(y)
     print y
 
-    y = nearest_corr(x, n_fact=100, threshold=1e-16)
+    y = corr_nearest(x, n_fact=100, threshold=1e-16)
     print np.linalg.eigvals(y)
     print y
 
-    y = clipped_corr(x, threshold=1e-16)
+    y = corr_clipped(x, threshold=1e-16)
     print np.linalg.eigvals(y)
     print y
 
@@ -53,20 +53,20 @@ if 'all' in examples:
 
         print np.sort(np.linalg.eigvals(x)), 'original'
 
-        yn = nearest_corr(x, threshold=1e-15, n_fact=200)
+        yn = corr_nearest(x, threshold=1e-15, n_fact=200)
         print np.sort(np.linalg.eigvals(yn)), ((yn - x)**2).sum()
 
-        yc = clipped_corr(x, threshold=1e-15)
+        yc = corr_clipped(x, threshold=1e-15)
         print np.sort(np.linalg.eigvals(yc)), ((yc - x)**2).sum()
 
     import time
     t0 = time.time()
     for _ in range(100):
-        nearest_corr(x, threshold=1e-15, n_fact=100)
+        corr_nearest(x, threshold=1e-15, n_fact=100)
 
     t1 = time.time()
     for _ in range(1000):
-        clipped_corr(x, threshold=1e-15)
+        corr_clipped(x, threshold=1e-15)
     t2 = time.time()
 
     print 'time:', t1 - t0, t2 - t1
@@ -78,5 +78,5 @@ if 'all' in examples:
                    0.651, 0.682, 0.581, 0.741, 1,     0.798,
                    0.826, 0.75,  0.742, 0.8,   0.798, 1]).reshape(6,6)
 
-    y1 = nearest_corr(x, threshold=1e-15, n_fact=200)
-    y2 = clipped_corr(x, threshold=1e-15)
+    y1 = corr_nearest(x, threshold=1e-15, n_fact=200)
+    y2 = corr_clipped(x, threshold=1e-15)

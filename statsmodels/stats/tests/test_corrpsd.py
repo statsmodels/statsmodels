@@ -9,7 +9,7 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.tools.correlation_tools import (
-                 nearest_corr, clipped_corr, nearest_cov)
+                 corr_nearest, corr_clipped, cov_nearest)
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays
@@ -81,18 +81,18 @@ def test_corr_psd():
     # test positive definite matrix is unchanged
     x = np.array([[1, -0.2, -0.9], [-0.2, 1, -0.2], [-0.9, -0.2, 1]])
 
-    y = nearest_corr(x, n_fact=100)
+    y = corr_nearest(x, n_fact=100)
     #print np.max(np.abs(x - y))
     assert_almost_equal(x, y, decimal=14)
 
-    y = clipped_corr(x)
+    y = corr_clipped(x)
     assert_almost_equal(x, y, decimal=14)
 
-    y = nearest_cov(x, n_fact=100)
+    y = cov_nearest(x, n_fact=100)
     assert_almost_equal(x, y, decimal=14)
 
     x2 = x + 0.001 * np.eye(3)
-    y = nearest_cov(x2, n_fact=100)
+    y = cov_nearest(x2, n_fact=100)
     assert_almost_equal(x2, y, decimal=14)
 
 
@@ -101,7 +101,7 @@ class CheckCorrPSDMixin(object):
     def test_nearest(self):
         x = self.x
         res_r = self.res
-        y = nearest_corr(x, threshold=1e-7, n_fact=100)
+        y = corr_nearest(x, threshold=1e-7, n_fact=100)
         #print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=3)
         d = norm_f(x, y)
@@ -116,7 +116,7 @@ class CheckCorrPSDMixin(object):
     def test_clipped(self):
         x = self.x
         res_r = self.res
-        y = clipped_corr(x, threshold=1e-7)
+        y = corr_clipped(x, threshold=1e-7)
         #print np.max(np.abs(x - y)), np.max(np.abs((x - y) / y))
         assert_almost_equal(y, res_r.mat, decimal=1)
         d = norm_f(x, y)
@@ -126,10 +126,10 @@ class CheckCorrPSDMixin(object):
         assert_allclose(evals, res_r.eigenvalues[::-1], rtol=0.1, atol=1e-7)
         assert_allclose(evals[0], 1e-7, rtol=0.02)
 
-    def test_nearest_cov(self):
+    def test_cov_nearest(self):
         x = self.x
         res_r = self.res
-        y = nearest_cov(x, method='nearest', threshold=1e-7)
+        y = cov_nearest(x, method='nearest', threshold=1e-7)
         #print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=2)
         d = norm_f(x, y)
@@ -149,16 +149,16 @@ class TestCovPSD(object):
         cls.x = x + 0.01 * np.eye(6)
         cls.res = cov_r
 
-    def test_nearest_cov(self):
+    def test_cov_nearest(self):
         x = self.x
         res_r = self.res
-        y = nearest_cov(x, method='nearest')
+        y = cov_nearest(x, method='nearest')
         #print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=3)
         d = norm_f(x, y)
         assert_allclose(d, res_r.normF, rtol=0.001)
 
-        y = nearest_cov(x, method='clipped')
+        y = cov_nearest(x, method='clipped')
         #print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=2)
         d = norm_f(x, y)
@@ -184,23 +184,23 @@ def test_corrpsd_threshold():
     #print np.linalg.eigvalsh(x)
     for threshold in [0, 1e-15, 1e-10, 1e-6]:
 
-        y = nearest_corr(x, n_fact=100, threshold=threshold)
+        y = corr_nearest(x, n_fact=100, threshold=threshold)
         evals = np.linalg.eigvalsh(y)
         #print 'evals', evals, threshold
         assert_allclose(evals[0], threshold, rtol=1e-6, atol=1e-15)
 
-        y = clipped_corr(x, threshold=threshold)
+        y = corr_clipped(x, threshold=threshold)
         evals = np.linalg.eigvalsh(y)
         #print 'evals', evals, threshold
         assert_allclose(evals[0], threshold, rtol=0.25, atol=1e-15)
 
-        y = nearest_cov(x, method='nearest', n_fact=100, threshold=threshold)
+        y = cov_nearest(x, method='nearest', n_fact=100, threshold=threshold)
         evals = np.linalg.eigvalsh(y)
         #print 'evals', evals, threshold
         #print evals[0] / threshold - 1
         assert_allclose(evals[0], threshold, rtol=1e-6, atol=1e-15)
 
-        y = nearest_cov(x, n_fact=100, threshold=threshold)
+        y = cov_nearest(x, n_fact=100, threshold=threshold)
         evals = np.linalg.eigvalsh(y)
         #print 'evals', evals, threshold
         #print evals[0] / threshold - 1
