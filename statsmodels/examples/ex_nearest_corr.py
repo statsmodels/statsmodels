@@ -13,7 +13,7 @@ TODO:
 """
 
 import numpy as np
-from statsmodels.tools.correlation_tools import (
+from statsmodels.stats.correlation_tools import (
                  corr_nearest, corr_clipped, cov_nearest)
 
 examples = ['all']

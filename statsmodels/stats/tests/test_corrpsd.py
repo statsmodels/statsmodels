@@ -8,7 +8,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
-from statsmodels.tools.correlation_tools import (
+from statsmodels.stats.correlation_tools import (
                  corr_nearest, corr_clipped, cov_nearest)
 
 def norm_f(x, y):
