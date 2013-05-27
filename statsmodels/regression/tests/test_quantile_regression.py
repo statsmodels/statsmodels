@@ -1,4 +1,5 @@
 import os
+import scipy
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -24,9 +25,13 @@ class CheckModelResults(object):
     def test_bse(self):
         assert_allclose(np.ravel(self.res1.bse.ix[idx]),
                             self.res2.table[:,1], rtol=1e-3)
+    def test_tvalues(self):
+        assert_allclose(np.ravel(self.res1.tvalues.ix[idx]),
+                            self.res2.table[:,2], rtol=1e-2)
     def test_pvalues(self):
-        assert_allclose(np.ravel(np.round(self.res1.pvalues.ix[idx], 3)),
-                            self.res2.table[:,3], rtol=1e-3)
+        pvals_stata = scipy.stats.t.sf(self.res2.table[:, 2] , self.res2.df_r)
+        assert_allclose(np.ravel(self.res1.pvalues.ix[idx]),
+                        pvals_stata, atol=1e-3)
     def test_conf_int(self):
         assert_allclose(self.res1.conf_int().ix[idx],
                 self.res2.table[:,-2:], rtol=1e-3)
