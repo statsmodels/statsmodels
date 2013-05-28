@@ -34,7 +34,7 @@ class  TestLowess(object):
 
     def test_simple(self):
         rfile = os.path.join(rpath, 'test_lowess_simple.csv')
-        test_data = np.genfromtxt(open(rfile, 'r'),
+        test_data = np.genfromtxt(open(rfile, 'rb'),
                                   delimiter = ',', names = True)
         expected_lowess = np.array([test_data['x'], test_data['out']]).T
 
@@ -45,7 +45,7 @@ class  TestLowess(object):
 
     def test_iter(self):
         rfile = os.path.join(rpath, 'test_lowess_iter.csv')
-        test_data = np.genfromtxt(open(rfile, 'r'),
+        test_data = np.genfromtxt(open(rfile, 'rb'),
                                   delimiter = ',', names = True)
 
         expected_lowess_no_iter = np.array([test_data['x'], test_data['out_0']]).T
@@ -60,7 +60,7 @@ class  TestLowess(object):
 
     def test_frac(self):
         rfile = os.path.join(rpath, 'test_lowess_frac.csv')
-        test_data = np.genfromtxt(open(rfile, 'r'),
+        test_data = np.genfromtxt(open(rfile, 'rb'),
                                   delimiter = ',', names = True)
 
         expected_lowess_23 = np.array([test_data['x'], test_data['out_2_3']]).T
@@ -75,7 +75,7 @@ class  TestLowess(object):
 
     def test_delta(self):
         rfile = os.path.join(rpath, 'test_lowess_delta.csv')
-        test_data = np.genfromtxt(open(rfile, 'r'),
+        test_data = np.genfromtxt(open(rfile, 'rb'),
                                   delimiter = ',', names = True)
 
         expected_lowess_del0 = np.array([test_data['x'], test_data['out_0']]).T
