@@ -174,6 +174,9 @@ def cov2corr(cov, return_std=False):
     -------
     corr : ndarray (subclass)
         correlation matrix
+    return_std : bool
+        If this is true then the standard deviation is also returned.
+        By default only the correlation matrix is returned.
 
     Notes
     -----
@@ -190,22 +193,25 @@ def cov2corr(cov, return_std=False):
         return corr
 
 def corr2cov(corr, std):
-    '''convert covariance matrix to correlation matrix
+    '''convert correlation matrix to covariance matrix given standard deviation
 
     Parameter
     ---------
-    cov : array_like, 2d
-        covariance matrix, see Notes
+    corr : array_like, 2d
+        correlation matrix, see Notes
+    std : array_like, 1d
+        standard deviation
 
     Returns
     -------
-    corr : ndarray (subclass)
-        correlation matrix
+    cov : ndarray (subclass)
+        covariance matrix
 
     Notes
     -----
     This function does not convert subclasses of ndarrays. This requires
-    that division is defined elementwise. np.ma.array and np.matrix are allowed.
+    that multiplication is defined elementwise. np.ma.array are allowed, but
+    not matrices.
 
     '''
     corr = np.asanyarray(corr)
