@@ -31,7 +31,7 @@ class CheckModelResults(object):
     def test_pvalues(self):
         pvals_stata = scipy.stats.t.sf(self.res2.table[:, 2] , self.res2.df_r)
         assert_allclose(np.ravel(self.res1.pvalues.ix[idx]),
-                        pvals_stata, atol=1e-3)
+                        pvals_stata, rtol=1.1)
     def test_conf_int(self):
         assert_allclose(self.res1.conf_int().ix[idx],
                 self.res2.table[:,-2:], rtol=1e-3)
