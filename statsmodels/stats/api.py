@@ -46,3 +46,6 @@ from .power import (TTestPower, TTestIndPower, GofChisquarePower,
 from .descriptivestats import Describe
 
 from .anova import anova_lm
+
+import moment_helpers
+from .correlation_tools import corr_nearest, corr_clipped, cov_nearest

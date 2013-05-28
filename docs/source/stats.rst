@@ -326,6 +326,20 @@ proportions that can be used with NormalIndPower.
 Moment Helpers
 --------------
 
+When there are missing values, then it is possible that a correlation or
+covariance matrix is not positive semi-definite. The following three
+functions can be used to find a correlation or covariance matrix that is
+positive definite and close to the original matrix.
+
+.. currentmodule:: statsmodels.stats.correlation_tools
+
+.. autosummary::
+   :toctree: generated/
+
+	corr_nearest
+	corr_clipped
+	cov_nearest
+
 These are utility functions to convert between central and non-central moments, skew,
 kurtosis and cummulants.
 
@@ -343,5 +357,6 @@ kurtosis and cummulants.
    mvsk2mc
    mvsk2mnc
    cov2corr
+   corr2cov
    se_cov
 
