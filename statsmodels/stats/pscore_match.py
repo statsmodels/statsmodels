@@ -7,6 +7,7 @@ License: BSD-3
 '''
 
 import statsmodels.api as sm
+import numpy as np
 
 
 class PropensityScoreMatch(object):
@@ -26,26 +27,35 @@ class PropensityScoreMatch(object):
         self.scores = p_res.predict(self.covariates)
         self.result.propensity_estimation = p_res
         
-    def compute_stratas(self, strata = None, rec= 0):
-        if not(strata is None) and self.check_balance_for(strata):
+    def compute_stratas(self, strata, rec= 0):
+        if self.check_balance_for(strata):
             return [strata,]
-        if strata is None:
-            strata = self.common_support()
-  #      if strata is None:
-   #         min, max = self.scores.min(), self.scores.max()
-    #    else:
-        min, max = self.scores[strata].min(), self.scores[strata].max()
+        else:
+            return self.divide_strata(strata)
+        
+    def basic_stratas(self):
+        common = self.common_support()
+        percentiles = np.percentile(self.scores[common], [0, 20, 40, 60, 80, 100])
+        stratas = []
+        min = percentiles[0]
+        for max in percentiles[1:]:
+            strata = (self.scores >= min) & (self.scores <max)
+            stratas += self.compute_stratas(strata)
+        return stratas
+    
+    def divide_strata(self, strata):
+        min, max = np.percentile(self.scores[strata], [0, 100])
         half = (min+ max)/2
         print min, max, half
         left, right = ((self.scores >= min) & (self.scores < half)) , ((self.scores >= half) & (self.scores < max))
-        print left
-        print right
-        return self.compute_stratas(left, rec=rec +1) + self.compute_stratas(right, rec = rec +1)
+        return self.compute_stratas(left) + self.compute_stratas(right)
             
         
         
     def check_balance_for(self, strata):
         endog, exog = self.assigment_index[strata], sm.add_constant(self.covariates[strata], prepend = True)
+        print self.covariates[strata].count()
+        print endog.count()
         om = sm.OLS(endog, exog)
         res= om.fit()
         print res.pvalues > 0.05
