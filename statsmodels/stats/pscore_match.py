@@ -26,12 +26,21 @@ class PropensityScoreMatch(object):
         self.scores = p_res.predict(self.covariates)
         self.result.propensity_estimation = p_res
         
-    def compute_stratas(self, strata = None):
+    def compute_stratas(self, strata = None, rec= 0):
         if not(strata is None) and self.check_balance_for(strata):
             return [strata,]
-        half = (self.scores.max() + self.scores.min())/2
-        left, right = self.scores < half, self.scores > half
-        return self.compute_stratas(left) + self.compute_stratas(right)
+        if strata is None:
+            strata = self.common_support()
+  #      if strata is None:
+   #         min, max = self.scores.min(), self.scores.max()
+    #    else:
+        min, max = self.scores[strata].min(), self.scores[strata].max()
+        half = (min+ max)/2
+        print min, max, half
+        left, right = ((self.scores >= min) & (self.scores < half)) , ((self.scores >= half) & (self.scores < max))
+        print left
+        print right
+        return self.compute_stratas(left, rec=rec +1) + self.compute_stratas(right, rec = rec +1)
             
         
         
@@ -39,7 +48,17 @@ class PropensityScoreMatch(object):
         endog, exog = self.assigment_index[strata], sm.add_constant(self.covariates[strata], prepend = True)
         om = sm.OLS(endog, exog)
         res= om.fit()
-        return (res.f_pvalue > 0.05) and (result.pvalues > 0.05).all() 
+        print res.pvalues > 0.05
+        if (res.pvalues > 0.05).all():
+            print 'eh!'
+            print res.f_pvalue
+        return (res.f_pvalue > 0.05) and (res.pvalues > 0.05).all()
+        
+    def common_support(self):
+        min_treated, max_treated = self.scores[self.assigment_index ==1].min(), self.scores[self.assigment_index ==1].max()
+        min_control, max_control = self.scores[self.assigment_index ==0].min(), self.scores[self.assigment_index ==0].max()
+        common_min, common_max = max(min_treated, min_control), min(max_treated, max_control)
+        return (self.scores >= common_min) & (self.scores <= common_max)
         
         
 class PScoreMatchResult(object):
