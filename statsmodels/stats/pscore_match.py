@@ -27,7 +27,9 @@ class PropensityScoreMatch(object):
         self.scores = p_res.predict(self.covariates)
         self.result.propensity_estimation = p_res
         
-    def compute_stratas(self, strata, rec= 0):
+    def compute_stratas(self, strata):
+        if self.assigment_index[strata].where(self.assigment_index[strata] == 1).count() <= 1:
+            return []
         if self.check_balance_for(strata):
             return [strata,]
         else:
