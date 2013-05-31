@@ -27,54 +27,54 @@ class PropensityScoreMatch(object):
         self.scores = p_res.predict(self.covariates)
         self.result.propensity_estimation = p_res
         
-    def compute_stratas(self, strata):
-        if self.assigment_index[strata].where(self.assigment_index[strata] == 1).count() <= 1:
+    def compute_strata(self, strat):
+        if self.assigment_index[strat].where(self.assigment_index[strat] == 1).count() <= 1:
             return []
-        if self.check_balance_for(strata):
-            return [strata,]
+        if self.check_balance_for(strat):
+            return [strat,]
         else:
-            return self.divide_strata(strata)
+            return self.divide_strat(strat)
         
-    def basic_stratas(self):
+    def basic_strata(self):
         common = self.common_support()
         percentiles = np.percentile(self.scores[common], [0, 20, 40, 60, 80, 100])
-        stratas = []
+        strata = []
         min = percentiles[0]
         for max in percentiles[1:]:
-            strata = (self.scores >= min) & (self.scores <max)
-            stratas += self.compute_stratas(strata)
-        self.stratas = stratas
-        return stratas
+            strat = (self.scores >= min) & (self.scores <max)
+            strata += self.compute_strata(strat)
+        self.strata = strata
+        return strata
     
-    def divide_strata(self, strata):
-        min, max = np.percentile(self.scores[strata], [0, 100])
+    def divide_strat(self, strat):
+        min, max = np.percentile(self.scores[strat], [0, 100])
         half = (min+ max)/2
         print min, max, half
         left, right = ((self.scores >= min) & (self.scores < half)) , ((self.scores >= half) & (self.scores < max))
-        return self.compute_stratas(left) + self.compute_stratas(right)
+        return self.compute_strata(left) + self.compute_strata(right)
         
         
-    def strat_effect(self, strata):
-        assigments = self.assigment_index[strata]
-        objective = self.treatment_objective_variable[strata]
+    def strat_effect(self, strat):
+        assigments = self.assigment_index[strat]
+        objective = self.treatment_objective_variable[strat]
         diff = objective.where(assigments ==1).mean() - objective.where(assigments ==0).mean()
         return diff
     
     def weights(self):
-        return [self.assigment_index[x].where(self.assigment_index[x] == 1).count() for x in self.stratas]
+        return [self.assigment_index[strat].where(self.assigment_index[strat] == 1).count() for strat in self.strata]
         
     def treatment_effect(self):
         weights = self.weights()
-        return np.sum((w*self.strat_effect(strata) for w, strata in zip(weights, self.stratas)))/np.sum(weights)
+        return np.sum((w*self.strat_effect(strat) for w, strat in zip(weights, self.strata)))/np.sum(weights)
         
         
-    def check_balance_for(self, strata):
-        endog, exog = self.assigment_index[strata], sm.add_constant(self.covariates[strata], prepend = True)
-        print self.covariates[strata].count()
+    def check_balance_for(self, strat):
+        endog, exog = self.assigment_index[strat], sm.add_constant(self.covariates[strat], prepend = True)
+        print self.covariates[strat].count()
         print endog.count()
         om = sm.OLS(endog, exog)
         res= om.fit()
-        print res.pvalues > 0.05
+        #print res.pvalues > 0.05
         if (res.pvalues > 0.05).all():
             print 'eh!'
             print res.f_pvalue
