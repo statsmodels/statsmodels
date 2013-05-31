@@ -43,6 +43,7 @@ class PropensityScoreMatch(object):
         for max in percentiles[1:]:
             strata = (self.scores >= min) & (self.scores <max)
             stratas += self.compute_stratas(strata)
+        self.stratas = stratas
         return stratas
     
     def divide_strata(self, strata):
@@ -51,7 +52,20 @@ class PropensityScoreMatch(object):
         print min, max, half
         left, right = ((self.scores >= min) & (self.scores < half)) , ((self.scores >= half) & (self.scores < max))
         return self.compute_stratas(left) + self.compute_stratas(right)
-            
+        
+        
+    def strat_effect(self, strata):
+        assigments = self.assigment_index[strata]
+        objective = self.treatment_objective_variable[strata]
+        diff = objective.where(assigments ==1).mean() - objective.where(assigments ==0).mean()
+        return diff
+    
+    def weights(self):
+        return [self.assigment_index[x].where(self.assigment_index[x] == 1).count() for x in self.stratas]
+        
+    def treatment_effect(self):
+        weights = self.weights()
+        return np.sum((w*self.strat_effect(strata) for w, strata in zip(weights, self.stratas)))/np.sum(weights)
         
         
     def check_balance_for(self, strata):
