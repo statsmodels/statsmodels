@@ -8,6 +8,7 @@ License: BSD-3
 
 import statsmodels.api as sm
 import numpy as np
+from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
 
 
 class PropensityScoreMatch(object):
@@ -25,6 +26,7 @@ class PropensityScoreMatch(object):
     def compute_pscore(self):
         p_mod = sm.Logit(self.assigment_index, self.covariates)
         p_res = p_mod.fit()
+        print p_res.summary()
         self.scores = p_res.predict(self.covariates)
         self.result.propensity_estimation = p_res
         
@@ -70,7 +72,7 @@ class StrataMatchingAlgorithm(object):
         strata = []
         min = percentiles[0]
         for max in percentiles[1:]:
-            strat = (scores >= min) & (scores <max)
+            strat = (scores >= min) & (scores < max)
             strata += self.compute_strata(strat)
         self.strata = strata
         return strata
@@ -100,14 +102,20 @@ class StrataMatchingAlgorithm(object):
         
         
     def check_balance_for(self, strat):
-        endog, exog = self.ps.assigment_index[strat], sm.add_constant(self.ps.covariates[strat], prepend = True)
-        #print self.ps.covariates[strat].count()
-        #print endog.count()
-        om = sm.OLS(endog, exog)
-        res= om.fit()
-        #print res.pvalues > 0.05
-        if (res.pvalues > 0.05).all():
+        treated = self.ps.covariates[strat][self.ps.assigment_index[strat] == 1]
+        control = self.ps.covariates[strat][self.ps.assigment_index[strat] == 0]
+        cm = CompareMeans(DescrStatsW(treated), DescrStatsW(control))
+        alpha = 0.2
+        test = cm.ttest_ind()
+        pvalues = test[1]
+        print test[0]
+        print pvalues
+        print pvalues > alpha
+        print np.all(pvalues > alpha)
+
+        if np.all(pvalues > alpha):
             print 'eh!'
-            print res.f_pvalue
-        return (res.f_pvalue > 0.05) and (res.pvalues > 0.05).all()
+            print test[0]
+            print pvalues
+        return np.all(pvalues > alpha)
     
