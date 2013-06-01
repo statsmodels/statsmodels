@@ -12,11 +12,12 @@ from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
 
 
 class PropensityScoreMatch(object):
-    def __init__(self, assigment_index, covariates, treatment_objective_variable):
+    def __init__(self, assigment_index, covariates, treatment_objective_variable, caliper = 0.01):
         self.assigment_index = assigment_index
         self.covariates = covariates
         self.treatment_objective_variable = treatment_objective_variable
-        self.matching_algo = StrataMatchingAlgorithm(self)
+        #self.matching_algo = StrataMatchingAlgorithm(self)
+        self.matching_algo = CaliperMatchingAlgorithm(self, caliper)
         
     def fit(self):
         self.result = PScoreMatchResult()
@@ -118,4 +119,44 @@ class StrataMatchingAlgorithm(object):
             print test[0]
             print pvalues
         return np.all(pvalues > alpha)
+        
+        
+        
+class CaliperMatchingAlgorithm(object):
+    def __init__(self, psmatch, caliper):
+        self.psmatch = psmatch
+        self.caliper = caliper
+        
+    def neighbors_of(self, index):
+        scores = self.psmatch.scores
+        score = scores[index]
+        common = self.psmatch.common_support()
+        answer = []
+        for idx, value in enumerate(common & self.psmatch.control()):
+            if value:
+                if np.abs(scores[idx] - score) < self.caliper:
+                    answer.append(idx)
+        return answer
+        
+    def matches(self):
+        self.matched = {}
+        commonT = self.psmatch.common_support() & self.psmatch.treated()
+        for idx, value in enumerate(commonT):
+            if value:
+                neighbors = self.neighbors_of(idx)
+                if neighbors:
+                    self.matched[idx] = neighbors
+                    
+    def treat_effect_per_treat(self, treated_id, nb):
+        return self.psmatch.treatment_objective_variable[treated_id] - np.mean(self.psmatch.treatment_objective_variable[nb])
+        
+    def treatment_effect(self):
+        return np.mean([self.treat_effect_per_treat(key, value) for key, value in self.matched.items()])
+        
+    def fit(self):
+        self.matches()
+        
+        
+        
+    
     
