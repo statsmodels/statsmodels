@@ -31,11 +31,18 @@ class PropensityScoreMatch(object):
     def treatment_effect(self):
         return self.matching_algo.treatment_effect()
         
+    def treated(self):
+        return self.assigment_index == 1
+    
+    def control(self):
+        return self.assigment_index == 0
+        
  
         
     def common_support(self):
-        min_treated, max_treated = self.scores[self.assigment_index ==1].min(), self.scores[self.assigment_index ==1].max()
-        min_control, max_control = self.scores[self.assigment_index ==0].min(), self.scores[self.assigment_index ==0].max()
+        treated, control = self.treated(), self.control()
+        min_treated, max_treated = self.scores[treated].min(), self.scores[treated].max()
+        min_control, max_control = self.scores[control].min(), self.scores[control].max()
         common_min, common_max = max(min_treated, min_control), min(max_treated, max_control)
         return (self.scores >= common_min) & (self.scores <= common_max)
         
@@ -78,13 +85,14 @@ class StrataMatchingAlgorithm(object):
         
         
     def strat_effect(self, strat):
-        assigments = self.ps.assigment_index[strat]
+        treated, control = self.ps.treated()[strat], self.ps.control()[strat]
         objective = self.ps.treatment_objective_variable[strat]
-        diff = objective.where(assigments ==1).mean() - objective.where(assigments ==0).mean()
+        diff = objective.where(treated).mean() - objective.where(control).mean()
         return diff
     
     def weights(self):
-        return [self.ps.assigment_index[strat].where(self.ps.assigment_index[strat] == 1).count() for strat in self.strata]
+        treated = self.ps.treated()
+        return [self.ps.assigment_index[strat].where(treated).count() for strat in self.strata]
         
     def treatment_effect(self):
         weights = self.weights()
