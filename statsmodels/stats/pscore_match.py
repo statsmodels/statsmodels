@@ -133,11 +133,6 @@ class CaliperMatchingAlgorithm(object):
         common = self.psmatch.common_support()
         answer = []
         return common & self.psmatch.control() & (np.abs(scores - score) < self.caliper)
-        #for idx, value in enumerate(common & self.psmatch.control()):
-        #    if value:
-        #        if np.abs(scores[idx] - score) < self.caliper:
-        #            answer.append(idx)
-        #return answer
         
     def matches(self):
         self.matched = {}
