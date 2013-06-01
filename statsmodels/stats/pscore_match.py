@@ -132,11 +132,12 @@ class CaliperMatchingAlgorithm(object):
         score = scores[index]
         common = self.psmatch.common_support()
         answer = []
-        for idx, value in enumerate(common & self.psmatch.control()):
-            if value:
-                if np.abs(scores[idx] - score) < self.caliper:
-                    answer.append(idx)
-        return answer
+        return common & self.psmatch.control() & (np.abs(scores - score) < self.caliper)
+        #for idx, value in enumerate(common & self.psmatch.control()):
+        #    if value:
+        #        if np.abs(scores[idx] - score) < self.caliper:
+        #            answer.append(idx)
+        #return answer
         
     def matches(self):
         self.matched = {}
@@ -144,7 +145,7 @@ class CaliperMatchingAlgorithm(object):
         for idx, value in enumerate(commonT):
             if value:
                 neighbors = self.neighbors_of(idx)
-                if neighbors:
+                if np.any(neighbors):
                     self.matched[idx] = neighbors
                     
     def treat_effect_per_treat(self, treated_id, nb):
