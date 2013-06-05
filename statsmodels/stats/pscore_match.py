@@ -27,10 +27,10 @@ class PropensityScoreMatch(object):
         self.matching_algo.fit()
         
     def compute_pscore(self):
-        p_mod = sm.Logit(self.assigment_index, self.covariates)
+        p_mod = sm.Logit(self.assigment_index, sm.add_constant(self.covariates))
         p_res = p_mod.fit()
         print p_res.summary()
-        self.scores = pd.Series(p_res.predict(self.covariates))
+        self.scores = pd.Series(p_res.predict(sm.add_constant(self.covariates)))
         self.result.propensity_estimation = p_res
         if self.use_comm_sup:
             comm_sup = self.common_support()
@@ -86,7 +86,8 @@ class StrataMatchingAlgorithm(object):
             scores = self.scores()
             min, max = scores.min(), scores.max()
             half = (min+ max)/2
-            print 'stratum min, max, half: ' + str([min, max, half])
+            print 'stratum min, half, max: ' + str([min, half, max])
+            print 'Treated, Control:' + str([self.ps.assigment_index[x].count() for x in (self.treated(), self.control())])
             
         def treated(self):
             return self.index & (self.ps.assigment_index == 1)
@@ -112,10 +113,13 @@ class StrataMatchingAlgorithm(object):
                 print pvalues
             return np.all(pvalues > alpha)
             
-        def strat_effect(self):
+        def treatment_effect(self):
             objective = self.ps.treatment_objective_variable
             diff = objective[self.treated()].mean() - objective[self.control()].mean()
             return diff
+        
+        def weighted_treatment_effeect(self):
+            return self.treatment_effect() * self.weight()
         
         def weight(self):
             return self.ps.assigment_index[self.treated()].count()
@@ -129,29 +133,40 @@ class StrataMatchingAlgorithm(object):
     def compute_strata(self, strat):
         if not strat.has_treated():
             return []
+        strat.describe()
         if strat.check_balance():
             return [strat,]
         else:
             left, right = strat.bisect()
             return self.compute_strata(left) + self.compute_strata(right)
-        
-    def fit(self):
+            
+            
+    def basic_strata(self):
         common = self.ps.common_support()
         scores = self.ps.scores
-        limits = np.linspace(scores[common].min(), scores[common].max(), 5)
+        #limits = np.linspace(scores[common].min(), scores[common].max(), 5+1)
+        limits = np.linspace(0, 1, 5+1)
         strata = []
         min = limits[0]
         for max in limits[1:]:
             strat = StrataMatchingAlgorithm.Stratum(self.ps, (scores >= min) & (scores < max))
-            strata += self.compute_strata(strat)
+            strata.append(strat)
             min = max
-        self.strata = strata
         return strata
+        
+    def fit(self):
+        self.strata = []
+        for strat in self.basic_strata():
+            self.strata += self.compute_strata(strat)
+        return self.strata
 
         
     def treatment_effect(self):
         weights = self.weights()
-        return np.sum((w*self.strat_effect(strat) for w, strat in zip(weights, self.strata)))/np.sum(weights)
+        return np.sum([strat.weighted_treatment_effeect() for strat in self.strata])/np.sum(weights)
+        
+    def weights(self):
+        return (strat.weight() for strat in self.strata)
         
         
         
