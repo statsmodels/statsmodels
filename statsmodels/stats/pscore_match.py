@@ -27,10 +27,11 @@ class PropensityScoreMatch(object):
         self.matching_algo.fit()
         
     def compute_pscore(self):
-        p_mod = sm.Logit(self.assigment_index, sm.add_constant(self.covariates))
+        covariates = sm.add_constant(self.covariates, prepend=True)
+        p_mod = sm.Logit(self.assigment_index, covariates)
         p_res = p_mod.fit()
         print p_res.summary()
-        self.scores = pd.Series(p_res.predict(sm.add_constant(self.covariates)))
+        self.scores = pd.Series(p_res.predict(covariates))
         self.result.propensity_estimation = p_res
         if self.use_comm_sup:
             comm_sup = self.common_support()
@@ -68,22 +69,16 @@ class StrataMatchingAlgorithm(object):
     class Stratum(object):
         def __init__(self, ps, min, max):
             self.ps = ps
-            self.index = (ps.scores >= min) & (ps.scores < max)
-            
-            
-        def scores(self):
-            return self.ps.scores[self.index]
+            self.index = ps.common_support() & (ps.scores >= min) & (ps.scores < max)
+            self.min, self.max = min, max
             
         def bisect(self):
-            scores = self.scores()
-            min, max = scores.min(), scores.max()
-            half = (min + max)/2
-            all_scores = self.ps.scores
-            return StrataMatchingAlgorithm.Stratum(self.ps, min, half), StrataMatchingAlgorithm.Stratum(self.ps, half, max)
+            half = (self.min + self.max)/2
+            return StrataMatchingAlgorithm.Stratum(self.ps, self.min, half), \
+                StrataMatchingAlgorithm.Stratum(self.ps, half, self.max)
             
         def describe(self):
-            scores = self.scores()
-            min, max = scores.min(), scores.max()
+            min, max = self.min, self.max
             half = (min+ max)/2
             print 'stratum min, half, max: ' + str([min, half, max])
             print 'Treated, Control:' + str([self.ps.assigment_index[x].count() for x in (self.treated(), self.control())])
@@ -98,7 +93,7 @@ class StrataMatchingAlgorithm(object):
             treated = self.ps.covariates[self.treated()]
             control = self.ps.covariates[self.control()]
             cm = CompareMeans(DescrStatsW(treated), DescrStatsW(control))
-            alpha = 0.2
+            alpha = 0.05
             test = cm.ttest_ind()
             pvalues = test[1]
             print test[0]
@@ -123,14 +118,14 @@ class StrataMatchingAlgorithm(object):
         def weight(self):
             return self.ps.assigment_index[self.treated()].count()
             
-        def has_treated(self):
-            return self.weight() > 0
+        def empty(self):
+            return not (np.any(self.treated()) & np.any(self.control()))
                 
     def __init__(self, psmatch):
         self.ps = psmatch
         
     def compute_strata(self, strat):
-        if not strat.has_treated():
+        if strat.empty():
             return []
         strat.describe()
         if strat.check_balance():
@@ -178,7 +173,6 @@ class CaliperMatchingAlgorithm(object):
         scores = self.psmatch.scores
         score = scores[index]
         common = self.psmatch.common_support()
-        answer = []
         return common & self.psmatch.control() & (np.abs(scores - score) < self.caliper)
         
     def matches(self):
