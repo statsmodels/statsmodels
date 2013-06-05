@@ -66,9 +66,9 @@ class PScoreMatchResult(object):
 
 class StrataMatchingAlgorithm(object):
     class Stratum(object):
-        def __init__(self, ps, index):
+        def __init__(self, ps, min, max):
             self.ps = ps
-            self.index = index
+            self.index = (ps.scores >= min) & (ps.scores < max)
             
             
         def scores(self):
@@ -79,8 +79,7 @@ class StrataMatchingAlgorithm(object):
             min, max = scores.min(), scores.max()
             half = (min + max)/2
             all_scores = self.ps.scores
-            left, right = ((all_scores >= min) & (all_scores < half)) , ((all_scores >= half) & (all_scores < max))
-            return StrataMatchingAlgorithm.Stratum(self.ps, self.index & left), StrataMatchingAlgorithm.Stratum(self.ps, self.index & right)
+            return StrataMatchingAlgorithm.Stratum(self.ps, min, half), StrataMatchingAlgorithm.Stratum(self.ps, half, max)
             
         def describe(self):
             scores = self.scores()
@@ -149,7 +148,7 @@ class StrataMatchingAlgorithm(object):
         strata = []
         min = limits[0]
         for max in limits[1:]:
-            strat = StrataMatchingAlgorithm.Stratum(self.ps, (scores >= min) & (scores < max))
+            strat = StrataMatchingAlgorithm.Stratum(self.ps, min, max)
             strata.append(strat)
             min = max
         return strata
