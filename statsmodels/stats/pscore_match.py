@@ -9,6 +9,7 @@ License: BSD-3
 import statsmodels.api as sm
 import numpy as np
 from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
+import pandas as pd
 
 
 class PropensityScoreMatch(object):
@@ -16,8 +17,9 @@ class PropensityScoreMatch(object):
         self.assigment_index = assigment_index
         self.covariates = covariates
         self.treatment_objective_variable = treatment_objective_variable
-        #self.matching_algo = StrataMatchingAlgorithm(self)
-        self.matching_algo = CaliperMatchingAlgorithm(self, caliper)
+        self.matching_algo = StrataMatchingAlgorithm(self)
+        #self.matching_algo = CaliperMatchingAlgorithm(self, caliper)
+        self.use_comm_sup = True
         
     def fit(self):
         self.result = PScoreMatchResult()
@@ -28,8 +30,17 @@ class PropensityScoreMatch(object):
         p_mod = sm.Logit(self.assigment_index, self.covariates)
         p_res = p_mod.fit()
         print p_res.summary()
-        self.scores = p_res.predict(self.covariates)
+        self.scores = pd.Series(p_res.predict(self.covariates))
         self.result.propensity_estimation = p_res
+        if self.use_comm_sup:
+            comm_sup = self.common_support()
+            scores = self.scores[comm_sup]
+            print 'Using common support: %s' % str([scores.min(), scores.max()]) 
+        else:
+            scores = self.scores
+        print 'propensity scores description'
+        print scores.describe()
+        
         
     def treatment_effect(self):
         return self.matching_algo.treatment_effect()
@@ -54,71 +65,93 @@ class PScoreMatchResult(object):
     pass
 
 class StrataMatchingAlgorithm(object):
+    class Stratum(object):
+        def __init__(self, ps, index):
+            self.ps = ps
+            self.index = index
+            
+            
+        def scores(self):
+            return self.ps.scores[self.index]
+            
+        def bisect(self):
+            scores = self.scores()
+            min, max = scores.min(), scores.max()
+            half = (min + max)/2
+            all_scores = self.ps.scores
+            left, right = ((all_scores >= min) & (all_scores < half)) , ((all_scores >= half) & (all_scores < max))
+            return StrataMatchingAlgorithm.Stratum(self.ps, self.index & left), StrataMatchingAlgorithm.Stratum(self.ps, self.index & right)
+            
+        def describe(self):
+            scores = self.scores()
+            min, max = scores.min(), scores.max()
+            half = (min+ max)/2
+            print 'stratum min, max, half: ' + str([min, max, half])
+            
+        def treated(self):
+            return self.index & (self.ps.assigment_index == 1)
+            
+        def control(self):
+            return self.index & (self.ps.assigment_index == 0)
+            
+        def check_balance(self):
+            treated = self.ps.covariates[self.treated()]
+            control = self.ps.covariates[self.control()]
+            cm = CompareMeans(DescrStatsW(treated), DescrStatsW(control))
+            alpha = 0.2
+            test = cm.ttest_ind()
+            pvalues = test[1]
+            print test[0]
+            print pvalues
+            print pvalues > alpha
+            print np.all(pvalues > alpha)
+    
+            if np.all(pvalues > alpha):
+                print 'eh!'
+                print test[0]
+                print pvalues
+            return np.all(pvalues > alpha)
+            
+        def strat_effect(self):
+            objective = self.ps.treatment_objective_variable
+            diff = objective[self.treated()].mean() - objective[self.control()].mean()
+            return diff
+        
+        def weight(self):
+            return self.ps.assigment_index[self.treated()].count()
+            
+        def has_treated(self):
+            return self.weight() > 0
+                
     def __init__(self, psmatch):
         self.ps = psmatch
         
     def compute_strata(self, strat):
-        assigment = self.ps.assigment_index[strat]
-        if assigment.where(assigment == 1).count() <= 1:
+        if not strat.has_treated():
             return []
-        if self.check_balance_for(strat):
+        if strat.check_balance():
             return [strat,]
         else:
-            return self.divide_strat(strat)
+            left, right = strat.bisect()
+            return self.compute_strata(left) + self.compute_strata(right)
         
     def fit(self):
         common = self.ps.common_support()
         scores = self.ps.scores
-        percentiles = np.percentile(scores[common], [0, 20, 40, 60, 80, 100])
+        limits = np.linspace(scores[common].min(), scores[common].max(), 5)
         strata = []
-        min = percentiles[0]
-        for max in percentiles[1:]:
-            strat = (scores >= min) & (scores < max)
+        min = limits[0]
+        for max in limits[1:]:
+            strat = StrataMatchingAlgorithm.Stratum(self.ps, (scores >= min) & (scores < max))
             strata += self.compute_strata(strat)
+            min = max
         self.strata = strata
         return strata
-    
-    def divide_strat(self, strat):
-        scores = self.ps.scores
-        min, max = np.percentile(scores[strat], [0, 100])
-        half = (min+ max)/2
-        print min, max, half
-        left, right = ((scores >= min) & (scores < half)) , ((scores >= half) & (scores < max))
-        return self.compute_strata(left) + self.compute_strata(right)
-        
-        
-    def strat_effect(self, strat):
-        treated, control = self.ps.treated()[strat], self.ps.control()[strat]
-        objective = self.ps.treatment_objective_variable[strat]
-        diff = objective.where(treated).mean() - objective.where(control).mean()
-        return diff
-    
-    def weights(self):
-        treated = self.ps.treated()
-        return [self.ps.assigment_index[strat].where(treated).count() for strat in self.strata]
+
         
     def treatment_effect(self):
         weights = self.weights()
         return np.sum((w*self.strat_effect(strat) for w, strat in zip(weights, self.strata)))/np.sum(weights)
-        
-        
-    def check_balance_for(self, strat):
-        treated = self.ps.covariates[strat][self.ps.assigment_index[strat] == 1]
-        control = self.ps.covariates[strat][self.ps.assigment_index[strat] == 0]
-        cm = CompareMeans(DescrStatsW(treated), DescrStatsW(control))
-        alpha = 0.2
-        test = cm.ttest_ind()
-        pvalues = test[1]
-        print test[0]
-        print pvalues
-        print pvalues > alpha
-        print np.all(pvalues > alpha)
-
-        if np.all(pvalues > alpha):
-            print 'eh!'
-            print test[0]
-            print pvalues
-        return np.all(pvalues > alpha)
         
         
         
