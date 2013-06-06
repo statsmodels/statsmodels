@@ -13,12 +13,16 @@ import pandas as pd
 
 
 class PropensityScoreMatch(object):
-    def __init__(self, assigment_index, covariates, treatment_objective_variable, caliper = 0.01):
+    def __init__(self, assigment_index, covariates, treatment_objective_variable, algo = 'strata', radius = 0.01):
         self.assigment_index = assigment_index
         self.covariates = covariates
         self.treatment_objective_variable = treatment_objective_variable
-        self.matching_algo = StrataMatchingAlgorithm(self)
-        #self.matching_algo = CaliperMatchingAlgorithm(self, caliper)
+        if algo == 'strata':
+            self.matching_algo = StrataMatchingAlgorithm(self)
+        elif algo == 'radius':
+            self.matching_algo = RadiusMatchingAlgorithm(self, radius)
+        else:
+            raise
         self.use_comm_sup = True
         
     def fit(self):
@@ -46,16 +50,22 @@ class PropensityScoreMatch(object):
     def treatment_effect(self):
         return self.matching_algo.treatment_effect()
         
-    def treated(self):
+    def _basic_treated(self):
         return self.assigment_index == 1
     
-    def control(self):
+    def _basic_control(self):
         return self.assigment_index == 0
+    
+    def treated(self):
+        return self._basic_treated() & self.common_support() 
+    
+    def control(self):
+        return self._basic_control() & self.common_support()
         
  
         
     def common_support(self):
-        treated, control = self.treated(), self.control()
+        treated, control = self._basic_treated(), self._basic_control()
         min_treated, max_treated = self.scores[treated].min(), self.scores[treated].max()
         min_control, max_control = self.scores[control].min(), self.scores[control].max()
         common_min, common_max = max(min_treated, min_control), min(max_treated, max_control)
@@ -83,10 +93,10 @@ class Stratum(object):
         print 'Treated, Control:' + str([self.ps.assigment_index[x].count() for x in (self.treated(), self.control())])
         
     def treated(self):
-        return self.index & (self.ps.assigment_index == 1)
+        return self.ps.treated() & self.index 
         
     def control(self):
-        return self.index & (self.ps.assigment_index == 0)
+        return self.ps.control() & self.index
         
     def check_balance(self):
         return self.check_balance_for(self.ps.scores) and self.check_balance_for(self.ps.covariates)
@@ -137,8 +147,6 @@ class StrataMatchingAlgorithm(object):
             
             
     def basic_strata(self):
-        common = self.ps.common_support()
-        scores = self.ps.scores
         #limits = np.linspace(scores[common].min(), scores[common].max(), 5+1)
         limits = np.linspace(0, 1, 5+1)
         strata = []
@@ -167,28 +175,26 @@ class StrataMatchingAlgorithm(object):
         
         
         
-class CaliperMatchingAlgorithm(object):
-    def __init__(self, psmatch, caliper):
+class RadiusMatchingAlgorithm(object):
+    def __init__(self, psmatch, radius):
         self.psmatch = psmatch
-        self.caliper = caliper
+        self.radius = radius
         
     def neighbors_of(self, index):
         scores = self.psmatch.scores
         score = scores[index]
-        common = self.psmatch.common_support()
-        return common & self.psmatch.control() & (np.abs(scores - score) < self.caliper)
+        return self.psmatch.control() & (np.abs(scores - score) < self.radius)
         
     def matches(self):
         self.matched = {}
-        commonT = self.psmatch.common_support() & self.psmatch.treated()
-        for idx, value in enumerate(commonT):
+        for idx, value in enumerate(self.psmatch.treated()):
             if value:
                 neighbors = self.neighbors_of(idx)
                 if np.any(neighbors):
                     self.matched[idx] = neighbors
                     
     def treat_effect_per_treat(self, treated_id, nb):
-        return self.psmatch.treatment_objective_variable[treated_id] - np.mean(self.psmatch.treatment_objective_variable[nb])
+        return self.psmatch.treatment_objective_variable[treated_id] - self.psmatch.treatment_objective_variable[nb].mean()
         
     def treatment_effect(self):
         return np.mean([self.treat_effect_per_treat(key, value) for key, value in self.matched.items()])
