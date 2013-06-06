@@ -78,7 +78,8 @@ class StrataMatchingAlgorithm(object):
                 StrataMatchingAlgorithm.Stratum(self.ps, half, self.max)
             
         def describe(self):
-            min, max = self.min, self.max
+            scores = self.ps.scores[self.index]
+            min, max = scores.min(), scores.max()
             half = (min+ max)/2
             print 'stratum min, half, max: ' + str([min, half, max])
             print 'Treated, Control:' + str([self.ps.assigment_index[x].count() for x in (self.treated(), self.control())])
@@ -90,10 +91,11 @@ class StrataMatchingAlgorithm(object):
             return self.index & (self.ps.assigment_index == 0)
             
         def check_balance(self):
-            treated = self.ps.covariates[self.treated()]
-            control = self.ps.covariates[self.control()]
+            return self.check_balance_for(self.ps.scores, 0.05) and self.check_balance_for(self.ps.covariates, 0.001)
+            
+        def check_balance_for(self, data, alpha):
+            treated, control = data[self.treated()], data[self.control()]
             cm = CompareMeans(DescrStatsW(treated), DescrStatsW(control))
-            alpha = 0.05
             test = cm.ttest_ind()
             pvalues = test[1]
             print test[0]
