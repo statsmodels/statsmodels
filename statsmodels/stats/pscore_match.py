@@ -91,22 +91,23 @@ class StrataMatchingAlgorithm(object):
             return self.index & (self.ps.assigment_index == 0)
             
         def check_balance(self):
-            return self.check_balance_for(self.ps.scores, 0.05) and self.check_balance_for(self.ps.covariates, 0.001)
+            return self.check_balance_for(self.ps.scores) and self.check_balance_for(self.ps.covariates)
             
-        def check_balance_for(self, data, alpha):
+        def check_balance_for(self, data):
             treated, control = data[self.treated()], data[self.control()]
             cm = CompareMeans(DescrStatsW(treated), DescrStatsW(control))
             test = cm.ttest_ind()
             pvalues = test[1]
-            print test[0]
-            print pvalues
-            print pvalues > alpha
-            print np.all(pvalues > alpha)
+            alpha = 0.005
+            #print test[0]
+            #print pvalues
+            #print pvalues > alpha
+            #print np.all(pvalues > alpha)
     
-            if np.all(pvalues > alpha):
-                print 'eh!'
-                print test[0]
-                print pvalues
+            #if np.all(pvalues > alpha):
+                #print 'eh!'
+            #    print test[0]
+            #    print pvalues
             return np.all(pvalues > alpha)
             
         def treatment_effect(self):
@@ -129,7 +130,6 @@ class StrataMatchingAlgorithm(object):
     def compute_strata(self, strat):
         if strat.empty():
             return []
-        strat.describe()
         if strat.check_balance():
             return [strat,]
         else:
@@ -154,6 +154,8 @@ class StrataMatchingAlgorithm(object):
         self.strata = []
         for strat in self.basic_strata():
             self.strata += self.compute_strata(strat)
+        print 'found: %d strata' % len(self.strata)
+        [strat.describe() for strat in self.strata]
         return self.strata
 
         
