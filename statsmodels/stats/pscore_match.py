@@ -23,7 +23,7 @@ class PropensityScoreMatch(object):
             self.matching_algo = RadiusMatchingAlgorithm(self, radius)
         else:
             raise
-        self.use_comm_sup = True
+        self.use_comm_sup = False
         
     def fit(self):
         self.result = PScoreMatchResult()
@@ -65,6 +65,8 @@ class PropensityScoreMatch(object):
  
         
     def common_support(self):
+        if not self.use_comm_sup:
+            return True
         treated, control = self._basic_treated(), self._basic_control()
         min_treated, max_treated = self.scores[treated].min(), self.scores[treated].max()
         min_control, max_control = self.scores[control].min(), self.scores[control].max()
@@ -194,10 +196,19 @@ class RadiusMatchingAlgorithm(object):
                     self.matched[idx] = neighbors
                     
     def treat_effect_per_treat(self, treated_id, nb):
-        return self.psmatch.treatment_objective_variable[treated_id] - self.psmatch.treatment_objective_variable[nb].mean()
+        return (self.psmatch.treatment_objective_variable[treated_id]) - (self.psmatch.treatment_objective_variable[nb].mean())
         
     def treatment_effect(self):
         return np.mean([self.treat_effect_per_treat(key, value) for key, value in self.matched.items()])
+        
+    def matched_control(self):
+        return np.any(self.matched.values(), axis=0).sum()
+        
+    def matched_treatment(self):
+        return len(self.matched)
+        
+    def describe(self):
+        print 'radius: %f\t treated :%d control: %d \t treatment effect: %f' % (self.radius, self.matched_treatment(), self.matched_control(), self.treatment_effect())
         
     def fit(self):
         self.matches()
