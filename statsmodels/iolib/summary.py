@@ -154,8 +154,15 @@ class Summary(object):
 
         self.rule.append(row)
 
-    def as_text(self):
+    def as_text(self, max_width=200):
         '''Generate ASCII Summary Table
+
+        Parameters
+        ----------
+        max_width : int maximum width of the ascii table. Panels that are
+            "naturally" larger than width will not be shrunk, but no panel will
+            be expanded/padded in such a way that it exceeds the specified
+            max_width.
         '''
 
         tables = self.tables
@@ -163,7 +170,7 @@ class Summary(object):
         title = self.title
         extra_txt = self.extra_txt
 
-        pad_col, pad_index, widest = _measure_tables(tables, settings)
+        pad_col, pad_index, widest = _measure_tables(tables, settings, max_width)
 
         rule_equal = widest * '='
         rule_dash = widest * '-'
@@ -173,8 +180,8 @@ class Summary(object):
 
         tab = '\n'.join(tab)
         tab = tab.split('\n')
-        tab[0] = rule_equal
-        tab.append(rule_equal)
+        tab[0] = '=' * len(tab[1]) 
+        tab.append('=' * len(tab[-1]))
         tab = '\n'.join(tab)
 
         if title is not None:
@@ -232,7 +239,7 @@ class Summary(object):
         return out
 
 
-def _measure_tables(tables, settings):
+def _measure_tables(tables, settings, width=200):
     '''Compare width of ascii tables in a list and calculate padding values.
     We add space to each col_sep to get us as close as possible to the
     width of the largest table. Then, we add a few spaces to the first
@@ -251,10 +258,15 @@ def _measure_tables(tables, settings):
         nsep = tables[i].shape[1] - 1
         if settings[i]['index']:
             nsep += 1
-        pad = int((len_max - length[i]) / nsep)
-        pad_sep.append(pad)
-        len_new = length[i] + nsep * pad
-        pad_index.append(len_max - len_new)
+        if length[i] >= width:
+            pad_sep.append(0)
+            pad_index.append(0)
+        else:
+            len_target = min(len_max, width)
+            pad = int((len_target - length[i]) / nsep)
+            pad_sep.append(pad)
+            len_new = length[i] + nsep * pad
+            pad_index.append(len_target - len_new)
 
     return pad_sep, pad_index, max(length)
 
@@ -468,7 +480,7 @@ def _df_to_simpletable(dat, align='r', float_format=None, header=True,
     st.output_formats['txt']['table_dec_above'] = table_dec_above
     st.output_formats['txt']['table_dec_below'] = table_dec_below
     st.output_formats['txt']['header_dec_below'] = header_dec_below
-    st.output_formats['txt']['colsep'] = ' ' * int(pad_col + 1)
+    st.output_formats['txt']['colsep'] = ' ' * int(pad_col + 2)
     return st
 
 
