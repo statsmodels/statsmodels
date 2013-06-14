@@ -81,10 +81,13 @@ def trim_mean(a, proportiontocut, axis=0):
     return np.mean(newa, axis=axis)
 
 class TrimmedMean(object):
+    '''class for trimmed and winsorized one sample statistics
+
+    '''
 
     def __init__(self, data, fraction, is_sorted=False, axis=0):
         self.data = np.asarray(data)
-        #TODO: add pandas handling, maybe not this is only internal
+        #TODO: add pandas handling, maybe not if this stays internal
         self.fraction = fraction
         self.axis = axis
         self.nobs = nobs = self.data.shape[axis]
@@ -184,6 +187,8 @@ def anova_bfm(*args):
 
     This currently returns both Brown-Forsythe, and Mehrotra adjusted pvalues.
     The Brown-Forsythe p-values are slightly liberal, i.e. reject too often.
+    It can be more powerful than the better sized then the test based on
+    Mehrotra p-values.
 
     Parameters
     ----------
@@ -196,9 +201,9 @@ def anova_bfm(*args):
         test statistic for k-sample mean comparison which is approximately
         F-distributed.
     pval : float
-        p-value Brown-Forsythe
+        p-value as in Brown-Forsythe 1974
     pval2 : float
-       p-value as corrected by Mehrotra
+       p-value as corrected by Mehrotra 1997
     (df_denom, df_num, df_denom2) : tuple of floats
         degreeds of freedom for the F-distribution. `df_denom` is for
         Brown-Forsythe p-values, `df_denom2` is for Mehrotra p-values.
@@ -206,9 +211,14 @@ def anova_bfm(*args):
 
     References
     ----------
-    Brown, Morton B., and Alan B. Forsythe. 1974. “The Small Sample Behavior of Some Statistics Which Test the Equality of Several Means.” Technometrics 16 (1) (February 1): 129–132. doi:10.2307/1267501.
+    Brown, Morton B., and Alan B. Forsythe. 1974. “The Small Sample Behavior
+    of Some Statistics Which Test the Equality of Several Means.”
+    Technometrics 16 (1) (February 1): 129–132. doi:10.2307/1267501.
 
-    Mehrotra, Devan V. 1997. “Improving the Brown-forsythe Solution to the Generalized Behrens-fisher Problem.” Communications in Statistics - Simulation and Computation 26 (3): 1139–1145. doi:10.1080/03610919708813431.
+    Mehrotra, Devan V. 1997. “Improving the Brown-Forsythe Solution to the
+    Generalized Behrens-Fisher Problem.” Communications in Statistics -
+    Simulation and Computation 26 (3): 1139–1145.
+    doi:10.1080/03610919708813431.
 
     '''
     args = map(np.asarray, args)
@@ -226,18 +236,74 @@ def anova_bfm(*args):
     statistic = 1. * (nobs * (means - mean_t)**2).sum()
     statistic /= tmp
 
-    df_denom = len(nobs) - 1
-    df_num = tmp**2 / ((1. - nobs / nobs_t)**2 * vars_**2 / (nobs - 1)).sum()
-    df_denom2 = tmp**2 / ((vars_**2).sum() +
+    df_num = len(nobs) - 1
+    df_denom = tmp**2 / ((1. - nobs / nobs_t)**2 * vars_**2 / (nobs - 1)).sum()
+    df_num2 = tmp**2 / ((vars_**2).sum() +
                           (nobs / nobs_t * vars_).sum()**2 -
                            2 * (nobs / nobs_t * vars_**2).sum())
 
 
-    pval = stats.f.sf(statistic, df_denom, df_num)
-    pval2 = stats.f.sf(statistic, df_denom2, df_num)
-    return statistic, pval, pval2, (df_denom, df_num, df_denom2)
+    pval = stats.f.sf(statistic, df_num, df_denom)
+    pval2 = stats.f.sf(statistic, df_num2, df_denom)
+    return statistic, pval, pval2, (df_num, df_denom, df_num2)
 
 def anova_welch(args, trim_frac=0):
+    '''Welch's one-way Anova for samples with heterogeneous variances
+
+    Welch's anova is correctly sized (not liberal or conservative) in smaller
+    samples if the distribution of the samples is not very far away from the
+    normal distribution. The test can become liberal if the data is strongly
+    skewed. Welch's Anova can also be correctly sized for discrete
+    distributions with finite support, like Lickert scale data.
+    The trimmed version is robust to many non-normal distributions, it stays
+    correctly sized in many cases, and is more powerful in some cases with
+    skewness or heavy tails.
+
+    Parameters
+    ----------
+    args : tuple of array_like
+        k independent samples, each array needs to be one dimensional and
+        contain one independent sample
+    trim_frac : float in [0, 0.5)
+        optional trimming for Anova with trimmed mean and winsorized variances.
+        With the default trim_frac equal to zero, the standard Welch's Anova
+        is computed without trimming. I `trim_frac` is larger than zero, then
+        then the largest and smallest observations in each sample are trimmed.
+        The number of trimmed observations is this fraction of number of
+        observations in the sample truncated to the next lower integer.
+        `trim_frac` has to be smaller than 0.5, however, if the fraction is
+        so large that there are not enough observations left over, then `nan`
+        will be returned.
+
+    Returns
+    -------
+    statistic : float
+        test statistic that is approximately F distributed
+    p_value : float
+        p_value of the approximate F-test
+    (df_num, df_denom) : tuple of floats
+        degrees of freedom for the F distribution
+
+    Notes
+    -----
+    This is a reference implementation. Welch's Anova produces the same
+    result as `oneway.test` with `equal.var=FALSE` in R stats.
+    The trimmed version has been verified by Monte Carlo simulations.
+
+    This function will be replaced by one that is better integrated with
+    related classes and functions in statsmodels.
+
+    Trimming is currently based on the integer part of ``nobs * trim_frac``.
+    The default might change to including fractional observations as in the
+    original articles by Yuen.
+
+    References
+    ----------
+    Welch
+
+    Yuen
+
+    '''
 
     args = map(np.asarray, args)
     if any([x.ndim != 1 for x in args]):
