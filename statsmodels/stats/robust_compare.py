@@ -182,10 +182,10 @@ class TrimmedMean(object):
         return tm
 
 
-def anova_bfm(*args):
+def anova_bfm(args, trim_frac=0):
     '''Brown-Forsythe Anova for comparison of means
 
-    This currently returns both Brown-Forsythe, and Mehrotra adjusted pvalues.
+    This currently returns both Brown-Forsythe and Mehrotra adjusted pvalues.
     The Brown-Forsythe p-values are slightly liberal, i.e. reject too often.
     It can be more powerful than the better sized then the test based on
     Mehrotra p-values.
@@ -226,8 +226,18 @@ def anova_bfm(*args):
         raise ValueError('data arrays have to be one-dimensional')
 
     nobs = np.array([len(x) for x in args], float)
-    means = np.array([x.mean() for x in args])
-    vars_ = np.array([x.var() for x in args])
+
+    if trim_frac == 0:
+        means = np.array([x.mean() for x in args])
+        vars_ = np.array([x.var(ddof=1) for x in args])
+    else:
+        tms = [TrimmedMean(x, trim_frac) for x in args]
+        means = np.array([tm.mean_trimmed for tm in tms])
+        vars_ = np.array([tm.var_winsorized for tm in tms])
+        nobs_original = nobs # store just in case
+        nobs = np.array([tm.nobs_reduced for tm in tms])
+
+
     nobs_t = nobs.sum()
     mean_t = (nobs * means).sum() / nobs_t
 
@@ -310,6 +320,8 @@ def anova_welch(args, trim_frac=0):
         raise ValueError('data arrays have to be one-dimensional')
 
     n_groups = len(args)
+
+    # the next block can be replaced by different implementation for groupsstats
     nobs = np.array([len(x) for x in args], float)
     if trim_frac == 0:
         means = np.array([x.mean() for x in args])
@@ -392,29 +404,37 @@ if __name__ == '__main__':
         np.random.seed(19864256)
         nrep = 10000
         nobs = np.array([5,10,5,5]) * 3
-        mm = (1, 1, 1, 2)
+        mm = (1, 1, 1, 1)
         ss = (0.8, 1, 1, 2)
         #ss = (1, 1, 1, 1)
 
         # run a Monte Carlo simulation to check size and power of tests
+        res_v = np.zeros((nrep, 3))
         res = np.zeros((nrep, 6))
         res_w = np.zeros((nrep, 4))
         for ii in range(nrep):
             #xx = [m + s * np.random.randn(n) for n, m, s in zip(nobs, mm, ss)]
-            xx = [m + s * stats.t.rvs(3, size=n) for n, m, s in zip(nobs, mm, ss)]
-            #xx = [m + s * stats.lognorm.rvs(1.5, size=n) - stats.lognorm.mean(1.5, scale=s) for n, m, s in zip(nobs, mm, ss)]
+            #xx = [m + s * stats.t.rvs(3, size=n) for n, m, s in zip(nobs, mm, ss)]
+            xx = [m + s * (stats.lognorm.rvs(1.5, size=n) - stats.lognorm.mean(1.5)) for n, m, s in zip(nobs, mm, ss)]
+            #xx = [m + s * (stats.chi2.rvs(3, size=n) - stats.chi2.mean(3)) for n, m, s in zip(nobs, mm, ss)]
             #xxd = [np.abs(x - np.median(x)) for x in xx]
             xxd = [scale_transform(x, center='trimmed', transform='abs', frac=0.1)
                            for x in xx]
             #print bf_anova(*xx)[:2], bf_anova(*xxd)[:2]
-            res[ii] = np.concatenate((anova_bfm(*xx)[:3], anova_bfm(*xxd)[:3]))
+            # levene raises exception with unbalanced
+            #res_v[ii] = np.concatenate((stats.levene(*xx), anova_bfm(xxd)[:3]))
+            res_v[ii] = anova_bfm(xxd)[:3]
+            res[ii] = np.concatenate((anova_bfm(xx)[:3],
+                                      anova_bfm(xx, trim_frac=0.2)[:3]))
             res_w[ii] = np.concatenate((anova_welch(xx)[:2],
-                                        anova_welch(xx, trim_frac=0.1)[:2]))
+                                        anova_welch(xx, trim_frac=0.2)[:2]))
 
         #print res[:5]
         print nobs
         print mm
         print ss
+        print '\nBF scale'
+        print (res_v[:, [1, 2]] < 0.05).mean(0)
         print '\nBF'
         print (res[:, [1, 2, 4, 5]] < 0.05).mean(0)
         print '\nWelch'
@@ -428,7 +448,7 @@ if __name__ == '__main__':
         ss = (0.8, 1, 1, 2)
 
         xx = [m + s * np.random.randn(n) for n, m, s in zip(nobs, mm, ss)]
-        print anova_bfm(*xx)
+        print anova_bfm(xx)
         print anova_welch(xx)
 
         npk_yield = np.array([
@@ -439,7 +459,7 @@ if __name__ == '__main__':
          1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6,
          6 ])
         xyield = [npk_yield[npk_block == idx] for idx in range(1,7)]
-        print anova_bfm(*xyield)
+        print anova_bfm(xyield)
         print anova_welch(xyield)
         idx_include = range(24)
         del idx_include[15]
@@ -448,7 +468,7 @@ if __name__ == '__main__':
         npk_block_ub = npk_block[idx_include]
         npk_yield_ub = npk_yield[idx_include]
         xyield_ub = [npk_yield_ub[npk_block_ub == idx] for idx in range(1,7)]
-        print anova_bfm(*xyield_ub)
+        print anova_bfm(xyield_ub)
         print anova_welch(xyield_ub)
         print anova_welch(xyield_ub, trim_frac=0.01)
         print anova_welch(xyield_ub, trim_frac=0.25)
