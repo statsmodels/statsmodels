@@ -38,7 +38,7 @@ def wls_prediction_std(res, exog=None, weights=None, alpha=0.05):
         exogenous variables for points to predict
     weights : scalar or array_like (optional)
         weights as defined for WLS (inverse of variance of observation)
-    alpha : float (default: alpha = 0.5)
+    alpha : float (default: alpha = 0.05)
         confidence level for two-sided hypothesis
 
     Returns
