@@ -13,17 +13,24 @@ import pandas as pd
 
 
 class PropensityScoreMatch(object):
-    def __init__(self, assigment_index, covariates, treatment_objective_variable, algo = 'strata', radius = 0.01):
+    def __init__(self, assigment_index, covariates, treatment_objective_variable,\
+                 algo = 'strata', radius = 0.01, regression = 'logit'):
         self.assigment_index = assigment_index
         self.covariates = covariates
         self.treatment_objective_variable = treatment_objective_variable
+        if regression == 'logit':
+            self.regression_class = sm.Logit
+        elif regression == 'probit':
+            self.regression_class = sm.Probit
+        else:
+            raise
         if algo == 'strata':
             self.matching_algo = StrataMatchingAlgorithm(self)
         elif algo == 'radius':
             self.matching_algo = RadiusMatchingAlgorithm(self, radius)
         else:
             raise
-        self.use_comm_sup = False
+        self.use_comm_sup = True
         
     def fit(self):
         self.result = PScoreMatchResult()
@@ -32,10 +39,11 @@ class PropensityScoreMatch(object):
         
     def compute_pscore(self):
         covariates = sm.add_constant(self.covariates, prepend=True)
-        p_mod = sm.Logit(self.assigment_index, covariates)
+        p_mod = self.regression_class(self.assigment_index, covariates)
         p_res = p_mod.fit()
         print p_res.summary()
-        self.scores = pd.Series(p_res.predict(covariates))
+        self.scores = pd.Series(p_res.predict(covariates), \
+                                index=self.assigment_index.index)
         self.result.propensity_estimation = p_res
         if self.use_comm_sup:
             comm_sup = self.common_support()
@@ -109,15 +117,6 @@ class Stratum(object):
         test = cm.ttest_ind()
         pvalues = test[1]
         alpha = 0.005
-        #print test[0]
-        #print pvalues
-        #print pvalues > alpha
-        #print np.all(pvalues > alpha)
-
-        #if np.all(pvalues > alpha):
-            #print 'eh!'
-        #    print test[0]
-        #    print pvalues
         return np.all(pvalues > alpha)
         
     def treatment_effect(self):
@@ -189,11 +188,10 @@ class RadiusMatchingAlgorithm(object):
         
     def matches(self):
         self.matched = {}
-        for idx, value in enumerate(self.psmatch.treated()):
-            if value:
-                neighbors = self.neighbors_of(idx)
-                if np.any(neighbors):
-                    self.matched[idx] = neighbors
+        for idx in self.psmatch.scores[self.psmatch.treated()].index:
+            neighbors = self.neighbors_of(idx)
+            if np.any(neighbors):
+                self.matched[idx] = neighbors
                     
     def treat_effect_per_treat(self, treated_id, nb):
         return (self.psmatch.treatment_objective_variable[treated_id]) - (self.psmatch.treatment_objective_variable[nb].mean())
