@@ -124,7 +124,7 @@ def _get_margeff_exog(exog, at, atexog, ind):
             if atexog.ndim == 1:
                 k_vars = len(atexog)
             else:
-                K_vars = atexog.shape[1]
+                k_vars = atexog.shape[1]
             try:
                 assert k_vars == exog.shape[1]
             except:
@@ -150,9 +150,9 @@ def _get_count_effects(effects, exog, count_ind, method, model, params):
     # this is the index for the effect and the index for count col in exog
     for i in count_ind:
         exog0 = exog.copy()
-        exog0[:,i] -= 1
+        exog0[:, i] -= 1
         effect0 = model.predict(params, exog0)
-        exog0[:,i] += 2
+        exog0[:, i] += 2
         effect1 = model.predict(params, exog0)
         #NOTE: done by analogy with dummy effects but untested bc
         # stata doesn't handle both count and eydx anywhere
@@ -306,18 +306,18 @@ def margeff_cov_params(model, params, exog, cov_params, at, derivative,
     """
     if callable(derivative):
         from statsmodels.tools.numdiff import approx_fprime_cs
-        params = params.ravel('F') # for Multinomial
+        params = params.ravel('F')  # for Multinomial
         try:
             jacobian_mat = approx_fprime_cs(params, derivative,
                                             args=(exog,method))
-        except TypeError, err: #norm.cdf doesn't take complex values
+        except TypeError:  # norm.cdf doesn't take complex values
             from statsmodels.tools.numdiff import approx_fprime1
             jacobian_mat = approx_fprime1(params, derivative,
                                             args=(exog,method))
         if at == 'overall':
             jacobian_mat = np.mean(jacobian_mat, axis=1)
         else:
-            jacobian_mat = jacobian_mat.squeeze() # exog was 2d row vector
+            jacobian_mat = jacobian_mat.squeeze()  # exog was 2d row vector
         if dummy_ind is not None:
             jacobian_mat = _margeff_cov_params_dummy(model, jacobian_mat,
                                 params, exog, dummy_ind, method, J)
