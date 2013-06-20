@@ -10,6 +10,7 @@ import statsmodels.api as sm
 import numpy as np
 from statsmodels.stats.weightstats import CompareMeans, DescrStatsW
 import pandas as pd
+from scipy import stats
 
 
 class PropensityScoreMatch(object):
@@ -57,6 +58,18 @@ class PropensityScoreMatch(object):
         
     def treatment_effect(self):
         return self.matching_algo.treatment_effect()
+        
+    def treatment_variance(self):
+        return self.matching_algo.treatment_variance()
+        
+    def treatment_std(self):
+        return np.sqrt(self.treatment_variance())
+        
+    def confidence_interval(self, alpha=0.05):
+        #assuming normality (don't know df)
+        mean, std = self.treatment_effect(), self.treatment_std()
+        return stats.norm.interval(alpha, loc=mean, scale=std )
+        
         
     def _basic_treated(self):
         return self.assigment_index == 1
@@ -198,6 +211,18 @@ class RadiusMatchingAlgorithm(object):
         
     def treatment_effect(self):
         return np.mean([self.treat_effect_per_treat(key, value) for key, value in self.matched.items()])
+        
+    def treatment_variance(self):
+        treated = self.matched.keys()
+        controls = self.matched.values()
+        cvar = 0
+        for matched_control in controls:
+            count = float(self.psmatch.treatment_objective_variable[matched_control].count())
+            if count > 1:
+                cvar  +=  self.psmatch.treatment_objective_variable[matched_control].var()/(count**2)
+        tvar = len(treated) *(self.psmatch.treatment_objective_variable[treated].var())
+        return 1/float(len(treated)**2)*(tvar+cvar)
+        
         
     def matched_control(self):
         return np.any(self.matched.values(), axis=0).sum()
