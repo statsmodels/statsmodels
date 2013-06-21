@@ -88,6 +88,16 @@ class TestKDEGaussFFT(CheckKDE):
         rfname2 = os.path.join(curdir,'results','results_kde_fft.csv')
         cls.res_density = np.genfromtxt(open(rfname2, 'rb'))
 
+class test_kde_refit():
+    data1 = np.linspace(0,1,100)
+    pdf = KDE(data1)
+    pdf.fit()
+
+    data2 = np.linspace(1,2,100)
+    pdf2 = KDE(data2)
+    pdf2.fit()
+
+    npt.assert_(not np.allclose(pdf.icdf[0], pdf2.icdf[1]))
 
 if __name__ == "__main__":
     import nose
