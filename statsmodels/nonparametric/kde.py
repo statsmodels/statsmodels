@@ -78,7 +78,6 @@ class KDEUnivariate(object):
     >>> plt.show()
 
     """
-    _cache = resettable_cache()
 
     def __init__(self, endog):
         self.endog = np.asarray(endog)
@@ -150,6 +149,8 @@ class KDEUnivariate(object):
         self.bw = bw
         self.kernel = kernel_switch[kernel](h=bw) # we instantiate twice,
                                                 # should this passed to funcs?
+        # put here to ensure empty cache after re-fit with new options
+        self._cache = resettable_cache()
 
     @cache_readonly
     def cdf(self):
