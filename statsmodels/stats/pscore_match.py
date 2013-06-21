@@ -41,19 +41,19 @@ class PropensityScoreMatch(object):
     def compute_pscore(self):
         covariates = sm.add_constant(self.covariates, prepend=True)
         p_mod = self.regression_class(self.assigment_index, covariates)
-        p_res = p_mod.fit()
-        print p_res.summary()
+        p_res = p_mod.fit(disp=False)
+        #print p_res.summary()
         self.scores = pd.Series(p_res.predict(covariates), \
                                 index=self.assigment_index.index)
         self.result.propensity_estimation = p_res
         if self.use_comm_sup:
             comm_sup = self.common_support()
             scores = self.scores[comm_sup]
-            print 'Using common support: %s' % str([scores.min(), scores.max()]) 
+            #print 'Using common support: %s' % str([scores.min(), scores.max()]) 
         else:
             scores = self.scores
-        print 'propensity scores description'
-        print scores.describe()
+        #print 'propensity scores description'
+        #print scores.describe()
         
         
     def treatment_effect(self):
@@ -68,7 +68,7 @@ class PropensityScoreMatch(object):
     def confidence_interval(self, alpha=0.05):
         #assuming normality (don't know df)
         mean, std = self.treatment_effect(), self.treatment_std()
-        return stats.norm.interval(alpha, loc=mean, scale=std )
+        return stats.norm.interval(1-alpha, loc=mean, scale=std )
         
         
     def _basic_treated(self):
