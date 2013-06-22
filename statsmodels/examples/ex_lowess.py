@@ -13,6 +13,10 @@ import statsmodels.api as sm
 
 lowess = sm.nonparametric.lowess
 
+# this is just to check direct import
+import statsmodels.nonparametric.smoothers_lowess
+statsmodels.nonparametric.smoothers_lowess.lowess
+
 x = np.arange(20.)
 
 #standard normal noise

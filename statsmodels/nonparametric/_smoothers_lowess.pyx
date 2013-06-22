@@ -130,30 +130,14 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
         int k
         Py_ssize_t robiter, i, left_end, right_end
         int last_fit_i,
-        np.ndarray[np.int_t, ndim = 1] sort_index
         np.ndarray[DTYPE_t, ndim = 1] x, y
         np.ndarray[DTYPE_t, ndim = 1] y_fit
         np.ndarray[DTYPE_t, ndim = 1] weights
         np.ndarray[DTYPE_t, ndim = 1] resid_weights
 
+    y = endog   # now just alias
+    x = exog
 
-    # Inputs should be vectors (1-D arrays) of the
-    # same length.
-    if exog.ndim != 1:
-        raise ValueError('exog must be a vector')
-    if endog.ndim != 1:
-        raise ValueError('endog must be a vector')
-    if endog.shape[0] != exog.shape[0] :
-        raise ValueError('exog and endog must have same length')
-
-    # Cut out missing values
-    x = exog[(np.isfinite(exog) & np.isfinite(endog))]
-    y = endog[(np.isfinite(exog) & np.isfinite(endog))]
-
-    # Sort both inputs according to the ascending order of x values
-    sort_index = np.argsort(exog)
-    x = np.array(x[sort_index])
-    y = np.array(y[sort_index])
     n = x.shape[0]
 
     # The number of neighbors in each regression.
