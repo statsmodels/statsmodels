@@ -91,6 +91,29 @@ class  TestLowess(object):
         assert_almost_equal(expected_lowess_delRdef, actual_lowess_delRdef, decimal = testdec)
         assert_almost_equal(expected_lowess_del1, actual_lowess_del1, decimal = testdec)
 
+    def test_options(self):
+        rfile = os.path.join(rpath, 'test_lowess_simple.csv')
+        test_data = np.genfromtxt(open(rfile, 'rb'),
+                                  delimiter = ',', names = True)
+        y, x = test_data['y'], test_data['x']
+        res1_fitted = test_data['out']
+        expected_lowess = np.array([test_data['x'], test_data['out']]).T
+
+        # check skip sorting
+        actual_lowess1 = lowess(y, x, is_sorted=True)
+        assert_almost_equal(actual_lowess1, expected_lowess, decimal=13)
+
+        # check order/index
+        actual_lowess = lowess(y[::-1], x[::-1])
+        assert_almost_equal(actual_lowess, actual_lowess1[::-1], decimal=13)
+
+        # check with nans,  this changes the arrays
+        y[[5, 6]] = np.nan
+        x[3] = np.nan
+        actual_lowess1[[3, 5, 6], 1] = np.nan
+        actual_lowess = lowess(y, x, is_sorted=True)
+        assert_almost_equal(actual_lowess1, actual_lowess1, decimal=13)
+
 
 if __name__ == "__main__":
     import nose
