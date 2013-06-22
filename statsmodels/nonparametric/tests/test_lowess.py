@@ -11,7 +11,7 @@ available in R's MASS package.
 
 import os
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_
+from numpy.testing import assert_almost_equal, assert_, assert_raises
 #import statsmodels.api as sm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
@@ -103,9 +103,24 @@ class  TestLowess(object):
         actual_lowess1 = lowess(y, x, is_sorted=True)
         assert_almost_equal(actual_lowess1, expected_lowess, decimal=13)
 
+        # check skip missing
+        actual_lowess = lowess(y, x, is_sorted=True, missing='none')
+        assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
+
         # check order/index
         actual_lowess = lowess(y[::-1], x[::-1])
         assert_almost_equal(actual_lowess, actual_lowess1[::-1], decimal=13)
+
+        # check integer input
+        actual_lowess = lowess(np.round(y).astype(int), x, is_sorted=True)
+        actual_lowess1 = lowess(np.round(y), x, is_sorted=True)
+        assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
+        assert_(actual_lowess.dtype is np.dtype(float))
+        # this will also have duplicate x
+        actual_lowess = lowess(y, np.round(x).astype(int), is_sorted=True)
+        actual_lowess1 = lowess(y, np.round(x), is_sorted=True)
+        assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
+        assert_(actual_lowess.dtype is np.dtype(float))
 
         # check with nans,  this changes the arrays
         y[[5, 6]] = np.nan
@@ -113,6 +128,9 @@ class  TestLowess(object):
         actual_lowess1[[3, 5, 6], 1] = np.nan
         actual_lowess = lowess(y, x, is_sorted=True)
         assert_almost_equal(actual_lowess1, actual_lowess1, decimal=13)
+        assert_raises(ValueError, lowess, y, x, missing='raise')
+
+
 
 
 if __name__ == "__main__":

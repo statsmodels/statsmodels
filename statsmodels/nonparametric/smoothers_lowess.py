@@ -6,7 +6,8 @@
 import numpy as np
 from ._smoothers_lowess import lowess as _lowess
 
-def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False):
+def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
+           missing='drop'):
     '''
         LOWESS (Locally Weighted Scatterplot Smoothing)
 
@@ -28,6 +29,14 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False):
     delta: float
         Distance within which to use linear-interpolation
         instead of weighted regression.
+    is_sorted : bool
+        If False (default), then the data will be sorted by exog before
+        calculating lowess. If True, then it is assumed that the data is
+        already sorted by exog.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'drop'.
 
     Returns
     -------
@@ -114,15 +123,25 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False):
     if endog.shape[0] != exog.shape[0] :
         raise ValueError('exog and endog must have same length')
 
-    # Cut out missing values
-    mask_valid = (np.isfinite(exog) & np.isfinite(endog))
-    all_valid = np.all(mask_valid)
-    if all_valid:
+    if missing in ['drop', 'raise']:
+        # Cut out missing values
+        mask_valid = (np.isfinite(exog) & np.isfinite(endog))
+        all_valid = np.all(mask_valid)
+        if all_valid:
+            y = endog
+            x = exog
+        else:
+            if missing == 'drop':
+                x = exog[mask_valid]
+                y = endog[mask_valid]
+            else:
+                raise ValueError('nan or inf found in data')
+    elif missing == 'none':
         y = endog
         x = exog
+        all_valid = True   # we assume it's true if missing='none'
     else:
-        x = exog[mask_valid]
-        y = endog[mask_valid]
+        raise ValueError("missing can only be 'none', 'drop' or 'raise'")
 
     if not is_sorted:
         # Sort both inputs according to the ascending order of x values
