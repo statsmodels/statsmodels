@@ -7,7 +7,7 @@ import numpy as np
 from ._smoothers_lowess import lowess as _lowess
 
 def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
-           missing='drop'):
+           missing='drop', return_sorted=True):
     '''
         LOWESS (Locally Weighted Scatterplot Smoothing)
 
@@ -37,11 +37,22 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
         Available options are 'none', 'drop', and 'raise'. If 'none', no nan
         checking is done. If 'drop', any observations with nans are dropped.
         If 'raise', an error is raised. Default is 'drop'.
+    return_sorted : bool
+        If True (default), then the returned array is sorted by exog and has
+        missing (nan or infinite) observations removed.
+        If False, then the returned array is in the same length and the same
+        sequence of observations as the input array.
 
     Returns
     -------
-    yfitted: numpy array, float
-        A numpy array with the fitted values of endog
+    out: ndarray, float
+        The returned array is two-dimensional if return_sorted is True, and
+        one dimensional if return_sorted is False.
+        If return_sorted is True, then a numpy array with two columns. The
+        first column contains the sorted x (exog) values and the second column
+        the associated estimated y (endog) values.
+        If return_sorted is False, then only the fitted values are returned,
+        and the observations will be in the same order as the input arrays.
 
     Notes
     -----
@@ -153,7 +164,9 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
     xr, yfitted = res.T
     #TODO: returning  xr from _lowess is now redundant
 
-    if not (all_valid and is_sorted):
+    if return_sorted or (all_valid and is_sorted):
+        return res
+    else:
         # rebuild yfitted with original indices
         # a bit messy: y might have been selected twice
         if not is_sorted:
@@ -168,5 +181,5 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
             yfitted_[mask_valid] = yfitted
             yfitted = yfitted_
 
-    # TODO: we don't need to return exog anymore - refactor
-    return np.column_stack((exog, yfitted))
+        # TODO: we don't need to return exog anymore - refactor
+        return yfitted #np.column_stack((exog, yfitted))

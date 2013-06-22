@@ -107,9 +107,9 @@ class  TestLowess(object):
         actual_lowess = lowess(y, x, is_sorted=True, missing='none')
         assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
 
-        # check order/index
-        actual_lowess = lowess(y[::-1], x[::-1])
-        assert_almost_equal(actual_lowess, actual_lowess1[::-1], decimal=13)
+        # check order/index, returns yfitted only
+        actual_lowess = lowess(y[::-1], x[::-1], return_sorted=False)
+        assert_almost_equal(actual_lowess, actual_lowess1[::-1, 1], decimal=13)
 
         # check integer input
         actual_lowess = lowess(np.round(y).astype(int), x, is_sorted=True)
