@@ -277,6 +277,7 @@ class CleanCommand(Command):
                 pass
         for clean_tree in self._clean_trees:
             try:
+                import shutil
                 shutil.rmtree(clean_tree)
             except Exception:
                 pass
@@ -286,6 +287,7 @@ class CheckSDist(sdist):
     """Custom sdist that ensures Cython has compiled all pyx files to c."""
 
     _pyxfiles = ['statsmodels/nonparametric/linbin.pyx',
+                 'statsmodels/nonparametric/_smoothers_lowess.pyx',
                  'statsmodels/tsa/kalmanf/kalman_loglike.pyx']
 
     def initialize_options(self):
@@ -385,6 +387,9 @@ ext_data = dict(
                   "sources" : []},
 
         linbin = {"pyxfile" : "nonparametric/linbin",
+                 "depends" : [],
+                 "sources" : []},
+        _smoothers_lowess = {"pyxfile" : "nonparametric/_smoothers_lowess",
                  "depends" : [],
                  "sources" : []}
         )
