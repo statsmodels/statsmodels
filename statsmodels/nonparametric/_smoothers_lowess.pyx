@@ -29,8 +29,8 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
            double frac = 2.0 / 3.0,
            Py_ssize_t it = 3,
            double delta = 0.0):
-    '''
-        LOWESS (Locally Weighted Scatterplot Smoothing)
+    '''lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0)
+    LOWESS (Locally Weighted Scatterplot Smoothing)
 
     A lowess function that outs smoothed estimates of endog
     at the given exog values from points (exog, endog)
@@ -40,7 +40,7 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
     endog: 1-D numpy array
         The y-values of the observed points
     exog: 1-D numpy array
-        The x-values of the observed points
+        The x-values of the observed points. exog has to be increasing.
     frac: float
         Between 0 and 1. The fraction of the data used
         when estimating each y-value.

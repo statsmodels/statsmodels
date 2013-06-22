@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 """Lowess - wrapper for cythonized extension
 
+Author : Chris Jordan-Squire
+Author : Carl Vogel
+Author : Josef Perktold
+
 """
 
 import numpy as np
 from ._smoothers_lowess import lowess as _lowess
 
-def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
+def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
            missing='drop', return_sorted=True):
-    '''
-        LOWESS (Locally Weighted Scatterplot Smoothing)
+    '''LOWESS (Locally Weighted Scatterplot Smoothing)
 
     A lowess function that outs smoothed estimates of endog
     at the given exog values from points (exog, endog)
@@ -77,18 +80,17 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
     residuals are larger than 6 times the median absolute residual
     are given weight 0.
 
-    delta can be used to save computations. For each x_i, regressions
-    are skipped for points closer than delta. The next regression is
-    fit for the farthest point within delta of x_i and all points in
+    `delta` can be used to save computations. For each `x_i`, regressions
+    are skipped for points closer than `delta`. The next regression is
+    fit for the farthest point within delta of `x_i` and all points in
     between are estimated by linearly interpolating between the two
     regression fits.
 
     Judicious choice of delta can cut computation time considerably
-    for large data (N > 5000). A good choice is delta = 0.01 *
-    range(exog).
+    for large data (N > 5000). A good choice is ``delta = 0.01 * range(exog)``.
 
     Some experimentation is likely required to find a good
-    choice of frac and iter for a particular dataset.
+    choice of `frac` and `iter` for a particular dataset.
 
     References
     ----------
@@ -161,8 +163,7 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
         y = np.array(y[sort_index])
 
     res = _lowess(y, x, frac=frac, it=it, delta=delta)
-    xr, yfitted = res.T
-    #TODO: returning  xr from _lowess is now redundant
+    _, yfitted = res.T
 
     if return_sorted or (all_valid and is_sorted):
         return res
@@ -181,5 +182,5 @@ def lowess(endog, exog, frac = 2.0 / 3.0, it = 3, delta = 0.0, is_sorted=False,
             yfitted_[mask_valid] = yfitted
             yfitted = yfitted_
 
-        # TODO: we don't need to return exog anymore - refactor
-        return yfitted #np.column_stack((exog, yfitted))
+        # we don't need to return exog anymore
+        return yfitted
