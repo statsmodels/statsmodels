@@ -8,7 +8,7 @@ import nose
 import statsmodels.api as sm
 from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
-                  plot_partregress_grid, plot_ccpr_grid)
+                  plot_partregress_grid, plot_ccpr_grid, add_lowess)
 from pandas import Series, DataFrame
 
 try:
@@ -73,7 +73,9 @@ class TestPlot(object):
         plot_regress_exog(res, exog_idx=0)
         plot_ccpr(res, exog_idx=0)
         plot_ccpr_grid(res, exog_idx=[0])
-        plot_ccpr_grid(res, exog_idx=[0,1])
+        fig = plot_ccpr_grid(res, exog_idx=[0,1])
+        for ax in fig.axes:
+            add_lowess(ax)
 
         plt.close('all')
 
