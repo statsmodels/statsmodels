@@ -86,7 +86,7 @@ class QuantReg(RegressionModel):
         return data
 
     def fit(self, q=.5, vcov='robust', kernel='epa', bandwidth='hsheather',
-            **kwargs):
+            max_iter=1000, p_tol=1e-6, **kwargs):
         '''Solve by Iterative Weighted Least Squares
 
         Parameters
@@ -139,24 +139,48 @@ class QuantReg(RegressionModel):
         rank = self.rank
         n_iter = 0
         xstar = exog
-        beta = np.ones(rank)  # TODO: better start
-        diff = 10
 
-        max_iter = 1000
-        while n_iter < max_iter and diff > 1e-6:
+        beta = np.ones(rank)
+        # TODO: better start, initial beta is used only for convergence check
+
+        # Note the following doesn't work yet,
+        # the iteration loop always starts with OLS as initial beta
+#        if start_params is not None:
+#            if len(start_params) != rank:
+#                raise ValueError('start_params has wrong length')
+#            beta = start_params
+#        else:
+#            # start with OLS
+#            beta = np.dot(np.linalg.pinv(exog), endog)
+
+        diff = 10
+        cycle = False
+
+        history = dict(params = [], mse=[])
+        while n_iter < max_iter and diff > p_tol and not cycle:
             n_iter += 1
             beta0 = beta
             xtx = np.dot(xstar.T, exog)
             xty = np.dot(xstar.T, endog)
             beta = np.dot(pinv(xtx), xty)
             resid = endog - np.dot(exog, beta)
-            #JP: bound resid away from zero,
-            #    why not symmetric: * np.sign(resid), shouldn't matter
-            resid[np.abs(resid) < .000001] = .000001
+
+            mask = np.abs(resid) < .000001
+            resid[mask] = np.sign(resid[mask]) * .000001
             resid = np.where(resid < 0, q * resid, (1-q) * resid)
             resid = np.abs(resid)
             xstar = exog / resid[:, np.newaxis]
             diff = np.max(np.abs(beta - beta0))
+            history['params'].append(beta)
+            history['mse'].append(np.mean(resid*resid))
+
+            if (n_iter >= 300) and (n_iter % 100 == 0):
+                # check for convergence circle, shouldn't happen
+                for ii in range(2, 10):
+                    if np.all(beta == history['params'][-ii]):
+                        cycle = True
+                        break
+                warnings.warn("Convergence cycle detected")
 
         if n_iter == max_iter:
             warnings.warn("Maximum number of iterations (1000) reached.")
@@ -188,6 +212,7 @@ class QuantReg(RegressionModel):
         lfit.iterations = n_iter
         lfit.sparsity = 1. / fhat0
         lfit.bandwidth = h
+        lfit.history = history
 
         return RegressionResultsWrapper(lfit)
 
