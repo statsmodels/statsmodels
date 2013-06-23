@@ -58,8 +58,6 @@ def bkfilter(X, low=6, high=32, K=12):
     #TODO: allow windowing functions to correct for Gibb's Phenomenon?
     # adjust bweights (symmetrically) by below before demeaning
     # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
-    if low < 2:
-        raise ValueError("low cannot be less than 2")
     _pandas_wrapper = _maybe_get_pandas_wrapper(X, K)
     X = np.asarray(X)
     omega_1 = 2.*np.pi/high # convert from freq. to periodicity
