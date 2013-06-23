@@ -56,11 +56,12 @@ print probit_margeff.summary()
 # Load data from the American National Election Studies:
 anes_data = sm.datasets.anes96.load()
 anes_exog = anes_data.exog
+anes_exog = np.column_stack((anes_exog[:,0],anes_exog[:,2],anes_exog[:,5:8]))
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 
 # Inspect the data:
-anes_data.exog[:5, :]
-anes_data.endog[:5]
+print anes_data.exog[:5, :]
+print anes_data.endog[:5]
 
 # Fit MNL model
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
@@ -68,6 +69,7 @@ mlogit_res = mlogit_mod.fit()
 print mlogit_res.params
 mlogit_margeff = mlogit_res.get_margeff()
 print mlogit_margeff.summary()
+
 
 #l1 regularized Multinomial Logit
 #--------------------------------
@@ -106,7 +108,7 @@ poisson_l1_res = poisson_mod2.fit_regularized(method='l1', alpha=alpha)
 # Negative binomial model
 #------------------------
 
-# The negative binomial model gives slightly different results: 
+# The negative binomial model gives slightly different results:
 mod_nbin = sm.NegativeBinomial(rand_data.endog, rand_exog)
 res_nbin = mod_nbin.fit(disp=False)
 print res_nbin.summary()
