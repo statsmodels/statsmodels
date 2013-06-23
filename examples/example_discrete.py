@@ -59,8 +59,8 @@ anes_exog = anes_data.exog
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 
 # Inspect the data:
-anes_data.exog[:5, :]
-anes_data.endog[:5]
+print anes_data.exog[:5, :]
+print anes_data.endog[:5]
 
 # Fit MNL model
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
@@ -106,7 +106,7 @@ poisson_l1_res = poisson_mod2.fit_regularized(method='l1', alpha=alpha)
 # Negative binomial model
 #------------------------
 
-# The negative binomial model gives slightly different results: 
+# The negative binomial model gives slightly different results:
 mod_nbin = sm.NegativeBinomial(rand_data.endog, rand_exog)
 res_nbin = mod_nbin.fit(disp=False)
 print res_nbin.summary()
