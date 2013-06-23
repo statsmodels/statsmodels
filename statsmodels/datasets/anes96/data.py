@@ -16,7 +16,7 @@ DESCRLONG   = DESCRSHORT
 
 NOTE        = """
 Number of observations - 944
-Numner of variables - 10
+Number of variables - 10
 
 Variables name definitions::
 
