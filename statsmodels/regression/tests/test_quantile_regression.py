@@ -38,6 +38,11 @@ class CheckModelResultsMixin(object):
         assert_allclose(np.ravel(self.res1.pvalues.ix[idx]),
                         pvals_stata, rtol=1.1)
 
+        # test that we use the t distribution for the p-values
+        pvals_t = scipy.stats.t.sf(self.res1.tvalues , self.res2.df_r) * 2
+        assert_allclose(np.ravel(self.res1.pvalues),
+                        pvals_t, rtol=1e-9, atol=1e-10)
+
     def test_conf_int(self):
         assert_allclose(self.res1.conf_int().ix[idx],
                 self.res2.table[:,-2:], rtol=1e-3)
