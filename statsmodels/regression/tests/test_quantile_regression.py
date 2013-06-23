@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from numpy.testing import *
-from patsy import dmatrices
+from patsy import dmatrices   # pylint: disable=E0611
 from statsmodels.regression.quantile_regression import QuantReg
 from results_quantile_regression import (
       biweight_chamberlain, biweight_hsheather, biweight_bofinger,
@@ -18,34 +18,46 @@ from results_quantile_regression import (
       epanechnikov_hsheather_q75, Rquantreg)
 
 idx = ['income', 'Intercept']
-class CheckModelResults(object):
+class CheckModelResultsMixin(object):
+
     def test_params(self):
         assert_allclose(np.ravel(self.res1.params.ix[idx]),
                             self.res2.table[:,0], rtol=1e-3)
+
     def test_bse(self):
+        assert_equal(self.res1.scale, 1)
         assert_allclose(np.ravel(self.res1.bse.ix[idx]),
                             self.res2.table[:,1], rtol=1e-3)
+
     def test_tvalues(self):
         assert_allclose(np.ravel(self.res1.tvalues.ix[idx]),
                             self.res2.table[:,2], rtol=1e-2)
+
     def test_pvalues(self):
         pvals_stata = scipy.stats.t.sf(self.res2.table[:, 2] , self.res2.df_r)
         assert_allclose(np.ravel(self.res1.pvalues.ix[idx]),
                         pvals_stata, rtol=1.1)
+
     def test_conf_int(self):
         assert_allclose(self.res1.conf_int().ix[idx],
                 self.res2.table[:,-2:], rtol=1e-3)
+
     def test_nobs(self):
         assert_allclose(self.res1.nobs, self.res2.N, rtol=1e-3)
+
     def test_df_model(self):
         assert_allclose(self.res1.df_model, self.res2.df_m, rtol=1e-3)
+
     def test_df_resid(self):
         assert_allclose(self.res1.df_resid, self.res2.df_r, rtol=1e-3)
+
     def test_prsquared(self):
         assert_allclose(self.res1.prsquared, self.res2.psrsquared, rtol=1e-3)
+
     def test_sparsity(self):
         assert_allclose(np.array(self.res1.sparsity),
                             self.res2.sparsity, rtol=1e-3)
+
     def test_bandwidth(self):
         assert_allclose(np.array(self.res1.bandwidth),
                             self.res2.kbwidth, rtol=1e-3)
@@ -88,11 +100,13 @@ def test_fitted_residuals():
     data = sm.datasets.engel.load_pandas().data
     y, X = dmatrices('foodexp ~ income', data, return_type='dataframe')
     res = QuantReg(y, X).fit(q=.1)
+    # Note: maxabs relative error with fitted is 1.789e-09
     assert_almost_equal(np.array(res.fittedvalues), Rquantreg.fittedvalues, 5)
     assert_almost_equal(np.array(res.predict()), Rquantreg.fittedvalues, 5)
     assert_almost_equal(np.array(res.resid), Rquantreg.residuals, 5)
 
-class TestEpanechnikovHsheatherQ75(CheckModelResults):
+
+class TestEpanechnikovHsheatherQ75(CheckModelResultsMixin):
     # Vincent Arel-Bundock also spot-checked q=.1
     @classmethod
     def setUp(cls):
@@ -101,92 +115,92 @@ class TestEpanechnikovHsheatherQ75(CheckModelResults):
         cls.res1 = QuantReg(y, X).fit(q=.75, vcov='iid', kernel='epa', bandwidth='hsheather')
         cls.res2 = epanechnikov_hsheather_q75
 
-class TestEpanechnikovBofinger(CheckModelResults):
+class TestEpanechnikovBofinger(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('epa', 'bofinger')
 
-class TestEpanechnikovChamberlain(CheckModelResults):
+class TestEpanechnikovChamberlain(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('epa', 'chamberlain')
 
-class TestEpanechnikovHsheather(CheckModelResults):
+class TestEpanechnikovHsheather(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('epa', 'hsheather')
 
-class TestGaussianBofinger(CheckModelResults):
+class TestGaussianBofinger(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('gau', 'bofinger')
 
-class TestGaussianChamberlain(CheckModelResults):
+class TestGaussianChamberlain(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('gau', 'chamberlain')
 
-class TestGaussianHsheather(CheckModelResults):
+class TestGaussianHsheather(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('gau', 'hsheather')
 
-class TestBiweightBofinger(CheckModelResults):
+class TestBiweightBofinger(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('biw', 'bofinger')
 
-class TestBiweightChamberlain(CheckModelResults):
+class TestBiweightChamberlain(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('biw', 'chamberlain')
 
-class TestBiweightHsheather(CheckModelResults):
+class TestBiweightHsheather(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('biw', 'hsheather')
 
-class TestCosineBofinger(CheckModelResults):
+class TestCosineBofinger(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('cos', 'bofinger')
 
-class TestCosineChamberlain(CheckModelResults):
+class TestCosineChamberlain(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('cos', 'chamberlain')
 
-class TestCosineHsheather(CheckModelResults):
+class TestCosineHsheather(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('cos', 'hsheather')
 
-class TestParzeneBofinger(CheckModelResults):
+class TestParzeneBofinger(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('par', 'bofinger')
 
-class TestParzeneChamberlain(CheckModelResults):
+class TestParzeneChamberlain(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('par', 'chamberlain')
 
-class TestParzeneHsheather(CheckModelResults):
+class TestParzeneHsheather(CheckModelResultsMixin):
     @classmethod
     def setUp(cls):
         cls.res1, cls.res2 = setup_fun('par', 'hsheather')
 
-#class TestTriangleBofinger(CheckModelResults):
+#class TestTriangleBofinger(CheckModelResultsMixin):
     #@classmethod
     #def setUp(cls):
         #cls.res1, cls.res2 = setup_fun('tri', 'bofinger')
 
-#class TestTriangleChamberlain(CheckModelResults):
+#class TestTriangleChamberlain(CheckModelResultsMixin):
     #@classmethod
     #def setUp(cls):
         #cls.res1, cls.res2 = setup_fun('tri', 'chamberlain')
 
-#class TestTriangleHsheather(CheckModelResults):
+#class TestTriangleHsheather(CheckModelResultsMixin):
     #@classmethod
     #def setUp(cls):
         #cls.res1, cls.res2 = setup_fun('tri', 'hsheather')
