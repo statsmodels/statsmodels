@@ -93,12 +93,23 @@ def test_stata_writer_pandas():
     #as of 0.9.0 pandas only supports i8 and f8
     dta = dta.astype(np.dtype([('year', 'i8'),
                                ('quarter', 'i8')] + dtype.descr[2:]))
+    dta4 = dta.astype(np.dtype([('year', 'i4'),
+                               ('quarter', 'i4')] + dtype.descr[2:]))
     dta = DataFrame.from_records(dta)
+    dta4 = DataFrame.from_records(dta4)
+    # dta is int64 'i8'  given to Stata writer
     writer = StataWriter(buf, dta)
     writer.write_file()
     buf.seek(0)
     dta2 = genfromdta(buf)
-    ptesting.assert_frame_equal(dta.reset_index(), DataFrame.from_records(dta2))
+    dta5 = DataFrame.from_records(dta2)
+    # dta2 is int32 'i4'  returned from Stata reader
+
+    if dta5.dtypes[1] is np.dtype('int64'):
+        ptesting.assert_frame_equal(dta.reset_index(), dta5)
+    else:
+        # don't check index because it has different size, int32 versus int64
+        ptesting.assert_frame_equal(dta4, dta5[dta5.columns[1:]])
 
 def test_stata_writer_unicode():
     # make sure to test with characters outside the latin-1 encoding
