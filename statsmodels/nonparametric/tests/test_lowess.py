@@ -69,7 +69,7 @@ class  TestLowess(object):
         actual_lowess_23 = lowess(test_data['y'], test_data['x'] ,frac = 2./3)
         actual_lowess_15 = lowess(test_data['y'], test_data['x'] ,frac = 1./5)
 
-        assert_almost_equal(expected_lowess_23, actual_lowess_23, decimal = testdec)
+        assert_almost_equal(expected_lowess_23, actual_lowess_23, decimal = testdec-1)
         assert_almost_equal(expected_lowess_15, actual_lowess_15, decimal = testdec)
 
 
