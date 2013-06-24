@@ -141,7 +141,8 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
     n = x.shape[0]
 
     # The number of neighbors in each regression.
-    k =  int(frac * n)
+    # round up if close to integer
+    k =  int(frac * n + 1e-10)
 
     # frac should be set, so that 2 <= k <= n.
     # Conform them instead of throwing error.
