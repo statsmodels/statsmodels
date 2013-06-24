@@ -15,6 +15,9 @@ try:
 except:
     have_matplotlib = False
 
+import pandas
+pandas_old = int(pandas.__version__.split('.')[1]) < 9
+
 # the main drawing function
 from statsmodels.graphics.mosaicplot import mosaic
 # other functions to be tested for accuracy
@@ -25,7 +28,7 @@ from statsmodels.graphics.mosaicplot import _normalize_split
 from statsmodels.graphics.mosaicplot import _split_rect
 
 
-@dec.skipif(not have_matplotlib)
+@dec.skipif(not have_matplotlib or pandas_old)
 def test_data_conversion():
     # It will not reorder the elements
     # so the dictionary will look odd
@@ -96,7 +99,7 @@ def test_mosaic_simple():
     #pylab.show()
 
 
-@dec.skipif(not have_matplotlib)
+@dec.skipif(not have_matplotlib or pandas_old)
 def test_mosaic():
     # make the same analysis on a known dataset
 

@@ -17,6 +17,10 @@ from statsmodels.iolib.foreign import (StataWriter, genfromdta,
 from statsmodels.datasets import macrodata
 
 
+import pandas
+pandas_old = int(pandas.__version__.split('.')[1]) < 9
+
+
 # Test precisions
 DECIMAL_4 = 4
 DECIMAL_3 = 3
@@ -115,6 +119,7 @@ def test_stata_writer_unicode():
     # make sure to test with characters outside the latin-1 encoding
     pass
 
+@dec.skipif(pandas_old)
 def test_genfromdta_datetime():
     results = [(datetime(2006, 11, 19, 23, 13, 20), 1479596223000,
             datetime(2010, 1, 20), datetime(2010, 1, 8), datetime(2010, 1, 1),
@@ -166,6 +171,7 @@ def test_date_converters():
         assert_equal(_datetime_to_stata_elapsed(
                      _stata_elapsed_date_to_datetime(i, "ty"), "ty"), i)
 
+@dec.skipif(pandas_old)
 def test_datetime_roundtrip():
     dta = np.array([(1, datetime(2010, 1, 1), 2),
                     (2, datetime(2010, 2, 1), 3),
