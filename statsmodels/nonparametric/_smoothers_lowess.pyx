@@ -484,6 +484,7 @@ def update_indices(np.ndarray[DTYPE_t, ndim = 1] x,
         double cutpoint
 
     last_fit_i = i
+    k = last_fit_i
     # For most points within delta of the current point, we skip the
     # weighted linear regression (which save much computation of
     # weights and fitted points). Instead, we'll jump to the last
