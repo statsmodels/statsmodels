@@ -178,7 +178,7 @@ stub R2 C2  40.95038  40.65765
                    "('y', 'sum')      1.4595      0.209   ",
                    "('y', 'amax')     0.2432      0.035   "]
         
-        self.assertEqual( desired, interesting_lines  )
+        self.assertEqual(sorted(desired), sorted(interesting_lines)  )
 
 
 if __name__ == "__main__":
