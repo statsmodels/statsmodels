@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_allclose
 from numpy import array, column_stack
 from statsmodels.datasets import macrodata
 from statsmodels.tsa.base.datetools import dates_from_range
@@ -572,7 +572,7 @@ def test_cfitz_pandas():
     dta.index = index
     cycle, trend = cffilter(dta["infl"])
     ndcycle, ndtrend = cffilter(dta['infl'].values)
-    assert_equal(cycle.values, ndcycle)
+    assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
     assert_equal(cycle.name, "infl")
@@ -580,7 +580,7 @@ def test_cfitz_pandas():
     #2d
     cycle, trend = cffilter(dta[["infl","unemp"]])
     ndcycle, ndtrend = cffilter(dta[['infl', 'unemp']].values)
-    assert_equal(cycle.values, ndcycle)
+    assert_allclose(cycle.values, ndcycle, rtol=1e-14)
     assert_equal(cycle.index[0], datetime(1959, 3, 31))
     assert_equal(cycle.index[-1], datetime(2009, 9, 30))
     assert_equal(cycle.columns.values, ["infl", "unemp"])

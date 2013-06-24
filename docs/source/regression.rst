@@ -144,6 +144,13 @@ Model Classes
    GLSAR
    yule_walker
 
+.. currentmodule:: statsmodels.regression.quantile_regression
+
+.. autosummary::
+   :toctree: generated/
+
+   QuantReg
+
 Results Classes
 ^^^^^^^^^^^^^^^
 
@@ -151,9 +158,17 @@ Fitting a linear regression model returns a results class. OLS has a
 specific results class with some additional methods compared to the
 results class of the other linear models.
 
+.. currentmodule:: statsmodels.regression.linear_model
+
 .. autosummary::
    :toctree: generated/
 
    RegressionResults
    OLSResults
 
+.. currentmodule:: statsmodels.regression.quantile_regression
+
+.. autosummary::
+   :toctree: generated/
+
+   QuantRegResults

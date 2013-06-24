@@ -866,8 +866,9 @@ class ARIMA(ARMA):
         if d == 0: # then we just use an ARMA model
             return ARMA(endog, (p,q), exog, dates, freq, missing)
         else:
-            return super(ARIMA, cls).__new__(cls, endog, order, exog, dates,
-                                             freq, missing)
+            mod = super(ARIMA, cls).__new__(cls)
+            mod.__init__(endog, order, exog, dates, freq, missing)
+            return mod
 
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                        missing='none'):

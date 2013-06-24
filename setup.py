@@ -495,7 +495,7 @@ if __name__ == "__main__":
     package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
     package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
     # Why are we installing this stuff?
-    package_data.update({"statsmodels.libqstrung" : ["*.r, *.txt"]})
+    package_data.update({"statsmodels.libqstrung" : ["*.r, *.txt", "*.dat"]})
 
     #TODO: deal with this. Not sure if it ever worked for bdists
     #('docs/build/htmlhelp/statsmodelsdoc.chm',
