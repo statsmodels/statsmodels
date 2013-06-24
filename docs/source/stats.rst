@@ -157,6 +157,22 @@ Non-Parametric Tests
 
    sign_test
 
+Interrater Reliability and Agreement
+------------------------------------
+
+The main function that statsmodels has currently available for interrater
+agreement measures and tests is Cohen's Kappa. Fleiss' Kappa is currently
+only implemented as a measures but without associated results statistics.
+
+.. currentmodule:: statsmodels.stats.inter_rater
+
+.. autosummary::
+   :toctree: generated/
+
+   cohens_kappa
+   fleiss_kappa
+   to_table
+   aggregate_raters
 
 Multiple Tests and Multiple Comparison Procedures
 -------------------------------------------------
