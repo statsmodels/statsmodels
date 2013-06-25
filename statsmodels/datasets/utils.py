@@ -19,6 +19,12 @@ from pandas import read_csv
 
 class Dataset(dict):
     def __init__(self, **kw):
+        # define some default attributes, so pylint can find them
+        self.endog = None
+        self.exog = None
+        self.data = None
+        self.names = None
+
         dict.__init__(self,kw)
         self.__dict__ = self
         # Some datasets have string variables. If you want a raw_data

@@ -4,7 +4,8 @@ Test functions for models.GLM
 """
 import os
 import numpy as np
-from numpy.testing import *
+from numpy.testing import assert_almost_equal, assert_equal, assert_raises
+from scipy import stats
 import statsmodels.api as sm
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.tools.tools import add_constant
@@ -18,11 +19,12 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
 
-class CheckModelResults(object):
+class CheckModelResultsMixin(object):
     '''
     res2 should be either the results from RModelWrap
     or the results as defined in model_results_data
     '''
+
     decimal_params = DECIMAL_4
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params,
@@ -102,7 +104,20 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
                 self.decimal_fittedvalues)
 
-class TestGlmGaussian(CheckModelResults):
+    def test_tpvalues(self):
+        # test comparing tvalues and pvalues with normal implementation
+        # make sure they use normal distribution (inherited in results class)
+        params = self.res1.params
+        tvalues = params / self.res1.bse
+        pvalues = stats.norm.sf(np.abs(tvalues)) * 2
+        half_width = stats.norm.isf(0.025) * self.res1.bse
+        conf_int = np.column_stack((params - half_width, params + half_width))
+
+        assert_almost_equal(self.res1.tvalues, tvalues)
+        assert_almost_equal(self.res1.pvalues, pvalues)
+        assert_almost_equal(self.res1.conf_int(), conf_int)
+
+class TestGlmGaussian(CheckModelResultsMixin):
     def __init__(self):
         '''
         Test Gaussian family with canonical identity link
@@ -129,7 +144,7 @@ class TestGlmGaussian(CheckModelResults):
 #        self.res2.resids = np.array(self.res2.resid)[:,None]*np.ones((1,5))
 #        self.res2.null_deviance = 185008826 # taken from R. Rpy bug?
 
-class TestGaussianLog(CheckModelResults):
+class TestGaussianLog(CheckModelResultsMixin):
     def __init__(self):
         # Test Precision
         self.decimal_aic_R = DECIMAL_0
@@ -158,7 +173,7 @@ class TestGaussianLog(CheckModelResults):
 #        GaussLog_Res_R = RModel(self.lny, self.X, r.glm, family=GaussLogLink)
 #        self.res2 = GaussLog_Res_R
 
-class TestGaussianInverse(CheckModelResults):
+class TestGaussianInverse(CheckModelResultsMixin):
     def __init__(self):
         # Test Precisions
         self.decimal_bic = DECIMAL_1
@@ -187,7 +202,7 @@ class TestGaussianInverse(CheckModelResults):
 #        InverseLink_Res_R = RModel(self.y_inv, self.X, r.glm, family=InverseLink)
 #        self.res2 = InverseLink_Res_R
 
-class TestGlmBinomial(CheckModelResults):
+class TestGlmBinomial(CheckModelResultsMixin):
     def __init__(self):
         '''
         Test Binomial family with canonical logit link using star98 dataset.
@@ -210,57 +225,57 @@ class TestGlmBinomial(CheckModelResults):
 #TODO:
 #Non-Canonical Links for the Binomial family require the algorithm to be
 #slightly changed
-#class TestGlmBinomialLog(CheckModelResults):
+#class TestGlmBinomialLog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialLogit(CheckModelResults):
+#class TestGlmBinomialLogit(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialProbit(CheckModelResults):
+#class TestGlmBinomialProbit(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialCloglog(CheckModelResults):
+#class TestGlmBinomialCloglog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialPower(CheckModelResults):
+#class TestGlmBinomialPower(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialLoglog(CheckModelResults):
+#class TestGlmBinomialLoglog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBinomialLogc(CheckModelResults):
+#class TestGlmBinomialLogc(CheckModelResultsMixin):
 #TODO: need include logc link
 #    pass
 
-class TestGlmBernoulli(CheckModelResults):
+class TestGlmBernoulli(CheckModelResultsMixin):
     def __init__(self):
         from results.results_glm import Lbw
         self.res2 = Lbw()
         self.res1 = GLM(self.res2.endog, self.res2.exog,
                 family=sm.families.Binomial()).fit()
 
-#class TestGlmBernoulliIdentity(CheckModelResults):
+#class TestGlmBernoulliIdentity(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliLog(CheckModelResults):
+#class TestGlmBernoulliLog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliProbit(CheckModelResults):
+#class TestGlmBernoulliProbit(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliCloglog(CheckModelResults):
+#class TestGlmBernoulliCloglog(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliPower(CheckModelResults):
+#class TestGlmBernoulliPower(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmBernoulliLoglog(CheckModelResults):
+#class TestGlmBernoulliLoglog(CheckModelResultsMixin):
 #    pass
 
-#class test_glm_bernoulli_logc(CheckModelResults):
+#class test_glm_bernoulli_logc(CheckModelResultsMixin):
 #    pass
 
-class TestGlmGamma(CheckModelResults):
+class TestGlmGamma(CheckModelResultsMixin):
 
     def __init__(self):
         '''
@@ -282,7 +297,7 @@ class TestGlmGamma(CheckModelResults):
         res2.aic_R += 2 # R doesn't count degree of freedom for scale with gamma
         self.res2 = res2
 
-class TestGlmGammaLog(CheckModelResults):
+class TestGlmGammaLog(CheckModelResultsMixin):
     def __init__(self):
         # Test Precisions
         self.decimal_resids = DECIMAL_3
@@ -303,7 +318,7 @@ class TestGlmGammaLog(CheckModelResults):
 #        self.res2.null_deviance = 27.92207137420696 # From R (bug in rpy)
 #        self.res2.bic = -154.1582089453923 # from Stata
 
-class TestGlmGammaIdentity(CheckModelResults):
+class TestGlmGammaIdentity(CheckModelResultsMixin):
     def __init__(self):
         # Test Precisions
         self.decimal_resids = -100 #TODO Very off from Stata?
@@ -324,7 +339,7 @@ class TestGlmGammaIdentity(CheckModelResults):
 #            family=r.Gamma(link="identity"))
 #        self.res2.null_deviance = 27.92207137420696 # from R, Rpy bug
 
-class TestGlmPoisson(CheckModelResults):
+class TestGlmPoisson(CheckModelResultsMixin):
     def __init__(self):
         '''
         Tests Poisson family with canonical log link.
@@ -340,13 +355,13 @@ class TestGlmPoisson(CheckModelResults):
                     family=sm.families.Poisson()).fit()
         self.res2 = Cpunish()
 
-#class TestGlmPoissonIdentity(CheckModelResults):
+#class TestGlmPoissonIdentity(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmPoissonPower(CheckModelResults):
+#class TestGlmPoissonPower(CheckModelResultsMixin):
 #    pass
 
-class TestGlmInvgauss(CheckModelResults):
+class TestGlmInvgauss(CheckModelResultsMixin):
     def __init__(self):
         '''
         Tests the Inverse Gaussian family in GLM.
@@ -368,7 +383,7 @@ class TestGlmInvgauss(CheckModelResults):
         self.res1 = res1
         self.res2 = res2
 
-class TestGlmInvgaussLog(CheckModelResults):
+class TestGlmInvgaussLog(CheckModelResultsMixin):
     def __init__(self):
         # Test Precisions
         self.decimal_aic_R = -10 # Big difference vs R.
@@ -389,7 +404,7 @@ class TestGlmInvgaussLog(CheckModelResults):
 #        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        self.res2.llf = -12162.72308 # from Stata, R's has big rounding diff
 
-class TestGlmInvgaussIdentity(CheckModelResults):
+class TestGlmInvgaussIdentity(CheckModelResultsMixin):
     def __init__(self):
         # Test Precisions
         self.decimal_aic_R = -10 #TODO: Big difference vs R
@@ -412,7 +427,7 @@ class TestGlmInvgaussIdentity(CheckModelResults):
 #        self.res2.null_deviance = 335.1539777981053 # from R, Rpy bug
 #        self.res2.llf = -12163.25545    # from Stata, big diff with R
 
-class TestGlmNegbinomial(CheckModelResults):
+class TestGlmNegbinomial(CheckModelResultsMixin):
     def __init__(self):
         '''
         Test Negative Binomial family with canonical log link
@@ -444,17 +459,17 @@ class TestGlmNegbinomial(CheckModelResults):
 #                family=r.negative_binomial(1))
 #        self.res2.null_deviance = 27.8110469364343
 
-#class TestGlmNegbinomial_log(CheckModelResults):
+#class TestGlmNegbinomial_log(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmNegbinomial_power(CheckModelResults):
+#class TestGlmNegbinomial_power(CheckModelResultsMixin):
 #    pass
 
-#class TestGlmNegbinomial_nbinom(CheckModelResults):
+#class TestGlmNegbinomial_nbinom(CheckModelResultsMixin):
 #    pass
 
 #NOTE: hacked together version to test poisson offset
-class TestGlmPoissonOffset(CheckModelResults):
+class TestGlmPoissonOffset(CheckModelResultsMixin):
     @classmethod
     def setupClass(cls):
         from results.results_glm import Cpunish
