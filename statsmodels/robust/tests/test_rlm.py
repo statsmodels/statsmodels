@@ -2,7 +2,9 @@
 Test functions for sm.rlm
 """
 
-from numpy.testing import assert_almost_equal
+import numpy as np
+from numpy.testing import assert_almost_equal, assert_allclose
+from scipy import stats
 import statsmodels.api as sm
 from statsmodels.robust.robust_linear_model import RLM
 from nose import SkipTest
@@ -69,10 +71,26 @@ class CheckRlmResultsMixin(object):
         assert_almost_equal(self.res1.h3, self.res2.h3,
                 self.decimal_bcov_scaled)
 
-#TODO: figure out how to handle in results
-#    def test_tvalues(self):
-#        assert_almost_equal(self.res1.params/np.sqrt(np.diag(res1.bcov_scaled)),
-#                res2.tvalues)
+
+    def test_tvalues(self):
+        if not hasattr(self.res2, 'tvalues'):
+            raise SkipTest("No tvalues in benchmark")
+        else:
+            assert_allclose(self.res1.tvalues, self.res2.tvalues, rtol=0.003)
+
+    def test_tpvalues(self):
+        # test comparing tvalues and pvalues with normal implementation
+        # make sure they use normal distribution (inherited in results class)
+        params = self.res1.params
+        tvalues = params / self.res1.bse
+        pvalues = stats.norm.sf(np.abs(tvalues)) * 2
+        half_width = stats.norm.isf(0.025) * self.res1.bse
+        conf_int = np.column_stack((params - half_width, params + half_width))
+
+        assert_almost_equal(self.res1.tvalues, tvalues)
+        assert_almost_equal(self.res1.pvalues, pvalues)
+        assert_almost_equal(self.res1.conf_int(), conf_int)
+
 
 class TestRlm(CheckRlmResultsMixin):
     from statsmodels.datasets.stackloss import load
