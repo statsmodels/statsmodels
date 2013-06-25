@@ -141,7 +141,8 @@ def lowess(np.ndarray[DTYPE_t, ndim = 1] endog,
     n = x.shape[0]
 
     # The number of neighbors in each regression.
-    k =  int(frac * n)
+    # round up if close to integer
+    k =  int(frac * n + 1e-10)
 
     # frac should be set, so that 2 <= k <= n.
     # Conform them instead of throwing error.
@@ -483,6 +484,7 @@ def update_indices(np.ndarray[DTYPE_t, ndim = 1] x,
         double cutpoint
 
     last_fit_i = i
+    k = last_fit_i
     # For most points within delta of the current point, we skip the
     # weighted linear regression (which save much computation of
     # weights and fitted points). Instead, we'll jump to the last
