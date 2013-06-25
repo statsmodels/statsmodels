@@ -2,7 +2,7 @@
 Test functions for sm.rlm
 """
 
-from numpy.testing import *
+from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
 from statsmodels.robust.robust_linear_model import RLM
 from nose import SkipTest
@@ -12,7 +12,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 
-class CheckRlmResults(object):
+class CheckRlmResultsMixin(object):
     '''
     res2 contains  results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and written to results.results_rlm
@@ -74,7 +74,7 @@ class CheckRlmResults(object):
 #        assert_almost_equal(self.res1.params/np.sqrt(np.diag(res1.bcov_scaled)),
 #                res2.tvalues)
 
-class TestRlm(CheckRlmResults):
+class TestRlm(CheckRlmResultsMixin):
     from statsmodels.datasets.stackloss import load
     data = load()   # class attributes for subclasses
     data.exog = sm.add_constant(data.exog, prepend=False)
@@ -174,7 +174,7 @@ class TestRlmAndrews(TestRlm):
 
 ### tests with Huber scaling
 
-class TestRlmHuber(CheckRlmResults):
+class TestRlmHuber(CheckRlmResultsMixin):
     from statsmodels.datasets.stackloss import load
     data = load()
     data.exog = sm.add_constant(data.exog, prepend=False)
@@ -260,7 +260,7 @@ class TestRlmAndrewsHuber(TestRlm):
         from results.results_rlm import AndrewsHuber
         self.res2 = AndrewsHuber()
 
-class TestRlmSresid(CheckRlmResults):
+class TestRlmSresid(CheckRlmResultsMixin):
     #Check GH:187
     from statsmodels.datasets.stackloss import load
     data = load()   # class attributes for subclasses
@@ -287,6 +287,3 @@ class TestRlmSresid(CheckRlmResults):
 #                        r.rlm, psi="psi.huber")
         from results.results_rlm import Huber
         self.res2 = Huber()
-
-if __name__=="__main__":
-    run_module_suite()
