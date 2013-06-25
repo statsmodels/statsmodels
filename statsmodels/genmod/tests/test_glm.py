@@ -102,6 +102,18 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.fittedvalues, self.res2.fittedvalues,
                 self.decimal_fittedvalues)
 
+    def test_tpvalues(self):
+        # test comparing tvalues and pvalues with normal implementation
+        # make sure they use normal distribution (inherited in results class)
+        params = self.res1.params
+        tvalues = params / self.res1.bse
+        pvalues = stats.norm.sf(np.abs(tvalues)) * 2
+        half_width = stats.norm.isf(0.025) * self.res1.bse
+        conf_int = np.column_stack((params - half_width, params + half_width))
+
+        assert_almost_equal(self.res1.tvalues, tvalues)
+        assert_almost_equal(self.res1.pvalues, pvalues)
+        assert_almost_equal(self.res1.conf_int(), conf_int)
 class TestGlmGaussian(CheckModelResults):
     def __init__(self):
         '''
