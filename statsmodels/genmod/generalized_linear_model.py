@@ -550,10 +550,6 @@ class GLMResults(base.LikelihoodModelResults):
 
 
     @cache_readonly
-    def pvalues(self):
-        return t.sf(np.abs(self.tvalues), self.df_resid)*2
-
-    @cache_readonly
     def pearson_chi2(self):
         chisq =  (self._endog- self.mu)**2 / self.family.variance(self.mu)
         chisq *= self._data_weights
