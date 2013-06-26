@@ -85,11 +85,11 @@ class  TestLowess(object):
         actual_lowess_del0    = lowess(test_data['y'], test_data['x'], frac=0.1)
         actual_lowess_delRdef = lowess(test_data['y'], test_data['x'], frac=0.1,
                        delta = 0.01 * np.ptp(test_data['x']))
-        actual_lowess_del1    = lowess(test_data['y'], test_data['x'], frac = 0.1, delta = 1.0)
+        actual_lowess_del1    = lowess(test_data['y'], test_data['x'], frac = 0.1, delta = 1.0 + 1e-10)
 
         assert_almost_equal(expected_lowess_del0, actual_lowess_del0, decimal = testdec)
         assert_almost_equal(expected_lowess_delRdef, actual_lowess_delRdef, decimal = testdec)
-        assert_almost_equal(expected_lowess_del1, actual_lowess_del1, decimal = testdec)
+        assert_almost_equal(expected_lowess_del1, actual_lowess_del1, decimal = 10) #testdec)
 
     def test_options(self):
         rfile = os.path.join(rpath, 'test_lowess_simple.csv')
