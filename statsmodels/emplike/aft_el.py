@@ -245,9 +245,10 @@ class emplikeAFT(object):
         self.censors = self.censors[idx]
         self.censors[-1] = 1  # Sort in init, not in function
         self.uncens_nobs = np.sum(self.censors)
-        self.uncens_endog = self.endog[np.bool_(self.censors), :].\
-          reshape(-1, 1)
-        self.uncens_exog = self.exog[np.bool_(self.censors.flatten()), :]
+        mask = self.censors.ravel().astype(bool)
+        self.uncens_endog = self.endog[mask, :].reshape(-1, 1)
+        self.uncens_exog = self.exog[mask, :]
+
 
     def _is_tied(self, endog, censors):
         """
