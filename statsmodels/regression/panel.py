@@ -223,7 +223,9 @@ xtreg emp wage capital, fe
 # R replication
 
 library(plm)
-dat = read.csv('EmplUK.csv')
+data(EmplUK)
+dat = EmplUK
 dat = pdata.frame(dat, c('firm', 'year'))
 mod = plm(emp ~ wage + capital, data=dat, model='within')
+
 '''
