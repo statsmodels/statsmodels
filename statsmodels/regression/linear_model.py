@@ -958,7 +958,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def rsquared_adj(self):
-        return (1 - np.divide(self.nobs - self.k_constant, self.df_resid)) * (1 - self.rsquared)
+        return 1 - np.divide(self.nobs - self.k_constant, self.df_resid) * (1 - self.rsquared)
 
     @cache_readonly
     def mse_model(self):
