@@ -958,11 +958,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def rsquared_adj(self):
-        try:
-            return (1 - (self.nobs - self.k_constant)/self.df_resid *
-                    (1 - self.rsquared))
-        except ZeroDivisionError:
-            return np.nan
+        return (1 - np.divide(self.nobs - self.k_constant, self.df_resid)) * (1 - self.rsquared)
 
     @cache_readonly
     def mse_model(self):
