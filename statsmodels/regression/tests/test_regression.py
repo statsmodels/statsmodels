@@ -3,14 +3,12 @@ Test functions for models.regression
 """
 import pandas
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_, assert_approx_equal,
+from numpy.testing import (assert_almost_equal, assert_approx_equal,
                             assert_raises, assert_equal)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
-from statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
-        yule_walker, RegressionResults)
+from statsmodels.regression.linear_model import OLS, WLS, GLS, yule_walker
 from statsmodels.datasets import longley
-from nose import SkipTest
 from scipy.stats import t as student_t
 
 DECIMAL_4 = 4
