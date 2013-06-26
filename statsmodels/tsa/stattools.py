@@ -10,12 +10,13 @@ from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant, Bunch
 from .tsatools import lagmat, lagmat2ds, add_trend
 from .adfvalues import mackinnonp, mackinnoncrit
+from ._bds import bds
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.compat.scipy import _next_regular
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
-           'adfuller', 'kpss']
+           'adfuller', 'kpss', 'bds']
 
 
 #NOTE: now in two places to avoid circular import
