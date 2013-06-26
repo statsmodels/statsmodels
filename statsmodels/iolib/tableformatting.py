@@ -100,3 +100,51 @@ fmt3 = dict(
             )
 fmt_params.update(fmt3)
 
+"""
+Summary Table formating
+This is here to help keep the formating consistent across the different models
+"""
+fmt_latex =  {'colsep': ' & ',
+  'colwidths': None,
+  'data_aligns': 'r',
+  'data_fmt': '%s',
+  'data_fmts': ['%s'],
+  'empty': '',
+  'empty_cell': '',
+  'fmt': 'ltx',
+  'header': '%s',
+  'header_align': 'c',
+  'header_dec_below': '\\hline',
+  'header_fmt': '%s',
+  'missing': '--',
+  'row_dec_below': None,
+  'row_post': '  \\\\',
+  'strip_backslash': True,
+  'stub': '%s',
+  'stub_align': 'l',
+  'stub_fmt': '%s',
+  'table_dec_above': '\\hline',
+  'table_dec_below': '\\hline'}
+
+fmt_txt =  {'colsep': ' ',
+  'colwidths': None,
+  'data_aligns': 'r',
+  'data_fmts': ['%s'],
+  'empty': '',
+  'empty_cell': '',
+  'fmt': 'txt',
+  'header': '%s',
+  'header_align': 'c',
+  'header_dec_below': '-',
+  'header_fmt': '%s',
+  'missing': '--',
+  'row_dec_below': None,
+  'row_post': '',
+  'row_pre': '',
+  'stub': '%s',
+  'stub_align': 'l',
+  'stub_fmt': '%s',
+  'table_dec_above': '-',
+  'table_dec_below': None,
+  'title_align': 'c'}
+
