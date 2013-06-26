@@ -958,8 +958,11 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def rsquared_adj(self):
-        return (1 - (self.nobs - self.k_constant)/self.df_resid *
-                (1 - self.rsquared))
+        try:
+            return (1 - (self.nobs - self.k_constant)/self.df_resid *
+                    (1 - self.rsquared))
+        except ZeroDivisionError:
+            return np.nan
 
     @cache_readonly
     def mse_model(self):
@@ -1263,10 +1266,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
         #add warnings/notes, added to text format only
         etext =[]
+        if self.model.exog.shape[0] < self.model.exog.shape[1]:
+            wstr = "The input rank is higher than the number of observations."
+            etext.append(wstr)
         if eigvals[0] < 1e-10:
             wstr = "The smallest eigenvalue is %6.3g. This might indicate "
             wstr += "that there are\n"
-            wstr = "strong multicollinearity problems or that the design "
+            wstr += "strong multicollinearity problems or that the design "
             wstr += "matrix is singular."
             wstr = wstr % eigvals[0]
             etext.append(wstr)
@@ -1279,6 +1285,8 @@ class RegressionResults(base.LikelihoodModelResults):
             etext.append(wstr)
 
         if etext:
+            etext = ["[{0}] {1}".format(i + 1, text) for i, text in enumerate(etext)]
+            etext.insert(0, "Warnings:")
             smry.add_extra_txt(etext)
 
         return smry
