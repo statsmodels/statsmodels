@@ -743,14 +743,17 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         Gradient of log-likelihood evaluated at params
         '''
-        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
+        kwds = {}
+        kwds.setdefault('centered', True)
+        return approx_fprime(params, self.loglike, **kwds).ravel()
 
     def jac(self, params, **kwds):
         '''
         Jacobian/Gradient of log-likelihood evaluated at params for each
         observation.
         '''
-        kwds.setdefault('epsilon', 1e-4)
+        #kwds.setdefault('epsilon', 1e-4)
+        kwds.setdefault('centered', True)
         return approx_fprime(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
