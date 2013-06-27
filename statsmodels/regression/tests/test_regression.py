@@ -1,6 +1,7 @@
 """
 Test functions for models.regression
 """
+import warnings
 import pandas
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_approx_equal,
@@ -196,11 +197,12 @@ class TestOLS(CheckRegressionResults):
         # Test that if df_resid = 0, rsquared_adj = 0.
         # This is a regression test for user issue:
         # https://github.com/statsmodels/statsmodels/issues/868
-        x = np.random.randn(5)
-        y = np.random.randn(5, 6)
-        results = OLS(x, y).fit()
-        rsquared_adj = results.rsquared_adj
-        assert_equal(rsquared_adj, np.nan)
+        with warnings.catch_warnings(record=True):
+            x = np.random.randn(5)
+            y = np.random.randn(5, 6)
+            results = OLS(x, y).fit()
+            rsquared_adj = results.rsquared_adj
+            assert_equal(rsquared_adj, np.nan)
 
 class TestRTO(CheckRegressionResults):
     @classmethod
@@ -660,8 +662,9 @@ def test_summary():
     X = dta.exog
     X["constant"] = 1
     y = dta.endog
-    res = OLS(y, X).fit()
-    table = res.summary().as_latex()
+    with warnings.catch_warnings(record=True):
+        res = OLS(y, X).fit()
+        table = res.summary().as_latex()
     # replace the date and time
     table = re.sub("(?<=\n\\\\textbf\{Date:\}             &).+?&",
                    " Sun, 07 Apr 2013 &", table)
