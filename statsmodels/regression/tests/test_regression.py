@@ -1,16 +1,15 @@
 """
 Test functions for models.regression
 """
+import warnings
 import pandas
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_, assert_approx_equal,
+from numpy.testing import (assert_almost_equal, assert_approx_equal,
                             assert_raises, assert_equal)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
-from statsmodels.regression.linear_model import (OLS, GLSAR, WLS, GLS,
-        yule_walker)
+from statsmodels.regression.linear_model import OLS, WLS, GLS, yule_walker
 from statsmodels.datasets import longley
-from nose import SkipTest
 from scipy.stats import t as student_t
 
 DECIMAL_4 = 4
@@ -153,7 +152,6 @@ class TestOLS(CheckRegressionResults):
         res_qr = OLS(data.endog, data.exog).fit(method="qr")
         cls.res_qr = res_qr
 
-
     #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
         #They are split up because the copied results do not have any DECIMAL_4
@@ -194,6 +192,17 @@ class TestOLS(CheckRegressionResults):
         mod = OLS(data.endog, data.exog, missing='drop')
         assert_equal(mod.endog.shape[0], 13)
         assert_equal(mod.exog.shape[0], 13)
+
+    def test_rsquared_adj_overfit(self):
+        # Test that if df_resid = 0, rsquared_adj = 0.
+        # This is a regression test for user issue:
+        # https://github.com/statsmodels/statsmodels/issues/868
+        with warnings.catch_warnings(record=True):
+            x = np.random.randn(5)
+            y = np.random.randn(5, 6)
+            results = OLS(x, y).fit()
+            rsquared_adj = results.rsquared_adj
+            assert_equal(rsquared_adj, np.nan)
 
 class TestRTO(CheckRegressionResults):
     @classmethod
@@ -653,8 +662,9 @@ def test_summary():
     X = dta.exog
     X["constant"] = 1
     y = dta.endog
-    res = OLS(y, X).fit()
-    table = res.summary().as_latex()
+    with warnings.catch_warnings(record=True):
+        res = OLS(y, X).fit()
+        table = res.summary().as_latex()
     # replace the date and time
     table = re.sub("(?<=\n\\\\textbf\{Date:\}             &).+?&",
                    " Sun, 07 Apr 2013 &", table)
