@@ -10,17 +10,19 @@ from statsmodels.miscmodels import PoissonGMLE, PoissonOffsetGMLE, \
 from statsmodels.discrete.discrete_model import Poisson
 
 
-DEC = 1
+DEC = 4
+DEC4 = 4
+DEC5 = 5
 
 class CompareMixin(object):
 
     def test_params(self):
-        assert_almost_equal(self.res.params, self.res_glm.params, DEC)
-        assert_almost_equal(self.res.params, self.res_discrete.params, DEC)
+        assert_almost_equal(self.res.params, self.res_glm.params, DEC5)
+        assert_almost_equal(self.res.params, self.res_discrete.params, DEC5)
 
     def test_cov_params(self):
-        assert_almost_equal(self.res.bse, self.res_glm.bse, DEC)
-        assert_almost_equal(self.res.bse, self.res_discrete.bse, DEC)
+        assert_almost_equal(self.res.bse, self.res_glm.bse, DEC5)
+        assert_almost_equal(self.res.bse, self.res_discrete.bse, DEC5)
         #TODO check problem with the following, precision is low,
         #dof error? last t-value is 22, 23, error is around 1% for PoissonMLE
         #this was with constant=1,
@@ -28,7 +30,7 @@ class CompareMixin(object):
         #overall precision for tstat looks like 1%
 
         #assert_almost_equal(self.res.tval, self.res_glm.t(), DEC)
-        assert_almost_equal(self.res.tvalues, self.res_discrete.tvalues, DEC)
+        assert_almost_equal(self.res.tvalues, self.res_discrete.tvalues, DEC4)
         #assert_almost_equal(self.res.params, self.res_discrete.params)
 
 
@@ -54,7 +56,7 @@ class TestPoissonMLE(CompareMixin):
         #estimate generic MLE
         self.mod = PoissonGMLE(data_endog, data_exog)
         self.res = self.mod.fit(start_params=0.9 * self.res_discrete.params,
-                                method='nm', disp=0)
+                                method='bfgs', disp=0)
 
 
 
@@ -72,34 +74,43 @@ class TestPoissonOffset(CompareMixin):
         xbeta = 1 + 0.1*rvs.sum(1)
         data_endog = np.random.poisson(np.exp(xbeta))
 
-        #estimate discretemod.Poisson as benchmark
-        self.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
-
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         self.res_glm = mod_glm.fit()
 
         #estimate generic MLE
         #self.mod = PoissonGMLE(data_endog, data_exog)
         #res = self.mod.fit()
+
+        #create offset variable based on first exog
+        self.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
         offset = self.res_discrete.params[0] * data_exog[:,0]  #1d ???
+
+        #estimate discretemod.Poisson as benchmark, now has offset
+        self.res_discrete = Poisson(data_endog, data_exog[:,1:],
+                                    offset=offset).fit(disp=0)
+
+        mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
+        self.res_glm = mod_glm.fit()
+
         #self.res = PoissonOffsetGMLE(data_endog, data_exog[:,1:], offset=offset).fit(start_params = np.ones(6)/2., method='nm')
         modo = PoissonOffsetGMLE(data_endog, data_exog[:,1:], offset=offset)
-        self.res = modo.fit(start_params = 0.9*self.res_discrete.params[1:],
-                            method='nm', disp=0)
+        self.res = modo.fit(start_params = 0.9*self.res_discrete.params,
+                            method='bfgs', disp=0)
 
 
 
     def test_params(self):
         assert_almost_equal(self.res.params, self.res_glm.params[1:], DEC)
-        assert_almost_equal(self.res.params, self.res_discrete.params[1:], DEC)
+        assert_almost_equal(self.res.params, self.res_discrete.params, DEC)
 
     def test_cov_params(self):
-        assert_almost_equal(self.res.bse, self.res_glm.bse[1:], DEC)
-        assert_almost_equal(self.res.bse, self.res_discrete.bse[1:], DEC)
+        assert_almost_equal(self.res.bse, self.res_glm.bse[1:], DEC-1)
+        assert_almost_equal(self.res.bse, self.res_discrete.bse, DEC5)
         #precision of next is very low ???
         #assert_almost_equal(self.res.tval, self.res_glm.t()[1:], DEC)
         #assert_almost_equal(self.res.params, self.res_discrete.params)
 
+#DEC = DEC - 1
 class TestPoissonZi(CompareMixin):
     #this uses the first exog to construct an offset variable
     def __init__(self):
@@ -113,8 +124,6 @@ class TestPoissonZi(CompareMixin):
         xbeta = 1 + 0.1*rvs.sum(1)
         data_endog = np.random.poisson(np.exp(xbeta))
 
-        #estimate discretemod.Poisson as benchmark
-        self.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
 
         mod_glm = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
         self.res_glm = mod_glm.fit()
@@ -122,24 +131,30 @@ class TestPoissonZi(CompareMixin):
         #estimate generic MLE
         #self.mod = PoissonGMLE(data_endog, data_exog)
         #res = self.mod.fit()
+
+        #create offset variable based on first exog
+        self.res_discrete = Poisson(data_endog, data_exog).fit(disp=0)
         offset = self.res_discrete.params[0] * data_exog[:,0]  #1d ???
-        self.res = PoissonZiGMLE(data_endog, data_exog[:,1:],offset=offset).fit(
-                            start_params=np.r_[0.9*self.res_discrete.params[1:],10],
-                            method='nm', disp=0)
 
+        #estimate discretemod.Poisson as benchmark, now has offset
+        self.res_discrete = Poisson(data_endog, data_exog[:,1:], offset=offset).fit(disp=0)
 
+        # Note : ZI has one extra parameter
+        self.res = PoissonZiGMLE(data_endog, data_exog[:,1:], offset=offset).fit(
+                            start_params=np.r_[0.9*self.res_discrete.params,10],
+                            method='bfgs', disp=0)
 
-        self.decimal = 1
+        self.decimal = 4
 
     def test_params(self):
         assert_almost_equal(self.res.params[:-1], self.res_glm.params[1:], self.decimal)
-        assert_almost_equal(self.res.params[:-1], self.res_discrete.params[1:], self.decimal)
+        assert_almost_equal(self.res.params[:-1], self.res_discrete.params, self.decimal)
 
     def test_cov_params(self):
         #skip until I have test with zero-inflated data
         #use bsejac for now since it seems to work
-        assert_almost_equal(self.res.bsejac[:-1], self.res_glm.bse[1:], self.decimal)
-        assert_almost_equal(self.res.bsejac[:-1], self.res_discrete.bse[1:], self.decimal)
+        assert_almost_equal(self.res.bsejac[:-1], self.res_glm.bse[1:], self.decimal-2)
+        assert_almost_equal(self.res.bsejac[:-1], self.res_discrete.bse, self.decimal-2)
         #assert_almost_equal(self.res.tval[:-1], self.res_glm.t()[1:], self.decimal)
 
 
