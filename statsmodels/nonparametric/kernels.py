@@ -15,7 +15,6 @@ NOTE: As it is, this module does not interact with the existing API
 import numpy as np
 from scipy.special import erf
 
-
 #TODO:
 # - make sure we only receive int input for wang-ryzin and aitchison-aitken
 # - Check for the scalar Xi case everywhere
@@ -156,6 +155,10 @@ def aitchison_aitken_convolution(h, Xi, Xj):
 
 def gaussian_cdf(h, Xi, x):
     return 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
+
+
+def gaussian_icdf(h, Xi, x):
+    return Xi + h**2 * np.sqrt(2)*erfinv(2*x - 1)
 
 
 def aitchison_aitken_cdf(h, Xi, x_u):

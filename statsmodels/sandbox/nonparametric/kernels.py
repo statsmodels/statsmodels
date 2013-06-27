@@ -22,7 +22,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
-
+from scipy.special import erf
 
 class NdKernel(object):
     """Generic N-dimensial kernel
@@ -68,7 +68,6 @@ class NdKernel(object):
     def density(self, xs, x):
         n = len(xs)
         #xs = self.inDomain( xs, xs, x )[0]
-
         if len(xs)>0:  ## Need to do product of marginal distributions
             #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
             #vectorized doesn't work:
@@ -387,6 +386,9 @@ class Gaussian(CustomKernel):
         v = np.sum(multiply(ys, exp(multiply(square(divide(subtract(xs, x),
                                                           self.h)), -0.5))))
         return v/w
+
+    def cdf(self, Xi, x, h):
+        return 0.5 * (1 + erf( (x - Xi)/(h * np.sqrt(2) ) ) )
 
 class Cosine(CustomKernel):
     """

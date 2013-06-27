@@ -16,13 +16,15 @@ from __future__ import absolute_import
 import warnings
 
 import numpy as np
-from scipy import integrate, stats
+from scipy import integrate, stats, interpolate
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools.decorators import (cache_readonly,
                                                     resettable_cache)
 from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform, counts)
 from .linbin import fast_linbin
+
+from bisect import bisect_left
 
 #### Kernels Switch for estimators ####
 
@@ -115,7 +117,7 @@ class KDEUnivariate(object):
             is implemented. If FFT is False, then a 'nobs' x 'gridsize'
             intermediate array is created.
         gridsize : int
-            If gridsize is None, max(len(X), 50) is used.
+            If gridsize is None, max(len(X), 512) is used.
         cut : float
             Defines the length of the grid past the lowest and highest values
             of X so that the kernel goes to zero. The end points are
@@ -149,6 +151,8 @@ class KDEUnivariate(object):
         self.bw = bw
         self.kernel = kernel_switch[kernel](h=bw) # we instantiate twice,
                                                 # should this passed to funcs?
+
+
         # put here to ensure empty cache after re-fit with new options
         self._cache = resettable_cache()
 
@@ -160,23 +164,55 @@ class KDEUnivariate(object):
         Notes
         -----
         Will not work if fit has not been called.
+
+        If there is an analytic integrated kernel avaliable for the kernel then
+        this is used to find the cdf on self.support. Otherwise the cdf is evaluated
+        numerically.
         """
         _checkisfit(self)
-        density = self.density
-        kern = self.kernel
-        if kern.domain is None: # TODO: test for grid point at domain bound
-            a,b = -np.inf,np.inf
-        else:
-            a,b = kern.domain
-        func = lambda x,s: kern.density(s,x)
 
-        support = self.support
-        support = np.r_[a,support]
-        gridsize = len(support)
-        endog = self.endog
-        probs = [integrate.quad(func, support[i-1], support[i],
-                    args=endog)[0] for i in xrange(1,gridsize)]
-        return np.cumsum(probs)
+        if getattr(self.kernel, 'cdf', None):
+            return sum(self.kernel.cdf(np.tile(self.endog,[len(self.support),1]).T, self.support, self.bw))/len(self.endog)
+
+        else:
+            density = self.density
+            kern = self.kernel
+            if kern.domain is None: # TODO: test for grid point at domain bound
+                a,b = -np.inf,np.inf
+            else:
+                a,b = kern.domain
+            func = lambda x,s: kern.density(s,x)
+
+            support = self.support
+            support = np.r_[a,support]
+            gridsize = len(support)
+            endog = self.endog
+            probs = [integrate.quad(func, support[i-1], support[i],
+                        args=endog)[0] for i in xrange(1,gridsize)]
+            return np.cumsum(probs)
+
+    # def cdf(self, x):
+    #     """
+    #     Returns the cumulative distribution function evaluated at x.
+
+    #     Notes
+    #     -----
+    #     Will not work if fit has not been called.
+
+    #     If there is an analytic integrated kernel avaliable for the kernel then
+    #     this is used to find the cdf on self.support. Otherwise the cdf is evaluated
+    #     numerically.
+    #     """
+    #     _checkisfit(self)
+
+    #     if getattr(self.kernel, 'cdf', None):
+    #         return sum(self.kernel.cdf(self.endog, x, self.bw))/len(self.endog)
+
+    #     else:
+    #         kern = self.kernel
+    #         func = lambda y: kern.density(self.endog, y)
+
+    #         return integrate.quad(func, self.support[0], x)[0]
 
     @cache_readonly
     def cumhazard(self):
@@ -231,19 +267,51 @@ class KDEUnivariate(object):
         return -integrate.quad(entr, a,b, args=(endog,))[0]
 
     @cache_readonly
-    def icdf(self):
+    def icdf(self, sample_quantile = False):
         """
-        Inverse Cumulative Distribution (Quantile) Function
+        Inverse Cumulative Distribution (Quantile) Function over the
+        range of the cdf stored.
 
         Notes
         -----
         Will not work if fit has not been called. Uses
         `scipy.stats.mstats.mquantiles`.
+
+        Uses linear interpolation to get values on a uniform
+        grid.
         """
         _checkisfit(self)
-        gridsize = len(self.density)
-        return stats.mstats.mquantiles(self.endog, np.linspace(0,1,
-                    gridsize))
+
+        if sample_quantile:
+            gridsize = len(self.density)
+            return stats.mstats.mquantiles(self.endog, np.linspace(0,1,
+                        gridsize))
+
+        else:
+            icdf_interp = interpolate.interp1d(self.cdf, self.support, kind='linear')
+            return icdf_interp(np.linspace(self.cdf[0],self.cdf[-1],len(self.support)))
+
+
+
+    # def icdf(self, x):
+
+    #     _checkisfit(self)
+
+    #     if getattr(self.kernel, 'icdf', None):
+    #         print sum(self.kernel.icdf(self.endog, x, self.bw))/len(self.endog)
+
+    #     if x >= self.support[-1]:
+    #         return np.infty
+    #     if x <= self.support[0]:
+    #         return -1*np.infty
+
+    #     index = bisect_left(self.cdf, x)
+    #     support = self.support
+    #     cdf = self.cdf
+
+    #     return (x-cdf[index-1])*1.0/(cdf[index]-cdf[index-1])*(support[index]-support[index-1])+ support[index-1]
+
+
 
     def evaluate(self, point):
         """
