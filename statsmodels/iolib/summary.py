@@ -261,14 +261,17 @@ def _getnames(self, yname=None, xname=None):
     '''extract names from model or construct names
     '''
     if yname is None:
-        try:
+        if hasattr(self.model, 'endog_names') and (
+               not self.model.endog_names is None):
             yname = self.model.endog_names
-        except AttributeError:
+        else:
             yname = 'y'
+
     if xname is None:
-        try:
+        if hasattr(self.model, 'exog_names') and (
+               not self.model.exog_names is None):
             xname = self.model.exog_names
-        except AttributeError:
+        else:
             xname = ['var_%d' % i for i in range(len(self.params))]
 
     return yname, xname
@@ -325,7 +328,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
         gen_left = [('Dep. Variable:', None),
                     ('Model type:', None),
                     ('Date:', None),
-                    ('No. Observations:', None)
+                    ('No. Observations:', None),
                     ('Df model:', None),
                     ('Df resid:', None)]
 
