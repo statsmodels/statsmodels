@@ -682,8 +682,11 @@ class GenericLikelihoodModel(LikelihoodModel):
         # this won't work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
             #try:
-            self.nparams = self.df_model = (exog.shape[1]
-                                            if np.ndim(exog) == 2 else 1)
+            self.nparams = (exog.shape[1] if np.ndim(exog) == 2 else 1)
+
+        #TODO temporary solution, force approx normal
+        #self.df_model = 9999
+        #somewhere: CacheWriteWarning: The attribute 'df_model' cannot be overwritten
         super(GenericLikelihoodModel, self).__init__(endog, exog, missing=missing)
 
     #this is redundant and not used when subclassing
@@ -695,6 +698,17 @@ class GenericLikelihoodModel(LikelihoodModel):
         else:   # can use approx_hess_p if we have a gradient
             if not self.hessian:
                 pass
+        #Initialize is called by
+        #statsmodels.model.LikelihoodModel.__init__
+        #and should contain any preprocessing that needs to be done for a model.
+        from statsmodels.tools import tools
+        if self.exog is not None:
+            self.df_model = float(tools.rank(self.exog) - 1)  # assumes constant
+            self.df_resid = float(self.exog.shape[0] - tools.rank(self.exog))
+        else:
+            self.df_model = np.nan
+            self.df_resid = np.nan
+        super(GenericLikelihoodModel, self).initialize()
 
     def expandparams(self, params):
         '''
@@ -787,52 +801,6 @@ class GenericLikelihoodModel(LikelihoodModel):
         return genericmlefit
     #fit.__doc__ += LikelihoodModel.fit.__doc__
 
-    #------------------------------
-    #TODO: the following have been moved to the result mixin class
-    #      check if anything is still using them from here
-
-    @cache_readonly
-    def jacv(self):
-        if not hasattr(self, '_results'):
-            raise ValueError('need to call fit first')
-        return self.jac(self._results.params)
-
-    @cache_readonly
-    def hessv(self):
-        if not hasattr(self, '_results'):
-            raise ValueError('need to call fit first')
-        return self.hessian(self._results.params)
-
-    # the following could be moved to results
-    @cache_readonly
-    def covjac(self):
-        '''
-        covariance of parameters based on loglike outer product of jacobian
-        '''
-##        if not hasattr(self, '_results'):
-##            raise ValueError('need to call fit first')
-##            #self.fit()
-##        self.jacv = jacv = self.jac(self._results.params)
-        jacv = self.jacv
-        return np.linalg.inv(np.dot(jacv.T, jacv))
-
-    @cache_readonly
-    def covjhj(self):
-        jacv = self.jacv
-##        hessv = self.hessv
-##        hessinv = np.linalg.inv(hessv)
-##        self.hessinv = hessinv
-        hessinv = self._results.cov_params()
-        return np.dot(hessinv, np.dot(np.dot(jacv.T, jacv), hessinv))
-
-    @cache_readonly
-    def bsejhj(self):
-        return np.sqrt(np.diag(self.covjhj))
-
-    @cache_readonly
-    def bsejac(self):
-        return np.sqrt(np.diag(self.covjac))
-
 
 class Results(object):
     """
@@ -853,7 +821,8 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
-        self.k_constant = model.k_constant
+        if hasattr(model, 'k_constant'):
+            self.k_constant = model.k_constant
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
@@ -880,6 +849,7 @@ class Results(object):
             exog = dmatrix(self.model.data.orig_exog.design_info.builder,
                     exog)
         return self.model.predict(self.params, exog, *args, **kwargs)
+
 
 #TODO: public method?
 class LikelihoodModelResults(Results):
@@ -1759,7 +1729,67 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
         self.endog = model.endog
         self.exog = model.exog
         self.nobs = model.endog.shape[0]
+        self.df_model = model.df_model
+        self.df_resid = model.df_resid
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
 
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
 
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', None),
+                    ('Method:', ['Maximum Likelihood']),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. Observations:', None),
+                    ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
+                    ('Df Model:', None), #[self.df_model])
+                    ]
+
+        top_right = [#('R-squared:', ["%#8.3f" % self.rsquared]),
+                     #('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+                     #('F-statistic:', ["%#8.4g" % self.fvalue] ),
+                     #('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+                     ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
+                     ('AIC:', ["%#8.4g" % self.aic]),
+                     ('BIC:', ["%#8.4g" % self.bic])
+                     ]
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Results"
+
+        #create summary table instance
+        from statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                          yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                             use_t=False)
+
+        return smry
