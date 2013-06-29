@@ -14,8 +14,8 @@ The online documentation is hosted at `sourceforge <http://statsmodels.sourcefor
 Minimal Examples
 ----------------
 
-Since version ``0.5.0`` of ``statsmodels``, you can use ``pandas`` data frames
-to hold your data and R-style formulas to fit your models. Here is a simple
+Since version ``0.5.0`` of ``statsmodels``, you can use R-style formulas
+together with ``pandas`` data frames to fit your models. Here is a simple
 example using ordinary least squares:   
 
 .. code-block:: python
