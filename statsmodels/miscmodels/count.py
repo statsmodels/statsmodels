@@ -210,12 +210,16 @@ class PoissonZiGMLE(GenericLikelihoodModel):
             self.offset = offset.ravel()  #which way?
         else:
             self.offset = 0.
+
+        #TODO: it's not standard pattern to use default exog
         if exog is None:
             self.exog = np.ones((self.nobs,1))
         self.nparams = self.exog.shape[1]
         #what's the shape in regression for exog if only constant
         self.start_params = np.hstack((np.ones(self.nparams), 0))
         self.cloneattr = ['start_params']
+        #needed for t_test and summary
+        self.exog_names.append('zi')
 
 
     # original copied from discretemod.Poisson

@@ -32,6 +32,18 @@ class CompareMixin(object):
         #assert_almost_equal(self.res.tval, self.res_glm.t(), DEC)
         assert_almost_equal(self.res.tvalues, self.res_discrete.tvalues, DEC4)
         #assert_almost_equal(self.res.params, self.res_discrete.params)
+        assert_almost_equal(self.res.pvalues, self.res_discrete.pvalues, DEC)
+
+    def test_ttest(self):
+        tt = self.res.t_test(np.eye(len(self.res.params)))
+        from scipy import stats
+        pvalue = stats.norm.sf(np.abs(tt.tvalue)) * 2
+        assert_almost_equal(tt.tvalue, self.res.tvalues, DEC)
+        assert_almost_equal(pvalue, self.res.pvalues, DEC)
+
+    def test_summary(self):
+        # SMOKE test
+        self.res.summary()
 
 
 class TestPoissonMLE(CompareMixin):
