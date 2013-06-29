@@ -5,7 +5,7 @@
 import numpy as np
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
-from statsmodels.miscmodels import PoissonGMLE, PoissonOffsetGMLE, \
+from statsmodels.miscmodels.count import PoissonGMLE, PoissonOffsetGMLE, \
                         PoissonZiGMLE
 from statsmodels.discrete.discrete_model import Poisson
 
