@@ -14,8 +14,7 @@ The online documentation is hosted at `sourceforge <http://statsmodels.sourcefor
 Minimal Example
 ---------------
 
-Get the data, run the estimation, and look at the results.
-For example, here is a minimal ordinary least squares example
+Here is a minimal example using ordinary least squares:
 
 .. code-block:: python
 
