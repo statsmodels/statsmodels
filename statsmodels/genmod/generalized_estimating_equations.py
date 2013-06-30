@@ -8,9 +8,8 @@ import pandas
 from patsy import dmatrices
 
 
-#TODO should this inherit from something?
 #TODO multinomial responses
-class GEE:
+class GEE(base.Model):
     """Procedures for fitting marginal regression models to dependent data
     using Generalized Estimating Equations.
 
@@ -24,20 +23,22 @@ class GEE:
     """
 
 
-    def __init__(self, Y, X, Id, T=None, family=None, varstruct=None, ytype="interval"):
+    def __init__(self, endog, exog, groups, time=None, family=None, varstruct=None,
+                 endog_type="interval", missing='none'):
         """
         Parameters
         ----------
-        Y : array-like
+        endog : array-like
             1d array of endogenous response variable.
-        X : array-like
+        exog : array-like
             A nobs x k array where `nobs` is the number of observations and `k`
             is the number of regressors. An interecept is not included by default
             and should be added by the user. See `statsmodels.tools.add_constant`.
-        Id : array-like
+        groups : array-like
             A 1d array of length `nobs` containing the cluster labels.
-        T : array-like
-            1d array of time (or other index) values.
+        time : array-like
+            1d array of time (or other index) values.  This is only used if the
+            dependence structure is Autoregressive
         family : family class instance
             The default is Gaussian.  To specify the binomial distribution
             family = sm.family.Binomial()
@@ -47,14 +48,18 @@ class GEE:
             The default is Independence.  To specify an exchangeable structure
             varstruct = sm.varstruct.Exchangeable()
             See statsmodels.varstruct.varstruct for more information.
-        ytype : string
-           Determines whether the response variable is analyzed as-is (ytype =
-           'interval'), or is recoded as binary indicators (ytype = 'ordinal' or
-           'nominal').  Ordinal values are recoded as cumulative indicators I(Y > s),
-           where s is one of the unique values of Y.  Nominal values are recoded as
-           indicators I(Y = s).  For both ordinal and nominal values, each observed
-           value is recoded as |S|-1 indicators, where S is the set of unique values of Y.
-           No indicator is created for the greatest value in S.
+        endog_type : string
+           Determines whether the response variable is analyzed as-is
+           (endog_type = 'interval'), or is recoded as binary
+           indicators (endog_type = 'ordinal' or 'nominal').  Ordinal
+           values are recoded as cumulative indicators I(endog > s),
+           where s is one of the unique values of endog.  Nominal
+           values are recoded as indicators I(endog = s).  For both
+           ordinal and nominal values, each observed value is recoded
+           as |S|-1 indicators, where S is the set of unique values of
+           endog.  No indicator is created for the greatest value in
+           S.
+        %(extra_params)s
 
         See also
         --------
@@ -77,11 +82,14 @@ class GEE:
         Endog and exog are references so that if the data they refer to are already
         arrays and these arrays are changed, endog and exog will change.
 
-        """
+        """ % {'extra_params' : base._missing_param_doc}
 
-        # Handle the ytype argument
-        if ytype not in ("interval","ordinal","nominal"):
-            raise ValueError("GEE: `ytype` must be one of 'interval', 'ordinal', or 'nominal'")
+        #TODO: This will not handle missing values with the groups and time data
+        super(GEE, self).__init__(endog, exog, missing=missing)
+
+        # Handle the endog_type argument
+        if endog_type not in ("interval","ordinal","nominal"):
+            raise ValueError("GEE: `endog_type` must be one of 'interval', 'ordinal', or 'nominal'")
 
         # Handle the family argument
         if family is None:
@@ -99,113 +107,93 @@ class GEE:
                 raise ValueError("GEE: `varstruct` must be a genmod varstruct instance")
         self.varstruct = varstruct
 
-        if type(X) == pandas.DataFrame:
-            self.xnames = X.columns
-        else:
-            self.xnames = ["v_%d" % (k+1) for k in range(X.shape[1])]
-
-        if type(Y) == pandas.Series:
-            self.yname = Y.name
-        else:
-            self.yname = "unnamed response"
-
-        # Drop cases with missing data
-        #TODO: Does this work for both numpy arrays and Pandas data frames/series?
-        ii = pandas.notnull(Y) & pandas.notnull(X).all(1)
-        if type(Y) == pandas.Series:
-            Y = Y.loc[ii].values
-        else:
-            Y = Y[ii]
-        if type(X) == pandas.DataFrame:
-            X = X.loc[ii,:].as_matrix()
-        else:
-            X = X[ii,:]
-        Id = Id[ii]
-        if T is not None:
-            T = T[ii]
-        ixn = np.flatnonzero(ii)
+        # Convert to ndarrays
+        if type(endog) == pandas.DataFrame:
+            endog = endog.iloc[:,0].values
+        if type(exog) == pandas.DataFrame:
+            exog = exog.as_matrix()
 
         # Convert the data to the internal representation
-        S = np.unique(Id)
+        S = np.unique(groups)
         S.sort()
-        Y1 = [list() for s in S]
-        X1 = [list() for s in S]
-        T1 = [list() for s in S]
+        endog1 = [list() for s in S]
+        exog1 = [list() for s in S]
+        time1 = [list() for s in S]
         IX = [list() for s in S]
-        for i in range(len(Y)):
-            idx = int(Id[i])
-            Y1[idx].append(Y[i])
-            X1[idx].append(X[i])
-            IX[idx].append(ixn[i])
-            if T is not None:
-                T1[idx].append(T[i])
-        Y = [np.array(y) for y in Y1]
-        X = [np.array(x) for x in X1]
+        for i in range(len(endog)):
+            idx = int(groups[i])
+            endog1[idx].append(endog[i])
+            exog1[idx].append(exog[i])
+            IX[idx].append(i)
+            if time is not None:
+                time1[idx].append(time[i])
+        endog = [np.array(y) for y in endog1]
+        exog = [np.array(x) for x in exog1]
         IX = [np.array(x) for x in IX]
-        if T1 is not None:
-            T = [np.array(t) for t in T1]
+        if time1 is not None:
+            time = [np.array(t) for t in time1]
 
         # Save the row indices in the original data (prior to dropping missing and
         # prior to splitting into clusters) that correspond to the rows
-        # of each element of Y and X.
+        # of each element of endog and exog.
         self.IX = IX
 
         # Need to do additional processing for categorical responses
-        if ytype != "interval":
-            self.Y_orig = Y
-            self.X_orig = X
-            Y,X,IY,BTW,nylevel = _setup_multicategorical(Y, X, ytype)
+        if endog_type != "interval":
+            self.endog_orig = endog
+            self.exog_orig = exog
+            endog,exog,IY,BTW,nylevel = _setup_multicategorical(endog, exog, endog_type)
             self.nylevel = nylevel
             self.IY = IY
             self.BTW = BTW
 
-        self.ytype = ytype
-        self.Y = Y
-        self.X = X
+        self.endog_type = endog_type
+        self.endog = endog
+        self.exog = exog
         self.family = family
-        self.T = T
+        self.time = time
 
         # Some of the variance calculations require data or methods from the gee class.
-        if ytype == "interval":
+        if endog_type == "interval":
             self.varstruct.initialize(self)
         else:
             self.varstruct.initialize(self, IY, BTW)
 
         # Total sample size
-        N = [len(y) for y in self.Y]
+        N = [len(y) for y in self.endog]
         self.nobs = sum(N)
 
 
 
-    #TODO: merge with something in base?
-    @classmethod
-    def from_formula(cls, formula, groups, data, time=None, family=None,
-                     varstruct=None, ytype="interval"):
-        """
+    # #TODO: merge with something in base?
+    # @classmethod
+    # def from_formula(cls, formula, grouping_variable, data, time_variable=None, family=None,
+    #                  varstruct=None, endog_type="interval"):
+    #     """
 
 
-        formula : string
-            The formula for the marginal model
+    #     formula : string
+    #         The formula for the marginal model
 
-        groups : string
-            The variable name that defines the group
+    #     groups : string
+    #         The variable name that defines the group
 
-        data : pandas.DataFrame
-            A pandas data frame containing all the variables in formula
-            and in groups
+    #     data : pandas.DataFrame
+    #         A pandas data frame containing all the variables in formula
+    #         and in groups
 
-        """
+    #     """
 
-        Y,X = dmatrices(formula, data, return_type="dataframe")
-        Y = Y.iloc[:,0] # Convert to series
+    #     endog,exog = dmatrices(formula, data, return_type="dataframe")
+    #     endog = endog.iloc[:,0] # Convert to series
 
-        T = None
-        if time is not None:
-            T = data[time]
+    #     time = None
+    #     if time_variable is not None:
+    #         time = data[time_variable]
 
-        Id = data[groups]
+    #     groups = data[grouping_variable]
 
-        return GEE(Y, X, Id, T, family, varstruct, ytype)
+    #     return GEE(endog, exog, groups, time, family, varstruct, endog_type)
 
 
 
@@ -215,26 +203,26 @@ class GEE:
         of `beta`.
         """
 
-        N = len(self.Y)
+        N = len(self.endog)
         nobs = self.nobs
         p = len(beta)
 
         mean = self.family.link.inverse
         varfunc = self.family.variance
-        Y = self.Y
-        X = self.X
+        endog = self.endog
+        exog = self.exog
 
         scale_inv,m = 0,0
         for i in range(N):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(X[i], beta)
+            lp = np.dot(exog[i], beta)
             E = mean(lp)
 
             S = np.sqrt(varfunc(E))
-            resid = (self.Y[i] - E) / S
+            resid = (self.endog[i] - E) / S
 
             n = len(resid)
             scale_inv += np.sum(resid**2)
@@ -254,10 +242,10 @@ class GEE:
         """
 
         # Number of clusters
-        N = len(self.Y)
+        N = len(self.endog)
 
-        X = self.X
-        Y = self.Y
+        exog = self.exog
+        endog = self.endog
         varstruct = self.varstruct
 
         mean = self.family.link.inverse
@@ -267,12 +255,12 @@ class GEE:
         B,C = 0,0
         for i in range(N):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(X[i], beta)
+            lp = np.dot(exog[i], beta)
             E = mean(lp)
-            Dt = X[i] * mean_deriv(lp)[:,None]
+            Dt = exog[i] * mean_deriv(lp)[:,None]
             D = Dt.T
 
             S = np.sqrt(varfunc(E))
@@ -283,7 +271,7 @@ class GEE:
             VID = np.linalg.solve(V, D.T)
             B += np.dot(D, VID)
 
-            R = Y[i] - E
+            R = endog[i] - E
             VIR = np.linalg.solve(V, R)
             C += np.dot(D, VIR)
 
@@ -296,9 +284,9 @@ class GEE:
         Returns the sampling covariance matrix of the regression parameters.
         """
 
-        Y = self.Y
-        X = self.X
-        N = len(Y)
+        endog = self.endog
+        exog = self.exog
+        N = len(endog)
 
         mean = self.family.link.inverse
         mean_deriv = self.family.link.inverse_deriv
@@ -307,12 +295,12 @@ class GEE:
         B,C = 0,0
         for i in range(N):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(X[i], beta)
+            lp = np.dot(exog[i], beta)
             E = mean(lp)
-            Dt = X[i] * mean_deriv(lp)[:,None]
+            Dt = exog[i] * mean_deriv(lp)[:,None]
             D = Dt.T
 
             S = np.sqrt(varfunc(E))
@@ -323,7 +311,7 @@ class GEE:
             VID = np.linalg.solve(V, D.T)
             B += np.dot(D, VID)
 
-            R = Y[i] - E
+            R = endog[i] - E
             VIR = np.linalg.solve(V, R)
             DVIR = np.dot(D, VIR)
             C += np.outer(DVIR, DVIR)
@@ -331,6 +319,21 @@ class GEE:
         BI = np.linalg.inv(B)
 
         return np.dot(BI, np.dot(C, BI))
+
+
+    def predict(self, exog=None, linear=False):
+
+        if exog is None and linear:
+            F = [self.model.family.link(np.dot(self.params, x)) for x in self.model.exog]
+        elif exog is None and not linear:
+            F = [np.dot(x, self.params) for x in self.model.exog]
+        elif linear:
+            F = self.model.family.link(self.params, exog)
+        elif not linear:
+            F = np.dot(exog, self.params)
+
+        return F
+
 
 
 
@@ -354,22 +357,22 @@ class GEE:
 
         """
 
-        Y = self.Y
-        X = self.X
+        endog = self.endog
+        exog = self.exog
         varstruct = self.varstruct
-        p = X[0].shape[1]
+        p = exog[0].shape[1]
 
         if starting_beta is None:
 
-            if self.ytype == "interval":
+            if self.endog_type == "interval":
                 xnames1 = []
                 beta = np.zeros(p, dtype=np.float64)
             else:
                 xnames1 = ["cat_%d" % k for k in range(1,self.nylevel)]
-                beta = _categorical_starting_values(self.Y_orig, self.X[0].shape[1],
-                                                    self.nylevel, self.ytype)
+                beta = _categorical_starting_values(self.endog_orig, self.exog[0].shape[1],
+                                                    self.nylevel, self.endog_type)
 
-            xnames1 += self.xnames
+            xnames1 += self.exog_names
             beta = pandas.Series(beta, index=xnames1)
 
         else:
@@ -433,22 +436,8 @@ class GEEResults:
 
     @cache_readonly
     def resid(self):
-        R = [y - np.dot(x, self.params) for x,y in zip(self.model.X, self.model.Y)]
+        R = [y - np.dot(x, self.params) for x,y in zip(self.model.exog, self.model.endog)]
         return R
-
-
-    def predict(self, exog=None, link=False):
-
-        if exog is None and link:
-            F = [self.model.family.GetE(self.params, x) for x in self.model.X]
-        elif exog is None and not link:
-            F = [np.dot(x, self.params) for x in self.model.X]
-        elif link:
-            F = self.model.family.GetE(self.params, exog)
-        elif not link:
-            F = np.dot(exog, self.params)
-
-        return F
 
 
     def conf_int(self, alpha=.05, cols=None):
@@ -515,15 +504,15 @@ class GEEResults:
                     ('Method:', ['Generalized Estimating Equations']),
                     ('Family:', [self.model.family.__class__.__name__]),
                     ('Dependence structure:', [self.model.varstruct.__class__.__name__]),
-                    ('Response type:', [self.model.ytype.title()]),
+                    ('Response type:', [self.model.endog_type.title()]),
                     ('Date:', None),
                     ('Time:', None),
         ]
 
-        NY = [len(y) for y in self.model.Y]
+        NY = [len(y) for y in self.model.endog]
 
         top_right = [('No. Observations:', [sum(NY)]),
-                     ('No. clusters:', [len(self.model.Y)]),
+                     ('No. clusters:', [len(self.model.endog)]),
                      ('Min. cluster size', [min(NY)]),
                      ('Max. cluster size', [max(NY)]),
                      ('Mean cluster size', ["%.1f" % np.mean(NY)]),
@@ -552,7 +541,7 @@ class GEEResults:
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                          yname=self.model.yname, xname=xname, title=title)
+                          yname=self.model.endog_names, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=self.params.index.tolist(),
                               alpha=alpha, use_t=True)
 
@@ -567,59 +556,60 @@ class GEEResults:
 
 
 
-def _setup_multicategorical(Y, X, ytype):
+def _setup_multicategorical(endog, exog, endog_type):
     """Restructure nominal or ordinal multicategorical data as binary
     indicators so that they can be analysed using Generalized Estimating
     Equations.
 
-    Nominal data are recoded as indicators.  Each element of Y is
-    recoded as the sequence of |S|-1 indicators I(y = S[0]), ..., I(y
-    = S[-1]), where S is the sorted list of unique values of Y
-    (excluding the maximum value).  Also, the covariate vector is
-    expanded by taking the Kronecker product of x with e_j, where e_y
-    is the indicator vector with a 1 in position y.
+    Nominal data are recoded as indicators.  Each element of endog is
+    recoded as the sequence of |S|-1 indicators I(endog = S[0]), ...,
+    I(endog = S[-1]), where S is the sorted list of unique values of
+    endog (excluding the maximum value).  Also, the covariate vector
+    is expanded by taking the Kronecker product of x with e_j, where
+    e_y is the indicator vector with a 1 in position y.
 
     Ordinal data are recoded as cumulative indicators. Each element y
-    of Y is recoded as |S|-1 indicators I(y > S[0]), ..., I(y > S[-1])
-    where S is the sorted list of unique values of Y (excluding the
-    maximum value).  Also, a vector e_y of |S| values is appended to
-    the front of each covariate vector x, where e_y is the indicator
-    vector with a 1 in position y.
+    of endog is recoded as |S|-1 indicators I(endog > S[0]), ...,
+    I(endog > S[-1]) where S is the sorted list of unique values of
+    endog (excluding the maximum value).  Also, a vector e_y of |S|
+    values is appended to the front of each covariate vector x, where
+    e_y is the indicator vector with a 1 in position y.
 
     Arguments
     ---------
-    Y: List
+    endog: List
         A list of 1-dimensional NumPy arrays, giving the response
         values for the clusters
-    X:  List
+    exog:  List
         A list of 2-dimensional NumPy arrays, giving the covariate
-        data for the clusters.  X[i] should include an intercept
+        data for the clusters.  exog[i] should include an intercept
         for nominal data but no intercept should be included for
         ordinal data.
-    ytype: string
+    endog_type: string
         Either "ordinal" or "nominal"
 
-    The number of rows of X[i] must equal the length of Y[i], and all
-    the X[i] arrays should have the same number of columns.
+    The number of rows of exog[i] must equal the length of endog[i],
+    and all the exog[i] arrays should have the same number of columns.
 
     Returns:
     --------
-    Y1:   Y recoded as described above
-    X1:   X recoded as described above
+    endog1:   endog recoded as described above
+    exog1:   exog recoded as described above
     IY:   a list whose i^th element iy = IY[i] is a sequence of tuples
-          (a,b), where Y[i][a:b] is the subvector of indicators derived
+          (a,b), where endog[i][a:b] is the subvector of indicators derived
           from the same ordinal value
     BTW   a list whose i^th element btw = BTW[i] is a map from cut-point
           pairs (c,c') to the indices of between-subject pairs derived
           from the given cut points
+
     """
 
-    if ytype not in ("ordinal", "nominal"):
-        raise ValueError("_setup_multicategorical: `ytype` must be either "
+    if endog_type not in ("ordinal", "nominal"):
+        raise ValueError("_setup_multicategorical: `endog_type` must be either "
                          "'nominal' or 'categorical'")
 
     # The unique outcomes
-    YV = np.concatenate(Y)
+    YV = np.concatenate(endog)
     S = list(set(YV))
     S.sort()
     S = S[0:-1]
@@ -627,10 +617,10 @@ def _setup_multicategorical(Y, X, ytype):
     ncut = len(S)
 
     # nominal=1, ordinal=0
-    ytype_i = [0,1][ytype == "nominal"]
+    endog_type_i = [0,1][endog_type == "nominal"]
 
-    Y1,X1,IY,BTW = [],[],[],[]
-    for y,x in zip(Y,X): # Loop over clusters
+    endog1,exog1,IY,BTW = [],[],[],[]
+    for y,x in zip(endog,exog): # Loop over clusters
 
         y1,x1,iy1 = [],[],[]
         jj = 0
@@ -639,7 +629,7 @@ def _setup_multicategorical(Y, X, ytype):
         for y2,x2 in zip(y,x): # Loop over data points within a cluster
             iy2 = []
             for js,s in enumerate(S):
-                if ytype_i == 0:
+                if endog_type_i == 0:
                     y1.append(int(y2 > s))
                     x3 = np.concatenate((np.zeros(ncut, dtype=np.float64), x2))
                     x3[js] = 1
@@ -652,8 +642,8 @@ def _setup_multicategorical(Y, X, ytype):
                 iy2.append(jj)
                 jj += 1
             iy1.append(iy2)
-        Y1.append(np.array(y1))
-        X1.append(np.array(x1))
+        endog1.append(np.array(y1))
+        exog1.append(np.array(x1))
 
         # Get a map from (c,c') tuples (pairs of points in S) to the
         # list of all index pairs corresponding to the tuple.
@@ -679,21 +669,21 @@ def _setup_multicategorical(Y, X, ytype):
         IY.append(iy1)
 
 
-    return Y1,X1,IY,BTW,len(S)+1
+    return endog1,exog1,IY,BTW,len(S)+1
 
 
-def _categorical_starting_values(Y, q, nylevel, ytype):
+def _categorical_starting_values(endog, q, nylevel, endog_type):
 
-    YV = np.concatenate(Y)
+    YV = np.concatenate(endog)
     S = list(set(YV))
     S.sort()
     S = S[0:-1]
 
-    if ytype == "ordinal":
+    if endog_type == "ordinal":
         Pr = np.array([np.mean(YV > s) for s in S])
         bl = np.log(Pr/(1-Pr))
         beta = np.concatenate((bl, np.zeros(q-nylevel+1)))
-    elif ytype == "nominal":
-        beta = np.zeros(X[0].shape[1], dtype=np.float64)
+    elif endog_type == "nominal":
+        beta = np.zeros(exog[0].shape[1], dtype=np.float64)
 
     return beta
