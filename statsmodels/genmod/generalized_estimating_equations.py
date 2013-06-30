@@ -164,39 +164,6 @@ class GEE(base.Model):
         self.nobs = sum(N)
 
 
-
-    # #TODO: merge with something in base?
-    # @classmethod
-    # def from_formula(cls, formula, grouping_variable, data, time_variable=None, family=None, 
-    #                  varstruct=None, endog_type="interval"):
-    #     """
-
-
-    #     formula : string
-    #         The formula for the marginal model
-        
-    #     groups : string
-    #         The variable name that defines the group
-
-    #     data : pandas.DataFrame
-    #         A pandas data frame containing all the variables in formula
-    #         and in groups
-
-    #     """
-        
-    #     endog,exog = dmatrices(formula, data, return_type="dataframe")
-    #     endog = endog.iloc[:,0] # Convert to series
-
-    #     time = None
-    #     if time_variable is not None:
-    #         time = data[time_variable]
-
-    #     groups = data[grouping_variable]
-        
-    #     return GEE(endog, exog, groups, time, family, varstruct, endog_type) 
-
-
-
     def estimate_scale(self, beta):
         """
         Returns an estimate of the scale parameter `phi` at the given value
