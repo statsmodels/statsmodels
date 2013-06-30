@@ -15,11 +15,12 @@ class VarStruct(object):
 
         Notes
         -----
-        parent should contain the clustered data in the form Y, X, where
-        Y and X are lists of the same length.  Y[i] is the response data
-        represented as a n_i length ndarray, and X[i] is the covariate
-        data represented as a n_i x p ndarray, where n_i is the number of
-        observations in cluster i.
+        parent should contain the clustered data in the form endog,
+        exog, where endog and exog are lists of the same length.  endog[i]
+        is the response data represented as a n_i length ndarray, and
+        endog[i] is the covariate data represented as a n_i x p ndarray,
+        where n_i is the number of observations in cluster i.
+
         """
         self.parent = parent
 
@@ -92,26 +93,26 @@ class Exchangeable(VarStruct):
 
     def update(self, beta):
 
-        N = len(self.parent.Y)
+        N = len(self.parent.endog)
         nobs = self.parent.nobs
         p = len(beta)
 
         mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
-        Y = self.parent.Y
-        X = self.parent.X
+        endog = self.parent.endog
+        exog = self.parent.exog
 
         a,scale_inv,m = 0,0,0
         for i in range(N):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(X[i], beta)
+            lp = np.dot(exog[i], beta)
             E = mean(lp)
 
             S = np.sqrt(varfunc(E))
-            resid = (self.parent.Y[i] - E) / S
+            resid = (self.parent.endog[i] - E) / S
 
             n = len(resid)
             Q = np.outer(resid, resid)
@@ -199,11 +200,11 @@ class Nested(VarStruct):
         corresponding element of QY.
         """
 
-        N = len(self.parent.Y)
+        N = len(self.parent.endog)
         QX,QI = [],[]
         m = self.Id.shape[1]
         for i in range(N):
-            n = len(self.parent.Y[i])
+            n = len(self.parent.endog[i])
             ix = self.parent.IX[i]
 
             qi = np.zeros((n,n), dtype=np.int32)
@@ -230,7 +231,7 @@ class Nested(VarStruct):
 
     def update(self, beta):
 
-        N = len(self.parent.Y)
+        N = len(self.parent.endog)
         nobs = self.parent.nobs
         p = len(beta)
 
@@ -239,21 +240,21 @@ class Nested(VarStruct):
 
         mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
-        Y = self.parent.Y
-        X = self.parent.X
+        endog = self.parent.endog
+        exog = self.parent.exog
 
         QY = []
         scale_inv,m = 0.,0.
         for i in range(N):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(X[i], beta)
+            lp = np.dot(exog[i], beta)
             E = mean(lp)
 
             S = np.sqrt(varfunc(E))
-            resid = (self.parent.Y[i] - E)/S
+            resid = (self.parent.endog[i] - E)/S
 
             n = len(resid)
             for j1 in range(n):
@@ -321,15 +322,15 @@ class Autoregressive(VarStruct):
 
     def update(self, beta):
 
-        if self.parent.T is None:
-            raise ValueError("GEE: T must be provided to GEE if using AR dependence structure")
+        if self.parent.time is None:
+            raise ValueError("GEE: time must be provided to GEE if using AR dependence structure")
 
-        N = len(self.parent.Y)
+        N = len(self.parent.endog)
         nobs = self.parent.nobs
         p = len(beta)
-        Y = self.parent.Y
-        X = self.parent.X
-        T = self.parent.T
+        endog = self.parent.endog
+        exog = self.parent.exog
+        time = self.parent.time
 
         # Only need to compute this once
         if self.QX is not None:
@@ -338,13 +339,13 @@ class Autoregressive(VarStruct):
             QX = []
             for i in range(N):
 
-                n = len(Y[i])
+                n = len(endog[i])
                 if n == 0:
                     continue
 
                 for j1 in range(n):
                     for j2 in range(j1):
-                        QX.append(np.abs(T[i][j1] - T[i][j2]))
+                        QX.append(np.abs(time[i][j1] - time[i][j2]))
 
             QX = np.array(QX)
             self.QX = QX
@@ -353,9 +354,8 @@ class Autoregressive(VarStruct):
 
         mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
-        Y = self.parent.Y
-        X = self.parent.X
-        T = self.parent.T
+        endog = self.parent.endog
+        exog = self.parent.exog
 
         # Weights
         VA = (1 - self.a**(2*QX)) / (1 - self.a**2)
@@ -365,14 +365,14 @@ class Autoregressive(VarStruct):
         QY = []
         for i in range(N):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(X[i], beta)
+            lp = np.dot(exog[i], beta)
             E = mean(lp)
 
             S = np.sqrt(scale*varfunc(E))
-            resid = (self.parent.Y[i] - E) / S
+            resid = (self.parent.endog[i] - E) / S
 
             n = len(resid)
             for j1 in range(n):
@@ -509,7 +509,7 @@ class GlobalOddsRatio(VarStruct):
         """
 
         BTW = self.BTW
-        Y = self.parent.Y
+        endog = self.parent.endog
 
         # Storage for the contingency tables for each (c,c')
         A = {}
@@ -517,13 +517,13 @@ class GlobalOddsRatio(VarStruct):
             A[ii] = np.zeros((2,2), dtype=np.float64)
 
         # Get the observed crude OR
-        for i in range(len(Y)):
+        for i in range(len(endog)):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
             # The observed joint values for the current cluster
-            y = Y[i]
+            y = endog[i]
             Y11 = np.outer(y, y)
             Y10 = np.outer(y, 1-y)
             Y01 = np.outer(1-y, y)
@@ -565,7 +565,7 @@ class GlobalOddsRatio(VarStruct):
         # Fix E[YY'] for elements that belong to same observation
         for iy in IY:
             ey = EY[iy[0]:iy[1]]
-            if self.parent.ytype == "ordinal":
+            if self.parent.endog_type == "ordinal":
                 eyr = np.outer(ey, np.ones(len(ey)))
                 eyc = np.outer(np.ones(len(ey)), ey)
                 V[iy[0]:iy[1],iy[0]:iy[1]] = np.where(eyr < eyc, eyr, eyc)
@@ -578,11 +578,11 @@ class GlobalOddsRatio(VarStruct):
     def update(self, beta):
         """Update the global odds ratio based on the current value of beta."""
 
-        X = self.parent.X
-        Y = self.parent.Y
+        exog = self.parent.exog
+        endog = self.parent.endog
         BTW = self.BTW
 
-        N = len(Y)
+        N = len(endog)
 
         # This will happen if all the clusters have only
         # one observation
@@ -595,10 +595,10 @@ class GlobalOddsRatio(VarStruct):
 
         for i in range(N):
 
-            if len(Y[i]) == 0:
+            if len(endog[i]) == 0:
                 continue
 
-            LP = np.dot(X[i], beta)
+            LP = np.dot(exog[i], beta)
             ELP = np.exp(-LP)
             EY = 1 / (1 + ELP)
 
