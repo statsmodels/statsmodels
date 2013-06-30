@@ -392,67 +392,83 @@ def _col_info(result, info_dict=None):
     out.columns = [str(result.model.endog_names)]
     return out
 
-def summary_col(results, float_format='%.4f', model_names=None, stars=True,
-        info_dict=None):
-    '''Add the contents of a Dict to summary table
+
+def _make_unique(list_of_names):
+    if len(set(list_of_names)) == len(list_of_names):
+        return list_of_names
+    # pandas does not like it if multiple columns have the same names
+    from collections import defaultdict
+    name_counter = defaultdict(str)
+    header = []
+    for _name in list_of_names:
+        name_counter[_name] += "I"
+        header.append(_name+" " +name_counter[_name])
+    return header
+
+
+def summary_col(results, float_format='%.4f', model_names=[], stars=False,
+        info_dict=None, regressor_order=[]):
+    '''Summarize multiple results instances side-by-side (coefs and SEs)
 
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
     float_format : string
         float format for coefficients and standard errors
-    model_names : list of strings of length len(results)
+    model_names : list of strings of length len(results) if the names are not
+        unique, a roman number will be appended to all model names
     stars : bool
         print significance stars
     info_dict : dict
         dict of lambda functions to be applied to results instances to retrieve
         model info
+    regressor_order : list of strings
+        list of names of the regressors in the desired order. All regressors
+        not specified will be appended to the end of the list.
     '''
 
-    # Coerce to list if user feeds a results instance
     if type(results) != list:
         results = [results]
-    # Params as dataframe columns
+
     cols = [_col_params(x, stars=stars, float_format=float_format) for x in results]
+
+    # Unique column names (pandas has problems merging otherwise)
+    if model_names:
+        colnames = _make_unique(model_names)
+    else:
+        colnames = _make_unique([x.columns[0] for x in cols])
+    for i in range(len(cols)):
+        cols[i].columns = [colnames[i]]
+
     merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
     summ = reduce(merg, cols)
-    # Index
-    idx1 = summ.index.get_level_values(0).tolist()
-    idx2 = range(1,len(idx1),2)
-    for i in idx2:
-        idx1[i] = ''
-    summ.index = pd.Index(idx1)
-    # Header
-    if model_names == None:
-        header = []
-        try:
-            for r in results:
-                header.append(r.model.endog_names)
-        except:
-            i = 0
-            for r in results:
-                header.append('Model ' + i)
-                i += 1
-    else:
-        header = model_names
-    summ.columns = pd.Index(header)
+
+    if regressor_order:
+        varnames = summ.index.get_level_values(0)
+        badname = filter(lambda x: x not in varnames, regressor_order)
+        if badname:
+            msg = ", ".join(badname) + " is/are not valid variable name(s)."
+            raise ValueError(msg)
+        ordered = filter(lambda x: x in varnames, regressor_order)
+        ordered = summ.ix[ordered]
+        unordered = filter(lambda x: x not in regressor_order, varnames)
+        unordered = summ.ix[unordered]
+        summ = pd.concat([ordered, unordered])
+
+    idx = summ.index.get_level_values(0).to_series()
+    ran = pd.Series(range(len(idx)))
+    summ.index = np.where(ran % 2 == 1, idx, '')
+
     summ = summ.fillna('')
 
-    # Info as dataframe columns
-    cols = [_col_info(x, info_dict) for x in results]
-    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
-    info = reduce(merg, cols)
-    dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
-    dat.columns = summ.columns
-    dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
-    # Summary
     smry = Summary()
-    smry.add_df(dat, header=True, align='l')
+    smry.add_df(summ, header=True, align='l')
     smry.add_text('Standard errors in parentheses.')
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
 
     return smry
+
 
 def _formatter(element, float_format='%.4f'):
     try:
@@ -485,6 +501,7 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True, index=Tr
     st.output_formats['txt']['header_dec_below'] = header_dec_below
     st.output_formats['txt']['colsep'] = ' ' * int(pad_col + 1)
     return st
+
 
 def _simple_tables(tables, settings, pad_col=None, pad_index=None):
     simple_tables = []
