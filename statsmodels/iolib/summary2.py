@@ -444,20 +444,18 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     summ = reduce(merg, cols)
 
     if regressor_order:
-        varnames = summ.index.get_level_values(0)
-        badname = filter(lambda x: x not in varnames, regressor_order)
-        if badname:
-            msg = ", ".join(badname) + " is/are not valid variable name(s)."
-            raise ValueError(msg)
-        ordered = filter(lambda x: x in varnames, regressor_order)
-        ordered = summ.ix[ordered]
-        unordered = filter(lambda x: x not in regressor_order, varnames)
-        unordered = summ.ix[unordered]
-        summ = pd.concat([ordered, unordered])
+        varnames = summ.index.get_level_values(0).tolist()
+        ordered = [x for x in regressor_order if x in varnames]
+        unordered = [x for x in varnames if x not in regressor_order + ['']]
+        order = ordered + list(np.unique(unordered))
 
-    idx = summ.index.get_level_values(0).to_series()
-    ran = pd.Series(range(len(idx)))
-    summ.index = np.where(ran % 2 == 1, idx, '')
+        f = lambda idx: sum([[x + 'coef', x + 'stde'] for x in idx], [])
+        summ.index = f(np.unique(varnames))
+        summ = summ.reindex(f(order))
+        summ.index = [x[:-4] for x in summ.index]
+
+    idx = pd.Series(range(summ.shape[0])) %2 == 1
+    summ.index = np.where(idx, '', summ.index.get_level_values(0))
 
     summ = summ.fillna('')
 
