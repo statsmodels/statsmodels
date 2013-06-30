@@ -1,3 +1,9 @@
+#!!
+import sys
+sys.path = [x for x in sys.path if "statsmodels" not in x]
+sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
+
+
 """
 Test functions for GEE
 """
@@ -14,14 +20,14 @@ def load_data(fname, icept=True):
 
     Z = np.loadtxt(fname, delimiter=",")
 
-    Id = Z[:,0]
-    Y = Z[:,1]
-    X = Z[:,2:]
+    group = Z[:,0]
+    endog = Z[:,1]
+    exog = Z[:,2:]
 
     if icept:
-        X = np.concatenate((np.ones((X.shape[0],1)), X), axis=1)
+        exog = np.concatenate((np.ones((exog.shape[0],1)), exog), axis=1)
 
-    return Y,X,Id
+    return endog,exog,group
 
 
 class TestGEE(object):
@@ -61,13 +67,13 @@ class TestGEE(object):
         sprintf("se = [[%s],[%s],[%s]]", sei, see, sea)
         """
 
-        Y,X,Id = load_data("data/gee_logistic_1.csv")
+        endog,exog,group = load_data("data/gee_logistic_1.csv")
 
         # Time values for the autoregressive model
-        T = np.zeros(len(Y))
-        idx = set(Id)
+        T = np.zeros(len(endog))
+        idx = set(group)
         for ii in idx:
-            jj = np.flatnonzero(Id == ii)
+            jj = np.flatnonzero(group == ii)
             T[jj] = range(len(jj))
 
         family = Binomial()
@@ -82,18 +88,19 @@ class TestGEE(object):
               [0.0816175453351956,0.0928973822942355,0.121459304850799,0.100993351847033]]
 
         for j,v in enumerate((vi,ve,va)):
-            md = GEE(Y, X, Id, T, family, v)
+            md = GEE(endog, exog, group, T, family, v)
             mdf = md.fit()
             if id(v) != id(va):
                 assert_almost_equal(mdf.params, cf[j], decimal=6)
                 assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
         # Test with formulas
-        D = np.concatenate((Y[:,None], Id[:,None], X[:,1:]), axis=1)
+        D = np.concatenate((endog[:,None], group[:,None], exog[:,1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(X.shape[1]-1)]
+        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3", "Id", D, None, family, v)
+             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
+                                   family=family, varstruct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=6)
              assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
@@ -134,7 +141,7 @@ class TestGEE(object):
 
         family = Gaussian()
 
-        Y,X,Id = load_data("data/gee_linear_1.csv")
+        endog,exog,group = load_data("data/gee_linear_1.csv")
 
         vi = Independence()
         ve = Exchangeable()
@@ -145,17 +152,18 @@ class TestGEE(object):
               [0.025701817387204,0.0303307060257735,0.0371977050322601,0.0301218562204013]] 
 
         for j,v in enumerate((vi,ve)):
-            md = GEE(Y, X, Id, None, family, v)
+            md = GEE(endog, exog, group, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
             assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
 
         # Test with formulas
-        D = np.concatenate((Y[:,None], Id[:,None], X[:,1:]), axis=1)
+        D = np.concatenate((endog[:,None], group[:,None], exog[:,1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(X.shape[1]-1)]
+        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3", "Id", D, None, family, v)
+             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
+                                   family=family, varstruct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=10)
              assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
@@ -166,17 +174,17 @@ class TestGEE(object):
 
         family = Gaussian()
 
-        Y,X,Id = load_data("data/gee_nested_linear_1.csv")
+        endog,exog,group = load_data("data/gee_nested_linear_1.csv")
 
-        Idn = []
+        group_n = []
         for i in range(300):
-            Idn.extend([0,]*5)
-            Idn.extend([1,]*5)
-        Idn = np.array(Idn)
+            group_n.extend([0,]*5)
+            group_n.extend([1,]*5)
+        group_n = np.array(group_n)
 
-        ne = Nested(Idn)
+        ne = Nested(group_n)
 
-        md = GEE(Y, X, Id, None, family, ne)
+        md = GEE(endog, exog, group_n, None, family, ne)
         mdf = md.fit()
         ## Nothing to compare to
 
@@ -185,11 +193,11 @@ class TestGEE(object):
 
         family = Binomial()
 
-        Y,X,Id = load_data("data/gee_ordinal_1.csv", icept=False)
+        endog,exog,group_n = load_data("data/gee_ordinal_1.csv", icept=False)
 
         v = GlobalOddsRatio()
 
-        md = GEE(Y, X, Id, None, family, v, ytype="ordinal")
+        md = GEE(endog, exog, group_n, None, family, v, endog_type="ordinal")
         mdf = md.fit()
         # Nothing to compare to...
         #assert_almost_equal(md.params, cf[j], decimal=2)
@@ -231,7 +239,7 @@ class TestGEE(object):
 
         family = Poisson()
 
-        Y,X,Id = load_data("data/gee_poisson_1.csv")
+        endog,exog,group_n = load_data("data/gee_poisson_1.csv")
 
         vi = Independence()
         ve = Exchangeable()
@@ -242,17 +250,18 @@ class TestGEE(object):
               [0.0180852155632977,0.00805161458483081,0.00933886210442408,0.00862255601233811,0.00917229773191988,0.00904411930948212]]
 
         for j,v in enumerate((vi,ve)):
-            md = GEE(Y, X, Id, None, family, v)
+            md = GEE(endog, exog, group_n, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=5)
             assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
         # Test with formulas
-        D = np.concatenate((Y[:,None], Id[:,None], X[:,1:]), axis=1)
+        D = np.concatenate((endog[:,None], group_n[:,None], exog[:,1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(X.shape[1]-1)]
+        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", "Id", D, None, family, v)
+             md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", D, None, groups=D.loc[:,"Id"],
+                                   family=family, varstruct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
