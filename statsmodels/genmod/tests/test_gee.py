@@ -1,7 +1,7 @@
 #!!
-import sys
-sys.path = [x for x in sys.path if "statsmodels" not in x]
-sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
+#import sys
+#sys.path = [x for x in sys.path if "statsmodels" not in x]
+#sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
 
 
 """
