@@ -5,7 +5,6 @@ import statsmodels.base.model as base
 from statsmodels.genmod.families import Family
 from statsmodels.genmod.dependence_structures import VarStruct
 import pandas
-from patsy import dmatrices
 
 
 #TODO multinomial responses
@@ -139,9 +138,9 @@ class GEE(base.Model):
         if time1 is not None:
             time_li = [np.array(t) for t in time1]
 
-        # Save the row indices in the original data (prior to dropping missing and
-        # prior to splitting into clusters) that correspond to the rows
-        # of each element of endog and exog.
+        # Save the row indices in the original data (after dropping
+        # missing but prior to splitting into clusters) that
+        # correspond to the rows of endog and exog.
         self.row_indices = row_indices
 
         # Need to do additional processing for categorical responses
@@ -337,6 +336,9 @@ class GEE(base.Model):
         varstruct = self.varstruct
         p = exog[0].shape[1]
 
+        self.fit_history = {'params' : [],
+                            'score_change' : []}
+
         if starting_beta is None:
 
             if self.endog_type == "interval":
@@ -360,13 +362,17 @@ class GEE(base.Model):
         for iter in range(maxit):
             u = self._beta_update(beta)
             beta += u
-            if np.sqrt(np.sum(u**2)) < ctol:
+            sc = np.sqrt(np.sum(u**2))
+            self.fit_history['params'].append(beta)
+            if  sc < ctol:
                 break
             self._update_assoc(beta)
 
         bcov = self._covmat(beta)
 
         GR = GEEResults(self, beta, bcov)
+
+        GR.fit_history = self.fit_history
 
         return GR
 
@@ -381,7 +387,6 @@ class GEE(base.Model):
 
 
 class GEEResults(object):
-
 
     def __init__(self, model, params, cov_params):
 
@@ -402,21 +407,18 @@ class GEEResults(object):
     def tvalues(self):
         return self.params / self.standard_errors
 
-
     @cache_readonly
     def pvalues(self):
         dist = stats.norm
         return 2*dist.cdf(-np.abs(self.tvalues))
 
-
     @cache_readonly
     def resid(self):
-        return self.endog - self.fittedvalues
-
+        return self.model.endog.iloc[:,0] - self.fittedvalues
 
     @cache_readonly
     def fittedvalues(self):
-        return self.family.link.inverse(np.dot(self.exog, self.params))
+        return self.model.family.link.inverse(np.dot(self.model.exog, self.params))
 
         
     def conf_int(self, alpha=.05, cols=None):
@@ -485,7 +487,6 @@ class GEEResults(object):
                     ('Dependence structure:', [self.model.varstruct.__class__.__name__]),
                     ('Response type:', [self.model.endog_type.title()]),
                     ('Date:', None),
-                    ('Time:', None),
         ]
         
         NY = [len(y) for y in self.model.endog]
@@ -495,14 +496,15 @@ class GEEResults(object):
                      ('Min. cluster size', [min(NY)]),
                      ('Max. cluster size', [max(NY)]),
                      ('Mean cluster size', ["%.1f" % np.mean(NY)]),
+                     ('No. iterations', ['%d' % len(self.fit_history)]),
+                     ('Time:', None),
                  ]
         
         # The skew of the residuals
-        R = np.concatenate(self.resid)
+        R = self.resid
         skew1 = stats.skew(R)
         kurt1 = stats.kurtosis(R)
-        V = [r - r.mean() for r in self.resid]
-        V = np.concatenate(V)
+        V = R.copy() - R.mean()
         skew2 = stats.skew(V)
         kurt2 = stats.kurtosis(V)
 
