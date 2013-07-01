@@ -16,6 +16,7 @@ from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,Independence,\
     GlobalOddsRatio,Autoregressive,Nested
 import pandas as pd
+import statsmodels.formula.api as sm
 
 def load_data(fname, icept=True):
 
@@ -266,6 +267,69 @@ class TestGEE(object):
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
+
+
+    def test_compare_OLS(self):
+
+        vs = Independence()
+        family = Gaussian()
+
+        Y = np.random.normal(size=100)
+        X1 = np.random.normal(size=100)
+        X2 = np.random.normal(size=100)
+        X3 = np.random.normal(size=100)
+        groups = np.random.randint(0, 4, size=100)
+
+        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
+
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
+                               family=family, varstruct=vs).fit()
+
+        ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
+
+        assert_almost_equal(ols.params, md.params, decimal=10)
+
+
+    def test_compare_logit(self):
+
+        vs = Independence()
+        family = Binomial()
+
+        Y = 1*(np.random.normal(size=100) < 0)
+        X1 = np.random.normal(size=100)
+        X2 = np.random.normal(size=100)
+        X3 = np.random.normal(size=100)
+        groups = np.random.randint(0, 4, size=100)
+
+        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
+
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
+                               family=family, varstruct=vs).fit()
+
+        sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit()
+
+        assert_almost_equal(sml.params, md.params, decimal=10)
+
+
+    def test_compare_poisson(self):
+
+        vs = Independence()
+        family = Poisson()
+
+        Y = np.ceil(-np.log(np.random.uniform(size=100)))
+        X1 = np.random.normal(size=100)
+        X2 = np.random.normal(size=100)
+        X3 = np.random.normal(size=100)
+        groups = np.random.randint(0, 4, size=100)
+
+        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
+
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
+                               family=family, varstruct=vs).fit()
+
+        sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit()
+
+        assert_almost_equal(sml.params, md.params, decimal=10)
 
 
 if  __name__=="__main__":
