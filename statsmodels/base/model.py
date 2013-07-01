@@ -667,7 +667,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
-                 hessian=None, missing='none'):
+                 hessian=None, missing='none', extra_params_names=None):
     # let them be none in case user wants to use inheritance
         if not loglike is None:
             self.loglike = loglike
@@ -679,15 +679,25 @@ class GenericLikelihoodModel(LikelihoodModel):
 
         # TODO: data structures?
 
+        #TODO temporary solution, force approx normal
+        #self.df_model = 9999
+        #somewhere: CacheWriteWarning: The attribute 'df_model' cannot be overwritten
+        super(GenericLikelihoodModel, self).__init__(endog, exog, missing=missing)
+
         # this won't work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
             #try:
             self.nparams = (exog.shape[1] if np.ndim(exog) == 2 else 1)
 
-        #TODO temporary solution, force approx normal
-        #self.df_model = 9999
-        #somewhere: CacheWriteWarning: The attribute 'df_model' cannot be overwritten
-        super(GenericLikelihoodModel, self).__init__(endog, exog, missing=missing)
+        # check param_names
+        if extra_params_names is not None:
+            if exog is not None:
+                self.exog_names.extend(extra_params_names)
+                self.nparams += len(extra_params_names)
+            else:
+                self.data.xnames = extra_params_names
+                self.nparams = len(extra_params_names)
+
 
     #this is redundant and not used when subclassing
     def initialize(self):
