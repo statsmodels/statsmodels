@@ -56,6 +56,54 @@ class TLinearModel(GenericLikelihoodModel):
 
     '''
 
+    def initialize(self):
+        # TODO: here or in __init__
+        self.k_vars = self.exog.shape[1]
+        if not hasattr(self, 'fix_df'):
+            self.fix_df = False
+
+        if self.fix_df is False:
+            # df will be estimated, no parameter restrictions
+            self.fixed_params = None
+            self.fixed_paramsmask = None
+            self.k_params = self.exog.shape[1] + 2
+        else:
+            # df fixed
+            self.k_params = self.exog.shape[1] + 1
+            fixdf = np.nan * np.zeros(self.exog.shape[1] + 2)
+            fixdf[-2] = self.fix_df
+            self.fixed_params = fixdf
+            self.fixed_paramsmask = np.isnan(fixdf)
+
+        self._set_start_params()
+
+        super(TLinearModel, self).initialize()
+
+    def _set_start_params(self, start_params=None, use_kurtosis=False):
+        if start_params is not None:
+            self.start_params = start_params
+        else:
+            from statsmodels.regression.linear_model import OLS
+            res_ols = OLS(self.endog, self.exog).fit()
+            start_params = 0.1*np.ones(self.k_params)
+            start_params[:self.k_vars] = res_ols.params
+
+            if self.fix_df is False:
+
+                if use_kurtosis:
+                    kurt = stats.kurtosis(res_ols.resid)
+                    df = 6./kurt + 4
+                else:
+                    df = 5
+
+                start_params[-2] = df
+                #TODO adjust scale for df
+                start_params[-1] = np.sqrt(res_ols.scale)
+
+            self.start_params = start_params
+
+
+
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)
@@ -105,6 +153,11 @@ class TLinearModel(GenericLikelihoodModel):
         lPx -= 0.5*np_log(df*np_pi) + (df+1)/2.*np_log(1+(x**2)/df)
         lPx -= np_log(scale)  # correction for scale
         return -lPx
+
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params[:self.exog.shape[1]])
 
 
 from scipy import stats
