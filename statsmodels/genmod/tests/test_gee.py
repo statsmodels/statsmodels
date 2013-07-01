@@ -1,7 +1,7 @@
 #!!
-#import sys
-#sys.path = [x for x in sys.path if "statsmodels" not in x]
-#sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
+import sys
+sys.path = [x for x in sys.path if "statsmodels" not in x]
+sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
 
 
 """
@@ -9,6 +9,7 @@ Test functions for GEE
 """
 
 import numpy as np
+import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
@@ -18,7 +19,8 @@ import pandas as pd
 
 def load_data(fname, icept=True):
 
-    Z = np.loadtxt(fname, delimiter=",")
+    data_dir = os.path.dirname(os.path.abspath(__file__))
+    Z = np.loadtxt(os.path.join(data_dir, fname), delimiter=",")
 
     group = Z[:,0]
     endog = Z[:,1]
@@ -113,7 +115,7 @@ class TestGEE(object):
         
         library(gee)
 
-        Z = read.csv("gee_linear_1.csv", header=FALSE)        
+        Z = read.csv("data/gee_linear_1.csv", header=FALSE)        
         Y = Z[,2]                                                                                                                  
         Id = Z[,1]
         X1 = Z[,3]
@@ -162,12 +164,11 @@ class TestGEE(object):
         D = pd.DataFrame(D)
         D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
-                                   family=family, varstruct=v)
-             mdf = md.fit()
-             assert_almost_equal(mdf.params, cf[j], decimal=10)
-             assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
-
+            md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
+                                  family=family, varstruct=v)
+            mdf = md.fit()
+            assert_almost_equal(mdf.params, cf[j], decimal=10)
+            assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
 
 
     def test_nested_linear(self):

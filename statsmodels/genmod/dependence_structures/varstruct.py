@@ -93,14 +93,15 @@ class Exchangeable(VarStruct):
 
     def update(self, beta):
 
-        N = len(self.parent.endog)
+        endog = self.parent.endog_li
+        exog = self.parent.exog_li
+
+        N = len(endog)
         nobs = self.parent.nobs
         p = len(beta)
 
         mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
-        endog = self.parent.endog
-        exog = self.parent.exog
 
         a,scale_inv,m = 0,0,0
         for i in range(N):
@@ -112,7 +113,7 @@ class Exchangeable(VarStruct):
             E = mean(lp)
 
             S = np.sqrt(varfunc(E))
-            resid = (self.parent.endog[i] - E) / S
+            resid = (endog[i] - E) / S
 
             n = len(resid)
             Q = np.outer(resid, resid)
@@ -123,7 +124,6 @@ class Exchangeable(VarStruct):
 
         scale_inv /= (nobs-p)
         self.a = a/(scale_inv*(m-p))
-
 
     def variance_matrix(self, E, index):
         n = len(E)
@@ -200,12 +200,13 @@ class Nested(VarStruct):
         corresponding element of QY.
         """
 
-        N = len(self.parent.endog)
+        endog = self.parent.endog_li
+        N = len(endog)
         QX,QI = [],[]
         m = self.Id.shape[1]
         for i in range(N):
-            n = len(self.parent.endog[i])
-            ix = self.parent.IX[i]
+            n = len(endog[i])
+            ix = self.parent.row_indices[i]
 
             qi = np.zeros((n,n), dtype=np.int32)
             for j1 in range(n):
@@ -231,7 +232,10 @@ class Nested(VarStruct):
 
     def update(self, beta):
 
-        N = len(self.parent.endog)
+        endog = self.parent.endog_li
+        exog = self.parent.exog_li
+
+        N = len(endog)
         nobs = self.parent.nobs
         p = len(beta)
 
@@ -240,8 +244,6 @@ class Nested(VarStruct):
 
         mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
-        endog = self.parent.endog
-        exog = self.parent.exog
 
         QY = []
         scale_inv,m = 0.,0.
@@ -325,12 +327,13 @@ class Autoregressive(VarStruct):
         if self.parent.time is None:
             raise ValueError("GEE: time must be provided to GEE if using AR dependence structure")
 
-        N = len(self.parent.endog)
+        endog = self.parent.endog_li
+        exog = self.parent.exog_li
+        time = self.parent.time_li
+
+        N = len(endog)
         nobs = self.parent.nobs
         p = len(beta)
-        endog = self.parent.endog
-        exog = self.parent.exog
-        time = self.parent.time
 
         # Only need to compute this once
         if self.QX is not None:
@@ -354,8 +357,6 @@ class Autoregressive(VarStruct):
 
         mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
-        endog = self.parent.endog
-        exog = self.parent.exog
 
         # Weights
         VA = (1 - self.a**(2*QX)) / (1 - self.a**2)
@@ -372,7 +373,7 @@ class Autoregressive(VarStruct):
             E = mean(lp)
 
             S = np.sqrt(scale*varfunc(E))
-            resid = (self.parent.endog[i] - E) / S
+            resid = (endog[i] - E) / S
 
             n = len(resid)
             for j1 in range(n):
@@ -509,7 +510,7 @@ class GlobalOddsRatio(VarStruct):
         """
 
         BTW = self.BTW
-        endog = self.parent.endog
+        endog = self.parent.endog_li
 
         # Storage for the contingency tables for each (c,c')
         A = {}
@@ -578,8 +579,8 @@ class GlobalOddsRatio(VarStruct):
     def update(self, beta):
         """Update the global odds ratio based on the current value of beta."""
 
-        exog = self.parent.exog
-        endog = self.parent.endog
+        exog = self.parent.exog_li
+        endog = self.parent.endog_li
         BTW = self.BTW
 
         N = len(endog)
