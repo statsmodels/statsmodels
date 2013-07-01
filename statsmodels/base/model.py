@@ -667,7 +667,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
-                 hessian=None, missing='none', extra_params_names=None):
+                 hessian=None, missing='none', extra_params_names=None, **kwds):
     # let them be none in case user wants to use inheritance
         if not loglike is None:
             self.loglike = loglike
@@ -676,6 +676,8 @@ class GenericLikelihoodModel(LikelihoodModel):
         if not hessian is None:
             self.hessian = hessian
         self.confint_dist = stats.norm
+
+        self.__dict__.update(kwds)
 
         # TODO: data structures?
 
@@ -689,14 +691,18 @@ class GenericLikelihoodModel(LikelihoodModel):
             #try:
             self.nparams = (exog.shape[1] if np.ndim(exog) == 2 else 1)
 
+        if extra_params_names is not None:
+            self._set_extra_params_names(extra_params_names)
+
+    def _set_extra_params_names(self, extra_params_names):
         # check param_names
         if extra_params_names is not None:
-            if exog is not None:
+            if self.exog is not None:
                 self.exog_names.extend(extra_params_names)
-                self.nparams += len(extra_params_names)
             else:
                 self.data.xnames = extra_params_names
-                self.nparams = len(extra_params_names)
+
+        self.nparams = len(self.exog_names)
 
 
     #this is redundant and not used when subclassing

@@ -67,6 +67,7 @@ class TLinearModel(GenericLikelihoodModel):
             self.fixed_params = None
             self.fixed_paramsmask = None
             self.k_params = self.exog.shape[1] + 2
+            extra_params_names = ['df', 'scale']
         else:
             # df fixed
             self.k_params = self.exog.shape[1] + 1
@@ -74,7 +75,9 @@ class TLinearModel(GenericLikelihoodModel):
             fixdf[-2] = self.fix_df
             self.fixed_params = fixdf
             self.fixed_paramsmask = np.isnan(fixdf)
+            extra_params_names = ['scale']
 
+        self._set_extra_params_names(extra_params_names)
         self._set_start_params()
 
         super(TLinearModel, self).initialize()
