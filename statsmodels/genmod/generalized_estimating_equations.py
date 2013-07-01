@@ -84,8 +84,9 @@ class GEE(base.Model):
 
         """ % {'extra_params' : base._missing_param_doc}
 
-        #TODO: This will not handle missing values with the groups and time data
-        super(GEE, self).__init__(endog, exog, missing=missing)
+        # Pass groups and time so they are proceessed for missing data
+        # along with endog and exog
+        super(GEE, self).__init__(endog, exog, groups=groups, time=time, missing=missing)
 
         # Handle the endog_type argument
         if endog_type not in ("interval","ordinal","nominal"):
@@ -109,9 +110,13 @@ class GEE(base.Model):
 
         # Convert to ndarrays
         if type(endog) == pandas.DataFrame:
-            endog = endog.iloc[:,0].values
+            endog_nda = endog.iloc[:,0].values
+        else:
+            endog_nda = endog
         if type(exog) == pandas.DataFrame:
-            exog = exog.as_matrix()
+            exog_nda = exog.as_matrix()
+        else:
+            exog_nda = exog
 
         # Convert the data to the internal representation
         S = np.unique(groups)
@@ -119,30 +124,29 @@ class GEE(base.Model):
         endog1 = [list() for s in S]
         exog1 = [list() for s in S]
         time1 = [list() for s in S]
-        IX = [list() for s in S]
-        for i in range(len(endog)):
+        row_indices = [list() for s in S]
+        for i in range(len(endog_nda)):
             idx = int(groups[i])
-            endog1[idx].append(endog[i])
-            exog1[idx].append(exog[i])
-            IX[idx].append(i)
+            endog1[idx].append(endog_nda[i])
+            exog1[idx].append(exog_nda[i,:])
+            row_indices[idx].append(i)
             if time is not None:
                 time1[idx].append(time[i])
-        endog = [np.array(y) for y in endog1]
-        exog = [np.array(x) for x in exog1]
-        IX = [np.array(x) for x in IX]
+        endog_li = [np.array(y) for y in endog1]
+        exog_li = [np.array(x) for x in exog1]
+        row_indices = [np.array(x) for x in row_indices]
+        time_li = None
         if time1 is not None:
-            time = [np.array(t) for t in time1]
+            time_li = [np.array(t) for t in time1]
 
         # Save the row indices in the original data (prior to dropping missing and
         # prior to splitting into clusters) that correspond to the rows
         # of each element of endog and exog.
-        self.IX = IX
+        self.row_indices = row_indices
 
         # Need to do additional processing for categorical responses
         if endog_type != "interval":
-            self.endog_orig = endog
-            self.exog_orig = exog
-            endog,exog,IY,BTW,nylevel = _setup_multicategorical(endog, exog, endog_type)
+            endog_li,exog_li,IY,BTW,nylevel = _setup_multicategorical(endog_li, exog_li, endog_type)
             self.nylevel = nylevel
             self.IY = IY
             self.BTW = BTW
@@ -150,8 +154,11 @@ class GEE(base.Model):
         self.endog_type = endog_type
         self.endog = endog
         self.exog = exog
+        self.endog_li = endog_li
+        self.exog_li = exog_li
         self.family = family
         self.time = time
+        self.time_li = time_li
 
         # Some of the variance calculations require data or methods from the gee class.
         if endog_type == "interval":
@@ -160,7 +167,7 @@ class GEE(base.Model):
             self.varstruct.initialize(self, IY, BTW)
 
         # Total sample size
-        N = [len(y) for y in self.endog]
+        N = [len(y) for y in self.endog_li]
         self.nobs = sum(N)
 
 
@@ -170,14 +177,15 @@ class GEE(base.Model):
         of `beta`.
         """
 
-        N = len(self.endog)
+        endog = self.endog_li
+        exog = self.exog_li
+
+        N = len(endog)
         nobs = self.nobs
         p = len(beta)
 
         mean = self.family.link.inverse
         varfunc = self.family.variance
-        endog = self.endog
-        exog = self.exog
 
         scale_inv,m = 0,0
         for i in range(N):
@@ -208,12 +216,12 @@ class GEE(base.Model):
         solving the score equations.
         """
 
-        # Number of clusters
-        N = len(self.endog)
-
-        exog = self.exog
-        endog = self.endog
+        endog = self.endog_li
+        exog = self.exog_li
         varstruct = self.varstruct
+
+        # Number of clusters
+        N = len(endog)
 
         mean = self.family.link.inverse
         mean_deriv = self.family.link.inverse_deriv
@@ -251,8 +259,8 @@ class GEE(base.Model):
         Returns the sampling covariance matrix of the regression parameters.
         """
 
-        endog = self.endog
-        exog = self.exog
+        endog = self.endog_li
+        exog = self.exog_li
         N = len(endog)
 
         mean = self.family.link.inverse
@@ -324,8 +332,8 @@ class GEE(base.Model):
 
         """
 
-        endog = self.endog
-        exog = self.exog
+        endog = self.endog_li
+        exog = self.exog_li
         varstruct = self.varstruct
         p = exog[0].shape[1]
 
@@ -336,7 +344,7 @@ class GEE(base.Model):
                 beta = np.zeros(p, dtype=np.float64)
             else:
                 xnames1 = ["cat_%d" % k for k in range(1,self.nylevel)]
-                beta = _categorical_starting_values(self.endog_orig, self.exog[0].shape[1],
+                beta = _categorical_starting_values(self.endog, exog[0].shape[1],
                                                     self.nylevel, self.endog_type)
 
             xnames1 += self.exog_names
@@ -372,7 +380,7 @@ class GEE(base.Model):
 
 
 
-class GEEResults:
+class GEEResults(object):
 
 
     def __init__(self, model, params, cov_params):
@@ -403,8 +411,12 @@ class GEEResults:
 
     @cache_readonly
     def resid(self):
-        R = [y - np.dot(x, self.params) for x,y in zip(self.model.exog, self.model.endog)]
-        return R
+        return self.endog - self.fittedvalues
+
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self.family.link.inverse(np.dot(self.exog, self.params))
 
 
     def conf_int(self, alpha=.05, cols=None):
@@ -641,13 +653,12 @@ def _setup_multicategorical(endog, exog, endog_type):
 
 def _categorical_starting_values(endog, q, nylevel, endog_type):
 
-    YV = np.concatenate(endog)
-    S = list(set(YV))
+    S = list(set(endog))
     S.sort()
     S = S[0:-1]
 
     if endog_type == "ordinal":
-        Pr = np.array([np.mean(YV > s) for s in S])
+        Pr = np.array([np.mean(endog > s) for s in S])
         bl = np.log(Pr/(1-Pr))
         beta = np.concatenate((bl, np.zeros(q-nylevel+1)))
     elif endog_type == "nominal":
