@@ -157,7 +157,7 @@ class KDEUnivariate(object):
         self._cache = resettable_cache()
 
     @cache_readonly
-    def cdf(self):
+    def cdf_sup(self):
         """
         Returns the cumulative distribution function evaluated at the support.
 
