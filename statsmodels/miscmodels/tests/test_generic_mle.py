@@ -6,8 +6,6 @@ Created on Fri Jun 28 14:19:26 2013
 Author: Josef Perktold
 """
 
-import warnings
-warnings.simplefilter('error')
 
 import numpy as np
 from scipy import stats
@@ -66,6 +64,7 @@ class CheckGenericMixin(object):
 
     def test_summary(self):
         self.res1.summary()
+        #print self.res1.summary()
 
     def test_ttest(self):
         self.res1.t_test(np.eye(len(self.res1.params)))
