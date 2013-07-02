@@ -179,7 +179,7 @@ class GEE(base.Model):
         endog = self.endog_li
         exog = self.exog_li
 
-        N = len(endog)
+        num_clust = len(endog)
         nobs = self.nobs
         p = len(beta)
 
@@ -187,7 +187,7 @@ class GEE(base.Model):
         varfunc = self.family.variance
 
         scale_inv,m = 0,0
-        for i in range(N):
+        for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
@@ -220,20 +220,22 @@ class GEE(base.Model):
         varstruct = self.varstruct
 
         # Number of clusters
-        N = len(endog)
+        num_clust = len(endog)
+
+        _cached_means = self._cached_means
 
         mean = self.family.link.inverse
         mean_deriv = self.family.link.inverse_deriv
         varfunc = self.family.variance
 
         B,C = 0,0
-        for i in range(N):
+        for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(exog[i], beta)
-            E = mean(lp)
+            E,lp = _cached_means[i]
+
             Dt = exog[i] * mean_deriv(lp)[:,None]
             D = Dt.T
 
@@ -252,6 +254,33 @@ class GEE(base.Model):
         return np.linalg.solve(B, C)
 
 
+    def _update_cached_means(self, beta):
+        """
+        _cached_means should always contain the most recent calculation of
+        the cluster-wise mean vectors.  This function should be called
+        every time the value of beta is changed, to keep the cached
+        means up to date.
+        """
+
+        endog = self.endog_li
+        exog = self.exog_li
+        num_clust = len(endog)
+
+        mean = self.family.link.inverse
+
+        self._cached_means = []
+
+        for i in range(num_clust):
+
+            if len(endog[i]) == 0:
+                continue
+
+            lp = np.dot(exog[i], beta)
+            E = mean(lp)
+
+            self._cached_means.append((E,lp))
+
+
 
     def _covmat(self, beta):
         """
@@ -260,14 +289,14 @@ class GEE(base.Model):
 
         endog = self.endog_li
         exog = self.exog_li
-        N = len(endog)
+        num_clust = len(endog)
 
         mean = self.family.link.inverse
         mean_deriv = self.family.link.inverse_deriv
         varfunc = self.family.variance
 
         B,C = 0,0
-        for i in range(N):
+        for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
@@ -359,9 +388,12 @@ class GEE(base.Model):
             else:
                 beta = starting_beta.copy()
 
+        self._update_cached_means(beta)
+
         for iter in range(maxit):
             u = self._beta_update(beta)
             beta += u
+            self._update_cached_means(beta)
             sc = np.sqrt(np.sum(u**2))
             self.fit_history['params'].append(beta)
             if  sc < ctol:
