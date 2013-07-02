@@ -15,12 +15,12 @@ class VarStruct(object):
 
         Notes
         -----
-        parent should contain the clustered data in the form endog,
-        exog, where endog and exog are lists of the same length.  endog[i]
-        is the response data represented as a n_i length ndarray, and
-        endog[i] is the covariate data represented as a n_i x p ndarray,
-        where n_i is the number of observations in cluster i.
-
+        The clustered data should be availabe as `parent.endog` and
+        `parent.exog`, where `endog` and `exog` are lists of the same
+        length.  `endog[i]` is the response data represented as a n_i
+        length ndarray, and `endog[i]` is the covariate data
+        represented as a n_i x p ndarray, where n_i is the number of
+        observations in cluster i.
         """
         self.parent = parent
 
@@ -96,21 +96,21 @@ class Exchangeable(VarStruct):
         endog = self.parent.endog_li
         exog = self.parent.exog_li
 
-        N = len(endog)
+        num_clust = len(endog)
         nobs = self.parent.nobs
         p = len(beta)
 
-        mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
 
+        _cached_means = self.parent._cached_means
+
         a,scale_inv,m = 0,0,0
-        for i in range(N):
+        for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(exog[i], beta)
-            E = mean(lp)
+            E,lp = _cached_means[i]
 
             S = np.sqrt(varfunc(E))
             resid = (endog[i] - E) / S
@@ -201,10 +201,10 @@ class Nested(VarStruct):
         """
 
         endog = self.parent.endog_li
-        N = len(endog)
+        num_clust = len(endog)
         QX,QI = [],[]
         m = self.Id.shape[1]
-        for i in range(N):
+        for i in range(num_clust):
             n = len(endog[i])
             ix = self.parent.row_indices[i]
 
@@ -235,25 +235,25 @@ class Nested(VarStruct):
         endog = self.parent.endog_li
         exog = self.parent.exog_li
 
-        N = len(endog)
+        num_clust = len(endog)
         nobs = self.parent.nobs
         p = len(beta)
 
         if self.QX is None:
             self._compute_design()
 
-        mean = self.parent.family.link.inverse
+        _cached_means = self.parent._cached_means
+
         varfunc = self.parent.family.variance
 
         QY = []
         scale_inv,m = 0.,0.
-        for i in range(N):
+        for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(exog[i], beta)
-            E = mean(lp)
+            E,lp = _cached_means[i]
 
             S = np.sqrt(varfunc(E))
             resid = (self.parent.endog[i] - E)/S
@@ -331,7 +331,7 @@ class Autoregressive(VarStruct):
         exog = self.parent.exog_li
         time = self.parent.time_li
 
-        N = len(endog)
+        num_clust = len(endog)
         nobs = self.parent.nobs
         p = len(beta)
 
@@ -340,7 +340,7 @@ class Autoregressive(VarStruct):
             QX = self.QX
         else:
             QX = []
-            for i in range(N):
+            for i in range(num_clust):
 
                 n = len(endog[i])
                 if n == 0:
@@ -355,8 +355,9 @@ class Autoregressive(VarStruct):
 
         scale = self.parent.estimate_scale(beta)
 
-        mean = self.parent.family.link.inverse
         varfunc = self.parent.family.variance
+
+        _cached_means = self.parent._cached_means
 
         # Weights
         VA = (1 - self.a**(2*QX)) / (1 - self.a**2)
@@ -364,14 +365,13 @@ class Autoregressive(VarStruct):
         WT /= WT.sum()
 
         QY = []
-        for i in range(N):
+        for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(exog[i], beta)
-            E = mean(lp)
-
+            E,lp = _cached_means[i]
+            
             S = np.sqrt(scale*varfunc(E))
             resid = (endog[i] - E) / S
 
@@ -582,9 +582,10 @@ class GlobalOddsRatio(VarStruct):
         exog = self.parent.exog_li
         endog = self.parent.endog_li
         BTW = self.BTW
+        _cached_means = self.parent._cached_means
 
-        N = len(endog)
-
+        num_clust = len(endog)
+        
         # This will happen if all the clusters have only
         # one observation
         if len(BTW[0]) == 0:
@@ -594,15 +595,13 @@ class GlobalOddsRatio(VarStruct):
         for ii in BTW[0]:
             A[ii] = np.zeros((2,2), dtype=np.float64)
 
-        for i in range(N):
+        for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
 
-            LP = np.dot(exog[i], beta)
-            ELP = np.exp(-LP)
-            EY = 1 / (1 + ELP)
-
+            EY,LP = _cached_means[i]
+            
             E11 = self.get_eyy(EY, i)
             E10 = EY[:,None] - E11
             E01 = -E11 + EY

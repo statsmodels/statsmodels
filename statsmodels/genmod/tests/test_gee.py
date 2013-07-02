@@ -1,7 +1,7 @@
 #!!
-#import sys
-#sys.path = [x for x in sys.path if "statsmodels" not in x]
-#sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
+import sys
+sys.path = [x for x in sys.path if "statsmodels" not in x]
+sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
 
 
 """
@@ -20,8 +20,9 @@ import statsmodels.formula.api as sm
 
 def load_data(fname, icept=True):
 
-    data_dir = os.path.dirname(os.path.abspath(__file__))
-    Z = np.loadtxt(os.path.join(data_dir, fname), delimiter=",")
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    Z = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
+                      delimiter=",")
 
     group = Z[:,0]
     endog = Z[:,1]
@@ -41,7 +42,7 @@ class TestGEE(object):
         logistic
 
         library(gee)
-        Z = read.csv("data/gee_logistic_1.csv", header=FALSE)
+        Z = read.csv("results/gee_logistic_1.csv", header=FALSE)
         Y = Z[,2]
         Id = Z[,1]
         X1 = Z[,3]
@@ -70,7 +71,7 @@ class TestGEE(object):
         sprintf("se = [[%s],[%s],[%s]]", sei, see, sea)
         """
 
-        endog,exog,group = load_data("data/gee_logistic_1.csv")
+        endog,exog,group = load_data("gee_logistic_1.csv")
 
         # Time values for the autoregressive model
         T = np.zeros(len(endog))
@@ -116,7 +117,7 @@ class TestGEE(object):
         
         library(gee)
 
-        Z = read.csv("data/gee_linear_1.csv", header=FALSE)        
+        Z = read.csv("results/gee_linear_1.csv", header=FALSE)        
         Y = Z[,2]                                                                                                                  
         Id = Z[,1]
         X1 = Z[,3]
@@ -144,7 +145,7 @@ class TestGEE(object):
 
         family = Gaussian()
 
-        endog,exog,group = load_data("data/gee_linear_1.csv")
+        endog,exog,group = load_data("gee_linear_1.csv")
 
         vi = Independence()
         ve = Exchangeable()
@@ -176,7 +177,7 @@ class TestGEE(object):
 
         family = Gaussian()
 
-        endog,exog,group = load_data("data/gee_nested_linear_1.csv")
+        endog,exog,group = load_data("gee_nested_linear_1.csv")
 
         group_n = []
         for i in range(300):
@@ -195,7 +196,7 @@ class TestGEE(object):
 
         family = Binomial()
 
-        endog,exog,group_n = load_data("data/gee_ordinal_1.csv", icept=False)
+        endog,exog,group_n = load_data("gee_ordinal_1.csv", icept=False)
 
         v = GlobalOddsRatio()
 
@@ -211,7 +212,7 @@ class TestGEE(object):
         poisson
 
         library(gee)
-        Z = read.csv("gee_poisson_1.csv", header=FALSE)
+        Z = read.csv("results/gee_poisson_1.csv", header=FALSE)
         Y = Z[,2]
         Id = Z[,1]
         X1 = Z[,3]
@@ -241,7 +242,7 @@ class TestGEE(object):
 
         family = Poisson()
 
-        endog,exog,group_n = load_data("data/gee_poisson_1.csv")
+        endog,exog,group_n = load_data("gee_poisson_1.csv")
 
         vi = Independence()
         ve = Exchangeable()
