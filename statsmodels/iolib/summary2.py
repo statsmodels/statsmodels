@@ -456,6 +456,23 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
 
     idx = pd.Series(range(summ.shape[0])) %2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
+    
+    # add infos about the modell.
+    # TODO: add the information which info should be taken from which model to the 
+    # summary generation in each model?
+    if info_dict:
+        # Info as dataframe columns
+        cols = [_col_info(x, info_dict) for x in results]
+        # use unique column names, otherwise the merge will not succeed
+        for df , name in zip(cols, _make_unique([df.columns[0] for df in cols])):
+            df.columns = [name]
+        merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
+        info = reduce(merg, cols)
+        dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
+        dat.columns = summ.columns
+        dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
+        summ = dat
+    
 
     summ = summ.fillna('')
 
