@@ -378,18 +378,19 @@ def _col_info(result, info_dict=None):
     '''
 
     if info_dict == None:
-        info_dict = {'N': lambda x: str(int(x.nobs)),
-                    'AIC': lambda x: '%.3f' % x.aic,
-                    'R2': lambda x: '%.3f' % x.rsquared}
+        info_dict = {}
     out = []
+    index = []
     for i in info_dict:
+        if isinstance(info_dict[i], dict):
+            # this is a specific model info_dict, but not for this result...
+            continue
         try:
             out.append(info_dict[i](result))
         except:
             out.append('')
-    out = pd.DataFrame(out)
-    out.index = pd.Index(info_dict.keys())
-    out.columns = [str(result.model.endog_names)]
+        index.append(i)
+    out = pd.DataFrame({str(result.model.endog_names):out}, index=index)
     return out
 
 
@@ -457,22 +458,20 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     idx = pd.Series(range(summ.shape[0])) %2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
 
-    # add infos about the modell.
-    # TODO: add the information which info should be taken from which model to the
-    # summary generation in each model?
+    # add infos about the models.
     if info_dict:
-        # Info as dataframe columns
-        cols = [_col_info(x, info_dict) for x in results]
-        # use unique column names, otherwise the merge will not succeed
-        for df , name in zip(cols, _make_unique([df.columns[0] for df in cols])):
-            df.columns = [name]
-        merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
-        info = reduce(merg, cols)
-        dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
-        dat.columns = summ.columns
-        dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
-        summ = dat
-
+        cols = [_col_info(x, info_dict.get(x.model.__class__.__name__, info_dict)) for x in results]
+    else:
+        cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in results]
+    # use unique column names, otherwise the merge will not succeed
+    for df , name in zip(cols, _make_unique([df.columns[0] for df in cols])):
+        df.columns = [name]
+    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
+    info = reduce(merg, cols)
+    dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
+    dat.columns = summ.columns
+    dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
+    summ = dat
 
     summ = summ.fillna('')
 
