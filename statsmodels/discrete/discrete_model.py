@@ -138,7 +138,7 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def _check_perfect_pred(self, params):
+    def _check_perfect_pred(self, params, *args):
         endog = self.endog
         fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
         if (self.raise_on_perfect_prediction and

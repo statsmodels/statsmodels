@@ -186,15 +186,18 @@ class LikelihoodModel(Model):
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
+        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
-            Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient.  `method` determines which solver from
-            scipy.optimize is used.  The explicit arguments in `fit` are
-            passed to the solver.  Each solver has several optional arguments
-            that are not the same across solvers.  See the notes section below
-            (or scipy.optimize) for the available arguments.
+            Powell's method, 'cg' for conjugate gradient, 'ncg' for Newton-
+            conjugate gradient or 'basinhopping' for global basin-hopping
+            solver, if available. `method` determines which solver from
+            scipy.optimize is used. The explicit arguments in `fit` are passed
+            to the solver, with the exception of the basin-hopping solver. Each
+            solver has several optional arguments that are not the same across
+            solvers. See the notes section below (or scipy.optimize) for the
+            available arguments and for the list of explicit arguments that the
+            basin-hopping solver supports..
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -215,6 +218,9 @@ class LikelihoodModel(Model):
 
         Notes
         -----
+        The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
+        explicit arguments.
+
         Optional arguments for the solvers (available in Results.mle_settings):
 
             'newton'
@@ -266,13 +272,39 @@ class LikelihoodModel(Model):
                     Maximum number of function evaluations to make.
                 start_direc : ndarray
                     Initial direction set.
-                """
+            'basinhopping'
+                niter : integer
+                    The number of basin hopping iterations.
+                niter_success : integer
+                    Stop the run if the global minimum candidate remains the
+                    same for this number of iterations.
+                T : float
+                    The "temperature" parameter for the accept or reject
+                    criterion. Higher "temperatures" mean that larger jumps
+                    in function value will be accepted. For best results
+                    `T` should be comparable to the separation (in function
+                    value) between local minima.
+                stepsize : float
+                    Initial step size for use in the random displacement.
+                interval : integer
+                    The interval for how often to update the `stepsize`.
+                minimizer : dict
+                    Extra keyword arguments to be passed to the minimizer
+                    `scipy.optimize.minimize()`, for example 'method' - the
+                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    tolerance for termination. Other arguments are mapped from
+                    explicit argument of `fit`:
+                      - `args` <- `fargs`
+                      - `jac` <- `score`
+                      - `hess` <- `hess`
+        """
         # Extract kwargs specific to fit_regularized calling fit
         extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
         cov_params_func = kwargs.setdefault('cov_params_func', None)
 
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg',
+                   'basinhopping']
         methods += extra_fit_funcs.keys()
         if start_params is None:
             if hasattr(self, 'start_params'):
@@ -307,7 +339,8 @@ class LikelihoodModel(Model):
             'bfgs': _fit_mle_bfgs,
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
-            'powell': _fit_mle_powell
+            'powell': _fit_mle_powell,
+            'basinhopping': _fit_mle_basinhopping,
         }
         if extra_fit_funcs:
             fit_funcs.update(extra_fit_funcs)
@@ -550,6 +583,40 @@ def _fit_mle_powell(f, score, start_params, fargs, kwargs, disp=True,
 
     return xopt, retvals
 
+def _fit_mle_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
+                          maxiter=100, callback=None, retall=False,
+                          full_output=True, hess=None):
+    if not 'basinhopping' in vars(optimize):
+        msg = 'basinhopping solver is not available, use e.g. bfgs instead!'
+        raise ValueError(msg)
+
+    from copy import copy
+    kwargs = copy(kwargs)
+    niter = kwargs.setdefault('niter', 100)
+    niter_success = kwargs.setdefault('niter_success', None)
+    T = kwargs.setdefault('T', 1.0)
+    stepsize = kwargs.setdefault('stepsize', 0.5)
+    interval = kwargs.setdefault('interval', 50)
+    minimizer_kwargs = kwargs.get('minimizer', {})
+    minimizer_kwargs['args'] = fargs
+    minimizer_kwargs['jac'] = score
+    minimizer_kwargs['hess'] = hess
+
+    res = optimize.basinhopping(f, start_params,
+                                minimizer_kwargs=minimizer_kwargs,
+                                niter=niter, niter_success=niter_success,
+                                T=T, stepsize=stepsize, disp=disp,
+                                callback=callback, interval=interval)
+    if full_output:
+        xopt, fopt, niter, fcalls = res.x, res.fun, res.nit, res.nfev
+        converged = 'completed successfully' in res.message[0]
+        retvals = {'fopt': fopt, 'iterations': niter,
+                   'fcalls': fcalls, 'converged': converged}
+
+    else:
+        xopt = None
+
+    return xopt, retvals
 
 #TODO: the below is unfinished
 class GenericLikelihoodModel(LikelihoodModel):
