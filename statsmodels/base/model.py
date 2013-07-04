@@ -186,15 +186,18 @@ class LikelihoodModel(Model):
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
+        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
-            Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient.  `method` determines which solver from
-            scipy.optimize is used.  The explicit arguments in `fit` are
-            passed to the solver.  Each solver has several optional arguments
-            that are not the same across solvers.  See the notes section below
-            (or scipy.optimize) for the available arguments.
+            Powell's method, 'cg' for conjugate gradient, 'ncg' for Newton-
+            conjugate gradient or 'basinhopping' for global basin-hopping
+            solver, if available. `method` determines which solver from
+            scipy.optimize is used. The explicit arguments in `fit` are passed
+            to the solver, with the exception of the basin-hopping solver. Each
+            solver has several optional arguments that are not the same across
+            solvers. See the notes section below (or scipy.optimize) for the
+            available arguments and for the list of explicit arguments that the
+            basin-hopping solver supports..
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -215,6 +218,9 @@ class LikelihoodModel(Model):
 
         Notes
         -----
+        The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
+        explicit arguments.
+
         Optional arguments for the solvers (available in Results.mle_settings):
 
             'newton'
@@ -266,7 +272,32 @@ class LikelihoodModel(Model):
                     Maximum number of function evaluations to make.
                 start_direc : ndarray
                     Initial direction set.
-                """
+            'basinhopping'
+                niter : integer
+                    The number of basin hopping iterations.
+                niter_success : integer
+                    Stop the run if the global minimum candidate remains the
+                    same for this number of iterations.
+                T : float
+                    The "temperature" parameter for the accept or reject
+                    criterion. Higher "temperatures" mean that larger jumps
+                    in function value will be accepted. For best results
+                    `T` should be comparable to the separation (in function
+                    value) between local minima.
+                stepsize : float
+                    Initial step size for use in the random displacement.
+                interval : integer
+                    The interval for how often to update the `stepsize`.
+                minimizer : dict
+                    Extra keyword arguments to be passed to the minimizer
+                    `scipy.optimize.minimize()`, for example 'method' - the
+                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    tolerance for termination. Other arguments are mapped from
+                    explicit argument of `fit`:
+                      - `args` <- `fargs`
+                      - `jac` <- `score`
+                      - `hess` <- `hess`
+        """
         # Extract kwargs specific to fit_regularized calling fit
         extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
         cov_params_func = kwargs.setdefault('cov_params_func', None)
