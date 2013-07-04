@@ -387,11 +387,8 @@ class TestProbitBasinhopping(CheckBinaryResults):
         res2 = Spector()
         res2.probit()
         cls.res2 = res2
-        # This is needed as basinhopping callback has a different number of
-        # arguments then other minimizer callbacks.
-        noop = lambda *args: None
         fit = Probit(data.endog, data.exog).fit
-        cls.res1 = fit(method="basinhopping", disp=0, niter=5, callback=noop,
+        cls.res1 = fit(method="basinhopping", disp=0, niter=5,
                        minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
 
 class CheckLikelihoodModelL1(object):
