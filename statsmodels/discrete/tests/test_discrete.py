@@ -27,6 +27,12 @@ try:
 except ImportError:
     has_cvxopt = False
 
+try:
+    from scipy.optimize import basinhopping
+    has_basinhopping = True
+except ImportError:
+    has_basinhopping = False
+
 DECIMAL_14 = 14
 DECIMAL_10 = 10
 DECIMAL_9 = 9
@@ -369,6 +375,24 @@ class TestProbitNCG(CheckBinaryResults):
         cls.res1 = Probit(data.endog, data.exog).fit(method="ncg",
             disp=0, avextol=1e-8)
 
+class TestProbitBasinhopping(CheckBinaryResults):
+    @classmethod
+    def setupClass(cls):
+        if not has_basinhopping:
+            raise SkipTest("Skipped TestProbitBasinhopping since"
+                           " basinhopping solver is not available")
+
+        data = sm.datasets.spector.load()
+        data.exog = sm.add_constant(data.exog, prepend=False)
+        res2 = Spector()
+        res2.probit()
+        cls.res2 = res2
+        # This is needed as basinhopping callback has a different number of
+        # arguments then other minimizer callbacks.
+        noop = lambda *args: None
+        fit = Probit(data.endog, data.exog).fit
+        cls.res1 = fit(method="basinhopping", disp=0, niter=5, callback=noop,
+                       minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
 
 class CheckLikelihoodModelL1(object):
     """
