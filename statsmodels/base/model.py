@@ -576,7 +576,7 @@ def _fit_mle_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
                                 callback=callback, interval=interval)
     if full_output:
         xopt, fopt, niter, fcalls = res.x, res.fun, res.nit, res.nfev
-        converged = True
+        converged = 'completed successfully' in res.message[0]
         retvals = {'fopt': fopt, 'iterations': niter,
                    'fcalls': fcalls, 'converged': converged}
 
