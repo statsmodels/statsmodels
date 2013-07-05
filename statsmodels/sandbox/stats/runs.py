@@ -496,7 +496,7 @@ def cochran_q(x):
 
     return q_stat, stats.chi2.sf(q_stat, k-1)
 
-def mcnemar(x, y, exact='auto', correction=True):
+def mcnemar(x, y=None, exact='auto', correction=True):
     '''McNemar test
 
     Parameters
@@ -526,12 +526,17 @@ def mcnemar(x, y, exact='auto', correction=True):
 
     '''
 
-    n1 = np.sum(x < y)
-    n2 = np.sum(x > y)
+    x = np.asarray(x)
+    if y is None and x.shape[0] == x.shape[1]:
+        n1, n2 = x[1, 0], x[0, 1]
+    else:
+        n1 = np.sum(x < y)
+        n2 = np.sum(x > y)
 
     if exact or (exact=='auto' and n1+n2<25):
         stat = min(n1,n2)
-        pval = stats.binom.sf(min(n1,n2), n1+n2, 0.5)
+        # binom is symmetric with p=0.5
+        pval = stats.binom.cdf(min(n1,n2), n1+n2, 0.5) * 2
     else:
         corr = int(correction)
         stat = (np.abs(n1-n2)-corr)**2 / (1. * (n1+n2))
