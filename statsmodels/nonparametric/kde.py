@@ -311,16 +311,6 @@ class KDEUnivariate(object):
 
     #     return (x-cdf[index-1])*1.0/(cdf[index]-cdf[index-1])*(support[index]-support[index-1])+ support[index-1]
 
-    def variance_alt(self, point):
-        """
-        Evaluates the variance of the kernel estimator according
-        to the approximate formula
-         v = 1/n * (1/h^2 sum(K(x-X_i/h)^2) - fhat(x,h)^2)
-        """
-
-        _checkisfit(self)
-        return self.kernel.variance(self.endog, point, self.bw)
-
     def variance(self, point):
         """
         Evaluates the variance of the kernel estimator according
@@ -331,8 +321,7 @@ class KDEUnivariate(object):
         """
 
         _checkisfit(self)
-        fh = self.evaluate(point)
-        return 1./(len(self.endog*self.bw))*1/(np.sqrt(np.pi)*2)*fh-1./(len(self.endog))*fh**2
+        return self.kernel.density_variance(self.endog, point)
 
     def evaluate(self, point):
         """

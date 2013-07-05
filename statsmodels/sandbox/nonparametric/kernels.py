@@ -189,29 +189,23 @@ class CustomKernel(object):
         else:
             return np.nan
 
-    def variance(self, xs, x, H):
+    def density_variance(self, xs, x):
+        """Returns an estimate of the density estimate for a point x based on
+        x-values xs. Uses the approximate variance formula:
+        $var(f(x))=\frac{1}{nh}R(K)-\frac{f(x)}{n}$
+        """
 
         xs = np.asarray(xs)
-        n = len(xs) # before inDomain?
+        n = len(xs)
         xs = self.inDomain( xs, xs, x )[0]
         if xs.ndim == 1:
-            xs = xs[:,None]
+            xs = xs[:, None]
         if len(xs)>0:
             h = self.h
-            w =  np.mean(1/H**2 * self((xs-x)/h)**2 - self.density(xs,x)**2, axis=0)
-            return w
-        else:
-            return np.nan
-
-        n = len(xs)
-        #xs = self.inDomain( xs, xs, x )[0]
-        if len(xs)>0:  ## Need to do product of marginal distributions
-            #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
-            #vectorized doesn't work:
-            t1 = 1./h**2 * self(((xs-x)/h)**2) #transposed
-            t2 =  - self.density(xs,x)**2
-            w = np.mean(t1-t2)
-            #w = np.mean([self(xd) for xd in ((xs-x) * self._Hrootinv)] ) #transposed
+            # Note 05/07/13 - _L2Norm actually seems to store the square of the
+            # norm. This is equal to R(K).
+            R = self._L2Norm
+            w =  (1./h * self.density(xs, x) * R - self.density(xs, x)**2)/n
             return w
         else:
             return np.nan
@@ -400,6 +394,7 @@ class Gaussian(CustomKernel):
         CustomKernel.__init__(self, shape = lambda x: 0.3989422804014327 *
                         np.exp(-x**2/2.0), h = h, domain = None, norm = 1.0)
         self._L2Norm = 1.0/(2.0*np.sqrt(np.pi))
+
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
