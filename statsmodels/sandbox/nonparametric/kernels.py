@@ -189,6 +189,33 @@ class CustomKernel(object):
         else:
             return np.nan
 
+    def variance(self, xs, x, H):
+
+        xs = np.asarray(xs)
+        n = len(xs) # before inDomain?
+        xs = self.inDomain( xs, xs, x )[0]
+        if xs.ndim == 1:
+            xs = xs[:,None]
+        if len(xs)>0:
+            h = self.h
+            w =  np.mean(1/H**2 * self((xs-x)/h)**2 - self.density(xs,x)**2, axis=0)
+            return w
+        else:
+            return np.nan
+
+        n = len(xs)
+        #xs = self.inDomain( xs, xs, x )[0]
+        if len(xs)>0:  ## Need to do product of marginal distributions
+            #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
+            #vectorized doesn't work:
+            t1 = 1./h**2 * self(((xs-x)/h)**2) #transposed
+            t2 =  - self.density(xs,x)**2
+            w = np.mean(t1-t2)
+            #w = np.mean([self(xd) for xd in ((xs-x) * self._Hrootinv)] ) #transposed
+            return w
+        else:
+            return np.nan
+
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
         xs and y-values ys.
