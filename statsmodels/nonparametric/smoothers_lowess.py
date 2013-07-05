@@ -158,7 +158,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
 
     if not is_sorted:
         # Sort both inputs according to the ascending order of x values
-        sort_index = np.argsort(exog)
+        sort_index = np.argsort(x)
         x = np.array(x[sort_index])
         y = np.array(y[sort_index])
 
