@@ -814,6 +814,19 @@ class GenericLikelihoodModel(LikelihoodModel):
                             full_output=full_output,
                             disp=disp, callback=callback, **kwargs)
         genericmlefit = GenericLikelihoodModelResults(self, mlefit)
+
+        #amend param names
+        exog_names = [] if (self.exog_names is None) else self.exog_names
+        k_miss = len(exog_names) - len(mlefit.params)
+        if not k_miss == 0:
+            if k_miss < 0:
+                self._set_extra_params_names(
+                                         ['par%d' % i for i in range(-k_miss)])
+            else:
+                # I don't want to raise after we have already fit()
+                import warnings
+                warnings.warn(UserWarning, 'more exog_names than parameters')
+
         return genericmlefit
     #fit.__doc__ += LikelihoodModel.fit.__doc__
 
@@ -1740,13 +1753,26 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 #        super(DiscreteResults, self).__init__(model, params,
 #                np.linalg.inv(-hessian), scale=1.)
         self.model = model
-        #self.df_model = model.df_model
-        #self.df_resid = model.df_resid
         self.endog = model.endog
         self.exog = model.exog
         self.nobs = model.endog.shape[0]
-        self.df_model = model.df_model
-        self.df_resid = model.df_resid
+
+        # TODO: possibly move to model.fit()
+        #       and outsource together with patching names
+        if hasattr(model, 'df_model'):
+            self.df_model = model.df_model
+        else:
+            self.df_model = len(mlefit.params)
+            # retrofitting the model, used in t_test TODO: check design
+            self.model.df_model = self.df_model
+
+        if hasattr(model, 'df_resid'):
+            self.df_resid = model.df_resid
+        else:
+            self.df_resid = self.endog.shape[0] - self.df_model
+            # retrofitting the model, used in t_test TODO: check design
+            self.model.df_resid = self.df_resid
+
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
 
