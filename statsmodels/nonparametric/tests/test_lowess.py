@@ -11,7 +11,8 @@ available in R's MASS package.
 
 import os
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_, assert_raises
+from numpy.testing import (assert_almost_equal, assert_, assert_raises,
+                           assert_equal)
 #import statsmodels.api as sm
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
@@ -125,10 +126,29 @@ class  TestLowess(object):
         # check with nans,  this changes the arrays
         y[[5, 6]] = np.nan
         x[3] = np.nan
-        actual_lowess1[[3, 5, 6], 1] = np.nan
+        mask_valid = np.isfinite(x) & np.isfinite(y)
+        #actual_lowess1[[3, 5, 6], 1] = np.nan
         actual_lowess = lowess(y, x, is_sorted=True)
-        assert_almost_equal(actual_lowess1, actual_lowess1, decimal=13)
+        actual_lowess1 = lowess(y[mask_valid], x[mask_valid], is_sorted=True)
+        assert_almost_equal(actual_lowess, actual_lowess1, decimal=13)
         assert_raises(ValueError, lowess, y, x, missing='raise')
+
+        perm_idx = np.arange(len(x))
+        np.random.shuffle(perm_idx)
+        yperm = y[perm_idx]
+        xperm = x[perm_idx]
+        actual_lowess2 = lowess(yperm, xperm, is_sorted=False)
+        assert_almost_equal(actual_lowess, actual_lowess2, decimal=13)
+
+        actual_lowess3 = lowess(yperm, xperm, is_sorted=False,
+                                return_sorted=False)
+        mask_valid = np.isfinite(xperm) & np.isfinite(yperm)
+        assert_equal(np.isnan(actual_lowess3), ~mask_valid)
+        # get valid sorted smoothed y from actual_lowess3
+        sort_idx = np.argsort(xperm)
+        yhat = actual_lowess3[sort_idx]
+        yhat = yhat[np.isfinite(yhat)]
+        assert_almost_equal(yhat, actual_lowess2[:,1], decimal=13)
 
 
 
