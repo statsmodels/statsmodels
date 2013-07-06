@@ -108,6 +108,33 @@ def test_cochranq2():
     assert_allclose(res, [13.2857143, 0.00405776], rtol=1e-6)
 
 
+def test_cochranq3():
+    # another example compared to SAS
+    # in frequency weight format
+    dt = [('A', 'S1'), ('B', 'S1'), ('C', 'S1'), ('count', int)]
+    dta = np.array([('F', 'F', 'F', 6),
+                    ('U', 'F', 'F', 2),
+                    ('F', 'F', 'U', 16),
+                    ('U', 'F', 'U', 4),
+                    ('F', 'U', 'F', 2),
+                    ('U', 'U', 'F', 6),
+                    ('F', 'U', 'U', 4),
+                    ('U', 'U', 'U', 6)], dt)
+
+    cases = np.array([[0, 0, 0],
+                      [1, 0, 0],
+                      [0, 0, 1],
+                      [1, 0, 1],
+                      [0, 1, 0],
+                      [1, 1, 0],
+                      [0, 1, 1],
+                      [1, 1, 1]])
+    count = np.array([ 6,  2, 16,  4,  2,  6,  4,  6])
+    data = np.repeat(cases, count, 0)
+
+    res = cochran_q(data)
+    assert_allclose(res, [8.4706, 0.0145], atol=5e-5)
+
 def test_runstest():
     #comparison numbers from R, tseries, runs.test
     #currently only 2-sided used
