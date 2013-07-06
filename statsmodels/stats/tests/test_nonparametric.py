@@ -8,7 +8,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
-from statsmodels.sandbox.stats.runs import mcnemar, cochran_q, Runs
+from statsmodels.sandbox.stats.runs import mcnemar, cochrans_q, Runs
 
 def _expand_table(table):
     '''expand a 2 by 2 contingency table to observations
@@ -80,15 +80,15 @@ def test_cochransq():
                    [1, 1, 1]])
     res_qstat = 2.8
     res_pvalue = 0.246597
-    assert_almost_equal(cochran_q(x), [res_qstat, res_pvalue])
+    assert_almost_equal(cochrans_q(x), [res_qstat, res_pvalue])
 
     #equivalence of mcnemar and cochranq for 2 samples
     a,b = x[:,:2].T
     assert_almost_equal(mcnemar(a,b, exact=False, correction=False),
-                        cochran_q(x[:,:2]))
+                        cochrans_q(x[:,:2]))
 
 
-def test_cochranq2():
+def test_cochransq2():
     # from an example found on web, verifies 13.286
     data = np.array('''
         0 0 0 1
@@ -104,11 +104,11 @@ def test_cochranq2():
         1 0 0 1
         0 0 1 1'''.split(), int).reshape(-1, 4)
 
-    res = cochran_q(data)
+    res = cochrans_q(data)
     assert_allclose(res, [13.2857143, 0.00405776], rtol=1e-6)
 
 
-def test_cochranq3():
+def test_cochransq3():
     # another example compared to SAS
     # in frequency weight format
     dt = [('A', 'S1'), ('B', 'S1'), ('C', 'S1'), ('count', int)]
@@ -132,7 +132,7 @@ def test_cochranq3():
     count = np.array([ 6,  2, 16,  4,  2,  6,  4,  6])
     data = np.repeat(cases, count, 0)
 
-    res = cochran_q(data)
+    res = cochrans_q(data)
     assert_allclose(res, [8.4706, 0.0145], atol=5e-5)
 
 def test_runstest():

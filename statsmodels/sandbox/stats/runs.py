@@ -431,7 +431,7 @@ def median_test_ksample(x, groups):
 
 
 
-def cochran_q(x):
+def cochrans_q(x):
     '''Cochran's Q test for identical effect of k treatments
 
     Cochran's Q is a k-sample extension of the McNemar test. If there are only
@@ -549,7 +549,5 @@ if __name__ == '__main__':
     print runstest_2samp(np.arange(16,0,-1), groups=x)
     print TotalRunsProb(7,9).cdf(11)
     print median_test_ksample(np.random.randn(100), np.random.randint(0,2,100))
-    print cochran_q(np.random.randint(0,2,(100,8)))
+    print cochrans_q(np.random.randint(0,2,(100,8)))
 
-    test_runstest()
-    test_cochransq()
