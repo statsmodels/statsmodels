@@ -88,6 +88,26 @@ def test_cochransq():
                         cochran_q(x[:,:2]))
 
 
+def test_cochranq2():
+    # from an example found on web, verifies 13.286
+    data = np.array('''
+        0 0 0 1
+        0 0 0 1
+        0 0 0 1
+        1 1 1 1
+        1 0 0 1
+        0 1 0 1
+        1 0 0 1
+        0 0 0 1
+        0 1 0 0
+        0 0 0 0
+        1 0 0 1
+        0 0 1 1'''.split(), int).reshape(-1, 4)
+
+    res = cochran_q(data)
+    assert_allclose(res, [13.2857143, 0.00405776], rtol=1e-6)
+
+
 def test_runstest():
     #comparison numbers from R, tseries, runs.test
     #currently only 2-sided used
