@@ -8,7 +8,7 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
-from statsmodels.sandbox.stats.runs import mcnemar
+from statsmodels.sandbox.stats.runs import mcnemar, cochran_q, Runs
 
 def _expand_table(table):
     '''expand a 2 by 2 contingency table to observations
@@ -61,3 +61,47 @@ def test_mcnemar_chisquare():
     x, y = _expand_table(f_obs2).T  # tuple unpack
     assert_allclose(mcnemar(f_obs2, exact=False),
                     mcnemar(x, y, exact=False), rtol=1e-13)
+
+
+def test_cochransq():
+    #example from dataplot docs, Conovover p. 253
+    #http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/cochran.htm
+    x = np.array([[1, 1, 1],
+                   [1, 1, 1],
+                   [0, 1, 0],
+                   [1, 1, 0],
+                   [0, 0, 0],
+                   [1, 1, 1],
+                   [1, 1, 1],
+                   [1, 1, 0],
+                   [0, 0, 1],
+                   [0, 1, 0],
+                   [1, 1, 1],
+                   [1, 1, 1]])
+    res_qstat = 2.8
+    res_pvalue = 0.246597
+    assert_almost_equal(cochran_q(x), [res_qstat, res_pvalue])
+
+    #equivalence of mcnemar and cochranq for 2 samples
+    a,b = x[:,:2].T
+    assert_almost_equal(mcnemar(a,b, exact=False, correction=False),
+                        cochran_q(x[:,:2]))
+
+
+def test_runstest():
+    #comparison numbers from R, tseries, runs.test
+    #currently only 2-sided used
+    x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
+
+    z_twosided = 1.386750
+    pvalue_twosided = 0.1655179
+
+    z_greater = 1.386750
+    pvalue_greater = 0.08275893
+
+    z_less = 1.386750
+    pvalue_less = 0.917241
+
+    #print Runs(x).runs_test(correction=False)
+    assert_almost_equal(np.array(Runs(x).runs_test(correction=False)),
+                        [z_twosided, pvalue_twosided], decimal=6)
