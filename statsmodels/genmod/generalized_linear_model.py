@@ -28,7 +28,6 @@ import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
-from scipy.stats import t
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 __all__ = ['GLM']
