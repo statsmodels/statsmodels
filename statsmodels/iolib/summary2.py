@@ -416,13 +416,19 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     results : statsmodels results instance or list of result instances
     float_format : string
         float format for coefficients and standard errors
+        Default : '%.4f'
     model_names : list of strings of length len(results) if the names are not
         unique, a roman number will be appended to all model names
     stars : bool
         print significance stars
     info_dict : dict
         dict of lambda functions to be applied to results instances to retrieve
-        model info
+        model info. To use specific information for different models, add a (nested)
+        info_dict with model name as the key.
+        Example: `info_dict = {"N":..., "R2": ..., "OLS":{"R2":...}}` would only show
+        `R2` for OLS regression models, but additionally `N` for all other results.
+        Default : None (use the info_dict specified in result.default_model_infos, if
+        this property exists)
     regressor_order : list of strings
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
