@@ -437,15 +437,14 @@ def cochran_q(x):
     Cochran's Q is a k-sample extension of the McNemar test. If there are only
     two treatments, then Cochran's Q test and McNemar test are equivalent.
 
-    what's this ? Test that the number of successes is the same for each case.
-    The alternative is that at least two treatements come from different
-    populations.
+    Test that the probability of success is the same for each treatment.
+    The alternative is that at least two treatments have a different
+    probability of success.
 
     Parameters
     ----------
     x : array_like, 2d (N,k)
         data with N cases and k variables
-
 
     Returns
     -------
@@ -453,19 +452,14 @@ def cochran_q(x):
        test statistic
     pvalue : float
        pvalue from the chisquare distribution
-    others ????
-       currently some test output, table and expected
 
     Notes
     -----
-    not verified,
-
-    In Wikipedia terminology, rows are blocks and N should be large for
-    the chisquare distribution to be a good approximation; columns are
-    treatments.
+    In Wikipedia terminology, rows are blocks and columns are treatments.
+    The number of rows N, should be large for the chisquare distribution to be
+    a good approximation.
     The Null hypothesis of the test is that all treatments have the
     same effect.
-
 
     References
     ----------
@@ -533,20 +527,17 @@ def mcnemar(x, y=None, exact='auto', correction=True):
         n1 = np.sum(x < y)
         n2 = np.sum(x > y)
 
-    if exact or (exact=='auto' and n1+n2<25):
-        stat = min(n1,n2)
+    if exact or (exact == 'auto' and n1 + n2 < 25):
+        stat = min(n1, n2)
         # binom is symmetric with p=0.5
-        pval = stats.binom.cdf(min(n1,n2), n1+n2, 0.5) * 2
+        pval = stats.binom.cdf(min(n1, n2), n1 + n2, 0.5) * 2
         pval = min(pval, 1)
     else:
         corr = int(correction)
-        stat = (np.abs(n1-n2)-corr)**2 / (1. * (n1+n2))
+        stat = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
         df = 1
-        pval = stats.chi2.sf(stat,1)
+        pval = stats.chi2.sf(stat, 1)
     return stat, pval
-
-from numpy.testing import assert_almost_equal, assert_array_almost_equal
-
 
 
 if __name__ == '__main__':
