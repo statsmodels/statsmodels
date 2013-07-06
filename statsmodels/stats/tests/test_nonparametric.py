@@ -22,6 +22,7 @@ def test_mcnemar_exact():
     f_obs3 = np.array([[101,  80], [59, 33]])
     f_obs4 = np.array([[101,  30], [60, 33]])
     f_obs5 = np.array([[101,  10], [30, 33]])
+    f_obs6 = np.array([[101,  10], [10, 33]])
 
     #vassar college online computation
     res1 = 0.000004
@@ -29,12 +30,14 @@ def test_mcnemar_exact():
     res3 = 0.089452
     res4 = 0.00206
     res5 = 0.002221
+    res6 = 1.
 
     assert_almost_equal(mcnemar(f_obs1, exact=True), [59, res1], decimal=6)
     assert_almost_equal(mcnemar(f_obs2, exact=True), [59, res2], decimal=6)
     assert_almost_equal(mcnemar(f_obs3, exact=True), [59, res3], decimal=6)
     assert_almost_equal(mcnemar(f_obs4, exact=True), [30, res4], decimal=6)
     assert_almost_equal(mcnemar(f_obs5, exact=True), [10, res5], decimal=6)
+    assert_almost_equal(mcnemar(f_obs6, exact=True), [10, res6], decimal=6)
 
     x, y = _expand_table(f_obs2).T  # tuple unpack
     assert_allclose(mcnemar(f_obs2, exact=True),

@@ -537,6 +537,7 @@ def mcnemar(x, y=None, exact='auto', correction=True):
         stat = min(n1,n2)
         # binom is symmetric with p=0.5
         pval = stats.binom.cdf(min(n1,n2), n1+n2, 0.5) * 2
+        pval = min(pval, 1)
     else:
         corr = int(correction)
         stat = (np.abs(n1-n2)-corr)**2 / (1. * (n1+n2))
