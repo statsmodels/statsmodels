@@ -63,6 +63,23 @@ def test_mcnemar_chisquare():
     assert_allclose(mcnemar(f_obs2, exact=False),
                     mcnemar(x, y, exact=False), rtol=1e-13)
 
+def test_mcnemar_vectorized():
+    ttk = np.random.randint(5,15, size=(2,2,3))
+    mcnemar(ttk)
+    res = mcnemar(ttk, exact=False)
+    res1 = zip(*[mcnemar(ttk[:,:,i], exact=False) for i in range(3)])
+    assert_allclose(res, res1, rtol=1e-13)
+
+    res = mcnemar(ttk, exact=False, correction=False)
+    res1 = zip(*[mcnemar(ttk[:,:,i], exact=False, correction=False)
+                                                          for i in range(3)])
+    assert_allclose(res, res1, rtol=1e-13)
+
+    res = mcnemar(ttk, exact=True)
+    res1 = zip(*[mcnemar(ttk[:,:,i], exact=True) for i in range(3)])
+    assert_allclose(res, res1, rtol=1e-13)
+
+
 def test_symmetry_bowker():
     table = np.array([0, 3, 4, 4, 2, 4, 1, 2, 4, 3, 5, 3, 0, 0, 2, 2, 3, 0, 0,
                       1, 5, 5, 5, 5, 5]).reshape(5, 5)

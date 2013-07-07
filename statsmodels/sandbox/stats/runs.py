@@ -522,18 +522,22 @@ def mcnemar(x, y=None, exact='auto', correction=True):
 
     x = np.asarray(x)
     if y is None and x.shape[0] == x.shape[1]:
+        if x.shape[0] != 2:
+            raise ValueError('table needs to be 2 by 2')
         n1, n2 = x[1, 0], x[0, 1]
     else:
-        n1 = np.sum(x < y)
-        n2 = np.sum(x > y)
+        # I'm not checking here whether x and y are binary,
+        # isn't this also paired sign test
+        n1 = np.sum(x < y, 0)
+        n2 = np.sum(x > y, 0)
 
     if exact or (exact == 'auto' and n1 + n2 < 25):
-        stat = min(n1, n2)
+        stat = np.minimum(n1, n2)
         # binom is symmetric with p=0.5
-        pval = stats.binom.cdf(min(n1, n2), n1 + n2, 0.5) * 2
-        pval = min(pval, 1)
+        pval = stats.binom.cdf(stat, n1 + n2, 0.5) * 2
+        pval = np.minimum(pval, 1)  # limit to 1 if n1==n2
     else:
-        corr = int(correction)
+        corr = int(correction) # convert bool to 0 or 1
         stat = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
         df = 1
         pval = stats.chi2.sf(stat, df)
