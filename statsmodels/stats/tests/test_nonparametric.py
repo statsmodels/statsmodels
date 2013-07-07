@@ -44,24 +44,38 @@ def test_mcnemar_exact():
     assert_allclose(mcnemar(f_obs2, exact=True),
                     mcnemar(x, y, exact=True), rtol=1e-13)
 
+
 def test_mcnemar_chisquare():
     f_obs1 = np.array([[101, 121], [59, 33]])
     f_obs2 = np.array([[101,  70], [59, 33]])
     f_obs3 = np.array([[101,  80], [59, 33]])
 
     #> mcn = mcnemar.test(matrix(c(101, 121,  59,  33),nrow=2))
-    res1 = [2.067222e+01, 5.450095e-06]
+    res1 = [2.067222e01, 5.450095e-06]
     res2 = [0.7751938,    0.3786151]
     res3 = [2.87769784,   0.08981434]
-
 
     assert_allclose(mcnemar(f_obs1, exact=False), res1, rtol=1e-6)
     assert_allclose(mcnemar(f_obs2, exact=False), res2, rtol=1e-6)
     assert_allclose(mcnemar(f_obs3, exact=False), res3, rtol=1e-6)
 
+    # compare table versus observations
     x, y = _expand_table(f_obs2).T  # tuple unpack
     assert_allclose(mcnemar(f_obs2, exact=False),
                     mcnemar(x, y, exact=False), rtol=1e-13)
+
+    # test correction = False
+    res1 = [2.135556e01, 3.815136e-06]
+    res2 = [0.9379845,   0.3327967]
+    res3 = [3.17266187,  0.07488031]
+
+    res = mcnemar(f_obs1, exact=False, correction=False)
+    assert_allclose(res, res1, rtol=1e-6)
+    res = mcnemar(f_obs2, exact=False, correction=False)
+    assert_allclose(res, res2, rtol=1e-6)
+    res = mcnemar(f_obs3, exact=False, correction=False)
+    assert_allclose(res, res3, rtol=1e-6)
+
 
 def test_mcnemar_vectorized():
     ttk = np.random.randint(5,15, size=(2,2,3))
