@@ -144,6 +144,7 @@ Non-Parametric Tests
    :toctree: generated/
 
    mcnemar
+   symmetry_bowker
    median_test_ksample
    runstest_1samp
    runstest_2samp

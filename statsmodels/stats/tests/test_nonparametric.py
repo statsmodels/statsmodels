@@ -8,7 +8,8 @@ Author: Josef Perktold
 
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
-from statsmodels.sandbox.stats.runs import mcnemar, cochrans_q, Runs
+from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q, Runs,
+                                            symmetry_bowker)
 
 def _expand_table(table):
     '''expand a 2 by 2 contingency table to observations
@@ -61,6 +62,38 @@ def test_mcnemar_chisquare():
     x, y = _expand_table(f_obs2).T  # tuple unpack
     assert_allclose(mcnemar(f_obs2, exact=False),
                     mcnemar(x, y, exact=False), rtol=1e-13)
+
+def test_symmetry_bowker():
+    table = np.array([0, 3, 4, 4, 2, 4, 1, 2, 4, 3, 5, 3, 0, 0, 2, 2, 3, 0, 0,
+                      1, 5, 5, 5, 5, 5]).reshape(5, 5)
+
+    res = symmetry_bowker(table)
+    mcnemar5_1 = dict(statistic=7.001587, pvalue=0.7252951, parameters=(10,),
+                      distr='chi2')
+    assert_allclose(res[:2], [mcnemar5_1['statistic'], mcnemar5_1['pvalue']],
+                    rtol=1e-7)
+
+    res = symmetry_bowker(1 + table)
+    mcnemar5_1b = dict(statistic=5.355988, pvalue=0.8661652, parameters=(10,),
+                       distr='chi2')
+    assert_allclose(res[:2], [mcnemar5_1b['statistic'], mcnemar5_1b['pvalue']],
+                    rtol=1e-7)
+
+
+    table = np.array([2, 2, 3, 6, 2, 3, 4, 3, 6, 6, 6, 7, 1, 9, 6, 7, 1, 1, 9,
+                      8, 0, 1, 8, 9, 4]).reshape(5, 5)
+
+    res = symmetry_bowker(table)
+    mcnemar5_2 = dict(statistic=18.76432, pvalue=0.04336035, parameters=(10,),
+                      distr='chi2')
+    assert_allclose(res[:2], [mcnemar5_2['statistic'], mcnemar5_2['pvalue']],
+                    rtol=1.5e-7)
+
+    res = symmetry_bowker(1 + table)
+    mcnemar5_2b = dict(statistic=14.55256, pvalue=0.1492461, parameters=(10,),
+                       distr='chi2')
+    assert_allclose(res[:2], [mcnemar5_2b['statistic'], mcnemar5_2b['pvalue']],
+                    rtol=1e-7)
 
 
 def test_cochransq():
