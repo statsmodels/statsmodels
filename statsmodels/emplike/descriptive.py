@@ -66,7 +66,7 @@ class _OptFuncts(object):
     """
 
     def __init__(self, endog):
-        super(_OptFuncts, self).__init__(endog)
+        pass
 
     def _log_star(self, eta, est_vect, weights, nobs):
         """
