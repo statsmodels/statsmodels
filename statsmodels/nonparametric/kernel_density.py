@@ -340,7 +340,7 @@ class KDEMultivariateConditional(GenericKDE):
     Conditional multivariate kernel density estimator.
 
     Calculates ``P(Y_1,Y_2,...Y_n | X_1,X_2...X_m) =
-    P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(Y_1, Y_2,..., Y_m)``.
+    P(X_1, X_2,...X_n, Y_1, Y_2,..., Y_m)/P(X_1, X_2,..., X_m)``.
     The conditional density is by definition the ratio of the two densities,
     see [1]_.
 
