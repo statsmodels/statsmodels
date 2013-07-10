@@ -34,6 +34,7 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 import numpy as np
 import pandas as pd
 from statsmodels.compatnp.np_compat import npc_unique
+import statsmodels.tools.data as data_util
 
 
 def combine_indices(groups, prefix='', sep='.', return_labels=False):
@@ -115,7 +116,7 @@ def group_sums_dummy(x, group_dummy):
 
     group_dummy can be either ndarray or sparse matrix
     '''
-    if type(group_dummy) is np.ndarray:
+    if data_util._is_using_ndarray_type(group_dummy):
         return np.dot(x.T, group_dummy)
     else:  # check for sparse
         return x.T * group_dummy
@@ -348,11 +349,11 @@ class Grouping():
 
         if not index:
             index = self.index
-        if type(data) == np.ndarray:
+        if data_util._is_using_ndarray_type(data):
             out = pd.DataFrame(data, index=index)
             out = out.sort()
             return np.array(out), index
-        elif type(data) in [pd.core.series.Series, pd.core.frame.DataFrame]:
+        elif data_util._is_using_pandas(data):
             out = data
             out.index = index
             out = out.sort()
