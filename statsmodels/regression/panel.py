@@ -7,31 +7,85 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults)
 from statsmodels.tools.grouputils import Grouping
+from statsmodels.panel.panel_model import PanelModel
 
-class PanelLM(RegressionModel):
-    '''Assumes the first level of the index is unit and the second it time'''
-    def __init__(self, endog, exog, method='pooling', effects='oneway',
-                 unit=None, time=None, hasconst=None, **kwargs):
+class PanelLM(PanelModel, RegressionModel):
+    r'''
+    Panel Data Linear Regression Model
 
-        if type(exog) in [pd.core.frame.DataFrame, pd.core.series.Series]:
-            self.groupings = Grouping(index_pandas=exog.index)
-        elif type(endog) in [pd.core.frame.DataFrame, pd.core.series.Series]:
-            self.groupings = Grouping(index_pandas=endog.index)
-        else:
-            self.groupings = Grouping(index_list=[unit, time])
-        self.exog, idx = self.groupings.sort(exog)
-        self.endog, idx = self.groupings.sort(endog)
-        self.groupings.index = idx # relevant index order may have changed
+    Parameters
+    ----------
+    y : array-like
+        The endogenous variable. See Notes.
+    X : array-like
+        The exogenous variables. See Notes.
+    panel : array-like, optional
+        If `y` and `X` are array-like, then `panel` must be specified and must
+        be of the same length as them.
+    time : array-like, optional
+        If `y` and `X` are array-like, then `time` must be specified and must
+        be of the same length as them.
+    effects : str
+        The type of model to be estimated.:
 
+        * oneway
+        * twoway
+        * time
+    method : str
+        The type of model to be estimated.:
+
+        * pooling
+        * within - Also known as the fixed-effects estimator. This uses OLS.
+        * between - Between effects model
+        * swar - The small sample Swamy-Arora estimator of individual-level
+          variance components should be used.
+        * random - GLS random-effects model
+        * mle - Maximum Likelihood random-effects model
+    %(extra_parameters)s
+
+    Notes
+    -----
+    If a Series or DataFrame is given for both `y` and `X` it is assumed that
+    the indices of both are equivalent MultiIndex. The first level must be the
+    panel index and the second unit must be the time index.
+
+    These are the different models assumed. The `effects` keyword will affect
+    the subscripts, but the same models hold.
+
+    Within or fixed-effects model
+
+    .. math:
+
+       (y_{it} - \bar{y}_i) = (X_{it}-\bar{X}_i)\beta + (\epsilon_{it} - \bar{\epsilon}_i)
+
+    Between-effects model
+
+    .. math:
+
+       \bar{y}_i = \alpha + \bar{x}_i\beta + \upsilon_i + \bar{\epsilon}_i
+
+    The random-effects models is weighted average of the two.
+
+    .. math:
+
+        (y_{it} - \theta\bar{y}_i) = (1-\theta)\alpha + (X_{it} - \theta \bar{X}_{i})\beta + [(1-\theta)\upsilon_i + (\epsilon_{it} - \theta \bar{\epsilon}_i)]
+
+    where :math:`\theta` is a function of :math:`\sigma_{\upsilon}^2` and
+    :math:`\sigma_{\epsilon}^2`
+
+    '''
+    #NOTE: all mixtures of effects and method don't make sense i think?
+    #TODO: Check docs
+
+    def __init__(self, y, X, panel=None, time=None, method='pooling',
+                 effects='oneway', hasconst=None, missing='none'):
         self.method = method
         self.effects = effects
 
-        self.panel_balanced = True # TODO: no hard code True
+        super(PanelLM, self).__init__(y, X, missing=missing, time=time,
+                                      panel=panel, hasconst=hasconst)
 
-        if method == 'swar':
-            self.var_u, self.var_e, self.theta = swar_ercomp(self.endog, self.exog)
 
-        super(PanelLM, self).__init__(endog, exog, **kwargs)
 
     def initialize(self, unit=None, time=None):
         self.wexog = self.whiten(self.exog)
@@ -40,13 +94,13 @@ class PanelLM(RegressionModel):
         self.rank = np.rank(self.exog)
         self.df_model = float(self.rank - self.k_constant)
         if self.method == 'within':
-            self.df_resid = self.nobs - self.rank - self.groupings.index.levshape[0]
+            self.df_resid = self.nobs - self.rank - self.data.n_panel
         else:
             self.df_resid = self.nobs - self.rank - 1
         self.df_model = float(self.rank - self.k_constant)
 
     def whiten(self, data):
-        g = self.groupings
+        g = self.data.groupings
         if self.method == 'within':
             f = lambda x: x - x.mean()
             if (self.effects == 'oneway') or (self.effects == 'unit'):
@@ -73,8 +127,16 @@ class PanelLM(RegressionModel):
         elif self.method == 'pooling':
             return data
         elif self.method == 'swar':
+            # do this here so endog and exog have been through data handling
+            idx = g.index
+            panel, time = (g.index.get_level_values(0),
+                           g.index.get_level_values(1))
+            self.var_u, self.var_e, self.theta = swar_ercomp(self.endog,
+                                                             self.exog,
+                                                             panel,
+                                                             time)
             out = g.transform_slices(array=data, function=swar_transform,
-                                     theta=self.theta) 
+                                     theta=self.theta)
             return out
 
     def fit(self, method="pinv", **kwargs):
@@ -86,15 +148,17 @@ class PanelLM(RegressionModel):
                    normalized_cov_params=self.normalized_cov_params)
         return lfit
 
-def swar_ercomp(y, X):
+#TODO: hook this into the data handling so panel and time are optional
+#      but for now it's used internally on plain arrays, so needs these
+def swar_ercomp(y, X, panel, time):
     '''Swamy-Arora error decomposition'''
-    b = PanelLM(y, X, 'between').fit()
-    w = PanelLM(y, X, 'within').fit()
-    w.model.groupings.count_categories(level=0)
-    Ts = w.model.groupings.counts   
+    b = PanelLM(y, X, panel=panel, time=time, method='between').fit()
+    w = PanelLM(y, X, panel=panel, time=time, method='within').fit()
+    w.model.data.groupings.count_categories(level=0)
+    Ts = w.model.data.groupings.counts
     Th = scipy.stats.mstats.hmean(Ts)
-    var_e = w.ssr / (X.shape[0] - w.model.groupings.index.levshape[0] - X.shape[1] + 1)
-    var_u = b.ssr / (b.model.groupings.index.levshape[0] - X.shape[1]) - var_e / Th
+    var_e = w.ssr / (X.shape[0] - w.model.data.n_panel - X.shape[1] + 1)
+    var_u = b.ssr / (b.model.data.n_panel - X.shape[1]) - var_e / Th
     var_u = max(var_u, 0)
     Ts = np.concatenate([np.repeat(x,x) for x in Ts])
     theta = 1 - np.sqrt(var_e / (Ts * var_u + var_e))
@@ -115,7 +179,7 @@ class PanelLMResults(RegressionResults):
     @cache_readonly
     def bse(self):
         if self.model.method == 'within':
-            scale = self.nobs - self.model.groupings.index.levshape[0] - self.df_model
+            scale = self.nobs - self.model.data.n_panel - self.df_model
             scale = np.sum(self.wresid**2) / scale
             bse = np.sqrt(np.diag(self.cov_params(scale=scale)))
         else:
@@ -128,7 +192,7 @@ class PanelLMResults(RegressionResults):
 
     @cache_readonly
     def resid(self):
-        if (self.model.method == 'within') and not (self.model.panel_balanced):
+        if (self.model.method == 'within') and not (self.model.data.is_balanced):
             Xb_bar = np.dot(self.model.exog.mean(axis=0), self.params)
             alph = np.mean(self.model.endog) - Xb_bar
             pred = alph + np.dot(self.model.exog, self.params)
@@ -156,7 +220,7 @@ class PanelLMResults(RegressionResults):
 def pooltest(endog, exog):
     '''Chow poolability test: F-test of joint significance for the unit dummies
     in a LSDV model
-    
+
     Returns
     -------
 
@@ -170,11 +234,25 @@ def pooltest(endog, exog):
     T = unrestricted.model.panel_T
     K = unrestricted.model.exog.shape[1]
     urss = unrestricted.ssr
-    rrss = restricted.ssr 
+    rrss = restricted.ssr
     F = ((rrss - urss) / (N-1)) / (urss / (N*T - N - K))
-    p = 1 - scipy.stats.distributions.f.cdf(F, N-1, N*(T-1)-K) 
+    p = 1 - scipy.stats.distributions.f.cdf(F, N-1, N*(T-1)-K)
     return F, p
 
+
+if __name__ == "__main__":
+    import statsmodels.api as sm
+    dta = sm.datasets.get_rdataset("EmplUK", "plm").data
+    dta.set_index(['firm', 'year'], inplace=True)
+    y = dta["emp"]
+    dta["const"] = 1
+    X = dta[["const", "wage", "capital"]]
+    mod1 = PanelLM(y, X, method='pooling').fit()
+    mod2 = PanelLM(y, X, method='between').fit()
+    mod3 = PanelLM(y, X.ix[:,1:], method='within').fit()
+    mod4 = PanelLM(y, X.ix[:,1:], method='within', effects='time').fit()
+    mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoways').fit()
+    mod6 = PanelLM(y, X, method='swar').fit()
 
 '''
 from statsmodels.iolib.summary import summary_col
@@ -198,7 +276,7 @@ y, X = dmatrices(f, gasoline, return_type='dataframe')
 # Statsmodels
 
 ================================================================
-            OLS    Between  Within N Within T Within 2w RE-SWAR 
+            OLS    Between  Within N Within T Within 2w RE-SWAR
 ----------------------------------------------------------------
 Intercept  10.3598  10.5060                               9.0390
           (1.2023) (3.3055)                             (1.1015)
