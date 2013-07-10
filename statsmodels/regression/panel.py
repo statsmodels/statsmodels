@@ -9,6 +9,14 @@ from statsmodels.regression.linear_model import (RegressionModel,
 from statsmodels.tools.grouputils import Grouping
 from statsmodels.panel.panel_model import PanelModel
 
+def _check_method_compat(method, effects):
+    if method == 'within' and not effects in ['oneway', 'twoway', 'time']:
+        raise ValueError("effects for within must be oneway, twoway, or time")
+    elif method == 'between' and not effects in ['oneway', 'time']:
+        raise ValueError("effects for between must be oneway or time")
+    #Need to do any checking for other methods?
+
+
 class PanelLM(PanelModel, RegressionModel):
     r'''
     Panel Data Linear Regression Model
@@ -79,6 +87,7 @@ class PanelLM(PanelModel, RegressionModel):
 
     def __init__(self, y, X, panel=None, time=None, method='pooling',
                  effects='oneway', hasconst=None, missing='none'):
+        _check_method_compat(method, effects)
         self.method = method
         self.effects = effects
 
@@ -113,16 +122,14 @@ class PanelLM(PanelModel, RegressionModel):
                 out = g.transform_array(data, f, 0)
                 out = g.transform_array(out, f, 1)
                 return out
-            else:
-                raise Exception('Method must be unit, time, oneway, or twoways')
+
         elif self.method == 'between':
             f = lambda x: x.mean()
             if (self.effects == 'oneway') or (self.effects == 'unit'):
                 out = g.transform_array(data, f, 0)
             elif (self.effects == 'time'):
                 out = g.transform_array(data, f, 1)
-            else:
-                raise Exception('effects must be unit, time, or oneway')
+
             return out
         elif self.method == 'pooling':
             return data
