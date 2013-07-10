@@ -311,6 +311,9 @@ class Grouping():
         self.index_int = self.index.labels
 
     def reindex(self, index_pandas=None):
+        """
+        Resets the index in-place.
+        """
         if type(index_pandas) in [pd.core.index.MultiIndex,
                                   pd.core.index.Index]:
             self.index = index_pandas
@@ -320,11 +323,19 @@ class Grouping():
             raise Exception('index_pandas must be Pandas index')
 
     def get_slices(self):
-        '''Only works on first index level'''
+        '''
+        Sets the slices attribute to be a list of indices of the sorted
+        groups for the first index level. I.e., self.slices[0] is the
+        index where each observation is in the first (sorted) group.
+        '''
         groups = self.index.get_level_values(0).unique()
         self.slices = [self.index.get_loc(x) for x in groups]
 
     def count_categories(self, level=0):
+        """
+        Sets the attribute counts to equal the bincount of the (integer-valued)
+        labels.
+        """
         self.counts = np.bincount(self.index_int[level])
 
     def check_index(self, sorted=True, unique=True, index=None):
@@ -385,7 +396,9 @@ class Grouping():
         return self.transform_dataframe(dataframe, function, level=level)
 
     def transform_slices(self, array, function, **kwargs):
-        '''Assumes array is a 1D or 2D numpy array'''
+        '''Apply function to each group. Similar to transform_array but does
+        not coerce array to a DataFrame and back and only works on a 1D or 2D
+        numpy array'''
         if array.shape[0] != self.nobs:
             raise Exception('array does not have the same shape as index')
         if self.slices is None:
