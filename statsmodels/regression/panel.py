@@ -10,6 +10,10 @@ from statsmodels.tools.grouputils import Grouping
 from statsmodels.panel.panel_model import PanelModel
 
 def _check_method_compat(method, effects):
+    if method not in ['within', 'pooling', 'between', 'swar', 'mle', 'random']:
+        raise ValueError("method %s not understood" % method)
+    if effects not in ['oneway', 'unit', 'time', 'twoway']:
+        raise ValueError("effects %s not understood" % effects)
     if method == 'within' and not effects in ['oneway', 'twoway', 'time']:
         raise ValueError("effects for within must be oneway, twoway, or time")
     elif method == 'between' and not effects in ['oneway', 'time']:
