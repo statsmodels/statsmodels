@@ -350,8 +350,12 @@ class Grouping():
         if not index:
             index = self.index
         if data_util._is_using_ndarray_type(data):
-            out = pd.DataFrame(data, index=index)
-            out = out.sort()
+            if data.ndim == 1:
+                out = pd.Series(data, index=index, copy=True)
+                out.sort_index()
+            else:
+                out = pd.DataFrame(data, index=index)
+                out = out.sort(inplace=False) # copies
             return np.array(out), index
         elif data_util._is_using_pandas(data):
             out = data
