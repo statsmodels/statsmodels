@@ -1,13 +1,13 @@
 """
 Tests for panel models
 
-Status: 
+Status:
     - rsquared_adj: ???
     - conf_int: SM is right R's plm is wrong (no df correction in plm)
-    - wrong f_pvalue (see especially between) 
+    - wrong f_pvalue (see especially between)
     - fvalue: why do I need to divide by 2 except for within? 2-tailed?
 
-Stata: 
+Stata:
 
 insheet using Grunfeld.csv, clear
 encode firm, generate(firmn)
@@ -43,7 +43,7 @@ class CheckModelResults(object):
 
     def test_dof(self):
                 assert_equal(self.res1.df_resid, self.res2.df_resid)
-                        
+
 #    def test_conf_int(self):
         #assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
 
@@ -99,7 +99,7 @@ class TestWithin(CheckModelResults):
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital - 1", data=data,
                 return_type='dataframe')
-        cls.res1 = PanelLM(y, X, 'within').fit(disp=0)
+        cls.res1 = PanelLM(y, X, method='within').fit(disp=0)
         res2 = within
         cls.res2 = res2
 
@@ -108,13 +108,13 @@ class TestBetween(CheckModelResults):
     @classmethod
     def setupClass(cls):
         from results_panel import between
-        data = statsmodels.datasets.grunfeld.load_pandas().data 
+        data = statsmodels.datasets.grunfeld.load_pandas().data
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital", data=data,
                 return_type='dataframe')
-        cls.res1 = PanelLM(y, X, 'between').fit(disp=0)
+        cls.res1 = PanelLM(y, X, method='between').fit(disp=0)
         res2 = between
         cls.res2 = res2
 
@@ -123,13 +123,13 @@ class TestRandom(CheckModelResults):
     @classmethod
     def setupClass(cls):
         from results_panel import swar1w
-        data = statsmodels.datasets.grunfeld.load_pandas().data 
+        data = statsmodels.datasets.grunfeld.load_pandas().data
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital", data=data,
                 return_type='dataframe')
-        cls.res1 = PanelLM(y, X, 'swar').fit(disp=0)
+        cls.res1 = PanelLM(y, X, method='swar').fit(disp=0)
         res2 = swar1w
         cls.res2 = res2
 
@@ -138,13 +138,13 @@ class TestPooling(CheckModelResults):
     @classmethod
     def setupClass(cls):
         from results_panel import pooling
-        data = statsmodels.datasets.grunfeld.load_pandas().data 
+        data = statsmodels.datasets.grunfeld.load_pandas().data
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
         y, X = dmatrices("invest ~ value + capital", data=data,
                 return_type='dataframe')
-        cls.res1 = PanelLM(y, X, 'pooling').fit(disp=0)
+        cls.res1 = PanelLM(y, X, method='pooling').fit(disp=0)
         res2 = pooling
         cls.res2 = res2
 
