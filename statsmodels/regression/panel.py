@@ -195,14 +195,14 @@ class PanelLMResults(RegressionResults):
 
     @cache_readonly
     def resid(self):
-        if (self.model.method == 'within') and not (self.model.data.is_balanced):
-            Xb_bar = np.dot(self.model.exog.mean(axis=0), self.params)
-            alph = np.mean(self.model.endog) - Xb_bar
-            pred = alph + np.dot(self.model.exog, self.params)
-            resid = self.model.endog - pred
+        model = self.model
+        if (model.method == 'within') and not (model.data.is_balanced):
+            Xb_bar = np.dot(model.exog.mean(axis=0), self.params)
+            alph = np.mean(model.endog) - Xb_bar
+            pred = alph + np.dot(model.exog, self.params)
+            resid = model.endog - pred
         else:
-            resid = self.model.wendog - self.model.predict(self.params,
-                                                           self.model.wexog)
+            resid = model.wendog - model.predict(self.params, model.wexog)
         return resid
 
     def predict(self):
