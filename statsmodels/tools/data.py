@@ -114,30 +114,32 @@ def interpret_data(data, colnames=None, rownames=None):
 def struct_to_ndarray(arr):
     return arr.view((float, len(arr.dtype.names)))
 
-def _is_using_ndarray_type(endog, exog):
+def _is_using_ndarray_type(endog, exog=None):
     return (type(endog) is np.ndarray and
             (type(exog) is np.ndarray or exog is None))
 
-def _is_using_ndarray(endog, exog):
+def _is_using_ndarray(endog, exog=None):
     return (isinstance(endog, np.ndarray) and
             (isinstance(exog, np.ndarray) or exog is None))
 
-def _is_using_pandas(endog, exog):
+def _is_using_pandas(endog, exog=None):
     if not have_pandas():
         return False
     from pandas import Series, DataFrame, WidePanel
     klasses = (Series, DataFrame, WidePanel)
-    return (isinstance(endog, klasses) or isinstance(exog, klasses))
+    return (isinstance(endog, klasses) or (isinstance(exog, klasses) or
+                                           exog is None))
 
-def _is_array_like(endog, exog):
+def _is_array_like(endog, exog=None):
     try: # do it like this in case of mixed types, ie., ndarray and list
         endog = np.asarray(endog)
-        exog = np.asarray(exog)
+        if exog is not None:
+            exog = np.asarray(exog)
         return True
     except:
         return False
 
-def _is_using_patsy(endog, exog):
+def _is_using_patsy(endog, exog=None):
     # we get this when a structured array is passed through a formula
     return (is_design_matrix(endog) and
             (is_design_matrix(exog) or exog is None))
