@@ -22,6 +22,7 @@ import numpy as np
 from numpy.testing import *
 import statsmodels
 from statsmodels.regression.panel import PanelLM
+from statsmodels.datasets import grunfeld
 from patsy import dmatrices
 
 DECIMAL_14 = 14
@@ -89,11 +90,10 @@ class CheckModelResults(object):
 
 
 class TestWithin(CheckModelResults):
-    import statsmodels
     @classmethod
     def setupClass(cls):
         from results_panel import within
-        data = statsmodels.datasets.grunfeld.load_pandas().data
+        data = grunfeld.load_pandas().data
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
@@ -104,11 +104,10 @@ class TestWithin(CheckModelResults):
         cls.res2 = res2
 
 class TestBetween(CheckModelResults):
-    import statsmodels
     @classmethod
     def setupClass(cls):
         from results_panel import between
-        data = statsmodels.datasets.grunfeld.load_pandas().data
+        data = grunfeld.load_pandas().data
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
@@ -119,11 +118,10 @@ class TestBetween(CheckModelResults):
         cls.res2 = res2
 
 class TestRandom(CheckModelResults):
-    import statsmodels
     @classmethod
     def setupClass(cls):
         from results_panel import swar1w
-        data = statsmodels.datasets.grunfeld.load_pandas().data
+        data = grunfeld.load_pandas().data
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
@@ -134,11 +132,10 @@ class TestRandom(CheckModelResults):
         cls.res2 = res2
 
 class TestPooling(CheckModelResults):
-    import statsmodels
     @classmethod
     def setupClass(cls):
         from results_panel import pooling
-        data = statsmodels.datasets.grunfeld.load_pandas().data
+        data = grunfeld.load_pandas().data
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
@@ -148,6 +145,11 @@ class TestPooling(CheckModelResults):
         res2 = pooling
         cls.res2 = res2
 
+class XestMLE(CheckModelResults):
+    pass
+
+class XestSWAR(CheckModelResults):
+    pass
 
 #if __name__ == "__main__":
     #import nose
