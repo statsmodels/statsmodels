@@ -49,17 +49,24 @@ class Model(object):
     def __init__(self, endog, exog=None, **kwargs):
         missing = kwargs.pop('missing', 'none')
         hasconst = kwargs.pop('hasconst', None)
-        self.data = handle_data(endog, exog, missing, hasconst, **kwargs)
+        self.data = self._handle_data(endog, exog, missing, hasconst,
+                                      **kwargs)
         self.k_constant = self.data.k_constant
         self.exog = self.data.exog
         self.endog = self.data.endog
         # kwargs arrays could have changed, easier to just attach here
         for key in kwargs:
             # pop so we don't start keeping all these twice or references
-            setattr(self, key, self.data.__dict__.pop(key))
+            try:
+                setattr(self, key, self.data.__dict__.pop(key))
+            except KeyError: # panel already pops keys in data handling
+                pass
         self._data_attr = []
         self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
                                 'data.orig_endog', 'data.orig_exog'])
+
+    def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
+        return handle_data(endog, exog, missing, hasconst, **kwargs)
 
     @classmethod
     def from_formula(cls, formula, data, subset=None, *args, **kwargs):
