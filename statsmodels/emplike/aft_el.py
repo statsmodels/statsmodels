@@ -34,12 +34,12 @@ from statsmodels.tools import add_constant
 #from elregress import ElReg
 from scipy import optimize
 from scipy.stats import chi2
-from descriptive import _OptFuncts_mixin
+from descriptive import _OptFunctsMixin
 # ^ this will change when descriptive gets merged
 import warnings
 
 
-class OptAFT_Mixin(_OptFuncts_mixin):
+class OptAFTMixin(_OptFunctsMixin):
     """
     Provides optimization functions used in estimating and conducting
     inference in an AFT model.
@@ -85,7 +85,6 @@ class OptAFT_Mixin(_OptFuncts_mixin):
                                                     test_params))
         eta_star = self._modif_newton(np.zeros(self.model.nvar), est_vect,
                                       self.model._fit_weights)
-        self.eta_star = eta_star
         denom = np.sum(self.model._fit_weights) + np.dot(eta_star, est_vect.T)
         self.new_weights = self.model._fit_weights / denom
         return -1 * np.sum(np.log(self.new_weights))
@@ -371,7 +370,7 @@ class emplikeAFT(object):
         return np.dot(endog, params)
 
 
-class AFTResults(OptAFT_Mixin):
+class AFTResults(OptAFTMixin):
     def __init__(self, model):
         self.model = model
 

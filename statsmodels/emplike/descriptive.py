@@ -46,7 +46,7 @@ def DescStat(endog):
         return DescStatMV(endog)
 
 
-class _OptFuncts_mixin(object):
+class _OptFunctsMixin(object):
     """
     A class that holds functions that are optimized/solved.
 
@@ -464,7 +464,7 @@ class _OptFuncts_mixin(object):
         return self.test_corr(corr)[0] - self.r0
 
 
-class DescStatUV(_OptFuncts_mixin):
+class DescStatUV(_OptFunctsMixin):
     """
     A class to compute confidence intervals and hypothesis tests involving
     mean, variance, kurtosis and skewness of a univariate random variable.
@@ -930,7 +930,7 @@ class DescStatUV(_OptFuncts_mixin):
         return llim, ulim
 
 
-class DescStatMV(_OptFuncts_mixin):
+class DescStatMV(_OptFunctsMixin):
     """
     A class for conducting inference on multivariate means and correlation.
 
