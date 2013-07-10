@@ -353,7 +353,7 @@ class Autoregressive(VarStruct):
             QX = np.array(QX)
             self.QX = QX
 
-        scale = self.parent.estimate_scale(beta)
+        scale = self.parent.estimate_scale()
 
         varfunc = self.parent.family.variance
 
