@@ -110,6 +110,7 @@ class PanelLM(PanelModel, RegressionModel):
 
     def whiten(self, data):
         g = self.data.groupings
+
         if self.method == 'within':
             f = lambda x: x - x.mean()
             if (self.effects == 'oneway') or (self.effects == 'unit'):
@@ -118,7 +119,7 @@ class PanelLM(PanelModel, RegressionModel):
             elif (self.effects == 'time'):
                 out = g.transform_array(data, f, 1)
                 return out
-            elif (self.effects == 'twoways'):
+            elif (self.effects == 'twoway'):
                 out = g.transform_array(data, f, 0)
                 out = g.transform_array(out, f, 1)
                 return out
@@ -258,7 +259,7 @@ if __name__ == "__main__":
     mod2 = PanelLM(y, X, method='between').fit()
     mod3 = PanelLM(y, X.ix[:,1:], method='within').fit()
     mod4 = PanelLM(y, X.ix[:,1:], method='within', effects='time').fit()
-    mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoways').fit()
+    mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoway').fit()
     mod6 = PanelLM(y, X, method='swar').fit()
 
 '''
@@ -269,7 +270,7 @@ def test(y, X):
     mod2 = PanelLM(y, X, method='between').fit()
     mod3 = PanelLM(y, X.ix[:,1:], method='within').fit()
     mod4 = PanelLM(y, X.ix[:,1:], method='within', effects='time').fit()
-    mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoways').fit()
+    mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoway').fit()
     mod6 = PanelLM(y, X, 'swar').fit()
     mn = ['OLS', 'Between', 'Within N', 'Within T', 'Within 2w', 'RE-SWAR']
     out = summary_col([mod1, mod2, mod3, mod4, mod5, mod6], model_names=mn, stars=False)
