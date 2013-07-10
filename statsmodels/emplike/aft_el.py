@@ -39,7 +39,7 @@ from descriptive import _OptFuncts_mixin
 import warnings
 
 
-class OptAFT(_OptFuncts_mixin):
+class OptAFT_Mixin(_OptFuncts_mixin):
     """
     Provides optimization functions used in estimating and conducting
     inference in an AFT model.
@@ -56,7 +56,7 @@ class OptAFT(_OptFuncts_mixin):
         likelihood of a parameter vector.
 
     """
-    def __init__(_OptFuncts):
+    def __init__(self):
         pass
 
     def _opt_wtd_nuis_regress(self, test_vals):
@@ -372,7 +372,7 @@ class emplikeAFT(object):
         return np.dot(endog, params)
 
 
-class AFTResults(OptAFT):
+class AFTResults(OptAFT_Mixin):
     def __init__(self, model):
         self.model = model
 

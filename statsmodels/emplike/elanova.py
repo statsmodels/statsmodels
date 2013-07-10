@@ -16,7 +16,7 @@ from scipy import optimize
 from scipy.stats import chi2
 
 
-class _ANOVAOpt(_OptFuncts_mixin):
+class _ANOVAOpt_mixin(_OptFuncts_mixin):
     """
 
     Class containing functions that are optimized over when
@@ -57,7 +57,7 @@ class _ANOVAOpt(_OptFuncts_mixin):
         return -2 * llr
 
 
-class ANOVA(_ANOVAOpt):
+class ANOVA(_ANOVAOpt_mixin):
     """
     A class for ANOVA and comparing means.
 
