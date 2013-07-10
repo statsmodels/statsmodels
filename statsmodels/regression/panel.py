@@ -82,9 +82,6 @@ class PanelLM(PanelModel, RegressionModel):
     :math:`\sigma_{\epsilon}^2`
 
     '''
-    #NOTE: all mixtures of effects and method don't make sense i think?
-    #TODO: Check docs
-
     def __init__(self, y, X, panel=None, time=None, method='pooling',
                  effects='oneway', hasconst=None, missing='none'):
         _check_method_compat(method, effects)
