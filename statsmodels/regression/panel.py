@@ -100,7 +100,7 @@ class PanelLM(PanelModel, RegressionModel):
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         self.nobs = float(self.wexog.shape[0])
-        self.rank = np.rank(self.exog)
+        self.rank = np.linalg.matrix_rank(self.exog)
         self.df_model = float(self.rank - self.k_constant)
         if self.method == 'within':
             self.df_resid = self.nobs - self.rank - self.data.n_panel
