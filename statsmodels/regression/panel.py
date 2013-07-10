@@ -95,7 +95,6 @@ class PanelLM(PanelModel, RegressionModel):
                                       panel=panel, hasconst=hasconst)
 
 
-
     def initialize(self, unit=None, time=None):
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
@@ -110,35 +109,13 @@ class PanelLM(PanelModel, RegressionModel):
 
     def whiten(self, data):
         g = self.data.groupings
-
-        if self.method == 'within':
-            f = lambda x: x - x.mean()
-            if (self.effects == 'oneway') or (self.effects == 'unit'):
-                out = g.transform_array(data, f, 0)
-                return out
-            elif (self.effects == 'time'):
-                out = g.transform_array(data, f, 1)
-                return out
-            elif (self.effects == 'twoway'):
-                out = g.transform_array(data, f, 0)
-                out = g.transform_array(out, f, 1)
-                return out
-
-        elif self.method == 'between':
-            f = lambda x: x.mean()
-            if (self.effects == 'oneway') or (self.effects == 'unit'):
-                out = g.transform_array(data, f, 0)
-            elif (self.effects == 'time'):
-                out = g.transform_array(data, f, 1)
-
-            return out
-        elif self.method == 'pooling':
+        method = self.method
+        if method == 'pooling':
             return data
-        elif self.method == 'swar':
+        elif method == 'swar':
             # do this here so endog and exog have been through data handling
             idx = g.index
-            panel, time = (g.index.get_level_values(0),
-                           g.index.get_level_values(1))
+            panel, time = (idx.get_level_values(0), idx.get_level_values(1))
             self.var_u, self.var_e, self.theta = swar_ercomp(self.endog,
                                                              self.exog,
                                                              panel,
@@ -146,6 +123,24 @@ class PanelLM(PanelModel, RegressionModel):
             out = g.transform_slices(array=data, function=swar_transform,
                                      theta=self.theta)
             return out
+
+        elif method == 'within':
+            func = lambda x : x - x.mean()
+        elif method == "between":
+            func = lambda x : x.mean()
+
+        effects = self.effects
+        if effects in ['oneway', 'unit']: #document/keep unit?
+            levels = [0]
+        elif effects == 'time':
+            levels = [1]
+        elif effects in ['twoway']:
+            levels = [0, 1]
+
+        for level in levels: #TODO: this should copy but be sure
+            data = g.transform_array(data, func, level)
+        return data
+
 
     def fit(self, method="pinv", **kwargs):
         wexog = self.wexog
