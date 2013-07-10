@@ -19,34 +19,39 @@ class GEE(base.Model):
 
     S Zeger and KY Liang. "Longitudinal Data Analysis for Discrete and
     Continuous Outcomes". Biometrics Vol. 42, No. 1 (Mar., 1986), pp. 121-130
+
+    Xu Guo and Wei Pan (2002). "Small sample performance of the score test in GEE".
+    http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
     """
     
 
-    def __init__(self, endog, exog, groups, time=None, family=None, varstruct=None, 
-                 endog_type="interval", missing='none'):
+    def __init__(self, endog, exog, groups, time=None, family=None, 
+                       varstruct=None, endog_type="interval", missing='none',
+                       offset=None, constraint=None):
         """
         Parameters
         ----------
         endog : array-like
             1d array of endogenous response variable.
         exog : array-like
-            A nobs x k array where `nobs` is the number of observations and `k`
-            is the number of regressors. An interecept is not included by default
-            and should be added by the user. See `statsmodels.tools.add_constant`.
+            A nobs x k array where `nobs` is the number of
+            observations and `k` is the number of regressors. An
+            interecept is not included by default and should be added
+            by the user. See `statsmodels.tools.add_constant`.
         groups : array-like
             A 1d array of length `nobs` containing the cluster labels.
         time : array-like
-            1d array of time (or other index) values.  This is only used if the
-            dependence structure is Autoregressive
+            A 1d array of time (or other index) values.  This is only
+            used if the dependence structure is Autoregressive
         family : family class instance
-            The default is Gaussian.  To specify the binomial distribution
-            family = sm.family.Binomial()
-            Each family can take a link instance as an argument.  See
+            The default is Gaussian.  To specify the binomial
+            distribution family = sm.family.Binomial() Each family can
+            take a link instance as an argument.  See
             statsmodels.family.family for more information.
         varstruct : VarStruct class instance
-            The default is Independence.  To specify an exchangeable structure
-            varstruct = sm.varstruct.Exchangeable()
-            See statsmodels.varstruct.varstruct for more information.
+            The default is Independence.  To specify an exchangeable
+            structure varstruct = sm.varstruct.Exchangeable() See
+            statsmodels.varstruct.varstruct for more information.
         endog_type : string
            Determines whether the response variable is analyzed as-is
            (endog_type = 'interval'), or is recoded as binary
@@ -58,6 +63,16 @@ class GEE(base.Model):
            as |S|-1 indicators, where S is the set of unique values of
            endog.  No indicator is created for the greatest value in
            S.
+        offset : array-like
+            An offset to be included in the fit.  If provided, must be an 
+            array whose length is the number of rows in exog.
+        constraint : (ndarray, ndarray)
+           If provided, the constraint is a tuple (L, R) such that the
+           model parameters are estimated under the constraint L *
+           param = R, where  L is a q x p matrix and R is a q-dimensional
+           vector.  If constraint is provided, a score test is
+           performed to compare the constrained model to the
+           unconstrained model.
         %(extra_params)s
 
         See also
@@ -85,7 +100,8 @@ class GEE(base.Model):
 
         # Pass groups and time so they are proceessed for missing data
         # along with endog and exog
-        super(GEE, self).__init__(endog, exog, groups=groups, time=time, missing=missing)
+        super(GEE, self).__init__(endog, exog, groups=groups, time=time,
+                                  offset=offset, missing=missing)
 
         # Handle the endog_type argument
         if endog_type not in ("interval","ordinal","nominal"):
@@ -107,6 +123,52 @@ class GEE(base.Model):
                 raise ValueError("GEE: `varstruct` must be a genmod varstruct instance")
         self.varstruct = varstruct
 
+        # Default offset
+        if offset is None:
+            offset = np.zeros(exog.shape[0], dtype=np.float64)
+
+        # Default time
+        if time is None:
+            time = np.zeros(exog.shape[0], dtype=np.float64)
+
+        # Handle the constraint
+        self.constraint = None
+        if constraint is not None:
+            self.constraint = constraint
+            if len(constraint) != 2:
+                raise ValueError("GEE: `constraint` must be a 2-tuple.")
+            L,R = tuple(constraint)
+            if type(L) != np.ndarray:
+                raise ValueError("GEE: `constraint[0]` must be a NumPy array.")
+            print L.shape, exog.shape
+            if L.shape[1] != exog.shape[1]:
+                raise ValueError("GEE: incompatible constraint dimensions; the number of columns of `constraint[0]` must equal the number of columns of `exog`.") 
+            if len(R) != L.shape[0]:
+                raise ValueError("GEE: incompatible constraint dimensions; the length of `constraint[1]` must equal the number of rows of `constraint[0]`.")
+            
+            # The columns of L0 are an orthogonal basis for the
+            # orthogonal complement to row(L), the columns of L1
+            # are an orthogonal basis for row(L).  The columns of [L0,L1] 
+            # are mutually orthogonal.             
+            u,s,vt = np.linalg.svd(L.T, full_matrices=1)
+            L0 = u[:,len(s):]
+            L1 = u[:,0:len(s)]
+
+            # param0 is one solution to the underdetermined system 
+            # L * param = R.
+            param0 = np.dot(L1, np.dot(vt, R) / s)
+
+            # Reduce exog so that the constraint is satisfied, save
+            # the full matrices for score testing.
+            offset += np.dot(exog, param0)
+            self.exog_preconstraint = exog.copy()
+            L = np.hstack((L0,L1))
+            exog_lintrans = np.dot(exog, L)
+            exog = exog_lintrans[:,0:L0.shape[1]]
+
+            self.constraint = self.constraint + (L0, param0,
+                                                 exog_lintrans)
+
         # Convert to ndarrays
         if type(endog) == pandas.DataFrame:
             endog_nda = endog.iloc[:,0].values
@@ -117,26 +179,33 @@ class GEE(base.Model):
         else:
             exog_nda = exog
 
-        # Convert the data to the internal representation
+        # Convert the data to the internal representation, which is a list
+        # of arrays, corresponding to the clusters.
         S = np.unique(groups)
         S.sort()
         endog1 = [list() for s in S]
         exog1 = [list() for s in S]
         time1 = [list() for s in S]
+        offset1 = [list() for s in S]
+        exog_lintrans1 = [list() for s in S]
         row_indices = [list() for s in S]
         for i in range(len(endog_nda)):
             idx = int(groups[i])
             endog1[idx].append(endog_nda[i])
             exog1[idx].append(exog_nda[i,:])
             row_indices[idx].append(i)
-            if time is not None:
-                time1[idx].append(time[i])
+            time1[idx].append(time[i])
+            offset1[idx].append(offset[i])
+            if constraint is not None:
+                exog_lintrans1[idx].append(exog_lintrans[i,:])
         endog_li = [np.array(y) for y in endog1]
         exog_li = [np.array(x) for x in exog1]
         row_indices = [np.array(x) for x in row_indices]
         time_li = None
-        if time1 is not None:
-            time_li = [np.array(t) for t in time1]
+        time_li = [np.array(t) for t in time1]
+        offset_li = [np.array(x) for x in offset1]
+        if constraint is not None:
+            exog_lintrans_li = [np.array(x) for x in exog_lintrans1]
 
         # Save the row indices in the original data (after dropping
         # missing but prior to splitting into clusters) that
@@ -145,7 +214,8 @@ class GEE(base.Model):
 
         # Need to do additional processing for categorical responses
         if endog_type != "interval":
-            endog_li,exog_li,IY,BTW,nylevel = _setup_multicategorical(endog_li, exog_li, endog_type)
+            endog_li,exog_li,offset_li,time_li,IY,BTW,nylevel =\
+              _setup_multicategorical(endog_li, exog_li, offset_li, time_li, endog_type)
             self.nylevel = nylevel
             self.IY = IY
             self.BTW = BTW
@@ -158,8 +228,14 @@ class GEE(base.Model):
         self.family = family
         self.time = time
         self.time_li = time_li
+        if constraint is not None:
+            self.exog_lintrans_li = exog_lintrans_li
 
-        # Some of the variance calculations require data or methods from the gee class.
+        self.offset = offset
+        self.offset_li = offset_li
+
+        # Some of the variance calculations require data or methods from 
+        # the gee class.
         if endog_type == "interval":
             self.varstruct.initialize(self)
         else:
@@ -170,37 +246,38 @@ class GEE(base.Model):
         self.nobs = sum(N)
 
 
-    def estimate_scale(self, beta):
+    def estimate_scale(self):
         """
-        Returns an estimate of the scale parameter `phi` at the given value
-        of `beta`.
+        Returns an estimate of the scale parameter `phi` at the current
+        parameter value.
         """
 
         endog = self.endog_li
         exog = self.exog_li
+        offset = self.offset_li
+
+        cached_means = self._cached_means
 
         num_clust = len(endog)
         nobs = self.nobs
-        p = len(beta)
+        p = exog[0].shape[1]
 
         mean = self.family.link.inverse
         varfunc = self.family.variance
 
-        scale_inv,m = 0,0
+        scale_inv = 0.
         for i in range(num_clust):
 
             if len(endog[i]) == 0:
                 continue
 
-            lp = np.dot(exog[i], beta)
-            E = mean(lp)
+            E,lp = cached_means[i]
 
             S = np.sqrt(varfunc(E))
-            resid = (self.endog[i] - E) / S
+            resid = (endog[i] - offset[i] - E) / S
 
             n = len(resid)
             scale_inv += np.sum(resid**2)
-            m += 0.5*n*(n-1)
 
         scale_inv /= (nobs-p)
         scale = 1 / scale_inv
@@ -208,11 +285,12 @@ class GEE(base.Model):
 
 
         
-    def _beta_update(self, beta):
+    def _beta_update(self):
         """
-        Returns a vector u based on the current regression
-        coefficients beta such that beta + u is the next iterate when
-        solving the score equations.
+        Returns two values (u, score).  The vector u is the update
+        vector such that params + u is the next iterate when solving
+        the score equations.  The vector `score` is the current state of
+        the score equations.
         """
         
         endog = self.endog_li
@@ -227,6 +305,89 @@ class GEE(base.Model):
         mean = self.family.link.inverse
         mean_deriv = self.family.link.inverse_deriv
         varfunc = self.family.variance
+
+        B,score = 0,0
+        for i in range(num_clust):
+
+            if len(endog[i]) == 0:
+                continue
+            
+            E,lp = _cached_means[i]
+
+            Dt = exog[i] * mean_deriv(lp)[:,None]
+            D = Dt.T
+
+            S = np.sqrt(varfunc(E))
+            V,is_cor = self.varstruct.variance_matrix(E, i)
+            if is_cor:
+                V *= np.outer(S, S)
+
+            VID = np.linalg.solve(V, D.T)
+            B += np.dot(D, VID)
+
+            R = endog[i] - E
+            VIR = np.linalg.solve(V, R)
+            score += np.dot(D, VIR)
+
+        u = np.linalg.solve(B, score)
+
+        return u, score
+
+
+    def _update_cached_means(self, beta):
+        """
+        _cached_means should always contain the most recent calculation of
+        the cluster-wise mean vectors.  This function should be called
+        every time the value of beta is changed, to keep the cached
+        means up to date.
+        """
+
+        endog = self.endog_li
+        exog = self.exog_li
+        offset = self.offset_li
+        num_clust = len(endog)
+        
+        mean = self.family.link.inverse
+
+        self._cached_means = []
+
+        for i in range(num_clust):
+
+            if len(endog[i]) == 0:
+                continue
+            
+            lp = offset[i] + np.dot(exog[i], beta)
+            E = mean(lp)
+
+            self._cached_means.append((E,lp))
+
+
+
+    def _covmat(self):
+        """
+        Returns the sampling covariance matrix of the regression
+        parameters and related quantities.
+
+        Returns
+        -------
+        robust_covariance : array-like
+           The robust, or sandwich estimate of the covariance, which is meaningful
+           even if the working covariance structure is incorrectly specified.
+        naive_covariance : array-like
+           The model based estimate of the covariance, which is meaningful if
+           the covariance structure is correctly specified.
+        C : array-like
+           The center matrix of the sandwich expression.
+        """
+
+        endog = self.endog_li
+        exog = self.exog_li
+        num_clust = len(endog)
+        
+        mean = self.family.link.inverse
+        mean_deriv = self.family.link.inverse_deriv
+        varfunc = self.family.variance
+        _cached_means = self._cached_means
 
         B,C = 0,0
         for i in range(num_clust):
@@ -249,79 +410,16 @@ class GEE(base.Model):
 
             R = endog[i] - E
             VIR = np.linalg.solve(V, R)
-            C += np.dot(D, VIR)
-
-        return np.linalg.solve(B, C)
-
-
-    def _update_cached_means(self, beta):
-        """
-        _cached_means should always contain the most recent calculation of
-        the cluster-wise mean vectors.  This function should be called
-        every time the value of beta is changed, to keep the cached
-        means up to date.
-        """
-
-        endog = self.endog_li
-        exog = self.exog_li
-        num_clust = len(endog)
-        
-        mean = self.family.link.inverse
-
-        self._cached_means = []
-
-        for i in range(num_clust):
-
-            if len(endog[i]) == 0:
-                continue
-            
-            lp = np.dot(exog[i], beta)
-            E = mean(lp)
-
-            self._cached_means.append((E,lp))
-
-
-
-    def _covmat(self, beta):
-        """
-        Returns the sampling covariance matrix of the regression parameters.
-        """
-
-        endog = self.endog_li
-        exog = self.exog_li
-        num_clust = len(endog)
-        
-        mean = self.family.link.inverse
-        mean_deriv = self.family.link.inverse_deriv
-        varfunc = self.family.variance
-
-        B,C = 0,0
-        for i in range(num_clust):
-
-            if len(endog[i]) == 0:
-                continue
-            
-            lp = np.dot(exog[i], beta)
-            E = mean(lp)
-            Dt = exog[i] * mean_deriv(lp)[:,None]
-            D = Dt.T
-
-            S = np.sqrt(varfunc(E))
-            V,is_cor = self.varstruct.variance_matrix(E, i)
-            if is_cor:
-                V *= np.outer(S, S)
-
-            VID = np.linalg.solve(V, D.T)
-            B += np.dot(D, VID)
-
-            R = endog[i] - E
-            VIR = np.linalg.solve(V, R)
             DVIR = np.dot(D, VIR)
             C += np.outer(DVIR, DVIR)
 
-        BI = np.linalg.inv(B)
+        scale = self.estimate_scale()
 
-        return np.dot(BI, np.dot(C, BI))
+        naive_covariance = scale*np.linalg.inv(B)
+        C /= scale**2
+        robust_covariance = np.dot(naive_covariance, np.dot(C, naive_covariance))
+
+        return robust_covariance, naive_covariance, C
 
 
     def predict(self, exog=None, linear=False):
@@ -375,10 +473,14 @@ class GEE(base.Model):
                 beta = np.zeros(p, dtype=np.float64)
             else:
                 xnames1 = ["cat_%d" % k for k in range(1,self.nylevel)]
-                beta = _categorical_starting_values(self.endog, exog[0].shape[1],
-                                                    self.nylevel, self.endog_type)
+                beta = _categorical_starting_values(self.endog, 
+                                                    exog[0].shape[1],
+                                                    self.nylevel, 
+                                                    self.endog_type)
 
             xnames1 += self.exog_names
+            if self.constraint is not None:
+                xnames1 = [str(k) for k in range(len(beta))]
             beta = pandas.Series(beta, index=xnames1)
 
         else:
@@ -391,16 +493,63 @@ class GEE(base.Model):
         self._update_cached_means(beta)
 
         for iter in range(maxit):
-            u = self._beta_update(beta)
+            u,score = self._beta_update()
             beta += u
             self._update_cached_means(beta)
             sc = np.sqrt(np.sum(u**2))
             self.fit_history['params'].append(beta)
-            if  sc < ctol:
+            if sc < ctol:
                 break
             self._update_assoc(beta)
 
-        bcov = self._covmat(beta)
+        bcov,ncov,C = self._covmat()
+
+        # Expand the constraint and do the score test, if the constraint is
+        # present.
+        if self.constraint is not None:
+
+            # The number of variables in the full model
+            pb = self.exog_preconstraint.shape[1]
+            beta0 = np.r_[beta, np.zeros(pb - len(beta))]
+
+            # Get the score vector under the full model.
+            save_exog_li = self.exog_li
+            self.exog_li = self.exog_lintrans_li
+            import copy
+            save_cached_means = copy.deepcopy(self._cached_means)
+            self._update_cached_means(beta0)
+            _,score = self._beta_update()
+            bcov1,ncov1,C = self._covmat()
+            scale = self.estimate_scale()
+            U2 = score[len(beta):] / scale
+
+            A = np.linalg.inv(ncov1)
+
+            B11 = C[0:p,0:p]
+            B22 = C[p:,p:]
+            B12 = C[0:p,p:]
+            A11 = A[0:p,0:p]
+            A22 = A[p:,p:]
+            A12 = A[0:p,p:]
+
+            score_cov = B22 - np.dot(A12.T, np.linalg.solve(A11, B12))
+            score_cov -= np.dot(B12.T, np.linalg.solve(A11, A12))
+            score_cov += np.dot(A12.T, np.dot(np.linalg.solve(A11, B11),
+                                              np.linalg.solve(A11, A12)))
+
+            from scipy.stats.distributions import chi2
+            self.score_statistic = np.dot(U2, np.linalg.solve(score_cov, U2))
+            self.score_df = len(U2)
+            self.score_pvalue = 1 - chi2.cdf(self.score_statistic, self.score_df)
+
+            # Reparameterize to the original coordinates
+            L0 = self.constraint[2]
+            param0 = self.constraint[3]
+            beta = param0 + np.dot(L0, beta)
+            bcov = np.dot(L0, np.dot(bcov, L0.T))
+
+            self.exog_li = save_exog_li
+            self._cached_means = save_cached_means
 
         GR = GEEResults(self, beta, bcov)
 
@@ -568,25 +717,28 @@ class GEEResults(object):
 
 
 
-
-def _setup_multicategorical(endog, exog, endog_type):
+def _setup_multicategorical(endog, exog, offset, time, endog_type):
     """Restructure nominal or ordinal multicategorical data as binary
     indicators so that they can be analysed using Generalized Estimating
     Equations.
 
-    Nominal data are recoded as indicators.  Each element of endog is
-    recoded as the sequence of |S|-1 indicators I(endog = S[0]), ...,
-    I(endog = S[-1]), where S is the sorted list of unique values of
-    endog (excluding the maximum value).  Also, the covariate vector
-    is expanded by taking the Kronecker product of x with e_j, where
-    e_y is the indicator vector with a 1 in position y.
+    For nominal data, each element of endog is recoded as the sequence
+    of |S|-1 indicators I(endog = S[0]), ..., I(endog = S[-1]), where
+    S is the sorted list of unique values of endog (excluding the
+    maximum value).
 
-    Ordinal data are recoded as cumulative indicators. Each element y
-    of endog is recoded as |S|-1 indicators I(endog > S[0]), ...,
-    I(endog > S[-1]) where S is the sorted list of unique values of
-    endog (excluding the maximum value).  Also, a vector e_y of |S|
-    values is appended to the front of each covariate vector x, where
-    e_y is the indicator vector with a 1 in position y.
+    For ordinal data, each element y of endog is recoded as |S|-1
+    cumulative indicators I(endog > S[0]), ..., I(endog > S[-1]) where
+    S is the sorted list of unique values of endog (excluding the
+    maximum value).  
+
+    For ordinal data, intercepts are constructed corresponding to the
+    different levels of the outcome. For nominal data, the covariate
+    vector is expanded so that different coefficients arise for each
+    class.
+
+    In both cases, the covariates in exog are copied over to all of
+    the indicators derived from the same original value.
 
     Arguments
     ---------
@@ -598,6 +750,11 @@ def _setup_multicategorical(endog, exog, endog_type):
         data for the clusters.  exog[i] should include an intercept
         for nominal data but no intercept should be included for
         ordinal data.
+    offset : List
+        A list of 1-dimensional NumPy arrays containing the offset
+        information
+    time : List
+        A list of 1-dimensional NumPy arrays containing time information
     endog_type: string
         Either "ordinal" or "nominal"
 
@@ -608,6 +765,8 @@ def _setup_multicategorical(endog, exog, endog_type):
     --------
     endog1:   endog recoded as described above
     exog1:   exog recoded as described above
+    offset1: offset expanded to fit the recoded data
+    time1:   time expanded to fit the recoded data
     IY:   a list whose i^th element iy = IY[i] is a sequence of tuples
           (a,b), where endog[i][a:b] is the subvector of indicators derived
           from the same ordinal value 
@@ -621,7 +780,7 @@ def _setup_multicategorical(endog, exog, endog_type):
         raise ValueError("_setup_multicategorical: `endog_type` must be either "
                          "'nominal' or 'categorical'") 
 
-    # The unique outcomes
+    # The unique outcomes, except the greatest one.
     YV = np.concatenate(endog)
     S = list(set(YV))
     S.sort()
@@ -632,18 +791,20 @@ def _setup_multicategorical(endog, exog, endog_type):
     # nominal=1, ordinal=0
     endog_type_i = [0,1][endog_type == "nominal"]
 
-    endog1,exog1,IY,BTW = [],[],[],[]
-    for y,x in zip(endog,exog): # Loop over clusters
+    endog1,exog1,offset1,time1,IY,BTW = [],[],[],[],[],[]
+    for y,x,off,ti in zip(endog,exog,offset,time): # Loop over clusters
 
-        y1,x1,iy1 = [],[],[]
+        y1,x1,off1,ti1,iy1 = [],[],[],[],[]
         jj = 0
         btw = {}
 
-        for y2,x2 in zip(y,x): # Loop over data points within a cluster
+        for y2,x2,off2,ti2 in zip(y,x,off,ti): # Loop over data points within a cluster
             iy2 = []
-            for js,s in enumerate(S):
+            for js,s in enumerate(S): # Loop over thresholds for the indicators
                 if endog_type_i == 0:
                     y1.append(int(y2 > s))
+                    off1.append(off2)
+                    ti1.append(ti2)
                     x3 = np.concatenate((np.zeros(ncut, dtype=np.float64), x2))
                     x3[js] = 1
                 else:
@@ -657,6 +818,8 @@ def _setup_multicategorical(endog, exog, endog_type):
             iy1.append(iy2)
         endog1.append(np.array(y1))
         exog1.append(np.array(x1))
+        offset1.append(np.array(off1))
+        time1.append(np.array(ti1))
 
         # Get a map from (c,c') tuples (pairs of points in S) to the
         # list of all index pairs corresponding to the tuple.
@@ -681,8 +844,7 @@ def _setup_multicategorical(endog, exog, endog_type):
 
         IY.append(iy1)
 
-
-    return endog1,exog1,IY,BTW,len(S)+1
+    return endog1,exog1,offset1,time1,IY,BTW,len(S)+1
 
 
 def _categorical_starting_values(endog, q, nylevel, endog_type):
