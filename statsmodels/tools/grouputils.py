@@ -35,6 +35,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.compatnp.np_compat import npc_unique
 import statsmodels.tools.data as data_util
+from statsmodels.tools.decorators import cache_readonly
 
 
 def combine_indices(groups, prefix='', sep='.', return_labels=False):
@@ -412,6 +413,16 @@ class Grouping():
             processed.append(function(subset, s, **kwargs))
         return np.concatenate(processed)
 
+    @cache_readonly
+    def dummies_time(self):
+        self.dummy_sparse(level=1)
+        return self._dummies
+
+    @cache_readonly
+    def dummies_groups(self):
+        self.dummy_sparse(level=0)
+        return self._dummies
+
     def dummy_sparse(self, level=0):
         '''create a sparse indicator from a group array with integer labels
 
@@ -463,7 +474,7 @@ class Grouping():
         groups = self.index.labels[level]
         indptr = np.arange(len(groups)+1)
         data = np.ones(len(groups), dtype=np.int8)
-        self.dummies = sparse.csr_matrix((data, groups, indptr))
+        self._dummies = sparse.csr_matrix((data, groups, indptr))
 
 if __name__ == '__main__':
 
