@@ -81,10 +81,10 @@ class OptAFT_Mixin(_OptFuncts_mixin):
         """
         test_params = test_vals.reshape(self.model.nvar, 1)
         est_vect = self.model.uncens_exog * (self.model.uncens_endog -
-                                            np.dot(self.model.uncens_exog,
-                                                         test_params))
+                                             np.dot(self.model.uncens_exog,
+                                                    test_params))
         eta_star = self._modif_newton(np.zeros(self.model.nvar), est_vect,
-                                         self.model._fit_weights)
+                                      self.model._fit_weights)
         self.eta_star = eta_star
         denom = np.sum(self.model._fit_weights) + np.dot(eta_star, est_vect.T)
         self.new_weights = self.model._fit_weights / denom
@@ -92,8 +92,8 @@ class OptAFT_Mixin(_OptFuncts_mixin):
 
     def _EM_test(self, nuisance_params, params=None, param_nums=None,
                  b0_vals=None, F=None, survidx=None, uncens_nobs=None,
-                numcensbelow=None, km=None, uncensored=None, censored=None,
-                maxiter=None, ftol=None):
+                 numcensbelow=None, km=None, uncensored=None, censored=None,
+                 maxiter=None, ftol=None):
         """
         Uses EM algorithm to compute the maximum likelihood of a test
 
@@ -119,7 +119,7 @@ class OptAFT_Mixin(_OptFuncts_mixin):
         params[param_nums] = b0_vals
 
         nuis_param_index = np.int_(np.delete(np.arange(self.model.nvar),
-                                           param_nums))
+                                             param_nums))
         params[nuis_param_index] = nuisance_params
         to_test = params.reshape(self.model.nvar, 1)
         opt_res = np.inf
@@ -129,7 +129,7 @@ class OptAFT_Mixin(_OptFuncts_mixin):
             death = np.cumsum(F[::-1])
             survivalprob = death[::-1]
             surv_point_mat = np.dot(F.reshape(-1, 1),
-                                1. / survivalprob[survidx].reshape(1, - 1))
+                                    1. / survivalprob[survidx].reshape(1, - 1))
             surv_point_mat = add_constant(surv_point_mat)
             summed_wts = np.cumsum(surv_point_mat, axis=1)
             wts = summed_wts[np.int_(np.arange(uncens_nobs)),
@@ -150,7 +150,7 @@ class OptAFT_Mixin(_OptFuncts_mixin):
         wtd_km = km.flatten() / np.sum(km)
         survivalmax = np.cumsum(wtd_km[::-1])[::-1]
         llikemax = np.sum(np.log(wtd_km[uncensored])) + \
-          np.sum(np.log(survivalmax[censored]))
+            np.sum(np.log(survivalmax[censored]))
         if iters == maxiter:
             warnings.warn('The EM reached the maximum number of iterations')
         return -2 * (llike - llikemax)
@@ -250,7 +250,6 @@ class emplikeAFT(object):
         self.uncens_endog = self.endog[mask, :].reshape(-1, 1)
         self.uncens_exog = self.exog[mask, :]
 
-
     def _is_tied(self, endog, censors):
         """
         Indicated if an observation takes the same value as the next
@@ -344,7 +343,7 @@ class emplikeAFT(object):
         km = np.cumprod(km)  # If no ties, this is kaplan-meier
         tied = self._is_tied(endog, censors)
         wtd_km = self._km_w_ties(tied, km)
-        return  (censors / wtd_km).reshape(nobs, 1)
+        return (censors / wtd_km).reshape(nobs, 1)
 
     def fit(self):
         """
@@ -479,7 +478,8 @@ class AFTResults(OptAFT_Mixin):
         uncens_endog = endog[uncensored]
         uncens_exog = exog[uncensored, :]
         reg_model = OLS(uncens_endog, uncens_exog).fit()
-        llr, pval, new_weights = reg_model.el_test(b0_vals, param_nums, return_weights=True)  # Needs to be changed
+        llr, pval, new_weights = reg_model.el_test(b0_vals, param_nums,
+                                                   return_weights=True)
         km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs
         F = np.asarray(new_weights).reshape(uncens_nobs)
@@ -490,12 +490,12 @@ class AFTResults(OptAFT_Mixin):
         numcensbelow = np.int_(np.cumsum(1 - censors))
         if len(param_nums) == len(params):
             llr = self._EM_test([], F=F, params=params,
-                                      param_nums=param_nums,
+                                param_nums=param_nums,
                                 b0_vals=b0_vals, survidx=survidx,
-                             uncens_nobs=uncens_nobs,
-                             numcensbelow=numcensbelow, km=km,
-                             uncensored=uncensored, censored=censored,
-                             ftol=ftol, maxiter=25)
+                                uncens_nobs=uncens_nobs,
+                                numcensbelow=numcensbelow, km=km,
+                                uncensored=uncensored, censored=censored,
+                                ftol=ftol, maxiter=25)
             return llr, chi2.sf(llr, self.model.nvar)
         else:
             x0 = np.delete(params, param_nums)
@@ -504,7 +504,7 @@ class AFTResults(OptAFT_Mixin):
                                    (params, param_nums, b0_vals, F, survidx,
                                     uncens_nobs, numcensbelow, km, uncensored,
                                     censored, maxiter, ftol), full_output=1,
-                                    disp = 0)
+                                    disp=0)
 
                 llr = res[1]
                 return llr, chi2.sf(llr, len(param_nums))
