@@ -1,9 +1,3 @@
-#!!
-#import sys
-#sys.path = [x for x in sys.path if "statsmodels" not in x]
-#sys.path.append("/afs/umich.edu/user/k/s/kshedden/fork/statsmodels")
-
-
 """
 Test functions for GEE
 """
@@ -13,8 +7,8 @@ import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
-from statsmodels.genmod.dependence_structures import Exchangeable,Independence,\
-    GlobalOddsRatio,Autoregressive,Nested
+from statsmodels.genmod.dependence_structures import Exchangeable,\
+    Independence,GlobalOddsRatio,Autoregressive,Nested
 import pandas as pd
 import statsmodels.formula.api as sm
 
@@ -171,6 +165,27 @@ class TestGEE(object):
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
             assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
+
+
+    def test_linear_constrained(self):
+
+        family = Gaussian()
+
+        exog = np.random.normal(size=(300,4))
+        exog[:,0] = 1
+        endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) + np.random.normal(size=300)
+        group = np.kron(np.arange(100), np.r_[1,1,1])
+
+        vi = Independence()
+        ve = Exchangeable()
+
+        L = np.r_[[[0, 0, 0, 1]]]
+        R = np.r_[0,]
+
+        for j,v in enumerate((vi,ve)):
+            md = GEE(endog, exog, group, None, family, v, constraint=(L,R))
+            mdf = md.fit()
+            assert_almost_equal(mdf.params[3], 0, decimal=10)
 
 
     def test_nested_linear(self):
