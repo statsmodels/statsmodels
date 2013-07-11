@@ -1,5 +1,6 @@
-source('../../tools/R2nparray/R/R2nparray.R')
+source('../../../tools/R2nparray/R/R2nparray.R')
 
+options(digits=20)
 library(plm)
 dat = read.csv('../../datasets/grunfeld/grunfeld.csv')
 dat = pdata.frame(dat, c('firm', 'year'))
