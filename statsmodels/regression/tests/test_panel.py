@@ -4,8 +4,6 @@ Tests for panel models
 Status:
     - rsquared_adj: ???
     - conf_int: SM is right R's plm is wrong (no df correction in plm)
-    - wrong f_pvalue (see especially between)
-    - fvalue: why do I need to divide by 2 except for within? 2-tailed?
 
 Stata:
 
@@ -43,7 +41,9 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_dof(self):
-                assert_equal(self.res1.df_resid, self.res2.df_resid)
+        assert_equal(self.res1.df_resid, self.res2.df_resid)
+        if self.res1.model.method != 'pooling':
+            assert_equal(self.res1.df_model, self.res2.df_model)
 
 #    def test_conf_int(self):
         #assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
@@ -146,10 +146,32 @@ class TestPooling(CheckModelResults):
         cls.res2 = res2
 
 class XestMLE(CheckModelResults):
-    pass
+    @classmethod
+    def setupClass(cls):
+        #from results_panel import mle_results
+        data = grunfeld.load_pandas().data
+        data.firm = data.firm.str.lower()
+        data = data.set_index(['firm', 'year'])
+        data = data.sort()
+        y = data['invest']
+        data['const'] = 1
+        X = data[['const', 'value', 'capital']]
+        cls.res1 = PanelLM(y, X, method='mle').fit(disp=0)
+        #cls.res2 = mle_results
 
 class XestSWAR(CheckModelResults):
-    pass
+    @classmethod
+    def setupClass(cls):
+        #from results_panel import mle_results
+        data = grunfeld.load_pandas().data
+        data.firm = data.firm.str.lower()
+        data = data.set_index(['firm', 'year'])
+        data = data.sort()
+        y = data['invest']
+        data['const'] = 1
+        X = data[['const', 'value', 'capital']]
+        cls.res1 = PanelLM(y, X, method='swar').fit(disp=0)
+        #cls.res2 = mle_results
 
 #if __name__ == "__main__":
     #import nose
