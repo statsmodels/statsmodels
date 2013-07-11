@@ -103,6 +103,9 @@ class GEE(base.Model):
         super(GEE, self).__init__(endog, exog, groups=groups, time=time,
                                   offset=offset, missing=missing)
 
+        if type(endog) == pandas.DataFrame:
+            endog = pandas.Series(endog.iloc[:,0])
+
         # Handle the endog_type argument
         if endog_type not in ("interval","ordinal","nominal"):
             raise ValueError("GEE: `endog_type` must be one of 'interval', 'ordinal', or 'nominal'")
