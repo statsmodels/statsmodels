@@ -45,6 +45,11 @@ class CheckModelResults(object):
         if self.res1.model.method != 'pooling':
             npt.assert_equal(self.res1.df_model, self.res2.df_model)
 
+    def test_sum_of_squares(self):
+        npt.assert_almost_equal(self.res1.ssr, self.res2.ssr)
+        npt.assert_almost_equal(self.res1.ess, self.res2.ess)
+        #centered and uncentered tss?
+
 #    def test_conf_int(self):
         #npt.assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
 
