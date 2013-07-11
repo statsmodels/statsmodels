@@ -89,10 +89,18 @@ within.df_residual = 207
 within.df_resid = 207
 within.df_model = 12 # from Stata
 within.nobs = 220
-within.conf_int = np.array([
-     0.0879818331472068, 0.277614703609689, 0.132276404904313,
-    0.342452180140319
-    ]).reshape(2, 2, order='F')
+# from R, based on normal distribution
+#within.conf_int = np.array([
+#     0.0879818331472068, 0.277614703609689, 0.132276404904313,
+#    0.342452180140319
+#    ]).reshape(2, 2, order='F')
+# from Stata, based on t distribution
+#NOTE: we don't list a constant
+within.conf_int = [#(-76.7430990196, -33.7999981334),
+                   (.087851586551, .132406651501),
+                   (.27742405134, .34264283241)]
+
+
 
 within.fittedvalues = np.array([
      -7.96629834730292, -6.18923927042444, 1.25593293364281,
@@ -544,10 +552,18 @@ between.df_residual = 8
 between.df_model = 2 # from Stata
 between.df_resid = 8
 between.nobs = 11
-between.conf_int = np.array([
-     -86.6506046370478, 0.0819060157392942, -0.312532633876553,
-    71.8856391981069, 0.187291497409824, 0.371908642339404
-    ]).reshape(3, 2, order='F')
+#R using normal distribution for between. Stata uses t. We prefer t here.
+#between.conf_int = np.array([
+#     -86.6506046370478, 0.0819060157392942, -0.312532633876553,
+#    71.8856391981069, 0.187291497409824, 0.371908642339404
+#    ]).reshape(3, 2, order='F')
+# from Stata
+between.conf_int = [
+                    (-100.6457,    85.88077),
+                    ( .0726029,    .1965946),
+                    (-.3729532,    .4323292)]
+
+
 
 between.fittedvalues = np.array([
      2.38243332123098, 38.2241728445525, 89.5222433986189, 2.33978697269486,
