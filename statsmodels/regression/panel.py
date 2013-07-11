@@ -193,6 +193,41 @@ class PanelLMResults(RegressionResults):
     def ssr(self):
         return np.sum(self.wresid**2)
 
+    def conf_int(self, alpha=.05, cols=None):
+        """
+        Returns the confidence interval of the fitted parameters.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The `alpha` level for the confidence interval.
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+        cols : array-like, optional
+            `cols` specifies which confidence intervals to return
+
+        Notes
+        -----
+        The confidence interval is based on Student's t-distribution.
+        """
+        from scipy import stats
+
+        bse = self.bse
+        params = self.params
+        if self.model.method == "swar":
+            dist = stats.norm
+            q = dist.ppf(1 - alpha / 2)
+        else:
+            dist = stats.t
+            q = dist.ppf(1 - alpha / 2, self.df_resid)
+
+        if cols is None:
+            lower = self.params - q * bse
+            upper = self.params + q * bse
+        else:
+            cols = np.asarray(cols)
+            lower = params[cols] - q * bse[cols]
+            upper = params[cols] + q * bse[cols]
+        return np.asarray(zip(lower, upper))
     @cache_readonly
     def resid(self):
         model = self.model
