@@ -9,7 +9,8 @@ class PanelModel(LikelihoodModel):
         # if need be -
         # check_dates(time)
         super(PanelModel, self).__init__(y, X, missing=missing,
-                                         time=time, panel=panel)
+                                         time=time, panel=panel,
+                                         hasconst=hasconst)
 
     def _handle_data(self, y, X, missing, hasconst, **kwargs):
         return handle_panel_data(y, X, missing, hasconst, **kwargs)
