@@ -7,9 +7,9 @@ Status:
 
 Stata:
 
-insheet using Grunfeld.csv, clear
+insheet using Grunfeld.csv, clear double
 encode firm, generate(firmn)
-xtset firm year
+xtset firmn year
 xtreg invest value capital, be
 
 """
@@ -50,8 +50,19 @@ class CheckModelResults(object):
         npt.assert_almost_equal(self.res1.ess, self.res2.ess)
         #centered and uncentered tss?
 
-#    def test_conf_int(self):
-        #npt.assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
+    def test_conf_int(self):
+        if self.res1.model.method == "pooling":
+            # we report t values but R results are norm, so check against that
+            from scipy.stats import norm
+            q = norm.ppf(1 - .025)
+            params, bse = self.res1.params, self.res1.bse
+            lower = params - q * bse
+            upper = params + q * bse
+            conf_int = np.asarray(zip(lower,upper))
+            npt.assert_almost_equal(conf_int, self.res2.conf_int, 4)
+        else:
+            npt.assert_almost_equal(self.res1.conf_int(), self.res2.conf_int,
+                                    DECIMAL_4)
 
     def test_tstat(self):
         npt.assert_almost_equal(self.res1.tvalues, self.res2.tvalues,
