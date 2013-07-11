@@ -86,6 +86,7 @@ class PanelLM(PanelModel, RegressionModel):
     :math:`\sigma_{\epsilon}^2`
 
     '''
+    #TODO: make sure hasconst works
     def __init__(self, y, X, method='pooling', effects='oneway', panel=None,
                  time=None, hasconst=None, missing='none'):
         _check_method_compat(method, effects)
@@ -101,12 +102,14 @@ class PanelLM(PanelModel, RegressionModel):
         self.wendog = self.whiten(self.endog)
         self.nobs = float(self.wexog.shape[0])
         self.rank = np.linalg.matrix_rank(self.exog)
-        self.df_model = float(self.rank - self.k_constant)
+        #NOTE: These should also depend on effects - needs to be a function
         if self.method == 'within':
-            self.df_resid = self.nobs - self.rank - self.data.n_panel
+            # -1 because n_panel is full rank
+            self.df_model = float(self.rank + self.data.n_panel - 1)
+            self.df_resid = self.nobs - self.df_model - 1
         else:
-            self.df_resid = self.nobs - self.rank - 1
-        self.df_model = float(self.rank - self.k_constant)
+            self.df_model = float(self.rank - self.k_constant)
+            self.df_resid = self.nobs - self.df_model - self.k_constant
 
     def whiten(self, data):
         g = self.data.groupings
@@ -180,15 +183,21 @@ class PanelLMResults(RegressionResults):
         super(PanelLMResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
 
-    @cache_readonly
-    def bse(self):
-        if self.model.method == 'within':
-            scale = self.nobs - self.model.data.n_panel - self.df_model
-            scale = np.sum(self.wresid**2) / scale
-            bse = np.sqrt(np.diag(self.cov_params(scale=scale)))
-        else:
-            bse = np.sqrt(np.diag(self.cov_params()))
-        return bse
+        # overwrite scale set in RegressionResults. This smells.
+        # might want to define other things than scale and leave it as 1.
+        # or just deprecate scale
+        wresid = self.wresid
+        self.scale = np.dot(wresid.T, wresid) / self.df_resid
+
+    #@cache_readonly
+    #def bse(self):
+    #    if self.model.method == 'within':
+    #        scale = self.nobs - self.model.data.n_panel - self.df_model
+    #        scale = np.sum(self.wresid**2) / scale
+    #        bse = np.sqrt(np.diag(self.cov_params(scale=scale)))
+    #    else:
+    #        bse = np.sqrt(np.diag(self.cov_params()))
+    #    return bse
 
     @cache_readonly
     def ssr(self):
@@ -211,15 +220,14 @@ class PanelLMResults(RegressionResults):
 
     @cache_readonly
     def fvalue(self):
-        f = self.mse_model/self.mse_resid
-        if self.model.method != 'within':
-            f = f / 2.
+        if self.model.method == 'within':
+            #TODO: not sure where the 2 degrees of freedom comes from
+            #      check literature
+            f = self.ess / self.ssr * self.df_resid / 2.
+        else:
+            f = self.mse_model/self.mse_resid
         return f
 
-    @cache_readonly
-    def scale(self):
-        wresid = self.wresid
-        return np.dot(wresid.T, wresid) / self.df_resid
 
 def pooltest(endog, exog):
     '''Chow poolability test: F-test of joint significance for the unit dummies
