@@ -17,7 +17,7 @@ xtreg invest value capital, be
 import os
 import statsmodels.api as sm
 import numpy as np
-from numpy.testing import *
+import numpy.testing as npt
 import statsmodels
 from statsmodels.regression.panel import PanelLM
 from statsmodels.datasets import grunfeld
@@ -38,54 +38,56 @@ class CheckModelResults(object):
     or the results as defined in model_results_data
     """
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+        npt.assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_dof(self):
-        assert_equal(self.res1.df_resid, self.res2.df_resid)
+        npt.assert_equal(self.res1.df_resid, self.res2.df_resid)
         if self.res1.model.method != 'pooling':
-            assert_equal(self.res1.df_model, self.res2.df_model)
+            npt.assert_equal(self.res1.df_model, self.res2.df_model)
 
 #    def test_conf_int(self):
-        #assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
+        #npt.assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)
 
     def test_tstat(self):
-        assert_almost_equal(self.res1.tvalues, self.res2.tvalues, DECIMAL_4)
+        npt.assert_almost_equal(self.res1.tvalues, self.res2.tvalues,
+                                DECIMAL_4)
 
     def pvalues(self):
-        assert_almost_equal(self.res1.pvalues, self.res2.pvalues, DECIMAL_4)
+        npt.assert_almost_equal(self.res1.pvalues, self.res2.pvalues,
+                                DECIMAL_4)
 
     def test_normalized_cov_params(self):
         pass
 
     def test_bse(self):
-        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
+        npt.assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
 
     def test_predict(self):
-        assert_almost_equal(self.res1.predict(),
+        npt.assert_almost_equal(self.res1.predict(),
                             self.res2.fittedvalues, DECIMAL_4)
 
     def test_nobs(self):
-        assert_almost_equal(self.res1.nobs,
+        npt.assert_almost_equal(self.res1.nobs,
                             self.res2.nobs, DECIMAL_4)
 
     def test_rsquared(self):
-        assert_almost_equal(self.res1.rsquared,
+        npt.assert_almost_equal(self.res1.rsquared,
                             self.res2.rsquared, DECIMAL_4)
 
     #def test_rsquared_adj(self):
-        #assert_almost_equal(self.res1.rsquared_adj,
+        #npt.assert_almost_equal(self.res1.rsquared_adj,
                             #self.res2.rsquared_adj, DECIMAL_4)
 
     def test_fvalue(self):
-        assert_almost_equal(self.res1.fvalue,
+        npt.assert_almost_equal(self.res1.fvalue,
                             self.res2.fvalue, DECIMAL_4)
 
     def test_f_pvalue(self):
-        assert_almost_equal(self.res1.f_pvalue,
+        npt.assert_almost_equal(self.res1.f_pvalue,
                             self.res2.f_pvalue, DECIMAL_4)
 
     def test_resid(self):
-        assert_almost_equal(self.res1.resid,
+        npt.assert_almost_equal(self.res1.resid,
                             self.res2.residuals, DECIMAL_4)
 
 
