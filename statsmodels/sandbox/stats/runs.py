@@ -487,33 +487,40 @@ def cochrans_q(x):
 
     return q_stat, stats.chi2.sf(q_stat, k-1)
 
-def mcnemar(x, y=None, exact='auto', correction=True):
+def mcnemar(x, y=None, exact=True, correction=True):
     '''McNemar test
 
     Parameters
     ----------
     x, y : array_like
-        two paired data samples
-    exact : bool or 'auto'
+        two paired data samples. If y is None, then x can be a 2 by 2
+        contingency table. x and y can have more than one dimension, then
+        the results are calculated under the assumption that axis zero
+        contains the observation for the samples.
+    exact : bool
+        If exact is true, then the binomial distribution will be used.
+        If exact is false, then the chisquare distribution will be used, which
+        is the approximation to the distribution of the test statistic for
+        large sample sizes.
     correction : bool
-        If true then a continuity correction is used for the approximate
-        chisquare distribution.
+        If true, then a continuity correction is used for the chisquare
+        distribution (if exact is false.)
 
     Returns
     -------
-    stat : float or int
-        The test statistic is the chisquare statistic in the case of large
-        samples or if exact is false. If the exact binomial distribution is
-        used, then this contains the min(n1, n2), where n1, n2 are cases
-        that are zero in one sample but one in the other sample.
+    stat : float or int, array
+        The test statistic is the chisquare statistic if exact is false. If the
+        exact binomial distribution is used, then this contains the min(n1, n2),
+        where n1, n2 are cases that are zero in one sample but one in the other
+        sample.
 
-    pvalue : float
+    pvalue : float or array
         p-value of the null hypothesis of equal effects.
 
     Notes
     -----
     This is a special case of Cochran's Q test. The results when the chisquare
-    distribution is used are identical, except for the continuity correction.
+    distribution is used are identical, except for continuity correction.
 
     '''
 
@@ -528,7 +535,7 @@ def mcnemar(x, y=None, exact='auto', correction=True):
         n1 = np.sum(x < y, 0)
         n2 = np.sum(x > y, 0)
 
-    if exact or (exact == 'auto' and n1 + n2 < 25):
+    if exact:
         stat = np.minimum(n1, n2)
         # binom is symmetric with p=0.5
         pval = stats.binom.cdf(stat, n1 + n2, 0.5) * 2
