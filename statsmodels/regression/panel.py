@@ -189,16 +189,6 @@ class PanelLMResults(RegressionResults):
         wresid = self.wresid
         self.scale = np.dot(wresid.T, wresid) / self.df_resid
 
-    #@cache_readonly
-    #def bse(self):
-    #    if self.model.method == 'within':
-    #        scale = self.nobs - self.model.data.n_panel - self.df_model
-    #        scale = np.sum(self.wresid**2) / scale
-    #        bse = np.sqrt(np.diag(self.cov_params(scale=scale)))
-    #    else:
-    #        bse = np.sqrt(np.diag(self.cov_params()))
-    #    return bse
-
     @cache_readonly
     def ssr(self):
         return np.sum(self.wresid**2)
@@ -265,6 +255,26 @@ if __name__ == "__main__":
     mod4 = PanelLM(y, X.ix[:,1:], method='within', effects='time').fit()
     mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoway').fit()
     mod6 = PanelLM(y, X, method='swar').fit()
+
+    from patsy import dmatrices
+    from panel import PanelLM
+    from statsmodels.datasets import grunfeld
+    data = grunfeld.load_pandas().data
+    data.firm = data.firm.apply(lambda x: x.lower())
+    data = data.set_index(['firm', 'year'])
+    data = data.sort()
+    y, X = dmatrices("invest ~ value + capital - 1", data=data,
+        return_type='dataframe')
+
+    within = PanelLM(y, X, method='within').fit(disp=0)
+
+    y, X = dmatrices("invest ~ value + capital", data=data,
+        return_type='dataframe')
+    between = PanelLM(y, X, method='between').fit(disp=0)
+    swar = PanelLM(y, X, method="swar").fit()
+    pooling = PanelLM(y, X, method="pooling").fit()
+
+
 
 '''
 from statsmodels.iolib.summary import summary_col
