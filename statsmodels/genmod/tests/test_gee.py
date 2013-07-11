@@ -103,6 +103,8 @@ class TestGEE(object):
              assert_almost_equal(mdf.params, cf[j], decimal=6)
              assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
+        # Check for run-time exceptions in summary
+        mdf.summary()
 
 
     def test_linear(self):
