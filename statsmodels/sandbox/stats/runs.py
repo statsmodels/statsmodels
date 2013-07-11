@@ -76,8 +76,6 @@ class Runs(object):
         pvalue based on normal distribution, with integer correction
 
         '''
-        npo = len(self.runs_pos)
-        nne = len(self.runs_neg)
         self.npo = npo = (self.runs_pos).sum()
         self.nne = nne = (self.runs_neg).sum()
 
@@ -99,7 +97,6 @@ class Runs(object):
                 z = 0.
 
         z /= rstd
-        from scipy import stats
         pval = 2 * stats.norm.sf(np.abs(z))
         return z, pval
 
@@ -136,8 +133,6 @@ def runstest_2samp(x, y=None, groups=None):
 
     This tests whether two samples come from the same distribution.
 
-
-
     Parameters
     ----------
     x : array_like
@@ -148,11 +143,6 @@ def runstest_2samp(x, y=None, groups=None):
     groups : array_like
         group labels or indicator the data for both groups is given in a
         single 1-dimensional array, x. If group labels are not [0,1], then
-
-
-    groups : {'mean', 'median'} or number
-        This specifies the cutoff to split the data into large and small
-        values. This
 
     Returns
     -------
@@ -203,7 +193,7 @@ def runstest_2samp(x, y=None, groups=None):
         gruni = np.arange(1)
     elif not groups is None:
         gruni = np.unique(groups)
-        if gruni.size != 2:
+        if gruni.size != 2:  # pylint: disable=E1103
             raise ValueError('not exactly two groups specified')
         #require groups to be numeric ???
     else:
@@ -212,7 +202,7 @@ def runstest_2samp(x, y=None, groups=None):
     xargsort = np.argsort(x)
     #check for ties
     x_sorted = x[xargsort]
-    x_diff = np.diff(x)   #TODO: check should this use x_sorted
+    x_diff = np.diff(x_sorted)   #TODO: check should this use x_sorted
     if x_diff.min() == 0:
         print 'ties detected'   #replace with warning
         x_mindiff = x_diff[x_diff > 0].min()
@@ -238,7 +228,7 @@ def runstest_2samp(x, y=None, groups=None):
         return Runs(xindicator).runs_test()
 
 try:
-    from scipy import comb
+    from scipy import comb  # pylint: disable=E0611
 except ImportError:
     from scipy.misc import comb
 
@@ -469,7 +459,7 @@ def cochrans_q(x):
     '''
     x = np.asarray(x)
     gruni = np.unique(x)
-    N,k = x.shape
+    N, k = x.shape
     count_row_success = (x==gruni[-1]).sum(1, float)
     count_col_success = (x==gruni[-1]).sum(0, float)
     count_row_ss = count_row_success.sum()
@@ -603,11 +593,11 @@ def symmetry_bowker(table):
 
 if __name__ == '__main__':
 
-    x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
+    x1 = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
 
-    print Runs(x).runs_test()
-    print runstest_1samp(x, cutoff='mean')
-    print runstest_2samp(np.arange(16,0,-1), groups=x)
+    print Runs(x1).runs_test()
+    print runstest_1samp(x1, cutoff='mean')
+    print runstest_2samp(np.arange(16,0,-1), groups=x1)
     print TotalRunsProb(7,9).cdf(11)
     print median_test_ksample(np.random.randn(100), np.random.randint(0,2,100))
     print cochrans_q(np.random.randint(0,2,(100,8)))
