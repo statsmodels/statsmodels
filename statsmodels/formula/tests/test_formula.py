@@ -37,7 +37,7 @@ class CheckFormulaOLS(object):
         try:
             warnings.filterwarnings("ignore",
                                     "kurtosistest only valid for n>=20")
-            summary = self.model.fit().summary()
+            self.model.fit().summary()
         finally:
             warn_ctx.__exit__()
 
@@ -49,6 +49,7 @@ class TestFormulaPandas(CheckFormulaOLS):
         cls.model = ols(longley_formula, data)
         super(TestFormulaPandas, cls).setupClass()
 
+
 class TestFormulaDict(CheckFormulaOLS):
     @classmethod
     def setupClass(cls):
@@ -56,12 +57,14 @@ class TestFormulaDict(CheckFormulaOLS):
         cls.model = ols(longley_formula, data)
         super(TestFormulaDict, cls).setupClass()
 
+
 class TestFormulaRecArray(CheckFormulaOLS):
     @classmethod
     def setupClass(cls):
         data = load().data
         cls.model = ols(longley_formula, data)
         super(TestFormulaRecArray, cls).setupClass()
+
 
 def test_tests():
     formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
@@ -76,6 +79,7 @@ def test_tests():
                                [0, 0, 0, 0, 0, 0, 1./1829]], 8)
     npt.assert_array_equal(Q, [[0],[2],[1]])
 
+
 def test_formula_labels():
     # make sure labels pass through patsy as expected
     # data(Duncan) from car in R
@@ -85,6 +89,7 @@ def test_formula_labels():
     dta = read_table(dta, sep=" ")
     model = ols("prestige ~ income + education", dta).fit()
     npt.assert_equal(model.fittedvalues.index, dta.index)
+
 
 def test_formula_predict():
     from numpy import log
