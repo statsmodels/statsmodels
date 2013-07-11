@@ -164,7 +164,7 @@ def runstest_2samp(x, y=None, groups=None):
 
     This test is intended for continuous distributions
     SAS has treatment for ties, but not clear, and sounds more complicated
-    (minimum and maximum possible runs prvent use of argsort)
+    (minimum and maximum possible runs prevent use of argsort)
     (maybe it's not so difficult, idea: add small positive noise to first
     one, run test, then to the other, run test, take max(?) p-value - DONE
     This gives not the minimum and maximum of the number of runs, but should
@@ -177,6 +177,12 @@ def runstest_2samp(x, y=None, groups=None):
 
     currently two-sided test only
 
+    This has not been verified against a reference implementation. In a short
+    Monte Carlo simulation where both samples are normally distribute, the test
+    seems to be correctly sized for larger number of observations (30 or
+    larger), but conservative (i.e. reject less often than nominal) with a
+    sample size of 10 in each group.
+
     See Also
     --------
     runs_test_1samp
@@ -188,9 +194,10 @@ def runstest_2samp(x, y=None, groups=None):
     x = np.asarray(x)
     if not y is None:
         y = np.asarray(y)
-        x = np.concatenate((x, y))
         groups = np.concatenate((np.zeros(len(x)), np.ones(len(y))))
-        gruni = np.arange(1)
+        # note reassigning x
+        x = np.concatenate((x, y))
+        gruni = np.arange(2)
     elif not groups is None:
         gruni = np.unique(groups)
         if gruni.size != 2:  # pylint: disable=E1103
@@ -202,7 +209,7 @@ def runstest_2samp(x, y=None, groups=None):
     xargsort = np.argsort(x)
     #check for ties
     x_sorted = x[xargsort]
-    x_diff = np.diff(x_sorted)   #TODO: check should this use x_sorted
+    x_diff = np.diff(x_sorted)  # used for detecting and handling ties
     if x_diff.min() == 0:
         print 'ties detected'   #replace with warning
         x_mindiff = x_diff[x_diff > 0].min()

@@ -9,7 +9,8 @@ Author: Josef Perktold
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q, Runs,
-                                            symmetry_bowker)
+                                            symmetry_bowker,
+                                            runstest_1samp, runstest_2samp)
 
 def _expand_table(table):
     '''expand a 2 by 2 contingency table to observations
@@ -216,3 +217,26 @@ def test_runstest():
     #print Runs(x).runs_test(correction=False)
     assert_almost_equal(np.array(Runs(x).runs_test(correction=False)),
                         [z_twosided, pvalue_twosided], decimal=6)
+
+def test_runstest_2sample():
+    # regression test, checked with MonteCarlo and looks reasonable
+
+    x = [31.8, 32.8, 39.2, 36, 30, 34.5, 37.4]
+    y = [35.5, 27.6, 21.3, 24.8, 36.7, 30]
+    y[-1] += 1e-6  #avoid tie that creates warning
+    groups = np.concatenate((np.zeros(len(x)), np.ones(len(y))))
+
+    res = runstest_2samp(x, y)
+    res1 = (0.022428065200812752, 0.98210649318649212)
+    assert_allclose(res, res1, rtol=1e-6)
+
+    # check as stacked array
+    res2 = runstest_2samp(x, y)
+    assert_allclose(res2, res, rtol=1e-6)
+
+    xy = np.concatenate((x, y))
+    res_1s = runstest_1samp(xy)
+    assert_allclose(res_1s, res1, rtol=1e-6)
+    # check cutoff
+    res2_1s = runstest_1samp(xy, xy.mean())
+    assert_allclose(res2_1s, res_1s, rtol=1e-6)
