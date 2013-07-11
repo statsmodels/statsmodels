@@ -595,7 +595,7 @@ class GEEResults(object):
 
     @cache_readonly
     def resid(self):
-        return self.model.endog.iloc[:,0] - self.fittedvalues
+        return self.model.endog - self.fittedvalues
 
     @cache_readonly
     def fittedvalues(self):
@@ -670,10 +670,10 @@ class GEEResults(object):
                     ('Date:', None),
         ]
 
-        NY = [len(y) for y in self.model.endog]
+        NY = [len(y) for y in self.model.endog_li]
 
         top_right = [('No. Observations:', [sum(NY)]),
-                     ('No. clusters:', [len(self.model.endog)]),
+                     ('No. clusters:', [len(self.model.endog_li)]),
                      ('Min. cluster size', [min(NY)]),
                      ('Max. cluster size', [max(NY)]),
                      ('Mean cluster size', ["%.1f" % np.mean(NY)]),
