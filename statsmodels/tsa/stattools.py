@@ -785,6 +785,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     '''
     from scipy import stats # lazy import
 
+    x = np.asarray(x)
+
     resli = {}
 
     for mlg in range(1, maxlag+1):

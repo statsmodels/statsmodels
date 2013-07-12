@@ -76,8 +76,6 @@ class Runs(object):
         pvalue based on normal distribution, with integer correction
 
         '''
-        npo = len(self.runs_pos)
-        nne = len(self.runs_neg)
         self.npo = npo = (self.runs_pos).sum()
         self.nne = nne = (self.runs_neg).sum()
 
@@ -99,11 +97,10 @@ class Runs(object):
                 z = 0.
 
         z /= rstd
-        from scipy import stats
         pval = 2 * stats.norm.sf(np.abs(z))
         return z, pval
 
-def runstest_1samp(x, cutoff='mean'):
+def runstest_1samp(x, cutoff='mean', correction=True):
     '''use runs test on binary discretized data above/below cutoff
 
     Parameters
@@ -112,7 +109,12 @@ def runstest_1samp(x, cutoff='mean'):
         data, numeric
     cutoff : {'mean', 'median'} or number
         This specifies the cutoff to split the data into large and small
-        values. This
+        values.
+    correction: bool
+        Following the SAS manual, for samplesize below 50, the test
+        statistic is corrected by 0.5. This can be turned off with
+        correction=False, and was included to match R, tseries, which
+        does not use any correction.
 
     Returns
     -------
@@ -129,14 +131,12 @@ def runstest_1samp(x, cutoff='mean'):
     elif cutoff == 'median':
         cutoff = np.median(x)
     xindicator = (x >= cutoff).astype(int)
-    return Runs(xindicator).runs_test()
+    return Runs(xindicator).runs_test(correction=correction)
 
-def runstest_2samp(x, y=None, groups=None):
+def runstest_2samp(x, y=None, groups=None, correction=True):
     '''Wald-Wolfowitz runstest for two samples
 
     This tests whether two samples come from the same distribution.
-
-
 
     Parameters
     ----------
@@ -148,11 +148,11 @@ def runstest_2samp(x, y=None, groups=None):
     groups : array_like
         group labels or indicator the data for both groups is given in a
         single 1-dimensional array, x. If group labels are not [0,1], then
-
-
-    groups : {'mean', 'median'} or number
-        This specifies the cutoff to split the data into large and small
-        values. This
+    correction: bool
+        Following the SAS manual, for samplesize below 50, the test
+        statistic is corrected by 0.5. This can be turned off with
+        correction=False, and was included to match R, tseries, which
+        does not use any correction.
 
     Returns
     -------
@@ -174,7 +174,7 @@ def runstest_2samp(x, y=None, groups=None):
 
     This test is intended for continuous distributions
     SAS has treatment for ties, but not clear, and sounds more complicated
-    (minimum and maximum possible runs prvent use of argsort)
+    (minimum and maximum possible runs prevent use of argsort)
     (maybe it's not so difficult, idea: add small positive noise to first
     one, run test, then to the other, run test, take max(?) p-value - DONE
     This gives not the minimum and maximum of the number of runs, but should
@@ -187,23 +187,29 @@ def runstest_2samp(x, y=None, groups=None):
 
     currently two-sided test only
 
+    This has not been verified against a reference implementation. In a short
+    Monte Carlo simulation where both samples are normally distribute, the test
+    seems to be correctly sized for larger number of observations (30 or
+    larger), but conservative (i.e. reject less often than nominal) with a
+    sample size of 10 in each group.
+
     See Also
     --------
     runs_test_1samp
     Runs
     RunsProb
 
-
     '''
     x = np.asarray(x)
     if not y is None:
         y = np.asarray(y)
-        x = np.concatenate((x, y))
         groups = np.concatenate((np.zeros(len(x)), np.ones(len(y))))
-        gruni = np.arange(1)
+        # note reassigning x
+        x = np.concatenate((x, y))
+        gruni = np.arange(2)
     elif not groups is None:
         gruni = np.unique(groups)
-        if gruni.size != 2:
+        if gruni.size != 2:  # pylint: disable=E1103
             raise ValueError('not exactly two groups specified')
         #require groups to be numeric ???
     else:
@@ -212,7 +218,7 @@ def runstest_2samp(x, y=None, groups=None):
     xargsort = np.argsort(x)
     #check for ties
     x_sorted = x[xargsort]
-    x_diff = np.diff(x)   #TODO: check should this use x_sorted
+    x_diff = np.diff(x_sorted)  # used for detecting and handling ties
     if x_diff.min() == 0:
         print 'ties detected'   #replace with warning
         x_mindiff = x_diff[x_diff > 0].min()
@@ -222,23 +228,23 @@ def runstest_2samp(x, y=None, groups=None):
         xx[groups==gruni[0]] += eps
         xargsort = np.argsort(xx)
         xindicator = groups[xargsort]
-        z0, p0 = Runs(xindicator).runs_test()
+        z0, p0 = Runs(xindicator).runs_test(correction=correction)
 
         xx[groups==gruni[0]] -= eps   #restore xx = x
         xx[groups==gruni[1]] += eps
         xargsort = np.argsort(xx)
         xindicator = groups[xargsort]
-        z1, p1 = Runs(xindicator).runs_test()
+        z1, p1 = Runs(xindicator).runs_test(correction=correction)
 
         idx = np.argmax([p0,p1])
         return [z0, z1][idx], [p0, p1][idx]
 
     else:
         xindicator = groups[xargsort]
-        return Runs(xindicator).runs_test()
+        return Runs(xindicator).runs_test(correction=correction)
 
 try:
-    from scipy import comb
+    from scipy import comb  # pylint: disable=E0611
 except ImportError:
     from scipy.misc import comb
 
@@ -431,21 +437,20 @@ def median_test_ksample(x, groups):
 
 
 
-def cochran_q(x):
+def cochrans_q(x):
     '''Cochran's Q test for identical effect of k treatments
 
     Cochran's Q is a k-sample extension of the McNemar test. If there are only
     two treatments, then Cochran's Q test and McNemar test are equivalent.
 
-    what's this ? Test that the number of successes is the same for each case.
-    The alternative is that at least two treatements come from different
-    populations.
+    Test that the probability of success is the same for each treatment.
+    The alternative is that at least two treatments have a different
+    probability of success.
 
     Parameters
     ----------
     x : array_like, 2d (N,k)
         data with N cases and k variables
-
 
     Returns
     -------
@@ -453,19 +458,14 @@ def cochran_q(x):
        test statistic
     pvalue : float
        pvalue from the chisquare distribution
-    others ????
-       currently some test output, table and expected
 
     Notes
     -----
-    not verified,
-
-    In Wikipedia terminology, rows are blocks and N should be large for
-    the chisquare distribution to be a good approximation; columns are
-    treatments.
+    In Wikipedia terminology, rows are blocks and columns are treatments.
+    The number of rows N, should be large for the chisquare distribution to be
+    a good approximation.
     The Null hypothesis of the test is that all treatments have the
     same effect.
-
 
     References
     ----------
@@ -475,7 +475,7 @@ def cochran_q(x):
     '''
     x = np.asarray(x)
     gruni = np.unique(x)
-    N,k = x.shape
+    N, k = x.shape
     count_row_success = (x==gruni[-1]).sum(1, float)
     count_col_success = (x==gruni[-1]).sum(0, float)
     count_row_ss = count_row_success.sum()
@@ -496,104 +496,132 @@ def cochran_q(x):
 
     return q_stat, stats.chi2.sf(q_stat, k-1)
 
-def mcnemar(x, y, exact='auto', correction=True):
+def mcnemar(x, y=None, exact=True, correction=True):
     '''McNemar test
 
     Parameters
     ----------
     x, y : array_like
-        two paired data samples
-    exact : bool or 'auto'
+        two paired data samples. If y is None, then x can be a 2 by 2
+        contingency table. x and y can have more than one dimension, then
+        the results are calculated under the assumption that axis zero
+        contains the observation for the samples.
+    exact : bool
+        If exact is true, then the binomial distribution will be used.
+        If exact is false, then the chisquare distribution will be used, which
+        is the approximation to the distribution of the test statistic for
+        large sample sizes.
     correction : bool
-        If true then a continuity correction is used for the approximate
-        chisquare distribution.
+        If true, then a continuity correction is used for the chisquare
+        distribution (if exact is false.)
 
     Returns
     -------
-    stat : float or int
-        The test statistic is the chisquare statistic in the case of large
-        samples or if exact is false. If the exact binomial distribution is
-        used, then this contains the min(n1, n2), where n1, n2 are cases
-        that are zero in one sample but one in the other sample.
+    stat : float or int, array
+        The test statistic is the chisquare statistic if exact is false. If the
+        exact binomial distribution is used, then this contains the min(n1, n2),
+        where n1, n2 are cases that are zero in one sample but one in the other
+        sample.
 
-    pvalue : float
+    pvalue : float or array
         p-value of the null hypothesis of equal effects.
 
     Notes
     -----
     This is a special case of Cochran's Q test. The results when the chisquare
-    distribution is used are identical, except for the continuity correction.
+    distribution is used are identical, except for continuity correction.
 
     '''
 
-    n1 = np.sum(x < y)
-    n2 = np.sum(x > y)
-
-    if exact or (exact=='auto' and n1+n2<25):
-        stat = min(n1,n2)
-        pval = stats.binom.sf(min(n1,n2), n1+n2, 0.5)
+    x = np.asarray(x)
+    if y is None and x.shape[0] == x.shape[1]:
+        if x.shape[0] != 2:
+            raise ValueError('table needs to be 2 by 2')
+        n1, n2 = x[1, 0], x[0, 1]
     else:
-        corr = int(correction)
-        stat = (np.abs(n1-n2)-corr)**2 / (1. * (n1+n2))
+        # I'm not checking here whether x and y are binary,
+        # isn't this also paired sign test
+        n1 = np.sum(x < y, 0)
+        n2 = np.sum(x > y, 0)
+
+    if exact:
+        stat = np.minimum(n1, n2)
+        # binom is symmetric with p=0.5
+        pval = stats.binom.cdf(stat, n1 + n2, 0.5) * 2
+        pval = np.minimum(pval, 1)  # limit to 1 if n1==n2
+    else:
+        corr = int(correction) # convert bool to 0 or 1
+        stat = (np.abs(n1 - n2) - corr)**2 / (1. * (n1 + n2))
         df = 1
-        pval = stats.chi2.sf(stat,1)
+        pval = stats.chi2.sf(stat, df)
     return stat, pval
 
-from numpy.testing import assert_almost_equal, assert_array_almost_equal
-def test_cochransq():
-    #example from dataplot docs, Conovover p. 253
-    #http://www.itl.nist.gov/div898/software/dataplot/refman1/auxillar/cochran.htm
-    x = np.array([[1, 1, 1],
-                   [1, 1, 1],
-                   [0, 1, 0],
-                   [1, 1, 0],
-                   [0, 0, 0],
-                   [1, 1, 1],
-                   [1, 1, 1],
-                   [1, 1, 0],
-                   [0, 0, 1],
-                   [0, 1, 0],
-                   [1, 1, 1],
-                   [1, 1, 1]])
-    res_qstat = 2.8
-    res_pvalue = 0.246597
-    assert_almost_equal(cochran_q(x), [res_qstat, res_pvalue])
 
-    #equivalence of mcnemar and cochranq for 2 samples
-    a,b = x[:,:2].T
-    assert_almost_equal(mcnemar(a,b, exact=False, correction=False),
-                        cochran_q(x[:,:2]))
+def symmetry_bowker(table):
+    '''Test for symmetry of a (k, k) square contingency table
+
+    This is an extension of the McNemar test to test the Null hypothesis
+    that the contingency table is symmetric around the main diagonal, that is
+
+    n_{i, j} = n_{j, i}  for all i, j
+
+    Parameter
+    ---------
+    table : array_like, 2d, (k, k)
+        a square contingency table that contains the count for k categories
+        in rows and columns.
+
+    Returns
+    -------
+    statistic : float
+        chisquare test statistic
+    p-value : float
+        p-value of the test statistic based on chisquare distribution
+    df : int
+        degrees of freedom of the chisquare distribution
+
+    Notes
+    -----
+    Implementation is based on the SAS documentation, R includes it in
+    `mcnemar.test` if the table is not 2 by 2.
+
+    The pvalue is based on the chisquare distribution which requires that the
+    sample size is not very small to be a good approximation of the true
+    distribution. For 2x2 contingency tables exact distribution can be
+    obtained with `mcnemar`
+
+    See Also
+    --------
+    mcnemar
 
 
-def test_runstest():
-    #comparison numbers from R, tseries, runs.test
-    #currently only 2-sided used
-    x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
+    '''
 
-    z_twosided = 1.386750
-    pvalue_twosided = 0.1655179
+    table = np.asarray(table)
+    k, k2 = table.shape
+    if k != k2:
+        raise ValueError('table needs to be square')
 
-    z_greater = 1.386750
-    pvalue_greater = 0.08275893
+    #low_idx = np.tril_indices(k, -1)  # this doesn't have Fortran order
+    upp_idx = np.triu_indices(k, 1)
 
-    z_less = 1.386750
-    pvalue_less = 0.917241
+    tril = table.T[upp_idx]   # lower triangle in column order
+    triu = table[upp_idx]     # upper triangle in row order
 
-    print Runs(x).runs_test(correction=False)
-    assert_array_almost_equal(np.array(Runs(x).runs_test(correction=False)),
-                        [z_twosided, pvalue_twosided], decimal=6)
+    stat = ((tril - triu)**2 / (tril + triu + 1e-20)).sum()
+    df = k * (k-1) / 2.
+    pval = stats.chi2.sf(stat, df)
 
+    return stat, pval, df
 
 if __name__ == '__main__':
 
-    x = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
+    x1 = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
 
-    print Runs(x).runs_test()
-    print runstest_1samp(x, cutoff='mean')
-    print runstest_2samp(np.arange(16,0,-1), groups=x)
+    print Runs(x1).runs_test()
+    print runstest_1samp(x1, cutoff='mean')
+    print runstest_2samp(np.arange(16,0,-1), groups=x1)
     print TotalRunsProb(7,9).cdf(11)
     print median_test_ksample(np.random.randn(100), np.random.randint(0,2,100))
-    print cochran_q(np.random.randint(0,2,(100,8)))
+    print cochrans_q(np.random.randint(0,2,(100,8)))
 
-    test_runstest()
-    test_cochransq()
