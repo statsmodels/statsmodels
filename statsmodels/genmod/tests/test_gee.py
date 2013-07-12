@@ -89,7 +89,7 @@ class TestGEE(object):
             md = GEE(endog, exog, group, T, family, v)
             mdf = md.fit()
             if id(v) != id(va):
-                assert_almost_equal(mdf.params, cf[j], decimal=6)
+                assert_almost_equal(mdf.params.values, cf[j], decimal=6)
                 assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
         # Test with formulas
@@ -100,11 +100,11 @@ class TestGEE(object):
              md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
                                    family=family, varstruct=v)
              mdf = md.fit()
-             assert_almost_equal(mdf.params, cf[j], decimal=6)
+             assert_almost_equal(mdf.params.values, cf[j], decimal=6)
              assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
         # Check for run-time exceptions in summary
-        mdf.summary()
+        print mdf.summary()
 
 
     def test_linear(self):
@@ -165,7 +165,7 @@ class TestGEE(object):
             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
                                   family=family, varstruct=v)
             mdf = md.fit()
-            assert_almost_equal(mdf.params, cf[j], decimal=10)
+            assert_almost_equal(mdf.params.values, cf[j], decimal=10)
             assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
 
 
@@ -305,7 +305,7 @@ class TestGEE(object):
 
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
 
-        assert_almost_equal(ols.params, md.params, decimal=10)
+        assert_almost_equal(ols.params.values, md.params.values, decimal=10)
 
 
     def test_compare_logit(self):
@@ -326,7 +326,7 @@ class TestGEE(object):
 
         sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit()
 
-        assert_almost_equal(sml.params, md.params, decimal=10)
+        assert_almost_equal(sml.params.values, md.params.values, decimal=10)
 
 
     def test_compare_poisson(self):
@@ -347,7 +347,7 @@ class TestGEE(object):
 
         sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit()
 
-        assert_almost_equal(sml.params, md.params, decimal=10)
+        assert_almost_equal(sml.params.values, md.params.values, decimal=10)
 
 
 if  __name__=="__main__":

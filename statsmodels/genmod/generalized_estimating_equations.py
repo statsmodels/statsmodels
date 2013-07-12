@@ -7,6 +7,108 @@ from statsmodels.genmod.dependence_structures import VarStruct
 import pandas
 
 
+
+class ParameterConstraint(object):
+    """
+    A class for managing linear equality constraints for a parameter
+    vector.
+    """
+
+    def __init__(self, L, R, exog):
+        """
+        Parameters:
+        ----------
+        L : ndarray
+           A q x p matrix which is the left hand side of the constraint L * param = R.
+           The number of constraints is q >= 1 and p is the dimension of the parameter
+           vector.
+        R : ndarray
+          A q-dimensional vector which is the right hand side of the constraint equation. 
+        exog : ndarray
+          The exognenous data for the parent model.
+        """
+
+        if type(L) != np.ndarray:
+            raise ValueError("The left hand side constraint matrix L must be a NumPy array.")
+        if len(R) != L.shape[0]:
+            raise ValueError("The number of columns of the left hand side constraint matrix L must equal the length of the right hand side constraint vector R.")
+
+        self.L = L
+        self.R = R
+
+        # The columns of L0 are an orthogonal basis for the orthogonal
+        # complement to row(L), the columns of L1 are an orthogonal
+        # basis for row(L).  The columns of LS = [L0,L1] are mutually
+        # orthogonal.
+        u,s,vt = np.linalg.svd(L.T, full_matrices=1)
+        self.L0 = u[:,len(s):]
+        self.L1 = u[:,0:len(s)]
+        self.LS = np.hstack((self.L0,self.L1))
+
+        # param0 is one solution to the underdetermined system 
+        # L * param = R.
+        self.param0 = np.dot(self.L1, np.dot(vt, self.R) / s)
+
+        self._offset_increment = np.dot(exog, self.param0)
+
+        self.orig_exog = exog
+        self.exog_fulltrans = np.dot(exog, self.LS)
+
+
+    def offset_increment(self):
+        """
+        Returns a vector that should be added to the offset vector to
+        accommodate the constraint.
+
+        Parameters:
+        -----------
+        exog : array-like
+           The exogeneous data for the model.
+        """
+        
+        return self._offset_increment
+        
+
+    def reduced_exog(self):
+        """
+        Returns a linearly transformed exog matrix whose columns span
+        the constrained model space.
+
+        Parameters:
+        -----------
+        exog : array-like
+           The exogeneous data for the model.
+        """
+        return self.exog_fulltrans[:,0:self.L0.shape[1]]
+
+
+    def restore_exog(self):
+        """
+        Returns the original exog matrix before it was reduced to
+        satisfy the constraint.
+        """
+        return self.orig_exog
+
+
+    def unpack_param(self, beta):
+        """
+        Returns the parameter vector `beta` in the original coordinates.
+        """
+
+        return self.param0 + np.dot(self.L0, beta)
+
+
+    def unpack_cov(self, bcov):
+        """
+        Returns the covariance matrix `bcov` in the original coordinates.
+        """
+
+        return np.dot(self.L0, np.dot(bcov, self.L0.T))
+
+
+
+
+
 #TODO multinomial responses
 class GEE(base.Model):
     """Procedures for fitting marginal regression models to dependent data
@@ -103,9 +205,6 @@ class GEE(base.Model):
         super(GEE, self).__init__(endog, exog, groups=groups, time=time,
                                   offset=offset, missing=missing)
 
-        if type(endog) == pandas.DataFrame:
-            endog = pandas.Series(endog.iloc[:,0])
-
         # Handle the endog_type argument
         if endog_type not in ("interval","ordinal","nominal"):
             raise ValueError("GEE: `endog_type` must be one of 'interval', 'ordinal', or 'nominal'")
@@ -126,116 +225,55 @@ class GEE(base.Model):
                 raise ValueError("GEE: `varstruct` must be a genmod varstruct instance")
         self.varstruct = varstruct
 
-        # Default offset
         if offset is None:
-            offset = np.zeros(exog.shape[0], dtype=np.float64)
+            self.offset = np.zeros(exog.shape[0], dtype=np.float64)
+        else:
+            self.offset = offset
 
-        # Default time
         if time is None:
-            time = np.zeros(exog.shape[0], dtype=np.float64)
+            self.time = np.zeros(exog.shape[0], dtype=np.float64)
+        else:
+            self.time = time
 
         # Handle the constraint
         self.constraint = None
         if constraint is not None:
-            self.constraint = constraint
             if len(constraint) != 2:
                 raise ValueError("GEE: `constraint` must be a 2-tuple.")
-            L,R = tuple(constraint)
-            if type(L) != np.ndarray:
-                raise ValueError("GEE: `constraint[0]` must be a NumPy array.")
-            print L.shape, exog.shape
-            if L.shape[1] != exog.shape[1]:
-                raise ValueError("GEE: incompatible constraint dimensions; the number of columns of `constraint[0]` must equal the number of columns of `exog`.") 
-            if len(R) != L.shape[0]:
-                raise ValueError("GEE: incompatible constraint dimensions; the length of `constraint[1]` must equal the number of rows of `constraint[0]`.")
-            
-            # The columns of L0 are an orthogonal basis for the
-            # orthogonal complement to row(L), the columns of L1
-            # are an orthogonal basis for row(L).  The columns of [L0,L1] 
-            # are mutually orthogonal.             
-            u,s,vt = np.linalg.svd(L.T, full_matrices=1)
-            L0 = u[:,len(s):]
-            L1 = u[:,0:len(s)]
+            self.constraint = ParameterConstraint(constraint[0], constraint[1], exog)
 
-            # param0 is one solution to the underdetermined system 
-            # L * param = R.
-            param0 = np.dot(L1, np.dot(vt, R) / s)
-
-            # Reduce exog so that the constraint is satisfied, save
-            # the full matrices for score testing.
-            offset += np.dot(exog, param0)
-            self.exog_preconstraint = exog.copy()
-            L = np.hstack((L0,L1))
-            exog_lintrans = np.dot(exog, L)
-            exog = exog_lintrans[:,0:L0.shape[1]]
-
-            self.constraint = self.constraint + (L0, param0,
-                                                 exog_lintrans)
-
-        # Convert to ndarrays
-        if type(endog) == pandas.DataFrame:
-            endog_nda = endog.iloc[:,0].values
-        else:
-            endog_nda = endog
-        if type(exog) == pandas.DataFrame:
-            exog_nda = exog.as_matrix()
-        else:
-            exog_nda = exog
+            self.offset += self.constraint.offset_increment()
+            self.exog = self.constraint.reduced_exog()
 
         # Convert the data to the internal representation, which is a list
         # of arrays, corresponding to the clusters.
-        S = np.unique(groups)
-        S.sort()
-        endog1 = [list() for s in S]
-        exog1 = [list() for s in S]
-        time1 = [list() for s in S]
-        offset1 = [list() for s in S]
-        exog_lintrans1 = [list() for s in S]
-        row_indices = [list() for s in S]
-        for i in range(len(endog_nda)):
-            idx = int(groups[i])
-            endog1[idx].append(endog_nda[i])
-            exog1[idx].append(exog_nda[i,:])
-            row_indices[idx].append(i)
-            time1[idx].append(time[i])
-            offset1[idx].append(offset[i])
-            if constraint is not None:
-                exog_lintrans1[idx].append(exog_lintrans[i,:])
-        endog_li = [np.array(y) for y in endog1]
-        exog_li = [np.array(x) for x in exog1]
-        row_indices = [np.array(x) for x in row_indices]
-        time_li = None
-        time_li = [np.array(t) for t in time1]
-        offset_li = [np.array(x) for x in offset1]
-        if constraint is not None:
-            exog_lintrans_li = [np.array(x) for x in exog_lintrans1]
+        group_labels = np.unique(groups)
+        group_labels.sort()
+        row_indices = {s: [] for s in group_labels}
+        for i in range(len(self.endog)):
+            row_indices[groups[i]].append(i)
 
-        # Save the row indices in the original data (after dropping
-        # missing but prior to splitting into clusters) that
-        # correspond to the rows of endog and exog.
         self.row_indices = row_indices
+        self.group_labels = group_labels
+        
+        self.endog_li = self._cluster_list(self.endog)
+        self.exog_li = self._cluster_list(self.exog)
+        self.time_li = self._cluster_list(self.time)
+        self.offset_li = self._cluster_list(self.offset)
+        if constraint is not None:
+            self.constraint.exog_fulltrans_li = self._cluster_list(self.constraint.exog_fulltrans)
 
         # Need to do additional processing for categorical responses
         if endog_type != "interval":
-            endog_li,exog_li,offset_li,time_li,IY,BTW,nylevel =\
-              _setup_multicategorical(endog_li, exog_li, offset_li, time_li, endog_type)
+            self.endog_li,self.exog_li,self.offset_li,self.time_li,IY,BTW,nylevel =\
+              _setup_multicategorical(self.endog_li, self.exog_li, 
+                                      self.offset_li, self.time_li, endog_type)
             self.nylevel = nylevel
             self.IY = IY
             self.BTW = BTW
 
         self.endog_type = endog_type
-        self.endog = endog
-        self.exog = exog
-        self.endog_li = endog_li
-        self.exog_li = exog_li
         self.family = family
-        self.time = time
-        self.time_li = time_li
-        if constraint is not None:
-            self.exog_lintrans_li = exog_lintrans_li
-
-        self.offset = offset
-        self.offset_li = offset_li
 
         # Some of the variance calculations require data or methods from 
         # the gee class.
@@ -247,6 +285,18 @@ class GEE(base.Model):
         # Total sample size
         N = [len(y) for y in self.endog_li]
         self.nobs = sum(N)
+
+
+    def _cluster_list(self, X):
+        """
+        Returns the array X split into subarrays corresponding to the cluster structure.
+        """
+
+        if len(X.shape) == 0:
+            return [np.array(X[self.row_indices[k]]) for k in self.group_labels] 
+        else:
+            return [np.array(X[self.row_indices[k],:]) for k in self.group_labels] 
+
 
 
     def estimate_scale(self):
@@ -439,6 +489,30 @@ class GEE(base.Model):
         return F
 
 
+    def _starting_beta(self, starting_beta):
+
+        try:
+            xnames = list(self.data.exog.columns)
+        except:
+            xnames = ["X%d" % k for k in range(1,self.data.exog.shape[1]+1)]
+
+        if starting_beta is None:
+
+            if self.endog_type == "interval":
+                beta = np.zeros(self.exog_li[0].shape[1], dtype=np.float64)
+            else:
+                xnames = ["cat_%d" % k for k in range(1,self.nylevel)] + xnames
+                beta = _categorical_starting_values(self.endog, 
+                                                    self.exog_li[0].shape[1],
+                                                    self.nylevel, 
+                                                    self.endog_type)
+
+        else:
+            beta = starting_beta.copy()
+                
+        return beta,xnames
+
+
 
 
     def fit(self, maxit=100, ctol=1e-6, starting_beta=None):
@@ -469,29 +543,7 @@ class GEE(base.Model):
         self.fit_history = {'params' : [],
                             'score_change' : []}
 
-        if starting_beta is None:
-
-            if self.endog_type == "interval":
-                xnames1 = []
-                beta = np.zeros(p, dtype=np.float64)
-            else:
-                xnames1 = ["cat_%d" % k for k in range(1,self.nylevel)]
-                beta = _categorical_starting_values(self.endog, 
-                                                    exog[0].shape[1],
-                                                    self.nylevel, 
-                                                    self.endog_type)
-
-            xnames1 += self.exog_names
-            if self.constraint is not None:
-                xnames1 = [str(k) for k in range(len(beta))]
-            beta = pandas.Series(beta, index=xnames1)
-
-        else:
-            if type(beta) == np.ndarray:
-                ix = ["v%d" % k for k in range(1,len(beta)+1)]
-                beta = pd.Series(starting_beta, index=ix)
-            else:
-                beta = starting_beta.copy()
+        beta,xnames = self._starting_beta(starting_beta)
 
         self._update_cached_means(beta)
 
@@ -512,12 +564,12 @@ class GEE(base.Model):
         if self.constraint is not None:
 
             # The number of variables in the full model
-            pb = self.exog_preconstraint.shape[1]
+            pb = self.constraint.L.shape[1]
             beta0 = np.r_[beta, np.zeros(pb - len(beta))]
 
             # Get the score vector under the full model.
             save_exog_li = self.exog_li
-            self.exog_li = self.exog_lintrans_li
+            self.exog_li = self.constraint.exog_fulltrans_li
             import copy
             save_cached_means = copy.deepcopy(self._cached_means)
             self._update_cached_means(beta0)
@@ -545,14 +597,14 @@ class GEE(base.Model):
             self.score_df = len(U2)
             self.score_pvalue = 1 - chi2.cdf(self.score_statistic, self.score_df)
 
-            # Reparameterize to the original coordinates
-            L0 = self.constraint[2]
-            param0 = self.constraint[3]
-            beta = param0 + np.dot(L0, beta)
-            bcov = np.dot(L0, np.dot(bcov, L0.T))
+            beta = self.constraint.unpack_param(beta)
+            bcov = self.constraint.unpack_cov(bcov)
 
             self.exog_li = save_exog_li
             self._cached_means = save_cached_means
+            self.exog = self.constraint.restore_exog()
+
+        beta = pandas.Series(beta, xnames)
 
         GR = GEEResults(self, beta, bcov)
 
@@ -864,7 +916,3 @@ def _categorical_starting_values(endog, q, nylevel, endog_type):
         beta = np.zeros(exog[0].shape[1], dtype=np.float64)
 
     return beta
-
-
-
-
