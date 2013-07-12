@@ -185,11 +185,12 @@ class MyPareto(GenericLikelihoodModel):
         #loc = np.dot(self.exog, beta)
         endog = self.endog
         x = (endog - loc)/scale
-        logpdf = np_log(b) - (b+1.)*np_log(x)
+        logpdf = np_log(b) - (b+1.)*np_log(x)  #use np_log(1 + x) for Pareto II
         logpdf -= np.log(scale)
         #lb = loc + scale
         #logpdf[endog<lb] = -inf
-        logpdf[x<1] = -np.inf
+        #import pdb; pdb.set_trace()
+        logpdf[x<1] = -10000 #-np.inf
         return -logpdf
 
     def fit_ks(self):
@@ -201,18 +202,21 @@ class MyPareto(GenericLikelihoodModel):
         '''
         rvs = self.endog
         rvsmin = rvs.min()
+        fixdf = np.nan * np.ones(3)
+        self.fixed_params = fixdf
+        self.fixed_paramsmask = np.isnan(fixdf)
 
         def pareto_ks(loc, rvs):
             #start_scale = rvs.min() - loc # not used yet
             #est = self.fit_fr(rvs, 1., frozen=[np.nan, loc, np.nan])
             self.fixed_params[1] = loc
-            #est = self.fit(start_params=self.start_params[self.fixed_paramsmask]).params
-            est = self.fit(start_params=self.start_params, method='nm').params
+            est = self.fit(start_params=self.start_params[self.fixed_paramsmask]).params
+            #est = self.fit(start_params=self.start_params, method='nm').params
             args = (est[0], loc, est[1])
             return stats.kstest(rvs,'pareto',args)[0]
 
-        locest = optimize.fmin(pareto_ks, rvsmin*0.7, (rvs,))
-        est = stats.pareto.fit_fr(rvs, 9., frozen=[np.nan, locest, np.nan])
+        locest = optimize.fmin(pareto_ks, rvsmin - 1.5, (rvs,))
+        est = stats.pareto.fit_fr(rvs, 0., frozen=[np.nan, locest, np.nan])
         args = (est[0], locest[0], est[1])
         return args
 
@@ -229,7 +233,7 @@ class MyPareto(GenericLikelihoodModel):
 
         def pareto_ks(loc, rvs):
             #start_scale = rvs.min() - loc # not used yet
-            est = stats.pareto.fit_fr(rvs, 1., frozen=[np.nan, loc, np.nan])
+            est = stats.pareto.fit_fr(rvs, frozen=[np.nan, loc, np.nan])
             args = (est[0], loc, est[1])
             return stats.kstest(rvs,'pareto',args)[0]
 
@@ -263,7 +267,8 @@ class MyPareto(GenericLikelihoodModel):
             args = (est[0], loc, est[1])
             return stats.kstest(rvs,'pareto',args)[0]
 
-        locest = optimize.fmin(pareto_ks, rvsmin*0.7, (rvs,))
+        #locest = optimize.fmin(pareto_ks, rvsmin*0.7, (rvs,))
+        locest = optimize.fmin(pareto_ks, rvsmin - 1.5, (rvs,))
         est = stats.pareto.fit_fr(rvs, 1., frozen=[np.nan, locest, np.nan])
         args = (est[0], locest[0], est[1])
         return args
@@ -276,7 +281,7 @@ par_start_params = np.array([1., 9., 2.])
 
 mod_par = MyPareto(y)
 mod_par.start_params = np.array([1., 10., 2.])
-mod_par.start_params = np.array([1., 9., 2.])
+mod_par.start_params = np.array([1., -9., 2.])
 mod_par.fixed_params = None
 
 fixdf = np.nan * np.ones(mod_par.start_params.shape)
@@ -287,9 +292,15 @@ if fixone:
     mod_par.fixed_params = fixdf
     mod_par.fixed_paramsmask = np.isnan(fixdf)
     mod_par.start_params = mod_par.start_params[mod_par.fixed_paramsmask]
+    mod_par.df_model = 2
+    mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
+    mod_par.data.xnames = ['shape', 'scale']
 else:
     mod_par.fixed_params = None
     mod_par.fixed_paramsmask = None
+    mod_par.df_model = 3
+    mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
+    mod_par.data.xnames = ['shape', 'loc', 'scale']
 
 res_par = mod_par.fit(start_params=mod_par.start_params, method='nm', maxfun=10000, maxiter=5000)
 #res_par2 = mod_par.fit(start_params=res_par.params, method='newton', maxfun=10000, maxiter=5000)
@@ -302,15 +313,24 @@ print res_parks
 
 print res_par.params[1:].sum(), sum(res_parks[1:]), mod_par.endog.min()
 
+#start new model, so we don't get two result instances with the same model instance
+mod_par = MyPareto(y)
 mod_par.fixed_params = fixdf
 mod_par.fixed_paramsmask = np.isnan(fixdf)
+mod_par.df_model = mod_par.fixed_paramsmask.sum()
+mod_par.df_resid = mod_par.endog.shape[0] - mod_par.df_model
+#mod_par.data.xnames = np.array(['shape', 'loc', 'scale'])[mod_par.fixed_paramsmask].tolist() # works also
+mod_par.data.xnames = [name for (name, incl) in zip(['shape', 'loc', 'scale'], mod_par.fixed_paramsmask) if incl]
 
-mod_par.start_params = par_start_params[mod_par.fixed_paramsmask]
-mod_par.fit(start_params=mod_par.start_params)
-res_parks2 = mod_par.fit_ks()
+res_par3 = mod_par.start_params = par_start_params[mod_par.fixed_paramsmask]
+res5 = mod_par.fit(start_params=mod_par.start_params)
+##res_parks2 = mod_par.fit_ks()
+##
+##res_parkst = mod_par.fit_ks1_trim()
+##print res_parkst
 
-res_parkst = mod_par.fit_ks1_trim()
-print res_parkst
+print res5.summary()
+print res5.t_test([[1,0]])
 
 '''
 C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
