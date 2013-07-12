@@ -106,6 +106,8 @@ class PanelLM(PanelModel, RegressionModel):
         if self.method == 'within':
             # -1 because n_panel is full rank
             self.df_model = float(self.rank + self.data.n_panel - 1)
+            # N(T-1) - K
+            # -K doesn't matter asymptotically (for calc of sigma_u)
             self.df_resid = self.nobs - self.df_model - 1
         else:
             self.df_model = float(self.rank - self.k_constant)
@@ -149,11 +151,14 @@ class PanelLM(PanelModel, RegressionModel):
     def fit(self, method="pinv", **kwargs):
         wexog = self.wexog
         self.pinv_wexog = pinv_wexog = np.linalg.pinv(wexog)
-        self.normalized_cov_params = np.dot(pinv_wexog, pinv_wexog.T)
+        normalized_cov_params = np.dot(pinv_wexog, pinv_wexog.T)
         beta = np.dot(self.pinv_wexog, self.wendog)
-        lfit = PanelLMResults(self, beta,
-                   normalized_cov_params=self.normalized_cov_params)
-        return lfit
+        if self.method == "within":
+            return PanelLMWithinResults(self, beta,
+                    normalized_cov_params=normalized_cov_params)
+        else:
+            return PanelLMResults(self, beta,
+                    normalized_cov_params=normalized_cov_params)
 
 #TODO: hook this into the data handling so panel and time are optional
 #      but for now it's used internally on plain arrays, so needs these
@@ -253,6 +258,107 @@ class PanelLMResults(RegressionResults):
             f = self.mse_model/self.mse_resid
         return f
 
+class PanelLMWithinResults(PanelLMResults):
+    @cache_readonly
+    def _fixed_effects(self): # make public?
+        model = self.model
+        grouped_y = model.data.groupings.transform_array(model.endog,
+                                                lambda x : x.mean(), 0)
+        grouped_X = model.data.groupings.transform_array(model.exog,
+                                                lambda x : x.mean(), 0)
+        #TODO: Make fixed_effects a property?
+        return grouped_y - model.predict(self.params, grouped_X)
+
+    @cache_readonly
+    def constant(self): # attach to params instead - handle up in fit?
+        return self._fixed_effects.mean()
+
+    #NOTE: this makes fittedvalues different from predict()
+    @cache_readonly
+    def fittedvalues(self): # defined as deviations from the mean fixed effect
+        model = self.model
+        return model.predict(self.params, model.exog) + self.constant
+
+    #TODO: better names for std_devs?
+    @cache_readonly
+    def std_dev_resid(self): # e_it the overall error
+        return self.scale ** .5
+
+    @cache_readonly
+    def std_dev_groups(self):
+        # sd. of res. within groups
+        return self._fixed_effects.std(ddof=1)
+
+    @cache_readonly
+    def resid_groups(self): # u_i, the fixed-error component
+        # easier for unbalanced case to use pandas alignment here.
+        # this should maybe be a method for Grouping class though.
+        # repeat maybe
+        import pandas as pd
+        #TODO: update for time effects
+        data = self.model.data
+        idx = data.groupings.index.get_level_values(0)
+        idx_uniq = idx.unique()
+        resid = pd.DataFrame(self._fixed_effects - self.constant,
+                             index=idx_uniq)
+        return resid.reindex(idx).values.squeeze()
+
+    @cache_readonly
+    def resid_combined(self):
+        return self.resid_groups + self.resid
+
+    @cache_readonly
+    def corr(self): # the correlation of u_i with XB_{it}
+        return np.corrcoef(self.resid_groups, self.fittedvalues)[0,1]
+
+    @cache_readonly
+    def rho(self):
+        # fraction of variance due to differences across panels
+        # aka intraclass correlation
+        return self.std_dev_groups ** 2 / (self.std_dev_groups**2 +
+                                           self.std_dev_resid**2)
+
+    @cache_readonly
+    def fitted_with_effects(self):
+        return self.fittedvalues + self.resid_groups
+
+    @cache_readonly
+    def std_dev_overall(self):
+        return (self.std_dev_groups**2 + self.std_dev_resid**2)**.5
+
+    @cache_readonly
+    def rsquared_within(self):
+        return self.rsquared
+
+    @cache_readonly
+    def rsquared_between(self):
+        model = self.model
+        grouped_y = model.data.groupings.transform_array(model.endog,
+                                                lambda x : x.mean(), 0)
+        grouped_X = model.data.groupings.transform_array(model.exog,
+                                                lambda x : x.mean(), 0)
+        grouped_y_hat = model.predict(self.params, grouped_X)
+        return np.corrcoef(grouped_y, grouped_y_hat)[0,1] ** 2
+
+    @cache_readonly
+    def rsquared_overall(self):
+        return np.corrcoef(self.fittedvalues, self.model.endog)[0,1] ** 2
+
+    @cache_readonly
+    def rsquared_adj(self): # this is not a good measure of fit.
+        r2 = self.rsquared  # prefer F-test / know what you're doing.
+        nobs = self.nobs
+        return 1 - (1 - r2) * (nobs - 1.)/(self.df_resid)
+
+    @cache_readonly
+    def centered_tss(self): #TODO: centered tss of _original_ y_{it} right?
+        return self.model.endog.var() * self.nobs
+
+    #NOTE: r2 depends on this, so it might be why it's off
+    #@cache_readonly
+    #def uncentered_tss(self):
+    #    # better safe than wrong
+    #    raise NotImplementedError
 
 def pooltest(endog, exog):
     '''Chow poolability test: F-test of joint significance for the unit dummies
