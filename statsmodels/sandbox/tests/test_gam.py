@@ -76,7 +76,7 @@ example: Gamma looks good in average bias and average RMSE (RMISE)
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_equal
 
 from scipy import stats
 
@@ -205,7 +205,11 @@ class BaseGAM(BaseAM, CheckGAM):
 
         np.random.seed(8765993)
         #y_obs = np.asarray([stats.poisson.rvs(p) for p in mu], float)
-        y_obs = self.rvs(mu_true, scale=scale, size=nobs) #this should work
+        if issubclass(self.rvs.im_class, stats.rv_discrete):
+            # Discrete distributions don't take `scale`.
+            y_obs = self.rvs(mu_true, size=nobs)
+        else:
+            y_obs = self.rvs(mu_true, scale=scale, size=nobs)
         m = GAM(y_obs, x, family=f)  #TODO: y_obs is twice __init__ and fit
         m.fit(y_obs, maxiter=100)
         res_gam = m.results
