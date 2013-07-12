@@ -156,6 +156,9 @@ class PanelLM(PanelModel, RegressionModel):
         if self.method == "within":
             return PanelLMWithinResults(self, beta,
                     normalized_cov_params=normalized_cov_params)
+        elif self.method == "between":
+            return PanelLMBetweenResults(self, beta,
+                    normalized_cov_params=normalized_cov_params)
         else:
             return PanelLMResults(self, beta,
                     normalized_cov_params=normalized_cov_params)
@@ -233,6 +236,11 @@ class PanelLMResults(RegressionResults):
             lower = params[cols] - q * bse[cols]
             upper = params[cols] + q * bse[cols]
         return np.asarray(zip(lower, upper))
+
+    @cache_readonly
+    def rsquared_overall(self):
+        return np.corrcoef(self.fittedvalues, self.model.endog)[0,1] ** 2
+
     @cache_readonly
     def resid(self):
         model = self.model
@@ -341,10 +349,6 @@ class PanelLMWithinResults(PanelLMResults):
         return np.corrcoef(grouped_y, grouped_y_hat)[0,1] ** 2
 
     @cache_readonly
-    def rsquared_overall(self):
-        return np.corrcoef(self.fittedvalues, self.model.endog)[0,1] ** 2
-
-    @cache_readonly
     def rsquared_adj(self): # this is not a good measure of fit.
         r2 = self.rsquared  # prefer F-test / know what you're doing.
         nobs = self.nobs
@@ -359,6 +363,49 @@ class PanelLMWithinResults(PanelLMResults):
     #def uncentered_tss(self):
     #    # better safe than wrong
     #    raise NotImplementedError
+
+
+class PanelLMBetweenResults(PanelLMResults):
+    @cache_readonly
+    def rsquared_between(self):
+        return self.rsquared
+
+    @cache_readonly
+    def rsquared_within(self):
+        model = self.model
+        within_y = model.data.groupings.transform_array(model.endog,
+                                                lambda x : x - x.mean(), 0)
+        within_X = model.data.groupings.transform_array(model.exog,
+                                                lambda x : x - x.mean(), 0)
+
+        within_y_hat = model.predict(self.params, within_X)
+        return np.corrcoef(within_y, within_y_hat)[0,1] ** 2
+
+    @cache_readonly
+    def rmse(self): #TODO: rename this. std_dev_overall? s.d.(u_i + avg(e_i))
+        return self.scale ** .5
+
+    @cache_readonly
+    def resid_overall(self):
+        model = self.model
+        within_y = model.data.groupings.transform_array(model.endog,
+                                                lambda x : x - x.mean(), 0)
+        within_X = model.data.groupings.transform_array(model.exog,
+                                                lambda x : x - x.mean(), 0)
+        within_y_hat = model.predict(self.params, within_X)
+        return within_y - within_y_hat
+
+    @cache_readonly
+    def resid_groups(self):
+        return self.resid
+
+    @cache_readonly
+    def resid_combined(self):
+        data = self.model.data
+        idx = data.groupings.index.get_level_values(0)
+        idx_uniq = idx.unique()
+        resid_groups = pd.DataFrame(self.resid_groups, index=idx_uniq)
+        return resid_groups.reindex(idx).values.squeeze() + self.resid_overall
 
 def pooltest(endog, exog):
     '''Chow poolability test: F-test of joint significance for the unit dummies
