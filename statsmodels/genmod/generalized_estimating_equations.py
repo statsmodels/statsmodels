@@ -31,7 +31,7 @@ class ParameterConstraint(object):
         if type(L) != np.ndarray:
             raise ValueError("The left hand side constraint matrix L must be a NumPy array.")
         if len(R) != L.shape[0]:
-            raise ValueError("The number of columns of the left hand side constraint matrix L must equal the length of the right hand side constraint vector R.")
+            raise ValueError("The number of rows of the left hand side constraint matrix L must equal the length of the right hand side constraint vector R.")
 
         self.L = L
         self.R = R
@@ -200,8 +200,10 @@ class GEE(base.Model):
 
         """ % {'extra_params' : base._missing_param_doc}
 
-        # Pass groups and time so they are proceessed for missing data
-        # along with endog and exog
+        # Pass groups, time, and offset so they are processed for
+        # missing data along with endog and exog.  Calling super
+        # creates self.exog, self.endog, etc. as ndarrays and the
+        # original exog, endog, etc. are self.data.endog, etc.
         super(GEE, self).__init__(endog, exog, groups=groups, time=time,
                                   offset=offset, missing=missing)
 
@@ -226,12 +228,12 @@ class GEE(base.Model):
         self.varstruct = varstruct
 
         if offset is None:
-            self.offset = np.zeros(exog.shape[0], dtype=np.float64)
+            self.offset = np.zeros(self.exog.shape[0], dtype=np.float64)
         else:
             self.offset = offset
 
         if time is None:
-            self.time = np.zeros(exog.shape[0], dtype=np.float64)
+            self.time = np.zeros(self.exog.shape[0], dtype=np.float64)
         else:
             self.time = time
 
@@ -240,7 +242,7 @@ class GEE(base.Model):
         if constraint is not None:
             if len(constraint) != 2:
                 raise ValueError("GEE: `constraint` must be a 2-tuple.")
-            self.constraint = ParameterConstraint(constraint[0], constraint[1], exog)
+            self.constraint = ParameterConstraint(constraint[0], constraint[1], self.exog)
 
             self.offset += self.constraint.offset_increment()
             self.exog = self.constraint.reduced_exog()
@@ -252,7 +254,6 @@ class GEE(base.Model):
         row_indices = {s: [] for s in group_labels}
         for i in range(len(self.endog)):
             row_indices[groups[i]].append(i)
-
         self.row_indices = row_indices
         self.group_labels = group_labels
         
