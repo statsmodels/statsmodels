@@ -49,6 +49,8 @@ class CheckModelResults(object):
         npt.assert_almost_equal(self.res1.ssr, self.res2.ssr)
         npt.assert_almost_equal(self.res1.ess, self.res2.ess)
         #centered and uncentered tss?
+        npt.assert_almost_equal(self.res1.centered_tss,
+                                self.res1.centered_tss, 4)
 
     def test_conf_int(self):
         if self.res1.model.method == "pooling":
@@ -90,9 +92,9 @@ class CheckModelResults(object):
         npt.assert_almost_equal(self.res1.rsquared,
                             self.res2.rsquared, DECIMAL_4)
 
-    #def test_rsquared_adj(self):
-        #npt.assert_almost_equal(self.res1.rsquared_adj,
-                            #self.res2.rsquared_adj, DECIMAL_4)
+    def test_rsquared_adj(self):
+        npt.assert_almost_equal(self.res1.rsquared_adj,
+                                self.res2.rsquared_adj, DECIMAL_4)
 
     def test_fvalue(self):
         npt.assert_almost_equal(self.res1.fvalue,
@@ -120,6 +122,39 @@ class TestWithin(CheckModelResults):
         cls.res1 = PanelLM(y, X, method='within').fit(disp=0)
         res2 = within
         cls.res2 = res2
+
+    def test_sigma(self):
+        npt.assert_almost_equal(self.res1.std_dev_groups,
+                                self.res2.std_dev_groups, 4)
+        npt.assert_almost_equal(self.res1.std_dev_resid,
+                                self.res2.std_dev_resid, 4)
+        npt.assert_almost_equal(self.res1.std_dev_overall,
+                                self.res2.std_dev_overall, 4)
+        npt.assert_almost_equal(self.res1.rho, self.res2.rho, 4)
+
+    def test_constant(self):
+        npt.assert_almost_equal(self.res1.constant, self.res2.constant, 4)
+
+    def test_corr(self):
+        npt.assert_almost_equal(self.res1.corr, self.res2.corr, 2)
+
+    def test_other_resids(self):
+        npt.assert_almost_equal(self.res1.resid_groups,
+                                self.res2.resid_groups, 4)
+        npt.assert_almost_equal(self.res1.resid_combined,
+                                self.res2.resid_combined, 4)
+
+    def test_fittedvalues(self):
+        npt.assert_almost_equal(self.res1.fittedvalues,
+                                self.res2.fittedvalues_stata, 3)
+
+    def test_rsquared_other(self):
+        npt.assert_almost_equal(self.res1.rsquared_overall,
+                                self.res2.rsquared_overall, 4)
+        npt.assert_almost_equal(self.res1.rsquared_between,
+                                self.res2.rsquared_between, 4)
+        npt.assert_almost_equal(self.res1.rsquared_within,
+                                self.res2.rsquared_within, 4)
 
 class TestBetween(CheckModelResults):
     @classmethod
@@ -190,6 +225,12 @@ class XestSWAR(CheckModelResults):
         X = data[['const', 'value', 'capital']]
         cls.res1 = PanelLM(y, X, method='swar').fit(disp=0)
         #cls.res2 = mle_results
+
+#TODO:
+#        check constants
+#        check different data (put these tests in panel/base/tests
+#        check different variances
+#        test prediction
 
 #if __name__ == "__main__":
     #import nose
