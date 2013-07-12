@@ -170,6 +170,29 @@ class TestBetween(CheckModelResults):
         res2 = between
         cls.res2 = res2
 
+    def test_rsquared_other(self):
+        npt.assert_almost_equal(self.res1.rsquared_overall,
+                                self.res2.rsquared_overall, 4)
+        npt.assert_almost_equal(self.res1.rsquared_between,
+                                self.res2.rsquared_between, 4)
+        npt.assert_almost_equal(self.res1.rsquared_within,
+                                self.res2.rsquared_within, 4)
+
+    def test_rmse(self):
+        npt.assert_almost_equal(self.res1.rmse, self.res2.rmse, 4)
+
+    def test_fittedvalues(self):
+        npt.assert_almost_equal(self.res1.fittedvalues,
+                                self.res2.fittedvalues_stata, 4)
+
+    def test_other_resids(self):
+        npt.assert_almost_equal(self.res1.resid_groups,
+                                self.res2.resid_groups, 4)
+        npt.assert_almost_equal(self.res1.resid_combined,
+                                self.res2.resid_combined, 4)
+        npt.assert_almost_equal(self.res1.resid_overall,
+                                self.res2.resid_overall, 4)
+
 class TestRandom(CheckModelResults):
     @classmethod
     def setupClass(cls):
