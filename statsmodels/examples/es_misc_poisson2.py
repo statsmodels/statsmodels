@@ -3,8 +3,8 @@
 import numpy as np
 from numpy.testing import assert_almost_equal
 import statsmodels.api as sm
-from statsmodels.miscmodels import PoissonGMLE, PoissonOffsetGMLE, \
-                        PoissonZiGMLE
+from statsmodels.miscmodels.count import (PoissonGMLE, PoissonOffsetGMLE,
+                                          PoissonZiGMLE)
 
 DEC = 3
 
@@ -43,7 +43,7 @@ print 'mod2'
 mod2 = PoissonZiGMLE(data_endog, data_exog[:,1:], offset=offset)
 start_params = np.r_[np.ones(6)/2.,10]
 start_params = np.r_[res.params[1:], 20.] #-100]
-res2 = mod2.fit(start_params=start_params, method='nm', maxiter=1000, maxfun=2000)
+res2 = mod2.fit(start_params=start_params, method='bfgs', maxiter=1000, maxfun=2000)
 
 print 'mod3'
 mod3 = PoissonZiGMLE(data_endog, data_exog, offset=None)
@@ -59,3 +59,4 @@ mod4 = PoissonZiGMLE(data_endog2, data_exog2, offset=None)
 start_params = np.r_[np.ones(7)/2.,10]
 start_params = np.r_[res.params, 0.]
 res4 = mod4.fit(start_params=start_params, method='nm', maxiter=1000, maxfun=1000)
+print res4.summary()
