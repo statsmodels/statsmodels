@@ -50,5 +50,5 @@ from .anova import anova_lm
 import moment_helpers
 from .correlation_tools import corr_nearest, corr_clipped, cov_nearest
 
-from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q, Runs,
-                                            symmetry_bowker)
+from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q,
+                        symmetry_bowker, Runs, runstest_1samp, runstest_2samp)

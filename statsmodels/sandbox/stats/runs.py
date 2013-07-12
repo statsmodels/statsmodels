@@ -100,7 +100,7 @@ class Runs(object):
         pval = 2 * stats.norm.sf(np.abs(z))
         return z, pval
 
-def runstest_1samp(x, cutoff='mean'):
+def runstest_1samp(x, cutoff='mean', correction=True):
     '''use runs test on binary discretized data above/below cutoff
 
     Parameters
@@ -109,7 +109,12 @@ def runstest_1samp(x, cutoff='mean'):
         data, numeric
     cutoff : {'mean', 'median'} or number
         This specifies the cutoff to split the data into large and small
-        values. This
+        values.
+    correction: bool
+        Following the SAS manual, for samplesize below 50, the test
+        statistic is corrected by 0.5. This can be turned off with
+        correction=False, and was included to match R, tseries, which
+        does not use any correction.
 
     Returns
     -------
@@ -126,9 +131,9 @@ def runstest_1samp(x, cutoff='mean'):
     elif cutoff == 'median':
         cutoff = np.median(x)
     xindicator = (x >= cutoff).astype(int)
-    return Runs(xindicator).runs_test()
+    return Runs(xindicator).runs_test(correction=correction)
 
-def runstest_2samp(x, y=None, groups=None):
+def runstest_2samp(x, y=None, groups=None, correction=True):
     '''Wald-Wolfowitz runstest for two samples
 
     This tests whether two samples come from the same distribution.
@@ -143,6 +148,11 @@ def runstest_2samp(x, y=None, groups=None):
     groups : array_like
         group labels or indicator the data for both groups is given in a
         single 1-dimensional array, x. If group labels are not [0,1], then
+    correction: bool
+        Following the SAS manual, for samplesize below 50, the test
+        statistic is corrected by 0.5. This can be turned off with
+        correction=False, and was included to match R, tseries, which
+        does not use any correction.
 
     Returns
     -------
@@ -189,7 +199,6 @@ def runstest_2samp(x, y=None, groups=None):
     Runs
     RunsProb
 
-
     '''
     x = np.asarray(x)
     if not y is None:
@@ -219,20 +228,20 @@ def runstest_2samp(x, y=None, groups=None):
         xx[groups==gruni[0]] += eps
         xargsort = np.argsort(xx)
         xindicator = groups[xargsort]
-        z0, p0 = Runs(xindicator).runs_test()
+        z0, p0 = Runs(xindicator).runs_test(correction=correction)
 
         xx[groups==gruni[0]] -= eps   #restore xx = x
         xx[groups==gruni[1]] += eps
         xargsort = np.argsort(xx)
         xindicator = groups[xargsort]
-        z1, p1 = Runs(xindicator).runs_test()
+        z1, p1 = Runs(xindicator).runs_test(correction=correction)
 
         idx = np.argmax([p0,p1])
         return [z0, z1][idx], [p0, p1][idx]
 
     else:
         xindicator = groups[xargsort]
-        return Runs(xindicator).runs_test()
+        return Runs(xindicator).runs_test(correction=correction)
 
 try:
     from scipy import comb  # pylint: disable=E0611

@@ -218,6 +218,26 @@ def test_runstest():
     assert_almost_equal(np.array(Runs(x).runs_test(correction=False)),
                         [z_twosided, pvalue_twosided], decimal=6)
 
+
+    # compare with runstest_1samp which should have same indicator
+    assert_almost_equal(runstest_1samp(x, correction=False),
+                        [z_twosided, pvalue_twosided], decimal=6)
+
+    x2 = x - 0.5 + np.random.uniform(-0.1, 0.1, size=len(x))
+    assert_almost_equal(runstest_1samp(x2, cutoff=0, correction=False),
+                        [z_twosided, pvalue_twosided], decimal=6)
+
+    assert_almost_equal(runstest_1samp(x2, cutoff='mean', correction=False),
+                        [z_twosided, pvalue_twosided], decimal=6)
+    assert_almost_equal(runstest_1samp(x2, cutoff=x2.mean(), correction=False),
+                        [z_twosided, pvalue_twosided], decimal=6)
+
+    # check median
+    assert_almost_equal(runstest_1samp(x2, cutoff='median', correction=False),
+                        runstest_1samp(x2, cutoff=np.median(x2), correction=False),
+                        decimal=6)
+
+
 def test_runstest_2sample():
     # regression test, checked with MonteCarlo and looks reasonable
 
