@@ -4,7 +4,10 @@ import numpy as np
 class VarStruct(object):
     """
     A base class for correlation and covariance structures of repeated
-    measures data.
+    measures data.  Each implementation of this class takes the
+    residuals from a regression fit to clustered data, and uses the
+    residuals from the fit to estimate the within-cluster variance and
+    dependence structure of the model errors.
     """
 
     def initialize(self, parent):
