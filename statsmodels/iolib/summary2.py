@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 import datetime
 import copy
-import collections
+#import collections  # OrderedDict requires python >= 2.7
+from statsmodels.compatnp.collections import OrderedDict
 import StringIO
 import textwrap
 from table import SimpleTable
@@ -253,7 +254,7 @@ def summary_model(results):
     def time_now(**kwrds):
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d %H:%M')
-    info = collections.OrderedDict()
+    info = OrderedDict()
     info['Model:'] = lambda x: x.model.__class__.__name__
     info['Model Family:'] = lambda x: x.family.__class.__name__
     info['Link Function:'] = lambda x: x.family.link.__class__.__name__
@@ -278,10 +279,10 @@ def summary_model(results):
     info['LLR p-value:'] = lambda x: "%#8.5g" % x.llr_pvalue
     info['Deviance:'] = lambda x: "%#8.5g" % x.deviance
     info['Pearson chi2:'] = lambda x: "%#6.3g" % x.pearson_chi2
-    info ['F-statistic:'] = lambda x: "%#8.4g" % self.fvalue
-    info ['Prob (F-statistic):'] = lambda x: "%#6.3g" % self.f_pvalue
+    info['F-statistic:'] = lambda x: "%#8.4g" % x.fvalue
+    info['Prob (F-statistic):'] = lambda x: "%#6.3g" % x.f_pvalue
     info['Scale:'] = lambda x: "%#8.5g" % x.scale
-    out = collections.OrderedDict()
+    out = OrderedDict()
     for key in info.keys():
         try:
             out[key] = info[key](results)
