@@ -37,7 +37,7 @@ class CheckSETAR(object):
         assert_almost_equal(self.est_beta, self.true_beta, DECIMAL_2)
 
     def test_se(self):
-        pass
+        assert_almost_equal(self.est_se, self.true_se, DECIMAL_3)
 
     def test_delay(self):
         pass
@@ -88,4 +88,14 @@ class TestSunspotsSETAR2(CheckSunspots):
             # Upper Regime
             2.31657, 0.94687, -0.02729, -0.48476, 0.32033, -0.21405, -0.03833,
             0.18431, -0.21549, 0.19081, -0.01986, 0.12535
+        ])
+
+        self.est_se = results.HC0_se
+        self.true_se = np.array([
+            # Lower Regime
+            0.89518, 0.10298, 0.26196, 0.29449, 0.25556, 0.28179, 0.25957,
+            0.21385, 0.23455, 0.25830, 0.20378, 0.12162,
+            # Upper Regime
+            0.55167, 0.07511, 0.11011, 0.09701, 0.08525, 0.08378, 0.07913,
+            0.08159, 0.08961, 0.09258, 0.09305, 0.06588
         ])
