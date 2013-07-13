@@ -5,7 +5,7 @@ Test functions for GEE
 import numpy as np
 import os
 from numpy.testing import assert_almost_equal
-from statsmodels.genmod.generalized_estimating_equations import GEE, setup_gee_multicategorical,\
+from statsmodels.genmod.generalized_estimating_equations import GEE, gee_setup_multicategorical,\
    gee_multicategorical_starting_values
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
@@ -218,11 +218,11 @@ class TestGEE(object):
 
         # Recode as cumulative indicators
         endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
-            setup_gee_multicategorical(endog, exog, group_n, None, None, "ordinal")
+            gee_setup_multicategorical(endog, exog, group_n, None, None, "ordinal")
 
         v = GlobalOddsRatio(nlevel, "ordinal")
 
-        beta = gee_multicategorical_starting_values(endog, nlevel, exog.shape[1], "ordinal")
+        beta = gee_multicategorical_starting_values(endog, exog.shape[1], "ordinal")
 
         md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
         mdf = md.fit(starting_beta = beta)
