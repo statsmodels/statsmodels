@@ -5,7 +5,7 @@ Test functions for GEE
 import numpy as np
 import os
 from numpy.testing import assert_almost_equal
-from statsmodels.genmod.generalized_estimating_equations import GEE, setup_gee_multicategorical,\
+from statsmodels.genmod.generalized_estimating_equations import GEE, gee_setup_multicategorical,\
    gee_multicategorical_starting_values
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
@@ -111,11 +111,11 @@ class TestGEE(object):
     def test_linear(self):
         """
         linear
-        
+
         library(gee)
 
-        Z = read.csv("results/gee_linear_1.csv", header=FALSE)        
-        Y = Z[,2]                                                                                                                  
+        Z = read.csv("results/gee_linear_1.csv", header=FALSE)
+        Y = Z[,2]
         Id = Z[,1]
         X1 = Z[,3]
         X2 = Z[,4]
@@ -124,20 +124,20 @@ class TestGEE(object):
                 tol=1e-8, maxit=100)
         smi = summary(mi)
         u = coefficients(smi)
-          
+
         cfi = paste(u[,1], collapse=",")
         sei = paste(u[,4], collapse=",")
 
-        me = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian, corstr="exchangeable", 
-                tol=1e-8, maxit=100)          
+        me = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian, corstr="exchangeable",
+                tol=1e-8, maxit=100)
         sme = summary(me)
         u = coefficients(sme)
 
         cfe = paste(u[,1], collapse=",")
         see = paste(u[,4], collapse=",")
 
-        sprintf("cf = [[%s],[%s]]", cfi, cfe) 
-        sprintf("se = [[%s],[%s]]", sei, see)                                        
+        sprintf("cf = [[%s],[%s]]", cfi, cfe)
+        sprintf("se = [[%s],[%s]]", sei, see)
         """
 
         family = Gaussian()
@@ -150,7 +150,7 @@ class TestGEE(object):
         cf = [[0.00515978834534064,0.78615903847622,-1.57628929834004,0.782486240348685],
               [0.00516507033680904,0.786253541786879,-1.57666801099155,0.781741984193051]]
         se = [[0.025720523853008,0.0303348838938358,0.0371658992200722,0.0301352423377647],
-              [0.025701817387204,0.0303307060257735,0.0371977050322601,0.0301218562204013]] 
+              [0.025701817387204,0.0303307060257735,0.0371977050322601,0.0301218562204013]]
 
         for j,v in enumerate((vi,ve)):
             md = GEE(endog, exog, group, None, family, v)
@@ -218,11 +218,11 @@ class TestGEE(object):
 
         # Recode as cumulative indicators
         endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
-            setup_gee_multicategorical(endog, exog, group_n, None, None, "ordinal")
+            gee_setup_multicategorical(endog, exog, group_n, None, None, "ordinal")
 
         v = GlobalOddsRatio(nlevel, "ordinal")
 
-        beta = gee_multicategorical_starting_values(endog, nlevel, exog.shape[1], "ordinal")
+        beta = gee_multicategorical_starting_values(endog, exog.shape[1], "ordinal")
 
         md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
         mdf = md.fit(starting_beta = beta)
@@ -245,14 +245,14 @@ class TestGEE(object):
         X4 = Z[,6]
         X5 = Z[,7]
 
-        mi = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson, 
+        mi = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson,
                 corstr="independence", scale.fix=TRUE)
         smi = summary(mi)
         u = coefficients(smi)
         cfi = paste(u[,1], collapse=",")
         sei = paste(u[,4], collapse=",")
 
-        me = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson, 
+        me = gee(Y ~ X1 + X2 + X3 + X4 + X5, id=Id, family=poisson,
                 corstr="exchangeable", scale.fix=TRUE)
         sme = summary(me)
 
