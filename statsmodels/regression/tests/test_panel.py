@@ -143,6 +143,8 @@ class TestWithin(CheckModelResults):
                                 self.res2.resid_groups, 4)
         npt.assert_almost_equal(self.res1.resid_combined,
                                 self.res2.resid_combined, 4)
+        npt.assert_almost_equal(self.res1.resid_overall,
+                                self.res2.resid_overall, 4)
 
     def test_fittedvalues(self):
         npt.assert_almost_equal(self.res1.fittedvalues,
