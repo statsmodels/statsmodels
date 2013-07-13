@@ -238,6 +238,8 @@ within.fittedvalues_stata = np.array([
           38.86697, 42.02142, 54.56273, 55.14452,
           43.20224, 58.15733, 52.98457, 57.06404,
           64.65125, 85.00089, 130.3614, 141.8531   ])
+# from stata - predict, e
+within.resid_overall = within.residuals
 # from stata - predict, ue
 within.resid_combined = np.array([  38.74925, 39.67719, 36.82202, 33.27925,
          30.21229, 33.03794, 34.73547, 41.84658,
