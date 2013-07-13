@@ -154,17 +154,6 @@ class GEE(base.Model):
             The default is Independence.  To specify an exchangeable
             structure varstruct = sm.varstruct.Exchangeable() See
             statsmodels.varstruct.varstruct for more information.
-        endog_type : string
-           Determines whether the response variable is analyzed as-is
-           (endog_type = 'interval'), or is recoded as binary
-           indicators (endog_type = 'ordinal' or 'nominal').  Ordinal
-           values are recoded as cumulative indicators I(endog > s),
-           where s is one of the unique values of endog.  Nominal
-           values are recoded as indicators I(endog = s).  For both
-           ordinal and nominal values, each observed value is recoded
-           as |S|-1 indicators, where S is the set of unique values of
-           endog.  No indicator is created for the greatest value in
-           S.
         offset : array-like
             An offset to be included in the fit.  If provided, must be an
             array whose length is the number of rows in exog.
@@ -206,10 +195,6 @@ class GEE(base.Model):
         # original exog, endog, etc. are self.data.endog, etc.
         super(GEE, self).__init__(endog, exog, groups=groups, time=time,
                                   offset=offset, missing=missing)
-
-        # Handle the endog_type argument
-        if endog_type not in ("interval","ordinal","nominal"):
-            raise ValueError("GEE: `endog_type` must be one of 'interval', 'ordinal', or 'nominal'")
 
         # Handle the family argument
         if family is None:
@@ -264,24 +249,9 @@ class GEE(base.Model):
         if constraint is not None:
             self.constraint.exog_fulltrans_li = self._cluster_list(self.constraint.exog_fulltrans)
 
-        # Need to do additional processing for categorical responses
-        if endog_type != "interval":
-            self.endog_li,self.exog_li,self.offset_li,self.time_li,IY,BTW,nylevel =\
-              _setup_multicategorical(self.endog_li, self.exog_li,
-                                      self.offset_li, self.time_li, endog_type)
-            self.nylevel = nylevel
-            self.IY = IY
-            self.BTW = BTW
-
-        self.endog_type = endog_type
         self.family = family
 
-        # Some of the variance calculations require data or methods from
-        # the gee class.
-        if endog_type == "interval":
-            self.varstruct.initialize(self)
-        else:
-            self.varstruct.initialize(self, IY, BTW)
+        self.varstruct.initialize(self)
 
         # Total sample size
         N = [len(y) for y in self.endog_li]
@@ -499,14 +469,7 @@ class GEE(base.Model):
 
         if starting_beta is None:
 
-            if self.endog_type == "interval":
-                beta = np.zeros(self.exog_li[0].shape[1], dtype=np.float64)
-            else:
-                xnames = ["cat_%d" % k for k in range(1,self.nylevel)] + xnames
-                beta = _categorical_starting_values(self.endog,
-                                                    self.exog_li[0].shape[1],
-                                                    self.nylevel,
-                                                    self.endog_type)
+            beta = np.zeros(self.exog_li[0].shape[1], dtype=np.float64)
 
         else:
             beta = starting_beta.copy()
@@ -722,7 +685,6 @@ class GEEResults(object):
                     ('Method:', ['Generalized Estimating Equations']),
                     ('Family:', [self.model.family.__class__.__name__]),
                     ('Dependence structure:', [self.model.varstruct.__class__.__name__]),
-                    ('Response type:', [self.model.endog_type.title()]),
                     ('Date:', None),
         ]
 
@@ -773,7 +735,7 @@ class GEEResults(object):
 
 
 
-def _setup_multicategorical(endog, exog, offset, time, endog_type):
+def setup_gee_multicategorical(endog, exog, groups, time, offset, endog_type):
     """Restructure nominal or ordinal multicategorical data as binary
     indicators so that they can be analysed using Generalized Estimating
     Equations.
@@ -798,19 +760,21 @@ def _setup_multicategorical(endog, exog, offset, time, endog_type):
 
     Arguments
     ---------
-    endog: List
+    endog: array-like
         A list of 1-dimensional NumPy arrays, giving the response
         values for the clusters
-    exog:  List
+    exog: array-like
         A list of 2-dimensional NumPy arrays, giving the covariate
         data for the clusters.  exog[i] should include an intercept
         for nominal data but no intercept should be included for
         ordinal data.
+    groups : array-like
+        The group label for each observation
+    time : List
+        A list of 1-dimensional NumPy arrays containing time information
     offset : List
         A list of 1-dimensional NumPy arrays containing the offset
         information
-    time : List
-        A list of 1-dimensional NumPy arrays containing time information
     endog_type: string
         Either "ordinal" or "nominal"
 
@@ -819,91 +783,110 @@ def _setup_multicategorical(endog, exog, offset, time, endog_type):
 
     Returns:
     --------
-    endog1:   endog recoded as described above
-    exog1:   exog recoded as described above
-    offset1: offset expanded to fit the recoded data
-    time1:   time expanded to fit the recoded data
-    IY:   a list whose i^th element iy = IY[i] is a sequence of tuples
-          (a,b), where endog[i][a:b] is the subvector of indicators derived
-          from the same ordinal value
-    BTW   a list whose i^th element btw = BTW[i] is a map from cut-point
-          pairs (c,c') to the indices of between-subject pairs derived
-          from the given cut points
+    endog_ex:   endog recoded as described above
+    exog_ex:   exog recoded as described above
+    groups_ex: groups recoded as described above
+    offset_ex: offset expanded to fit the recoded data
+    time_ex:   time expanded to fit the recoded data
+
+    Examples:
+    ---------
+
+    >>> family = Binomial()
+
+    >>> endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
+        setup_gee_multicategorical(endog, exog, group_n, None, None, "ordinal")
+
+    >>> v = GlobalOddsRatio(nlevel, "ordinal")
+
+    >>> nx = exog.shape[1] - nlevel + 1
+    >>> beta = gee_multicategorical_starting_values(endog, nlevel, nx, "ordinal")
+
+    >>> md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
+    >>> mdf = md.fit(starting_beta = beta)
+
 
     """
 
     if endog_type not in ("ordinal", "nominal"):
-        raise ValueError("_setup_multicategorical: `endog_type` must be either "
+        raise ValueError("setup_multicategorical: `endog_type` must be either "
                          "'nominal' or 'categorical'")
 
     # The unique outcomes, except the greatest one.
-    YV = np.concatenate(endog)
-    S = list(set(YV))
+    S = list(set(endog))
     S.sort()
     S = S[0:-1]
 
     ncut = len(S)
 
+    # Default offset
+    if offset is None:
+        offset = np.zeros(len(endog), dtype=np.float64)
+
+    # Default time
+    if time is None:
+        time = np.zeros(len(endog), dtype=np.float64)
+
     # nominal=1, ordinal=0
     endog_type_i = [0,1][endog_type == "nominal"]
 
-    endog1,exog1,offset1,time1,IY,BTW = [],[],[],[],[],[]
-    for y,x,off,ti in zip(endog,exog,offset,time): # Loop over clusters
+    endog_ex = []
+    exog_ex = []
+    groups_ex = []
+    time_ex = []
+    offset_ex = []
 
-        y1,x1,off1,ti1,iy1 = [],[],[],[],[]
-        jj = 0
-        btw = {}
+    jx = 0
+    for y,x,gr,off,ti in zip(endog,exog,groups,offset,time):
 
-        for y2,x2,off2,ti2 in zip(y,x,off,ti): # Loop over data points within a cluster
-            iy2 = []
-            for js,s in enumerate(S): # Loop over thresholds for the indicators
-                if endog_type_i == 0:
-                    y1.append(int(y2 > s))
-                    off1.append(off2)
-                    ti1.append(ti2)
-                    x3 = np.concatenate((np.zeros(ncut, dtype=np.float64), x2))
-                    x3[js] = 1
-                else:
-                    y1.append(int(y2 == s))
-                    xx = np.zeros(ncut, dtype=np.float64)
-                    xx[js] = 1
-                    x3 = np.kronecker(xx, x3)
-                x1.append(x3)
-                iy2.append(jj)
-                jj += 1
-            iy1.append(iy2)
-        endog1.append(np.array(y1))
-        exog1.append(np.array(x1))
-        offset1.append(np.array(off1))
-        time1.append(np.array(ti1))
+        for js,s in enumerate(S): # Loop over thresholds for the indicators
 
-        # Get a map from (c,c') tuples (pairs of points in S) to the
-        # list of all index pairs corresponding to the tuple.
-        btw = {}
-        for i1,v1 in enumerate(iy1):
-            for v2 in iy1[0:i1]:
-                for j1,k1 in enumerate(v1):
-                    for j2,k2 in enumerate(v2):
-                        ii = [(j1,j2),(j2,j1)][j2<j1]
-                        if ii not in btw:
-                            btw[ii] = []
-                        if j1 < j2:
-                            btw[ii].append((k1,k2))
-                        else:
-                            btw[ii].append((k2,k1))
-        for kk in btw.keys():
-            btw[kk] = np.array(btw[kk])
-        BTW.append(btw)
+            # Code as cumulative indicators
+            if endog_type_i == 0:
 
-        # Convert from index list to slice endpoints
-        iy1 = [(min(x),max(x)+1) for x in iy1]
+                endog_ex.append(int(y > s))
+                offset_ex.append(off)
+                groups_ex.append(gr)
+                time_ex.append(ti)
+                xe = np.concatenate((np.zeros(ncut, dtype=np.float64), x))
+                xe[js] = 1
+                exog_ex.append(xe)
 
-        IY.append(iy1)
+            # Code as indicators
+            else:
+                y1.append(int(y2 == s))
+                xx = np.zeros(ncut, dtype=np.float64)
+                xx[js] = 1
+                x3 = np.kronecker(xx, x3)
 
-    return endog1,exog1,offset1,time1,IY,BTW,len(S)+1
+            jx += 1
+
+    endog_ex = np.array(endog_ex)
+    exog_ex = np.array(exog_ex)
+    groups_ex = np.array(groups_ex)
+    time_ex = np.array(time_ex)
+    offset_ex = np.array(offset_ex)
+
+    return endog_ex,exog_ex,groups_ex,time_ex,offset_ex,len(S)+1
 
 
-def _categorical_starting_values(endog, q, nylevel, endog_type):
+def gee_multicategorical_starting_values(endog, n_level, n_exog, endog_type):
+    """
+
+    Parameters:
+    -----------
+    endog : array-like
+       Endogeneous (response) data for the unmodified data.
+
+    n_level : integer
+       The number of levels for the categorical response
+
+    n_exog : integer
+       The number of exogeneous (predictor) variables
+
+    endog_type : string
+       Either "ordinal" or "nominal"
+    """
 
     S = list(set(endog))
     S.sort()
@@ -912,7 +895,7 @@ def _categorical_starting_values(endog, q, nylevel, endog_type):
     if endog_type == "ordinal":
         Pr = np.array([np.mean(endog > s) for s in S])
         bl = np.log(Pr/(1-Pr))
-        beta = np.concatenate((bl, np.zeros(q-nylevel+1)))
+        beta = np.concatenate((bl, np.zeros(n_exog)))
     elif endog_type == "nominal":
         beta = np.zeros(exog[0].shape[1], dtype=np.float64)
 
