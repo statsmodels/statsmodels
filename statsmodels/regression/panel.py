@@ -316,6 +316,10 @@ class PanelLMWithinResults(PanelLMResults):
         return self.resid_groups + self.resid
 
     @cache_readonly
+    def resid_overall(self):
+        return self.resid
+
+    @cache_readonly
     def corr(self): # the correlation of u_i with XB_{it}
         return np.corrcoef(self.resid_groups, self.fittedvalues)[0,1]
 
