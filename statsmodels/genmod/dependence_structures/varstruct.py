@@ -455,12 +455,52 @@ class GlobalOddsRatio(VarStruct):
     Generalized Estimating Equations for Ordinal Data: A Note on Working Correlation Structures
     Thomas Lumley Biometrics Vol. 52, No. 1 (Mar., 1996), pp. 354-361
     http://www.jstor.org/stable/2533173
+
+
+    Notes:
+    ------
+    IY is a list whose i^th element iy = IY[i] is a sequence of tuples
+    (a,b), where endog[i][a:b] is the subvector of indicators derived
+    from the same ordinal value.
+
+    BTW is a dictionary where btw = BTW{group} is a map from cut-point
+    pairs (c,c') to the indices of between-subject pairs derived from
+    the given cut points.
+
     """
 
-    def initialize(self, parent, IY, BTW):
-        super(GlobalOddsRatio, self).initialize(parent)
 
+    def __init__(self, nlevel, endog_type):
+        super(GlobalOddsRatio, self).__init__()
+        self.nlevel = nlevel
+        self.ncut = nlevel - 1
+        self.endog_type = endog_type
+
+
+    def initialize(self, parent):
+
+        self.parent = parent
+
+        IY = []
+        for v in parent.endog_li:
+            jj = np.arange(0, len(v)+1, self.ncut)
+            Q = np.hstack((jj[0:-1][:,None], jj[1:][:,None]))
+            Q = [(jj[k],jj[k+1]) for k in range(len(jj)-1)]
+            IY.append(Q)
         self.IY = IY
+        
+        BTW = []
+        for v in parent.endog_li:
+            m = len(v) / self.ncut
+            jj = np.kron(np.ones(m), np.arange(self.ncut))
+            j1 = np.outer(jj, np.ones(len(jj)))
+            j2 = np.outer(np.ones(len(jj)), jj)
+            btw = {}
+            for k1 in range(self.ncut):
+                for k2 in range(k1+1):
+                    v1,v2 = np.nonzero((j1==k1) & (j2==k2))
+                    btw[(k2,k1)] = np.hstack((v2[:,None], v1[:,None])) 
+            BTW.append(btw)
         self.BTW = BTW
 
         # Initialize the dependence parameters
@@ -569,7 +609,7 @@ class GlobalOddsRatio(VarStruct):
         # Fix E[YY'] for elements that belong to same observation
         for iy in IY:
             ey = EY[iy[0]:iy[1]]
-            if self.parent.endog_type == "ordinal":
+            if self.endog_type == "ordinal":
                 eyr = np.outer(ey, np.ones(len(ey)))
                 eyc = np.outer(np.ones(len(ey)), ey)
                 V[iy[0]:iy[1],iy[0]:iy[1]] = np.where(eyr < eyc, eyr, eyc)
