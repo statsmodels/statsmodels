@@ -199,7 +199,7 @@ class GEE(base.Model):
     """ % {'extra_params' : base._missing_param_doc}
 
     fit_history = None
-    _cached_means = None
+    cached_means = None
 
 
     def __init__(self, endog, exog, groups, time=None, family=None,
@@ -307,7 +307,7 @@ class GEE(base.Model):
         exog = self.exog_li
         offset = self.offset_li
 
-        cached_means = self._cached_means
+        cached_means = self.cached_means
 
         num_clust = len(endog)
         nobs = self.nobs
@@ -348,7 +348,7 @@ class GEE(base.Model):
         # Number of clusters
         num_clust = len(endog)
 
-        _cached_means = self._cached_means
+        cached_means = self.cached_means
 
         mean_deriv = self.family.link.inverse_deriv
         varfunc = self.family.variance
@@ -359,7 +359,7 @@ class GEE(base.Model):
             if len(endog[i]) == 0:
                 continue
 
-            expval, lpr = _cached_means[i]
+            expval, lpr = cached_means[i]
 
             dmat_t = exog[i] * mean_deriv(lpr)[:, None]
             dmat = dmat_t.T
@@ -381,9 +381,9 @@ class GEE(base.Model):
         return update, score
 
 
-    def _update_cached_means(self, beta):
+    def update_cached_means(self, beta):
         """
-        _cached_means should always contain the most recent
+        cached_means should always contain the most recent
         calculation of the cluster-wise mean vectors.  This function
         should be called every time the value of beta is changed, to
         keep the cached means up to date.
@@ -396,7 +396,7 @@ class GEE(base.Model):
 
         mean = self.family.link.inverse
 
-        self._cached_means = []
+        self.cached_means = []
 
         for i in range(num_clust):
 
@@ -406,7 +406,7 @@ class GEE(base.Model):
             lpr = offset[i] + np.dot(exog[i], beta)
             expval = mean(lpr)
 
-            self._cached_means.append((expval, lpr))
+            self.cached_means.append((expval, lpr))
 
 
 
@@ -435,7 +435,7 @@ class GEE(base.Model):
 
         mean_deriv = self.family.link.inverse_deriv
         varfunc = self.family.variance
-        _cached_means = self._cached_means
+        cached_means = self.cached_means
 
         bmat, cmat = 0, 0
         for i in range(num_clust):
@@ -443,7 +443,7 @@ class GEE(base.Model):
             if len(endog[i]) == 0:
                 continue
 
-            expval, lpr = _cached_means[i]
+            expval, lpr = cached_means[i]
 
             dmat_t = exog[i] * mean_deriv(lpr)[:, None]
             dmat = dmat_t.T
@@ -569,12 +569,12 @@ class GEE(base.Model):
 
         beta, xnames = self._starting_beta(starting_beta)
 
-        self._update_cached_means(beta)
+        self.update_cached_means(beta)
 
         for _ in xrange(maxit):
             update, _ = self._beta_update()
             beta += update
-            self._update_cached_means(beta)
+            self.update_cached_means(beta)
             stepsize = np.sqrt(np.sum(update**2))
             self.fit_history['params'].append(beta)
             if stepsize < ctol:
@@ -628,8 +628,8 @@ class GEE(base.Model):
         save_exog_li = self.exog_li
         self.exog_li = self.constraint.exog_fulltrans_li
         import copy
-        save_cached_means = copy.deepcopy(self._cached_means)
-        self._update_cached_means(beta0)
+        save_cached_means = copy.deepcopy(self.cached_means)
+        self.update_cached_means(beta0)
         _, score = self._beta_update()
         _, ncov1, cmat = self._covmat()
         scale = self.estimate_scale()
@@ -662,7 +662,7 @@ class GEE(base.Model):
         bcov = self.constraint.unpack_cov(bcov)
 
         self.exog_li = save_exog_li
-        self._cached_means = save_cached_means
+        self.cached_means = save_cached_means
         self.exog = self.constraint.restore_exog()
 
         return beta, bcov
