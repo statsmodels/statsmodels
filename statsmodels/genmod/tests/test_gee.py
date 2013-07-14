@@ -5,8 +5,8 @@ Test functions for GEE
 import numpy as np
 import os
 from numpy.testing import assert_almost_equal
-from statsmodels.genmod.generalized_estimating_equations import GEE, gee_setup_multicategorical,\
-   gee_multicategorical_starting_values
+from statsmodels.genmod.generalized_estimating_equations import GEE,\
+    gee_setup_multicategorical,gee_ordinal_starting_values
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
@@ -24,7 +24,8 @@ def load_data(fname, icept=True):
     exog = Z[:,2:]
 
     if icept:
-        exog = np.concatenate((np.ones((exog.shape[0],1)), exog), axis=1)
+        exog = np.concatenate((np.ones((exog.shape[0],1)), exog),
+                              axis=1)
 
     return endog,exog,group
 
@@ -106,6 +107,21 @@ class TestGEE(object):
 
         # Check for run-time exceptions in summary
         print mdf.summary()
+
+
+    def test_post_estimation(self):
+
+        family = Gaussian()
+        endog,exog,group = load_data("gee_linear_1.csv")
+
+        ve = Exchangeable()
+
+        md = GEE(endog, exog, group, None, family, ve)
+        mdf = md.fit()
+
+        assert_almost_equal(np.dot(exog, mdf.params), mdf.fittedvalues)
+        assert_almost_equal(endog - np.dot(exog, mdf.params), mdf.resid)
+
 
 
     def test_linear(self):
@@ -214,15 +230,17 @@ class TestGEE(object):
 
         family = Binomial()
 
-        endog,exog,group_n = load_data("gee_ordinal_1.csv", icept=False)
+        endog,exog,group_n = load_data("gee_ordinal_1.csv",
+                                       icept=False)
 
         # Recode as cumulative indicators
         endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
-            gee_setup_multicategorical(endog, exog, group_n, None, None, "ordinal")
+            gee_setup_multicategorical(endog, exog, group_n, None,
+                                       None, "ordinal")
 
         v = GlobalOddsRatio(nlevel, "ordinal")
 
-        beta = gee_multicategorical_starting_values(endog, exog.shape[1], "ordinal")
+        beta = gee_ordinal_starting_values(endog, exog.shape[1])
 
         md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
         mdf = md.fit(starting_beta = beta)
