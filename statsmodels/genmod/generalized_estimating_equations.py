@@ -1,8 +1,28 @@
+"""
+Procedures for fitting marginal regression models to dependent
+data using Generalized Estimating Equations.
+
+References
+----------
+KY Liang and S Zeger. "Longitudinal data analysis using
+generalized linear models". Biometrika (1986) 73 (1): 13-22.
+
+S Zeger and KY Liang. "Longitudinal Data Analysis for Discrete and
+Continuous Outcomes". Biometrics Vol. 42, No. 1 (Mar., 1986),
+pp. 121-130
+
+Xu Guo and Wei Pan (2002). "Small sample performance of the score
+test in GEE".
+http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
+"""
+
+
 import numpy as np
 from scipy import stats
 from statsmodels.tools.decorators import cache_readonly
 import statsmodels.base.model as base
 from statsmodels.genmod import families
+from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import VarStruct
 import pandas
 
@@ -118,89 +138,73 @@ class ParameterConstraint(object):
 
 #TODO multinomial responses
 class GEE(base.Model):
-    """
-    Procedures for fitting marginal regression models to dependent
-    data using Generalized Estimating Equations.
-
-    References
+    __doc__ = """
+    Parameters
     ----------
-    KY Liang and S Zeger. "Longitudinal data analysis using
-    generalized linear models". Biometrika (1986) 73 (1): 13-22.
+    endog : array-like
+        1d array of endogenous response variable.
+    exog : array-like
+        A nobs x k array where `nobs` is the number of
+        observations and `k` is the number of regressors. An
+        interecept is not included by default and should be added
+        by the user. See `statsmodels.tools.add_constant`.
+    groups : array-like
+        A 1d array of length `nobs` containing the cluster labels.
+    time : array-like
+        A 1d array of time (or other index) values.  This is only
+        used if the dependence structure is Autoregressive
+    family : family class instance
+        The default is Gaussian.  To specify the binomial
+        distribution family = sm.family.Binomial() Each family can
+        take a link instance as an argument.  See
+        statsmodels.family.family for more information.
+    varstruct : VarStruct class instance
+        The default is Independence.  To specify an exchangeable
+        structure varstruct = sm.varstruct.Exchangeable() See
+        statsmodels.varstruct.varstruct for more information.
+    offset : array-like
+        An offset to be included in the fit.  If provided, must be
+        an array whose length is the number of rows in exog.
+    constraint : (ndarray, ndarray)
+       If provided, the constraint is a tuple (L, R) such that the
+       model parameters are estimated under the constraint L *
+       param = R, where L is a q x p matrix and R is a
+       q-dimensional vector.  If constraint is provided, a score
+       test is performed to compare the constrained model to the
+       unconstrained model.
+    %(extra_params)s
 
-    S Zeger and KY Liang. "Longitudinal Data Analysis for Discrete and
-    Continuous Outcomes". Biometrics Vol. 42, No. 1 (Mar., 1986),
-    pp. 121-130
+    See also
+    --------
+    statsmodels.families.*
 
-    Xu Guo and Wei Pan (2002). "Small sample performance of the score
-    test in GEE".
-    http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
-    """
+    Notes
+    -----
+    Only the following combinations make sense for family and link ::
+
+                   + ident log logit probit cloglog pow opow nbinom loglog logc
+      Gaussian     |   x    x                        x
+      inv Gaussian |   x    x                        x
+      binomial     |   x    x    x     x       x     x    x           x      x
+      Poission     |   x    x                        x
+      neg binomial |   x    x                        x          x
+      gamma        |   x    x                        x
+
+    Not all of these link functions are currently available.
+
+    Endog and exog are references so that if the data they refer
+    to are already arrays and these arrays are changed, endog and
+    exog will change.
+
+    """ % {'extra_params' : base._missing_param_doc}
 
     fit_history = None
+    _cached_means = None
 
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        varstruct=None, missing='none', offset=None,
                        constraint=None):
-        """
-        Parameters
-        ----------
-        endog : array-like
-            1d array of endogenous response variable.
-        exog : array-like
-            A nobs x k array where `nobs` is the number of
-            observations and `k` is the number of regressors. An
-            interecept is not included by default and should be added
-            by the user. See `statsmodels.tools.add_constant`.
-        groups : array-like
-            A 1d array of length `nobs` containing the cluster labels.
-        time : array-like
-            A 1d array of time (or other index) values.  This is only
-            used if the dependence structure is Autoregressive
-        family : family class instance
-            The default is Gaussian.  To specify the binomial
-            distribution family = sm.family.Binomial() Each family can
-            take a link instance as an argument.  See
-            statsmodels.family.family for more information.
-        varstruct : VarStruct class instance
-            The default is Independence.  To specify an exchangeable
-            structure varstruct = sm.varstruct.Exchangeable() See
-            statsmodels.varstruct.varstruct for more information.
-        offset : array-like
-            An offset to be included in the fit.  If provided, must be
-            an array whose length is the number of rows in exog.
-        constraint : (ndarray, ndarray)
-           If provided, the constraint is a tuple (L, R) such that the
-           model parameters are estimated under the constraint L *
-           param = R, where L is a q x p matrix and R is a
-           q-dimensional vector.  If constraint is provided, a score
-           test is performed to compare the constrained model to the
-           unconstrained model.
-        %(extra_params)s
-
-        See also
-        --------
-        statsmodels.families.*
-
-        Notes
-        -----
-        Only the following combinations make sense for family and link ::
-
-                       + ident log logit probit cloglog pow opow nbinom loglog logc
-          Gaussian     |   x    x                        x
-          inv Gaussian |   x    x                        x
-          binomial     |   x    x    x     x       x     x    x           x      x
-          Poission     |   x    x                        x
-          neg binomial |   x    x                        x          x
-          gamma        |   x    x                        x
-
-        Not all of these link functions are currently available.
-
-        Endog and exog are references so that if the data they refer
-        to are already arrays and these arrays are changed, endog and
-        exog will change.
-
-        """ % {'extra_params' : base._missing_param_doc}
 
         # Pass groups, time, and offset so they are processed for
         # missing data along with endog and exog.  Calling super
@@ -253,7 +257,7 @@ class GEE(base.Model):
 
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the clusters.
-        group_labels = np.unique(groups)
+        group_labels = list(set(groups))
         group_labels.sort()
         row_indices = {s: [] for s in group_labels}
         for i in range(len(self.endog)):
@@ -467,24 +471,45 @@ class GEE(base.Model):
         return robust_covariance, naive_covariance, cmat
 
 
-    def predict(self, exog=None, linear=False):
+    def predict(self, params, exog=None, offset=None, linear=False):
+        """
+        Return predicted values for a design matrix
 
-        if exog is None and linear:
-            fitted = np.dot(self.model.exog, self.params)
-            fitted = self.model.family.link(fitted)
-        elif exog is None and not linear:
-            fitted = np.dot(self.model.exog, self.params)
-        elif linear:
-            fitted = self.model.family.link(np.dot(exog, self.params))
-        elif not linear:
-            fitted = np.dot(exog, self.params)
+        Parameters
+        ----------
+        params : array-like
+            Parameters / coefficients of a GLM.
+        exog : array-like, optional
+            Design / exogenous data. If exog is None, model exog is
+            used.
+        offset : array-like, optional
+            Offset for exog if provided.  If offset is None, model
+            offset is used.
+        linear : bool
+            If True, returns the linear predicted values.  If False,
+            returns the value of the inverse of the model's link
+            function at the linear predicted values.
+
+        Returns
+        -------
+        An array of fitted values
+        """
+
+        if exog is None:
+            fitted = self.offset + np.dot(self.exog, params)
+        else:
+            fitted = offset + np.dot(exog, params)
+
+        if not linear:
+            fitted = self.family.link(fitted)
 
         return fitted
 
 
     def _starting_beta(self, starting_beta):
         """
-        Returns a starting value for beta and a list of variable names.
+        Returns a starting value for beta and a list of variable
+        names.
 
         Parameters:
         -----------
@@ -562,12 +587,13 @@ class GEE(base.Model):
             beta, bcov = self._handle_constraint(beta, bcov)
 
         beta = pandas.Series(beta, xnames)
+        scale = self.estimate_scale()
 
-        GR = GEEResults(self, beta, bcov)
+        results = GEEResults(self, beta, bcov/scale, scale)
 
-        GR.fit_history = self.fit_history
+        results.fit_history = self.fit_history
 
-        return GR
+        return results
 
 
 
@@ -586,10 +612,10 @@ class GEE(base.Model):
         Returns:
         --------
         beta : array-like
-            The input parameter vector beta, expanded to the 
+            The input parameter vector beta, expanded to the
             coordinate system of the full model
         bcov : array-like
-            The input covariance matrix bcov, expanded to the 
+            The input covariance matrix bcov, expanded to the
             coordinate system of the full model
         """
 
@@ -607,7 +633,7 @@ class GEE(base.Model):
         _, score = self._beta_update()
         _, ncov1, cmat = self._covmat()
         scale = self.estimate_scale()
-        U2 = score[len(beta):] / scale
+        score2 = score[len(beta):] / scale
 
         amat = np.linalg.inv(ncov1)
 
@@ -619,16 +645,16 @@ class GEE(base.Model):
 
         score_cov = bmat_22 - \
             np.dot(amat_12.T, np.linalg.solve(amat_11, bmat_12))
-        score_cov -= np.dot(bmat_12.T, 
+        score_cov -= np.dot(bmat_12.T,
                         np.linalg.solve(amat_11, amat_12))
         score_cov += np.dot(amat_12.T,
                             np.dot(np.linalg.solve(amat_11, bmat_11),
                                    np.linalg.solve(amat_11, amat_12)))
 
         from scipy.stats.distributions import chi2
-        self.score_statistic = np.dot(U2,
-                                  np.linalg.solve(score_cov, U2))
-        self.score_df = len(U2)
+        self.score_statistic = np.dot(score2,
+                                  np.linalg.solve(score_cov, score2))
+        self.score_df = len(score2)
         self.score_pvalue = 1 -\
                  chi2.cdf(self.score_statistic, self.score_df)
 
@@ -651,40 +677,31 @@ class GEE(base.Model):
 
 
 
-class GEEResults(object):
+class GEEResults(base.LikelihoodModelResults):
 
-    fit_history = None
+    def __init__(self, model, params, cov_params, scale):
 
-    def __init__(self, model, params, cov_params):
-
-        self.model = model
-        self.params = params
-        self.cov_params = cov_params
+        super(GEEResults, self).__init__(model, params,
+                normalized_cov_params=cov_params, scale=scale)
 
 
     @cache_readonly
     def standard_errors(self):
-        return np.sqrt(np.diag(self.cov_params))
-
-    @cache_readonly
-    def bse(self):
-        return np.sqrt(np.diag(self.cov_params))
-
-    @cache_readonly
-    def tvalues(self):
-        return self.params / self.standard_errors
-
-    @cache_readonly
-    def pvalues(self):
-        dist = stats.norm
-        return 2*dist.cdf(-np.abs(self.tvalues))
+        return np.sqrt(np.diag(self.cov_params()))
 
     @cache_readonly
     def resid(self):
+        """
+        Returns the residuals, the endogeneous data minus the fitted
+        values from the model.
+        """
         return self.model.endog - self.fittedvalues
 
     @cache_readonly
     def fittedvalues(self):
+        """
+        Returns the fitted values from the model.
+        """
         return self.model.family.link.inverse(np.dot(self.model.exog,
                                                      self.params))
 
@@ -763,7 +780,7 @@ class GEEResults(object):
                      ('Min. cluster size', [min(NY)]),
                      ('Max. cluster size', [max(NY)]),
                      ('Mean cluster size', ["%.1f" % np.mean(NY)]),
-                     ('No. iterations', ['%d' % len(self.fit_history)]),
+                     ('No. iterations', ['%d' % len(self.model.fit_history)]),
                      ('Time:', None),
                  ]
 
@@ -944,7 +961,7 @@ def gee_setup_multicategorical(endog, exog, groups, time, offset,
     return endog_ex, exog_ex, groups_ex, time_ex, offset_ex, len(endog_values)
 
 
-def gee_multicategorical_starting_values(endog, n_exog, endog_type):
+def gee_ordinal_starting_values(endog, n_exog):
     """
 
     Parameters:
@@ -954,21 +971,33 @@ def gee_multicategorical_starting_values(endog, n_exog, endog_type):
 
     n_exog : integer
        The number of exogeneous (predictor) variables
-
-    endog_type : string
-       Either "ordinal" or "nominal"
     """
 
     endog_values = list(set(endog))
     endog_values.sort()
     endog_cuts = endog_values[0:-1]
 
-    if endog_type == "ordinal":
-        prob = np.array([np.mean(endog > s) for s in endog_cuts])
-        prob_logit = np.log(prob/(1-prob))
-        beta = np.concatenate((prob_logit, np.zeros(n_exog)))
-    elif endog_type == "nominal":
-        pass
-        #beta = np.zeros(exog[0].shape[1], dtype=np.float64)
+    prob = np.array([np.mean(endog > s) for s in endog_cuts])
+    prob_logit = np.log(prob/(1-prob))
+    beta = np.concatenate((prob_logit, np.zeros(n_exog)))
 
     return beta
+
+
+def gee_nominal_starting_values(endog, n_exog):
+    """
+
+    Parameters:
+    -----------
+    endog : array-like
+       Endogeneous (response) data for the unmodified data.
+
+    n_exog : integer
+       The number of exogeneous (predictor) variables
+    """
+
+    endog_values = list(set(endog))
+    endog_values.sort()
+    endog_cuts = endog_values[0:-1]
+
+    raise NotImplementedError
