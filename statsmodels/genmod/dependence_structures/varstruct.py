@@ -114,7 +114,7 @@ class Exchangeable(VarStruct):
 
         varfunc = self.parent.family.variance
 
-        _cached_means = self.parent._cached_means
+        cached_means = self.parent.cached_means
 
         residsq_sum, scale_inv, nterm = 0, 0, 0
         for i in range(num_clust):
@@ -122,7 +122,7 @@ class Exchangeable(VarStruct):
             if len(endog[i]) == 0:
                 continue
 
-            expval, _ = _cached_means[i]
+            expval, _ = cached_means[i]
 
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / sdev
@@ -283,7 +283,7 @@ class Nested(VarStruct):
         if self.designx is None:
             self._compute_design()
 
-        _cached_means = self.parent._cached_means
+        cached_means = self.parent.cached_means
 
         varfunc = self.parent.family.variance
 
@@ -294,7 +294,7 @@ class Nested(VarStruct):
             if len(endog[i]) == 0:
                 continue
 
-            expval, _ = _cached_means[i]
+            expval, _ = cached_means[i]
 
             sdev = np.sqrt(varfunc(expval))
             resid = (self.parent.endog[i] - expval) / sdev
@@ -398,7 +398,7 @@ class Autoregressive(VarStruct):
 
         varfunc = self.parent.family.variance
 
-        _cached_means = self.parent._cached_means
+        cached_means = self.parent.cached_means
 
         # Weights
         var = (1 - self.dparams**(2 * designx)) / (1 - self.dparams**2)
@@ -411,7 +411,7 @@ class Autoregressive(VarStruct):
             if len(endog[i]) == 0:
                 continue
 
-            expval, _ = _cached_means[i]
+            expval, _ = cached_means[i]
 
             sdev = np.sqrt(scale * varfunc(expval))
             resid = (endog[i] - expval) / sdev
@@ -436,6 +436,9 @@ class Autoregressive(VarStruct):
         while f_ctr > f_lft:
             b_ctr /= 2
             f_ctr = fitfunc(b_ctr)
+            if b_ctr < 1e-8:
+                self.dparams = 0
+                return
 
         # Right bracket point
         b_rgt, f_rgt = 0.75, fitfunc(0.75)
@@ -446,9 +449,8 @@ class Autoregressive(VarStruct):
                 raise ValueError(
                     "Autoregressive: unable to find right bracket")
 
-        from scipy.optimize import minimize_scalar
-        mnr = minimize_scalar(fitfunc, [b_lft, b_ctr, b_rgt])
-        self.dparams = mnr.x
+        from scipy.optimize import brent
+        self.dparams = brent(fitfunc, brack=[b_lft, b_ctr, b_rgt])
 
 
     def variance_matrix(self, endog_expval, index):
@@ -663,7 +665,7 @@ class GlobalOddsRatio(VarStruct):
 
         endog = self.parent.endog_li
         cpp = self.cpp
-        _cached_means = self.parent._cached_means
+        cached_means = self.parent.cached_means
 
         num_clust = len(endog)
 
@@ -681,7 +683,7 @@ class GlobalOddsRatio(VarStruct):
             if len(endog[i]) == 0:
                 continue
 
-            endog_expval, _ = _cached_means[i]
+            endog_expval, _ = cached_means[i]
 
             emat_11 = self.get_eyy(endog_expval, i)
             emat_10 = endog_expval[:, None] - emat_11
