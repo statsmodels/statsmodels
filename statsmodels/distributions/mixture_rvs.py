@@ -118,9 +118,9 @@ class MixtureDistribution(object):
             scale = kwargs[i].get('scale',1)
             args = kwargs[i].get('args',())
             if i == 0:  #assume all broadcast the same as the first dist
-                pdf_ = prob[i] * dist[i].pdf(x, args=args, loc=loc, scale=scale)
+                pdf_ = prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
             else:
-                pdf_ += prob[i] * dist[i].pdf(x, args=args, loc=loc, scale=scale)
+                pdf_ += prob[i] * dist[i].pdf(x, *args, loc=loc, scale=scale)
         return pdf_
 
     def cdf(self, x, prob, dist, kwargs=None):
@@ -164,9 +164,9 @@ class MixtureDistribution(object):
             scale = kwargs[i].get('scale',1)
             args = kwargs[i].get('args',())
             if i == 0:  #assume all broadcast the same as the first dist
-                cdf_ = prob[i] * dist[i].cdf(x, args=args, loc=loc, scale=scale)
+                cdf_ = prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
             else:
-                cdf_ += prob[i] * dist[i].cdf(x, args=args, loc=loc, scale=scale)
+                cdf_ += prob[i] * dist[i].cdf(x, *args, loc=loc, scale=scale)
         return cdf_
 
 

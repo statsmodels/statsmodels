@@ -1455,6 +1455,94 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         smry.tables.append(roots_table)
         return smry
 
+    def summary2(self, title=None, alpha=.05, float_format="%.4f"):
+        """Experimental summary function for ARIMA Results
+
+        Parameters
+        -----------
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary
+
+        Returns
+        -------
+        smry : Summary instance
+            This holds the summary table and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary2.Summary : class to hold summary
+            results
+
+        """
+        # get sample TODO: make better sample machinery for estimation
+        k_diff = getattr(self, 'k_diff', 0)
+        if 'mle' in self.model.method:
+            start = k_diff
+        else:
+            start = k_diff + self.k_ar
+        if self.data.dates is not None:
+            dates = self.data.dates
+            sample = [dates[start].strftime('%m-%d-%Y')]
+            sample += [dates[-1].strftime('%m-%d-%Y')]
+        else:
+            sample = str(start) + ' - ' + str(len(self.data.orig_endog))
+
+        k_ar, k_ma = self.k_ar, self.k_ma
+        if not k_diff:
+            order = str((k_ar, k_ma))
+        else:
+            order = str((k_ar, k_diff, k_ma))
+
+        # Roots table
+        if k_ma and k_ar:
+            arstubs = ["AR.%d" % i for i in range(1, k_ar + 1)]
+            mastubs = ["MA.%d" % i for i in range(1, k_ma + 1)]
+            stubs = arstubs + mastubs
+            roots = np.r_[self.arroots, self.maroots]
+            freq = np.r_[self.arfreq, self.mafreq]
+        elif k_ma:
+            mastubs = ["MA.%d" % i for i in range(1, k_ma + 1)]
+            stubs = mastubs
+            roots = self.maroots
+            freq = self.mafreq
+        elif k_ar:
+            arstubs = ["AR.%d" % i for i in range(1, k_ar + 1)]
+            stubs = arstubs
+            roots = self.arroots
+            freq = self.arfreq
+        modulus = np.abs(roots)
+        data = np.column_stack((roots.real, roots.imag, modulus, freq))
+        data = pd.DataFrame(data)
+        data.columns = ['Real', 'Imaginary', 'Modulus', 'Frequency']
+        data.index = stubs
+
+        # Summary
+        from statsmodels.iolib import summary2
+        smry = summary2.Summary()
+
+        # Model info
+        model_info = summary2.summary_model(self)
+        model_info['Method:'] = self.model.method
+        model_info['Sample:'] = sample[0]
+        model_info['   '] = sample[-1]
+        model_info['S.D. of innovations:'] = "%#5.3f" % self.sigma2**.5
+        model_info['HQIC:'] = "%#5.3f" % self.hqic
+        model_info['No. Observations:'] = str(len(self.model.endog))
+
+        # Parameters
+        params = summary2.summary_params(self)
+        smry.add_dict(model_info)
+        smry.add_df(params, float_format=float_format)
+        smry.add_df(data, float_format="%17.4f")
+        smry.add_title(results=self, title=title)
+
+        return smry
 
 class ARMAResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}

@@ -186,15 +186,18 @@ class LikelihoodModel(Model):
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg', or 'ncg'}
+        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping'}
             Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
             'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
-            Powell's method, 'cg' for conjugate gradient, or 'ncg' for Newton-
-            conjugate gradient.  `method` determines which solver from
-            scipy.optimize is used.  The explicit arguments in `fit` are
-            passed to the solver.  Each solver has several optional arguments
-            that are not the same across solvers.  See the notes section below
-            (or scipy.optimize) for the available arguments.
+            Powell's method, 'cg' for conjugate gradient, 'ncg' for Newton-
+            conjugate gradient or 'basinhopping' for global basin-hopping
+            solver, if available. `method` determines which solver from
+            scipy.optimize is used. The explicit arguments in `fit` are passed
+            to the solver, with the exception of the basin-hopping solver. Each
+            solver has several optional arguments that are not the same across
+            solvers. See the notes section below (or scipy.optimize) for the
+            available arguments and for the list of explicit arguments that the
+            basin-hopping solver supports..
         maxiter : int
             The maximum number of iterations to perform.
         full_output : bool
@@ -215,6 +218,9 @@ class LikelihoodModel(Model):
 
         Notes
         -----
+        The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
+        explicit arguments.
+
         Optional arguments for the solvers (available in Results.mle_settings):
 
             'newton'
@@ -266,13 +272,39 @@ class LikelihoodModel(Model):
                     Maximum number of function evaluations to make.
                 start_direc : ndarray
                     Initial direction set.
-                """
+            'basinhopping'
+                niter : integer
+                    The number of basin hopping iterations.
+                niter_success : integer
+                    Stop the run if the global minimum candidate remains the
+                    same for this number of iterations.
+                T : float
+                    The "temperature" parameter for the accept or reject
+                    criterion. Higher "temperatures" mean that larger jumps
+                    in function value will be accepted. For best results
+                    `T` should be comparable to the separation (in function
+                    value) between local minima.
+                stepsize : float
+                    Initial step size for use in the random displacement.
+                interval : integer
+                    The interval for how often to update the `stepsize`.
+                minimizer : dict
+                    Extra keyword arguments to be passed to the minimizer
+                    `scipy.optimize.minimize()`, for example 'method' - the
+                    minimization method (e.g. 'L-BFGS-B'), or 'tol' - the
+                    tolerance for termination. Other arguments are mapped from
+                    explicit argument of `fit`:
+                      - `args` <- `fargs`
+                      - `jac` <- `score`
+                      - `hess` <- `hess`
+        """
         # Extract kwargs specific to fit_regularized calling fit
         extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
         cov_params_func = kwargs.setdefault('cov_params_func', None)
 
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg']
+        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg',
+                   'basinhopping']
         methods += extra_fit_funcs.keys()
         if start_params is None:
             if hasattr(self, 'start_params'):
@@ -307,7 +339,8 @@ class LikelihoodModel(Model):
             'bfgs': _fit_mle_bfgs,
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
-            'powell': _fit_mle_powell
+            'powell': _fit_mle_powell,
+            'basinhopping': _fit_mle_basinhopping,
         }
         if extra_fit_funcs:
             fit_funcs.update(extra_fit_funcs)
@@ -550,6 +583,40 @@ def _fit_mle_powell(f, score, start_params, fargs, kwargs, disp=True,
 
     return xopt, retvals
 
+def _fit_mle_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
+                          maxiter=100, callback=None, retall=False,
+                          full_output=True, hess=None):
+    if not 'basinhopping' in vars(optimize):
+        msg = 'basinhopping solver is not available, use e.g. bfgs instead!'
+        raise ValueError(msg)
+
+    from copy import copy
+    kwargs = copy(kwargs)
+    niter = kwargs.setdefault('niter', 100)
+    niter_success = kwargs.setdefault('niter_success', None)
+    T = kwargs.setdefault('T', 1.0)
+    stepsize = kwargs.setdefault('stepsize', 0.5)
+    interval = kwargs.setdefault('interval', 50)
+    minimizer_kwargs = kwargs.get('minimizer', {})
+    minimizer_kwargs['args'] = fargs
+    minimizer_kwargs['jac'] = score
+    minimizer_kwargs['hess'] = hess
+
+    res = optimize.basinhopping(f, start_params,
+                                minimizer_kwargs=minimizer_kwargs,
+                                niter=niter, niter_success=niter_success,
+                                T=T, stepsize=stepsize, disp=disp,
+                                callback=callback, interval=interval)
+    if full_output:
+        xopt, fopt, niter, fcalls = res.x, res.fun, res.nit, res.nfev
+        converged = 'completed successfully' in res.message[0]
+        retvals = {'fopt': fopt, 'iterations': niter,
+                   'fcalls': fcalls, 'converged': converged}
+
+    else:
+        xopt = None
+
+    return xopt, retvals
 
 #TODO: the below is unfinished
 class GenericLikelihoodModel(LikelihoodModel):
@@ -600,7 +667,7 @@ class GenericLikelihoodModel(LikelihoodModel):
 
     """
     def __init__(self, endog, exog=None, loglike=None, score=None,
-                 hessian=None, missing='none'):
+                 hessian=None, missing='none', extra_params_names=None, **kwds):
     # let them be none in case user wants to use inheritance
         if not loglike is None:
             self.loglike = loglike
@@ -610,14 +677,33 @@ class GenericLikelihoodModel(LikelihoodModel):
             self.hessian = hessian
         self.confint_dist = stats.norm
 
+        self.__dict__.update(kwds)
+
         # TODO: data structures?
+
+        #TODO temporary solution, force approx normal
+        #self.df_model = 9999
+        #somewhere: CacheWriteWarning: The attribute 'df_model' cannot be overwritten
+        super(GenericLikelihoodModel, self).__init__(endog, exog, missing=missing)
 
         # this won't work for ru2nmnl, maybe np.ndim of a dict?
         if exog is not None:
             #try:
-            self.nparams = self.df_model = (exog.shape[1]
-                                            if np.ndim(exog) == 2 else 1)
-        super(GenericLikelihoodModel, self).__init__(endog, exog, missing=missing)
+            self.nparams = (exog.shape[1] if np.ndim(exog) == 2 else 1)
+
+        if extra_params_names is not None:
+            self._set_extra_params_names(extra_params_names)
+
+    def _set_extra_params_names(self, extra_params_names):
+        # check param_names
+        if extra_params_names is not None:
+            if self.exog is not None:
+                self.exog_names.extend(extra_params_names)
+            else:
+                self.data.xnames = extra_params_names
+
+        self.nparams = len(self.exog_names)
+
 
     #this is redundant and not used when subclassing
     def initialize(self):
@@ -628,6 +714,17 @@ class GenericLikelihoodModel(LikelihoodModel):
         else:   # can use approx_hess_p if we have a gradient
             if not self.hessian:
                 pass
+        #Initialize is called by
+        #statsmodels.model.LikelihoodModel.__init__
+        #and should contain any preprocessing that needs to be done for a model.
+        from statsmodels.tools import tools
+        if self.exog is not None:
+            self.df_model = float(tools.rank(self.exog) - 1)  # assumes constant
+            self.df_resid = float(self.exog.shape[0] - tools.rank(self.exog))
+        else:
+            self.df_model = np.nan
+            self.df_resid = np.nan
+        super(GenericLikelihoodModel, self).initialize()
 
     def expandparams(self, params):
         '''
@@ -676,14 +773,17 @@ class GenericLikelihoodModel(LikelihoodModel):
         '''
         Gradient of log-likelihood evaluated at params
         '''
-        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
+        kwds = {}
+        kwds.setdefault('centered', True)
+        return approx_fprime(params, self.loglike, **kwds).ravel()
 
     def jac(self, params, **kwds):
         '''
         Jacobian/Gradient of log-likelihood evaluated at params for each
         observation.
         '''
-        kwds.setdefault('epsilon', 1e-4)
+        #kwds.setdefault('epsilon', 1e-4)
+        kwds.setdefault('centered', True)
         return approx_fprime(params, self.loglikeobs, **kwds)
 
     def hessian(self, params):
@@ -714,54 +814,21 @@ class GenericLikelihoodModel(LikelihoodModel):
                             full_output=full_output,
                             disp=disp, callback=callback, **kwargs)
         genericmlefit = GenericLikelihoodModelResults(self, mlefit)
+
+        #amend param names
+        exog_names = [] if (self.exog_names is None) else self.exog_names
+        k_miss = len(exog_names) - len(mlefit.params)
+        if not k_miss == 0:
+            if k_miss < 0:
+                self._set_extra_params_names(
+                                         ['par%d' % i for i in range(-k_miss)])
+            else:
+                # I don't want to raise after we have already fit()
+                import warnings
+                warnings.warn(UserWarning, 'more exog_names than parameters')
+
         return genericmlefit
     #fit.__doc__ += LikelihoodModel.fit.__doc__
-
-    #------------------------------
-    #TODO: the following have been moved to the result mixin class
-    #      check if anything is still using them from here
-
-    @cache_readonly
-    def jacv(self):
-        if not hasattr(self, '_results'):
-            raise ValueError('need to call fit first')
-        return self.jac(self._results.params)
-
-    @cache_readonly
-    def hessv(self):
-        if not hasattr(self, '_results'):
-            raise ValueError('need to call fit first')
-        return self.hessian(self._results.params)
-
-    # the following could be moved to results
-    @cache_readonly
-    def covjac(self):
-        '''
-        covariance of parameters based on loglike outer product of jacobian
-        '''
-##        if not hasattr(self, '_results'):
-##            raise ValueError('need to call fit first')
-##            #self.fit()
-##        self.jacv = jacv = self.jac(self._results.params)
-        jacv = self.jacv
-        return np.linalg.inv(np.dot(jacv.T, jacv))
-
-    @cache_readonly
-    def covjhj(self):
-        jacv = self.jacv
-##        hessv = self.hessv
-##        hessinv = np.linalg.inv(hessv)
-##        self.hessinv = hessinv
-        hessinv = self._results.cov_params()
-        return np.dot(hessinv, np.dot(np.dot(jacv.T, jacv), hessinv))
-
-    @cache_readonly
-    def bsejhj(self):
-        return np.sqrt(np.diag(self.covjhj))
-
-    @cache_readonly
-    def bsejac(self):
-        return np.sqrt(np.diag(self.covjac))
 
 
 class Results(object):
@@ -783,7 +850,8 @@ class Results(object):
     def initialize(self, model, params, **kwd):
         self.params = params
         self.model = model
-        self.k_constant = model.k_constant
+        if hasattr(model, 'k_constant'):
+            self.k_constant = model.k_constant
 
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
@@ -810,6 +878,7 @@ class Results(object):
             exog = dmatrix(self.model.data.orig_exog.design_info.builder,
                     exog)
         return self.model.predict(self.params, exog, *args, **kwargs)
+
 
 #TODO: public method?
 class LikelihoodModelResults(Results):
@@ -1684,12 +1753,85 @@ class GenericLikelihoodModelResults(LikelihoodModelResults, ResultMixin):
 #        super(DiscreteResults, self).__init__(model, params,
 #                np.linalg.inv(-hessian), scale=1.)
         self.model = model
-        #self.df_model = model.df_model
-        #self.df_resid = model.df_resid
         self.endog = model.endog
         self.exog = model.exog
         self.nobs = model.endog.shape[0]
+
+        # TODO: possibly move to model.fit()
+        #       and outsource together with patching names
+        if hasattr(model, 'df_model'):
+            self.df_model = model.df_model
+        else:
+            self.df_model = len(mlefit.params)
+            # retrofitting the model, used in t_test TODO: check design
+            self.model.df_model = self.df_model
+
+        if hasattr(model, 'df_resid'):
+            self.df_resid = model.df_resid
+        else:
+            self.df_resid = self.endog.shape[0] - self.df_model
+            # retrofitting the model, used in t_test TODO: check design
+            self.model.df_resid = self.df_resid
+
         self._cache = resettable_cache()
         self.__dict__.update(mlefit.__dict__)
 
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
 
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', None),
+                    ('Method:', ['Maximum Likelihood']),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. Observations:', None),
+                    ('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
+                    ('Df Model:', None), #[self.df_model])
+                    ]
+
+        top_right = [#('R-squared:', ["%#8.3f" % self.rsquared]),
+                     #('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+                     #('F-statistic:', ["%#8.4g" % self.fvalue] ),
+                     #('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+                     ('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
+                     ('AIC:', ["%#8.4g" % self.aic]),
+                     ('BIC:', ["%#8.4g" % self.bic])
+                     ]
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Results"
+
+        #create summary table instance
+        from statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                          yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                             use_t=False)
+
+        return smry

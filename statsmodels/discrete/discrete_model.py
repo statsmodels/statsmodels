@@ -138,7 +138,7 @@ class DiscreteModel(base.LikelihoodModel):
         """
         raise NotImplementedError
 
-    def _check_perfect_pred(self, params):
+    def _check_perfect_pred(self, params, *args):
         endog = self.endog
         fittedvalues = self.cdf(np.dot(self.exog, params[:self.exog.shape[1]]))
         if (self.raise_on_perfect_prediction and
@@ -2258,6 +2258,46 @@ class DiscreteResults(base.LikelihoodModelResults):
         #                   title="")
         return smry
 
+    def summary2(self, yname=None, xname=None, title=None, alpha=.05,
+            float_format="%.4f"):
+        """Experimental function to summarize regression results
+
+        Parameters
+        -----------
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+        # Summary
+        from statsmodels.iolib import summary2
+        smry = summary2.Summary()
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title)
+
+        return smry
+
+
+
 class CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {
                     "one_line_description" : "A results class for count data",
@@ -2611,6 +2651,48 @@ class MultinomialResults(DiscreteResults):
         # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
         return (self.model.wendog.argmax(1) !=
                 self.predict().argmax(1)).astype(float)
+
+    def summary2(self, alpha=0.05, float_format="%.4f"):
+        """Experimental function to summarize regression results
+
+        Parameters
+        -----------
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary2.Summary : class to hold summary
+            results
+
+        """
+
+        from statsmodels.iolib import summary2
+        smry = summary2.Summary()
+        smry.add_dict(summary2.summary_model(self))
+        # One data frame per value of endog
+        eqn = self.params.shape[1]
+        confint = self.conf_int(alpha)
+        for i in range(eqn):
+            coefs = summary2.summary_params(self, alpha, self.params[:,i],
+                    self.bse[:,i], self.tvalues[:,i], self.pvalues[:,i],
+                    confint[i])
+            # Header must show value of endog
+            level_str =  self.model.endog_names + ' = ' + str(i)
+            coefs[level_str] = coefs.index
+            coefs = coefs.ix[:,[-1,0,1,2,3,4,5]]
+            smry.add_df(coefs, index=False, header=True, float_format=float_format)
+            smry.add_title(results=self)
+        return smry
+
 
 class L1MultinomialResults(MultinomialResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
