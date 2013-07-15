@@ -275,6 +275,7 @@ class Nested(VarStruct):
     def update(self, beta):
 
         endog = self.parent.endog_li
+        offset = self.parent.offset_li
 
         num_clust = len(endog)
         nobs = self.parent.nobs
@@ -297,7 +298,7 @@ class Nested(VarStruct):
             expval, _ = cached_means[i]
 
             sdev = np.sqrt(varfunc(expval))
-            resid = (self.parent.endog[i] - expval) / sdev
+            resid = (endog[i] - offset[i] - expval) / sdev
 
             ngrp = len(resid)
             for j1 in range(ngrp):
@@ -316,6 +317,8 @@ class Nested(VarStruct):
 
         self.vcomp_coeff = np.clip(vcomp_coeff, 0, np.inf)
         self.scale_inv = scale_inv
+
+        self.dparams = self.vcomp_coeff.copy()
 
 
     def variance_matrix(self, expval, index):
@@ -346,11 +349,27 @@ class Nested(VarStruct):
 
 class Autoregressive(VarStruct):
     """
-    An autoregressive working dependence structure.
+    An autoregressive working dependence structure.  The dependence is
+    defined in terms of the `time` component of the parent GEE class.
+    Time represents a potentially multidimensional index from which
+    distances between pairs of obsercations can be determined.  The
+    correlation between two observations in the same cluster is
+    dparams**distance, where `dparams` is the autocorrelation
+    parameter to be estimated, and distance is the distance between
+    the two observations, calculated from their corresponding time
+    values.  `time` is stored as an n_obs x k matrix, where `k`
+    represents the number of dimensions in the time index.
 
     The autocorrelation parameter is estimated using weighted
     nonlinear least squares, regressing each value within a cluster on
     each preceeding value within the same cluster.
+
+    Parameters
+    ----------
+    dist_func: function from R^k x R^k to R^+, optional
+       A function that takes the time vector for two observations and
+       computed the distance between the two observations based on the
+       time vector.
 
     Reference
     ---------
@@ -363,6 +382,18 @@ class Autoregressive(VarStruct):
     dparams = 0
 
     designx = None
+
+    # The function for determining distances based on time
+    dist_func = None
+
+
+    def __init__(self, dist_func=None):
+
+        if dist_func is None:
+            self.dist_func = lambda x, y: np.abs(x - y).sum()
+        else:
+            self.dist_func = dist_func
+
 
     def update(self, beta):
 
@@ -386,10 +417,11 @@ class Autoregressive(VarStruct):
                 if ngrp == 0:
                     continue
 
+                # Loop over pairs of observations within a cluster
                 for j1 in range(ngrp):
                     for j2 in range(j1):
-                        designx.append(np.abs(time[i][j1] -
-                                              time[i][j2]))
+                        designx.append(self.dist_func(time[i][j1, :],
+                                                      time[i][j2, :]))
 
             designx = np.array(designx)
             self.designx = designx
