@@ -151,8 +151,9 @@ class GEE(base.Model):
     groups : array-like
         A 1d array of length `nobs` containing the cluster labels.
     time : array-like
-        A 1d array of time (or other index) values.  This is only
-        used if the dependence structure is Autoregressive
+        A 2d array of time (or other index) values, used by some
+        dependence structures to define similarity relationships among
+        observations within a cluster.
     family : family class instance
         The default is Gaussian.  To specify the binomial
         distribution family = sm.family.Binomial() Each family can
@@ -238,10 +239,13 @@ class GEE(base.Model):
         else:
             self.offset = offset
 
-        if time is None:
-            self.time = np.zeros(self.exog.shape[0], dtype=np.float64)
+        if self.time is None:
+            self.time = np.zeros((self.exog.shape[0],1), 
+                                 dtype=np.float64)
         else:
             self.time = time
+        if len(self.time.shape) == 1:
+            self.time = np.reshape(self.time, (len(self.time),1))
 
         # Handle the constraint
         self.constraint = None
@@ -652,11 +656,14 @@ class GEE(base.Model):
                                    np.linalg.solve(amat_11, amat_12)))
 
         from scipy.stats.distributions import chi2
-        self.score_statistic = np.dot(score2,
-                                  np.linalg.solve(score_cov, score2))
-        self.score_df = len(score2)
-        self.score_pvalue = 1 -\
-                 chi2.cdf(self.score_statistic, self.score_df)
+        score_statistic = np.dot(score2,
+                                 np.linalg.solve(score_cov, score2))
+        score_df = len(score2)
+        score_pvalue = 1 - \
+                 chi2.cdf(score_statistic, score_df)
+        self.score_test_results = {"statistic": score_statistic,
+                                   "df": score_df,
+                                   "p-value": score_pvalue}
 
         beta = self.constraint.unpack_param(beta)
         bcov = self.constraint.unpack_cov(bcov)
