@@ -171,7 +171,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
         # rebuild yfitted with original indices
         # a bit messy: y might have been selected twice
         if not is_sorted:
-            yfitted_ = np.empty_like(endog)
+            yfitted_ = np.empty_like(y)
             yfitted_.fill(np.nan)
             yfitted_[sort_index] = yfitted
             yfitted = yfitted_
