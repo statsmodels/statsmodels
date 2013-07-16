@@ -49,7 +49,7 @@ class CheckGradLoglikeMixin(object):
 
             sccs = numdiff.approx_fprime_cs(test_params.ravel(),
                                                       self.mod.loglike)
-            assert_almost_equal(sc, sccs, decimal=12)
+            assert_almost_equal(sc, sccs, decimal=11)
 
     def test_hess(self):
         for test_params in self.params:
