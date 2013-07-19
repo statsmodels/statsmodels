@@ -5,13 +5,10 @@ class VarStruct(object):
     """
     A base class for correlation and covariance structures of repeated
     measures data.  Each implementation of this class takes the
-    residuals from a regression fit to clustered data, and uses the
-    residuals from the fit to estimate the within-cluster variance and
+    residuals from a regression model that has been fit to clustered
+    data, and uses them to estimate the within-cluster variance and
     dependence structure of the model errors.
     """
-
-    # The parent model instance
-    parent = None
 
     # Parameters describing the dependency structure
     dparams = None
@@ -19,24 +16,12 @@ class VarStruct(object):
 
     def initialize(self, parent):
         """
-        Parameters
-        ----------
-        parent : a reference to the model using this dependence
-        structure
-
-        Notes
-        -----
-        The clustered data should be availabe as `parent.endog` and
-        `parent.exog`, where `endog` and `exog` are lists of the same
-        length.  `endog[i]` is the response data represented as a n_i
-        length ndarray, and `endog[i]` is the covariate data
-        represented as a n_i x p ndarray, where n_i is the number of
-        observations in cluster i.
+        Called by GEE.
         """
-        self.parent = parent
+        pass
 
 
-    def update(self, beta):
+    def update(self, beta, parent):
         """
         Updates the association parameter values based on the current
         regression coefficients.
@@ -82,7 +67,7 @@ class Independence(VarStruct):
     """
 
     # Nothing to update
-    def update(self, beta):
+    def update(self, beta, parent):
         return
 
 
@@ -104,17 +89,17 @@ class Exchangeable(VarStruct):
     dparams = 0
 
 
-    def update(self, beta):
+    def update(self, beta, parent):
 
-        endog = self.parent.endog_li
+        endog = parent.endog_li
 
         num_clust = len(endog)
-        nobs = self.parent.nobs
+        nobs = parent.nobs
         dim = len(beta)
 
-        varfunc = self.parent.family.variance
+        varfunc = parent.family.variance
 
-        cached_means = self.parent.cached_means
+        cached_means = parent.cached_means
 
         residsq_sum, scale_inv, nterm = 0, 0, 0
         for i in range(num_clust):
@@ -226,7 +211,7 @@ class Nested(VarStruct):
         self.designx = None
 
 
-    def _compute_design(self):
+    def _compute_design(self, parent):
         """
         Called on the first call to update
 
@@ -240,13 +225,13 @@ class Nested(VarStruct):
         with the corresponding element of QY.
         """
 
-        endog = self.parent.endog_li
+        endog = parent.endog_li
         num_clust = len(endog)
         designx, ilabels = [], []
         n_nest = self.id_matrix.shape[1]
         for i in range(num_clust):
             ngrp = len(endog[i])
-            rix = self.parent.row_indices[i]
+            rix = parent.row_indices[i]
 
             ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
             for j1 in range(ngrp):
@@ -272,21 +257,21 @@ class Nested(VarStruct):
         self.designx_v = svd[2].T
 
 
-    def update(self, beta):
+    def update(self, beta, parent):
 
-        endog = self.parent.endog_li
-        offset = self.parent.offset_li
+        endog = parent.endog_li
+        offset = parent.offset_li
 
         num_clust = len(endog)
-        nobs = self.parent.nobs
+        nobs = parent.nobs
         dim = len(beta)
 
         if self.designx is None:
-            self._compute_design()
+            self._compute_design(parent)
 
-        cached_means = self.parent.cached_means
+        cached_means = parent.cached_means
 
-        varfunc = self.parent.family.variance
+        varfunc = parent.family.variance
 
         dvmat = []
         scale_inv = 0.
@@ -395,14 +380,14 @@ class Autoregressive(VarStruct):
             self.dist_func = dist_func
 
 
-    def update(self, beta):
+    def update(self, beta, parent):
 
-        if self.parent.time is None:
+        if parent.time is None:
             raise ValueError("GEE: time must be provided to GEE if "
                              "using AR dependence structure")
 
-        endog = self.parent.endog_li
-        time = self.parent.time_li
+        endog = parent.endog_li
+        time = parent.time_li
 
         num_clust = len(endog)
 
@@ -426,11 +411,11 @@ class Autoregressive(VarStruct):
             designx = np.array(designx)
             self.designx = designx
 
-        scale = self.parent.estimate_scale()
+        scale = parent.estimate_scale()
 
-        varfunc = self.parent.family.variance
+        varfunc = parent.family.variance
 
-        cached_means = self.parent.cached_means
+        cached_means = parent.cached_means
 
         # Weights
         var = (1 - self.dparams**(2 * designx)) / (1 - self.dparams**2)
@@ -549,8 +534,6 @@ class GlobalOddsRatio(VarStruct):
 
     def initialize(self, parent):
 
-        self.parent = parent
-
         ibd = []
         for v in parent.endog_li:
             jj = np.arange(0, len(v) + 1, self.ncut)
@@ -575,7 +558,7 @@ class GlobalOddsRatio(VarStruct):
         self.cpp = cpp
 
         # Initialize the dependence parameters
-        self.crude_or = self.observed_crude_oddsratio()
+        self.crude_or = self.observed_crude_oddsratio(parent)
         self.odds_ratio = self.crude_or
 
 
@@ -590,7 +573,7 @@ class GlobalOddsRatio(VarStruct):
         if len(tables) == 0:
             return 1.
 
-        # Get the samepled odds ratios and variances
+        # Get the sampled odds ratios and variances
         log_oddsratio, var = [], []
         for table in tables:
             lor = np.log(table[1, 1]) + np.log(table[0, 0]) -\
@@ -614,7 +597,7 @@ class GlobalOddsRatio(VarStruct):
         return vmat, False
 
 
-    def observed_crude_oddsratio(self):
+    def observed_crude_oddsratio(self, parent):
         """The crude odds ratio is obtained by pooling all data
         corresponding to a given pair of cut points (c,c'), then
         forming the inverse variance weighted average of these odds
@@ -624,7 +607,7 @@ class GlobalOddsRatio(VarStruct):
         """
 
         cpp = self.cpp
-        endog = self.parent.endog_li
+        endog = parent.endog_li
 
         # Storage for the contingency tables for each (c,c')
         tables = {}
@@ -691,13 +674,13 @@ class GlobalOddsRatio(VarStruct):
         return vmat
 
 
-    def update(self, beta):
+    def update(self, beta, parent):
         """Update the global odds ratio based on the current value of
         beta."""
 
-        endog = self.parent.endog_li
+        endog = parent.endog_li
         cpp = self.cpp
-        cached_means = self.parent.cached_means
+        cached_means = parent.cached_means
 
         num_clust = len(endog)
 
