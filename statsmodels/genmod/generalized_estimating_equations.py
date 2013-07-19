@@ -136,7 +136,6 @@ class ParameterConstraint(object):
 
 
 
-#TODO multinomial responses
 class GEE(base.Model):
     __doc__ = """
     Parameters
@@ -240,7 +239,7 @@ class GEE(base.Model):
             self.offset = offset
 
         if self.time is None:
-            self.time = np.zeros((self.exog.shape[0],1), 
+            self.time = np.zeros((self.exog.shape[0],1),
                                  dtype=np.float64)
         else:
             self.time = time
@@ -263,7 +262,7 @@ class GEE(base.Model):
         # list of arrays, corresponding to the clusters.
         group_labels = list(set(groups))
         group_labels.sort()
-        row_indices = {s: [] for s in group_labels}
+        row_indices = dict((s, []) for s in group_labels)
         for i in range(len(self.endog)):
             row_indices[groups[i]].append(i)
         self.row_indices = row_indices
@@ -284,6 +283,19 @@ class GEE(base.Model):
         # Total sample size
         group_ns = [len(y) for y in self.endog_li]
         self.nobs = sum(group_ns)
+
+        # Get mean_deriv from the link function, or use a default.
+        try:
+            # The custom mean_deriv is currently only used for the
+            # multinomial logit model
+            self.mean_deriv = self.family.link.mean_deriv
+        except AttributeError:
+            mean_deriv_lpr = self.family.link.inverse_deriv
+            def mean_deriv(exog, lpr):
+                dmat_t = exog * mean_deriv_lpr(lpr)[:, None]
+                dmat = dmat_t.T
+                return dmat
+            self.mean_deriv = mean_deriv
 
 
     def _cluster_list(self, array):
@@ -354,7 +366,6 @@ class GEE(base.Model):
 
         cached_means = self.cached_means
 
-        mean_deriv = self.family.link.inverse_deriv
         varfunc = self.family.variance
 
         bmat, score = 0, 0
@@ -365,15 +376,14 @@ class GEE(base.Model):
 
             expval, lpr = cached_means[i]
 
-            dmat_t = exog[i] * mean_deriv(lpr)[:, None]
-            dmat = dmat_t.T
+            dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
             vmat, is_cor = self.varstruct.variance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
-            vinv_d = np.linalg.solve(vmat, dmat_t)
+            vinv_d = np.linalg.solve(vmat, dmat.T)
             bmat += np.dot(dmat, vinv_d)
 
             resid = endog[i] - expval
@@ -437,7 +447,6 @@ class GEE(base.Model):
         exog = self.exog_li
         num_clust = len(endog)
 
-        mean_deriv = self.family.link.inverse_deriv
         varfunc = self.family.variance
         cached_means = self.cached_means
 
@@ -449,15 +458,14 @@ class GEE(base.Model):
 
             expval, lpr = cached_means[i]
 
-            dmat_t = exog[i] * mean_deriv(lpr)[:, None]
-            dmat = dmat_t.T
+            dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
             vmat, is_cor = self.varstruct.variance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
-            vinv_d = np.linalg.solve(vmat, dmat_t)
+            vinv_d = np.linalg.solve(vmat, dmat.T)
             bmat += np.dot(dmat, vinv_d)
 
             resid = endog[i] - expval
@@ -680,7 +688,7 @@ class GEE(base.Model):
         Update the association parameters
         """
 
-        self.varstruct.update(beta)
+        self.varstruct.update(beta, self)
 
 
 
@@ -703,6 +711,19 @@ class GEEResults(base.LikelihoodModelResults):
         values from the model.
         """
         return self.model.endog - self.fittedvalues
+
+
+    @cache_readonly
+    def centered_resid(self):
+        """
+        Returns the residuals centered within each group.
+        """
+        resid = self.resid
+        for v in self.model.group_labels:
+            ii = self.model.row_indices[v]
+            resid[ii] -= resid[ii].mean()
+        return resid
+
 
     @cache_readonly
     def fittedvalues(self):
@@ -792,12 +813,10 @@ class GEEResults(base.LikelihoodModelResults):
                  ]
 
         # The skew of the residuals
-        R = self.resid
-        skew1 = stats.skew(R)
-        kurt1 = stats.kurtosis(R)
-        V = R.copy() - R.mean()
-        skew2 = stats.skew(V)
-        kurt2 = stats.kurtosis(V)
+        skew1 = stats.skew(self.resid)
+        kurt1 = stats.kurtosis(self.resid)
+        skew2 = stats.skew(self.centered_resid)
+        kurt2 = stats.kurtosis(self.centered_resid)
 
         diagn_left = [('Skew:', ["%12.4f" % skew1]),
                       ('Centered skew:', ["%12.4f" % skew2])]
@@ -818,7 +837,7 @@ class GEEResults(base.LikelihoodModelResults):
                              xname=xname, title=title)
         smry.add_table_params(self, yname=yname,
                               xname=self.params.index.tolist(),
-                              alpha=alpha, use_t=True)
+                              alpha=alpha, use_t=False)
 
         smry.add_table_2cols(self, gleft=diagn_left,
                              gright=diagn_right, yname=yname,
@@ -847,13 +866,15 @@ def gee_setup_multicategorical(endog, exog, groups, time, offset,
     S is the sorted list of unique values of endog (excluding the
     maximum value).
 
-    For ordinal data, intercepts are constructed corresponding to the
-    different levels of the outcome. For nominal data, the covariate
-    vector is expanded so that different coefficients arise for each
-    class.
+    In addition, exog is modified as follows:
 
-    In both cases, the covariates in exog are copied over to all of
-    the indicators derived from the same original value.
+    For ordinal data, intercepts are prepended to the covariates, so
+    that when defining a new variable as I(endog > S[j]) the intercept
+    is a vector of zeros, with a 1 in the j^th position.
+
+    For nominal data, when constructing the new exog for I(endog =
+    S[j]), the covariate vector is expanded |S| - 1 times, with the
+    exog values replaced with zeros except for block j.
 
     Arguments
     ---------
@@ -882,27 +903,22 @@ def gee_setup_multicategorical(endog, exog, groups, time, offset,
     Returns:
     --------
     endog_ex:   endog recoded as described above
-    exog_ex:   exog recoded as described above
-    groups_ex: groups recoded as described above
-    offset_ex: offset expanded to fit the recoded data
-    time_ex:   time expanded to fit the recoded data
+    exog_ex:    exog recoded as described above
+    groups_ex:  groups expanded to fit the recoded data
+    offset_ex:  offset expanded to fit the recoded data
+    time_ex:    time expanded to fit the recoded data
 
     Examples:
     ---------
 
     >>> family = Binomial()
-
     >>> endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
-        setup_gee_multicategorical(endog, exog, group_n, None, None, "ordinal")
-
+        gee_setup_multicategorical(endog, exog, group_n, None, None, "ordinal")
     >>> v = GlobalOddsRatio(nlevel, "ordinal")
-
     >>> nx = exog.shape[1] - nlevel + 1
     >>> beta = gee_multicategorical_starting_values(endog, nlevel, nx, "ordinal")
-
     >>> md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
     >>> mdf = md.fit(starting_beta = beta)
-
 
     """
 
@@ -926,7 +942,7 @@ def gee_setup_multicategorical(endog, exog, groups, time, offset,
         time = np.zeros(len(endog), dtype=np.float64)
 
     # nominal=1, ordinal=0
-    endog_type_i = [0, 1][endog_type == "nominal"]
+    endog_type_ordinal = (endog_type == "ordinal")
 
     endog_ex = []
     exog_ex = []
@@ -934,30 +950,35 @@ def gee_setup_multicategorical(endog, exog, groups, time, offset,
     time_ex = []
     offset_ex = []
 
-    for endog1, exog1, grp, off, tim in zip(endog, exog, groups, offset, time):
+    for endog1, exog1, grp, off, tim in \
+            zip(endog, exog, groups, offset, time):
 
         # Loop over thresholds for the indicators
         for thresh_ix, thresh in enumerate(endog_cuts):
 
             # Code as cumulative indicators
-            if endog_type_i == 0:
+            if endog_type_ordinal:
 
                 endog_ex.append(int(endog1 > thresh))
                 offset_ex.append(off)
                 groups_ex.append(grp)
                 time_ex.append(tim)
-                zero = np.zeros(ncut, dtype=np.float64)
-                exog1_icepts = np.concatenate((zero, exog1))
-                exog1_icepts[thresh_ix] = 1
-                exog_ex.append(exog1_icepts)
+                icepts = np.zeros(ncut, dtype=np.float64)
+                icepts[thresh_ix] = 1
+                exog2 = np.concatenate((icepts, exog1))
+                exog_ex.append(exog2)
 
             # Code as indicators
             else:
-                pass
-                #y1.append(int(y2 == s))
-                #xx = np.zeros(ncut, dtype=np.float64)
-                #xx[js] = 1
-                #x3 = np.kronecker(xx, x3)
+
+                endog_ex.append(int(endog1 == thresh))
+                offset_ex.append(off)
+                groups_ex.append(grp)
+                time_ex.append(tim)
+                exog2 = np.zeros(ncut * len(exog1), dtype=np.float64)
+                exog2[thresh_ix*len(exog1):(thresh_ix+1)*len(exog1)] \
+                    = exog1
+                exog_ex.append(exog2)
 
     endog_ex = np.array(endog_ex)
     exog_ex = np.array(exog_ex)
@@ -1005,6 +1026,116 @@ def gee_nominal_starting_values(endog, n_exog):
 
     endog_values = list(set(endog))
     endog_values.sort()
-    endog_cuts = endog_values[0:-1]
+    ncuts = len(endog_values) - 1
 
-    raise NotImplementedError
+    return np.zeros(n_exog * ncuts, dtype=np.float64)
+
+
+
+import statsmodels.genmod.families.varfuncs as varfuncs
+from statsmodels.genmod.families.links import Link
+from statsmodels.genmod.families import Family
+
+
+class MultinomialLogit(Link):
+    """
+    The multinomial logit transform, only for use with GEE.
+
+    Notes
+    -----
+    The data are assumed coded as binary indicators, where each
+    observed multinomial value y is coded as I(y == S[0]), ..., I(y ==
+    S[-1]), where S is the set of possible response labels, excluding
+    the largest one.  Thererefore functions in this class should only
+    be called using vector argument whose length is a multiple of |S|
+    = ncut, which is an argument to be provided when initializing the
+    class.
+
+    call and derivative use a private method _clean to make trim p by
+    1e-10 so that p is in (0,1)
+    """
+
+    def __init__(self, ncut):
+        self.ncut = ncut
+
+
+    def inverse(self, lpr):
+        """
+        Inverse of the multinomial logit transform, which gives the
+        expected values of the data as a function of the linear
+        predictors.
+
+        Parameters
+        ----------
+        lpr : array-like (length must be divisible by `ncut`)
+            The linear predictors
+
+        Returns
+        -------
+        prob : array
+            Probabilities, or expected values
+        """
+
+        expval = np.exp(lpr)
+
+        denom = 1 + np.reshape(expval, (len(expval) / self.ncut,
+                                        self.ncut)).sum(1)
+        denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
+
+        prob = expval / denom
+
+        return prob
+
+
+
+    def mean_deriv(self, exog, lpr):
+        """
+        Derivative of the expected endog with respect to param.
+
+        Parameters
+        ----------
+        z : array-like, length must be multiple of `ncut`.
+            The linear predictor values
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to param
+        """
+
+        expval = np.exp(lpr)
+
+        expval_m = np.reshape(expval, (len(expval) / self.ncut,
+                                       self.ncut))
+
+        denom = 1 + expval_m.sum(1)
+        denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
+
+        dmat = expval[:, None] * exog / denom[:, None]
+
+        from scipy.sparse import block_diag
+        ones = np.ones(self.ncut, dtype=np.float64)
+        cmat = block_diag([np.outer(ones, x) for x in expval_m], "csr")
+        rmat = cmat.dot(exog)
+        dmat -= expval[:,None] * rmat / denom[:, None]**2
+
+        return dmat.T
+
+
+
+
+
+class Multinomial(Family):
+    """
+    Pseudo-link function for fitting nominal multinomial models with
+    GEE.  Not for use outside the GEE class.
+    """
+
+    links = [MultinomialLogit,]
+    variance = varfuncs.binary
+
+
+    def __init__(self, ncut):
+
+        self.ncut = ncut
+        self.link = MultinomialLogit(ncut)
