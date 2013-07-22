@@ -2,6 +2,8 @@
 Assesment of Generalized Estimating Equations using simulation.
 
 Only Gaussian models are currently checked.
+
+See the generated file "gee_simulation_check.txt" for results.
 """
 
 ##!!!! Delete before going to github
@@ -22,6 +24,8 @@ from itertools import product
 np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
                     suppress=True)
 
+
+OUT = open("gee_simulation_check.txt", "w")
 
 class GEE_simulator(object):
 
@@ -74,11 +78,15 @@ class AR_simulator(GEE_simulator):
 
 
     def print_dparams(self, dparams_est):
-        print "AR coefficient estimate:   %8.4f" % dparams_est[0]
-        print "AR coefficient truth:      %8.4f" % self.dparams[0]
-        print "Error variance estimate:   %8.4f" % dparams_est[1]
-        print "Error variance truth:      %8.4f" % self.error_sd**2
-        print
+        OUT.write("AR coefficient estimate:   %8.4f\n" %
+                  dparams_est[0])
+        OUT.write("AR coefficient truth:      %8.4f\n" %
+                  self.dparams[0])
+        OUT.write("Error variance estimate:   %8.4f\n" %
+                  dparams_est[1])
+        OUT.write("Error variance truth:      %8.4f\n" %
+                  self.error_sd**2)
+        OUT.write("\n")
 
     def simulate(self):
 
@@ -130,15 +138,16 @@ class Nested_simulator(GEE_simulator):
 
     def print_dparams(self, dparams_est):
         for j in range(len(self.nest_sizes)):
-            print "Nest %d variance estimate:  %8.4f" % \
-                (j+1, dparams_est[j])
-            print "Nest %d variance truth:     %8.4f" % \
-                (j+1, self.dparams[j])
+            OUT.write("Nest %d variance estimate:  %8.4f\n" % \
+                          (j+1, dparams_est[j]))
+            OUT.write("Nest %d variance truth:     %8.4f\n" % \
+                          (j+1, self.dparams[j]))
 
-        print "Error variance estimate:   %8.4f" % \
-            (dparams_est[-1] - sum(dparams_est[0:-1]))
-        print "Error variance truth:      %8.4f" % self.error_sd**2
-        print
+        OUT.write("Error variance estimate:   %8.4f\n" % \
+            (dparams_est[-1] - sum(dparams_est[0:-1])))
+        OUT.write("Error variance truth:      %8.4f\n" %
+                  self.error_sd**2)
+        OUT.write("\n")
 
 
     def simulate(self):
@@ -195,108 +204,16 @@ class Nested_simulator(GEE_simulator):
 
 
 
-def check_dparams(gendat):
-    """
-    Check the estimation of the dependence parameters.
-    """
-
-    nrep = 10
-
-    dparams = []
-    for j in range(nrep):
-
-        da,va = gendat()
-
-        ga = Gaussian()
-
-        md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
-        mdf = md.fit()
-
-        scale_inv = 1 / md.estimate_scale()
-
-        dparams.append(np.r_[va.dparams, scale_inv])
-
-    dparams_mean = np.array(sum(dparams) / len(dparams))
-
-    #v = list(da.dparams)
-    #v.append(da.error_sd**2)
-    #v = np.array(v)
-
-    da.print_dparams(dparams_mean)
 
 
-def check_regression(gendat):
-    """
-    Check the estimation of the regression coefficients.
-    """
-
-    nrep = 10
-
-    params = []
-    std_errors = []
-
-    for j in range(nrep):
-
-        da,va = gendat()
-
-        ga = Gaussian()
-
-        md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
-        mdf = md.fit()
-
-        params.append(np.asarray(mdf.params))
-        std_errors.append(np.asarray(mdf.standard_errors))
-
-    params = np.array(params)
-    eparams = params.mean(0)
-    sdparams = params.std(0)
-    std_errors = np.array(std_errors)
-    std_errors = std_errors.mean(0)
-
-    print "Checking parameter values"
-    print "Observed:            ", eparams
-    print "Expected:            ", da.params
-    print "Absolute difference: ", eparams - da.params
-    print "Relative difference: ", (eparams - da.params) / da.params
-    print
-
-    print "Checking standard errors"
-    print "Observed:            ", sdparams
-    print "Expected:            ", std_errors
-    print "Absolute difference: ", sdparams - std_errors
-    print "Relative difference: ", (sdparams - std_errors) / std_errors
-    print
 
 
-def check_constraint(gendat):
+def check_constraint(da, va, ga):
     """
     Check the score testing of the parameter constraints.
     """
 
-    nrep = 100
-    pvalues = []
 
-    for j in range(nrep):
-
-        da,va = gendat()
-
-        ga = Gaussian()
-
-        lhs = np.array([[0., 1, 1, 0, 0],])
-        rhs = np.r_[0.,]
-
-        md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
-                 constraint=(lhs, rhs))
-        mdf = md.fit()
-        score = md.score_test_results
-        pvalues.append(score["p-value"])
-
-    pvalues.sort()
-
-    print "Checking constrained estimation:"
-    print "Observed   Expected Null"
-    for q in np.arange(0.1, 0.91, 0.1):
-        print "%10.3f %10.3f" % (pvalues[int(q*len(pvalues))], q)
 
 
 
@@ -342,19 +259,89 @@ def gendat_nested1():
     ns.simulate()
     return ns, Nested(ns.id_matrix)
 
+
+nrep = 100
+
+gendats = [gen_gendat_ar0(ar) for ar in 0, 0.3, 0.6]
+gendats.extend([gen_gendat_ar1(ar) for ar in 0, 0.3, 0.6])
+gendats.extend([gendat_nested0, gendat_nested1])
+
+lhs = np.array([[0., 1, 1, 0, 0],])
+rhs = np.r_[0.,]
+
 # Loop over data generating models
-for j in 0,1:
+for gendat in gendats:
 
-    if j == 0:
-        gendats = [gen_gendat_ar0(ar) for ar in 0, 0.3, 0.6]
-        gendats.extend([gen_gendat_ar1(ar) for ar in 0, 0.3, 0.6])
-    elif j == 1:
-        gendats = [gendat_nested0, gendat_nested1]
+    pvalues = []
+    params = []
+    std_errors = []
+    dparams = []
 
-    for gendat in gendats:
+    for j in range(nrep):
 
-        check_dparams(gendat)
+        da,va = gendat()
+        ga = Gaussian()
 
-        check_regression(gendat)
+        md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
+        mdf = md.fit()
 
-        check_constraint(gendat)
+        scale_inv = 1 / md.estimate_scale()
+        dparams.append(np.r_[va.dparams, scale_inv])
+        params.append(np.asarray(mdf.params))
+        std_errors.append(np.asarray(mdf.standard_errors))
+
+        da,va = gendat()
+        ga = Gaussian()
+
+        md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
+                 constraint=(lhs, rhs))
+        mdf = md.fit()
+        score = md.score_test_results
+        pvalue = score["p-value"]
+        pvalues.append(pvalue)
+
+    dparams_mean = np.array(sum(dparams) / len(dparams))
+    OUT.write("Checking dependence parameters:\n")
+    da.print_dparams(dparams_mean)
+
+    params = np.array(params)
+    eparams = params.mean(0)
+    sdparams = params.std(0)
+    std_errors = np.array(std_errors)
+    std_errors = std_errors.mean(0)
+
+    OUT.write("Checking parameter values:\n")
+    OUT.write("Observed:            ")
+    OUT.write(np.array_str(eparams) + "\n")
+    OUT.write("Expected:            ")
+    OUT.write(np.array_str(da.params) + "\n")
+    OUT.write("Absolute difference: ")
+    OUT.write(np.array_str(eparams - da.params) + "\n")
+    OUT.write("Relative difference: ")
+    OUT.write(np.array_str((eparams - da.params) / da.params) + "\n")
+    OUT.write("\n")
+
+    OUT.write("Checking standard errors\n")
+    OUT.write("Observed:            ")
+    OUT.write(np.array_str(sdparams) + "\n")
+    OUT.write("Expected:            ")
+    OUT.write(np.array_str(std_errors) + "\n")
+    OUT.write("Absolute difference: ")
+    OUT.write(np.array_str(sdparams - std_errors) + "\n")
+    OUT.write("Relative difference: ")
+    OUT.write(np.array_str((sdparams - std_errors) / std_errors) + "\n")
+    OUT.write("\n")
+
+    pvalues.sort()
+    OUT.write("Checking constrained estimation:\n")
+    OUT.write("Left hand side:\n")
+    OUT.write(np.array_str(lhs) + "\n")
+    OUT.write("Right hand side:\n")
+    OUT.write(np.array_str(rhs) + "\n")
+    OUT.write("Observed p-values   Expected Null p-values\n")
+    for q in np.arange(0.1, 0.91, 0.1):
+        OUT.write("%20.3f %20.3f\n" % (pvalues[int(q*len(pvalues))], q))
+
+    OUT.write("=" * 80 + "\n\n")
+
+OUT.close()
