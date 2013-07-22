@@ -3,6 +3,9 @@ Assesment of Generalized Estimating Equations using simulation.
 
 This script checks the performance of ordinal and nominal models for
 multinomial data.
+
+See the generated file "gee_categorical_simulation_check.ps" for
+results.
 """
 
 ##!!!! Delete before going to github
@@ -21,6 +24,9 @@ from statsmodels.genmod.dependence_structures import Exchangeable,\
 import statsmodels.formula.api as sm
 from itertools import product
 from scipy import stats
+
+
+OUT = open("gee_categorical_simulation_check.txt", "w")
 
 np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
                     suppress=True)
@@ -81,24 +87,29 @@ class ordinal_simulator(GEE_simulator):
 
     # The thresholds where the latent continuous process is cut to
     # obtain the categorical values.
-    threshold = None
+    thresholds = None
 
 
     def true_params(self):
         return np.concatenate((self.thresholds, self.params))
 
 
-    def starting_values(self):
-        return gee_ordinal_starting_values(self.endog,
+    def starting_values(self, nconstraints):
+        beta = gee_ordinal_starting_values(self.endog,
                                            len(self.params))
+        if nconstraints > 0:
+            m = self.exog_ex.shape[1] - nconstraints
+            beta = beta[0:m]
+
+        return beta
 
 
     def print_dparams(self, dparams_est):
-        print "AR coefficient estimate:   %8.4f" % dparams_est[0]
-        print "AR coefficient truth:      %8.4f" % self.dparams[0]
-        print "Error variance estimate:   %8.4f" % dparams_est[1]
-        print "Error variance truth:      %8.4f" % self.error_sd**2
-        print
+        OUT.write("Odds ratio estimate:   %8.4f\n" % dparams_est[0])
+        OUT.write("Odds ratio truth:      %8.4f\n" %
+                  self.dparams[0])
+        OUT.write("\n")
+
 
     def simulate(self):
 
@@ -134,18 +145,16 @@ class ordinal_simulator(GEE_simulator):
 class nominal_simulator(GEE_simulator):
 
 
-    def starting_values(self):
+    def starting_values(self, nconstraints):
         return None
 
     def true_params(self):
         return np.concatenate(self.params[:-1])
 
     def print_dparams(self, dparams_est):
-        print "AR coefficient estimate:   %8.4f" % dparams_est[0]
-        print "AR coefficient truth:      %8.4f" % self.dparams[0]
-        print "Error variance estimate:   %8.4f" % dparams_est[1]
-        print "Error variance truth:      %8.4f" % self.error_sd**2
-        print
+        OUT.write("Odds ratio estimate:   %8.4f\n" % dparams_est[0])
+        OUT.write("Odds ratio truth:      %8.4f\n" % self.dparams[0])
+        OUT.write("\n")
 
     def simulate(self):
 
@@ -185,112 +194,6 @@ class nominal_simulator(GEE_simulator):
         self.offset = np.zeros(len(self.endog), dtype=np.float64)
 
 
-def check_dparams(gendat):
-    """
-    Check the estimation of the dependence parameters.
-    """
-
-    nrep = 10
-
-    dparams = []
-    for j in range(nrep):
-
-        da,va = gendat()
-
-        ga = Gaussian()
-
-        beta = gee_ordinal_starting_values(endog, exog.shape[1])
-
-        md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
-        mdf = md.fit(starting_beta = beta)
-
-        scale_inv = 1 / md.estimate_scale()
-
-        dparams.append(np.r_[va.dparams, scale_inv])
-
-    dparams_mean = np.array(sum(dparams) / len(dparams))
-
-    da.print_dparams(dparams_mean)
-
-
-def check_regression(gendat):
-    """
-    Check the estimation of the regression coefficients.
-    """
-
-    nrep = 20
-
-    params = []
-    std_errors = []
-
-    for j in range(nrep):
-
-        da, va, mt = gendat()
-
-        beta = da.starting_values()
-
-        md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
-                 mt, va)
-        mdf = md.fit(starting_beta = beta)
-
-        params.append(np.asarray(mdf.params))
-        std_errors.append(np.asarray(mdf.standard_errors))
-
-    params = np.array(params)
-    eparams = params.mean(0)
-    sdparams = params.std(0)
-    std_errors = np.array(std_errors)
-    std_errors = std_errors.mean(0)
-    true_params = da.true_params()
-
-    print "Checking parameter values"
-    print "Observed:            ", eparams
-    print "Expected:            ", true_params
-    print "Absolute difference: ", eparams - true_params
-    print "Relative difference: ", \
-        (eparams - true_params) / true_params
-    print
-
-    print "Checking standard errors"
-    print "Observed:            ", sdparams
-    print "Expected:            ", std_errors
-    print "Absolute difference: ", sdparams - std_errors
-    print "Relative difference: ", \
-        (sdparams - std_errors) / std_errors
-    print
-
-
-def check_constraint(gendat0):
-    """
-    Check the score testing of the parameter constraints.
-    """
-
-    nrep = 100
-    pvalues = []
-
-    for j in range(nrep):
-
-        da,va = gendat()
-
-        ga = Gaussian()
-
-        lhs = np.array([[0., 1, 1, 0, 0],])
-        rhs = np.r_[0.,]
-
-        md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
-                 constraint=(lhs, rhs))
-        mdf = md.fit()
-        score = md.score_test_results
-        pvalues.append(score["p-value"])
-
-    pvalues.sort()
-
-    print "Checking constrained estimation:"
-    print "Observed   Expected"
-    for q in np.arange(0.1, 0.91, 0.1):
-        print "%10.3f %10.3f" % (pvalues[int(q*len(pvalues))], q)
-
-
 
 def gendat_ordinal():
 
@@ -298,6 +201,7 @@ def gendat_ordinal():
     os.params = np.r_[0., 1]
     os.ngroups = 200
     os.thresholds = [1, 0, -1]
+    os.dparams = [1.,]
     os.simulate()
 
     os.endog_ex, os.exog_ex, os.group_ex, os.time_ex, \
@@ -307,7 +211,10 @@ def gendat_ordinal():
 
     va = GlobalOddsRatio(4, "ordinal")
 
-    return os, va, Binomial()
+    lhs = np.array([[0., 0., 0, 1., 0.], [0., 0, 0, 0, 1]])
+    rhs = np.r_[0., 1]
+
+    return os, va, Binomial(), (lhs, rhs)
 
 
 def gendat_nominal():
@@ -317,6 +224,7 @@ def gendat_nominal():
     # The last component of params must be identically zero
     ns.params = [np.r_[0., 1], np.r_[-1., 0], np.r_[0., 0]]
     ns.ngroups = 200
+    ns.dparams = [1., ]
     ns.simulate()
 
     ns.endog_ex, ns.exog_ex, ns.group_ex, ns.time_ex, \
@@ -326,16 +234,97 @@ def gendat_nominal():
 
     va = GlobalOddsRatio(3, "nominal")
 
-    return ns, va, Multinomial(2)
+    lhs = np.array([[0., 1., 1, 0],])
+    rhs = np.r_[0.,]
 
+    return ns, va, Multinomial(2), (lhs, rhs)
+
+
+nrep = 100
 
 # Loop over data generating models
 gendats = [gendat_nominal, gendat_ordinal]
 
 for gendat in gendats:
 
-    #check_dparams(gendat)
+    dparams = []
+    params = []
+    std_errors = []
+    pvalues = []
 
-    check_regression(gendat)
+    for j in range(nrep):
 
-    #check_constraint(gendat)
+        da, va, mt, constraint = gendat()
+
+        beta = da.starting_values(0)
+
+        md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
+                 mt, va)
+        mdf = md.fit(starting_beta = beta)
+
+        scale_inv = 1 / md.estimate_scale()
+
+        dparams.append(np.r_[va.dparams, scale_inv])
+
+        params.append(np.asarray(mdf.params))
+        std_errors.append(np.asarray(mdf.standard_errors))
+
+        da, va, mt, constraint = gendat()
+
+        beta = da.starting_values(constraint[0].shape[0])
+
+        md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
+                 mt, va, constraint=constraint)
+        mdf = md.fit(starting_beta = beta)
+
+        score = md.score_test_results
+        pvalues.append(score["p-value"])
+
+
+    dparams_mean = np.array(sum(dparams) / len(dparams))
+
+    OUT.write("Checking dependence parameters:\n")
+    da.print_dparams(dparams_mean)
+
+    params = np.array(params)
+    eparams = params.mean(0)
+    sdparams = params.std(0)
+    std_errors = np.array(std_errors)
+    std_errors = std_errors.mean(0)
+    true_params = da.true_params()
+
+    OUT.write("Checking parameter values:\n")
+    OUT.write("Observed:            ")
+    OUT.write(np.array_str(eparams) + "\n")
+    OUT.write("Expected:            ")
+    OUT.write(np.array_str(true_params) + "\n")
+    OUT.write("Absolute difference: ")
+    OUT.write(np.array_str(eparams - true_params) + "\n")
+    OUT.write("Relative difference: ")
+    OUT.write(np.array_str((eparams - true_params) / true_params)
+              + "\n")
+    OUT.write("\n")
+
+    OUT.write("Checking standard errors:\n")
+    OUT.write("Observed:            ")
+    OUT.write(np.array_str(sdparams) + "\n")
+    OUT.write("Expected:            ")
+    OUT.write(np.array_str(std_errors) + "\n")
+    OUT.write("Absolute difference: ")
+    OUT.write(np.array_str(sdparams - std_errors) + "\n")
+    OUT.write("Relative difference: ")
+    OUT.write(np.array_str((sdparams - std_errors) / std_errors)
+              + "\n")
+    OUT.write("\n")
+
+    OUT.write("Checking constrained estimation:\n")
+    OUT.write("Observed   Expected\n")
+
+    pvalues.sort()
+    for q in np.arange(0.1, 0.91, 0.1):
+        OUT.write("%10.3f %10.3f\n" %
+                  (pvalues[int(q*len(pvalues))], q))
+
+    OUT.write("=" * 80 + "\n\n")
+
+OUT.close()

@@ -513,7 +513,7 @@ class GlobalOddsRatio(VarStruct):
     """
 
     # The current estimate of the odds ratio
-    odds_ratio = None
+    dparams = [None,]
 
     # The current estimate of the crude odds ratio
     crude_or = None
@@ -559,7 +559,7 @@ class GlobalOddsRatio(VarStruct):
 
         # Initialize the dependence parameters
         self.crude_or = self.observed_crude_oddsratio(parent)
-        self.odds_ratio = self.crude_or
+        self.dparams[0] = self.crude_or
 
 
     def pooled_odds_ratio(self, tables):
@@ -646,7 +646,7 @@ class GlobalOddsRatio(VarStruct):
         probabilities of endog and the odds ratio cor.
         """
 
-        cor = self.odds_ratio
+        cor = self.dparams[0]
         ibd = self.ibd[index]
 
         # The between-observation joint probabilities
@@ -715,9 +715,9 @@ class GlobalOddsRatio(VarStruct):
 
         cor_expval = self.pooled_odds_ratio(tables.values())
 
-        self.odds_ratio *= self.crude_or / cor_expval
+        self.dparams[0] *= self.crude_or / cor_expval
 
 
     def summary(self):
 
-        print "Global odds ratio: %.3f\n" % self.odds_ratio
+        print "Global odds ratio: %.3f\n" % self.dparams[0]
