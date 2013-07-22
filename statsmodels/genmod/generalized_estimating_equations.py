@@ -297,8 +297,7 @@ class GEE(base.Model):
             # multinomial logit model
             mean_deriv_lpr = self.family.link.inverse_deriv
             def mean_deriv(exog, lpr):
-                dmat_t = exog * mean_deriv_lpr(lpr)[:, None]
-                dmat = dmat_t.T
+                dmat = exog * mean_deriv_lpr(lpr)[:, None]
                 return dmat
             self.mean_deriv = mean_deriv
 
@@ -388,12 +387,12 @@ class GEE(base.Model):
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
-            vinv_d = np.linalg.solve(vmat, dmat.T)
-            bmat += np.dot(dmat, vinv_d)
+            vinv_d = np.linalg.solve(vmat, dmat)
+            bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
             vinv_resid = np.linalg.solve(vmat, resid)
-            score += np.dot(dmat, vinv_resid)
+            score += np.dot(dmat.T, vinv_resid)
 
         update = np.linalg.solve(bmat, score)
 
@@ -441,11 +440,14 @@ class GEE(base.Model):
            is meaningful even if the working covariance structure is
            incorrectly specified.
         naive_covariance : array-like
-           The model based estimate of the covariance, which is
+           The model-based estimate of the covariance, which is
            meaningful if the covariance structure is correctly
            specified.
-         cmat : array-like
-           The center matrix of the sandwich expression.
+        robust_covariance_bc : array-like
+           The "bias corrected" robust covariance of Mancl and DeRouen.
+        cmat : array-like
+           The center matrix of the sandwich expression, used in
+           obtaining score test results.
         """
 
         endog = self.endog_li
@@ -455,6 +457,8 @@ class GEE(base.Model):
         varfunc = self.family.variance
         cached_means = self.cached_means
 
+        # Calculate the naive (model-based) and robust (sandwich)
+        # covariances.
         bmat, cmat = 0, 0
         for i in range(num_clust):
 
@@ -470,12 +474,12 @@ class GEE(base.Model):
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
-            vinv_d = np.linalg.solve(vmat, dmat.T)
-            bmat += np.dot(dmat, vinv_d)
+            vinv_d = np.linalg.solve(vmat, dmat)
+            bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
             vinv_resid = np.linalg.solve(vmat, resid)
-            dvinv_resid = np.dot(dmat, vinv_resid)
+            dvinv_resid = np.dot(dmat.T, vinv_resid)
             cmat += np.outer(dvinv_resid, dvinv_resid)
 
         scale = self.estimate_scale()
@@ -485,7 +489,38 @@ class GEE(base.Model):
         robust_covariance = np.dot(naive_covariance,
                                    np.dot(cmat, naive_covariance))
 
-        return robust_covariance, naive_covariance, cmat
+        # Calculate the bias-corrected sandwich estimate of Mancl and
+        # DeRouen (requires naive_covariance so cannot be calculated
+        # in the previous loop).
+        bcm = 0
+        for i in range(num_clust):
+
+            if len(endog[i]) == 0:
+                continue
+
+            expval, lpr = cached_means[i]
+
+            dmat = self.mean_deriv(exog[i], lpr)
+
+            sdev = np.sqrt(varfunc(expval))
+            vmat, is_cor = self.varstruct.variance_matrix(expval, i)
+            if is_cor:
+                vmat *= np.outer(sdev, sdev)
+
+            vinv_d = np.linalg.solve(vmat, dmat)
+            hmat = np.dot(vinv_d, naive_covariance)
+            hmat = np.dot(hmat, dmat.T).T
+
+            resid = endog[i] - expval
+            aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
+            srt = np.dot(dmat.T, np.linalg.solve(vmat, aresid))
+            bcm += np.outer(srt, srt)
+
+        robust_covariance_bc = np.dot(naive_covariance,
+                                      np.dot(bcm, naive_covariance))
+
+        return robust_covariance, naive_covariance, \
+            robust_covariance_bc, cmat
 
 
     def predict(self, params, exog=None, offset=None, linear=False):
@@ -598,7 +633,7 @@ class GEE(base.Model):
                 break
             self._update_assoc(beta)
 
-        bcov, _, _ = self._covmat()
+        bcov, ncov, bc_cov, _ = self._covmat()
 
         if self.constraint is not None:
             beta, bcov = self._handle_constraint(beta, bcov)
@@ -609,6 +644,8 @@ class GEE(base.Model):
         results = GEEResults(self, beta, bcov/scale, scale)
 
         results.fit_history = self.fit_history
+        results.naive_covariance = ncov
+        results.robust_covariance_bc = bc_cov
 
         return results
 
@@ -648,7 +685,7 @@ class GEE(base.Model):
         save_cached_means = copy.deepcopy(self.cached_means)
         self.update_cached_means(beta0)
         _, score = self._beta_update()
-        _, ncov1, cmat = self._covmat()
+        _, ncov1, _, cmat = self._covmat()
         scale = self.estimate_scale()
         score2 = score[len(beta):] / scale
 
@@ -1124,7 +1161,7 @@ class MultinomialLogit(Link):
         rmat = cmat.dot(exog)
         dmat -= expval[:,None] * rmat / denom[:, None]**2
 
-        return dmat.T
+        return dmat
 
 
 
