@@ -46,7 +46,7 @@ class ParameterConstraint(object):
           A q-dimensional vector which is the right hand side of the
           constraint equation.
         exog : ndarray
-          The exognenous data for the parent model.
+          The n x p exognenous data for the full model.
         """
 
         if type(lhs) != np.ndarray:
@@ -109,24 +109,24 @@ class ParameterConstraint(object):
 
     def restore_exog(self):
         """
-        Returns the original exog matrix before it was reduced to
+        Returns the full exog matrix before it was reduced to
         satisfy the constraint.
         """
         return self.orig_exog
 
 
-    def unpack_param(self, beta):
+    def unpack_param(self, params):
         """
-        Returns the parameter vector `beta` in the original
+        Converts the parameter vector `params` from reduced to full
         coordinates.
         """
 
-        return self.param0 + np.dot(self.lhs0, beta)
+        return self.param0 + np.dot(self.lhs0, params)
 
 
     def unpack_cov(self, bcov):
         """
-        Returns the covariance matrix `bcov` in the original
+        Converts the covariance matrix `bcov` from reduced to full
         coordinates.
         """
 
@@ -141,11 +141,11 @@ class GEE(base.Model):
     Parameters
     ----------
     endog : array-like
-        1d array of endogenous response variable.
+        1d array of endogenous response values.
     exog : array-like
         A nobs x k array where `nobs` is the number of
         observations and `k` is the number of regressors. An
-        interecept is not included by default and should be added
+        intercept is not included by default and should be added
         by the user. See `statsmodels.tools.add_constant`.
     groups : array-like
         A 1d array of length `nobs` containing the cluster labels.
@@ -155,12 +155,12 @@ class GEE(base.Model):
         observations within a cluster.
     family : family class instance
         The default is Gaussian.  To specify the binomial
-        distribution family = sm.family.Binomial() Each family can
+        distribution family = sm.family.Binomial(). Each family can
         take a link instance as an argument.  See
         statsmodels.family.family for more information.
     varstruct : VarStruct class instance
         The default is Independence.  To specify an exchangeable
-        structure varstruct = sm.varstruct.Exchangeable() See
+        structure varstruct = sm.varstruct.Exchangeable().  See
         statsmodels.varstruct.varstruct for more information.
     offset : array-like
         An offset to be included in the fit.  If provided, must be
@@ -251,6 +251,10 @@ class GEE(base.Model):
         if constraint is not None:
             if len(constraint) != 2:
                 raise ValueError("GEE: `constraint` must be a 2-tuple.")
+            if constraint[0].shape[1] != self.exog.shape[1]:
+                raise ValueError("GEE: the left hand side of the "
+                   "constraint must have the same number of columns "
+                   "as the exog matrix.")
             self.constraint = ParameterConstraint(constraint[0],
                                                   constraint[1],
                                                   self.exog)
@@ -284,12 +288,13 @@ class GEE(base.Model):
         group_ns = [len(y) for y in self.endog_li]
         self.nobs = sum(group_ns)
 
-        # Get mean_deriv from the link function, or use a default.
+        # mean_deriv is the derivative of E[endog|exog] with respect
+        # to param, calculated for a given cluster.
         try:
-            # The custom mean_deriv is currently only used for the
-            # multinomial logit model
             self.mean_deriv = self.family.link.mean_deriv
         except AttributeError:
+            # The custom mean_deriv is currently only used for the
+            # multinomial logit model
             mean_deriv_lpr = self.family.link.inverse_deriv
             def mean_deriv(exog, lpr):
                 dmat_t = exog * mean_deriv_lpr(lpr)[:, None]
@@ -300,7 +305,7 @@ class GEE(base.Model):
 
     def _cluster_list(self, array):
         """
-        Returns the `array` split into subarrays corresponding to the
+        Returns `array` split into subarrays corresponding to the
         cluster structure.
         """
 
@@ -568,7 +573,7 @@ class GEE(base.Model):
             iterations
         starting_beta : array-like
             A vector of starting values for the regression
-            coefficients
+            coefficients.  If None, a default is chosen.
 
         Returns
         -------
