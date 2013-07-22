@@ -8,7 +8,7 @@ Should Hessian also work per observation, if fun returns 2d
 '''
 
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_allclose
 import statsmodels.api as sm
 from statsmodels.tools import numdiff
 from statsmodels.tools.numdiff import (approx_fprime, approx_fprime_cs,
@@ -61,18 +61,18 @@ class CheckGradLoglikeMixin(object):
             assert_almost_equal(he, hefd, decimal=7)
             hefd = numdiff.approx_fprime(test_params, self.mod.score,
                                          centered=True)
-            assert_almost_equal(he, hefd, decimal=7)
+            assert_allclose(he, hefd, rtol=1e-10)
             hefd = numdiff.approx_fprime(test_params, self.mod.score,
                                          centered=False)
             assert_almost_equal(he, hefd, decimal=4)
 
             hescs = numdiff.approx_fprime_cs(test_params.ravel(),
                                                         self.mod.score)
-            assert_almost_equal(he, hescs, decimal=DEC8)
+            assert_allclose(he, hescs, rtol=1e-13)
 
             hecs = numdiff.approx_hess_cs(test_params.ravel(),
                                                         self.mod.loglike)
-            assert_almost_equal(he, hecs, decimal=DEC6)
+            assert_allclose(he, hecs, rtol=1e-9)
 
             #NOTE: Look at the lack of precision - default epsilon not always
             #best
