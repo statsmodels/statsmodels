@@ -3,7 +3,7 @@ Test AR Model
 """
 import statsmodels.api as sm
 from statsmodels.tsa.ar_model import AR
-from numpy.testing import (assert_almost_equal, assert_equal, #assert_allclose,
+from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
 from results import results_ar
 import numpy as np
@@ -156,17 +156,17 @@ class TestARMLEConstant(object):
         # 9, 51
         start, end = 9, 51
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=7e-6)
 
         # 9, 308
         start, end = 9, 308
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=7e-6)
 
         # 9, 333
         start, end = 9, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=7e-6)
 
         # 100, 151
         start, end = 100, 151
