@@ -79,10 +79,12 @@ class CheckGenericMixin(object):
         assert_allclose(params, np.zeros(len(params)), atol=4)
 
         assert_allclose(self.res1.bse, np.zeros(len(params)), atol=0.5)
-        assert_allclose(self.res1.bse, self.res1.bsejac, rtol=0.05, atol=0.15)
-        # bsejhj is very different from the other two
-        # use huge atol as sanity check for availability
-        assert_allclose(self.res1.bsejhj, self.res1.bsejac,
+        if not self.skip_bsejac:
+            assert_allclose(self.res1.bse, self.res1.bsejac, rtol=0.05,
+                            atol=0.15)
+            # bsejhj is very different from the other two
+            # use huge atol as sanity check for availability
+            assert_allclose(self.res1.bsejhj, self.res1.bsejac,
                             rtol=0.05, atol=1.5)
 
 
@@ -109,6 +111,10 @@ class TestMyPareto1(CheckGenericMixin):
 
         self.mod = mod_par
         self.res1 = mod_par.fit(disp=None)
+
+        # Note: possible problem with parameters close to min data boundary
+        # see issue #968
+        self.skip_bsejac = True
 
     def test_minsupport(self):
         # rough sanity checks for convergence
@@ -140,3 +146,6 @@ class TestMyParetoRestriction(CheckGenericMixin):
 
         self.mod = mod_par
         self.res1 = mod_par.fit(disp=None)
+
+        # Note: loc is fixed, no problems with parameters close to min data
+        self.skip_bsejac = False
