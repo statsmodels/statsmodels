@@ -6,7 +6,7 @@ import numpy as np
 import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
-    gee_setup_multicategorical,gee_ordinal_starting_values
+    gee_setup_multicategorical,gee_ordinal_starting_values, GEEMargins
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
@@ -24,13 +24,40 @@ def load_data(fname, icept=True):
     exog = Z[:,2:]
 
     if icept:
-        exog = np.concatenate((np.ones((exog.shape[0],1)), exog), 
+        exog = np.concatenate((np.ones((exog.shape[0],1)), exog),
                               axis=1)
 
     return endog,exog,group
 
 
 class TestGEE(object):
+
+
+    def test_margins(self):
+
+        n = 300
+        exog = np.random.normal(size=(n, 4))
+        exog[:,0] = 1
+        exog[:,1] = 1*(exog[:,2] < 0)
+
+        group = np.kron(np.arange(n/4), np.ones(4))
+        time = np.zeros((n, 1))
+
+        beta = np.r_[0, 1, -1, 0.5]
+        lpr = np.dot(exog, beta)
+        prob = 1 / (1 + np.exp(-lpr))
+
+        endog = 1*(np.random.uniform(size=n) < prob)
+
+        fa = Binomial()
+        ex = Exchangeable()
+
+        md = GEE(endog, exog, group, time, fa, ex)
+        mdf = md.fit()
+
+        marg = GEEMargins(mdf, ())
+        marg.summary()
+        # Nothing to compare to
 
 
     def test_logistic(self):
@@ -91,7 +118,7 @@ class TestGEE(object):
             md = GEE(endog, exog, group, T, family, v)
             mdf = md.fit()
             if id(v) != id(va):
-                assert_almost_equal(mdf.params.values, cf[j], decimal=6)
+                assert_almost_equal(mdf.params, cf[j], decimal=6)
                 assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
         # Test with formulas
@@ -102,7 +129,7 @@ class TestGEE(object):
              md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
                                    family=family, varstruct=v)
              mdf = md.fit()
-             assert_almost_equal(mdf.params.values, cf[j], decimal=6)
+             assert_almost_equal(mdf.params, cf[j], decimal=6)
              assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
         # Check for run-time exceptions in summary
@@ -182,7 +209,7 @@ class TestGEE(object):
             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
                                   family=family, varstruct=v)
             mdf = md.fit()
-            assert_almost_equal(mdf.params.values, cf[j], decimal=10)
+            assert_almost_equal(mdf.params, cf[j], decimal=10)
             assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
 
 
@@ -230,12 +257,12 @@ class TestGEE(object):
 
         family = Binomial()
 
-        endog,exog,group_n = load_data("gee_ordinal_1.csv", 
+        endog,exog,group_n = load_data("gee_ordinal_1.csv",
                                        icept=False)
 
         # Recode as cumulative indicators
         endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
-            gee_setup_multicategorical(endog, exog, group_n, None, 
+            gee_setup_multicategorical(endog, exog, group_n, None,
                                        None, "ordinal")
 
         v = GlobalOddsRatio(nlevel, "ordinal")
@@ -330,7 +357,7 @@ class TestGEE(object):
 
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
 
-        assert_almost_equal(ols.params.values, md.params.values, decimal=10)
+        assert_almost_equal(ols.params.values, md.params, decimal=10)
 
 
     def test_compare_logit(self):
@@ -351,7 +378,7 @@ class TestGEE(object):
 
         sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit()
 
-        assert_almost_equal(sml.params.values, md.params.values, decimal=10)
+        assert_almost_equal(sml.params.values, md.params, decimal=10)
 
 
     def test_compare_poisson(self):
@@ -372,7 +399,7 @@ class TestGEE(object):
 
         sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit()
 
-        assert_almost_equal(sml.params.values, md.params.values, decimal=10)
+        assert_almost_equal(sml.params.values, md.params, decimal=10)
 
 
 if  __name__=="__main__":

@@ -19,11 +19,13 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 
 import numpy as np
 from scipy import stats
-from statsmodels.tools.decorators import cache_readonly
+from statsmodels.tools.decorators import cache_readonly, \
+    resettable_cache
 import statsmodels.base.model as base
 from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import VarStruct
+from scipy.stats import norm
 import pandas
 
 
@@ -289,17 +291,33 @@ class GEE(base.Model):
         self.nobs = sum(group_ns)
 
         # mean_deriv is the derivative of E[endog|exog] with respect
-        # to param, calculated for a given cluster.
+        # to params
         try:
+            # This custom mean_deriv is currently only used for the
+            # multinomial logit model
             self.mean_deriv = self.family.link.mean_deriv
         except AttributeError:
-            # The custom mean_deriv is currently only used for the
-            # multinomial logit model
+            # Otherwise it can be obtained easily from inverse_deriv
             mean_deriv_lpr = self.family.link.inverse_deriv
             def mean_deriv(exog, lpr):
                 dmat = exog * mean_deriv_lpr(lpr)[:, None]
                 return dmat
             self.mean_deriv = mean_deriv
+
+        # mean_deriv_exog is the derivative of E[endog|exog] with
+        # respect to exog
+        try:
+            # This custom mean_deriv_exog is currently only used for
+            # the multinomial logit model
+            self.mean_deriv_exog = self.family.link.mean_deriv_exog
+        except AttributeError:
+            # Otherwise it can be obtained easily from inverse_deriv
+            mean_deriv_lpr = self.family.link.inverse_deriv
+            def mean_deriv_exog(exog, params):
+                lpr = np.dot(exog, params)
+                dmat = np.outer(mean_deriv_lpr(lpr), params)
+                return dmat
+            self.mean_deriv_exog = mean_deriv_exog
 
 
     def _cluster_list(self, array):
@@ -572,16 +590,8 @@ class GEE(base.Model):
         --------
         beta : array-like
            Starting values for params
-        xnames : array-like
-           A list of variable names
 
         """
-
-        try:
-            xnames = list(self.data.exog.columns)
-        except:
-            xnames = ["X%d" % k for k in
-                      range(1, self.data.exog.shape[1]+1)]
 
         if starting_beta is None:
             beta_dm = self.exog_li[0].shape[1]
@@ -590,7 +600,7 @@ class GEE(base.Model):
         else:
             beta = starting_beta.copy()
 
-        return beta, xnames
+        return beta
 
 
 
@@ -619,7 +629,7 @@ class GEE(base.Model):
         self.fit_history = {'params' : [],
                             'score_change' : []}
 
-        beta, xnames = self._starting_beta(starting_beta)
+        beta = self._starting_beta(starting_beta)
 
         self.update_cached_means(beta)
 
@@ -638,7 +648,6 @@ class GEE(base.Model):
         if self.constraint is not None:
             beta, bcov = self._handle_constraint(beta, bcov)
 
-        beta = pandas.Series(beta, xnames)
         scale = self.estimate_scale()
 
         results = GEEResults(self, beta, bcov/scale, scale)
@@ -731,6 +740,45 @@ class GEE(base.Model):
         """
 
         self.varstruct.update(beta, self)
+
+
+    def _derivative_exog(self, params, exog=None, transform='dydx',
+            dummy_idx=None, count_idx=None):
+        """
+        For computing marginal effects returns dF(XB) / dX where F(.) is
+        the predicted probabilities
+
+        transform can be 'dydx', 'dyex', 'eydx', or 'eyex'.
+
+        Not all of these make sense in the presence of discrete regressors,
+        but checks are done in the results in get_margeff.
+        """
+        #note, this form should be appropriate for
+        ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
+        if exog == None:
+            exog = self.exog
+        margeff = self.mean_deriv_exog(exog, params)
+#        lpr = np.dot(exog, params)
+#        margeff = (self.mean_deriv(exog, lpr) / exog) * params
+#        margeff = np.dot(self.pdf(np.dot(exog, params))[:,None],
+#                                                          params[None,:])
+
+        if 'ex' in transform:
+            margeff *= exog
+        if 'ey' in transform:
+            margeff /= self.predict(params, exog)[:,None]
+        if count_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_count_effects)
+            margeff = _get_count_effects(margeff, exog, count_idx, transform,
+                    self, params)
+        if dummy_idx is not None:
+            from statsmodels.discrete.discrete_margins import (
+                    _get_dummy_effects)
+            margeff = _get_dummy_effects(margeff, exog, dummy_idx, transform,
+                    self, params)
+        return margeff
+
 
 
 
@@ -878,7 +926,7 @@ class GEEResults(base.LikelihoodModelResults):
                              yname=self.model.endog_names,
                              xname=xname, title=title)
         smry.add_table_params(self, yname=yname,
-                              xname=self.params.index.tolist(),
+                              xname=self.model.exog_names,
                               alpha=alpha, use_t=False)
 
         smry.add_table_2cols(self, gleft=diagn_left,
@@ -1136,8 +1184,12 @@ class MultinomialLogit(Link):
 
         Parameters
         ----------
-        z : array-like, length must be multiple of `ncut`.
-            The linear predictor values
+        exog : array-like
+           The exogeneous data at which the derivative is computed,
+           number of rows must be a multiple of `ncut`.
+        lpr : array-like
+           The linear predictor values, length must be multiple of
+           `ncut`.
 
         Returns
         -------
@@ -1164,6 +1216,58 @@ class MultinomialLogit(Link):
         return dmat
 
 
+    # Minimally tested
+    def mean_deriv_exog(self, exog, params):
+        """
+        Derivative of the expected endog with respect to exog, used in
+        analyzing marginal effects.
+
+        Parameters
+        ----------
+        exog : array-like
+           The exogeneous data at which the derivative is computed,
+           number of rows must be a multiple of `ncut`.
+        lpr : array-like
+           The linear predictor values, length must be multiple of
+           `ncut`.
+
+        Returns
+        -------
+        The value of the derivative of the expected endog with respect
+        to exog.
+        """
+
+        lpr = np.dot(exog, params)
+        expval = np.exp(lpr)
+
+        expval_m = np.reshape(expval, (len(expval) / self.ncut,
+                                       self.ncut))
+
+        denom = 1 + expval_m.sum(1)
+        denom = np.kron(denom, np.ones(self.ncut, dtype=np.float64))
+
+        bmat0 = np.outer(np.ones(exog.shape[0]), params)
+
+        # Masking matrix
+        qmat = []
+        for j in range(self.ncut):
+            ee = np.zeros(self.ncut, dtype=np.float64)
+            ee[j] = 1
+            qmat.append(np.kron(ee, np.ones(len(params) / self.ncut)))
+        qmat = np.array(qmat)
+        qmat = np.kron(np.ones((exog.shape[0]/self.ncut, 1)), qmat)
+        bmat = bmat0 * qmat
+
+        dmat = expval[:, None] * bmat / denom[:, None]
+
+        expval_mb = np.kron(expval_m, np.ones((self.ncut, 1)))
+        expval_mb = np.kron(expval_mb, np.ones((1, self.ncut)))
+
+        dmat -= expval[:, None] * (bmat * expval_mb) / denom[:,None]**2
+
+        return dmat
+
+
 
 
 
@@ -1181,3 +1285,305 @@ class Multinomial(Family):
 
         self.ncut = ncut
         self.link = MultinomialLogit(ncut)
+
+
+
+
+
+
+from statsmodels.discrete.discrete_margins import \
+    _get_margeff_exog, _get_const_index, _check_margeff_args, \
+    _effects_at, margeff_cov_with_se, _check_at_is_all, \
+    _transform_names
+
+
+
+
+class GEEMargins(object):
+    """Estimate the marginal effects of a model fit using generalized
+    estimating equations.
+
+    Parameters
+    ----------
+    results : GEEResults instance
+        The results instance of a fitted discrete choice model
+    args : tuple
+        Args are passed to `get_margeff`. This is the same as
+        results.get_margeff. See there for more information.
+    kwargs : dict
+        Keyword args are passed to `get_margeff`. This is the same as
+        results.get_margeff. See there for more information.
+    """
+    def __init__(self, results, args, kwargs={}):
+        self._cache = resettable_cache()
+        self.results = results
+        self.get_margeff(*args, **kwargs)
+
+    def _reset(self):
+        self._cache = resettable_cache()
+
+    @cache_readonly
+    def tvalues(self):
+        _check_at_is_all(self.margeff_options)
+        return self.margeff / self.margeff_se
+
+    def summary_frame(self, alpha=.05):
+        """
+        Returns a DataFrame summarizing the marginal effects.
+
+        Parameters
+        ----------
+        alpha : float
+            Number between 0 and 1. The confidence intervals have the
+            probability 1-alpha.
+
+        Returns
+        -------
+        frame : DataFrames
+            A DataFrame summarizing the marginal effects.
+        """
+        _check_at_is_all(self.margeff_options)
+        from pandas import DataFrame
+        names = [_transform_names[self.margeff_options['method']],
+                                  'Std. Err.', 'z', 'Pr(>|z|)',
+                                  'Conf. Int. Low', 'Cont. Int. Hi.']
+        ind = self.results.model.exog.var(0) != 0 # True if not a constant
+        exog_names = self.results.model.exog_names
+        var_names = [name for i,name in enumerate(exog_names) if ind[i]]
+        table = np.column_stack((self.margeff, self.margeff_se, self.tvalues,
+                                 self.pvalues, self.conf_int(alpha)))
+        return DataFrame(table, columns=names, index=var_names)
+
+    @cache_readonly
+    def pvalues(self):
+        _check_at_is_all(self.margeff_options)
+        return norm.sf(np.abs(self.tvalues)) * 2
+
+    def conf_int(self, alpha=.05):
+        """
+        Returns the confidence intervals of the marginal effects
+
+        Parameters
+        ----------
+        alpha : float
+            Number between 0 and 1. The confidence intervals have the
+            probability 1-alpha.
+
+        Returns
+        -------
+        conf_int : ndarray
+            An array with lower, upper confidence intervals for the marginal
+            effects.
+        """
+        _check_at_is_all(self.margeff_options)
+        me_se = self.margeff_se
+        q = norm.ppf(1 - alpha / 2)
+        lower = self.margeff - q * me_se
+        upper = self.margeff + q * me_se
+        return np.asarray(zip(lower, upper))
+
+    def summary(self, alpha=.05):
+        """
+        Returns a summary table for marginal effects
+
+        Parameters
+        ----------
+        alpha : float
+            Number between 0 and 1. The confidence intervals have the
+            probability 1-alpha.
+
+        Returns
+        -------
+        Summary : SummaryTable
+            A SummaryTable instance
+        """
+        _check_at_is_all(self.margeff_options)
+        results = self.results
+        model = results.model
+        title = model.__class__.__name__ + " Marginal Effects"
+        method = self.margeff_options['method']
+        top_left = [('Dep. Variable:', [model.endog_names]),
+                ('Method:', [method]),
+                ('At:', [self.margeff_options['at']]),]
+
+        from statsmodels.iolib.summary import (Summary, summary_params,
+                                                table_extend)
+        exog_names = model.exog_names[:] # copy
+        smry = Summary()
+
+        # sigh, we really need to hold on to this in _data...
+        _, const_idx = _get_const_index(model.exog)
+        if const_idx is not None:
+            exog_names.pop(const_idx)
+
+        J = int(getattr(model, "J", 1))
+        if J > 1:
+            yname, yname_list = results._get_endog_name(model.endog_names,
+                                                None, all=True)
+        else:
+            yname = model.endog_names
+            yname_list = [yname]
+
+        smry.add_table_2cols(self, gleft=top_left, gright=[],
+                yname=yname, xname=exog_names, title=title)
+
+        #NOTE: add_table_params is not general enough yet for margeff
+        # could use a refactor with getattr instead of hard-coded params
+        # tvalues etc.
+        table = []
+        conf_int = self.conf_int(alpha)
+        margeff = self.margeff
+        margeff_se = self.margeff_se
+        tvalues = self.tvalues
+        pvalues = self.pvalues
+        if J > 1:
+            for eq in range(J):
+                restup = (results, margeff[:,eq], margeff_se[:,eq],
+                          tvalues[:,eq], pvalues[:,eq], conf_int[:,:,eq])
+                tble = summary_params(restup, yname=yname_list[eq],
+                              xname=exog_names, alpha=alpha, use_t=False,
+                              skip_header=True)
+                tble.title = yname_list[eq]
+                # overwrite coef with method name
+                header = ['', _transform_names[method], 'std err', 'z',
+                        'P>|z|', '[%3.1f%% Conf. Int.]' % (100-alpha*100)]
+                tble.insert_header_row(0, header)
+                #from IPython.core.debugger import Pdb; Pdb().set_trace()
+                table.append(tble)
+
+            table = table_extend(table, keep_headers=True)
+        else:
+            restup = (results, margeff, margeff_se, tvalues, pvalues, conf_int)
+            table = summary_params(restup, yname=yname, xname=exog_names,
+                    alpha=alpha, use_t=False, skip_header=True)
+            header = ['', _transform_names[method], 'std err', 'z',
+                        'P>|z|', '[%3.1f%% Conf. Int.]' % (100-alpha*100)]
+            table.insert_header_row(0, header)
+
+        smry.tables.append(table)
+        return smry
+
+    def get_margeff(self, at='overall', method='dydx', atexog=None,
+                          dummy=False, count=False):
+        """Get marginal effects of the fitted model.
+
+        Parameters
+        ----------
+        at : str, optional
+            Options are:
+
+            - 'overall', The average of the marginal effects at each
+              observation.
+            - 'mean', The marginal effects at the mean of each regressor.
+            - 'median', The marginal effects at the median of each regressor.
+            - 'zero', The marginal effects at zero for each regressor.
+            - 'all', The marginal effects at each observation. If `at` is all
+              only margeff will be available.
+
+            Note that if `exog` is specified, then marginal effects for all
+            variables not specified by `exog` are calculated using the `at`
+            option.
+        method : str, optional
+            Options are:
+
+            - 'dydx' - dy/dx - No transformation is made and marginal effects
+              are returned.  This is the default.
+            - 'eyex' - estimate elasticities of variables in `exog` --
+              d(lny)/d(lnx)
+            - 'dyex' - estimate semielasticity -- dy/d(lnx)
+            - 'eydx' - estimate semeilasticity -- d(lny)/dx
+
+            Note that tranformations are done after each observation is
+            calculated.  Semi-elasticities for binary variables are computed
+            using the midpoint method. 'dyex' and 'eyex' do not make sense
+            for discrete variables.
+        atexog : array-like, optional
+            Optionally, you can provide the exogenous variables over which to
+            get the marginal effects.  This should be a dictionary with the key
+            as the zero-indexed column number and the value of the dictionary.
+            Default is None for all independent variables less the constant.
+        dummy : bool, optional
+            If False, treats binary variables (if present) as continuous.  This
+            is the default.  Else if True, treats binary variables as
+            changing from 0 to 1.  Note that any variable that is either 0 or 1
+            is treated as binary.  Each binary variable is treated separately
+            for now.
+        count : bool, optional
+            If False, treats count variables (if present) as continuous.  This
+            is the default.  Else if True, the marginal effect is the
+            change in probabilities when each observation is increased by one.
+
+        Returns
+        -------
+        effects : ndarray
+            the marginal effect corresponding to the input options
+
+        Notes
+        -----
+        When using after Poisson, returns the expected number of events
+        per period, assuming that the model is loglinear.
+        """
+        self._reset() # always reset the cache when this is called
+        #TODO: if at is not all or overall, we can also put atexog values
+        # in summary table head
+        method = method.lower()
+        at = at.lower()
+        _check_margeff_args(at, method)
+        self.margeff_options = dict(method=method, at=at)
+        results = self.results
+        model = results.model
+        params = results.params
+        exog = model.exog.copy() # copy because values are changed
+        effects_idx, const_idx =  _get_const_index(exog)
+
+        if dummy:
+            _check_discrete_args(at, method)
+            dummy_idx, dummy = _get_dummy_index(exog, const_idx)
+        else:
+            dummy_idx = None
+
+        if count:
+            _check_discrete_args(at, method)
+            count_idx, count = _get_count_index(exog, const_idx)
+        else:
+            count_idx = None
+
+        # get the exogenous variables
+        exog = _get_margeff_exog(exog, at, atexog, effects_idx)
+
+        # get base marginal effects, handled by sub-classes
+        effects = model._derivative_exog(params, exog, method,
+                                                    dummy_idx, count_idx)
+
+        J = getattr(model, 'J', 1)
+        effects_idx = np.tile(effects_idx, J) # adjust for multi-equation.
+
+        effects = _effects_at(effects, at)
+
+        if at == 'all':
+            if J > 1:
+                K = model.K - np.any(~effects_idx) # subtract constant
+                self.margeff = effects[:, effects_idx].reshape(-1, K, J,
+                                                                order='F')
+            else:
+                self.margeff = effects[:, effects_idx]
+        else:
+            # Set standard error of the marginal effects by Delta method.
+            margeff_cov, margeff_se = margeff_cov_with_se(model, params, exog,
+                                                results.cov_params(), at,
+                                                model._derivative_exog,
+                                                dummy_idx, count_idx,
+                                                method, J)
+
+            # reshape for multi-equation
+            if J > 1:
+                K = model.K - np.any(~effects_idx) # subtract constant
+                self.margeff = effects[effects_idx].reshape(K, J, order='F')
+                self.margeff_se = margeff_se[effects_idx].reshape(K, J,
+                                                                  order='F')
+                self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
+            else:
+                # don't care about at constant
+                self.margeff_cov = margeff_cov[effects_idx][:, effects_idx]
+                self.margeff_se = margeff_se[effects_idx]
+                self.margeff = effects[effects_idx]
