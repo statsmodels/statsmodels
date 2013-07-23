@@ -609,7 +609,7 @@ class Cell(object):
             self.data = data.data
             self._datatype = data.datatype
             self._fmt = data._fmt
-        except AttributeError: #passed ordinary data
+        except (AttributeError, TypeError): #passed ordinary data
             self.data = data
             self._datatype = datatype
             self._fmt = dict()
