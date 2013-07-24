@@ -48,9 +48,16 @@ class SETAR(tsbase.TimeSeriesModel):
                  dates=None, freq=None, missing='none'):
         super(SETAR, self).__init__(endog, None, dates, freq)
 
-        if delay < 1 or delay >= len(endog):
+        if delay is not None and delay < 1 or delay > ar_order:
             raise ValueError('Delay parameter must be greater than zero'
-                             ' and less than nobs. Got %d.' % delay)
+                             ' and less than ar_order. Got %d.' % delay)
+
+        # Unsure of statistical properties if length of sample changes when
+        # estimating hyperparameters, which happens if delay can be greater
+        # than ar_order, so that the number of initial observations changes
+        if delay is None and max_delay > ar_order:
+            raise ValueError('Maximum delay for grid search must not be '
+                             ' greater than the autoregressive order.')
 
         if thresholds is not None and not len(thresholds)+1 == order:
             raise ValueError('Number of thresholds must match'
