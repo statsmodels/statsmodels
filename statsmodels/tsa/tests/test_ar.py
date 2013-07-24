@@ -201,7 +201,7 @@ class TestARMLEConstant(object):
         # None, None
         start, end = None, None
         fv = res1.predict(dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[9:309], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[9:309], rtol=7e-6)
 
 
 class TestAutolagAR(object):
