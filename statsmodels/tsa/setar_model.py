@@ -63,10 +63,16 @@ class SETAR(tsbase.TimeSeriesModel):
             raise ValueError('Number of thresholds must match'
                              ' the order of the SETAR model')
 
+        # Exogenous matrix
+        self.exog = add_constant(lagmat(self.endog, ar_order))
+        self.nobs_initial = ar_order
+        self.nobs = len(self.endog) - ar_order
+
         # "Immutable" properties
         self.order = order
         self.k_ar = ar_order
         self.min_regime_frac = min_regime_frac
+        self.min_regime_num = np.ceil(min_regime_frac * self.nobs)
         self.max_delay = max_delay if max_delay is not None else ar_order
         self.threshold_grid_size = threshold_grid_size
 
