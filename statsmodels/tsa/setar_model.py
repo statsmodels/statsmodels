@@ -15,6 +15,7 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.tsatools import add_constant, lagmat
 from statsmodels.regression.linear_model import OLS
 
+
 class InvalidRegimeError(ValueError):
     pass
 
@@ -81,9 +82,6 @@ class SETAR(tsbase.TimeSeriesModel):
 
         # "Flexible" properties
         self.delay = delay
-        # TODO I sort in case thresholds are in wrong order, but that seems
-        #      like it may be wasteful, since it won't usually be the case?
-        #      and feels like user error anyway...
         self.thresholds = np.sort(thresholds)
         self.regimes = None
 
@@ -132,10 +130,6 @@ class SETAR(tsbase.TimeSeriesModel):
 
         endog, exog = self.build_datasets(self.delay, self.thresholds)
 
-        # TODO implement the SETARResults class to nicely show all
-        #      regimes' results
-        # TODO really just doing OLS on this dataset...is there a better way to
-        #      do this?
         return OLS(endog, exog).fit()
 
     def select_hyperparameters(self):
