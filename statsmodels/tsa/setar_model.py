@@ -201,7 +201,7 @@ class SETAR(tsbase.TimeSeriesModel):
 
         return params, max_obj
 
-    def select_hyperparameters(self):
+    def select_hyperparameters(self, threshold_grid_size=None, maxiter=100):
         """
         Select delay and threshold hyperparameters via grid search
         """
@@ -215,8 +215,9 @@ class SETAR(tsbase.TimeSeriesModel):
             XX.dot(exog.T.dot(endog))
         )
 
-        # Get threshold grid size
-        threshold_grid_size = self.threshold_grid_size
+        # Get default threshold grid size, if necessary
+        if threshold_grid_size is None:
+            threshold_grid_size = self.threshold_grid_size
 
         # Estimate the delay and an initial value for the dominant threshold
         thresholds = []
@@ -239,7 +240,6 @@ class SETAR(tsbase.TimeSeriesModel):
             # Iterate threshold selection to convergence
             proposed = thresholds[:]
             iteration = 0
-            maxiter = 100
             while True:
                 iteration += 1
 
@@ -256,7 +256,7 @@ class SETAR(tsbase.TimeSeriesModel):
                 # If the recalculation produced no change, we've converged
                 if proposed == thresholds:
                     break
-                # If convergence is happening fast enough
+                # If convergence is not happening fast enough
                 if iteration > maxiter:
                     print ('Warning: Maximum number of iterations has been '
                            'exceeded.')
