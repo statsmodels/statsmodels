@@ -15,6 +15,9 @@ import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.tsatools import add_constant, lagmat
 from statsmodels.regression.linear_model import OLS
 
+class InvalidRegimeError(ValueError):
+    pass
+
 
 class SETAR(tsbase.TimeSeriesModel):
     """
@@ -70,7 +73,7 @@ class SETAR(tsbase.TimeSeriesModel):
 
         # "Immutable" properties
         self.order = order
-        self.k_ar = ar_order
+        self.ar_order = ar_order
         self.min_regime_frac = min_regime_frac
         self.min_regime_num = np.ceil(min_regime_frac * self.nobs)
         self.max_delay = max_delay if max_delay is not None else ar_order
@@ -84,14 +87,30 @@ class SETAR(tsbase.TimeSeriesModel):
         self.thresholds = np.sort(thresholds)
         self.regimes = None
 
-    def _get_regime_indicators(self, delay, thresholds):
-        """
-        Generate an indicator vector of regimes (0, ..., order-1)
-        """
-        return np.r_[
-            [np.NaN]*delay,
-            np.searchsorted(self.thresholds, self.endog[:-delay])
-        ]
+    def build_datasets(self, delay, thresholds, order=None):
+        if order is None:
+            order = self.order
+
+        endog = self.endog[self.nobs_initial:, ]
+        exog_transpose = self.exog[self.nobs_initial:, ].T
+        threshold_var = self.endog[self.nobs_initial-delay:-delay, ]
+        indicators = np.searchsorted(thresholds, threshold_var)
+
+        k = self.ar_order + 1
+        exog_list = []
+        for i in range(order):
+            in_regime = (indicators == i)
+
+            if in_regime.sum() < self.min_regime_num:
+                raise InvalidRegimeError('Regime %d has too few observations:'
+                                         ' threshold values may need to be'
+                                         ' adjusted' % i)
+
+            exog_list.append(np.multiply(exog_transpose, indicators == i).T)
+
+        exog = np.concatenate(exog_list, 1)
+
+        return endog, exog
 
     def fit(self):
         """
@@ -111,26 +130,7 @@ class SETAR(tsbase.TimeSeriesModel):
         if self.delay is None or self.thresholds is None:
             self.delay, self.thresholds = self.select_hyperparameters()
 
-        nobs_initial = max(self.k_ar, self.delay)
-        nobs = len(self.endog) - nobs_initial
-
-        indicators = self._get_regime_indicators(self.delay, self.thresholds)
-        indicator_matrix = (indicators[:, None] == range(self.order))
-
-        lags = add_constant(lagmat(self.endog, self.k_ar))
-
-        exog = np.multiply(
-            np.bmat('lags '*self.order),
-            np.kron(indicator_matrix, np.ones(self.k_ar+1))
-        )[nobs_initial:, :]
-        endog = self.endog[nobs_initial:, ]
-
-        # Make sure each regime has enough datapoints
-        if indicator_matrix.sum(0).min() < np.ceil(nobs*self.min_regime_frac):
-            # TODO is this the right exception to throw?
-            raise ValueError('Regime %d has too few observations:'
-                             ' threshold values may need to be adjusted' %
-                             indicator_matrix.sum(0).argmin())
+        endog, exog = self.build_datasets(self.delay, self.thresholds)
 
         # TODO implement the SETARResults class to nicely show all
         #      regimes' results
