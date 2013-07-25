@@ -46,7 +46,7 @@ def show_versions():
     except ImportError:
         print("patsy: Not installed")
 
-    print ("\nOptional Dependencies\n=====================\n")
+    print("\nOptional Dependencies\n=====================\n")
 
     try:
         import matplotlib as mpl
@@ -60,6 +60,42 @@ def show_versions():
     except ImportError:
         print("cvxopt: Not installed")
 
+    print("\nDeveloper Tools\n================\n")
+
+    try:
+        import IPython
+        print("IPython: %s" % IPython.__version__)
+    except ImportError:
+        print("IPython: Not installed")
+    try:
+        import jinja2
+        print("    jinja2: %s" % jinja2.__version__)
+    except ImportError:
+        print("    jinja2: Not installed")
+
+    try:
+        import sphinx
+        print("sphinx: %s" % sphinx.__version__)
+    except ImportError:
+        print("sphinx: Not installed")
+
+    try:
+        import pygments
+        print("    pygments: %s" % pygments.__version__)
+    except ImportError:
+        print("    pygments: Not installed")
+
+    try:
+        import nose
+        print("nose: %s" % nose.__version__)
+    except ImportError:
+        print("nose: Not installed")
+
+    try:
+        import virtualenv
+        print("virtualenv: %s" % virtualenv.__version__)
+    except ImportError:
+        print("virtualenv: Not installed")
 
     print("\n")
 
