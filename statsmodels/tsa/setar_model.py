@@ -174,7 +174,7 @@ class SETAR(tsbase.TimeSeriesModel):
                                      XX, resids, delay_grid=None):
 
         if delay_grid is None:
-            delay_grid = range(2, self.max_delay+1)
+            delay_grid = range(1, self.max_delay+1)
 
         max_obj = 0
         params = (None, None)
