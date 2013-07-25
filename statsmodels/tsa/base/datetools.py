@@ -6,13 +6,13 @@ from statsmodels.compatnp.py3k import asstr
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
 try:
-    from pandas.tseries.frequencies import get_offset
+    from pandas.tseries.frequencies import to_offset
     class _freq_to_pandas_class(object):
         # being lazy, don't want to replace dictionary below
         def __getitem__(self, key):
-            return get_offset(key)
+            return to_offset(key)
     _freq_to_pandas = _freq_to_pandas_class()
-except ImportError, err:
+except ImportError:
     _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                        'D' : pandas_datetools.day,
                        'W' : pandas_datetools.Week(weekday=6),
