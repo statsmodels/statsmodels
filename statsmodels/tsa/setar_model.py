@@ -71,6 +71,10 @@ class SETAR(tsbase.TimeSeriesModel):
             raise ValueError('Maximum delay for grid search must not be '
                              ' greater than the autoregressive order.')
 
+        if delay is None and thresholds is not None:
+            raise ValueError('Thresholds cannot be specified without delay'
+                             ' parameter.')
+
         if thresholds is not None and not len(thresholds)+1 == order:
             raise ValueError('Number of thresholds must match'
                              ' the order of the SETAR model')
@@ -90,7 +94,9 @@ class SETAR(tsbase.TimeSeriesModel):
 
         # "Flexible" properties
         self.delay = delay
-        self.thresholds = np.sort(thresholds)
+        self.thresholds = thresholds
+        if self.thresholds:
+            self.thresholds = np.sort(self.thresholds)
         self.regimes = None
 
     def build_datasets(self, delay, thresholds, order=None):
@@ -219,10 +225,13 @@ class SETAR(tsbase.TimeSeriesModel):
         if threshold_grid_size is None:
             threshold_grid_size = self.threshold_grid_size
 
+        # Set delay grid if delay is specified
+        delay_grid = [self.delay] if self.delay is not None else None
+
         # Estimate the delay and an initial value for the dominant threshold
         thresholds = []
         params, min_obj = self._select_hyperparameters_grid(
-            thresholds, threshold_grid_size, XX, resids
+            thresholds, threshold_grid_size, XX, resids, delay_grid=delay_grid
         )
         delay = params[0]
         thresholds.append(params[1])
