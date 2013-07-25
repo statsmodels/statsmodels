@@ -12,7 +12,7 @@ try:
         def __getitem__(self, key):
             return to_offset(key)
     _freq_to_pandas = _freq_to_pandas_class()
-except ImportError, err:
+except ImportError:
     _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                        'D' : pandas_datetools.day,
                        'W' : pandas_datetools.Week(weekday=6),
