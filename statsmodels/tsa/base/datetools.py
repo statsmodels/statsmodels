@@ -139,10 +139,10 @@ def _is_leap(year):
 
 def date_parser(timestr, parserinfo=None, **kwargs):
     """
-    Uses dateutils.parser.parse, but also handles monthly dates of the form
+    Uses dateutil.parser.parse, but also handles monthly dates of the form
     1999m4, 1999:m4, 1999:mIV, 1999mIV and the same for quarterly data
     with q instead of m. It is not case sensitive. The default for annual
-    data is the end of the year, which also differs from dateutils.
+    data is the end of the year, which also differs from dateutil.
     """
     flags = re.IGNORECASE | re.VERBOSE
     if re.search(_q_pattern, timestr, flags):
@@ -159,7 +159,14 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        return pandas_datetools.parser.parse(timestr, parserinfo, **kwargs)
+        if hasattr(pandas_datetools, 'parser'):
+
+            return pandas_datetools.parser.parse(timestr, parserinfo,
+                                                 **kwargs)
+        else: # older pandas version didn't import this into namespace
+            from dateutil import parser
+            return parser.parse(timestr, parserinfo, **kwargs)
+
 
     return datetime.datetime(year, month, day)
 
