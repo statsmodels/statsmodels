@@ -15,6 +15,18 @@ def show_versions():
     except:
         pass
 
+    try:
+        from statsmodels import version
+        has_sm = True
+    except ImportError:
+        has_sm = False
+
+    print('\nStatsmodels\n===========')
+    if has_sm:
+        print('\nInstalled: %s' % version.full_version)
+    else:
+        print('Not installed')
+
     print("\nRequired Dependencies\n=====================\n")
     try:
         import Cython
