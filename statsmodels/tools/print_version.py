@@ -69,6 +69,13 @@ def show_versions():
         print("pandas: Not installed")
 
     try:
+        import dateutil
+        print("    dateutil: %s (%s)" % (safe_version(dateutil),
+                                     dirname(dateutil.__file__)))
+    except ImportError:
+        print("    dateutil: not installed")
+
+    try:
         import patsy
         print("patsy: %s (%s)" % (safe_version(patsy),
                                   dirname(patsy.__file__)))
