@@ -60,8 +60,21 @@ def test_predict_freq():
                                     offset=datetools.yearEnd)
         npt.assert_array_equal(predict_dates, expected_dates)
 
+def test_keyerror_start_date():
+    x = np.arange(1,36.)
 
+    if _pandas_08x:
+        from pandas import date_range
 
+        # there's a bug in pandas up to 0.10.2 for YearBegin
+        #dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
+        dates = date_range("1972-4-30", "2006-4-30", freq="A-APR")
+        series = Series(x, index=dates)
+        model = TimeSeriesModel(series)
+    else:
+        from pandas import DateRange, datetools
+        dates = DateRange("1972-1-1", "2007-1-1", offset=datetools.yearEnd)
+        series = Series(x, index=dates)
+        model = TimeSeriesModel(series)
 
-
-
+    npt.assert_raises(ValueError, model._get_predict_start, "1970-4-30")
