@@ -113,12 +113,11 @@ class TimeSeriesModel(base.LikelihoodModel):
         if isinstance(start, str):
             if dates is None:
                 raise ValueError("Got a string for start and dates is None")
+            dtstart = self._str_to_date(start)
+            self.data.predict_start = dtstart
             try:
-                dtstart = self._str_to_date(start)
-                self.data.predict_start = dtstart
                 start = self._get_dates_loc(dates, dtstart)
-            except: # this catches all errors in the above..
-                    #FIXME to be less greedy
+            except KeyError:
                 raise ValueError("Start must be in dates. Got %s | %s" %
                         (str(start), str(dtstart)))
 
