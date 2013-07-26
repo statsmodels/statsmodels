@@ -159,11 +159,12 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        if hasattr(pandas_datetools, 'parser'):
-
+        if (hasattr(pandas_datetools, 'parser') and
+            not callable(pandas_datetools.parser)):
+            # exists in 0.8.0 pandas, but it's the class not the module
             return pandas_datetools.parser.parse(timestr, parserinfo,
                                                  **kwargs)
-        else: # older pandas version didn't import this into namespace
+        else: # 0.8.1 pandas version didn't import this into namespace
             from dateutil import parser
             return parser.parse(timestr, parserinfo, **kwargs)
 
