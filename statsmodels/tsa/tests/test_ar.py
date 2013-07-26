@@ -151,57 +151,58 @@ class TestARMLEConstant(object):
         res1 = self.res1
         res2 = self.res2
 
+        rtol = 8e-6
         # assert_raises pre-sample
 
         # 9, 51
         start, end = 9, 51
         fv = res1.predict(start, end, dynamic=True)
-        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=7e-6)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 9, 308
         start, end = 9, 308
         fv = res1.predict(start, end, dynamic=True)
-        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=7e-6)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 9, 333
         start, end = 9, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=7e-6)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 100, 151
         start, end = 100, 151
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 100, 308
         start, end = 100, 308
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 100, 333
         start, end = 100, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 308, 308
         start, end = 308, 308
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn3[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn3[start:end+1], rtol=rtol)
 
         # 308, 333
         start, end = 308, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn3[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn3[start:end+1], rtol=rtol)
 
         # 309, 333
         start, end = 309, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn4[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn4[start:end+1], rtol=rtol)
 
         # None, None
         start, end = None, None
         fv = res1.predict(dynamic=True)
-        assert_allclose(fv, res2.fcdyn[9:309], rtol=7e-6)
+        assert_allclose(fv, res2.fcdyn[9:309], rtol=rtol)
 
 
 class TestAutolagAR(object):
