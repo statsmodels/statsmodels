@@ -174,8 +174,9 @@ if __name__=="__main__":
     for ii in range(nchoices):
         xi.append(dta1[xivar[ii]][choice_index==ii])
         # this doesn't change sequence of columns, bug report by Skipper I think
-    xifloat = [xx.view(float).reshape(nobs,-1) for xx in xi]
-    xifloat = [X[xi_names][choice_index==ii].values for ii, xi_names in enumerate(xivar)]
+    #xifloat = [xx.view(float).reshape(nobs,-1) for xx in xi]
+    #xifloat = [X[xi_names][choice_index==ii].values for ii, xi_names in enumerate(xivar)]
+    xifloat = [X.ix[choice_index==ii, xi_names].values for ii, xi_names in enumerate(xivar)]
     #xifloat[-1] = xifloat[-1][:,1:]
 
     clogit = CLogit(endog, xifloat, 2)
@@ -183,7 +184,7 @@ if __name__=="__main__":
 
     resclogit=clogit.fit()
 
-
+    exog_names = u'     βG         βT        αair          γH          αtrain       αbus'.split()
     print u'     βG         βT        αair          γH          αtrain       αbus'
     print resclogit.params
 
@@ -247,3 +248,10 @@ if __name__=="__main__":
     ttme          hinc_air
     -0.09612462    0.01328701
     """
+
+    #TODO: why are df_resid and df_model nan
+    resclogit.df_resid = resclogit.model.endog.shape[0] - len(resclogit.params)
+    resclogit.df_model = len(resclogit.params)
+    exog_names = u'G T const_air H const_train const_bus'.split()
+    print resclogit.summary(yname='Travel Mode', xname=exog_names)
+    #TODO: it looks like R reports p-value based on t-distribution
