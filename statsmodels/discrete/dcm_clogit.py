@@ -74,6 +74,7 @@ class CLogit(GenericLikelihoodModel):
         z=np.arange(len(zi)+ncommon)
         beta_indices = [np.r_[np.array([0, 1]),z[zi[ii]:zi[ii+1]]]
                        for ii in range(len(zi)-1)]
+        #beta_indices = [array([3, 0, 1, 2]), array([4, 0, 1]), array([5, 0, 1]), array([1])]
         self.beta_indices = beta_indices
 
 
@@ -116,7 +117,7 @@ class CLogit(GenericLikelihoodModel):
 
 if __name__=="__main__":
 
-    """
+    u"""
     Example
     See Greene, Econometric Analysis (5th Edition - 2003: Page 729)
     21.7.8. APPLICATION: CONDITIONAL LOGIT MODELFOR TRAVEL MODE CHOICE
@@ -136,8 +137,15 @@ if __name__=="__main__":
     import patsy
     import numpy.lib.recfunctions as recf
 
+    #TODO: use datasets instead
     url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
-    df = pandas.read_csv(url)
+    file_ = "ModeChoice.csv"
+    import os
+    if not os.path.exists(file_):
+        import urllib
+        urllib.urlretrieve(url, "ModeChoice.csv")
+
+    df = pandas.read_csv(file_)
     pandas.set_printoptions(max_rows=1000, max_columns=20)
     df.describe()
 
@@ -167,6 +175,8 @@ if __name__=="__main__":
         xi.append(dta1[xivar[ii]][choice_index==ii])
         # this doesn't change sequence of columns, bug report by Skipper I think
     xifloat = [xx.view(float).reshape(nobs,-1) for xx in xi]
+    xifloat = [X[xi_names][choice_index==ii].values for ii, xi_names in enumerate(xivar)]
+    #xifloat[-1] = xifloat[-1][:,1:]
 
     clogit = CLogit(endog, xifloat, 2)
     # Iterations:  ¿ 957 ?
@@ -174,11 +184,11 @@ if __name__=="__main__":
     resclogit=clogit.fit()
 
 
-    print '     βG         βT        αair          γH          αtrain       αbus'
+    print u'     βG         βT        αair          γH          αtrain       αbus'
     print resclogit.params
 
 
-    print"""
+    print u"""
     Greene TABLE 21.11 Parameter Estimates. Unweighted Sample
         βG       βT      αair        γH         αtrain       αbus
     [-0.015501  -0.09612   5.2074  0.01328757  3.86905293  3.16319074]
