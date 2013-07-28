@@ -190,8 +190,8 @@ class CustomKernel(object):
             return np.nan
 
     def density_variance(self, xs, x):
-        """Returns the variance of kernel density estimate for a point x based
-         on x-values xs. 
+        """Returns the variance of the kernel density estimate for a point x 
+        based on x-values xs. 
 
         This uses the approximate variance formula:
         $var(f(x))=\frac{1}{nh}R(K)-\frac{f(x)}{n}$
