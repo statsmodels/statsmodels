@@ -157,7 +157,7 @@ class KDEUnivariate(object):
         self._cache = resettable_cache()
 
     @cache_readonly
-    def cdf_sup(self):
+    def cdf(self):
         """
         Returns the cumulative distribution function evaluated at the support.
 
@@ -191,28 +191,28 @@ class KDEUnivariate(object):
                         args=endog)[0] for i in xrange(1,gridsize)]
             return np.cumsum(probs)
 
-    # def cdf(self, x):
-    #     """
-    #     Returns the cumulative distribution function evaluated at x.
+    def cdf_eval(self, x):
+        """
+        Returns the cumulative distribution function evaluated at x.
 
-    #     Notes
-    #     -----
-    #     Will not work if fit has not been called.
+        Notes
+        -----
+        Will not work if fit has not been called.
 
-    #     If there is an analytic integrated kernel avaliable for the kernel then
-    #     this is used to find the cdf on self.support. Otherwise the cdf is evaluated
-    #     numerically.
-    #     """
-    #     _checkisfit(self)
+        If there is an analytic integrated kernel avaliable for the kernel then
+        this is used to find the cdf on self.support. Otherwise the cdf is evaluated
+        numerically.
+        """
+        _checkisfit(self)
 
-    #     if getattr(self.kernel, 'cdf', None):
-    #         return sum(self.kernel.cdf(self.endog, x, self.bw))/len(self.endog)
+        if getattr(self.kernel, 'cdf', None):
+            return sum(self.kernel.cdf(self.endog, x, self.bw))/len(self.endog)
 
-    #     else:
-    #         kern = self.kernel
-    #         func = lambda y: kern.density(self.endog, y)
+        else:
+            kern = self.kernel
+            func = lambda y: kern.density(self.endog, y)
 
-    #         return integrate.quad(func, self.support[0], x)[0]
+            return integrate.quad(func, self.support[0], x)[0]
 
     @cache_readonly
     def cumhazard(self):
@@ -291,25 +291,23 @@ class KDEUnivariate(object):
             icdf_interp = interpolate.interp1d(self.cdf, self.support, kind='linear')
             return icdf_interp(np.linspace(self.cdf[0],self.cdf[-1],len(self.support)))
 
+    def icdf_eval(self, x):
 
+        _checkisfit(self)
 
-    # def icdf(self, x):
+        if getattr(self.kernel, 'icdf', None):
+            print sum(self.kernel.icdf(self.endog, x, self.bw))/len(self.endog)
 
-    #     _checkisfit(self)
+        if x >= self.support[-1]:
+            return np.infty
+        if x <= self.support[0]:
+            return -1*np.infty
 
-    #     if getattr(self.kernel, 'icdf', None):
-    #         print sum(self.kernel.icdf(self.endog, x, self.bw))/len(self.endog)
+        index = bisect_left(self.cdf, x)
+        support = self.support
+        cdf = self.cdf
 
-    #     if x >= self.support[-1]:
-    #         return np.infty
-    #     if x <= self.support[0]:
-    #         return -1*np.infty
-
-    #     index = bisect_left(self.cdf, x)
-    #     support = self.support
-    #     cdf = self.cdf
-
-    #     return (x-cdf[index-1])*1.0/(cdf[index]-cdf[index-1])*(support[index]-support[index-1])+ support[index-1]
+        return (x-cdf[index-1])*1.0/(cdf[index]-cdf[index-1])*(support[index]-support[index-1])+ support[index-1]
 
     def variance(self, point):
         """
