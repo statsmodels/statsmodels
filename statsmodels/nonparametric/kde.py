@@ -24,8 +24,6 @@ from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform, counts)
 from .linbin import fast_linbin
 
-from bisect import bisect_left
-
 #### Kernels Switch for estimators ####
 
 kernel_switch = dict(gau=kernels.Gaussian, epa=kernels.Epanechnikov,
@@ -303,7 +301,7 @@ class KDEUnivariate(object):
         if x <= self.support[0]:
             return -1*np.infty
 
-        index = bisect_left(self.cdf, x)
+        index = np.searchsorted(self.cdf, x)
         support = self.support
         cdf = self.cdf
 
