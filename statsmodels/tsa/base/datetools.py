@@ -35,7 +35,15 @@ def _index_date(date, dates):
     if isinstance(date, basestring):
         date = date_parser(date)
     try:
-        return dates.get_loc(date)
+        if hasattr(dates, 'indexMap'): # 0.7.xart = np.where(start)[0]
+            return dates.indexMap[date]
+        else:
+            date = dates.get_loc(date)
+            try: # pandas 0.8.0 returns a boolean array
+                len(date)
+                return np.where(date)[0].item()
+            except TypeError: # expected behavior
+                return date
     except KeyError, err:
         freq = _infer_freq(dates)
         if freq is None:
