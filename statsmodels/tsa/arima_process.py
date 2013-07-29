@@ -281,7 +281,7 @@ def arma_acf(ar, ma, nobs=10):
 
     Returns
     -------
-    acovf : array
+    acf : array
         autocorrelation of ARMA process given by ar, ma
 
 
