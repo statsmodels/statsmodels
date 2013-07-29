@@ -80,6 +80,12 @@ class TimeSeriesModel(base.LikelihoodModel):
             date = dates.indexMap[date]
         else:
             date = dates.get_loc(date)
+            try: # pandas 0.8.0 returns a boolean array
+                len(date)
+                from numpy import where
+                date = where(date)[0].item()
+            except TypeError: # this is expected behavior
+                pass
         return date
 
     def _str_to_date(self, date):
