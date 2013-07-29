@@ -35,7 +35,7 @@ def _index_date(date, dates):
     if isinstance(date, basestring):
         date = date_parser(date)
     try:
-        if hasattr(dates, 'indexMap'): # 0.7.xart = np.where(start)[0]
+        if hasattr(dates, 'indexMap'): # 0.7.x
             return dates.indexMap[date]
         else:
             date = dates.get_loc(date)
