@@ -36,6 +36,12 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'ipython_directive',
               'numpy_ext.numpydoc']
 
+import sphinx
+if sphinx.__version__ == '1.1.3':
+    print ("WARNING: Not building inheritance diagrams on sphinx 1.1.3. "
+           "See https://github.com/statsmodels/statsmodels/issues/1002")
+    extensions.remove('sphinx.ext.inheritance_diagram')
+
 # plot_directive is broken on old matplotlib
 from matplotlib import __version__ as mpl_version
 from distutils.version import LooseVersion
