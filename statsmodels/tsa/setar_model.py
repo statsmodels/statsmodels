@@ -7,6 +7,11 @@ References
 Hansen, Bruce. 1999.
 "Testing for Linearity."
 Journal of Economic Surveys 13 (5): 551-576.
+
+Hansen, Bruce E. 1997.
+"Inference in TAR Models."
+Studies in Nonlinear Dynamics & Econometrics 2 (1) (January 1).
+
 """
 
 from __future__ import division
@@ -51,7 +56,19 @@ class SETAR(tsbase.TimeSeriesModel):
     threshold_grid_size is only approximate because it uses values from the
     threshold variable itself, approximately evenly spaced, and there may be a
     few more elements in the grid search than requested
+
+
+    References
+    ----------
+    See Hansen (1997) Table 1 for threshold critical values.
+
     """
+
+    threshold_crits = {
+        0.8:   4.50,    0.85: 5.10,     0.9: 5.94,
+        0.925: 6.53,    0.95: 7.35,     0.975: 8.75,
+        0.99:  10.59
+    }
 
     # TODO are there too many parameters here?
     def __init__(self, endog, order, ar_order,
