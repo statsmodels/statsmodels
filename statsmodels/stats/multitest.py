@@ -79,8 +79,8 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         `hommel` : closed method based on Simes tests (non-negative)
         `fdr_bh` : Benjamini/Hochberg  (non-negative)
         `fdr_by` : Benjamini/Yekutieli (negative)
-        'fdr_tsbh' : two stage fdr correction (non-negative)
-        'fdr_tsbky' : two stage fdr correction (non-negative)
+        `fdr_tsbh` : two stage fdr correction (non-negative)
+        `fdr_tsbky` : two stage fdr correction (non-negative)
 
     returnsorted : bool
          not tested, return sorted p-values instead of original sequence
