@@ -66,7 +66,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
     estimating the `smooth` y_i by taking the frac*N closest points
     to (x_i,y_i) based on their x values and estimating y_i
     using a weighted linear regression. The weight for (x_j,y_j)
-    is tricube function applied to |x_i-x_j|.
+    is tricube function applied to abs(x_i-x_j).
 
     If it > 1, then further weighted local linear regressions
     are performed, where the weights are the same as above

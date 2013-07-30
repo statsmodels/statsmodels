@@ -219,7 +219,7 @@ class DiscreteModel(base.LikelihoodModel):
 
         Notes
         -----
-        Optional arguments for the solvers (available in Results.mle_settings):
+        Optional arguments for the solvers (available in Results.mle_settings)::
 
             'l1'
                 acc : float (default 1e-6)

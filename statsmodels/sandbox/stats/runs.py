@@ -565,8 +565,8 @@ def symmetry_bowker(table):
 
     n_{i, j} = n_{j, i}  for all i, j
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     table : array_like, 2d, (k, k)
         a square contingency table that contains the count for k categories
         in rows and columns.

@@ -70,8 +70,6 @@ class QuantReg(RegressionModel):
     * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171-209. Cambridge: Cambridge University Press.
     * Hall, P., and S. Sheather. (1988). On the distribution of the Studentized quantile. Journal of the Royal Statistical Society, Series B 50: 381-391.
 
-    Keywords
-    --------
     Keywords: Least Absolute Deviation(LAD) Regression, Quantile Regression,
     Regression, Robust Estimation.
     '''
@@ -94,25 +92,27 @@ class QuantReg(RegressionModel):
         q : float
             Quantile must be between 0 and 1
         vcov : string, method used to calculate the variance-covariance matrix
-               of the parameters. Default is ``robust``
+               of the parameters. Default is ``robust``:
 
-               robust : heteroskedasticity robust standard errors (as suggested
+               - robust : heteroskedasticity robust standard errors (as suggested
                         in Greene 6th edition)
-               iid : iid errors (as in Stata 12)
-        kernel : string, kernel to use in the kernel density estimation for the
-                 asymptotic covariance matrix
+               - iid : iid errors (as in Stata 12)
 
-                 epa: Epanechnikov
-                 cos: Cosine
-                 gau: Gaussian
-                 par: Parzene
+        kernel : string, kernel to use in the kernel density estimation for the
+                 asymptotic covariance matrix:
+
+                 - epa: Epanechnikov
+                 - cos: Cosine
+                 - gau: Gaussian
+                 - par: Parzene
+
         bandwidth: string, Bandwidth selection method in kernel density
                    estimation for asymptotic covariance estimate (full
-                   references in QuantReg docstring)
+                   references in QuantReg docstring):
 
-                   hsheather: Hall-Sheather (1988)
-                   bofinger: Bofinger (1975)
-                   chamberlain: Chamberlain (1994)
+                   - hsheather: Hall-Sheather (1988)
+                   - bofinger: Bofinger (1975)
+                   - chamberlain: Chamberlain (1994)
         '''
 
         if q < 0 or q > 1:

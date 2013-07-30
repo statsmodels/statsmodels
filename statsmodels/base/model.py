@@ -221,7 +221,7 @@ class LikelihoodModel(Model):
         The 'basinhopping' solver ignores `maxiter`, `retall`, `full_output`
         explicit arguments.
 
-        Optional arguments for the solvers (available in Results.mle_settings):
+        Optional arguments for the solvers (available in Results.mle_settings)::
 
             'newton'
                 tol : float

@@ -405,8 +405,8 @@ def power_ztost_prop(low, upp, nobs, p_alt, alpha=0.05, dist='norm',
                      critval_continuity=0):
     '''Power of proportions equivalence test based on normal distribution
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     low, upp : floats
         lower and upper limit of equivalence region
     nobs : int
