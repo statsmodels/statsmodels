@@ -1,3 +1,5 @@
+.. _old_changes:
+
 Release History
 ===============
 
