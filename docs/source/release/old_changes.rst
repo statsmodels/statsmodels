@@ -1,7 +1,9 @@
+:orphan:
+
 .. _old_changes:
 
-Release History
-===============
+Pre 0.5.0 Release History
+=========================
 
 0.5.0
 -----
