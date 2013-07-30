@@ -205,7 +205,7 @@ class SETAR(tsbase.TimeSeriesModel):
                 except InvalidRegimeError:
                     pass
 
-        return params, max_obj
+        return params
 
     def select_hyperparameters(self, threshold_grid_size=None, maxiter=100):
         """
@@ -230,21 +230,20 @@ class SETAR(tsbase.TimeSeriesModel):
 
         # Estimate the delay and an initial value for the dominant threshold
         thresholds = []
-        params, min_obj = self._select_hyperparameters_grid(
+        delay, threshold = self._select_hyperparameters_grid(
             thresholds, threshold_grid_size, XX, resids, delay_grid=delay_grid
         )
-        delay = params[0]
-        thresholds.append(params[1])
+        thresholds.append(threshold)
 
         # Get remaining thresholds
         for i in range(2, self.order):
 
             # Get initial estimate of next threshold
-            params, min_obj = self._select_hyperparameters_grid(
+            _, threshold = self._select_hyperparameters_grid(
                 thresholds, threshold_grid_size, XX, resids,
                 delay_grid=[delay]
             )
-            thresholds.append(params[1])
+            thresholds.append(threshold)
 
             # Iterate threshold selection to convergence
             proposed = thresholds[:]
@@ -255,12 +254,12 @@ class SETAR(tsbase.TimeSeriesModel):
                 # Recalculate each threshold individually, holding the others
                 # constant, starting at the first threshold
                 for j in range(i):
-                    params, min_obj = self._select_hyperparameters_grid(
+                    _, threshold = self._select_hyperparameters_grid(
                         thresholds[:j] + thresholds[j+1:],
                         threshold_grid_size, XX, resids,
                         delay_grid=[delay]
                     )
-                    proposed[j] = params[1]
+                    proposed[j] = threshold
 
                 # If the recalculation produced no change, we've converged
                 if proposed == thresholds:
