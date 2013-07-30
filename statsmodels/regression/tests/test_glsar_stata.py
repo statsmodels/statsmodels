@@ -7,20 +7,14 @@ Author: Josef Perktold
 """
 
 import numpy as np
-from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                           assert_approx_equal, assert_array_less)
+from numpy.testing import assert_almost_equal, assert_allclose
 
-from statsmodels.regression.linear_model import OLS, GLSAR
+from statsmodels.regression.linear_model import GLSAR
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
-def assert_allclose(actual, desired, rtol=1e-7, atol=0,
-                    err_msg='', verbose=True):
-    assert_(np.allclose(actual, desired, rtol=rtol, atol=atol))
 
-
-class CheckStataResults(object):
-
+class CheckStataResultsMixin(object):
 
     def test_params_table(self):
         res, results = self.res, self.results
@@ -30,7 +24,7 @@ class CheckStataResults(object):
         assert_allclose(res.tvalues, results.tvalues, atol=0, rtol=0.004)
         assert_allclose(res.pvalues, results.pvalues, atol=1e-7, rtol=0.004)
 
-class CheckStataResultsP(CheckStataResults):
+class CheckStataResultsPMixin(CheckStataResultsMixin):
 
     def test_predicted(self):
         res, results = self.res, self.results
@@ -40,7 +34,7 @@ class CheckStataResultsP(CheckStataResults):
         #not yet
         #assert_almost_equal(res.fittedvalues_se, results.fittedvalues_se, 4)
 
-class TestGLSARCorc(CheckStataResultsP):
+class TestGLSARCorc(CheckStataResultsPMixin):
 
     @classmethod
     def setup_class(self):
@@ -56,7 +50,7 @@ class TestGLSARCorc(CheckStataResultsP):
         self.results = results
 
     def test_rho(self):
-        assert_almost_equal(self.res.model.rho, self.results.rho, 3)
+        assert_almost_equal(self.res.model.rho, self.results.rho, 3)  # pylint: disable-msg=E1101
 
 
 if __name__=="__main__":
