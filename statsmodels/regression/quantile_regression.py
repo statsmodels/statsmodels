@@ -70,8 +70,6 @@ class QuantReg(RegressionModel):
     * Chamberlain, G. (1994). Quantile regression, censoring, and the structure of wages. In Advances in Econometrics, Vol. 1: Sixth World Congress, ed. C. A. Sims, 171-209. Cambridge: Cambridge University Press.
     * Hall, P., and S. Sheather. (1988). On the distribution of the Studentized quantile. Journal of the Royal Statistical Society, Series B 50: 381-391.
 
-    Keywords
-    --------
     Keywords: Least Absolute Deviation(LAD) Regression, Quantile Regression,
     Regression, Robust Estimation.
     '''
