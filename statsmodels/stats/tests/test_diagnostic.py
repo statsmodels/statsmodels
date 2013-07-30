@@ -845,7 +845,7 @@ def test_outlier_test():
     res2 = np.c_[rstudent, unadj_p, bonf_p]
     res = oi.outlier_test(ndarray_mod, method='b', labels=labels, order=True)
     np.testing.assert_almost_equal(res.values, res2, 7)
-    np.testing.assert_equal(res.index.tolist(), sorted_labels)
+    np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
 
 
 if __name__ == '__main__':
