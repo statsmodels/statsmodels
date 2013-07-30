@@ -417,8 +417,8 @@ class DummyTransform(object):
 def groupmean_d(x, d):
     '''groupmeans using dummy variables
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     x : array_like, ndim
         data array, tested for 1,2 and 3 dimensions
     d : ndarray, 1d

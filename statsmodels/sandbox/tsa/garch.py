@@ -951,8 +951,8 @@ def generate_garch(nobs, ar, ma, mu=1., scale=0.1):
 def generate_gjrgarch(nobs, ar, ma, mu=1., scale=0.1, varinnovation=None):
     '''simulate gjr garch process
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     ar : array_like, 1d
         autoregressive term for variance
     ma : array_like, 2d
