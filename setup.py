@@ -520,4 +520,5 @@ if __name__ == "__main__":
           cmdclass = cmdclass,
           packages = packages,
           package_data = package_data,
+          include_package_data=True,
           **setuptools_kwargs)
