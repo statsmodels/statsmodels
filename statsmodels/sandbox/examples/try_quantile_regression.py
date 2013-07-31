@@ -7,19 +7,19 @@ Author: Josef Perktold
 import numpy as np
 import statsmodels.api as sm
 
-from statsmodels.sandbox.regression.quantile_regression import quantilereg
-
+from statsmodels.regression.quantile_regression import QuantReg
 sige = 5
 nobs, k_vars = 500, 5
 x = np.random.randn(nobs, k_vars)
 #x[:,0] = 1
 y = x.sum(1) + sige * (np.random.randn(nobs)/2 + 1)**3
 p = 0.5
-res_qr = quantilereg(y,x,p)
+exog = np.column_stack((np.ones(nobs), x))
+res_qr = QuantReg(y, exog).fit(p)
 
-res_qr2 = quantilereg(y,x,0.25)
-res_qr3 = quantilereg(y,x,0.75)
-res_ols = sm.OLS(y, np.column_stack((np.ones(nobs), x))).fit()
+res_qr2 = QuantReg(y, exog).fit(0.25)
+res_qr3 = QuantReg(y, exog).fit(0.75)
+res_ols = sm.OLS(y, exog).fit()
 
 
 ##print 'ols ', res_ols.params
@@ -27,7 +27,7 @@ res_ols = sm.OLS(y, np.column_stack((np.ones(nobs), x))).fit()
 ##print '0.5 ', res_qr
 ##print '0.75', res_qr3
 
-params = [res_ols.params, res_qr2, res_qr, res_qr3]
+params = [res_ols.params, res_qr2.params, res_qr.params, res_qr3.params]
 labels = ['ols', 'qr 0.25', 'qr 0.5', 'qr 0.75']
 
 import matplotlib.pyplot as plt

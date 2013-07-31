@@ -35,12 +35,12 @@ sun_dates = dates_from_range('1700', '2008')
 sun_predict_dates = dates_from_range('2008', '2033')
 
 try:
-    from pandas import DatetimeIndex
+    from pandas import DatetimeIndex  # pylint: disable-msg=E0611
     cpi_dates = DatetimeIndex(cpi_dates, freq='infer')
     sun_dates = DatetimeIndex(sun_dates, freq='infer')
     cpi_predict_dates = DatetimeIndex(cpi_predict_dates, freq='infer')
     sun_predict_dates = DatetimeIndex(sun_predict_dates, freq='infer')
-except ImportError, err:
+except ImportError:
     pass
 
 
@@ -81,7 +81,7 @@ def test_compare_arma():
     #return resls[0], d.params, rescm.params
 
 
-class CheckArmaResults(object):
+class CheckArmaResultsMixin(object):
     """
     res2 are the results from gretl.  They are in results/results_arma.
     res1 are from statsmodels
@@ -155,7 +155,7 @@ class CheckArmaResults(object):
         # smoke tests
         table = self.res1.summary()
 
-class CheckForecast(object):
+class CheckForecastMixin(object):
     decimal_forecast = DECIMAL_4
     def test_forecast(self):
         assert_almost_equal(self.res1.forecast_res, self.res2.forecast,
@@ -166,7 +166,7 @@ class CheckForecast(object):
         assert_almost_equal(self.res1.forecast_err, self.res2.forecasterr,
                 self.decimal_forecasterr)
 
-class CheckDynamicForecast(object):
+class CheckDynamicForecastMixin(object):
     decimal_forecast_dyn = 4
     def test_dynamic_forecast(self):
         assert_almost_equal(self.res1.forecast_res_dyn, self.res2.forecast_dyn,
@@ -178,7 +178,7 @@ class CheckDynamicForecast(object):
     #                        DECIMAL_4)
 
 
-class CheckArimaResults(CheckArmaResults):
+class CheckArimaResultsMixin(CheckArmaResultsMixin):
     def test_order(self):
         assert self.res1.k_diff == self.res2.k_diff
         assert self.res1.k_ar == self.res2.k_ar
@@ -190,7 +190,7 @@ class CheckArimaResults(CheckArmaResults):
                 self.decimal_predict_levels)
 
 #NOTE: Ok
-class Test_Y_ARMA11_NoConst(CheckArmaResults, CheckForecast):
+class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,0]
@@ -209,7 +209,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResults, CheckForecast):
         assert_(type(res_unpickled) is type(self.res1))
 
 #NOTE: Ok
-class Test_Y_ARMA14_NoConst(CheckArmaResults):
+class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,1]
@@ -219,7 +219,7 @@ class Test_Y_ARMA14_NoConst(CheckArmaResults):
 #NOTE: Ok
 #can't use class decorators in 2.5....
 #@dec.slow
-class Test_Y_ARMA41_NoConst(CheckArmaResults, CheckForecast):
+class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,2]
@@ -230,7 +230,7 @@ class Test_Y_ARMA41_NoConst(CheckArmaResults, CheckForecast):
         cls.decimal_maroots = DECIMAL_3
 
 #NOTE: Ok
-class Test_Y_ARMA22_NoConst(CheckArmaResults):
+class Test_Y_ARMA22_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,3]
@@ -238,7 +238,7 @@ class Test_Y_ARMA22_NoConst(CheckArmaResults):
         cls.res2 = results_arma.Y_arma22()
 
 #NOTE: Ok
-class Test_Y_ARMA50_NoConst(CheckArmaResults, CheckForecast):
+class Test_Y_ARMA50_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,4]
@@ -248,7 +248,7 @@ class Test_Y_ARMA50_NoConst(CheckArmaResults, CheckForecast):
         cls.res2 = results_arma.Y_arma50()
 
 #NOTE: Ok
-class Test_Y_ARMA02_NoConst(CheckArmaResults):
+class Test_Y_ARMA02_NoConst(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,5]
@@ -256,7 +256,7 @@ class Test_Y_ARMA02_NoConst(CheckArmaResults):
         cls.res2 = results_arma.Y_arma02()
 
 #NOTE: Ok
-class Test_Y_ARMA11_Const(CheckArmaResults, CheckForecast):
+class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,6]
@@ -266,7 +266,7 @@ class Test_Y_ARMA11_Const(CheckArmaResults, CheckForecast):
         cls.res2 = results_arma.Y_arma11c()
 
 #NOTE: OK
-class Test_Y_ARMA14_Const(CheckArmaResults):
+class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,7]
@@ -275,7 +275,7 @@ class Test_Y_ARMA14_Const(CheckArmaResults):
 
 #NOTE: Ok
 #@dec.slow
-class Test_Y_ARMA41_Const(CheckArmaResults, CheckForecast):
+class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,8]
@@ -292,7 +292,7 @@ class Test_Y_ARMA41_Const(CheckArmaResults, CheckForecast):
             cls.decimal_bse -= 1
 
 #NOTE: Ok
-class Test_Y_ARMA22_Const(CheckArmaResults):
+class Test_Y_ARMA22_Const(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,9]
@@ -300,7 +300,7 @@ class Test_Y_ARMA22_Const(CheckArmaResults):
         cls.res2 = results_arma.Y_arma22c()
 
 #NOTE: Ok
-class Test_Y_ARMA50_Const(CheckArmaResults, CheckForecast):
+class Test_Y_ARMA50_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,10]
@@ -310,7 +310,7 @@ class Test_Y_ARMA50_Const(CheckArmaResults, CheckForecast):
         cls.res2 = results_arma.Y_arma50c()
 
 #NOTE: Ok
-class Test_Y_ARMA02_Const(CheckArmaResults):
+class Test_Y_ARMA02_Const(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,11]
@@ -319,7 +319,7 @@ class Test_Y_ARMA02_Const(CheckArmaResults):
 
 #NOTE:
 # cov_params and tvalues are off still but not as much vs. R
-class Test_Y_ARMA11_NoConst_CSS(CheckArmaResults):
+class Test_Y_ARMA11_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,0]
@@ -329,7 +329,7 @@ class Test_Y_ARMA11_NoConst_CSS(CheckArmaResults):
         cls.decimal_t = DECIMAL_1
 
 # better vs. R
-class Test_Y_ARMA14_NoConst_CSS(CheckArmaResults):
+class Test_Y_ARMA14_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,1]
@@ -344,7 +344,7 @@ class Test_Y_ARMA14_NoConst_CSS(CheckArmaResults):
 #NOTE:
 # bse, etc. better vs. R
 # maroot is off because maparams is off a bit (adjust tolerance?)
-class Test_Y_ARMA41_NoConst_CSS(CheckArmaResults):
+class Test_Y_ARMA41_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,2]
@@ -358,7 +358,7 @@ class Test_Y_ARMA41_NoConst_CSS(CheckArmaResults):
 
 #NOTE: Ok
 #same notes as above
-class Test_Y_ARMA22_NoConst_CSS(CheckArmaResults):
+class Test_Y_ARMA22_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,3]
@@ -377,7 +377,7 @@ class Test_Y_ARMA22_NoConst_CSS(CheckArmaResults):
 # with no adjustment for p and no extra sigma estimate
 #NOTE: so our tests use x-12 arima results which agree with us and are
 # consistent with the rest of the models
-class Test_Y_ARMA50_NoConst_CSS(CheckArmaResults):
+class Test_Y_ARMA50_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,4]
@@ -388,7 +388,7 @@ class Test_Y_ARMA50_NoConst_CSS(CheckArmaResults):
         cls.decimal_llf = DECIMAL_1 # looks like rounding error?
 
 #NOTE: ok
-class Test_Y_ARMA02_NoConst_CSS(CheckArmaResults):
+class Test_Y_ARMA02_NoConst_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,5]
@@ -398,7 +398,7 @@ class Test_Y_ARMA02_NoConst_CSS(CheckArmaResults):
 
 #NOTE: Ok
 #NOTE: our results are close to --x-12-arima option and R
-class Test_Y_ARMA11_Const_CSS(CheckArmaResults):
+class Test_Y_ARMA11_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,6]
@@ -410,7 +410,7 @@ class Test_Y_ARMA11_Const_CSS(CheckArmaResults):
         cls.decimal_t = DECIMAL_1
 
 #NOTE: Ok
-class Test_Y_ARMA14_Const_CSS(CheckArmaResults):
+class Test_Y_ARMA14_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,7]
@@ -421,7 +421,7 @@ class Test_Y_ARMA14_Const_CSS(CheckArmaResults):
         cls.decimal_pvalues = DECIMAL_1
 
 #NOTE: Ok
-class Test_Y_ARMA41_Const_CSS(CheckArmaResults):
+class Test_Y_ARMA41_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,8]
@@ -434,7 +434,7 @@ class Test_Y_ARMA41_Const_CSS(CheckArmaResults):
         cls.decimal_bse = DECIMAL_1
 
 #NOTE: Ok
-class Test_Y_ARMA22_Const_CSS(CheckArmaResults):
+class Test_Y_ARMA22_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,9]
@@ -445,7 +445,7 @@ class Test_Y_ARMA22_Const_CSS(CheckArmaResults):
         cls.decimal_pvalues = DECIMAL_1
 
 #NOTE: Ok
-class Test_Y_ARMA50_Const_CSS(CheckArmaResults):
+class Test_Y_ARMA50_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,10]
@@ -457,7 +457,7 @@ class Test_Y_ARMA50_Const_CSS(CheckArmaResults):
         cls.decimal_cov_params = DECIMAL_2
 
 #NOTE: Ok
-class Test_Y_ARMA02_Const_CSS(CheckArmaResults):
+class Test_Y_ARMA02_Const_CSS(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
         endog = y_arma[:,11]
@@ -536,7 +536,7 @@ def test_start_params_bug():
     1600, 1876, 1885, 1962, 2280, 2711, 2591, 2411])
     res = ARMA(data, order=(4,1)).fit(disp=-1)
 
-class Test_ARIMA101(CheckArmaResults):
+class Test_ARIMA101(CheckArmaResultsMixin):
     # just make sure this works
     @classmethod
     def setupClass(cls):
@@ -549,7 +549,8 @@ class Test_ARIMA101(CheckArmaResults):
         cls.res2.k_ar = 1
         cls.res2.k_ma = 1
 
-class Test_ARIMA111(CheckArimaResults, CheckForecast, CheckDynamicForecast):
+class Test_ARIMA111(CheckArimaResultsMixin, CheckForecastMixin,
+                    CheckDynamicForecastMixin):
     @classmethod
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
@@ -579,7 +580,8 @@ class Test_ARIMA111(CheckArimaResults, CheckForecast, CheckDynamicForecast):
         assert_almost_equal(self.res1.arfreq, [0.0000], 4)
         assert_almost_equal(self.res1.mafreq, [0.0000], 4)
 
-class Test_ARIMA111CSS(CheckArimaResults, CheckForecast, CheckDynamicForecast):
+class Test_ARIMA111CSS(CheckArimaResultsMixin, CheckForecastMixin,
+                       CheckDynamicForecastMixin):
     @classmethod
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
@@ -611,7 +613,7 @@ class Test_ARIMA111CSS(CheckArimaResults, CheckForecast, CheckDynamicForecast):
         cls.decimal_predict_levels = DECIMAL_2
 
 
-class Test_ARIMA112CSS(CheckArimaResults):
+class Test_ARIMA112CSS(CheckArimaResultsMixin):
     @classmethod
     def setupClass(cls):
         from statsmodels.datasets.macrodata import load
@@ -1600,11 +1602,11 @@ def test_arima_predict_q2():
 def test_arima_predict_pandas_nofreq():
     # this is issue 712
     try:
-        from pandas.tseries.api import infer_freq
+        from pandas.tseries.api import infer_freq  # pylint: disable-msg=E0611, F0401
     except ImportError:
         import nose
         raise nose.SkipTest
-    from pandas import DataFrame, DatetimeIndex
+    from pandas import DataFrame
     dates = ["2010-01-04", "2010-01-05", "2010-01-06", "2010-01-07",
              "2010-01-08", "2010-01-11", "2010-01-12", "2010-01-11",
              "2010-01-12", "2010-01-13", "2010-01-17"]

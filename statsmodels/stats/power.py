@@ -53,11 +53,20 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     pow_ = 0
     if alternative in ['two-sided', '2s', 'larger']:
         crit_upp = stats.t.isf(alpha_, df)
+        #print crit_upp, df, d*np.sqrt(nobs)
         # use private methods, generic methods return nan with negative d
-        pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
+        if np.any(np.isnan(crit_upp)):
+            # avoid endless loop, https://github.com/scipy/scipy/issues/2667
+            pow_ = np.nan
+        else:
+            pow_ = stats.nct._sf(crit_upp, df, d*np.sqrt(nobs))
     if alternative in ['two-sided', '2s', 'smaller']:
         crit_low = stats.t.ppf(alpha_, df)
-        pow_ += stats.nct._cdf(crit_low, df, d*np.sqrt(nobs))
+        #print crit_low, df, d*np.sqrt(nobs)
+        if np.any(np.isnan(crit_low)):
+            pow_ = np.nan
+        else:
+            pow_ += stats.nct._cdf(crit_low, df, d*np.sqrt(nobs))
     return pow_
 
 def normal_power(effect_size, nobs, alpha, alternative='two-sided', sigma=1.):
@@ -167,6 +176,8 @@ class Power(object):
             self.start_bqexp[key] = dict(low=1., start_upp=50.)
         for key in ['ratio']:
             self.start_bqexp[key] = dict(low=1e-8, start_upp=2)
+        for key in ['alpha']:
+            self.start_bqexp[key] = dict(low=1e-12, upp=1 - 1e-12)
 
     def power(self, *args, **kwds):
         raise NotImplementedError
@@ -207,9 +218,14 @@ class Power(object):
             del kwds['power']
             return self.power(**kwds)
 
+        self._counter = 0
         def func(x):
             kwds[key] = x
             fval = self._power_identity(**kwds)
+            self._counter += 1
+            #print self._counter,
+            if self._counter > 500:
+                raise RuntimeError('possible endless loop (500 NaNs)')
             if np.isnan(fval):
                 return np.inf
             else:
@@ -224,6 +240,7 @@ class Power(object):
 
         fit_kwds = self.start_bqexp[key]
         fit_res = []
+        #print vars()
         try:
             val, res = brentq_expanding(func, full_output=True, **fit_kwds)
             failed = False
@@ -240,6 +257,7 @@ class Power(object):
             #TODO: check more cases to make this robust
             val, infodict, ier, msg = optimize.fsolve(func, start_value,
                                                       full_output=True) #scalar
+            #val = optimize.newton(func, start_value) #scalar
             fval = infodict['fvec']
             fit_res.append(infodict)
             if ier == 1 and np.abs(fval) < 1e-4 :
@@ -512,8 +530,8 @@ class TTestIndPower(Power):
             df = (nobs1 - 1 + nobs2 - 1)
 
         nobs = 1./ (1. / nobs1 + 1. / nobs2)
-        return ttest_power(effect_size, nobs, alpha, df=df,
-                           alternative=alternative)
+        #print 'calling ttest power with', (effect_size, nobs, alpha, df, alternative)
+        return ttest_power(effect_size, nobs, alpha, df=df, alternative=alternative)
 
     #method is only added to have explicit keywords and docstring
     def solve_power(self, effect_size=None, nobs1=None, alpha=None, power=None,

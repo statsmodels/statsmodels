@@ -1,9 +1,8 @@
-import os
-import scipy
+
+import scipy.stats
 import numpy as np
-import pandas as pd
 import statsmodels.api as sm
-from numpy.testing import *
+from numpy.testing import assert_allclose, assert_equal, assert_almost_equal
 from patsy import dmatrices   # pylint: disable=E0611
 from statsmodels.regression.quantile_regression import QuantReg
 from results_quantile_regression import (
