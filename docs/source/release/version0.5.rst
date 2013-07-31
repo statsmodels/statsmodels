@@ -54,8 +54,16 @@ Multivariate Kernel Density Estimators (GSoC 2012 project)
 Quantile Regression Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. currentmodule:: statsmodels.regression.quantile_regression
+
+Quantile regression is supported via the :class:`QuantReg` class. Kernel and bandwidth selection options are available for estimating the asymptotic covariance matrix using a kernel density estimator.
+
 Negative Binomial Regression Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.discrete.discrete_model
+
+It is now possible to fit negative binomial models for count data via maximum-likelihood using the :class:`NegativeBinomial` class. ``NB1``, ``NB2``, and ``geometric`` variance specifications are available.
 
 l1-penalized discrete choice models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
