@@ -98,8 +98,8 @@ Major Bugs fixed
 
 * Regression through the origin models now correctly use uncentered total sum of squares in post-estimation statistics. This affected the :math:`R^2` value in linear models without a constant. See :ghissue:`27`.
 
-Backwards incompatible changes
-------------------------------
+Backwards incompatible changes and deprecations
+-----------------------------------------------
 
 * Cython code is now non-optional. You will need a C compiler to build from source. If building from github and not a source release, you will also need Cython installed. See the :ref:`installation documentation <install>`.
 
