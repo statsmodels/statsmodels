@@ -84,10 +84,11 @@ Other important new features
 
 * **Ability to write Stata datasets**: Added the ability to write Stata ``.dta`` files.
 
-.. currentmodule:: statsmodels.tsa
-* **ARIMA modeling**: Statsmodels now has support for fitting Autoregressive Integrated Moving Average (ARIMA) models. See :func:`ARIMA` and :func:`ARIMAResults` for more information.
+.. currentmodule:: statsmodels.tsa.arima_model
 
-* **Support for dynamic prediction in AR(I)MA models**: It is now possible to obtain dynamic in-sample forecast values in ARMA and ARIMA models.
+* **ARIMA modeling**: Statsmodels now has support for fitting Autoregressive Integrated Moving Average (ARIMA) models. See :class:`ARIMA` and :class:`ARIMAResults` for more information.
+
+* **Support for dynamic prediction in AR(I)MA models**: It is now possible to obtain dynamic in-sample forecast values in :class:`ARMA` and :class:`ARIMA` models.
 
 * **Improved Pandas integration**: Statsmodels now supports all frequencies available in pandas for time-series modeling. These are used for intelligent dates handling for prediction. These features are available, if you pass a pandas Series or DataFrame with a DatetimeIndex to a time-series model.
 
@@ -102,6 +103,28 @@ Backwards incompatible changes and deprecations
 -----------------------------------------------
 
 * Cython code is now non-optional. You will need a C compiler to build from source. If building from github and not a source release, you will also need Cython installed. See the :ref:`installation documentation <install>`.
+
+* The ``q_matrix`` keyword to `t_test` and `f_test` for linear models is deprecated. You can now specify linear hypotheses using formulas.
+
+.. currentmodule:: statsmodels.tsa.stattools
+
+* The ``conf_int`` keyword to :func:`acf` is deprecated.
+
+.. currentmodule:: statsmodels.tsa.vector_ar.var_model
+
+* The ``names`` argument is deprecated in :class:`VAR` and SVAR. This is now automatically detected and handled.
+
+* The ``order`` keyword to ``ARMA.fit`` is deprecated. It is now passed in during model instantiation.
+
+.. currentmodule:: statsmodels.distributions
+
+* The empirical distribution function (:class:`ECDF`) and supporting functions have been moved to ``statsmodels.distributions``. Their old paths have been deprecated.
+
+* The ``margeff`` method of the discrete choice models has been deprecated. Use ``get_margeff`` instead. See above. Also, the vague ``resid`` attribute of the discrete choice models has been deprecated in favor of the more descriptive ``resid_dev`` to indicate that they are deviance residuals.
+
+.. currentmodule:: statsmodels.nonparametric.kde
+
+* The class ``KDE`` has been deprecated and renamed to :class:`KDEUnivariate` to distinguish it from the new ``KDEMultivariate``. See above.
 
 Development summary and credits
 -------------------------------
