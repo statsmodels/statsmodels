@@ -44,6 +44,8 @@ insufficiently tested.
    tools.recipr0
    tools.unsqueeze
 
+.. _numdiff:
+
 Numerical Differentiation
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
