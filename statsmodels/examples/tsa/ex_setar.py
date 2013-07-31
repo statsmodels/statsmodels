@@ -25,14 +25,13 @@ dta.SUNACTIVITY.iloc[[262, 280, 281, 287]] = [
 ]
 
 # Replicate Hansen (1999) Figure 1
-f1 = plt.figure(figsize=(10,6))
+f1 = plt.figure(figsize=(10, 6))
 ax = f1.add_subplot(111)
 ax.plot_date(x=dta.index, y=dta.sun, fmt='k-')
 ax.set(title='Figure 1. Annual sunspot means, 1700-1988.',
-       ylim=(0,28),
-       xlim=(datetime.date(1680,1,1), datetime.date(2000,1,1))
-);
-ax.yaxis.set_ticks(range(0,32,4));
+       ylim=(0, 28),
+       xlim=(datetime.date(1680, 1, 1), datetime.date(2000, 1, 1)))
+ax.yaxis.set_ticks(range(0, 32, 4))
 
 # Replicate Hansen (1999) Table 1
 res = SETAR(dta.sun, order=1, ar_order=11).fit()
@@ -40,7 +39,7 @@ res.summary()
 
 # Replicate Hansen (1999) Table 2
 res = SETAR(dta.sun, order=2, ar_order=11,
-			delay=2, thresholds=[7.4233751915117967]).fit()
+            delay=2, thresholds=[7.4233751915117967]).fit()
 res.summary()
 
 # Recalculate results, but this time using a comprehensive grid search
