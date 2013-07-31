@@ -98,6 +98,14 @@ New and Improved Graphics
 
 * **Regression Plots**: The regression plots have been refactored and improved. They can now handle pandas objects and regression results instances appropriately. See :func:`sm.graphics.plot_fit <regressionplots.plot_fit>`, :func:`sm.graphics.plot_regress_exog <regressionplots.plot_regress_exog>`, :func:`sm.graphics.plot_partregress <regressionplots.plot_partregress>`, :func:`sm.graphics.plot_ccpr   <regressionplots.plot_ccpr>`, :func:`sm.graphics.abline_plot <regressionplots.abline_plot>`, :func:`sm.graphics.influence_plot <regressionplots.influence_plot>`, and :func:`sm.graphics.plot_leverage_resid2 <regressionplots.plot_leverage_resid2>`.
 
+.. currentmodule:: statsmodels.stats.power
+
+Power and Sample Size Calculations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The power module (``statsmodel.stats.power``) currently implements power and sample size calculations for the t-tests (:class:`sm.stats.TTestPower <TTestPower>`, :class:`sm.stats.TTestIndPower <TTestIndPower>`), normal based test (:class:`sm.stats.NormIndPower <NormIndPower>`), F-tests (:class:`sm.stats.FTestPower <FTestPower>`, `:class:sm.stats.FTestAnovaPower <FTestAnovaPower>`) and Chisquare goodness of fit (:class:`sm.stats.GofChisquarePower <GofChisquarePower>`) test. The implementation is class based, but the module also provides three shortcut functions, :func:`sm.stats.tt_solve_power <tt_solve_power>`, :func:`sm.stats.tt_ind_solve_power <tt_ind_solve_power>` and :func:`sm.stats.zt_ind_solve_power <zt_ind_solve_power>` to solve for any one of the parameters of the power equations.
+
+
 Other important new features
 ----------------------------
 * **IPython notebook examples**: Many of our examples have been converted or added as IPython notebooks now. They are available `here <http://statsmodels.sourceforge.net/devel/examples/index.html#notebook-examples>`_.
@@ -133,9 +141,10 @@ Other important new features
 
 * **Improved Pandas integration**: Statsmodels now supports all frequencies available in pandas for time-series modeling. These are used for intelligent dates handling for prediction. These features are available, if you pass a pandas Series or DataFrame with a DatetimeIndex to a time-series model.
 
-* **Power and Sample Size Calculations**: 
+.. currentmodule:: statsmodels
 
-* **New statistical hypothesis tests**: TOST, test for proportions, Cohen's kappa, Tukey HSD multiple comparison enhancement (with plot).
+* **New statistical hypothesis tests**: Added statistics for calculating interrater agreement including Cohen's kappa and Fleiss' kappa (See :ref:`interrater`). Statistics and hypothesis tests for proportional data (See :ref:`proportion stats <proportion_stats>`). Tukey HSD (with plot) was added as an enhancment to the multiple comparison tests (:class:`sm.stats.multicomp.MultiComparison <sandbox.stats.multicomp.MultiComparison>`, :func:`sm.stats.multicomp.pairwise_tukeyhsd <stats.multicomp.pairwise_tukeyhsd>`). Tests of non-equivlance for two dependent, pairded samples were added as two one-sided t tests and z tests (See :ref:`tost`).
+  
 
 Major Bugs fixed
 ----------------
