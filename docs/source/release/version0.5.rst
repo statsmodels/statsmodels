@@ -5,10 +5,9 @@
 Release 0.5.0
 =============
 
-Statsmodels 0.5 contains many new features and a large amount of bug fixes.
+Statsmodels 0.5 is a large and very exciting release that brings together a year of work done by 36 authors, including almost 2000 commits. It contains many new features and a large amount of bug fixes detailed below.
 
 See the :ref:`list of fixed issues <issues_list_05>` for specific closed issues.
-
 
 The following major new features appear in this version.
 
@@ -19,7 +18,7 @@ Statsmodels now supports fitting models with a formula. This functionality is pr
 
     import statsmodels.formula.api as smf
 
-Alternatively, each model in the usual ``statsmodels.api`` namespace has a ``from_formula`` classmethod that will create a model using a formula. A typical workflow can now look something like this.
+Alternatively, each model in the usual ``statsmodels.api`` namespace has a ``from_formula`` classmethod that will create a model using a formula. Formulas are also available for specifying linear hypothesis tests using the ``t_test`` and ``f_test`` methods after model fitting. A typical workflow can now look something like this.
 
 .. code-block:: python
 
@@ -42,57 +41,78 @@ Empirical Likelihood-Based Inference for moments of univariate and multivariate 
 
 Analysis of Variance (ANOVA) Modeling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-See :ref:`anova`.
 
+Support for ANOVA is now available including type I, II, and III sums of squares. See :ref:`anova`.
 
-Nonparameteric Regression (GSoC 2012 project)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-...
+.. currentmodule:: statsmodels.nonparametric
 
 Multivariate Kernel Density Estimators (GSoC 2012 project)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-...
+
+Kernel density estimation has been extended to handle multivariate estimation as well via product kernels. It is available as :class:`sm.nonparametric.KDEMultivariate <kernel_density.KDEMultivariate>`. It supports least squares and maximum likelihood cross-validation for bandwidth estimation, as well as mixed continuous, ordered, and unordered categorical data. Conditional density estimation is also available via :class:`sm.nonparametric.KDEMUltivariateConditional <kernel_density.KDEMultivariateConditional>`.
+
+Nonparameteric Regression (GSoC 2012 project)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Kernel regression models are now available via :class:`sm.nonparametric.KernelReg <kernel_regression.KernelReg>`. It is based on the product kernel mentioned above, so it also has the same set of features including support for cross-validation as well as support for estimation mixed continuous and categorical variables. Censored kernel regression is also provided by `kernel_regression.KernelCensoredReg`.
 
 Quantile Regression Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.regression.quantile_regression
 
-Quantile regression is supported via the :class:`QuantReg` class. Kernel and bandwidth selection options are available for estimating the asymptotic covariance matrix using a kernel density estimator.
+Quantile regression is supported via the :class:`sm.QuantReg <QuantReg>` class. Kernel and bandwidth selection options are available for estimating the asymptotic covariance matrix using a kernel density estimator.
 
 Negative Binomial Regression Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. currentmodule:: statsmodels.discrete.discrete_model
 
-It is now possible to fit negative binomial models for count data via maximum-likelihood using the :class:`NegativeBinomial` class. ``NB1``, ``NB2``, and ``geometric`` variance specifications are available.
+It is now possible to fit negative binomial models for count data via maximum-likelihood using the :class:`sm.NegativeBinomial <NegativeBinomial>` class. ``NB1``, ``NB2``, and ``geometric`` variance specifications are available.
 
-l1-penalized discrete choice models
+l1-penalized Discrete Choice Models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-(optional cvxopt dependency)
+A new optimization method has been added to the discrete models, which includes Logit, Probit, MNLogit and Poisson, that makes it possible to estimate the models with an l1, linear, penalization. This shrinks parameters towards zero and can set parameters that are not very different from zero to zero. This is especially useful if there are a large number of explanatory variables and a large associated number of parameters. `CVXOPT <http://cvxopt.org/>`_ is now an optional dependency that can be used for fitting these models.
+
+New and Improved Graphics
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: statsmodels.graphics
+
+* **Mosaic Plot**: Create a mosaic plot from a contingency table. This allows you to visualize multivariate categorical data in a rigorous and informative way. Available with :func:`sm.graphics.mosaic <mosaicplot.mosaic>`.
+
+* **Interaction Plot**: Interaction plots now handle categorical factors as well as other improviments. :func:`sm.graphics.interaction_plot <factorplots.interaction_plot>`.
+
+* **ProbPlot**: A convenience class for constructing Q-Q, P-P, and probablity plots has been added. :func:`sm.graphics.ProbPlot <gofplots.ProbPlot>`.
+
+* **Regression Plots**: The regression plots have been refactored and improved. They can now handle pandas objects and regression results instances appropriately. See :func:`sm.graphics.plot_fit <regressionplots.plot_fit>`, :func:`sm.graphics.plot_regress_exog <regressionplots.plot_regress_exog>`, :func:`sm.graphics.plot_partregress <regressionplots.plot_partregress>`, :func:`sm.graphics.plot_ccpr   <regressionplots.plot_ccpr>`, :func:`sm.graphics.abline_plot <regressionplots.abline_plot>`, :func:`sm.graphics.influence_plot <regressionplots.influence_plot>`, and :func:`sm.graphics.plot_leverage_resid2 <regressionplots.plot_leverage_resid2>`.
 
 Other important new features
 ----------------------------
-* **IPython notebook examples**
+* **IPython notebook examples**: Many of our examples have been converted or added as IPython notebooks now. They are available `here <http://statsmodels.sourceforge.net/devel/examples/index.html#notebook-examples>`_.
 
-* **Improved marginal effects for discrete choice models**
+* **Improved marginal effects for discrete choice models**: Expanded options for obtaining marginal effects after the estimation of nonlinear discrete choice models are available. See :py:meth:`get_margeff <statsmodels.discrete.discrete_model.DiscreteResuls.get_margeff>`.
 
-* **OLS outlier tests**
+* **OLS influence outlier measures**: After the estimation of a model with OLS, the common set of influence and outlier measures and a outlier test are now available attached as methods ``get_influnce`` and ``outlier_test`` to the Results instance. See :py:class:`OLSInfluence <statsmodels.stats.outliers_influence.OLSInfluence>` and :func:`outlier_test <statsmodels.stats.outliers_influence.outlier_test>`.
 
-* **Expanded probability and diagnostic plots**
+* **New datasets**: New :ref:`datasets <datasets>` are available for examples.
 
-* **New datasets**
+* **Access to R datasets**: We now have access to many of the same datasets available to R users through the `Rdatasets project <http://vincentarelbundock.github.io/Rdatasets/>`_. You can access these using the :func:`sm.datasets.get_rdataset <statsmodels.datasets.get_rdataset>` function. This function also includes caching of these datasets.
 
-* **Access to R datasets**
+* **Improved numerical differentiation tools**: Numerical differentiation routines have been greatly improved and expanded to cover all the routines discussed in::
 
-* **Improved numerical differentiation tools**
+    Ridout, M.S. (2009) Statistical applications of the complex-step method
+        of numerical differentiation. The American Statistician, 63, 66-74
 
-* **Consistent constant handling across models**
+  See the :ref:`sm.tools.numdiff <numdiff>` module.
+
+* **Consistent constant handling across models**: Result statistics no longer rely on the assumption that a constant is present in the model.
 
 * **Missing value handling across models**: Users can now control what models do in the presence of missing values via the ``missing`` keyword available in the instantiation of every model. The options are ``'none'``, ``'drop'``, and ``'raise'``. The default is ``'none'``, which does no missing value checks. To drop missing values use ``'drop'``. And ``'raise'`` will raise an error in the presence of any missing data.
 
-* **Ability to write Stata datasets**: Added the ability to write Stata ``.dta`` files.
+.. currentmodule:: statsmodels.iolib
+
+* **Ability to write Stata datasets**: Added the ability to write Stata ``.dta`` files. See :class:`sm.iolib.StataWriter <foreign.StataWriter>`.
 
 .. currentmodule:: statsmodels.tsa.arima_model
 
@@ -101,6 +121,10 @@ Other important new features
 * **Support for dynamic prediction in AR(I)MA models**: It is now possible to obtain dynamic in-sample forecast values in :class:`ARMA` and :class:`ARIMA` models.
 
 * **Improved Pandas integration**: Statsmodels now supports all frequencies available in pandas for time-series modeling. These are used for intelligent dates handling for prediction. These features are available, if you pass a pandas Series or DataFrame with a DatetimeIndex to a time-series model.
+
+* **Power and Sample Size Calculations**: 
+
+* **New statistical hypothesis tests**: TOST, test for proportions, Cohen's kappa, Tukey HSD multiple comparison enhancement (with plot).
 
 Major Bugs fixed
 ----------------
@@ -116,19 +140,19 @@ Backwards incompatible changes and deprecations
 
 * The ``q_matrix`` keyword to `t_test` and `f_test` for linear models is deprecated. You can now specify linear hypotheses using formulas.
 
-.. currentmodule:: statsmodels.tsa.stattools
+.. currentmodule:: statsmodels.tsa
 
-* The ``conf_int`` keyword to :func:`acf` is deprecated.
+* The ``conf_int`` keyword to :func:`sm.tsa.acf <stattools.acf>` is deprecated.
 
-.. currentmodule:: statsmodels.tsa.vector_ar.var_model
+* The ``names`` argument is deprecated in :class:`sm.tsa.VAR <vector_ar.var_model.VAR>` and `sm.tsa.SVAR <vector_ar.svar_model.SVAR>`. This is now automatically detected and handled.
 
-* The ``names`` argument is deprecated in :class:`VAR` and SVAR. This is now automatically detected and handled.
+.. currentmodule:: statsmodels.tsa
 
-* The ``order`` keyword to ``ARMA.fit`` is deprecated. It is now passed in during model instantiation.
+* The ``order`` keyword to :py:meth:`sm.tsa.ARMA.fit <ARMA.fit>` is deprecated. It is now passed in during model instantiation.
 
 .. currentmodule:: statsmodels.distributions
 
-* The empirical distribution function (:class:`ECDF`) and supporting functions have been moved to ``statsmodels.distributions``. Their old paths have been deprecated.
+* The empirical distribution function (:class:`sm.distributions.ECDF <ECDF>`) and supporting functions have been moved to ``statsmodels.distributions``. Their old paths have been deprecated.
 
 * The ``margeff`` method of the discrete choice models has been deprecated. Use ``get_margeff`` instead. See above. Also, the vague ``resid`` attribute of the discrete choice models has been deprecated in favor of the more descriptive ``resid_dev`` to indicate that they are deviance residuals.
 
