@@ -37,11 +37,13 @@ See :ref:`here for some more documentation of using formulas in statsmodels <for
 
 Empirical Likelihood (Google Summer of Code 2012 project)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-...
+
+Empirical Likelihood-Based Inference for moments of univariate and multivariate variables is available as well as EL-based ANOVA tests. EL-based linear regression, including the regression through the origin model. In addition, the accelerated failure time model for inference on a linear regression model with a randomly right censored endogenous variable is available.
 
 Analysis of Variance (ANOVA) Modeling
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-...
+See :ref:`anova`.
+
 
 Nonparameteric Regression (GSoC 2012 project)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
