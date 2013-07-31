@@ -24,6 +24,7 @@ Module Reference
    :toctree: generated/
 
    foreign.StataReader
+   foreign.StataWriter
    foreign.genfromdta
    foreign.savetxt
    table.SimpleTable
