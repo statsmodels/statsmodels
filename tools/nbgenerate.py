@@ -299,7 +299,8 @@ if __name__ == '__main__':
                 with io.open(new_html, "w", encoding="utf-8") as f:
                     f.write(title_cell["source"]+u"\n")
                     f.write(u"="*len(title_cell["source"])+u"\n\n")
-                    f.write(notebook_template.substitute(body=html_out))
+                    f.write(notebook_template.substitute(name=fname_only,
+                                                         body=html_out))
             hash_funcs.update_hash_dict(filehash, fname_only)
     except Exception, err:
         raise err

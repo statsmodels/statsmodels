@@ -1,6 +1,10 @@
 from string import Template
 
 notebook_template = Template("""
+.. _$name_notebook:
+
+`Link to Notebook GitHub <https://github.com/statsmodels/statsmodels/tree/master/examples/notebooks/$name.ipynb>`_
+
 .. raw:: html
 
 $body
