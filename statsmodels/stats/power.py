@@ -55,7 +55,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
         crit_upp = stats.t.isf(alpha_, df)
         #print crit_upp, df, d*np.sqrt(nobs)
         # use private methods, generic methods return nan with negative d
-        if np.isnan(crit_upp):
+        if np.any(np.isnan(crit_upp)):
             # avoid endless loop, https://github.com/scipy/scipy/issues/2667
             pow_ = np.nan
         else:
@@ -63,7 +63,7 @@ def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     if alternative in ['two-sided', '2s', 'smaller']:
         crit_low = stats.t.ppf(alpha_, df)
         #print crit_low, df, d*np.sqrt(nobs)
-        if np.isnan(crit_upp):
+        if np.any(np.isnan(crit_low)):
             pow_ = np.nan
         else:
             pow_ += stats.nct._cdf(crit_low, df, d*np.sqrt(nobs))
