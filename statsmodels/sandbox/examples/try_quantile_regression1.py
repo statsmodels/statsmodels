@@ -10,10 +10,10 @@ import numpy as np
 from scipy import stats
 import statsmodels.api as sm
 
-from statsmodels.sandbox.regression.quantile_regression import quantilereg
+from statsmodels.regression.quantile_regression import QuantReg
 
 sige = 0.1
-nobs, k_vars = 1500, 3
+nobs, k_vars = 500, 3
 x = np.random.uniform(-1, 1, size=nobs)
 x.sort()
 exog = np.vander(x, k_vars+1)[:,::-1]
@@ -21,14 +21,12 @@ mix = 0.1 * stats.norm.pdf(x[:,None], loc=np.linspace(-0.5, 0.75, 4), scale=0.01
 y = exog.sum(1) + mix + sige * (np.random.randn(nobs)/2 + 1)**3
 
 p = 0.5
-x0 = exog[:, 1:]    #quantilereg includes constant already!
-res_qr = quantilereg(y, x0, p)
-
-res_qr2 = quantilereg(y, x0, 0.1)
-res_qr3 = quantilereg(y, x0, 0.75)
+res_qr = QuantReg(y, exog).fit(p)
+res_qr2 = QuantReg(y, exog).fit(0.1)
+res_qr3 = QuantReg(y, exog).fit(0.75)
 res_ols = sm.OLS(y, exog).fit()
 
-params = [res_ols.params, res_qr2, res_qr, res_qr3]
+params = [res_ols.params, res_qr2.params, res_qr.params, res_qr3.params]
 labels = ['ols', 'qr 0.1', 'qr 0.5', 'qr 0.75']
 
 import matplotlib.pyplot as plt

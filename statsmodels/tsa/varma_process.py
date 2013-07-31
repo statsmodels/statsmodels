@@ -683,7 +683,7 @@ if __name__ == "__main__":
     #print maxabs(arhat - a22)
 
 
-    v = Var(ar2s)
+    v = _Var(ar2s)
     v.fit(1)
     v.forecast()
     v.forecast(25)[-30:]
