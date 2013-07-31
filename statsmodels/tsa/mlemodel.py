@@ -15,7 +15,7 @@ import numpy as np
 
 try:
     import numdifftools as ndt
-except:
+except ImportError:
     pass
 
 from statsmodels.base.model import LikelihoodModel

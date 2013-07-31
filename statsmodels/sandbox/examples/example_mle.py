@@ -43,7 +43,7 @@ score = lambda params: -1*mod.score(params)
 res = mod.fit()
 #print mod.results.params
 print 'OLS'
-print mod._results.params
+print res.params
 print 'MLE'
 #resfmin2 = optimize.fmin(f, mod.results.params*0.9, maxfun=5000, maxiter=5000, xtol=1e-10, ftol= 1e-10)
 resfmin2 = optimize.fmin(f, np.ones(7), maxfun=5000, maxiter=5000, xtol=1e-10, ftol= 1e-10)
