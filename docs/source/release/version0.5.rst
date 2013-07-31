@@ -79,11 +79,22 @@ New and Improved Graphics
 
 .. currentmodule:: statsmodels.graphics
 
+* **ProbPlot**: A new `ProbPlot` object has been added to provide a simple interface to create P-P, Q-Q, and probability plots with options to fit a distribution and show various reference lines. In the case of Q-Q and P-P plots, two different samples can be compared with the `other` keyword argument. :func:`sm.graphics.ProbPlot <gofplots.ProbPlot>`
+
+.. code-block:: python
+   
+   import numpy as np
+   import statsmodels.api as sm
+   x = np.random.normal(loc=1.12, scale=0.25, size=37)
+   y = np.random.normal(loc=0.75, scale=0.45, size=37)
+   ppx = sm.ProbPlot(x)
+   ppy =  sm.ProbPlot(y)
+   fig1 = ppx.qqplot()
+   fig2 = ppx.qqplot(other=ppy)
+
 * **Mosaic Plot**: Create a mosaic plot from a contingency table. This allows you to visualize multivariate categorical data in a rigorous and informative way. Available with :func:`sm.graphics.mosaic <mosaicplot.mosaic>`.
 
 * **Interaction Plot**: Interaction plots now handle categorical factors as well as other improviments. :func:`sm.graphics.interaction_plot <factorplots.interaction_plot>`.
-
-* **ProbPlot**: A convenience class for constructing Q-Q, P-P, and probablity plots has been added. :func:`sm.graphics.ProbPlot <gofplots.ProbPlot>`.
 
 * **Regression Plots**: The regression plots have been refactored and improved. They can now handle pandas objects and regression results instances appropriately. See :func:`sm.graphics.plot_fit <regressionplots.plot_fit>`, :func:`sm.graphics.plot_regress_exog <regressionplots.plot_regress_exog>`, :func:`sm.graphics.plot_partregress <regressionplots.plot_partregress>`, :func:`sm.graphics.plot_ccpr   <regressionplots.plot_ccpr>`, :func:`sm.graphics.abline_plot <regressionplots.abline_plot>`, :func:`sm.graphics.influence_plot <regressionplots.influence_plot>`, and :func:`sm.graphics.plot_leverage_resid2 <regressionplots.plot_leverage_resid2>`.
 
