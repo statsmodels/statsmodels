@@ -24,7 +24,6 @@ TODO:
     send patsy proposal for data handle (see Issue #941)
 
 """
-
 import numpy as np
 from statsmodels.base.model import GenericLikelihoodModel
 
@@ -57,8 +56,6 @@ class CLogit(GenericLikelihoodModel):
 
     If there are choice specific constants, then they should be contained in Z.
     For identification, the constant of one choice should be dropped.
-
-
     '''
 
     def __init__(self, endog, exog_bychoices, ncommon, **kwds):
@@ -71,20 +68,23 @@ class CLogit(GenericLikelihoodModel):
         # TODO: rename beta to params and include inclusive values for nested CL
         betaind = [exog_bychoices[ii].shape[1]-ncommon for ii in range(self.nchoices)]
         zi = np.r_[[ncommon], ncommon + np.array(betaind).cumsum()]
-        z=np.arange(len(zi)+ncommon)
+        self.zi = zi
+        z = np.arange(len(zi)+ncommon)
 
-        beta_indices = [np.r_[np.array(np.arange(ncommon)),z[zi[ii]:zi[ii+1]]]
+        beta_indices = [np.r_[np.arange(ncommon), z[zi[ii]:zi[ii+1]]]
                        for ii in range(len(zi)-1)]
         # beta_indices = [array([3, 0, 1, 2]), array([4, 0, 1]), array([5, 0, 1]), array([1])]
         self.beta_indices = beta_indices
 
+        params_num = []                            #num de params to estimate
+        for sublist in beta_indices:
+            for item in sublist:
+                if item not in params_num:
+                    params_num.append(item)
 
-    def initialize_clogit(self, params):
-        """
-        """
-        self.df_model = len(params)  # assumes constant
-        self.df_resid = self.nobs - len(params)
-        print self.df_model, self.df_resid
+        self.params_num = params_num
+        self.df_model = len(params_num)
+        self.df_resid = int(self.nobs - len(params_num))
 
     def xbetas(self, params):
         '''these are the V_i
@@ -93,6 +93,7 @@ class CLogit(GenericLikelihoodModel):
         for choiceind in range(self.nchoices):
             res[:,choiceind] = np.dot(self.exog_bychoices[choiceind],
                                       params[self.beta_indices[choiceind]])
+
         return res
 
     def loglike(self, params):
@@ -114,13 +115,13 @@ class CLogit(GenericLikelihoodModel):
     def fit(self, start_params=None, maxiter=10000, maxfun=5000, method="newton",
             full_output=1, disp=1, callback=None,**kwds):
         if start_params is None:
-            start_params = np.zeros(6)  # need better np.zeros(6)
+            start_params = np.zeros(len(self.params_num))
         else:
             start_params = np.asarray(start_params)
-        return super(CLogit, self).fit( start_params=start_params,
+        return super(CLogit, self).fit(start_params=start_params,
                                     maxiter=maxiter, maxfun=maxfun,**kwds)
 
-if __name__=="__main__":
+if __name__ =="__main__":
 
     u"""Example
     See Greene, Econometric Analysis (5th Edition - 2003: Page 729)
@@ -148,26 +149,25 @@ if __name__=="__main__":
         import urllib
         urllib.urlretrieve(url, "ModeChoice.csv")
     df = pandas.read_csv(file_)
-
     pandas.set_printoptions(max_rows=1000, max_columns=20)
     df.describe()
 
-    nchoices=4
-    nobs=210
+    nchoices = 4
+    nobs = 210
     choice_index = np.arange(nchoices*nobs) % nchoices
     df['hinc_air'] = df['hinc']*(choice_index==0)
-    df.head()[:]
 
     f = 'mode  ~ ttme+invc+invt+gc+hinc+psize+hinc_air'
-    y,X = patsy.dmatrices(f, df, return_type='dataframe')
+    y, X = patsy.dmatrices(f, df, return_type='dataframe')
     y.head()
     X.head()
 
     endog = y.to_records()
-    endog = endog['mode'].reshape(-1,nchoices)
+    endog = endog['mode'].reshape(-1, nchoices)
 
-    dta= X.to_records()
-    dta1=np.array(dta)
+    dta = X.to_records()
+    dta1 = np.array(dta)
+
     xivar = [['gc', 'ttme', 'Intercept','hinc_air'],
              ['gc', 'ttme', 'Intercept'],
              ['gc', 'ttme', 'Intercept'],
@@ -180,22 +180,18 @@ if __name__=="__main__":
 
     # xifloat = [xx.view(float).reshape(nobs,-1) for xx in xi]
     # xifloat = [X[xi_names][choice_index==ii].values for ii, xi_names in enumerate(xivar)]
-    xifloat = [X.ix[choice_index==ii, xi_names].values for ii, xi_names in enumerate(xivar)]
+    xifloat = [X.ix[choice_index == ii, xi_names].values for ii, xi_names in enumerate(xivar)]
 
-    clogit = CLogit(endog, xifloat, 2)
+    clogit_mod  = CLogit(endog, xifloat, 2)
     # Iterations:  ¿ 957 ?
-
-    resclogit=clogit.fit()
+    clogit_res =  clogit_mod.fit()
 
     exog_names = u'     βG         βT        αair          γH          αtrain       αbus'.split()
     print u'     βG         βT        αair          γH          αtrain       αbus'
-    print resclogit.params
+    print clogit_res.params
 
-    clogit.initialize_clogit(resclogit.params)
-    clogit.xbetas(resclogit.params)
-
-
-    print u"""Greene TABLE 21.11 Parameter Estimates. Unweighted Sample
+    print u"""Example
+    Greene TABLE 21.11 Parameter Estimates. Unweighted Sample
         βG       βT      αair        γH         αtrain       αbus
     [-0.015501  -0.09612   5.2074  0.01328757  3.86905293  3.16319074]
 
@@ -245,7 +241,6 @@ if __name__=="__main__":
     McFadden R^2:  0.29825
     Likelihood ratio test : chisq = 169.26 (p.value = < 2.22e-16)
     """
-
     print  u""" R results
     air:(intercept) train:(intercept)   bus:(intercept)   gc
     5.20743293        3.86903570        3.16319033       -0.01550151
@@ -254,14 +249,99 @@ if __name__=="__main__":
     """
 
     # TODO: why are df_resid and df_model nan
-    # resclogit.df_resid = resclogit.model.endog.shape[0] - len(resclogit.params)
-    # resclogit.df_model = len(resclogit.params)
+    # clogit_res.df_resid = clogit_res.model.endog.shape[0] - len(clogit_res.params)
+    # clogit_res.df_model = len(clogit_res.params)
 
-    table = {'df_resid': clogit.df_resid, 'df_model': clogit.df_model}
+    table = {'df_resid': clogit_mod.df_resid, 'df_model': clogit_mod.df_model}
 
-    for df_resid,df_model in table.items():
-        print '{0} ==> {1:10}'.format(df_resid,df_model)
+    for df_resid, df_model in table.items():
+        print '{0} ==> {1:10}'.format(df_resid, df_model)
 
     exog_names = u'G T const_air H const_train const_bus'.split()
-    # print resclogit.summary(yname='Travel Mode', xname=exog_names)
+    # print clogit_res.summary(yname='Travel Mode', xname=exog_names)
     # TODO: it looks like R reports p-value based on t-distribution
+
+    hessian = clogit_mod.hessian(clogit_res.params)
+    print hessian
+    print u"""
+    model$hessian       #the hessian of the log-likelihood at convergence,
+                      air:(intercept) train:(intercept) bus:(intercept)           gc        ttme    hinc_air
+    air:(intercept)        -25.613627          7.715062        3.883696    192.37152  -1109.9784   -993.2641
+    train:(intercept)        7.715062        -28.707527        6.766574   -776.60445   -313.7511    284.4266
+    bus:(intercept)          3.883696          6.766574      -17.978427    -21.70683   -159.8403    144.5267
+    gc                     192.371522       -776.604449      -21.706830 -75474.20527 -16841.6889   7780.6315
+    ttme                 -1109.978447       -313.751079     -159.840260 -16841.68892 -91446.9712 -43448.0365
+    hinc_air              -993.264146        284.426623      144.526736   7780.63148 -43448.0365 -48054.1196
+    """
+
+    print u"""
+    Example 2
+    """
+    xivar2 = [['invc', 'Intercept'],
+             ['invc', 'Intercept'],
+             ['invc', 'Intercept'],
+             ['invc', ]]
+
+    xi2 = []
+
+    for ii in range(nchoices):
+        xi2.append(dta1[xivar2[ii]][choice_index==ii])
+
+    xifloat2 = [X.ix[choice_index == ii, xi2_names].values for ii, xi2_names in enumerate(xivar2)]
+
+    clogit_mod2 = CLogit(endog, xifloat2, 1)
+    clogit_res2 = clogit_mod2.fit()
+
+    print clogit_res2.params
+
+    table = {'df_resid': clogit_mod2.df_resid, 'df_model': clogit_mod2.df_model}
+
+    for df_resid,df_model in table.items():
+        print '{0} ==> {1:10}'.format(df_resid, df_model)
+
+    """
+        Call:
+    mlogit(formula = choice ~ invc, data = TravelMode, reflevel = "car",
+        shape = "long", alt.var = "mode", print.level = 2, method = "nr")
+
+    Frequencies of alternatives:
+        car     air   train     bus
+    0.28095 0.27619 0.30000 0.14286
+
+    nr method
+    4 iterations, 0h:0m:0s
+    g'(-H)^-1g = 0.000482
+    successive function values within tolerance limits
+
+    Coefficients :
+                        Estimate Std. Error t-value Pr(>|t|)
+    air:(intercept)    0.8711172  0.3979705  2.1889  0.02860 *
+    train:(intercept)  0.4825992  0.2455787  1.9652  0.04940 *
+    bus:(intercept)   -0.5000892  0.2356369 -2.1223  0.03381 *
+    invc              -0.0138883  0.0055318 -2.5106  0.01205 *
+    ---
+    Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+    Log-Likelihood: -280.54
+    McFadden R^2:  0.011351
+    Likelihood ratio test : chisq = 6.4418 (p.value = 0.011147)
+    """
+
+    hessian2 = clogit_mod2.hessian(clogit_res2.params)
+
+    print hessian2
+
+    print u"""
+    R results
+
+        model2$coefficient
+    air:(intercept) train:(intercept)   bus:(intercept)              invc
+       0.87111722        0.48259924       -0.50008925       -0.01388828
+
+        model2$hessian
+                      air:(intercept) train:(intercept) bus:(intercept)          invc
+    air:(intercept)        -41.485888         17.171385        8.218602   -2022.67713
+    train:(intercept)       17.171385        -43.402569        8.885814     -81.87671
+    bus:(intercept)          8.218602          8.885814      -25.618418     455.92294
+    invc                 -2022.677132        -81.876710      455.922944 -157872.76175
+    """
