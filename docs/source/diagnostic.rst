@@ -202,19 +202,19 @@ individual outliers and might not be able to identify groups of outliers.
    Some of these statistics can be calculated from an OLS results instance,
    others require that an OLS is estimated for each left out variable.
 
-   resid_press
-   resid_studentized_external
-   resid_studentized_internal
-   ess_press
-   hat_matrix_diag
-   cooks_distance - Cook's Distance `Wikipedia <http://en.wikipedia.org/wiki/Cook%27s_distance>`_ (with some other links)
-   cov_ratio
-   dfbetas
-   dffits
-   dffits_internal
-   det_cov_params_not_obsi
-   params_not_obsi
-   sigma2_not_obsi
+   - resid_press
+   - resid_studentized_external
+   - resid_studentized_internal
+   - ess_press
+   - hat_matrix_diag
+   - cooks_distance - Cook's Distance `Wikipedia <http://en.wikipedia.org/wiki/Cook%27s_distance>`_ (with some other links)
+   - cov_ratio
+   - dfbetas
+   - dffits
+   - dffits_internal
+   - det_cov_params_not_obsi
+   - params_not_obsi
+   - sigma2_not_obsi
 
 
 
