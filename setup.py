@@ -151,7 +151,7 @@ def check_dependency_versions(min_versions):
 MAJ = 0
 MIN = 5
 REV = 0
-ISRELEASED = False
+ISRELEASED = True
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
 classifiers = [ 'Development Status :: 4 - Beta',
