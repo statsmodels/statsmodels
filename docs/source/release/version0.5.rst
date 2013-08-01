@@ -143,8 +143,8 @@ Other important new features
 
 .. currentmodule:: statsmodels
 
-* **New statistical hypothesis tests**: Added statistics for calculating interrater agreement including Cohen's kappa and Fleiss' kappa (See :ref:`interrater`). Statistics and hypothesis tests for proportional data (See :ref:`proportion stats <proportion_stats>`). Tukey HSD (with plot) was added as an enhancment to the multiple comparison tests (:class:`sm.stats.multicomp.MultiComparison <sandbox.stats.multicomp.MultiComparison>`, :func:`sm.stats.multicomp.pairwise_tukeyhsd <stats.multicomp.pairwise_tukeyhsd>`). Tests of non-equivlance for two dependent, pairded samples were added as two one-sided t tests and z tests (See :ref:`tost`).
-  
+* **New statistical hypothesis tests**: Added statistics for calculating interrater agreement including Cohen's kappa and Fleiss' kappa (See :ref:`interrater`), statistics and hypothesis tests for proportions (See :ref:`proportion stats <proportion_stats>`), Tukey HSD (with plot) was added as an enhancement to the multiple comparison tests (:class:`sm.stats.multicomp.MultiComparison <sandbox.stats.multicomp.MultiComparison>`, :func:`sm.stats.multicomp.pairwise_tukeyhsd <stats.multicomp.pairwise_tukeyhsd>`). Weighted statistics and t tests were enhanced with new options. Tests of equivalence for one sample and two independent or paired samples were added based on t tests and z tests (See :ref:`tost`).  
+
 
 Major Bugs fixed
 ----------------
