@@ -65,6 +65,7 @@ Basic Documentation
     :maxdepth: 3
 
     introduction
+    release/index
     gettingstarted
     example_formulas
     install

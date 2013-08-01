@@ -77,3 +77,4 @@ Other Plots
    :toctree: generated/
 
    factorplots.interaction_plot
+   mosaicplot.mosaic

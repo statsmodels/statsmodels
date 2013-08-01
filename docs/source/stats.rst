@@ -158,6 +158,8 @@ Non-Parametric Tests
 
    sign_test
 
+.. _interrater:   
+
 Interrater Reliability and Agreement
 ------------------------------------
 
@@ -236,6 +238,7 @@ The following functions are not (yet) public
    set_remove_subs
    tiecorrect
 
+.. _tost:
 
 Basic Statistics and t-Tests with frequency weights
 ---------------------------------------------------
@@ -306,6 +309,8 @@ equations.
    tt_ind_solve_power
    zt_ind_solve_power
 
+
+.. _proportion_stats:
 
 Proportion
 ----------

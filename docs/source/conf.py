@@ -34,7 +34,9 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'matplotlib.sphinxext.only_directives',
               'ipython_console_highlighting',
               'ipython_directive',
-              'numpy_ext.numpydoc']
+              'numpy_ext.numpydoc',
+              'github' # for GitHub links
+              ]
 
 import sphinx
 if sphinx.__version__ == '1.1.3':
@@ -316,3 +318,6 @@ intersphinx_mapping = {
 
 from os.path import dirname, abspath, join
 plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
+
+# ghissue config
+github_project_url = "https://github.com/statsmodels/statsmodels"
