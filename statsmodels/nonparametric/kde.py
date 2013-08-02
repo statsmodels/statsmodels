@@ -220,7 +220,7 @@ class KDEUnivariate(object):
         """
         _checkisfit(self)
 
-        if method = 'exact':
+        if method == 'exact':
             if getattr(self.kernel, 'cdf', None):
                 kvals = sum(self.kernel.cdf(self.endog, x, self.bw))
                 return kvals/len(self.endog)
@@ -332,7 +332,7 @@ class KDEUnivariate(object):
         """
         _checkisfit(self)
 
-        if method = 'exact':
+        if method == 'exact':
             if getattr(self.kernel, 'cdf', None):
                 kvals = sum(self.kernel.cdf(self.endog, x, self.bw))
                 return 1-kvals/len(self.endog)
