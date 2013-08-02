@@ -730,9 +730,8 @@ def levinson_durbin(s, nlags=10, isacov=False):
     return sigma_v, arcoefs, pacf_, sig, phi  #return everything
 
 
-
 def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
-    '''four tests for granger non causality of 2 timeseries
+    """four tests for granger non causality of 2 timeseries
 
     all four tests give similar results
     `params_ftest` and `ssr_ftest` are equivalent based on F test which is
@@ -782,35 +781,38 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     http://en.wikipedia.org/wiki/Granger_causality
     Greene: Econometric Analysis
 
-    '''
-    from scipy import stats # lazy import
+    """
+    from scipy import stats
 
     x = np.asarray(x)
 
+    if x.shape[0] <= 3 * maxlag + int(addconst):
+        raise ValueError("")
+
     resli = {}
 
-    for mlg in range(1, maxlag+1):
+    for mlg in range(1, maxlag + 1):
         result = {}
         if verbose:
             print '\nGranger Causality'
             print 'number of lags (no zero)', mlg
-        mxlg = mlg #+ 1 # Note number of lags starting at zero in lagmat
+        mxlg = mlg
 
         # create lagmat of both time series
         dta = lagmat2ds(x, mxlg, trim='both', dropex=1)
 
         #add constant
         if addconst:
-            dtaown = add_constant(dta[:,1:mxlg+1], prepend=False)
-            dtajoint = add_constant(dta[:,1:], prepend=False)
+            dtaown = add_constant(dta[:, 1:mxlg+1], prepend=False)
+            dtajoint = add_constant(dta[:, 1:], prepend=False)
         else:
-            raise ValueError('Not Implemented')
-            dtaown = dta[:,1:mxlg]
-            dtajoint = dta[:,1:]
+            raise NotImplementedError('Not Implemented')
+            #dtaown = dta[:, 1:mxlg]
+            #dtajoint = dta[:, 1:]
 
-        #run ols on both models without and with lags of second variable
-        res2down = OLS(dta[:,0], dtaown).fit()
-        res2djoint = OLS(dta[:,0], dtajoint).fit()
+        # Run ols on both models without and with lags of second variable
+        res2down = OLS(dta[:, 0], dtaown).fit()
+        res2djoint = OLS(dta[:, 0], dtajoint).fit()
 
         #print results
         #for ssr based tests see: http://support.sas.com/rnd/app/examples/ets/granger/index.htm
@@ -834,18 +836,19 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         lr = -2*(res2down.llf-res2djoint.llf)
         if verbose:
             print 'likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %  \
-              (lr, stats.chi2.sf(lr, mxlg), mxlg)
+                (lr, stats.chi2.sf(lr, mxlg), mxlg)
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
-        rconstr = np.column_stack((np.zeros((mxlg-1,mxlg-1)), np.eye(mxlg-1, mxlg-1),\
-                                   np.zeros((mxlg-1, 1))))
-        rconstr = np.column_stack((np.zeros((mxlg,mxlg)), np.eye(mxlg, mxlg),\
-                                   np.zeros((mxlg, 1))))
+        rconstr = np.column_stack((
+            np.zeros((mxlg, mxlg)),
+            np.eye(mxlg, mxlg),
+            np.zeros((mxlg, 1))
+        ))
         ftres = res2djoint.f_test(rconstr)
         if verbose:
             print 'parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
-              (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
+                (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
         result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
                                   np.squeeze(ftres.pvalue)[()],
                                   ftres.df_denom, ftres.df_num)
@@ -853,6 +856,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         resli[mxlg] = (result, [res2down, res2djoint, rconstr])
 
     return resli
+
 
 def coint(y1, y2, regression="c"):
     """
