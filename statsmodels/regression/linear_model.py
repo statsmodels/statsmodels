@@ -1390,7 +1390,6 @@ class RegressionResults(base.LikelihoodModelResults):
         from statsmodels.stats.stattools import (jarque_bera,
                                                  omni_normtest,
                                                  durbin_watson)
-
         from statsmodels.compatnp.collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
@@ -1398,6 +1397,7 @@ class RegressionResults(base.LikelihoodModelResults):
         eigvals = self.eigenvals
         condno = self.condition_number
         eigvals = np.sort(eigvals) #in increasing order
+
         diagnostic = OrderedDict([
                      ('Omnibus:',  "%.3f" % omni),
                      ('Prob(Omnibus):', "%.3f" % omnipv),

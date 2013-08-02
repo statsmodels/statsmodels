@@ -214,23 +214,33 @@ class TestCoint_t(CheckCoint):
         self.teststat = -1.8208817
 
 
-def test_grangercausality():
-    # some example data
-    mdata = macrodata.load().data
-    mdata = mdata[['realgdp','realcons']]
-    data = mdata.view((float,2))
-    data = np.diff(np.log(data), axis=0)
+class TestGrangerCausality(object):
 
-    #R: lmtest:grangertest
-    r_result = [0.243097, 0.7844328, 195, 2]  #f_test
-    gr = grangercausalitytests(data[:,1::-1], 2, verbose=False)
-    assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
-    assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'],
-                        decimal=7)
+    def test_grangercausality(self):
+        # some example data
+        mdata = macrodata.load().data
+        mdata = mdata[['realgdp', 'realcons']]
+        data = mdata.view((float, 2))
+        data = np.diff(np.log(data), axis=0)
+
+        #R: lmtest:grangertest
+        r_result = [0.243097, 0.7844328, 195, 2]  # f_test
+        gr = grangercausalitytests(data[:, 1::-1], 2, verbose=False)
+        assert_almost_equal(r_result, gr[2][0]['ssr_ftest'], decimal=7)
+        assert_almost_equal(gr[2][0]['params_ftest'], gr[2][0]['ssr_ftest'], decimal=7)
+
+    def test_granger_fails_on_nobs_check(self):
+        # Test that if maxlag is too large, Granger Test raises a clear error.
+        X = np.random.rand(10, 2)
+        grangercausalitytests(X, 2)  # This should pass.
+        assert_raises(ValueError, grangercausalitytests, X, 3)
+
+
 
 def test_pandasacovf():
     s = Series(range(1, 11))
     assert_almost_equal(acovf(s), acovf(s.values))
+
 
 def test_acovf2d():
     dta = sunspots.load_pandas().data
