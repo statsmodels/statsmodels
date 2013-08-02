@@ -179,7 +179,7 @@ class KDEUnivariate(object):
             return self.kernel.density(self.endog, point)
 
         if method == 'interpolate':
-            return interpolate.interp1d(point, self.pdf_values)
+            return interpolate.interp1d(self.support, self.pdf_values)(point)
 
         raise NotImplementedError("selected method not implemented")
 
@@ -200,39 +200,6 @@ class KDEUnivariate(object):
         """
         Returns the cumulative distribution function evaluated at x.
 
-        Notes
-        -----
-        Will not work if fit has not been called.
-
-        If there is an analytic integrated kernel avaliable for the kernel then
-        this is used to find the cdf on self.support. Otherwise the cdf is evaluated
-        numerically.
-        """
-        _checkisfit(self)
-
-        if method = 'exact':
-            if getattr(self.kernel, 'cdf', None):
-                return sum(self.kernel.cdf(self.endog, x, self.bw))/len(self.endog)
-
-            else:
-                kern = self.kernel
-                func = lambda y: kern.density(self.endog, y)
-
-                return integrate.quad(func, self.support[0], x)[0]
-
-        if method == 'interpolate':
-            return interpolate.interp1d(point, self.cdf_values)
-
-        raise NotImplementedError("selected method not implemented")
-
-
-
-
-    @cache_readonly
-    def cdf_values(self):
-        """
-        Returns the cumulative distribution function evaluated at the support.
-
         Parameters
         ----------
         point : float
@@ -248,13 +215,49 @@ class KDEUnivariate(object):
         Will not work if fit has not been called.
 
         If there is an analytic integrated kernel avaliable for the kernel then
-        this is used to find the cdf on self.support. Otherwise the cdf is evaluated
-        numerically.
+        this is used to find the cdf on self.support. Otherwise the cdf is 
+        evaluated numerically.
+        """
+        _checkisfit(self)
+
+        if method = 'exact':
+            if getattr(self.kernel, 'cdf', None):
+                kvals = sum(self.kernel.cdf(self.endog, x, self.bw))
+                return kvals/len(self.endog)
+
+            else:
+                kern = self.kernel
+                func = lambda y: kern.density(self.endog, y)
+
+                return integrate.quad(func, self.support[0], x)[0]
+
+        if method == 'interpolate':
+            return interpolate.interp1d(self.support, self.cdf_values)(point)
+
+        raise NotImplementedError("selected method not implemented")
+
+
+
+
+    @cache_readonly
+    def cdf_values(self):
+        """
+        Returns the cumulative distribution function evaluated at the support.
+
+        Notes
+        -----
+        Will not work if fit has not been called.
+
+        If there is an analytic integrated kernel avaliable for the kernel then
+        this is used to find the cdf on self.support. Otherwise the cdf is 
+        evaluated numerically.
         """
         _checkisfit(self)
 
         if getattr(self.kernel, 'cdf', None):
-            return sum(self.kernel.cdf(np.tile(self.endog,[len(self.support),1]).T, self.support, self.bw))/len(self.endog)
+            endog_tile = np.tile(self.endog,[len(self.support),1]).T
+            kvals = sum(self.kernel.cdf(endog_tile, self.support, self.bw))
+            return kaval/len(self.endog)
 
         else:
             density = self.density
@@ -276,7 +279,7 @@ class KDEUnivariate(object):
 
     def cumhazard(self, point, method = 'exact'):
         """
-        Returns the hazard function evaluated at a point.
+        Returns the cumulative hazard function evaluated at a point.
 
         Notes
         -----
@@ -289,7 +292,7 @@ class KDEUnivariate(object):
     @cache_readonly
     def cumhazard_values(self):
         """
-        Returns the hazard function evaluated at the support.
+        Returns the cumulative hazard function evaluated at the support.
 
         Notes
         -----
@@ -307,10 +310,44 @@ class KDEUnivariate(object):
         Notes
         -----
         Will not work if fit has not been called.
+
+
+        Parameters
+        ----------
+        point : float
+            Point at which to evaluate the sf.
+        method : string
+            Method used to evaluate sf. Options are:
+                'exact' - calculate exact value by using all sample points
+                'interpoalte' - calculate by interpolating from values of 
+                                density over support.
+
+        Notes
+        -----
+        Will not work if fit has not been called.                    
+
+        If there is an analytic integrated kernel avaliable for the kernel then
+        this is used to find the sf on self.support. Otherwise the sf is 
+        evaluated numerically.
         """
         _checkisfit(self)
-        return 1 - self.cdf(point, method)
 
+        if method = 'exact':
+            if getattr(self.kernel, 'cdf', None):
+                kvals = sum(self.kernel.cdf(self.endog, x, self.bw))
+                return 1-kvals/len(self.endog)
+
+            else:
+                kern = self.kernel
+                func = lambda y: kern.density(self.endog, y)
+
+                return integrate.quad(func, x, self.support[-1])[0]
+
+
+        if method == 'interpolate':
+            return interpolate.interp1d(self.support, self.sf_values)(point)
+
+        raise NotImplementedError("selected method not implemented")
 
     @cache_readonly
     def sf_values(self):
@@ -320,9 +357,36 @@ class KDEUnivariate(object):
         Notes
         -----
         Will not work if fit has not been called.
+
+        If there is an analytic integrated kernel avaliable for the kernel then
+        this is used to find the sf on self.support. Otherwise the sf is 
+        evaluated numerically.
         """
+        
         _checkisfit(self)
         return 1 - self.cdf_values
+
+        if getattr(self.kernel, 'cdf', None):
+            endog_tile = np.tile(self.endog,[len(self.support),1]).T
+            kvals = sum(self.kernel.cdf(endog_tile, self.support, self.bw))
+            return 1 - kaval/len(self.endog)
+
+        else:
+            density = self.density
+            kern = self.kernel
+            if kern.domain is None: # TODO: test for grid point at domain bound
+                a,b = -np.inf,np.inf
+            else:
+                a,b = kern.domain
+            func = lambda x,s: kern.density(s,x)
+
+            support = self.support
+            support = np.r_[a,support]
+            gridsize = len(support)
+            endog = self.endog
+            probs = [integrate.quad(func, support[i-1], support[i],
+                        args=endog)[0] for i in xrange(1,gridsize)]
+            return np.cumsum(probs[::-1])
 
 
     @cache_readonly
@@ -356,53 +420,71 @@ class KDEUnivariate(object):
     @cache_readonly
     def ppf_values(self):
         """
-        Inverse Cumulative Distribution (Quantile) Function over the
+        Returns the Inverse Cumulative Distribution (Quantile) Function over the
         range of the cdf stored.
 
         Notes
         -----
-        Will not work if fit has not been called. Uses
-        `scipy.stats.mstats.mquantiles`.
+        Will not work if fit has not been called.
 
         Uses linear interpolation to get values on a uniform
         grid.
         """
         _checkisfit(self)
 
-        if sample_quantile:
-            gridsize = len(self.density)
-            return stats.mstats.mquantiles(self.endog, np.linspace(0,1,
-                        gridsize))
-
-        else:
-            icdf_interp = interpolate.interp1d(self.cdf, self.support, kind='linear')
-            return icdf_interp(np.linspace(self.cdf[0],self.cdf[-1],len(self.support)))
+        intp = interpolate.interp1d(self.cdf, self.support, kind='linear')
+        return intp(np.linspace(self.cdf[0],self.cdf[-1],len(self.support)))
 
     def ppf(self, x, method = 'exact'):
+        """
+        Returns the Inverse Cumulative Distribution (Quantile) Function over the
+        evaluated at at point
 
+        Notes
+        -----
+        Will not work if fit has not been called.
+
+        Parameters
+        ----------
+        point : float
+            Point at which to evaluate the ppf.
+        method : string
+            Method used to evaluate ppf. Options are:
+                'exact' - calculate exact value by using all sample points
+                'interpoalte' - calculate by interpolating from values of 
+                                density over support.
+
+        Notes
+        -----
+        Will not work if fit has not been called.                    
+        """
         _checkisfit(self)
 
-        if getattr(self.kernel, 'icdf', None):
-            print sum(self.kernel.icdf(self.endog, x, self.bw))/len(self.endog)
+        if method == 'exact':
 
-        if x >= self.support[-1]:
-            return np.infty
-        if x <= self.support[0]:
-            return -1*np.infty
+            if x >= self.support[-1]:
+                return np.infty
+            if x <= self.support[0]:
+                return -1*np.infty
 
-        index = np.searchsorted(self.cdf, x)
-        support = self.support
-        cdf = self.cdf
+            index = np.searchsorted(self.cdf, x)
+            support = self.support
+            cdf = self.cdf
 
-        return (x-cdf[index-1])*1.0/(cdf[index]-cdf[index-1])*(support[index]-support[index-1])+ support[index-1]
+            scale = (cdf[index]-cdf[index-1])*(support[index]-support[index-1])
+            return (x-cdf[index-1])*1.0/scale + support[index-1]
+
+        if method == 'interpolate':
+            return interpolate.interp1d(self.support, self.ppf_values)(point)
+
+        raise NotImplementedError("selected method not implemented")
+
 
     def variance(self, point):
         """
         Evaluates the variance of the kernel estimator according
         to the approximate formula
          v = 1/n * (1/h^2 sum(K(x-X_i/h)^2) - fhat(x,h)^2)
-
-         NOTE : NOT WORKING
         """
 
         _checkisfit(self)
