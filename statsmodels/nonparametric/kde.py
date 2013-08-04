@@ -163,9 +163,10 @@ class KDEUnivariate(object):
         point : float
             Point at which to evaluate the pdf.
         method : string
-            Method used to evaluate pdf. Options are:
-                'exact' - calculate exact value by using all sample points
-                'interpoalte' - calculate by interpolating from values of 
+            Method used to evaluate pdf. Choices are:
+
+                - exact: calculate exact value by using all sample points
+                - interpolate: - calculate by interpolating from values of 
                                 density over support.
         
         Notes:
@@ -206,8 +207,9 @@ class KDEUnivariate(object):
             Point at which to evaluate the cdf.
         method : string
             Method used to evaluate pdf. Options are:
-                'exact' - calculate exact value by using all sample points
-                'interpoalte' - calculate by interpolating from values of 
+                
+                - exact: calculate exact value by using all sample points
+                - interpolate: - calculate by interpolating from values of 
                                 density over support.
 
         Notes
@@ -318,8 +320,9 @@ class KDEUnivariate(object):
             Point at which to evaluate the sf.
         method : string
             Method used to evaluate sf. Options are:
-                'exact' - calculate exact value by using all sample points
-                'interpoalte' - calculate by interpolating from values of 
+
+                - exact: calculate exact value by using all sample points
+                - interpolate: - calculate by interpolating from values of 
                                 density over support.
 
         Notes
@@ -450,8 +453,9 @@ class KDEUnivariate(object):
             Point at which to evaluate the ppf.
         method : string
             Method used to evaluate ppf. Options are:
-                'exact' - calculate exact value by using all sample points
-                'interpoalte' - calculate by interpolating from values of 
+
+                - exact: calculate exact value by using all sample points
+                - interpolate: - calculate by interpolating from values of 
                                 density over support.
 
         Notes
