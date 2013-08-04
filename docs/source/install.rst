@@ -107,16 +107,12 @@ Replace `/x64` with `/x86` and `v7.0` with `v7.1` as needed.
 Dependencies
 ~~~~~~~~~~~~
 
-* `Python <http://www.python.org>`__ >= 2.5, including Python 3.x 
-* `NumPy <http://www.scipy.org/>`__ >= 1.4
+* `Python <http://www.python.org>`__ >= 2.6, including Python 3.x 
+* `NumPy <http://www.scipy.org/>`__ >= 1.5.0
 * `SciPy <http://www.scipy.org/>`__ >= 0.7
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
 * `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
 * `Cython <http://cython.org/>`__ >= 15.1, Needed if you want to build the code from github and not a source distribution.
-
-.. tested with Python 2.5., 2.6, 2.7 and 3.2
-.. (tested with numpy 1.4.1, 1.5.1 and 1.6.0, scipy 0.7.2, 0.8.0, 0.9.0)
-.. do we need to tell people about testing?
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
