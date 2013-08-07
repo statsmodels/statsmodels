@@ -1,6 +1,9 @@
 """
 Self-Exciting Threshold Autoregression
 
+Author: Chad Fulton
+License: BSD
+
 References
 ----------
 
@@ -12,13 +15,33 @@ Hansen, Bruce E. 1997.
 "Inference in TAR Models."
 Studies in Nonlinear Dynamics & Econometrics 2 (1) (January 1).
 
+Notes
+-----
+
+- Assumes homoskedasticity in terms of constructing CIs for threshold
+  parameters (see Hansen 1997)
+  TODO implement the heteroskedastic correct CIs
+- Assumes conditional homoskedasticity of errors in linearity testing when
+  bootstrapping to get p-values. Also requires assumption of independence of
+  errors (see Hansen 1999)
+  TODO implement bootstrapping for the heteroskedastic case
+- TODO add ability to have different AR orders for each regime
+- TODO add ability to remove specific AR orders (e.g. what Potter 1995 does)
+       i.e. by manipulating the self.exog matrix
+- TODO implement finite sample standard errors (Hansen 1997)
+- TODO add forecasting (via simulation)
+- TODO generalize to TAR
+
 """
 
 from __future__ import division
 import numpy as np
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.tsatools import add_constant, lagmat
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, OLSResults
+from statsmodels.tools.decorators import (cache_readonly, cache_writable,
+                                          resettable_cache)
+import statsmodels.base.wrapper as wrap
 
 
 class InvalidRegimeError(ValueError):
@@ -275,6 +298,24 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
     def _select_hyperparameters_grid(self, thresholds, threshold_grid_size,
                                      XX, resids, delay_grid=None):
+        """
+        Maximizes objective function, given already selected thresholds and,
+        optionally, an already selcted delay.
+
+        Parameters
+        ----------
+        thresholds : iterable
+            Already-selected threshold values (can be empty).
+        threshold_grid_size : integer
+            The approximate number of elements in the threshold grid if a grid
+            search is used.
+        XX : array-like
+            (X'X)^{-1} from a SETAR(1) specification (i.e. AR(1))
+        resids : array-like
+            The residuals from a SETAR(1) specification (i.e. AR(1))
+        delay_grid : iterable, optional
+            The grid of delay parameters to check.
+        """
 
         if delay_grid is None:
             delay_grid = range(1, self.max_delay + 1)
@@ -316,7 +357,24 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
     def select_hyperparameters(self, threshold_grid_size=None, maxiter=100):
         """
-        Select delay and threshold hyperparameters via grid search
+        Select delay and threshold hyperparameters via grid search.
+
+        Selected parameters minimize the sum of squared errors over the grid.
+
+        Parameters
+        ----------
+        threshold_grid_size : integer, optional
+            The approximate number of elements in the threshold grid if a grid
+            search is used.
+        maxiter : integer, optional
+            Maximum iterations in iterative threshold (re)estimation.
+
+        Returns
+        -------
+        delay : int
+            Selected delay parameter
+        thresholds : iterable
+            Selected threshold parameter(s)
         """
 
         # Cache calculations
