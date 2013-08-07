@@ -438,5 +438,421 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         return delay, np.sort(thresholds)
 
 
-class SETARResults:
-    pass
+class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
+    """
+    Class to hold results from fitting a SETAR model.
+
+    Parameters
+    ----------
+    model : ARMA instance
+        The fitted model instance
+    params : array
+        Fitted parameters
+    normalized_cov_params : array, optional
+        The normalized variance covariance matrix
+    scale : float, optional
+        Optional argument to scale the variance covariance matrix.
+    """
+
+    _cache = {}
+
+    def __init__(self, model, params, normalized_cov_params=None, scale=1.):
+        super(SETARResults, self).__init__(model, params,
+                                           normalized_cov_params, scale)
+
+    @cache_readonly
+    def bse(self):
+        # Get White's corrected standard errors here. Report them, because
+        # otherwise we don't allow heteroskedasticity between regimes
+        return self.HC0_se
+
+    @cache_readonly
+    def SSR(self):
+        """
+        Model sum of squared errors
+        """
+        key = (self.model.delay,) + tuple(self.model.thresholds)
+        return self.threshold_SSR[key]
+
+    @cache_readonly
+    def threshold_SSR(self):
+        """
+        Sum of squared errors for each threshold, calculated for each
+        possible alternative threshold value.
+        """
+
+        # Compute the sum of squared residuals for each model
+        ar1_ssr = self.model.ar1_resids.T.dot(self.model.ar1_resids)
+        return {
+            key: (ar1_ssr - obj)
+            for key, obj in self.model.objectives.items()
+            if len(key) == len(self.model.thresholds) + 1
+        }
+
+    @cache_readonly
+    def threshold_LR(self):
+        """
+        Likelihood ratio statistics for each threshold, calculated for each
+        possible alternative threshold value.
+        """
+        # Local copies
+        delay = self.model.delay
+        thresholds = self.model.thresholds.tolist()
+
+        # Compute the likelihood ratio statistics for each model, relative to
+        # the thresholds, the confidence sets, and the conservative confidence
+        # intervals
+        threshold_LR = []
+        for threshold_idx in range(len(thresholds)):
+            threshold = thresholds[threshold_idx]
+            held_thresholds = set(
+                thresholds[:threshold_idx] + thresholds[threshold_idx+1:]
+            )
+
+            LR_set = {}
+            for (key, SSR) in self.threshold_SSR.items():
+                alt_thresholds = set(key[1:])
+                # Only need to test the specific alternative of this specific
+                # threshold being replaced
+                if (not key[0] == delay) or (not
+                   alt_thresholds.issuperset(held_thresholds)):
+                    continue
+                alt_threshold = alt_thresholds.difference(
+                    held_thresholds
+                ).pop()
+
+                # Likelihood ratio statistic
+                LR_set[alt_threshold] = (
+                    self.model.nobs * (SSR - self.SSR) / self.SSR
+                )
+            threshold_LR.append(LR_set)
+
+        return threshold_LR
+
+    def conf_set_thresholds(self, alpha=0.05):
+        """
+        Compute confidence sets by inverting the LR statistic
+
+        Parameters
+        ----------
+        alpha : float
+            significance level for the confidence sets
+
+        Returns
+        -------
+        conf_sets : iterable
+            A list of confidence sets, one for each threshold.
+            Each confidence set is a list of thresholds in the confidence set
+            at the specified level.
+        """
+        if 1-alpha not in self.model.threshold_crits.keys():
+            raise ValueError('Threshold confidence intervals can only be'
+                             ' calculated at levels [0.01, 0.025, 0.05, 0.075,'
+                             ' 0.1, 0.15, 0.2]. God %f.' % alpha)
+        crit = self.model.threshold_crits[1 - alpha]
+
+        thresholds = self.model.thresholds.tolist()
+
+        # Compute the confidence sets
+        conf_sets = []
+        for threshold_idx in range(len(thresholds)):
+            threshold = thresholds[threshold_idx]
+            held_thresholds = set(
+                thresholds[:threshold_idx] + thresholds[threshold_idx+1:]
+            )
+
+            conf_sets.append(np.sort([
+                alt_threshold for (alt_threshold, LR)
+                in self.threshold_LR[threshold_idx].items()
+                if LR < crit
+            ]))
+
+        return conf_sets
+
+    def conf_int_thresholds(self, alpha=0.05):
+        """
+        Compute conservative confidence intervals by inverting the LR statistic
+
+        Parameters
+        ----------
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        conf_ints : iterable
+            A list of confidence intervales, one for each threshold.
+            Each confidence interval is a tuple (lower value, upper value).
+        """
+        conf_ints = [
+            (conf_set[0], conf_set[-1])
+            for conf_set in self.conf_set_thresholds(alpha=alpha)
+        ]
+
+        return conf_ints
+
+    def plot_threshold_ci(self, threshold_idx, ax=None, **kwargs):
+        from statsmodels.graphics import utils
+        fig, ax = utils.create_mpl_ax(ax)
+        fig.set(**kwargs)
+
+        # Make sure we have the LR statistics
+        self.conf_int_thresholds()
+
+        # Plot the LRs
+        LR_set = self.threshold_LR[threshold_idx]
+        LR_keys = np.sort(LR_set.keys())
+        LR, = ax.step(LR_keys, [LR_set[key] for key in LR_keys], 'k-')
+
+        # Plot the critical values
+        xlim = ax.get_xlim()
+        crits = self.model.threshold_crits
+        l90 = ax.hlines(crits[0.90], xlim[0], xlim[1], linestyle='--')
+        l95 = ax.hlines(crits[0.95], xlim[0], xlim[1], linestyle='-.')
+        l99 = ax.hlines(crits[0.99], xlim[0], xlim[1], linestyle='dotted')
+
+        # Add a legend
+        labels = [
+            '$LR_n(\gamma_%d)$' % (threshold_idx+1),
+            '90% Critical', '95% Critical', '99% Critical'
+        ]
+        ax.legend([LR, l90, l95, l99], labels, 'lower right')
+
+        # Add titles
+        ax.set(
+            title=('Confidence Interval Construction for Threshold'
+                   ' $\gamma_%d$' % (threshold_idx + 1)),
+            xlabel='Threshold Variable: $Y_{t-%d}$' % self.model.delay,
+            ylabel=('Likelihood Ratio Sequence in $\gamma_%d$' %
+                    (threshold_idx+1))
+        )
+
+        return fig
+
+    def _make_exog_names(self):
+        exog_names = []
+        for regime in range(self.model.order + 1):
+            exog_names += ['Const.']
+            exog_names += [
+                'y_{t-%d}^{(%d)}' % (i, regime)
+                for i in range(1, self.model.ar_order + 1)
+            ]
+
+        return exog_names
+
+    def _make_regime_descriptions(self):
+        titles = []
+        length = 0
+        if self.model.order == 0:
+            titles.append('\gamma_1 \lt \infty')
+        else:
+            delay = self.model.delay
+            thresholds = self.model.thresholds
+            for regime in range(self.model.order):
+                if regime == 0:
+                    titles.append(
+                        'y_{t-%d} in (-Inf, %.2f]' %
+                        (delay, thresholds[0])
+                    )
+                elif regime == self.model.order - 1:
+                    titles.append(
+                        'y_{t-%d} in (%.2f, Inf)' %
+                        (delay, thresholds[-1])
+                    )
+                else:
+                    titles.append(
+                        'y_{t-%d} in (%.2f, %.2f]' %
+                        (delay, thresholds[regime - 1], thresholds[regime])
+                    )
+                if len(titles[-1]) > length:
+                    length = len(titles[-1])
+
+        return titles
+
+    def summary(self, yname=None, title=None, alpha=.05):
+        """
+        Summarize the SETAR Results
+
+        Parameters
+        ----------
+        yname : string, optional
+            Default is `y`
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+
+        xname = self._make_exog_names()
+
+        model = (
+            self.model.__class__.__name__ + '('
+            + repr(self.model.order) + ';'
+            + ','.join([repr(self.model.ar_order), repr(self.model.delay)])
+            + ')'
+        )
+
+        if self.data.dates is not None:
+            dates = self.data.dates
+            sample = [('Sample:', [dates[0].strftime('%m-%d-%Y')])]
+            sample += [('', [' - ' + dates[-1].strftime('%m-%d-%Y')])]
+        else:
+            start = self.model.nobs_initial + 1
+            end = repr(self.model.data.orig_endog.shape[0])
+            sample = [('Sample:', [repr(start) + ' - ' + end])]
+
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', [model]),
+                    ('Method:', ['Least Squares']),
+                    ('Date:', None),
+                    ('Time:', None)
+                    ] + sample
+
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None),
+                     ('Log-Likelihood:', None),
+                     ('AIC:', ["%#8.4g" % self.aic]),
+                     ('BIC:', ["%#8.4g" % self.bic])
+                     ]
+
+        diagn_left = [('Omnibus:', None),
+                      ('Prob(Omnibus):', None),
+                      ('Skew:', None),
+                      ('Kurtosis:', None)
+                      ]
+
+        diagn_right = [('Durbin-Watson:', None),
+                       ('Jarque-Bera (JB):', None),
+                       ('Prob(JB):', None),
+                       ('Cond. No.', None)
+                       ]
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+
+        # Create summary table instance
+        from statsmodels.iolib.summary import Summary, summary_params, forg
+        from statsmodels.iolib.table import SimpleTable
+        from statsmodels.iolib.tableformatting import fmt_params
+        smry = Summary()
+        warnings = []
+
+        # Add model information
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             yname=yname, xname=xname, title=title)
+
+        # Add hyperparameters summary table
+        if (1 - alpha) not in self.model.threshold_crits:
+            warnings.append("Critical value for threshold estimates is"
+                            " unavailable at the %d%% level. Using 95%%"
+                            " instead." % ((1-alpha)*100))
+            alpha = 0.05
+        alp = str((1-alpha)*100)+'%'
+        conf_int = self.conf_int_thresholds(alpha)
+
+        # (see summary_params())
+        confint = [
+            "%s %s" % tuple(map(forg, conf_int[i]))
+            for i in range(len(conf_int))
+        ]
+        confint.insert(0, '')
+        len_ci = map(len, confint)
+        max_ci = max(len_ci)
+        min_ci = min(len_ci)
+
+        if min_ci < max_ci:
+            confint = [ci.center(max_ci) for ci in confint]
+
+        thresholds = list(self.model.thresholds)
+        param_header = ['coef', '[' + alp + ' Conf. Int.]']
+        param_stubs = ['Delay'] + ['\gamma_%d' % (threshold_idx + 1)
+                                   for threshold_idx in range(len(thresholds))]
+        param_data = zip([self.model.delay] + map(forg, thresholds), confint)
+
+        parameter_table = SimpleTable(param_data,
+                                      param_header,
+                                      param_stubs,
+                                      title=None,
+                                      txt_fmt=fmt_params)
+        smry.tables.append(parameter_table)
+
+        # Add parameter tables for each regime
+        results = np.c_[
+            self.params, self.bse, self.tvalues, self.pvalues,
+        ].T
+        conf = self.conf_int(alpha)
+        k = self.model.ar_order + self.model.k_trend
+        regime_desc = self._make_regime_descriptions()
+        max_len = max(map(len, regime_desc))
+        for regime in range(1, self.model.order + 1):
+            res = (self,)
+            res += tuple(results[:, k*(regime - 1):k*regime])
+            res += (conf[k*(regime - 1):k*regime],)
+            table = summary_params(res, yname=yname,
+                                   xname=xname[k*regime:k*(regime+1)],
+                                   alpha=alpha, use_t=True)
+
+            # Add regime descriptives, if multiple regimes
+            if self.model.order > 1:
+                # Replace the header row
+                header = ["\n" + str(cell) for cell in table.pop(0)]
+                title = ("Regime %d" % regime).center(max_len)
+                desc = regime_desc[regime - 1].center(max_len)
+                header[0] = "%s \n %s" % (title, desc)
+                table.insert_header_row(0, header)
+                # Add diagnostic information
+                nobs = [
+                    'nobs_%d' % regime, self.model.nobs_regimes[regime - 1],
+                    '', '', '', ''
+                ]
+                table.insert(len(table), nobs, 'header')
+
+            smry.tables.append(table)
+
+        # Add notes, added to text format only
+        warnings.append("Reported parameter standard errors are White's (1980)"
+                        " heteroskedasticity robust standard errors.")
+        warnings.append("Threshold confidence intervals calculated as"
+                        " Hansen's (1997) conservative (non-disjoint)"
+                        " intervals")
+
+        # Add notes / warnings, added to text format only
+        if self.model.exog.shape[0] < self.model.exog.shape[1]:
+            wstr = "The input rank is higher than the number of observations."
+            warnings.append(wstr)
+
+        if warnings:
+            etext = [
+                "[{0}] {1}".format(i + 1, text)
+                for i, text in enumerate(warnings)
+            ]
+            etext.insert(0, "Notes / Warnings:")
+            smry.add_extra_txt(etext)
+
+        return smry
+
+
+class SETARResultsWrapper(wrap.ResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(
+        tsbase.TimeSeriesResultsWrapper._wrap_methods,
+        _methods
+    )
+wrap.populate_wrapper(SETARResultsWrapper, SETARResults)
