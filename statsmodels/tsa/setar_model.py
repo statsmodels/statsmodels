@@ -25,7 +25,7 @@ class InvalidRegimeError(ValueError):
     pass
 
 
-class SETAR(tsbase.TimeSeriesModel):
+class SETAR(OLS, tsbase.TimeSeriesModel):
     """
     Self-Exciting Threshold Autoregressive Model
 
@@ -41,6 +41,10 @@ class SETAR(tsbase.TimeSeriesModel):
         The delay for the self-exciting threshold variable.
     thresholds : iterable, optional
         The threshold values separating the data into regimes.
+    trend : str {'c','nc'}
+        Whether to include a constant or not
+        'c' includes constant
+        'nc' no constant
     min_regime_frac : scalar, optional
         The minumum fraction of observations in each regime.
     max_delay : integer, optional
@@ -72,10 +76,9 @@ class SETAR(tsbase.TimeSeriesModel):
 
     # TODO are there too many parameters here?
     def __init__(self, endog, order, ar_order,
-                 delay=None, thresholds=None, min_regime_frac=0.1,
-                 max_delay=None, threshold_grid_size=100,
+                 delay=None, thresholds=None, trend='c',
+                 min_regime_frac=0.1, max_delay=None, threshold_grid_size=100,
                  dates=None, freq=None, missing='none'):
-        super(SETAR, self).__init__(endog, None, dates, freq)
 
         if delay is not None and delay < 1 or delay > ar_order:
             raise ValueError('Delay parameter must be greater than zero'
@@ -92,18 +95,17 @@ class SETAR(tsbase.TimeSeriesModel):
             raise ValueError('Thresholds cannot be specified without delay'
                              ' parameter.')
 
-        if thresholds is not None and not len(thresholds)+1 == order:
+        if thresholds is not None and not len(thresholds) + 1 == order:
             raise ValueError('Number of thresholds must match'
                              ' the order of the SETAR model')
 
-        # Exogenous matrix
-        self.exog = add_constant(lagmat(self.endog, ar_order))
-        self.nobs_initial = ar_order
-        self.nobs = len(self.endog) - ar_order
-
         # "Immutable" properties
+        self.nobs_initial = ar_order
+        self.nobs = endog.shape[0] - ar_order
+
         self.order = order
         self.ar_order = ar_order
+        self.k_trend = int(trend == 'c')
         self.min_regime_frac = min_regime_frac
         self.min_regime_num = np.ceil(min_regime_frac * self.nobs)
         self.max_delay = max_delay if max_delay is not None else ar_order
@@ -114,32 +116,99 @@ class SETAR(tsbase.TimeSeriesModel):
         self.thresholds = thresholds
         if self.thresholds:
             self.thresholds = np.sort(self.thresholds)
-        self.regimes = None
 
-    def build_datasets(self, delay, thresholds, order=None):
-        if order is None:
-            order = self.order
+        # Estimation properties
+        self.nobs_regimes = None
+        self.objectives = {}
+        self.ar1_resids = None
 
-        endog = self.endog[self.nobs_initial:, ]
-        exog_transpose = self.exog[self.nobs_initial:, ].T
-        threshold_var = self.endog[self.nobs_initial-delay:-delay, ]
+        # Make a copy of original datasets
+        orig_endog = endog
+        orig_exog = lagmat(orig_endog, ar_order)
+
+        # Trends
+        if self.k_trend:
+            orig_exog = add_constant(orig_exog)
+
+        # Create datasets / complete initialization
+        endog = orig_endog[self.nobs_initial:]
+        exog = orig_exog[self.nobs_initial:]
+        super(SETAR, self).__init__(endog, exog,
+                                    hasconst=self.k_trend, missing=missing)
+
+        # Overwrite originals
+        self.data.orig_endog = orig_endog
+        self.data.orig_exog = orig_exog
+
+    def initialize(self):
+        """
+        Initialize datasets
+
+        Since we manipulate exog and endog as the delay and thresholds are
+        changed / selected, this function (and its parent) are called to keep
+        all variables up-to-date (mostly making sure shapes are the same)
+        """
+        self.data.endog = self.endog
+        self.data.exog = self.exog
+        self.weights = np.repeat(1., self.endog.shape[0])
+
+        super(SETAR, self).initialize()
+
+    def build_datasets(self, delay, thresholds):
+        """
+        Build the endogenous vector and exogenous matrix for SETAR(m)
+        estimation.
+
+        Primary purpose is to construct the exogenous dataset, which is the
+        matrix of lags (up to ar_order, plus a constant term) horizontally
+        duplicated once each for the number of regimes. Each duplication has
+        the rows for which the model dicatates another regime set to zero.
+
+        Also returns the endogenous vector of appropriate size (i.e. reduced by
+        nobs_initial because the model is conditional on those observations).
+
+        Parameters
+        ----------
+        delay : integer
+            The delay for the self-exciting threshold variable.
+        thresholds : iterable
+            The threshold values separating the data into regimes.
+
+        Returns
+        -------
+        endog : array-like
+            Engodenous variable, (nobs - nobs_initial) x 1
+        exog : array-like
+            Exogenous matrix,
+            (nobs - nobs_initial) x [(ar_order + k_trend) * order]
+        nobs_regimes : iterable
+            Number of observations in each regime
+        """
+
+        order = len(thresholds) + 1
+
+        exog_transpose = self.exog.T
+        threshold_var = self.exog[:, delay]
         indicators = np.searchsorted(thresholds, threshold_var)
 
-        k = self.ar_order + 1
+        k = self.ar_order + self.k_trend
         exog_list = []
+        nobs_regimes = ()
         for i in range(order):
             in_regime = (indicators == i)
+            nobs_regime = in_regime.sum()
 
-            if in_regime.sum() < self.min_regime_num:
+            if nobs_regime < self.min_regime_num:
                 raise InvalidRegimeError('Regime %d has too few observations:'
                                          ' threshold values may need to be'
                                          ' adjusted' % i)
 
             exog_list.append(np.multiply(exog_transpose, indicators == i).T)
+            nobs_regimes += (nobs_regime,)
 
         exog = np.concatenate(exog_list, 1)
 
-        return endog, exog
+        return self.endog, exog, nobs_regimes
 
     def fit(self):
         """
@@ -159,9 +228,17 @@ class SETAR(tsbase.TimeSeriesModel):
         if self.delay is None or self.thresholds is None:
             self.delay, self.thresholds = self.select_hyperparameters()
 
-        endog, exog = self.build_datasets(self.delay, self.thresholds)
+        self.endog, self.exog, self.nobs_regimes = self.build_datasets(
+            self.delay, self.thresholds
+        )
+        self.initialize()
 
-        return OLS(endog, exog).fit()
+        beta = self._fit()
+        lfit = SETARResults(
+            self, beta, normalized_cov_params=self.normalized_cov_params
+        )
+
+        return lfit
 
     def _grid_search_objective(self, delay, thresholds, XX, resids):
         """
@@ -169,15 +246,24 @@ class SETAR(tsbase.TimeSeriesModel):
 
         Corresponds to f_2(\gamma, d) in Hansen (1999), but extended to any
         number of thresholds.
+
+        Parameters
+        ----------
+        delay : integer
+            The delay for the self-exciting threshold variable.
+        thresholds : iterable
+            The threshold values separating the data into regimes.
+        XX : array-like
+            (X'X)^{-1} from a SETAR(1) specification (i.e. AR(1))
+        resids : array-like
+            The residuals from a SETAR(1) specification (i.e. AR(1))
         """
-        endog, exog = self.build_datasets(
-            delay, thresholds, order=len(thresholds)+1
-        )
+        endog, exog, _ = self.build_datasets(delay, thresholds)
 
         # Intermediate calculations
-        k = self.ar_order+1
+        k = self.ar_order + self.k_trend
         X1 = exog[:, :-k]
-        X = self.exog[self.nobs_initial:]
+        X = self.exog
         X1X1 = X1.T.dot(X1)
         XX1 = X.T.dot(X1)
         Mn = np.linalg.inv(
@@ -191,7 +277,7 @@ class SETAR(tsbase.TimeSeriesModel):
                                      XX, resids, delay_grid=None):
 
         if delay_grid is None:
-            delay_grid = range(1, self.max_delay+1)
+            delay_grid = range(1, self.max_delay + 1)
 
         max_obj = 0
         params = (None, None)
@@ -209,11 +295,15 @@ class SETAR(tsbase.TimeSeriesModel):
 
             # Iterate over possible threshold values
             for threshold in threshold_grid:
+                if threshold in thresholds:
+                    continue
                 try:
+                    iteration_thresholds = np.sort([threshold] + thresholds)
                     obj = self._grid_search_objective(
-                        delay, np.sort([threshold] + thresholds),
+                        delay, iteration_thresholds,
                         XX, resids
                     )
+                    self.objectives[(delay,)+tuple(iteration_thresholds)] = obj
                     if obj > max_obj:
                         max_obj = obj
                         params = (delay, threshold)
@@ -230,12 +320,10 @@ class SETAR(tsbase.TimeSeriesModel):
         """
 
         # Cache calculations
-        endog = self.endog[self.nobs_initial:]
-        exog = self.exog[self.nobs_initial:]
-        XX = np.linalg.inv(exog.T.dot(exog))    # (X'X)^{-1}
-        resids = endog - np.dot(                # SETAR(1) residuals
-            exog,
-            XX.dot(exog.T.dot(endog))
+        XX = np.linalg.inv(self.exog.T.dot(self.exog))    # (X'X)^{-1}
+        self.ar1_resids = resids = self.endog - np.dot(   # SETAR(1) residuals
+            self.exog,
+            XX.dot(self.exog.T.dot(self.endog))
         )
 
         # Get default threshold grid size, if necessary
@@ -272,7 +360,7 @@ class SETAR(tsbase.TimeSeriesModel):
                 # constant, starting at the first threshold
                 for j in range(i):
                     _, threshold = self._select_hyperparameters_grid(
-                        thresholds[:j] + thresholds[j+1:],
+                        thresholds[:j] + thresholds[j + 1:],
                         threshold_grid_size, XX, resids,
                         delay_grid=[delay]
                     )

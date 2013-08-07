@@ -142,7 +142,7 @@ class RegressionModel(base.LikelihoodModel):
     def whiten(self, X):
         raise NotImplementedError("Subclasses should implement.")
 
-    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
+    def _fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
             use_t=None, **kwargs):
         """
         Full fit of the model.
@@ -221,6 +221,40 @@ class RegressionModel(base.LikelihoodModel):
         if self._df_resid is None:
             self.df_resid = self.nobs - self.rank
 
+            # no upper triangular solve routine in numpy/scipy?
+        return beta
+
+    def fit(self, method="pinv", cov_type='nonrobust', cov_kwds=None,
+            use_t=None, **kwargs):
+        """
+        Full fit of the model.
+
+        The results include an estimate of covariance matrix, (whitened)
+        residuals and an estimate of scale.
+
+        Parameters
+        ----------
+        method : str
+            Can be "pinv", "qr".  "pinv" uses the Moore-Penrose pseudoinverse
+            to solve the least squares problem. "qr" uses the QR
+            factorization.
+
+        Returns
+        -------
+        A RegressionResults class instance.
+
+        See Also
+        ---------
+        regression.RegressionResults
+
+        Notes
+        -----
+        The fit method uses the pseudoinverse of the design/exogenous variables
+        to solve the least squares minimization.
+        """
+        beta = self._fit(method, **kwargs)
+
+            # no upper triangular solve routine in numpy/scipy?
         if isinstance(self, OLS):
             lfit = OLSResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params,

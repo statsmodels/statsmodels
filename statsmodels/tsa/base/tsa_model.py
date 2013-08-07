@@ -39,8 +39,8 @@ class TimeSeriesModel(base.LikelihoodModel):
                           "extra_params" : _missing_param_doc,
                           "extra_sections" : ""}
 
-    def __init__(self, endog, exog=None, dates=None, freq=None, missing='none'):
-        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing)
+    def __init__(self, endog, exog=None, dates=None, freq=None, missing='none', **kwargs):
+        super(TimeSeriesModel, self).__init__(endog, exog, missing=missing, **kwargs)
         self._init_dates(dates, freq)
 
     def _init_dates(self, dates, freq):
