@@ -6,6 +6,7 @@ from statsmodels.tools.tools import chain_dot
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults)
+from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.tools.grouputils import Grouping
 from statsmodels.panel.panel_model import PanelModel
 
@@ -20,6 +21,47 @@ def _check_method_compat(method, effects):
         raise ValueError("effects for between must be oneway or time")
     #Need to do any checking for other methods?
 
+def _ols_loglike(self, params):
+    # same as WLS - used for between and within
+    nobs2 = self.nobs / 2.
+    wresid = self.wendog - np.dot(self.wexog, params)
+    return (-nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *
+             np.dot(wresid, wresid)) - nobs2)
+
+def _random_effects_mle_loglike(self, params):
+    """
+    """
+    y = self.endog
+    X = self.exog
+    groupings = self.data.groupings
+    groupings.count_categories() #TODO: only do this once
+    T = groupings.counts
+
+    var_groups, var_resid = params[-2:]**2
+    params = params[:-2]
+
+    resid = y - np.dot(X, params)
+    resid_sq = groupings.transform_array(resid**2,
+                                         lambda x : np.sum(x.values), 0)
+    resid_sum_sq = groupings.transform_array(resid,
+                                         lambda x : np.sum(x.values), 0)**2
+
+    rho = var_groups / (T * var_groups + var_resid)
+    # for each group
+    llf = -1/2.*(1./var_resid * (resid_sq - rho*resid_sum_sq) +
+                 np.log(T * var_groups/var_resid + 1) +
+                 T*np.log(2*np.pi*var_resid))
+    return np.sum(llf)
+
+
+#TODO:
+def _maximize_loglike():
+    """
+    Amemiya (1971) shows that brute force maximization of the (log-)likelihood
+    leads to non-linear first-order conditions, so we proceed using an
+    iterative method.
+    """
+    pass
 
 class PanelLM(PanelModel, RegressionModel):
     r'''
@@ -50,7 +92,7 @@ class PanelLM(PanelModel, RegressionModel):
         * within - Also known as the fixed-effects estimator. This uses OLS.
         * between - Between effects model
         * swar - The small sample Swamy-Arora estimator of individual-level
-          variance components should be used.
+          variance components is used.
         * random - GLS random-effects model
         * mle - Maximum Likelihood random-effects model
     %(extra_parameters)s
@@ -85,7 +127,11 @@ class PanelLM(PanelModel, RegressionModel):
     where :math:`\theta` is a function of :math:`\sigma_{\upsilon}^2` and
     :math:`\sigma_{\epsilon}^2`
 
+    For random-effects models, there are two estimators available. The
+    difference between the `sa` and `random` methods is only apparent in
+    unbalanced panels in the calculation of `std_dev_groups`.
     '''
+    #TODO: Add GLS random effects estimator
     #TODO: make sure hasconst works
     def __init__(self, y, X, method='pooling', effects='oneway', panel=None,
                  time=None, hasconst=None, missing='none'):
@@ -96,22 +142,36 @@ class PanelLM(PanelModel, RegressionModel):
         super(PanelLM, self).__init__(y, X, missing=missing, time=time,
                                       panel=panel, hasconst=hasconst)
 
+        #I think this needs to be attached for (un)pickling.
+        self._loglike_funcs = dict(mle = _random_effects_mle_loglike,
+                                   within = _ols_loglike,
+                                   between = _ols_loglike,
+                                   )
+
 
     def initialize(self, unit=None, time=None):
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         self.nobs = float(self.wexog.shape[0])
         self.rank = np.linalg.matrix_rank(self.exog)
+
+    @cache_readonly
+    def df_resid(self):
         #NOTE: These should also depend on effects - needs to be a function
         if self.method == 'within':
-            # -1 because n_panel is full rank
-            self.df_model = float(self.rank + self.data.n_panel - 1)
             # N(T-1) - K
             # -K doesn't matter asymptotically (for calc of sigma_u)
-            self.df_resid = self.nobs - self.df_model - 1
+            return self.nobs - self.df_model - 1
         else:
-            self.df_model = float(self.rank - self.k_constant)
-            self.df_resid = self.nobs - self.df_model - self.k_constant
+            return self.nobs - self.df_model - self.k_constant
+
+    @cache_readonly
+    def df_model(self):
+        if self.method == 'within':
+            # -1 because n_panel is full rank
+            return float(self.rank + self.data.n_panel - 1)
+        else:
+            return float(self.rank - self.k_constant)
 
     def whiten(self, data):
         g = self.data.groupings
@@ -122,10 +182,9 @@ class PanelLM(PanelModel, RegressionModel):
             # do this here so endog and exog have been through data handling
             idx = g.index
             panel, time = (idx.get_level_values(0), idx.get_level_values(1))
-            self.var_u, self.var_e, self.theta = swar_ercomp(self.endog,
-                                                             self.exog,
-                                                             panel,
-                                                             time)
+            (self.var_groups,
+             self.var_resid,
+             self.theta) = swar_ercomp(self.endog, self.exog, panel, time)
             out = g.transform_slices(array=data, function=swar_transform,
                                      theta=self.theta)
             return out
@@ -147,6 +206,10 @@ class PanelLM(PanelModel, RegressionModel):
             data = g.transform_array(data, func, level)
         return data
 
+    def loglike(self, params):
+        """
+        """
+        return self._loglike_funcs[self.method](self, params)
 
     def fit(self, method="pinv", **kwargs):
         wexog = self.wexog
@@ -158,6 +221,9 @@ class PanelLM(PanelModel, RegressionModel):
                     normalized_cov_params=normalized_cov_params)
         elif self.method == "between":
             return PanelLMBetweenResults(self, beta,
+                    normalized_cov_params=normalized_cov_params)
+        elif self.method in ['random', 'swar']:
+            return PanelLMRandomResults(self, beta,
                     normalized_cov_params=normalized_cov_params)
         else:
             return PanelLMResults(self, beta,
@@ -172,12 +238,14 @@ def swar_ercomp(y, X, panel, time):
     w.model.data.groupings.count_categories(level=0)
     Ts = w.model.data.groupings.counts
     Th = scipy.stats.mstats.hmean(Ts)
-    var_e = w.ssr / (X.shape[0] - w.model.data.n_panel - X.shape[1] + 1)
-    var_u = b.ssr / (b.model.data.n_panel - X.shape[1]) - var_e / Th
-    var_u = max(var_u, 0)
+    # variance of e_{it}
+    var_resid = w.ssr / (X.shape[0] - w.model.data.n_panel - X.shape[1] + 1)
+    # panel-level variance
+    var_groups = b.ssr / (b.model.data.n_panel - X.shape[1]) - var_resid / Th
+    var_groups = max(var_groups, 0)
     Ts = np.concatenate([np.repeat(x,x) for x in Ts])
-    theta = 1 - np.sqrt(var_e / (Ts * var_u + var_e))
-    return var_e, var_u, np.array(theta)
+    theta = 1 - np.sqrt(var_resid / (Ts * var_groups + var_resid))
+    return var_resid, var_groups, np.array(theta)
 
 def swar_transform(subset, position, theta):
     '''Apply to a sub-group of observations'''
@@ -191,51 +259,17 @@ class PanelLMResults(RegressionResults):
         super(PanelLMResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
 
+    @cache_readonly
+    def scale(self):
         # overwrite scale set in RegressionResults. This smells.
         # might want to define other things than scale and leave it as 1.
         # or just deprecate scale
         wresid = self.wresid
-        self.scale = np.dot(wresid.T, wresid) / self.df_resid
+        return np.dot(wresid.T, wresid) / self.df_resid
 
     @cache_readonly
     def ssr(self):
         return np.sum(self.wresid**2)
-
-    def conf_int(self, alpha=.05, cols=None):
-        """
-        Returns the confidence interval of the fitted parameters.
-
-        Parameters
-        ----------
-        alpha : float, optional
-            The `alpha` level for the confidence interval.
-            ie., The default `alpha` = .05 returns a 95% confidence interval.
-        cols : array-like, optional
-            `cols` specifies which confidence intervals to return
-
-        Notes
-        -----
-        The confidence interval is based on Student's t-distribution.
-        """
-        from scipy import stats
-
-        bse = self.bse
-        params = self.params
-        if self.model.method == "swar":
-            dist = stats.norm
-            q = dist.ppf(1 - alpha / 2)
-        else:
-            dist = stats.t
-            q = dist.ppf(1 - alpha / 2, self.df_resid)
-
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
-            cols = np.asarray(cols)
-            lower = params[cols] - q * bse[cols]
-            upper = params[cols] + q * bse[cols]
-        return np.asarray(zip(lower, upper))
 
     @cache_readonly
     def rsquared_overall(self):
@@ -368,6 +402,10 @@ class PanelLMWithinResults(PanelLMResults):
     #    # better safe than wrong
     #    raise NotImplementedError
 
+    @cache_readonly
+    def llf(self):
+        return self.model.loglike(self.params)
+
 
 class PanelLMBetweenResults(PanelLMResults):
     @cache_readonly
@@ -410,6 +448,147 @@ class PanelLMBetweenResults(PanelLMResults):
         idx_uniq = idx.unique()
         resid_groups = pd.DataFrame(self.resid_groups, index=idx_uniq)
         return resid_groups.reindex(idx).values.squeeze() + self.resid_overall
+
+class PanelLMRandomResults(PanelLMResults):
+    def __init__(self, model, params, normalized_cov_params=None):
+        super(PanelLMRandomResults, self).__init__(model, params)
+        self.normalized_cov_params = normalized_cov_params
+        self.theta = model.theta
+        #TODO: rename these?
+        self.std_dev_resid = model.var_resid ** .5
+        self.std_dev_groups = model.var_groups ** .5
+
+    @cache_readonly
+    def wresid(self):
+        # overwrite scale set in RegressionResults. This smells.
+        # might want to define other things than scale and leave it as 1.
+        # or just deprecate scale
+        model = self.model
+        return model.wendog - model.predict(self.params, model.wexog)
+
+    @cache_readonly
+    def scale(self):
+        return np.dot(self.wresid.T, self.wresid) / self.df_resid
+
+    def conf_int(self, alpha=.05, cols=None):
+        """
+        Returns the confidence interval of the fitted parameters.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The `alpha` level for the confidence interval.
+            ie., The default `alpha` = .05 returns a 95% confidence interval.
+        cols : array-like, optional
+            `cols` specifies which confidence intervals to return
+
+        Notes
+        -----
+        The confidence interval is based on Student's t-distribution.
+        """
+        #NOTE: Only copied to change distribution
+        from scipy import stats
+
+        bse = self.bse
+        params = self.params
+        dist = stats.norm
+        q = dist.ppf(1 - alpha / 2)
+
+        if cols is None:
+            lower = self.params - q * bse
+            upper = self.params + q * bse
+        else:
+            cols = np.asarray(cols)
+            lower = params[cols] - q * bse[cols]
+            upper = params[cols] + q * bse[cols]
+        return np.asarray(zip(lower, upper))
+
+    @cache_readonly
+    def std_dev_overall(self):
+        return (self.model.var_resid + self.model.var_groups) ** .5
+
+    @cache_readonly
+    def chi2(self):
+        return self.fvalue * 2
+
+    @cache_readonly
+    def chi2_pvalue(self):
+        from scipy.stats import chi2
+        #TODO: what's the correct df here?
+        return chi2.sf(self.chi2, self.df_resid)
+
+    @cache_readonly
+    def rho(self):
+        return self.std_dev_resid ** 2 / (self.std_dev_groups**2 +
+                                          self.std_dev_resid**2)
+
+        #    @cache_readonly
+        #    def fittedvalues(self):
+        #        return self.model.predict(self.)
+
+    @cache_readonly
+    def rsquared_overall(self):
+        np.corrcoef(self.fittedvalues, self.model.endog)[0,1] ** 2
+
+    @cache_readonly
+    def rsquared_between(self):
+        model = self.model
+        grouped_y = model.data.groupings.transform_array(model.endog,
+                                                lambda x : x.mean(), 0)
+        grouped_X = model.data.groupings.transform_array(model.exog,
+                                                lambda x : x.mean(), 0)
+        grouped_y_hat = model.predict(self.params, grouped_X)
+        return np.corrcoef(grouped_y, grouped_y_hat)[0,1] ** 2
+
+    @cache_readonly
+    def rsquared_within(self):
+        model = self.model
+        within_y = model.data.groupings.transform_array(model.endog,
+                                                lambda x : x - x.mean(), 0)
+        within_X = model.data.groupings.transform_array(model.exog,
+                                                lambda x : x - x.mean(), 0)
+
+        within_y_hat = model.predict(self.params, within_X)
+        return np.corrcoef(within_y, within_y_hat)[0,1] ** 2
+
+    @cache_readonly
+    def resid_overall(self):
+        return self.resid - self.resid_groups
+
+    @cache_readonly
+    def resid_groups(self): # u_i, the random effect
+        # easier for unbalanced case to use pandas alignment here.
+        # this should maybe be a method for Grouping class though.
+        # repeat maybe
+        import pandas as pd
+        model = self.model
+        data = model.data
+
+        #TODO: update for time effects
+        weight = (self.std_dev_resid**2/
+                  (model.data.n_time*self.std_dev_resid**2 +
+                   self.std_dev_groups**2))
+
+        # reindex
+        idx = data.groupings.index.get_level_values(0)
+        idx_uniq = idx.unique()
+
+        resid = data.groupings.transform_array(self.resid*weight,
+                                               lambda x : x.sum(), 0)
+
+        resid = pd.DataFrame(resid, index=idx_uniq)
+
+        return resid.reindex(idx).values.squeeze()
+
+    @cache_readonly
+    def resid(self):
+        model = self.model
+        return model.endog - model.predict(self.params, model.exog)
+
+    @cache_readonly
+    def resid_combined(self):
+        return self.resid
+
 
 def pooltest(endog, exog):
     '''Chow poolability test: F-test of joint significance for the unit dummies
@@ -465,6 +644,10 @@ if __name__ == "__main__":
     between = PanelLM(y, X, method='between').fit(disp=0)
     swar = PanelLM(y, X, method="swar").fit()
     pooling = PanelLM(y, X, method="pooling").fit()
+
+    # check likelihood, params from Stata
+    params = np.array([-53.9125431163, .109289189706, .30797722867,
+                        77.2671635329, 50.0622100182])
 
 
 
