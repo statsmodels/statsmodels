@@ -242,7 +242,7 @@ def _series_add_constant(data, prepend):
 
 def _dataframe_add_constant(data, prepend):
     # check for const.
-    if np.any(data.var(0) == 1):
+    if np.any(data.var(0) == 0):
         return data
     if prepend:
         data.insert(0, 'const', 1)
