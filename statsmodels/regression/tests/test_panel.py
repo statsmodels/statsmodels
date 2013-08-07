@@ -1,10 +1,6 @@
 """
 Tests for panel models
 
-Status:
-    - rsquared_adj: ???
-    - conf_int: SM is right R's plm is wrong (no df correction in plm)
-
 Stata:
 
 insheet using Grunfeld.csv, clear double
@@ -44,13 +40,6 @@ class CheckModelResults(object):
         npt.assert_equal(self.res1.df_resid, self.res2.df_resid)
         if self.res1.model.method != 'pooling':
             npt.assert_equal(self.res1.df_model, self.res2.df_model)
-
-    def test_sum_of_squares(self):
-        npt.assert_almost_equal(self.res1.ssr, self.res2.ssr)
-        npt.assert_almost_equal(self.res1.ess, self.res2.ess)
-        #centered and uncentered tss?
-        npt.assert_almost_equal(self.res1.centered_tss,
-                                self.res1.centered_tss, 4)
 
     def test_conf_int(self):
         if self.res1.model.method == "pooling":
@@ -92,9 +81,18 @@ class CheckModelResults(object):
         npt.assert_almost_equal(self.res1.rsquared,
                             self.res2.rsquared, DECIMAL_4)
 
-    def test_rsquared_adj(self):
-        npt.assert_almost_equal(self.res1.rsquared_adj,
-                                self.res2.rsquared_adj, DECIMAL_4)
+    def test_resid(self):
+        npt.assert_almost_equal(self.res1.resid,
+                            self.res2.residuals, DECIMAL_4)
+
+
+class FixedEffectsMixin(object):
+    def test_sum_of_squares(self):
+        npt.assert_almost_equal(self.res1.ssr, self.res2.ssr)
+        npt.assert_almost_equal(self.res1.ess, self.res2.ess)
+        #centered and uncentered tss?
+        npt.assert_almost_equal(self.res1.centered_tss,
+                                self.res1.centered_tss, 4)
 
     def test_fvalue(self):
         npt.assert_almost_equal(self.res1.fvalue,
@@ -104,12 +102,11 @@ class CheckModelResults(object):
         npt.assert_almost_equal(self.res1.f_pvalue,
                             self.res2.f_pvalue, DECIMAL_4)
 
-    def test_resid(self):
-        npt.assert_almost_equal(self.res1.resid,
-                            self.res2.residuals, DECIMAL_4)
+    def test_rsquared_adj(self):
+        npt.assert_almost_equal(self.res1.rsquared_adj,
+                                self.res2.rsquared_adj, DECIMAL_4)
 
-
-class TestWithin(CheckModelResults):
+class TestWithin(CheckModelResults, FixedEffectsMixin):
     @classmethod
     def setupClass(cls):
         from results_panel import within
@@ -158,7 +155,10 @@ class TestWithin(CheckModelResults):
         npt.assert_almost_equal(self.res1.rsquared_within,
                                 self.res2.rsquared_within, 4)
 
-class TestBetween(CheckModelResults):
+    def test_loglike(self):
+        npt.assert_almost_equal(self.res1.llf, self.res2.llf, 4)
+
+class TestBetween(CheckModelResults, FixedEffectsMixin):
     @classmethod
     def setupClass(cls):
         from results_panel import between
@@ -195,6 +195,9 @@ class TestBetween(CheckModelResults):
         npt.assert_almost_equal(self.res1.resid_overall,
                                 self.res2.resid_overall, 4)
 
+    def test_loglike(self):
+        npt.assert_almost_equal(self.res1.llf, self.res2.llf, 4)
+
 class TestRandom(CheckModelResults):
     @classmethod
     def setupClass(cls):
@@ -209,7 +212,30 @@ class TestRandom(CheckModelResults):
         res2 = swar1w
         cls.res2 = res2
 
-class TestPooling(CheckModelResults):
+    def test_chi2(self):
+        npt.assert_almost_equal(self.res1.chi2, self.res2.fvalue*2)
+
+    def test_chi2_pvalue(self):
+        npt.assert_almost_equal(self.res1.chi2_pvalue, self.res2.chi2_pvalue)
+
+    def test_other_resids(self):
+        npt.assert_almost_equal(self.res1.resid_groups,
+                                self.res2.resid_groups, 4)
+        npt.assert_almost_equal(self.res1.resid_combined,
+                                self.res2.resid_combined, 4)
+        npt.assert_almost_equal(self.res1.resid_overall,
+                                self.res2.resid_overall, 4)
+
+    def test_fittedvalues(self):
+        npt.assert_almost_equal(self.res1.fittedvalues,
+                                self.res2.fittedvalues_stata, 3)
+
+    def test_wresid(self):
+        npt.assert_almost_equal(self.res1.wresid,
+                                self.res2.wresid, 4)
+
+
+class TestPooling(CheckModelResults, FixedEffectsMixin):
     @classmethod
     def setupClass(cls):
         from results_panel import pooling
