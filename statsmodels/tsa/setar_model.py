@@ -300,7 +300,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
                                      XX, resids, delay_grid=None):
         """
         Maximizes objective function, given already selected thresholds and,
-        optionally, an already selcted delay.
+        optionally, an already selected delay.
 
         Parameters
         ----------
