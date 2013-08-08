@@ -490,14 +490,14 @@ def acorr_breush_godfrey(results, nlags=None, store=False):
 
     '''
 
-    x = np.concatenate((np.zeros(nlags), results.resid))
+    x = np.asarray(results.resid)
     exog_old = results.model.exog
-    x = np.asarray(x)
     nobs = x.shape[0]
     if nlags is None:
         #for adf from Greene referencing Schwert 1989
-        nlags = 12. * np.power(nobs/100., 1/4.)#nobs//4  #TODO: check default, or do AIC/BIC
+        nlags = np.trunc(12. * np.power(nobs/100., 1/4.))#nobs//4  #TODO: check default, or do AIC/BIC
 
+    x = np.concatenate((np.zeros(nlags), x))
 
     #xdiff = np.diff(x)
     #
