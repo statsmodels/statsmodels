@@ -165,7 +165,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
     res = _lowess(y, x, frac=frac, it=it, delta=delta)
     _, yfitted = res.T
 
-    if return_sorted or (all_valid and is_sorted):
+    if return_sorted:
         return res
     else:
         # rebuild yfitted with original indices
@@ -175,6 +175,8 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
             yfitted_.fill(np.nan)
             yfitted_[sort_index] = yfitted
             yfitted = yfitted_
+        else:
+            yfitted = yfitted
 
         if not all_valid:
             yfitted_ = np.empty_like(endog)
