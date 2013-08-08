@@ -705,11 +705,11 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
             + ')'
         )
 
-        if self.data.dates is not None:
+        try:
             dates = self.data.dates
             sample = [('Sample:', [dates[0].strftime('%m-%d-%Y')])]
             sample += [('', [' - ' + dates[-1].strftime('%m-%d-%Y')])]
-        else:
+        except:
             start = self.model.nobs_initial + 1
             end = repr(self.model.data.orig_endog.shape[0])
             sample = [('Sample:', [repr(start) + ' - ' + end])]
