@@ -582,13 +582,15 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
                     continue
                 try:
                     iteration_thresholds = np.sort([threshold] + thresholds)
-                    obj = self._grid_search_objective(
-                        delay, iteration_thresholds,
-                        XX, resids
-                    )
-                    self.objectives[(delay,)+tuple(iteration_thresholds)] = obj
-                    if obj > max_obj:
-                        max_obj = obj
+                    key = (delay,)+tuple(iteration_thresholds)
+                    if key not in self.objectives:
+                        obj = self._grid_search_objective(
+                            delay, iteration_thresholds,
+                            XX, resids
+                        )
+                        self.objectives[key] = obj
+                    if self.objectives[key] > max_obj:
+                        max_obj = self.objectives[key]
                         params = (delay, threshold)
                 # Some threshold values don't allow enough values in each
                 # regime; we just need to not select those thresholds
