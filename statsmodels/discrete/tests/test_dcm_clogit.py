@@ -4,6 +4,11 @@ Tests for discrete choice models : clogit
 Results are from R mlogit package
 
 """
+#cur_dir = os.path.abspath(os.path.dirname(__file__))
+
+import sys
+sys.path[0]='/home/nuska/github/Statsmodels/statsmodels'
+
 import os
 import numpy as np
 import pandas as pandas
@@ -12,9 +17,10 @@ from patsy import dmatrices
 # import all functions from numpy.testing that are needed
 from numpy.testing import (assert_almost_equal)
 
-from statsmodels.discrete.discrete.dcm_clogit import CLogit
-from results.results_dcm_clogit import Modechoice
+from statsmodels.discrete.dcm_clogit import CLogit
+from statsmodels.discrete.tests.results.results_dcm_clogit import Travelmodechoice
 
+DECIMAL_4 = 4
 
 class CheckDCMResults(object):
     """
@@ -22,8 +28,11 @@ class CheckDCMResults(object):
     """
 
     def test_params(self):
-        assert_almost_equal(self.res1.params, self.res2.params, 4)
+        assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
+    def test_hessian(self):
+        np.testing.assert_allclose(self.mod1.hessian(self.res1.params),
+                                   self.res2.hessian, rtol=1e-4, atol=0)
 
 class TestCLogit(CheckDCMResults):
     """
@@ -47,8 +56,9 @@ class TestCLogit(CheckDCMResults):
         nchoices = 4
         nobs = 210
         choice_index = np.arange(nchoices*nobs) % nchoices
-        df['hinc_air'] = df['hinc']*(choice_index==0)
 
+
+        df['hinc_air'] = df['hinc']*(choice_index==0)
         f = 'mode  ~ ttme+invc+invt+gc+hinc+psize+hinc_air'
         y, X = dmatrices(f, df, return_type='dataframe')
         y.head()
@@ -69,13 +79,18 @@ class TestCLogit(CheckDCMResults):
 
         for ii in range(nchoices):
             xi.append(dta1[xivar[ii]][choice_index==ii])
-        xifloat = [X.ix[choice_index == ii, xi_names].values for ii, xi_names in enumerate(xivar)]
+        xifloat = [X.ix[choice_index == ii, xi_names].values
+                    for ii, xi_names in enumerate(xivar)]
 
-        clogit_res = CLogit(endog, xifloat, 2).fit()
+        mod1 = CLogit(endog, xifloat, 2)
+        res1 = CLogit(endog, xifloat, 2).fit()
+
+        cls.mod1 = mod1
+        cls.res1 = res1
 
         # set up results
-        res2 = Modechoice()
-        res2.CLogit()
+        res2 = Travelmodechoice()
+        res2.clogit_greene()
         cls.res2 = res2
 
         # set up precision
@@ -84,4 +99,4 @@ class TestCLogit(CheckDCMResults):
 
 if __name__ == "__main__":
     import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)

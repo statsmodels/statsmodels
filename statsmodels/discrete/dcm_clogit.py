@@ -74,7 +74,7 @@ class CLogit(GenericLikelihoodModel):
                        for ii in range(len(zi)-1)]
         # beta_indices = [array([3, 0, 1, 2]), array([4, 0, 1]), array([5, 0, 1]), array([1])]
         self.beta_indices = beta_indices
-        print (beta_indices)
+        # print (beta_indices)
 
         params_num = []                            # num de params to estimate
         for sublist in beta_indices:
@@ -85,7 +85,7 @@ class CLogit(GenericLikelihoodModel):
         self.params_num = params_num
         self.df_model = len(params_num)
         self.df_resid = int(self.nobs - len(params_num))
-        print self.params_num
+	# print self.params_num
 
         # TODO exog_names. See at the end
 
