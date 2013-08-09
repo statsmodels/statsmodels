@@ -81,7 +81,9 @@ class Transf_gen(distributions.rv_continuous):
                          # possible to freeze the underlying distribution
 
         super(Transf_gen,self).__init__(a=a, b=b, name = name,
-                                longname = longname, extradoc = extradoc)
+                                        shapes=kls.shapes,
+                                        longname = longname,
+                                        extradoc = extradoc)
 
     def _cdf(self,x,*args, **kwargs):
         #print args
@@ -148,7 +150,7 @@ class ExpTransf_gen(distributions.rv_continuous):
             self.numargs = kwargs['numargs']
         else:
             self.numargs = 1
-        if 'numargs' in kwargs:
+        if 'name' in kwargs:
             name = kwargs['name']
         else:
             name = 'Log transformed distribution'
@@ -156,7 +158,7 @@ class ExpTransf_gen(distributions.rv_continuous):
             a = kwargs['a']
         else:
             a = 0
-        super(ExpTransf_gen,self).__init__(a=0, name = 'Log transformed distribution')
+        super(ExpTransf_gen,self).__init__(a=a, name=name)
         self.kls = kls
     def _cdf(self,x,*args):
         #print args
@@ -320,8 +322,11 @@ class TransfTwo_gen(distributions.rv_continuous):
         self.kls = kls   #(self.u_args, self.u_kwargs)
                          # possible to freeze the underlying distribution
 
-        super(TransfTwo_gen,self).__init__(a=a, b=b, name = name,
-                                longname = longname, extradoc = extradoc)
+        super(TransfTwo_gen,self).__init__(a=a, b=b,
+                                           name = name,
+                                           shapes=kls.shapes,
+                                           longname = longname,
+                                           extradoc = extradoc)
 
     def _rvs(self, *args):
         self.kls._size = self._size   #size attached to self, not function argument
