@@ -17,7 +17,7 @@ Studies in Nonlinear Dynamics & Econometrics 2 (1) (January 1).
 
 Lin, Jin-Lung, and C. W. J. Granger. 1994.
 "Forecasting from Non-linear Models in Practice."
-Journal of Forecasting 13 (1) (January): 1–9.
+Journal of Forecasting 13 (1) (January): 1-9.
 
 
 
