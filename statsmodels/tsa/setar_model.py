@@ -15,6 +15,12 @@ Hansen, Bruce E. 1997.
 "Inference in TAR Models."
 Studies in Nonlinear Dynamics & Econometrics 2 (1) (January 1).
 
+Lin, Jin-Lung, and C. W. J. Granger. 1994.
+"Forecasting from Non-linear Models in Practice."
+Journal of Forecasting 13 (1) (January): 1–9.
+
+
+
 Notes
 -----
 
@@ -36,6 +42,8 @@ Notes
 
 from __future__ import division
 import numpy as np
+import pandas as pd
+from statsmodels.base import data
 import statsmodels.tsa.base.tsa_model as tsbase
 from statsmodels.tsa.tsatools import add_constant, lagmat
 from statsmodels.regression.linear_model import OLS, OLSResults
@@ -263,6 +271,266 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
         return lfit
 
+    def _get_predict_start(self, start, dynamic):
+        """
+        Returns the index of the given start date.
+        """
+        if start is None:
+            start = 0
+
+        dates = self.data.dates
+        if isinstance(start, str):
+            if dates is None:
+                raise ValueError("Got a string for start and dates is None")
+            dtstart = self._str_to_date(start)
+            self.data.predict_start = dtstart
+
+            if dynamic and dtstart < self.data.dates[0]:
+                raise ValueError('Cannot start dynamic prediction earlier than'
+                                 ' record %d (the AR order) due to conditional'
+                                 ' least squares estimation. Got %s.' %
+                                 (self.ar_order, repr(start)))
+
+            try:
+                start = self._get_dates_loc(dates, dtstart)
+            except KeyError:
+                raise ValueError("Start must be in dates. Got %s | %s" %
+                                 (str(start), str(dtstart)))
+
+        self._set_predict_start_date(start)
+        return start
+
+        start = super(SETAR, self)._get_predict_start(start)
+
+        #if dynamic and start <= self.ar_order:
+        #    raise ValueError('Cannot start dynamic prediction earlier than'
+        #                     ' %d (the AR order) due to conditional least'
+        #                     ' squares estimation. Got %d.' %
+        #                     (self.ar_order, start))
+
+        return start
+
+    def predict(self, params, start=None, end=None, dynamic=False,
+                method='mc'):
+        """
+        In-sample predictions and/or out-of-sample forecasts
+
+        Parameters
+        ----------
+        params : array-like, optional after fit has been called
+            Parameters of a linear model
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction.
+        dynamic : bool, optional
+            The `dynamic` keyword affects in-sample prediction. If dynamic
+            is False, then the in-sample lagged values are used for
+            prediction. If `dynamic` is True, then in-sample forecasts are
+            used in place of lagged dependent variables. The first forecasted
+            value is `start`.
+        method : str {'n','nfe','mc','bs'}, optional
+            Method to use for dynamic prediction and out-of-sample forecasting
+            'n' naive method, assumes errors are at means (zero)
+            'nfe' Normal Forecast Error method (Not yet implemented)
+            'mc' Monte Carlo method (Gaussian errors)
+            'bs' Bootstrap method (errors drawn randomly with replacement from
+                 residuals)
+
+        Returns
+        -------
+        An array of fitted values
+
+        Notes
+        -----
+        1. Static in-sample prediction is just like that for OLS because the
+           regime is known and static implies using actual valeus, so we can
+           just dot the full set of parameters with the self.exog dataset
+           (recall that this is not simply a lagmat(endog, ...) - it was
+           created in self.build_exog).
+
+        2. Dynamic in-sample prediction takes actual data up to start as the
+           initial values for forecasting.
+
+        2. Out-of-sample forecasting is performed if end is after the last
+           sample observation. Currently this function does not return standard
+           errors and confidence intervals.
+        """
+
+        start = self._get_predict_start(start, dynamic)
+        end, out_of_sample = self._get_predict_end(end)
+
+        # In-sample prediction
+        prediction = []
+
+        # Static: for all y_t, use *actual* y_{t-1}, ..., y_{t-p}
+        if not dynamic:
+            exog = self.exog[start:end + 1, ]
+            prediction = np.dot(exog, params)
+        # Dynamic: use y_1, ..., y_{start-1} as initial datapoints, forecast
+        # everything else
+        else:
+            orig_start = start + self.nobs_initial
+            initial = self.data.orig_endog[
+                orig_start - self.ar_order:orig_start
+            ].squeeze()
+            prediction = self.forecast(params, end - (start - 1), initial,
+                                       method=method)
+
+        # Out-of-sample forecasting
+        if out_of_sample:
+            # Get our initial data
+            initial = prediction
+            required_obs = self.ar_order - len(initial)
+            if required_obs > 0:
+                initial = np.r_[
+                    self.data.orig_endog[start-required_obs:start].squeeze(),
+                    initial
+                ]
+
+            # Add the forecast
+            forecast = self.forecast(params, out_of_sample, initial,
+                                     method=method)
+            prediction = np.r_[prediction, forecast]
+
+        # Date handling if Pandas endog
+        if (self.data.predict_dates is not None and
+                isinstance(self.data, data.PandasData)):
+            prediction = pd.TimeSeries(prediction,
+                                       index=self.data.predict_dates)
+
+        return prediction
+
+    def _forecast_nfe(self, params, steps, initial, alpha):
+        raise NotImplementedError
+
+    def _forecast_naive(self, params, steps, initial, alpha):
+        forecast = []
+
+        for step in range(steps):
+            # Forecast the next value
+            lags = initial[:-self.ar_order-1:-1]
+            regime = np.searchsorted(self.thresholds, lags[self.delay-1])
+            k = self.ar_order + self.k_trend
+            forecast.append(
+                np.dot(np.r_[1, lags], params[k*regime:k*(regime + 1)])
+            )
+            # Make the new initial set
+            initial = np.r_[initial[1:], forecast[-1]]
+
+        return np.array(forecast)
+
+    def _forecast_monte_carlo(self, params, steps, initial, alpha, errors):
+        forecast = []
+
+        # First forecast has no error
+        errors = np.r_[np.zeros((1, errors.shape[1])), errors]
+
+        # Generate forecasts
+        for step in range(steps):
+            # Forecast the next value
+            lags = initial[:-self.ar_order-1:-1]
+            regime = np.searchsorted(self.thresholds, lags[self.delay-1])
+            k = self.ar_order + self.k_trend
+            forecast.append(
+                np.mean(errors[step-1] + np.dot(
+                    np.r_[1, lags],
+                    params[k*regime:k*(regime + 1)])
+                )
+            )
+            initial = np.r_[initial[1:], forecast[-1]]
+
+        return np.array(forecast)
+
+    def forecast(self, params, steps=1, initial=None, alpha=.05, method='mc',
+                 reps=100, resids=None):
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        params : array-like, optional after fit has been called
+            Parameters of a linear model
+        steps : int, optional
+            The number of out of sample forecasts from the end of the
+            sample.
+        initial : array, optional
+            The predetermined endogenous values on which to begin forecasting.
+        alpha : float
+            The confidence intervals for the forecasts are (1 - alpha) %
+        method : str {'n','nfe','mc','bs'}, optional
+            Method to use in out-of-sample forecasting
+            'n' naive method, assumes errors are at means (zero)
+            'nfe' Normal Forecast Error method (Not yet implemented)
+            'mc' Monte Carlo method (Gaussian errors)
+            'bs' Bootstrap method (errors drawn randomly with replacement from
+                 residuals)
+        reps : int, optional
+            The number of repetitions for draws in the monte carlo and
+            bootstrap methods.
+        resids : array, optional
+            The residuals from fit(), from which to draw the errors if the
+            bootstrap method is used
+
+        Returns
+        -------
+        forecast : array
+            Array of out-of-sample forecasts
+        stderr : array
+            Array of the standard error of the forecasts.
+        conf_int : array
+            2d array of the confidence interval for the forecast
+        """
+
+        if initial is None:
+            initial = self.endog
+
+        if initial.shape[0] < self.ar_order:
+            raise ValueError('Cannot forecast with less than %d (the AR order)'
+                             ' datapoints.' % self.ar_order)
+
+        if self.delay is None or self.thresholds is None:
+            raise RuntimeError('Cannot forecast if delay and threshold'
+                               ' hyperparameters are not set.')
+
+        if method == 'n':
+            errors = np.zeros((steps, 1))
+            forecast = self._forecast_monte_carlo(
+                params, steps, initial, alpha, errors=errors
+            )
+        elif method == 'mc':
+            errors = np.random.normal(size=(steps-1, reps))
+            forecast = self._forecast_monte_carlo(
+                params, steps, initial, alpha, errors=errors
+            )
+        elif method == 'bs':
+            if resids is None:
+                # Note: must cache predict_dates; it gets overwritten
+                #       in the self.predict() call
+                dates = self.data.predict_dates
+                resids = self.endog - self.predict(params)
+                self.data.predict_dates = dates
+            errors = resids[
+                np.random.random_integers(0, len(resids)-1, (steps-1, reps))
+            ]
+            forecast = self._forecast_monte_carlo(
+                params, steps, initial, alpha,
+                errors=errors
+            )
+        elif method == 'nfe':
+            forecast = self._forecast_nfe(params, steps, initial, alpha)
+        else:
+            raise ValueError('Invalid forecasting method. Valid methods are'
+                             ' "n", "nfe", "mc", and "bs". Got %s.' % method)
+
+        return forecast
+
     def _grid_search_objective(self, delay, thresholds, XX, resids):
         """
         Objective function to maximize in SETAR(2) hyperparameter grid search
@@ -467,6 +735,10 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         return self.HC0_se
 
     @cache_readonly
+    def resid(self):
+        return self.model.endog - self.model.predict(self.params)
+
+    @cache_readonly
     def SSR(self):
         """
         Model sum of squared errors
@@ -628,6 +900,15 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         )
 
         return fig
+
+    def predict(self, start=None, end=None, dynamic=False, method='mc'):
+        return self.model.predict(self.params, start, end,
+                                  dynamic=dynamic, method=method)
+
+    def forecast(self, steps=1, alpha=0.05, method='mc',
+                 reps=100):
+        return self.model.forecast(self.params, steps,
+                                   alpha=alpha, method=method, reps=reps)
 
     def _make_exog_names(self):
         exog_names = []
