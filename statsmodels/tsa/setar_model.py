@@ -35,7 +35,8 @@ Notes
 - TODO add ability to remove specific AR orders (e.g. what Potter 1995 does)
        i.e. by manipulating the self.exog matrix
 - TODO implement finite sample standard errors (Hansen 1997)
-- TODO add forecasting (via simulation)
+- TODO add interval forecasts (Hyndman 1995)
+- TODO add NFE forecasting method (De Gooijer and De Bruin 1998)
 - TODO generalize to TAR
 
 """
@@ -300,16 +301,6 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         self._set_predict_start_date(start)
         return start
 
-        start = super(SETAR, self)._get_predict_start(start)
-
-        #if dynamic and start <= self.ar_order:
-        #    raise ValueError('Cannot start dynamic prediction earlier than'
-        #                     ' %d (the AR order) due to conditional least'
-        #                     ' squares estimation. Got %d.' %
-        #                     (self.ar_order, start))
-
-        return start
-
     def predict(self, params, start=None, end=None, dynamic=False,
                 method='mc'):
         """
@@ -345,7 +336,8 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
         Returns
         -------
-        An array of fitted values
+        predicted : array
+            Array of predicted and/or forecasted values
 
         Notes
         -----
@@ -359,8 +351,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
            initial values for forecasting.
 
         2. Out-of-sample forecasting is performed if end is after the last
-           sample observation. Currently this function does not return standard
-           errors and confidence intervals.
+           sample observation.
         """
 
         start = self._get_predict_start(start, dynamic)
@@ -373,8 +364,8 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         if not dynamic:
             exog = self.exog[start:end + 1, ]
             prediction = np.dot(exog, params)
-        # Dynamic: use y_1, ..., y_{start-1} as initial datapoints, forecast
-        # everything else
+        # Dynamic: use y_{start-1-ar_order}, ..., y_{start-1} as initial
+        # datapoints, forecast everything else
         else:
             orig_start = start + self.nobs_initial
             initial = self.data.orig_endog[
@@ -410,23 +401,10 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
     def _forecast_nfe(self, params, steps, initial, alpha):
         raise NotImplementedError
 
-    def _forecast_naive(self, params, steps, initial, alpha):
-        forecast = []
-
-        for step in range(steps):
-            # Forecast the next value
-            lags = initial[:-self.ar_order-1:-1]
-            regime = np.searchsorted(self.thresholds, lags[self.delay-1])
-            k = self.ar_order + self.k_trend
-            forecast.append(
-                np.dot(np.r_[1, lags], params[k*regime:k*(regime + 1)])
-            )
-            # Make the new initial set
-            initial = np.r_[initial[1:], forecast[-1]]
-
-        return np.array(forecast)
-
     def _forecast_monte_carlo(self, params, steps, initial, alpha, errors):
+        """
+        Generic method for generating forecasts using a Monte Carlo approach
+        """
         forecast = []
 
         # First forecast has no error
@@ -482,10 +460,6 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         -------
         forecast : array
             Array of out-of-sample forecasts
-        stderr : array
-            Array of the standard error of the forecasts.
-        conf_int : array
-            2d array of the confidence interval for the forecast
         """
 
         if initial is None:
@@ -902,13 +876,81 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         return fig
 
     def predict(self, start=None, end=None, dynamic=False, method='mc'):
+        """
+        In-sample predictions and/or out-of-sample forecasts
+
+        Parameters
+        ----------
+        start : int, str, or datetime, optional
+            Zero-indexed observation number at which to start forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type.
+        end : int, str, or datetime, optional
+            Zero-indexed observation number at which to end forecasting, ie.,
+            the first forecast is start. Can also be a date string to
+            parse or a datetime type. However, if the dates index does not
+            have a fixed frequency, end must be an integer index if you
+            want out of sample prediction.
+        dynamic : bool, optional
+            The `dynamic` keyword affects in-sample prediction. If dynamic
+            is False, then the in-sample lagged values are used for
+            prediction. If `dynamic` is True, then in-sample forecasts are
+            used in place of lagged dependent variables. The first forecasted
+            value is `start`.
+        method : str {'n','nfe','mc','bs'}, optional
+            Method to use for dynamic prediction and out-of-sample forecasting
+            'n' naive method, assumes errors are at means (zero)
+            'nfe' Normal Forecast Error method (Not yet implemented)
+            'mc' Monte Carlo method (Gaussian errors)
+            'bs' Bootstrap method (errors drawn randomly with replacement from
+                 residuals)
+
+        Returns
+        -------
+        predicted : array
+            Array of predicted and/or forecasted values
+
+        See Also
+        --------
+        statsmodels.tsa.setar_model.SETAR.predict : prediction implementation
+        """
         return self.model.predict(self.params, start, end,
                                   dynamic=dynamic, method=method)
 
     def forecast(self, steps=1, alpha=0.05, method='mc',
                  reps=100):
-        return self.model.forecast(self.params, steps,
-                                   alpha=alpha, method=method, reps=reps)
+        """
+        Out-of-sample forecasts
+
+        Parameters
+        ----------
+        steps : int, optional
+            The number of out of sample forecasts from the end of the
+            sample.
+        alpha : float
+            The confidence intervals for the forecasts are (1 - alpha) %
+        method : str {'n','nfe','mc','bs'}, optional
+            Method to use in out-of-sample forecasting
+            'n' naive method, assumes errors are at means (zero)
+            'nfe' Normal Forecast Error method (Not yet implemented)
+            'mc' Monte Carlo method (Gaussian errors)
+            'bs' Bootstrap method (errors drawn randomly with replacement from
+                 residuals)
+        reps : int, optional
+            The number of repetitions for draws in the monte carlo and
+            bootstrap methods.
+
+        Returns
+        -------
+        forecast : array
+            Array of out-of-sample forecasts
+
+        See Also
+        --------
+        statsmodels.tsa.setar_model.SETAR.forecast : forecasting implementation
+        """
+        return self.model.forecast(self.params, steps, alpha=alpha,
+                                   method=method, reps=reps, resids=self.resid)
 
     def _make_exog_names(self):
         exog_names = []
