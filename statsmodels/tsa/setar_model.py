@@ -502,7 +502,6 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
                              ' the error term of each observation. Got %d.' %
                              (steps, len(scale)))
 
-
         if method == 'n':
             errors = np.zeros((steps, 1))
             forecast = self._forecast_monte_carlo(
@@ -669,7 +668,8 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         """
 
         # SETAR(1) is a special case
-        if self.order == 1: return 0, ()
+        if self.order == 1:
+            return 0, ()
 
         # Cache calculations
         XX = np.linalg.inv(self.exog.T.dot(self.exog))    # (X'X)^{-1}
