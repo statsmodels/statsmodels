@@ -798,7 +798,7 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
             null = self._get_model(null, self.model.ar_order)
         return self.model.nobs * (null.ssr - self.ssr) / self.ssr
 
-    def order_test(self, null=1, reps=10, heteroskedasticity='h'):
+    def order_test(self, null=1, reps=100, heteroskedasticity='n'):
         """
         SETAR Order Selection Test
 
@@ -840,6 +840,9 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         own scale. Thus in addition to a common pool of errors (which are
         rescaled residuals from the entire sample), we pass an array of scales
         to reverse the rescaling when generating the bootstrap observation.
+
+        Each repetition involves running select_hyperparameters() on a model.
+        This will be slow even in models of reasonable sizes and orders.
         """
 
         if isinstance(null, int):
@@ -857,7 +860,11 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
                              ' higher-order SETAR models.')
 
         exog = self.model.data.orig_exog[self.model.nobs_initial:]
-        initial = self.model.data.orig_endog[:self.model.nobs_initial]
+        # This is a bit of a cludge, to deal with pandas datasets
+        dta = data.handle_data(
+            self.model.data.orig_endog[:self.model.nobs_initial], None
+        )
+        initial = dta.endog
 
         scale = None
         if heteroskedasticity == 'n':
