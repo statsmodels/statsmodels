@@ -871,6 +871,10 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
             errors = null.resid / scale**0.5
             # Now, set those scales (which were negative) back to zero
             scale[scale == np.Inf] = 0
+        else:
+            raise ValueError('Invalid type of heteroskedasticity. Valid types'
+                             ' are "n", "r", and "g". Got %s.' %
+                             heteroskedasticity)
 
         f_stats = []
         for rep in range(reps):
