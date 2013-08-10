@@ -773,6 +773,130 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
             self._cache_alternatives[order] = mod.fit()
         return self._cache_alternatives[order]
 
+    def f_stat(self, null=None):
+        """
+        F statistic for order selection
+
+        Parameters
+        ----------
+        null : SETARResults, optional
+            The null hypothesis to test against. If not provided, calculated
+            with SETAR(1) as the null.
+        """
+        if null is None:
+            null = self._AR
+        elif isinstance(null, int):
+            null = self._get_model(null, self.model.ar_order)
+        return self.model.nobs * (null.ssr - self.ssr) / self.ssr
+
+    def order_test(self, null=1, reps=10, heteroskedasticity='h'):
+        """
+        SETAR Order Selection Test
+
+        Parameters
+        ----------
+        null : SETARResults, int, optional
+            The model under the null hypothesis. Can also be an integer
+            indicating the order of the SETAR model under the null hypothesis.
+            The order must be less than the order of the alternate hypothesis
+            (i.e. the fitted model).
+        reps : int, optional
+            the number of bootstrap replications to perform
+        heteroskedasticity : str {'n','r','g'}, optional
+            Assumption on type of heteroskedasticity in the error term
+            'n' No heteroskedasticity (homoskedasticity)
+            'r' Between-regime heteroskedasticity only, so that there is
+                within-regime homoskedasticity.
+                Only applicable if the null and alternative hypotheses are both
+                of order greater than one.
+            'g' Heteroskedasticity of general form
+
+        Returns
+        -------
+        f_stat : float
+            The value of the max-F statistic
+        pvalue : float
+            The bootstrapped p-value for the F test
+
+        Notes
+        -----
+        Between-regime heteroskedastic assumes homoskedasticity within regimes.
+        Thus to do the bootstrap, essentially each regime has a different
+        "pool" of errors available to be drawn from, corresponding to the
+        actual residuals from that regime. This is equivalent to assuming that
+        the errors are scaled differently in between-regimes, but scaled the
+        same within-regimes.
+
+        Heteroskedasticity of general form allows each observation to have its
+        own scale. Thus in addition to a common pool of errors (which are
+        rescaled residuals from the entire sample), we pass an array of scales
+        to reverse the rescaling when generating the bootstrap observation.
+        """
+
+        if isinstance(null, int):
+            null = self._get_model(null, self.model.ar_order)
+
+        if null.model.order >= self.model.order:
+            raise ValueError('Model under the null hypothesis must have'
+                             ' order less than %d (the order of the currently'
+                             ' fitted model). Got %d.' %
+                             (self.model.order, null_order))
+
+        if heteroskedasticity == 'r' and null.model.order == 1:
+            raise ValueError('The regime heteroskedastic test is only'
+                             ' applicable when testing between two'
+                             ' higher-order SETAR models.')
+
+        exog = self.model.data.orig_exog[self.model.nobs_initial:]
+        initial = self.model.data.orig_endog[:self.model.nobs_initial]
+
+        scale = None
+        if heteroskedasticity == 'n':
+            errors = null.resid
+        elif heteroskedasticity == 'r':
+            # Utilizes the tuple option for different bootstrapping errors
+            # in different regimes
+            errors = tuple([
+                null.resid[null.regime_indicators == regime]
+                for regime in range(null.order)
+            ])
+        elif heteroskedasticity == 'g':
+            # Utilizes the scale option for differently scaled errors in
+            # different periods
+            res = OLS(null.resid**2, exog**2).fit()
+            scale = res.fittedvalues
+            # Temporarily replace negative scales with infinity so that the
+            # division makes the scaled error zero
+            scale[scale < 0] = np.Inf
+            errors = null.resid / scale**0.5
+            # Now, set those scales (which were negative) back to zero
+            scale[scale == np.Inf] = 0
+
+        f_stats = []
+        for rep in range(reps):
+            # Create a sample from these parameters with these errors
+            # (this amounts to doing a bootstrap forecast)
+            sample = self.model.forecast(
+                null.delay, null.thresholds, null.params, int(null.nobs),
+                initial=initial, method='bs', reps=1,
+                resids=errors, scale=scale
+            )
+            # Estimate a SETAR model on the simulated sample
+            simul_res = SETAR(
+                np.r_[initial, sample],
+                order=self.model.order,
+                ar_order=self.model.ar_order,
+                threshold_grid_size=self.model.threshold_grid_size
+            ).fit()
+            # Estimate the null SETAR model on the simulated sample
+            simul_null = simul_res._get_model(null.order, null.ar_order)
+            f_stats.append(simul_res.f_stat(simul_null))
+
+        f_stat = self.f_stat(null)
+        pvalue = np.mean(f_stats > f_stat)
+
+        return f_stat, pvalue, f_stats
+
     @cache_readonly
     def ar_order(self):
         return self.model.ar_order
