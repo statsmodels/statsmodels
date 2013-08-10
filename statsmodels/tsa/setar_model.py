@@ -724,22 +724,46 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         return self._cache_alternatives[order]
 
     @cache_readonly
+    def ar_order(self):
+        return self.model.ar_order
+
+    @cache_readonly
+    def delay(self):
+        return self.model.delay
+
+    @cache_readonly
+    def order(self):
+        return self.model.order
+
+    @cache_readonly
+    def thresholds(self):
+        return self.model.thresholds
+
+    @cache_readonly
+    def regime_indicators(self):
+        return self.model.regime_indicators
+
+    @cache_readonly
     def bse(self):
         # Get White's corrected standard errors here. Report them, because
         # otherwise we don't allow heteroskedasticity between regimes
         return self.HC0_se
 
     @cache_readonly
-    def resid(self):
-        return self.model.endog - self.model.predict(self.params)
+    def fittedvalues(self):
+        return self.model.predict(self.model.delay,
+                                  self.model.thresholds,
+                                  self.params)
 
     @cache_readonly
-    def SSR(self):
-        """
-        Model sum of squared errors
-        """
-        key = (self.model.delay,) + tuple(self.model.thresholds)
-        return self.threshold_SSR[key]
+    def wresid(self):
+        return self.resid
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.model.predict(self.model.delay,
+                                                     self.model.thresholds,
+                                                     self.params)
 
     @cache_readonly
     def threshold_SSR(self):
@@ -749,9 +773,8 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         """
 
         # Compute the sum of squared residuals for each model
-        ar1_ssr = self.model.ar1_resids.T.dot(self.model.ar1_resids)
         return {
-            key: (ar1_ssr - obj)
+            key: (self._AR.ssr - obj)
             for key, obj in self.model.objectives.items()
             if len(key) == len(self.model.thresholds) + 1
         }
@@ -762,6 +785,7 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         Likelihood ratio statistics for each threshold, calculated for each
         possible alternative threshold value.
         """
+
         # Local copies
         delay = self.model.delay
         thresholds = self.model.thresholds.tolist()
@@ -790,7 +814,7 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
 
                 # Likelihood ratio statistic
                 LR_set[alt_threshold] = (
-                    self.model.nobs * (SSR - self.SSR) / self.SSR
+                    self.model.nobs * (SSR - self.ssr) / self.ssr
                 )
             threshold_LR.append(LR_set)
 
