@@ -298,13 +298,17 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         self._set_predict_start_date(start)
         return start
 
-    def predict(self, params, start=None, end=None, dynamic=False,
-                method='mc'):
+    def predict(self, delay, thresholds, params, start=None, end=None,
+                dynamic=False, method='mc'):
         """
         In-sample predictions and/or out-of-sample forecasts
 
         Parameters
         ----------
+        delay : integer
+            The delay for the self-exciting threshold variable.
+        thresholds : iterable
+            The threshold values separating the data into regimes.
         params : array-like, optional after fit has been called
             Parameters of a linear model
         start : int, str, or datetime, optional
@@ -368,7 +372,8 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             initial = self.data.orig_endog[
                 orig_start - self.ar_order:orig_start
             ].squeeze()
-            prediction = self.forecast(params, end - (start - 1), initial,
+            prediction = self.forecast(delay, thresholds, params,
+                                       end - (start - 1), initial,
                                        method=method)
 
         # Out-of-sample forecasting
@@ -383,39 +388,47 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
                 ]
 
             # Add the forecast
-            forecast = self.forecast(params, out_of_sample, initial,
-                                     method=method)
+            forecast = self.forecast(delay, thresholds, params, out_of_sample,
+                                     initial, method=method)
             prediction = np.r_[prediction, forecast]
 
         # Date handling if Pandas endog
-        if (self.data.predict_dates is not None and
+        predict_dates = getattr(self.data, 'predict_dates', None)
+        if (predict_dates is not None and
                 isinstance(self.data, data.PandasData)):
             prediction = pd.TimeSeries(prediction,
                                        index=self.data.predict_dates)
 
         return prediction
 
-    def _forecast_nfe(self, params, steps, initial, alpha):
+    def _forecast_nfe(self, delay, thresholds, params, steps, initial, alpha):
         raise NotImplementedError
 
-    def _forecast_monte_carlo(self, params, steps, initial, alpha, errors):
+    def _forecast_monte_carlo(self, delay, thresholds, params, steps, initial,
+                              alpha, errors, scale):
         """
         Generic method for generating forecasts using a Monte Carlo approach
         """
         forecast = []
 
-        # First forecast has no error
-        errors = np.r_[np.zeros((1, errors.shape[1])), errors]
-
         # Generate forecasts
         for step in range(steps):
             # Forecast the next value
             lags = initial[:-self.ar_order-1:-1]
-            regime = np.searchsorted(self.thresholds, lags[self.delay-1])
+            regime = np.searchsorted(thresholds, lags[delay-1])
             k = self.ar_order + self.k_trend
+            exog = np.r_[1, lags] if self.k_trend else lags
+
+            if step == 0:
+                # First forecast has no error
+                error = 0
+            elif isinstance(errors, tuple):
+                error = errors[regime][step-1]
+            else:
+                error = errors[step-1]
             forecast.append(
-                np.mean(errors[step-1] + np.dot(
-                    np.r_[1, lags],
+                np.mean(error*scale[step] + np.dot(
+                    exog,
                     params[k*regime:k*(regime + 1)])
                 )
             )
@@ -423,13 +436,17 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
         return np.array(forecast)
 
-    def forecast(self, params, steps=1, initial=None, alpha=.05, method='mc',
-                 reps=100, resids=None):
+    def forecast(self, delay, thresholds, params, steps=1, initial=None,
+                 alpha=.05, method='mc', reps=100, resids=None, scale=None):
         """
         Out-of-sample forecasts
 
         Parameters
         ----------
+        delay : integer
+            The delay for the self-exciting threshold variable.
+        thresholds : iterable
+            The threshold values separating the data into regimes.
         params : array-like, optional after fit has been called
             Parameters of a linear model
         steps : int, optional
@@ -449,9 +466,14 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         reps : int, optional
             The number of repetitions for draws in the monte carlo and
             bootstrap methods.
-        resids : array, optional
+        resids : array, tuple optional
             The residuals from fit(), from which to draw the errors if the
-            bootstrap method is used
+            bootstrap method is used. Optionally can provide different pools of
+            errors per regime, in which case a tuple of length equal to the
+            order of the model (i.e. the number of regimes) must be provided.
+        scale : array, optional
+            Optional array of scale parameters to allow for heteroskedasticity
+            in monte carlo sample generation. Array must have length `steps`.
 
         Returns
         -------
@@ -464,21 +486,33 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
         if initial.shape[0] < self.ar_order:
             raise ValueError('Cannot forecast with less than %d (the AR order)'
-                             ' datapoints.' % self.ar_order)
+                             ' initial datapoints.' % self.ar_order)
 
-        if self.delay is None or self.thresholds is None:
-            raise RuntimeError('Cannot forecast if delay and threshold'
-                               ' hyperparameters are not set.')
+        if isinstance(resids, tuple) and not len(resids) == len(thresholds)+1:
+            raise ValueError('If regime-specific residuals are provided as a'
+                             ' tuple, it must be of length equal to the'
+                             ' number of regimes (here %d). Got %d.' %
+                             (len(thresholds)+1, len(resids)))
+
+        if scale is None:
+            scale = np.ones((steps, 1))
+        elif not len(scale) == steps:
+            raise ValueError('If the scale array is provided, it must be of'
+                             ' length `steps` (here %d) to provide a scale for'
+                             ' the error term of each observation. Got %d.' %
+                             (steps, len(scale)))
+
 
         if method == 'n':
             errors = np.zeros((steps, 1))
             forecast = self._forecast_monte_carlo(
-                params, steps, initial, alpha, errors=errors
+                delay, thresholds, params, steps, initial, alpha, errors=errors
             )
         elif method == 'mc':
             errors = np.random.normal(size=(steps-1, reps))
             forecast = self._forecast_monte_carlo(
-                params, steps, initial, alpha, errors=errors
+                delay, thresholds, params, steps, initial, alpha,
+                errors=errors, scale=scale
             )
         elif method == 'bs':
             if resids is None:
@@ -487,12 +521,28 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
                 dates = self.data.predict_dates
                 resids = self.endog - self.predict(params)
                 self.data.predict_dates = dates
-            errors = resids[
-                np.random.random_integers(0, len(resids)-1, (steps-1, reps))
-            ]
+
+            # If we have regime-specific residual pools, fore each regime we
+            # make enough draws with replacement from each pool to fill the
+            # entire forecast, and provide an array for errors for each regime
+            if isinstance(resids, tuple):
+                errors = ()
+                for regime_resids in resids:
+                    errors += (regime_resids[
+                        np.random.random_integers(
+                            0, len(regime_resids)-1, (steps-1, reps)
+                        )
+                    ],)
+            # Otherwise, we just provide a single array of residuals
+            else:
+                errors = resids[
+                    np.random.random_integers(
+                        0, len(resids)-1, (steps-1, reps)
+                    )
+                ]
             forecast = self._forecast_monte_carlo(
-                params, steps, initial, alpha,
-                errors=errors
+                delay, thresholds, params, steps, initial, alpha,
+                errors=errors, scale=scale
             )
         elif method == 'nfe':
             forecast = self._forecast_nfe(params, steps, initial, alpha)
@@ -959,7 +1009,8 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         --------
         statsmodels.tsa.setar_model.SETAR.predict : prediction implementation
         """
-        return self.model.predict(self.params, start, end,
+        return self.model.predict(self.model.delay, self.model.thresholds,
+                                  self.params, start, end,
                                   dynamic=dynamic, method=method)
 
     def forecast(self, steps=1, alpha=0.05, method='mc',
@@ -994,7 +1045,8 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         --------
         statsmodels.tsa.setar_model.SETAR.forecast : forecasting implementation
         """
-        return self.model.forecast(self.params, steps, alpha=alpha,
+        return self.model.forecast(self.model.delay, self.model.thresholds,
+                                   self.params, steps, alpha=alpha,
                                    method=method, reps=reps, resids=self.resid)
 
     def _make_exog_names(self):
