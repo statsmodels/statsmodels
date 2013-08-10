@@ -703,6 +703,25 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(SETARResults, self).__init__(model, params,
                                            normalized_cov_params, scale)
+        self._cache_alternatives = {}
+
+    @cache_readonly
+    def _AR(self):
+        return self._get_model(1, self.model.ar_order)
+
+    def _get_model(self, order, ar_order):
+        if order not in self._cache_alternatives:
+            mod = SETAR(
+                self.model.data.orig_endog,
+                order=order,
+                ar_order=ar_order,
+                threshold_grid_size=self.model.threshold_grid_size
+            )
+            # We can supply some already-calculated objective values to the
+            # alternative model, since it's on the same dataset
+            mod.objectives = self.model.objectives
+            self._cache_alternatives[order] = mod.fit()
+        return self._cache_alternatives[order]
 
     @cache_readonly
     def bse(self):
