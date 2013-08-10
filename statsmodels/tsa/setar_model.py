@@ -20,17 +20,12 @@ Lin, Jin-Lung, and C. W. J. Granger. 1994.
 Journal of Forecasting 13 (1) (January): 1-9.
 
 
-
 Notes
 -----
 
 - Assumes homoskedasticity in terms of constructing CIs for threshold
   parameters (see Hansen 1997)
   TODO implement the heteroskedastic correct CIs
-- Assumes conditional homoskedasticity of errors in linearity testing when
-  bootstrapping to get p-values. Also requires assumption of independence of
-  errors (see Hansen 1999)
-  TODO implement bootstrapping for the heteroskedastic case
 - TODO add ability to have different AR orders for each regime
 - TODO add ability to remove specific AR orders (e.g. what Potter 1995 does)
        i.e. by manipulating the self.exog matrix
@@ -44,8 +39,8 @@ Notes
 from __future__ import division
 import numpy as np
 import pandas as pd
-from statsmodels.base import data
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.base import data
 from statsmodels.tsa.tsatools import add_constant, lagmat
 from statsmodels.regression.linear_model import OLS, OLSResults
 from statsmodels.tools.decorators import (cache_readonly, cache_writable,
@@ -106,7 +101,6 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         0.99:  10.59
     }
 
-    # TODO are there too many parameters here?
     def __init__(self, endog, order, ar_order,
                  delay=None, thresholds=None, trend='c',
                  min_regime_frac=0.1, max_delay=None, threshold_grid_size=100,
@@ -351,7 +345,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         2. Dynamic in-sample prediction takes actual data up to start as the
            initial values for forecasting.
 
-        2. Out-of-sample forecasting is performed if end is after the last
+        3. Out-of-sample forecasting is performed if end is after the last
            sample observation.
         """
 
@@ -401,11 +395,11 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
         return prediction
 
-    def _forecast_nfe(self, delay, thresholds, params, steps, initial, alpha):
+    def _forecast_nfe(self, delay, thresholds, params, steps, initial):
         raise NotImplementedError
 
     def _forecast_monte_carlo(self, delay, thresholds, params, steps, initial,
-                              alpha, errors, scale):
+                              errors, scale):
         """
         Generic method for generating forecasts using a Monte Carlo approach
         """
@@ -437,7 +431,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         return np.array(forecast)
 
     def forecast(self, delay, thresholds, params, steps=1, initial=None,
-                 alpha=.05, method='mc', reps=100, resids=None, scale=None):
+                 method='mc', reps=100, resids=None, scale=None):
         """
         Out-of-sample forecasts
 
@@ -454,8 +448,6 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             sample.
         initial : array, optional
             The predetermined endogenous values on which to begin forecasting.
-        alpha : float
-            The confidence intervals for the forecasts are (1 - alpha) %
         method : str {'n','nfe','mc','bs'}, optional
             Method to use in out-of-sample forecasting
             'n' naive method, assumes errors are at means (zero)
@@ -505,12 +497,12 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         if method == 'n':
             errors = np.zeros((steps, 1))
             forecast = self._forecast_monte_carlo(
-                delay, thresholds, params, steps, initial, alpha, errors=errors
+                delay, thresholds, params, steps, initial, errors=errors
             )
         elif method == 'mc':
             errors = np.random.normal(size=(steps-1, reps))
             forecast = self._forecast_monte_carlo(
-                delay, thresholds, params, steps, initial, alpha,
+                delay, thresholds, params, steps, initial,
                 errors=errors, scale=scale
             )
         elif method == 'bs':
@@ -540,11 +532,11 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
                     )
                 ]
             forecast = self._forecast_monte_carlo(
-                delay, thresholds, params, steps, initial, alpha,
+                delay, thresholds, params, steps, initial,
                 errors=errors, scale=scale
             )
         elif method == 'nfe':
-            forecast = self._forecast_nfe(params, steps, initial, alpha)
+            forecast = self._forecast_nfe(params, steps, initial)
         else:
             raise ValueError('Invalid forecasting method. Valid methods are'
                              ' "n", "nfe", "mc", and "bs". Got %s.' % method)
@@ -568,6 +560,11 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             (X'X)^{-1} from a SETAR(1) specification (i.e. AR(1))
         resids : array-like
             The residuals from a SETAR(1) specification (i.e. AR(1))
+
+        Returns
+        -------
+        objective : float
+            The value of the objective function
         """
         exog, _, _ = self.build_exog(delay, thresholds)
 
@@ -603,6 +600,13 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             The residuals from a SETAR(1) specification (i.e. AR(1))
         delay_grid : iterable, optional
             The grid of delay parameters to check.
+
+        Returns
+        -------
+        delay : int
+            Selected delay parameter
+        thresholds : iterable
+            Selected threshold parameter(s)
         """
 
         if delay_grid is None:
@@ -782,6 +786,11 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         null : SETARResults, optional
             The null hypothesis to test against. If not provided, calculated
             with SETAR(1) as the null.
+
+        Returns
+        -------
+        f_stat : float
+            The value of the F-statistic
         """
         if null is None:
             null = self._AR
@@ -1061,6 +1070,30 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         return conf_ints
 
     def plot_threshold_ci(self, threshold_idx, ax=None, **kwargs):
+        """
+        Plot the likelihood ratio sequence and confidence interval cutoffs
+        for alternate values of a given threshold.
+
+        Plots threshold on the horizontal and the likelihood ratio sequence on
+        vertical axis.
+
+        Parameters
+        ----------
+        threshold_idx : array_like
+            The index of the threshold
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
+        **kwargs : kwargs, optional
+            Optional keyword arguments that are directly passed on to the
+            Matplotlib ``plot`` and ``axhline`` functions.
+
+        Returns
+        -------
+        fig : Matplotlib figure instance
+            If `ax` is None, the created figure. Otherwise the figure to which
+            `ax` is connected.
+        """
         from statsmodels.graphics import utils
         fig, ax = utils.create_mpl_ax(ax)
         fig.set(**kwargs)
@@ -1141,8 +1174,7 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
                                   self.params, start, end,
                                   dynamic=dynamic, method=method)
 
-    def forecast(self, steps=1, alpha=0.05, method='mc',
-                 reps=100):
+    def forecast(self, steps=1, method='mc', reps=100):
         """
         Out-of-sample forecasts
 
@@ -1151,8 +1183,6 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         steps : int, optional
             The number of out of sample forecasts from the end of the
             sample.
-        alpha : float
-            The confidence intervals for the forecasts are (1 - alpha) %
         method : str {'n','nfe','mc','bs'}, optional
             Method to use in out-of-sample forecasting
             'n' naive method, assumes errors are at means (zero)
@@ -1174,8 +1204,8 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
         statsmodels.tsa.setar_model.SETAR.forecast : forecasting implementation
         """
         return self.model.forecast(self.model.delay, self.model.thresholds,
-                                   self.params, steps, alpha=alpha,
-                                   method=method, reps=reps, resids=self.resid)
+                                   self.params, steps, method=method,
+                                   reps=reps, resids=self.resid)
 
     def _make_exog_names(self):
         exog_names = []
@@ -1277,18 +1307,6 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
                      ('BIC:', ["%#8.4g" % self.bic])
                      ]
 
-        diagn_left = [('Omnibus:', None),
-                      ('Prob(Omnibus):', None),
-                      ('Skew:', None),
-                      ('Kurtosis:', None)
-                      ]
-
-        diagn_right = [('Durbin-Watson:', None),
-                       ('Jarque-Bera (JB):', None),
-                       ('Prob(JB):', None),
-                       ('Cond. No.', None)
-                       ]
-
         if title is None:
             title = self.model.__class__.__name__ + ' ' + "Regression Results"
 
@@ -1371,14 +1389,13 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
 
             smry.tables.append(table)
 
-        # Add notes, added to text format only
+        # Add notes / warnings, added to text format only
         warnings.append("Reported parameter standard errors are White's (1980)"
                         " heteroskedasticity robust standard errors.")
         warnings.append("Threshold confidence intervals calculated as"
                         " Hansen's (1997) conservative (non-disjoint)"
                         " intervals")
 
-        # Add notes / warnings, added to text format only
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
             wstr = "The input rank is higher than the number of observations."
             warnings.append(wstr)
