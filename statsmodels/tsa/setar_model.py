@@ -618,6 +618,9 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             Selected threshold parameter(s)
         """
 
+        # SETAR(1) is a special case
+        if self.order == 1: return 0, ()
+
         # Cache calculations
         XX = np.linalg.inv(self.exog.T.dot(self.exog))    # (X'X)^{-1}
         self.ar1_resids = resids = self.endog - np.dot(   # SETAR(1) residuals
