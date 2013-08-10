@@ -148,6 +148,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         self.thresholds = thresholds
         if self.thresholds:
             self.thresholds = np.sort(self.thresholds)
+        self.regime_indicators = None
 
         # Estimation properties
         self.nobs_regimes = None
@@ -186,7 +187,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
         super(SETAR, self).initialize()
 
-    def build_exog(self, delay, thresholds, exog=None, check_nobs=True):
+    def build_exog(self, delay, thresholds, check_nobs=True):
         """
         Build the exogenous matrix for SETAR(m) estimation.
 
@@ -196,10 +197,6 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             The delay for the self-exciting threshold variable.
         thresholds : iterable
             The threshold values separating the data into regimes.
-        exog : array-like, optional
-            An optional arry of exogenous variables (e.g. the results of a
-            lagmat on some endog). Assumed to have the same trend as given by
-            self.k_trend. If not provided, uses self.exog
         check_nobs : bool, optional
             Whether or not to checks that there are enough observations in each
             regime.
@@ -211,23 +208,23 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             ar_order, plus a constant term) horizontally duplicated once each
             for the number of regimes. Each duplication has the rows for which
             the model dicatates another regime set to zero.
+        regime_indicators : array
+            Array of which (zero-indexed) regime each observation falls into
         nobs_regimes : iterable
             Number of observations in each regime
         """
-        if exog is None:
-            exog = self.exog
-
+        exog = self.exog
         order = len(thresholds) + 1
 
         exog_transpose = exog.T
         threshold_var = exog[:, delay - (1 - self.k_trend)]
-        indicators = np.searchsorted(thresholds, threshold_var)
+        regime_indicators = np.searchsorted(thresholds, threshold_var)
 
         k = self.ar_order + self.k_trend
         exog_list = []
         nobs_regimes = ()
         for i in range(order):
-            in_regime = (indicators == i)
+            in_regime = (regime_indicators == i)
             nobs_regime = in_regime.sum()
 
             if check_nobs and nobs_regime < self.min_regime_num:
@@ -235,12 +232,12 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
                                          ' threshold values may need to be'
                                          ' adjusted' % i)
 
-            exog_list.append(np.multiply(exog_transpose, indicators == i).T)
+            exog_list.append(np.multiply(exog_transpose, in_regime).T)
             nobs_regimes += (nobs_regime,)
 
         exog = np.concatenate(exog_list, 1)
 
-        return exog, nobs_regimes
+        return exog, regime_indicators, nobs_regimes
 
     def fit(self):
         """
@@ -260,7 +257,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         if self.delay is None or self.thresholds is None:
             self.delay, self.thresholds = self.select_hyperparameters()
 
-        self.exog, self.nobs_regimes = self.build_exog(
+        self.exog, self.regime_indicators, self.nobs_regimes = self.build_exog(
             self.delay, self.thresholds
         )
         self.initialize()
@@ -523,7 +520,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         resids : array-like
             The residuals from a SETAR(1) specification (i.e. AR(1))
         """
-        exog, _ = self.build_exog(delay, thresholds)
+        exog, _, _ = self.build_exog(delay, thresholds)
 
         # Intermediate calculations
         k = self.ar_order + self.k_trend
