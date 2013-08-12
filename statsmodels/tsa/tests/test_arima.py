@@ -1796,6 +1796,34 @@ def test_bad_start_params():
     arima_mod = ARIMA(np.log(inv), (1,1,2))
     assert_raises(ValueError, mod.fit)
 
+def test_arima_small_data_bug():
+    # Issue 1038, too few observations with given order
+    from datetime import datetime
+    import pandas as pd
+    import statsmodels.api as sm
+
+    vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474]
+
+    dr = pd.date_range(datetime.today(), periods=len(vals), freq='AS')
+    ts = pd.TimeSeries(vals, index=dr)
+    df = pd.DataFrame(ts)
+    mod = sm.tsa.ARIMA(df, (2, 0, 2))
+    assert_raises(ValueError, mod.fit)
+
+def test_arima_dataframe_integer_name():
+    # Smoke Test for Issue 1038
+    from datetime import datetime
+    import pandas as pd
+    import statsmodels.api as sm
+
+    vals = [96.2, 98.3, 99.1, 95.5, 94.0, 87.1, 87.9, 86.7402777504474,
+            94.0, 96.5, 93.3, 97.5, 96.3, 92.]
+
+    dr = pd.date_range(datetime.today(), periods=len(vals), freq='AS')
+    ts = pd.TimeSeries(vals, index=dr)
+    df = pd.DataFrame(ts)
+    mod = sm.tsa.ARIMA(df, (2, 0, 2))
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
