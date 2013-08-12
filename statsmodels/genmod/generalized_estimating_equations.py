@@ -404,7 +404,10 @@ class GEE(base.Model):
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
-            vinv_d = np.linalg.solve(vmat, dmat)
+            try:
+                vinv_d = np.linalg.solve(vmat, dmat)
+            except np.linalg.LinAlgError:
+                return None, None
             bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
@@ -474,6 +477,9 @@ class GEE(base.Model):
         varfunc = self.family.variance
         cached_means = self.cached_means
 
+        import warnings
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
         # Calculate the naive (model-based) and robust (sandwich)
         # covariances.
         bmat, cmat = 0, 0
@@ -491,7 +497,13 @@ class GEE(base.Model):
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
-            vinv_d = np.linalg.solve(vmat, dmat)
+            try:
+                vinv_d = np.linalg.solve(vmat, dmat)
+            except np.linalg.LinAlgError:
+                warnings.warn("Singular matrix encountered in GEE covariance estimation",
+                              ConvergenceWarning)
+                return None, None, None, None
+
             bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
@@ -632,8 +644,19 @@ class GEE(base.Model):
 
         self.update_cached_means(beta)
 
+        import warnings
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
+        # Define here in case singularity encountered on first
+        # iteration.
+        fitlack = -1.
+
         for itr in xrange(maxit):
             update, score = self._beta_update()
+            if update is None:
+                warnings.warn("Singular matrix encountered in GEE update",
+                              ConvergenceWarning)
+                break
             beta += update
             self.update_cached_means(beta)
             fitlack = np.sqrt(np.sum(score**2))
@@ -646,15 +669,26 @@ class GEE(base.Model):
             self._update_assoc(beta)
 
         if fitlack >= ctol:
-            import warnings
-            from statsmodels.tools.sm_exceptions import ConvergenceWarning
             warnings.warn("Iteration reached prior to convergence",
                           ConvergenceWarning)
 
+        if beta is None:
+            warnings.warn("Unable to estimate GEE parameters.",
+                          ConvergenceWarning)
+            return None
+
         bcov, ncov, bc_cov, _ = self._covmat()
+        if bcov is None:
+            warnings.warn("Unable to determine covariance structure for GEE estimates",
+                          ConvergenceWarning)
+            return None
 
         if self.constraint is not None:
             beta, bcov = self._handle_constraint(beta, bcov)
+            if beta is None:
+                warnings.warn("Unable to estimate constrained GEE parameters.",
+                              ConvergenceWarning)
+                return None
 
         scale = self.estimate_scale()
 
@@ -663,6 +697,8 @@ class GEE(base.Model):
         results.fit_history = self.fit_history
         results.naive_covariance = ncov
         results.robust_covariance_bc = bc_cov
+        results.score_norm = fitlack
+        results.converged = (fitlack < ctol)
 
         return results
 
@@ -690,6 +726,9 @@ class GEE(base.Model):
             coordinate system of the full model
         """
 
+        import warnings
+        from statsmodels.tools.sm_exceptions import ConvergenceWarning
+
         # The number of variables in the full model
         red_p = len(beta)
         full_p = self.constraint.lhs.shape[1]
@@ -702,6 +741,12 @@ class GEE(base.Model):
         save_cached_means = copy.deepcopy(self.cached_means)
         self.update_cached_means(beta0)
         _, score = self._beta_update()
+
+        if score is None:
+            warnings.warn("Singular matrix encountered in GEE score test",
+                          ConvergenceWarning)
+            return None, None
+
         _, ncov1, _, cmat = self._covmat()
         scale = self.estimate_scale()
         score2 = score[len(beta):] / scale
