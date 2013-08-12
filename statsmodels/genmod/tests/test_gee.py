@@ -270,7 +270,7 @@ class TestGEE(object):
         beta = gee_ordinal_starting_values(endog, exog.shape[1])
 
         md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
-        mdf = md.fit(starting_beta = beta)
+        mdf = md.fit(starting_params = beta)
         # Nothing to compare to...
         #assert_almost_equal(md.params, cf[j], decimal=2)
         #assert_almost_equal(mdf.standard_errors, se[j], decimal=2)
