@@ -26,7 +26,6 @@ from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import VarStruct
 from scipy.stats import norm
-import pandas
 
 
 
@@ -576,14 +575,14 @@ class GEE(base.Model):
         return fitted
 
 
-    def _starting_beta(self, starting_beta):
+    def _starting_params(self, starting_params):
         """
         Returns a starting value for beta and a list of variable
         names.
 
         Parameters:
         -----------
-        starting_beta : array-like
+        starting_params : array-like
             Starting values if available, otherwise None
 
         Returns:
@@ -593,19 +592,19 @@ class GEE(base.Model):
 
         """
 
-        if starting_beta is None:
+        if starting_params is None:
             beta_dm = self.exog_li[0].shape[1]
             beta = np.zeros(beta_dm, dtype=np.float64)
 
         else:
-            beta = starting_beta.copy()
+            beta = starting_params.copy()
 
         return beta
 
 
 
 
-    def fit(self, maxit=100, ctol=1e-6, starting_beta=None):
+    def fit(self, maxit=60, ctol=1e-6, starting_params=None):
         """
         Fits a GEE model.
 
@@ -616,7 +615,7 @@ class GEE(base.Model):
         ctol : float
             The convergence criterion for stopping the Gauss-Seidel
             iterations
-        starting_beta : array-like
+        starting_params : array-like
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
 
@@ -629,19 +628,28 @@ class GEE(base.Model):
         self.fit_history = {'params' : [],
                             'score_change' : []}
 
-        beta = self._starting_beta(starting_beta)
+        beta = self._starting_params(starting_params)
 
         self.update_cached_means(beta)
 
-        for _ in xrange(maxit):
-            update, _ = self._beta_update()
+        for itr in xrange(maxit):
+            update, score = self._beta_update()
             beta += update
             self.update_cached_means(beta)
-            stepsize = np.sqrt(np.sum(update**2))
+            fitlack = np.sqrt(np.sum(score**2))
             self.fit_history['params'].append(beta)
-            if stepsize < ctol:
+
+            # Don't exit until the association parameters have been
+            # updated at least once.
+            if fitlack < ctol and itr > 0:
                 break
             self._update_assoc(beta)
+
+        if fitlack >= ctol:
+            import warnings
+            from statsmodels.tools.sm_exceptions import ConvergenceWarning
+            warnings.warn("Iteration reached prior to convergence",
+                          ConvergenceWarning)
 
         bcov, ncov, bc_cov, _ = self._covmat()
 
@@ -650,7 +658,7 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
-        results = GEEResults(self, beta, bcov/scale, scale)
+        results = GEEResults(self, beta, bcov / scale, scale)
 
         results.fit_history = self.fit_history
         results.naive_covariance = ncov
@@ -1008,7 +1016,7 @@ def gee_setup_multicategorical(endog, exog, groups, time, offset,
     >>> nx = exog.shape[1] - nlevel + 1
     >>> beta = gee_multicategorical_starting_values(endog, nlevel, nx, "ordinal")
     >>> md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
-    >>> mdf = md.fit(starting_beta = beta)
+    >>> mdf = md.fit(starting_params = beta)
 
     """
 
