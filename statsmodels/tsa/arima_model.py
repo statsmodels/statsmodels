@@ -399,6 +399,13 @@ class ARMA(tsbase.TimeSeriesModel):
                 armod = AR(endog).fit(ic='bic', trend='nc')
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
+                # it's possible in small samples that optimal lag-order
+                # doesn't leave enough obs. No consistent way to fix.
+                if p_tmp + q >= len(endog):
+                    raise ValueError("Proper starting parameters cannot"
+                            " be found for this order with this number "
+                            "of observations. Use the start_params "
+                            "argument.")
                 resid = endog[p_tmp:] - np.dot(lagmat(endog, p_tmp,
                                 trim='both'), arcoefs_tmp)
                 if p < p_tmp + q:
