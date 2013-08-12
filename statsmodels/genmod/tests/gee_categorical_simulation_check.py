@@ -1,10 +1,9 @@
 """
 Assesment of Generalized Estimating Equations using simulation.
 
-This script checks the performance of ordinal and nominal models for
-multinomial data.
+This script checks ordinal and nominal models for multinomial data.
 
-See the generated file "gee_categorical_simulation_check.ps" for
+See the generated file "gee_categorical_simulation_check.txt" for
 results.
 """
 
@@ -17,7 +16,7 @@ sys.path.insert(0, df)
 import numpy as np
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
     gee_setup_multicategorical, gee_ordinal_starting_values, \
-    Multinomial
+    Multinomial, GEEMargins
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
@@ -25,62 +24,8 @@ import statsmodels.formula.api as sm
 from itertools import product
 from scipy import stats
 
+from gee_gaussian_simulation_check import GEE_simulator
 
-OUT = open("gee_categorical_simulation_check.txt", "w")
-
-np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
-                    suppress=True)
-
-
-class GEE_simulator(object):
-
-    #
-    # Parameters that must be defined
-    #
-
-    # Number of groups
-    ngroups = None
-
-    # Standard deviation of the pure errors
-    error_sd = None
-
-    # The regression coefficients
-    params = None
-
-    # The parameters defining the dependence structure
-    dparams = None
-
-
-    # The data after recoding as binary
-    endog_ex = None
-    exog_ex = None
-    group_ex = None
-    time_ex = None
-
-
-    #
-    # Output parameters
-    #
-
-    # Matrix of exogeneous data (rows are cases, columns are
-    # variables)
-    exog = None
-
-    # Matrix of endogeneous data (len(endog) = exog.shape[0])
-    endog = None
-
-    # Matrix of time information (time.shape[0] = len(endog))
-    time = None
-
-    # Group labels (len(groups) = len(endog))
-    group = None
-
-    # Group sizes are random within this range
-    group_size_range = [4, 11]
-
-    # dparams_est is dparams with scale_inv appended
-    def print_dparams(self, dparams_est):
-        raise NotImplementedError
 
 
 class ordinal_simulator(GEE_simulator):
@@ -240,91 +185,98 @@ def gendat_nominal():
     return ns, va, Multinomial(2), (lhs, rhs)
 
 
-nrep = 100
+if __name__ == '__main__':
 
-# Loop over data generating models
-gendats = [gendat_nominal, gendat_ordinal]
+    nrep = 100
 
-for gendat in gendats:
+    OUT = open("gee_categorical_simulation_check.txt", "w")
 
-    dparams = []
-    params = []
-    std_errors = []
-    pvalues = []
+    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+                        suppress=True)
 
-    for j in range(nrep):
+    # Loop over data generating models
+    gendats = [gendat_nominal, gendat_ordinal]
 
-        da, va, mt, constraint = gendat()
+    for gendat in gendats:
 
-        beta = da.starting_values(0)
+        dparams = []
+        params = []
+        std_errors = []
+        pvalues = []
 
-        md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
-                 mt, va)
-        mdf = md.fit(starting_beta = beta)
+        for j in range(nrep):
 
-        scale_inv = 1 / md.estimate_scale()
+            da, va, mt, constraint = gendat()
 
-        dparams.append(np.r_[va.dparams, scale_inv])
+            beta = da.starting_values(0)
 
-        params.append(np.asarray(mdf.params))
-        std_errors.append(np.asarray(mdf.standard_errors))
+            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
+                     mt, va)
+            mdf = md.fit(starting_params = beta)
 
-        da, va, mt, constraint = gendat()
+            scale_inv = 1 / md.estimate_scale()
 
-        beta = da.starting_values(constraint[0].shape[0])
+            dparams.append(np.r_[va.dparams, scale_inv])
 
-        md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
-                 mt, va, constraint=constraint)
-        mdf = md.fit(starting_beta = beta)
+            params.append(np.asarray(mdf.params))
+            std_errors.append(np.asarray(mdf.standard_errors))
 
-        score = md.score_test_results
-        pvalues.append(score["p-value"])
+            da, va, mt, constraint = gendat()
+
+            beta = da.starting_values(constraint[0].shape[0])
+
+            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
+                     mt, va, constraint=constraint)
+            mdf = md.fit(starting_params = beta)
+
+            score = md.score_test_results
+            pvalues.append(score["p-value"])
 
 
-    dparams_mean = np.array(sum(dparams) / len(dparams))
+        dparams_mean = np.array(sum(dparams) / len(dparams))
 
-    OUT.write("Checking dependence parameters:\n")
-    da.print_dparams(dparams_mean)
+        OUT.write("Checking dependence parameters:\n")
+        da.print_dparams(dparams_mean)
 
-    params = np.array(params)
-    eparams = params.mean(0)
-    sdparams = params.std(0)
-    std_errors = np.array(std_errors)
-    std_errors = std_errors.mean(0)
-    true_params = da.true_params()
+        params = np.array(params)
+        eparams = params.mean(0)
+        sdparams = params.std(0)
+        std_errors = np.array(std_errors)
+        std_errors = std_errors.mean(0)
+        true_params = da.true_params()
 
-    OUT.write("Checking parameter values:\n")
-    OUT.write("Observed:            ")
-    OUT.write(np.array_str(eparams) + "\n")
-    OUT.write("Expected:            ")
-    OUT.write(np.array_str(true_params) + "\n")
-    OUT.write("Absolute difference: ")
-    OUT.write(np.array_str(eparams - true_params) + "\n")
-    OUT.write("Relative difference: ")
-    OUT.write(np.array_str((eparams - true_params) / true_params)
-              + "\n")
-    OUT.write("\n")
+        OUT.write("Checking parameter values:\n")
+        OUT.write("Observed:            ")
+        OUT.write(np.array_str(eparams) + "\n")
+        OUT.write("Expected:            ")
+        OUT.write(np.array_str(true_params) + "\n")
+        OUT.write("Absolute difference: ")
+        OUT.write(np.array_str(eparams - true_params) + "\n")
+        OUT.write("Relative difference: ")
+        OUT.write(np.array_str((eparams - true_params) / true_params)
+                  + "\n")
+        OUT.write("\n")
 
-    OUT.write("Checking standard errors:\n")
-    OUT.write("Observed:            ")
-    OUT.write(np.array_str(sdparams) + "\n")
-    OUT.write("Expected:            ")
-    OUT.write(np.array_str(std_errors) + "\n")
-    OUT.write("Absolute difference: ")
-    OUT.write(np.array_str(sdparams - std_errors) + "\n")
-    OUT.write("Relative difference: ")
-    OUT.write(np.array_str((sdparams - std_errors) / std_errors)
-              + "\n")
-    OUT.write("\n")
+        OUT.write("Checking standard errors:\n")
+        OUT.write("Observed:            ")
+        OUT.write(np.array_str(sdparams) + "\n")
+        OUT.write("Expected:            ")
+        OUT.write(np.array_str(std_errors) + "\n")
+        OUT.write("Absolute difference: ")
+        OUT.write(np.array_str(sdparams - std_errors) + "\n")
+        OUT.write("Relative difference: ")
+        OUT.write(np.array_str((sdparams - std_errors) / std_errors)
+                  + "\n")
+        OUT.write("\n")
 
-    OUT.write("Checking constrained estimation:\n")
-    OUT.write("Observed   Expected\n")
+        OUT.write("Checking constrained estimation:\n")
+        OUT.write("Observed   Expected\n")
 
-    pvalues.sort()
-    for q in np.arange(0.1, 0.91, 0.1):
-        OUT.write("%10.3f %10.3f\n" %
-                  (pvalues[int(q*len(pvalues))], q))
+        pvalues.sort()
+        for q in np.arange(0.1, 0.91, 0.1):
+            OUT.write("%10.3f %10.3f\n" %
+                      (pvalues[int(q*len(pvalues))], q))
 
-    OUT.write("=" * 80 + "\n\n")
+        OUT.write("=" * 80 + "\n\n")
 
-OUT.close()
+    OUT.close()
