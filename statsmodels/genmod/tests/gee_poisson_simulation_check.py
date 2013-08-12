@@ -196,8 +196,8 @@ if __name__ == "__main__":
 
     gendats = [gendat_exchangeable, gendat_overdispersed]
 
-    lhs = np.array([[0., 1, 1, 0, 0],])
-    rhs = np.r_[0.6,]
+    lhs = np.array([[0., 1, -1, 0, 0],])
+    rhs = np.r_[0.0,]
 
     # Loop over data generating models
     for gendat in gendats:
@@ -220,7 +220,7 @@ if __name__ == "__main__":
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
             mdf = md.fit(starting_params = mdf.params)
-            if mdf is None:
+            if mdf is None or (not mdf.converged):
                 print "Failed to converge"
                 continue
 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
                      constraint=(lhs, rhs))
             mdf = md.fit()
-            if mdf is None:
+            if mdf is None or (not mdf.converged):
                 print "Failed to converge"
                 continue
 
@@ -244,6 +244,8 @@ if __name__ == "__main__":
             pvalues.append(pvalue)
 
         dparams_mean = np.array(sum(dparams) / len(dparams))
+        OUT.write("Results based on %d successful fits out of %d data sets.\n\n"
+                  % (len(dparams), nrep))
         OUT.write("Checking dependence parameters:\n")
         da.print_dparams(dparams_mean)
 
