@@ -145,7 +145,7 @@ class TestRegressionNM(GenRes):
         assert_almost_equal(beta1ci, self.res2.test_ci_beta1, 6)
 
     def test_ci_beta2(self):
-        beta2ci = self.res1.conf_int_el(2, method='nm')
+        beta2ci = self.res1.conf_int_el(2, lower_bound=.59, upper_bound=2.2,  method='nm')
         assert_almost_equal(beta2ci, self.res2.test_ci_beta2, 6)
 
     def test_ci_beta3(self):
