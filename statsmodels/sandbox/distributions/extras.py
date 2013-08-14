@@ -835,6 +835,7 @@ class TransfTwo_gen(distributions.rv_continuous):
                          # possible to freeze the underlying distribution
 
         super(TransfTwo_gen,self).__init__(a=a, b=b, name = name,
+                                shapes = kls.shapes,
                                 longname = longname, extradoc = extradoc)
 
     def _rvs(self, *args):
@@ -935,6 +936,7 @@ def derivminus(x):
 
 def negsquarefunc(x):
     return -np.power(x,2)
+
 
 
 negsquarenormalg = TransfTwo_gen(stats.norm, negsquarefunc, inverseplus, inverseminus,
@@ -1227,6 +1229,8 @@ def mvnormcdf(upper, mu, cov, lower=None,  **kwds):
     #v/np.sqrt(np.atleast_2d(np.diag(covv)))/np.sqrt(np.atleast_2d(np.diag(covv))).T
 
     return mvstdnormcdf(lower, upper, corr, **kwds)
+
+
 
 
 if __name__ == '__main__':

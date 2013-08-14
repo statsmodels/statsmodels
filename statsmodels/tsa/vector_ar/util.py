@@ -60,6 +60,8 @@ def make_lag_names(names, lag_order, trendorder=1):
     # take care of lagged endogenous names
     for i in range(1, lag_order + 1):
         for name in names:
+            if not isinstance(name, basestring):
+                name = str(name) # will need consistent unicode handling
             lag_names.append('L'+str(i)+'.'+name)
 
     # handle the constant name

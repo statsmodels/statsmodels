@@ -202,7 +202,8 @@ def _get_dataset_meta(dataname, package, cache):
     return dataset_meta["Title"].item()
 
 def get_rdataset(dataname, package="datasets", cache=False):
-    """
+    """download and return R dataset
+
     Parameters
     ----------
     dataname : str

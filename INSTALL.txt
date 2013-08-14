@@ -1,11 +1,11 @@
 Dependencies
 ------------
 
-python >= 2.5
+python >= 2.6
 
     www.python.org
 
-numpy >= 1.4.0
+numpy >= 1.5.1
 
     www.numpy.org
 
