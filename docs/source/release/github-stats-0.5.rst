@@ -6,14 +6,20 @@ Issues closed in the 0.5.0 development cycle
 Issued closed in 0.5.0
 -----------------------
 
-GitHub stats for release 0.5.0 (07/02/2012/ - 07/30/2013/).
+GitHub stats for release 0.5.0 (07/02/2012/ - 08/14/2013/).
 
-We closed a total of 356 issues, 166 pull requests and 190 regular issues. This is the full list (generated with the script  :file:`tools/github_stats.py`):
+We closed a total of 380 issues, 172 pull requests and 208 regular issues. This is the full list (generated with the script  :file:`tools/github_stats.py`):
 
 This list is automatically generated, and may be incomplete:
 
-Pull Requests (166):
+Pull Requests (172):
 
+* :ghpull:`1015`: DOC: Bump version. Remove done tasks.
+* :ghpull:`1010`: DOC/RLS: Update release notes workflow. Help Needed!
+* :ghpull:`1014`: DOC: nbgenerate does not like the comment at end of line.
+* :ghpull:`1012`: DOC: Add link to notebook and crosslink ref. Closes #924.
+* :ghpull:`997`: misc, tests, diagnostic
+* :ghpull:`1009`: MAINT: Add .mailmap file.
 * :ghpull:`817`: Add 3 new unit tests for arima_process
 * :ghpull:`1001`: BUG include_package_data for install closes #907
 * :ghpull:`1005`: GITHUB: Contributing guidlines
@@ -181,8 +187,26 @@ Pull Requests (166):
 * :ghpull:`366`: Version fixes
 * :ghpull:`359`: DOC: Fix sphinx warnings
 
-Issues (190):
+Issues (208):
 
+* :ghissue:`1036`: Series no longer inherits from ndarray
+* :ghissue:`1038`: DataFrame with integer names not handled in ARIMA
+* :ghissue:`1028`: Test fail with windows and Anaconda - Low priority
+* :ghissue:`676`: acorr_breush_godfrey  undefined nlags
+* :ghissue:`922`: lowess returns inconsistent with option
+* :ghissue:`425`: no bse in robust with norm=TrimmedMean
+* :ghissue:`1025`: add_constant incorrectly detects constant column
+* :ghissue:`533`: py3 compatibility ``pandas.read_csv(urlopen(...))``
+* :ghissue:`662`: doc: install instruction: explicit about removing scikits.statsmodels
+* :ghissue:`910`: test failure Ubuntu TestARMLEConstant.test_dynamic_predict
+* :ghissue:`80`: t_model: f_test, t_test don't work
+* :ghissue:`432`: GenericLikelihoodModel change default for score and hessian
+* :ghissue:`454`: BUG/ENH: HuberScale instance is not used, allow user defined scale estimator
+* :ghissue:`98`: check connection or connect summary to variable names in wrappers
+* :ghissue:`418`: BUG: MNLogit loglikeobs, jac
+* :ghissue:`1017`: nosetests warnings
+* :ghissue:`924`: DOCS link in notebooks to notebook for download
+* :ghissue:`1011`: power ttest endless loop possible
 * :ghissue:`907`: BLD data_files for stats.libqsturng
 * :ghissue:`328`: consider moving example scripts into IPython notebooks
 * :ghissue:`1002`: Docs won't build with Sphinx 1.1.3
