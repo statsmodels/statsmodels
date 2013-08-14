@@ -825,7 +825,7 @@ class GenericLikelihoodModel(LikelihoodModel):
             else:
                 # I don't want to raise after we have already fit()
                 import warnings
-                warnings.warn(UserWarning, 'more exog_names than parameters')
+                warnings.warn('more exog_names than parameters', UserWarning)
 
         return genericmlefit
     #fit.__doc__ += LikelihoodModel.fit.__doc__
