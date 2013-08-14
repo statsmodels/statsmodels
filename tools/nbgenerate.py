@@ -31,20 +31,11 @@ cur_dir = os.path.abspath(os.path.dirname(__file__))
 
 from IPython.config import Config
 try:
-    from nbconvert.converters.template import ConverterTemplate
-    from nbconvert.converters.rst import ConverterRST
+    from IPython.nbconvert.exporters import HTMLExporter
 except ImportError:
-    if os.path.exists("/home/skipper/src/nbconvert"):
-        if not os.path.exists(os.path.join(cur_dir, "nbconvert")):
-            os.symlink("/home/skipper/src/nbconvert",
-               os.path.join(cur_dir, "nbconvert"))
-        from nbconvert.converters.template import ConverterTemplate
-        from nbconvert.converters.rst import ConverterRST
-    else:
-        from warnings import warn
-        warn("Notebook examples not built. Add nbconvert to path or update "
-             "paths in tools/nbgenerate.py")
-        sys.exit(0)
+    from warnings import warn
+    warn("Notebook examples not built. You need IPython 1.0.")
+    sys.exit(0)
 
 import hash_funcs
 
@@ -110,7 +101,7 @@ class NotebookRunner:
         outs = []
         shell.execute(cell.input)
         # hard-coded timeout, problem?
-        shell.get_msg(timeout=20)
+        shell.get_msg(timeout=90)
         cell.prompt_number = exec_count # msg["content"]["execution_count"]
 
         while True:
@@ -212,17 +203,18 @@ def nb2html(nb):
     Cribbed from nbviewer
     """
     config = Config()
-    config.ConverterTemplate.template_file = 'basichtml'
+    config.HTMLExporter.template_file = 'basic'
     config.NbconvertApp.fileext = "html"
     config.CSSHtmlHeaderTransformer.enabled = False
 
-    C = ConverterTemplate(config=config)
-    return C.convert(nb)[0]
+    C = HTMLExporter(config=config)
+    return C.from_notebook_node(nb)[0]
 
 def nb2rst(nb, files_dir):
     """
     nb should be a NotebookNode
     """
+    #NOTE: This does not currently work. Needs to be update to IPython 1.0.
     config = Config()
     C = ConverterRST(config=config)
     # bastardize how this is supposed to be called
