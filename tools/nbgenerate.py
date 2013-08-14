@@ -101,7 +101,7 @@ class NotebookRunner:
         outs = []
         shell.execute(cell.input)
         # hard-coded timeout, problem?
-        shell.get_msg(timeout=20)
+        shell.get_msg(timeout=90)
         cell.prompt_number = exec_count # msg["content"]["execution_count"]
 
         while True:
