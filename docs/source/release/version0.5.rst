@@ -5,7 +5,7 @@
 Release 0.5.0
 =============
 
-Statsmodels 0.5 is a large and very exciting release that brings together a year of work done by 36 authors, including almost 2000 commits. It contains many new features and a large amount of bug fixes detailed below.
+Statsmodels 0.5 is a large and very exciting release that brings together a year of work done by 38 authors, including over 2000 commits. It contains many new features and a large amount of bug fixes detailed below.
 
 See the :ref:`list of fixed issues <issues_list_05>` for specific closed issues.
 
@@ -183,9 +183,9 @@ Backwards incompatible changes and deprecations
 Development summary and credits
 -------------------------------
 
-The previous version (statsmodels 0.4.3) was released on July 2, 2012. Since then we have closed a total of 356 issues, 166 pull requests and 190 regular issues. The :ref:`detailed list<issues_list_05>` can be viewed.
+The previous version (statsmodels 0.4.3) was released on July 2, 2012. Since then we have closed a total of 380 issues, 172 pull requests and 208 regular issues. The :ref:`detailed list<issues_list_05>` can be viewed.
 
-This release is a result of the work of the following 36 authors who contributed total of 1962 commits. If for any reason, we've failed to list your name in the below, please contact us:
+This release is a result of the work of the following 38 authors who contributed total of 2032 commits. If for any reason, we've failed to list your name in the below, please contact us:
 
 * Ana Martinez Pardo <anamartinezpardo-at-gmail.com>
 * anov <novikova.go.zoom-at-gmail.com>
@@ -204,6 +204,7 @@ This release is a result of the work of the following 36 authors who contributed
 * Grayson <graysonbadgley-at-gmail.com>
 * Jan Schulz <jasc-at-gmx.net>
 * Josef Perktold <josef.pktd-at-gmail.com>
+* Jeff Reback <jeff-at-reback.net>
 * Justin Grana <jg3705a-at-student.american.edu>
 * langmore <ianlangmore-at-gmail.com>
 * Matthew Brett <matthew.brett-at-gmail.com>
@@ -223,6 +224,7 @@ This release is a result of the work of the following 36 authors who contributed
 * tylerhartley <tyleha-at-gmail.com>
 * Vincent Arel-Bundock <varel-at-umich.edu>
 * VirgileFritsch <virgile.fritsch-at-gmail.com>
+* Zhenya <evgeni-at-burovski.me>
 
 .. note:: 
 
