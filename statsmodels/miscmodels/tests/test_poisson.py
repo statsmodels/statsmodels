@@ -170,5 +170,10 @@ class TestPoissonZi(CompareMixin):
         #assert_almost_equal(self.res.tval[:-1], self.res_glm.t()[1:], self.decimal)
 
 
-
+    def test_exog_names_warning(self):
+        mod = self.res.model
+        mod1 = PoissonOffsetGMLE(mod.endog, mod.exog, offset=mod.offset)
+        from numpy.testing import assert_warns
+        mod1.data.xnames = mod1.data.xnames * 2
+        assert_warns(UserWarning, mod1.fit)
 
