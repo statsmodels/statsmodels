@@ -769,13 +769,14 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
     def _AR(self):
         return self._get_model(1, self.model.ar_order)
 
-    def _get_model(self, order, ar_order):
+    def _get_model(self, order, ar_order, **kwargs):
         if order not in self._cache_alternatives:
             mod = SETAR(
                 self.model.data.orig_endog,
                 order=order,
                 ar_order=ar_order,
-                threshold_grid_size=self.model.threshold_grid_size
+                threshold_grid_size=self.model.threshold_grid_size,
+                **kwargs
             )
             # We can supply some already-calculated objective values to the
             # alternative model, since it's on the same dataset
