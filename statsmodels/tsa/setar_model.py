@@ -46,6 +46,7 @@ from statsmodels.regression.linear_model import OLS, OLSResults
 from statsmodels.tools.decorators import (cache_readonly, cache_writable,
                                           resettable_cache)
 import statsmodels.base.wrapper as wrap
+import setar_utils
 
 
 class InvalidRegimeError(RuntimeError):
@@ -859,7 +860,7 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
             raise ValueError('Model under the null hypothesis must have'
                              ' order less than %d (the order of the currently'
                              ' fitted model). Got %d.' %
-                             (self.model.order, null_order))
+                             (self.model.order, null.model.order))
 
         if heteroskedasticity == 'r' and null.model.order == 1:
             raise ValueError('The regime heteroskedastic test is only'
@@ -899,25 +900,35 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
                              ' are "n", "r", and "g". Got %s.' %
                              heteroskedasticity)
 
-        f_stats = []
+
+        # Create samples
+        samples = []
         for rep in range(reps):
             # Create a sample from these parameters with these errors
             # (this amounts to doing a bootstrap forecast)
-            sample = self.model.forecast(
+            samples.append(np.r_[initial, self.model.forecast(
                 null.delay, null.thresholds, null.params, int(null.nobs),
                 initial=initial, method='bs', reps=1,
                 resids=errors, scale=scale
+            )])
+
+        # Try to bootstrap in parallel
+        try:
+            from statsmodels.tools.parallel import parallel_func
+            parallel, p_func, n_jobs = parallel_func(
+                setar_utils._order_test_bootstrap, n_jobs=-1,
+                verbose=0
             )
-            # Estimate a SETAR model on the simulated sample
-            simul_res = SETAR(
-                np.r_[initial, sample],
-                order=self.model.order,
-                ar_order=self.model.ar_order,
-                threshold_grid_size=self.model.threshold_grid_size
-            ).fit()
-            # Estimate the null SETAR model on the simulated sample
-            simul_null = simul_res._get_model(null.order, null.ar_order)
-            f_stats.append(simul_res.f_stat(simul_null))
+            f_stats = parallel(
+                p_func(samples[rep], self.model.threshold_grid_size, null.order,
+                       null.ar_order, self.order, self.ar_order) for rep in range(reps)
+            )
+        # Fall back on sequential
+        except:
+            f_stats = []
+            for rep in range(reps):
+                f_stats.append(setar_utils._order_test_bootstrap(samples[rep], self.model.threshold_grid_size, null.order,
+                   null.ar_order, self.order, self.ar_order))
 
         f_stat = self.f_stat(null)
         pvalue = np.mean(f_stats > f_stat)
