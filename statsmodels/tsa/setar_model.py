@@ -207,7 +207,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         nobs_regimes : iterable
             Number of observations in each regime
         """
-        exog = self.exog
+        exog = self.data.orig_exog[self.nobs_initial:]
         order = len(thresholds) + 1
 
         exog_transpose = exog.T
@@ -338,8 +338,8 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         -----
         1. Static in-sample prediction is just like that for OLS because the
            regime is known and static implies using actual valeus, so we can
-           just dot the full set of parameters with the self.exog dataset
-           (recall that this is not simply a lagmat(endog, ...) - it was
+           just dot the full set of parameters with the built exog dataset
+           (recall that this is not simply a lagmat(endog, ...) - it is
            created in self.build_exog).
 
         2. Dynamic in-sample prediction takes actual data up to start as the
@@ -357,8 +357,8 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
         # Static: for all y_t, use *actual* y_{t-1}, ..., y_{t-p}
         if not dynamic:
-            exog = self.exog[start:end + 1, ]
-            prediction = np.dot(exog, params)
+            exog, _, _ = self.build_exog(delay, thresholds, False)
+            prediction = np.dot(exog[start:end + 1, ], params)
         # Dynamic: use y_{start-1-ar_order}, ..., y_{start-1} as initial
         # datapoints, forecast everything else
         else:
@@ -571,7 +571,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         # Intermediate calculations
         k = self.ar_order + self.k_trend
         X1 = exog[:, :-k]
-        X = self.exog
+        X = self.data.orig_exog[self.nobs_initial:]
         X1X1 = X1.T.dot(X1)
         XX1 = X.T.dot(X1)
         Mn = np.linalg.inv(
@@ -676,10 +676,10 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
             return 0, ()
 
         # Cache calculations
-        XX = np.linalg.inv(self.exog.T.dot(self.exog))    # (X'X)^{-1}
+        exog = self.data.orig_exog[self.nobs_initial:]
+        XX = np.linalg.inv(exog.T.dot(exog))              # (X'X)^{-1}
         self.ar1_resids = resids = self.endog - np.dot(   # SETAR(1) residuals
-            self.exog,
-            XX.dot(self.exog.T.dot(self.endog))
+            exog, XX.dot(exog.T.dot(self.endog))
         )
 
         # Get default threshold grid size, if necessary
