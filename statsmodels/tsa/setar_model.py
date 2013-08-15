@@ -733,6 +733,12 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
 
                 thresholds = proposed[:]
 
+        if delay is None or np.all(thresholds) is None:
+            raise InvalidRegimeError('No thresholds in the grid gave each'
+                                     ' regime at least the minimum number of'
+                                     ' observations. Consider increasing the'
+                                     ' grid size.')
+
         return delay, np.sort(thresholds)
 
 
