@@ -48,7 +48,7 @@ from statsmodels.tools.decorators import (cache_readonly, cache_writable,
 import statsmodels.base.wrapper as wrap
 
 
-class InvalidRegimeError(ValueError):
+class InvalidRegimeError(RuntimeError):
     pass
 
 
@@ -140,7 +140,7 @@ class SETAR(OLS, tsbase.TimeSeriesModel):
         # "Flexible" properties
         self.delay = delay
         self.thresholds = thresholds
-        if self.thresholds:
+        if self.thresholds is not None:
             self.thresholds = np.sort(self.thresholds)
         self.regime_indicators = None
 
