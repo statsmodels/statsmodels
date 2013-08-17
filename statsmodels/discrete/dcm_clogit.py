@@ -82,13 +82,12 @@ class CLogit(GenericLikelihoodModel):
         paramsind = [exog_bychoices[ii].shape[1]-ncommon for ii in range(self.nchoices)]
         zi = np.r_[[ncommon], ncommon + np.array(paramsind).cumsum()]
         self.zi = zi
-        z = np.arange(len(zi)+ncommon)
+        z = np.arange(max(zi))
 
         params_indices = [np.r_[np.arange(ncommon), z[zi[ii]:zi[ii+1]]]
                        for ii in range(len(zi)-1)]
-        # params_indices = [array([3, 0, 1, 2]), array([4, 0, 1]), array([5, 0, 1]), array([1])]
+
         self.params_indices = params_indices
-        print (params_indices)
 
         params_num = []                                 # params to estimate
         for sublist in params_indices:
@@ -97,7 +96,6 @@ class CLogit(GenericLikelihoodModel):
                     params_num.append(item)
 
         self.params_num = params_num
-        print self.params_num
 
         self.df_model = len(self.params_num)
         self.df_resid = int(self.nobs - len(self.params_num))
@@ -143,7 +141,6 @@ class CLogit(GenericLikelihoodModel):
         The cdf is the same as in the multinomial logit model.
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
         """
-#        eXB = np.column_stack((np.ones(len(X)), np.exp(X)))
         eXB = np.exp(X)
         return eXB/eXB.sum(1)[:, None]
 
@@ -298,7 +295,7 @@ class CLogit(GenericLikelihoodModel):
         # TODO: check number of  iterations. Seems too high.
         start_time = time.time()
 
-        model_fit =  super(CLogit, self).fit(start_params=start_params,
+        model_fit =  super(CLogit, self).fit(start_params=start_params, method=method,
                                     maxiter=maxiter, maxfun=maxfun,**kwds)
 
         end_time = time.time()
@@ -368,7 +365,7 @@ class CLogitResults (DiscreteResults):
 
         top_left = [('Dep. Variable:', None),
                      ('Model:', [self.model.__class__.__name__]),
-                     ('Method:', ['Maximum Likelihood']),
+                     ('Method:', ['NotImplemented'] ),
                      ('Date:', None),
                      ('Time:', None),
                      ('Converged:', ["%s" % self.mle_retvals['converged']]),
@@ -383,7 +380,7 @@ class CLogitResults (DiscreteResults):
 
         if title is None:
             title = self.model.__class__.__name__ + ' ' + \
-            "new class of results - in the process of implementing"
+            "new class of results - in process of implementing"
 
         #boiler plate
         from statsmodels.iolib.summary import Summary
