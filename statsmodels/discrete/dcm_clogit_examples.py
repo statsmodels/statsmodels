@@ -27,10 +27,9 @@ See Greene, Econometric Analysis (5th Edition - 2003: Page 729)
     *two alternative specific variables (gc, ttme)
         with a generic coefficient (βG, βT)
     *one alternative specific variable (hinc_air)
-        with an alternative specific coefficient (γH*di,air)
+        with an alternative specific coefficient (γH)
 
-Ui j = αair*di,air + αtrain*di,train + αbus*di,bus + βG*GCij
-        + βT*TTMEij + (γH*di,air)*HINCi + εij
+Ui j = αair + αtrain + αbus + βG*gcij+ βT*ttmeij + γH*hinc_air + εij
 
 Note: There's a typo on TABLE 21.11. βT isn't -0.19612 is -0.09612
     see TABLE 21.13 to check
@@ -81,14 +80,11 @@ xi = []
 for ii in range(nchoices):
     xi.append(dta1[xivar[ii]][choice_index==ii])
 
-# xifloat = [xx.view(float).reshape(nobs,-1) for xx in xi]
-# xifloat = [X[xi_names][choice_index==ii].values for ii, xi_names in enumerate(xivar)]
 xifloat = ( [X.ix[choice_index == ii, xi_names].values
             for ii, xi_names in enumerate(xivar)] )
 
 start_time = time.time()
 clogit_mod  = CLogit(endog, xifloat, 2)
-# Iterations:  ¿ 957 ?
 clogit_res =  clogit_mod.fit()
 end_time = time.time()
 print("the elapsed time to estimate the whole example 1 was %g seconds"
@@ -231,7 +227,6 @@ Log-Likelihood: -280.54
 McFadden R^2:  0.011351
 Likelihood ratio test : chisq = 6.4418 (p.value = 0.011147)
 """
-
 hessian2 = clogit_mod2.hessian(clogit_res2.params)
 
 print hessian2
@@ -270,7 +265,6 @@ xifloat3 = ( [X.ix[choice_index == ii, xi_names].values
                 for ii, xi_names in enumerate(xivar3)] )
 start_time = time.time()
 clogit_mod3  = CLogit(endog, xifloat3, 1)
-# Iterations:  ¿ 957 ?
 clogit_res3 =  clogit_mod3.fit()
 end_time = time.time()
 print("the elapsed time to estimate the whole example 3 was %g seconds"
@@ -288,4 +282,46 @@ print CLogitResults(clogit_mod3, clogit_res3).summary()
 
 hessian3 = clogit_mod3.hessian(clogit_res3.params)
 s = 'The value of hessian hessian is '+ '\r' + str(hessian3)
+print s
+
+#############################################################################
+print u"""
+Example 4
+    *four alternative-specific constants (αair, αtrain, αbus, αcar)
+        αcar dropped for identification
+    *one alternative specific variables (gc)
+        with a generic coefficient (βG)
+    *one individual specific variables (hinc)
+        with an alternative specific coefficient (γHair,γHtrain,γHbus,γHcar)
+        γHcar dropped for identification
+
+Ui j = αair + αtrain + αbus + βG*gcij
+        + γHair*hinci + γHtrain*hinci+ γHtbus*hinci+ εij
+"""
+xivar = [['gc', 'Intercept','hinc'],
+         ['gc', 'Intercept','hinc'],
+         ['gc', 'Intercept','hinc'],
+         ['gc' ]]
+
+xi = []
+
+for ii in range(nchoices):
+    xi.append(dta1[xivar[ii]][choice_index==ii])
+
+xifloat = ( [X.ix[choice_index == ii, xi_names].values
+            for ii, xi_names in enumerate(xivar)] )
+
+start_time = time.time()
+clogit_mod  = CLogit(endog, xifloat, 1)
+clogit_res =  clogit_mod.fit()
+end_time = time.time()
+print("the elapsed time to estimate the whole example 1 was %g seconds"
+% (end_time - start_time))
+print clogit_res.params
+print clogit_res.summary(yname='Travel Mode')
+
+print CLogitResults(clogit_mod, clogit_res).summary()
+
+hessian = clogit_mod.hessian(clogit_res.params)
+s = 'The value of hessian hessian is '+ '\r' + str(hessian)
 print s
