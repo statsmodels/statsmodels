@@ -337,7 +337,7 @@ class StataReader(object):
         # other state vars
         self._data_location = self._file.tell()
         string_data = filter(lambda x: type(x) is int, self._header['typlist'])
-        self._has_string_data = len(string_data) > 0
+        self._has_string_data = len(list(string_data)) > 0
         self._col_size()
         
 
