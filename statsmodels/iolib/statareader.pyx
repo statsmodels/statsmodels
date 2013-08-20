@@ -358,10 +358,11 @@ class StataReader(object):
     def _unpack_from(self, fmt, byt, offset, missing_flt):
         typlist = self._header['typlist']
         d = map(None, unpack_from(self._header['byteorder']+fmt, byt, offset))
+        d_len = len(list(d))
         d = [self._null_terminate(d[i], self._encoding) \
                 if type(typlist[i]) is int \
                 else self._missing_values_test(d[i], typlist[i]) \
-                for i in xrange(len(d))]
+                for i in xrange(d_len)]
                 
         if None in d:
             d = map(lambda x: missing_flt if x is None else x, d)
