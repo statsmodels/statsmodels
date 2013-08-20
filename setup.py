@@ -391,9 +391,11 @@ ext_data = dict(
         linbin = {"pyxfile" : "nonparametric/linbin",
                  "depends" : [],
                  "sources" : []},
+
         _smoothers_lowess = {"pyxfile" : "nonparametric/_smoothers_lowess",
                  "depends" : [],
                  "sources" : []},
+                 
         statareader = {"pyxfile" : "iolib/statareader",
                  "depends" : [],
                  "sources" : []}

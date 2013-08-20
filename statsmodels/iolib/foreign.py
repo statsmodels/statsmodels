@@ -17,7 +17,7 @@ import sys
 import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
 from statsmodels.compatnp.py3k import asbytes, asstr
-import .statareader as sr
+from . import statareader as sr
 import statsmodels.tools.data as data_util
 from pandas import isnull
 
