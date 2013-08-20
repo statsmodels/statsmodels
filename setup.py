@@ -6,7 +6,6 @@ developers [1], which was in turn based on work done in pyzmq [2] and lxml [3].
 [2] http://zeromq.github.io/pyzmq/
 [3] http://lxml.de/
 """
-# Test to see git is set up correctly.
 
 import os
 from os.path import splitext, basename, join as pjoin
