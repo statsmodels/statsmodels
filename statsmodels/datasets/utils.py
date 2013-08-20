@@ -131,7 +131,9 @@ def _cache_it(data, cache_path):
     if sys.version_info[0] >= 3:
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
-        open(cache_path, "wb").write(zlib.compress(pickle.dumps(data)))
+        # use protocol 2 so can open with python 2.x if cached in 3.x
+        open(cache_path, "wb").write(zlib.compress(pickle.dumps(data,
+                                                                protocol=2)))
     else:
         open(cache_path, "wb").write(pickle.dumps(data).encode("zip"))
 
