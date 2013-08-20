@@ -466,7 +466,7 @@ def getchunks(file_obj, chunk_info):
         2 : leftover chunk size
     """
     
-    for i in xrange(chunk_info[0]):
+    for i in xrange(int(chunk_info[0])):
         yield file_obj._file.read(chunk_info[1])
     
     if chunk_info[2] != 0:
