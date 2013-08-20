@@ -153,9 +153,11 @@ class StataReader(object):
     #NOTE: the byte type seems to be reserved for categorical variables
     # with a label, but the underlying variable is -127 to 100
     # we're going to drop the label and cast to int
-    DTYPE_MAP = dict(zip(range(1,245), ['a' + str(i) for i in range(1,245)]) + \
-                    [(251, np.int16),(252, np.int32),(253, int),
-                        (254, np.float32), (255, np.float64)])
+    range1 = zip(range(1,245), ['a' + str(i) for i in range(1,245)])
+    range2 = [(251, np.int16),(252, np.int32),(253, int),
+                        (254, np.float32), (255, np.float64)]
+
+    DTYPE_MAP = dict(range1 + range2)
     TYPE_MAP = range(251)+list('bhlfd')
     #NOTE: technically, some of these are wrong. there are more numbers
     # that can be represented. it's the 27 ABOVE and BELOW the max listed
