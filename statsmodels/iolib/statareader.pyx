@@ -158,7 +158,7 @@ class StataReader(object):
                         (254, np.float32), (255, np.float64)]
 
     DTYPE_MAP = dict(list(range1) + range2)
-    TYPE_MAP = range(251)+list('bhlfd')
+    TYPE_MAP = list(range(251))+list('bhlfd')
     #NOTE: technically, some of these are wrong. there are more numbers
     # that can be represented. it's the 27 ABOVE and BELOW the max listed
     # numeric data type in [U] 12.2.2 of the 11.2 manual
