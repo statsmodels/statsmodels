@@ -286,7 +286,8 @@ class CheckSDist(sdist):
 
     _pyxfiles = ['statsmodels/nonparametric/linbin.pyx',
                  'statsmodels/nonparametric/_smoothers_lowess.pyx',
-                 'statsmodels/tsa/kalmanf/kalman_loglike.pyx']
+                 'statsmodels/tsa/kalmanf/kalman_loglike.pyx',
+                 'statsmodels/iolib/statareader.pyx']
 
     def initialize_options(self):
         sdist.initialize_options(self)
@@ -387,7 +388,12 @@ ext_data = dict(
         linbin = {"pyxfile" : "nonparametric/linbin",
                  "depends" : [],
                  "sources" : []},
+
         _smoothers_lowess = {"pyxfile" : "nonparametric/_smoothers_lowess",
+                 "depends" : [],
+                 "sources" : []},
+                 
+        statareader = {"pyxfile" : "iolib/statareader",
                  "depends" : [],
                  "sources" : []}
         )
