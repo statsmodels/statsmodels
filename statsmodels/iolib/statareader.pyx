@@ -494,7 +494,7 @@ def processchunk(file_obj, chunk, record_size, fmt,
         target index to keep track of where to insert next record
     """
     numofrecs = len(chunk)/record_size # number of records in chunk
-    for i in xrange(numofrecs):
+    for i in xrange(int(numofrecs)):
         target[t_index] = file_obj._unpack_from(fmt, chunk, 
                                                 i*record_size, missing_flt)
         t_index+=1
