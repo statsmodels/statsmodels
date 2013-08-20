@@ -157,7 +157,7 @@ class StataReader(object):
     range2 = [(251, np.int16),(252, np.int32),(253, int),
                         (254, np.float32), (255, np.float64)]
 
-    DTYPE_MAP = dict(range1 + range2)
+    DTYPE_MAP = dict(list(range1) + range2)
     TYPE_MAP = range(251)+list('bhlfd')
     #NOTE: technically, some of these are wrong. there are more numbers
     # that can be represented. it's the 27 ABOVE and BELOW the max listed
