@@ -408,7 +408,7 @@ def reader_inner_loop(file_obj, size, missing_flt):
     labels = header['vlblist'] # labels are thrown away unless DataArray
                                # type is used
     target = np.zeros((nobs,nvar))
-    dt = np.dtype(zip(varnames, types))
+    dt = np.dtype(list(zip(varnames, types)))
     
     target = np.zeros((nobs), dtype=dt) # init final array
     t_index = 0
