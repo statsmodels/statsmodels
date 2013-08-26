@@ -5,6 +5,7 @@ Created on Sun Jan 06 09:50:54 2013
 
 Author: Josef Perktold
 """
+from __future__ import print_function
 
 
 
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     #seed = 430973
     #seed = 47829
     seed = 648456 #good seed for het_scale = 0.5
-    print seed
+    print(seed)
     np.random.seed(seed)
 
     nobs, k_vars = 300, 3

@@ -4,6 +4,12 @@ Created on Thu Oct 21 15:42:18 2010
 
 Author: josef-pktd
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import linalg
@@ -29,14 +35,14 @@ sigmainv = linalg.inv(sigma)
 c = linalg.cholesky(sigma, lower=True)
 ci = linalg.cholesky(sigmainv, lower=True)
 
-print sigma
-print tiny2zero(ci/ci.max())
+print(sigma)
+print(tiny2zero(ci/ci.max()))
 
 "this is the text book transformation"
-print 'coefficient for first observation', np.sqrt(1-autocov[1]**2)
+print('coefficient for first observation', np.sqrt(1-autocov[1]**2))
 ci2 = ci[::-1,::-1].T
-print tiny2zero(ci2/ci2.max())
+print(tiny2zero(ci2/ci2.max()))
 
-print np.dot(ci/ci.max(), np.ones(nobs))
+print(np.dot(ci/ci.max(), np.ones(nobs)))
 
-print np.dot(ci2/ci2.max(), np.ones(nobs))
+print(np.dot(ci2/ci2.max(), np.ones(nobs)))

@@ -3,6 +3,7 @@
 all test folders should have and ``__init__.py``
 
 '''
+from __future__ import print_function
 
 import os
 
@@ -15,7 +16,7 @@ for base, dnames, fnames in os.walk(root):
         if (len(dnames) + len(fnames)) != 0:
             n_py = len([f for f in fnames if f[-3:] == '.py'])
             if n_py > 0:
-                print(base, dnames, len(fnames), n_py)
+                print((base, dnames, len(fnames), n_py))
 
     if '__pycache__' in dnames:
         dnames.remove('__pycache__')

@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 
 import numpy as np
@@ -50,7 +51,7 @@ if __name__ == '__main__':
     varnames = ['const'] + ['var1_%d' %i for i in np.arange(3)] \
                          + ['var2_%d' %i for i in np.arange(2)]
     xo,vo = add_indep(x, varnames)
-    print xo.shape
+    print(xo.shape)
 
 
 

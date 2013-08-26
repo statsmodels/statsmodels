@@ -33,6 +33,14 @@ problem with definition of df_model, it has 1 subtracted for constant
 
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import statsmodels.base.model as base
@@ -186,7 +194,7 @@ def coef_restriction_diffbase(n_coeffs, n_vars=None, position=0, base_idx=0):
     reduced = -np.eye(n_coeffs)  #make all rows, drop one row later
     reduced[:, base_idx] = 1
 
-    keep = range(n_coeffs)
+    keep = list(range(n_coeffs))
     del keep[base_idx]
     reduced = np.take(reduced, keep, axis=0)
 
@@ -254,8 +262,8 @@ if __name__ == '__main__':
     lambd = 1 #1e-4
     mod = TheilGLS(y, X, r_matrix=R, q_matrix=r, sigma_prior=lambd)
     res = mod.fit()
-    print res_ols.params
-    print res.params
+    print(res_ols.params)
+    print(res.params)
 
     #example 2
     #I need more flexible penalization in example, the penalization should
@@ -288,17 +296,17 @@ if __name__ == '__main__':
     lambd = 2 #1e-4
     mod = TheilGLS(y, X, r_matrix=R, q_matrix=r, sigma_prior=lambd)
     res = mod.fit()
-    print res_ols.params
-    print res.params
+    print(res_ols.params)
+    print(res.params)
 
     res_bic = mod.fit_minic()   #this will just return zero
     res = mod.fit(res_bic)
 
-    print res_bic
+    print(res_bic)
     for lambd in np.linspace(0, 80, 21):
         res_l = mod.fit(lambd)
         #print lambd, res_l.params[-2:], res_l.bic, res_l.bic + 1./lambd, res.df_model
-        print lambd, res_l.params[-2:], res_l.bic, res.df_model, np.trace(res.normalized_cov_params)
+        print(lambd, res_l.params[-2:], res_l.bic, res.df_model, np.trace(res.normalized_cov_params))
 
 
     import matplotlib.pyplot as plt
@@ -328,7 +336,7 @@ if __name__ == '__main__':
         from statsmodels.sandbox.panel.random_panel import PanelSample
         dgp = PanelSample(nobs, k_vars, n_groups)
         dgp.group_means = 2 + np.random.randn(n_groups) #add random intercept
-        print 'seed', dgp.seed
+        print('seed', dgp.seed)
         y = dgp.generate_panel()
         X = np.column_stack((dgp.exog[:,1:],
                                dgp.groups[:,None] == np.arange(n_groups)))
@@ -343,7 +351,7 @@ if __name__ == '__main__':
         lambd = 1 #1e-4
         mod = TheilGLS(y, X, r_matrix=R, q_matrix=r, sigma_prior=lambd)
         res = mod.fit()
-        print res.params
+        print(res.params)
 
         params_l = []
         for lambd in np.linspace(0, 20, 21):

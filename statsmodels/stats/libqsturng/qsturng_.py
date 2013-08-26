@@ -22,12 +22,15 @@ see:
     Studentized range distribution.
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
+from __future__ import print_function
 
 import math
 import scipy.stats
 import numpy as np
 
 from scipy.optimize import fminbound
+from six.moves import map
+from six.moves import zip
 
 inf = np.inf
 
@@ -371,7 +374,7 @@ A = {(0.1, 2.0): [-2.2485085243379075, -1.5641014278923464, 0.55942294426816752,
 p_keys = [.1,.5,.675,.75,.8,.85,.9,.95,.975,.99,.995,.999]
 
 # v values that are defined in the A table
-v_keys = range(2, 21) + [24, 30, 40, 60, 120, inf]
+v_keys = list(range(2, 21)) + [24, 30, 40, 60, 120, inf]
 
 def _isfloat(x):
     """
@@ -527,7 +530,7 @@ def _interpolate_p(p, r, v):
     try:
         y0 = _func(A[(p0, v)], p0, r, v) + 1.
     except:
-        print p,r,v
+        print(p,r,v)
     y1 = _func(A[(p1, v)], p1, r, v) + 1.
     y2 = _func(A[(p2, v)], p2, r, v) + 1.
 
@@ -687,7 +690,7 @@ def _qsturng(p, r, v):
     p = float(p)
     if isinstance(v, np.ndarray):
         v = v.item()
-    if A.has_key((p,v)):
+    if (p,v) in A:
         y = _func(A[(p,v)], p, r, v) + 1.
 
     elif p not in p_keys and v not in v_keys+([],[1])[p>=.90]:

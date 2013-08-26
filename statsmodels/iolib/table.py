@@ -86,6 +86,9 @@ from __future__ import division, with_statement
 import logging
 
 from statsmodels.compatnp.iter_compat import zip_longest
+from six.moves import map
+import six
+from six.moves import zip
 
 try: #plan for Python 3
     #from itertools import izip_longest, izip as zip
@@ -112,7 +115,7 @@ def csv2st(csvfile, headers=False, stubs=False, title=None):
             try:
                 headers = next(reader)
             except NameError: #must be Python 2.5 or earlier
-                headers = reader.next()
+                headers = six.advance_iterator(reader)
         elif headers is False:
             headers=()
         if stubs is True:
@@ -195,7 +198,7 @@ class SimpleTable(list):
         """
         #self._raw_data = data
         self.title = title
-        self._datatypes = datatypes or range(len(data[0]))
+        self._datatypes = datatypes or list(range(len(data[0])))
         #start with default formatting
         self._txt_fmt = default_txt_fmt.copy()
         self._latex_fmt = default_latex_fmt.copy()
@@ -283,7 +286,7 @@ class SimpleTable(list):
                 try:
                     row.insert_stub(loc, next(stubs))
                 except NameError: #Python 2.5 or earlier
-                    row.insert_stub(loc, stubs.next())
+                    row.insert_stub(loc, six.advance_iterator(stubs))
                 except StopIteration:
                     raise ValueError('length of stubs must match table length')
     def _data2rows(self, raw_data):
@@ -301,7 +304,7 @@ class SimpleTable(list):
                 try:
                     cell.datatype = next(dtypes)
                 except NameError: #Python 2.5 or earlier
-                    cell.datatype = dtypes.next()
+                    cell.datatype = six.advance_iterator(dtypes)
                 cell.row = newrow  #a cell knows its row
             rows.append(newrow)
         logging.debug('Exit SimpleTable.data2rows.')

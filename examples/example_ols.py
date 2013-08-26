@@ -1,5 +1,29 @@
 """Ordinary Least Squares
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -22,20 +46,20 @@ X = sm.add_constant(X, prepend=False)
 y = np.dot(X, beta) + e
 
 # Inspect data
-print X[:5, :]
-print y[:5]
+print(X[:5, :])
+print(y[:5])
 
 #Fit and summary
 #^^^^^^^^^^^^^^^
 
 model = sm.OLS(y, X)
 results = model.fit()
-print results.summary()
+print(results.summary())
 
 # Quantities of interest can be extracted directly from the fitted model. Type
 # ``dir(results)`` for a full list. Here are some examples:
-print results.params
-print results.rsquared
+print(results.params)
+print(results.rsquared)
 
 #OLS non-linear curve but linear in parameters
 #---------------------------------------------
@@ -54,12 +78,12 @@ y = y_true + sig * np.random.normal(size=nsample)
 # Fit and summary
 #^^^^^^^^^^^^^^^^
 res = sm.OLS(y, X).fit()
-print res.summary()
+print(res.summary())
 
 # Extract other quantities of interest
-print res.params
-print res.bse
-print res.predict()
+print(res.params)
+print(res.bse)
+print(res.predict())
 
 # Draw a plot to compare the true relationship to OLS predictions. Confidence
 # intervals around the predictions are built using the ``wls_prediction_std``
@@ -93,18 +117,18 @@ e = np.random.normal(size=nsample)
 y = y_true + e
 
 # Inspect the data
-print X[:5, :]
-print y[:5]
-print groups
-print dummy[:5, :]
+print(X[:5, :])
+print(y[:5])
+print(groups)
+print(dummy[:5, :])
 
 #Fit and summary
 #^^^^^^^^^^^^^^^
 res2 = sm.OLS(y, X).fit()
-print res.summary()
-print res2.params
-print res2.bse
-print res.predict()
+print(res.summary())
+print(res2.params)
+print(res2.bse)
+print(res.predict())
 
 # Draw a plot to compare the true relationship to OLS predictions.
 prstd, iv_l, iv_u = wls_prediction_std(res2);
@@ -126,8 +150,8 @@ plt.title('blue: true,   red: OLS');
 # strongly reject the null hypothesis of identical constant in the 3 groups:
 
 R = [[0, 1, 0, 0], [0, 0, 1, 0]]
-print np.array(R)
-print res2.f_test(R)
+print(np.array(R))
+print(res2.f_test(R))
 
 #T test
 #^^^^^^
@@ -135,7 +159,7 @@ print res2.f_test(R)
 # groups add to zero. The T-test allows us to reject the Null (but note the
 # one-sided p-value):
 R = [0, 1, -1, 0]
-print res2.t_test(R)
+print(res2.t_test(R))
 
 #Small group effects
 #^^^^^^^^^^^^^^^^^^^
@@ -145,7 +169,7 @@ beta = [1., 0.3, -0.0, 10]
 y_true = np.dot(X, beta)
 y = y_true + np.random.normal(size=nsample)
 res3 = sm.OLS(y, X).fit()
-print res3.f_test(R)
+print(res3.f_test(R))
 
 #Multicollinearity
 #-----------------
@@ -165,7 +189,7 @@ X = sm.tools.add_constant(X, prepend=False)
 #^^^^^^^^^^^^^^^
 ols_model = sm.OLS(y, X)
 ols_results = ols_model.fit()
-print ols_results.summary()
+print(ols_results.summary())
 
 #Condition number
 #^^^^^^^^^^^^^^^^
@@ -181,7 +205,7 @@ norm_xtx = np.dot(norm_x.T, norm_x)
 # eigen values.
 eigs = np.linalg.eigvals(norm_xtx)
 condition_number = np.sqrt(eigs.max() / eigs.min())
-print condition_number
+print(condition_number)
 
 #Dropping an observation
 #^^^^^^^^^^^^^^^^^^^^^^^
@@ -189,4 +213,4 @@ print condition_number
 # effect on the coefficient estimates:
 ols_results2 = sm.OLS(y[:-1], X[:-1, :]).fit()
 res_dropped = ols_results.params / ols_results2.params * 100 - 100
-print 'Percentage change %4.2f%%\n' * 7 % tuple(i for i in res_dropped)
+print('Percentage change %4.2f%%\n' * 7 % tuple(i for i in res_dropped))

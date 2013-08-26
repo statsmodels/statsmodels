@@ -5,6 +5,8 @@ from statsmodels.compatnp.iter_compat import zip_longest
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,
                                                 fmt_params, fmt_base, fmt_2cols)
+from six.moves import map
+from six.moves import zip
 #from statsmodels.iolib.summary2d import summary_params_2dflat
 #from summary2d import summary_params_2dflat
 
@@ -201,7 +203,7 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     params = self.params
     conf_int = self.conf_int(alpha)
     std_err = self.bse
-    exog_len = xrange(len(xname))
+    exog_len = range(len(xname))
     tstat = tstats[modeltype]
     prob_stat = prob_stats[modeltype]
 
@@ -468,7 +470,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
     params_stubs = xname
 
-    exog_idx = xrange(len(xname))
+    exog_idx = range(len(xname))
 
     #center confidence intervals if they are unequal lengths
 #    confint = ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \

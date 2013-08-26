@@ -10,6 +10,8 @@ Created on Fri Nov 04 13:45:43 2011
 Author: Josef Perktold
 
 """
+from __future__ import print_function
+from __future__ import print_function
 
 import time
 
@@ -38,7 +40,7 @@ x1 = np.linspace(lb, ub, nobs)
 x2 = np.sin(2*x1)
 x = np.column_stack((x1/x1.max()*2, x2))
 exog = (x[:,:,None]**np.arange(order+1)[None, None, :]).reshape(nobs, -1)
-idx = range((order+1)*2)
+idx = list(range((order+1)*2))
 del idx[order+1]
 exog_reduced = exog[:,idx]  #remove duplicate constant
 y_true = exog.sum(1) / 2.
@@ -56,10 +58,10 @@ if example == 1:
 
 
 for ss in m.smoothers:
-    print ss.params
+    print(ss.params)
 
 res_ols = OLS(y, exog_reduced).fit()
-print res_ols.params
+print(res_ols.params)
 
 #assert_almost_equal(y_pred, res_ols.fittedvalues, 3)
 

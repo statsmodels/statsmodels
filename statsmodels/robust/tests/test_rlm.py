@@ -116,7 +116,7 @@ class TestRlm(CheckRlmResultsMixin):
 #        r.library('MASS')
 #        self.res2 = RModel(self.data.endog, self.data.exog,
 #                        r.rlm, psi="psi.huber")
-        from results.results_rlm import Huber
+        from .results.results_rlm import Huber
         self.res2 = Huber()
 
     def test_summary(self):
@@ -143,7 +143,7 @@ class TestHampel(TestRlm):
     def setup(self):
 #        self.res2 = RModel(self.data.endog[:,None], self.data.exog,
 #        r.rlm, psi="psi.hampel") #, init="lts")
-        from results.results_rlm import Hampel
+        from .results.results_rlm import Hampel
         self.res2 = Hampel()
 
 
@@ -168,7 +168,7 @@ class TestRlmBisquare(TestRlm):
     def setup(self):
 #        self.res2 = RModel(self.data.endog, self.data.exog,
 #                        r.rlm, psi="psi.bisquare")
-        from results.results_rlm import BiSquare
+        from .results.results_rlm import BiSquare
         self.res2 = BiSquare()
 
 
@@ -187,7 +187,7 @@ class TestRlmAndrews(TestRlm):
         self.res1.h3 = h3
 
     def setup(self):
-        from results.results_rlm import Andrews
+        from .results.results_rlm import Andrews
         self.res2 = Andrews()
 
 ### tests with Huber scaling
@@ -211,7 +211,7 @@ class TestRlmHuber(CheckRlmResultsMixin):
         self.res1.h3 = h3
 
     def setup(self):
-        from results.results_rlm import HuberHuber
+        from .results.results_rlm import HuberHuber
         self.res2 = HuberHuber()
 
 class TestHampelHuber(TestRlm):
@@ -232,7 +232,7 @@ class TestHampelHuber(TestRlm):
         self.res1.h3 = h3
 
     def setup(self):
-        from results.results_rlm import HampelHuber
+        from .results.results_rlm import HampelHuber
         self.res2 = HampelHuber()
 
 class TestRlmBisquareHuber(TestRlm):
@@ -254,7 +254,7 @@ class TestRlmBisquareHuber(TestRlm):
         self.res1.h3 = h3
 
     def setup(self):
-        from results.results_rlm import BisquareHuber
+        from .results.results_rlm import BisquareHuber
         self.res2 = BisquareHuber()
 
 class TestRlmAndrewsHuber(TestRlm):
@@ -275,7 +275,7 @@ class TestRlmAndrewsHuber(TestRlm):
         self.res1.h3 = h3
 
     def setup(self):
-        from results.results_rlm import AndrewsHuber
+        from .results.results_rlm import AndrewsHuber
         self.res2 = AndrewsHuber()
 
 class TestRlmSresid(CheckRlmResultsMixin):
@@ -303,5 +303,5 @@ class TestRlmSresid(CheckRlmResultsMixin):
 #        r.library('MASS')
 #        self.res2 = RModel(self.data.endog, self.data.exog,
 #                        r.rlm, psi="psi.huber")
-        from results.results_rlm import Huber
+        from .results.results_rlm import Huber
         self.res2 = Huber()

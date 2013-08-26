@@ -111,7 +111,7 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
     if x.dtype.names:
         names = x.dtype.names
         if not col and np.squeeze(x).ndim > 1:
-            raise IndexError, "col is None and the input array is not 1d"
+            raise IndexError("col is None and the input array is not 1d")
         elif len(names) == 1:
             col = names[0]
         if isinstance(col, int):
@@ -183,8 +183,8 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             ins_idx = insert
 
         ndlags = lagmat(contemp, lags, trim='Both')
-        first_cols = range(ins_idx)
-        last_cols = range(ins_idx,x.shape[1])
+        first_cols = list(range(ins_idx))
+        last_cols = list(range(ins_idx,x.shape[1]))
         if drop:
             if col in first_cols:
                 first_cols.pop(first_cols.index(col))
@@ -221,7 +221,7 @@ def detrend(x, order=1, axis=0):
     if order == 0:
         return x - np.expand_dims(x.mean(ax), x)
     else:
-        if x.ndim == 2 and range(2)[axis]==1:
+        if x.ndim == 2 and list(range(2))[axis]==1:
             x = x.T
         elif x.ndim > 2:
             raise NotImplementedError('x.ndim>2 is not implemented until it is needed')
@@ -229,7 +229,7 @@ def detrend(x, order=1, axis=0):
         trends = np.vander(np.arange(nobs).astype(float), N=order+1)
         beta = np.linalg.lstsq(trends, x)[0]
         resid = x - np.dot(trends, beta)
-        if x.ndim == 2 and range(2)[axis]==1:
+        if x.ndim == 2 and list(range(2))[axis]==1:
             resid = resid.T
         return resid
 

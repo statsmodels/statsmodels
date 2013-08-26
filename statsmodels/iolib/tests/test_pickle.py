@@ -5,7 +5,7 @@ def test_pickle():
     import tempfile
     from numpy.testing import assert_equal
     tmpdir = tempfile.mkdtemp(prefix='pickle')
-    a = range(10)
+    a = list(range(10))
     save_pickle(a, tmpdir+'/res.pkl')
     b = load_pickle(tmpdir+'/res.pkl')
     assert_equal(a, b)

@@ -9,6 +9,7 @@ import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 import statsmodels.tsa.stattools as tsast
 from statsmodels.datasets import macrodata
+import six
 
 def test_adf_autolag():
     #see issue #246
@@ -26,7 +27,7 @@ def test_adf_autolag():
         st2 = adf3[-1]
 
         assert_equal(len(st2.autolag_results), 15 + 1)  #+1 for lagged level
-        for l, res in sorted(st2.autolag_results.iteritems())[:5]:
+        for l, res in sorted(six.iteritems(st2.autolag_results))[:5]:
             lag = l-k_trend
             #assert correct design matrices in _autolag
             assert_equal(res.model.exog[-10:,k_trend], x[-11:-1])

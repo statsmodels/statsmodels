@@ -15,6 +15,36 @@ Created on Wed Dec 21 12:28:17 2011
 Author: Josef Perktold
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -63,35 +93,35 @@ if 'ex1' in examples:
     X2 = X  #correctly specigied
 
     res_ols = OLS(y2, X2).fit()
-    print 'OLS beta estimates'
-    print res_ols.params
-    print 'OLS stddev of beta'
-    print res_ols.bse
-    print '\nWLS'
+    print('OLS beta estimates')
+    print(res_ols.params)
+    print('OLS stddev of beta')
+    print(res_ols.bse)
+    print('\nWLS')
     mod0 = GLSHet2(y2, X2, exog_var=winv)
     res0 = mod0.fit()
-    print 'new version'
+    print('new version')
     mod1 = GLSHet(y2, X2, exog_var=winv)
     res1 = mod1.iterative_fit(2)
-    print 'WLS beta estimates'
-    print res1.params
-    print res0.params
-    print 'WLS stddev of beta'
-    print res1.bse
+    print('WLS beta estimates')
+    print(res1.params)
+    print(res0.params)
+    print('WLS stddev of beta')
+    print(res1.bse)
     #compare with previous version GLSHet2, refactoring check
     #assert_almost_equal(res1.params, np.array([ 0.37642521,  1.51447662]))
     #this fails ???  more iterations? different starting weights?
 
 
-    print res1.model.weights/res1.model.weights.max()
+    print(res1.model.weights/res1.model.weights.max())
     #why is the error so small in the estimated weights ?
     assert_almost_equal(res1.model.weights/res1.model.weights.max(), weights_dgp, 14)
-    print 'residual regression params'
-    print res1.results_residual_regression.params
-    print 'scale of model ?'
-    print res1.scale
-    print 'unweighted residual variance, note unweighted mean is not zero'
-    print res1.resid.var()
+    print('residual regression params')
+    print(res1.results_residual_regression.params)
+    print('scale of model ?')
+    print(res1.scale)
+    print('unweighted residual variance, note unweighted mean is not zero')
+    print(res1.resid.var())
     #Note weighted mean is zero:
     #(res1.model.weights * res1.resid).mean()
 
@@ -111,7 +141,7 @@ if 'ex1' in examples:
     #changed z0 contains dummy and constant
     mod2 = GLSHet(y2, X2, exog_var=z0)
     res2 = mod2.iterative_fit(3)
-    print res2.params
+    print(res2.params)
 
     import statsmodels.api as sm
     #z = sm.add_constant(w, prepend=True)
@@ -119,21 +149,21 @@ if 'ex1' in examples:
     mod3 = GLSHet(y2, X2, exog_var=z1)#, link=sm.families.links.log())
     res3 = mod3.iterative_fit(20)
     error_var_3 = res3.mse_resid/res3.model.weights
-    print res3.params
-    print "np.array(res3.model.history['ols_params'])"
+    print(res3.params)
+    print("np.array(res3.model.history['ols_params'])")
 
-    print np.array(res3.model.history['ols_params'])
-    print "np.array(res3.model.history['self_params'])"
-    print np.array(res3.model.history['self_params'])
+    print(np.array(res3.model.history['ols_params']))
+    print("np.array(res3.model.history['self_params'])")
+    print(np.array(res3.model.history['self_params']))
 
     #Models 2 and 3 are equivalent with different parameterization of Z
-    print np.unique(res2.model.weights) #for discrete z only, only a few uniques
-    print np.unique(res3.model.weights)
+    print(np.unique(res2.model.weights)) #for discrete z only, only a few uniques
+    print(np.unique(res3.model.weights))
 
-    print res3.summary()
-    print '\n\nResults of estimation of weights'
-    print     '--------------------------------'
-    print res3.results_residual_regression.summary()
+    print(res3.summary())
+    print('\n\nResults of estimation of weights')
+    print('--------------------------------')
+    print(res3.results_residual_regression.summary())
 
     if doplots:
         plt.figure()

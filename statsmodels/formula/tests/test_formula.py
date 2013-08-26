@@ -7,6 +7,7 @@ from statsmodels.datasets.longley import load, load_pandas
 
 import numpy.testing as npt
 from numpy.testing.utils import WarningManager
+import six
 
 
 longley_formula = 'TOTEMP ~ GNPDEFL + GNP + UNEMP + ARMED + POP + YEAR'
@@ -53,7 +54,7 @@ class TestFormulaPandas(CheckFormulaOLS):
 class TestFormulaDict(CheckFormulaOLS):
     @classmethod
     def setupClass(cls):
-        data = dict((k, v.tolist()) for k, v in load_pandas().data.iteritems())
+        data = dict((k, v.tolist()) for k, v in six.iteritems(load_pandas().data))
         cls.model = ols(longley_formula, data)
         super(TestFormulaDict, cls).setupClass()
 

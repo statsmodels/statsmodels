@@ -23,6 +23,19 @@ I guess this is currently only for one sided test statistics, e.g. for
 two-sided tests basend on t or normal distribution use the absolute value.
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import numpy as np
@@ -471,7 +484,7 @@ if __name__ == '__main__':
 #    print mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
 #    print mc1.quantiles()
 
-    print '\nLjung Box'
+    print('\nLjung Box')
     from statsmodels.sandbox.stats.diagnostic import acorr_ljungbox
 
     def lb4(x):
@@ -486,31 +499,31 @@ if __name__ == '__main__':
         s,p = acorr_ljungbox(x, lags=4)
         return np.r_[s, p]
 
-    print 'Results with MC class'
+    print('Results with MC class')
     mc1 = StatTestMC(normalnoisesim, lb)
-    mc1.run(10000, statindices=range(8))
-    print mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975])
-    print mc1.quantiles(1)
-    print mc1.quantiles(0)
-    print mc1.histogram(0)
+    mc1.run(10000, statindices=list(range(8)))
+    print(mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975]))
+    print(mc1.quantiles(1))
+    print(mc1.quantiles(0))
+    print(mc1.histogram(0))
 
     #print mc1.summary_quantiles([1], stats.chi2([2]).ppf, title='acorr_ljungbox')
-    print mc1.summary_quantiles([1,2,3], stats.chi2([2,3,4]).ppf,
+    print(mc1.summary_quantiles([1,2,3], stats.chi2([2,3,4]).ppf,
                                 varnames=['lag 1', 'lag 2', 'lag 3'],
-                                title='acorr_ljungbox')
-    print mc1.cdf(0.1026, 1)
-    print mc1.cdf(0.7278, 3)
+                                title='acorr_ljungbox'))
+    print(mc1.cdf(0.1026, 1))
+    print(mc1.cdf(0.7278, 3))
 
-    print mc1.cdf(0.7278, [1,2,3])
+    print(mc1.cdf(0.7278, [1,2,3]))
     frac = [0.01, 0.025, 0.05, 0.1, 0.975]
     crit = stats.chi2([2,4]).ppf(np.atleast_2d(frac).T)
-    print mc1.summary_cdf([1,3], frac, crit, title='acorr_ljungbox')
+    print(mc1.summary_cdf([1,3], frac, crit, title='acorr_ljungbox'))
     crit = stats.chi2([2,3,4]).ppf(np.atleast_2d(frac).T)
-    print mc1.summary_cdf([1,2,3], frac, crit,
+    print(mc1.summary_cdf([1,2,3], frac, crit,
                           varnames=['lag 1', 'lag 2', 'lag 3'],
-                          title='acorr_ljungbox')
+                          title='acorr_ljungbox'))
 
-    print mc1.cdf(crit, [1,2,3])[1].shape
+    print(mc1.cdf(crit, [1,2,3])[1].shape)
 
     #fixed broadcasting in cdf  Done 2d only
     '''

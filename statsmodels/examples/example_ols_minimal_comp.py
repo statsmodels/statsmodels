@@ -3,6 +3,10 @@
 add example for new compare methods
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import statsmodels.api as sm
@@ -15,13 +19,13 @@ beta = np.array([10, 1, 0.01])
 y = np.dot(X, beta) + np.random.normal(size=nsample)
 
 results = sm.OLS(y, X).fit()
-print results.summary()
+print(results.summary())
 
 results2 = sm.OLS(y, X[:,:2]).fit()
-print results.compare_f_test(results2)
-print results.f_test([0,0,1])
+print(results.compare_f_test(results2))
+print(results.f_test([0,0,1]))
 
-print results.compare_lr_test(results2)
+print(results.compare_lr_test(results2))
 
 '''
 (1.841903749875428, 0.1778775592033047)

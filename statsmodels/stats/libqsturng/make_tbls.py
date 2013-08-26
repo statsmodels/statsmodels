@@ -8,6 +8,8 @@ from scipy.optimize import leastsq
 import numpy as np
 from statsmodels.compatnp.collections import OrderedDict
 from numpy.random import random
+from six.moves import map
+from six.moves import zip
 
 # The values for p in [.5, .75, .9, .95, .975, .99, .995, .999]
 # were pulled from:
@@ -413,7 +415,7 @@ T = OrderedDict([(0.100, OrderedDict([(float(L.split()[0]),
 
 # This dict maps r values to the correct list index
 R = OrderedDict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
-                     17,18,19,20,30,40,60,80,100], range(24)))
+                     17,18,19,20,30,40,60,80,100], list(range(24))))
 
 inf = np.inf
 # we will need a tinv function

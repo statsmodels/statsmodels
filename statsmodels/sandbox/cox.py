@@ -24,6 +24,10 @@ feels very slow
 need testcase before trying to fix
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import shutil
@@ -33,7 +37,7 @@ import numpy as np
 
 
 from statsmodels.base import model
-import survival
+from . import survival
 
 class Discrete(object):
 
@@ -99,7 +103,7 @@ class CoxPH(model.LikelihoodModel):
         self.initialize(self.subjects)
 
     def initialize(self, subjects):
-        print 'called initialize'
+        print('called initialize')
         self.failures = {}
         for i in range(len(subjects)):
             s = subjects[i]
@@ -145,7 +149,7 @@ class CoxPH(model.LikelihoodModel):
         try:
             shutil.rmtree(self.cachedir, ignore_errors=True)
         except AttributeError:
-            print "AttributeError: 'CoxPH' object has no attribute 'cachedir'"
+            print("AttributeError: 'CoxPH' object has no attribute 'cachedir'")
             pass
 
     def loglike(self, b, ties='breslow'):
@@ -261,8 +265,8 @@ if __name__ == '__main__':
 
     #res = c.newton([0.4])  #doesn't work anymore
     res=c.fit([0.4],method="bfgs")
-    print res.params
-    print dir(c)
+    print(res.params)
+    print(dir(c))
     #print c.fit(Y)
     #c.information(res.params)  #raises exception
 

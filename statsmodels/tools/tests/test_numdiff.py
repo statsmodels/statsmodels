@@ -6,6 +6,22 @@ finite difference Hessian has some problems that I didn't look at yet
 Should Hessian also work per observation, if fun returns 2d
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
@@ -299,21 +315,21 @@ if __name__ == '__main__':
     y = np.dot(x, beta) + 0.1*np.random.randn(nobs)
     xkols = np.dot(np.linalg.pinv(x),y)
 
-    print approx_fprime((1,2,3),fun,epsilon,x)
+    print(approx_fprime((1,2,3),fun,epsilon,x))
     gradtrue = x.sum(0)
-    print x.sum(0)
+    print(x.sum(0))
     gradcs = approx_fprime_cs((1,2,3), fun, (x,), h=1.0e-20)
-    print gradcs, maxabs(gradcs, gradtrue)
-    print approx_hess_cs((1,2,3), fun, (x,), h=1.0e-20)  #this is correctly zero
+    print(gradcs, maxabs(gradcs, gradtrue))
+    print(approx_hess_cs((1,2,3), fun, (x,), h=1.0e-20))  #this is correctly zero
 
-    print approx_hess_cs((1,2,3), fun2, (y,x), h=1.0e-20)-2*np.dot(x.T, x)
-    print numdiff.approx_hess(xk,fun2,1e-3, (y,x))[0] - 2*np.dot(x.T, x)
+    print(approx_hess_cs((1,2,3), fun2, (y,x), h=1.0e-20)-2*np.dot(x.T, x))
+    print(numdiff.approx_hess(xk,fun2,1e-3, (y,x))[0] - 2*np.dot(x.T, x))
 
     gt = (-x*2*(y-np.dot(x, [1,2,3]))[:,None])
     g = approx_fprime_cs((1,2,3), fun1, (y,x), h=1.0e-20)#.T   #this shouldn't be transposed
     gd = numdiff.approx_fprime((1,2,3),fun1,epsilon,(y,x))
-    print maxabs(g, gt)
-    print maxabs(gd, gt)
+    print(maxabs(g, gt))
+    print(maxabs(gd, gt))
 
 
     import statsmodels.api as sm
@@ -331,12 +347,12 @@ if __name__ == '__main__':
     #cs doesn't work for Probit because special.ndtr doesn't support complex
     #maybe calculating ndtr for real and imag parts separately, if we need it
     #and if it still works in this case
-    print 'sm', score(test_params)
-    print 'fd', numdiff.approx_fprime(test_params,loglike,epsilon)
-    print 'cs', numdiff.approx_fprime_cs(test_params,loglike)
-    print 'sm', hess(test_params)
-    print 'fd', numdiff.approx_fprime(test_params,score,epsilon)
-    print 'cs', numdiff.approx_fprime_cs(test_params, score)
+    print('sm', score(test_params))
+    print('fd', numdiff.approx_fprime(test_params,loglike,epsilon))
+    print('cs', numdiff.approx_fprime_cs(test_params,loglike))
+    print('sm', hess(test_params))
+    print('fd', numdiff.approx_fprime(test_params,score,epsilon))
+    print('cs', numdiff.approx_fprime_cs(test_params, score))
 
     #print 'fd', numdiff.approx_hess(test_params, loglike, epsilon) #TODO: bug
     '''
@@ -348,8 +364,8 @@ if __name__ == '__main__':
     TypeError: can only concatenate list (not "float") to list
     '''
     hesscs = numdiff.approx_hess_cs(test_params, loglike)
-    print 'cs', hesscs
-    print maxabs(hess(test_params), hesscs)
+    print('cs', hesscs)
+    print(maxabs(hess(test_params), hesscs))
 
     data = sm.datasets.anes96.load()
     exog = data.exog

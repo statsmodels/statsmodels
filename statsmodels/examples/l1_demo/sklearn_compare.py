@@ -91,11 +91,11 @@ colors = ['b', 'r', 'k', 'g', 'm', 'c', 'y']
 for coeff, name in [(sm_coeff, 'sm'), (sk_coeff, 'sk')]:
     if name == 'sk':
         ltype = 'x'  # linetype
-        t = range(N)  # The 'time' parameter
+        t = list(range(N))  # The 'time' parameter
     else:
         ltype = 'o'
         t = s
-    for i in xrange(K):
+    for i in range(K):
         plt.plot(t, coeff[:,i], ltype+colors[i], label=name+'-X'+str(i))
 plt.legend(loc='best')
 plt.show()

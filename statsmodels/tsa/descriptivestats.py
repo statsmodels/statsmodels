@@ -8,7 +8,7 @@ License: BSD(3clause)
 """
 
 import numpy as np
-import stattools as stt
+from . import stattools as stt
 
 
 #todo: check subclassing for descriptive stats classes
@@ -28,12 +28,12 @@ class TsaDescriptive(object):
         return self.__class__(xfiltered, self.label, self.name + '_filtered')
 
     def detrend(self, order=1):
-        import tsatools
+        from . import tsatools
         xdetrended = tsatools.detrend(self.data, order=order)
         return self.__class__(xdetrended, self.label, self.name + '_detrended')
 
     def fit(self, order=(1,0,1), **kwds):
-        from arima_model import ARMA
+        from .arima_model import ARMA
         self.mod = ARMA(self.data)
         self.res = self.mod.fit(order=order, **kwds)
         #self.estimated_process =

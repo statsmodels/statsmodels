@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
@@ -156,11 +158,11 @@ class ProbPlot(object):
         try:
             return self.dist.ppf(self.theoretical_percentiles())
         except TypeError:
-            print('%s requires more parameters to compute ppf' % \
-                    (self.dist.name,))
+            print(('%s requires more parameters to compute ppf' % \
+                    (self.dist.name,)))
         except:
-            print('failed to compute the ppf of %s' % \
-                    (self.dist.name,))
+            print(('failed to compute the ppf of %s' % \
+                    (self.dist.name,)))
 
     def sorted_data(self):
         sorted_data = np.array(self.data, copy=True)

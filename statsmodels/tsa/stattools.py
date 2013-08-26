@@ -1,14 +1,21 @@
 """
 Statistical tools for time series analysis
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import stats, signal
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant
-from tsatools import lagmat, lagmat2ds, add_trend
+from .tsatools import lagmat, lagmat2ds, add_trend
 #from statsmodels.sandbox.tsa import var
-from adfvalues import mackinnonp, mackinnoncrit
+from .adfvalues import mackinnonp, mackinnoncrit
+import six
 #from statsmodels.sandbox.rls import RLS
 
 #NOTE: now in two places to avoid circular import
@@ -65,9 +72,9 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         results[lag] = mod_instance.fit()
 
     if method == "aic":
-        icbest, bestlag = min((v.aic,k) for k,v in results.iteritems())
+        icbest, bestlag = min((v.aic,k) for k,v in six.iteritems(results))
     elif method == "bic":
-        icbest, bestlag = min((v.bic,k) for k,v in results.iteritems())
+        icbest, bestlag = min((v.bic,k) for k,v in six.iteritems(results))
     elif method == "t-stat":
         lags = sorted(results.keys())[::-1]
         #stop = stats.norm.ppf(.95)
@@ -717,9 +724,9 @@ def levinson_durbin(s, nlags=10, isacov=False):
     # initial points for the recursion
     phi[1,1] = sxx_m[1]/sxx_m[0]
     sig[1] = sxx_m[0] - phi[1,1]*sxx_m[1]
-    for k in xrange(2,order+1):
+    for k in range(2,order+1):
         phi[k,k] = (sxx_m[k] - np.dot(phi[1:k,k-1], sxx_m[1:k][::-1]))/sig[k-1]
-        for j in xrange(1,k):
+        for j in range(1,k):
             phi[j,k] = phi[j,k-1] - phi[k,k]*phi[k-j,k-1]
         sig[k] = sig[k-1]*(1 - phi[k,k]**2)
 
@@ -792,8 +799,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     for mlg in range(1, maxlag+1):
         result = {}
         if verbose:
-            print '\nGranger Causality'
-            print 'number of lags (no zero)', mlg
+            print('\nGranger Causality')
+            print('number of lags (no zero)', mlg)
         mxlg = mlg #+ 1 # Note number of lags starting at zero in lagmat
 
         # create lagmat of both time series
@@ -819,22 +826,22 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # Granger Causality test using ssr (F statistic)
         fgc1 = (res2down.ssr-res2djoint.ssr)/res2djoint.ssr/(mxlg)*res2djoint.df_resid
         if verbose:
-            print 'ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
-              (fgc1, stats.f.sf(fgc1, mxlg, res2djoint.df_resid), res2djoint.df_resid, mxlg)
+            print('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
+              (fgc1, stats.f.sf(fgc1, mxlg, res2djoint.df_resid), res2djoint.df_resid, mxlg))
         result['ssr_ftest'] = (fgc1, stats.f.sf(fgc1, mxlg, res2djoint.df_resid), res2djoint.df_resid, mxlg)
 
         # Granger Causality test using ssr (ch2 statistic)
         fgc2 = res2down.nobs*(res2down.ssr-res2djoint.ssr)/res2djoint.ssr
         if verbose:
-            print 'ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, df=%d' %  \
-              (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
+            print('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, df=%d' %  \
+              (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
         result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         #likelihood ratio test pvalue:
         lr = -2*(res2down.llf-res2djoint.llf)
         if verbose:
-            print 'likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %  \
-              (lr, stats.chi2.sf(lr, mxlg), mxlg)
+            print('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %  \
+              (lr, stats.chi2.sf(lr, mxlg), mxlg))
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
@@ -844,8 +851,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
                                    np.zeros((mxlg, 1))))
         ftres = res2djoint.f_test(rconstr)
         if verbose:
-            print 'parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
-              (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num)
+            print('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
+              (ftres.fvalue, ftres.pvalue, ftres.df_denom, ftres.df_num))
         result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
                                   np.squeeze(ftres.pvalue)[()],
                                   ftres.df_denom, ftres.df_num)

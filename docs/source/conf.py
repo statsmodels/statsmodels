@@ -1,3 +1,4 @@
+from __future__ import print_function
 # -*- coding: utf-8 -*-
 #
 # statsmodels documentation build configuration file, created by
@@ -12,6 +13,7 @@
 # serve to show the default.
 
 import sys, os
+import six
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -64,8 +66,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'statsmodels'
-copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+project = six.u('statsmodels')
+copyright = six.u('2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers')
 
 
 autosummary_generate = True
@@ -136,7 +138,7 @@ pygments_style = 'sphinx'
 if 'htmlhelp' in sys.argv:
     #html_theme = 'statsmodels_htmlhelp'  #doesn't look nice yet
     html_theme = 'default'
-    print '################# using statsmodels_htmlhelp ############'
+    print('################# using statsmodels_htmlhelp ############')
 else:
     html_theme = 'statsmodels'
 
@@ -225,8 +227,8 @@ htmlhelp_basename = 'statsmodelsdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'statsmodels.tex', u'statsmodels Documentation',
-   u'Josef Perktold, Skipper Seabold', 'manual'),
+  ('index', 'statsmodels.tex', six.u('statsmodels Documentation'),
+   six.u('Josef Perktold, Skipper Seabold'), 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -262,18 +264,18 @@ pngmath_use_preview=True
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'statsmodels', u'statsmodels Documentation',
-     [u'Josef Perktold, Skipper Seabold, Jonathan Taylor'], 1)
+    ('index', 'statsmodels', six.u('statsmodels Documentation'),
+     [six.u('Josef Perktold, Skipper Seabold, Jonathan Taylor')], 1)
 ]
 
 
 # -- Options for Epub output ---------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'statsmodels'
-epub_author = u'Josef Perktold, Skipper Seabold'
-epub_publisher = u'Josef Perktold, Skipper Seabold'
-epub_copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers'
+epub_title = six.u('statsmodels')
+epub_author = six.u('Josef Perktold, Skipper Seabold')
+epub_publisher = six.u('Josef Perktold, Skipper Seabold')
+epub_copyright = six.u('2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, statsmodels-developers')
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

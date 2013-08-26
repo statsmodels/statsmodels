@@ -4,6 +4,17 @@ Created on Thu Oct 21 21:45:24 2010
 
 Author: josef-pktd
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import signal
@@ -40,7 +51,7 @@ def armaloop(arcoefs, macoefs, x):
     arlag = arcoefs_r.shape[0]
     malag = macoefs_r.shape[0]
     maxlag = max(arlag, malag)
-    print maxlag
+    print(maxlag)
     y = np.zeros(x.shape, float)
     e = np.zeros(x.shape, float)
     y[:maxlag] = x[:maxlag]
@@ -58,23 +69,23 @@ def armaloop(arcoefs, macoefs, x):
     return y, e
 
 arcoefs, macoefs = -np.array([1, -0.8, 0.2])[1:], np.array([1., 0.5, 0.1])[1:]
-print armaloop(arcoefs, macoefs, np.ones(10))
-print armaloop([0.8], [], np.ones(10))
-print armaloop([0.8], [], np.arange(2,10))
+print(armaloop(arcoefs, macoefs, np.ones(10)))
+print(armaloop([0.8], [], np.ones(10)))
+print(armaloop([0.8], [], np.arange(2,10)))
 y, e = armaloop([0.1], [0.8], np.arange(2,10))
-print e
-print signal.lfilter(np.array([1, -0.1]), np.array([1., 0.8]), np.arange(2,10))
+print(e)
+print(signal.lfilter(np.array([1, -0.1]), np.array([1., 0.8]), np.arange(2,10)))
 
 y, e = armaloop([], [0.8], np.ones(10))
-print e
-print signal.lfilter(np.array([1, -0.]), np.array([1., 0.8]), np.ones(10))
+print(e)
+print(signal.lfilter(np.array([1, -0.]), np.array([1., 0.8]), np.ones(10)))
 
 ic=signal.lfiltic(np.array([1, -0.1]), np.array([1., 0.8]), np.ones([0]), np.array([1]))
-print signal.lfilter(np.array([1, -0.1]), np.array([1., 0.8]), np.ones(10), zi=ic)
+print(signal.lfilter(np.array([1, -0.1]), np.array([1., 0.8]), np.ones(10), zi=ic))
 
 zi = signal.lfilter_zi(np.array([1, -0.8, 0.2]), np.array([1., 0, 0]))
-print signal.lfilter(np.array([1, -0.1]), np.array([1., 0.8]), np.ones(10), zi=zi)
-print signal.filtfilt(np.array([1, -0.8]), np.array([1.]), np.ones(10))
+print(signal.lfilter(np.array([1, -0.1]), np.array([1., 0.8]), np.ones(10), zi=zi))
+print(signal.filtfilt(np.array([1, -0.8]), np.array([1.]), np.ones(10)))
 
 #todo write examples/test across different versions
 

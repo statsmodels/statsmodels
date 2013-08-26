@@ -12,6 +12,9 @@ from statsmodels.distributions import (ECDF, monotone_fn_inverter,
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.compatnp.py3k import asstr2
 from pandas import DataFrame
+from functools import reduce
+from six.moves import map
+from six.moves import zip
 
 def _make_dictnames(tmp_arr, offset=0):
     """

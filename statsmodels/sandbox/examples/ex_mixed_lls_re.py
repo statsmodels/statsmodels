@@ -14,6 +14,45 @@ individual specific constant, that is just a random effect without exogenous
 regressors.
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 
@@ -76,39 +115,39 @@ if 'ex1' in examples:
     m.initialize()
     res = m.fit(maxiter=100, rtol=1.0e-5, params_rtol=1e-6, params_atol=1e-6)
     t1 = time.time()
-    print 'time for initialize and fit', t1-t0
-    print 'number of iterations', m.iterations
+    print('time for initialize and fit', t1-t0)
+    print('number of iterations', m.iterations)
     #print dir(m)
     #print vars(m)
-    print '\nestimates for fixed effects'
-    print m.a
-    print m.params
+    print('\nestimates for fixed effects')
+    print(m.a)
+    print(m.params)
     bfixed_cov = m.cov_fixed()
-    print 'beta fixed standard errors'
-    print np.sqrt(np.diag(bfixed_cov))
+    print('beta fixed standard errors')
+    print(np.sqrt(np.diag(bfixed_cov)))
 
-    print m.bse
+    print(m.bse)
     b_re = m.params_random_units
-    print 'RE mean:', b_re.mean(0)
-    print 'RE columns std', b_re.std(0)
-    print 'np.cov(b_re, rowvar=0), sample statistic'
-    print np.cov(b_re, rowvar=0)
-    print 'std of above'
+    print('RE mean:', b_re.mean(0))
+    print('RE columns std', b_re.std(0))
+    print('np.cov(b_re, rowvar=0), sample statistic')
+    print(np.cov(b_re, rowvar=0))
+    print('std of above')
     #need atleast_1d or diag raises exception
-    print np.sqrt(np.diag(np.atleast_1d(np.cov(b_re, rowvar=0))))
-    print 'm.cov_random()'
-    print m.cov_random()
-    print 'std of above'
-    print res.std_random()
-    print np.sqrt(np.diag(m.cov_random()))
+    print(np.sqrt(np.diag(np.atleast_1d(np.cov(b_re, rowvar=0)))))
+    print('m.cov_random()')
+    print(m.cov_random())
+    print('std of above')
+    print(res.std_random())
+    print(np.sqrt(np.diag(m.cov_random())))
 
-    print '\n(non)convergence of llf'
-    print m.history['llf'][-4:]
-    print 'convergence of parameters'
+    print('\n(non)convergence of llf')
+    print(m.history['llf'][-4:])
+    print('convergence of parameters')
     #print np.diff(np.vstack(m.history[-4:])[:,1:],axis=0)
-    print np.diff(np.vstack(m.history['params'][-4:]),axis=0)
-    print 'convergence of D'
-    print np.diff(np.array(m.history['D'][-4:]), axis=0)
+    print(np.diff(np.vstack(m.history['params'][-4:]),axis=0))
+    print('convergence of D')
+    print(np.diff(np.array(m.history['D'][-4:]), axis=0))
 
     #zdotb = np.array([np.dot(unit.Z, unit.b) for unit in m.units])
     zb = np.array([(unit.Z * unit.b[None,:]).sum(0) for unit in m.units])
@@ -121,13 +160,13 @@ if 'ex1' in examples:
            [-0.00909159,  0.26846254]])
     >>> #note cov_random doesn't subtract mean!
     '''
-    print '\nchecking the random effects distribution and prediction'
+    print('\nchecking the random effects distribution and prediction')
     gamma_re_true = np.array(gamma_re_true)
-    print 'mean of random effect true', gamma_re_true.mean(0)
-    print 'mean from fixed effects   ', m.params[-2:]
-    print 'mean of estimated RE      ', b_re.mean(0)
+    print('mean of random effect true', gamma_re_true.mean(0))
+    print('mean from fixed effects   ', m.params[-2:])
+    print('mean of estimated RE      ', b_re.mean(0))
 
-    print
+    print()
     absmean_true = np.abs(gamma_re_true).mean(0)
     mape = ((m.params[-2:] + b_re) / gamma_re_true - 1).mean(0)*100
     mean_abs_perc = np.abs((m.params[-2:] + b_re) - gamma_re_true).mean(0) \
@@ -136,22 +175,22 @@ if 'ex1' in examples:
                          / absmean_true*100
     rmse_perc = ((m.params[-2:] + b_re) - gamma_re_true).std(0) \
                   / absmean_true*100
-    print 'mape           ', mape
-    print 'mean_abs_perc  ', mean_abs_perc
-    print 'median_abs_perc', median_abs_perc
-    print 'rmse_perc (std)', rmse_perc
+    print('mape           ', mape)
+    print('mean_abs_perc  ', mean_abs_perc)
+    print('median_abs_perc', median_abs_perc)
+    print('rmse_perc (std)', rmse_perc)
     from numpy.testing import assert_almost_equal
     #assert is for n_units=100 in original example
     #I changed random number generation, so this won't work anymore
     #assert_almost_equal(rmse_perc, [ 34.14783884,  11.6031684 ], decimal=8)
 
     #now returns res
-    print 'llf', res.llf  #based on MLE, does not include constant
-    print 'tvalues', res.tvalues
-    print 'pvalues', res.pvalues
-    print res.t_test([1])
-    print 'test mean of both random effects variables is zero'
-    print res.f_test([[1]])
+    print('llf', res.llf)  #based on MLE, does not include constant
+    print('tvalues', res.tvalues)
+    print('pvalues', res.pvalues)
+    print(res.t_test([1]))
+    print('test mean of both random effects variables is zero')
+    print(res.f_test([[1]]))
     plots = res.plot_random_univariate(bins=50)
     #fig = res.plot_scatter_pairs(0, 1) #no pairs
     import matplotlib.pyplot as plt

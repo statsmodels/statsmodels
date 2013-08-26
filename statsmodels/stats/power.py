@@ -30,10 +30,13 @@ refactoring
 
 
 """
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import stats, optimize
 from statsmodels.tools.rootfinding import brentq_expanding
+import six
 
 def ttest_power(effect_size, nobs, alpha, df=None, alternative='two-sided'):
     '''Calculate power of a ttest
@@ -208,7 +211,7 @@ class Power(object):
         #TODO: maybe use explicit kwds,
         #    nicer but requires inspect? and not generic across tests
         #    I'm duplicating this in the subclass to get informative docstring
-        key = [k for k,v in kwds.iteritems() if v is None]
+        key = [k for k,v in six.iteritems(kwds) if v is None]
         #print kwds, key;
         if len(key) != 1:
             raise ValueError('need exactly one keyword that is None')
@@ -236,7 +239,7 @@ class Power(object):
             start_value = self.start_ttp[key]
         except KeyError:
             start_value = 0.9
-            print 'Warning: using default start_value for', key
+            print('Warning: using default start_value for', key)
 
         fit_kwds = self.start_bqexp[key]
         fit_res = []
@@ -925,7 +928,7 @@ class FTestAnovaPower(Power):
 
         val, r = optimize.brentq(func, 1e-8, 1-1e-8, full_output=True)
         if not r.converged:
-            print r
+            print(r)
         return val
 
 

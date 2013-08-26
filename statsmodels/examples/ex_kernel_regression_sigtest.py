@@ -32,6 +32,23 @@ bootstrap critical values
 times: 8.34599995613 20.6909999847 666.373999834
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import time
 
@@ -61,37 +78,37 @@ if __name__ == '__main__':
     #R_bw = [0.4017893, 0.4943397]  # Bandwidth obtained in R
     bw_expected = [0.3987821, 0.50933458]
     #npt.assert_allclose(model.bw, bw_expected, rtol=1e-3)
-    print 'bw'
-    print model.bw
-    print bw_expected
+    print('bw')
+    print(model.bw)
+    print(bw_expected)
 
-    print '\nsig_test - default'
-    print model.sig_test([1], nboot=100)
+    print('\nsig_test - default')
+    print(model.sig_test([1], nboot=100))
     t1 = time.time()
     res0 = smkr.TestRegCoefC(model, [1])
-    print 'pvalue'
-    print (res0.t_dist >= res0.test_stat).mean()
-    print 'test statistic', res0.test_stat
-    print 'bootstrap critical values'
+    print('pvalue')
+    print((res0.t_dist >= res0.test_stat).mean())
+    print('test statistic', res0.test_stat)
+    print('bootstrap critical values')
     probs = np.array([0.9, 0.95, 0.975, 0.99])
     bsort0 = np.sort(res0.t_dist)
     nrep0 = len(bsort0)
-    print bsort0[(probs * nrep0).astype(int)]
+    print(bsort0[(probs * nrep0).astype(int)])
 
     t2 = time.time()
-    print '\nsig_test - pivot=True, nboot=200, nested_res=50'
+    print('\nsig_test - pivot=True, nboot=200, nested_res=50')
     res1 = smkr.TestRegCoefC(model, [1], pivot=True, nboot=200, nested_res=50)
-    print 'pvalue'
-    print (res1.t_dist >= res1.test_stat).mean()
-    print 'test statistic', res1.test_stat
-    print 'bootstrap critical values'
+    print('pvalue')
+    print((res1.t_dist >= res1.test_stat).mean())
+    print('test statistic', res1.test_stat)
+    print('bootstrap critical values')
     probs = np.array([0.9, 0.95, 0.975, 0.99])
     bsort1 = np.sort(res1.t_dist)
     nrep1 = len(bsort1)
-    print bsort1[(probs * nrep1).astype(int)]
+    print(bsort1[(probs * nrep1).astype(int)])
     t3 = time.time()
 
-    print 'times:', t1-t0, t2-t1, t3-t2
+    print('times:', t1-t0, t2-t1, t3-t2)
 
 
 #    import matplotlib.pyplot as plt

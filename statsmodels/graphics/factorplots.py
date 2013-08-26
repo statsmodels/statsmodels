@@ -5,7 +5,7 @@ Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
-import utils
+from . import utils
 
 
 def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
@@ -91,7 +91,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     fig, ax = utils.create_mpl_ax(ax)
 
     response_name = ylabel or getattr(response, 'name', 'response')
-    ylabel = '%s of %s' % (func.func_name, response_name)
+    ylabel = '%s of %s' % (func.__name__, response_name)
     xlabel = xlabel or getattr(x, 'name', 'X')
     legendtitle = legendtitle or getattr(trace, 'name', 'Trace')
 
@@ -101,7 +101,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     x_values = x_levels = None
     if isinstance(x[0], str):
         x_levels = [l for l in np.unique(x)]
-        x_values = xrange(len(x_levels))
+        x_values = list(range(len(x_levels)))
         x = _recode(x, dict(zip(x_levels, x_values)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
@@ -114,21 +114,21 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     if linestyles:
         try:
             assert len(linestyles) == n_trace
-        except AssertionError, err:
+        except AssertionError as err:
             raise ValueError("Must be a linestyle for each trace level")
     else:  # set a default
         linestyles = ['-'] * n_trace
     if markers:
         try:
             assert len(markers) == n_trace
-        except AssertionError, err:
+        except AssertionError as err:
             raise ValueError("Must be a linestyle for each trace level")
     else:  # set a default
         markers = ['.'] * n_trace
     if colors:
         try:
             assert len(colors) == n_trace
-        except AssertionError, err:
+        except AssertionError as err:
             raise ValueError("Must be a linestyle for each trace level")
     else:  # set a default
         #TODO: how to get n_trace different colors?

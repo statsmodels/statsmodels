@@ -2,7 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from kernridgeregress_class import GaussProcess, kernel_euclid
+from .kernridgeregress_class import GaussProcess, kernel_euclid
 
 
 m,k = 50,4

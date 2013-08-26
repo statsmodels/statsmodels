@@ -60,7 +60,7 @@ def cffilter(X, low=6, high=32, drift=True):
     Bj = np.r_[B0,Bj][:,None]
     y = np.zeros((nobs,nseries))
 
-    for i in xrange(nobs):
+    for i in range(nobs):
 
         B = -.5*Bj[0] -np.sum(Bj[1:-i-2])
         A = -Bj[0] - np.sum(Bj[1:-i-2]) - np.sum(Bj[1:i]) - B

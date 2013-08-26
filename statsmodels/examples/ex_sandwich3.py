@@ -5,6 +5,15 @@ Created on Sat Dec 17 08:39:16 2011
 
 Author: Josef Perktold
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -16,12 +25,12 @@ import statsmodels.stats.sandwich_covariance as sw
 #http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt
 try:
     pet = np.genfromtxt("test_data.txt")
-    print 'using local file'
+    print('using local file')
 except IOError:
     import urllib
     urllib.urlretrieve('http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt',
                        'test_data.txt')
-    print 'downloading file'
+    print('downloading file')
     pet = np.genfromtxt("test_data.txt")
 
 
@@ -45,14 +54,14 @@ bse_0 = sw.se_cov(covg)
 bse_1 = sw.se_cov(covt)
 bse_01 = sw.se_cov(cov01)
 
-print 'OLS            ', res.bse
-print 'het HC0        ', res.HC0_se, bse_petw - res.HC0_se
-print 'het firm       ', bse_0, bse_0 - bse_pet0
-print 'het year       ', bse_1, bse_1 - bse_pet1
-print 'het firm & year', bse_01, bse_01 - bse_pet01
+print('OLS            ', res.bse)
+print('het HC0        ', res.HC0_se, bse_petw - res.HC0_se)
+print('het firm       ', bse_0, bse_0 - bse_pet0)
+print('het year       ', bse_1, bse_1 - bse_pet1)
+print('het firm & year', bse_01, bse_01 - bse_pet01)
 
-print 'relative difference standard error het firm & year to OLS'
-print '               ', bse_01 / res.bse
+print('relative difference standard error het firm & year to OLS')
+print('               ', bse_01 / res.bse)
 
 #From the last line we see that the cluster and year robust standard errors
 #are approximately twice those of OLS

@@ -4,6 +4,27 @@ Created on Wed Jul 28 08:28:04 2010
 
 Author: josef-pktd
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import numpy as np
@@ -90,16 +111,16 @@ rvs = np.random.randn(nobs, nvars-1)
 data_exog = sm.add_constant(rvs, prepend=False)
 xbeta = 0.9 + 0.1*rvs.sum(1)
 data_endog = xbeta + 0.1*np.random.standard_t(df, size=nobs)
-print data_endog.var()
+print(data_endog.var())
 
 res_ols = sm.OLS(data_endog, data_exog).fit()
-print res_ols.scale
-print np.sqrt(res_ols.scale)
-print res_ols.params
+print(res_ols.scale)
+print(np.sqrt(res_ols.scale))
+print(res_ols.params)
 kurt = stats.kurtosis(res_ols.resid)
 df_fromkurt = 6./kurt + 4
-print stats.t.stats(df_fromkurt, moments='mvsk')
-print stats.t.stats(df, moments='mvsk')
+print(stats.t.stats(df_fromkurt, moments='mvsk'))
+print(stats.t.stats(df, moments='mvsk'))
 
 modp = MyT(data_endog, data_exog)
 start_value = 0.1*np.ones(data_exog.shape[1]+2)
@@ -127,24 +148,24 @@ else:
 
 resp = modp.fit(start_params = modp.start_params, disp=1, method='nm')#'newton')
 #resp = modp.fit(start_params = modp.start_params, disp=1, method='newton')
-print '\nestimation results t-dist'
-print resp.params
-print resp.bse
+print('\nestimation results t-dist')
+print(resp.params)
+print(resp.bse)
 resp2 = modp.fit(start_params = resp.params, method='Newton')
-print 'using Newton'
-print resp2.params
-print resp2.bse
+print('using Newton')
+print(resp2.params)
+print(resp2.bse)
 
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
 hb=-approx_hess(modp.start_params, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_params)
-print tmp.shape
+print(tmp.shape)
 #np.linalg.eigh(np.linalg.inv(hb))[0]
 
 pp=np.array(store_params)
-print pp.min(0)
-print pp.max(0)
+print(pp.min(0))
+print(pp.max(0))
 
 
 
@@ -245,7 +266,7 @@ class MyPareto(GenericLikelihoodModel):
             res.append([trimidx, pareto_ks(loc-1e-10, rvs[trimidx:])])
         res = np.array(res)
         bestidx = res[np.argmin(res[:,1]),0].astype(int)
-        print bestidx
+        print(bestidx)
         locest = rvs[bestidx]
 
         est = stats.pareto.fit_fr(rvs[bestidx:], 1., frozen=[np.nan, locest, np.nan])
@@ -307,11 +328,11 @@ res_par = mod_par.fit(start_params=mod_par.start_params, method='nm', maxfun=100
 
 res_parks = mod_par.fit_ks1()
 
-print res_par.params
+print(res_par.params)
 #print res_par2.params
-print res_parks
+print(res_parks)
 
-print res_par.params[1:].sum(), sum(res_parks[1:]), mod_par.endog.min()
+print(res_par.params[1:].sum(), sum(res_parks[1:]), mod_par.endog.min())
 
 #start new model, so we don't get two result instances with the same model instance
 mod_par = MyPareto(y)
@@ -329,8 +350,8 @@ res5 = mod_par.fit(start_params=mod_par.start_params)
 ##res_parkst = mod_par.fit_ks1_trim()
 ##print res_parkst
 
-print res5.summary()
-print res5.t_test([[1,0]])
+print(res5.summary())
+print(res5.t_test([[1,0]]))
 
 '''
 C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;

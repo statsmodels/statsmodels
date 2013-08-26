@@ -1,9 +1,24 @@
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import sys
 import numpy as np
 from scipy import stats
 #from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest
+from six.moves import zip
 
 def _kurtosis(a):
     '''wrapper for scipy.stats.kurtosis that returns nan instead of raising Error
@@ -247,7 +262,7 @@ class Describe(object):
                     #                      self.dataset.dtype.names if
                             #(self._is_dtype_like(col)=='number')]
                 else:
-                    self._columns_list = range(self.dataset.shape[1])
+                    self._columns_list = list(range(self.dataset.shape[1]))
             else:
                 self._columns_list = columns
                 if self._arraytype == 'sctruct':
@@ -318,11 +333,11 @@ if __name__ == "__main__":
                         'median', 'skew', 'uss', 'kurtosis']
     #TODO: mode var raise exception,
     #TODO: percentile writes list in cell (?), huge wide format
-    print(t1.summary(stats=noperc))
-    print(t1.summary())
-    print(t1.summary( orientation='varcols'))
-    print(t1.summary(stats=['mean', 'median', 'min', 'max'], orientation=('varcols')))
-    print(t1.summary(stats='all'))
+    print((t1.summary(stats=noperc)))
+    print((t1.summary()))
+    print((t1.summary( orientation='varcols')))
+    print((t1.summary(stats=['mean', 'median', 'min', 'max'], orientation=('varcols'))))
+    print((t1.summary(stats='all')))
 
 
     import unittest
@@ -350,46 +365,46 @@ if __name__ == "__main__":
         def test_basic_1(self):
             print('test_basic_1')
             t1 = Describe(data1)
-            print(t1.summary())
+            print((t1.summary()))
 
 
         def test_basic_2(self):
             print('test_basic_2')
             t2 = Describe(data2)
-            print(t2.summary())
+            print((t2.summary()))
 
         def test_basic_3(self):
             print('test_basic_3')
             t1 = Describe(data3)
-            print(t1.summary())
+            print((t1.summary()))
 
         def test_basic_4(self):
             print('test_basic_4')
             t1 = Describe(data4)
-            print(t1.summary())
+            print((t1.summary()))
 
         def test_basic_1a(self):
             print('test_basic_1a')
             t1 = Describe(data1)
-            print(t1.summary(stats='basic', columns=['alpha']))
+            print((t1.summary(stats='basic', columns=['alpha'])))
 
         def test_basic_1b(self):
             print('test_basic_1b')
             t1 = Describe(data1)
-            print(t1.summary(stats='basic', columns='all'))
+            print((t1.summary(stats='basic', columns='all')))
 
         def test_basic_2a(self):
             print('test_basic_2a')
             t2 = Describe(data2)
-            print(t2.summary(stats='all'))
+            print((t2.summary(stats='all')))
 
         def test_basic_3(aself):
             t1 = Describe(data3)
-            print(t1.summary(stats='all'))
+            print((t1.summary(stats='all')))
 
         def test_basic_4a(self):
             t1 = Describe(data4)
-            print(t1.summary(stats='all'))
+            print((t1.summary(stats='all')))
 
 
 

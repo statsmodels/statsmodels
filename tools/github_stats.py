@@ -17,6 +17,8 @@ import sys
 from datetime import datetime, timedelta
 from subprocess import check_output
 from gh_api import get_paged_request, make_auth_header, get_pull_request
+from six.moves import map
+from six.moves import zip
 
 #-----------------------------------------------------------------------------
 # Globals

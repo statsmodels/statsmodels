@@ -5,6 +5,8 @@ Created on Wed Jan 02 13:43:44 2013
 
 Author: Josef Perktold
 """
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import statsmodels.nonparametric.api as nparam
@@ -54,9 +56,9 @@ if __name__ == '__main__':
 
     mean2, mfx2 = model2.fit()
 
-    print model.bw
+    print(model.bw)
     #print model1.bw
-    print model2.bw
+    print(model2.bw)
 
     ix = np.argsort(y_cens)
     ix_rev = np.zeros(nobs, int)

@@ -23,7 +23,7 @@ def get_var_endog(y, lags, trend='c'):
     """
     nobs = len(y)
     # Ravel C order, need to put in descending order
-    Z = np.array([y[t-lags : t][::-1].ravel() for t in xrange(lags, nobs)])
+    Z = np.array([y[t-lags : t][::-1].ravel() for t in range(lags, nobs)])
 
     # Add constant, trend, etc.
     if trend != 'nc':
@@ -198,9 +198,9 @@ def varsim(coefs, intercept, sig_u, steps=100, initvalues=None, seed=None):
     result[p:] = intercept + ugen[p:]
 
     # add in AR terms
-    for t in xrange(p, steps):
+    for t in range(p, steps):
         ygen = result[t]
-        for j in xrange(p):
+        for j in range(p):
             ygen += np.dot(coefs[j], result[t-j-1])
 
     return result
@@ -237,7 +237,7 @@ def vech(A):
 
     length=A.shape[1]
     vechvec=[]
-    for i in xrange(length):
+    for i in range(length):
         b=i
         while b < length:
             vechvec.append(A[b,i])

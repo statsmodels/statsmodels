@@ -79,7 +79,7 @@ def test_mosaic_simple():
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+    data = OrderedDict(zip(keys, list(range(1, 1 + len(keys)))))
     # which colours should I use for the various categories?
     # put it into a dict
     props = {}
@@ -144,7 +144,7 @@ def test_mosaic_very_complex():
     key_base = (['male', 'female'], ['old', 'young'],
                     ['healty', 'ill'], ['work', 'unemployed'])
     keys = list(product(*key_base))
-    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
+    data = OrderedDict(zip(keys, list(range(1, 1 + len(keys)))))
     props = {}
     props[('male', 'old')] = {'color': 'r'}
     props[('female',)] = {'color': 'pink'}
@@ -221,7 +221,7 @@ def test__reduce_dict():
     eq(_reduce_dict(data, ('m',)), 4)
     eq(_reduce_dict(data, ('m', 'o')), 2)
     eq(_reduce_dict(data, ('m', 'o', 'w')), 1)
-    data = OrderedDict(zip(list(product('mf', 'oy', 'wn')), range(8)))
+    data = OrderedDict(zip(list(product('mf', 'oy', 'wn')), list(range(8))))
     eq(_reduce_dict(data, ('m',)), 6)
     eq(_reduce_dict(data, ('m', 'o')), 1)
     eq(_reduce_dict(data, ('m', 'o', 'w')), 0)

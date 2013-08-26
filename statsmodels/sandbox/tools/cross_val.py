@@ -30,7 +30,7 @@ except: # Using Python < 2.6
         if r <= 0:
             yield []
         else:
-            for i in xrange(len(seq)):
+            for i in range(len(seq)):
                 for cc in combinations(seq[i+1:], r-1):
                     yield [seq[i]]+cc
 
@@ -72,7 +72,7 @@ class LeaveOneOut(object):
 
     def __iter__(self):
         n = self.n
-        for i in xrange(n):
+        for i in range(n):
             test_index  = np.zeros(n, dtype=np.bool)
             test_index[i] = True
             train_index = np.logical_not(test_index)
@@ -130,7 +130,7 @@ class LeavePOut(object):
     def __iter__(self):
         n = self.n
         p = self.p
-        comb = combinations(range(n), p)
+        comb = combinations(list(range(n)), p)
         for idx in comb:
             test_index = np.zeros(n, dtype=np.bool)
             test_index[np.array(idx)] = True
@@ -193,7 +193,7 @@ class KFold(object):
         k = self.k
         j = int(np.ceil(n/k))
 
-        for i in xrange(k):
+        for i in range(k):
             test_index  = np.zeros(n, dtype=np.bool)
             if i<k-1:
                 test_index[i*j:(i+1)*j] = True
@@ -357,7 +357,7 @@ class KStepAhead(object):
         k = self.k
         start = self.start
         if self.return_slice:
-            for i in xrange(start, n-k):
+            for i in range(start, n-k):
                 train_slice = slice(None, i, None)
                 if self.kall:
                     test_slice = slice(i, i+k)
@@ -366,7 +366,7 @@ class KStepAhead(object):
                 yield train_slice, test_slice
 
         else: #for compatibility with other iterators
-            for i in xrange(start, n-k):
+            for i in range(start, n-k):
                 train_index  = np.zeros(n, dtype=np.bool)
                 train_index[:i] = True
                 test_index  = np.zeros(n, dtype=np.bool)

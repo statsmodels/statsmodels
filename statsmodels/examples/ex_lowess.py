@@ -6,6 +6,8 @@ Author: Chris Jordan Squire
 
 extracted from test suite by josef-pktd
 """
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,8 +54,8 @@ expected_lowess = np.array([[  0.        ,  -0.58337912],
                            [ 19.        ,  18.0466769 ]])
 
 actual_lowess = lowess(y, x)
-print actual_lowess
-print np.max(np.abs(actual_lowess-expected_lowess))
+print(actual_lowess)
+print(np.max(np.abs(actual_lowess-expected_lowess)))
 
 plt.plot(y, 'o')
 plt.plot(actual_lowess[:,1])

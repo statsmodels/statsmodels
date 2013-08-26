@@ -6,8 +6,9 @@ import copy
 from statsmodels.compatnp.collections import OrderedDict
 import StringIO
 import textwrap
-from table import SimpleTable
-from tableformatting import fmt_latex, fmt_txt
+from .table import SimpleTable
+from .tableformatting import fmt_latex, fmt_txt
+from functools import reduce
 
 class Summary(object):
     def __init__(self):
@@ -462,7 +463,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
 
-    idx = pd.Series(range(summ.shape[0])) %2 == 1
+    idx = pd.Series(list(range(summ.shape[0]))) %2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
 
     # add infos about the models.

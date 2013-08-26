@@ -1,3 +1,29 @@
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import stats
@@ -26,12 +52,12 @@ def probitloglike(params, endog, exog):
 
 mod = GenericLikelihoodModel(data.endog, data.exog, loglike=probitloglike)
 res = mod.fit(method="nm", fargs=(data.endog,data.exog), maxiter=500)
-print res
+print(res)
 
 
 #np.allclose(res.params, probit_res.params)
 
-print res.params, probit_res.params
+print(res.params, probit_res.params)
 
 #datal = sm.datasets.longley.load()
 datal = sm.datasets.ccard.load()
@@ -57,7 +83,7 @@ if show_error:
     mod_norm = GenericLikelihoodModel(datal.endog, datal.exog, loglike_norm_xb)
     res_norm = mod_norm.fit(method="nm", maxiter = 500)
 
-    print res_norm.params
+    print(res_norm.params)
 
 if show_error2:
     def loglike_norm_xb(params, endog, exog):
@@ -73,7 +99,7 @@ if show_error2:
                             method="nm", maxiter = 5000,
                             fargs=(datal.endog, datal.exog))
 
-    print res_norm.params
+    print(res_norm.params)
 
 class MygMLE(GenericLikelihoodModel):
     # just for testing
@@ -92,17 +118,17 @@ class MygMLE(GenericLikelihoodModel):
 mod_norm2 = MygMLE(datal.endog, datal.exog)
 #res_norm = mod_norm.fit(start_params=np.ones(datal.exog.shape[1]+1), method="nm", maxiter = 500)
 res_norm2 = mod_norm2.fit(start_params=[1.]*datal.exog.shape[1]+[1], method="nm", maxiter = 500)
-print res_norm2.params
+print(res_norm2.params)
 
 res2 = sm.OLS(datal.endog, datal.exog).fit()
 start_params = np.hstack((res2.params, np.sqrt(res2.mse_resid)))
 res_norm3 = mod_norm2.fit(start_params=start_params, method="nm", maxiter = 500,
                           retall=0)
-print start_params
-print res_norm3.params
-print res2.bse
+print(start_params)
+print(res_norm3.params)
+print(res2.bse)
 #print res_norm3.bse   # not available
-print 'llf', res2.llf, res_norm3.llf
+print('llf', res2.llf, res_norm3.llf)
 
 bse = np.sqrt(np.diag(np.linalg.inv(res_norm3.model.hessian(res_norm3.params))))
 res_norm3.model.score(res_norm3.params)
@@ -144,25 +170,25 @@ from statsmodels.tools.numdiff import approx_fprime, approx_hess
 hb=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
 hf=-approx_hess(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
 hh = (hf+hb)/2.
-print np.linalg.eigh(hh)
+print(np.linalg.eigh(hh))
 
 grad = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
-print grad
+print(grad)
 gradb = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=-1e-4)
 gradf = -approx_fprime(res_norm3.params, mod_norm2.loglike, epsilon=1e-4)
-print (gradb+gradf)/2.
+print((gradb+gradf)/2.)
 
-print res_norm3.model.score(res_norm3.params)
-print res_norm3.model.score(start_params)
+print(res_norm3.model.score(res_norm3.params))
+print(res_norm3.model.score(start_params))
 mod_norm2.loglike(start_params/2.)
-print np.linalg.inv(-1*mod_norm2.hessian(res_norm3.params))
-print np.sqrt(np.diag(res_bfgs.cov_params()))
-print res_norm3.bse
+print(np.linalg.inv(-1*mod_norm2.hessian(res_norm3.params)))
+print(np.sqrt(np.diag(res_bfgs.cov_params())))
+print(res_norm3.bse)
 
-print "MLE - OLS parameter estimates"
-print res_norm3.params[:-1] - res2.params
-print "bse diff in percent"
-print (res_norm3.bse[:-1] / res2.bse)*100. - 100
+print("MLE - OLS parameter estimates")
+print(res_norm3.params[:-1] - res2.params)
+print("bse diff in percent")
+print((res_norm3.bse[:-1] / res2.bse)*100. - 100)
 
 '''
 C:\Programs\Python25\lib\site-packages\matplotlib-0.99.1-py2.5-win32.egg\matplotlib\rcsetup.py:117: UserWarning: rcParams key "numerix" is obsolete and has no effect;
@@ -372,12 +398,12 @@ array([   5.51471653,   80.36595035,    7.46933695,   82.92232357,
 Is scale a misnomer, actually scale squared, i.e. variance of error term ?
 '''
 
-print res_norm3.model.jac(res_norm3.params).shape
+print(res_norm3.model.jac(res_norm3.params).shape)
 
 jac = res_norm3.model.jac(res_norm3.params)
-print np.sqrt(np.diag(np.dot(jac.T, jac)))/start_params
+print(np.sqrt(np.diag(np.dot(jac.T, jac)))/start_params)
 jac2 = res_norm3.model.jac(res_norm3.params, centered=True)
 
-print np.sqrt(np.diag(np.linalg.inv(np.dot(jac.T, jac))))
-print res_norm3.bse
-print res2.bse
+print(np.sqrt(np.diag(np.linalg.inv(np.dot(jac.T, jac)))))
+print(res_norm3.bse)
+print(res2.bse)

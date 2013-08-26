@@ -17,6 +17,7 @@ from statsmodels.api import OLS
 from statsmodels.api import stats
 import numpy as np
 import logging
+import six
 
 def _model2dataframe(model_endog, model_exog, model_type=OLS, **kwargs):
     """return a series containing the summary of a linear model
@@ -312,7 +313,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         '_in_non': {},
         '_out_sign': {},
         '_out_non': {}}
-    for group_name, group_list in groups.iteritems():
+    for group_name, group_list in six.iteritems(groups):
         res = _test_group(pvals, group_name, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]

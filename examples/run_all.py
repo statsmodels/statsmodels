@@ -7,6 +7,11 @@ manually, at least in my setup.
 uncomment plt.show() to show all plot windows
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 stop_on_error = True
 
@@ -37,14 +42,14 @@ if __name__ == '__main__':
     if 'y' in cont.lower():
         for run_all_f in filelist:
             try:
-                print '\n\nExecuting example file', run_all_f
-                print '-----------------------' + '-' * len(run_all_f)
-                execfile(run_all_f)
+                print('\n\nExecuting example file', run_all_f)
+                print('-----------------------' + '-' * len(run_all_f))
+                exec(compile(open(run_all_f).read(), run_all_f, 'exec'))
             except:
                 # f might be overwritten in the executed file
-                print '**********************' + '*' * len(run_all_f)
-                print 'ERROR in example file', run_all_f
-                print '**********************' + '*' * len(run_all_f)
+                print('**********************' + '*' * len(run_all_f))
+                print('ERROR in example file', run_all_f)
+                print('**********************' + '*' * len(run_all_f))
                 if stop_on_error:
                     raise
 

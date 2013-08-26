@@ -8,7 +8,7 @@ from statsmodels.tsa.arima_process import (arma_generate_sample, arma_acovf,
                         arma_acf, arma_impulse_response, lpol_fiar, lpol_fima)
 from statsmodels.sandbox.tsa.fftarma import ArmaFft
 
-from results.results_process import armarep  #benchmarkdata
+from .results.results_process import armarep  #benchmarkdata
 
 arlist = [[1.],
           [1, -0.9],  #ma representation will need many terms to get high precision

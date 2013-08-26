@@ -11,6 +11,7 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
+from __future__ import print_function
 from __future__ import absolute_import
 # for 2to3 with extensions
 import warnings
@@ -175,7 +176,7 @@ class KDEUnivariate(object):
         gridsize = len(support)
         endog = self.endog
         probs = [integrate.quad(func, support[i-1], support[i],
-                    args=endog)[0] for i in xrange(1,gridsize)]
+                    args=endog)[0] for i in range(1,gridsize)]
         return np.cumsum(probs)
 
     @cache_readonly
@@ -543,4 +544,4 @@ if __name__ == "__main__":
     except:
 #        ft = np.loadtxt('./ft_silver.csv')
 #        smooth = np.loadtxt('./smooth_silver.csv')
-        print "Didn't get the estimates from the Silverman algorithm"
+        print("Didn't get the estimates from the Silverman algorithm")

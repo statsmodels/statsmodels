@@ -95,7 +95,7 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
 
 def get_lilliefors_table():
     #function just to keep things together
-    from tabledist import TableDist
+    from .tabledist import TableDist
     #for this test alpha is sf probability, i.e. right tail probability
 
     alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])[::-1]

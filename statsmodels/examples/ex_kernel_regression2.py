@@ -5,6 +5,9 @@ Created on Wed Jan 02 13:43:44 2013
 
 Author: Josef Perktold
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import numpy.testing as npt
@@ -40,9 +43,9 @@ if __name__ == '__main__':
 
     mean2, mfx2 = model2.fit()
 
-    print model.bw
-    print model1.bw
-    print model2.bw
+    print(model.bw)
+    print(model1.bw)
+    print(model2.bw)
 
     import matplotlib.pyplot as plt
     fig = plt.figure()

@@ -5,6 +5,14 @@ Created on Wed Mar 28 15:34:18 2012
 
 Author: Josef Perktold
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import StringIO
 import numpy as np
@@ -130,7 +138,7 @@ def get_thsd(mci):
     means = mci.groupstats.groupmean
     nobs = mci.groupstats.groupnobs
     resi = tukeyhsd(means, nobs, var_, df=None, alpha=0.05, q_crit=qsturng(0.95, len(means), (nobs-1).sum()))
-    print resi[4]
+    print(resi[4])
     var2 = (mci.groupstats.groupvarwithin() * (nobs - 1)).sum() \
                                                         / (nobs - 1).sum()
     assert_almost_equal(var_, var2, decimal=14)
@@ -138,15 +146,15 @@ def get_thsd(mci):
 
 mc = multi.MultiComparison(dta['Rust'], dta['Brand'])
 res = mc.tukeyhsd()
-print res
+print(res)
 
 mc2 = multi.MultiComparison(dta2['StressReduction'], dta2['Treatment'])
 res2 = mc2.tukeyhsd()
-print res2
+print(res2)
 
 mc2s = multi.MultiComparison(dta2['StressReduction'][3:29], dta2['Treatment'][3:29])
 res2s = mc2s.tukeyhsd()
-print res2s
+print(res2s)
 res2s_001 = mc2s.tukeyhsd(alpha=0.01)
 #R result
 tukeyhsd2s = np.array([1.888889,0.8888889,-1,0.2658549,-0.5908785,-2.587133,3.511923,2.368656,0.5871331,0.002837638,0.150456,0.1266072]).reshape(3,4, order='F')
@@ -154,23 +162,23 @@ assert_almost_equal(res2s_001.confint, tukeyhsd2s[:,1:3], decimal=3)
 
 mc3 = multi.MultiComparison(dta3['Relief'], dta3['Brand'])
 res3 = mc3.tukeyhsd()
-print res3
+print(res3)
 
 tukeyhsd4 = multi.MultiComparison(cylinders, cyl_labels, group_order=["Sweden", "Japan", "Germany", "France", "USA"])
 res4 = tukeyhsd4.tukeyhsd()
-print res4
+print(res4)
 try:
     import matplotlib.pyplot as plt
     fig = res4.plot_simultaneous("USA")
     plt.show()
 except Exception as e:
-    print e
+    print(e)
 
 for mci in [mc, mc2, mc3]:
     get_thsd(mci)
 
 from scipy import stats
-print mc2.allpairtest(stats.ttest_ind, method='b')[0]
+print(mc2.allpairtest(stats.ttest_ind, method='b')[0])
 
 '''same as SAS:
 >>> np.var(mci.groupstats.groupdemean(), ddof=3)

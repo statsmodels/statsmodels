@@ -1,5 +1,11 @@
 """Generalized Least Squares
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import statsmodels.api as sm
 data = sm.datasets.longley.load()
@@ -22,8 +28,8 @@ ols_resid = sm.OLS(data.endog, data.exog).fit().resid
 # on the lagged residuals
 
 resid_fit = sm.OLS(ols_resid[1:], sm.add_constant(ols_resid[:-1])).fit()
-print resid_fit.tvalues[1]
-print resid_fit.pvalues[1]
+print(resid_fit.tvalues[1])
+print(resid_fit.pvalues[1])
 # While we don't have strong evidence that the errors follow an AR(1)
 # process we continue
 
@@ -34,14 +40,14 @@ rho = resid_fit.params[1]
 
 from scipy.linalg import toeplitz
 
-toeplitz(range(5))
+toeplitz(list(range(5)))
 #.. array([[0, 1, 2, 3, 4],
 #..       [1, 0, 1, 2, 3],
 #..       [2, 1, 0, 1, 2],
 #..       [3, 2, 1, 0, 1],
 #..       [4, 3, 2, 1, 0]])
 
-order = toeplitz(range(len(ols_resid)))
+order = toeplitz(list(range(len(ols_resid))))
 
 # so that our error covariance structure is actually rho**order
 # which defines an autocorrelation structure
@@ -65,7 +71,7 @@ glsar_results = glsar_model.iterative_fit(1)
 # errors of the parameter estimate. This might be do to the numerical
 # differences in the algorithm, e.g. the treatment of initial conditions,
 # because of the small number of observations in the longley dataset.
-print gls_results.params
-print glsar_results.params
-print gls_results.bse
-print glsar_results.bse
+print(gls_results.params)
+print(glsar_results.params)
+print(gls_results.bse)
+print(glsar_results.bse)

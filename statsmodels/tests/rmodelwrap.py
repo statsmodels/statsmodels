@@ -3,7 +3,7 @@
 import numpy as np
 
 import rpy
-from check_for_rpy import skip_rpy
+from .check_for_rpy import skip_rpy
 skipR = skip_rpy()
 if not skipR:
     from rpy import r

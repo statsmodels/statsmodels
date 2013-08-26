@@ -14,6 +14,8 @@ from numpy.testing import TestCase, rand, assert_, assert_equal, \
 import numpy as np
 
 from statsmodels.stats.libqsturng import qsturng, psturng,p_keys,v_keys
+from six.moves import map
+from six.moves import zip
 
 def read_ch(fname):
     with open(fname) as f:

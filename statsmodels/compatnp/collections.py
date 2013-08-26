@@ -4,16 +4,16 @@
 
 try:
     #python >= 2.7
-    from collections import OrderedDict
+    from .collections import OrderedDict
 except ImportError:
     #http://code.activestate.com/recipes/576693/
     #author: Raymond Hettinger
-    from ordereddict import OrderedDict
+    from .ordereddict import OrderedDict
 
 try:
     #python >= 2.7
-    from collections import Counter
+    from .collections import Counter
 except ImportError:
     #http://code.activestate.com/recipes/576611/
     #author: Raymond Hettinger
-    from counter import Counter
+    from .counter import Counter

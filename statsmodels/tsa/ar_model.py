@@ -19,6 +19,9 @@ from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
 from statsmodels.tsa.vector_ar import util
 from statsmodels.tsa.base.datetools import _index_date
+import six
+from six.moves import map
+from six.moves import zip
 
 
 __all__ = ['AR']
@@ -126,7 +129,7 @@ class AR(tsbase.TimeSeriesModel):
         Q_0 = Q_0.reshape(p,p, order='F') #TODO: order might need to be p+k
         P = Q_0
         Z_mat = KalmanFilter.Z(p)
-        for i in xrange(end): #iterate p-1 times to fit presample
+        for i in range(end): #iterate p-1 times to fit presample
             v_mat = y[i] - dot(Z_mat,alpha)
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
             Finv = 1./F_mat # inv. always scalar
@@ -436,7 +439,7 @@ class AR(tsbase.TimeSeriesModel):
                         full_output=0, trend=trend,
                         maxiter=100, disp=0)
                 results[lag] = eval('fit.'+ic)
-            bestic, bestlag = min((res, k) for k,res in results.iteritems())
+            bestic, bestlag = min((res, k) for k,res in six.iteritems(results))
 
         else: # choose by last t-stat.
             stop = 1.6448536269514722 # for t-stat, norm.ppf(.95)

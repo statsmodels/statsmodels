@@ -53,7 +53,7 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
             endog = data[endog_name]
 
     if exog_idx is None:
-        exog_name = [names[i] for i in xrange(len(names))
+        exog_name = [names[i] for i in range(len(names))
                  if i not in endog_idx]
     else:
         exog_name = [names[i] for i in exog_idx]
@@ -113,7 +113,7 @@ def _maybe_reset_index(data):
     real index. Strip this for a zero-based index
     """
     from pandas import Index
-    if data.index.equals(Index(range(1,len(data)+1))):
+    if data.index.equals(Index(list(range(1,len(data)+1)))):
         data = data.reset_index(drop=True)
     return data
 
@@ -178,7 +178,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
     url = base_url + (dataname + ".%s") % extension
     try:
         data, from_cache = _urlopen_cached(url, cache)
-    except HTTPError, err:
+    except HTTPError as err:
         if '404' in str(err):
             raise ValueError("Dataset %s was not found." % dataname)
         else:

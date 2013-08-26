@@ -3,6 +3,18 @@
 Script to generate notebooks with output from notebooks that don't have
 output.
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+import six
 
 # prefer HTML over rST for now until nbconvert changes drop
 OUTPUT = "html"
@@ -125,7 +137,7 @@ class NotebookRunner:
                 out.stream = content["name"]
                 out.text = content["data"]
             elif msg_type in ["display_data", "pyout"]:
-                for mime, data in content["data"].iteritems():
+                for mime, data in six.iteritems(content["data"]):
                     attr = mime.split("/")[-1].lower()
                     # this gets most right, but fix svg+html, plain
                     attr = attr.replace('+xml', '').replace('plain', 'text')
@@ -137,7 +149,7 @@ class NotebookRunner:
                 out.evalue = content["evalue"]
                 out.traceback = content["traceback"]
             else:
-                print "unhandled iopub msg:", msg_type
+                print("unhandled iopub msg:", msg_type)
 
             outs.append(out)
 
@@ -164,18 +176,18 @@ class NotebookRunner:
                     outs = self.run_cell(shell, iopub, cell, exec_count)
                     exec_count += 1
                 except Exception as e:
-                    print "failed to run cell:", repr(e)
-                    print cell.input
+                    print("failed to run cell:", repr(e))
+                    print(cell.input)
                     errors += 1
                     continue
                 cell.outputs = outs
 
-        print "ran notebook %s" % nb.metadata.name
-        print "    ran %3i cells" % cells
+        print("ran notebook %s" % nb.metadata.name)
+        print("    ran %3i cells" % cells)
         if errors:
-            print "    %3i cells raised exceptions" % errors
+            print("    %3i cells raised exceptions" % errors)
         else:
-            print "    there were no errors"
+            print("    there were no errors")
 
     def __del__(self):
         self.kc.stop_channels()
@@ -247,9 +259,9 @@ if __name__ == '__main__':
             towrite, filehash = hash_funcs.check_hash(open(fname, "r").read(),
                                                       fname_only)
             if not towrite:
-                print "Hash has not changed for file %s" % fname_only
+                print("Hash has not changed for file %s" % fname_only)
                 continue
-            print "Writing ", fname_only
+            print("Writing ", fname_only)
 
             # This edits the notebook cells inplace
             notebook_runner(nb)
@@ -282,19 +294,19 @@ if __name__ == '__main__':
                 try:
                     assert title_cell['cell_type'] == 'heading'
                 except:
-                    print "Title not in first cell for ", fname_only
-                    print "Not generating rST"
+                    print("Title not in first cell for ", fname_only)
+                    print("Not generating rST")
 
                 html_out = nb2html(nb)
                 # indent for insertion into raw html block in rST
                 html_out = "\n".join(["   "+i for i in html_out.split("\n")])
                 with io.open(new_html, "w", encoding="utf-8") as f:
-                    f.write(title_cell["source"]+u"\n")
-                    f.write(u"="*len(title_cell["source"])+u"\n\n")
+                    f.write(title_cell["source"]+six.u("\n"))
+                    f.write(six.u("=")*len(title_cell["source"])+six.u("\n\n"))
                     f.write(notebook_template.substitute(name=fname_only,
                                                          body=html_out))
             hash_funcs.update_hash_dict(filehash, fname_only)
-    except Exception, err:
+    except Exception as err:
         raise err
 
     finally:

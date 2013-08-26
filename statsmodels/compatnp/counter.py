@@ -5,11 +5,15 @@ License: MIT License
 http://code.activestate.com/recipes/576611/ , downloaded 2013-03-08
 
 '''
+from __future__ import print_function
 
 
 from operator import itemgetter
 from heapq import nlargest
 from itertools import repeat, ifilter
+import six
+from six.moves import map
+from six.moves import zip
 
 class Counter(dict):
     '''Dict subclass for counting hashable objects.  Sometimes called a bag
@@ -46,8 +50,8 @@ class Counter(dict):
 
         '''
         if n is None:
-            return sorted(self.iteritems(), key=itemgetter(1), reverse=True)
-        return nlargest(n, self.iteritems(), key=itemgetter(1))
+            return sorted(six.iteritems(self), key=itemgetter(1), reverse=True)
+        return nlargest(n, six.iteritems(self), key=itemgetter(1))
 
     def elements(self):
         '''Iterator over elements repeating each as many times as its count.
@@ -60,7 +64,7 @@ class Counter(dict):
         elements() will ignore it.
 
         '''
-        for elem, count in self.iteritems():
+        for elem, count in six.iteritems(self):
             for _ in repeat(None, count):
                 yield elem
 
@@ -88,7 +92,7 @@ class Counter(dict):
             if hasattr(iterable, 'iteritems'):
                 if self:
                     self_get = self.get
-                    for elem, count in iterable.iteritems():
+                    for elem, count in six.iteritems(iterable):
                         self[elem] = self_get(elem, 0) + count
                 else:
                     dict.update(self, iterable) # fast path when counter is empty
@@ -195,4 +199,4 @@ class Counter(dict):
 
 if __name__ == '__main__':
     import doctest
-    print doctest.testmod()
+    print(doctest.testmod())

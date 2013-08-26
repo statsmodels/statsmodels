@@ -19,6 +19,9 @@ from numpy.lib._iotools import _is_string_like, easy_dtype
 from statsmodels.compatnp.py3k import asbytes, asstr
 import statsmodels.tools.data as data_util
 from pandas import isnull
+from six.moves import filter
+from six.moves import map
+from six.moves import zip
 
 
 def is_py3():
@@ -286,10 +289,10 @@ class StataReader(object):
     #NOTE: the byte type seems to be reserved for categorical variables
     # with a label, but the underlying variable is -127 to 100
     # we're going to drop the label and cast to int
-    DTYPE_MAP = dict(zip(range(1,245), ['a' + str(i) for i in range(1,245)]) + \
+    DTYPE_MAP = dict(zip(list(range(1,245)), ['a' + str(i) for i in range(1,245)]) + \
                     [(251, np.int16),(252, np.int32),(253, int),
                         (254, np.float32), (255, np.float64)])
-    TYPE_MAP = range(251)+list('bhlfd')
+    TYPE_MAP = list(range(251))+list('bhlfd')
     #NOTE: technically, some of these are wrong. there are more numbers
     # that can be represented. it's the 27 ABOVE and BELOW the max listed
     # numeric data type in [U] 12.2.2 of the 11.2 manual
@@ -356,7 +359,7 @@ class StataReader(object):
         """
         Returns a list of the dataset's StataVariables objects.
         """
-        return map(_StataVariable, zip(range(self._header['nvar']),
+        return map(_StataVariable, zip(list(range(self._header['nvar'])),
             self._header['typlist'], self._header['varlist'],
             self._header['srtlist'],
             self._header['fmtlist'], self._header['lbllist'],
@@ -543,7 +546,7 @@ class StataReader(object):
         else:
             return map(lambda i: self._unpack(typlist[i],
                 self._file.read(self._col_size(i))),
-                range(self._header['nvar']))
+                list(range(self._header['nvar'])))
 
 def _open_file_binary_write(fname, encoding):
     if hasattr(fname, 'write'):
@@ -719,10 +722,10 @@ class StataWriter(object):
     #NOTE: the byte type seems to be reserved for categorical variables
     # with a label, but the underlying variable is -127 to 100
     # we're going to drop the label and cast to int
-    DTYPE_MAP = dict(zip(range(1,245), ['a' + str(i) for i in range(1,245)]) + \
+    DTYPE_MAP = dict(zip(list(range(1,245)), ['a' + str(i) for i in range(1,245)]) + \
                     [(251, np.int16),(252, np.int32),(253, int),
                         (254, np.float32), (255, np.float64)])
-    TYPE_MAP = range(251)+list('bhlfd')
+    TYPE_MAP = list(range(251))+list('bhlfd')
     MISSING_VALUES = { 'b': 101,
                        'h': 32741,
                        'l' : 2147483621,

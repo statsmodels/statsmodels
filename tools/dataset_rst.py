@@ -10,12 +10,13 @@ import os
 from os.path import join
 import inspect
 from string import Template
+import six
 
 datasets = dict(inspect.getmembers(sm.datasets, inspect.ismodule))
 datasets.pop('utils')
 datasets.pop('nile') #TODO: fix docstring in nile
 
-doc_template = Template(u"""$TITLE
+doc_template = Template(six.u("""$TITLE
 $title_
 
 Description
@@ -35,7 +36,7 @@ Copyright
 ---------
 
 $COPYRIGHT
-""")
+"""))
 
 for dataset in datasets:
     write_pth = join('../docs/source/datasets/generated',

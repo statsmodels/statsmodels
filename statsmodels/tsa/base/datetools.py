@@ -3,6 +3,9 @@ import datetime
 from pandas import datetools as pandas_datetools
 import numpy as np
 from statsmodels.compatnp.py3k import asstr
+from functools import reduce
+from six.moves import map
+from six.moves import zip
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
 try:
@@ -44,7 +47,7 @@ def _index_date(date, dates):
                 return np.where(date)[0].item()
             except TypeError: # expected behavior
                 return date
-    except KeyError, err:
+    except KeyError as err:
         freq = _infer_freq(dates)
         if freq is None:
             #TODO: try to intelligently roll forward onto a date in the
@@ -92,7 +95,7 @@ def _idx_from_dates(d1, d2, freq):
         from pandas import DatetimeIndex
         return len(DatetimeIndex(start=d1, end=d2,
                                  freq = _freq_to_pandas[freq])) - 1
-    except ImportError, err:
+    except ImportError as err:
         from pandas import DateRange
         return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
 
@@ -108,8 +111,8 @@ _quarter_to_day = {
         }
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-_months_with_days = zip(range(1,13), _mdays)
-_month_to_day = dict(zip(map(str,range(1,13)), _months_with_days))
+_months_with_days = zip(list(range(1,13)), _mdays)
+_month_to_day = dict(zip(map(str,list(range(1,13))), _months_with_days))
 _month_to_day.update(dict(zip(["I", "II", "III", "IV", "V", "VI",
                                "VII", "VIII", "IX", "X", "XI", "XII"],
                                _months_with_days)))
@@ -222,7 +225,7 @@ def date_range_str(start, end=None, length=None):
     elif length:
         yr2 = yr1 + length // annual_freq
         offset2 = length % annual_freq + (offset1 - 1)
-    years = np.repeat(range(yr1+1, yr2), annual_freq).tolist()
+    years = np.repeat(list(range(yr1+1, yr2)), annual_freq).tolist()
     years = np.r_[[str(yr1)]*(annual_freq+1-offset1), years] # tack on first year
     years = np.r_[years, [str(yr2)]*offset2] # tack on last year
     if split != 'a':

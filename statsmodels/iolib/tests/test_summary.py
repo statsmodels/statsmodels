@@ -2,6 +2,16 @@
 
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 if __name__ == '__main__':
 
@@ -12,14 +22,14 @@ if __name__ == '__main__':
     TestOLS.setupClass()
     results = aregression.res1
     r_summary = str(results.summary_old())
-    print r_summary
+    print(r_summary)
     olsres = results
 
-    print '\n\n'
+    print('\n\n')
 
     r_summary = str(results.summary())
-    print r_summary
-    print '\n\n'
+    print(r_summary)
+    print('\n\n')
 
 
     from statsmodels.discrete.tests.test_discrete  import TestProbitNewton
@@ -28,8 +38,8 @@ if __name__ == '__main__':
     TestProbitNewton.setupClass()
     results = aregression.res1
     r_summary = str(results.summary())
-    print r_summary
-    print '\n\n'
+    print(r_summary)
+    print('\n\n')
 
     probres = results
 
@@ -39,10 +49,10 @@ if __name__ == '__main__':
     #TestHampel.setupClass()
     results = aregression.res1
     r_summary = str(results.summary())
-    print r_summary
+    print(r_summary)
     rlmres = results
 
-    print '\n\n'
+    print('\n\n')
 
     from statsmodels.genmod.tests.test_glm  import TestGlmBinomial
 
@@ -50,13 +60,13 @@ if __name__ == '__main__':
     #TestGlmBinomial.setupClass()
     results = aregression.res1
     r_summary = str(results.summary())
-    print r_summary
+    print(r_summary)
 
     #print results.summary2(return_fmt='latex')
     #print results.summary2(return_fmt='csv')
 
     smry = olsres.summary()
-    print smry.as_csv()
+    print(smry.as_csv())
 
 #    import matplotlib.pyplot as plt
 #    plt.plot(rlmres.model.endog,'o')

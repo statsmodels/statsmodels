@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Out of sample prediction
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import statsmodels.api as sm
@@ -19,8 +22,8 @@ y = y_true + sig * np.random.normal(size=nsample)
 
 olsmod = sm.OLS(y, X)
 olsres = olsmod.fit()
-print olsres.params
-print olsres.bse
+print(olsres.params)
+print(olsres.bse)
 
 #In-sample prediction
 
@@ -31,7 +34,7 @@ ypred = olsres.predict(X)
 x1n = np.linspace(20.5, 25, 10)
 Xnew = np.c_[x1n, np.sin(x1n), (x1n - 5)**2, np.ones(10)]
 ynewpred = olsres.predict(Xnew)  # predict out of sample
-print ypred
+print(ypred)
 
 import matplotlib.pyplot as plt
 plt.figure();

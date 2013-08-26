@@ -38,6 +38,7 @@ from scipy.stats.mstats import mquantiles
 from statsmodels.nonparametric.api import KDEMultivariate, KernelReg
 from statsmodels.nonparametric._kernel_base import \
     gpke, LeaveOneOut, _get_type_pos, _adjust_shape
+import six
 
 
 __all__ = ['SingleIndexModel', 'SemiLinear', 'TestFForm']
@@ -106,7 +107,7 @@ class TestFForm(object):
         u2 = fct2 * resid
         r = fct2 / sqrt5
         I_dist = np.empty((self.nboot,1))
-        for j in xrange(self.nboot):
+        for j in range(self.nboot):
             u_boot = u2.copy()
 
             prob = np.random.uniform(0,1, size = (n,))
@@ -135,7 +136,7 @@ class TestFForm(object):
         I = 0
         S2 = 0
         for i, X_not_i in enumerate(XLOO):
-            u_j = uLOO.next()
+            u_j = six.advance_iterator(uLOO)
             u_j = np.squeeze(u_j)
             # See Bootstrapping procedure on p. 357 in [1]
             K = gpke(self.bw, data=-X_not_i, data_predict=-self.exog[i, :],
@@ -225,7 +226,7 @@ class SingleIndexModel(KernelReg):
         LOO_Y = LeaveOneOut(self.endog).__iter__()
         L = 0
         for i, X_not_i in enumerate(LOO_X):
-            Y = LOO_Y.next()
+            Y = six.advance_iterator(LOO_Y)
             #print b.shape, np.dot(self.exog[i:i+1, :], b).shape, bw,
             G = self.func(bw, endog=Y, exog=-np.dot(X_not_i, b)[:,None],
                           #data_predict=-b*self.exog[i, :])[0]
@@ -245,7 +246,7 @@ class SingleIndexModel(KernelReg):
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.K))
-        for i in xrange(N_data_predict):
+        for i in range(N_data_predict):
             mean_mfx = self.func(self.bw, self.endog,
                                  np.dot(self.exog, self.b)[:,None],
                                  data_predict=np.dot(data_predict[i:i+1, :],self.b))
@@ -368,8 +369,8 @@ class SemiLinear(KernelReg):
         Xb = np.dot(self.exog, b)[:,None]
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
-            Y = LOO_Y.next()
-            Z = LOO_Z.next()
+            Y = six.advance_iterator(LOO_Y)
+            Z = six.advance_iterator(LOO_Z)
             Xb_j = np.dot(X_not_i, b)[:,None]
             Yx = Y - Xb_j
             G = self.func(bw, endog=Yx, exog=-Z,
@@ -396,7 +397,7 @@ class SemiLinear(KernelReg):
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.K))
         Y = self.endog - np.dot(exog_predict, self.b)[:,None]
-        for i in xrange(N_data_predict):
+        for i in range(N_data_predict):
             mean_mfx = self.func(self.bw, Y, self.exog_nonparametric,
                                  data_predict=exog_nonparametric_predict[i, :])
             mean[i] = mean_mfx[0]

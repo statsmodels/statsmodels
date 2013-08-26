@@ -3,6 +3,11 @@
 some work, some things don't
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import string
 import numpy as np
@@ -61,14 +66,14 @@ ValueError: term not in formula
 
 
 '''
-print form.hasterm('C')
-print form.termcolumns(formula.Term('C'))  #doesn't work with string argument
+print(form.hasterm('C'))
+print(form.termcolumns(formula.Term('C')))  #doesn't work with string argument
 
 #Example: use two columns and get contrast
 
 f2 = (form['A']+form['B'])
-print f2
-print repr(f2)
+print(f2)
+print(repr(f2))
 f2.namespace.keys()   #namespace is still empty
 f2.namespace = namespace  #associate data
 f2.namespace.keys()
@@ -120,7 +125,7 @@ np.min(np.abs(f3.design() - f2.design().prod(1)))
 f4 = formula.interactions([form['A'],form['B']])
 f4.namespace
 f4.namespace = namespace
-print f4
+print(f4)
 f4.names()
 f4.design().shape
 

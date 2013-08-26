@@ -25,6 +25,7 @@ R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
 
 W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
+from __future__ import print_function
 
 __docformat__ = 'restructuredtext en'
 
@@ -1654,7 +1655,7 @@ if __name__ == "__main__":
     data.exog = add_constant(data.exog, prepend=False)
     ols_results = OLS(data.endog, data.exog).fit() #results
     gls_results = GLS(data.endog, data.exog).fit() #results
-    print(ols_results.summary())
+    print((ols_results.summary()))
     tables = ols_results.summary(returns='tables')
     csv = ols_results.summary(returns='csv')
 """
