@@ -35,6 +35,8 @@ import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
+from six.moves import zip
+
 try:
     import cvxopt
     have_cvxopt = True
@@ -555,7 +557,7 @@ class MultinomialModel(BinaryModel):
 
         eXB = np.exp(np.dot(exog, params))
         sum_eXB = (1 + eXB.sum(1))[:,None]
-        J, K = map(int, [self.J, self.K])
+        J, K = [int(x) for x in [self.J, self.K]]
         repeat_eXB = np.repeat(eXB, J, axis=1)
         X = np.tile(exog, J-1)
         # this is the derivative wrt the base level
