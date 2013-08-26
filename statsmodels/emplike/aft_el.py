@@ -33,7 +33,7 @@ from statsmodels.api import OLS, WLS, add_constant
 #from elregress import ElReg
 from scipy import optimize
 from scipy.stats import chi2
-from descriptive import _OptFuncts
+from .descriptive import _OptFuncts
 # ^ this will change when descriptive gets merged
 import warnings
 

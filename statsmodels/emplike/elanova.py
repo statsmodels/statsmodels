@@ -11,7 +11,7 @@ Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
 
 import numpy as np
-from descriptive import _OptFuncts
+from .descriptive import _OptFuncts
 from scipy import optimize
 from scipy.stats import chi2
 
