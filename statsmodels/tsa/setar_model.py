@@ -920,14 +920,14 @@ class SETARResults(OLSResults, tsbase.TimeSeriesModelResults):
                 verbose=0
             )
             f_stats = parallel(
-                p_func(samples[rep], self.model.threshold_grid_size, null.order,
+                p_func(samples[rep], self.model.delay, self.model.threshold_grid_size, null.order,
                        null.ar_order, self.order, self.ar_order) for rep in range(reps)
             )
         # Fall back on sequential
         except:
             f_stats = []
             for rep in range(reps):
-                f_stats.append(setar_utils._order_test_bootstrap(samples[rep], self.model.threshold_grid_size, null.order,
+                f_stats.append(setar_utils._order_test_bootstrap(samples[rep], self.model.delay, self.model.threshold_grid_size, null.order,
                    null.ar_order, self.order, self.ar_order))
 
         f_stat = self.f_stat(null)
