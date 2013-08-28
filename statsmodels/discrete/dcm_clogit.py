@@ -12,21 +12,13 @@ Train, K. `Discrete Choice Methods with Simulation`.
     Cambridge University Press. 2003
 --------------------
 
-# TODO:
-    adapt it to the structure of others discrete models
-        (source:discrete_model.py)
-    add dataset Mode choice
-        (http://statsmodels.sourceforge.net/devel/datasets/
-            dataset_proposal.html#dataset-proposal)
-    add example
-        (http://statsmodels.sourceforge.net/devel/dev/examples.html)
-    add test
-    send patsy proposal for data handle (see Issue #941)
-
 """
+
 import numpy as np
-from statsmodels.base.model import GenericLikelihoodModel
-from statsmodels.discrete.discrete_model import DiscreteResults
+import pandas as pd
+from statsmodels.base.model import GenericLikelihoodModel, GenericLikelihoodModelResults
+import statsmodels.api as sm
+
 import time
 
 class CLogit(GenericLikelihoodModel):
@@ -35,26 +27,41 @@ class CLogit(GenericLikelihoodModel):
 
     Parameters
     ----------
-    endog : array (nobs,nchoices)
-        dummy encoding of realized choices
-    exog_bychoices : list of arrays
-        explanatory variables, one array of exog for each choice. Variables
-        with common coefficients have to be first in each array
+    endog_data : array
+        dummy encoding of realized choices.
+    exog_data : array (nobs, k*)
+        array with explanatory variables.Variables for the model are select
+        by V, so, k* can be >= than k. An intercept is not included by
+        default and should be added by the user.
+    V: dict
+        a dictionary with the names of the explanatory variables for the
+        utility function for each alternative. Variables with common
+        coefficients have to be first in each array.
+        For explanatory variables, choose an alternative and drop all on it.
+        This is for identification.
     ncommon : int
-        number of explanatory variables with common coefficients
+        number of explanatory variables with common coefficients.
 
     Attributes
     ----------
-    endog : array
-        A reference to the endogenous response variable
-    exog : array
-        A reference to the exogenous design.
-    J / nchoices : float
+    endog : array (nobs*J, )
+        the endogenous response variable
+    endog_bychoices: array (nobs,J)
+        the endogenous response variable by choices
+    exog_matrix: array   (nobs*J,K)
+        the enxogenous response variables
+    exog_bychoices: list of arrays J * (nobs,K)
+        the enxogenous response variables by choices. one array of exog
+        for each choice.
+    nobs : float
+        number of observations.
+    J  : float
         The number of choices for the endogenous variable. Note that this
         is zero-indexed.
     K : float
         The actual number of parameters for the exogenous design.  Includes
-        the constant if the design has one.
+        the constant if the design has one and excludes the constant of one
+        choice which should be dropped for identification.
 
     Notes
     -----
@@ -71,55 +78,85 @@ class CLogit(GenericLikelihoodModel):
     For identification, the constant of one choice should be dropped.
     """
 
-    def __init__(self, endog, exog_bychoices, ncommon, **kwds):
+    def __init__(self, endog_data, exog_data, V, ncommon, **kwds):
 
-        super(CLogit, self).__init__(endog, **kwds)
-        self.endog = endog
-        self.exog_bychoices = exog_bychoices
+        self.exog_data = exog_data
+        self.V = V
         self.ncommon = ncommon
-        self.nobs, self.nchoices = endog.shape
+        super(CLogit, self).__init__(endog = endog_data , **kwds)
 
-        paramsind = [exog_bychoices[ii].shape[1]-ncommon for ii in range(self.nchoices)]
-        zi = np.r_[[ncommon], ncommon + np.array(paramsind).cumsum()]
-        self.zi = zi
+    def initialize(self):
+
+        self.J = len(self.V)
+        self.nobs = self.endog.shape[0]/self.J
+
+        # Endog_bychoices
+        self.endog_bychoices = self.endog.reshape(-1, self.J)
+        # Exog_bychoices
+        exog_bychoices = []
+        exog_bychoices_names = []
+        self.choice_index = np.arange(self.J*self.nobs) % self.J
+
+        for ii, key in enumerate(iter(self.V)):
+            (exog_bychoices.append(self.exog_data[self.V[key]][self.choice_index==ii]
+                                    .values.reshape(self.nobs, -1)))
+
+        for key in self.V:
+            exog_bychoices_names.append(self.V[key])
+
+        self.exog_bychoices = exog_bychoices
+
+        # Betas
+        beta_not_common = ([len(exog_bychoices_names[ii])-self.ncommon
+                            for ii in range(self.J)])
+        zi = np.r_[[self.ncommon], self.ncommon + np.array(beta_not_common).cumsum()]
         z = np.arange(max(zi))
+        beta_ind = [np.r_[np.arange(self.ncommon), z[zi[ii]:zi[ii+1]]]
+                               for ii in range(len(zi)-1)] # index of betas
+        beta_ind = beta_ind
+        self.beta_ind = beta_ind
+        beta_ind_str = ([map(str, (np.r_[np.arange(self.ncommon),
+                                        z[zi[ii]:zi[ii+1]]]).tolist())
+                               for ii in range(len(zi)-1)])# str index of betas
 
-        params_indices = [np.r_[np.arange(ncommon), z[zi[ii]:zi[ii+1]]]
-                       for ii in range(len(zi)-1)]
+        print 'Coefficients: '
+        betas = {}
 
-        self.params_indices = params_indices
+        for sublist in range(self.J):
+            aa = []
+            for ii in range(len(exog_bychoices_names[sublist])):
+                aa.append( beta_ind_str[sublist][ii]
+                          +"_"+ exog_bychoices_names[sublist][ii] )
+            betas [sublist] = aa
 
-        params_num = []                                 # params to estimate
-        for sublist in params_indices:
-            for item in sublist:
-                if item not in params_num:
-                    params_num.append(item)
+        for key in betas:
+            print '{0} => {1:10}'.format(key, betas[key])
 
-        self.params_num = params_num
+        # Exog matrix
+        pieces =[]
+        Vkeys = []
+        for ii in range(self.J):
+            pieces.append(pd.DataFrame(exog_bychoices[ii], columns=betas[ii]))
+            Vkeys.append(ii+1)
 
-        self.df_model = len(self.params_num)
-        self.df_resid = int(self.nobs - len(self.params_num))
+        exog_matrix_all = (pd.concat(pieces, axis=0,keys = Vkeys, names =
+                           ['choice', 'nobs'])
+                           .fillna(value=0).sortlevel(1).reset_index())
 
+        self.exog_matrix = exog_matrix_all.iloc [:, 2:]
 
-        # TODO cleanup J/nchoice K / numparams
-        self.J = self.nchoices
-        self.K = len(self.params_num)
-
-    def _build_exog(self):
-        """
-        Build the exogenous matrix
-        """
-        # TODO exog_names. See at the end
-
-        return NotImplementedError
+        self.K = len(self.exog_matrix.columns)
+        self.df_model = self.K
+        self.df_resid = int(self.nobs - self.K)
 
     def xbetas(self, params):
-        '''these are the V_i
+        '''the Utilities V_i
+
         '''
-        res = np.empty((self.nobs, self.nchoices))
-        for choiceind in range(self.nchoices):
+        res = np.empty((self.nobs, self.J))
+        for choiceind in range(self.J):
             res[:, choiceind] = np.dot(self.exog_bychoices[choiceind],
-                                      params[self.params_indices[choiceind]])
+                                      params[self.beta_ind[choiceind]])
         return res
 
     def cdf(self, X):
@@ -129,20 +166,19 @@ class CLogit(GenericLikelihoodModel):
         Parameters
         ----------
         X : array
-            The linear predictor of the model XB.
+            the linear predictor of the model.
 
         Returns
         --------
         cdf : ndarray
-            The cdf evaluated at `X`.
+            the cdf evaluated at `X`.
 
         Notes
         -----
-        The cdf is the same as in the multinomial logit model.
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
         """
         eXB = np.exp(X)
-        return eXB/eXB.sum(1)[:, None]
+        return  eXB/eXB.sum(1)[:, None]
 
 
     def loglike(self, params):
@@ -152,14 +188,13 @@ class CLogit(GenericLikelihoodModel):
 
         Parameters
         ----------
-        params : array-like
-            The parameters of the conditional logit model.
+        params : array
+            the parameters of the conditional logit model.
 
         Returns
         -------
         loglike : float
-            The log-likelihood function of the model evaluated at `params`.
-            See notes.
+            the log-likelihood function of the model evaluated at `params`.
 
         Notes
         ------
@@ -168,14 +203,11 @@ class CLogit(GenericLikelihoodModel):
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
 
-        The loglike is the same as for the multinomial logit model.
         """
-
         xb = self.xbetas(params)
-        loglike = (self.endog * np.log(self.cdf(xb))).sum(1)
+        loglike = (self.endog_bychoices * np.log(self.cdf(xb))).sum(1)
 
         return loglike.sum()
-
 
     def scoreX(self, params):
         """
@@ -184,58 +216,66 @@ class CLogit(GenericLikelihoodModel):
         Parameters
         ----------
         params : array
-            The parameters of the conditional logit model.
+            the parameters of the conditional logit model.
 
         Returns
         --------
-        score : ndarray, (K * (J-1),)
-            The 2-d score vector, i.e. the first derivative of the
-            loglikelihood function, of the conditional logit model evaluated at
-            `params`.
+        score : ndarray 1d (K)
+            the score vector of the model evaluated at `params`.
 
         Notes
         -----
+        It is the first derivative of the loglikelihood function of the
+        conditional logit model evaluated at `params`.
+
         .. math:: \\frac{\\partial\\ln L}{\\partial\\beta_{j}}=\\sum_{i}\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
 
         for :math:`j=1,...,J`
-
-        In the multinomial model the score matrix is K x J-1 but is returned
-        as a flattened array to work with the solvers.
         """
+        # TODO
+#       Rgradient = np.array([ -1.60028400e-09,  -2.46809100e-09,
+#                                  4.05103000e-11, 1.79633500e-09,
+#                                  3.78327600e-11,  -9.05671600e-11])
+#        gc,ttme,air:(intercept),hinc_air,train:(intercept),bus:(intercept)
 
-        #firstterm = self.endog[:,1:] - self.cdf(np.dot(self.xbetas(params)))[:,1:]
-        #return np.dot(firstterm.T, self.exog).flatten()
+#        firsterm = (self.endog_bychoices - self.cdf(self.xbetas(params))).flatten('F')
+#
+#        return np.dot(firsterm.T, self.exog_matrix.values)
 
-        raise NotImplementedError
 
-    def jacX(self, params):
+
+    def jac(self, params):
         """
-        Jacobian matrix for conditional logit model log-likelihood
+        Jacobian matrix for conditional logit model log-likelihood.
 
         Parameters
         ----------
         params : array
-            The parameters of the conditional logit model.
+            the parameters of the conditional logit model.
 
         Returns
         --------
-        jac : ndarray, (nobs, k_vars*(J-1))
-            The derivative of the loglikelihood for each observation evaluated
-            at `params` .
+        jac : ndarray, (nobs, K)
+            the jacobian for each observation.
 
         Notes
         -----
+        It is the first derivative of the loglikelihood function of the
+        conditional logit model for each observation evaluated at `params`.
+
         .. math:: \\frac{\\partial\\ln L_{i}}{\\partial\\beta_{j}}=\\left(d_{ij}-\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right)x_{i}
 
         for :math:`j=1,...,J`, for observations :math:`i=1,...,n`
 
-        In the multinomial model the score vector is K x (J-1) but is returned
-        as a flattened array. The Jacobian has the observations in rows and
-        the flatteded array of derivatives in columns.
+        The jac is (nobs , K) but is returned as a flattened array.
+        The Jacobian has the observations in rows and the flatteded array of
+        derivatives in columns.
         """
 
-       # firstterm = self.endog[:,1:] - self.cdf(self.xbetas(params))[:,1:]
-       # return (firstterm[:,:,None] * self.exog[:,None,:]).reshape(self.exog.shape[0], -1)
+#        firsterm = (self.endog_bychoices - self.cdf(self.xbetas(params))).flatten('F')
+#
+#        return (firsterm [:, None] * self.exog_matrix.values).flatten()
+
         return NotImplementedError
 
     def hessianX(self, params):
@@ -249,23 +289,20 @@ class CLogit(GenericLikelihoodModel):
 
         Returns
         -------
-        hess : ndarray, (J*K, J*K)
-            The Hessian, second derivative of loglikelihood function with
-            respect to the flattened parameters, evaluated at `params`
-
+        hess : ndarray, (K, K)
+            The Hessian
         Notes
         -----
+        It is the second derivative with respect to the flattened parameters
+        of the loglikelihood function of the conditional logit model
+        evaluated at `params`.
+
         .. math:: \\frac{\\partial^{2}\\ln L}{\\partial\\beta_{j}\\partial\\beta_{l}}=-\\sum_{i=1}^{n}\\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\left[\\boldsymbol{1}\\left(j=l\\right)-\\frac{\\exp\\left(\\beta_{l}^{\\prime}x_{i}\\right)}{\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}\\right]x_{i}x_{l}^{\\prime}
 
         where
         :math:`\\boldsymbol{1}\\left(j=l\\right)` equals 1 if `j` = `l` and 0
         otherwise.
-
-        In the multinomial model the actual Hessian matrix has J**2 * K x K elements. The Hessian
-        is reshaped to be square (J*K, J*K) so that the solvers can use it. This implementation does not take advantage of the symmetry of
-        the Hessian and could probably be refactored for speed.
         """
-
         return NotImplementedError
 
 
@@ -276,47 +313,49 @@ class CLogit(GenericLikelihoodModel):
         In a model linear the log-likelihood function of the sample, is
         global concave for β parameters, which facilitates its numerical
         maximization (McFadden, 1973).
-        Fixed Method = Newton, because it'll find the maximum in a few iterations.
-        Newton method require a likelihood function, a score/gradient,
+        Fixed Method = Newton, because it'll find the maximum in a few
+        iterations. Newton method require a likelihood function, a score/gradient,
         and a Hessian. Since analytical solutions are known, we give it.
-
+        Initial parameters estimates from the standard logit
         Returns
         -------
         Fit object for likelihood based models
         See: GenericLikelihoodModelResults
 
         """
-        #ORRO (2006) documentación np.ones??
+
         if start_params is None:
-            start_params = np.zeros(len(self.params_num))
+            print 'Estimating initial parameters..'
+            logit_mod = sm.Logit(self.endog , self.exog_matrix)
+            logit_res = logit_mod.fit()
+            start_params  = logit_res.params.values
+            print start_params
         else:
             start_params = np.asarray(start_params)
 
-        # TODO: check number of  iterations. Seems too high.
         start_time = time.time()
-
+        print 'Estimating model..'
         model_fit =  super(CLogit, self).fit(start_params=start_params, method=method,
                                     maxiter=maxiter, maxfun=maxfun,**kwds)
-
         end_time = time.time()
-        print("the elapsed time was %g seconds" % (end_time - start_time))
+        self.elapsed_time = end_time - start_time
+        print("the elapsed time was %g seconds" % (self.elapsed_time))
         return model_fit
 
 ### Results Class ###
 
-class CLogitResults (DiscreteResults):
+class CLogitResults (GenericLikelihoodModelResults):
 
-# TODO on summary: frequencies of alternatives, McFadden R^2, Likelihood
-#   ratio test, method, iterations.
+    # TODO on summary: frequencies of alternatives, McFadden R^2, Likelihood
+    #   ratio test, method, iterations.
 
-    def __init__(self, model, mlefit):
-        #super(DiscreteResults, self).__init__(model, params,
-        #        np.linalg.inv(-hessian), scale=1.)
+    def __init__(self, model, mlefit, **kwds):
+
         self.model = model
-        self.df_model = model.df_model
-        self.df_resid = model.df_resid
-        self.nobs = model.endog.shape[0]
+        self.mlefit = mlefit
+        self.nobs_bychoice = model.nobs
         self.__dict__.update(mlefit.__dict__)
+        self.xname = model.exog_matrix.columns.tolist()
 
     def __getstate__(self):
         try:
@@ -326,16 +365,8 @@ class CLogitResults (DiscreteResults):
             pass
         return self.__dict__
 
-    def _get_endog_name(self, yname, yname_list):
-        if yname is None:
-            yname = self.model.endog_names
-        if yname_list is None:
-            yname_list = self.model.endog_names
-        return yname, yname_list
-
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 yname_list=None):
-
         """Summarize the Clogit Results
 
         Parameters
@@ -365,14 +396,15 @@ class CLogitResults (DiscreteResults):
 
         top_left = [('Dep. Variable:', None),
                      ('Model:', [self.model.__class__.__name__]),
-                     ('Method:', ['NotImplemented'] ),
+                     ('Method:', ['MLE']),
                      ('Date:', None),
                      ('Time:', None),
                      ('Converged:', ["%s" % self.mle_retvals['converged']]),
+                     ('Iterations:', ["%s" % self.mle_retvals['iterations']]),
                      ('Elapsed time:' , ['NotImplemented'] )
                       ]
 
-        top_right = [('No. Observations:', None),
+        top_right = [('No. Observations:', [self.nobs_bychoice]),
                      ('Df Residuals:', None),
                      ('Df Model:', None),
                      ('Log-Likelihood:', None),
@@ -380,7 +412,7 @@ class CLogitResults (DiscreteResults):
 
         if title is None:
             title = self.model.__class__.__name__ + ' ' + \
-            "new class of results - in process of implementing"
+            "class of results"
 
         #boiler plate
         from statsmodels.iolib.summary import Summary
@@ -395,5 +427,44 @@ class CLogitResults (DiscreteResults):
 
 if __name__ == "__main__":
 
-    # examples
-    import dcm_clogit_examples
+    # example
+    import pandas as pd
+    from patsy import dmatrices
+
+    url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
+    file_ = "ModeChoice.csv"
+    import os
+    if not os.path.exists(file_):
+        import urllib
+        urllib.urlretrieve(url, "ModeChoice.csv")
+    df = pd.read_csv(file_)
+    pd.set_printoptions(max_rows=1000, max_columns=20)
+    df.describe()
+
+    f = 'mode  ~ ttme+invc+invt+gc+hinc+psize'
+    y, X = dmatrices(f, df, return_type='dataframe')
+
+    ### Names of the variables for the utility function for each alternative
+    #Variables with common coefficients have to be first in each array
+    V = {
+        "1": ['gc', 'Intercept', 'hinc'],
+        "2": ['gc', 'Intercept', 'hinc'],
+        "3": ['gc', 'Intercept', 'hinc'],
+        "4": ['gc'],
+         }
+
+    #Number of common coefficients
+    ncommon= 1
+
+    ###
+    start_time = time.time()
+
+    clogit_mod  =  CLogit (y, X,  V, ncommon)
+    clogit_res =  clogit_mod.fit()
+
+    end_time = time.time()
+    print("the whole elapsed time was %g seconds.") % (end_time - start_time)
+
+    print clogit_mod.exog_matrix.columns.tolist()
+    print clogit_res.params
+    print CLogitResults(clogit_mod, clogit_res).summary()
