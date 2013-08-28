@@ -8,7 +8,8 @@ See:
 https://github.com/statsmodels/statsmodels/wiki/DCM:-Discrete-choice-models
 
 """
-import pandas as pandas
+
+import pandas as pd
 import numpy as np
 from patsy import dmatrices
 import time
@@ -35,14 +36,7 @@ Note: There's a typo on TABLE 21.11. βT isn't -0.19612 is -0.09612
     see TABLE 21.13 to check
 """
 
-print u"""
-
-Example 1. Replicate Greene (2003) results.
-TABLE 21.11 Parameter Estimates. Unweighted Sample
-    βG       βT      αair        γH         αtrain       αbus
-[-0.015501  -0.09612   5.2074  0.01328757  3.86905293  3.16319074]
-
-"""
+### Data
 # TODO: use datasets instead
 url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
 file_ = "ModeChoice.csv"
@@ -50,8 +44,8 @@ import os
 if not os.path.exists(file_):
     import urllib
     urllib.urlretrieve(url, "ModeChoice.csv")
-df = pandas.read_csv(file_)
-pandas.set_printoptions(max_rows=1000, max_columns=20)
+df = pd.read_csv(file_)
+pd.set_printoptions(max_rows=1000, max_columns=20)
 df.describe()
 
 nchoices = 4
@@ -64,46 +58,47 @@ y, X = dmatrices(f, df, return_type='dataframe')
 y.head()
 X.head()
 
-endog = y.to_records()
-endog = endog['mode'].reshape(-1, nchoices)
+endog_data = y
+exog_data = X
 
-dta = X.to_records()
-dta1 = np.array(dta)
+print u"""
 
-xivar = [['gc', 'ttme', 'Intercept','hinc_air'],
-         ['gc', 'ttme', 'Intercept'],
-         ['gc', 'ttme', 'Intercept'],
-         ['gc', 'ttme' ]]
+Example 1. Replicate Greene (2003) results.
+TABLE 21.11 Parameter Estimates. Unweighted Sample
+    βG       βT      αair        γH         αtrain       αbus
+[-0.015501  -0.09612   5.2074  0.01328757  3.86905293  3.16319074]
 
-xi = []
+"""
 
-for ii in range(nchoices):
-    xi.append(dta1[xivar[ii]][choice_index==ii])
+# Names of the variables for the utility function for each alternative
+# variables with common coefficients have to be first in each array
+V = {
+    "1": ['gc', 'ttme', 'Intercept','hinc_air'],
+    "2": ['gc', 'ttme', 'Intercept'],
+    "3": ['gc', 'ttme', 'Intercept'],
+    "4": ['gc', 'ttme' ],
+     }
 
-xifloat = ( [X.ix[choice_index == ii, xi_names].values
-            for ii, xi_names in enumerate(xivar)] )
+# Number of common coefficients
+ncommon= 2
 
+# Model
 start_time = time.time()
-clogit_mod  = CLogit(endog, xifloat, 2)
-clogit_res =  clogit_mod.fit()
+
+clogit_mod  =  CLogit (endog_data, exog_data, V, ncommon)
+clogit_res  =  clogit_mod.fit()
+
 end_time = time.time()
-print("the elapsed time to estimate the whole example 1 was %g seconds"
+print("the whole elapsed time was %g seconds."
 % (end_time - start_time))
 
-exog_names = u'     βG         βT        αair          γH          αtrain   \
-    αbus'.split()
-print u'     βG         βT        αair          γH          αtrain       αbus'
+# Results
+print clogit_mod.exog_matrix.columns.tolist()
 print clogit_res.params
-
-
-exog_names = u'G T const_air H const_train const_bus'.split()
-print clogit_res.summary(yname='Travel Mode', xname=exog_names)
-
 print CLogitResults(clogit_mod, clogit_res).summary()
 
-hessian = clogit_mod.hessian(clogit_res.params)
-s = 'The value of hessian hessian is '+ '\r' + str(hessian)
-print s
+# hessian = clogit_mod.hessian(clogit_res.params)
+# print hessian
 
 """
 # R code for example 1
@@ -175,30 +170,35 @@ Example 2
         with a generic coefficient (βinvc)
 
 """
-xivar2 = [['invc', 'Intercept'],
-          ['invc', 'Intercept'],
-          ['invc', 'Intercept'],
-          ['invc' ]]
+# Names of the variables for the utility function for each alternative
+# variables with common coefficients have to be first in each array
+V = {
+    "1": ['invc', 'Intercept'],
+    "2": ['invc', 'Intercept'],
+    "3": ['invc', 'Intercept'],
+    "4": ['invc'  ],
+     }
 
-xi2 = []
+# Number of common coefficients
+ncommon= 1
 
-for ii in range(nchoices):
-    xi2.append(dta1[xivar2[ii]][choice_index==ii])
+# Model
+start_time = time.time()
 
-xifloat2 = ( [X.ix[choice_index == ii, xi2_names].values
-                for ii, xi2_names in enumerate(xivar2)] )
+clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
+clogit_res =  clogit_mod.fit()
 
-star_time = time.time()
-clogit_mod2 = CLogit(endog, xifloat2, 1)
-clogit_res2 = clogit_mod2.fit()
 end_time = time.time()
-print("the elapsed time to estimate the whole example 2 was %g seconds"
+print("the whole elapsed time was %g seconds."
 % (end_time - start_time))
 
-print clogit_res2.params
-exog_names = u'invc const_air const_train const_bus'.split()
-print clogit_res2.summary(yname='Travel Mode', xname=exog_names)
-print CLogitResults(clogit_mod2, clogit_res2).summary()
+# Results
+print clogit_mod.exog_matrix.columns.tolist()
+print clogit_res.params
+print CLogitResults(clogit_mod, clogit_res).summary()
+
+#hessian2 = clogit_mod2.hessian(clogit_res2.params)
+#print hessian2
 
 """
     Call:
@@ -227,9 +227,7 @@ Log-Likelihood: -280.54
 McFadden R^2:  0.011351
 Likelihood ratio test : chisq = 6.4418 (p.value = 0.011147)
 """
-hessian2 = clogit_mod2.hessian(clogit_res2.params)
 
-print hessian2
 
 print u"""
 R results
@@ -251,40 +249,36 @@ Example 3
         with a generic coefficient (βG)
 """
 
-xivar3 = [['gc'],
-         ['gc'],
-         ['gc'],
-         ['gc']]
+# Names of the variables for the utility function for each alternative
+# variables with common coefficients have to be first in each array
+V = {
+    "1": ['gc'],
+    "2": ['gc'],
+    "3": ['gc'],
+    "4": ['gc'],
+     }
 
-xi = []
+# Number of common coefficients
+ncommon= 1
 
-for ii in range(nchoices):
-    xi.append(dta1[xivar3[ii]][choice_index==ii])
-
-xifloat3 = ( [X.ix[choice_index == ii, xi_names].values
-                for ii, xi_names in enumerate(xivar3)] )
+# Model
 start_time = time.time()
-clogit_mod3  = CLogit(endog, xifloat3, 1)
-clogit_res3 =  clogit_mod3.fit()
+
+clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
+clogit_res =  clogit_mod.fit()
+
 end_time = time.time()
-print("the elapsed time to estimate the whole example 3 was %g seconds"
+print("the whole elapsed time was %g seconds."
 % (end_time - start_time))
 
-exog_names = u'βT        αai        αtrain       αbus'.split()
-print u'βT        αai        αtrain       αbus'
-print clogit_res3.params
+# Results
+print clogit_mod.exog_matrix.columns.tolist()
+print clogit_res.params
+print CLogitResults(clogit_mod, clogit_res).summary()
 
+#hessian = clogit_mod.hessian(clogit_res.params)
+#print hessian
 
-exog_names = u'gc'.split()
-print clogit_res3.summary(yname='Travel Mode', xname=exog_names)
-
-print CLogitResults(clogit_mod3, clogit_res3).summary()
-
-hessian3 = clogit_mod3.hessian(clogit_res3.params)
-s = 'The value of hessian hessian is '+ '\r' + str(hessian3)
-print s
-
-#############################################################################
 print u"""
 Example 4
     *four alternative-specific constants (αair, αtrain, αbus, αcar)
@@ -298,30 +292,70 @@ Example 4
 Ui j = αair + αtrain + αbus + βG*gcij
         + γHair*hinci + γHtrain*hinci+ γHtbus*hinci+ εij
 """
-xivar = [['gc', 'Intercept','hinc'],
-         ['gc', 'Intercept','hinc'],
-         ['gc', 'Intercept','hinc'],
-         ['gc' ]]
 
-xi = []
+# Names of the variables for the utility function for each alternative
+# variables with common coefficients have to be first in each array
+V = {
+    "1": ['gc', 'Intercept','hinc'],
+    "2": ['gc', 'Intercept','hinc'],
+    "3": ['gc', 'Intercept','hinc'],
+    "4": ['gc'],
+     }
 
-for ii in range(nchoices):
-    xi.append(dta1[xivar[ii]][choice_index==ii])
+# Number of common coefficients
+ncommon= 1
 
-xifloat = ( [X.ix[choice_index == ii, xi_names].values
-            for ii, xi_names in enumerate(xivar)] )
-
+# Model
 start_time = time.time()
-clogit_mod  = CLogit(endog, xifloat, 1)
-clogit_res =  clogit_mod.fit()
-end_time = time.time()
-print("the elapsed time to estimate the whole example 1 was %g seconds"
-% (end_time - start_time))
-print clogit_res.params
-print clogit_res.summary(yname='Travel Mode')
 
+clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
+clogit_res =  clogit_mod.fit()
+
+end_time = time.time()
+print("the whole elapsed time was %g seconds."
+% (end_time - start_time))
+
+# Results
+print clogit_mod.exog_matrix.columns.tolist()
+print clogit_res.params
 print CLogitResults(clogit_mod, clogit_res).summary()
 
-hessian = clogit_mod.hessian(clogit_res.params)
-s = 'The value of hessian hessian is '+ '\r' + str(hessian)
-print s
+#hessian = clogit_mod.hessian(clogit_res.params)
+#print hessian
+
+print u"""
+Example 5
+    *one individual specific variables (hinc)
+        with an alternative specific coefficient (γHair,γHtrain,γHbus,γHcar)
+        γHcar dropped for identification
+
+"""
+# Names of the variables for the utility function for each alternative
+# variables with common coefficients have to be first in each array
+V = {
+    "1": ['hinc'],
+    "2": ['hinc'],
+    "3": ['hinc'],
+    "4": [],
+     }
+
+# Number of common coefficients
+ncommon= 0
+
+# Model
+start_time = time.time()
+
+clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
+clogit_res =  clogit_mod.fit()
+
+end_time = time.time()
+print("the whole elapsed time was %g seconds."
+% (end_time - start_time))
+
+# Results
+print clogit_mod.exog_matrix.columns.tolist()
+print clogit_res.params
+print CLogitResults(clogit_mod, clogit_res).summary()
+
+#hessian = clogit_mod.hessian(clogit_res.params)
+#print hessian
