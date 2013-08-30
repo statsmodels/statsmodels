@@ -20,7 +20,7 @@ from statsmodels.base.model import (GenericLikelihoodModel,
                                     GenericLikelihoodModelResults)
 import statsmodels.api as sm
 import time
-
+from collections import OrderedDict
 
 class CLogit(GenericLikelihoodModel):
     __doc__ = """
@@ -90,14 +90,15 @@ class CLogit(GenericLikelihoodModel):
 
         # Endog_bychoices
         self.endog_bychoices = endog_data.values.reshape(-1, self.J)
+
         # Exog_bychoices
         exog_bychoices = []
         exog_bychoices_names = []
-        self.choice_index = np.arange(self.J * self.nobs) % self.J
+        self.choice_index = np.array(V.keys() * self.nobs)
 
-        for ii, key in enumerate(iter(self.V)):
+        for key in iter(self.V):
             (exog_bychoices.append(self.exog_data[self.V[key]]
-                                    [self.choice_index == ii]
+                                    [self.choice_index == key]
                                     .values.reshape(self.nobs, -1)))
 
         for key in self.V:
@@ -108,6 +109,11 @@ class CLogit(GenericLikelihoodModel):
         # Betas
         beta_not_common = ([len(exog_bychoices_names[ii]) - self.ncommon
                             for ii in range(self.J)])
+        exog_names_prueba = []
+
+        for ii, key in enumerate(self.V):
+            exog_names_prueba.append(key * beta_not_common[ii])
+
         zi = np.r_[[self.ncommon], self.ncommon + np.array(beta_not_common)\
                     .cumsum()]
         z = np.arange(max(zi))
@@ -117,9 +123,9 @@ class CLogit(GenericLikelihoodModel):
         self.beta_ind = beta_ind
         beta_ind_str = ([map(str, (np.r_[np.arange(self.ncommon),
                                         z[zi[ii]:zi[ii + 1]]]).tolist())
-                               for ii in range(len(zi) - 1)])  # str index of betas
+                              for ii in range(len(zi) - 1)])  # str index of betas
 
-        betas = {}
+        betas = OrderedDict()
 
         for sublist in range(self.J):
             aa = []
@@ -138,7 +144,7 @@ class CLogit(GenericLikelihoodModel):
             pieces.append(pd.DataFrame(exog_bychoices[ii], columns=betas[ii]))
             Vkeys.append(ii + 1)
 
-        self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = Vkeys,
+        self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = V.keys(),
                                      names =['choice', 'nobs'])
                            .fillna(value = 0).sortlevel(1).reset_index())
 
@@ -147,8 +153,8 @@ class CLogit(GenericLikelihoodModel):
         print 'Parameters to estimate: '
         print self.exog_matrix.columns.tolist()
 
-        super(CLogit, self).__init__(endog = endog_data, exog = self.exog_matrix,
-                                        **kwds)
+        super(CLogit, self).__init__(endog = endog_data,
+                    exog = self.exog_matrix, **kwds)
 
         self.K = len(self.exog_matrix.columns)
         self.df_model = self.K
@@ -265,7 +271,7 @@ class CLogit(GenericLikelihoodModel):
 
         for :math:`j=1,...,J`
         """
-
+        # TODO check with other statistical packages
         firstterm = (self.endog_bychoices - self.cdf(self.xbetas(params)))\
                     .reshape(-1, 1)
         return  np.dot(firstterm.T, self.exog).flatten()
@@ -294,6 +300,7 @@ class CLogit(GenericLikelihoodModel):
         for :math:`j=1,...,J`, for observations :math:`i=1,...,n`
 
         """
+        # TODO check with other statistical packages
 
         firsterm = (self.endog_bychoices - self.cdf(self.xbetas(params)))\
                     .reshape(-1, 1)
@@ -389,8 +396,7 @@ class CLogitResults (GenericLikelihoodModelResults):
             pass
         return self.__dict__
 
-
-    def summary(self, title= None, alpha=.05):
+    def summary(self, title = None, alpha = .05):
         """Summarize the Clogit Results
 
         Parameters
@@ -404,7 +410,7 @@ class CLogitResults (GenericLikelihoodModelResults):
         Returns
         -------
         smry : Summary instance
-            this holds the summary tables and text, which caclon be printed or
+            this holds the summary tables and text, which can be printed or
             converted to various output formats.
 
         See Also
@@ -449,7 +455,6 @@ class CLogitResults (GenericLikelihoodModelResults):
         mydata = [self.freq_alt]
         myheaders = self.alt
         mytitle = ("Frequencies of alternatives: ")
-
         tbl = SimpleTable(mydata, myheaders, title = mytitle,
                           data_fmts = ["%3.3f"])
         smry.tables.append(tbl)
@@ -478,14 +483,19 @@ if __name__ == "__main__":
     y, X = dmatrices(f, df, return_type='dataframe')
 
     # Names of the variables for the utility function for each alternative
-    # variables with common coefficients have to be first in each array
-    V = {
-        "air": ['gc', 'ttme', 'Intercept', 'hinc'],
-        "train": ['gc', 'ttme', 'Intercept'],
-        "bus ": ['gc', 'ttme', 'Intercept'],
-        "car": ['gc', 'ttme']
-        }
+    # V = OrderedDict((
+    #    ('choice 1', ['vrbe1', 'Intercept', 'vrble2',  'vrble3']),
+    #    ('choice 2', ['vrbe1', 'Intercept', 'vrble2']),
+    #    ('choice 3', ['vrbe1']),
+    #    ))
 
+
+    V = OrderedDict((
+        ('air', ['gc', 'ttme', 'Intercept', 'hinc']),
+        ('train', ['gc', 'ttme', 'Intercept']),
+        ('bus', ['gc', 'ttme', 'Intercept']),
+        ('car', ['gc', 'ttme'])
+        ))
     # Number of common coefficients
     ncommon = 2
 
