@@ -13,6 +13,8 @@ import sys
 import subprocess
 import re
 
+from numpy.lib.utils import get_include as np_get_include
+
 # temporarily redirect config directory to prevent matplotlib importing
 # testing that for writeable directory which results in sandbox error in
 # certain easy_install versions
@@ -156,7 +158,7 @@ REV = 0
 ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
-classifiers = [ 'Development Status :: 4 - Beta',
+classifiers = ['Development Status :: 4 - Beta',
               'Environment :: Console',
               'Programming Language :: Python :: 2.6',
               'Programming Language :: Python :: 2.7',
@@ -382,10 +384,22 @@ common_include = []
 #NOTE: we are not currently using this but add it to Extension, if needed.
 # libraries = ['m'] if 'win32' not in sys.platform else []
 
+from statsmodels._build_utils import get_blas_info
+cblas_libs, blas_info = get_blas_info()
+cblas_compile_args = blas_info.pop('extra_compile_args', [])
+cblas_includes = [pjoin('statsmodels', 'src', 'cblas'),
+                  np_get_include()]
+if blas_info.get('include_dirs', False):
+    cblas_includes += blas_info.pop('include_dirs')
+
 ext_data = dict(
         kalman_loglike = {"pyxfile" : "tsa/kalmanf/kalman_loglike",
                   "depends" : [],
-                  "sources" : []},
+                  "libraries" : cblas_libs,
+                  "sources" : [],
+                  "extra_compile_args" : cblas_compile_args,
+                  "include" : cblas_includes,
+                  }, # blas_info added below
 
         linbin = {"pyxfile" : "nonparametric/linbin",
                  "depends" : [],
@@ -395,25 +409,28 @@ ext_data = dict(
                  "sources" : []}
         )
 
+ext_data['kalman_loglike'].update(blas_info)
+
 def pxd(name):
-    return os.path.abspath(pjoin('pandas', name + '.pxd'))
+    return os.path.abspath(pjoin('statsmodels', name + '.pxd'))
 
 extensions = []
 for name, data in ext_data.items():
-    sources = [srcpath(data['pyxfile'], suffix=suffix, subdir='')]
-    pxds = [pxd(x) for x in data.get('pxdfiles', [])]
-    destdir = ".".join(os.path.dirname(data["pyxfile"]).split("/"))
+    pyxfile = data.pop('pyxfile')
+    sources = [srcpath(pyxfile, suffix=suffix, subdir='')]
+    pxds = [pxd(x) for x in data.pop('pxdfiles', [])]
+    destdir = ".".join(os.path.dirname(pyxfile).split("/"))
     if suffix == '.pyx' and pxds:
         sources.extend(pxds)
 
-    sources.extend(data.get('sources', []))
+    sources.extend(data.pop('sources', []))
 
-    include = data.get('include', common_include)
+    include = common_include + data.pop('include', [])
 
     obj = Extension('statsmodels.%s.%s' % (destdir, name),
                     sources=sources,
-                    depends=data.get('depends', []),
-                    include_dirs=include)
+                    include_dirs=include,
+                    **data)
 
     extensions.append(obj)
 
