@@ -505,9 +505,11 @@ class KalmanFilter(object):
         ----------
         Durbin and Koopman Section 3.7.
         """
-        arr = zeros((r,r), dtype=params.dtype) # allows for complex-step
-                                                  # derivative
-        params_padded = zeros(r, dtype=params.dtype) # handle zero coefficients if necessary
+        arr = zeros((r, r), dtype=params.dtype, order="F")
+        # allows for complex-step derivative
+        params_padded = zeros(r, dtype=params.dtype,
+                              order="F")
+                        # handle zero coefficients if necessary
         #NOTE: squeeze added for cg optimizer
         params_padded[:p] = params[k:p+k]
         arr[:,0] = params_padded   # first p params are AR coeffs w/ short params
@@ -538,8 +540,9 @@ class KalmanFilter(object):
         ----------
         Durbin and Koopman Section 3.7.
         """
-        arr = zeros((r,1), dtype=params.dtype) # this allows zero coefficients
-                                                  # dtype allows for compl. der.
+        arr = zeros((r, 1), dtype=params.dtype, order="F")
+                               # this allows zero coefficients
+                               # dtype allows for compl. der.
         arr[1:q+1,:] = params[p+k:p+k+q][:,None]
         arr[0] = 1.0
         return arr
@@ -560,7 +563,7 @@ class KalmanFilter(object):
         Currently only returns a 1 x r vector [1,0,0,...0].  Will need to
         be generalized when the Kalman Filter becomes more flexible.
         """
-        arr = zeros((1,r))
+        arr = zeros((1,r), order="F")
         arr[:,0] = 1.
         return arr
 
@@ -639,14 +642,14 @@ class KalmanFilter(object):
         #TODO: this won't work for time-varying parameters
         (y, k, nobs, k_ar, k_ma, k_lags, newparams, Z_mat, m, R_mat, T_mat,
                 paramsdtype) = cls._init_kalman_state(params, arma_model)
-
         if issubdtype(paramsdtype, float):
             loglike, sigma2 =  kalman_loglike.kalman_loglike_double(y, k,
                                     k_ar, k_ma, k_lags, int(nobs), Z_mat,
                                     R_mat, T_mat)
         elif issubdtype(paramsdtype, complex):
             loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
-                                    k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                    k_ar, k_ma, k_lags, int(nobs),
+                                    Z_mat.astype(complex),
                                     R_mat, T_mat)
         else:
             raise TypeError("This dtype %s is not supported "
@@ -654,7 +657,7 @@ class KalmanFilter(object):
         if set_sigma2:
             arma_model.sigma2 = sigma2
 
-        return loglike.item() # return a scalar not a 0d array
+        return loglike
 
 
 if __name__ == "__main__":
