@@ -48,3 +48,5 @@ help
 
 # Project specific
 statsmodels/version.py
+docs/rehab.table
+docs/salary.table
