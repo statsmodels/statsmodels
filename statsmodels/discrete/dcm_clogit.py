@@ -16,13 +16,17 @@ Train, K. `Discrete Choice Methods with Simulation`.
 
 import numpy as np
 import pandas as pd
-from statsmodels.base.model import (GenericLikelihoodModel,
-                                    GenericLikelihoodModelResults)
+from statsmodels.base.model import (LikelihoodModel,
+                                    LikelihoodModelResults, ResultMixin)
 import statsmodels.api as sm
 import time
 from collections import OrderedDict
+from scipy import stats
 
-class CLogit(GenericLikelihoodModel):
+# TODO: public/private method
+
+
+class CLogit(LikelihoodModel):
     __doc__ = """
     Conditional Logit
 
@@ -42,6 +46,11 @@ class CLogit(GenericLikelihoodModel):
         drop all specific variables on it.
     ncommon : int
         number of explanatory variables with common coefficients.
+    ref_level : str
+        Name of the key for the alternative of reference.
+    name_intercept : str
+        name of the column with the intercept. 'None' if an intercept is not
+        included.
 
     Attributes
     ----------
@@ -79,26 +88,46 @@ class CLogit(GenericLikelihoodModel):
     For identification, the constant of one choice should be dropped.
     """
 
-    def __init__(self, endog_data, exog_data, V, ncommon, **kwds):
+    def __init__(self, endog_data, exog_data, V, ncommon, ref_level,
+                         name_intercept = None, **kwds):
 
+        self.endog_data = endog_data
         self.exog_data = exog_data
+
         self.V = V
         self.ncommon = ncommon
 
+        self.ref_level = ref_level
+
+        if name_intercept == None:
+            self.exog_data['Intercept'] = 1
+            self.name_intercept = 'Intercept'
+        else:
+            self.name_intercept = name_intercept
+
+        self._initialize()
+        super(CLogit, self).__init__(endog = endog_data,
+                exog = self.exog_matrix, **kwds)
+
+    def _initialize(self):
+        """
+        Preprocesses the data for Clogit
+        """
+
         self.J = len(self.V)
-        self.nobs = endog_data.shape[0] / self.J
+        self.nobs = self.endog_data.shape[0] / self.J
 
         # Endog_bychoices
-        self.endog_bychoices = endog_data.values.reshape(-1, self.J)
+        self.endog_bychoices = self.endog_data.values.reshape(-1, self.J)
 
         # Exog_bychoices
         exog_bychoices = []
         exog_bychoices_names = []
-        self.choice_index = np.array(V.keys() * self.nobs)
+        choice_index = np.array(self.V.keys() * self.nobs)
 
         for key in iter(self.V):
             (exog_bychoices.append(self.exog_data[self.V[key]]
-                                    [self.choice_index == key]
+                                    [choice_index == key]
                                     .values.reshape(self.nobs, -1)))
 
         for key in self.V:
@@ -119,11 +148,10 @@ class CLogit(GenericLikelihoodModel):
         z = np.arange(max(zi))
         beta_ind = [np.r_[np.arange(self.ncommon), z[zi[ii]:zi[ii + 1]]]
                                for ii in range(len(zi) - 1)]  # index of betas
-        beta_ind = beta_ind
         self.beta_ind = beta_ind
         beta_ind_str = ([map(str, (np.r_[np.arange(self.ncommon),
                                         z[zi[ii]:zi[ii + 1]]]).tolist())
-                              for ii in range(len(zi) - 1)])  # str index of betas
+                             for ii in range(len(zi) - 1)])  # str index of betas
 
         betas = OrderedDict()
 
@@ -135,7 +163,7 @@ class CLogit(GenericLikelihoodModel):
             betas[sublist] = aa
 
         for key in betas:
-            print '{0} => {1:10}'.format(V.keys()[key], betas[key])
+            print '{0} => {1:10}'.format(self.V.keys()[key], betas[key])
 
         # Exog
         pieces = []
@@ -144,8 +172,8 @@ class CLogit(GenericLikelihoodModel):
             pieces.append(pd.DataFrame(exog_bychoices[ii], columns=betas[ii]))
             Vkeys.append(ii + 1)
 
-        self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = V.keys(),
-                                     names =['choice', 'nobs'])
+        self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = self.V.keys(),
+                                     names = ['choice', 'nobs'])
                            .fillna(value = 0).sortlevel(1).reset_index())
 
         self.exog_matrix = self.exog_matrix_all.iloc[:, 2:]
@@ -153,12 +181,10 @@ class CLogit(GenericLikelihoodModel):
         print 'Parameters to estimate: '
         print self.exog_matrix.columns.tolist()
 
-        super(CLogit, self).__init__(endog = endog_data,
-                    exog = self.exog_matrix, **kwds)
+        K = len(self.exog_matrix.columns)
 
-        self.K = len(self.exog_matrix.columns)
-        self.df_model = self.K
-        self.df_resid = int(self.nobs - self.K)
+        self.df_model = K
+        self.df_resid = int(self.nobs - K)
 
     def xbetas(self, params):
         '''the Utilities V_i
@@ -170,7 +196,7 @@ class CLogit(GenericLikelihoodModel):
                                       params[self.beta_ind[choiceind]])
         return res
 
-    def cdf(self, X):
+    def cdf(self, item):
         """
         Conditional Logit cumulative distribution function.
 
@@ -188,7 +214,7 @@ class CLogit(GenericLikelihoodModel):
         -----
         .. math:: \\frac{\\exp\\left(\\beta_{j}^{\\prime}x_{i}\\right){\\sum_{k=0}^{J}\\exp\\left(\\beta_{k}^{\\prime}x_{i}\\right)}
         """
-        eXB = np.exp(X)
+        eXB = np.exp(item)
         return  eXB / eXB.sum(1)[:, None]
 
     def loglike(self, params):
@@ -271,10 +297,15 @@ class CLogit(GenericLikelihoodModel):
 
         for :math:`j=1,...,J`
         """
+
         # TODO check with other statistical packages
         firstterm = (self.endog_bychoices - self.cdf(self.xbetas(params)))\
                     .reshape(-1, 1)
-        return  np.dot(firstterm.T, self.exog).flatten()
+        return np.dot(firstterm.T, self.exog).flatten()
+
+#        from statsmodels.tools.numdiff import approx_fprime
+#
+#        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
 
     def jac(self, params):
         """
@@ -307,7 +338,7 @@ class CLogit(GenericLikelihoodModel):
 
         return (firsterm * self.exog)
 
-    def hessianX(self, params):
+    def hessian(self, params):
         """
         Conditional logit Hessian matrix of the log-likelihood
 
@@ -332,7 +363,19 @@ class CLogit(GenericLikelihoodModel):
         :math:`\\boldsymbol{1}\\left(j=l\\right)` equals 1 if `j` = `l` and 0
         otherwise.
         """
-        return NotImplement
+
+        # TODO: analytical derivatives
+        from statsmodels.tools.numdiff import approx_hess
+        # need options for hess (epsilon)
+        return approx_hess(params, self.loglike)
+
+    def information(self, params):
+        """
+        Fisher information matrix of model
+
+        Returns -Hessian of loglike evaluated at params.
+        """
+        raise NotImplementedError
 
     def fit(self, start_params=None, maxiter=10000, maxfun=5000,
             method="newton", full_output=1, disp=1, callback=None, **kwds):
@@ -354,16 +397,16 @@ class CLogit(GenericLikelihoodModel):
 
         if start_params is None:
             print 'Estimating initial parameters..'
-            logit_mod = sm.Logit(self.endog, self.exog_matrix)
-            logit_res = logit_mod.fit()
+            logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
             start_params = logit_res.params.values
+            print 'Initial parameters:'
             print start_params
         else:
             start_params = np.asarray(start_params)
 
         start_time = time.time()
         print 'Estimating model..'
-        model_fit = super(CLogit, self).fit(start_params=start_params,
+        model_fit = super(CLogit, self).fit(disp = 0, start_params = start_params,
                         method=method, maxiter=maxiter, maxfun=maxfun, **kwds)
         end_time = time.time()
         self.elapsed_time = end_time - start_time
@@ -374,19 +417,57 @@ class CLogit(GenericLikelihoodModel):
 ### Results Class ###
 
 
-class CLogitResults (GenericLikelihoodModelResults):
+class CLogitResults (LikelihoodModelResults, ResultMixin):
+    __doc__ = """
+        Parameters
+    ----------
+    model : A Discrete Choice Model instance.
 
-    # TODO on summary: McFadden R^2, Likelihood ratio test
+    mlfit : The results of the Discrete Choice Model fitted.
 
-    def __init__(self, model, mlefit, **kwds):
+    Returns
+    -------
+    aic : float
+        Akaike information criterion.  -2*(`llf` - p) where p is the number
+        of regressors including the intercept.
+    bic : float
+        Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
+        number of regressors including the intercept.
+    bse : array
+        The standard errors of the coefficients.
+    df_resid : float
+        Residual degrees-of-freedom of model.
+    df_model : float
+        Params.
+    fitted_values : array
+        Fitted values
+    llf : float
+        Value of the loglikelihood
+    llnull : float
+        Value of the constant-only loglikelihood
+    llr : float
+        Likelihood ratio chi-squared statistic; -2*(`llnull` - `llf`)
+    llrt: float
+        Likelihood ratio test
+    llr_pvalue : float
+        The chi-squared probability of getting a log-likelihood ratio
+        statistic greater than llr.  llr has a chi-squared distribution
+        with degrees of freedom `df_model`.
+    prsquared : float
+        McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
+    """
+
+    def __init__(self, model, mlefit):
 
         self.model = model
         self.mlefit = mlefit
         self.nobs_bychoice = model.nobs
-        self.__dict__.update(mlefit.__dict__)
+        self.nobs = model.endog.shape[0]
         self.alt = model.V.keys()
-        self.freq_alt = (model.endog_bychoices[:, ].sum(0) / model.nobs)\
+        self.freq_alt = model.endog_bychoices[:, ].sum(0).tolist()
+        self.perc_alt = (model.endog_bychoices[:, ].sum(0) / model.nobs)\
                         .tolist()
+        self.__dict__.update(self.mlefit.__dict__)
 
     def __getstate__(self):
         try:
@@ -395,6 +476,47 @@ class CLogitResults (GenericLikelihoodModelResults):
         except (AttributeError, KeyError):
             pass
         return self.__dict__
+
+    def llnull(self):
+        # loglike model without predictors
+        model = self.model
+        V = model.V
+        print "model without predictors:"
+        V_null = OrderedDict()
+
+        for ii in range(len(V.keys())):
+            if V.keys()[ii] == model.ref_level:
+                V_null[V.keys()[ii]] = []
+            else:
+                V_null[V.keys()[ii]] = [model.name_intercept]
+
+        clogit_null_mod = model.__class__(model.endog_data, model.exog_data,
+                                          V_null, ncommon = 0,
+                                          ref_level = model.ref_level,
+                                          name_intercep = model.name_intercept)
+        clogit_null_res = clogit_null_mod.fit(start_params = np.zeros(\
+                                                len(V.keys()) - 1), disp = 0)
+
+        return clogit_null_res.llf
+
+    def llr(self):
+        return -2 * (self.llnull() - self.llf)
+
+    def llrt(self):
+        return 2 * (self.llf - self.llnull())
+
+    def llr_pvalue(self):
+        return stats.chisqprob(self.llr(), self.model.df_model)
+
+    def prsquared(self):
+        """
+        McFadden's Pseudo R-Squared: comparing two models on the same data, would
+        be higher for the model with the greater likelihood.
+        """
+        return (1 - self.llf / self.llnull())
+
+    def fitted_values(self):
+        return self.model.xbetas(self.mlefit.params)
 
     def summary(self, title = None, alpha = .05):
         """Summarize the Clogit Results
@@ -432,13 +554,19 @@ class CLogitResults (GenericLikelihoodModelResults):
                     ('Num. alternatives:', [self.model.J])
                       ]
 
-        top_right = [('No. Cases:', [self.nobs]),
+        top_right = [
+                     ('No. Cases:', [self.nobs]),
                      ('No. Observations:', [self.nobs_bychoice]),
-                     ('Df Residuals:', None),
-                     ('Df Model:', None),
-                     ('Log-Likelihood:', None)
-                     ]
+                     ('Df Residuals:', [self.model.df_resid]),
+                     ('Df Model:', [self.model.df_model]),
+                     ('Log-Likelihood:', None),
+                     ('LL-Null:', ["%#8.5g" % self.llnull()]),
+                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared()]),
+                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue()]),
+                     ('Likelihood ratio test:', ["%#8.5g" %self.llrt()]),
+                     ('AIC:', ["%#8.5g" %self.aic])
 
+                                     ]
         if title is None:
             title = self.model.__class__.__name__ + ' ' + \
             "results"
@@ -452,11 +580,12 @@ class CLogitResults (GenericLikelihoodModelResults):
                              title=title)
 
         # Frequencies of alternatives
-        mydata = [self.freq_alt]
+        mydata = [self.freq_alt, self.perc_alt]
         myheaders = self.alt
-        mytitle = ("Frequencies of alternatives: ")
-        tbl = SimpleTable(mydata, myheaders, title = mytitle,
-                          data_fmts = ["%3.3f"])
+        mytitle = ("")
+        mystubs = ["Frequencies of alternatives: ", "Percentage:"]
+        tbl = SimpleTable(mydata, myheaders, mystubs, title = mytitle,
+                          data_fmts = ["%5.2f"])
         smry.tables.append(tbl)
 
         # for parameters
@@ -483,19 +612,13 @@ if __name__ == "__main__":
     y, X = dmatrices(f, df, return_type='dataframe')
 
     # Names of the variables for the utility function for each alternative
-    # V = OrderedDict((
-    #    ('choice 1', ['vrbe1', 'Intercept', 'vrble2',  'vrble3']),
-    #    ('choice 2', ['vrbe1', 'Intercept', 'vrble2']),
-    #    ('choice 3', ['vrbe1']),
-    #    ))
-
-
+    # variables with common coefficients have to be first in each array
     V = OrderedDict((
         ('air', ['gc', 'ttme', 'Intercept', 'hinc']),
         ('train', ['gc', 'ttme', 'Intercept']),
         ('bus', ['gc', 'ttme', 'Intercept']),
-        ('car', ['gc', 'ttme'])
-        ))
+        ('car', ['gc', 'ttme']))
+        )
     # Number of common coefficients
     ncommon = 2
 
@@ -503,11 +626,13 @@ if __name__ == "__main__":
     print 'Example:'
     start_time = time.time()
 
-    clogit_mod = CLogit(y, X,  V, ncommon)
+    clogit_mod = CLogit(y, X,  V, ncommon,
+                        ref_level = 'car', name_intercept = 'Intercept')
     clogit_res = clogit_mod.fit()
 
     end_time = time.time()
     print("the whole elapsed time was %g seconds.") % (end_time - start_time)
 
     print clogit_res.params
-    print CLogitResults(clogit_mod, clogit_res).summary()
+    clogit_sum = CLogitResults(clogit_mod, clogit_res).summary()
+    print clogit_sum
