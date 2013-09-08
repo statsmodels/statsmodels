@@ -36,22 +36,21 @@ Note: There's a typo on TABLE 21.11. βT isn't -0.19612 is -0.09612
     see TABLE 21.13 to check
 """
 
-### Data
+# Load data
 # TODO: use datasets instead
 url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
 file_ = "ModeChoice.csv"
 import os
 if not os.path.exists(file_):
     import urllib
-    urllib.urlretrieve(url, "ModeChoice.csv")
+    urllib.urlretrieve(url, file_)
 df = pd.read_csv(file_)
-pd.set_printoptions(max_rows=1000, max_columns=20)
 df.describe()
 
 nchoices = 4
 nobs = 210
-choice_index = np.arange(nchoices*nobs) % nchoices
-df['hinc_air'] = df['hinc']*(choice_index==0)
+choice_index = np.arange(nchoices * nobs) % nchoices
+df['hinc_air'] = df['hinc'] * (choice_index == 0)
 
 f = 'mode  ~ ttme+invc+invt+gc+hinc+psize+hinc_air'
 y, X = dmatrices(f, df, return_type='dataframe')
@@ -73,20 +72,21 @@ TABLE 21.11 Parameter Estimates. Unweighted Sample
 # Names of the variables for the utility function for each alternative
 # variables with common coefficients have to be first in each array
 V = {
-    "1": ['gc', 'ttme', 'Intercept','hinc_air'],
+    "1": ['gc', 'ttme', 'Intercept', 'hinc_air'],
     "2": ['gc', 'ttme', 'Intercept'],
     "3": ['gc', 'ttme', 'Intercept'],
-    "4": ['gc', 'ttme' ],
+    "4": ['gc', 'ttme'],
      }
 
 # Number of common coefficients
-ncommon= 2
+ncommon = 2
 
 # Model
 start_time = time.time()
 
-clogit_mod  =  CLogit (endog_data, exog_data, V, ncommon)
-clogit_res  =  clogit_mod.fit()
+clogit_mod = CLogit(endog_data, exog_data, V, ncommon,
+                       ref_level = '4', name_intercept = 'Intercept')
+clogit_res = clogit_mod.fit()
 
 end_time = time.time()
 print("the whole elapsed time was %g seconds."
@@ -95,7 +95,7 @@ print("the whole elapsed time was %g seconds."
 # Results
 print clogit_mod.exog_matrix.columns.tolist()
 print clogit_res.params
-print CLogitResults(clogit_mod, clogit_res).summary()
+print CLogitResults(clogit_mod).summary()
 
 # hessian = clogit_mod.hessian(clogit_res.params)
 # print hessian
@@ -176,17 +176,18 @@ V = {
     "1": ['invc', 'Intercept'],
     "2": ['invc', 'Intercept'],
     "3": ['invc', 'Intercept'],
-    "4": ['invc'  ],
+    "4": ['invc'],
      }
 
 # Number of common coefficients
-ncommon= 1
+ncommon = 1
 
 # Model
 start_time = time.time()
 
-clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
-clogit_res =  clogit_mod.fit()
+clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+                        ref_level = '4', name_intercept = 'Intercept')
+clogit_res = clogit_mod.fit()
 
 end_time = time.time()
 print("the whole elapsed time was %g seconds."
@@ -195,7 +196,7 @@ print("the whole elapsed time was %g seconds."
 # Results
 print clogit_mod.exog_matrix.columns.tolist()
 print clogit_res.params
-print CLogitResults(clogit_mod, clogit_res).summary()
+print CLogitResults(clogit_mod).summary()
 
 #hessian2 = clogit_mod2.hessian(clogit_res2.params)
 #print hessian2
@@ -259,13 +260,14 @@ V = {
      }
 
 # Number of common coefficients
-ncommon= 1
+ncommon = 1
 
 # Model
 start_time = time.time()
 
-clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
-clogit_res =  clogit_mod.fit()
+clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+                        ref_level = '4', name_intercept = None)
+clogit_res = clogit_mod.fit()
 
 end_time = time.time()
 print("the whole elapsed time was %g seconds."
@@ -274,7 +276,7 @@ print("the whole elapsed time was %g seconds."
 # Results
 print clogit_mod.exog_matrix.columns.tolist()
 print clogit_res.params
-print CLogitResults(clogit_mod, clogit_res).summary()
+print CLogitResults(clogit_mod).summary()
 
 #hessian = clogit_mod.hessian(clogit_res.params)
 #print hessian
@@ -296,20 +298,21 @@ Ui j = αair + αtrain + αbus + βG*gcij
 # Names of the variables for the utility function for each alternative
 # variables with common coefficients have to be first in each array
 V = {
-    "1": ['gc', 'Intercept','hinc'],
-    "2": ['gc', 'Intercept','hinc'],
-    "3": ['gc', 'Intercept','hinc'],
+    "1": ['gc', 'Intercept', 'hinc'],
+    "2": ['gc', 'Intercept', 'hinc'],
+    "3": ['gc', 'Intercept', 'hinc'],
     "4": ['gc'],
      }
 
 # Number of common coefficients
-ncommon= 1
+ncommon = 1
 
 # Model
 start_time = time.time()
 
-clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
-clogit_res =  clogit_mod.fit()
+clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+                        ref_level = '4', name_intercept = 'Intercept')
+clogit_res = clogit_mod.fit()
 
 end_time = time.time()
 print("the whole elapsed time was %g seconds."
@@ -318,7 +321,7 @@ print("the whole elapsed time was %g seconds."
 # Results
 print clogit_mod.exog_matrix.columns.tolist()
 print clogit_res.params
-print CLogitResults(clogit_mod, clogit_res).summary()
+print CLogitResults(clogit_mod).summary()
 
 #hessian = clogit_mod.hessian(clogit_res.params)
 #print hessian
@@ -340,12 +343,13 @@ V = {
      }
 
 # Number of common coefficients
-ncommon= 0
+ncommon = 0
 
 # Model
 start_time = time.time()
 
-clogit_mod  =  CLogit (endog_data, exog_data,  V, ncommon)
+clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+                        ref_level = '4', name_intercept = None)
 clogit_res =  clogit_mod.fit()
 
 end_time = time.time()
@@ -355,7 +359,7 @@ print("the whole elapsed time was %g seconds."
 # Results
 print clogit_mod.exog_matrix.columns.tolist()
 print clogit_res.params
-print CLogitResults(clogit_mod, clogit_res).summary()
+print CLogitResults(clogit_mod).summary()
 
 #hessian = clogit_mod.hessian(clogit_res.params)
 #print hessian
