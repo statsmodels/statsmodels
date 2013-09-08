@@ -4,89 +4,86 @@ Tests for discrete choice models : clogit
 Results are from R mlogit package
 
 """
-#cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-import sys
-sys.path[0]='/home/nuska/github/Statsmodels/statsmodels'
-
-import os
 import numpy as np
-import pandas as pandas
-from patsy import dmatrices
-
-# import all functions from numpy.testing that are needed
+import pandas as pd
+from collections import OrderedDict
 from numpy.testing import (assert_almost_equal)
-
-from statsmodels.discrete.dcm_clogit import CLogit
-from statsmodels.discrete.tests.results.results_dcm_clogit import Travelmodechoice
+from statsmodels.discrete.dcm_clogit import CLogit, CLogitResults
+from statsmodels.discrete.results_dcm_clogit import Travelmodechoice
 
 DECIMAL_4 = 4
+
 
 class CheckDCMResults(object):
     """
     res2 are the results. res1 are the values from statsmodels
     """
-
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
+
+    def test_bse(self):
+        assert_almost_equal(self.res1.bse, self.res2.bse, DECIMAL_4)
+
+    def test_llf(self):
+        assert_almost_equal(self.res1.llf, self.res2.llf, DECIMAL_4)
+
+    def test_llnull(self):
+        assert_almost_equal(self.sum1.llnull, self.res2.llnull, DECIMAL_4)
+
+    def test_aic(self):
+        assert_almost_equal(self.sum1.aic, self.res2.aic, DECIMAL_4)
 
     def test_hessian(self):
         np.testing.assert_allclose(self.mod1.hessian(self.res1.params),
                                    self.res2.hessian, rtol=1e-4, atol=0)
+    #TODO test_score, test_jac, fitted_values, Likelihood ratio test
+
 
 class TestCLogit(CheckDCMResults):
     """
-    Tests the Clogit model using Newton's method for fitting.
+    Tests the Clogit model
     """
 
     @classmethod
     def setupClass(cls):
         # set up model
-        # TODO: use datasets instead
-        url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
-        file_ = "ModeChoice.csv"
 
+        # load data
+        from patsy import dmatrices
+
+        url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/\
+                ModeChoice.csv"
+        file_ = "ModeChoice.csv"
+        import os
         if not os.path.exists(file_):
             import urllib
-            urllib.urlretrieve(url, "ModeChoice.csv")
-        df = pandas.read_csv(file_)
-        pandas.set_printoptions(max_rows=1000, max_columns=20)
+            urllib.urlretrieve(url, file_)
+        df = pd.read_csv(file_)
         df.describe()
 
-        nchoices = 4
-        nobs = 210
-        choice_index = np.arange(nchoices*nobs) % nchoices
-
-
-        df['hinc_air'] = df['hinc']*(choice_index==0)
-        f = 'mode  ~ ttme+invc+invt+gc+hinc+psize+hinc_air'
+        f = 'mode  ~ ttme+invc+invt+gc+hinc+psize'
         y, X = dmatrices(f, df, return_type='dataframe')
-        y.head()
-        X.head()
 
-        endog = y.to_records()
-        endog = endog['mode'].reshape(-1, nchoices)
+        # Names of the variables for the utility function for each alternative
+        V = OrderedDict((
+            ('air',   ['gc', 'ttme', 'Intercept', 'hinc']),
+            ('train', ['gc', 'ttme', 'Intercept']),
+            ('bus',   ['gc', 'ttme', 'Intercept']),
+            ('car',   ['gc', 'ttme']))
+            )
+        # Number of common coefficients
+        ncommon = 2
 
-        dta = X.to_records()
-        dta1 = np.array(dta)
-
-        xivar = [['gc', 'ttme', 'Intercept','hinc_air'],
-                 ['gc', 'ttme', 'Intercept'],
-                 ['gc', 'ttme', 'Intercept'],
-                 ['gc', 'ttme' ]]
-
-        xi = []
-
-        for ii in range(nchoices):
-            xi.append(dta1[xivar[ii]][choice_index==ii])
-        xifloat = [X.ix[choice_index == ii, xi_names].values
-                    for ii, xi_names in enumerate(xivar)]
-
-        mod1 = CLogit(endog, xifloat, 2)
-        res1 = CLogit(endog, xifloat, 2).fit()
+        # Describe and fit model
+        mod1 = CLogit(y, X, V, ncommon, ref_level = 'car',
+                      name_intercept = 'Intercept')
+        res1 = mod1.fit()
+        sum1 = CLogitResults(mod1)
 
         cls.mod1 = mod1
         cls.res1 = res1
+        cls.sum1 = sum1
 
         # set up results
         res2 = Travelmodechoice()
