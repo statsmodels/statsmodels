@@ -22,6 +22,9 @@ import statsmodels.api as sm
 import time
 from collections import OrderedDict
 from scipy import stats
+from statsmodels.tools.decorators import (resettable_cache,
+        cache_readonly)
+
 
 # TODO: public/private method
 
@@ -153,23 +156,20 @@ class CLogit(LikelihoodModel):
                                         z[zi[ii]:zi[ii + 1]]]).tolist())
                              for ii in range(len(zi) - 1)])  # str index of betas
 
-        betas = OrderedDict()
+        self.betas = OrderedDict()
 
         for sublist in range(self.J):
             aa = []
             for ii in range(len(exog_bychoices_names[sublist])):
                 aa.append(beta_ind_str[sublist][ii]
                           + "_" + exog_bychoices_names[sublist][ii])
-            betas[sublist] = aa
-
-        for key in betas:
-            print '{0} => {1:10}'.format(self.V.keys()[key], betas[key])
+            self.betas[sublist] = aa
 
         # Exog
         pieces = []
         Vkeys = []
         for ii in range(self.J):
-            pieces.append(pd.DataFrame(exog_bychoices[ii], columns=betas[ii]))
+            pieces.append(pd.DataFrame(exog_bychoices[ii], columns=self.betas[ii]))
             Vkeys.append(ii + 1)
 
         self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = self.V.keys(),
@@ -178,13 +178,18 @@ class CLogit(LikelihoodModel):
 
         self.exog_matrix = self.exog_matrix_all.iloc[:, 2:]
 
-        print 'Parameters to estimate: '
-        print self.exog_matrix.columns.tolist()
+        self.K = len(self.exog_matrix.columns)
 
-        K = len(self.exog_matrix.columns)
+        self.df_model = self.K
+        self.df_resid = int(self.nobs - self.K)
 
-        self.df_model = K
-        self.df_resid = int(self.nobs - K)
+    def names_params(self):
+
+        for key in self.betas:
+            print '{0} => {1:10}'.format(self.V.keys()[key], self.betas[key])
+
+        return "total variables: %g " % (self.K)
+
 
     def xbetas(self, params):
         '''the Utilities V_i
@@ -378,7 +383,7 @@ class CLogit(LikelihoodModel):
         raise NotImplementedError
 
     def fit(self, start_params=None, maxiter=10000, maxfun=5000,
-            method="newton", full_output=1, disp=1, callback=None, **kwds):
+            method="newton", full_output=1, disp=None, callback=None, **kwds):
         """
         Fits CLogit() model using maximum likelihood.
         In a model linear the log-likelihood function of the sample, is
@@ -396,22 +401,16 @@ class CLogit(LikelihoodModel):
         """
 
         if start_params is None:
-            print 'Estimating initial parameters..'
             logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
             start_params = logit_res.params.values
-            print 'Initial parameters:'
-            print start_params
         else:
             start_params = np.asarray(start_params)
 
         start_time = time.time()
-        print 'Estimating model..'
-        model_fit = super(CLogit, self).fit(disp = 0, start_params = start_params,
+        model_fit = super(CLogit, self).fit(disp = disp, start_params = start_params,
                         method=method, maxiter=maxiter, maxfun=maxfun, **kwds)
         end_time = time.time()
         self.elapsed_time = end_time - start_time
-
-        print("the elapsed time was %g seconds" % (self.elapsed_time))
         return model_fit
 
 ### Results Class ###
@@ -440,7 +439,7 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
     df_model : float
         Params.
     fitted_values : array
-        Fitted values
+        Fitted values. Linear predictor XB.
     llf : float
         Value of the loglikelihood
     llnull : float
@@ -457,17 +456,19 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
         McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
     """
 
-    def __init__(self, model, mlefit):
-
+    def __init__(self, model):
+        # super(CLogitResults, self).__init__(model)
         self.model = model
-        self.mlefit = mlefit
+        self.mlefit = model.fit()
         self.nobs_bychoice = model.nobs
         self.nobs = model.endog.shape[0]
         self.alt = model.V.keys()
+        self.names_params = model.names_params
         self.freq_alt = model.endog_bychoices[:, ].sum(0).tolist()
         self.perc_alt = (model.endog_bychoices[:, ].sum(0) / model.nobs)\
                         .tolist()
         self.__dict__.update(self.mlefit.__dict__)
+        self._cache = resettable_cache()
 
     def __getstate__(self):
         try:
@@ -477,11 +478,12 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
             pass
         return self.__dict__
 
+    @cache_readonly
     def llnull(self):
         # loglike model without predictors
         model = self.model
         V = model.V
-        print "model without predictors:"
+
         V_null = OrderedDict()
 
         for ii in range(len(V.keys())):
@@ -499,21 +501,25 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
 
         return clogit_null_res.llf
 
+    @cache_readonly
     def llr(self):
-        return -2 * (self.llnull() - self.llf)
+        return -2 * (self.llnull - self.llf)
 
+    @cache_readonly
     def llrt(self):
-        return 2 * (self.llf - self.llnull())
+        return 2 * (self.llf - self.llnull)
 
+    @cache_readonly
     def llr_pvalue(self):
-        return stats.chisqprob(self.llr(), self.model.df_model)
+        return stats.chisqprob(self.llr, self.model.df_model)
 
+    @cache_readonly
     def prsquared(self):
         """
         McFadden's Pseudo R-Squared: comparing two models on the same data, would
         be higher for the model with the greater likelihood.
         """
-        return (1 - self.llf / self.llnull())
+        return (1 - self.llf / self.llnull)
 
     def fitted_values(self):
         return self.model.xbetas(self.mlefit.params)
@@ -560,10 +566,10 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
                      ('Df Residuals:', [self.model.df_resid]),
                      ('Df Model:', [self.model.df_model]),
                      ('Log-Likelihood:', None),
-                     ('LL-Null:', ["%#8.5g" % self.llnull()]),
-                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared()]),
-                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue()]),
-                     ('Likelihood ratio test:', ["%#8.5g" %self.llrt()]),
+                     ('LL-Null:', ["%#8.5g" % self.llnull]),
+                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
+                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue]),
+                     ('Likelihood ratio test:', ["%#8.5g" %self.llrt]),
                      ('AIC:', ["%#8.5g" %self.aic])
 
                                      ]
@@ -590,10 +596,10 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
 
         # for parameters
         # TODO rename parameters
-
         smry.add_table_params(self, alpha=alpha, use_t=False)
 
         return smry
+
 
 if __name__ == "__main__":
 
@@ -614,25 +620,27 @@ if __name__ == "__main__":
     # Names of the variables for the utility function for each alternative
     # variables with common coefficients have to be first in each array
     V = OrderedDict((
-        ('air', ['gc', 'ttme', 'Intercept', 'hinc']),
+        ('air',   ['gc', 'ttme', 'Intercept', 'hinc']),
         ('train', ['gc', 'ttme', 'Intercept']),
-        ('bus', ['gc', 'ttme', 'Intercept']),
-        ('car', ['gc', 'ttme']))
+        ('bus',   ['gc', 'ttme', 'Intercept']),
+        ('car',   ['gc', 'ttme']))
         )
     # Number of common coefficients
     ncommon = 2
 
-    # Model
-    print 'Example:'
-    start_time = time.time()
+    # Set up model
 
+    print 'Example:'
+
+    # Describe model
     clogit_mod = CLogit(y, X,  V, ncommon,
                         ref_level = 'car', name_intercept = 'Intercept')
-    clogit_res = clogit_mod.fit()
+    # Fit model
+    clogit_res = clogit_mod.fit(disp=1)
 
-    end_time = time.time()
-    print("the whole elapsed time was %g seconds.") % (end_time - start_time)
+    # Summarize model
+    print 'Model variables:'
+    print clogit_mod.names_params()
 
-    print clogit_res.params
-    clogit_sum = CLogitResults(clogit_mod, clogit_res).summary()
-    print clogit_sum
+    clogit_sum = CLogitResults(clogit_mod)
+    print clogit_sum.summary()
