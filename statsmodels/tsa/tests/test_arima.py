@@ -1822,6 +1822,15 @@ def test_arima_dataframe_integer_name():
     df = pandas.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
 
+def test_arima_exog_predict_1d():
+    # test 1067
+    np.random.seed(12345)
+    y = np.random.random(100)
+    x = np.random.random(100)
+    mod = ARMA(y, (2, 1), x).fit(disp=-1)
+    newx = np.random.random(12)
+    results = mod.forecast(steps=10, alpha=0.05, exog=newx)
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
