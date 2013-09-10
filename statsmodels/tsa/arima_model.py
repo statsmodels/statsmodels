@@ -203,6 +203,8 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
         if k_exog > 0:
             #TODO: technically should only hold for MLE not
             # conditional model. See #274.
+            if np.ndim(exog) == 1: # ensure 2-d for conformability
+                exog = exog[:,None]
             X = lagmat(np.dot(exog, exparams), p, original='in', trim='both')
             mu = trendparam * (1 - arparams.sum())
             # arparams were reversed in unpack for ease later
