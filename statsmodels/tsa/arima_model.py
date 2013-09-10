@@ -120,7 +120,10 @@ _predict = """
             want out of sample prediction.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
-            requested, exog must be given.
+            requested, exog must be given. Note that you'll need to pass
+            `k_ar` additional lags for any exogenous variables. E.g., if you
+            fit an ARMAX(2, q) model and want to predict 5 steps, you need 7
+            observations to do this.
         dynamic : bool, optional
             The `dynamic` keyword affects in-sample prediction. If dynamic
             is False, then the in-sample lagged values are used for
@@ -1339,7 +1342,10 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         exog : array
             If the model is an ARMAX, you must provide out of sample
             values for the exogenous variables. This should not include
-            the constant.
+            the constant. Note that you'll need to pass `k_ar` additional
+            lags for any exogenous variables. E.g., if you fit an ARMAX(2, q)
+            model and want to predict 5 steps, you need 7 observations
+            to do this.
         alpha : float
             The confidence intervals for the forecasts are (1 - alpha) %
 
