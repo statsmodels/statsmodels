@@ -1,12 +1,14 @@
 """
-Test Results for discrete models from R (mlogit package)
+Test Results for discrete models
 Replicate Greene (2003: Page 729) results.
+Results are from R mlogit package (Cross check with Biogeme).
 
-Results are from Stata 11 (Cross check with Biogem).
 """
 
 import numpy as np
+import os
 
+cur_dir = os.path.abspath(os.path.dirname(__file__))
 
 class Travelmodechoice():
 
@@ -14,14 +16,21 @@ class Travelmodechoice():
     R code
 
     library("mlogit", "TravelMode")
+    data("TravelMode", package="AER") #load data
     names(TravelMode)<- c("individual", "mode", "choice", "ttme", "invc",
-                             "invt", "gc", "hinc", "psize")
+                          "invt", "gc", "hinc", "psize")
     TravelMode$hinc_air <- with(TravelMode, hinc * (mode == "air"))
     res <- mlogit(choice ~ gc + ttme + hinc_air, data = TravelMode,
-                shape = "long", alt.var = "mode", reflevel = "car")
-    summary(res)
-    model$coefficients
-    model$hessian       #the hessian of the log-likelihood at convergence
+                  shape = "long", alt.var = "mode", reflevel = "car")
+    res_summary <- summary(res)
+    str( res_summary)
+    order_in_smCLogit <- c(4,5,1,6,2,3)
+    params <- res_summary$CoefTable[order_in_smCLogit, 1] # model$coefficients
+    bse <- res_summary$CoefTable[order_in_smCLogit, 2]
+    score <- res$gradient[order_in_smCLogit]
+    predict <- fitted.values(res, outcome=FALSE)
+    write.table(predict[,c(2,3,4,1)], file = "clogit_predict.csv",
+                        row.names = FALSE, col.names = FALSE,sep = ";")
 
     """
     def __init__(self):
@@ -58,3 +67,12 @@ class Travelmodechoice():
         self.llnull = -283.7588
 
         self.aic = 410.2567
+
+        self.llrt = 169.2608
+
+        self.score = [-1.6002843494789e-09, -2.46809062076636e-09,
+                      4.05102973735638e-11, 1.7963349419059e-09,
+                      3.78327581936067e-11, -9.05671633608801e-11]
+
+        self.predict = np.loadtxt(os.path.join(cur_dir,'clogit_predict.csv'),
+            delimiter=";")
