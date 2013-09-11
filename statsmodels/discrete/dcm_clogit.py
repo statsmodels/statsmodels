@@ -25,7 +25,6 @@ from scipy import stats
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 
-
 # TODO: public/private method
 
 
@@ -152,25 +151,32 @@ class CLogit(LikelihoodModel):
         beta_ind = [np.r_[np.arange(self.ncommon), z[zi[ii]:zi[ii + 1]]]
                                for ii in range(len(zi) - 1)]  # index of betas
         self.beta_ind = beta_ind
-        beta_ind_str = ([map(str, (np.r_[np.arange(self.ncommon),
-                                        z[zi[ii]:zi[ii + 1]]]).tolist())
-                             for ii in range(len(zi) - 1)])  # str index of betas
+
+        beta_ind_str = ([map(str, beta_ind[ii]) for ii in range(self.J)])
+        beta_ind_J = ([map(str, beta_ind[ii]) for ii in range(self.J)])
+
+        for ii in range(self.J):
+            for jj, item in enumerate(beta_ind[ii]):
+                if item in np.arange(self.ncommon):
+                    beta_ind_J[ii][jj] = ''
+                else:
+                    beta_ind_J[ii][jj] = ' (' + self.V.keys()[ii] + ')'
 
         self.betas = OrderedDict()
 
         for sublist in range(self.J):
             aa = []
             for ii in range(len(exog_bychoices_names[sublist])):
-                aa.append(beta_ind_str[sublist][ii]
-                          + "_" + exog_bychoices_names[sublist][ii])
+                aa.append(
+                beta_ind_str[sublist][ii] + ' ' +
+                exog_bychoices_names[sublist][ii]
+                + beta_ind_J[sublist][ii])
             self.betas[sublist] = aa
 
         # Exog
         pieces = []
-        Vkeys = []
         for ii in range(self.J):
             pieces.append(pd.DataFrame(exog_bychoices[ii], columns=self.betas[ii]))
-            Vkeys.append(ii + 1)
 
         self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = self.V.keys(),
                                      names = ['choice', 'nobs'])
@@ -183,22 +189,14 @@ class CLogit(LikelihoodModel):
         self.df_model = self.K
         self.df_resid = int(self.nobs - self.K)
 
-    def names_params(self):
-
-        for key in self.betas:
-            print '{0} => {1:10}'.format(self.V.keys()[key], self.betas[key])
-
-        return "total variables: %g " % (self.K)
-
-
     def xbetas(self, params):
         '''the Utilities V_i
 
         '''
         res = np.empty((self.nobs, self.J))
-        for choiceind in range(self.J):
-            res[:, choiceind] = np.dot(self.exog_bychoices[choiceind],
-                                      params[self.beta_ind[choiceind]])
+        for ii in range(self.J):
+            res[:, ii] = np.dot(self.exog_bychoices[ii],
+                                      params[self.beta_ind[ii]])
         return res
 
     def cdf(self, item):
@@ -245,6 +243,7 @@ class CLogit(LikelihoodModel):
         if not.
 
         """
+
         xb = self.xbetas(params)
         loglike = (self.endog_bychoices * np.log(self.cdf(xb))).sum(1)
 
@@ -302,15 +301,44 @@ class CLogit(LikelihoodModel):
 
         for :math:`j=1,...,J`
         """
+        # approach 0 (obtained numerically)
 
-        # TODO check with other statistical packages
+#        from statsmodels.tools.numdiff import approx_fprime
+#        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
+
+        # score far away other stadistical packages
+        # and params almost equal to 2 decimals
+
+        # Score: x (our result), y (R) , z (biogeme)
+        # x: array([  2.55795385e-09,   1.13686838e-09,   8.52651283e-10,
+        #         3.97903932e-09,   1.13686838e-09,  -8.52651283e-10])
+        # y: array([ -1.60028435e-09,  -2.46809062e-09,   4.05102974e-11,
+        #         1.79633494e-09,   3.78327582e-11,  -9.05671634e-11])
+        # z: Biogeme
+        #            0.000112021 -0.000703405 -0.00024437
+        #            0.000201291 -0.00024898 -0.000251562
+
+        # Params:
+        # x: array([-0.01557578, -0.09661438,  5.24719454,  0.0130168 ,  3.88864726,
+        # 3.18137605])
+        # y: array([-0.01550151, -0.09612462,  5.20743293,  0.01328701,  3.8690357 ,
+        # 3.16319033])
+
+
+        # approach 1 (analytical derivatives)
+
         firstterm = (self.endog_bychoices - self.cdf(self.xbetas(params)))\
                     .reshape(-1, 1)
         return np.dot(firstterm.T, self.exog).flatten()
 
-#        from statsmodels.tools.numdiff import approx_fprime
-#
-#        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
+        # score far away other stadistical packages
+        # but equal final result in params
+
+        # Score: x (our result), y (R)
+        # x: array([ -2.41584530e-13,   2.89990254e-13,   1.53210777e-14,
+        #         4.97379915e-13,   5.57887070e-15,   5.68989300e-16])
+        # y: array([ -1.60028435e-09,  -2.46809062e-09,   4.05102974e-11,
+        #         1.79633494e-09,   3.78327582e-11,  -9.05671634e-11])
 
     def jac(self, params):
         """
@@ -336,11 +364,9 @@ class CLogit(LikelihoodModel):
         for :math:`j=1,...,J`, for observations :math:`i=1,...,n`
 
         """
-        # TODO check with other statistical packages
 
         firsterm = (self.endog_bychoices - self.cdf(self.xbetas(params)))\
                     .reshape(-1, 1)
-
         return (firsterm * self.exog)
 
     def hessian(self, params):
@@ -411,7 +437,31 @@ class CLogit(LikelihoodModel):
                         method=method, maxiter=maxiter, maxfun=maxfun, **kwds)
         end_time = time.time()
         self.elapsed_time = end_time - start_time
+
         return model_fit
+
+    def predict(self, params, linear=False):
+        """
+        Predict response variable of a model given exogenous variables.
+
+        Parameters
+        ----------
+        params : array-like
+            Fitted parameters of the model.
+        linear : bool, optional
+            If True, returns the linear predictor dot(exog_bychoices,params).
+            Else, returns the value of the cdf at the linear predictor.
+
+        Returns
+        -------
+        array
+            Fitted values at exog.
+        """
+        if not linear:
+            return self.cdf(self.xbetas(params))
+        else:
+            return self.xbetas(params)
+
 
 ### Results Class ###
 
@@ -438,8 +488,6 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
         Residual degrees-of-freedom of model.
     df_model : float
         Params.
-    fitted_values : array
-        Fitted values. Linear predictor XB.
     llf : float
         Value of the loglikelihood
     llnull : float
@@ -454,6 +502,7 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
         with degrees of freedom `df_model`.
     prsquared : float
         McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
+
     """
 
     def __init__(self, model):
@@ -463,7 +512,6 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
         self.nobs_bychoice = model.nobs
         self.nobs = model.endog.shape[0]
         self.alt = model.V.keys()
-        self.names_params = model.names_params
         self.freq_alt = model.endog_bychoices[:, ].sum(0).tolist()
         self.perc_alt = (model.endog_bychoices[:, ].sum(0) / model.nobs)\
                         .tolist()
@@ -520,9 +568,6 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
         be higher for the model with the greater likelihood.
         """
         return (1 - self.llf / self.llnull)
-
-    def fitted_values(self):
-        return self.model.xbetas(self.mlefit.params)
 
     def summary(self, title = None, alpha = .05):
         """Summarize the Clogit Results
@@ -603,6 +648,9 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
 
 if __name__ == "__main__":
 
+    print 'Example:'
+
+    # Load data
     from patsy import dmatrices
 
     url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
@@ -617,6 +665,8 @@ if __name__ == "__main__":
     f = 'mode  ~ ttme+invc+invt+gc+hinc+psize'
     y, X = dmatrices(f, df, return_type='dataframe')
 
+    # Set up model
+
     # Names of the variables for the utility function for each alternative
     # variables with common coefficients have to be first in each array
     V = OrderedDict((
@@ -628,10 +678,6 @@ if __name__ == "__main__":
     # Number of common coefficients
     ncommon = 2
 
-    # Set up model
-
-    print 'Example:'
-
     # Describe model
     clogit_mod = CLogit(y, X,  V, ncommon,
                         ref_level = 'car', name_intercept = 'Intercept')
@@ -639,8 +685,5 @@ if __name__ == "__main__":
     clogit_res = clogit_mod.fit(disp=1)
 
     # Summarize model
-    print 'Model variables:'
-    print clogit_mod.names_params()
-
     clogit_sum = CLogitResults(clogit_mod)
     print clogit_sum.summary()
