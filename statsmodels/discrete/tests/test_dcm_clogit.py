@@ -1,18 +1,19 @@
 """
 Tests for discrete choice models : clogit
 
-Results are from R mlogit package
-
 """
+
+from discrete.dcm_clogit import CLogit, CLogitResults
+from discrete.results_dcm_clogit import Travelmodechoice
 
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
-from numpy.testing import (assert_almost_equal)
-from statsmodels.discrete.dcm_clogit import CLogit, CLogitResults
-from statsmodels.discrete.results_dcm_clogit import Travelmodechoice
+from numpy.testing import assert_almost_equal
 
 DECIMAL_4 = 4
+RTOL_4 = 1e-4
+ATOL_0 = 0
 
 
 class CheckDCMResults(object):
@@ -36,8 +37,19 @@ class CheckDCMResults(object):
 
     def test_hessian(self):
         np.testing.assert_allclose(self.mod1.hessian(self.res1.params),
-                                   self.res2.hessian, rtol=1e-4, atol=0)
-    #TODO test_score, test_jac, fitted_values, Likelihood ratio test
+                                   self.res2.hessian, rtol=RTOL_4, atol=ATOL_0)
+
+   def test_llrt(self):
+        assert_almost_equal(self.sum1.llrt, self.res2.llrt, DECIMAL_4)
+
+#    def test_score(self):
+#        np.testing.assert_allclose(self.mod1.score(self.res1.params),
+#                                   self.res2.score, rtol=RTOL_4, atol=ATOL_0)
+
+    def test_predict(self):
+        np.testing.assert_allclose(self.mod1.predict(self.res1.params,
+                                                     linear=False),
+                                   self.res2.predict, rtol=RTOL_4, atol=ATOL_0)
 
 
 class TestCLogit(CheckDCMResults):
