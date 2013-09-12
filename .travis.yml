@@ -50,7 +50,7 @@ script:
     # Compose a script to run testing with coverage
     - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
     - if [ "${PYSUF}" != "3" ]; then PYTHONCMD="coverage run --rcfile=.travis_coveragerc"; else PYTHONCMD="$PYTHON"; fi
-    - sudo $PYTHONCMD test.py
+    - $PYTHONCMD test.py
 after_success:
     - if [ "${PYSUF}" != "3" ]; then coveralls; fi
 
