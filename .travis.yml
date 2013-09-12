@@ -37,7 +37,7 @@ install:
     - sudo apt-get --no-install-recommends install $PYTHON-pandas
     - sudo apt-get --no-install-recommends install $PYTHON-pandas-lib
     - sudo easy_install$PYSUF -U patsy
-    - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install -q coverage coveralls; fi
+    - if [ "${PYSUF}" != "3" ]; then pip install -q coverage coveralls; fi
 script:
     - sudo $PYTHON setup.py install
     # Ubuntu 12.04 installs statsmodels under the wrong path for Python 3
