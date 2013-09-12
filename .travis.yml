@@ -36,9 +36,9 @@ install:
     - sudo apt-get install $PYTHON-dateutil
     - sudo apt-get --no-install-recommends install $PYTHON-pandas
     - sudo apt-get --no-install-recommends install $PYTHON-pandas-lib
-    - easy_install$PYSUF -U patsy
-    - if [ "${PYSUF}" != "3" ]; then pip install coverage; fi
-    - if [ "${PYSUF}" != "3" ]; then pip install coveralls; fi
+    - sudo easy_install$PYSUF -U patsy
+    - if [ "${PYSUF}" != "3" ]; then sudo pip install coverage; fi
+    - if [ "${PYSUF}" != "3" ]; then sudo pip install coveralls; fi
 script:
     - sudo $PYTHON setup.py install
     # Ubuntu 12.04 installs statsmodels under the wrong path for Python 3
