@@ -55,6 +55,6 @@ script:
     - pwd
     # Compose a script to run testing with coverage
     - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
-    - if [ "${PYSUF}" != "3" ]; then coverage run --rcfile=.travis_coveragerc test.py; else $PYTHON test.py; fi
+    - if [ "${PYSUF}" != "3" ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else $PYTHON test.py; fi
 after_success:
     - if [ "${PYSUF}" != "3" ]; then coveralls; fi

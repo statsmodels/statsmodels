@@ -1,6 +1,5 @@
 
 [run]
 branch = True
-omit =
-    /usr/*
-    /home/travis/virtualenv/*
+include =
+    /usr/local/lib/python*/*-packages/statsmodels*
