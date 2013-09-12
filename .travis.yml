@@ -48,12 +48,11 @@ script:
          sudo rm -rf /usr/lib/python3.2/dist-packages/statsmodels-* ;
       fi
     # For some reason, Python 3 will try to work with the build directory. cd original directory
-    - cd $SRCDIR
-    - echo "I: Current directory: $PWD"
+    - cd "${SRCDIR}"
+    - echo "Current directory: ${PWD}"
     # Compose a script to run testing with coverage
     - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
     - if [ "${PYSUF}" != "3" ]; then PYTHONCMD="coverage run --rcfile=.travis_coveragerc"; else PYTHONCMD="$PYTHON"; fi
     - $PYTHONCMD test.py
 after_success:
     - if [ "${PYSUF}" != "3" ]; then coveralls; fi
-
