@@ -41,7 +41,6 @@ install:
     - if [ "${PYSUF}" != "3" ]; then sudo pip install coveralls; fi
 script:
     - SRCDIR=$PWD
-    - pwd
     - sudo $PYTHON setup.py install
     # Ubuntu 12.04 installs statsmodels under the wrong path for Python 3
     - if [ "${PYSUF}" == "3" ]; then
@@ -50,9 +49,7 @@ script:
       fi
     # statsmodels was installed "system-wide" thus cd under dedicated
     # travis-test/ directory to not try using local version without built extensions
-    - pwd
     - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
-    - pwd
     # Compose a script to run testing with coverage
     - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
     - if [ "${PYSUF}" != "3" ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else $PYTHON test.py; fi
