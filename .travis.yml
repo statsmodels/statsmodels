@@ -37,6 +37,7 @@ install:
     - sudo apt-get --no-install-recommends install $PYTHON-pandas
     - sudo apt-get --no-install-recommends install $PYTHON-pandas-lib
     - sudo easy_install$PYSUF -U patsy
+    - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pip install -q coveralls; fi
 script:
     - sudo $PYTHON setup.py install
     # Ubuntu 12.04 installs statsmodels under the wrong path for Python 3
@@ -46,5 +47,10 @@ script:
       fi
     # For some reason, Python 3 will try to work with the build directory. Get out of folder to avoid breakage
     - cd ../
-    - sudo $PYTHON -c "import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)"
+    # Compose a script to run testing with coverage
+    - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
+    - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then PYTHONCMD="coverage run --rcfile=.travis_coveragerc"; else PYTHONCMD="$PYTHON"; fi
+after_success:
+    - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then coveralls; fi
+    - sudo $PYTHONCMD test.py
 
