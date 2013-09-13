@@ -301,44 +301,11 @@ class CLogit(LikelihoodModel):
 
         for :math:`j=1,...,J`
         """
-        # approach 0 (obtained numerically)
-
-#        from statsmodels.tools.numdiff import approx_fprime
-#        return approx_fprime(params, self.loglike, epsilon=1e-4).ravel()
-
-        # score far away other stadistical packages
-        # and params almost equal to 2 decimals
-
-        # Score: x (our result), y (R) , z (biogeme)
-        # x: array([  2.55795385e-09,   1.13686838e-09,   8.52651283e-10,
-        #         3.97903932e-09,   1.13686838e-09,  -8.52651283e-10])
-        # y: array([ -1.60028435e-09,  -2.46809062e-09,   4.05102974e-11,
-        #         1.79633494e-09,   3.78327582e-11,  -9.05671634e-11])
-        # z: Biogeme
-        #            0.000112021 -0.000703405 -0.00024437
-        #            0.000201291 -0.00024898 -0.000251562
-
-        # Params:
-        # x: array([-0.01557578, -0.09661438,  5.24719454,  0.0130168 ,  3.88864726,
-        # 3.18137605])
-        # y: array([-0.01550151, -0.09612462,  5.20743293,  0.01328701,  3.8690357 ,
-        # 3.16319033])
-
-
-        # approach 1 (analytical derivatives)
 
         firstterm = (self.endog_bychoices - self.cdf(self.xbetas(params)))\
                     .reshape(-1, 1)
         return np.dot(firstterm.T, self.exog).flatten()
 
-        # score far away other stadistical packages
-        # but equal final result in params
-
-        # Score: x (our result), y (R)
-        # x: array([ -2.41584530e-13,   2.89990254e-13,   1.53210777e-14,
-        #         4.97379915e-13,   5.57887070e-15,   5.68989300e-16])
-        # y: array([ -1.60028435e-09,  -2.46809062e-09,   4.05102974e-11,
-        #         1.79633494e-09,   3.78327582e-11,  -9.05671634e-11])
 
     def jac(self, params):
         """
@@ -427,8 +394,14 @@ class CLogit(LikelihoodModel):
         """
 
         if start_params is None:
-            logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
-            start_params = logit_res.params.values
+
+            Logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
+            start_params = Logit_res.params.values
+            # 1 loops, best of 3: 316 ms per loop
+
+            # start_params = np.zeros(self.K)
+            # 1 loops, best of 3: 345 ms per loop
+
         else:
             start_params = np.asarray(start_params)
 
@@ -462,13 +435,16 @@ class CLogit(LikelihoodModel):
         else:
             return self.xbetas(params)
 
+    def summary(self):
+
+        return CLogitResults(self).summary()
 
 ### Results Class ###
 
 
-class CLogitResults (LikelihoodModelResults, ResultMixin):
+class CLogitResults(LikelihoodModelResults, ResultMixin):
     __doc__ = """
-        Parameters
+    Parameters
     ----------
     model : A Discrete Choice Model instance.
 
@@ -506,7 +482,7 @@ class CLogitResults (LikelihoodModelResults, ResultMixin):
     """
 
     def __init__(self, model):
-        # super(CLogitResults, self).__init__(model)
+
         self.model = model
         self.mlefit = model.fit()
         self.nobs_bychoice = model.nobs
@@ -686,4 +662,4 @@ if __name__ == "__main__":
 
     # Summarize model
     clogit_sum = CLogitResults(clogit_mod)
-    print clogit_sum.summary()
+    print clogit_sum.summary()  # or clogit_mod.summary()

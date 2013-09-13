@@ -2,23 +2,27 @@
 Tests for discrete choice models : clogit
 
 """
-
-from discrete.dcm_clogit import CLogit, CLogitResults
-from discrete.results_dcm_clogit import Travelmodechoice
+from statsmodels.discrete.dcm_clogit import CLogit, CLogitResults
+from results.results_dcm_clogit import Travelmodechoice
 
 import numpy as np
 import pandas as pd
 from collections import OrderedDict
 from numpy.testing import assert_almost_equal
 
-DECIMAL_4 = 4
+DECIMAL_4 = 1
+
 RTOL_4 = 1e-4
+RTOL_8 = 1e-8
+
 ATOL_0 = 0
+ATOL_1 = 10
 
 
 class CheckDCMResults(object):
     """
     res2 are the results. res1 are the values from statsmodels
+
     """
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
@@ -39,12 +43,26 @@ class CheckDCMResults(object):
         np.testing.assert_allclose(self.mod1.hessian(self.res1.params),
                                    self.res2.hessian, rtol=RTOL_4, atol=ATOL_0)
 
-   def test_llrt(self):
+    def test_llrt(self):
         assert_almost_equal(self.sum1.llrt, self.res2.llrt, DECIMAL_4)
 
-#    def test_score(self):
-#        np.testing.assert_allclose(self.mod1.score(self.res1.params),
-#                                   self.res2.score, rtol=RTOL_4, atol=ATOL_0)
+    def test_score_at_optimun(self):
+        # this test the score evaluated at the optimum (where the score
+        # should be zero). Anything smaller (in absolute value) than 1e-5
+        # or 1e-8 is fine.
+
+        np.testing.assert_allclose(self.mod1.score(self.res1.params),
+                                   self.res2.score, rtol=RTOL_8, atol=ATOL_1)
+
+    def test_score(self):
+        # this test the score at parameters different from the optimum.
+
+        import statsmodels.tools.numdiff as nd
+        score_by_numdiff = nd.approx_fprime(self.res1.params * 2, \
+                                            self.mod1.loglike, centered=True)
+
+        np.testing.assert_allclose(self.mod1.score(self.res1.params * 2),
+                                   score_by_numdiff, rtol=RTOL_4, atol=ATOL_1)
 
     def test_predict(self):
         np.testing.assert_allclose(self.mod1.predict(self.res1.params,
@@ -102,8 +120,6 @@ class TestCLogit(CheckDCMResults):
         res2.clogit_greene()
         cls.res2 = res2
 
-        # set up precision
-        cls.decimal_tvalues = 3
 
 
 if __name__ == "__main__":
