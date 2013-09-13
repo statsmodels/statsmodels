@@ -6,7 +6,8 @@ import numpy as np
 import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
-    gee_setup_multicategorical,gee_ordinal_starting_values, GEEMargins
+    gee_setup_ordinal,gee_ordinal_starting_values, GEEMargins,\
+    gee_setup_nominal
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
@@ -257,23 +258,91 @@ class TestGEE(object):
 
         family = Binomial()
 
-        endog,exog,group_n = load_data("gee_ordinal_1.csv",
-                                       icept=False)
+        endog_orig, exog_orig, groups = load_data("gee_ordinal_1.csv",
+                                                  icept=False)
+
+        data = np.concatenate((endog_orig[:,None], exog_orig,
+                               groups[:,None]), axis=1)
 
         # Recode as cumulative indicators
-        endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
-            gee_setup_multicategorical(endog, exog, group_n, None,
-                                       None, "ordinal")
+        endog, exog, intercepts, nlevel = gee_setup_ordinal(data, 0)
+
+        exog1 = np.concatenate((intercepts, exog), axis=1)
+        groups = exog1[:,-1]
+        exog1 = exog1[:,0:-1]
 
         v = GlobalOddsRatio(nlevel, "ordinal")
 
-        beta = gee_ordinal_starting_values(endog, exog.shape[1])
+        beta = gee_ordinal_starting_values(endog_orig,
+                                           exog_orig.shape[1])
 
-        md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
+        md = GEE(endog, exog1, groups, None, family, v)
         mdf = md.fit(starting_params = beta)
         # Nothing to compare to...
         #assert_almost_equal(md.params, cf[j], decimal=2)
         #assert_almost_equal(mdf.standard_errors, se[j], decimal=2)
+
+
+    def test_nominal(self):
+
+        family = Binomial()
+
+        endog_orig, exog_orig, groups = load_data("gee_nominal_1.csv",
+                                                  icept=False)
+
+        data = np.concatenate((endog_orig[:,None], exog_orig,
+                               groups[:,None]), axis=1)
+
+        # Recode as indicators
+        endog, exog, exog_ne, nlevel = gee_setup_nominal(data, 0,
+                                                         [4,])
+
+        groups = exog_ne[:,0]
+
+        v = Independence()
+        md = GEE(endog, exog, groups, None, family, v)
+        mdf1 = md.fit()
+
+        v = GlobalOddsRatio(nlevel, "nominal")
+        md = GEE(endog, exog, groups, None, family, v)
+        mdf = md.fit(starting_params=np.r_[0,1,-1,0,-1,1])
+        # Nothing to compare to...
+        #assert_almost_equal(md.params, cf[j], decimal=2)
+        #assert_almost_equal(mdf.standard_errors, se[j], decimal=2)
+
+
+    def test_ordinal_pandas(self):
+
+        family = Binomial()
+
+        endog_orig, exog_orig, groups = load_data("gee_ordinal_1.csv",
+                                                 icept=False)
+
+        data = np.concatenate((endog_orig[:,None], exog_orig,
+                               groups[:,None]), axis=1)
+        data = pd.DataFrame(data)
+        data.columns = ["endog", "x1", "x2", "x3", "x4", "x5",
+                        "group"]
+
+        # Recode as cumulative indicators
+        endog, exog, intercepts, nlevel = \
+            gee_setup_ordinal(data, "endog")
+
+        exog1 = np.concatenate((intercepts, exog), axis=1)
+        groups = exog1[:,-1]
+        exog1 = exog1[:,0:-1]
+
+        v = GlobalOddsRatio(nlevel, "ordinal")
+
+        beta = gee_ordinal_starting_values(endog_orig,
+                                           exog_orig.shape[1])
+
+        md = GEE(endog, exog1, groups, None, family, v)
+        mdf = md.fit(starting_params = beta)
+        # Nothing to compare to...
+        #assert_almost_equal(md.params, cf[j], decimal=2)
+        #assert_almost_equal(mdf.standard_errors, se[j], decimal=2)
+
 
 
     def test_poisson(self):
