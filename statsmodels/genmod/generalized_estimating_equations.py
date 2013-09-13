@@ -992,82 +992,62 @@ class GEEResults(base.LikelihoodModelResults):
 
 
 
-def gee_setup_multicategorical(endog, exog, groups, time, offset,
-                               endog_type):
+def gee_setup_ordinal(data, endog_col):
     """
-    Restructure nominal or ordinal multicategorical data as binary
-    indicators so that they can be analysed using Generalized
-    Estimating Equations.
+    Restructure ordinal data as binary indicators so that they can be
+    analysed using Generalized Estimating Equations.
 
-    For nominal data, each element of endog is recoded as the sequence
-    of |S|-1 indicators I(endog = S[0]), ..., I(endog = S[-1]), where
-    S is the sorted list of unique values of endog (excluding the
-    maximum value).
+    Each row of `data` is replaced with |S| rows, where S is the set
+    of distinct values of the endogeneous variable excluding the
+    maximum value.
 
-    For ordinal data, each element y of endog is recoded as |S|-1
-    cumulative indicators I(endog > S[0]), ..., I(endog > S[-1]) where
-    S is the sorted list of unique values of endog (excluding the
-    maximum value).
+    The values of the endogeneous variable are replaced with the
+    sequence of cumulative indicators I(endog > S[0]), ..., I(endog >
+    S[-1]).
 
-    In addition, exog is modified as follows:
-
-    For ordinal data, intercepts are prepended to the covariates, so
-    that when defining a new variable as I(endog > S[j]) the intercept
-    is a vector of zeros, with a 1 in the j^th position.
-
-    For nominal data, when constructing the new exog for I(endog =
-    S[j]), the covariate vector is expanded |S| - 1 times, with the
-    exog values replaced with zeros except for block j.
+    Also, exog is modified by prepending columns containing threshold
+    indicators.  When defining a new variable as I(endog > S[j]), the
+    threshold indicators are a vector of zeros, with a 1 in the j^th
+    position.
 
     Arguments
     ---------
-    endog: array-like
-        A list of 1-dimensional NumPy arrays, giving the response
-        values for the clusters
-    exog: array-like
-        A list of 2-dimensional NumPy arrays, giving the covariate
-        data for the clusters.  exog[i] should include an intercept
-        for nominal data but no intercept should be included for
-        ordinal data.
-    groups : array-like
-        The group label for each observation
-    time : List
-        A list of 1-dimensional NumPy arrays containing time
-        information
-    offset : List
-        A list of 1-dimensional NumPy arrays containing the offset
-        information
-    endog_type: string
-        Either "ordinal" or "nominal"
-
-    The number of rows of exog[i] must equal the length of endog[i],
-    and all the exog[i] arrays should have the same number of columns.
+    data: array-like
+        A two-dimensional array containing the data (variables in
+        columns, cases in rows.
+    endog_col: integer or string
+        The column index or name of `data` that contains the
+        endogeneous variable
 
     Returns:
     --------
-    endog_ex:   endog recoded as described above
-    exog_ex:    exog recoded as described above
-    groups_ex:  groups expanded to fit the recoded data
-    offset_ex:  offset expanded to fit the recoded data
-    time_ex:    time expanded to fit the recoded data
-
-    Examples:
-    ---------
-
-    >>> family = Binomial()
-    >>> endog_ex,exog_ex,groups_ex,time_ex,offset_ex,nlevel =\
-        gee_setup_multicategorical(endog, exog, group_n, None, None, "ordinal")
-    >>> v = GlobalOddsRatio(nlevel, "ordinal")
-    >>> nx = exog.shape[1] - nlevel + 1
-    >>> beta = gee_multicategorical_starting_values(endog, nlevel, nx, "ordinal")
-    >>> md = GEE(endog_ex, exog_ex, groups_ex, None, family, v)
-    >>> mdf = md.fit(starting_params = beta)
-
+    endog: array-like
+        The endogeneous variable recoded as described above
+    exog: array-like
+        All columns of `data` except `endog_col`, recoded as described
+        above
+    intercepts: array-like
+        Indicator columns showing which threshold each value was
+        derived from.
+    nlevel: integer
+        The number of distinct values of the endogeneous variable
     """
 
-    if endog_type not in ("ordinal", "nominal"):
-        raise ValueError("setup_multicategorical: `endog_type` must "
-                         "be either 'nominal' or 'categorical'")
+    pandas = False
+    import pandas as pd
+    if type(data) == pd.core.frame.DataFrame:
+        index = data.index
+        columns = data.columns
+        endog = data[endog_col]
+        ine = [i for i,x in enumerate(columns) if x != endog_col]
+        pandas = True
+        data = np.asarray(data)
+    else:
+        endog = data[:,endog_col]
+        ine = range(data.shape[1])
+        ine.remove(endog_col)
+
+    exog = data[:,ine]
 
     # The unique outcomes, except the greatest one.
     endog_values = list(set(endog))
@@ -1076,60 +1056,149 @@ def gee_setup_multicategorical(endog, exog, groups, time, offset,
 
     ncut = len(endog_cuts)
 
-    # Default offset
-    if offset is None:
-        offset = np.zeros(len(endog), dtype=np.float64)
+    nrows = len(endog_cuts) * exog.shape[0]
+    exog_ex = np.zeros((nrows, exog.shape[1]), dtype=exog.dtype)
+    endog_ex = np.zeros(nrows, dtype=endog.dtype)
+    intercepts = np.zeros((nrows, ncut), dtype=np.float64)
 
-    # Default time
-    if time is None:
-        time = np.zeros(len(endog), dtype=np.float64)
-
-    # nominal=1, ordinal=0
-    endog_type_ordinal = (endog_type == "ordinal")
-
-    endog_ex = []
-    exog_ex = []
-    groups_ex = []
-    time_ex = []
-    offset_ex = []
-
-    for endog1, exog1, grp, off, tim in \
-            zip(endog, exog, groups, offset, time):
+    jrow = 0
+    for exog_row,endog_value in zip(exog, endog):
 
         # Loop over thresholds for the indicators
         for thresh_ix, thresh in enumerate(endog_cuts):
 
-            # Code as cumulative indicators
-            if endog_type_ordinal:
+            exog_ex[jrow,:] = exog_row
+            endog_ex[jrow] = (int(endog_value > thresh))
+            intercepts[jrow,thresh_ix] = 1
+            jrow += 1
 
-                endog_ex.append(int(endog1 > thresh))
-                offset_ex.append(off)
-                groups_ex.append(grp)
-                time_ex.append(tim)
-                icepts = np.zeros(ncut, dtype=np.float64)
-                icepts[thresh_ix] = 1
-                exog2 = np.concatenate((icepts, exog1))
-                exog_ex.append(exog2)
+    if pandas:
 
-            # Code as indicators
-            else:
+        index_ex = []
+        [index_ex.extend(y) for y in [[x,]*ncut for x in index]]
+        endog_ex = pd.Series(endog_ex, index=index_ex)
+        columns1 = [columns[i] for i in ine]
+        exog_ex = pd.DataFrame(exog_ex, index=index_ex,
+                               columns=columns1)
 
-                endog_ex.append(int(endog1 == thresh))
-                offset_ex.append(off)
-                groups_ex.append(grp)
-                time_ex.append(tim)
-                exog2 = np.zeros(ncut * len(exog1), dtype=np.float64)
-                exog2[thresh_ix*len(exog1):(thresh_ix+1)*len(exog1)] \
-                    = exog1
-                exog_ex.append(exog2)
+        intercept_columns = ["intercept_%d" for k in
+                             range(1, 1+len(endog_cuts))]
+        intercepts = pd.DataFrame(intercepts, index=index_ex,
+                                  columns=intercept_columns)
 
-    endog_ex = np.array(endog_ex)
-    exog_ex = np.array(exog_ex)
-    groups_ex = np.array(groups_ex)
-    time_ex = np.array(time_ex)
-    offset_ex = np.array(offset_ex)
+    return endog_ex, exog_ex, intercepts, len(endog_values)
 
-    return endog_ex, exog_ex, groups_ex, time_ex, offset_ex, len(endog_values)
+
+
+def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
+    """
+    Restructure nominal data as binary indicators so that they can be
+    analysed using Generalized Estimating Equations.
+
+    The data are expanded in both the rows and the columns.  Each row
+    of `data` is replaced with |S| rows, where S is the set of
+    distinct values of the endogeneous variable excluding the maximum
+    value.
+
+    The values of the endogeneous variable are replaced with the
+    sequence of indicators I(endog = S[0]), ..., I(endog = S[-1]).
+
+    exog is expanded column-wise by concatenating |S| blocks of the
+    same size as the original exog.  For the data row corresponding to
+    the indicator I(endog = S[j]), the j^th block contains the
+    original exog, and the other blocks contain zeros.
+
+    Arguments
+    ---------
+    data: array-like
+        A two-dimensional array containing the data (variables in
+        columns, cases in rows.
+    endog_col: integer
+        The column index of `data` that contains the endogeneous
+        variable
+    noexpand_cols : array-like
+        The indices of columns that are not expanded to be used
+        as covariates for the mean structure.  This should include
+        the grouping column, along with any columns used to estimate
+        the dependence structure (like a time column).
+
+    Returns:
+    --------
+    endog: array-like
+        The endogeneous variable recoded as described above
+    exog: array-like
+        All columns of `data` except `endog_col` and any in
+        `noexpand_cols`, expanded in both the rows and columns as
+        described above
+    exog_noexp: array-like
+        The columns of `data` in `noexand_cols`, expanded in the rows
+        but not the columns as described above
+    nlevel: integer
+        The number of distinct values of the endogeneous variable
+    """
+
+    pandas = False
+    import pandas as pd
+    if type(data) == pd.core.frame.DataFrame:
+        index = data.index
+        columns = data.columns
+        endog = data[endog_col]
+        ine = [i for i,x in enumerate(columns) if x != endog_col
+                           and x not in noexpand_cols]
+        inx = [i for i,x in enumerate(columns) if x in
+                           noexpand_cols or x in noexpand_cols]
+        pandas = True
+        data = np.asarray(data)
+    else:
+        endog = data[:,endog_col]
+        ine = range(data.shape[1])
+        ine.remove(endog_col)
+        [ine.remove(x) for x in noexpand_cols]
+        inx = noexpand_cols
+
+    exog = data[:,ine]
+    exog_noexp_raw = data[:,inx]
+
+    # The unique outcomes, except the greatest one.
+    endog_values = list(set(endog))
+    endog_values.sort()
+    endog_cuts = endog_values[0:-1]
+
+    ncut = len(endog_cuts)
+
+    nrows = len(endog_cuts) * exog.shape[0]
+    ncols = len(endog_cuts) * exog.shape[1]
+    exog_ex = np.zeros((nrows, ncols), dtype=np.float64)
+    endog_ex = np.zeros(nrows, dtype=np.float64)
+    exog_noexp = np.zeros((nrows, len(inx)), dtype=np.float64)
+
+    jrow = 0
+    for exog_row,exog_row_ne,endog_value in zip(exog, exog_noexp_raw,
+                                                endog):
+
+        # Loop over thresholds for the indicators
+        for thresh_ix, thresh in enumerate(endog_cuts):
+
+            u = np.zeros(len(endog_cuts), dtype=np.float64)
+            u[thresh_ix] = 1
+            exog_ex[jrow,:] = np.kron(u, exog_row)
+            exog_noexp[jrow,:] = exog_row_ne
+            endog_ex[jrow] = (int(endog_value == thresh))
+            jrow += 1
+
+    if pandas:
+
+        index_ex = []
+        [index_ex.extend(y) for y in [[x,]*ncut for x in index]]
+        endog_ex = pd.Series(endog_ex, index=index_ex)
+        columns1 = [columns[i] for i in ine]
+        exog_ex = pd.DataFrame(exog_ex, index=index_ex,
+                               columns=columns1)
+
+
+    return endog_ex, exog_ex, exog_noexp, len(endog_values)
+
+
 
 
 def gee_ordinal_starting_values(endog, n_exog):
@@ -1138,7 +1207,7 @@ def gee_ordinal_starting_values(endog, n_exog):
     Parameters:
     -----------
     endog : array-like
-       Endogeneous (response) data for the unmodified data.
+       Endogeneous (response) data
 
     n_exog : integer
        The number of exogeneous (predictor) variables
