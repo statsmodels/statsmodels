@@ -74,5 +74,5 @@ class Travelmodechoice():
                       4.05102973735638e-11, 1.7963349419059e-09,
                       3.78327581936067e-11, -9.05671633608801e-11]
 
-        self.predict = np.loadtxt(os.path.join(cur_dir,'clogit_predict.csv'),
+        self.predict = np.loadtxt(os.path.join(cur_dir, 'clogit_predict.csv'),
             delimiter=";")
