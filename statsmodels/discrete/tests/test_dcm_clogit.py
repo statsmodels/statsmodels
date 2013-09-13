@@ -10,7 +10,7 @@ import pandas as pd
 from collections import OrderedDict
 from numpy.testing import assert_almost_equal
 
-DECIMAL_4 = 1
+DECIMAL_4 = 4
 
 RTOL_4 = 1e-4
 RTOL_8 = 1e-8
