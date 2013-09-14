@@ -11,7 +11,6 @@ Greene, W. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 Train, K. `Discrete Choice Methods with Simulation`.
     Cambridge University Press. 2003
 --------------------
-
 """
 
 import numpy as np
@@ -25,9 +24,8 @@ from scipy import stats
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 
+
 # TODO: public/private method
-
-
 class CLogit(LikelihoodModel):
     __doc__ = """
     Conditional Logit
@@ -74,6 +72,18 @@ class CLogit(LikelihoodModel):
         The actual number of parameters for the exogenous design.  Includes
         the constant if the design has one and excludes the constant of one
         choice which should be dropped for identification.
+    loglikeobs
+    params
+    score
+    jac
+    hessian
+    information
+    predict
+    residuals
+    resid_misclassified
+    pred_table
+    summary : Summary instance
+        summarize the results inside CLogitResults class.
 
     Notes
     -----
@@ -205,7 +215,7 @@ class CLogit(LikelihoodModel):
 
         Parameters
         ----------
-        X : array
+        X : array (nobs,K)
             the linear predictor of the model.
 
         Returns
@@ -219,6 +229,14 @@ class CLogit(LikelihoodModel):
         """
         eXB = np.exp(item)
         return  eXB / eXB.sum(1)[:, None]
+
+    def pdf(self, item):
+        """
+        Conditional Logit probability density function.
+
+        """
+        raise NotImplementedError
+
 
     def loglike(self, params):
 
@@ -246,7 +264,6 @@ class CLogit(LikelihoodModel):
 
         xb = self.xbetas(params)
         loglike = (self.endog_bychoices * np.log(self.cdf(xb))).sum(1)
-
         return loglike.sum()
 
     def loglikeobs(self, params):
@@ -260,7 +277,7 @@ class CLogit(LikelihoodModel):
 
         Returns
         -------
-        loglike : ndarray (nobs,)
+        loglike : ndarray (nobs,K)
             The log likelihood for each observation of the model evaluated
             at `params`. See Notes
 
@@ -275,7 +292,6 @@ class CLogit(LikelihoodModel):
         """
 
         xb = self.xbetas(params)
-
         return  (self.endog_bychoices * np.log(self.cdf(xb))).sum(1)
 
     def score(self, params):
@@ -397,17 +413,17 @@ class CLogit(LikelihoodModel):
 
             Logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
             start_params = Logit_res.params.values
-            # 1 loops, best of 3: 316 ms per loop
-
-            # start_params = np.zeros(self.K)
-            # 1 loops, best of 3: 345 ms per loop
 
         else:
             start_params = np.asarray(start_params)
 
         start_time = time.time()
-        model_fit = super(CLogit, self).fit(disp = disp, start_params = start_params,
-                        method=method, maxiter=maxiter, maxfun=maxfun, **kwds)
+        model_fit = super(CLogit, self).fit(disp = disp,
+                                            start_params = start_params,
+                                            method=method, maxiter=maxiter,
+                                            maxfun=maxfun, **kwds)
+
+        self.params = model_fit.params
         end_time = time.time()
         self.elapsed_time = end_time - start_time
 
@@ -427,7 +443,7 @@ class CLogit(LikelihoodModel):
 
         Returns
         -------
-        array
+        array (nobs,K)
             Fitted values at exog.
         """
         if not linear:
@@ -436,19 +452,100 @@ class CLogit(LikelihoodModel):
             return self.xbetas(params)
 
     def summary(self):
-
+        # TODO add __doc__ = CLogitResults.__doc__
         return CLogitResults(self).summary()
 
+    @cache_readonly
+    def residuals(self):
+        """
+        Residuals
+
+        Returns
+        -------
+        array
+            Residuals.
+
+        Notes
+        -----
+        The residuals for the Conditional Logit model are defined as
+
+        .. math:: y_i - p_i
+
+        where : math:`y_i` is the endogenous variable and math:`p_i`
+        predicted probabilities for each category value.
+        """
+
+        return self.endog_bychoices - self.predict(self.params)
+
+    @cache_readonly
+    def resid_misclassified(self):
+        """
+        Residuals indicating which observations are misclassified.
+
+        Returns
+        -------
+        array (nobs,K)
+            Residuals.
+
+        Notes
+        -----
+        The residuals for the Conditional Logit model are defined
+
+        .. math:: argmax(y_i) \\neq argmax(p_i)
+
+        where :math:`argmax(y_i)` is the index of the category for the
+        endogenous variable and :math:`argmax(p_i)` is the index of the
+        predicted probabilities for each category. That is, the residual
+        is a binary indicator that is 0 if the category with the highest
+        predicted probability is the same as that of the observed variable
+        and 1 otherwise.
+        """
+        # it's 0 or 1 - 0 for correct prediction and 1 for a missed one
+
+        return (self.endog_bychoices.argmax(1) !=
+                self.predict(self.params).argmax(1)).astype(float)
+
+    def pred_table(self, params = None):
+        """
+        Returns the J x J prediction table.
+
+        Parameters
+        ----------
+        params : array-like, optional
+            If None, the parameters of the fitted model are used.
+
+        Notes
+        -----
+        pred_table[i,j] refers to the number of times "i" was observed and
+        the model predicted "j". Correct predictions are along the diagonal.
+        """
+        # TODO. doesn't match the results of green.
+        # greene = np.array([[ 32.,   8.,   5.,  13.],
+        #                   [  7.,  37.,   5.,  14.],
+        #                   [  3.,   5.,  15.,   6.],
+        #                   [ 16.,  13.,   6.,  25.]])
+        # clogit_mod.endog_bychoices.sum(0) #OK: 58.,  63.,  30.,  59.
+        # clogit_mod.predict(clogit_res.params).sum(0) #OK: 58.,  63.,  30.,  59.
+        # clogit_mod.pred_table().sum(0) # 56.,  64.,  23.,  67.
+        # clogit_mod.pred_table().sum(1) # OK: 58.,  63.,  30.,  59.
+
+        if params == None:
+            params = self.params
+
+        # these are the real choices
+        idx = self.endog_bychoices.argmax(1)
+        # these are the predicted choices
+        idy = self.predict(params).argmax(1)
+
+        return np.histogram2d(idx, idy, bins = self.J)[0]
+
+
 ### Results Class ###
-
-
 class CLogitResults(LikelihoodModelResults, ResultMixin):
     __doc__ = """
     Parameters
     ----------
     model : A Discrete Choice Model instance.
-
-    mlfit : The results of the Discrete Choice Model fitted.
 
     Returns
     -------
@@ -616,11 +713,62 @@ class CLogitResults(LikelihoodModelResults, ResultMixin):
         smry.tables.append(tbl)
 
         # for parameters
-        # TODO rename parameters
         smry.add_table_params(self, alpha=alpha, use_t=False)
 
         return smry
 
+
+# Marginal Effects
+class ClogitMargeff(CLogit):
+
+    __doc__ = """
+    Conditional Logit Marginal effects
+        Derivatives of the probabilitis with respect to the explanatory variables.
+
+    Notes
+    -----
+    * for alternative specific coefficients are:
+
+        P[j] * (params_asc[j] - sum_k P[k]*params_asc[k])
+
+        where params_asc are params for the individual-specific variables
+
+        See _derivative_exog in class MultinomialModel
+
+    * for generic coefficient are:
+
+        params_gen[j] * P[j] (1 - P[j])
+
+        where params_gen are params for the alternative-specific variables.
+
+    """
+
+    def __init__(self, model):
+
+        self.model = model
+        params = model.params
+        self.ncommon = model.ncommon
+        K = model.K
+        self.J = model.J
+        exog = model.exog_matrix
+
+        self.K_asc = self.ncommon
+        self.K_gen = K - self.ncommon
+
+        self.exog_asc = exog[np.arange(self.ncommon)]
+        self.exog_gen = exog[np.arange(self.ncommon, K)]
+
+        self.params_asc = params[np.arange(self.ncommon)]
+        self.params_gen = params[np.arange(self.ncommon, K)]
+
+    def _derivative_exog_asc(self):
+        return NotImplementedError
+
+    def _derivative_exog_gen(self):
+        return NotImplementedError
+
+    def get_margeff(self):
+        return NotImplementedError
 
 if __name__ == "__main__":
 
@@ -661,5 +809,8 @@ if __name__ == "__main__":
     clogit_res = clogit_mod.fit(disp=1)
 
     # Summarize model
-    clogit_sum = CLogitResults(clogit_mod)
-    print clogit_sum.summary()  # or clogit_mod.summary()
+    print clogit_mod.summary()
+
+    # Marginal Effects
+    # clogit_margeff = ClogitMargeff(clogit_mod)
+    # print clogit_margeff._derivative_exog_asc()
