@@ -53,8 +53,11 @@ def _random_effects_mle_loglike(self, params):
                  T*np.log(2*np.pi*var_resid))
     return np.sum(llf)
 
+_effects_levels = dict(oneway=[0],
+                       time=[1],
+                       twoway=[0,1])
+#TODO: support any other aliases?
 
-#TODO:
 def _maximize_loglike():
     """
     Amemiya (1971) shows that brute force maximization of the (log-)likelihood
@@ -138,6 +141,7 @@ class PanelLM(PanelModel, RegressionModel):
         _check_method_compat(method, effects)
         self.method = method
         self.effects = effects
+        self._effects_level = _effects_levels[effects]
 
         super(PanelLM, self).__init__(y, X, missing=missing, time=time,
                                       panel=panel, hasconst=hasconst)
@@ -147,7 +151,6 @@ class PanelLM(PanelModel, RegressionModel):
                                    within = _ols_loglike,
                                    between = _ols_loglike,
                                    )
-
 
     def initialize(self, unit=None, time=None):
         self.wexog = self.whiten(self.exog)
@@ -195,12 +198,7 @@ class PanelLM(PanelModel, RegressionModel):
             func = lambda x : x.mean()
 
         effects = self.effects
-        if effects in ['oneway', 'unit']: #document/keep unit?
-            levels = [0]
-        elif effects == 'time':
-            levels = [1]
-        elif effects in ['twoway']:
-            levels = [0, 1]
+        levels = self._effects_level
 
         for level in levels: #TODO: this should copy but be sure
             data = g.transform_array(data, func, level)
@@ -304,10 +302,13 @@ class PanelLMWithinResults(PanelLMResults):
     @cache_readonly
     def _fixed_effects(self): # make public?
         model = self.model
+        level = model._effects_level[0]
+        #TODO: this won't work for two-way? Make sure it's tested.
+        #maybe transform_array should recurse for isinstance(level, list)
         grouped_y = model.data.groupings.transform_array(model.endog,
-                                                lambda x : x.mean(), 0)
+                                                lambda x : x.mean(), level)
         grouped_X = model.data.groupings.transform_array(model.exog,
-                                                lambda x : x.mean(), 0)
+                                                lambda x : x.mean(), level)
         #TODO: Make fixed_effects a property?
         return grouped_y - model.predict(self.params, grouped_X)
 
@@ -337,9 +338,10 @@ class PanelLMWithinResults(PanelLMResults):
         # this should maybe be a method for Grouping class though.
         # repeat maybe
         import pandas as pd
-        #TODO: update for time effects
+        #TODO: update for twoway effects
         data = self.model.data
-        idx = data.groupings.index.get_level_values(0)
+        level = self.model._effects_level[0]
+        idx = data.groupings.index.get_level_values(level)
         idx_uniq = idx.unique()
         resid = pd.DataFrame(self._fixed_effects - self.constant,
                              index=idx_uniq)
@@ -379,10 +381,11 @@ class PanelLMWithinResults(PanelLMResults):
     @cache_readonly
     def rsquared_between(self):
         model = self.model
+        level = model._effects_level[0]
         grouped_y = model.data.groupings.transform_array(model.endog,
-                                                lambda x : x.mean(), 0)
+                                                lambda x : x.mean(), level)
         grouped_X = model.data.groupings.transform_array(model.exog,
-                                                lambda x : x.mean(), 0)
+                                                lambda x : x.mean(), level)
         grouped_y_hat = model.predict(self.params, grouped_X)
         return np.corrcoef(grouped_y, grouped_y_hat)[0,1] ** 2
 
@@ -415,10 +418,11 @@ class PanelLMBetweenResults(PanelLMResults):
     @cache_readonly
     def rsquared_within(self):
         model = self.model
+        level = model._effects_level[0]
         within_y = model.data.groupings.transform_array(model.endog,
-                                                lambda x : x - x.mean(), 0)
+                                                lambda x : x - x.mean(), level)
         within_X = model.data.groupings.transform_array(model.exog,
-                                                lambda x : x - x.mean(), 0)
+                                                lambda x : x - x.mean(), level)
 
         within_y_hat = model.predict(self.params, within_X)
         return np.corrcoef(within_y, within_y_hat)[0,1] ** 2
@@ -430,10 +434,11 @@ class PanelLMBetweenResults(PanelLMResults):
     @cache_readonly
     def resid_overall(self):
         model = self.model
+        level = model._effects_level[0]
         within_y = model.data.groupings.transform_array(model.endog,
-                                                lambda x : x - x.mean(), 0)
+                                                lambda x : x - x.mean(), level)
         within_X = model.data.groupings.transform_array(model.exog,
-                                                lambda x : x - x.mean(), 0)
+                                                lambda x : x - x.mean(), level)
         within_y_hat = model.predict(self.params, within_X)
         return within_y - within_y_hat
 
@@ -444,7 +449,8 @@ class PanelLMBetweenResults(PanelLMResults):
     @cache_readonly
     def resid_combined(self):
         data = self.model.data
-        idx = data.groupings.index.get_level_values(0)
+        level = self.model._effects_level[0]
+        idx = data.groupings.index.get_level_values(level)
         idx_uniq = idx.unique()
         resid_groups = pd.DataFrame(self.resid_groups, index=idx_uniq)
         return resid_groups.reindex(idx).values.squeeze() + self.resid_overall
@@ -533,20 +539,22 @@ class PanelLMRandomResults(PanelLMResults):
     @cache_readonly
     def rsquared_between(self):
         model = self.model
+        level = model._effects_level[0]
         grouped_y = model.data.groupings.transform_array(model.endog,
-                                                lambda x : x.mean(), 0)
+                                                lambda x : x.mean(), level)
         grouped_X = model.data.groupings.transform_array(model.exog,
-                                                lambda x : x.mean(), 0)
+                                                lambda x : x.mean(), level)
         grouped_y_hat = model.predict(self.params, grouped_X)
         return np.corrcoef(grouped_y, grouped_y_hat)[0,1] ** 2
 
     @cache_readonly
     def rsquared_within(self):
         model = self.model
+        level = model._effects_level[0]
         within_y = model.data.groupings.transform_array(model.endog,
-                                                lambda x : x - x.mean(), 0)
+                                                lambda x : x - x.mean(), level)
         within_X = model.data.groupings.transform_array(model.exog,
-                                                lambda x : x - x.mean(), 0)
+                                                lambda x : x - x.mean(), level)
 
         within_y_hat = model.predict(self.params, within_X)
         return np.corrcoef(within_y, within_y_hat)[0,1] ** 2
@@ -563,6 +571,7 @@ class PanelLMRandomResults(PanelLMResults):
         import pandas as pd
         model = self.model
         data = model.data
+        level = model._effects_level[0]
 
         #TODO: update for time effects
         weight = (self.std_dev_resid**2/
@@ -570,11 +579,11 @@ class PanelLMRandomResults(PanelLMResults):
                    self.std_dev_groups**2))
 
         # reindex
-        idx = data.groupings.index.get_level_values(0)
+        idx = data.groupings.index.get_level_values(level)
         idx_uniq = idx.unique()
 
         resid = data.groupings.transform_array(self.resid*weight,
-                                               lambda x : x.sum(), 0)
+                                               lambda x : x.sum(), level)
 
         resid = pd.DataFrame(resid, index=idx_uniq)
 
