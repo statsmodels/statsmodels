@@ -198,7 +198,7 @@ class TestBetween(CheckModelResults, FixedEffectsMixin):
     def test_loglike(self):
         npt.assert_almost_equal(self.res1.llf, self.res2.llf, 4)
 
-class TestRandom(CheckModelResults):
+class TestRandomSWAR(CheckModelResults):
     @classmethod
     def setupClass(cls):
         from results_panel import swar1w
@@ -249,6 +249,10 @@ class TestPooling(CheckModelResults, FixedEffectsMixin):
         res2 = pooling
         cls.res2 = res2
 
+
+class TestTwoWay(CheckModelResults, FixedEffectsMixin):
+    pass
+
 class XestMLE(CheckModelResults):
     @classmethod
     def setupClass(cls):
@@ -261,20 +265,6 @@ class XestMLE(CheckModelResults):
         data['const'] = 1
         X = data[['const', 'value', 'capital']]
         cls.res1 = PanelLM(y, X, method='mle').fit(disp=0)
-        #cls.res2 = mle_results
-
-class XestSWAR(CheckModelResults):
-    @classmethod
-    def setupClass(cls):
-        #from results_panel import mle_results
-        data = grunfeld.load_pandas().data
-        data.firm = data.firm.str.lower()
-        data = data.set_index(['firm', 'year'])
-        data = data.sort()
-        y = data['invest']
-        data['const'] = 1
-        X = data[['const', 'value', 'capital']]
-        cls.res1 = PanelLM(y, X, method='swar').fit(disp=0)
         #cls.res2 = mle_results
 
 #TODO:
