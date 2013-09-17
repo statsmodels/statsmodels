@@ -21,6 +21,12 @@ def _check_method_compat(method, effects):
         raise ValueError("effects for between must be oneway or time")
     #Need to do any checking for other methods?
 
+#NOTE: all of the fixed effects, residuals, etc. follow the stata convention
+#      of being defined as deviations from the conditional mean rather than
+#      deviations from a base case. We do this ex-post, but we could
+#      probably just fix tranform_array to use a different encoding rather
+#      than the treatment encoding?
+
 def _ols_loglike(self, params):
     # same as WLS - used for between and within
     nobs2 = self.nobs / 2.
@@ -653,6 +659,7 @@ if __name__ == "__main__":
     between = PanelLM(y, X, method='between').fit(disp=0)
     swar = PanelLM(y, X, method="swar").fit()
     pooling = PanelLM(y, X, method="pooling").fit()
+    twoway = PanelLM(y, X, method="twoway").fit()
 
     # check likelihood, params from Stata
     params = np.array([-53.9125431163, .109289189706, .30797722867,
