@@ -16,9 +16,9 @@ xtreg invest value capital i.year, fe
 the conditional mean of the sample rather than in terms of exclusion from the
 base case (1935)*/
 
-
+set varabbrev off
 qui tabulate year, generate(yr)
-local j 0
+local j 1
 forvalues i = 1936/1954 {
     local ++j
     rename yr`j' yr`i'
