@@ -4,6 +4,10 @@ Created on Fri Nov 04 10:51:39 2011
 
 @author: josef
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
@@ -31,9 +35,9 @@ pmod.fit(y)  #no return
 y_pred = pmod.predict(x)
 error = y - y_pred
 mse = (error*error).mean()
-print mse
+print(mse)
 res_ols = OLS(y, exog[:,:3]).fit()
-print np.squeeze(pmod.coef) - res_ols.params
+print(np.squeeze(pmod.coef) - res_ols.params)
 
 
 weights = np.ones(nobs)
@@ -45,9 +49,9 @@ pmodw.fit(y, weights=weights)  #no return
 y_predw = pmodw.predict(x)
 error = y - y_predw
 mse = (error*error).mean()
-print mse
+print(mse)
 res_wls = WLS(y, exog[:,:3], weights=weights).fit()
-print np.squeeze(pmodw.coef) - res_wls.params
+print(np.squeeze(pmodw.coef) - res_wls.params)
 
 
 

@@ -1,1 +1,1 @@
-from denton import dentonm
+from .denton import dentonm

@@ -1,5 +1,5 @@
 # pylint: disable=W0611
-import diagnostic
+from . import diagnostic
 from .diagnostic import (
             acorr_ljungbox, acorr_breush_godfrey,
             CompareCox, compare_cox, CompareJ, compare_j,
@@ -11,16 +11,16 @@ from .diagnostic import (
             normal_ad, lillifors
             )
 
-import multicomp
+from . import multicomp
 from .multitest import (multipletests, fdrcorrection, fdrcorrection_twostage)
 from .multicomp import tukeyhsd
-import gof
+from . import gof
 from .gof import (powerdiscrepancy, gof_chisquare_discrete,
                   chisquare_effectsize)
-import stattools
+from . import stattools
 from .stattools import durbin_watson, omni_normtest, jarque_bera
 
-import sandwich_covariance
+from . import sandwich_covariance
 from .sandwich_covariance import (
             cov_cluster, cov_cluster_2groups, cov_nw_panel,
             cov_hac, cov_white_simple,
@@ -47,7 +47,7 @@ from .descriptivestats import Describe
 
 from .anova import anova_lm
 
-import moment_helpers
+from . import moment_helpers
 from .correlation_tools import corr_nearest, corr_clipped, cov_nearest
 
 from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q,

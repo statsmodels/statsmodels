@@ -2,6 +2,9 @@
 This module contains scatterplot smoothers, that is classes
 who generate a smooth fit of a set of (x,y) pairs.
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 # pylint: disable-msg=C0103
 # pylint: disable-msg=W0142
@@ -9,7 +12,7 @@ who generate a smooth fit of a set of (x,y) pairs.
 # pylint: disable-msg=E1101
 
 import numpy as np
-import kernels
+from . import kernels
 #import numbers
 #from scipy.linalg import solveh_banded
 #from scipy.optimize import golden
@@ -116,7 +119,7 @@ class PolySmoother(object):
         self.coef = np.zeros((order+1,), np.float64)
         if x is not None:
             if x.ndim > 1:
-                print 'Warning: 2d x detected in PolySmoother init, shape:', x.shape
+                print('Warning: 2d x detected in PolySmoother init, shape:', x.shape)
                 x=x[0,:] #check orientation
             self.X = np.array([x**i for i in range(order+1)]).T
 
@@ -158,7 +161,7 @@ class PolySmoother(object):
         if x is not None:
             #if x.ndim > 1: x=x[0,:]  #why this this should select column not row
             if x.ndim > 1:
-                print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
+                print('Warning: 2d x detected in PolySmoother predict, shape:', x.shape)
                 x=x[:,0]  #TODO: check and clean this up
             X = np.array([(x**i) for i in range(self.order+1)])
         else: X = self.X
@@ -183,7 +186,7 @@ class PolySmoother(object):
                 raise ValueError("x needed to fit PolySmoother")
         else:
             if x.ndim > 1: 
-                print 'Warning: 2d x detected in PolySmoother predict, shape:', x.shape
+                print('Warning: 2d x detected in PolySmoother predict, shape:', x.shape)
                 #x=x[0,:] #TODO: check orientation, row or col
             self.X = np.array([(x**i) for i in range(self.order+1)]).T
         #print _w.shape

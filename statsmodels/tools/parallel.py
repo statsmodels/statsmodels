@@ -9,6 +9,8 @@ changes for statsmodels (Josef Perktold)
 - try import from joblib directly, (doesn't import all of sklearn)
 
 '''
+from __future__ import print_function
+from __future__ import print_function
 
 
 def parallel_func(func, n_jobs, verbose=5):
@@ -56,11 +58,11 @@ def parallel_func(func, n_jobs, verbose=5):
                 import multiprocessing
                 n_jobs = multiprocessing.cpu_count()
             except (ImportError, NotImplementedError):
-                print "multiprocessing not installed. Cannot run in parallel."
+                print("multiprocessing not installed. Cannot run in parallel.")
                 n_jobs = 1
 
     except ImportError:
-        print "joblib not installed. Cannot run in parallel."
+        print("joblib not installed. Cannot run in parallel.")
         n_jobs = 1
         my_func = func
         parallel = list

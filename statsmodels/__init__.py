@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import print_function
 #
 # models - Statistical Models
 #
@@ -55,9 +57,9 @@ class NoseWrapper(Tester):
         utils.verbose = verbose
 
         if doctests:
-            print("Running unit tests and doctests for %s" % self.package_name)
+            print(("Running unit tests and doctests for %s" % self.package_name))
         else:
-            print("Running unit tests for %s" % self.package_name)
+            print(("Running unit tests for %s" % self.package_name))
 
         self._show_system_info()
 

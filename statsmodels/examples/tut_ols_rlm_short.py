@@ -7,6 +7,14 @@ closer to true slope and not tilted like OLS.
 
 Note: uncomment plt.show() to display graphs
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 #from scipy import stats
@@ -35,10 +43,10 @@ plt.plot(x1, y2, 'o', x1, y_true2, 'b-')
 
 
 res2 = sm.OLS(y2, X).fit()
-print "OLS: parameter estimates: slope, constant"
-print res2.params
-print "standard deviation of parameter estimates"
-print res2.bse
+print("OLS: parameter estimates: slope, constant")
+print(res2.params)
+print("standard deviation of parameter estimates")
+print(res2.bse)
 prstd, iv_l, iv_u = wls_prediction_std(res2)
 plt.plot(x1, res2.fittedvalues, 'r-')
 plt.plot(x1, iv_u, 'r--')
@@ -48,10 +56,10 @@ plt.plot(x1, iv_l, 'r--')
 #compare with robust estimator
 
 resrlm2 = sm.RLM(y2, X).fit()
-print "\nRLM: parameter estimates: slope, constant"
-print resrlm2.params
-print "standard deviation of parameter estimates"
-print resrlm2.bse
+print("\nRLM: parameter estimates: slope, constant")
+print(resrlm2.params)
+print("standard deviation of parameter estimates")
+print(resrlm2.bse)
 plt.plot(x1, resrlm2.fittedvalues, 'g.-')
 plt.title('Data with Outliers; blue: true, red: OLS, green: RLM')
 

@@ -49,6 +49,56 @@ Author: josef-pktd
 License: BSD
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 #note copied from distr_skewnorm_0.py
 
@@ -97,18 +147,18 @@ class SkewNorm_gen(distributions.rv_continuous):
 skewnorm = SkewNorm_gen()
 def example_n():
 
-    print skewnorm.pdf(1,0), stats.norm.pdf(1), skewnorm.pdf(1,0) - stats.norm.pdf(1)
-    print skewnorm.pdf(1,1000), stats.chi.pdf(1,1), skewnorm.pdf(1,1000) - stats.chi.pdf(1,1)
-    print skewnorm.pdf(-1,-1000), stats.chi.pdf(1,1), skewnorm.pdf(-1,-1000) - stats.chi.pdf(1,1)
+    print(skewnorm.pdf(1,0), stats.norm.pdf(1), skewnorm.pdf(1,0) - stats.norm.pdf(1))
+    print(skewnorm.pdf(1,1000), stats.chi.pdf(1,1), skewnorm.pdf(1,1000) - stats.chi.pdf(1,1))
+    print(skewnorm.pdf(-1,-1000), stats.chi.pdf(1,1), skewnorm.pdf(-1,-1000) - stats.chi.pdf(1,1))
     rvs = skewnorm.rvs(0,size=500)
-    print 'sample mean var: ', rvs.mean(), rvs.var()
-    print 'theoretical mean var', skewnorm.stats(0)
+    print('sample mean var: ', rvs.mean(), rvs.var())
+    print('theoretical mean var', skewnorm.stats(0))
     rvs = skewnorm.rvs(5,size=500)
-    print 'sample mean var: ', rvs.mean(), rvs.var()
-    print 'theoretical mean var', skewnorm.stats(5)
-    print skewnorm.cdf(1,0), stats.norm.cdf(1), skewnorm.cdf(1,0) - stats.norm.cdf(1)
-    print skewnorm.cdf(1,1000), stats.chi.cdf(1,1), skewnorm.cdf(1,1000) - stats.chi.cdf(1,1)
-    print skewnorm.sf(0.05,1000), stats.chi.sf(0.05,1), skewnorm.sf(0.05,1000) - stats.chi.sf(0.05,1)
+    print('sample mean var: ', rvs.mean(), rvs.var())
+    print('theoretical mean var', skewnorm.stats(5))
+    print(skewnorm.cdf(1,0), stats.norm.cdf(1), skewnorm.cdf(1,0) - stats.norm.cdf(1))
+    print(skewnorm.cdf(1,1000), stats.chi.cdf(1,1), skewnorm.cdf(1,1000) - stats.chi.cdf(1,1))
+    print(skewnorm.sf(0.05,1000), stats.chi.sf(0.05,1), skewnorm.sf(0.05,1000) - stats.chi.sf(0.05,1))
 
 # generated the same way as distributions in stats.distributions
 class SkewNorm2_gen(distributions.rv_continuous):
@@ -182,12 +232,12 @@ appears in J.Roy.Statist.Soc, series B, vol.65, pp.367-389
 def example_T():
     skewt = ACSkewT_gen()
     rvs = skewt.rvs(10,0,size=500)
-    print 'sample mean var: ', rvs.mean(), rvs.var()
-    print 'theoretical mean var', skewt.stats(10,0)
-    print 't mean var', stats.t.stats(10)
-    print skewt.stats(10,1000) # -> folded t distribution, as alpha -> inf
+    print('sample mean var: ', rvs.mean(), rvs.var())
+    print('theoretical mean var', skewt.stats(10,0))
+    print('t mean var', stats.t.stats(10))
+    print(skewt.stats(10,1000)) # -> folded t distribution, as alpha -> inf
     rvs = np.abs(stats.t.rvs(10,size=1000))
-    print rvs.mean(), rvs.var()
+    print(rvs.mean(), rvs.var())
 
 ##
 ##def mvsk2cm(*args):
@@ -253,8 +303,8 @@ def pdf_moments_st(cnt):
 
     N = len(cnt)
     if N < 2:
-        raise ValueError, "At least two moments must be given to" + \
-              "approximate the pdf."
+        raise ValueError("At least two moments must be given to" + \
+              "approximate the pdf.")
 
     totp = poly1d(1)
     sig = sqrt(cnt[1])
@@ -273,8 +323,8 @@ def pdf_moments_st(cnt):
             Ck += Dvals[k][m] / sig**m * momdiff
         # Add to totp
         raise
-        print Dvals
-        print Ck
+        print(Dvals)
+        print(Ck)
         totp = totp +  Ck*Dvals[k]
 
     def thisfunc(x):
@@ -324,8 +374,8 @@ def pdf_mvsk(mvsk):
     """
     N = len(mvsk)
     if N < 4:
-        raise ValueError, "Four moments must be given to" + \
-              "approximate the pdf."
+        raise ValueError("Four moments must be given to" + \
+              "approximate the pdf.")
 
     mu, mc2, skew, kurt = mvsk
 
@@ -372,8 +422,8 @@ def pdf_moments(cnt):
     """
     N = len(cnt)
     if N < 2:
-        raise ValueError, "At least two moments must be given to" + \
-              "approximate the pdf."
+        raise ValueError("At least two moments must be given to" + \
+              "approximate the pdf.")
 
 
 
@@ -452,7 +502,7 @@ class NormExpan_gen(distributions.rv_continuous):
             cnt = args
             self.mvsk = mc2mvsk(cnt)
         else:
-            raise ValueError, "mode must be 'mvsk' or centmom"
+            raise ValueError("mode must be 'mvsk' or centmom")
 
         self.cnt = cnt
         #self.mvsk = (mu,sig,sk,kur)
@@ -475,32 +525,32 @@ def examples_normexpand():
     normexpan = NormExpan_gen(rvs, mode='sample')
 
     smvsk = stats.describe(rvs)[2:]
-    print 'sample: mu,sig,sk,kur'
-    print smvsk
+    print('sample: mu,sig,sk,kur')
+    print(smvsk)
 
     dmvsk = normexpan.stats(moments='mvsk')
-    print 'normexpan: mu,sig,sk,kur'
-    print dmvsk
-    print 'mvsk diff distribution - sample'
-    print np.array(dmvsk) - np.array(smvsk)
-    print 'normexpan attributes mvsk'
-    print mc2mvsk(normexpan.cnt)
-    print normexpan.mvsk
+    print('normexpan: mu,sig,sk,kur')
+    print(dmvsk)
+    print('mvsk diff distribution - sample')
+    print(np.array(dmvsk) - np.array(smvsk))
+    print('normexpan attributes mvsk')
+    print(mc2mvsk(normexpan.cnt))
+    print(normexpan.mvsk)
 
     from statsmodels.stats.momenthelpers import mvsk2mnc, mnc2mc
     mnc = mvsk2mnc(dmvsk)
     mc = mnc2mc(mnc)
-    print 'central moments'
-    print mc
-    print 'non-central moments'
-    print mnc
+    print('central moments')
+    print(mc)
+    print('non-central moments')
+    print(mnc)
 
 
     pdffn = pdf_moments(mc)
-    print '\npdf approximation from moments'
-    print 'pdf at', mc[0]-1,mc[0]+1
-    print pdffn([mc[0]-1,mc[0]+1])
-    print normexpan.pdf([mc[0]-1,mc[0]+1])
+    print('\npdf approximation from moments')
+    print('pdf at', mc[0]-1,mc[0]+1)
+    print(pdffn([mc[0]-1,mc[0]+1]))
+    print(normexpan.pdf([mc[0]-1,mc[0]+1]))
 
 
 ## copied from nonlinear_transform_gen.py
@@ -712,36 +762,36 @@ def examples_transf():
     ##print stats.lognorm.stats(1)
     ##print lognormal.rvs(size=10)
 
-    print 'Results for lognormal'
+    print('Results for lognormal')
     lognormalg = ExpTransf_gen(stats.norm, a=0, name = 'Log transformed normal general')
-    print lognormalg.cdf(1)
-    print stats.lognorm.cdf(1,1)
-    print lognormalg.stats()
-    print stats.lognorm.stats(1)
-    print lognormalg.rvs(size=5)
+    print(lognormalg.cdf(1))
+    print(stats.lognorm.cdf(1,1))
+    print(lognormalg.stats())
+    print(stats.lognorm.stats(1))
+    print(lognormalg.rvs(size=5))
 
     ##print 'Results for loggamma'
     ##loggammag = ExpTransf_gen(stats.gamma)
     ##print loggammag._cdf(1,10)
     ##print stats.loggamma.cdf(1,10)
 
-    print 'Results for expgamma'
+    print('Results for expgamma')
     loggammaexpg = LogTransf_gen(stats.gamma)
-    print loggammaexpg._cdf(1,10)
-    print stats.loggamma.cdf(1,10)
-    print loggammaexpg._cdf(2,15)
-    print stats.loggamma.cdf(2,15)
+    print(loggammaexpg._cdf(1,10))
+    print(stats.loggamma.cdf(1,10))
+    print(loggammaexpg._cdf(2,15))
+    print(stats.loggamma.cdf(2,15))
 
 
     # this requires change in scipy.stats.distribution
     #print loggammaexpg.cdf(1,10)
 
-    print 'Results for loglaplace'
+    print('Results for loglaplace')
     loglaplaceg = LogTransf_gen(stats.laplace)
-    print loglaplaceg._cdf(2)
-    print stats.loglaplace.cdf(2,1)
+    print(loglaplaceg._cdf(2))
+    print(stats.loglaplace.cdf(2,1))
     loglaplaceexpg = ExpTransf_gen(stats.laplace)
-    print loglaplaceexpg._cdf(2)
+    print(loglaplaceexpg._cdf(2))
     stats.loglaplace.cdf(3,3)
     #0.98148148148148151
     loglaplaceexpg._cdf(3,0,1./3)
@@ -849,7 +899,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         elif self.shape == 'hump':
             signpdf = -1
         else:
-            raise ValueError, 'shape can only be `u` or `hump`'
+            raise ValueError('shape can only be `u` or `hump`')
 
         return signpdf * (self.derivplus(x)*self.kls._pdf(self.funcinvplus(x),*args, **kwargs) -
                    self.derivminus(x)*self.kls._pdf(self.funcinvminus(x),*args, **kwargs))
@@ -1129,9 +1179,9 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     correl = np.zeros(n*(n-1)/2.0)  #dtype necessary?
 
     if (lower.ndim != 1) or (upper.ndim != 1):
-        raise ValueError, 'can handle only 1D bounds'
+        raise ValueError('can handle only 1D bounds')
     if len(upper) != n:
-        raise ValueError, 'bounds have different lengths'
+        raise ValueError('bounds have different lengths')
     if n==2 and corrcoef.size==1:
         correl = corrcoef
         #print 'case scalar rho', n
@@ -1145,7 +1195,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
 #            for jj in range(ii):
 #                correl[ jj + ((ii-2)*(ii-1))/2] = corrcoef[ii,jj]
     else:
-        raise ValueError, 'corrcoef has incorrect dimension'
+        raise ValueError('corrcoef has incorrect dimension')
 
     if not 'maxpts' in kwds:
         if n >2:
@@ -1169,7 +1219,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     #print kwds.items()
     error, cdfvalue, inform = scipy.stats.kde.mvn.mvndst(lower,upper,infin,correl,**kwds)
     if inform:
-        print 'something wrong', informcode[inform], error
+        print('something wrong', informcode[inform], error)
     return cdfvalue
 
 

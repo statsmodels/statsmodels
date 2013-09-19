@@ -15,6 +15,13 @@ Warning: The algorithm does not converge.  Roundoff error is detected
   the best which can be obtained.
 array(2981.0032380193438)
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import warnings # for silencing, see above...
 import numpy as np
@@ -165,11 +172,11 @@ if __name__ == '__main__':
 
     debug = 0
     if debug:
-        print negsquarenormalg.ppf([0.1,0.5,0.9])
-        print stats.chi2.ppf([0.1,0.5,0.9],1)
-        print negsquarenormalg.a
-        print negsquarenormalg.b
+        print(negsquarenormalg.ppf([0.1,0.5,0.9]))
+        print(stats.chi2.ppf([0.1,0.5,0.9],1))
+        print(negsquarenormalg.a)
+        print(negsquarenormalg.b)
 
-        print absnormalg.stats( moments='mvsk')
-        print stats.foldnorm(1e-10).stats( moments='mvsk')
-        print stats.halfnorm.stats( moments='mvsk')
+        print(absnormalg.stats( moments='mvsk'))
+        print(stats.foldnorm(1e-10).stats( moments='mvsk'))
+        print(stats.halfnorm.stats( moments='mvsk'))

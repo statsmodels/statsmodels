@@ -104,7 +104,7 @@ def groupsstats_1d(y, x, labelsunique):
 
 def cat2dummy(y, nonseq=0):
     if nonseq or (y.ndim == 2 and y.shape[1] > 1):
-        ycat, uniques, unitransl =  convertlabels(y, range(y.shape[1]))
+        ycat, uniques, unitransl =  convertlabels(y, list(range(y.shape[1])))
     else:
         ycat = y.copy()
         ymin = y.min()

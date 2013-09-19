@@ -1,3 +1,4 @@
+from __future__ import print_function
 from statsmodels.datasets.macrodata import load_pandas
 from statsmodels.tsa.base.datetools import dates_from_range
 from statsmodels.tsa.arima_model import ARIMA
@@ -13,7 +14,7 @@ dates = dates_from_range('1959q1', '2009q3')
 cpi.index = dates
 
 res = ARIMA(cpi, (1, 1, 1), freq='Q').fit()
-print res.summary()
+print(res.summary())
 
 # we can look at the series
 cpi.diff().plot()
@@ -33,14 +34,14 @@ confint_pacf = stats.norm.ppf(1 - .025) * np.sqrt(1 / 202.)
 fig = plt.figure()
 ax = fig.add_subplot(121)
 ax.set_title('Autocorrelation')
-ax.plot(range(41), acf, 'bo', markersize=5)
-ax.vlines(range(41), 0, acf)
-ax.fill_between(range(41), confint_acf[:, 0], confint_acf[:, 1], alpha=.25)
+ax.plot(list(range(41)), acf, 'bo', markersize=5)
+ax.vlines(list(range(41)), 0, acf)
+ax.fill_between(list(range(41)), confint_acf[:, 0], confint_acf[:, 1], alpha=.25)
 fig.tight_layout()
 ax = fig.add_subplot(122, sharey=ax)
-ax.vlines(range(41), 0, pacf)
-ax.plot(range(41), pacf, 'bo', markersize=5)
-ax.fill_between(range(41), -confint_pacf, confint_pacf, alpha=.25)
+ax.vlines(list(range(41)), 0, pacf)
+ax.plot(list(range(41)), pacf, 'bo', markersize=5)
+ax.fill_between(list(range(41)), -confint_pacf, confint_pacf, alpha=.25)
 
 
 #NOTE: you'll be able to just to this when tsa-plots is in master

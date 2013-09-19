@@ -4,6 +4,13 @@ Created on Fri Apr 02 11:41:25 2010
 
 Author: josef-pktd
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import numpy as np
@@ -66,8 +73,8 @@ skip = 8
 
 rresid, rparams, rypred, rresid_standardized, rresid_scaled, rcusum, rcusumci = \
             recursive_olsresiduals(res1, skip)
-print rcusum
-print rresid_scaled[skip-1:]
+print(rcusum)
+print(rresid_scaled[skip-1:])
 
 assert_almost_equal(rparams[-1], res1.params)
 
@@ -79,8 +86,8 @@ plt.figure()
 plt.plot(rresid)
 plt.plot(np.abs(rresid))
 
-print 'cusum test reject:'
-print ((rcusum[1:]>rcusumci[1])|(rcusum[1:]<rcusumci[0])).any()
+print('cusum test reject:')
+print(((rcusum[1:]>rcusumci[1])|(rcusum[1:]<rcusumci[0])).any())
 
 rresid2, rparams2, rypred2, rresid_standardized2, rresid_scaled2, rcusum2, rcusumci2 = \
             recursive_olsresiduals2(res1, skip)
@@ -94,11 +101,11 @@ assert_almost_equal(rparams[skip:], rparams2[skip:],13)
 from statsmodels.sandbox.stats.diagnostic import breaks_hansen, \
         breaks_cusumolsresid#, breaks_cusum
 H, crit95, ft, s = breaks_hansen(res1)
-print H
-print crit95
+print(H)
+print(crit95)
 
 supb, pval, crit = breaks_cusumolsresid(res1.resid)
-print supb, pval, crit
+print(supb, pval, crit)
 
 ##check whether this works directly: Ploberger/Kramer framing of standard cusum
 ##no, it's different, there is another denominator

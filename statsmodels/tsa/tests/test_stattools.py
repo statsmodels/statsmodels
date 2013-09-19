@@ -229,7 +229,7 @@ def test_grangercausality():
                         decimal=7)
 
 def test_pandasacovf():
-    s = Series(range(1, 11))
+    s = Series(list(range(1, 11)))
     assert_almost_equal(acovf(s), acovf(s.values))
 
 def test_acovf2d():

@@ -6,6 +6,23 @@ Warning: not tried out or tested yet, Done
 
 Author: josef-pktd
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 from scipy import comb
@@ -60,13 +77,13 @@ for method, x in [('pdf', rv),
                   ('sf', rv),
                   ('ppf', quant),
                   ('isf', quant)]:
-    print getattr(genpareto2, method)(x, shape, loc, scale)
-    print getattr(stats.genpareto, method)(x, -shape, loc, scale)
+    print(getattr(genpareto2, method)(x, shape, loc, scale))
+    print(getattr(stats.genpareto, method)(x, -shape, loc, scale))
 
-print genpareto2.stats(shape, loc, scale, moments='mvsk')
-print stats.genpareto.stats(-shape, loc, scale, moments='mvsk')
-print genpareto2.entropy(shape, loc, scale)
-print stats.genpareto.entropy(-shape, loc, scale)
+print(genpareto2.stats(shape, loc, scale, moments='mvsk'))
+print(stats.genpareto.stats(-shape, loc, scale, moments='mvsk'))
+print(genpareto2.entropy(shape, loc, scale))
+print(stats.genpareto.entropy(-shape, loc, scale))
 
 
 def paramstopot(thresh, shape, scale):
@@ -83,7 +100,7 @@ def paramsfrompot(thresh, shape, scalepot):
 
 def warnif(cond, msg):
     if not cond:
-        print msg, 'does not hold'
+        print(msg, 'does not hold')
 
 def meanexcess(thresh, shape, scale):
     '''mean excess function of genpareto
@@ -117,8 +134,8 @@ def meanexcess_plot(data, params=None, lidx=100, uidx=10, method='emp', plot=0):
     return datasorted, meanexcess
 
 
-print meanexcess(5, -0.5, 10)
-print meanexcess(5, -2, 10)
+print(meanexcess(5, -0.5, 10))
+print(meanexcess(5, -2, 10))
 import matplotlib.pyplot as plt
 
 data = genpareto2.rvs(-0.75, scale=5, size=1000)
@@ -126,8 +143,8 @@ data = genpareto2.rvs(-0.75, scale=5, size=1000)
 #data = stats.norm.rvs(0, np.sqrt(50), size=1000)
 #data = stats.pareto.rvs(1.5, np.sqrt(50), size=1000)
 tmp = meanexcess_plot(data, params=(-0.75, 5), plot=1)
-print tmp[1][-20:]
-print tmp[0][-20:]
+print(tmp[1][-20:])
+print(tmp[0][-20:])
 #plt.show()
 
 def meanexcess_emp(data):
@@ -147,15 +164,15 @@ def meanexcess_dist(self, lb, *args, **kwds):
                     lbb in lb])
 
 ds, me, mc = meanexcess_emp(1.*np.arange(1,10))
-print ds
-print me
-print mc
+print(ds)
+print(me)
+print(mc)
 
-print meanexcess_dist(stats.norm, lb=0.5)
-print meanexcess_dist(stats.norm, lb=[-np.inf, -0.5, 0, 0.5])
+print(meanexcess_dist(stats.norm, lb=0.5))
+print(meanexcess_dist(stats.norm, lb=[-np.inf, -0.5, 0, 0.5]))
 rvs = stats.norm.rvs(size=100000)
 rvs = rvs - rvs.mean()
-print rvs.mean(), rvs[rvs>-0.5].mean(), rvs[rvs>0].mean(), rvs[rvs>0.5].mean()
+print(rvs.mean(), rvs[rvs>-0.5].mean(), rvs[rvs>0].mean(), rvs[rvs>0.5].mean())
 
 
 

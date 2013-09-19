@@ -907,7 +907,7 @@ class ARIMA(ARMA):
                 try: # catch when given an integer outside of dates index
                     start = super(ARIMA, self)._get_predict_start(start,
                                                                   dynamic)
-                except IndexError, err:
+                except IndexError as err:
                     raise ValueError("start must be in series. "
                                      "got %d" % (start + k_diff))
         else: # received a date

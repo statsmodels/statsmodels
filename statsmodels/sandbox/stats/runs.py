@@ -18,6 +18,13 @@ TODO
 * add one-sided tests where possible or where it makes sense
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import stats
@@ -220,7 +227,7 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
     x_sorted = x[xargsort]
     x_diff = np.diff(x_sorted)  # used for detecting and handling ties
     if x_diff.min() == 0:
-        print 'ties detected'   #replace with warning
+        print('ties detected')   #replace with warning
         x_mindiff = x_diff[x_diff > 0].min()
         eps = x_mindiff/2.
         xx = x.copy()  #don't change original, just in case
@@ -618,10 +625,10 @@ if __name__ == '__main__':
 
     x1 = np.array([1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1])
 
-    print Runs(x1).runs_test()
-    print runstest_1samp(x1, cutoff='mean')
-    print runstest_2samp(np.arange(16,0,-1), groups=x1)
-    print TotalRunsProb(7,9).cdf(11)
-    print median_test_ksample(np.random.randn(100), np.random.randint(0,2,100))
-    print cochrans_q(np.random.randint(0,2,(100,8)))
+    print(Runs(x1).runs_test())
+    print(runstest_1samp(x1, cutoff='mean'))
+    print(runstest_2samp(np.arange(16,0,-1), groups=x1))
+    print(TotalRunsProb(7,9).cdf(11))
+    print(median_test_ksample(np.random.randn(100), np.random.randint(0,2,100)))
+    print(cochrans_q(np.random.randint(0,2,(100,8))))
 

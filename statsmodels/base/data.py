@@ -8,6 +8,7 @@ from pandas import DataFrame, Series, TimeSeries, isnull
 from statsmodels.tools.decorators import (resettable_cache,
                 cache_readonly, cache_writable)
 import statsmodels.tools.data as data_util
+import six
 
 try:
     reduce
@@ -123,7 +124,7 @@ class ModelData(object):
         combined_2d = ()
         combined_2d_names = []
         if len(kwargs):
-            for key, value_array in kwargs.iteritems():
+            for key, value_array in six.iteritems(kwargs):
                 if value_array is None or value_array.ndim == 0:
                     none_array_names += [key]
                     continue
@@ -154,10 +155,10 @@ class ModelData(object):
             nan_mask = ~nan_mask
             drop_nans = lambda x : self._drop_nans(x, nan_mask)
             drop_nans_2d = lambda x : self._drop_nans_2d(x, nan_mask)
-            combined = dict(zip(combined_names, map(drop_nans, combined)))
+            combined = dict(zip(combined_names, [drop_nans(x) for x in combined]))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names,
-                                         map(drop_nans_2d, combined_2d))))
+                                         [drop_nans_2d(x) for x in combined_2d])))
             if none_array_names:
                 combined.update(dict(zip(none_array_names,
                                          [None]*len(none_array_names)

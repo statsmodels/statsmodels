@@ -29,6 +29,47 @@ missing:
 
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import stats
@@ -36,6 +77,9 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
+import six
+from six.moves import map
+from six.moves import zip
 
 #get the old signature back so the examples work
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):
@@ -281,9 +325,9 @@ def acorr_ljungbox(x, lags=None, boxpierce=False):
     x = np.asarray(x)
     nobs = x.shape[0]
     if lags is None:
-        lags = range(1,41)  #TODO: check default; SS: changed to 40
+        lags = list(range(1,41))  #TODO: check default; SS: changed to 40
     elif isinstance(lags, int):
-        lags = range(1,lags+1)
+        lags = list(range(1,lags+1))
     maxlag = max(lags)
     lags = np.asarray(lags)
 
@@ -370,9 +414,9 @@ def acorr_lm(x, maxlag=None, autolag='AIC', store=False, regresults=False):
             results[mlag] = OLS(xshort, xdall[:,:mlag+1]).fit()
 
         if autolag.lower() == 'aic':
-            bestic, icbestlag = min((v.aic,k) for k,v in results.iteritems())
+            bestic, icbestlag = min((v.aic,k) for k,v in six.iteritems(results))
         elif autolag.lower() == 'bic':
-            icbest, icbestlag = min((v.bic,k) for k,v in results.iteritems())
+            icbest, icbestlag = min((v.bic,k) for k,v in six.iteritems(results))
         else:
             raise ValueError("autolag can only be None, 'AIC' or 'BIC'")
 
@@ -1053,9 +1097,9 @@ def _recursive_olsresiduals2(olsresults, skip):
         yi = y[i]
         xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
         xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
-        print xy.shape, XTY.shape
-        print XTX
-        print XTY
+        print(xy.shape, XTY.shape)
+        print(XTX)
+        print(XTY)
         beta = np.linalg.solve(XTX, XTY)
         rparams[i-1] = beta  #this is beta based on info up to t-1
         yipred = np.dot(xi, beta)
@@ -1497,8 +1541,8 @@ if __name__ == '__main__':
     if 'adf' in examples:
 
         x = np.random.randn(20)
-        print acorr_ljungbox(x,4)
-        print unitroot_adf(x)
+        print(acorr_ljungbox(x,4))
+        print(unitroot_adf(x))
 
         nrepl = 100
         nobs = 100
@@ -1507,18 +1551,18 @@ if __name__ == '__main__':
             x = (1e-4+np.random.randn(nobs)).cumsum()
             mcres[ii] = unitroot_adf(x, 2,trendorder=0, autolag=None)[0]
 
-        print (mcres<-2.57).sum()
-        print np.histogram(mcres)
+        print((mcres<-2.57).sum())
+        print(np.histogram(mcres))
         mcressort = np.sort(mcres)
         for ratio in [0.01, 0.025, 0.05, 0.1]:
-            print ratio, mcressort[int(nrepl*ratio)]
+            print(ratio, mcressort[int(nrepl*ratio)])
 
-        print 'critical values in Green table 20.5'
-        print 'sample size = 100'
-        print 'with constant'
-        print '0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47'
+        print('critical values in Green table 20.5')
+        print('sample size = 100')
+        print('with constant')
+        print('0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47')
 
-        print '0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26'
+        print('0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26')
         crvdg = dict([map(float,s.split(':')) for s in ('0.01: -19.8,  0.025: -16.3, 0.05: -13.7, 0.01: -11.0, 0.975: 0.47'.split(','))])
         crvd = dict([map(float,s.split(':')) for s in ('0.01: -3.50,  0.025: -3.17, 0.05: -2.90, 0.01: -2.58, 0.975: 0.26'.split(','))])
         '''
@@ -1530,19 +1574,19 @@ if __name__ == '__main__':
 
         #for trend = 0
         crit_5lags0p05 =-4.41519 + (-14.0406)/nobs + (-12.575)/nobs**2
-        print crit_5lags0p05
+        print(crit_5lags0p05)
 
 
         adfstat, _,_,resstore = unitroot_adf(x, 2,trendorder=0, autolag=None, store=1)
 
-        print (mcres>crit_5lags0p05).sum()
+        print((mcres>crit_5lags0p05).sum())
 
-        print resstore.resols.model.exog[-5:]
-        print x[-5:]
+        print(resstore.resols.model.exog[-5:])
+        print(x[-5:])
 
-        print np.histogram(mcres, bins=[-np.inf, -3.5, -3.17, -2.9 , -2.58,  0.26, np.inf])
+        print(np.histogram(mcres, bins=[-np.inf, -3.5, -3.17, -2.9 , -2.58,  0.26, np.inf]))
 
-        print mcressort[(nrepl*(np.array([0.01, 0.025, 0.05, 0.1, 0.975]))).astype(int)]
+        print(mcressort[(nrepl*(np.array([0.01, 0.025, 0.05, 0.1, 0.975]))).astype(int)])
 
 
         def randwalksim(nobs=100, drift=0.0):
@@ -1554,13 +1598,13 @@ if __name__ == '__main__':
         def adf20(x):
             return unitroot_adf(x, 2,trendorder=0, autolag=None)[:2]
 
-        print '\nResults with MC class'
+        print('\nResults with MC class')
         mc1 = StatTestMC(randwalksim, adf20)
         mc1.run(1000, statindices=[0,1])
-        print mc1.histogram(0, critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
-        print mc1.quantiles(0)
+        print(mc1.histogram(0, critval=[-3.5, -3.17, -2.9 , -2.58,  0.26]))
+        print(mc1.quantiles(0))
 
-        print '\nLjung Box'
+        print('\nLjung Box')
 
         def lb4(x):
             s,p = acorr_ljungbox(x, lags=4)
@@ -1570,44 +1614,44 @@ if __name__ == '__main__':
             s,p = acorr_ljungbox(x, lags=1)
             return s[0], p[0]
 
-        print 'Results with MC class'
+        print('Results with MC class')
         mc1 = StatTestMC(normalnoisesim, lb4)
         mc1.run(1000, statindices=[0,1])
-        print mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975])
-        print mc1.quantiles(1)
-        print mc1.quantiles(0)
-        print mc1.histogram(0)
+        print(mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975]))
+        print(mc1.quantiles(1))
+        print(mc1.quantiles(0))
+        print(mc1.histogram(0))
 
     nobs = 100
     x = np.ones((nobs,2))
     x[:,1] = np.arange(nobs)/20.
     y = x.sum(1) + 1.01*(1+1.5*(x[:,1]>10))*np.random.rand(nobs)
-    print het_goldfeldquandt(y,x, 1)
+    print(het_goldfeldquandt(y,x, 1))
 
     y = x.sum(1) + 1.01*(1+0.5*(x[:,1]>10))*np.random.rand(nobs)
-    print het_goldfeldquandt(y,x, 1)
+    print(het_goldfeldquandt(y,x, 1))
 
     y = x.sum(1) + 1.01*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
-    print het_goldfeldquandt(y,x, 1)
+    print(het_goldfeldquandt(y,x, 1))
 
-    print het_breushpagan(y,x)
-    print het_white(y,x)
+    print(het_breushpagan(y,x))
+    print(het_white(y,x))
 
     f, fp, fo = het_goldfeldquandt(y,x, 1)
-    print f, fp
+    print(f, fp)
     resgq = het_goldfeldquandt(y,x, 1, retres=True)
-    print resgq
+    print(resgq)
 
     #this is just a syntax check:
-    print _neweywestcov(y, x)
+    print(_neweywestcov(y, x))
 
     resols1 = OLS(y, x).fit()
-    print _neweywestcov(resols1.resid, x)
-    print resols1.cov_params()
-    print resols1.HC0_se
-    print resols1.cov_HC0
+    print(_neweywestcov(resols1.resid, x))
+    print(resols1.cov_params())
+    print(resols1.HC0_se)
+    print(resols1.cov_HC0)
 
     y = x.sum(1) + 10.*(1-0.5*(x[:,1]>10))*np.random.rand(nobs)
-    print HetGoldfeldQuandt().run(y,x, 1, alternative='dec')
+    print(HetGoldfeldQuandt().run(y,x, 1, alternative='dec'))
 
 

@@ -5,6 +5,8 @@ changes:
 The only changes are that additional results are returned
 
 '''
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy.linalg import svd as decomp_svd
@@ -20,6 +22,8 @@ from numpy import asarray_chkfinite, outer, concatenate, reshape, single
 #from numpy import matrix as Matrix
 from numpy.linalg import LinAlgError
 from scipy.linalg import calc_lwork
+from six.moves import map
+from six.moves import zip
 
 
 ### Linear Least Squares
@@ -202,8 +206,8 @@ if __name__ == '__main__':
     pinv2(a0)
     x = pinv(a0)
     x2=scipy.linalg.pinv(a0)
-    print np.max(np.abs(x-x2))
+    print(np.max(np.abs(x-x2)))
     x = pinv2(a0)
     x2 = scipy.linalg.pinv2(a0)
-    print np.max(np.abs(x-x2))
+    print(np.max(np.abs(x-x2)))
 

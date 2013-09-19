@@ -18,6 +18,8 @@ import re
 import smtplib
 import sys
 from email.MIMEText import MIMEText
+from six.moves import map
+from six.moves import zip
 
 ######### INITIAL SETUP ##########
 

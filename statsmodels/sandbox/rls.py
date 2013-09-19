@@ -3,6 +3,7 @@
 from pandas
 License: Simplified BSD
 """
+from __future__ import print_function
 
 import numpy as np
 from statsmodels.regression.linear_model import WLS, GLS, RegressionResults
@@ -148,5 +149,5 @@ if __name__=="__main__":
     design = sm.add_constant(design, prepend=True)
     rls_mod = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
     rls_fit = rls_mod.fit()
-    print rls_fit.params
+    print(rls_fit.params)
 

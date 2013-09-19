@@ -1,6 +1,8 @@
 """
 Test VAR Model
 """
+from __future__ import print_function
+from __future__ import print_function
 from __future__ import with_statement
 
 # pylint: disable=W0612,W0231
@@ -21,6 +23,7 @@ from statsmodels.tsa.vector_ar.var_model import VAR
 from statsmodels.compatnp.py3k import BytesIO
 
 from numpy.testing import assert_almost_equal, assert_equal, assert_
+import six
 
 DECIMAL_12 = 12
 DECIMAL_6 = 6
@@ -107,7 +110,7 @@ class RResults(object):
 
     def __init__(self):
         #data = np.load(resultspath + 'vars_results.npz')
-        from results.results_var_data import var_results
+        from .results.results_var_data import var_results
         data = var_results.__dict__
 
         self.names = data['coefs'].dtype.names
@@ -222,7 +225,7 @@ class CheckFEVD(object):
         close_plots()
 
     def test_fevd_repr(self):
-        print self.fevd
+        print(self.fevd)
 
     def test_fevd_summary(self):
         self.fevd.summary()
@@ -300,7 +303,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_summary(self):
         summ = self.res.summary()
-        print summ
+        print(summ)
 
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)
@@ -349,7 +352,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             result = self.res.test_causality(name, variables, kind='f')
             assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
 
-            rng = range(self.k)
+            rng = list(range(self.k))
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
             assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
@@ -559,7 +562,7 @@ def test_get_trendorder():
         'ctt' : 3
     }
 
-    for t, trendorder in results.iteritems():
+    for t, trendorder in six.iteritems(results):
         assert(util.get_trendorder(t) == trendorder)
 
 if __name__ == '__main__':

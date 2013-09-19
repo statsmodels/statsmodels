@@ -1,5 +1,7 @@
 """Example: statsmodels.OLS
 """
+from __future__ import print_function
+from __future__ import print_function
 
 from statsmodels.datasets.longley import load
 import statsmodels.api as sm
@@ -41,7 +43,7 @@ resparams = np.nan * np.ones((7, 7))
 res = sm.OLS(data.endog, data.exog).fit()
 resparams[:, 0] = res.params
 
-indall = range(7)
+indall = list(range(7))
 for i in range(6):
     ind = indall[:]
     del ind[i]
@@ -65,5 +67,5 @@ nn = len(nanstring)
 nanrep = ' ' * (nn - 1)
 nanrep = nanrep[:nn // 2] + '-' + nanrep[nn // 2:]
 
-print 'Longley data - sensitivity to dropping an explanatory variable'
-print str(tabl).replace(nanstring, nanrep)
+print('Longley data - sensitivity to dropping an explanatory variable')
+print(str(tabl).replace(nanstring, nanrep))

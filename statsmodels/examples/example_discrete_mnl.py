@@ -1,5 +1,16 @@
 """Example: statsmodels.discretemod
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import statsmodels.api as sm
@@ -21,11 +32,11 @@ mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 from statsmodels.iolib.summary import (
                         summary_params_2d, summary_params_2dflat)
 
-exog_names = [anes_data.exog_name[i] for i in [0, 2]+range(5,8)] + ['const']
+exog_names = [anes_data.exog_name[i] for i in [0, 2]+list(range(5,8))] + ['const']
 endog_names = [anes_data.endog_name+'_%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
-print '\n\nMultinomial'
-print  summary_params_2d(mlogit_res, extras=['bse','tvalues'],
-                         endog_names=endog_names, exog_names=exog_names)
+print('\n\nMultinomial')
+print(summary_params_2d(mlogit_res, extras=['bse','tvalues'],
+                         endog_names=endog_names, exog_names=exog_names))
 tables, table_all = summary_params_2dflat(mlogit_res,
                                           endog_names=endog_names,
                                           exog_names=exog_names,
@@ -34,23 +45,23 @@ tables, table_all = summary_params_2dflat(mlogit_res,
                                           endog_names=endog_names,
                                           exog_names=exog_names,
                                           keep_headers=False)
-print '\n\n'
-print table_all
-print '\n\n'
-print '\n'.join((str(t) for t in tables))
+print('\n\n')
+print(table_all)
+print('\n\n')
+print('\n'.join((str(t) for t in tables)))
 
 from statsmodels.iolib.summary import table_extend
 at = table_extend(tables)
-print at
+print(at)
 
-print '\n\n'
-print mlogit_res.summary()
-print mlogit_res.summary(yname='PID')
+print('\n\n')
+print(mlogit_res.summary())
+print(mlogit_res.summary(yname='PID'))
 #the following is supposed to raise ValueError
 #mlogit_res.summary(yname=['PID'])
 
 endog_names = [anes_data.endog_name+'=%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
-print mlogit_res.summary(yname='PID', yname_list=endog_names, xname=exog_names)
+print(mlogit_res.summary(yname='PID', yname_list=endog_names, xname=exog_names))
 
 ''' #trying pickle
 import pickle #, copy

@@ -1,4 +1,6 @@
 '''Generic Maximum Likelihood Models'''
+from __future__ import print_function
+from __future__ import print_function
 
 #This tutorial explains how to quickly implement new maximum likelihood models
 #in ``statsmodels``. The `GenericLikelihoodModel
@@ -101,8 +103,8 @@ medpar.head()
 
 import patsy
 y, X = patsy.dmatrices('los~type2+type3+hmo+white', medpar)
-print y[:5]
-print X[:5]
+print(y[:5])
+print(X[:5])
 
 #Then, we fit the model and extract some information:
 

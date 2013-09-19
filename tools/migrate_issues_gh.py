@@ -37,6 +37,17 @@ To push to GH, you need to set below the GH repository owner, API token and
 repository name you wan to push issues into. See the GH section for the
 necessary variables.
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import collections
 import os.path
@@ -50,6 +61,9 @@ import launchpadlib
 from launchpadlib.credentials import Credentials
 from launchpadlib.launchpad import (
     Launchpad, STAGING_SERVICE_ROOT, EDGE_SERVICE_ROOT )
+import six
+from six.moves import map
+from six.moves import zip
 
 #-----------------------------------------------------------------------------
 # Launchpad configuration
@@ -91,7 +105,7 @@ def create_session():
     rrd_dir = os.path.expanduser("~/.cache/hydrazine/rrd")
     for d in [lplib_cachedir, hydrazine_cachedir, rrd_dir]:
         if not os.path.isdir(d):
-            os.makedirs(d, mode=0700)
+            os.makedirs(d, mode=0o700)
 
     hydrazine_credentials_filename = os.path.join(hydrazine_cachedir,
         'credentials')
@@ -131,7 +145,7 @@ def canonical_status(entered):
 
 class Base(object):
     def __str__(self):
-        a = dict([(k,v) for (k,v) in self.__dict__.iteritems()
+        a = dict([(k,v) for (k,v) in six.iteritems(self.__dict__)
                   if not k.startswith('_')])
         return pformat(a)
 
@@ -219,7 +233,7 @@ bugs = {}
 for bt in list(bug_tasks):
     b = Bug(bt)
     bugs[b.id] = b
-    print b.title
+    print(b.title)
     sys.stdout.flush()
 
 #-----------------------------------------------------------------------------
@@ -268,13 +282,13 @@ repo = 'statsmodels/statsmodels'
 to_skip = set()
 
 # Only label these importance levels:
-gh_importances = set([u'critical', u'high', u'low', u'medium', u'wishlist'])
+gh_importances = set([six.u('critical'), six.u('high'), six.u('low'), six.u('medium'), six.u('wishlist')])
 
 # Start script
 gh = client.Github(username=user, api_token=token)
 
 # Filter out the full LP bug dict to process only the ones we want
-bugs_todo = dict( (id, b) for (id, b) in bugs.iteritems()
+bugs_todo = dict( (id, b) for (id, b) in six.iteritems(bugs)
                   if not b.status in to_skip )
 
 # Select which bug ids to run
@@ -292,24 +306,24 @@ for n, bug_id in enumerate(bids):
     title = format_title(bug)
     body = format_body(bug)
 
-    print
+    print()
     if len(title)<65:
-        print bug.id, '[{0}/{1}]'.format(n+1, nbugs), title
+        print(bug.id, '[{0}/{1}]'.format(n+1, nbugs), title)
     else:
-        print bug.id, title[:65]+'...'
+        print(bug.id, title[:65]+'...')
 
     # still check bug.status, in case we manually added other bugs to the list
     # above (mostly during testing)
     if bug.status in to_skip:
-        print '--- Skipping - status:',bug.status
+        print('--- Skipping - status:',bug.status)
         continue
 
-    print '+++ Filing...',
+    print('+++ Filing...', end=' ')
     sys.stdout.flush()
 
     # Create github issue for this bug
     issue = gh.issues.open(repo, title=title, body=body)
-    print 'created GitHub #', issue.number
+    print('created GitHub #', issue.number)
     gh_issues.append(issue.number)
     sys.stdout.flush()
 
@@ -358,14 +372,14 @@ for n, bug_id in enumerate(bids):
     batch_size = 10
     tsleep = 60
     if (len(gh_issues) % batch_size)==0:
-        print
-        print '*** SLEEPING for {0} seconds to avoid github blocking... ***'.format(tsleep)
+        print()
+        print('*** SLEEPING for {0} seconds to avoid github blocking... ***'.format(tsleep))
         sys.stdout.flush()
         time.sleep(tsleep)
 
 # Summary report
-print
-print '*'*80
-print 'Summary of GitHub issues filed:'
-print gh_issues
-print 'Total:', len(gh_issues)
+print()
+print('*'*80)
+print('Summary of GitHub issues filed:')
+print(gh_issues)
+print('Total:', len(gh_issues))

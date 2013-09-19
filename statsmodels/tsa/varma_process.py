@@ -28,6 +28,17 @@ Extensions
 see also VAR section in Notes.txt
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from numpy.testing import assert_equal
@@ -165,7 +176,7 @@ def varinversefilter(ar, nobs, version=1):
     '''
     nlags, nvars, nvarsex = ar.shape
     if nvars != nvarsex:
-        print 'exogenous variables not implemented not tested'
+        print('exogenous variables not implemented not tested')
     arinv = np.zeros((nobs+1, nvarsex, nvars))
     arinv[0,:,:] = ar[0]
     arinv[1:nlags,:,:] = -ar[1:]
@@ -177,7 +188,7 @@ def varinversefilter(ar, nobs, version=1):
             arinv[i,:,:] = tmp
     if version == 0:
         for i in range(nlags+1,nobs+1):
-            print ar[1:].shape, arinv[i-1:i-nlags:-1,:,:].shape
+            print(ar[1:].shape, arinv[i-1:i-nlags:-1,:,:].shape)
             #arinv[i,:,:] = np.dot(-ar[1:],arinv[i-1:i-nlags:-1,:,:])
             #print np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1])).shape
             #arinv[i,:,:] = np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1]))
@@ -226,7 +237,7 @@ def vargenerate(ar, u, initvalues=None):
     nlagsm1 = nlags - 1
     nobs = u.shape[0]
     if nvars != nvarsex:
-        print 'exogenous variables not implemented not tested'
+        print('exogenous variables not implemented not tested')
     if u.shape[1] != nvars:
         raise ValueError('u needs to have nvars columns')
     if initvalues is None:
@@ -714,13 +725,13 @@ if __name__ == "__main__":
                      [ 0.1, -0.1]]])
 
     vp = VarmaPoly(ar23, ma22)
-    print vars(vp)
-    print vp.vstack()
-    print vp.vstack(a24)
-    print vp.hstackarma_minus1()
-    print vp.getisstationary()
-    print vp.getisinvertible()
+    print(vars(vp))
+    print(vp.vstack())
+    print(vp.vstack(a24))
+    print(vp.hstackarma_minus1())
+    print(vp.getisstationary())
+    print(vp.getisinvertible())
 
     vp2 = VarmaPoly(ar23ns)
-    print vp2.getisstationary()
-    print vp2.getisinvertible()  # no ma lags
+    print(vp2.getisstationary())
+    print(vp2.getisinvertible())  # no ma lags

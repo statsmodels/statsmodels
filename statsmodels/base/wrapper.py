@@ -2,6 +2,7 @@ import inspect
 import functools
 
 import numpy as np
+import six
 
 
 class ResultsWrapper(object):
@@ -94,7 +95,7 @@ def make_wrapper(func, how):
                                       defaults=argspec[3])
 
     try:
-        func_name = func.im_func.func_name
+        func_name = func.__func__.__name__
     except AttributeError:
         #Python 3
         func_name = func.__name__
@@ -105,7 +106,7 @@ def make_wrapper(func, how):
 
 
 def populate_wrapper(klass, wrapping):
-    for meth, how in klass._wrap_methods.iteritems():
+    for meth, how in six.iteritems(klass._wrap_methods):
         if not hasattr(wrapping, meth):
             continue
 

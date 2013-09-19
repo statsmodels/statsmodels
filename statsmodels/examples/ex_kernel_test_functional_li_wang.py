@@ -58,6 +58,20 @@ aymp.normal p-value (upper) 0.306629578855
 
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 
@@ -74,7 +88,7 @@ if __name__ == '__main__':
 
     seed = np.random.randint(999999)
     #seed = 661176
-    print seed
+    print(seed)
     np.random.seed(seed)
 
     sig_e = 0.1 #0.5 #0.1
@@ -108,21 +122,21 @@ if __name__ == '__main__':
     t1 = time.time()
     b_res = np.asarray(b_res)
 
-    print 'time', (t1 - t0) / 60.
-    print b_res.mean(0)
-    print b_res.std(0)
-    print 'reject at [0.2, 0.1, 0.05] (row 1: normal, row 2: bootstrap)'
-    print (b_res[:,1:,None] >= [0.2, 0.1, 0.05]).mean(0)
+    print('time', (t1 - t0) / 60.)
+    print(b_res.mean(0))
+    print(b_res.std(0))
+    print('reject at [0.2, 0.1, 0.05] (row 1: normal, row 2: bootstrap)')
+    print((b_res[:,1:,None] >= [0.2, 0.1, 0.05]).mean(0))
 
-    print 'bw', tst.bw
-    print 'tst.test_stat', tst.test_stat
-    print tst.sig
-    print 'tst.boots_results min, max', tst.boots_results.min(), tst.boots_results.max()
-    print 'lower tail bootstrap p-value', (tst.boots_results < tst.test_stat).mean()
-    print 'upper tail bootstrap p-value', (tst.boots_results >= tst.test_stat).mean()
+    print('bw', tst.bw)
+    print('tst.test_stat', tst.test_stat)
+    print(tst.sig)
+    print('tst.boots_results min, max', tst.boots_results.min(), tst.boots_results.max())
+    print('lower tail bootstrap p-value', (tst.boots_results < tst.test_stat).mean())
+    print('upper tail bootstrap p-value', (tst.boots_results >= tst.test_stat).mean())
     from scipy import stats
-    print 'aymp.normal p-value (2-sided)', stats.norm.sf(np.abs(tst.test_stat))*2
-    print 'aymp.normal p-value (upper)', stats.norm.sf(tst.test_stat)
+    print('aymp.normal p-value (2-sided)', stats.norm.sf(np.abs(tst.test_stat))*2)
+    print('aymp.normal p-value (upper)', stats.norm.sf(tst.test_stat))
 
     res_ols = mod_ols.fit()
 

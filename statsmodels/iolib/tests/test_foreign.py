@@ -35,7 +35,7 @@ def test_genfromdta():
     #    (dta/ndarray)
     #res2 = np.load(curdir+'/results/macrodata.npy')
     #res2 = res2.view((float,len(res2[0])))
-    from results.macrodata import macrodata_result as res2
+    from .results.macrodata import macrodata_result as res2
     res1 = genfromdta(curdir+'/../../datasets/macrodata/macrodata.dta')
     #res1 = res1.view((float,len(res1[0])))
     assert_array_equal(res1 == res2, True)

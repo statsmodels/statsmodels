@@ -23,7 +23,7 @@ class ARIMA111(object):
         self.k_ma = 1
         if method == "mle":
             # from stata
-            from arima111_results import results
+            from .arima111_results import results
 
             # unpack stata results
             self.__dict__.update(results)
@@ -189,7 +189,7 @@ class ARIMA211(object):
     def __init__(self, method="mle"):
         if method == 'mle':
             # from stata
-            from arima111_results import results
+            from .arima111_results import results
 
             self.__dict__.update(results)
             self.resid = self.resid[1:]
@@ -225,7 +225,7 @@ class ARIMA211(object):
             self.forecast_dyn = forecast_results['fc211cdyn'][-25:]
             self.forecasterr_dyn = forecast_results['fc211cdynse'][-25:]
         else:
-            from arima211_css_results import results
+            from .arima211_css_results import results
 
             self.__dict__.update(results)
             self.resid = self.resid[1:]
@@ -269,7 +269,7 @@ class ARIMA112(object):
         self.k_exog = 1
         self.k_diff = 1
         if method == "mle":
-            from arima112_results import results
+            from .arima112_results import results
             # from gretl
             self.arroots = [1.0324 + 0j]
             self.maroots = [1.1447 + 0j, -4.8613+0j]

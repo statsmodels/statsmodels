@@ -3,6 +3,8 @@ from scipy import stats
 from pandas import DataFrame, Index
 from statsmodels.formula.formulatools import (_remove_intercept_patsy,
                                     _has_intercept, _intercept_idx)
+from six.moves import map
+from six.moves import zip
 
 def _get_covariance(model, robust):
     if robust is None:
@@ -180,7 +182,7 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         # need two hypotheses matrices L1 is most restrictive, ie., term==0
         # L2 is everything except term==0
         cols = design_info.slice(term)
-        L1 = range(cols.start, cols.stop)
+        L1 = list(range(cols.start, cols.stop))
         L2 = []
         term_set = set(term.factors)
         for t in terms_info: # for the term you have
@@ -188,8 +190,8 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
             if term_set.issubset(other_set) and not term_set == other_set:
                 col = design_info.slice(t)
                 # on a higher order term containing current `term`
-                L1.extend(range(col.start, col.stop))
-                L2.extend(range(col.start, col.stop))
+                L1.extend(list(range(col.start, col.stop)))
+                L2.extend(list(range(col.start, col.stop)))
 
         L1 = np.eye(model.model.exog.shape[1])[L1]
         L2 = np.eye(model.model.exog.shape[1])[L2]

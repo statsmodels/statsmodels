@@ -76,6 +76,60 @@ ValueError: zero-size array to ufunc.reduce without identity
 
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 #import xlrd
@@ -216,9 +270,9 @@ def Tukeythreegene(first,second,third):
    conclusion = []
 
 ##    print qcrit
-   print qtest3to1
-   print qtest3to2
-   print qtest2to1
+   print(qtest3to1)
+   print(qtest3to2)
+   print(qtest2to1)
 
    if(qtest3to1>qcrit): #testing all q test statistic values to q critical values
        conclusion.append('3to1null')
@@ -416,7 +470,7 @@ def mcfdr(nrepl=100, nobs=50, ntests=10, ntrue=6, mu=0.5, alpha=0.05, rho=0.):
     nfalse = ntests - ntrue
     locs = np.array([0.]*ntrue + [mu]*(ntests - ntrue))
     results = []
-    for i in xrange(nrepl):
+    for i in range(nrepl):
         #rvs = locs + stats.norm.rvs(size=(nobs, ntests))
         rvs = locs + randmvn(rho, size=(nobs, ntests))
         tt, tpval = stats.ttest_1samp(rvs, 0)
@@ -721,11 +775,11 @@ class TukeyHSDResults(object):
         maxrange = [means[i] + self.halfwidths[i] for i in range(len(means))]
 
         if comparison_name is None:
-            ax1.errorbar(means, range(len(means)), xerr=self.halfwidths,
+            ax1.errorbar(means, list(range(len(means))), xerr=self.halfwidths,
                          marker='o', linestyle='None', color='k', ecolor='k')
         else:
             if comparison_name not in self.groupsunique:
-                raise ValueError, 'comparison_name not found in group names.'
+                raise ValueError('comparison_name not found in group names.')
             midx = np.where(self.groupsunique==comparison_name)[0]
             for i in range(len(means)):
                 if self.groupsunique[i] == comparison_name:
@@ -835,7 +889,7 @@ class MultiComparison(object):
 
         # simultaneous/separate treatment of multiple tests
         f=(tot * (tot + 1.) / 12.) / stats.tiecorrect(self.rankdata) #(xranks)
-        print 'MultiComparison.kruskal'
+        print('MultiComparison.kruskal')
         for i,j in zip(*self.pairindices):
             #pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
@@ -843,8 +897,8 @@ class MultiComparison(object):
             Q = pdiff / se
 
             # TODO : print statments, fix
-            print i,j, pdiff, se, pdiff / se, pdiff / se > 2.6310,
-            print stats.norm.sf(Q) * 2
+            print(i,j, pdiff, se, pdiff / se, pdiff / se > 2.6310, end=' ')
+            print(stats.norm.sf(Q) * 2)
             return stats.norm.sf(Q) * 2
 
 
@@ -1006,7 +1060,7 @@ def compare_ordered(vals, alpha):
     #v1,v2 have wrong sequence
     for i in range(4):
         for j in range(4,i, -1):
-            print i,j
+            print(i,j)
 
 
 
@@ -1555,7 +1609,7 @@ class StepDown(object):
             return res
 
     def stepdown(self, indices):
-        print indices
+        print(indices)
         if self.check_set(indices): # larger than critical distance
             if (len(indices) > 2):  # step down into subsets if more than 2 elements
                 for subs in self.iter_subsets(indices):
@@ -1578,7 +1632,7 @@ class StepDown(object):
         self.accepted = []  #store accepted sets, not unique
         self.rejected = []
         self.get_distance_matrix()
-        self.stepdown(range(self.n_vals))
+        self.stepdown(list(range(self.n_vals)))
 
         return list(set(self.accepted)), list(set(sd.rejected))
 
@@ -1631,7 +1685,7 @@ def homogeneous_subsets(vals, dcrit):
     '''
 
     nvals = len(vals)
-    indices_ = range(nvals)
+    indices_ = list(range(nvals))
     rejected = []
     subsetsli = []
     if np.size(dcrit) == 1:
@@ -1742,19 +1796,19 @@ if __name__ == '__main__':
     if 'tukey' in examples:
         #Example Tukey
         x = np.array([[0,0,1]]).T + np.random.randn(3, 20)
-        print Tukeythreegene(*x)
+        print(Tukeythreegene(*x))
 
         #Example FDR
         #------------
 
     if ('fdr' in examples) or ('bonf' in examples):
         x1 = [1,1,1,0,-1,-1,-1,0,1,1,-1,1]
-        print zip(np.arange(len(x1)), x1)
-        print maxzero(x1)
+        print(zip(np.arange(len(x1)), x1))
+        print(maxzero(x1))
         #[(0, 1), (1, 1), (2, 1), (3, 0), (4, -1), (5, -1), (6, -1), (7, 0), (8, 1), (9, 1), (10, -1), (11, 1)]
         #(11, array([ 3,  7, 11]))
 
-        print maxzerodown(-np.array(x1))
+        print(maxzerodown(-np.array(x1)))
 
         locs = np.linspace(0,1,10)
         locs = np.array([0.]*6 + [0.75]*4)
@@ -1765,7 +1819,7 @@ if __name__ == '__main__':
 
         reject = tpval_sorted < ecdf(tpval_sorted)*0.05
         reject2 = max(np.nonzero(reject))
-        print reject
+        print(reject)
 
         res = np.array(zip(np.round(rvs.mean(0),4),np.round(tpval,4),
                            reject[tpval_sortind.argsort()]),
@@ -1773,38 +1827,38 @@ if __name__ == '__main__':
                               ('pval',float),
                               ('reject', np.bool8)])
         #from statsmodels.iolib import SimpleTable
-        print SimpleTable(res, headers=res.dtype.names)
-        print fdrcorrection_bak(tpval, alpha=0.05)
-        print reject
+        print(SimpleTable(res, headers=res.dtype.names))
+        print(fdrcorrection_bak(tpval, alpha=0.05))
+        print(reject)
 
-        print '\nrandom example'
-        print 'bonf', multipletests(tpval, alpha=0.05, method='bonf')
-        print 'sidak', multipletests(tpval, alpha=0.05, method='sidak')
-        print 'hs', multipletests(tpval, alpha=0.05, method='hs')
-        print 'sh', multipletests(tpval, alpha=0.05, method='sh')
+        print('\nrandom example')
+        print('bonf', multipletests(tpval, alpha=0.05, method='bonf'))
+        print('sidak', multipletests(tpval, alpha=0.05, method='sidak'))
+        print('hs', multipletests(tpval, alpha=0.05, method='hs'))
+        print('sh', multipletests(tpval, alpha=0.05, method='sh'))
         pvals = np.array('0.0020 0.0045 0.0060 0.0080 0.0085 0.0090 0.0175 0.0250 '
                  '0.1055 0.5350'.split(), float)
-        print '\nexample from lecturnotes'
+        print('\nexample from lecturnotes')
         for meth in ['bonf', 'sidak', 'hs', 'sh']:
-            print meth, multipletests(pvals, alpha=0.05, method=meth)
+            print(meth, multipletests(pvals, alpha=0.05, method=meth))
 
     if 'fdrmc' in examples:
         mcres = mcfdr(nobs=100, nrepl=1000, ntests=30, ntrue=30, mu=0.1, alpha=0.05, rho=0.3)
         mcmeans = np.array(mcres).mean(0)
-        print mcmeans
-        print mcmeans[0]/6., 1-mcmeans[1]/4.
-        print mcmeans[:4], mcmeans[-4:]
+        print(mcmeans)
+        print(mcmeans[0]/6., 1-mcmeans[1]/4.)
+        print(mcmeans[:4], mcmeans[-4:])
 
 
     if 'randmvn' in examples:
         rvsmvn = randmvn(0.8, (5000,5))
-        print np.corrcoef(rvsmvn, rowvar=0)
-        print rvsmvn.var(0)
+        print(np.corrcoef(rvsmvn, rowvar=0))
+        print(rvsmvn.var(0))
 
 
     if 'tukeycrit' in examples:
-        print get_tukeyQcrit(8, 8, alpha=0.05), 5.60
-        print get_tukeyQcrit(8, 8, alpha=0.01), 7.47
+        print(get_tukeyQcrit(8, 8, alpha=0.05), 5.60)
+        print(get_tukeyQcrit(8, 8, alpha=0.01), 7.47)
 
 
     if 'multicompdev' in examples:
@@ -1832,16 +1886,16 @@ if __name__ == '__main__':
 
         mrs = np.sort(meanranks)
         v1, v2 = np.triu_indices(4,1)
-        print '\nsorted rank differences'
-        print mrs[v2] - mrs[v1]
+        print('\nsorted rank differences')
+        print(mrs[v2] - mrs[v1])
         diffidx = np.argsort(mrs[v2] - mrs[v1])[::-1]
         mrs[v2[diffidx]] - mrs[v1[diffidx]]
 
-        print '\nkruskal for all pairs'
+        print('\nkruskal for all pairs')
         for i,j in zip(v2[diffidx], v1[diffidx]):
-            print i,j, stats.kruskal(xli[i], xli[j]),
+            print(i,j, stats.kruskal(xli[i], xli[j]), end=' ')
             mwu, mwupval = stats.mannwhitneyu(xli[i], xli[j], use_continuity=False)
-            print mwu, mwupval*2, mwupval*2<0.05/6., mwupval*2<0.1/6.
+            print(mwu, mwupval*2, mwupval*2<0.05/6., mwupval*2<0.1/6.)
 
 
 
@@ -1858,9 +1912,9 @@ if __name__ == '__main__':
         grouprankmean = groupranksum * 1.0 / groupnobs + 1
         assert_almost_equal(grouprankmean[intlab], stats.rankdata(X[:,0]), 15)
         gs = GroupsStats(X, useranks=True)
-        print '\ngroupmeanfilter and grouprankmeans'
-        print gs.groupmeanfilter
-        print grouprankmean[intlab]
+        print('\ngroupmeanfilter and grouprankmeans')
+        print(gs.groupmeanfilter)
+        print(grouprankmean[intlab])
         #the following has changed
         #assert_almost_equal(gs.groupmeanfilter, stats.rankdata(X[:,0]), 15)
 
@@ -1873,42 +1927,42 @@ if __name__ == '__main__':
         ntot = float(len(xranks));
         tiecorrection = 1 - (nties**3 - nties).sum()/(ntot**3 - ntot)
         assert_almost_equal(tiecorrection, stats.tiecorrect(xranks),15)
-        print '\ntiecorrection for data and ranks'
-        print tiecorrection
-        print tiecorrect(xranks)
+        print('\ntiecorrection for data and ranks')
+        print(tiecorrection)
+        print(tiecorrect(xranks))
 
         tot = X.shape[0]
         t=500 #168
         f=(tot*(tot+1.)/12.)-(t/(6.*(tot-1.)))
         f=(tot*(tot+1.)/12.)/stats.tiecorrect(xranks)
-        print '\npairs of mean rank differences'
+        print('\npairs of mean rank differences')
         for i,j in zip(v2[diffidx], v1[diffidx]):
             #pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(f * np.sum(1./xnobs[[i,j]] )) #np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
-            print i,j, pdiff, se, pdiff/se, pdiff/se>2.6310
+            print(i,j, pdiff, se, pdiff/se, pdiff/se>2.6310)
 
         multicomp = MultiComparison(*X.T)
         multicomp.kruskal()
         gsr = GroupsStats(X, useranks=True)
 
-        print '\nexamples for kruskal multicomparison'
+        print('\nexamples for kruskal multicomparison')
         for i in range(10):
             x1, x2 = (np.random.randn(30,2) + np.array([0, 0.5])).T
             skw = stats.kruskal(x1, x2)
             mc2=MultiComparison(np.r_[x1, x2], np.r_[np.zeros(len(x1)), np.ones(len(x2))])
             newskw = mc2.kruskal()
-            print skw, np.sqrt(skw[0]), skw[1]-newskw, (newskw/skw[1]-1)*100
+            print(skw, np.sqrt(skw[0]), skw[1]-newskw, (newskw/skw[1]-1)*100)
 
         tablett, restt, arrtt = multicomp.allpairtest(stats.ttest_ind)
         tablemw, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu)
-        print
-        print tablett
-        print
-        print tablemw
+        print()
+        print(tablett)
+        print()
+        print(tablemw)
         tablemwhs, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu, method='hs')
-        print
-        print tablemwhs
+        print()
+        print(tablemwhs)
 
     if 'last' in examples:
         xli = (np.random.randn(60,4) + np.array([0, 0, 0.5, 0.5])).T
@@ -1916,13 +1970,13 @@ if __name__ == '__main__':
         xrvs, xrvsgr = catstack(xli)
         multicompr = MultiComparison(xrvs, xrvsgr)
         tablett, restt, arrtt = multicompr.allpairtest(stats.ttest_ind)
-        print tablett
+        print(tablett)
 
 
         xli=[[8,10,9,10,9],[7,8,5,8,5],[4,8,7,5,7]]
         x,l = catstack(xli)
         gs4 = GroupsStats(np.column_stack([x,l]))
-        print gs4.groupvarwithin()
+        print(gs4.groupvarwithin())
 
 
     #test_tukeyhsd() #moved to test_multi.py
@@ -1938,13 +1992,13 @@ if __name__ == '__main__':
     #same number of rejection as in BKY paper:
     #single step-up:4, two-stage:8, iterated two-step:9
     #also alpha_star is the same as theirs for TST
-    print fdrcorrection0(pvals, alpha=0.05, method='indep')
-    print fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
+    print(fdrcorrection0(pvals, alpha=0.05, method='indep'))
+    print(fdrcorrection_twostage(pvals, alpha=0.05, iter=False))
     res_tst = fdrcorrection_twostage(pvals, alpha=0.05, iter=False)
     assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2],3) #alpha_star for stage 2
     assert_equal(8, res_tst[0].sum())
-    print fdrcorrection_twostage(pvals, alpha=0.05, iter=True)
-    print 'fdr_gbs', multipletests(pvals, alpha=0.05, method='fdr_gbs')
+    print(fdrcorrection_twostage(pvals, alpha=0.05, iter=True))
+    print('fdr_gbs', multipletests(pvals, alpha=0.05, method='fdr_gbs'))
     #multicontrast_pvalues(tstat, tcorr, df)
     test_tukey_pvalues()
     tukey_pvalues(3.649, 3, 16)

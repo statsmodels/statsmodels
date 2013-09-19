@@ -1,5 +1,20 @@
 """Discrete Data Models
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import statsmodels.api as sm
@@ -17,15 +32,15 @@ spector_data.endog[:5]
 #-------------------------------
 lpm_mod = sm.OLS(spector_data.endog, spector_data.exog)
 lpm_res = lpm_mod.fit()
-print lpm_res.params[:-1]
+print(lpm_res.params[:-1])
 
 #Logit Model
 #-----------
 logit_mod = sm.Logit(spector_data.endog, spector_data.exog)
 logit_res = logit_mod.fit()
-print logit_res.params
+print(logit_res.params)
 logit_margeff = logit_res.get_margeff(method='dydx', at='overall')
-print logit_margeff.summary()
+print(logit_margeff.summary())
 
 #l1 regularized logit
 #--------------------
@@ -35,20 +50,20 @@ alpha = 0.1 * len(spector_data.endog) * np.ones(spector_data.exog.shape[1])
 # Choose not to regularize the constant
 alpha[-1] = 0
 logit_l1_res = logit_mod.fit_regularized(method='l1', alpha=alpha)
-print logit_l1_res.summary()
+print(logit_l1_res.summary())
 
 
 # As in all the discrete data models presented below, we can print a nice
 # summary of results:
-print logit_res.summary()
+print(logit_res.summary())
 
 #Probit Model
 #------------
 probit_mod = sm.Probit(spector_data.endog, spector_data.exog)
 probit_res = probit_mod.fit()
-print probit_res.params
+print(probit_res.params)
 probit_margeff = probit_res.get_margeff()
-print probit_margeff.summary()
+print(probit_margeff.summary())
 
 #Multinomial Logit
 #-----------------
@@ -59,15 +74,15 @@ anes_exog = anes_data.exog
 anes_exog = sm.add_constant(anes_exog, prepend=False)
 
 # Inspect the data:
-print anes_data.exog[:5, :]
-print anes_data.endog[:5]
+print(anes_data.exog[:5, :])
+print(anes_data.endog[:5])
 
 # Fit MNL model
 mlogit_mod = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_res = mlogit_mod.fit()
-print mlogit_res.params
+print(mlogit_res.params)
 mlogit_margeff = mlogit_res.get_margeff()
-print mlogit_margeff.summary()
+print(mlogit_margeff.summary())
 
 #l1 regularized Multinomial Logit
 #--------------------------------
@@ -78,7 +93,7 @@ alpha = 10 * np.ones((mlogit_mod.K, mlogit_mod.J - 1))
 alpha[-1, :] = 0
 mlogit_mod2 = sm.MNLogit(anes_data.endog, anes_exog)
 mlogit_l1_res = mlogit_mod2.fit_regularized(method='l1', alpha=alpha)
-print mlogit_l1_res.summary()
+print(mlogit_l1_res.summary())
 
 #Poisson model
 #-------------
@@ -93,9 +108,9 @@ rand_exog = sm.add_constant(rand_exog, prepend=False)
 # Fit Poisson model:
 poisson_mod = sm.Poisson(rand_data.endog, rand_exog)
 poisson_res = poisson_mod.fit(method="newton")
-print poisson_res.summary()
+print(poisson_res.summary())
 poisson_margeff = poisson_res.get_margeff()
-print poisson_margeff.summary()
+print(poisson_margeff.summary())
 
 # l1 regularized Poisson model
 poisson_mod2 = sm.Poisson(rand_data.endog, rand_exog)
@@ -109,7 +124,7 @@ poisson_l1_res = poisson_mod2.fit_regularized(method='l1', alpha=alpha)
 # The negative binomial model gives slightly different results:
 mod_nbin = sm.NegativeBinomial(rand_data.endog, rand_exog)
 res_nbin = mod_nbin.fit(disp=False)
-print res_nbin.summary()
+print(res_nbin.summary())
 
 #Alternative solvers
 #-------------------

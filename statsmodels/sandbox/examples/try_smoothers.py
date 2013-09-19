@@ -7,6 +7,19 @@ Author: Josef
 
 mainly script for checking Kernel Regression
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import numpy as np
 
 if __name__ == "__main__":
@@ -36,30 +49,30 @@ if __name__ == "__main__":
     start = time.time()
     KSy = KS.conf(KSx)
     KVar = KS.std(KSx)
-    print time.time() - start    # This should be significantly quicker...
+    print(time.time() - start)    # This should be significantly quicker...
     start = time.time()          #
     KS2y = KS2.conf(KSx)         #
     K2Var = KS2.std(KSx)         #
-    print time.time() - start    # ...than this.
+    print(time.time() - start)    # ...than this.
 
     KSConfIntx, KSConfInty = KS.conf(15)
 
-    print "Norm const should be 0.9375"
-    print K2.norm_const
+    print("Norm const should be 0.9375")
+    print(K2.norm_const)
 
-    print "L2 Norms Should Match:"
-    print K.L2Norm
-    print K2.L2Norm
+    print("L2 Norms Should Match:")
+    print(K.L2Norm)
+    print(K2.L2Norm)
 
-    print "Fit values should match:"
+    print("Fit values should match:")
     #print zip(KSy, KS2y)
-    print KSy[28]
-    print KS2y[28]
+    print(KSy[28])
+    print(KS2y[28])
 
-    print "Var values should match:"
+    print("Var values should match:")
     #print zip(KVar, K2Var)
-    print KVar[39]
-    print K2Var[39]
+    print(KVar[39])
+    print(K2Var[39])
 
     fig = plt.figure()
     ax = fig.add_subplot(221)

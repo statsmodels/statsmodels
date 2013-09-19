@@ -5,6 +5,9 @@ Created on Sun Nov 14 08:21:41 2010
 Author: josef-pktd
 License: BSD (3-clause)
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import numpy as np
@@ -184,10 +187,10 @@ if __name__ == '__main__':
         y0 = ytrue + 0.1*np.random.normal(size=ytrue.shape)
 
         mod = FactorModelUnivariate(y0, x0)
-        print mod.summary_find_nfact()
-        print "with cross validation - slower"
+        print(mod.summary_find_nfact())
+        print("with cross validation - slower")
         mod.fit_find_nfact(maxfact=None, skip_crossval=False, cv_iter=None)
-        print mod.summary_find_nfact()
+        print(mod.summary_find_nfact())
 
 
 

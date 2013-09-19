@@ -30,6 +30,19 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from statsmodels.compatnp.np_compat import npc_unique
@@ -219,7 +232,7 @@ class Group(object):
         '''
         uni = self.uni
         if drop_idx is not None:
-            idx = range(len(uni))
+            idx = list(range(len(uni)))
             del idx[drop_idx]
             uni = uni[idx]
 
@@ -340,21 +353,21 @@ if __name__ == '__main__':
     from scipy import sparse
 
     g = np.array([0, 0, 1, 2, 1, 1, 2, 0])
-    u = range(3)
+    u = list(range(3))
     indptr = np.arange(len(g)+1)
     data = np.ones(len(g), dtype=np.int8)
     a = sparse.csr_matrix((data, g, indptr))
-    print a.todense()
-    print np.all(a.todense() == (g[:,None] == np.arange(3)).astype(int))
+    print(a.todense())
+    print(np.all(a.todense() == (g[:,None] == np.arange(3)).astype(int)))
 
     x = np.arange(len(g)*3).reshape(len(g), 3, order='F')
 
-    print 'group means'
-    print x.T * a
-    print np.dot(x.T, g[:,None] == np.arange(3))
-    print np.array([np.bincount(g, weights=x[:,col]) for col in range(3)])
+    print('group means')
+    print(x.T * a)
+    print(np.dot(x.T, g[:,None] == np.arange(3)))
+    print(np.array([np.bincount(g, weights=x[:,col]) for col in range(3)]))
     for cat in u:
-        print x[g==cat].sum(0)
+        print(x[g==cat].sum(0))
     for cat in u: x[g==cat].sum(0)
 
     cc = sparse.csr_matrix([[0, 1, 0, 1, 0, 0, 0, 0, 0],
@@ -368,14 +381,14 @@ if __name__ == '__main__':
                 [0, 0, 0, 0, 0, 1, 0, 1, 0]])
 
     #------------- groupsums
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2), g,
-                    use_bincount=False).T
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2)[:,:,0], g)
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2)[:,:,1], g)
+    print(group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2), g,
+                    use_bincount=False).T)
+    print(group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2)[:,:,0], g))
+    print(group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2)[:,:,1], g))
 
     #------------- examples class
     x = np.arange(len(g)*3).reshape(len(g), 3, order='F')
     mygroup = Group(g)
-    print mygroup.group_int
-    print mygroup.group_sums(x)
-    print mygroup.labels()
+    print(mygroup.group_int)
+    print(mygroup.group_sums(x))
+    print(mygroup.labels())

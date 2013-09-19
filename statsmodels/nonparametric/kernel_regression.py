@@ -37,8 +37,9 @@ import numpy as np
 from scipy import optimize
 from scipy.stats.mstats import mquantiles
 
-from _kernel_base import GenericKDE, EstimatorSettings, gpke, \
+from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _get_type_pos, _adjust_shape, _compute_min_std_IQR
+import six
 
 
 
@@ -310,7 +311,7 @@ class KernelReg(GenericKDE):
         LOO_Y = LeaveOneOut(self.endog).__iter__()
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
-            Y = LOO_Y.next()
+            Y = six.advance_iterator(LOO_Y)
             G = func(bw, endog=Y, exog=-X_not_i,
                      data_predict=-self.exog[ii, :])[0]
             L += (self.endog[ii] - G) ** 2
@@ -370,7 +371,7 @@ class KernelReg(GenericKDE):
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.k_vars))
-        for i in xrange(N_data_predict):
+        for i in range(N_data_predict):
             mean_mfx = func(self.bw, self.endog, self.exog,
                             data_predict=data_predict[i, :])
             mean[i] = mean_mfx[0]
@@ -525,9 +526,9 @@ class KernelCensoredReg(KernelReg):
         self.exog = np.squeeze(self.exog[ix])
         self.d = np.squeeze(self.d[ix])
         self.W_in = np.empty((self.nobs, 1))
-        for i in xrange(1, self.nobs + 1):
+        for i in range(1, self.nobs + 1):
             P=1
-            for j in xrange(1, i):
+            for j in range(1, i):
                 P *= ((self.nobs - j)/(float(self.nobs)-j+1))**self.d[j-1]
             self.W_in[i-1,0] = P * self.d[i-1] / (float(self.nobs) - i + 1 )
 
@@ -637,8 +638,8 @@ class KernelCensoredReg(KernelReg):
         LOO_W = LeaveOneOut(self.W_in).__iter__()
         L = 0
         for ii, X_not_i in enumerate(LOO_X):
-            Y = LOO_Y.next()
-            w = LOO_W.next()
+            Y = six.advance_iterator(LOO_Y)
+            w = six.advance_iterator(LOO_W)
             G = func(bw, endog=Y, exog=-X_not_i,
                      data_predict=-self.exog[ii, :], W=w)[0]
             L += (self.endog[ii] - G) ** 2
@@ -659,7 +660,7 @@ class KernelCensoredReg(KernelReg):
         N_data_predict = np.shape(data_predict)[0]
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.k_vars))
-        for i in xrange(N_data_predict):
+        for i in range(N_data_predict):
             mean_mfx = func(self.bw, self.endog, self.exog,
                             data_predict=data_predict[i, :],
                             W=self.W_in)
@@ -779,7 +780,7 @@ class TestRegCoefC(object):
         """
         n = np.shape(Y)[0]
         lam = np.empty(shape=(self.nres, ))
-        for i in xrange(self.nres):
+        for i in range(self.nres):
             ind = np.random.random_integers(0, n-1, size=(n,1))
             Y1 = Y[ind, 0]
             X1 = X[ind, :]
@@ -808,7 +809,7 @@ class TestRegCoefC(object):
         M = np.reshape(M, (n, 1))
         e = Y - M
         e = e - np.mean(e)  # recenter residuals
-        for i in xrange(self.nboot):
+        for i in range(self.nboot):
             ind = np.random.random_integers(0, n-1, size=(n,1))
             e_boot = e[ind, 0]
             Y_boot = M + e_boot
@@ -902,7 +903,7 @@ class TestRegCoefD(TestRegCoefC):
         u2 = fct2 * u
         r = fct2 / (5 ** 0.5)
         I_dist = np.empty((self.nboot,1))
-        for j in xrange(self.nboot):
+        for j in range(self.nboot):
             u_boot = copy.deepcopy(u2)
 
             prob = np.random.uniform(0,1, size = (n,1))

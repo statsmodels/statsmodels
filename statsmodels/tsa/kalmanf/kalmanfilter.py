@@ -17,6 +17,7 @@ This file follows Hamilton's notation pretty closely.
 The ARMA Model class follows Durbin and Koopman notation.
 Harvey uses Durbin and Koopman notation.
 """
+from __future__ import print_function
 #Anderson and Moore `Optimal Filtering` provides a more efficient algorithm
 # namely the information filter
 # if the number of series is much greater than the number of states
@@ -30,6 +31,8 @@ from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, one
 from numpy.linalg import inv, pinv
 from statsmodels.tools.tools import chain_dot
 from . import kalman_loglike
+from six.moves import map
+from six.moves import zip
 
 #Fast filtering and smoothing for multivariate state space models
 # and The Riksbank -- Strid and Walentin (2008)
@@ -357,7 +360,7 @@ class StateSpaceModel(object):
             H = H(params)
         elif H == None:
             H = 0
-        print callable(Q)
+        print(callable(Q))
         if Q != None and callable(Q):
             Q = Q(params)
         elif Q == None:

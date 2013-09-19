@@ -4,9 +4,10 @@ import numpy as np
 
 from statsmodels.tools.decorators import cache_readonly
 
-import var_model as _model
-import util
-import plotting
+from . import var_model as _model
+from . import util
+from . import plotting
+import six
 
 FULL_SAMPLE = 0
 ROLLING = 1
@@ -115,13 +116,13 @@ class DynamicVAR(object):
     @property
     def nobs(self):
         # Stub, do I need this?
-        data = dict((eq, r.nobs) for eq, r in self.equations.iteritems())
+        data = dict((eq, r.nobs) for eq, r in six.iteritems(self.equations))
         return pn.DataFrame(data)
 
     @cache_readonly
     def equations(self):
         eqs = {}
-        for col, ts in self.y.iteritems():
+        for col, ts in six.iteritems(self.y):
             model = pn.ols(y=ts, x=self.x, window=self._window,
                            window_type=self._window_type,
                            min_periods=self._min_periods)
@@ -136,7 +137,7 @@ class DynamicVAR(object):
         Return dynamic regression coefficients as WidePanel
         """
         data = {}
-        for eq, result in self.equations.iteritems():
+        for eq, result in six.iteritems(self.equations):
             data[eq] = result.beta
 
         panel = pn.WidePanel.fromDict(data)
@@ -182,7 +183,7 @@ class DynamicVAR(object):
     @cache_readonly
     def resid(self):
         data = {}
-        for eq, result in self.equations.iteritems():
+        for eq, result in six.iteritems(self.equations):
             data[eq] = result.resid
 
         return pn.DataFrame(data)
@@ -269,7 +270,7 @@ class DynamicVAR(object):
     @cache_readonly
     def r2(self):
         """Returns the r-squared values."""
-        data = dict((eq, r.r2) for eq, r in self.equations.iteritems())
+        data = dict((eq, r.r2) for eq, r in six.iteritems(self.equations))
         return pn.DataFrame(data)
 
 class DynamicPanelVAR(DynamicVAR):

@@ -38,6 +38,21 @@ Author: josef-pktd
 License: BSD
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 from scipy import integrate # for scipy 0.6.0
 
@@ -205,36 +220,36 @@ def examples_transf():
     ##print stats.lognorm.stats(1)
     ##print lognormal.rvs(size=10)
 
-    print 'Results for lognormal'
+    print('Results for lognormal')
     lognormalg = ExpTransf_gen(stats.norm, a=0, name = 'Log transformed normal general')
-    print lognormalg.cdf(1)
-    print stats.lognorm.cdf(1,1)
-    print lognormalg.stats()
-    print stats.lognorm.stats(1)
-    print lognormalg.rvs(size=5)
+    print(lognormalg.cdf(1))
+    print(stats.lognorm.cdf(1,1))
+    print(lognormalg.stats())
+    print(stats.lognorm.stats(1))
+    print(lognormalg.rvs(size=5))
 
     ##print 'Results for loggamma'
     ##loggammag = ExpTransf_gen(stats.gamma)
     ##print loggammag._cdf(1,10)
     ##print stats.loggamma.cdf(1,10)
 
-    print 'Results for expgamma'
+    print('Results for expgamma')
     loggammaexpg = LogTransf_gen(stats.gamma)
-    print loggammaexpg._cdf(1,10)
-    print stats.loggamma.cdf(1,10)
-    print loggammaexpg._cdf(2,15)
-    print stats.loggamma.cdf(2,15)
+    print(loggammaexpg._cdf(1,10))
+    print(stats.loggamma.cdf(1,10))
+    print(loggammaexpg._cdf(2,15))
+    print(stats.loggamma.cdf(2,15))
 
 
     # this requires change in scipy.stats.distribution
     #print loggammaexpg.cdf(1,10)
 
-    print 'Results for loglaplace'
+    print('Results for loglaplace')
     loglaplaceg = LogTransf_gen(stats.laplace)
-    print loglaplaceg._cdf(2,10)
-    print stats.loglaplace.cdf(2,10)
+    print(loglaplaceg._cdf(2,10))
+    print(stats.loglaplace.cdf(2,10))
     loglaplaceexpg = ExpTransf_gen(stats.laplace)
-    print loglaplaceexpg._cdf(2,10)
+    print(loglaplaceexpg._cdf(2,10))
 
 
 
@@ -339,7 +354,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         elif self.shape == 'hump':
             signpdf = -1
         else:
-            raise ValueError, 'shape can only be `u` or `hump`'
+            raise ValueError('shape can only be `u` or `hump`')
 
         return signpdf * (self.derivplus(x)*self.kls._pdf(self.funcinvplus(x),*args, **kwargs) -
                    self.derivminus(x)*self.kls._pdf(self.funcinvminus(x),*args, **kwargs))

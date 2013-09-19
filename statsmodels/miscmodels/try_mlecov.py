@@ -4,6 +4,15 @@ toeplitz structure is not exploited, need cholesky or inv for toeplitz
 
 Author: josef-pktd
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import numpy as np
@@ -72,8 +81,8 @@ def mvn_loglike_chol(x, sigma):
     logdetsigma = np.log(np.linalg.det(sigma))
     nobs = len(x)
     from scipy import stats
-    print 'scipy.stats'
-    print np.log(stats.norm.pdf(x_whitened)).sum()
+    print('scipy.stats')
+    print(np.log(stats.norm.pdf(x_whitened)).sum())
 
     llf = - np.dot(x_whitened.T, x_whitened)
     llf -= nobs * np.log(2 * np.pi)
@@ -200,10 +209,10 @@ if __name__ == '__main__':
     mod.nar, mod.nma = 2, 2   #needs to be added, no init method
     mod.nobs = len(y)
     res = mod.fit(start_params=[0.1, -0.8, 0.2, 0.1, 1.])
-    print 'DGP', ar, ma
-    print res.params
+    print('DGP', ar, ma)
+    print(res.params)
     from statsmodels.regression import yule_walker
-    print yule_walker(y, 2)
+    print(yule_walker(y, 2))
     #resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
     #print resi.params
 
@@ -225,11 +234,11 @@ if __name__ == '__main__':
 ##    #plt.show()
 
     sigma = mod._params2cov(res.params[:-1], nobs) * res.params[-1]**2
-    print mvn_loglike(y, sigma)
+    print(mvn_loglike(y, sigma))
     llo = mvn_nloglike_obs(y, sigma)
-    print llo.sum(), llo.shape
-    print mvn_loglike_chol(y, sigma)
-    print mvn_loglike_sum(y, sigma)
+    print(llo.sum(), llo.shape)
+    print(mvn_loglike_chol(y, sigma))
+    print(mvn_loglike_sum(y, sigma))
 
 
 

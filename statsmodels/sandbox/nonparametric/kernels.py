@@ -22,6 +22,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
+from six.moves import filter
 
 
 class NdKernel(object):

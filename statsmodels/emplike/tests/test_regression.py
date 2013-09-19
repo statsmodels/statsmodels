@@ -1,7 +1,7 @@
 from numpy.testing import assert_almost_equal
 from numpy.testing.decorators import slow
 import statsmodels.api as sm
-from results.el_results import RegressionResults
+from .results.el_results import RegressionResults
 
 
 class GenRes(object):

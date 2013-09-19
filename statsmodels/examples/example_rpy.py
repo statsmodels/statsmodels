@@ -16,6 +16,10 @@ it does not work for all types of R models.
 There are also R scripts included with most of the datasets to run
 some basic models for comparisons of results to statsmodels.
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 from rpy import r
 import numpy as np
@@ -31,8 +35,8 @@ if 1 in examples:
     formula = r('y~%s-1' % '+'.join(des_cols))
     frame = r.data_frame(y=y, x=x)
     results = r.lm(formula, data=frame)
-    print results.keys()
-    print results['coefficients']
+    print(results.keys())
+    print(results['coefficients'])
 
 if 2 in examples:
     data2 = sm.datasets.star98.load()
@@ -45,6 +49,6 @@ if 2 in examples:
     results2 = r.glm(formula2, data=frame2, family='binomial')
     params_est = [results2['coefficients'][k] for k
                     in sorted(results2['coefficients'])]
-    print params_est
-    print ', '.join(['%13.10f']*21) % tuple(params_est)
+    print(params_est)
+    print(', '.join(['%13.10f']*21) % tuple(params_est))
 

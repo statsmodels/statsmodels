@@ -2,6 +2,10 @@
 
 Author : Josef Perktold
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 
@@ -157,18 +161,18 @@ if __name__ == '__main__':
     import testsave
 
     for d in data:
-        print d,
+        print(d, end=' ')
         correct = np.all(data[d] == getattr(testsave.var_results, d))
         if not correct and not data[d].dtype == np.dtype('object'):
             correct = np.allclose(data[d], getattr(testsave.var_results, d),
                               rtol=1e-16, atol=1e-16)
-            if not correct: print "inexact precision"
+            if not correct: print("inexact precision")
         if not correct:
             correlem =[np.all(data[d].item()[k] ==
                               getattr(testsave.var_results, d).item()[k])
                        for k in data[d].item().keys()]
             if not correlem:
-                print d, "wrong"
+                print(d, "wrong")
 
-    print res_var.verify()
+    print(res_var.verify())
 

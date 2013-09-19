@@ -17,6 +17,7 @@ getquotes is from pandas\examples\finance.py
 Created on Sat Jan 30 16:30:18 2010
 Author: josef-pktd
 """
+from __future__ import print_function
 
 import numpy as np
 import matplotlib.finance as fin
@@ -60,7 +61,7 @@ for sy in dj30:
 
 # combine into WidePanel
 pawp = pa.WidePanel.fromDict(dmall)
-print pawp.values.shape
+print(pawp.values.shape)
 
 # select closing prices
 paclose = pawp.getMinorXS('close')

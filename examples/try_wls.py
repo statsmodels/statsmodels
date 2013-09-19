@@ -5,6 +5,57 @@ example is extended to look at the meaning of rsquared in WLS,
 at outliers, compares with RLM and a short bootstrap
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -55,19 +106,19 @@ rsquared_adj = 1 -(wls_fit.nobs)/(wls_fit.df_resid)*(1-rsquared)
 # stays small. Below also compared using squared or sqrt of weight variable.
 # TODO: need to add 45 degree line to graphs
 wls_fit3 = sm.WLS(data.endog, data.exog[:,(0,1,3,4)], weights=1/incomesq).fit()
-print wls_fit3.summary()
-print 'corrected rsquared',
-print (wls_fit3.uncentered_tss - wls_fit3.ssr)/wls_fit3.uncentered_tss
+print(wls_fit3.summary())
+print('corrected rsquared', end=' ')
+print((wls_fit3.uncentered_tss - wls_fit3.ssr)/wls_fit3.uncentered_tss)
 plt.figure();
 plt.title('WLS dropping heteroscedasticity variable from regressors');
 plt.plot(data.endog, wls_fit3.fittedvalues, 'o');
 plt.xlim([0,2000]);
 #@savefig wls_drop_het.png
 plt.ylim([0,2000]);
-print 'raw correlation of endog and fittedvalues'
-print np.corrcoef(data.endog, wls_fit.fittedvalues)
-print 'raw correlation coefficient of endog and fittedvalues squared'
-print np.corrcoef(data.endog, wls_fit.fittedvalues)[0,1]**2
+print('raw correlation of endog and fittedvalues')
+print(np.corrcoef(data.endog, wls_fit.fittedvalues))
+print('raw correlation coefficient of endog and fittedvalues squared')
+print(np.corrcoef(data.endog, wls_fit.fittedvalues)[0,1]**2)
 
 # compare with robust regression,
 # heteroscedasticity correction downweights the outliers
@@ -150,7 +201,7 @@ def index_trim_outlier(resid, k):
 
 #ols_test_fit = sm.OLS(data.endog, data.exog).fit()
 olskeep, olsoutl = index_trim_outlier(ols_fit.resid, 2)
-print 'ols outliers', olsoutl, ols_fit.resid[olsoutl]
+print('ols outliers', olsoutl, ols_fit.resid[olsoutl])
 ols_fit_rm2 = sm.OLS(data.endog[olskeep], data.exog[olskeep,:]).fit()
 rlm_fit_rm2 = sm.RLM(data.endog[olskeep], data.exog[olskeep,:]).fit()
 #weights = 1/incomesq
@@ -158,46 +209,46 @@ rlm_fit_rm2 = sm.RLM(data.endog[olskeep], data.exog[olskeep,:]).fit()
 results = [ols_fit, ols_fit_rm2, rlm_fit, rlm_fit_rm2]
 #Note: I think incomesq is already square
 for weights in [1/incomesq, 1/incomesq**2, np.sqrt(incomesq)]:
-    print '\nComparison OLS and WLS with and without outliers'
+    print('\nComparison OLS and WLS with and without outliers')
     wls_fit0 = sm.WLS(data.endog, data.exog, weights=weights).fit()
     wls_fit_rm2 = sm.WLS(data.endog[olskeep], data.exog[olskeep,:],
                          weights=weights[olskeep]).fit()
     wlskeep, wlsoutl = index_trim_outlier(ols_fit.resid, 2)
-    print '2 outliers candidates and residuals'
-    print wlsoutl, wls_fit.resid[olsoutl]
+    print('2 outliers candidates and residuals')
+    print(wlsoutl, wls_fit.resid[olsoutl])
     # redundant because ols and wls outliers are the same:
     ##wls_fit_rm2_ = sm.WLS(data.endog[wlskeep], data.exog[wlskeep,:],
     ##                     weights=1/incomesq[wlskeep]).fit()
 
-    print 'outliers ols, wls:', olsoutl, wlsoutl
+    print('outliers ols, wls:', olsoutl, wlsoutl)
 
-    print 'rsquared'
-    print 'ols vs ols rm2', ols_fit.rsquared, ols_fit_rm2.rsquared
-    print 'wls vs wls rm2', wls_fit0.rsquared, wls_fit_rm2.rsquared #, wls_fit_rm2_.rsquared
-    print 'compare R2_resid  versus  R2_wresid'
-    print 'ols minus 2', getrsq(ols_fit_rm2)[0],
-    print getrsq((ols_fit_rm2.wresid, ols_fit_rm2.model.wendog))[0]
-    print 'wls        ', getrsq(wls_fit)[0],
-    print getrsq((wls_fit.wresid, wls_fit.model.wendog))[0]
+    print('rsquared')
+    print('ols vs ols rm2', ols_fit.rsquared, ols_fit_rm2.rsquared)
+    print('wls vs wls rm2', wls_fit0.rsquared, wls_fit_rm2.rsquared) #, wls_fit_rm2_.rsquared
+    print('compare R2_resid  versus  R2_wresid')
+    print('ols minus 2', getrsq(ols_fit_rm2)[0], end=' ')
+    print(getrsq((ols_fit_rm2.wresid, ols_fit_rm2.model.wendog))[0])
+    print('wls        ', getrsq(wls_fit)[0], end=' ')
+    print(getrsq((wls_fit.wresid, wls_fit.model.wendog))[0])
 
-    print 'wls minus 2', getrsq(wls_fit_rm2)[0],
+    print('wls minus 2', getrsq(wls_fit_rm2)[0], end=' ')
     # next is same as wls_fit_rm2.rsquared for cross checking
-    print getrsq((wls_fit_rm2.wresid, wls_fit_rm2.model.wendog))[0]
+    print(getrsq((wls_fit_rm2.wresid, wls_fit_rm2.model.wendog))[0])
     #print getrsq(wls_fit_rm2_)[0],
     #print getrsq((wls_fit_rm2_.wresid, wls_fit_rm2_.model.wendog))[0]
     results.extend([wls_fit0, wls_fit_rm2])
 
-print '     ols             ols_rm2       rlm           rlm_rm2     wls (lin)    wls_rm2 (lin)   wls (squ)   wls_rm2 (squ)  wls (sqrt)   wls_rm2 (sqrt)'
-print 'Parameter estimates'
-print np.column_stack([r.params for r in results])
-print 'R2 original data, next line R2 weighted data'
-print np.column_stack([getattr(r, 'rsquared', None) for r in results])
+print('     ols             ols_rm2       rlm           rlm_rm2     wls (lin)    wls_rm2 (lin)   wls (squ)   wls_rm2 (squ)  wls (sqrt)   wls_rm2 (sqrt)')
+print('Parameter estimates')
+print(np.column_stack([r.params for r in results]))
+print('R2 original data, next line R2 weighted data')
+print(np.column_stack([getattr(r, 'rsquared', None) for r in results]))
 
-print 'Standard errors'
-print np.column_stack([getattr(r, 'bse', None) for r in results])
-print 'Heteroscedasticity robust standard errors (with ols)'
-print 'with outliers'
-print np.column_stack([getattr(ols_fit, se, None) for se in ['HC0_se', 'HC1_se', 'HC2_se', 'HC3_se']])
+print('Standard errors')
+print(np.column_stack([getattr(r, 'bse', None) for r in results]))
+print('Heteroscedasticity robust standard errors (with ols)')
+print('with outliers')
+print(np.column_stack([getattr(ols_fit, se, None) for se in ['HC0_se', 'HC1_se', 'HC2_se', 'HC3_se']]))
 
 #..'''
 #..
@@ -261,16 +312,16 @@ for it in range(niter):
     bootres[it, nvar:] = res.bse
 
 np.set_printoptions(linewidth=200)
-print 'Bootstrap Results of parameters and parameter standard deviation  OLS'
-print 'Parameter estimates'
-print 'median', np.median(bootres[:,:5], 0)
-print 'mean  ', np.mean(bootres[:,:5], 0)
-print 'std   ', np.std(bootres[:,:5], 0)
+print('Bootstrap Results of parameters and parameter standard deviation  OLS')
+print('Parameter estimates')
+print('median', np.median(bootres[:,:5], 0))
+print('mean  ', np.mean(bootres[:,:5], 0))
+print('std   ', np.std(bootres[:,:5], 0))
 
-print 'Standard deviation of parameter estimates'
-print 'median', np.median(bootres[:,5:], 0)
-print 'mean  ', np.mean(bootres[:,5:], 0)
-print 'std   ', np.std(bootres[:,5:], 0)
+print('Standard deviation of parameter estimates')
+print('median', np.median(bootres[:,5:], 0))
+print('mean  ', np.mean(bootres[:,5:], 0))
+print('std   ', np.std(bootres[:,5:], 0))
 
 plt.figure()
 for i in range(4):
@@ -299,17 +350,17 @@ for it in range(niter):
     bootreswls[it, :nvar] = res.params
     bootreswls[it, nvar:] = res.bse
 
-print 'Bootstrap Results of parameters and parameter standard deviation',
-print 'WLS removed 2 outliers from sample'
-print 'Parameter estimates'
-print 'median', np.median(bootreswls[:,:5], 0)
-print 'mean  ', np.mean(bootreswls[:,:5], 0)
-print 'std   ', np.std(bootreswls[:,:5], 0)
+print('Bootstrap Results of parameters and parameter standard deviation', end=' ')
+print('WLS removed 2 outliers from sample')
+print('Parameter estimates')
+print('median', np.median(bootreswls[:,:5], 0))
+print('mean  ', np.mean(bootreswls[:,:5], 0))
+print('std   ', np.std(bootreswls[:,:5], 0))
 
-print 'Standard deviation of parameter estimates'
-print 'median', np.median(bootreswls[:,5:], 0)
-print 'mean  ', np.mean(bootreswls[:,5:], 0)
-print 'std   ', np.std(bootreswls[:,5:], 0)
+print('Standard deviation of parameter estimates')
+print('median', np.median(bootreswls[:,5:], 0))
+print('mean  ', np.mean(bootreswls[:,5:], 0))
+print('std   ', np.std(bootreswls[:,5:], 0))
 
 plt.figure()
 for i in range(4):

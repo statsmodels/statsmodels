@@ -15,6 +15,7 @@ from itertools import product
 
 from numpy import iterable, r_, cumsum, array
 from statsmodels.graphics import utils
+import six
 
 __all__ = ["mosaic"]
 
@@ -288,7 +289,7 @@ def _normalize_data(data, index):
         index = None
     # can it be used as a dictionary?
     try:
-        items = list(data.iteritems())
+        items = list(six.iteritems(data))
     except AttributeError:
         # ok, I cannot use the data as a dictionary
         # Try to convert it to a numpy array, or die trying

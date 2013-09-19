@@ -22,6 +22,20 @@ Koppelman, Frank S., and Chandra Bhat with technical support from Vaneet Sethi,
 Author: josef-pktd
 License: BSD (simplified)
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import numpy as np
@@ -202,18 +216,18 @@ class RU2NMNL(object):
 
         if type(tree) == tuple:   #assumes leaves are int for choice index
             name, subtree = tree
-            print name, datadict[name]
-            print 'subtree', subtree
+            print(name, datadict[name])
+            print('subtree', subtree)
             keys = []
             if testxb:
                 branchsum = datadict[name]
             else:
                 branchsum = name  #0
             for b in subtree:
-                print b
+                print(b)
                 #branchsum += branch2(b)
                 branchsum = branchsum + self.calc_prob(b, keys)
-            print 'branchsum', branchsum, keys
+            print('branchsum', branchsum, keys)
             for k in keys:
                 self.probs[k] = self.probs[k] + ['*' + name + '-prob']
 
@@ -223,12 +237,12 @@ class RU2NMNL(object):
                                 '(%s)' % ', '.join(self.paramsind[tree])]
             if testxb:
                 leavessum = sum((datadict[bi] for bi in tree))
-                print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
+                print('final branch with', tree, ''.join(tree), leavessum) #sum(tree)
                 return leavessum  #sum(xb[tree])
             else:
                 return ''.join(tree) #sum(tree)
 
-        print 'working on branch', tree, branchsum
+        print('working on branch', tree, branchsum)
         return branchsum
 
 
@@ -245,11 +259,11 @@ nobs, nchoices = endog.shape
 datafloat = dta.view(float).reshape(-1,7)
 exog = datafloat[:,1:].reshape(-1,6*nchoices).copy() #I don't want a view
 
-print endog.sum(0)
+print(endog.sum(0))
 varnames = dta.dtype.names
-print varnames[1:]
+print(varnames[1:])
 modes = ['Air', 'Train', 'Bus', 'Car']
-print exog.mean(0).reshape(nchoices, -1) # Greene Table 23.23
+print(exog.mean(0).reshape(nchoices, -1)) # Greene Table 23.23
 
 
 
@@ -335,10 +349,10 @@ array([-0.0961246 , -0.0155019 ,  0.01328757,  5.20741244,  3.86905293,
 '''
 res3corr = res3[[1, 0, 2, 3, 4, 5]]
 res3corr[0] *= 10
-print res3corr - tab2324  # diff 1e-5 to 1e-6
+print(res3corr - tab2324)  # diff 1e-5 to 1e-6
 #199.128369 - 199.1284  #llf same up to print precision of Greene
 
-print clogit.fit()
+print(clogit.fit())
 
 
 tree0 = ('top',
@@ -368,6 +382,6 @@ paramsind = {'top' :   [],
              }
 
 modru = RU2NMNL(endog, datadict, tree0, paramsind)
-print modru.calc_prob(modru.tree)
-print '\nmodru.probs'
-print modru.probs
+print(modru.calc_prob(modru.tree))
+print('\nmodru.probs')
+print(modru.probs)

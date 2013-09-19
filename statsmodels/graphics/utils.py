@@ -97,7 +97,7 @@ def maybe_name_or_idx(idx, model):
     column in a design matrix.
     """
     if idx is None:
-        idx = range(model.exog.shape[1])
+        idx = list(range(model.exog.shape[1]))
     if isinstance(idx, int):
         exog_name = model.exog_names[idx]
         exog_idx = idx

@@ -4,6 +4,8 @@ Created on Wed May 04 06:09:18 2011
 
 @author: josef
 """
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 
@@ -53,9 +55,9 @@ expected_shortfall = mean_residual_life #alias
 if __name__ == "__main__":
     rvs = np.random.standard_t(5, size= 10)
     res = mean_residual_life(rvs)
-    print res
+    print(res)
     rmean = [rvs[i:].mean() for i in range(len(rvs))]
-    print res[:,2] - rmean[1:]
+    print(res[:,2] - rmean[1:])
 
 '''
 >>> mean_residual_life(rvs, frac= 0.5)

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 from scipy import optimize, stats
 from statsmodels.base.data import handle_data
@@ -8,6 +9,7 @@ from statsmodels.tools.decorators import (resettable_cache,
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
+from functools import reduce
 
 
 _model_params_doc = """\
@@ -415,14 +417,14 @@ def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,
         if disp:
             print ("Warning: Maximum number of iterations has been "
                    "exceeded.")
-            print "         Current function value: %f" % fval
-            print "         Iterations: %d" % iterations
+            print("         Current function value: %f" % fval)
+            print("         Iterations: %d" % iterations)
     else:
         warnflag = 0
         if disp:
-            print "Optimization terminated successfully."
-            print "         Current function value: %f" % fval
-            print "         Iterations %d" % iterations
+            print("Optimization terminated successfully.")
+            print("         Current function value: %f" % fval)
+            print("         Iterations %d" % iterations)
     if full_output:
         (xopt, fopt, niter,
          gopt, hopt) = (newparams, f(newparams, *fargs),
@@ -1672,9 +1674,9 @@ class ResultMixin(object):
         distributed observations.
         '''
         results = []
-        print self.model.__class__
+        print(self.model.__class__)
         hascloneattr = True if hasattr(self, 'cloneattr') else False
-        for i in xrange(nrep):
+        for i in range(nrep):
             rvsind = np.random.randint(self.nobs - 1, size=self.nobs)
             #this needs to set startparam and get other defining attributes
             #need a clone method on model

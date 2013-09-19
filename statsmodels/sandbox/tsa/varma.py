@@ -21,6 +21,12 @@ changes
 Author : josefpkt
 License : BSD
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 import numpy as np
@@ -116,7 +122,7 @@ if __name__ == '__main__':
     #B[:,:,1] = 2
     B[:,:,1] = [[0,0],[0,0],[0,1]]
     xhat = VAR(x,B)
-    print np.all(xhat[P:,0]==np.correlate(x[:-1,0],np.ones(P))*2)
+    print(np.all(xhat[P:,0]==np.correlate(x[:-1,0],np.ones(P))*2))
     #print xhat
 
 
@@ -133,8 +139,8 @@ if __name__ == '__main__':
     C = np.zeros((Q,K,K))
     xhat1 = VAR(x,B, const=const)
     xhat2, err2 = VARMA(x,B,C, const=const)
-    print np.all(xhat2 == xhat1)
-    print np.all(xhat2[P:,0] == np.correlate(x[:-1,0],np.ones(P))*2+const)
+    print(np.all(xhat2 == xhat1))
+    print(np.all(xhat2[P:,0] == np.correlate(x[:-1,0],np.ones(P))*2+const))
 
     C[1,1,1] = 0.5
     xhat3, err3 = VARMA(x,B,C)
@@ -164,13 +170,13 @@ if __name__ == '__main__':
     xhat0 = VAR(x0,B)
     xcorr00 = signal.correlate(x0,B[:,:,0])#[:,0]
     xcorr01 = signal.correlate(x0,B[:,:,1])
-    print np.all(signal.correlate(x0,B[:,:,0],'valid')[:-1,0]==xhat0[P:,0])
-    print np.all(signal.correlate(x0,B[:,:,1],'valid')[:-1,0]==xhat0[P:,1])
+    print(np.all(signal.correlate(x0,B[:,:,0],'valid')[:-1,0]==xhat0[P:,0]))
+    print(np.all(signal.correlate(x0,B[:,:,1],'valid')[:-1,0]==xhat0[P:,1]))
 
     #import error
     #from movstat import acovf, acf
     from statsmodels.tsa.stattools import acovf, acf
     aav = acovf(x[:,0])
-    print aav[0] == np.var(x[:,0])
+    print(aav[0] == np.var(x[:,0]))
     aac = acf(x[:,0])
 

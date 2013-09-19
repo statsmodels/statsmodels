@@ -11,6 +11,8 @@ import statsmodels.stats.proportion as sms
 import statsmodels.stats.weightstats as smw
 
 from numpy.testing import assert_almost_equal
+from six.moves import map
+from six.moves import zip
 
 
 # Region, Eyes, Hair, Count

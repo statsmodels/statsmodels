@@ -1,3 +1,9 @@
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 #
 # This script examines the predictive prior densities of two local level
 # models given the same priors for parameters that appear to be the same.
@@ -7,7 +13,7 @@ try:
     import pymc
     pymc_installed = 1
 except:
-    print "pymc not imported"
+    print("pymc not imported")
     pymc_installed = 0
 from scipy.stats import gamma, beta, invgamma
 import numpy as np
@@ -61,17 +67,17 @@ for x > 0, a > 0, b>0.
 # in inverted gamma
 
 palpha = np.random.gamma(400.,.005, size=10000)
-print "First moment: %s\nSecond moment: %s" % (palpha.mean(),palpha.std())
+print("First moment: %s\nSecond moment: %s" % (palpha.mean(),palpha.std()))
 palpha = palpha[0]
 
 prho = np.random.beta(49.5,49.5, size=1e5)
-print "Beta Distribution"
-print "First moment: %s\nSecond moment: %s" % (prho.mean(),prho.std())
+print("Beta Distribution")
+print("First moment: %s\nSecond moment: %s" % (prho.mean(),prho.std()))
 prho = prho[0]
 
 psigma = igamma.rvs(1.,4.**2/2, size=1e5)
-print "Inverse Gamma Distribution"
-print "First moment: %s\nSecond moment: %s" % (psigma.mean(),psigma.std())
+print("Inverse Gamma Distribution")
+print("First moment: %s\nSecond moment: %s" % (psigma.mean(),psigma.std()))
 
 # First do the univariate case
 # y_t = theta_t + epsilon_t

@@ -5,6 +5,12 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 import statsmodels.api as sm
@@ -26,7 +32,7 @@ results = model.fit()
 
 
 #print results.predict(xf)
-print results.model.predict(results.params, xf)
+print(results.model.predict(results.params, xf))
 results.summary()
 
 shrinkit = 1
@@ -41,8 +47,8 @@ fh.close()
 fh = open(fname, 'r')
 results2 = pickle.load(fh)
 fh.close()
-print results2.predict(xf)
-print results2.model.predict(results.params, xf)
+print(results2.predict(xf))
+print(results2.model.predict(results.params, xf))
 
 
 y_count = np.random.poisson(np.exp(x.sum(1)-x.mean()))
@@ -51,7 +57,7 @@ results = model.fit(method='bfgs')
 
 results.summary()
 
-print results.model.predict(results.params, xf, exposure=1, offset=0)
+print(results.model.predict(results.params, xf, exposure=1, offset=0))
 
 if shrinkit:
     results.remove_data()
@@ -67,8 +73,8 @@ fh.close()
 fh = open(fname, 'r')
 results3 = pickle.load(fh)
 fh.close()
-print results3.predict(xf, exposure=1, offset=0)
-print results3.model.predict(results.params, xf, exposure=1, offset=0)
+print(results3.predict(xf, exposure=1, offset=0))
+print(results3.model.predict(results.params, xf, exposure=1, offset=0))
 
 def check_pickle(obj):
     import StringIO

@@ -35,10 +35,10 @@ class ContrastResults(object):
     def __str__(self):
         if hasattr(self, 'fvalue'):
             return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
+                   (repr(self.fvalue), self.pvalue, self.df_denom, self.df_num)
         else:
             return '<T test: effect=%s, sd=%s, t=%s, p=%s, df_denom=%d>' % \
-                   (`self.effect`, `self.sd`, `self.tvalue`, `self.pvalue`,
+                   (repr(self.effect), repr(self.sd), repr(self.tvalue), repr(self.pvalue),
                            self.df_denom)
 
     def __repr__(self):

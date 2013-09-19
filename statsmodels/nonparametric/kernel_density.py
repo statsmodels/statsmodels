@@ -33,9 +33,10 @@ References
 
 import numpy as np
 
-import kernels
-from _kernel_base import GenericKDE, EstimatorSettings, gpke, \
+from . import kernels
+from ._kernel_base import GenericKDE, EstimatorSettings, gpke, \
     LeaveOneOut, _adjust_shape
+import six
 
 
 __all__ = ['KDEMultivariate', 'KDEMultivariateConditional', 'EstimatorSettings']
@@ -190,7 +191,7 @@ class KDEMultivariate(GenericKDE):
             data_predict = _adjust_shape(data_predict, self.k_vars)
 
         pdf_est = []
-        for i in xrange(np.shape(data_predict)[0]):
+        for i in range(np.shape(data_predict)[0]):
             pdf_est.append(gpke(self.bw, data=self.data,
                                 data_predict=data_predict[i, :],
                                 var_type=self.var_type) / self.nobs)
@@ -235,7 +236,7 @@ class KDEMultivariate(GenericKDE):
             data_predict = _adjust_shape(data_predict, self.k_vars)
 
         cdf_est = []
-        for i in xrange(np.shape(data_predict)[0]):
+        for i in range(np.shape(data_predict)[0]):
             cdf_est.append(gpke(self.bw, data=self.data,
                                 data_predict=data_predict[i, :],
                                 var_type=self.var_type,
@@ -461,7 +462,7 @@ class KDEMultivariateConditional(GenericKDE):
         xLOO = LeaveOneOut(self.exog).__iter__()
         L = 0
         for i, Y_j in enumerate(yLOO):
-            X_not_i = xLOO.next()
+            X_not_i = six.advance_iterator(xLOO)
             f_yx = gpke(bw, data=-Y_j, data_predict=-self.data[i, :],
                         var_type=(self.dep_type + self.indep_type))
             f_x = gpke(bw[self.k_dep:], data=-X_not_i,
@@ -513,7 +514,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         pdf_est = []
         data_predict = np.column_stack((endog_predict, exog_predict))
-        for i in xrange(np.shape(data_predict)[0]):
+        for i in range(np.shape(data_predict)[0]):
             f_yx = gpke(self.bw, data=self.data,
                         data_predict=data_predict[i, :],
                         var_type=(self.dep_type + self.indep_type))
@@ -567,7 +568,7 @@ class KDEMultivariateConditional(GenericKDE):
 
         N_data_predict = np.shape(exog_predict)[0]
         cdf_est = np.empty(N_data_predict)
-        for i in xrange(N_data_predict):
+        for i in range(N_data_predict):
             mu_x = gpke(self.bw[self.k_dep:], data=self.exog,
                         data_predict=exog_predict[i, :],
                         var_type=self.indep_type) / self.nobs

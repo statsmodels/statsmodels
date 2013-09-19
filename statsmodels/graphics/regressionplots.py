@@ -367,13 +367,13 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         #NOTE: row_labels can be None.
         #Maybe we should fix this to never be the case.
         if obs_labels is None:
-            obs_labels = range(len(exog_i))
+            obs_labels = list(range(len(exog_i)))
 
     if obs_labels is not False: # could be array-like
         if len(obs_labels) != len(exog_i):
             raise ValueError("obs_labels does not match length of exog_i")
         label_kwargs.update(dict(ha="center", va="bottom"))
-        ax = utils.annotate_axes(range(len(obs_labels)), obs_labels,
+        ax = utils.annotate_axes(list(range(len(obs_labels))), obs_labels,
                             zip(res_xaxis.resid, res_yaxis.resid),
                             [(0, 5)] * len(obs_labels), "x-large", ax=ax,
                             **label_kwargs)
@@ -450,7 +450,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
     # for indexing purposes
     other_names = np.array(results.model.exog_names)
     for i,idx in enumerate(exog_idx):
-        others = range(k_vars)
+        others = list(range(k_vars))
         others.pop(idx)
         exog_others = pandas.DataFrame(exog[:, others],
                                        columns=other_names[others])
@@ -777,7 +777,7 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
     # add point labels
     labels = results.model.data.row_labels
     if labels is None:
-        labels = range(len(resids))
+        labels = list(range(len(resids)))
     ax = utils.annotate_axes(np.where(large_points)[0], labels,
                              zip(leverage, resids),
                              zip(-(psize/2)**.5, (psize/2)**.5), "x-large",
@@ -830,7 +830,7 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     large_resid = np.abs(resid) > cutoff
     labels = results.model.data.row_labels
     if labels is None:
-        labels = range(results.nobs)
+        labels = list(range(results.nobs))
     index = np.where(np.logical_or(large_leverage, large_resid))[0]
     ax = utils.annotate_axes(index, labels, zip(resid**2, leverage),
                              [(0, 5)]*int(results.nobs), "large",

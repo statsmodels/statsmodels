@@ -1,5 +1,10 @@
 """Weighted Least Squares
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 from scipy import stats
@@ -36,7 +41,7 @@ X = X[:, [0, 2]]
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 mod_wls = sm.WLS(y, X, weights=1. / w)
 res_wls = mod_wls.fit()
-print res_wls.summary()
+print(res_wls.summary())
 
 #OLS vs. WLS
 #-----------
@@ -45,8 +50,8 @@ print res_wls.summary()
 res_ols = sm.OLS(y, X).fit()
 
 # Compare the estimated parameters in WLS and OLS
-print res_ols.params
-print res_wls.params
+print(res_ols.params)
+print(res_wls.params)
 
 # Compare the WLS standard errors to  heteroscedasticity corrected OLS standard
 # errors:
@@ -56,7 +61,7 @@ se = np.round(se, 4)
 colnames = 'x1', 'const'
 rownames = 'WLS', 'OLS', 'OLS_HC0', 'OLS_HC1', 'OLS_HC3', 'OLS_HC3'
 tabl = SimpleTable(se, colnames, rownames, txt_fmt=default_txt_fmt)
-print tabl
+print(tabl)
 
 # Calculate OLS prediction interval
 covb = res_ols.cov_params()
@@ -87,4 +92,4 @@ var2 = resid2.var(ddof=int(res_ols.df_model) + 1)
 w_est = w.copy()
 w_est[w != 1.] = np.sqrt(var2) / np.sqrt(var1)
 res_fwls = sm.WLS(y, X, 1. / w_est).fit()
-print res_fwls.summary()
+print(res_fwls.summary())

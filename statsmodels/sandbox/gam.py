@@ -33,6 +33,13 @@ case for gamma and the others. Advantage of PolySmoother is that we can
 benchmark against the parametric GLM results.
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 # JP:
 # changes: use PolySmoother instead of crashing bspline
@@ -51,6 +58,7 @@ import numpy as np
 from statsmodels.genmod import families
 from statsmodels.sandbox.nonparametric.smoothers import PolySmoother
 from statsmodels.genmod.generalized_linear_model import GLM
+import six
 
 DEBUG = False
 
@@ -234,7 +242,7 @@ class AdditiveModel(object):
             #print 'next shape', (Y - alpha - mu + tmp).shape
             bad = np.isnan(Y - alpha - mu + tmp).any()
             if bad: #temporary assert while debugging
-                print Y, alpha, mu, tmp
+                print(Y, alpha, mu, tmp)
                 raise
             #self.smoothers[i].smooth(Y - alpha - mu + tmp,
             self.smoothers[i].smooth(Y - mu + tmp,
@@ -243,7 +251,7 @@ class AdditiveModel(object):
             self.results.offset[i] = -(tmp2*self.weights).sum() / self.weights.sum()
             #self.offset used in smoothed
             if DEBUG:
-                print self.smoothers[i].params
+                print(self.smoothers[i].params)
             mu += tmp2 - tmp
         #change setting offset here: tests still pass, offset equal to constant
         #in component ??? what's the effect of offset
@@ -267,8 +275,8 @@ class AdditiveModel(object):
         '''
         self.iter += 1 #moved here to always count, not necessary
         if DEBUG:
-            print self.iter, self.results.Y.shape,
-            print self.results.predict(self.exog).shape, self.weights.shape
+            print(self.iter, self.results.Y.shape, end=' ')
+            print(self.results.predict(self.exog).shape, self.weights.shape)
         curdev = (((self.results.Y - self.results.predict(self.exog))**2) * self.weights).sum()
 
         if self.iter > self.maxiter: #kill it, no max iterationoption
@@ -318,7 +326,7 @@ class AdditiveModel(object):
         self.results = Results(Y, alpha, self.exog, self.smoothers, self.family, offset)
 
         while self.cont():
-            self.results = self.next()
+            self.results = six.advance_iterator(self)
 
         if self.iter >= self.maxiter:
             import warnings
@@ -353,7 +361,7 @@ class Model(GLM, AdditiveModel):
         _results = self.results
         Y = _results.Y
         if np.isnan(self.weights).all():
-            print "nanweights1"
+            print("nanweights1")
 
         _results.mu = self.family.link.inverse(_results.predict(self.exog))
         #eta = _results.predict(self.exog)
@@ -361,10 +369,10 @@ class Model(GLM, AdditiveModel):
         weights = self.family.weights(_results.mu)
         if np.isnan(weights).all():
             self.weights = weights
-            print "nanweights2"
+            print("nanweights2")
         self.weights = weights
         if DEBUG:
-            print 'deriv isnan', np.isnan(self.family.link.deriv(_results.mu)).any()
+            print('deriv isnan', np.isnan(self.family.link.deriv(_results.mu)).any())
 
         #Z = _results.predict(self.exog) + \
         Z = _results.predict(self.exog) + \
@@ -421,7 +429,7 @@ class Model(GLM, AdditiveModel):
         self.results.Y = Y
 
         while self.cont():
-            self.results = self.next()
+            self.results = six.advance_iterator(self)
             self.scale = self.results.scale = self.estimate_scale()
 
         if self.iter >= self.maxiter:

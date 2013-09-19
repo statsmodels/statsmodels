@@ -133,7 +133,7 @@ class TestGlmGaussian(CheckModelResultsMixin):
         self.data.exog = add_constant(self.data.exog, prepend=False)
         self.res1 = GLM(self.data.endog, self.data.exog,
                         family=sm.families.Gaussian()).fit()
-        from results.results_glm import Longley
+        from .results.results_glm import Longley
         self.res2 = Longley()
 
 #    def setup(self):
@@ -163,7 +163,7 @@ class TestGaussianLog(CheckModelResultsMixin):
         GaussLog_Model = GLM(self.lny, self.X, \
                 family=sm.families.Gaussian(sm.families.links.log))
         self.res1 = GaussLog_Model.fit()
-        from results.results_glm import GaussianLog
+        from .results.results_glm import GaussianLog
         self.res2 = GaussianLog()
 
 #    def setup(self):
@@ -192,7 +192,7 @@ class TestGaussianInverse(CheckModelResultsMixin):
                 family=sm.families.Gaussian(sm.families.links.inverse_power))
         InverseLink_Res = InverseLink_Model.fit()
         self.res1 = InverseLink_Res
-        from results.results_glm import GaussianInverse
+        from .results.results_glm import GaussianInverse
         self.res2 = GaussianInverse()
 
 #    def setup(self):
@@ -211,7 +211,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
         self.decimal_bic = DECIMAL_2
 
         from statsmodels.datasets.star98 import load
-        from results.results_glm import Star98
+        from .results.results_glm import Star98
         data = load()
         data.exog = add_constant(data.exog, prepend=False)
         self.res1 = GLM(data.endog, data.exog, \
@@ -249,7 +249,7 @@ class TestGlmBinomial(CheckModelResultsMixin):
 
 class TestGlmBernoulli(CheckModelResultsMixin):
     def __init__(self):
-        from results.results_glm import Lbw
+        from .results.results_glm import Lbw
         self.res2 = Lbw()
         self.res1 = GLM(self.res2.endog, self.res2.exog,
                 family=sm.families.Binomial()).fit()
@@ -286,7 +286,7 @@ class TestGlmGamma(CheckModelResultsMixin):
         self.decimal_resids = DECIMAL_2
 
         from statsmodels.datasets.scotland import load
-        from results.results_glm import Scotvote
+        from .results.results_glm import Scotvote
         data = load()
         data.exog = add_constant(data.exog, prepend=False)
         res1 = GLM(data.endog, data.exog, \
@@ -304,7 +304,7 @@ class TestGlmGammaLog(CheckModelResultsMixin):
         self.decimal_aic_R = DECIMAL_0
         self.decimal_fittedvalues = DECIMAL_3
 
-        from results.results_glm import CancerLog
+        from .results.results_glm import CancerLog
         res2 = CancerLog()
         self.res1 = GLM(res2.endog, res2.exog,
             family=sm.families.Gamma(link=sm.families.links.log)).fit()
@@ -326,7 +326,7 @@ class TestGlmGammaIdentity(CheckModelResultsMixin):
         self.decimal_aic_R = DECIMAL_0
         self.decimal_loglike = DECIMAL_1
 
-        from results.results_glm import CancerIdentity
+        from .results.results_glm import CancerIdentity
         res2 = CancerIdentity()
         self.res1 = GLM(res2.endog, res2.exog,
             family=sm.families.Gamma(link=sm.families.links.identity)).fit()
@@ -346,7 +346,7 @@ class TestGlmPoisson(CheckModelResultsMixin):
 
         Test results were obtained by R.
         '''
-        from results.results_glm import Cpunish
+        from .results.results_glm import Cpunish
         from statsmodels.datasets.cpunish import load
         self.data = load()
         self.data.exog[:,3] = np.log(self.data.exog[:,3])
@@ -376,7 +376,7 @@ class TestGlmInvgauss(CheckModelResultsMixin):
         self.decimal_aic_R = DECIMAL_0
         self.decimal_loglike = DECIMAL_0
 
-        from results.results_glm import InvGauss
+        from .results.results_glm import InvGauss
         res2 = InvGauss()
         res1 = GLM(res2.endog, res2.exog, \
                 family=sm.families.InverseGaussian()).fit()
@@ -389,7 +389,7 @@ class TestGlmInvgaussLog(CheckModelResultsMixin):
         self.decimal_aic_R = -10 # Big difference vs R.
         self.decimal_resids = DECIMAL_3
 
-        from results.results_glm import InvGaussLog
+        from .results.results_glm import InvGaussLog
         res2 = InvGaussLog()
         self.res1 = GLM(res2.endog, res2.exog,
             family=sm.families.InverseGaussian(link=\
@@ -411,12 +411,12 @@ class TestGlmInvgaussIdentity(CheckModelResultsMixin):
         self.decimal_fittedvalues = DECIMAL_3
         self.decimal_params = DECIMAL_3
 
-        from results.results_glm import Medpar1
+        from .results.results_glm import Medpar1
         data = Medpar1()
         self.res1 = GLM(data.endog, data.exog,
             family=sm.families.InverseGaussian(link=\
             sm.families.links.identity)).fit()
-        from results.results_glm import InvGaussIdentity
+        from .results.results_glm import InvGaussIdentity
         self.res2 = InvGaussIdentity()
 
 #    def setup(self):
@@ -446,7 +446,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
         self.data.exog = add_constant(self.data.exog, prepend=False)
         self.res1 = GLM(self.data.endog, self.data.exog,
                 family=sm.families.NegativeBinomial()).fit()
-        from results.results_glm import Committee
+        from .results.results_glm import Committee
         res2 = Committee()
         res2.aic_R += 2 # They don't count a degree of freedom for the scale
         self.res2 = res2
@@ -472,7 +472,7 @@ class TestGlmNegbinomial(CheckModelResultsMixin):
 class TestGlmPoissonOffset(CheckModelResultsMixin):
     @classmethod
     def setupClass(cls):
-        from results.results_glm import Cpunish
+        from .results.results_glm import Cpunish
         from statsmodels.datasets.cpunish import load
         data = load()
         data.exog[:,3] = np.log(data.exog[:,3])

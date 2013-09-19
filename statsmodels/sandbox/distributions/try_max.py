@@ -5,6 +5,8 @@ adjusted from Denis on pystatsmodels mailing list
 there might still be problems with loc and scale,
 
 '''
+from __future__ import print_function
+from __future__ import print_function
 
 
 from __future__ import division
@@ -46,8 +48,8 @@ class MaxDist(stats.rv_continuous):
 
 maxdistr = MaxDist(stats.norm, 10)
 
-print maxdistr.rvs(size=10)
-print maxdistr.stats(moments = 'mvsk')
+print(maxdistr.rvs(size=10))
+print(maxdistr.stats(moments = 'mvsk'))
 
 '''
 >>> print maxdistr.stats(moments = 'mvsk')

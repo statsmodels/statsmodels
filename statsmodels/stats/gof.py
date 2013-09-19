@@ -208,7 +208,7 @@ def gof_chisquare_discrete(distfn, arg, rvs, alpha, msg):
 
     # construct intervals with minimum mass 1/nsupp
     # intervalls are left-half-open as in a cdf difference
-    distsupport = xrange(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
+    distsupport = range(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
     last = 0
     distsupp = [max(distfn.a, -1000)]
     distmass = []
@@ -297,7 +297,7 @@ def gof_binning_discrete(rvs, distfn, arg, nsupp=20):
 
     # construct intervals with minimum mass 1/nsupp
     # intervalls are left-half-open as in a cdf difference
-    distsupport = xrange(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
+    distsupport = range(max(distfn.a, -1000), min(distfn.b, 1000) + 1)
     last = 0
     distsupp = [max(distfn.a, -1000)]
     distmass = []

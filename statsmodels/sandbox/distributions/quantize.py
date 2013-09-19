@@ -2,9 +2,12 @@
 
 Author: josef-pktd
 '''
+from __future__ import print_function
 
 
 import numpy as np
+from six.moves import map
+from six.moves import zip
 
 def prob_bv_rectangle(lower, upper, cdf):
     '''helper function for probability of a rectangle in a bivariate distribution
@@ -43,7 +46,7 @@ def prob_mv_grid(bins, cdf, axis=-1):
         bins_ = []
         #broadcast if binedges are 1d
         if all(map(np.ndim, bins) == np.ones(n_dim)):
-            for d in xrange(n_dim):
+            for d in range(n_dim):
                 sl = [None]*n_dim
                 sl[d] = slice(None)
                 bins_.append(bins[d][sl])
@@ -51,10 +54,10 @@ def prob_mv_grid(bins, cdf, axis=-1):
         n_dim = bins.shape[0]
         bins_ = bins
 
-    print len(bins)
+    print(len(bins))
     cdf_values = cdf(bins_)
     probs = cdf_values.copy()
-    for d in xrange(n_dim):
+    for d in range(n_dim):
         probs = np.diff(probs, axis=d)
 
     return probs

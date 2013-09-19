@@ -8,4 +8,4 @@ from .regressionplots import (abline_plot, plot_regress_exog, plot_fit,
                               plot_leverage_resid2)
 from .factorplots import interaction_plot
 from .plottools import rainbow
-import tsaplots as tsa
+from . import tsaplots as tsa

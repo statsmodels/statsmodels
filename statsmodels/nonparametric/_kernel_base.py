@@ -15,7 +15,7 @@ try:
 except ImportError:
     has_joblib = False
 
-import kernels
+from . import kernels
 
 
 kernel_func = dict(wangryzin=kernels.wang_ryzin,
@@ -60,19 +60,19 @@ def _compute_subset(class_type, data, bw, co, do, n_cvars, ix_ord,
         sub_data = data[bound[0]:bound[1], :]
 
     if class_type == 'KDEMultivariate':
-        from kernel_density import KDEMultivariate
+        from .kernel_density import KDEMultivariate
         var_type = class_vars[0]
         sub_model = KDEMultivariate(sub_data, var_type, bw=bw,
                         defaults=EstimatorSettings(efficient=False))
     elif class_type == 'KDEMultivariateConditional':
-        from kernel_density import KDEMultivariateConditional
+        from .kernel_density import KDEMultivariateConditional
         k_dep, dep_type, indep_type = class_vars
         endog = sub_data[:, :k_dep]
         exog = sub_data[:, k_dep:]
         sub_model = KDEMultivariateConditional(endog, exog, dep_type,
             indep_type, bw=bw, defaults=EstimatorSettings(efficient=False))
     elif class_type == 'KernelReg':
-        from kernel_regression import KernelReg
+        from .kernel_regression import KernelReg
         var_type, k_vars, reg_type = class_vars
         endog = _adjust_shape(sub_data[:, 0], 1)
         exog = _adjust_shape(sub_data[:, 1:], k_vars)
@@ -204,13 +204,13 @@ class GenericKDE (object):
                 for i in range(n_blocks))
         else:
             res = []
-            for i in xrange(n_blocks):
+            for i in range(n_blocks):
                 res.append(_compute_subset(class_type, data, bw, co, do,
                                            n_cvars, ix_ord, ix_unord, n_sub,
                                            class_vars, self.randomize,
                                            bounds[i]))
 
-        for i in xrange(n_blocks):
+        for i in range(n_blocks):
             sample_scale[i, :] = res[i][0]
             only_bw[i, :] = res[i][1]
 
@@ -412,7 +412,7 @@ class LeaveOneOut(object):
         X = self.X
         nobs, k_vars = np.shape(X)
 
-        for i in xrange(nobs):
+        for i in range(nobs):
             index = np.ones(nobs, dtype=np.bool)
             index[i] = False
             yield X[index, :]

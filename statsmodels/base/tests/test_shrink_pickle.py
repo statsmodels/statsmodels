@@ -5,6 +5,7 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
+from __future__ import print_function
 
 import pickle
 import numpy as np
@@ -209,7 +210,7 @@ if __name__ == '__main__':
                 TestRemoveDataPickleNegativeBinomial,
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:
-        print cls
+        print(cls)
         cls.setup_class()
         tt = cls()
         tt.setup()

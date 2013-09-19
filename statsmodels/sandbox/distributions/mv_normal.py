@@ -144,6 +144,18 @@ What's currently there?
 'standardize', 'standardized', 'std', 'std_sigma', 'whiten']
 
 """
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 
@@ -288,10 +300,10 @@ def expect_mc_bounds(dist, func=lambda x: 1, size=50000, lower=None, upper=None,
         used += rvsok.shape[0]
 
         rvsli.append(rvsok)   #[:remain]) use extras instead
-        print used
+        print(used)
         if used >= size: break
     rvs = np.vstack(rvsli)
-    print rvs.shape
+    print(rvs.shape)
     assert used == rvs.shape[0] #saftey check
     mean_conditional = fun(rvs).mean(0)
     if conditional:
@@ -1056,7 +1068,7 @@ class MVT(MVElliptical):
 
 
         '''
-        from multivariate import multivariate_t_rvs
+        from .multivariate import multivariate_t_rvs
         return multivariate_t_rvs(self.mean, self.sigma, df=self.df, n=size)
 
 
@@ -1201,17 +1213,17 @@ if __name__ == '__main__':
     if 'mvn' in examples:
         bvn = BivariateNormal(mu, covx)
         rvs = bvn.rvs(size=1000)
-        print rvs.mean(0)
-        print np.cov(rvs, rowvar=0)
-        print bvn.expect()
-        print bvn.cdf([0,0])
+        print(rvs.mean(0))
+        print(np.cov(rvs, rowvar=0))
+        print(bvn.expect())
+        print(bvn.cdf([0,0]))
         bvn1 = BivariateNormal(mu, np.eye(2))
         bvn2 = BivariateNormal(mu, 4*np.eye(2))
-        fun = lambda(x) : np.log(bvn1.pdf(x)) - np.log(bvn.pdf(x))
-        print bvn1.expect(fun)
-        print bvn1.kl(bvn2), bvn1.kl_mc(bvn2)
-        print bvn2.kl(bvn1), bvn2.kl_mc(bvn1)
-        print bvn1.kl(bvn), bvn1.kl_mc(bvn)
+        fun = lambda x : np.log(bvn1.pdf(x)) - np.log(bvn.pdf(x))
+        print(bvn1.expect(fun))
+        print(bvn1.kl(bvn2), bvn1.kl_mc(bvn2))
+        print(bvn2.kl(bvn1), bvn2.kl_mc(bvn1))
+        print(bvn1.kl(bvn), bvn1.kl_mc(bvn))
         mvn = MVNormal(mu, covx)
         mvn.pdf([0,0])
         mvn.pdf(np.zeros((2,2)))
@@ -1247,9 +1259,9 @@ if __name__ == '__main__':
         assert_array_almost_equal( mvn3c.pdf(cov3), r_val, decimal = 16)
 
         mvn3b = MVNormal((0,0,0), 1)
-        fun = lambda(x) : np.log(mvn3.pdf(x)) - np.log(mvn3b.pdf(x))
-        print mvn3.expect_mc(fun)
-        print mvn3.expect_mc(fun, size=200000)
+        fun = lambda x : np.log(mvn3.pdf(x)) - np.log(mvn3b.pdf(x))
+        print(mvn3.expect_mc(fun))
+        print(mvn3.expect_mc(fun, size=200000))
 
 
     mvt = MVT((0,0), 1, 5)

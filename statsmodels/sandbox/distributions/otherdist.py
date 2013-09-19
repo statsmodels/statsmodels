@@ -19,6 +19,10 @@ Question: Metaclasses and class factories for generating new distributions from
 existing distributions by transformation, mixing, compounding
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 
@@ -263,10 +267,10 @@ if __name__ == '__main__':
 
 
     pd = ParametricMixtureD(mdist, bdist, bd_args_fn, bd_kwds_fn)
-    print pd.pdf(1)
+    print(pd.pdf(1))
     p, bp = pd.pdf(np.linspace(0,20,21))
     pc, bpc = pd.cdf(np.linspace(0,20,21))
-    print pd.rvs()
+    print(pd.rvs())
     rvs, m = pd.rvs(size=1000)
 
 
@@ -281,8 +285,8 @@ if __name__ == '__main__':
     clip_lower_ = 0. #-0.5
     cnorm = ClippedContinuous(bdist, clip_lower_)
     x = np.linspace(1e-8, 4, 11)
-    print cnorm.pdf(x)
-    print cnorm.cdf(x)
+    print(cnorm.pdf(x))
+    print(cnorm.cdf(x))
 
     if doplots:
         #plt.figure()

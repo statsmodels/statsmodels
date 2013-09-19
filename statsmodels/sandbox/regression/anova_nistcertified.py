@@ -2,9 +2,22 @@
 
 compares my implementations, stats.f_oneway and anova using statsmodels.OLS
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 import os
 import numpy as np
 from scipy import stats
+from six.moves import map
+from six.moves import zip
 
 filenameli = ['SiRstv.dat', 'SmLs01.dat', 'SmLs02.dat', 'SmLs03.dat', 'AtmWtAg.dat',
               'SmLs04.dat', 'SmLs05.dat', 'SmLs06.dat', 'SmLs07.dat', 'SmLs08.dat',
@@ -35,7 +48,7 @@ def getnist(filename):
     return y, x, np.array([f, prob, R2, resstd]), certified, caty
 
 
-from try_catdata import groupsstats_dummy, groupstatsbin
+from .try_catdata import groupsstats_dummy, groupstatsbin
 
 
 def anova_oneway(y, x, seq=0):
@@ -68,7 +81,7 @@ def anova_oneway(y, x, seq=0):
     return f, prob, R2, resstd
 
 import statsmodels.api as sm
-from try_ols_anova import data2dummy
+from .try_ols_anova import data2dummy
 
 def anova_ols(y, x):
     X = sm.add_constant(data2dummy(x), prepend=False)
@@ -78,28 +91,28 @@ def anova_ols(y, x):
 
 
 if __name__ == '__main__':
-    print '\n using new ANOVA anova_oneway'
-    print 'f, prob, R2, resstd'
+    print('\n using new ANOVA anova_oneway')
+    print('f, prob, R2, resstd')
     for fn in filenameli:
-        print fn
+        print(fn)
         y, x, cert, certified, caty = getnist(fn)
         res = anova_oneway(y, x)
-        print np.array(res) - cert
+        print(np.array(res) - cert)
 
-    print '\n using stats ANOVA f_oneway'
+    print('\n using stats ANOVA f_oneway')
     for fn in filenameli:
-        print fn
+        print(fn)
         y, x, cert, certified, caty = getnist(fn)
         xlist = [x[y==ii] for ii in caty]
         res = stats.f_oneway(*xlist)
-        print np.array(res) - cert[:2]
+        print(np.array(res) - cert[:2])
 
-    print '\n using statsmodels.OLS'
-    print 'f, prob, R2, resstd'
+    print('\n using statsmodels.OLS')
+    print('f, prob, R2, resstd')
     for fn in filenameli[:]:
-        print fn
+        print(fn)
         y, x, cert, certified, caty = getnist(fn)
         res = anova_ols(x, y)
-        print np.array(res) - cert
+        print(np.array(res) - cert)
 
 

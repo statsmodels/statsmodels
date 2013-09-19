@@ -1,3 +1,14 @@
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import numpy as np
 
@@ -64,13 +75,13 @@ if __name__ == '__main__':
     from scipy import stats
     alpha = 0.1
     #df looks wrong
-    print stats.f.isf(1-alpha, n_params, res.df_resid)
-    print stats.f.sf(cooks_d, n_params, res.df_resid)
+    print(stats.f.isf(1-alpha, n_params, res.df_resid))
+    print(stats.f.sf(cooks_d, n_params, res.df_resid))
 
 
-    print 'Cooks Distance'
-    print cooks_d
-    print cooks_d2
+    print('Cooks Distance')
+    print(cooks_d)
+    print(cooks_d2)
 
     doplot = 0
     if doplot:
@@ -91,17 +102,17 @@ if __name__ == '__main__':
         plt.setp(ltext, fontsize='small') # the legend text fontsize
 
 
-    print oi.reset_ramsey(res, degree=3)
+    print(oi.reset_ramsey(res, degree=3))
 
     #note, constant in last column
     for i in range(1):
-        print oi.variance_inflation_factor(res.model.exog, i)
+        print(oi.variance_inflation_factor(res.model.exog, i))
 
     infl = oi.OLSInfluence(res_ols)
-    print infl.resid_studentized_external
-    print infl.resid_studentized_internal
-    print infl.summary_table()
-    print oi.summary_table(res, alpha=0.05)[0]
+    print(infl.resid_studentized_external)
+    print(infl.resid_studentized_internal)
+    print(infl.summary_table())
+    print(oi.summary_table(res, alpha=0.05)[0])
 
 '''
 >>> res.resid

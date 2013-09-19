@@ -132,7 +132,7 @@ def descstats(data, cols=None, axis=0):
                 'stddev': x[:,var].std(), 'range': '('+str(x[:,var].min())+', '+\
                 str(x[:,var].max())+')'+os.linesep}
     else:
-        raise ValueError, "data not understood"
+        raise ValueError("data not understood")
 
     return desc
 

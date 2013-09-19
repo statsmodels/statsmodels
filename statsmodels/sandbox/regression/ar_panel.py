@@ -19,6 +19,11 @@ asymptotically correct (check)
 Could be extended to AR(p) errors, but then requires panel with larger T
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 
 
@@ -90,13 +95,13 @@ if __name__ == '__main__':
     y = data + np.dot(group_dummy, np.array([10, 20, 30]))
     y0 = data0 + np.dot(group_dummy, np.array([10, 20, 30]))
 
-    print groups_valid
-    print np.diff(y)[groups_valid]
+    print(groups_valid)
+    print(np.diff(y)[groups_valid])
 
     alpha = 1  #test with 1
-    print (y0[1:] - alpha*y0[:-1])[groups_valid]
+    print((y0[1:] - alpha*y0[:-1])[groups_valid])
     alpha = 0.2  #test with 1
-    print (y0[1:] - alpha*y0[:-1] + 0.001)[groups_valid]
+    print((y0[1:] - alpha*y0[:-1] + 0.001)[groups_valid])
     #this is now AR(1) for each group separately
 
 
@@ -110,5 +115,5 @@ if __name__ == '__main__':
     #mod = PanelAR1(data, exog, groups=groups) #data doesn't contain different means
     #print mod.ar1filter(mod.endog, 1)
     resa, reso = mod.fit()
-    print resa[0], reso.params
+    print(resa[0], reso.params)
 

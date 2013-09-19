@@ -80,6 +80,15 @@ Author: josef-pktd, parts based on David Huard
 License: BSD
 
 '''
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
+from __future__ import print_function
 
 import scipy.interpolate as interpolate
 import numpy as np
@@ -261,8 +270,8 @@ if __name__ == '__main__':
     examples = [2]
     if 1 in examples:
         empiricalcdf(x)
-        print percentileofscore(x, 0.5)
-        print scoreatpercentile(x, 50)
+        print(percentileofscore(x, 0.5))
+        print(scoreatpercentile(x, 50))
         import matplotlib.pyplot as plt
         xsupp = np.linspace(x.min(), x.max())
         pos = percentileofscore(x, xsupp)
@@ -299,10 +308,10 @@ if __name__ == '__main__':
 
 
     histd = HistDist(x)
-    print histd.optimize_binning()
-    print histd.cdf_emp(histd.binlimit)
-    print histd.ppf_emp([0.25, 0.5, 0.75])
-    print histd.cdf_emp([-0.5, -0.25, 0, 0.25, 0.5])
+    print(histd.optimize_binning())
+    print(histd.cdf_emp(histd.binlimit))
+    print(histd.ppf_emp([0.25, 0.5, 0.75]))
+    print(histd.cdf_emp([-0.5, -0.25, 0, 0.25, 0.5]))
 
 
     xsupp = np.linspace(x.min(), x.max(), 500)
@@ -324,9 +333,9 @@ if __name__ == '__main__':
     ppfe = ppfemp(cdf_ongrid)
     plt.plot(ppfe, cdf_ongrid)
 
-    print 'negative density'
-    print '(np.diff(ppfs)).min()', (np.diff(ppfs)).min()
-    print '(np.diff(cdf_ongrid)).min()', (np.diff(cdf_ongrid)).min()
+    print('negative density')
+    print('(np.diff(ppfs)).min()', (np.diff(ppfs)).min())
+    print('(np.diff(cdf_ongrid)).min()', (np.diff(cdf_ongrid)).min())
     #plt.show()
 
 
