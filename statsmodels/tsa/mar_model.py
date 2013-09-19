@@ -25,7 +25,6 @@ Notes
 -----
 
 Roadmap:
-- Add the Kim Smoother
 - Correctly estimate covariance matrix
 - Add expected regime duration
 - Add results class
@@ -39,10 +38,18 @@ Roadmap:
 - Add support for the EM algorithm
 
 
-TODO the vectorization of the transition matrix used in initialize_filter
-     cannot be transformed back to a transition matrix using
-     MAR.transition_matrix() with default options (it requires setting
-    order='C'). This needs to be corrected.
+
+The MAR model has four types of parameters:
+- transition probabilities
+- AR parameters
+- standard deviation parameters
+- mean parameters
+
+The AR, standard deviation, and mean parameters may be allowed to differ
+across states, or may be restricted to be the same.
+
+If the transition probabilities are allowed to change over time, it is called a
+Time-Varying Probabilites (TVP) Markov-Switching Model.
 
 
 
@@ -726,12 +733,8 @@ class MAR(base.LikelihoodModel):
         Calculate smoothed probabilities (using all information in the sample),
         using Kim's smoothing algorithm.
 
-        1. Calculates the joint probabilities
-           (S_t=s_t, S_{t+1}=s_{t+1}, ..., S_{t+k}=s_{t+k}) given time T
-           information.
-
-        2. Calculates the marginal probability that the time period t is in
-           each of the possible states, given time T information
+        Calculates the marginal probability that the time period t is in each
+        of the possible states, given time T information
 
         Parameters
         ----------
@@ -746,9 +749,6 @@ class MAR(base.LikelihoodModel):
 
         Returns
         -------
-        smoothed_joint_probabilites : array-like
-            An nobs x M^k vector of joint probabilities where each row is
-            conditional on time T information.
         smoothed_marginal_probabilities : array-like
             An nobs x M length vector of marginal probabilities that the time
             period t is in each of the possible states given time T information.
