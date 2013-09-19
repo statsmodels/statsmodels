@@ -179,7 +179,7 @@ from scipy import stats
 from mar_c import hamilton_filter
 import resource
 
-class MAR(base.LikelihoodModel):
+class MAR(tsbase.TimeSeriesModel):
     """
     "An autoregressive model of order k with first-order , M-state
     Markov-switching mean and variance"
@@ -227,8 +227,7 @@ class MAR(base.LikelihoodModel):
         # Create datasets / complete initialization
         endog = orig_endog[self.nobs_initial:]
         exog = orig_exog[self.nobs_initial:]
-        super(MAR, self).__init__(endog, exog,
-                                  hasconst=0, missing=missing)
+        super(MAR, self).__init__(endog, exog, missing=missing)
 
         # Overwrite originals
         self.data.orig_endog = orig_endog
