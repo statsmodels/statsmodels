@@ -827,8 +827,7 @@ class MAR(base.LikelihoodModel):
             marginal_densities, joint_probabilities, joint_probabilities_t1
         )
 
-    def initial_joint_probabilities(self, transitions,
-                                    unconditional_probabilities):
+    def initial_joint_probabilities(self, transitions):
         # The initialized values for the joint probabilities of states are
         # calculated from the unconditional probabilities
         # Note: considering k states
@@ -1012,6 +1011,12 @@ class MAR(base.LikelihoodModel):
            has length M and the resultant vector needs to have length M^k, it
            must be tiled M^(k-1) times.
         """
+        # Get the unconditional probabilities of the states, given a set of
+        # transition probabilities
+        unconditional_probabilities = self.unconditional_probabilities(
+            transitions
+        )
+
         # Make sure we have our transitions in vector form
         transition_vector = self.transition_vector(transitions, 'right')
 
@@ -1175,18 +1180,12 @@ class MAR(base.LikelihoodModel):
         """
         transitions, ar_params, stddevs, means = self.separate_params(params)
 
-        # Get the unconditional probabilities of the states, given a set of 
-        # transition probabilities
-        unconditional_probabilities = self.unconditional_probabilities(transitions)
-
         # Joint probabilities (of states): (nobs+1) x (M x ... x M), ndim = k+1
         # It's time dimension is nobs+1 because the 0th joint probability is
         # the input (calculated from the unconditional probabilities) for the
         # first iteration of the algorithm, which starts at time t=1
         joint_probabilities = np.zeros((self.nobs+1, self.nstates**self.order))
-        joint_probabilities[0] = self.initial_joint_probabilities(
-            transitions, unconditional_probabilities
-        )
+        joint_probabilities[0] = self.initial_joint_probabilities(transitions)
 
         # Marginal conditional densities
         marginal_conditional_densities = self.marginal_conditional_densities(
