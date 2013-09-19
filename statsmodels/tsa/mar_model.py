@@ -399,7 +399,7 @@ class MAR(base.LikelihoodModel):
             np.exp(transitions) / (1 + np.exp(transitions))**2
         )
 
-        return np.diag(np.r_[transitions, [1]*(self.nparams - nprobs)])
+        return np.diag(np.r_[transitions, [1]*(self.nparams-len(transitions))])
 
     def loglike(self, params):
         """
