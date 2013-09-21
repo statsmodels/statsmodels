@@ -4,12 +4,21 @@ cimport cython
 DTYPE = np.float64
 ctypedef np.float64_t dtype_t
 
+cdef extern from "math.h":
+    double log(double x)
+cdef extern from "math.h":
+    double exp(double x)
+cdef extern from "math.h":
+    double sqrt(double x)
+cdef extern from "math.h":
+    double PI
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def hamilton_filter(int nobs,
                     int nstates,
                     int order,
-                    np.ndarray[dtype_t, ndim = 1] transition_vector not None,
+                    np.ndarray[dtype_t, ndim = 2] transition_vectors not None,
                     np.ndarray[dtype_t, ndim = 2, mode='c'] joint_probabilities not None,
                     np.ndarray[dtype_t, ndim = 2, mode='c'] marginal_conditional_densities not None):
 
@@ -37,7 +46,7 @@ def hamilton_filter(int nobs,
         #_marginal_conditional_densities = marginal_conditional_densities[t-1]
         for i in range(nstates):
             for j in range(nstates):
-                transition = transition_vector[i*nstates + j]
+                transition = transition_vectors[t, i*nstates + j]
                 for k in range(nstatesk_1):
                     idx = j*nstatesk_1 + k
                     joint_probabilities_t1[t-1, i*nstatesk + idx] = transition * joint_probabilities[t-1, idx]
@@ -46,7 +55,7 @@ def hamilton_filter(int nobs,
         #joint_probabilities_t1[t-1] = _joint_probabilities_t1
 
         #joint_probabilities_t1 = (
-        #    np.repeat(transition_vector, nstates**(order-1)) * 
+        #    np.repeat(transition_vectors[t], nstates**(order-1)) * 
         #    np.tile(joint_probabilities[t-1], nstates)
         #)
 
@@ -74,3 +83,68 @@ def hamilton_filter(int nobs,
         #    (nstates**order, nstates)
         #).sum(1)
     return marginal_densities, joint_probabilities, joint_probabilities_t1
+
+def tvtp_transition_vectors(int nobs,
+                           int nstates,
+                           int tvtp_order,
+                           np.ndarray[dtype_t, ndim = 2] transitions,     # nstates * (nstates-1) x tvtp_order
+                           np.ndarray[dtype_t, ndim = 2, mode='c'] exog): # t+1 x tvtp_order
+    cdef int n, t, i, j, k, idx
+    cpdef dtype_t transition, colsum
+    cdef np.ndarray[dtype_t, ndim = 2] transition_vectors
+
+    transition_vectors = np.zeros((nobs+1, nstates**2))
+
+    for t in range(nobs+1):
+        for i in range(nstates): # iterate over "columns" in the transition matrix
+            idx = i*(nstates-1)
+            colsum = 0
+            for j in range(nstates-1): # iterate all but last "row" in the transition matrix
+                transition = 0
+                for k in range(tvtp_order):
+                    transition += exog[t,k] * transitions[idx + j, k]
+                transition = exp(transition)
+                transition_vectors[t, idx + j] = transition / (1 + transition)
+                colsum += transition_vectors[t, idx + j]
+            # Add in last row
+            transition_vectors[t,idx+nstates] = 1 - colsum
+
+    return transition_vectors
+
+def marginal_conditional_densities(int nobs,
+                                   int nstates,
+                                   int order,
+                                   np.ndarray[dtype_t, ndim=2] params,
+                                   np.ndarray[dtype_t, ndim=1] stddevs,
+                                   np.ndarray[dtype_t, ndim=1] means,
+                                   np.ndarray[dtype_t, ndim=2] augmented):
+    cdef int nstatesk, t, i, j, k, idx, idx2, num, state
+    cdef dtype_t var, top
+    cdef np.ndarray[dtype_t, ndim = 1] state_means, variances
+    cdef np.ndarray[dtype_t, ndim = 2] marginal_conditional_densities
+
+    nstatesk = nstates**order
+    marginal_conditional_densities = np.zeros((nobs, nstates**(order+1)))
+    variances = stddevs**2
+
+    state_means = np.zeros((order+1,))
+    top = 2
+    for t in range(nobs):
+        idx = 0
+        for i in range(nstates):
+            var = variances[i]
+            for j in range(nstatesk):
+                num = idx
+                top = 0
+                for k in range(order+1):
+                    state = num % nstates
+                    top += (augmented[t, -(k+1)] - means[state]) * params[i, -(k+1)]
+                    num = num // nstates
+                marginal_conditional_densities[t, idx] = (
+                    (1 / sqrt(2*np.pi*var)) * exp(
+                        -( top**2 / (2*var))
+                    )
+                )
+                idx += 1
+
+    return marginal_conditional_densities

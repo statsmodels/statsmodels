@@ -56,15 +56,15 @@ class CheckHamilton1989(object):
         mod = MAR(data.dlgnp, order=4, nstates=2)
 
         # Parameters from Table 4.1, Kim and Nelson (1999)
-        params = mod.transform(np.array([
+        params = np.array([
             1.15590, -2.20657,
             0.08983, -0.01861, -0.17434, -0.08392,
-            0.79619, 0.79619,
+            0.79619,
             -0.21320, 1.12828
-        ]))
+        ])
 
         # Log Likelihood
-        self.loglike = mod.loglike(mod.untransform(params))
+        self.loglike = mod.loglike(params)
 
         # Filtered probabilities
         (

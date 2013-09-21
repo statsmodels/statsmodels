@@ -45,12 +45,90 @@ The MAR model has four types of parameters:
 - standard deviation parameters
 - mean parameters
 
+The standard case is the assumption of fixed transition probabilities. In this
+case, there are nstates * (nstates - 1) parameters to be estimated, and
+nstates^2 parameters used in the model. See below for more details.
+If the transition probabilities are allowed to change over time, it is called a
+Time-Varying Transition Probabilites (TVTP) Markov-Switching Model. In this
+case, an additional exogenous matrix must be supplied that are assumed to
+determine the transition probabilities at each point in time. The number of
+parameters to be estimated is (k+1)(nstates) * (k+1)(nstates-1), and the number
+of parameters used in the model is (k+1)^2 * nstates^2.
+
 The AR, standard deviation, and mean parameters may be allowed to differ
 across states, or may be restricted to be the same.
+If the AR parameters are allowed to differ, there are `order`*`nstates`
+parameters to be estimated and used in the model. If they are not, then there
+are `order` parameters.
+If the standard deviation (or the mean) parameter is allowed to differ,
+there are `nstates` standard deviation (or mean) parameters to estimate and use
+in the model, otherwise there is only 1.
 
-If the transition probabilities are allowed to change over time, it is called a
-Time-Varying Probabilites (TVP) Markov-Switching Model.
+Parameters are used in two ways:
 
+(1) Optimization: the optimization routine requires a flat array of parameters
+    where each parameter can range over (-Inf, Inf), and it adjusts each
+    parameter while finding the values that optimize the objective function,
+    here the log likelihood. Thus if there are M states with regime
+    homoskedasticity, there must be only a single standard deviation parameter
+    in the array passed to the optimizer. If there are M states with regime
+    heteroskedasticity, there must be M standard deviation parameters in the
+    array.
+    These are the parameters passed to the MAR.loglike() method.
+(2) Initializing the filter: the parameters selected by the optimizer at each
+    iteration are then used to calculate the inputs to the filtering routines
+    (i.e. joint_probabilities and marginal_conditional_densities). For this,
+    they need to be (a) transformed to their actual ranges (e.g. probabilities
+    to lie within [0,1]) and (b) expanded to the full state range. In the
+    regime homoskedasticity example above, the single standard deviation
+    parameter must be expanded so that there is one parameter per regime. In
+    this case, each regime's standard deviation parameter would be identical.
+    These are the parameters passed to the MAR.filter() and
+    MAR.initialize_filter() methods.
+
+To achieve this, several helper methods are employed:
+- MAR.expand_params()
+  - Takes an array of parameters from the optimizer, and returns an expanded
+    array of parameters suitable for use in the model.
+  - (If not TVTP) Expands the probability vector into a transition vector
+  - Expands restrictions (e.g. if parameters are restricted to not change, it
+    expands the single set of `order` parameters to `nstates`*`order`
+    parameters).
+  - Always returns `nparams` parameters.
+- MAR.contract_params()
+  - Takes an array of parameters suitable for use in the model, and returns a
+    contracted array of parameters to be passed to the optimizer.
+- MAR.fuse_params()
+  - Takes each set of parameters separately and fuses them into a single array
+    (used to maintain consistent parameter ordering in e.g. the optimization
+    setting).
+- MAR.separate_params()
+   - Takes an array of parameters and separates it into the component parts.
+- MAR.transform_params()
+   - Takes an array of parameters (either the contracted or expanded set of
+     parameters) that are unconstrained (as would be used in the optimizer) and
+     transforms them to a constrained form suitable for use in the model (e.g.
+     transforms probabilities from (-Inf, Inf) to [0,1])
+- MAR.untransform_params()
+   - Takes an array of parameters (either the contracted or expanded set of
+     parameters) that are constrained (as would be used in the model) and
+     reverses the transformation to make them be unconstrained (e.g. transforms
+     probabilities from [0,1] to (-Inf, Inf))
+
+The flow of parameters through the model looks like:
+
+(1) MAR.fit() is called, optionally with the start_params argument.
+(2) MAR.loglike() is called by the optimizer, and is passed the contracted,
+    untransformed (i.e. unconstrained) params.
+(3) The parameters are
+    a. Transformed (i.e. constrained to lie within the actual parameter spaces)
+    b. Expanded
+(4) MAR.initialize_filter() is called with the expanded, transformed
+    parameters.
+
+The default functionality
+
+To allow arbitrary specification of regime-switching for the parameters, 
 
 
 Internally, the transition matrix is constructed to be left stochastic, and 
@@ -176,7 +254,8 @@ from statsmodels.tools.decorators import (cache_readonly, cache_writable,
                                           resettable_cache)
 import statsmodels.base.wrapper as wrap
 from scipy import stats
-from mar_c import hamilton_filter
+from mar_c import (hamilton_filter, tvtp_transition_vectors,
+                   marginal_conditional_densities)
 import resource
 
 class MAR(tsbase.TimeSeriesModel):
@@ -192,6 +271,17 @@ class MAR(tsbase.TimeSeriesModel):
         The order of the autoregressive parameters.
     nstates : integer
         The number of states in the Markov chain.
+    switch_ar : boolean, optiona
+        Whether or not AR parameters are allowed to switch with regimes.
+    switch_var : boolean, optional
+        Whether or not the variances are allowed to vary across regimes.
+        (Regime-specific Heteroskedasticity)
+    switch_means : boolean, optional
+        Whether or not the means are allowed to vary across regimes.
+    tvtp_data : array-like, optional
+        A vector or matrix of exogenous or lagged variables to use in
+        calculating time varying transition probabilities (TVTP). TVTP is only
+        used if this variable is provided.
 
     References
     ----------
@@ -206,6 +296,8 @@ class MAR(tsbase.TimeSeriesModel):
     """
 
     def __init__(self, endog, order, nstates,
+                 switch_ar=False, switch_var=False, switch_mean=True,
+                 tvtp_exog=None,
                  dates=None, freq=None, missing='none'):
 
         # "Immutable" properties
@@ -213,12 +305,111 @@ class MAR(tsbase.TimeSeriesModel):
         self.nobs = endog.shape[0] - order
         self.order = order
         self.nstates = nstates
-        self.nparams = (
-            self.nstates*(self.nstates - 1) + # Probabilities
-            self.order +                      # AR parameters
-            self.nstates +                    # Standard deviatons
-            self.nstates                      # Means
+
+        # Determine switching parameters
+
+        # Transition probabilities
+        if tvtp_exog is None:
+            self.tvtp_exog = np.ones((self.nobs+1, 1))
+        else:
+            self.tvtp_exog = add_constant(tvtp_exog)
+        self.tvtp_order = self.tvtp_exog.shape[1]
+        if not self.tvtp_exog.shape[0] == self.nobs+1:
+            raise ValueError('Length of exogenous data determining the time'
+                             ' varying transition probabilities must have'
+                             ' length equal to %d: the number of observations'
+                             ' plus one. Got length %d.' %
+                             (self.nobs + 1, self.tvtp_exog.shape[0]))
+        self.nparams_prob = (
+            self.nstates * (self.nstates - 1) * self.tvtp_order
         )
+
+        # AR parameters
+        if switch_ar == True:
+            self.nparams_ar = self.nstates*self.order
+            self.switch_ar = True
+        elif switch_ar == False:
+            self.nparams_ar = self.order
+            self.switch_ar = False
+        else:
+            self.nparams_ar, self.switch_ar = switch_ar
+            if not callable(self.switch_ar):
+                raise ValueError('Custom switching definitions for AR'
+                                 ' parameters must include a callback as the'
+                                 ' second element of the passed argument.')
+
+        # Variance parameters
+        if switch_var == True:
+            self.nparams_var = self.nstates
+            self.switch_var = True
+        elif switch_var == False:
+            self.nparams_var = 1
+            self.switch_var = False
+        else:
+            self.nparams_var, self.switch_var = switch_var
+            if not callable(self.switch_var):
+                raise ValueError('Custom switching definitions for variance'
+                                 ' parameters must include a callback as the'
+                                 ' second element of the passed argument.')
+
+        # Mean parameters
+        if switch_mean == True:
+            self.nparams_mean = self.nstates
+            self.switch_mean = True
+        elif switch_mean == False:
+            self.nparams_mean = 1
+            self.switch_mean = False
+        else:
+            self.nparams_mean, self.switch_mean = switch_mean
+            if not callable(self.switch_mean):
+                raise ValueError('Custom switching definitions for mean'
+                                 ' parameters must include a callback as the'
+                                 ' second element of the passed argument.')
+
+        # The number of parameters used by the optimizer
+        self.nparams = (
+            self.nparams_prob +
+            self.nparams_ar +
+            self.nparams_var +
+            self.nparams_mean
+        )
+        # The number of parameters used by the model
+        # (not quite right for nparams_prob, in case of TVTP)
+        self.nparams_prob_full = self.nparams_prob
+        self.nparams_ar_full = self.order * self.nstates
+        self.nparams_var_full = self.nstates
+        self.nparams_mean_full = self.nstates
+        self.nparams_full = (
+            self.nparams_prob_full +
+            self.nparams_ar_full +
+            self.nparams_var_full +
+            self.nparams_mean_full
+        )
+
+        # If we got custom (callable) switch functions, test them
+        test_vector = np.ones((self.nparams,))
+        if callable(self.switch_ar):
+            test_ar = len(self.switch_ar(test_vector))
+            if not test_ar == self.nparams_ar_full:
+                raise ValueError('Invalid custom switching function for AR'
+                                 ' parameters. Must return a vector of length'
+                                 ' %d. Got a parameter of length %d.' %
+                                 (self.nparams_ar_full, test_ar))
+        if callable(self.switch_var):
+            test_var = len(self.switch_var(test_vector))
+            if not test_var == self.nparams_var_full:
+                raise ValueError('Invalid custom switching function for'
+                                 ' variance parameters. Must return a vector'
+                                 ' of length %d. Got a parameter of length'
+                                 ' %d.' % (self.nparams_ar_full, test_var))
+        if callable(self.switch_mean):
+            test_mean = len(self.switch_mean(test_vector))
+            if not test_mean == self.nparams_mean_full:
+                raise ValueError('Invalid custom switching function for mean'
+                                 ' parameters. Must return a vector of length'
+                                 ' %d. Got a parameter of length %d.' %
+                                 (self.nparams_mean_full, test_mean))
+
 
         # Make a copy of original datasets
         orig_endog = endog
@@ -235,17 +426,58 @@ class MAR(tsbase.TimeSeriesModel):
 
         # Cache
         self.augmented = np.c_[endog, exog]
-        self.cache_transition = {}
-        self.cache_marginal_conditional_densities = {}
 
-    def combine_params(self, probabilities, ar_params, stddevs, means):
+    def expand_params(self, params):
+        params = np.asarray(params)
+        # Make sure they're not already expanded
+        if params.shape == (self.nparams_full,):
+            return params
+        elif params.shape != (self.nparams,):
+            raise ValueError('Unexpected parameter vector shape. Expected %s,'
+                             ' got %s.' % ((self.nparams,), params.shape))
+
+        transitions, ar_params, stddevs, means = self.separate_params(params)
+
+        # Transition probabilities
+        # (these are expanded later, due to possibility of TVTP)
+
+        # AR parameters
+        if self.switch_ar == True:
+            pass
+        elif self.switch_ar == False:
+            ar_params = np.tile(ar_params, self.nstates)
+        else:
+            ar_params = self.switch_ar(params)
+
+        # Variance parameters
+        if self.switch_var == True:
+            pass
+        elif self.switch_var == False:
+            stddevs = np.tile(stddevs, self.nstates)
+        else:
+            stddevs = self.switch_var(params)
+
+        # Mean parameters
+        if self.switch_mean == True:
+            pass
+        elif self.switch_mean == False:
+            means = np.tile(means, self.nstates)
+        else:
+            means = self.switch_mean(params)
+
+        return self.fuse_params(transitions, ar_params, stddevs, means)
+
+    def contract_params(self, params):
+        raise NotImplementedError
+
+    def fuse_params(self, transitions, ar_params, stddevs, means):
         """
         Combines the component parameters into a single array.
 
         Parameters
         ----------
-        probabilities : array-like
-            A probability vector
+        transitions : array-like
+            A vector of transition probabilities
         ar_params : array-like
             The AR parameters
         stddevs : array-like
@@ -258,7 +490,7 @@ class MAR(tsbase.TimeSeriesModel):
         params : array-like
             An array of parameters
         """
-        return np.r_[probabilities, ar_params, stddevs, means]
+        return np.r_[transitions, ar_params, stddevs, means]
 
     def separate_params(self, params):
         """
@@ -271,8 +503,8 @@ class MAR(tsbase.TimeSeriesModel):
 
         Returns
         -------
-        probabilities : array-like
-            A probability vector
+        transitions : array-like
+            A vector of transition probabilities
         ar_params : array-like
             The AR parameters
         stddevs : array-like
@@ -282,24 +514,25 @@ class MAR(tsbase.TimeSeriesModel):
         """
         params = np.asarray(params)
 
-        # Anything called "params" has a probabilities vector - meaning not
-        # the full transition vector of transition probabilities.
-        nprobs = self.nstates*(self.nstates - 1)
-
-        # Make sure we have the right number of parameters
-        if not params.shape[0] == self.nparams:
-            raise ValueError('Invalid number of parameters. Expected %d,'
-                             ' got %d.' % (self.nparams, params.shape[0]))
-
         # Separate the parameters
-        transitions = params[:nprobs]
-        ar_params = params[nprobs:self.order+nprobs]
-        stddevs = params[self.order+nprobs:self.order+nprobs+self.nstates]
-        means = params[-self.nstates:]
+        if params.shape == (self.nparams,):
+            nparams = np.cumsum((self.nparams_prob, self.nparams_ar,
+                       self.nparams_var, self.nparams_mean))
+        elif params.shape == (self.nparams_full,):
+            nparams = np.cumsum((self.nparams_prob_full, self.nparams_ar_full,
+                       self.nparams_var_full, self.nparams_mean_full))
+        else:
+            raise ValueError('Invalid number of parameters. Expected %s or %s,'
+                             ' got %s.' % ((self.nparams,),
+                             (self.nparams_full,), params.shape))
+        transitions = params[:nparams[0]]
+        ar_params = params[nparams[0]:nparams[1]]
+        stddevs = params[nparams[1]:nparams[2]]
+        means = params[nparams[2]:]
 
         return transitions, ar_params, stddevs, means
 
-    def transform(self, params, method='logit'):
+    def transform_params(self, params, method='logit'):
         """
         Transforms a set of unconstrained parameters to a set of contrained
         parameters.
@@ -325,19 +558,20 @@ class MAR(tsbase.TimeSeriesModel):
         transitions, ar_params, stddevs, means = self.separate_params(params)
 
         #  transitions: transform to always be in (0, 1)
-        if method == 'logit':
-             transitions = np.exp( transitions) / (1 + np.exp( transitions))
-        elif method == 'abs':
-             transitions = np.abs( transitions) / (1 + np.abs( transitions))
-        else:
-            raise VaueError('Invalid transformation method')
+        if False:
+            if method == 'logit':
+                 transitions = np.exp( transitions) / (1 + np.exp( transitions))
+            elif method == 'abs':
+                 transitions = np.abs( transitions) / (1 + np.abs( transitions))
+            else:
+                raise VaueError('Invalid transformation method')
 
         # Standard deviations: transform to always be positive
         stddevs = np.abs(stddevs)
 
-        return np.r_[transitions, ar_params, stddevs, means]
+        return self.fuse_params(transitions, ar_params, stddevs, means)
 
-    def untransform(self, params, method='logit'):
+    def untransform_params(self, params, method='logit'):
         """
         Transforms a set of constrained parameters to a set of uncontrained
         parameters.
@@ -363,15 +597,16 @@ class MAR(tsbase.TimeSeriesModel):
         transitions, ar_params, stddevs, means = self.separate_params(params)
 
         # Probabilities: untransform to always be in (-Inf, Inf)
-        if method == 'logit':
-            transitions = np.log(transitions / (1 - transitions))
-        elif method == 'abs':
-            transitions = transitions / (1 - transitions)
-        else:
-            raise VaueError('Invalid transformation method')
+        if False:
+            if method == 'logit':
+                transitions = np.log(transitions / (1 - transitions))
+            elif method == 'abs':
+                transitions = transitions / (1 - transitions)
+            else:
+                raise VaueError('Invalid transformation method')
         # No other untransformations
 
-        return np.r_[transitions, ar_params, stddevs, means]
+        return self.fuse_params(transitions, ar_params, stddevs, means)
 
     def transform_jacobian(self, params):
         """
@@ -394,11 +629,15 @@ class MAR(tsbase.TimeSeriesModel):
         transitions, ar_params, stddevs, means = self.separate_params(params)
 
         # The only transformation to take the gradient of is on probabilities
-        transitions = (
-            np.exp(transitions) / (1 + np.exp(transitions))**2
-        )
+        if not tvtp:
+            transitions = (
+                np.exp(transitions) / (1 + np.exp(transitions))**2
+            )
+            vector = np.r_[transitions, [1]*(self.nparams-len(transitions))]
+        else:
+            vector = [1] * nparams
 
-        return np.diag(np.r_[transitions, [1]*(self.nparams-len(transitions))])
+        return np.diag(vector)
 
     def loglike(self, params):
         """
@@ -407,7 +646,7 @@ class MAR(tsbase.TimeSeriesModel):
         Parameters
         ----------
         params : array-like
-            An array of unonstrained parameters
+            An array of unconstrained, contracted parameters
 
         Returns
         -------
@@ -419,21 +658,58 @@ class MAR(tsbase.TimeSeriesModel):
         Uses unconstrained parameters because it is meant to be called via
         the optimization routine, which uses unconstrained parameters.
         """
-        params = self.transform(params)
-
-        transitions, _, _, _ = self.separate_params(params)
-        transition_vector = self.transition_vector(transitions, 'right')
+        params = self.transform_params(params)
+        params = self.expand_params(params)
 
         (joint_probabilities,
          marginal_conditional_densities) = self.initialize_filter(params)
 
+        transitions, _, _, _ = self.separate_params(params)
+        transition_vectors = self.tvtp_transition_vectors(transitions)
+
         marginal_densities, _, _ = hamilton_filter(
             self.nobs, self.nstates, self.order,
-            transition_vector, joint_probabilities,
+            transition_vectors, joint_probabilities,
             marginal_conditional_densities
         )
 
         return np.sum(np.log(marginal_densities))
+
+    def tvtp_transition_vectors(self, transitions, matrix_type='left'):
+        """
+        Create a vector of time varying transition probability vectors
+
+        Each transition vector is the vectorized version of the transition
+        matrix.
+
+        Parameters
+        ----------
+        transitions : array-like
+            A vector of transition parameters, with length
+            self.nstates * (self.nstates - 1) * self.tvtp_order
+        matrix_type : {'left', 'right'}, optional
+            The method by which the corresponding transition matrix would be
+            constructed from the returned transition vector.
+            - If 'left', the transition matrix would be constructed to be left
+              stochastic.
+            - If 'right', the transition matrix would be constructed to be
+              right stochastic.
+            See MAR.transition_matrix() or the module docstring for details.
+
+        Returns
+        -------
+        transition_vector : array
+            An (nobs+1) x (nstates*nstates) matrix (i.e. an nobs+1 vector of
+            nstates*nstates transition vectors).
+        """
+        transitions = transitions.reshape(
+            self.nstates*(self.nstates-1), self.tvtp_order
+        )
+        transition_vectors = tvtp_transition_vectors(
+            self.nobs, self.nstates, self.tvtp_order,
+            transitions, self.tvtp_exog
+        )
+        return transition_vectors
 
     def probability_vector(self, transitions, matrix_type='left'):
         """
@@ -667,7 +943,7 @@ class MAR(tsbase.TimeSeriesModel):
             A 1-dimensional, self.nstates length vector of the unconditional
             probabilities of each state.
         """
-        transition_matrix = self.transition_matrix(transitions)
+        transition_matrix = self.transition_matrix(transitions, 'right')
         A = np.r_[
             np.eye(self.nstates) - transition_matrix,
             np.ones((self.nstates, 1)).T
@@ -752,7 +1028,8 @@ class MAR(tsbase.TimeSeriesModel):
             An nobs x M length vector of marginal probabilities that the time
             period t is in each of the possible states given time T information.
         """
-        transition_matrix = self.transition_matrix(transitions)
+        transition_vector = self.tvtp_transition_vectors(transitions)[0]
+        transition_matrix = self.transition_matrix(transition_vector, 'right')
 
         marginal_probabilities = self.marginalize_probabilities(
             joint_probabilities[1:]
@@ -801,21 +1078,21 @@ class MAR(tsbase.TimeSeriesModel):
             is conditional on time t-1 information.
 
         """
-        #params = self.transform(params)
-
+        params = self.expand_params(params)
         transitions, _, _, _ = self.separate_params(params)
-        transition_vector = self.transition_vector(transitions, 'right')
+        #transition_vector = self.transition_vector(transitions, 'right')
+        transition_vectors = self.tvtp_transition_vectors(transitions)
 
         (joint_probabilities,
          marginal_conditional_densities) = self.initialize_filter(params)
 
         if method == 'c':
             fn = hamilton_filter
-            args = (self.nobs, self.nstates, self.order, transition_vector,
+            args = (self.nobs, self.nstates, self.order, transition_vectors,
                     joint_probabilities, marginal_conditional_densities)
         elif method == 'python':
             fn = self.hamilton_filter
-            args = (transition_vector, joint_probabilities,
+            args = (transition_vectors, joint_probabilities,
                     marginal_conditional_densities)
         else:
             raise ValueError('Invalid filter method')
@@ -1010,14 +1287,15 @@ class MAR(tsbase.TimeSeriesModel):
            has length M and the resultant vector needs to have length M^k, it
            must be tiled M^(k-1) times.
         """
+        # TODO only need the 0-th entry, so probably could refactor this to
+        # only calculate that
+        transition_vector = self.tvtp_transition_vectors(transitions)[0]
+
         # Get the unconditional probabilities of the states, given a set of
         # transition probabilities
         unconditional_probabilities = self.unconditional_probabilities(
-            transitions
+            transition_vector
         )
-
-        # Make sure we have our transitions in vector form
-        transition_vector = self.transition_vector(transitions, 'right')
 
         conditional_probabilities = [
             np.tile(
@@ -1038,6 +1316,51 @@ class MAR(tsbase.TimeSeriesModel):
         return joint_probabilities
 
     def marginal_conditional_densities(self, ar_params, sds, means):
+        """
+        Calculate marginal conditional densities for each observation y_t
+        given each possible vector of states (S_t, ..., S_{t-k}).
+
+        Returns
+        -------
+        marginal_conditional_densities : array-like
+            An nobs x self.nstates**(self.order + 1) matrix, where the index
+            [t,i] corresponds to the marginal density of the y_t given the
+            i-th vector of states, where the states are ordered in increasing
+            lexicographic order, so i=0 corresponds to (0, 0, ..., 0).
+
+        Notes
+        -----
+        Each marginal conditional density [t,i] is calculated using the
+        following components, given states (S_t, ..., S_{t-k})
+        - x = [y_t, x_{t-1}, ..., x_{t-k}] * [1, -\phi_1^{S_t}, ..., \phi_k^{S_t}]
+        - loc = [\mu_t, ..., \mu_{t-k}] * [1, -\phi_1^{S_t}, ..., \phi_k^{S_t}]
+        - stddev = \sigma^{S_t}
+
+        - x has t * nstates distinct values
+        - loc has t * nstates**(k+1) distinct values
+        - sd has nstates distinct values
+
+        - The (k) AR parameters corresponding to S_t
+        - The (1) standard deviation corresponding to S_t
+        - The (nstates) means corresponding to states S_t, ..., S_{t-k}
+
+        Steps:
+
+        1. Create the params matrix from the ar_params (nstates x k+1)
+        2: Repeat the augmented matrix `nstates` times (nobs*nstates x k+1)
+        3. Repeating the params matrix `nobs` times  (nobs*nstates x k+1)
+        4. np.einsum('ij,ij->i', repeated_params, repeated_augmented) to get an
+           nobs*nstates x 1 vector
+        5. Repeat this nstates**k times to get an nobs*nstates**(k+1) x 1
+           vector. Where the first nobs rows correspond to S_t=0, etc.
+        6. Construct the means matrix (nstates**(k+1) x k+1)
+        7. Repeat the params matrix nstates**k times.
+        8. np.einsum('ij,ij->i', repeated_params, means) to get an
+           nstates**(k+1) x 1 vector
+        7. Repeat this nobs times.
+        3. Substract (7) from (5) to get x-loc
+        """
+
         # Calculate the marginal conditional densities
         ar_params = np.r_[1, -ar_params]
         # The order of the states is lexicographic, increasing
@@ -1148,9 +1471,9 @@ class MAR(tsbase.TimeSeriesModel):
             lengths of the components in paretheses):
             - transition probabilities (nstates^2 or nstates*(nstates-1))
             - AR parameters (order)
-            - sds (nstates)
+            - stddevs (nstates)
             - means (nstates)
-            TODO specify the lengths of sds and means in the constructor, so
+            TODO specify the lengths of stddevs and means in the constructor, so
             that they can be different (e.g. constrain some or all regimes to
             have the same values, constrain certain regimes to have certain
             values, etc.)
@@ -1170,7 +1493,7 @@ class MAR(tsbase.TimeSeriesModel):
             :math:`Pr(S_t|\psi_t)`
         params : iterable
             The AR parameters (1 x self.order)
-        sds : iterable
+        stddevs : iterable
             A vector of standard deviations, corresponding to each state.
             (1 x self.order+1)
         means : iterable
@@ -1187,16 +1510,19 @@ class MAR(tsbase.TimeSeriesModel):
         joint_probabilities[0] = self.initial_joint_probabilities(transitions)
 
         # Marginal conditional densities
-        marginal_conditional_densities = self.marginal_conditional_densities(
-            ar_params, stddevs, means
+        params = np.c_[
+            [1]*self.nstates,
+            -ar_params.reshape((self.nstates, self.order))
+        ]
+        mcds = marginal_conditional_densities(
+            self.nobs, self.nstates, self.order,
+            params, stddevs, means, self.augmented
         )
 
-        return joint_probabilities, marginal_conditional_densities
+        return joint_probabilities, mcds
         
-    def hamilton_filter(self, transitions, joint_probabilities,
+    def hamilton_filter(self, transition_vectors, joint_probabilities,
                         marginal_conditional_densities):
-        transition_vector = self.transition_vector(transitions)
-
         # Marginal density (not conditional on states) of y_t: t x 1
         marginal_densities = np.zeros((self.nobs, 1))
         joint_probabilities_t1 = np.zeros((self.nobs, self.nstates**(self.order+1)))
@@ -1389,7 +1715,7 @@ class MAR(tsbase.TimeSeriesModel):
             M^2 * M^(k-1) = M^(k+1).
             """
             _joint_probabilities_t1 = (
-                np.repeat(transition_vector, self.nstates**(self.order-1)) * 
+                np.repeat(transition_vectors[t], self.nstates**(self.order-1)) * 
                 np.tile(joint_probabilities[t-1], self.nstates)
             )
             joint_probabilities_t1[t-1] = _joint_probabilities_t1
@@ -1487,3 +1813,200 @@ class MAR(tsbase.TimeSeriesModel):
         from statsmodels.tools.numdiff import approx_hess
         # need options for hess (epsilon)
         return approx_hess(params, self.loglike)
+
+class MARResults(tsbase.TimeSeriesModelResults):
+    """
+    Class to hold results from fitting a MAR model.
+
+    Parameters
+    ----------
+    model : ARMA instance
+        The fitted model instance
+    params : array
+        Fitted parameters
+    normalized_cov_params : array, optional
+        The normalized variance covariance matrix
+    scale : float, optional
+        Optional argument to scale the variance covariance matrix.
+    """
+
+    _cache = {}
+
+    def __init__(self, model, params, normalized_cov_params, scale=1.):
+        super(MARResults, self).__init__(model, params,
+                                           normalized_cov_params, scale)
+
+    def summary(self, yname=None, title=None, alpha=.05):
+        """
+        Summarize the MAR Results
+
+        Parameters
+        ----------
+        yname : string, optional
+            Default is `y`
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+
+        xname = self._make_exog_names()
+
+        model = (
+            self.model.__class__.__name__ + '('
+            + repr(self.model.order) + ';'
+            + ','.join([repr(self.model.ar_order), repr(self.model.delay)])
+            + ')'
+        )
+
+        try:
+            dates = self.data.dates
+            sample = [('Sample:', [dates[0].strftime('%m-%d-%Y')])]
+            sample += [('', [' - ' + dates[-1].strftime('%m-%d-%Y')])]
+        except:
+            start = self.model.nobs_initial + 1
+            end = repr(self.model.data.orig_endog.shape[0])
+            sample = [('Sample:', [repr(start) + ' - ' + end])]
+
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', [model]),
+                    ('Method:', ['Least Squares']),
+                    ('Date:', None),
+                    ('Time:', None)
+                    ] + sample
+
+        top_right = [('No. Observations:', None),
+                     ('Df Residuals:', None),
+                     ('Df Model:', None),
+                     ('Log-Likelihood:', None),
+                     ('AIC:', ["%#8.4g" % self.aic]),
+                     ('BIC:', ["%#8.4g" % self.bic])
+                     ]
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Regression Results"
+
+        # Create summary table instance
+        from statsmodels.iolib.summary import Summary, summary_params, forg
+        from statsmodels.iolib.table import SimpleTable
+        from statsmodels.iolib.tableformatting import fmt_params
+        smry = Summary()
+        warnings = []
+
+        # Add model information
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                             yname=yname, xname=xname, title=title)
+
+        # Add hyperparameters summary table
+        if (1 - alpha) not in self.model.threshold_crits:
+            warnings.append("Critical value for threshold estimates is"
+                            " unavailable at the %d%% level. Using 95%%"
+                            " instead." % ((1-alpha)*100))
+            alpha = 0.05
+        alp = str((1-alpha)*100)+'%'
+        conf_int = self.conf_int_thresholds(alpha)
+
+        # (see summary_params())
+        confint = [
+            "%s %s" % tuple(map(forg, conf_int[i]))
+            for i in range(len(conf_int))
+        ]
+        confint.insert(0, '')
+        len_ci = map(len, confint)
+        max_ci = max(len_ci)
+        min_ci = min(len_ci)
+
+        if min_ci < max_ci:
+            confint = [ci.center(max_ci) for ci in confint]
+
+        thresholds = list(self.model.thresholds)
+        param_header = ['coef', '[' + alp + ' Conf. Int.]']
+        param_stubs = ['Delay'] + ['\gamma_%d' % (threshold_idx + 1)
+                                   for threshold_idx in range(len(thresholds))]
+        param_data = zip([self.model.delay] + map(forg, thresholds), confint)
+
+        parameter_table = SimpleTable(param_data,
+                                      param_header,
+                                      param_stubs,
+                                      title=None,
+                                      txt_fmt=fmt_params)
+        smry.tables.append(parameter_table)
+
+        # Add parameter tables for each regime
+        results = np.c_[
+            self.params, self.bse, self.tvalues, self.pvalues,
+        ].T
+        conf = self.conf_int(alpha)
+        k = self.model.ar_order + self.model.k_trend
+        regime_desc = self._make_regime_descriptions()
+        max_len = max(map(len, regime_desc))
+        for regime in range(1, self.model.order + 1):
+            res = (self,)
+            res += tuple(results[:, k*(regime - 1):k*regime])
+            res += (conf[k*(regime - 1):k*regime],)
+            table = summary_params(res, yname=yname,
+                                   xname=xname[k*regime:k*(regime+1)],
+                                   alpha=alpha, use_t=True)
+
+            # Add regime descriptives, if multiple regimes
+            if self.model.order > 1:
+                # Replace the header row
+                header = ["\n" + str(cell) for cell in table.pop(0)]
+                title = ("Regime %d" % regime).center(max_len)
+                desc = regime_desc[regime - 1].center(max_len)
+                header[0] = "%s \n %s" % (title, desc)
+                table.insert_header_row(0, header)
+                # Add diagnostic information
+                nobs = [
+                    'nobs_%d' % regime, self.model.nobs_regimes[regime - 1],
+                    '', '', '', ''
+                ]
+                table.insert(len(table), nobs, 'header')
+
+            smry.tables.append(table)
+
+        # Add notes / warnings, added to text format only
+        warnings.append("Reported parameter standard errors are White's (1980)"
+                        " heteroskedasticity robust standard errors.")
+        warnings.append("Threshold confidence intervals calculated as"
+                        " Hansen's (1997) conservative (non-disjoint)"
+                        " intervals")
+
+        if self.model.exog.shape[0] < self.model.exog.shape[1]:
+            wstr = "The input rank is higher than the number of observations."
+            warnings.append(wstr)
+
+        if warnings:
+            etext = [
+                "[{0}] {1}".format(i + 1, text)
+                for i, text in enumerate(warnings)
+            ]
+            etext.insert(0, "Notes / Warnings:")
+            smry.add_extra_txt(etext)
+
+        return smry
+
+
+class MARResultsWrapper(tsbase.TimeSeriesResultsWrapper):
+    _attrs = {}
+    _wrap_attrs = wrap.union_dicts(tsbase.TimeSeriesResultsWrapper._wrap_attrs,
+                                   _attrs)
+    _methods = {}
+    _wrap_methods = wrap.union_dicts(
+        tsbase.TimeSeriesResultsWrapper._wrap_methods,
+        _methods
+    )
+wrap.populate_wrapper(MARResultsWrapper, MARResults)
