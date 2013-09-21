@@ -1,4 +1,4 @@
-import scipy
+from scipy import stats
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
@@ -8,7 +8,7 @@ from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults)
 from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.tools.grouputils import Grouping
-from statsmodels.panel.panel_model import PanelModel
+from statsmodels.panel.panel_model import PanelModel, _effects_levels
 
 def _check_method_compat(method, effects):
     if method not in ['within', 'pooling', 'between', 'swar', 'mle', 'random']:
@@ -241,7 +241,7 @@ def swar_ercomp(y, X, panel, time):
     w = PanelLM(y, X, panel=panel, time=time, method='within').fit()
     w.model.data.groupings.count_categories(level=0)
     Ts = w.model.data.groupings.counts
-    Th = scipy.stats.mstats.hmean(Ts)
+    Th = stats.mstats.hmean(Ts)
     # variance of e_{it}
     var_resid = w.ssr / (X.shape[0] - w.model.data.n_panel - X.shape[1] + 1)
     # panel-level variance
@@ -499,7 +499,6 @@ class PanelLMRandomResults(PanelLMResults):
         The confidence interval is based on Student's t-distribution.
         """
         #NOTE: Only copied to change distribution
-        from scipy import stats
 
         bse = self.bse
         params = self.params
@@ -525,9 +524,8 @@ class PanelLMRandomResults(PanelLMResults):
 
     @cache_readonly
     def chi2_pvalue(self):
-        from scipy.stats import chi2
         #TODO: what's the correct df here?
-        return chi2.sf(self.chi2, self.df_resid)
+        return stats.chi2.sf(self.chi2, self.df_resid)
 
     @cache_readonly
     def rho(self):
@@ -624,7 +622,7 @@ def pooltest(endog, exog):
     urss = unrestricted.ssr
     rrss = restricted.ssr
     F = ((rrss - urss) / (N-1)) / (urss / (N*T - N - K))
-    p = 1 - scipy.stats.distributions.f.cdf(F, N-1, N*(T-1)-K)
+    p = 1 - stats.distributions.f.cdf(F, N-1, N*(T-1)-K)
     return F, p
 
 
