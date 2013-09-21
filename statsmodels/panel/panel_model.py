@@ -1,6 +1,10 @@
 from statsmodels.base.model import LikelihoodModel
 from statsmodels.panel.base.data import handle_panel_data
 
+_effects_levels = dict(oneway=[0],
+                       time=[1],
+                       twoway=[0,1])
+#TODO: support any other aliases?
 
 class PanelModel(LikelihoodModel):
     def __init__(self, y, X, time=None, panel=None, missing='none',
