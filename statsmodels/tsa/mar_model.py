@@ -1335,7 +1335,7 @@ class MAR(tsbase.TimeSeriesModel):
         """
         # TODO only need the 0-th entry, so probably could refactor this to
         # only calculate that
-        transition_vector = self.tvtp_transition_vectors(transitions)[0]
+        transition_vector = self.tvtp_transition_vectors(transitions, 'right')[0]
 
         # Get the unconditional probabilities of the states, given a set of
         # transition probabilities
