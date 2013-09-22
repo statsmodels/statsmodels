@@ -22,6 +22,9 @@ def hamilton_filter(int nobs,
                     np.ndarray[dtype_t, ndim = 2, mode='c'] joint_probabilities not None,
                     np.ndarray[dtype_t, ndim = 2, mode='c'] marginal_conditional_densities not None):
 
+    if order == 0:
+        return hamilton_filter_uncorrelated(nobs, nstates, transition_vectors, joint_probabilities, marginal_conditional_densities)
+
     cdef np.ndarray[dtype_t, ndim = 2] joint_probabilities_t1
     cdef np.ndarray[dtype_t, ndim = 1] joint_densities, marginal_densities
     #cdef np.ndarray[dtype_t, ndim = 1] _joint_probabilities_t1 #, joint_probabilities_t
@@ -83,6 +86,41 @@ def hamilton_filter(int nobs,
         #joint_probabilities[t] = joint_probabilities_t.reshape(
         #    (nstates**order, nstates)
         #).sum(1)
+    return marginal_densities, joint_probabilities, joint_probabilities_t1
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def hamilton_filter_uncorrelated(int nobs,
+                                 int nstates,
+                                 np.ndarray[dtype_t, ndim = 2] transition_vectors not None,
+                                 np.ndarray[dtype_t, ndim = 2, mode='c'] joint_probabilities not None,
+                                 np.ndarray[dtype_t, ndim = 2, mode='c'] marginal_conditional_densities not None):
+
+    cdef np.ndarray[dtype_t, ndim = 2] joint_probabilities_t1, marginal_probabilities_t1
+    cdef np.ndarray[dtype_t, ndim = 1] joint_densities, marginal_densities
+    cdef int t, i, j, k, idx
+    cdef dtype_t transition
+
+    joint_probabilities_t1 = np.zeros((nobs, nstates**2))
+    marginal_probabilities_t1 = np.zeros((nobs, nstates))
+    joint_densities = np.zeros((nstates,))
+    marginal_densities = np.zeros((nobs,))
+
+    for t in range(1, nobs+1):
+        for i in range(nstates):        # Range over S_t
+            for j in range(nstates):    # Range over S_{t-1}
+                # This step is what dictates whether transition is in left or right stochastic form
+                # Here, i represents the row (S_t = the state to which we're moving),
+                # and j represents the column (S_{t-1} = the state from which we're moving)
+                # Thus the vector needs to be of the form:
+                # [P11 P12 ... P1M P21 ... P2M ... PMM ]
+                transition = transition_vectors[t, i*nstates + j]
+                joint_probabilities_t1[t-1, i*nstates + j] = transition * joint_probabilities[t-1, j]
+                marginal_probabilities_t1[t-1, i] += joint_probabilities_t1[t-1, i*nstates + j]
+            joint_densities[i] = marginal_probabilities_t1[t-1, i] * marginal_conditional_densities[t-1, i]
+            marginal_densities[t-1] += joint_densities[i]
+
+        joint_probabilities[t] = joint_densities / marginal_densities[t-1]
     return marginal_densities, joint_probabilities, joint_probabilities_t1
 
 def tvtp_transition_vectors_right(int nobs,

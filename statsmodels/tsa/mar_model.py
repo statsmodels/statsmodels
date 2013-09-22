@@ -1335,21 +1335,24 @@ class MAR(tsbase.TimeSeriesModel):
             transition_vector
         )
 
-        conditional_probabilities = [
-            np.tile(
-                transition_vector.repeat(self.nstates**(self.order-2-i)),
-                self.nstates**i
-            )[:,None] # need to add the second dimension to concatenate
-            for i in range(self.order-1) # k-1 values; 0=first, k-2=last
-        ]
+        if self.order > 1:
+            conditional_probabilities = [
+                np.tile(
+                    transition_vector.repeat(self.nstates**(self.order-2-i)),
+                    self.nstates**i
+                )[:,None] # need to add the second dimension to concatenate
+                for i in range(self.order-1) # k-1 values; 0=first, k-2=last
+            ]
 
-        unconditional_probabilities = np.tile(
-            unconditional_probabilities, self.nstates**(self.order-1)
-        )[:,None]
+            unconditional_probabilities = np.tile(
+                unconditional_probabilities, self.nstates**(self.order-1)
+            )[:,None]
 
-        joint_probabilities = reduce(np.multiply,
-            conditional_probabilities + [unconditional_probabilities]
-        ).squeeze()
+            joint_probabilities = reduce(np.multiply,
+                conditional_probabilities + [unconditional_probabilities]
+            ).squeeze()
+        else:
+            joint_probabilities = unconditional_probabilities
 
         return joint_probabilities
 
@@ -1406,7 +1409,8 @@ class MAR(tsbase.TimeSeriesModel):
         # It's time dimension is nobs+1 because the 0th joint probability is
         # the input (calculated from the unconditional probabilities) for the
         # first iteration of the algorithm, which starts at time t=1
-        joint_probabilities = np.zeros((self.nobs+1, self.nstates**self.order))
+        order = max(self.order, 1)
+        joint_probabilities = np.zeros((self.nobs+1, self.nstates**order))
         joint_probabilities[0] = self.initial_joint_probabilities(transitions)
 
         # Marginal conditional densities
