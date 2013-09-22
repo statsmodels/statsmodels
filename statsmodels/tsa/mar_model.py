@@ -254,7 +254,8 @@ from statsmodels.tools.decorators import (cache_readonly, cache_writable,
                                           resettable_cache)
 import statsmodels.base.wrapper as wrap
 from scipy import stats
-from mar_c import (hamilton_filter, tvtp_transition_vectors,
+from mar_c import (hamilton_filter, tvtp_transition_vectors_left,
+                   tvtp_transition_vectors_right,
                    marginal_conditional_densities)
 import resource
 
@@ -665,7 +666,7 @@ class MAR(tsbase.TimeSeriesModel):
          marginal_conditional_densities) = self.initialize_filter(params)
 
         transitions, _, _, _ = self.separate_params(params)
-        transition_vectors = self.tvtp_transition_vectors(transitions)
+        transition_vectors = self.tvtp_transition_vectors(transitions, 'right')
 
         marginal_densities, _, _ = hamilton_filter(
             self.nobs, self.nstates, self.order,
@@ -705,7 +706,18 @@ class MAR(tsbase.TimeSeriesModel):
         transitions = transitions.reshape(
             self.nstates*(self.nstates-1), self.tvtp_order
         )
-        transition_vectors = tvtp_transition_vectors(
+
+        if matrix_type == 'left':
+            fn = tvtp_transition_vectors_left
+        elif matrix_type == 'right':
+            fn = tvtp_transition_vectors_right
+        else:
+            raise ValueError("Invalid matrix type method. Must be one of"
+                             " {'left', 'right'}, corresponding to a left"
+                             " stochastic or right stochastic transition"
+                             " matrix. Got %s." % matrix_type)
+
+        transition_vectors = fn(
             self.nobs, self.nstates, self.tvtp_order,
             transitions, self.tvtp_exog
         )
@@ -1028,7 +1040,7 @@ class MAR(tsbase.TimeSeriesModel):
             An nobs x M length vector of marginal probabilities that the time
             period t is in each of the possible states given time T information.
         """
-        transition_vector = self.tvtp_transition_vectors(transitions)[0]
+        transition_vector = self.tvtp_transition_vectors(transitions, 'right')[0]
         transition_matrix = self.transition_matrix(transition_vector, 'right')
 
         marginal_probabilities = self.marginalize_probabilities(
@@ -1080,8 +1092,7 @@ class MAR(tsbase.TimeSeriesModel):
         """
         params = self.expand_params(params)
         transitions, _, _, _ = self.separate_params(params)
-        #transition_vector = self.transition_vector(transitions, 'right')
-        transition_vectors = self.tvtp_transition_vectors(transitions)
+        transition_vectors = self.tvtp_transition_vectors(transitions, 'right')
 
         (joint_probabilities,
          marginal_conditional_densities) = self.initialize_filter(params)

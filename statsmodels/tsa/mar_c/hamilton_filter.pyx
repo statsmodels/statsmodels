@@ -84,11 +84,11 @@ def hamilton_filter(int nobs,
         #).sum(1)
     return marginal_densities, joint_probabilities, joint_probabilities_t1
 
-def tvtp_transition_vectors(int nobs,
-                           int nstates,
-                           int tvtp_order,
-                           np.ndarray[dtype_t, ndim = 2] transitions,     # nstates * (nstates-1) x tvtp_order
-                           np.ndarray[dtype_t, ndim = 2, mode='c'] exog): # t+1 x tvtp_order
+def tvtp_transition_vectors_right(int nobs,
+                                 int nstates,
+                                 int tvtp_order,
+                                 np.ndarray[dtype_t, ndim = 2] transitions,     # nstates * (nstates-1) x tvtp_order
+                                 np.ndarray[dtype_t, ndim = 2, mode='c'] exog): # t+1 x tvtp_order
     cdef int n, t, i, j, k, idx
     cpdef dtype_t transition, colsum
     cdef np.ndarray[dtype_t, ndim = 2] transition_vectors
@@ -97,17 +97,53 @@ def tvtp_transition_vectors(int nobs,
 
     for t in range(nobs+1):
         for i in range(nstates): # iterate over "columns" in the transition matrix
-            idx = i*(nstates-1)
             colsum = 0
             for j in range(nstates-1): # iterate all but last "row" in the transition matrix
                 transition = 0
                 for k in range(tvtp_order):
-                    transition += exog[t,k] * transitions[idx + j, k]
+                    transition += exog[t,k] * transitions[i*(nstates-1)+j, k]
                 transition = exp(transition)
-                transition_vectors[t, idx + j] = transition / (1 + transition)
-                colsum += transition_vectors[t, idx + j]
+                transition_vectors[t, i + j*nstates] = transition
+                colsum += transition
+            # iterate over all but the last "row" again, now that we have all
+            # of the values
+            for j in range(nstates-1):
+                transition_vectors[t, i + j*nstates] /= (1 + colsum)
             # Add in last row
-            transition_vectors[t,idx+nstates] = 1 - colsum
+            transition_vectors[t,i + (nstates-1)*nstates] = 1 - (colsum / (1 + colsum))
+
+    return transition_vectors
+
+def tvtp_transition_vectors_left(int nobs,
+                                 int nstates,
+                                 int tvtp_order,
+                                 np.ndarray[dtype_t, ndim = 2] transitions,     # nstates * (nstates-1) x tvtp_order
+                                 np.ndarray[dtype_t, ndim = 2, mode='c'] exog): # t+1 x tvtp_order
+    cdef int n, t, i, j, k, idx
+    cpdef dtype_t transition, colsum
+    cdef np.ndarray[dtype_t, ndim = 2] transition_vectors
+
+    transition_vectors = np.zeros((nobs+1, nstates**2))
+
+    for t in range(nobs+1):
+        idx = 0
+        for i in range(nstates): # iterate over "columns" in the transition matrix
+            colsum = 0
+            for j in range(nstates-1): # iterate all but last "row" in the transition matrix
+                transition = 0
+                for k in range(tvtp_order):
+                    transition += exog[t,k] * transitions[i*(nstates-1)+j, k]
+                transition = exp(transition)
+                transition_vectors[t, idx] = transition
+                colsum += transition
+            # iterate over all but the last "row" again, now that we have all
+            # of the values
+            for j in range(nstates-1):
+                transition_vectors[t, idx] /= (1 + colsum)
+                idx += 1
+            # Add in last row
+            transition_vectors[t,idx] = 1 - (colsum / (1 + colsum))
+            idx += 1
 
     return transition_vectors
 

@@ -1,1 +1,1 @@
-from hamilton_filter import hamilton_filter, tvtp_transition_vectors, marginal_conditional_densities
+from hamilton_filter import hamilton_filter, tvtp_transition_vectors_left, tvtp_transition_vectors_right, marginal_conditional_densities
