@@ -27,7 +27,7 @@ DECIMAL_2 = 2
 DECIMAL_1 = 1
 
 
-class CheckHamilton1989(object):
+class TestHamilton1989(object):
     """
     Hamilton's (1989) Markov Switching Model of GNP (as presented in Kim and
     Nelson (1999))
@@ -37,8 +37,6 @@ class CheckHamilton1989(object):
 
     See `statsmodels.tsa.tests.results.results_mar` for more details.
     """
-
-    filter_method = None
 
     def __init__(self):
         self.true = results_mar.htm4_kim
@@ -59,7 +57,7 @@ class CheckHamilton1989(object):
         params = np.array([
             1.15590, -2.20657,
             0.08983, -0.01861, -0.17434, -0.08392,
-            0.79619,
+            -np.log(0.79619), # necessary due to transformation
             -0.21320, 1.12828
         ])
 
@@ -70,7 +68,7 @@ class CheckHamilton1989(object):
         (
             marginal_densities, filtered_joint_probabilities,
             filtered_joint_probabilities_t1
-        ) = mod.filter(params, self.filter_method)
+        ) = mod.filter(params)
         filtered_marginal_probabilities = mod.marginalize_probabilities(
             filtered_joint_probabilities[1:]
         )
@@ -98,19 +96,3 @@ class CheckHamilton1989(object):
         assert_almost_equal(
             self.smoothed[:, 0], self.true['smooth0'], DECIMAL_5
         )
-
-
-class TestHamilton1989C(CheckHamilton1989):
-    """
-    Tests Hamilton's (1989) Markov Switching Model of GNP (as presented in Kim
-    and Nelson (1999)) using the filter written in Cython.
-    """
-    filter_method = 'c'
-
-
-class TestHamilton1989Python(CheckHamilton1989):
-    """
-    Tests Hamilton's (1989) Markov Switching Model of GNP (as presented in Kim
-    and Nelson (1999)) using the filter written in pure Python.
-    """
-    filter_method = 'python'
