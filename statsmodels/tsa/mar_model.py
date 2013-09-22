@@ -609,17 +609,8 @@ class MAR(tsbase.TimeSeriesModel):
         """
         transitions, ar_params, stddevs, means = self.separate_params(params)
 
-        #  transitions: transform to always be in (0, 1)
-        if False:
-            if method == 'logit':
-                 transitions = np.exp( transitions) / (1 + np.exp( transitions))
-            elif method == 'abs':
-                 transitions = np.abs( transitions) / (1 + np.abs( transitions))
-            else:
-                raise VaueError('Invalid transformation method')
-
         # Standard deviations: transform to always be positive
-        stddevs = np.abs(stddevs)
+        stddevs = np.exp(-stddevs)
 
         return self.fuse_params(transitions, ar_params, stddevs, means)
 
@@ -648,15 +639,7 @@ class MAR(tsbase.TimeSeriesModel):
         """
         transitions, ar_params, stddevs, means = self.separate_params(params)
 
-        # Probabilities: untransform to always be in (-Inf, Inf)
-        if False:
-            if method == 'logit':
-                transitions = np.log(transitions / (1 - transitions))
-            elif method == 'abs':
-                transitions = transitions / (1 - transitions)
-            else:
-                raise VaueError('Invalid transformation method')
-        # No other untransformations
+        stddevs = -np.log(stddevs)
 
         return self.fuse_params(transitions, ar_params, stddevs, means)
 
@@ -1141,6 +1124,7 @@ class MAR(tsbase.TimeSeriesModel):
             is conditional on time t-1 information.
 
         """
+        params = self.transform_params(params)
         params = self.expand_params(params)
         transitions, _, _, _ = self.separate_params(params)
         transition_vectors = self.tvtp_transition_vectors(transitions, 'right')
