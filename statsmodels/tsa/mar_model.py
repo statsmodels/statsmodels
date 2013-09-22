@@ -329,43 +329,88 @@ class MAR(tsbase.TimeSeriesModel):
         if switch_ar == True:
             self.nparams_ar = self.nstates*self.order
             self.switch_ar = True
+            self.switch_method_ar = 'all'
         elif switch_ar == False:
             self.nparams_ar = self.order
             self.switch_ar = False
-        else:
+            self.switch_method_ar = 'none'
+        elif isinstance(switch_ar, (list, np.ndarray)):
+            self.nparams_ar = 0
+            self.switch_ar = np.asarray(switch_ar)
+            if not self.switch_ar.shape[0] == nstates:
+                raise ValueError('Fixed switching definitions for AR'
+                                 ' parameters must be an array specifying a'
+                                 ' fixed value for each state. Expected length'
+                                 ' %d, got length %d.' %
+                                 (nstates, self.switch_ar.shape[0]))
+            self.switch_method_ar = 'fixed'
+        elif isinstance(switch_ar, tuple) and callable(switch_ar[1]):
             self.nparams_ar, self.switch_ar = switch_ar
-            if not callable(self.switch_ar):
-                raise ValueError('Custom switching definitions for AR'
-                                 ' parameters must include a callback as the'
-                                 ' second element of the passed argument.')
+            self.switch_method_ar = 'custom'
+        else:
+            raise ValueError('Custom switching definitions for AR'
+                             ' parameters must be an array of fixed values or'
+                             ' must be a tuple with the number of parameters'
+                             ' to estimate as the first value and a callback'
+                             ' as the second value.')
 
         # Variance parameters
         if switch_var == True:
             self.nparams_var = self.nstates
             self.switch_var = True
+            self.switch_method_var = 'all'
         elif switch_var == False:
             self.nparams_var = 1
             self.switch_var = False
-        else:
+            self.switch_method_var = 'none'
+        elif isinstance(switch_var, (list, np.ndarray)):
+            self.nparams_var = 0
+            self.switch_var = np.asarray(switch_var)
+            if not self.switch_var.shape[0] == nstates:
+                raise ValueError('Fixed switching definitions for variance'
+                                 ' parameters must be an array specifying a'
+                                 ' fixed value for each state. Expected length'
+                                 ' %d, got length %d.' %
+                                 (nstates, self.switch_var.shape[0]))
+            self.switch_method_var = 'fixed'
+        elif isinstance(switch_var, tuple) and callable(switch_var[1]):
             self.nparams_var, self.switch_var = switch_var
-            if not callable(self.switch_var):
-                raise ValueError('Custom switching definitions for variance'
-                                 ' parameters must include a callback as the'
-                                 ' second element of the passed argument.')
+            self.switch_method_var = 'custom'
+        else:
+            raise ValueError('Custom switching definitions for variance'
+                             ' parameters must be an array of fixed values or'
+                             ' must be a tuple with the number of parameters'
+                             ' to estimate as the first value and a callback'
+                             ' as the second value.')
 
         # Mean parameters
         if switch_mean == True:
             self.nparams_mean = self.nstates
             self.switch_mean = True
+            self.switch_method_mean = 'all'
         elif switch_mean == False:
             self.nparams_mean = 1
             self.switch_mean = False
-        else:
+            self.switch_method_mean = 'none'
+        elif isinstance(switch_mean, (list, np.ndarray)):
+            self.nparams_mean = 0
+            self.switch_mean = np.asarray(switch_mean)
+            if not self.switch_mean.shape[0] == nstates:
+                raise ValueError('Fixed switching definitions for mean'
+                                 ' parameters must be an array specifying a'
+                                 ' fixed value for each state. Expected length'
+                                 ' %d, got length %d.' %
+                                 (nstates, self.switch_mean.shape[0]))
+            self.switch_method_mean = 'fixed'
+        elif isinstance(switch_mean, tuple) and callable(switch_mean[1]):
             self.nparams_mean, self.switch_mean = switch_mean
-            if not callable(self.switch_mean):
-                raise ValueError('Custom switching definitions for mean'
-                                 ' parameters must include a callback as the'
-                                 ' second element of the passed argument.')
+            self.switch_method_mean = 'custom'
+        else:
+            raise ValueError('Custom switching definitions for mean'
+                             ' parameters must be an array of fixed values or'
+                             ' must be a tuple with the number of parameters'
+                             ' to estimate as the first value and a callback'
+                             ' as the second value.')
 
         # The number of parameters used by the optimizer
         self.nparams = (
@@ -388,23 +433,23 @@ class MAR(tsbase.TimeSeriesModel):
         )
 
         # If we got custom (callable) switch functions, test them
-        test_vector = np.ones((self.nparams,))
-        if callable(self.switch_ar):
-            test_ar = len(self.switch_ar(test_vector))
+        test_args = self.separate_params(np.ones((self.nparams,)))
+        if self.switch_method_ar == 'custom':
+            test_ar = len(self.switch_ar(*test_args))
             if not test_ar == self.nparams_ar_full:
                 raise ValueError('Invalid custom switching function for AR'
                                  ' parameters. Must return a vector of length'
                                  ' %d. Got a parameter of length %d.' %
                                  (self.nparams_ar_full, test_ar))
-        if callable(self.switch_var):
-            test_var = len(self.switch_var(test_vector))
+        if self.switch_method_var == 'custom':
+            test_var = len(self.switch_var(*test_args))
             if not test_var == self.nparams_var_full:
                 raise ValueError('Invalid custom switching function for'
                                  ' variance parameters. Must return a vector'
                                  ' of length %d. Got a parameter of length'
                                  ' %d.' % (self.nparams_ar_full, test_var))
-        if callable(self.switch_mean):
-            test_mean = len(self.switch_mean(test_vector))
+        if self.switch_method_mean == 'custom':
+            test_mean = len(self.switch_mean(*test_args))
             if not test_mean == self.nparams_mean_full:
                 raise ValueError('Invalid custom switching function for mean'
                                  ' parameters. Must return a vector of length'
@@ -443,28 +488,34 @@ class MAR(tsbase.TimeSeriesModel):
         # (these are expanded later, due to possibility of TVTP)
 
         # AR parameters
-        if self.switch_ar == True:
+        if self.switch_method_ar == 'all':
             pass
-        elif self.switch_ar == False:
+        elif self.switch_method_ar == 'none':
             ar_params = np.tile(ar_params, self.nstates)
+        elif self.switch_method_ar == 'fixed':
+            ar_params = self.switch_ar
         else:
-            ar_params = self.switch_ar(params)
+            ar_params = self.switch_ar(transitions, ar_params, stddevs, means)
 
         # Variance parameters
-        if self.switch_var == True:
+        if self.switch_method_var == 'all':
             pass
-        elif self.switch_var == False:
+        elif self.switch_method_var == 'none':
             stddevs = np.tile(stddevs, self.nstates)
+        elif self.switch_method_var == 'fixed':
+            stddevs = self.switch_var
         else:
-            stddevs = self.switch_var(params)
+            stddevs = self.switch_var(transitions, ar_params, stddevs, means)
 
         # Mean parameters
-        if self.switch_mean == True:
+        if self.switch_method_mean == 'all':
             pass
-        elif self.switch_mean == False:
+        elif self.switch_method_mean == 'none':
             means = np.tile(means, self.nstates)
+        elif self.switch_method_mean == 'fixed':
+            means = self.switch_mean
         else:
-            means = self.switch_mean(params)
+            means = self.switch_mean(transitions, ar_params, stddevs, means)
 
         return self.fuse_params(transitions, ar_params, stddevs, means)
 
