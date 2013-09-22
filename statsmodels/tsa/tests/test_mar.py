@@ -96,3 +96,80 @@ class TestHamilton1989(object):
         assert_almost_equal(
             self.smoothed[:, 0], self.true['smooth0'], DECIMAL_5
         )
+
+
+class TestKimNelsonStartz1998(object):
+    """
+    Kim, Nelson, and Startz's (1998) "application of a three-state
+    Markov-switching variance model to monthly stock returns for the period
+    1926:1 - 1986:12"
+
+    Test data produced using GAUSS code described in Kim and Nelson (1999) and
+    found at http://econ.korea.ac.kr/~cjkim/SSMARKOV.htm
+
+    See `statsmodels.tsa.tests.results.results_mar` for more details.
+    """
+
+    def __init__(self):
+        self.true = results_mar.stck_v3
+
+        # Equal-Weighted Excess Returns
+        data = pd.DataFrame(
+            self.true['data'],
+            # Note: it's not clear that these are the correct dates, but it
+            # doesn't matter for the test.
+            index=pd.date_range('1926-01-01', '1995-12-01', freq='MS'),
+            columns=['ewer']
+        )
+        data = data[0:732]
+        data['dmewer'] = data['ewer'] - data['ewer'].mean()
+
+        # Two-state Markov-switching process, where GNP is an AR(4)
+        mod = MAR(data.dmewer, order=0, nstates=3,
+                  switch_ar=False, switch_var=True, switch_mean=[0,0,0])
+
+        # Parameters from stck_v3.opt
+        # Also correspond to Kim and Nelson (1999) Table 4.3, after
+        # transformations.
+        params = np.array([
+            16.399767, 12.791361, 0.522758, 4.417225, -5.845336, -3.028234,
+            # Division by 2 because in stck_v3.opt the parameters are
+            # variances, and here they are standard deviations
+            6.704260/2,  5.520378/2,  3.473059/2
+        ])
+
+        # Log Likelihood
+        self.loglike = mod.loglike(params)
+
+        # Filtered probabilities
+        (
+            marginal_densities, filtered_joint_probabilities,
+            filtered_joint_probabilities_t1
+        ) = mod.filter(params)
+        filtered_marginal_probabilities = mod.marginalize_probabilities(
+            filtered_joint_probabilities[1:]
+        )
+        self.filtered = filtered_marginal_probabilities
+
+        # Smoothed probabilities
+        transitions = mod.separate_params(params)[0]
+        smoothed_marginal_probabilities = mod.smooth(
+            filtered_joint_probabilities, filtered_joint_probabilities_t1,
+            transitions
+        )
+        self.smoothed = smoothed_marginal_probabilities
+
+    def test_loglike(self):
+        assert_almost_equal(
+            self.loglike, self.true['fout'], DECIMAL_5
+        )
+
+    def test_filtered_recession_probabilities(self):
+        assert_almost_equal(
+            self.filtered, self.true['prtt'], DECIMAL_5
+        )
+
+    def test_smoothed_recession_probabilities(self):
+        assert_almost_equal(
+            self.smoothed, self.true['sm0'], DECIMAL_5
+        )
