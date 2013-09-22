@@ -30,8 +30,8 @@ def hamilton_filter(int nobs,
     cdef dtype_t transition
 
     nstatesk_1 = nstates**(order-1)
-    nstatesk = nstatesk_1*nstates
-    nstatesk1 = nstatesk*nstates
+    nstatesk = nstates**order
+    nstatesk1 = nstates**(order+1)
 
     joint_probabilities_t1 = np.zeros((nobs, nstatesk1))
     joint_densities = np.zeros((nstatesk1,))
@@ -44,14 +44,15 @@ def hamilton_filter(int nobs,
     for t in range(1, nobs+1):
         #_joint_probabilities = joint_probabilities[t-1]
         #_marginal_conditional_densities = marginal_conditional_densities[t-1]
+        idx = 0
         for i in range(nstates):
             for j in range(nstates):
                 transition = transition_vectors[t, i*nstates + j]
                 for k in range(nstatesk_1):
-                    idx = j*nstatesk_1 + k
-                    joint_probabilities_t1[t-1, i*nstatesk + idx] = transition * joint_probabilities[t-1, idx]
-                    joint_densities[i*nstatesk + idx] = transition * joint_probabilities[t-1, idx] * marginal_conditional_densities[t-1, i*nstatesk + idx]
-                    marginal_densities[t-1] += joint_densities[i*nstatesk + idx]
+                    joint_probabilities_t1[t-1, idx] = transition * joint_probabilities[t-1, j*nstatesk_1 + k]
+                    joint_densities[idx] = joint_probabilities_t1[t-1, idx] * marginal_conditional_densities[t-1, idx]
+                    marginal_densities[t-1] += joint_densities[idx]
+                    idx += 1
         #joint_probabilities_t1[t-1] = _joint_probabilities_t1
 
         #joint_probabilities_t1 = (
@@ -164,7 +165,6 @@ def marginal_conditional_densities(int nobs,
     variances = stddevs**2
 
     state_means = np.zeros((order+1,))
-    top = 2
     for t in range(nobs):
         idx = 0
         for i in range(nstates):
