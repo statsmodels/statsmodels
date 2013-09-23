@@ -1076,8 +1076,7 @@ class MAR(tsbase.TimeSeriesModel):
             An nobs x M length vector of marginal probabilities that the time
             period t is in each of the possible states given time T information.
         """
-        transition_vector = self.tvtp_transition_vectors(transitions, 'right')[0]
-        transition_matrix = self.transition_matrix(transition_vector, 'right')
+        transition_vectors = self.tvtp_transition_vectors(transitions, 'right')
 
         marginal_probabilities = self.marginalize_probabilities(
             joint_probabilities[1:]
@@ -1089,7 +1088,10 @@ class MAR(tsbase.TimeSeriesModel):
         smoothed_marginal_probabilities = np.zeros((self.nobs, self.nstates))
         smoothed_marginal_probabilities[self.nobs-1] = marginal_probabilities[self.nobs-1]
 
-        for t in range(self.nobs-1, 0, -1): 
+        for t in range(self.nobs-1, 0, -1):
+            transition_matrix = self.transition_matrix(
+                transition_vectors[t], 'right'
+            )
             smoothed_marginal_probabilities[t-1] = (
                 marginal_probabilities[t-1] * np.dot(
                     transition_matrix.T,
@@ -1130,6 +1132,7 @@ class MAR(tsbase.TimeSeriesModel):
         params = self.expand_params(params)
         transitions, _, _, _ = self.separate_params(params)
         transition_vectors = self.tvtp_transition_vectors(transitions, 'right')
+        transition_vectors = transition_vectors[self.nobs_initial:]
 
         (joint_probabilities,
          marginal_conditional_densities) = self.initialize_filter(params)

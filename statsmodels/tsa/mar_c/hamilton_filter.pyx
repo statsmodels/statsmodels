@@ -114,7 +114,7 @@ def hamilton_filter_uncorrelated(int nobs,
                 # and j represents the column (S_{t-1} = the state from which we're moving)
                 # Thus the vector needs to be of the form:
                 # [P11 P12 ... P1M P21 ... P2M ... PMM ]
-                transition = transition_vectors[t, i*nstates + j]
+                transition = transition_vectors[t-1, i*nstates + j]
                 joint_probabilities_t1[t-1, i*nstates + j] = transition * joint_probabilities[t-1, j]
                 marginal_probabilities_t1[t-1, i] += joint_probabilities_t1[t-1, i*nstates + j]
             joint_densities[i] = marginal_probabilities_t1[t-1, i] * marginal_conditional_densities[t-1, i]
