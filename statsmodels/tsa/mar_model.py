@@ -311,16 +311,17 @@ class MAR(tsbase.TimeSeriesModel):
 
         # Transition probabilities
         if tvtp_exog is None:
-            self.tvtp_exog = np.ones((self.nobs+1, 1))
+            self.tvtp_exog = np.ones((self.nobs + self.nobs_initial + 1, 1))
         else:
             self.tvtp_exog = add_constant(tvtp_exog)
         self.tvtp_order = self.tvtp_exog.shape[1]
-        if not self.tvtp_exog.shape[0] == self.nobs+1:
+        if not self.tvtp_exog.shape[0] == self.nobs + self.nobs_initial + 1:
             raise ValueError('Length of exogenous data determining the time'
                              ' varying transition probabilities must have'
                              ' length equal to %d: the number of observations'
                              ' plus one. Got length %d.' %
-                             (self.nobs + 1, self.tvtp_exog.shape[0]))
+                             (self.nobs + self.nobs_initial + 1,
+                              self.tvtp_exog.shape[0]))
         self.nparams_prob = (
             self.nstates * (self.nstates - 1) * self.tvtp_order
         )
@@ -701,6 +702,7 @@ class MAR(tsbase.TimeSeriesModel):
 
         transitions, _, _, _ = self.separate_params(params)
         transition_vectors = self.tvtp_transition_vectors(transitions, 'right')
+        transition_vectors = transition_vectors[self.nobs_initial:]
 
         marginal_densities, _, _ = hamilton_filter(
             self.nobs, self.nstates, self.order,
@@ -752,7 +754,7 @@ class MAR(tsbase.TimeSeriesModel):
                              " matrix. Got %s." % matrix_type)
 
         transition_vectors = fn(
-            self.nobs, self.nstates, self.tvtp_order,
+            self.nobs + self.nobs_initial, self.nstates, self.tvtp_order,
             transitions, self.tvtp_exog
         )
         return transition_vectors
@@ -1325,20 +1327,18 @@ class MAR(tsbase.TimeSeriesModel):
            has length M and the resultant vector needs to have length M^k, it
            must be tiled M^(k-1) times.
         """
-        # TODO only need the 0-th entry, so probably could refactor this to
-        # only calculate that
-        transition_vector = self.tvtp_transition_vectors(transitions, 'right')[0]
+        transition_vectors = self.tvtp_transition_vectors(transitions, 'right')
 
         # Get the unconditional probabilities of the states, given a set of
         # transition probabilities
         unconditional_probabilities = self.unconditional_probabilities(
-            transition_vector
+            transition_vectors[0]
         )
 
         if self.order > 1:
             conditional_probabilities = [
                 np.tile(
-                    transition_vector.repeat(self.nstates**(self.order-2-i)),
+                    transition_vectors[self.order-i-1].repeat(self.nstates**(self.order-2-i)),
                     self.nstates**i
                 )[:,None] # need to add the second dimension to concatenate
                 for i in range(self.order-1) # k-1 values; 0=first, k-2=last

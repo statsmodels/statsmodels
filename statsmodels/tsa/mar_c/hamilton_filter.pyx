@@ -50,7 +50,7 @@ def hamilton_filter(int nobs,
         idx = 0
         for i in range(nstates):
             for j in range(nstates):
-                transition = transition_vectors[t, i*nstates + j]
+                transition = transition_vectors[t-1, i*nstates + j]
                 for k in range(nstatesk_1):
                     joint_probabilities_t1[t-1, idx] = transition * joint_probabilities[t-1, j*nstatesk_1 + k]
                     joint_densities[idx] = joint_probabilities_t1[t-1, idx] * marginal_conditional_densities[t-1, idx]
