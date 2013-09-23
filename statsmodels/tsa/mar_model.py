@@ -31,13 +31,13 @@ Roadmap:
 - Add plotting capabilities (e.g. for showing probabilities of each regime at
   time t - can do a line plot for M=2, otherwise an area plot)
 - Add support for model specification testing (the usual nuisence approach)
-- Add support for time varying parameters
-- Add support for Regime-specific error variances
 - Add support for MS-VAR
 - Add support for state-space models
 - Add support for the EM algorithm
 
-
+TODO: Modify tvtp_transition_vectors_left and right to only calculate a single
+      time if tvtp_order == 1, and then just repeat it nobs+1 times.
+      Also, refactor to not call it many times for each loglike call.
 
 The MAR model has four types of parameters:
 - transition probabilities
