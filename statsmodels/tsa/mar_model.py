@@ -755,7 +755,7 @@ class MAR(tsbase.TimeSeriesModel):
 
         transition_vectors = fn(
             self.nobs + self.nobs_initial, self.nstates, self.tvtp_order,
-            transitions, self.tvtp_exog
+            transitions, np.asarray(self.tvtp_exog, order='C')
         )
         return transition_vectors
 
