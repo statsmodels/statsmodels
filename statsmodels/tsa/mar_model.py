@@ -664,15 +664,20 @@ class MAR(tsbase.TimeSeriesModel):
         """
         transitions, ar_params, stddevs, means = self.separate_params(params)
 
-        # The only transformation to take the gradient of is on probabilities
-        if not tvtp:
+        # If not TVTP, then we want to return the estimated probabilities
+        # themselves, and not the unconstrainted parameters
+        # (If TVTP, then we just want to return the unconstrained parameters)
+        if self.tvtp_order == 1:
             transitions = (
                 np.exp(transitions) / (1 + np.exp(transitions))**2
             )
-            vector = np.r_[transitions, [1]*(self.nparams-len(transitions))]
-        else:
-            vector = [1] * nparams
 
+        # Standard deviation parameters:
+        stddevs = -np.exp(-stddevs)
+
+        vector = np.r_[
+            transitions, [1]*len(ar_params), stddevs, [1]*len(means)
+        ]
         return np.diag(vector)
 
     def loglike(self, params):
