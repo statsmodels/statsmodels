@@ -98,6 +98,98 @@ class TestHamilton1989(object):
         )
 
 
+class TestFilardo1994TVTP(object):
+    """
+    Filardo's (1994) Markov-Switching Model with Time-Varying Transition
+    Probabilities (as presented in Kim and Nelson (1999))
+
+    Test data produced using GAUSS code described in Kim and Nelson (1999) and
+    found at http://econ.korea.ac.kr/~cjkim/SSMARKOV.htm
+
+    See `statsmodels.tsa.tests.results.results_mar` for more details.
+    """
+
+    def __init__(self):
+        self.true = results_mar.htm_tvp
+
+        # Filardo's Industrual Production dataset, 1948.1 - 1991.4
+        data = pd.DataFrame(
+            self.true['data'],
+            index=pd.date_range('1948-01-01', '1991-04-01', freq='MS'),
+            columns=['month', 'ip', 'idx']
+        )
+        data['dlip'] = np.log(data['ip']).diff()*100
+
+        # Deflated pre-1960 observations by ratio of std. devs.
+        # See hmt_tvp.opt or Filardo (1994) p. 302
+        std_ratio = data['dlip']['1960-01-01':].std() / data['dlip'][:'1959-12-01'].std()
+        data['dlip'][:'1959-12-01'] = data['dlip'][:'1959-12-01'] * std_ratio
+        data['dlidx'] = np.log(data['idx']).diff()*100
+        data['dmdlidx'] = data['dlidx'] - data['dlidx'].mean()
+
+        # Two-state Markov-switching process, where IP is an AR(4)
+        mod = MAR(data.dlip[2:], order=4, nstates=2,
+                  switch_ar=False, switch_var=False, switch_mean=True,
+                  tvtp_exog=data.dmdlidx[1:])
+
+
+        # Parameters conform to hmt_tvp.opt, after transformation
+        params = np.array([
+            1.64982, -0.99472, -4.35966, -1.77043, # TVTP parameters
+            0.18947, 0.07933, 0.11094,  0.12226,   # AR parameters
+            -np.log(0.69596),                      # Std. Dev
+            -0.86585, 0.51733                      # Mean
+        ])
+        params = np.array(np.r_[
+            [1.64982, -0.99472, -4.35966, -1.77043], # TVTP parameters
+            [0.18947, 0.07933, 0.11094,  0.12226],   # AR parameters
+            [-np.log(0.69596)],                      # Std. Dev
+             [-0.86585, 0.51733]                      # Mean
+        ])
+
+        # Log Likelihood
+        self.loglike = mod.loglike(params)
+
+        # Filtered probabilities
+        (
+            marginal_densities, filtered_joint_probabilities,
+            filtered_joint_probabilities_t1
+        ) = mod.filter(params)
+        filtered_marginal_probabilities = mod.marginalize_probabilities(
+            filtered_joint_probabilities[1:]
+        )
+        self.filtered = filtered_marginal_probabilities
+
+        # Smoothed probabilities
+        transitions = mod.separate_params(params)[0]
+        smoothed_marginal_probabilities = mod.smooth(
+            filtered_joint_probabilities, filtered_joint_probabilities_t1,
+            transitions
+        )
+        self.smoothed = smoothed_marginal_probabilities
+
+    def test_loglike(self):
+        assert_almost_equal(
+            self.loglike, self.true['-1*fout'], DECIMAL_5
+        )
+
+    def test_filtered_recession_probabilities(self):
+        # Have to use self.true['pr_tt0'][4:] because Kim and Nelson include
+        # 0's in the first 4 spots (which correspond to the initial
+        # observations required for the AR(4) model to be fit.)
+        assert_almost_equal(
+            self.filtered[:, 0], self.true['pr_tt0'][4:], DECIMAL_5
+        )
+
+    def test_smoothed_recession_probabilities(self):
+        # Kim and Nelson do not provide smoothed estimates here, possibly
+        # because the smoothed estimate is zero for almost all periods.
+        #assert_almost_equal(
+        #    self.smoothed[:, 0], self.true['smooth0'], DECIMAL_5
+        #)
+        pass
+
+
 class TestKimNelsonStartz1998(object):
     """
     Kim, Nelson, and Startz's (1998) "application of a three-state
