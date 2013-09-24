@@ -410,7 +410,8 @@ for name, data in ext_data.items():
     obj = Extension('statsmodels.%s.%s' % (destdir, name),
                     sources=sources,
                     depends=data.get('depends', []),
-                    include_dirs=include)
+                    include_dirs=include,
+                    libraries=libraries)
 
     extensions.append(obj)
 
