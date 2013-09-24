@@ -35,7 +35,7 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy.stats.stats import ss
 from statsmodels.tools.tools import (add_constant, rank,
-                                             recipr, chain_dot)
+                                             recipr, chain_dot, extendedpinv)
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 import statsmodels.base.model as base
@@ -69,6 +69,7 @@ def _get_sigma(sigma, nobs):
 
     return sigma, cholsigmainv
 
+
 class RegressionModel(base.LikelihoodModel):
     """
     Base class for linear regression models not used by users.
@@ -80,15 +81,35 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
-        #print "calling initialize, now whitening"  #for debugging
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
         self.nobs = float(self.wexog.shape[0])
-        self.rank = rank(self.exog)
-        self.df_model = float(self.rank - self.k_constant)
-        self.df_resid = self.nobs - self.rank
-        self.df_model = float(rank(self.exog) - self.k_constant)
+
+        self._df_model = None
+        self._df_resid = None
+
+    def _get_df_model(self):
+        if self._df_model is None:
+            self.rank = rank(self.exog)
+            self._df_model = float(self.rank - self.k_constant)
+        return self._df_model
+
+    def _set_df_model(self, value):
+        self._df_model = value
+
+    df_model = property(_get_df_model, _set_df_model)
+
+    def _get_df_resid(self):
+        if self._df_resid is None:
+            self.rank = rank(self.exog)
+            self._df_resid = self.nobs - self.rank
+        return self._df_resid
+
+    def _set_df_resid(self, value):
+        self._df_resid = value
+
+    df_resid = property(_get_df_resid, _set_df_resid)
 
     def fit(self, method="pinv", **kwargs):
         """
@@ -117,32 +138,44 @@ class RegressionModel(base.LikelihoodModel):
         The fit method uses the pseudoinverse of the design/exogenous variables
         to solve the least squares minimization.
         """
-        exog = self.wexog
-        endog = self.wendog
-
         if method == "pinv":
             if ((not hasattr(self, 'pinv_wexog')) or
-                (not hasattr(self, 'normalized_cov_params'))):
-                #print "recalculating pinv"   #for debugging
-                self.pinv_wexog = pinv_wexog = np.linalg.pinv(self.wexog)
-                self.normalized_cov_params = np.dot(pinv_wexog,
-                                                 np.transpose(pinv_wexog))
-            beta = np.dot(self.pinv_wexog, endog)
+                (not hasattr(self, 'normalized_cov_params')) or
+                (not hasattr(self, 'rank'))):
+
+                self.pinv_wexog, singular_values = extendedpinv(self.wexog)
+                self.normalized_cov_params = np.dot(self.pinv_wexog,
+                                        np.transpose(self.pinv_wexog))
+
+                # Cache these singular values for use later.
+                self.wexog_singular_values = singular_values
+                self.rank = rank(np.diag(singular_values))
+
+            beta = np.dot(self.pinv_wexog, self.wendog)
 
         elif method == "qr":
             if ((not hasattr(self, 'exog_Q')) or
-                (not hasattr(self, 'normalized_cov_params'))):
-                Q, R = np.linalg.qr(exog)
+                (not hasattr(self, 'normalized_cov_params')) or
+                (not hasattr(self, 'rank'))):
+                Q, R = np.linalg.qr(self.wexog)
                 self.exog_Q, self.exog_R = Q, R
                 self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
+
+                # Cache singular values from R.
+                self.wexog_singular_values = np.linalg.svd(R, 0, 0)
+                self.rank = rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
 
             # used in ANOVA
-            self.effects = effects = np.dot(Q.T, endog)
+            self.effects = effects = np.dot(Q.T, self.wendog)
             beta = np.linalg.solve(R, effects)
 
-            # no upper triangular solve routine in numpy/scipy?
+        if self._df_model is None:
+            self._df_model = float(self.rank - self.k_constant)
+        if self._df_resid is None:
+            self.df_resid = self.nobs - self.rank
+
         if isinstance(self, OLS):
             lfit = OLSResults(self, beta,
                        normalized_cov_params=self.normalized_cov_params)
@@ -168,7 +201,7 @@ class RegressionModel(base.LikelihoodModel):
 
         Notes
         -----
-        If the model as not yet been fit, params is not optional.
+        If the model has not yet been fit, params is not optional.
         """
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
@@ -709,6 +742,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
     else:
         return rho, np.sqrt(sigmasq)
 
+
 class RegressionResults(base.LikelihoodModelResults):
     """
     This class summarizes the fit of a linear regression model.
@@ -855,6 +889,10 @@ class RegressionResults(base.LikelihoodModelResults):
                                                  normalized_cov_params,
                                                  scale)
         self._cache = resettable_cache()
+        if hasattr(model, 'wexog_singular_values'):
+            self._wexog_singular_values = model.wexog_singular_values
+        else:
+            self._wexog_singular_values = None
 
     def __str__(self):
         self.summary()
@@ -973,7 +1011,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if self.k_constant:
             return self.centered_tss / (self.df_resid + self.df_model)
         else:
-            return self.uncentered_tss/ (self.df_resid + self.df_model)
+            return self.uncentered_tss / (self.df_resid + self.df_model)
 
     @cache_readonly
     def fvalue(self):
@@ -999,6 +1037,25 @@ class RegressionResults(base.LikelihoodModelResults):
     def bic(self):
         return (-2 * self.llf + np.log(self.nobs) * (self.df_model +
                                                      self.k_constant))
+
+    @cache_readonly
+    def eigenvals(self):
+        """
+        Return eigenvalues sorted in decreasing order.
+        """
+        if self._wexog_singular_values is not None:
+            eigvals = self._wexog_singular_values ** 2
+        else:
+            eigvals = np.linalg.linalg.eigvalsh(np.dot(self.model.wexog.T, self.model.wexog))
+        return np.sort(eigvals)[::-1]
+
+    @cache_readonly
+    def condition_number(self):
+        """
+        Return condition number of exogenous matrix, calculated as ratio of largest to smallest eigenvalue.
+        """
+        eigvals = self.eigenvals
+        return np.sqrt(eigvals[0]/eigvals[-1])
 
     #TODO: make these properties reset bse
     def _HCCM(self, scale):
@@ -1194,16 +1251,12 @@ class RegressionResults(base.LikelihoodModelResults):
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
-        #TODO: reuse condno from somewhere else ?
-        #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
-        wexog = self.model.wexog
-        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
-        eigvals = np.sort(eigvals) #in increasing order
-        condno = np.sqrt(eigvals[-1]/eigvals[0])
+        eigvals = self.eigenvals
+        condno = self.condition_number
 
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,
-                          mineigval=eigvals[0])
+                          mineigval=eigvals[-1])
 
         #TODO not used yet
         #diagn_left_header = ['Models stats']
@@ -1265,12 +1318,12 @@ class RegressionResults(base.LikelihoodModelResults):
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)
-        if eigvals[0] < 1e-10:
+        if eigvals[-1] < 1e-10:
             wstr = "The smallest eigenvalue is %6.3g. This might indicate "
             wstr += "that there are\n"
             wstr += "strong multicollinearity problems or that the design "
             wstr += "matrix is singular."
-            wstr = wstr % eigvals[0]
+            wstr = wstr % eigvals[-1]
             etext.append(wstr)
         elif condno > 1000:  #TODO: what is recommended
             wstr = "The condition number is large, %6.3g. This might "
@@ -1334,13 +1387,13 @@ class RegressionResults(base.LikelihoodModelResults):
         from statsmodels.stats.stattools import (jarque_bera,
                                                  omni_normtest,
                                                  durbin_watson)
-        from numpy.linalg import (cond, eigvalsh)
+
         from statsmodels.compatnp.collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         dw = durbin_watson(self.wresid)
-        condno = cond(self.model.wexog)
-        eigvals = eigvalsh(np.dot(self.model.wexog.T, self.model.wexog))
+        eigvals = self.eigenvals
+        condno = self.condition_number
         eigvals = np.sort(eigvals) #in increasing order
         diagnostic = OrderedDict([
                      ('Omnibus:',  "%.3f" % omni),
@@ -1361,10 +1414,10 @@ class RegressionResults(base.LikelihoodModelResults):
         smry.add_dict(diagnostic)
 
         # Warnings
-        if eigvals[0] < 1e-10:
+        if eigvals[-1] < 1e-10:
             warn = "The smallest eigenvalue is %6.3g. This might indicate that\
             there are strong multicollinearity problems or that the design\
-            matrix is singular." % eigvals[0]
+            matrix is singular." % eigvals[-1]
             smry.add_text(warn)
         if condno > 1000:
             warn = "* The condition number is large (%.g). This might indicate \
