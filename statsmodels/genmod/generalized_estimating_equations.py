@@ -11,6 +11,10 @@ S Zeger and KY Liang. "Longitudinal Data Analysis for Discrete and
 Continuous Outcomes". Biometrics Vol. 42, No. 1 (Mar., 1986),
 pp. 121-130
 
+A Rotnitzky and NP Jewell (1990). "Hypothesis testing of regression
+parameters in semiparametric generalized linear models for cluster
+correlated data", Biometrika, 77, 485-497.
+
 Xu Guo and Wei Pan (2002). "Small sample performance of the score
 test in GEE".
 http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
@@ -373,10 +377,16 @@ class GEE(base.Model):
 
     def _beta_update(self):
         """
-        Returns two values (update, score).  The vector `update` is
-        the update vector such that params + update is the next
-        iterate when solving the score equations.  The vector `score`
-        is the current state of the score equations.
+        Returns
+        -------
+        update : array-like
+            The update vector such that params + update is the next
+            iterate when solving the score equations.
+        score : array-like
+            The current state of the score equations, not
+            incorporating the scale parameter.  If desired,
+            multiply this vector by the scale parameter to
+            incorporate the scale.
         """
 
         endog = self.endog_li
@@ -464,7 +474,8 @@ class GEE(base.Model):
            meaningful if the covariance structure is correctly
            specified.
         robust_covariance_bc : array-like
-           The "bias corrected" robust covariance of Mancl and DeRouen.
+           The "bias corrected" robust covariance of Mancl and
+           DeRouen.
         cmat : array-like
            The center matrix of the sandwich expression, used in
            obtaining score test results.
@@ -500,7 +511,8 @@ class GEE(base.Model):
             try:
                 vinv_d = np.linalg.solve(vmat, dmat)
             except np.linalg.LinAlgError:
-                warnings.warn("Singular matrix encountered in GEE covariance estimation",
+                warnings.warn("Singular matrix encountered in GEE "
+                              "covariance estimation",
                               ConvergenceWarning)
                 return None, None, None, None
 
@@ -513,8 +525,8 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
-        naive_covariance = scale*np.linalg.inv(bmat)
-        cmat /= scale**2
+        naive_covariance = np.linalg.inv(bmat) / scale
+        cmat *= scale**2
         robust_covariance = np.dot(naive_covariance,
                                    np.dot(cmat, naive_covariance))
 
@@ -535,6 +547,7 @@ class GEE(base.Model):
             vmat, is_cor = self.varstruct.variance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
+            vmat /= scale
 
             vinv_d = np.linalg.solve(vmat, dmat)
             hmat = np.dot(vinv_d, naive_covariance)
@@ -654,8 +667,8 @@ class GEE(base.Model):
         for itr in xrange(maxit):
             update, score = self._beta_update()
             if update is None:
-                warnings.warn("Singular matrix encountered in GEE update",
-                              ConvergenceWarning)
+                warnings.warn("Singular matrix encountered in GEE "
+                              "update", ConvergenceWarning)
                 break
             beta += update
             self.update_cached_means(beta)
@@ -679,15 +692,15 @@ class GEE(base.Model):
 
         bcov, ncov, bc_cov, _ = self._covmat()
         if bcov is None:
-            warnings.warn("Unable to determine covariance structure for GEE estimates",
-                          ConvergenceWarning)
+            warnings.warn("Unable to determine covariance structure "
+                          "for GEE estimates", ConvergenceWarning)
             return None
 
         if self.constraint is not None:
             beta, bcov = self._handle_constraint(beta, bcov)
             if beta is None:
-                warnings.warn("Unable to estimate constrained GEE parameters.",
-                              ConvergenceWarning)
+                warnings.warn("Unable to estimate constrained GEE "
+                              "parameters.", ConvergenceWarning)
                 return None
 
         scale = self.estimate_scale()
@@ -743,13 +756,13 @@ class GEE(base.Model):
         _, score = self._beta_update()
 
         if score is None:
-            warnings.warn("Singular matrix encountered in GEE score test",
-                          ConvergenceWarning)
+            warnings.warn("Singular matrix encountered in GEE score "
+                          "test", ConvergenceWarning)
             return None, None
 
         _, ncov1, _, cmat = self._covmat()
         scale = self.estimate_scale()
-        score2 = score[len(beta):] / scale
+        score2 = score[len(beta):] * scale
 
         amat = np.linalg.inv(ncov1)
 

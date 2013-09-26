@@ -1,5 +1,11 @@
 """
 Test functions for GEE
+
+Most comparisons are to R.  The statmodels GEE implementation should
+generally agree with the R GEE implementation for the independence and
+exchangeable correlation structures.  For other correlation structures
+the details of the correlation estimation differ among implementations
+and the results will not agree exactly.
 """
 
 import numpy as np
@@ -15,6 +21,17 @@ import pandas as pd
 import statsmodels.formula.api as sm
 
 def load_data(fname, icept=True):
+    """
+    Load a data set from the results directory.  The data set should
+    be a CSV file with the following format:
+
+    Column 0: Group indicator
+    Column 1: endog variable
+    Columns 2-end: exog variables
+
+    If `icept` is True, an intercept is prepended to the exog
+    variables.
+    """
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     Z = np.genfromtxt(os.path.join(cur_dir, 'results', fname),
@@ -63,7 +80,7 @@ class TestGEE(object):
 
     def test_logistic(self):
         """
-        logistic
+        R code to for comparing results:
 
         library(gee)
         Z = read.csv("results/gee_logistic_1.csv", header=FALSE)
@@ -73,19 +90,22 @@ class TestGEE(object):
         X2 = Z[,4]
         X3 = Z[,5]
 
-        mi = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial, corstr="independence")
+        mi = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
+                 corstr="independence")
         smi = summary(mi)
         u = coefficients(smi)
         cfi = paste(u[,1], collapse=",")
         sei = paste(u[,4], collapse=",")
 
-        me = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial, corstr="exchangeable")
+        me = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
+                 corstr="exchangeable")
         sme = summary(me)
         u = coefficients(sme)
         cfe = paste(u[,1], collapse=",")
         see = paste(u[,4], collapse=",")
 
-        ma = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial, corstr="AR-M")
+        ma = gee(Y ~ X1 + X2 + X3, id=Id, family=binomial,
+                 corstr="AR-M")
         sma = summary(ma)
         u = coefficients(sma)
         cfa = paste(u[,1], collapse=",")
@@ -154,7 +174,7 @@ class TestGEE(object):
 
     def test_linear(self):
         """
-        linear
+        R code for comparing Gaussian GEE:
 
         library(gee)
 
@@ -164,16 +184,16 @@ class TestGEE(object):
         X1 = Z[,3]
         X2 = Z[,4]
         X3 = Z[,5]
-        mi = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian, corstr="independence",
-                tol=1e-8, maxit=100)
+        mi = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian,
+                 corstr="independence", tol=1e-8, maxit=100)
         smi = summary(mi)
         u = coefficients(smi)
 
         cfi = paste(u[,1], collapse=",")
         sei = paste(u[,4], collapse=",")
 
-        me = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian, corstr="exchangeable",
-                tol=1e-8, maxit=100)
+        me = gee(Y ~ X1 + X2 + X3, id=Id, family=gaussian,
+                 corstr="exchangeable", tol=1e-8, maxit=100)
         sme = summary(me)
         u = coefficients(sme)
 
@@ -191,27 +211,36 @@ class TestGEE(object):
         vi = Independence()
         ve = Exchangeable()
 
-        cf = [[0.00515978834534064,0.78615903847622,-1.57628929834004,0.782486240348685],
-              [0.00516507033680904,0.786253541786879,-1.57666801099155,0.781741984193051]]
-        se = [[0.025720523853008,0.0303348838938358,0.0371658992200722,0.0301352423377647],
-              [0.025701817387204,0.0303307060257735,0.0371977050322601,0.0301218562204013]]
+        cf = [[0.00515978834534064,0.78615903847622,
+               -1.57628929834004,0.782486240348685],
+              [0.00516507033680904,0.786253541786879,
+               -1.57666801099155,0.781741984193051]]
+        se = [[0.025720523853008,0.0303348838938358,
+               0.0371658992200722,0.0301352423377647],
+              [0.025701817387204,0.0303307060257735,
+               0.0371977050322601,0.0301218562204013]]
 
         for j,v in enumerate((vi,ve)):
             md = GEE(endog, exog, group, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
-            assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
+            assert_almost_equal(mdf.standard_errors, se[j],
+                                decimal=10)
 
         # Test with formulas
-        D = np.concatenate((endog[:,None], group[:,None], exog[:,1:]), axis=1)
+        D = np.concatenate((endog[:,None], group[:,None], exog[:,1:]),
+                           axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(exog.shape[1]-1)]
+        D.columns = ["Y","Id",] + ["X%d" % (k+1)
+                                   for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-            md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
+            md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
+                                  groups=D.loc[:,"Id"],
                                   family=family, varstruct=v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
-            assert_almost_equal(mdf.standard_errors, se[j], decimal=10)
+            assert_almost_equal(mdf.standard_errors, se[j],
+                                decimal=10)
 
 
     def test_linear_constrained(self):
@@ -220,7 +249,8 @@ class TestGEE(object):
 
         exog = np.random.normal(size=(300,4))
         exog[:,0] = 1
-        endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) + np.random.normal(size=300)
+        endog = np.dot(exog, np.r_[1, 1, 0, 0.2]) +\
+            np.random.normal(size=300)
         group = np.kron(np.arange(100), np.r_[1,1,1])
 
         vi = Independence()
@@ -230,7 +260,8 @@ class TestGEE(object):
         R = np.r_[0,]
 
         for j,v in enumerate((vi,ve)):
-            md = GEE(endog, exog, group, None, family, v, constraint=(L,R))
+            md = GEE(endog, exog, group, None, family, v,
+                     constraint=(L,R))
             mdf = md.fit()
             assert_almost_equal(mdf.params[3], 0, decimal=10)
 
@@ -385,10 +416,18 @@ class TestGEE(object):
         vi = Independence()
         ve = Exchangeable()
 
-        cf = [[-0.0146481939473855,-0.00354936927720112,0.00373735567047755,0.50536434354091,0.00536672970672592,-0.506763623216482],
-              [-0.0146390416486013,-0.00378457467315029,0.00359526175252784,0.505218312342825,0.00520243210015778,-0.506959420331449]]
-        se = [[0.0180718833872629,0.00804583519493001,0.00932754357592236,0.00859676512232225,0.00917599454216625,0.00903356938618812],
-              [0.0180852155632977,0.00805161458483081,0.00933886210442408,0.00862255601233811,0.00917229773191988,0.00904411930948212]]
+        cf = [[-0.0146481939473855,-0.00354936927720112,
+                0.00373735567047755,0.50536434354091,
+                0.00536672970672592,-0.506763623216482],
+              [-0.0146390416486013,-0.00378457467315029,
+                0.00359526175252784,0.505218312342825,
+                0.00520243210015778,-0.506959420331449]]
+        se = [[0.0180718833872629,0.00804583519493001,
+               0.00932754357592236,0.00859676512232225,
+               0.00917599454216625,0.00903356938618812],
+              [0.0180852155632977,0.00805161458483081,
+               0.00933886210442408,0.00862255601233811,
+               0.00917229773191988,0.00904411930948212]]
 
         for j,v in enumerate((vi,ve)):
             md = GEE(endog, exog, group_n, None, family, v)
@@ -397,18 +436,26 @@ class TestGEE(object):
             assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
 
         # Test with formulas
-        D = np.concatenate((endog[:,None], group_n[:,None], exog[:,1:]), axis=1)
+        D = np.concatenate((endog[:,None], group_n[:,None],
+                            exog[:,1:]), axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(exog.shape[1]-1)]
+        D.columns = ["Y","Id",] + ["X%d" % (k+1)
+                                   for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", D, None, groups=D.loc[:,"Id"],
+             md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", D,
+                                   None, groups=D.loc[:,"Id"],
                                    family=family, varstruct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=5)
-             assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
+             assert_almost_equal(mdf.standard_errors, se[j],
+                                 decimal=6)
 
 
     def test_compare_OLS(self):
+        """
+        Gaussian GEE with independence correlation should agree
+        exactly with OLS.
+        """
 
         vs = Independence()
         family = Gaussian()
@@ -417,16 +464,21 @@ class TestGEE(object):
         X1 = np.random.normal(size=100)
         X2 = np.random.normal(size=100)
         X3 = np.random.normal(size=100)
-        groups = np.random.randint(0, 4, size=100)
+        groups = np.kron(range(20), np.ones(5))
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
-                               family=family, varstruct=vs).fit()
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
+                              groups=groups, family=family,
+                              varstruct=vs).fit()
 
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
 
         assert_almost_equal(ols.params.values, md.params, decimal=10)
+
+        naive_tvalues = md.params / \
+            np.sqrt(np.diag(md.naive_covariance))
+        assert_almost_equal(naive_tvalues, ols.tvalues, decimal=10)
 
 
     def test_compare_logit(self):
