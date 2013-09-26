@@ -26,7 +26,7 @@ Estimation methodology design
 --------------------
  * give a initial hypothesis about the distribution of the random parameters
  * draw R random numbers of this distribution.
-    pseudo-random numbers are used for the draws
+    Halton sequence numbers are used for the draws
  * for each draw :math:`\beta^r' compute the probability:
   .. math:: L^r_{ni} (\beta^r_{n}) = \frac{e^{\beta^r_{n}X_{ni}}} {\sum_{j} e^{\beta^r_{n}X_{nj}}}
  * compute the average of these probabilities
@@ -36,11 +36,10 @@ Estimation methodology design
 
 TODO
 --------------------
- * Notes about distribution(s) to use.
+ * notes about distribution(s) to use.
      Orro (2006, chapter 3); Train (2003, chapter 6)
- * Halton numbers for efficiency in computation (not implemented in statsmodels) [1]
-    or Modified Latin Hypercube Sampling (Hess et al., 2006) [2]
- * Panel data
+ * draws: see [1] and Modified Latin Hypercube Sampling (Hess et al., 2006) [2]
+ * panel data : see Train (2003, chapter 6: 6.7)
  * Bayesian approach (Train, Chapter 12)
  * specification on error-components logit. (do note about specification)
 
@@ -59,7 +58,7 @@ from collections import OrderedDict
 from scipy import stats
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
-
+from halton_sequence import halton
 
 class MXLogit(LikelihoodModel):
     __doc__ = """
@@ -156,6 +155,7 @@ class MXLogit(LikelihoodModel):
 
         self.draws = draws
         self.random_params = random_params
+        self.num_rparam = len(random_params)
 
         self._initialize()
         super(MXLogit, self).__init__(endog = endog_data,
@@ -242,9 +242,9 @@ class MXLogit(LikelihoodModel):
         self.df_resid = int(self.nobs - self.K)
 
     def xbetas(self, params):
-        '''the Utilities V_i
+        """the Utilities V_i
 
-        '''
+        """
         res = np.empty((self.nobs, self.J))
         for ii in range(self.J):
             res[:, ii] = np.dot(self.exog_bychoices[ii],
@@ -253,11 +253,30 @@ class MXLogit(LikelihoodModel):
 
     def drawnvalues(self):
         """
-        """
-        #TODO  pseudo-random numbers
-        drawn_values = np.ones([self.draws,2])
 
-        return drawn_values
+        """
+        # TODO : implement test
+        # from math import sqrt
+        # sqrt(210)/2 # the ratio should be small (See Train, 2001)
+
+        haltonsequence = halton(self.num_rparam, self.draws)
+
+        # TODO: set user-provided dist
+        # TODO: estimate loc and scale as part of the estimation procedure
+        # Initial values of:
+        #    means -> coeficients from conditional logit
+        #    standart deviations -> 0.1
+        # see fit
+
+        # haltonsequence = halton(1, 5)
+        # drawnvalues = stats.norm.ppf(haltonsequence,-0.016, 0.1 )
+        if DEBUG:
+            print "___working in haltonsequence"
+
+        haltonsequence = halton(1, self.draws)
+        self.dv = stats.norm.ppf(haltonsequence, self.mean, self.std)
+
+        return self.dv
 
     def cdf(self, item):
         """
@@ -289,18 +308,23 @@ class MXLogit(LikelihoodModel):
         eXB = np.exp(item)
         return  eXB / eXB.sum(1)[:, None]
 
-    def cdf_average(self, item):
+    def cdf_average(self, params):
         """
         """
-        prob_average = [[]]
-#        dv = self.drawnvalues
-#        for ii in dv:
-#            item[:2] = ii.values
-#            prob_average.append(self.cdf(item))
+        if DEBUG:
+            print "___working in average"
 
-#        return prob_average.sum(1)/self.draws
-        return self.cdf(item)
+        prob_average = []
+        self.drawnvalues()
+        for ii in self.dv:
+            params[0] = ii  # numpy.ndarray
+            xb = self.xbetas(params)
+            prob_average.append(self.cdf(xb))
 
+        if DEBUG:
+            print "___returning to average"
+
+        return sum(prob_average) / self.draws
 
     def loglike(self, params):
 
@@ -335,9 +359,14 @@ class MXLogit(LikelihoodModel):
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
         """
+        if DEBUG:
+            print "___working in loglike"
 
-        xb = self.xbetas(params)
-        loglike = (self.endog_bychoices * np.log(self.cdf_average(xb))).sum(1)
+        loglike = (self.endog_bychoices *
+                    np.log(self.cdf_average(params))).sum(1)
+        if DEBUG:
+            print "___returning to loglike"
+
         return loglike.sum()
 
     def score(self, params):
@@ -364,20 +393,35 @@ class MXLogit(LikelihoodModel):
 
         """
 
+        if DEBUG:
+            print "_working on fit"
+
         if start_params is None:
 
-        # TODO
-        # Initial values of:
-        #    means -> coeficients from conditional logit
-        #    standart deviations -> 0.1
+            if DEBUG:
+                print "__working on start params"
 
+        # TODO: func_params
+            self.mean = -0.01550155  # set to check with R results
+            self.std = 0.00027105    # set to check with R results
+#            self.mean = -0.016 # loc
+#            self.std = 1.0  # scale
             Logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
-            start_params = np.r_[Logit_res.params.values,
-                                  np.array([-0.0155,1])]
+            # func_params = np.array([self.mean, self.std])
+            # start_params = np.r_[Logit_res.params.values,
+            #                      func_params]
+            start_params =  Logit_res.params
+
+            if DEBUG:
+                print "start_params", start_params
+
             self.satpar = start_params
 
         else:
             start_params = np.asarray(start_params)
+
+        if DEBUG:
+            print "___working on fit"
 
         start_time = time.time()
         model_fit = super(MXLogit, self).fit(disp = disp,
@@ -386,6 +430,11 @@ class MXLogit(LikelihoodModel):
                                             maxfun=maxfun, **kwds)
 
         self.params = model_fit.params
+
+        if DEBUG:
+            print self.params
+            print "___returning to fit"
+
         end_time = time.time()
         self.elapsed_time = end_time - start_time
 
@@ -457,6 +506,7 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
 
     @cache_readonly
     def llnull(self):
+        # TODO: Use Clogit
         # loglike model without predictors
         model = self.model
         V = model.V
@@ -477,6 +527,9 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
                                            ncommon = 0,
                                            ref_level = model.ref_level,
                                            name_intercep = model.name_intercept)
+
+        mxlogit_null_mod.mean = None
+        mxlogit_null_mod.std = None
         mxlogit_null_res = mxlogit_null_mod.fit(start_params = np.zeros(\
                                                 len(V.keys()) - 1), disp = 0)
 
@@ -536,7 +589,9 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
 #                    ('Iterations:', ["%s" % self.mle_retvals['iterations']]),
                     ('Elapsed time (seg.):',
                                     ["%10.4f" % self.model.elapsed_time]),
-                    ('Num. alternatives:', [self.model.J])
+                    ('Num. alternatives:', [self.model.J]),
+                    ('Draws:', [self.model.draws]),
+                    ('Method:', ["Halton sequence"]),
                       ]
 
         top_right = [
@@ -573,19 +628,25 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
                           data_fmts = ["%5.2f"])
         smry.tables.append(tbl)
 
-        # for parameters
-        mydata = [ self.model.satpar, self.params]
+#        # for parameters
+#        smry.add_table_params(self, alpha=alpha, use_t=True)
+
+        # TODO
+        # for ramdom parameters
+        mydata = [self.model.satpar, self.params]
         mystubs = self.model.exog_names
         myheaders = ["Initial Params:", "Params: "]
 
         mytitle = ("Params MXLogit")
         tb2 = SimpleTable(mydata, mystubs, myheaders, title = mytitle,
-                          data_fmts = ["%5.3f"])
+                          data_fmts = ["%5.4f"])
         smry.tables.append(tb2)
         return smry
 
 
 if __name__ == "__main__":
+
+    DEBUG = 0
 
     print 'Example:'
 
@@ -622,19 +683,56 @@ if __name__ == "__main__":
     ncommon = 2
     # Random coefficients and distributions
     random_params = OrderedDict((
-        ('gc', [stats.norm]),
+        ('gc', stats.norm),
         ))
+
     # Number of draws used for simulation
     # eg: 50 for draf model, 1000 for final model
-    draws = 10
+    draws = 50
+
     # Describe model
     mxlogit_mod = MXLogit(endog_data = y, exog_data = X,  V = V,
                           random_params = random_params, draws = draws,
                           ncommon = ncommon, ref_level = 'car',
                           name_intercept = 'Intercept')
     # Fit model
-    mxlogit_res = mxlogit_mod.fit(disp=1)
+    mxlogit_res = mxlogit_mod.fit(method = "bfgs", disp = 1)
 
     # Summarize model
-    # TODO
+    # TODO means and standard errors for mixed logit parameters
     print mxlogit_mod.summary()
+
+    # R results
+
+    #mlogit(formula = choice ~ gc + ttme + hinc_air, data = TravelMode,
+    #    reflevel = "car", rpar = c(gc = "n"), R = 50, shape = "long",
+    #    alt.var = "mode")
+    #
+    #Frequencies of alternatives:
+    #    car     air   train     bus
+    #0.28095 0.27619 0.30000 0.14286
+    #
+    #bfgs method
+    #16 iterations, 0h:0m:4s
+    #g'(-H)^-1g = 1.33E-07
+    #gradient close to zero
+    #
+    #Coefficients :
+    #                     Estimate  Std. Error  t-value  Pr(>|t|)
+    #air:(intercept)    5.20736267  0.77769684   6.6959 2.144e-11 ***
+    #train:(intercept)  3.86902862  0.44728704   8.6500 < 2.2e-16 ***
+    #bus:(intercept)    3.16319599  0.43712507   7.2364 4.610e-13 ***
+    #gc                -0.01550155  0.00410559  -3.7757 0.0001595 ***
+    #ttme              -0.09612401  0.00809057 -11.8810 < 2.2e-16 ***
+    #hinc_air           0.01328820  0.01209832   1.0984 0.2720515
+    #sd.gc              0.00027105  0.13136215   0.0021 0.9983537
+    #---
+    #Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+    #
+    #Log-Likelihood: -199.13
+    #McFadden R^2:  0.29825
+    #Likelihood ratio test : chisq = 169.26 (p.value = < 2.22e-16)
+    #
+    #random coefficients
+    #   Min.     1st Qu.      Median        Mean     3rd Qu. Max.
+    #gc -Inf -0.01568437 -0.01550155 -0.01550155 -0.01531873  Inf
