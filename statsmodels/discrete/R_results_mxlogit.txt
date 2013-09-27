@@ -60,3 +60,140 @@ Likelihood ratio test : chisq = 169.26 (p.value = < 2.22e-16)
 random coefficients
    Min.     1st Qu.      Median        Mean     3rd Qu. Max.
 gc -Inf -0.01568437 -0.01550155 -0.01550155 -0.01531873  Inf
+
+
+MXLogit - Statsmodels
+---------------------
+V = OrderedDict((
+    ('air',   ['gc', 'ttme', 'Intercept', 'hinc']),
+    ('train', ['gc', 'ttme', 'Intercept']),
+    ('bus',   ['gc', 'ttme', 'Intercept']),
+    ('car',   ['gc', 'ttme']))
+    )
+NORMAL = ['gc']
+
+
+Example:
+                                MXLogit results
+================================================================================
+Dep. Variable:                     mode   No. Cases:                         840
+Model:                          MXLogit   No. Observations:                  210
+Method:                            bfgs   Df Residuals:                      204
+Date:                  Fri, 27 Sep 2013   Df Model:                            6
+Time:                          14:45:06   Log-Likelihood:                -199.13
+Converged:                         True   AIC:                            414.26
+Elapsed time (seg.):             3.9949
+Num. alternatives:                    4
+Draws:                               50
+Method:                 Halton sequence
+=====================================================
+                               air  train  bus   car
+-----------------------------------------------------
+Frequencies of alternatives:  58.00 63.00 30.00 59.00
+Percentage:                    0.28  0.30  0.14  0.28
+                                                    Params MXLogit
+======================================================================================================================
+                  0 gc   1 ttme 2 Intercept (air) 3 hinc (air) 4 Intercept (train) 5 Intercept (bus) mean_0 gc sd_0 gc
+----------------------------------------------------------------------------------------------------------------------
+Initial Params: -0.0065 -0.1036       5.1703         0.0200           3.4835             2.7166       -0.0065   0.1000
+Params:         -0.0155 -0.0961       5.2075         0.0133           3.8691             3.1632       -0.0155   0.0000
+----------------------------------------------------------------------------------------------------------------------
+
+
+Ejemplo 2
+=========
+
+R
+------
+> library("mlogit", "TravelMode")
+> data("TravelMode", package="AER")
+> TravelMode <- TravelMode[,]
+> names(TravelMode)<- c("individual", "mode", "choice", "ttme", "invc",
++                       "invt", "gc", "hinc", "psize")
+> TravelMode$hinc_air <- with(TravelMode, hinc * (mode == "air"))
+> res <- mlogit(choice ~ ttme + gc , data = TravelMode,
++               rpar = c( 'air:(intercept)' = 'n',
++                         'bus:(intercept)' = 'n',
++                         'train:(intercept)' = 'n'
++                         ), R = 50, halton = NA,
++               shape = "long", alt.var = "mode", reflevel = "car")
+>
+>
+> summary(res)
+
+Call:
+mlogit(formula = choice ~ ttme + gc, data = TravelMode, reflevel = "car",
+    rpar = c(`air:(intercept)` = "n", `bus:(intercept)` = "n",
+        `train:(intercept)` = "n"), R = 50, halton = NA, shape = "long",
+    alt.var = "mode")
+
+Frequencies of alternatives:
+    car     air   train     bus
+0.28095 0.27619 0.30000 0.14286
+
+bfgs method
+17 iterations, 0h:0m:5s
+g'(-H)^-1g = 1.26E-07
+gradient close to zero
+
+Coefficients :
+                       Estimate Std. Error t-value  Pr(>|t|)
+air:(intercept)       6.1228505  0.7934020  7.7172 1.199e-14 ***
+train:(intercept)     5.1342926  0.6848327  7.4971 6.528e-14 ***
+bus:(intercept)       4.1623581  0.6239579  6.6709 2.542e-11 ***
+ttme                 -0.1145892  0.0123942 -9.2454 < 2.2e-16 ***
+gc                   -0.0313874  0.0067029 -4.6827 2.832e-06 ***
+sd.air:(intercept)   -3.0623792  0.7810149 -3.9210 8.817e-05 ***
+sd.train:(intercept)  0.0160550  4.9501754  0.0032    0.9974
+sd.bus:(intercept)    0.0632562  5.1749312  0.0122    0.9902
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Log-Likelihood: -197.26
+McFadden R^2:  0.30483
+Likelihood ratio test : chisq = 173 (p.value = < 2.22e-16)
+
+random coefficients
+                  Min.  1st Qu.   Median     Mean  3rd Qu. Max.
+air:(intercept)   -Inf 4.057307 6.122850 6.122850 8.188394  Inf
+bus:(intercept)   -Inf 4.119692 4.162358 4.162358 4.205024  Inf
+train:(intercept) -Inf 5.123464 5.134293 5.134293 5.145122  Inf
+
+
+MXLogit - Statsmodels
+---------------------
+
+V = OrderedDict((
+    ('air',   ['gc', 'ttme', 'Intercept']),
+    ('train', ['gc', 'ttme', 'Intercept']),
+    ('bus',   ['gc', 'ttme', 'Intercept']),
+    ('car',   ['gc', 'ttme']))
+    )
+
+NORMAL = ['Intercept']
+
+Example:
+                                MXLogit results
+================================================================================
+Dep. Variable:                     mode   No. Cases:                         840
+Model:                          MXLogit   No. Observations:                  210
+Method:                            bfgs   Df Residuals:                      205
+Date:                  Fri, 27 Sep 2013   Df Model:                            5
+Time:                          14:56:50   Log-Likelihood:                -197.71
+Converged:                         True   AIC:                            417.41
+Elapsed time (seg.):            89.6353
+Num. alternatives:                    4
+Draws:                              500
+Method:                 Halton sequence
+=====================================================
+                               air  train  bus   car
+-----------------------------------------------------
+Frequencies of alternatives:  58.00 63.00 30.00 59.00
+Percentage:                    0.28  0.30  0.14  0.28
+                                                                                                         Params MXLogit
+===============================================================================================================================================================================================================================
+                  0 gc   1 ttme 2 Intercept (air) 3 Intercept (train) 4 Intercept (bus) mean_2 Intercept (air) sd_2 Intercept (air) mean_3 Intercept (train) sd_3 Intercept (train) mean_4 Intercept (bus) sd_4 Intercept (bus)
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Initial Params: -0.0065 -0.1050       5.9781             3.5283             2.7612              5.9781                0.1000                 3.5283                  0.1000                 2.7612                0.1000
+Params:         -0.0313 -0.1140       3.4148             5.1114             4.1363              6.1373                3.0438                 5.1114                  0.0000                 4.1431                0.0027
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

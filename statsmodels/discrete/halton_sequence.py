@@ -101,7 +101,8 @@ def halton(dim, nbpts):
     p.fill(np.nan)
 
     # TODO: provided prime number instead of set it static
-    P = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31]
+    P = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,\
+         59, 61, 67, 71, 73, 79, 83, 89]
     lognbpts = log(nbpts + 1)
     for i in range(dim):
         b = P[i]

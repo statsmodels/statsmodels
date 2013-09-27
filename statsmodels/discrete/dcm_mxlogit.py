@@ -59,6 +59,7 @@ from scipy import stats
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from halton_sequence import halton
+import re
 
 
 class MXLogit(LikelihoodModel):
@@ -137,8 +138,10 @@ class MXLogit(LikelihoodModel):
     dropped.
     """
 
-    def __init__(self, endog_data, exog_data,  V, random_params, draws, ncommon,
-                 ref_level, name_intercept = None, **kwds):
+    def __init__(self, endog_data, exog_data,  V, draws, ncommon,
+                 NORMAL,ref_level, name_intercept = None, **kwds):
+
+        start_time = time.time()
 
         self.endog_data = endog_data
         self.exog_data = exog_data
@@ -155,10 +158,16 @@ class MXLogit(LikelihoodModel):
             self.name_intercept = name_intercept
 
         self.draws = draws
-        self.random_params = random_params
-        self.num_rparam = len(random_params)
+        self.NORMAL = NORMAL
+        self.num_rparam = len(NORMAL)
 
         self._initialize()
+
+        # TODO : implement test
+        # from math import sqrt
+        # sqrt(210)/2 # the ratio should be small (See Train, 2001)
+        self.haltonsequence = halton(len(self.n_ramdon), self.draws)
+
         super(MXLogit, self).__init__(endog = endog_data,
                 exog = self.exog_matrix, **kwds)
 
@@ -192,10 +201,6 @@ class MXLogit(LikelihoodModel):
         # Betas
         beta_not_common = ([len(exog_bychoices_names[ii]) - self.ncommon
                             for ii in range(self.J)])
-        exog_names_prueba = []
-
-        for ii, key in enumerate(self.V):
-            exog_names_prueba.append(key * beta_not_common[ii])
 
         zi = np.r_[[self.ncommon], self.ncommon + np.array(beta_not_common)\
                     .cumsum()]
@@ -226,7 +231,6 @@ class MXLogit(LikelihoodModel):
             self.betas[sublist] = aa
 
         # Exog
-
         pieces = []
         for ii in range(self.J):
             pieces.append(pd.DataFrame(exog_bychoices[ii], columns=self.betas[ii]))
@@ -237,10 +241,46 @@ class MXLogit(LikelihoodModel):
 
         self.exog_matrix = self.exog_matrix_all.iloc[:, 2:]
 
-        self.K = len(self.exog_matrix.columns) + len(self.random_params)
+        self.K = len(self.exog_matrix.columns)
 
         self.df_model = self.K
         self.df_resid = int(self.nobs - self.K)
+
+        self.paramsnames = sorted(set([i for j in self.betas.values()
+                                       for i in j]))
+
+        self.values_ramdon = []
+        self.n_ramdon = []
+
+        for name in self.NORMAL:
+            random = re.compile("[ ]\b*" + name)
+            for ii, jj in enumerate(self.paramsnames):
+                if random.search(jj) is not None:
+                    self.values_ramdon.append(ii)
+                    self.n_ramdon.append(jj)
+
+        if DEBUG:
+            print self.values_ramdon
+            print self.n_ramdon
+
+        ms_params = []
+
+        for param in self.n_ramdon:
+            ms_params.append('mean_%s' % param)
+            ms_params.append('sd_%s' % param)
+
+        self.ms_params = ms_params
+        self.paramsnames = np.r_[self.paramsnames, ms_params]
+        self.nparams = len(self.paramsnames)
+
+        #mapping coefficient names to indices to unique/parameter array
+        self.paramsidx = OrderedDict((name, idx) for (idx, name) in
+                              enumerate(self.paramsnames))
+
+        if DEBUG:
+            print self.paramsnames
+            print self.paramsidx
+            print self.nparams
 
     def xbetas(self, params):
         """the Utilities V_i
@@ -252,30 +292,18 @@ class MXLogit(LikelihoodModel):
                                       params[self.beta_ind[ii]])
         return res
 
-    def drawnvalues(self):
+    def drawndistri(self, params):
         """
-
         """
-        # TODO : implement test
-        # from math import sqrt
-        # sqrt(210)/2 # the ratio should be small (See Train, 2001)
+        dv = np.empty((len(self.haltonsequence), len(self.n_ramdon)))
 
-        haltonsequence = halton(self.num_rparam, self.draws)
+        for ii, name in enumerate(self.n_ramdon):
+            mean = params[self.paramsidx['mean_' + name]]
+            std = params[self.paramsidx['sd_' + name]]
+            hs = self.haltonsequence[:, ii]
+            dv[:, ii] = stats.norm.ppf(hs, mean, std)
 
-        # TODO: set user-provided dist
-        # TODO: estimate loc and scale as part of the estimation procedure
-        # Initial values of:
-        #    means -> coeficients from conditional logit
-        #    standart deviations -> 0.1
-        # see fit
-
-        # haltonsequence = halton(1, 5)
-        # drawnvalues = stats.norm.ppf(haltonsequence,-0.016, 0.1 )
-        if DEBUG:
-            print "___working in haltonsequence"
-
-        haltonsequence = halton(1, self.draws)
-        self.dv = stats.norm.ppf(haltonsequence, self.mean, self.std)
+        self.dv = dv
 
         return self.dv
 
@@ -314,13 +342,21 @@ class MXLogit(LikelihoodModel):
         """
         if DEBUG:
             print "___working in average"
-
         prob_average = []
-        self.drawnvalues()
-        for ii in self.dv:
-            params[0] = ii  # numpy.ndarray
-            xb = self.xbetas(params)
-            prob_average.append(self.cdf(xb))
+
+        self.drawndistri(params)
+
+        for jj in range(self.dv.shape[0]):
+                if DEBUG:
+                    print self.values_ramdon
+                    print self.dv[jj]
+
+                params[self.values_ramdon] = self.dv[jj]  # numpy.ndarray
+
+                if DEBUG:
+                    print params
+                xb = self.xbetas(params)
+                prob_average.append(self.cdf(xb))
 
         if DEBUG:
             print "___returning to average"
@@ -355,13 +391,19 @@ class MXLogit(LikelihoodModel):
 
         so, the simulated log-likelihood:
 
-        .. math:: \LL = \sum_{n=1}^{N} \sum_{j=0}^{J} d_{ij} \ln \bar{P}_{nj} </math>
+        .. math:: \LL = \sum_{n=1}^{N} \sum_{j=0}^{J} d_{ij} \ln \bar{P}_{nj}
 
         where :math:`d_{ij}=1` if individual `i` chose alternative `j` and 0
         if not.
         """
         if DEBUG:
             print "___working in loglike"
+            print params
+
+        for name in self.n_ramdon:
+            std = params[self.paramsidx['sd_' + name]]
+            std = 1e-8 if std < 1e-8 else std
+            params[self.paramsidx['sd_' + name]] = std
 
         loglike = (self.endog_bychoices *
                     np.log(self.cdf_average(params))).sum(1)
@@ -382,7 +424,7 @@ class MXLogit(LikelihoodModel):
         from statsmodels.tools.numdiff import approx_hess
         return approx_hess(params, self.loglike)
 
-    def fit(self, start_params=None, maxiter=10000, maxfun=5000,
+    def fit(self, start_params=None, maxiter=5000, maxfun=5000,
             method='bfgs', full_output=1, disp=None, callback=None, **kwds):
         """
         Fits MXLogit() model using maximum likelihood.
@@ -393,25 +435,27 @@ class MXLogit(LikelihoodModel):
         See: GenericLikelihoodModelResults
 
         """
-
-        if DEBUG:
-            print "_working on fit"
+        start_time = time.time()
 
         if start_params is None:
 
             if DEBUG:
                 print "__working on start params"
 
-        # TODO: func_params
-            self.mean = -0.01550155  # set to check with R results
-            self.std = 0.00027105    # set to check with R results
-#            self.mean = -0.016 # loc
-#            self.std = 1.0  # scale
             Logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
-            # func_params = np.array([self.mean, self.std])
-            # start_params = np.r_[Logit_res.params.values,
-            #                      func_params]
-            start_params =  Logit_res.params
+
+            # Initial values of:
+            # means -> coeficients from conditional logit
+            # standart deviations -> 0.1
+            func_params = []
+
+            for rand in self.values_ramdon:
+                mean = Logit_res.params[rand] # loc
+                func_params.append(mean)
+                sd = 0.1 # loc
+                func_params.append(sd)
+
+            start_params = np.r_[Logit_res.params, func_params]
 
             if DEBUG:
                 print "start_params", start_params
@@ -424,7 +468,6 @@ class MXLogit(LikelihoodModel):
         if DEBUG:
             print "___working on fit"
 
-        start_time = time.time()
         model_fit = super(MXLogit, self).fit(disp = disp,
                                             start_params = start_params,
                                             method=method, maxiter=maxiter,
@@ -523,8 +566,8 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
         mxlogit_null_mod = model.__class__(endog_data = model.endog_data,
                                            exog_data = model.exog_data,
                                            V = V_null,
-                                           random_params = random_params,
-                                           draws = draws,
+                                           NORMAL = [],
+                                           draws = 0,
                                            ncommon = 0,
                                            ref_level = model.ref_level,
                                            name_intercep = model.name_intercept)
@@ -601,10 +644,10 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
                      ('Df Residuals:', [self.model.df_resid]),
                      ('Df Model:', [self.model.df_model]),
                      ('Log-Likelihood:', None),
-                     ('LL-Null (constant only):', ["%#8.5g" % self.llnull]),
-                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
-                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue]),
-                     ('Likelihood ratio test:', ["%#8.5g" %self.llrt]),
+#                     ('LL-Null (constant only):', ["%#8.5g" % self.llnull]),
+#                     ('Pseudo R-squ.:', ["%#6.4g" % self.prsquared]),
+#                     ('LLR p-value:', ["%#6.4g" % self.llr_pvalue]),
+#                     ('Likelihood ratio test:', ["%#8.5g" %self.llrt]),
                      ('AIC:', ["%#8.5g" %self.aic])
 
                                      ]
@@ -635,7 +678,8 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
         # TODO
         # for ramdom parameters
         mydata = [self.model.satpar, self.params]
-        mystubs = self.model.exog_names
+        aa =  self.model.exog_names + self.model.ms_params
+        mystubs = aa
         myheaders = ["Initial Params:", "Params: "]
 
         mytitle = ("Params MXLogit")
@@ -643,6 +687,7 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
                           data_fmts = ["%5.4f"])
         smry.tables.append(tb2)
         return smry
+
 
 
 if __name__ == "__main__":
@@ -667,7 +712,6 @@ if __name__ == "__main__":
     y, X = dmatrices(f, df, return_type='dataframe')
 
     # Set up model
-
     # Names of the variables for the utility function for each alternative
     # variables with common coefficients have to be first in each array
     # the order should be the same as sequence in data
@@ -682,22 +726,28 @@ if __name__ == "__main__":
 
     # Number of common coefficients
     ncommon = 2
-    # Random coefficients and distributions
-    random_params = OrderedDict((
-        ('gc', stats.norm),
-        ))
+
+    # Random coefficients and distributions (By now, only Normal)
+    # TODO: add Uniform, Triangular and Log-nomal
+
+    NORMAL = ['gc']
 
     # Number of draws used for simulation
     # eg: 50 for draf model, 1000 for final model
     draws = 50
 
     # Describe model
+    ref_level = 'car'
+    name_intercept = 'Intercept'
     mxlogit_mod = MXLogit(endog_data = y, exog_data = X,  V = V,
-                          random_params = random_params, draws = draws,
-                          ncommon = ncommon, ref_level = 'car',
-                          name_intercept = 'Intercept')
+                          NORMAL = NORMAL, draws = draws,
+                          ncommon = ncommon, ref_level = ref_level,
+                          name_intercept = name_intercept)
+
     # Fit model
-    mxlogit_res = mxlogit_mod.fit(method = "bfgs", disp = 1)
+#    mxlogit_res = mxlogit_mod.fit(method = "bfgs", disp = 1)
+#    print mxlogit_res.params
+#    print mxlogit_res.llf
 
     # Summarize model
     # TODO means and standard errors for mixed logit parameters
