@@ -60,6 +60,7 @@ from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 from halton_sequence import halton
 
+
 class MXLogit(LikelihoodModel):
     __doc__ = """
     Mixed Logit
@@ -701,38 +702,3 @@ if __name__ == "__main__":
     # Summarize model
     # TODO means and standard errors for mixed logit parameters
     print mxlogit_mod.summary()
-
-    # R results
-
-    #mlogit(formula = choice ~ gc + ttme + hinc_air, data = TravelMode,
-    #    reflevel = "car", rpar = c(gc = "n"), R = 50, shape = "long",
-    #    alt.var = "mode")
-    #
-    #Frequencies of alternatives:
-    #    car     air   train     bus
-    #0.28095 0.27619 0.30000 0.14286
-    #
-    #bfgs method
-    #16 iterations, 0h:0m:4s
-    #g'(-H)^-1g = 1.33E-07
-    #gradient close to zero
-    #
-    #Coefficients :
-    #                     Estimate  Std. Error  t-value  Pr(>|t|)
-    #air:(intercept)    5.20736267  0.77769684   6.6959 2.144e-11 ***
-    #train:(intercept)  3.86902862  0.44728704   8.6500 < 2.2e-16 ***
-    #bus:(intercept)    3.16319599  0.43712507   7.2364 4.610e-13 ***
-    #gc                -0.01550155  0.00410559  -3.7757 0.0001595 ***
-    #ttme              -0.09612401  0.00809057 -11.8810 < 2.2e-16 ***
-    #hinc_air           0.01328820  0.01209832   1.0984 0.2720515
-    #sd.gc              0.00027105  0.13136215   0.0021 0.9983537
-    #---
-    #Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-    #
-    #Log-Likelihood: -199.13
-    #McFadden R^2:  0.29825
-    #Likelihood ratio test : chisq = 169.26 (p.value = < 2.22e-16)
-    #
-    #random coefficients
-    #   Min.     1st Qu.      Median        Mean     3rd Qu. Max.
-    #gc -Inf -0.01568437 -0.01550155 -0.01550155 -0.01531873  Inf
