@@ -66,6 +66,8 @@ class Independence(VarStruct):
     An independence working dependence structure.
     """
 
+    dparams = np.r_[[]]
+
     # Nothing to update
     def update(self, beta, parent):
         return
@@ -125,11 +127,12 @@ class Exchangeable(VarStruct):
 
     def variance_matrix(self, expval, index):
         dim = len(expval)
-        return self.dparams * np.ones((dim, dim), dtype=np.float64) + \
+        return self.dparams * np.ones((dim, dim), dtype=np.float64) +\
                                 (1 - self.dparams) * np.eye(dim), True
 
     def summary(self):
-        return "The correlation between two observations in the same cluster is %.3f" % self.dparams
+        return "The correlation between two observations in the "\
+            "same cluster is %.3f" % self.dparams
 
 
 
@@ -297,7 +300,8 @@ class Nested(VarStruct):
 
         # Use least squares regression to estimate the variance
         # components
-        vcomp_coeff = np.dot(self.designx_v, np.dot(self.designx_u.T, dvmat) /\
+        vcomp_coeff = np.dot(self.designx_v, np.dot(self.designx_u.T,
+                                                    dvmat) /\
                                  self.designx_s)
 
         self.vcomp_coeff = np.clip(vcomp_coeff, 0, np.inf)
@@ -327,7 +331,8 @@ class Nested(VarStruct):
         msg = "Variance estimates\n------------------\n"
         for k in range(len(self.vcomp_coeff)):
             msg += "Component %d: %.3f\n" % (k+1, self.vcomp_coeff[k])
-        msg += "Residual: %.3f\n" % (self.scale_inv - np.sum(self.vcomp_coeff))
+        msg += "Residual: %.3f\n" % (self.scale_inv -
+                                     np.sum(self.vcomp_coeff))
         return msg
 
 
@@ -418,7 +423,8 @@ class Autoregressive(VarStruct):
         cached_means = parent.cached_means
 
         # Weights
-        var = (1 - self.dparams**(2 * designx)) / (1 - self.dparams**2)
+        var = (1 - self.dparams**(2 * designx)) /\
+            (1 - self.dparams**2)
         wts = 1 / var
         wts /= wts.sum()
 
@@ -480,13 +486,14 @@ class Autoregressive(VarStruct):
 
     def summary(self):
 
-        print "Autoregressive(1) dependence parameter: %.3f\n" % self.dparams
+        print "Autoregressive(1) dependence parameter: %.3f\n" %\
+            self.dparams
 
 
 
 class GlobalOddsRatio(VarStruct):
     """
-    Estimate the global `qodds ratio for a GEE with either ordinal or
+    Estimate the global odds ratio for a GEE with either ordinal or
     nominal data.
 
     References

@@ -18,18 +18,21 @@ correlated data", Biometrika, 77, 485-497.
 Xu Guo and Wei Pan (2002). "Small sample performance of the score
 test in GEE".
 http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
+
+LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
+improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
 
 
 import numpy as np
 from scipy import stats
+from scipy import linalg as spl
 from statsmodels.tools.decorators import cache_readonly, \
     resettable_cache
 import statsmodels.base.model as base
 from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import VarStruct
-from scipy.stats import norm
 
 
 
@@ -415,13 +418,20 @@ class GEE(base.Model):
                 vmat *= np.outer(sdev, sdev)
 
             try:
-                vinv_d = np.linalg.solve(vmat, dmat)
+                vco = spl.cho_factor(vmat)
             except np.linalg.LinAlgError:
-                return None, None
+                return None,None
+
+            #try:
+            #    vinv_d = np.linalg.solve(vmat, dmat)
+            #except np.linalg.LinAlgError:
+            #    return None, None
+            vinv_d = spl.cho_solve(vco, dmat)
             bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
-            vinv_resid = np.linalg.solve(vmat, resid)
+            #vinv_resid = np.linalg.solve(vmat, resid)
+            vinv_resid = spl.cho_solve(vco, resid)
             score += np.dot(dmat.T, vinv_resid)
 
         update = np.linalg.solve(bmat, score)
@@ -509,17 +519,21 @@ class GEE(base.Model):
                 vmat *= np.outer(sdev, sdev)
 
             try:
-                vinv_d = np.linalg.solve(vmat, dmat)
+                vco = spl.cho_factor(vmat)
             except np.linalg.LinAlgError:
                 warnings.warn("Singular matrix encountered in GEE "
                               "covariance estimation",
                               ConvergenceWarning)
-                return None, None, None, None
+                return None,None,None,None
+
+            vinv_d = spl.cho_solve(vco, dmat)
+            #vinv_d = np.linalg.solve(vmat, dmat)
 
             bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
-            vinv_resid = np.linalg.solve(vmat, resid)
+            #vinv_resid = np.linalg.solve(vmat, resid)
+            vinv_resid = spl.cho_solve(vco, resid)
             dvinv_resid = np.dot(dmat.T, vinv_resid)
             cmat += np.outer(dvinv_resid, dvinv_resid)
 
@@ -549,13 +563,20 @@ class GEE(base.Model):
                 vmat *= np.outer(sdev, sdev)
             vmat /= scale
 
-            vinv_d = np.linalg.solve(vmat, dmat)
+            try:
+                vco = spl.cho_factor(vmat)
+            except np.linalg.LinAlgError:
+                return None,None
+
+            #vinv_d = np.linalg.solve(vmat, dmat)
+            vinv_d = spl.cho_solve(vco, dmat)
             hmat = np.dot(vinv_d, naive_covariance)
             hmat = np.dot(hmat, dmat.T).T
 
             resid = endog[i] - expval
             aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
-            srt = np.dot(dmat.T, np.linalg.solve(vmat, aresid))
+            #srt = np.dot(dmat.T, np.linalg.solve(vmat, aresid))
+            srt = np.dot(dmat.T, spl.cho_solve(vco, aresid))
             bcm += np.outer(srt, srt)
 
         robust_covariance_bc = np.dot(naive_covariance,
@@ -1492,7 +1513,7 @@ class GEEMargins(object):
     @cache_readonly
     def pvalues(self):
         _check_at_is_all(self.margeff_options)
-        return norm.sf(np.abs(self.tvalues)) * 2
+        return stats.norm.sf(np.abs(self.tvalues)) * 2
 
     def conf_int(self, alpha=.05):
         """
@@ -1512,7 +1533,7 @@ class GEEMargins(object):
         """
         _check_at_is_all(self.margeff_options)
         me_se = self.margeff_se
-        q = norm.ppf(1 - alpha / 2)
+        q = stats.norm.ppf(1 - alpha / 2)
         lower = self.margeff - q * me_se
         upper = self.margeff + q * me_se
         return np.asarray(zip(lower, upper))
