@@ -381,6 +381,46 @@ class GMM(object):
         #TODO: add other optimization options and results
         return optimizer(self.gmmobjective, start, args=(weights,), disp=1, **opt_args)
 
+
+    def fitgmm_cu(self, start, method='bfgs', opt_args=None):
+        '''estimate parameters using continuously updating GMM
+
+        Parameters
+        ----------
+        start : array_like
+            starting values for minimization
+
+        Returns
+        -------
+        paramest : array
+            estimated parameters
+
+        Notes
+        -----
+        todo: add fixed parameter option, not here ???
+
+        uses scipy.optimize.fmin
+
+        '''
+##        if not fixed is None:  #fixed not defined in this version
+##            raise NotImplementedError
+
+        if opt_args is None:
+            opt_args = {}
+
+        if method == 'nm':
+            optimizer = optimize.fmin
+        elif method == 'bfgs':
+            optimizer = optimize.fmin_bfgs
+        elif method == 'ncg':
+            optimizer = optimize.fmin_ncg
+        else:
+            raise ValueError('optimizer method not available')
+
+        #TODO: add other optimization options and results
+        return optimizer(self.gmmobjective_cu, start, args=(), disp=1, **opt_args)
+
+
     def gmmobjective(self, params, weights):
         '''
         objective function for GMM minimization
@@ -400,6 +440,30 @@ class GMM(object):
         '''
         moms = self.momcond(params)
         return np.dot(np.dot(moms.mean(0),weights), moms.mean(0))
+
+
+    def gmmobjective_cu(self, params, weights_method='momcov',
+                        wargs=()):
+        '''
+        objective function for continuously updating  GMM minimization
+
+        Parameters
+        ----------
+        params : array
+            parameter values at which objective is evaluated
+
+        Returns
+        -------
+        jval : float
+            value of objective function
+
+        '''
+        moms = self.momcond(params)
+        inv_weights = self.calc_weightmatrix(moms, method=weights_method,
+                                             wargs=wargs)
+        weights = np.linalg.pinv(inv_weights)
+        self._weights_cu = weights  # store if we need it later
+        return np.dot(np.dot(moms.mean(0), weights), moms.mean(0))
 
 
     def fititer(self, start, maxiter=2, start_weights=None,
