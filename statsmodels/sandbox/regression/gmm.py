@@ -85,6 +85,13 @@ class IV2SLS(LikelihoodModel):
     in exog are not supposed to be instrumented out, then these variables
     need also to be included in the instrument array.
 
+    TODO:
+    compared to Stata it looks like this doesn't currently use a
+    degrees of freedom correction, ratio of `bse` for an example with
+    `exog.shape = (758, 13)` is approximately
+    >>> np.sqrt(758. / (758 - 12))  # why not `- 13`
+    1.0080108089126418
+
 
     '''
 
@@ -138,7 +145,8 @@ class IV2SLS(LikelihoodModel):
 
         lfit = RegressionResults(self, params,
                        normalized_cov_params=self.normalized_cov_params)
-        self._results = lfit
+        self._results = lfit  # TODO : remove this
+        self._results_ols2nd = OLS(endog, xhat).fit()
         return lfit
 
     #copied from GLS, because I subclass currently LikelihoodModel and not GLS
@@ -266,11 +274,13 @@ class GMM(object):
         self.exog = exog
         self.instrument = instrument
         self.nmoms = nmoms or instrument.shape[1]
-        self.results = GMMResults()
         self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
 
-    def fit(self, start=None):
+    def fit(self, start=None, maxiter=10, inv_weights=None,
+                  weights_method='cov', wargs=(),
+                  has_optimal_weights=True,
+                  opt_method='bfgs', opt_args=None):
         '''
         Estimate the parameters using default settings.
 
@@ -301,13 +311,25 @@ class GMM(object):
         #bug: where does start come from ???
         if start is None:
             start = self.fitstart() #TODO: temporary hack
-        params, weights = self.fititer(start, maxiter=10, start_weights=None,
-                                        weights_method='cov', wargs=())
-        self.results.params = params
-        self.results.weights = weights
-        self.results.jval = self.gmmobjective(params, weights)
 
-        return self.results
+        if maxiter == 0:
+            weights = np.linalg.pinv(inv_weights)
+            params = self.fitgmm(start, weights=weights)
+        else:
+            params, weights = self.fititer(start,
+                                           maxiter=maxiter,
+                                           start_weights=inv_weights,
+                                           weights_method=weights_method,
+                                           wargs=wargs,
+                                           opt_args=opt_args)
+        results = GMMResults()
+        results.model = self
+        results.params = params
+        results.weights = weights
+        results.jval = self.gmmobjective(params, weights)
+
+        self.results = results # FIXME: remove, still keeping it temporarily
+        return results
 
 
     def fitgmm(self, start, weights=None, method='bfgs', opt_args=None):
@@ -381,7 +403,7 @@ class GMM(object):
 
 
     def fititer(self, start, maxiter=2, start_weights=None,
-                    weights_method='cov', wargs=()):
+                    weights_method='momcov', wargs=(), method='bfgs', opt_args=None):
         '''iterative estimation with updating of optimal weighting matrix
 
         stopping criteria are maxiter or change in parameter estimate less
@@ -426,14 +448,15 @@ class GMM(object):
         #args = (self.endog, self.exog, self.instrument)
         #args is not used in the method version
         for it in range(maxiter):
-            winv = np.linalg.inv(w)
+            winv = np.linalg.inv(w)  # FIXME: winv, w names reversed
             #this is still calling function not method
 ##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
 ##                            weightsoptimal=False)
-            resgmm = self.fitgmm(start, weights=winv)
+            resgmm = self.fitgmm(start, weights=winv, method=method,
+                                 opt_args=opt_args)
 
             moms = momcond(resgmm)
-            w = self.calc_weightmatrix(moms, method='momcov', wargs=())
+            w = self.calc_weightmatrix(moms, method=weights_method, wargs=())
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
@@ -520,21 +543,24 @@ class GMM(object):
 
         return gradmoms
 
+class GMMResults(object):
+    '''just a storage class right now'''
 
-    def cov_params(self, **kwds):  #TODO add options ???
-        if not hasattr(self.results, 'params'):
-            raise ValueError('the model has to be fit first')
+    def __init__(self, *args, **kwds):
+        self.__dict__.update(kwds)
 
-        if hasattr(self.results, '_cov_params'):
+
+    def cov_params(self, **kwds):  #TODO add options ???)
+
+        if hasattr(self, '_cov_params'):
             #replace with decorator later
-            return self.results._cov_params
+            return self._cov_params
 
-        gradmoms = self.gradient_momcond(self.results.params)
-        moms = self.momcond(self.results.params)
+        gradmoms = self.model.gradient_momcond(self.params)
+        moms = self.model.momcond(self.params)
         covparams = self.calc_cov_params(moms, gradmoms, **kwds)
-        self.results._cov_params = covparams
-        return self.results._cov_params
-
+        self._cov_params = covparams
+        return self._cov_params
 
 
     #still needs to be fully converted to method
@@ -557,7 +583,7 @@ class GMM(object):
 
         nobs = moms.shape[0]
         if weights is None:
-            omegahat = self.calc_weightmatrix(moms, method=method, wargs=wargs)
+            omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
             has_optimal_weights = True
             #add other options, Barzen, ...  longrun var estimators
         else:
@@ -599,9 +625,6 @@ class GMM(object):
         nparams = self.results.params.size #self.nparams
         return jstat, stats.chi2.sf(jstat, self.nmoms - nparams)
 
-class GMMResults(object):
-    '''just a storage class right now'''
-    pass
 
 class IVGMM(GMM):
     '''
