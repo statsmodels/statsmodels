@@ -512,7 +512,7 @@ class GMM(object):
         #args = (self.endog, self.exog, self.instrument)
         #args is not used in the method version
         for it in range(maxiter):
-            winv = np.linalg.inv(w)  # FIXME: winv, w names reversed
+            winv = np.linalg.pinv(w)  # FIXME: winv, w names reversed
             #this is still calling function not method
 ##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
 ##                            weightsoptimal=False)
@@ -520,7 +520,7 @@ class GMM(object):
                                  opt_args=opt_args)
 
             moms = momcond(resgmm)
-            w = self.calc_weightmatrix(moms, method=weights_method, wargs=())
+            w = self.calc_weightmatrix(moms, method=weights_method, wargs=wargs)
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
