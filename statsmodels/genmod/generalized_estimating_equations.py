@@ -694,8 +694,8 @@ class GEE(base.Model):
             self._update_assoc(beta)
 
         if fitlack >= ctol:
-            warnings.warn("Iteration reached prior to convergence",
-                          ConvergenceWarning)
+            warnings.warn("Iteration limit reached prior to "
+                          "convergence", ConvergenceWarning)
 
         if beta is None:
             warnings.warn("Unable to estimate GEE parameters.",
@@ -967,6 +967,7 @@ class GEEResults(base.LikelihoodModelResults):
                     ('Family:', [self.model.family.__class__.__name__]),
                     ('Dependence structure:', [self.model.varstruct.__class__.__name__]),
                     ('Date:', None),
+                    ('Covariance type: ', ['Robust',])
         ]
 
         NY = [len(y) for y in self.model.endog_li]
