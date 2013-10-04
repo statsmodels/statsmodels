@@ -15,7 +15,7 @@ sys.path.insert(0, df)
 
 import numpy as np
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
-    gee_setup_multicategorical, gee_ordinal_starting_values, \
+    gee_setup_ordinal, gee_setup_nominal, gee_ordinal_starting_values,\
     Multinomial, GEEMargins
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
@@ -149,10 +149,17 @@ def gendat_ordinal():
     os.dparams = [1.,]
     os.simulate()
 
-    os.endog_ex, os.exog_ex, os.group_ex, os.time_ex, \
-    os.offset_ex, os.nthresh = \
-        gee_setup_multicategorical(os.endog, os.exog, os.group,
-                                   os.time, os.offset, "ordinal")
+    data = np.concatenate((os.endog[:,None], os.exog,
+                           os.group[:,None]), axis=1)
+
+    os.endog_ex, os.exog_ex, os.intercepts, os.nthresh = \
+        gee_setup_ordinal(data, 0)
+
+    os.group_ex = os.exog_ex[:,-1]
+    os.exog_ex = os.exog_ex[:,0:-1]
+
+    os.exog_ex = np.concatenate((os.intercepts, os.exog_ex),
+                                axis=1)
 
     va = GlobalOddsRatio(4, "ordinal")
 
@@ -172,10 +179,13 @@ def gendat_nominal():
     ns.dparams = [1., ]
     ns.simulate()
 
-    ns.endog_ex, ns.exog_ex, ns.group_ex, ns.time_ex, \
-    ns.offset_ex, ns.nthresh = \
-        gee_setup_multicategorical(ns.endog, ns.exog, ns.group,
-                                   ns.time, ns.offset, "nominal")
+    data = np.concatenate((ns.endog[:,None], ns.exog,
+                           ns.group[:,None]), axis=1)
+
+    ns.endog_ex, ns.exog_ex, ns.exog_ne, ns.nlevel = \
+        gee_setup_nominal(data, 0, [3,])
+
+    ns.group_ex = ns.exog_ne[:,0]
 
     va = GlobalOddsRatio(3, "nominal")
 
@@ -197,7 +207,7 @@ if __name__ == '__main__':
     # Loop over data generating models
     gendats = [gendat_nominal, gendat_ordinal]
 
-    for gendat in gendats:
+    for jg,gendat in enumerate(gendats):
 
         dparams = []
         params = []
@@ -210,9 +220,12 @@ if __name__ == '__main__':
 
             beta = da.starting_values(0)
 
-            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
+            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, None,
                      mt, va)
             mdf = md.fit(starting_params = beta)
+
+            if mdf is None:
+                continue
 
             scale_inv = 1 / md.estimate_scale()
 
@@ -225,15 +238,20 @@ if __name__ == '__main__':
 
             beta = da.starting_values(constraint[0].shape[0])
 
-            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, da.time_ex,
+            md = GEE(da.endog_ex, da.exog_ex, da.group_ex, None,
                      mt, va, constraint=constraint)
             mdf = md.fit(starting_params = beta)
+
+            if mdf is None:
+                continue
 
             score = md.score_test_results
             pvalues.append(score["p-value"])
 
-
         dparams_mean = np.array(sum(dparams) / len(dparams))
+
+        OUT.write("%s data.\n" % ("Nominal", "Ordinal")[jg])
+        OUT.write("%d runs converged successfully.\n" % len(pvalues))
 
         OUT.write("Checking dependence parameters:\n")
         da.print_dparams(dparams_mean)
