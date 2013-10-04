@@ -310,7 +310,7 @@ class GMM(object):
         return self.results
 
 
-    def fitgmm(self, start, weights=None):
+    def fitgmm(self, start, weights=None, method='bfgs', opt_args=None):
         '''estimate parameters using GMM
 
         Parameters
@@ -342,8 +342,22 @@ class GMM(object):
         if weights is None:
             weights = np.eye(self.nmoms)
 
+        if opt_args is None:
+            opt_args = {}
+
+        if method == 'nm':
+            optimizer = optimize.fmin
+        elif method == 'bfgs':
+            optimizer = optimize.fmin_bfgs
+        elif method == 'ncg':
+            optimizer = optimize.fmin_ncg
+        else:
+            raise ValueError('optimizer method not available')
+
+        print np.linalg.det(weights)
+
         #TODO: add other optimization options and results
-        return optimize.fmin(self.gmmobjective, start, (weights,), disp=0)
+        return optimizer(self.gmmobjective, start, args=(weights,), disp=1, **opt_args)
 
     def gmmobjective(self, params, weights):
         '''
