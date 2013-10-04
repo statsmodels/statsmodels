@@ -422,15 +422,10 @@ class GEE(base.Model):
             except np.linalg.LinAlgError:
                 return None,None
 
-            #try:
-            #    vinv_d = np.linalg.solve(vmat, dmat)
-            #except np.linalg.LinAlgError:
-            #    return None, None
             vinv_d = spl.cho_solve(vco, dmat)
             bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
-            #vinv_resid = np.linalg.solve(vmat, resid)
             vinv_resid = spl.cho_solve(vco, resid)
             score += np.dot(dmat.T, vinv_resid)
 
@@ -527,12 +522,10 @@ class GEE(base.Model):
                 return None,None,None,None
 
             vinv_d = spl.cho_solve(vco, dmat)
-            #vinv_d = np.linalg.solve(vmat, dmat)
 
             bmat += np.dot(dmat.T, vinv_d)
 
             resid = endog[i] - expval
-            #vinv_resid = np.linalg.solve(vmat, resid)
             vinv_resid = spl.cho_solve(vco, resid)
             dvinv_resid = np.dot(dmat.T, vinv_resid)
             cmat += np.outer(dvinv_resid, dvinv_resid)
@@ -568,14 +561,12 @@ class GEE(base.Model):
             except np.linalg.LinAlgError:
                 return None,None
 
-            #vinv_d = np.linalg.solve(vmat, dmat)
             vinv_d = spl.cho_solve(vco, dmat)
             hmat = np.dot(vinv_d, naive_covariance)
             hmat = np.dot(hmat, dmat.T).T
 
             resid = endog[i] - expval
             aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
-            #srt = np.dot(dmat.T, np.linalg.solve(vmat, aresid))
             srt = np.dot(dmat.T, spl.cho_solve(vco, aresid))
             bcm += np.outer(srt, srt)
 
