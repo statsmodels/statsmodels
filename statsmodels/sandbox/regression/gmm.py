@@ -146,7 +146,7 @@ class IV2SLS(LikelihoodModel):
         lfit = RegressionResults(self, params,
                        normalized_cov_params=self.normalized_cov_params)
         self._results = lfit  # TODO : remove this
-        self._results_ols2nd = OLS(endog, xhat).fit()
+        self._results_ols2nd = OLS(y, xhat).fit()
         return lfit
 
     #copied from GLS, because I subclass currently LikelihoodModel and not GLS
@@ -261,6 +261,9 @@ class GMM(object):
     are still missing in several methods.
 
 
+    TODO:
+    currently onestep (maxiter=0) still produces an updated estimate of bse
+    and cov_params.
 
     '''
 
@@ -315,6 +318,7 @@ class GMM(object):
         if maxiter == 0:
             weights = np.linalg.pinv(inv_weights)
             params = self.fitgmm(start, weights=weights)
+            weights_ = weights  # temporary alias used in jval
         else:
             params, weights = self.fititer(start,
                                            maxiter=maxiter,
@@ -322,11 +326,15 @@ class GMM(object):
                                            weights_method=weights_method,
                                            wargs=wargs,
                                            opt_args=opt_args)
+            # TODO weights returned by fititer is inv_weights
+            weights_ = np.linalg.pinv(weights)
         results = GMMResults()
         results.model = self
         results.params = params
         results.weights = weights
-        results.jval = self.gmmobjective(params, weights)
+        results.q = self.gmmobjective(params, weights_)
+        # nobs_moms attached by momcond_mean
+        results.jval = results.q * self.nobs_moms
 
         self.results = results # FIXME: remove, still keeping it temporarily
         return results
@@ -371,6 +379,8 @@ class GMM(object):
             optimizer = optimize.fmin
         elif method == 'bfgs':
             optimizer = optimize.fmin_bfgs
+            # TODO: add score
+            opt_args['fprime'] = self.score #lambda params: self.score(params, weights)
         elif method == 'ncg':
             optimizer = optimize.fmin_ncg
         else:
@@ -438,8 +448,10 @@ class GMM(object):
             value of objective function
 
         '''
-        moms = self.momcond(params)
-        return np.dot(np.dot(moms.mean(0),weights), moms.mean(0))
+        moms = self.momcond_mean(params)
+        return np.dot(np.dot(moms, weights), moms)
+        #moms = self.momcond(params)
+        #return np.dot(np.dot(moms.mean(0),weights), moms.mean(0))
 
 
     def gmmobjective_cu(self, params, weights_method='momcov',
@@ -524,7 +536,9 @@ class GMM(object):
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
+                # TODO: set has_optimal_weights = True
                 break
+
             start = resgmm
         return resgmm, w
 
@@ -594,7 +608,9 @@ class GMM(object):
         '''
 
         #endog, exog = args
-        return self.momcond(params).mean(0)
+        momcond = self.momcond(params)
+        self.nobs_moms, self.k_moms = momcond.shape
+        return momcond.mean(0)
 
     def gradient_momcond(self, params, epsilon=1e-4, method='centered'):
 
@@ -606,6 +622,15 @@ class GMM(object):
             gradmoms = approx_fprime(params, momcond, epsilon=epsilon)
 
         return gradmoms
+
+    def score(self, params, weights, epsilon=1e-4, centered=True):
+
+        deriv = approx_fprime(params, self.gmmobjective, args=(weights,),
+                              centered=centered)
+
+        return deriv
+
+
 
 class GMMResults(object):
     '''just a storage class right now'''
@@ -646,15 +671,19 @@ class GMMResults(object):
         '''
 
         nobs = moms.shape[0]
+        omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
         if weights is None:
-            omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
-            has_optimal_weights = True
+            #omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
+            #has_optimal_weights = True
             #add other options, Barzen, ...  longrun var estimators
+            weights = self.weights
         else:
-            omegahat = weights   #2 different names used,
+            pass
+            #omegahat = weights   #2 different names used,
             #TODO: this is wrong, I need an estimate for omega
 
         if has_optimal_weights: #has_optimal_weights:
+            # TOD0 make has_optimal_weights depend on convergence or iter >2
             cov = np.linalg.inv(np.dot(gradmoms.T,
                                        np.dot(np.linalg.inv(omegahat), gradmoms)))
         else:
@@ -685,8 +714,8 @@ class GMMResults(object):
         what's the normalization in jval ?
         '''
 
-        jstat = self.results.jval
-        nparams = self.results.params.size #self.nparams
+        jstat = self.jval
+        nparams = self.params.size #self.nparams
         return jstat, stats.chi2.sf(jstat, self.nmoms - nparams)
 
 
@@ -702,15 +731,18 @@ class IVGMM(GMM):
     def fitstart(self):
         return np.zeros(self.exog.shape[1])
 
+    def get_error(self, params):
+        return self.endog - np.dot(self.exog, params)
+
     def momcond(self, params):
-        endog, exog, instrum = self.endog, self.exog, self.instrument
-        return instrum * (endog - np.dot(exog, params))[:,None]
+        instrument = self.instrument
+        return instrument * self.get_error(params)[:,None]
+
 
 #not tried out yet
-class NonlinearIVGMM(GMM):
+class NonlinearIVGMM(IVGMM):
     '''
-    Class for linear instrumental variables estimation with homoscedastic
-    errors
+    Class for non-linear instrumental variables estimation with GMM
 
     currently mainly a test case, not checked yet
 
@@ -720,12 +752,12 @@ class NonlinearIVGMM(GMM):
         #might not make sense for more general functions
         return np.zeros(self.exog.shape[1])
 
-    def __init__(self, endog, exog, instrument, **kwds):
+    def __init__(self, endog, exog, instrument, func, **kwds):
         self.func = func
+        super(NonlinearIVGMM, self).__init__(endog, exog, instrument)
 
-    def momcond(self, params):
-        endog, exog, instrum = self.endog, self.exog, self.instrument
-        return instrum * (endog - self.func(params, exog))[:,None]
+    def get_error(self, params):
+        return self.endog - self.func(self.exog, params)
 
 
 def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
