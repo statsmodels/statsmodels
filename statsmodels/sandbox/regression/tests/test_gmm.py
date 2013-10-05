@@ -146,6 +146,44 @@ idx = idx[1:] + idx[:1]
 exog_st = exog[:, idx]
 
 
+class TestGMMOLS(object):
+
+    @classmethod
+    def setup_class(self):
+        exog = exog_st  # with const at end
+        res_ols = OLS(endog, exog).fit()
+
+        #  use exog as instrument
+        nobs, k_instr = exog.shape
+        w0inv = np.dot(exog.T, exog) / nobs
+        #w0 = np.linalg.inv(w0inv)
+
+        mod = gmm.IVGMM(endog, exog, exog)
+        res = mod.fit(np.ones(exog.shape[1], float), maxiter=0, inv_weights=w0inv,
+                        opt_method='bfgs', opt_args={'gtol':1e-6})
+
+        self.res1 = res
+        self.res2 = res_ols
+
+
+    def test_basic(self):
+        res1, res2 = self.res1, self.res2
+        # test both absolute and relative difference
+        assert_allclose(res1.params, res2.params, rtol=5e-4, atol=0)
+        assert_allclose(res1.params, res2.params, rtol=0, atol=1e-5)
+
+        n = res1.model.exog.shape[0]
+        dffac = 1#np.sqrt((n - 1.) / n)   # currently different df in cov calculation
+        assert_allclose(res1.bse * dffac, res2.HC0_se, rtol=5e-6, atol=0)
+        assert_allclose(res1.bse * dffac, res2.HC0_se, rtol=0, atol=1e-7)
+
+
+    def test_other(self):
+        res1, res2 = self.res1, self.res2
+
+
+
+
 class CheckGMM(object):
 
     def test_basic(self):
@@ -155,7 +193,7 @@ class CheckGMM(object):
         assert_allclose(res1.params, res2.params, rtol=0, atol=5e-6)
 
         n = res1.model.exog.shape[0]
-        dffac = np.sqrt((n - 1.) / n)   # currently different df in cov calculation
+        dffac = 1 #np.sqrt((n - 1.) / n)   # currently different df in cov calculation
         assert_allclose(res1.bse * dffac, res2.bse, rtol=5e-7, atol=0)
         assert_allclose(res1.bse * dffac, res2.bse, rtol=0, atol=1e-7)
 
