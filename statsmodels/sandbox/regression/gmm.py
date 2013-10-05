@@ -85,12 +85,9 @@ class IV2SLS(LikelihoodModel):
     in exog are not supposed to be instrumented out, then these variables
     need also to be included in the instrument array.
 
-    TODO:
-    compared to Stata it looks like this doesn't currently use a
-    degrees of freedom correction, ratio of `bse` for an example with
-    `exog.shape = (758, 13)` is approximately
-    >>> np.sqrt(758. / (758 - 12))  # why not `- 13`
-    1.0080108089126418
+    Degrees of freedom in the calculation of the standard errors uses
+    `df_resid = (nobs - k_vars)`.
+    (This corresponds to the `small` option in Stata's ivreg2.)
 
 
     '''
@@ -101,7 +98,7 @@ class IV2SLS(LikelihoodModel):
         # where is this supposed to be handled
         #Note: Greene p.77/78 dof correction is not necessary (because only
         #       asy results), but most packages do it anyway
-        self.df_resid = exog.shape[0] - exog.shape[1] + 1
+        self.df_resid = exog.shape[0] - exog.shape[1]
 
     def initialize(self):
         self.wendog = self.endog

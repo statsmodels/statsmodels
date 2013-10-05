@@ -89,8 +89,8 @@ def test_iv2sls_r():
 
     assert_allclose(res.params, params, rtol=1e-7, atol=1e-9)
     # TODO: check df correction
-    assert_allclose(res.bse * np.sqrt((n - k) / (n - k - 1.)), bse,
-                    rtol=0, atol=3e-7)
+    #assert_allclose(res.bse * np.sqrt((n - k) / (n - k - 1.)), bse,
+    assert_allclose(res.bse, bse, rtol=0, atol=3e-7)
 
 
 
@@ -208,6 +208,7 @@ class TestGMMSt1(CheckGMM):
 
     @classmethod
     def setup_class(self):
+        # compare to Stata default options, iterative GMM
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -220,4 +221,39 @@ class TestGMMSt1(CheckGMM):
         self.res1 = res10
 
         from results_gmm_griliches_iter import results
+        self.res2 = results
+
+
+class CheckIV2SLS(object):
+
+    def test_basic(self):
+        res1, res2 = self.res1, self.res2
+        # test both absolute and relative difference
+        assert_allclose(res1.params, res2.params, rtol=1e-9, atol=0)
+        assert_allclose(res1.params, res2.params, rtol=0, atol=1e-10)
+
+        n = res1.model.exog.shape[0]
+        assert_allclose(res1.bse, res2.bse, rtol=1e-10, atol=0)
+        assert_allclose(res1.bse, res2.bse, rtol=0, atol=1e-11)
+
+    def test_other(self):
+        res1, res2 = self.res1, self.res2
+        assert_allclose(res1.rsquared, res2.r2, rtol=1e-7, atol=0)
+        assert_allclose(res1.ssr, res2.rss, rtol=1e-10, atol=0)
+
+
+
+class TestIV2SLSSt1(CheckIV2SLS):
+
+    @classmethod
+    def setup_class(self):
+        exog = exog_st  # with const at end
+        start = OLS(endog, exog).fit().params
+        nobs, k_instr = instrument.shape
+
+        mod = gmm.IV2SLS(endog, exog, instrument)
+        res = mod.fit()
+        self.res1 = res
+
+        from results_ivreg2_griliches import results_small as results
         self.res2 = results
