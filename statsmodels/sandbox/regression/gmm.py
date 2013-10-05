@@ -267,7 +267,8 @@ class GMM(object):
 
     '''
 
-    def __init__(self, endog, exog, instrument, nmoms=None, **kwds):
+    def __init__(self, endog, exog, instrument, k_moms=None, k_params=None,
+                  **kwds):
         '''
         maybe drop and use mixin instead
 
@@ -276,7 +277,8 @@ class GMM(object):
         self.endog = endog
         self.exog = exog
         self.instrument = instrument
-        self.nmoms = nmoms or instrument.shape[1]
+        self.nmoms = k_moms or instrument.shape[1]
+        self.k_params = k_params or exog.shape[1]
         self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
 
@@ -583,13 +585,21 @@ class GMM(object):
         Hansen, Bruce
 
         '''
-        nobs = moms.shape[0]
+        nobs, k_moms = moms.shape
         if method == 'momcov':
-            w = np.cov(moms, rowvar=0)
-        elif method == 'fakekernel':
+            w = np.cov(moms, rowvar=0, bias=True) #  divide by n
+            if 'ddof' in wargs:
+                if wargs['ddof'] == 'k_params':
+                    w = w * nobs * 1. / (nobs - self.k_params)
+                else:
+                    w = w * nobs * 1. / (nobs - wargs['ddof'])
+
+        elif method == 'flatkernel':
             #uniform cut-off window
+            if not 'maxlag' in wargs:
+                raise ValueError('flatkernel requires maxlag')
             moms_centered = moms - moms.mean()
-            maxlag = 5
+            maxlag = wargs['maxlag']
             h = np.ones(maxlag)
             w = np.dot(moms.T, moms)/nobs
             for i in range(1,maxlag+1):
