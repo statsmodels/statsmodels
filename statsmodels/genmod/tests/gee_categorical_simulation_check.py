@@ -15,11 +15,11 @@ sys.path.insert(0, df)
 
 import numpy as np
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
-    gee_setup_ordinal, gee_setup_nominal, gee_ordinal_starting_values,\
-    Multinomial, GEEMargins
+    gee_setup_ordinal, gee_setup_nominal,\
+    gee_ordinal_starting_values, Multinomial, GEEMargins
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
-    Independence,GlobalOddsRatio,Autoregressive,Nested
+    Independence, GlobalOddsRatio, Autoregressive, Nested
 import statsmodels.formula.api as sm
 from itertools import product
 from scipy import stats
@@ -88,7 +88,6 @@ class ordinal_simulator(GEE_simulator):
 
 
 class nominal_simulator(GEE_simulator):
-
 
     def starting_values(self, nconstraints):
         return None
@@ -192,7 +191,7 @@ def gendat_nominal():
     lhs = np.array([[0., 1., 1, 0],])
     rhs = np.r_[0.,]
 
-    return ns, va, Multinomial(2), (lhs, rhs)
+    return ns, va, Multinomial(3), (lhs, rhs)
 
 
 if __name__ == '__main__':

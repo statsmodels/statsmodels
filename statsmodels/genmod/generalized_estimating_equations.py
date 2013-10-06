@@ -32,7 +32,7 @@ from statsmodels.tools.decorators import cache_readonly, \
 import statsmodels.base.model as base
 from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
-from statsmodels.genmod.dependence_structures import VarStruct
+from statsmodels.genmod.dependence_structures import CovStruct
 
 
 
@@ -166,10 +166,10 @@ class GEE(base.Model):
         distribution family = sm.family.Binomial(). Each family can
         take a link instance as an argument.  See
         statsmodels.family.family for more information.
-    varstruct : VarStruct class instance
+    covstruct : CovStruct class instance
         The default is Independence.  To specify an exchangeable
-        structure varstruct = sm.varstruct.Exchangeable().  See
-        statsmodels.varstruct.varstruct for more information.
+        structure covstruct = sm.covstruct.Exchangeable().  See
+        statsmodels.covstruct.covstruct for more information.
     offset : array-like
         An offset to be included in the fit.  If provided, must be
         an array whose length is the number of rows in exog.
@@ -204,6 +204,14 @@ class GEE(base.Model):
     to are already arrays and these arrays are changed, endog and
     exog will change.
 
+    The "robust" covariance type is the standard "sandwich estimator"
+    (e.g. Liang and Zeger (1986)).  It is the default here and in most
+    other packages.  The "naive" estimator gives smaller standard
+    errors, but is only correct if the working correlation structure
+    is correctly specified.  The "bias reduced" estimator of Mancl and
+    DeRouen (Biometrics, 2001) reduces the downard bias of the robust
+    estimator.
+
     """ % {'extra_params' : base._missing_param_doc}
 
     fit_history = None
@@ -211,7 +219,7 @@ class GEE(base.Model):
 
 
     def __init__(self, endog, exog, groups, time=None, family=None,
-                       varstruct=None, missing='none', offset=None,
+                       covstruct=None, missing='none', offset=None,
                        constraint=None):
 
         # Pass groups, time, and offset so they are processed for
@@ -231,28 +239,20 @@ class GEE(base.Model):
                                  "family instance")
         self.family = family
 
-        # Handle the varstruct argument
-        if varstruct is None:
-            varstruct = dependence_structures.Independence()
+        # Handle the covstruct argument
+        if covstruct is None:
+            covstruct = dependence_structures.Independence()
         else:
-            if not issubclass(varstruct.__class__, VarStruct):
-                raise ValueError("GEE: `varstruct` must be a genmod "
-                                 "varstruct instance")
-        self.varstruct = varstruct
+            if not issubclass(covstruct.__class__, CovStruct):
+                raise ValueError("GEE: `covstruct` must be a genmod "
+                                 "covstruct instance")
+        self.covstruct = covstruct
 
         if offset is None:
             self.offset = np.zeros(self.exog.shape[0],
                                    dtype=np.float64)
         else:
             self.offset = offset
-
-        if self.time is None:
-            self.time = np.zeros((self.exog.shape[0],1),
-                                 dtype=np.float64)
-        else:
-            self.time = time
-        if len(self.time.shape) == 1:
-            self.time = np.reshape(self.time, (len(self.time),1))
 
         # Handle the constraint
         self.constraint = None
@@ -282,7 +282,17 @@ class GEE(base.Model):
 
         self.endog_li = self._cluster_list(self.endog)
         self.exog_li = self._cluster_list(self.exog)
-        self.time_li = self._cluster_list(self.time)
+
+        # Time defaults to a 1d grid with equal spacing
+        if self.time is not None:
+            if len(self.time.shape) == 1:
+                self.time = np.reshape(self.time, (len(self.time),1))
+            self.time_li = self._cluster_list(self.time)
+        else:
+            self.time_li = [np.arange(len(y))[:,None]
+                            for y in self.endog_li]
+            self.time = np.concatenate(self.time_li)
+
         self.offset_li = self._cluster_list(self.offset)
         if constraint is not None:
             self.constraint.exog_fulltrans_li = \
@@ -290,7 +300,7 @@ class GEE(base.Model):
 
         self.family = family
 
-        self.varstruct.initialize(self)
+        self.covstruct.initialize(self)
 
         # Total sample size
         group_ns = [len(y) for y in self.endog_li]
@@ -386,7 +396,7 @@ class GEE(base.Model):
             The update vector such that params + update is the next
             iterate when solving the score equations.
         score : array-like
-            The current state of the score equations, not
+            The current value of the score equations, not
             incorporating the scale parameter.  If desired,
             multiply this vector by the scale parameter to
             incorporate the scale.
@@ -413,7 +423,7 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.varstruct.variance_matrix(expval, i)
+            vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
@@ -509,7 +519,7 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.varstruct.variance_matrix(expval, i)
+            vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
@@ -551,7 +561,7 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.varstruct.variance_matrix(expval, i)
+            vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
             vmat /= scale
@@ -659,11 +669,44 @@ class GEE(base.Model):
         Returns
         -------
         An instance of the GEEResults class
-
         """
 
         self.fit_history = {'params' : [],
+                            'fitlack': [],
                             'score_change' : []}
+
+        # Check starting_params, if supplied
+        if starting_params is not None:
+            if type(starting_params) != np.ndarray:
+                msg = "GEE: the `starting_params` argument to "\
+                    "`fit` must be of type numpy.ndarray."
+                raise ValueError(msg)
+            if len(starting_params.shape) != 1:
+                msg = "GEE: the `starting_params` argument to "\
+                    "`fit` must be 1 dimensional."
+                raise ValueError(msg)
+            if len(starting_params) != self.exog.shape[1]:
+                msg = ("GEE: the `starting_params` argument to "
+                       "fit has length %d, but there are %d "
+                       "covariates.") % (len(starting_params),
+                                         self.exog.shape[1])
+                raise ValueError(msg)
+
+        # Check maxit
+        msg = "GEE: the `maxit` argument to `fit` must be a "\
+            "positive integer."
+        if not np.isscalar(maxit):
+            raise ValueError(msg)
+        if maxit <= 0 or (round(maxit) != maxit):
+            raise ValueError(msg)
+
+        # Check ctol
+        msg = "GEE: the `ctol` argument to "\
+            "`fit` must be a positive real number."
+        if not np.isscalar(ctol):
+            raise ValueError(msg)
+        if ctol <= 0:
+            raise ValueError(msg)
 
         beta = self._starting_params(starting_params)
 
@@ -686,6 +729,7 @@ class GEE(base.Model):
             self.update_cached_means(beta)
             fitlack = np.sqrt(np.sum(score**2))
             self.fit_history['params'].append(beta)
+            self.fit_history['fitlack'].append(fitlack)
 
             # Don't exit until the association parameters have been
             # updated at least once.
@@ -817,7 +861,7 @@ class GEE(base.Model):
         Update the association parameters
         """
 
-        self.varstruct.update(beta, self)
+        self.covstruct.update(beta, self)
 
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
@@ -868,9 +912,31 @@ class GEEResults(base.LikelihoodModelResults):
                 normalized_cov_params=cov_params, scale=scale)
 
 
-    @cache_readonly
-    def standard_errors(self):
-        return np.sqrt(np.diag(self.cov_params()))
+    def standard_errors(self, covariance_type="robust"):
+        """
+        Arguments:
+        ----------
+        covariance_type : string
+            One of "robust", "naive", or "bias reduced".  Determines
+            the covariance used to compute standard errors.  Defaults
+            to "robust".
+        """
+
+        # Check covariance_type
+        covariance_type = covariance_type.lower()
+        allowed_covariances = ["robust", "naive", "bias reduced"]
+        if covariance_type not in allowed_covariances:
+            msg = "GEE: `covariance_type` must be one of " +\
+                ", ",join(allowed_covariances)
+            raise ValueError(msg)
+
+        if covariance_type == "robust":
+            return np.sqrt(np.diag(self.cov_params()))
+        elif covariance_type == "naive":
+            return np.sqrt(np.diag(self.naive_covariance))
+        elif covariance_type == "bias_reduced":
+            return np.sqrt(np,diag(self.robust_covariance_bc))
+
 
     @cache_readonly
     def resid(self):
@@ -902,9 +968,10 @@ class GEEResults(base.LikelihoodModelResults):
                                                      self.params))
 
 
-    def conf_int(self, alpha=.05, cols=None):
+    def conf_int(self, alpha=.05, cols=None,
+                 covariance_type="robust"):
         """
-        Returns the confidence interval of the fitted parameters.
+        Returns confidence intervals for the fitted parameters.
 
         Parameters
         ----------
@@ -913,12 +980,16 @@ class GEEResults(base.LikelihoodModelResults):
              default `alpha` = .05 returns a 95% confidence interval.
         cols : array-like, optional
              `cols` specifies which confidence intervals to return
+        covariance_type : string
+             The covariance type used for computing standard errors;
+             must be one of 'robust', 'naive', and 'bias reduced'.
+             See `GEE` for details.
 
         Notes
         -----
         The confidence interval is based on the Gaussian distribution.
         """
-        bse = self.standard_errors
+        bse = self.standard_errors(covariance_type=covariance_type)
         params = self.params
         dist = stats.norm
         q = dist.ppf(1 - alpha / 2)
@@ -933,7 +1004,8 @@ class GEEResults(base.LikelihoodModelResults):
         return np.asarray(zip(lower, upper))
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05,
+                covariance_type="robust"):
         """Summarize the Regression Results
 
         Parameters
@@ -947,6 +1019,9 @@ class GEEResults(base.LikelihoodModelResults):
             the default title
         alpha : float
             significance level for the confidence intervals
+        covariance_type : string
+            The covariance type used to compute the standard errors;
+            one of 'robust', 'naive', and 'bias reduced'.
 
         Returns
         -------
@@ -965,9 +1040,10 @@ class GEEResults(base.LikelihoodModelResults):
                     ('Model:', None),
                     ('Method:', ['Generalized Estimating Equations']),
                     ('Family:', [self.model.family.__class__.__name__]),
-                    ('Dependence structure:', [self.model.varstruct.__class__.__name__]),
+                    ('Dependence structure:',
+                     [self.model.covstruct.__class__.__name__]),
                     ('Date:', None),
-                    ('Covariance type: ', ['Robust',])
+                    ('Covariance type: ', [covariance_type,])
         ]
 
         NY = [len(y) for y in self.model.endog_li]
@@ -977,7 +1053,8 @@ class GEEResults(base.LikelihoodModelResults):
                      ('Min. cluster size', [min(NY)]),
                      ('Max. cluster size', [max(NY)]),
                      ('Mean cluster size', ["%.1f" % np.mean(NY)]),
-                     ('No. iterations', ['%d' % len(self.model.fit_history)]),
+                     ('No. iterations', ['%d' %
+                                       len(self.model.fit_history)]),
                      ('Time:', None),
                  ]
 
@@ -1289,8 +1366,8 @@ class MultinomialLogit(Link):
     = ncut, which is an argument to be provided when initializing the
     class.
 
-    call and derivative use a private method _clean to make trim p by
-    1e-10 so that p is in (0,1)
+    call and derivative use a private method _clean to trim p by 1e-10
+    so that p is in (0,1)
     """
 
     def __init__(self, ncut):
@@ -1429,12 +1506,17 @@ class Multinomial(Family):
     variance = varfuncs.binary
 
 
-    def __init__(self, ncut):
+    def __init__(self, nlevels):
+        """
+        Arguments:
+        ----------
+        nlevels : integer
+            The number of distinct categories for the multinomial
+            distribution.
+        """
 
-        self.ncut = ncut
-        self.link = MultinomialLogit(ncut)
-
-
+        self.ncut = nlevels - 1
+        self.link = MultinomialLogit(self.ncut)
 
 
 
