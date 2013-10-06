@@ -54,8 +54,10 @@ import numpy as np
 from scipy import optimize, stats
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
-from statsmodels.regression.linear_model import RegressionResults, OLS
+from statsmodels.regression.linear_model import (OLS, RegressionResults,
+                                                 RegressionResultsWrapper)
 import statsmodels.tools.tools as tools
+from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
 
 
 def maxabs(x):
@@ -129,6 +131,7 @@ class IV2SLS(LikelihoodModel):
         #Greene 5th edt., p.78 section 5.4
         #move this maybe
         y,x,z = self.endog, self.exog, self.instrument
+        # TODO: this uses "textbook" calculation, improve linalg
         ztz = np.dot(z.T, z)
         ztx = np.dot(z.T, x)
         self.xhatparams = xhatparams = np.linalg.solve(ztz, ztx)
@@ -142,11 +145,15 @@ class IV2SLS(LikelihoodModel):
         Ftxinv = np.linalg.inv(Ftx)
         self.normalized_cov_params = np.dot(Ftxinv.T, np.dot(FtF, Ftxinv))
 
-        lfit = RegressionResults(self, params,
+        lfit = IVRegressionResults(self, params,
                        normalized_cov_params=self.normalized_cov_params)
+
+        lfit.exog_hat_params = xhatparams
+        lfit.exog_hat = xhat # TODO: do we want to store this, might be large
         self._results = lfit  # TODO : remove this
         self._results_ols2nd = OLS(y, xhat).fit()
-        return lfit
+
+        return RegressionResultsWrapper(lfit)
 
     #copied from GLS, because I subclass currently LikelihoodModel and not GLS
     def predict(self, params, exog=None):
@@ -208,6 +215,34 @@ class IV2SLS(LikelihoodModel):
         pval = stats.chi2.sf(H, dof)
 
         return H, pval, dof
+
+
+class IVRegressionResults(RegressionResults):
+    """
+    Results class for for an OLS model.
+
+    Most of the methods and attributes are inherited from RegressionResults.
+    The special methods that are only available for OLS are:
+
+    - get_influence
+    - outlier_test
+    - el_test
+    - conf_int_el
+
+    See Also
+    --------
+    RegressionResults
+
+    """
+
+    @cache_readonly
+    def fvalue(self):
+        k_vars = len(self.params)
+        restriction = np.eye(k_vars)
+        idx_noconstant = range(k_vars)
+        del idx_noconstant[self.model.data.const_idx]
+        fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
+        return fval
 
 
 ############# classes for Generalized Method of Moments GMM
