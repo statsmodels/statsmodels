@@ -275,6 +275,15 @@ class CheckIV2SLS(object):
         assert_allclose(res_f.pvalue, res2.Fp, rtol=1e-08, atol=0)
 
 
+    def test_hausman(self):
+        res1, res2 = self.res1, self.res2
+        hausm = res1.spec_hausman()
+        # hausman uses se2 = ssr / nobs, no df correction
+        assert_allclose(hausm[0], res2.hausman['DWH'], rtol=1e-11, atol=0)
+        assert_allclose(hausm[1], res2.hausman['DWHp'], rtol=1e-10, atol=0)
+
+
+
     def test_smoke(self):
         res1 = self.res1
         # TODO: llf raise NotImplementedError, used in summary
