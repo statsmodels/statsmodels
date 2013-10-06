@@ -1,11 +1,11 @@
 """
 Test functions for GEE
 
-Most comparisons are to R.  The statmodels GEE implementation should
-generally agree with the R GEE implementation for the independence and
-exchangeable correlation structures.  For other correlation structures
-the details of the correlation estimation differ among implementations
-and the results will not agree exactly.
+Esternal comparisons are to R.  The statmodels GEE implementation
+should generally agree with the R GEE implementation for the
+independence and exchangeable correlation structures.  For other
+correlation structures, the details of the correlation estimation
+differ among implementations and the results will not agree exactly.
 """
 
 import numpy as np
@@ -13,7 +13,7 @@ import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
     gee_setup_ordinal,gee_ordinal_starting_values, GEEMargins,\
-    gee_setup_nominal
+    gee_setup_nominal, Multinomial
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
@@ -80,7 +80,7 @@ class TestGEE(object):
 
     def test_logistic(self):
         """
-        R code to for comparing results:
+        R code for comparing results:
 
         library(gee)
         Z = read.csv("results/gee_logistic_1.csv", header=FALSE)
@@ -129,6 +129,7 @@ class TestGEE(object):
         vi = Independence()
         va = Autoregressive()
 
+        # From R gee
         cf = [[0.0167272965285882,1.13038654425893,
                -1.86896345082962,1.09397608331333],
               [0.0178982283915449,1.13118798191788,
@@ -147,18 +148,23 @@ class TestGEE(object):
             mdf = md.fit()
             if id(v) != id(va):
                 assert_almost_equal(mdf.params, cf[j], decimal=6)
-                assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
+                assert_almost_equal(mdf.standard_errors(), se[j],
+                                    decimal=6)
 
         # Test with formulas
-        D = np.concatenate((endog[:,None], group[:,None], exog[:,1:]), axis=1)
+        D = np.concatenate((endog[:,None], group[:,None], exog[:,1:]),
+                           axis=1)
         D = pd.DataFrame(D)
-        D.columns = ["Y","Id",] + ["X%d" % (k+1) for k in range(exog.shape[1]-1)]
+        D.columns = ["Y","Id",] + ["X%d" % (k+1)
+                                   for k in range(exog.shape[1]-1)]
         for j,v in enumerate((vi,ve)):
-             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=D.loc[:,"Id"],
-                                   family=family, varstruct=v)
+             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
+                                   groups=D.loc[:,"Id"],
+                                   family=family, covstruct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=6)
-             assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
+             assert_almost_equal(mdf.standard_errors(), se[j],
+                                 decimal=6)
 
         # Check for run-time exceptions in summary
         print mdf.summary()
@@ -174,15 +180,15 @@ class TestGEE(object):
         md = GEE(endog, exog, group, None, family, ve)
         mdf = md.fit()
 
-        assert_almost_equal(np.dot(exog, mdf.params), mdf.fittedvalues)
-        assert_almost_equal(endog - np.dot(exog, mdf.params), mdf.resid)
+        assert_almost_equal(np.dot(exog, mdf.params),
+                            mdf.fittedvalues)
+        assert_almost_equal(endog - np.dot(exog, mdf.params),
+                            mdf.resid)
 
 
 
     def test_linear(self):
         """
-        R code for comparing Gaussian GEE:
-
         library(gee)
 
         Z = read.csv("results/gee_linear_1.csv", header=FALSE)
@@ -218,6 +224,7 @@ class TestGEE(object):
         vi = Independence()
         ve = Exchangeable()
 
+        # From R gee
         cf = [[-0.01850226507491,0.81436304278962,
                 -1.56167635393184,0.794239361055003],
               [-0.0182920577154767,0.814898414022467,
@@ -231,7 +238,7 @@ class TestGEE(object):
             md = GEE(endog, exog, group, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
-            assert_almost_equal(mdf.standard_errors, se[j],
+            assert_almost_equal(mdf.standard_errors(), se[j],
                                 decimal=10)
 
         # Test with formulas
@@ -243,10 +250,10 @@ class TestGEE(object):
         for j,v in enumerate((vi,ve)):
             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
                                   groups=D.loc[:,"Id"],
-                                  family=family, varstruct=v)
+                                  family=family, covstruct=v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
-            assert_almost_equal(mdf.standard_errors, se[j],
+            assert_almost_equal(mdf.standard_errors(), se[j],
                                 decimal=10)
 
 
@@ -280,16 +287,33 @@ class TestGEE(object):
         endog,exog,group = load_data("gee_nested_linear_1.csv")
 
         group_n = []
-        for i in range(300):
+        for i in range(endog.shape[0]/10):
             group_n.extend([0,]*5)
             group_n.extend([1,]*5)
-        group_n = np.array(group_n)
+        group_n = np.array(group_n)[:,None]
+
+        dp = Independence()
+        md = GEE(endog, exog, group, None, family, dp)
+        mdf1 = md.fit()
+
+        # From statsmodels.GEE (not an independent test)
+        cf = np.r_[-0.1671073 ,  1.00467426, -2.01723004,  0.97297106]
+        se = np.r_[0.08629606,  0.04058653,  0.04067038,  0.03777989]
+        assert_almost_equal(mdf1.params, cf, decimal=6)
+        assert_almost_equal(mdf1.standard_errors(), se,
+                            decimal=6)
 
         ne = Nested(group_n)
 
-        md = GEE(endog, exog, group_n, None, family, ne)
-        mdf = md.fit()
-        ## Nothing to compare to
+        md = GEE(endog, exog, group, None, family, ne)
+        mdf2 = md.fit(starting_params=mdf1.params)
+
+        # From statsmodels.GEE (not an independent test)
+        cf = np.r_[-0.16655319,  1.02183688, -2.00858719,  1.00101969]
+        se = np.r_[0.08632616,  0.02913582,  0.03114428,  0.02893991]
+        assert_almost_equal(mdf2.params, cf, decimal=6)
+        assert_almost_equal(mdf2.standard_errors(), se,
+                            decimal=6)
 
 
     def test_ordinal(self):
@@ -317,13 +341,11 @@ class TestGEE(object):
         md = GEE(endog, exog1, groups, None, family, v)
         mdf = md.fit(starting_params = beta)
         # Nothing to compare to...
-        #assert_almost_equal(md.params, cf[j], decimal=2)
-        #assert_almost_equal(mdf.standard_errors, se[j], decimal=2)
 
 
     def test_nominal(self):
 
-        family = Binomial()
+        family = Multinomial(3)
 
         endog_orig, exog_orig, groups = load_data("gee_nominal_1.csv",
                                                   icept=False)
@@ -333,20 +355,31 @@ class TestGEE(object):
 
         # Recode as indicators
         endog, exog, exog_ne, nlevel = gee_setup_nominal(data, 0,
-                                                         [4,])
+                                                         [3,])
 
         groups = exog_ne[:,0]
 
+        # Test with independence correlation
         v = Independence()
         md = GEE(endog, exog, groups, None, family, v)
         mdf1 = md.fit()
 
+        # From statsmodels.GEE (not an independent test)
+        cf1 = np.r_[0.44944752,  0.45569985, -0.92007064, -0.46766728]
+        se1 = np.r_[0.09801821,  0.07718842,  0.13229421,  0.08544553]
+        assert_almost_equal(mdf1.params, cf1, decimal=5)
+        assert_almost_equal(mdf1.standard_errors(), se1, decimal=5)
+
+        # Test with global odds ratio dependence
         v = GlobalOddsRatio(nlevel, "nominal")
         md = GEE(endog, exog, groups, None, family, v)
-        mdf = md.fit(starting_params=np.r_[0,1,-1,0,-1,1])
-        # Nothing to compare to...
-        #assert_almost_equal(md.params, cf[j], decimal=2)
-        #assert_almost_equal(mdf.standard_errors, se[j], decimal=2)
+        mdf2 = md.fit(starting_params=mdf1.params)
+
+        # From statsmodels.GEE (not an independent test)
+        cf2 = np.r_[0.45397549,  0.42278345, -0.91997131, -0.50115943]
+        se2 = np.r_[0.09646057,  0.07405713,  0.1324629 ,  0.09025019]
+        assert_almost_equal(mdf2.params, cf2, decimal=5)
+        assert_almost_equal(mdf2.standard_errors(), se2, decimal=5)
 
 
     def test_ordinal_pandas(self):
@@ -379,14 +412,12 @@ class TestGEE(object):
         mdf = md.fit(starting_params = beta)
         # Nothing to compare to...
         #assert_almost_equal(md.params, cf[j], decimal=2)
-        #assert_almost_equal(mdf.standard_errors, se[j], decimal=2)
+        #assert_almost_equal(mdf.standard_errors(), se[j], decimal=2)
 
 
 
     def test_poisson(self):
         """
-        poisson
-
         library(gee)
         Z = read.csv("results/gee_poisson_1.csv", header=FALSE)
         Y = Z[,2]
@@ -423,6 +454,7 @@ class TestGEE(object):
         vi = Independence()
         ve = Exchangeable()
 
+        # From R gee
         cf = [[-0.0364450410793481,-0.0543209391301178,
                 0.0156642711741052,0.57628591338724,
                 -0.00465659951186211,-0.477093153099256],
@@ -440,7 +472,8 @@ class TestGEE(object):
             md = GEE(endog, exog, group_n, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=5)
-            assert_almost_equal(mdf.standard_errors, se[j], decimal=6)
+            assert_almost_equal(mdf.standard_errors(), se[j],
+                                decimal=6)
 
         # Test with formulas
         D = np.concatenate((endog[:,None], group_n[:,None],
@@ -451,17 +484,18 @@ class TestGEE(object):
         for j,v in enumerate((vi,ve)):
              md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", D,
                                    None, groups=D.loc[:,"Id"],
-                                   family=family, varstruct=v)
+                                   family=family, covstruct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=5)
-             assert_almost_equal(mdf.standard_errors, se[j],
+             assert_almost_equal(mdf.standard_errors(), se[j],
                                  decimal=6)
 
 
     def test_compare_OLS(self):
         """
         Gaussian GEE with independence correlation should agree
-        exactly with OLS.
+        exactly with OLS for parameter estimates and standard errors
+        derived from the naive covariance estimate.
         """
 
         vs = Independence()
@@ -477,7 +511,7 @@ class TestGEE(object):
 
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
                               groups=groups, family=family,
-                              varstruct=vs)
+                              covstruct=vs)
         mdf = md.fit()
 
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
@@ -503,7 +537,7 @@ class TestGEE(object):
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
-                               family=family, varstruct=vs).fit()
+                               family=family, covstruct=vs).fit()
 
         sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit()
 
@@ -524,7 +558,7 @@ class TestGEE(object):
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
-                               family=family, varstruct=vs).fit()
+                               family=family, covstruct=vs).fit()
 
         sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit()
 

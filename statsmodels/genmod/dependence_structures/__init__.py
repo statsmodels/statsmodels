@@ -1,7 +1,7 @@
 '''
-This module contains dependence strutures for fitting models using
-generalized estimating equations.
+This module contains dependence structures for fitting models using
+generalized estimating equations (GEE).
 '''
 
-from varstruct import Independence, Exchangeable, GlobalOddsRatio, Autoregressive,\
-    Nested, VarStruct
+from covstruct import Independence, Exchangeable, GlobalOddsRatio,\
+    Autoregressive, Nested, CovStruct
