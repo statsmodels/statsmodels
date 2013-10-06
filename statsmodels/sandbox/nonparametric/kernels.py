@@ -48,6 +48,7 @@ class NdKernel(object):
             kernels = Gaussian()
 
         self._kernels = kernels
+        self.weights = None
 
         if H is None:
             H = np.matrix( np.identity(n))
@@ -66,13 +67,17 @@ class NdKernel(object):
     H = property(getH, setH, doc="Kernel bandwidth matrix")
 
     def density(self, xs, x):
+
         n = len(xs)
         #xs = self.inDomain( xs, xs, x )[0]
 
         if len(xs)>0:  ## Need to do product of marginal distributions
             #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
             #vectorized doesn't work:
-            w = np.mean(self((xs-x) * self._Hrootinv )) #transposed
+            if self.weights is not None:
+                w = np.sum(self((xs-x)/h).T * self_Hrootinv * self.weights, axis=1)
+            else:
+                w = np.mean(self((xs-x) * self._Hrootinv )) #transposed
             #w = np.mean([self(xd) for xd in ((xs-x) * self._Hrootinv)] ) #transposed
             return w
         else:
@@ -137,6 +142,7 @@ class CustomKernel(object):
             norm = 1.0
         self._normconst = norm
         self.domain = domain
+        self.weights = None
         if callable(shape):
             self._shape = shape
         else:
@@ -185,7 +191,10 @@ class CustomKernel(object):
             xs = xs[:,None]
         if len(xs)>0:
             h = self.h
-            w = 1/h * np.mean(self((xs-x)/h), axis=0)
+            if self.weights is not None:
+                w = 1/h * np.sum(self((xs-x)/h).T * self.weights, axis=1)
+            else:
+                w = 1/h * np.mean(self((xs-x)/h), axis=0)
             return w
         else:
             return np.nan

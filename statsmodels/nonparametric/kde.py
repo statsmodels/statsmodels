@@ -150,6 +150,7 @@ class KDEUnivariate(object):
         self.kernel = kernel_switch[kernel](h=bw) # we instantiate twice,
                                                 # should this passed to funcs?
         # put here to ensure empty cache after re-fit with new options
+        self.kernel.weights = weights
         self._cache = resettable_cache()
 
     @cache_readonly
