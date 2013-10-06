@@ -98,7 +98,9 @@ class IV2SLS(LikelihoodModel):
         # where is this supposed to be handled
         #Note: Greene p.77/78 dof correction is not necessary (because only
         #       asy results), but most packages do it anyway
-        self.df_resid = exog.shape[0] - exog.shape[1]
+        self.df_resid = self.exog.shape[0] - self.exog.shape[1]
+        #self.df_model = float(self.rank - self.k_constant)
+        self.df_model = float(self.exog.shape[1] - self.k_constant)
 
     def initialize(self):
         self.wendog = self.endog
