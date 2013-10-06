@@ -187,34 +187,6 @@ class IV2SLS(LikelihoodModel):
         else:
             return np.dot(exog, params)
 
-    def spec_hausman(self, dof=None):
-        '''Hausman's specification test
-
-
-        See Also
-        --------
-        spec_hausman : generic function for Hausman's specification test
-
-        '''
-        #use normalized cov_params for OLS
-
-        resols = OLS(endog, exog).fit()
-        normalized_cov_params_ols = resols.model.normalized_cov_params
-        se2 = resols.mse_resid
-
-        params_diff = self._results.params - resols.params
-
-        cov_diff = np.linalg.pinv(self.xhatprod) - normalized_cov_params_ols
-        #TODO: the following is very inefficient, solves problem (svd) twice
-        #use linalg.lstsq or svd directly
-        #cov_diff will very often be in-definite (singular)
-        if not dof:
-            dof = tools.rank(cov_diff)
-        cov_diffpinv = np.linalg.pinv(cov_diff)
-        H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
-        pval = stats.chi2.sf(H, dof)
-
-        return H, pval, dof
 
 
 class IVRegressionResults(RegressionResults):
@@ -243,6 +215,40 @@ class IVRegressionResults(RegressionResults):
         del idx_noconstant[self.model.data.const_idx]
         fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
         return fval
+
+
+    def spec_hausman(self, dof=None):
+        '''Hausman's specification test
+
+
+        See Also
+        --------
+        spec_hausman : generic function for Hausman's specification test
+
+        '''
+        #use normalized cov_params for OLS
+
+        endog, exog = self.model.endog, self.model.exog
+        resols = OLS(endog, exog).fit()
+        normalized_cov_params_ols = resols.model.normalized_cov_params
+        # Stata `ivendog` doesn't use df correction for se
+        #se2 = resols.mse_resid #* resols.df_resid * 1. / len(endog)
+        se2 = resols.ssr / len(endog)
+
+        params_diff = self.params - resols.params
+
+        cov_diff = np.linalg.pinv(self.model.xhatprod) - normalized_cov_params_ols
+        #TODO: the following is very inefficient, solves problem (svd) twice
+        #use linalg.lstsq or svd directly
+        #cov_diff will very often be in-definite (singular)
+        if not dof:
+            dof = tools.rank(cov_diff)
+        cov_diffpinv = np.linalg.pinv(cov_diff)
+        H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
+        pval = stats.chi2.sf(H, dof)
+
+        return H, pval, dof
+
 
 
 ############# classes for Generalized Method of Moments GMM
