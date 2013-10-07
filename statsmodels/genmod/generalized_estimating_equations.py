@@ -36,6 +36,26 @@ from statsmodels.genmod.dependence_structures import CovStruct
 
 
 
+# Workaround for block_diag, not available until scipy version
+# 0.11. When the statsmodels scipy dependency moves to version 0.11,
+# we can remove this function and use:
+# from scipy.sparse import block_diag
+def block_diag(dblocks, format=None):
+
+    from scipy.sparse import bmat
+
+    n = len(dblocks)
+    blocks = []
+    for i in range(n):
+        b = [None,]*n
+        b[i] = dblocks[i]
+        blocks.append(b)
+
+    return bmat(blocks, format)
+
+
+
+
 class ParameterConstraint(object):
     """
     A class for managing linear equality constraints for a parameter
@@ -1432,7 +1452,6 @@ class MultinomialLogit(Link):
 
         dmat = expval[:, None] * exog / denom[:, None]
 
-        from scipy.sparse import block_diag
         ones = np.ones(self.ncut, dtype=np.float64)
         cmat = block_diag([np.outer(ones, x) for x in expval_m], "csr")
         rmat = cmat.dot(exog)
@@ -1444,8 +1463,8 @@ class MultinomialLogit(Link):
     # Minimally tested
     def mean_deriv_exog(self, exog, params):
         """
-        Derivative of the expected endog with respect to exog, used in
-        analyzing marginal effects.
+        Derivative of the expected endog with respect to exog for the
+        multinomial model, used in analyzing marginal effects.
 
         Parameters
         ----------
