@@ -671,7 +671,8 @@ class GEE(base.Model):
 
 
 
-    def fit(self, maxit=60, ctol=1e-6, starting_params=None):
+    def fit(self, maxit=60, ctol=1e-6, starting_params=None,
+            covariance_type="robust"):
         """
         Fits a GEE model.
 
@@ -685,6 +686,10 @@ class GEE(base.Model):
         starting_params : array-like
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
+        covariance_type : string
+            The covariance type used to calculate standard errors,
+            must be one of "robust" (default), "naive", or "bias
+            reduced" (after Mancl and DeRouen 2001).
 
         Returns
         -------
@@ -788,6 +793,7 @@ class GEE(base.Model):
         results.robust_covariance_bc = bc_cov
         results.score_norm = fitlack
         results.converged = (fitlack < ctol)
+        results.covariance_type = covariance_type
 
         return results
 
@@ -934,6 +940,11 @@ class GEEResults(base.LikelihoodModelResults):
 
     def standard_errors(self, covariance_type="robust"):
         """
+        This is a convenience function that returns the standard
+        errors for any covariance type.  The value of `bse` is the
+        standard errors for whichever covariance type is specified as
+        an argument to `fit` (defaults to "robust").
+
         Arguments:
         ----------
         covariance_type : string
@@ -956,6 +967,12 @@ class GEEResults(base.LikelihoodModelResults):
             return np.sqrt(np.diag(self.naive_covariance))
         elif covariance_type == "bias_reduced":
             return np.sqrt(np,diag(self.robust_covariance_bc))
+
+
+    # Need to override to allow for different covariance types.
+    @cache_readonly
+    def bse(self):
+        return self.standard_errors(self.covariance_type)
 
 
     @cache_readonly
@@ -1570,6 +1587,7 @@ class GEEMargins(object):
 
     def _reset(self):
         self._cache = resettable_cache()
+
 
     @cache_readonly
     def tvalues(self):
