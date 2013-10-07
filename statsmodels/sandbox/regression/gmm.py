@@ -415,20 +415,24 @@ class GMM(object):
 
     '''
 
+    results_class = 'GMMResults'
+
     def __init__(self, endog, exog, instrument, k_moms=None, k_params=None,
                   **kwds):
         '''
         maybe drop and use mixin instead
 
-        GMM doesn't really care about the data, just the moment conditions
+        TODO: GMM doesn't really care about the data, just the moment conditions
         '''
         self.endog = endog
         self.exog = exog
         self.instrument = instrument
+        self.nobs = endog.shape[0]
         self.nmoms = k_moms or instrument.shape[1]
         self.k_params = k_params or exog.shape[1]
         self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
+
 
     def fit(self, start=None, maxiter=10, inv_weights=None,
                   weights_method='cov', wargs=(),
@@ -478,13 +482,16 @@ class GMM(object):
                                            opt_args=opt_args)
             # TODO weights returned by fititer is inv_weights
             weights_ = np.linalg.pinv(weights)
-        results = GMMResults()
-        results.model = self
+        #results = GMMResults()
+        results = results_class_dict[self.results_class](model=self)
+        #results.model = self
         results.params = params
         results.weights = weights
-        results.q = self.gmmobjective(params, weights_)
+        results.q = self.gmmobjective(params, weights)
         # nobs_moms attached by momcond_mean
         results.jval = results.q * self.nobs_moms
+        results.wargs = wargs
+        results.opt_args = opt_args
 
         self.results = results # FIXME: remove, still keeping it temporarily
         return results
@@ -673,16 +680,19 @@ class GMM(object):
         #call fitgmm function
         #args = (self.endog, self.exog, self.instrument)
         #args is not used in the method version
+        winv_new = w
         for it in range(maxiter):
-            winv = np.linalg.pinv(w)  # FIXME: winv, w names reversed
+            winv = winv_new
+            w = np.linalg.pinv(winv)
             #this is still calling function not method
 ##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
 ##                            weightsoptimal=False)
-            resgmm = self.fitgmm(start, weights=winv, method=method,
+            resgmm = self.fitgmm(start, weights=w, method=method,
                                  opt_args=opt_args)
 
             moms = momcond(resgmm)
-            w = self.calc_weightmatrix(moms, method=weights_method, wargs=wargs)
+            # the following is S = cov_moments
+            winv_new = self.calc_weightmatrix(moms, method=weights_method, wargs=wargs)
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
@@ -734,12 +744,15 @@ class GMM(object):
 
         '''
         nobs, k_moms = moms.shape
+        # TODO: wargs are tuple or dict ?
+        print ' momcov ddof', wargs
         if method == 'momcov':
             w = np.cov(moms, rowvar=0, bias=True) #  divide by n
             if 'ddof' in wargs:
                 if wargs['ddof'] == 'k_params':
                     w = w * nobs * 1. / (nobs - self.k_params)
                 else:
+                    print ' momcov ddof', wargs['ddof']
                     w = w * nobs * 1. / (nobs - wargs['ddof'])
 
         elif method == 'flatkernel':
@@ -789,20 +802,25 @@ class GMM(object):
         return deriv
 
 
-
-class GMMResults(object):
+# TODO: wrong superclass, I want tvalues, ... right now
+class GMMResults(LikelihoodModelResults):
     '''just a storage class right now'''
 
     def __init__(self, *args, **kwds):
         self.__dict__.update(kwds)
 
+        self.nobs = self.model.nobs
+
 
     def cov_params(self, **kwds):  #TODO add options ???)
 
+        # TODO: don't do this when we want to change options
         if hasattr(self, '_cov_params'):
             #replace with decorator later
             return self._cov_params
 
+        if self.wargs:
+            kwds['wargs'] = self.wargs
         gradmoms = self.model.gradient_momcond(self.params)
         moms = self.model.momcond(self.params)
         covparams = self.calc_cov_params(moms, gradmoms, **kwds)
@@ -810,7 +828,6 @@ class GMMResults(object):
         return self._cov_params
 
 
-    #still needs to be fully converted to method
     def calc_cov_params(self, moms, gradmoms, weights=None,
                                               has_optimal_weights=True,
                                               method='momcov', wargs=()):
@@ -834,6 +851,7 @@ class GMMResults(object):
             #omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
             #has_optimal_weights = True
             #add other options, Barzen, ...  longrun var estimators
+            # TODO: this might still be inv_weights after fititer
             weights = self.weights
         else:
             pass
@@ -848,7 +866,7 @@ class GMMResults(object):
             gw = np.dot(gradmoms.T, weights)
             gwginv = np.linalg.inv(np.dot(gw, gradmoms))
             cov = np.dot(np.dot(gwginv, np.dot(np.dot(gw, omegahat), gw.T)), gwginv)
-            cov = np.linalg.inv(cov)
+            cov /= nobs
 
         return cov/nobs
 
@@ -874,7 +892,74 @@ class GMMResults(object):
 
         jstat = self.jval
         nparams = self.params.size #self.nparams
-        return jstat, stats.chi2.sf(jstat, self.nmoms - nparams)
+        df = self.model.nmoms - nparams
+        return jstat, stats.chi2.sf(jstat, df), df
+
+
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `var_##` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+
+        jvalue, jpvalue, jdf = self.jtest()
+
+        top_left = [('Dep. Variable:', None),
+                    ('Model:', None),
+                    ('Method:', ['GMM']),
+                    ('Date:', None),
+                    ('Time:', None),
+                    ('No. Observations:', None),
+                    #('Df Residuals:', None), #[self.df_resid]), #TODO: spelling
+                    #('Df Model:', None), #[self.df_model])
+                    ]
+
+        top_right = [#('R-squared:', ["%#8.3f" % self.rsquared]),
+                     #('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
+                     ('Hansen J:', ["%#8.4g" % jvalue] ),
+                     ('Prob (Hansen J):', ["%#6.3g" % jpvalue]),
+                     #('F-statistic:', ["%#8.4g" % self.fvalue] ),
+                     #('Prob (F-statistic):', ["%#6.3g" % self.f_pvalue]),
+                     #('Log-Likelihood:', None), #["%#6.4g" % self.llf]),
+                     #('AIC:', ["%#8.4g" % self.aic]),
+                     #('BIC:', ["%#8.4g" % self.bic])
+                     ]
+
+        if title is None:
+            title = self.model.__class__.__name__ + ' ' + "Results"
+
+        #create summary table instance
+        from statsmodels.iolib.summary import Summary
+        smry = Summary()
+        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
+                          yname=yname, xname=xname, title=title)
+        smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
+                             use_t=False)
+
+        return smry
+
 
 
 class IVGMM(GMM):
@@ -886,11 +971,20 @@ class IVGMM(GMM):
 
     '''
 
+    results_class = 'IVGMMResults'
+
     def fitstart(self):
         return np.zeros(self.exog.shape[1])
 
     def get_error(self, params):
-        return self.endog - np.dot(self.exog, params)
+        return self.endog - self.predict(params)
+
+    def predict(self, params, exog=None):
+
+        if exog is None:
+            exog = self.exog
+
+        return np.dot(exog, params)
 
     def momcond(self, params):
         instrument = self.instrument
@@ -904,18 +998,48 @@ class NonlinearIVGMM(IVGMM):
 
     currently mainly a test case, not checked yet
 
+    This should be reversed:
+    NonlinearIVGMM is IVGMM and need LinearIVGMM as special case (fit, predict)
+
     '''
 
     def fitstart(self):
         #might not make sense for more general functions
         return np.zeros(self.exog.shape[1])
 
+
     def __init__(self, endog, exog, instrument, func, **kwds):
         self.func = func
         super(NonlinearIVGMM, self).__init__(endog, exog, instrument)
 
-    def get_error(self, params):
-        return self.endog - self.func(self.exog, params)
+
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+
+        return self.func(self.exog, params)
+
+
+
+class IVGMMResults(GMMResults):
+
+
+    # this assumes that we have an additive error model `(y - f(x, params))`
+
+    @cache_readonly
+    def fittedvalues(self):
+        return self.model.predict(self.params)
+
+
+    @cache_readonly
+    def resid(self):
+        return self.model.endog - self.fittedvalues()
+
+
+    @cache_readonly
+    def ssr(self):
+        return (self.resid * self.resid).sum()
+
 
 
 def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
@@ -1093,7 +1217,8 @@ class DistQuantilesGMM(GMM):
         return self.results
 
 
-
+results_class_dict = {'GMMResults': GMMResults,
+                      'IVGMMResults': IVGMMResults}
 
 
 if __name__ == '__main__':
