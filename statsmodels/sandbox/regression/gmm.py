@@ -815,9 +815,9 @@ class GMMResults(LikelihoodModelResults):
     def cov_params(self, **kwds):  #TODO add options ???)
 
         # TODO: don't do this when we want to change options
-        if hasattr(self, '_cov_params'):
-            #replace with decorator later
-            return self._cov_params
+#         if hasattr(self, '_cov_params'):
+#             #replace with decorator later
+#             return self._cov_params
 
         if self.wargs:
             kwds['wargs'] = self.wargs
@@ -828,7 +828,7 @@ class GMMResults(LikelihoodModelResults):
         return self._cov_params
 
 
-    def calc_cov_params(self, moms, gradmoms, weights=None,
+    def calc_cov_params(self, moms, gradmoms, weights=None, use_weights=False,
                                               has_optimal_weights=True,
                                               method='momcov', wargs=()):
         '''calculate covariance of parameter estimates
@@ -846,7 +846,7 @@ class GMMResults(LikelihoodModelResults):
         '''
 
         nobs = moms.shape[0]
-        omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
+
         if weights is None:
             #omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
             #has_optimal_weights = True
@@ -857,6 +857,11 @@ class GMMResults(LikelihoodModelResults):
             pass
             #omegahat = weights   #2 different names used,
             #TODO: this is wrong, I need an estimate for omega
+
+        if use_weights:
+            omegahat = weights
+        else:
+            omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
 
         if has_optimal_weights: #has_optimal_weights:
             # TOD0 make has_optimal_weights depend on convergence or iter >2
