@@ -237,12 +237,20 @@ class TestGMMSt2(object):
         #w0 = np.linalg.inv(w0inv)
 
         mod = gmm.IVGMM(endog, exog, instrument)
-        res10 = mod.fit(start, maxiter=2, inv_weights=w0inv, wargs={'ddof':0},
+        res = mod.fit(start, maxiter=2, inv_weights=w0inv, wargs={'ddof':0},
                         opt_method='bfgs', opt_args={'gtol':1e-6})
-        self.res1 = res10
+        self.res1 = res
 
         from results_ivreg2_griliches import results_gmm2s_robust as results
         self.res2 = results
+
+        # TODO: remove after testing, compare bse from 1 iteration
+        # see test_basic
+        mod = gmm.IVGMM(endog, exog, instrument)
+        res = mod.fit(start, maxiter=1, inv_weights=w0inv, wargs={'ddof':0},
+                        opt_method='bfgs', opt_args={'gtol':1e-6})
+        self.res3 = res
+
 
     def test_basic(self):
         res1, res2 = self.res1, self.res2
@@ -255,6 +263,26 @@ class TestGMMSt2(object):
         dffact = np.sqrt(745. / 758 )
         assert_allclose(res1.bse * dffact, res2.bse, rtol=5e-03, atol=0)
         assert_allclose(res1.bse * dffact, res2.bse, rtol=0, atol=5e-03)
+
+        # try other versions for bse,
+        # TODO: next two produce the same as before (looks like)
+        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=True,
+                                            weights=res1.weights))))
+        assert_allclose(res1.bse, res2.bse, rtol=5e-01, atol=0)
+
+        bse = np.sqrt(np.diag((res1.cov_params(has_optimal_weights=True,
+                                               weights=res1.weights,
+                                               use_weights=True))))
+        assert_allclose(res1.bse, res2.bse, rtol=5e-02, atol=0)
+
+        # TODO: resolve this
+        # try bse from previous step, is closer to Stata
+        # guess: Stata ivreg2 doesn't calc for bse update after final iteration
+        # need better test case, bse difference is close to numerical optimization precision
+        assert_allclose(self.res3.bse, res2.bse, rtol=5e-05, atol=0)
+        assert_allclose(self.res3.bse, res2.bse, rtol=0, atol=5e-06)
+
+
 
         # TODO; tvalues are not available yet, no inheritance
         #assert_allclose(res1.tvalues, res2.tvalues, rtol=5e-10, atol=0)
