@@ -461,7 +461,13 @@ class GMM(object):
         of the GMM objective function, jval to results. The results are
         attached to this instance and also returned.
 
-        fititer is called with maxiter=10
+        fititer is called with maxiter=10 by default.
+
+        Warning: One-step estimation, `maxiter` either 0 or 1, still has
+        problems (at least compared to Stata's gmm).
+        By default it uses a heteroscedasticity robust covariance matrix, but
+        uses the assumption that the weight matrix is optimal.
+        See options for cov_params in the results instance.
 
 
         '''
@@ -824,6 +830,7 @@ class GMMResults(LikelihoodModelResults):
         gradmoms = self.model.gradient_momcond(self.params)
         moms = self.model.momcond(self.params)
         covparams = self.calc_cov_params(moms, gradmoms, **kwds)
+
         self._cov_params = covparams
         return self._cov_params
 
@@ -871,7 +878,7 @@ class GMMResults(LikelihoodModelResults):
             gw = np.dot(gradmoms.T, weights)
             gwginv = np.linalg.inv(np.dot(gw, gradmoms))
             cov = np.dot(np.dot(gwginv, np.dot(np.dot(gw, omegahat), gw.T)), gwginv)
-            cov /= nobs
+            #cov /= nobs
 
         return cov/nobs
 
