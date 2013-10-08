@@ -56,6 +56,7 @@ from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
 from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
+import statsmodels.stats.sandwich_covariance as smcov
 import statsmodels.tools.tools as tools
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
 
@@ -292,6 +293,9 @@ class IVRegressionResults(RegressionResults):
         eigvals = np.sort(eigvals) #in increasing order
         condno = np.sqrt(eigvals[-1]/eigvals[0])
 
+        # TODO: check what is valid.
+        # box-pierce, breush-pagan, durbin's h are not with endogenous on rhs
+        # use Cumby Huizinga 1992 instead
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,
                           mineigval=eigvals[0])
@@ -476,8 +480,10 @@ class GMM(object):
             start = self.fitstart() #TODO: temporary hack
 
         if maxiter == 0:
+            # TODO invweights could be None
             weights = np.linalg.pinv(inv_weights)
-            params = self.fitgmm(start, weights=weights)
+            params = self.fitgmm(start, weights=weights,
+                                 method=opt_method, opt_args=opt_args)
             weights_ = weights  # temporary alias used in jval
         else:
             params, weights = self.fititer(start,
@@ -485,6 +491,7 @@ class GMM(object):
                                            start_weights=inv_weights,
                                            weights_method=weights_method,
                                            wargs=wargs,
+                                           method=opt_method,
                                            opt_args=opt_args)
             # TODO weights returned by fititer is inv_weights
             weights_ = np.linalg.pinv(weights)
@@ -751,7 +758,8 @@ class GMM(object):
         '''
         nobs, k_moms = moms.shape
         # TODO: wargs are tuple or dict ?
-        print ' momcov ddof', wargs
+        print ' momcov wargs', wargs
+        # TODO: store this outside to avoid doing this inside optimization loop
         if method == 'momcov':
             w = np.cov(moms, rowvar=0, bias=True) #  divide by n
             if 'ddof' in wargs:
@@ -767,11 +775,22 @@ class GMM(object):
                 raise ValueError('flatkernel requires maxlag')
             moms_centered = moms - moms.mean()
             maxlag = wargs['maxlag']
-            h = np.ones(maxlag)
+            h = np.ones(maxlag + 1)
             w = np.dot(moms.T, moms)/nobs
             for i in range(1,maxlag+1):
-                w += (h * np.dot(moms_centered[i:].T, moms_centered[:-i]) /
+                w += (h[i] * np.dot(moms_centered[i:].T, moms_centered[:-i]) /
                                                                   (nobs-i))
+        elif method == 'hac':
+            maxlag = wargs['maxlag']
+            if 'kernel' in wargs:
+                weights_func = wargs['kernel']
+            else:
+                weights_func = smcov.weights_bartlett
+                wargs['kernel'] = weights_func
+
+            moms_centered = moms - moms.mean()
+            w = smcov.S_hac_simple(moms_centered, nlags=maxlag,
+                                   weights_func=weights_func)
         else:
             w = np.dot(moms.T, moms)/nobs
 
@@ -908,6 +927,27 @@ class GMMResults(LikelihoodModelResults):
         return jstat, stats.chi2.sf(jstat, df), df
 
 
+    def compare_j(self, other):
+        '''hypothesis test for comparing two nested gmm estimates
+
+        This assumes that some moment restrictions have been dropped in one
+        of the GMM estimates relative to the other.
+
+        '''
+        jstat1 = self.jval
+        k_moms1 = self.model.nmoms
+        jstat2 = other.jval
+        k_moms2 = other.model.nmoms
+        jdiff = jstat1 - jstat2
+        df = k_moms1 - k_moms2
+        if df < 0:
+            # possible nested in other way, TODO allow this or not
+            # flip sign instead of absolute
+            df = - df
+            jdiff = - jdiff
+        return jdiff, stats.chi2.sf(jdiff, df), df
+
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 
@@ -1029,7 +1069,7 @@ class NonlinearIVGMM(IVGMM):
         if exog is None:
             exog = self.exog
 
-        return self.func(self.exog, params)
+        return self.func(exog, params)
 
 
 
