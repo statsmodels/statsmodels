@@ -11,12 +11,18 @@ class CovStruct(object):
     """
 
     # Parameters describing the dependency structure
-    dparams = None
+    dep_params = None
 
 
     def initialize(self, parent):
         """
-        Called by GEE.
+        Called by GEE, used by implementations that need additional
+        setup prior to running `fit`.
+
+        Parameters
+        ----------
+        parent : GEE class
+            A reference to the parent GEE class instance.
         """
         pass
 
@@ -25,6 +31,13 @@ class CovStruct(object):
         """
         Updates the association parameter values based on the current
         regression coefficients.
+
+        Parameters
+        ----------
+        beta : array-like
+            Working values for the regression parameters.
+        parent : GEE class reference
+            A reference to the parent GEE class instance.
         """
         raise NotImplementedError
 
@@ -66,7 +79,7 @@ class Independence(CovStruct):
     An independence working dependence structure.
     """
 
-    dparams = np.r_[[]]
+    dep_params = np.r_[[]]
 
     # Nothing to update
     def update(self, beta, parent):
@@ -88,7 +101,7 @@ class Exchangeable(CovStruct):
     """
 
     # The correlation between any two values in the same cluster
-    dparams = 0
+    dep_params = 0
 
 
     def update(self, beta, parent):
@@ -122,17 +135,17 @@ class Exchangeable(CovStruct):
             nterm += 0.5 * ngrp * (ngrp - 1)
 
         scale_inv /= (nobs - dim)
-        self.dparams = residsq_sum / (scale_inv * (nterm - dim))
+        self.dep_params = residsq_sum / (scale_inv * (nterm - dim))
 
 
     def covariance_matrix(self, expval, index):
         dim = len(expval)
-        return self.dparams * np.ones((dim, dim), dtype=np.float64) +\
-                                (1 - self.dparams) * np.eye(dim), True
+        return self.dep_params * np.ones((dim, dim), dtype=np.float64) +\
+                                (1 - self.dep_params) * np.eye(dim), True
 
     def summary(self):
         return "The correlation between two observations in the "\
-            "same cluster is %.3f" % self.dparams
+            "same cluster is %.3f" % self.dep_params
 
 
 
@@ -306,7 +319,7 @@ class Nested(CovStruct):
         self.vcomp_coeff = np.clip(vcomp_coeff, 0, np.inf)
         self.scale_inv = scale_inv
 
-        self.dparams = self.vcomp_coeff.copy()
+        self.dep_params = self.vcomp_coeff.copy()
 
 
     def covariance_matrix(self, expval, index):
@@ -343,7 +356,7 @@ class Autoregressive(CovStruct):
     Time represents a potentially multidimensional index from which
     distances between pairs of obsercations can be determined.  The
     correlation between two observations in the same cluster is
-    dparams**distance, where `dparams` is the autocorrelation
+    dep_params**distance, where `dep_params` is the autocorrelation
     parameter to be estimated, and distance is the distance between
     the two observations, calculated from their corresponding time
     values.  `time` is stored as an n_obs x k matrix, where `k`
@@ -368,7 +381,7 @@ class Autoregressive(CovStruct):
     """
 
     # The autoregression parameter
-    dparams = 0
+    dep_params = 0
 
     designx = None
 
@@ -422,8 +435,8 @@ class Autoregressive(CovStruct):
         cached_means = parent.cached_means
 
         # Weights
-        var = (1 - self.dparams**(2 * designx)) /\
-            (1 - self.dparams**2)
+        var = (1 - self.dep_params**(2 * designx)) /\
+            (1 - self.dep_params**2)
         wts = 1 / var
         wts /= wts.sum()
 
@@ -459,7 +472,7 @@ class Autoregressive(CovStruct):
             b_ctr /= 2
             f_ctr = fitfunc(b_ctr)
             if b_ctr < 1e-8:
-                self.dparams = 0
+                self.dep_params = 0
                 return
 
         # Right bracket point
@@ -472,21 +485,21 @@ class Autoregressive(CovStruct):
                     "Autoregressive: unable to find right bracket")
 
         from scipy.optimize import brent
-        self.dparams = brent(fitfunc, brack=[b_lft, b_ctr, b_rgt])
+        self.dep_params = brent(fitfunc, brack=[b_lft, b_ctr, b_rgt])
 
 
     def covariance_matrix(self, endog_expval, index):
         ngrp = len(endog_expval)
-        if self.dparams == 0:
+        if self.dep_params == 0:
             return np.eye(ngrp, dtype=np.float64), True
         idx = np.arange(ngrp)
-        return self.dparams**np.abs(idx[:, None] - idx[None, :]), True
+        return self.dep_params**np.abs(idx[:, None] - idx[None, :]), True
 
 
     def summary(self):
 
         print "Autoregressive(1) dependence parameter: %.3f\n" %\
-            self.dparams
+            self.dep_params
 
 
 
@@ -519,7 +532,7 @@ class GlobalOddsRatio(CovStruct):
     """
 
     # The current estimate of the odds ratio
-    dparams = [None,]
+    dep_params = [None,]
 
     # The current estimate of the crude odds ratio
     crude_or = None
@@ -565,7 +578,7 @@ class GlobalOddsRatio(CovStruct):
 
         # Initialize the dependence parameters
         self.crude_or = self.observed_crude_oddsratio(parent)
-        self.dparams[0] = self.crude_or
+        self.dep_params[0] = self.crude_or
 
 
     def pooled_odds_ratio(self, tables):
@@ -652,7 +665,7 @@ class GlobalOddsRatio(CovStruct):
         probabilities of endog and the odds ratio cor.
         """
 
-        cor = self.dparams[0]
+        cor = self.dep_params[0]
         ibd = self.ibd[index]
 
         # The between-observation joint probabilities
@@ -721,9 +734,9 @@ class GlobalOddsRatio(CovStruct):
 
         cor_expval = self.pooled_odds_ratio(tables.values())
 
-        self.dparams[0] *= self.crude_or / cor_expval
+        self.dep_params[0] *= self.crude_or / cor_expval
 
 
     def summary(self):
 
-        print "Global odds ratio: %.3f\n" % self.dparams[0]
+        print "Global odds ratio: %.3f\n" % self.dep_params[0]
