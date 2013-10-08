@@ -1,0 +1,67 @@
+Results based on 100 successful fits out of 100 data sets.Checking dependence parameters:
+Estimated common pairwise correlation:     0.2993
+True common pairwise correlation:          0.3000
+Estimated inverse scale parameter:         1.0104
+True inverse scale parameter:              1.0000
+
+Checking parameter values:
+Observed:            [   1.999    0.198    0.200   -0.100   -0.200]
+Expected:            [   2.000    0.200    0.200   -0.100   -0.200]
+Absolute difference: [  -0.001   -0.002   -0.000    0.000    0.000]
+Relative difference: [  -0.000   -0.009   -0.000   -0.004   -0.002]
+
+Checking standard errors
+Observed:            [   0.007    0.006    0.006    0.006    0.006]
+Expected:            [   0.007    0.006    0.006    0.006    0.006]
+Absolute difference: [   0.000    0.000    0.000    0.000   -0.000]
+Relative difference: [   0.046    0.050    0.077    0.042   -0.007]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000   -1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.127                0.100
+               0.206                0.200
+               0.250                0.300
+               0.329                0.400
+               0.403                0.500
+               0.484                0.600
+               0.565                0.700
+               0.645                0.800
+               0.832                0.900
+================================================================================
+
+Results based on 98 successful fits out of 100 data sets.Checking dependence parameters:
+Estimated inverse scale parameter:         1.9792
+True inverse scale parameter:              2.0000
+
+Checking parameter values:
+Observed:            [   2.001    0.198    0.199   -0.100   -0.199]
+Expected:            [   2.000    0.200    0.200   -0.100   -0.200]
+Absolute difference: [   0.001   -0.002   -0.001    0.000    0.001]
+Relative difference: [   0.000   -0.010   -0.007   -0.004   -0.004]
+
+Checking standard errors
+Observed:            [   0.007    0.014    0.016    0.016    0.014]
+Expected:            [   0.007    0.014    0.014    0.013    0.013]
+Absolute difference: [   0.000    0.001    0.002    0.002    0.001]
+Relative difference: [   0.010    0.057    0.150    0.185    0.043]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000   -1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.096                0.100
+               0.147                0.200
+               0.241                0.300
+               0.281                0.400
+               0.459                0.500
+               0.530                0.600
+               0.649                0.700
+               0.849                0.800
+               0.879                0.900
+================================================================================

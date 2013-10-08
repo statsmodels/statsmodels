@@ -1,0 +1,5 @@
+Nominal data.
+99 runs converged successfully.
+Checking dependence parameters:
+Odds ratio estimate:     1.0028
+Odds ratio truth:        1.0000

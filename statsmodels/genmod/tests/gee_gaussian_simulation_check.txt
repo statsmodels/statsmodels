@@ -1,0 +1,283 @@
+Checking dependence parameters:
+AR coefficient estimate:     0.0000
+AR coefficient truth:        0.0000
+Error variance estimate:     4.0006
+Error variance truth:        4.0000
+
+Checking parameter values:
+Observed:            [  -0.005   -1.007    1.008   -0.003    0.494]
+Expected:            [   0.000   -1.000    1.000    0.000    0.500]
+Absolute difference: [  -0.005   -0.007    0.008   -0.003   -0.006]
+Relative difference: [    -inf    0.007    0.008     -inf   -0.012]
+
+Checking standard errors
+Observed:            [   0.054    0.056    0.056    0.052    0.053]
+Expected:            [   0.053    0.053    0.054    0.053    0.053]
+Absolute difference: [   0.001    0.003    0.002   -0.001   -0.001]
+Relative difference: [   0.023    0.052    0.042   -0.025   -0.012]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.169                0.100
+               0.284                0.200
+               0.406                0.300
+               0.488                0.400
+               0.600                0.500
+               0.679                0.600
+               0.732                0.700
+               0.810                0.800
+               0.910                0.900
+================================================================================
+
+Checking dependence parameters:
+AR coefficient estimate:     0.3766
+AR coefficient truth:        0.3000
+Error variance estimate:     3.9845
+Error variance truth:        4.0000
+
+Checking parameter values:
+Observed:            [  -0.005   -1.002    0.998   -0.003    0.492]
+Expected:            [   0.000   -1.000    1.000    0.000    0.500]
+Absolute difference: [  -0.005   -0.002   -0.002   -0.003   -0.008]
+Relative difference: [    -inf    0.002   -0.002     -inf   -0.017]
+
+Checking standard errors
+Observed:            [   0.082    0.055    0.056    0.055    0.054]
+Expected:            [   0.080    0.054    0.053    0.053    0.053]
+Absolute difference: [   0.002    0.002    0.002    0.002    0.001]
+Relative difference: [   0.026    0.034    0.044    0.034    0.020]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.152                0.100
+               0.268                0.200
+               0.347                0.300
+               0.437                0.400
+               0.517                0.500
+               0.585                0.600
+               0.705                0.700
+               0.826                0.800
+               0.915                0.900
+================================================================================
+
+Checking dependence parameters:
+AR coefficient estimate:     0.6689
+AR coefficient truth:        0.6000
+Error variance estimate:     4.0118
+Error variance truth:        4.0000
+
+Checking parameter values:
+Observed:            [  -0.009   -0.998    0.996   -0.002    0.493]
+Expected:            [   0.000   -1.000    1.000    0.000    0.500]
+Absolute difference: [  -0.009    0.002   -0.004   -0.002   -0.007]
+Relative difference: [    -inf   -0.002   -0.004     -inf   -0.014]
+
+Checking standard errors
+Observed:            [   0.102    0.050    0.046    0.050    0.044]
+Expected:            [   0.106    0.048    0.048    0.048    0.048]
+Absolute difference: [  -0.004    0.001   -0.002    0.002   -0.004]
+Relative difference: [  -0.040    0.031   -0.039    0.044   -0.075]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.064                0.100
+               0.126                0.200
+               0.191                0.300
+               0.329                0.400
+               0.474                0.500
+               0.609                0.600
+               0.676                0.700
+               0.840                0.800
+               0.934                0.900
+================================================================================
+
+Checking dependence parameters:
+AR coefficient estimate:     0.0000
+AR coefficient truth:        0.0000
+Error variance estimate:     3.9885
+Error variance truth:        4.0000
+
+Checking parameter values:
+Observed:            [  -0.005   -0.798    1.195    0.005    0.505]
+Expected:            [   0.000   -0.800    1.200    0.000    0.500]
+Absolute difference: [  -0.005    0.002   -0.005    0.005    0.005]
+Relative difference: [    -inf   -0.002   -0.004      inf    0.011]
+
+Checking standard errors
+Observed:            [   0.044    0.047    0.054    0.059    0.057]
+Expected:            [   0.053    0.053    0.053    0.053    0.053]
+Absolute difference: [  -0.009   -0.005    0.001    0.006    0.004]
+Relative difference: [  -0.178   -0.098    0.014    0.106    0.071]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.000                0.100
+               0.000                0.200
+               0.000                0.300
+               0.000                0.400
+               0.000                0.500
+               0.000                0.600
+               0.000                0.700
+               0.000                0.800
+               0.000                0.900
+================================================================================
+
+Checking dependence parameters:
+AR coefficient estimate:     0.3810
+AR coefficient truth:        0.3000
+Error variance estimate:     3.9966
+Error variance truth:        4.0000
+
+Checking parameter values:
+Observed:            [  -0.000   -0.797    1.200   -0.002    0.499]
+Expected:            [   0.000   -0.800    1.200    0.000    0.500]
+Absolute difference: [  -0.000    0.003    0.000   -0.002   -0.001]
+Relative difference: [    -inf   -0.004    0.000     -inf   -0.002]
+
+Checking standard errors
+Observed:            [   0.086    0.062    0.044    0.058    0.053]
+Expected:            [   0.080    0.053    0.053    0.054    0.054]
+Absolute difference: [   0.006    0.008   -0.009    0.004   -0.001]
+Relative difference: [   0.074    0.158   -0.165    0.081   -0.010]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.000                0.100
+               0.000                0.200
+               0.000                0.300
+               0.000                0.400
+               0.000                0.500
+               0.000                0.600
+               0.000                0.700
+               0.000                0.800
+               0.000                0.900
+================================================================================
+
+Checking dependence parameters:
+AR coefficient estimate:     0.6660
+AR coefficient truth:        0.6000
+Error variance estimate:     4.0002
+Error variance truth:        4.0000
+
+Checking parameter values:
+Observed:            [  -0.007   -0.793    1.201   -0.006    0.501]
+Expected:            [   0.000   -0.800    1.200    0.000    0.500]
+Absolute difference: [  -0.007    0.007    0.001   -0.006    0.001]
+Relative difference: [    -inf   -0.009    0.001     -inf    0.003]
+
+Checking standard errors
+Observed:            [   0.109    0.048    0.046    0.047    0.049]
+Expected:            [   0.106    0.048    0.048    0.048    0.048]
+Absolute difference: [   0.002   -0.000   -0.001   -0.001    0.002]
+Relative difference: [   0.023   -0.007   -0.029   -0.018    0.034]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.000                0.100
+               0.000                0.200
+               0.000                0.300
+               0.000                0.400
+               0.000                0.500
+               0.000                0.600
+               0.000                0.700
+               0.000                0.800
+               0.000                0.900
+================================================================================
+
+Checking dependence parameters:
+Nest 1 variance estimate:    1.9752
+Nest 1 variance truth:       2.0000
+Nest 2 variance estimate:    1.0013
+Nest 2 variance truth:       1.0000
+Error variance estimate:     1.0089
+Error variance truth:        1.0000
+
+Checking parameter values:
+Observed:            [   0.024    1.002    0.999   -1.000   -1.001]
+Expected:            [   0.000    1.000    1.000   -1.000   -1.000]
+Absolute difference: [   0.024    0.002   -0.001   -0.000   -0.001]
+Relative difference: [     inf    0.002   -0.001    0.000    0.001]
+
+Checking standard errors
+Observed:            [   0.219    0.024    0.022    0.021    0.020]
+Expected:            [   0.204    0.021    0.022    0.021    0.022]
+Absolute difference: [   0.016    0.002    0.001   -0.001   -0.002]
+Relative difference: [   0.077    0.104    0.026   -0.041   -0.089]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.000                0.100
+               0.000                0.200
+               0.000                0.300
+               0.000                0.400
+               0.000                0.500
+               0.000                0.600
+               0.000                0.700
+               0.000                0.800
+               0.000                0.900
+================================================================================
+
+Checking dependence parameters:
+Nest 1 variance estimate:    0.9614
+Nest 1 variance truth:       1.0000
+Nest 2 variance estimate:    3.0497
+Nest 2 variance truth:       3.0000
+Error variance estimate:     4.0144
+Error variance truth:        4.0000
+
+Checking parameter values:
+Observed:            [   0.007    0.999    1.297   -0.799   -1.200]
+Expected:            [   0.000    1.000    1.300   -0.800   -1.200]
+Absolute difference: [   0.007   -0.001   -0.003    0.001    0.000]
+Relative difference: [     inf   -0.001   -0.002   -0.001   -0.000]
+
+Checking standard errors
+Observed:            [   0.142    0.047    0.044    0.044    0.040]
+Expected:            [   0.163    0.044    0.043    0.043    0.042]
+Absolute difference: [  -0.021    0.003    0.001    0.001   -0.002]
+Relative difference: [  -0.129    0.077    0.015    0.015   -0.052]
+
+Checking constrained estimation:
+Left hand side:
+[[   0.000    1.000    1.000    0.000    0.000]]
+Right hand side:
+[   0.000]
+Observed p-values   Expected Null p-values
+               0.000                0.100
+               0.000                0.200
+               0.000                0.300
+               0.000                0.400
+               0.000                0.500
+               0.000                0.600
+               0.000                0.700
+               0.000                0.800
+               0.000                0.900
+================================================================================
