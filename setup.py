@@ -482,6 +482,8 @@ if __name__ == "__main__":
                          ["*.csv", "*.dat"]})
     package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
     package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
+    # temporary, until moved:
+    package_data.update({"statsmodels.sandbox.regression.tests" : ["*.dta"]})
     # Why are we installing this stuff?
 
     #TODO: deal with this. Not sure if it ever worked for bdists
