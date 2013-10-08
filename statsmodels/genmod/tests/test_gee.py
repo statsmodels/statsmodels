@@ -75,7 +75,7 @@ class TestGEE(object):
 
         marg = GEEMargins(mdf, ())
         marg.summary()
-        # Nothing to compare to
+
 
 
     def test_logistic(self):
@@ -340,7 +340,14 @@ class TestGEE(object):
 
         md = GEE(endog, exog1, groups, None, family, v)
         mdf = md.fit(starting_params = beta)
-        # Nothing to compare to...
+
+        cf = np.r_[1.09238131, 0.02148193, -0.39879146, -0.01855666,
+                   0.02983409, 1.18123172,  0.01845318, -1.10233886]
+        se = np.r_[0.10878752,  0.10326078,  0.11171241, 0.05488705,
+                   0.05995019, 0.0916574,  0.05951445,  0.08539281]
+
+        assert_almost_equal(mdf.params, cf, decimal=5)
+        assert_almost_equal(mdf.bse, se, decimal=5)
 
 
     def test_nominal(self):
@@ -410,9 +417,14 @@ class TestGEE(object):
 
         md = GEE(endog, exog1, groups, None, family, v)
         mdf = md.fit(starting_params = beta)
-        # Nothing to compare to...
-        #assert_almost_equal(md.params, cf[j], decimal=2)
-        #assert_almost_equal(mdf.standard_errors(), se[j], decimal=2)
+
+        cf = np.r_[1.09238131, 0.02148193, -0.39879146, -0.01855666,
+                   0.02983409, 1.18123172, 0.01845318, -1.10233886]
+        se = np.r_[0.10878752, 0.10326078, 0.11171241, 0.05488705,
+                   0.05995019, 0.0916574, 0.05951445, 0.08539281]
+
+        assert_almost_equal(mdf.params, cf, decimal=2)
+        assert_almost_equal(mdf.bse, se, decimal=2)
 
 
 
