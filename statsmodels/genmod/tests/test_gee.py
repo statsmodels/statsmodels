@@ -287,7 +287,7 @@ class TestGEE(object):
         endog,exog,group = load_data("gee_nested_linear_1.csv")
 
         group_n = []
-        for i in range(endog.shape[0]/10):
+        for i in range(endog.shape[0]//10):
             group_n.extend([0,]*5)
             group_n.extend([1,]*5)
         group_n = np.array(group_n)[:,None]
