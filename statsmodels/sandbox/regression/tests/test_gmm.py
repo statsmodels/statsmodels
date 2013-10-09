@@ -283,10 +283,10 @@ class TestGMMStOnestep(CheckGMM):
                                             #weights=res1.weights))))
         # TODO: doesn't look different
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
-
-        w0inv = np.dot(instrument.T, instrument) / nobs
+        #nobs = instrument.shape[0]
+        #w0inv = np.dot(instrument.T, instrument) / nobs
         q = self.res1.model.gmmobjective(self.res1.params, np.linalg.inv(self.res1.weights))
-        assert_allclose(q, res2.Q, rtol=5e-6, atol=0)
+        #assert_allclose(q, res2.Q, rtol=5e-6, atol=0)
 
 
 class TestGMMStOneiter(CheckGMM):
@@ -329,6 +329,7 @@ class TestGMMStOneiter(CheckGMM):
         #assert_allclose(res1.bse, res2.bse, rtol=5e-06, atol=0)
 
         #This doesn't replicate Stata oneway either
+        nobs = instrument.shape[0]
         w0inv = np.dot(instrument.T, instrument) / nobs
         q = self.res1.model.gmmobjective(self.res1.params, w)#self.res1.weights)
         #assert_allclose(q, res2.Q, rtol=5e-6, atol=0)
