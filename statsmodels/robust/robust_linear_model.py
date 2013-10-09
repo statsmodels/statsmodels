@@ -187,9 +187,10 @@ class RLM(base.LikelihoodModel):
         """
         if isinstance(self.scale_est, str):
             if self.scale_est.lower() == 'mad':
-                return scale.mad(resid)
-            if self.scale_est.lower() == 'stand_mad':
-                return scale.stand_mad(resid)
+                return scale.mad(resid, center=0)
+            else:
+                raise ValueError("Option %s for scale_est not understood" %
+                                 self.scale_est)
         elif isinstance(self.scale_est, scale.HuberScale):
             return self.scale_est(self.df_resid, self.nobs, resid)
         else:
@@ -222,15 +223,13 @@ class RLM(base.LikelihoodModel):
         maxiter : int
             The maximum number of iterations to try. Default is 50.
         scale_est : string or HuberScale()
-            'mad', 'stand_mad', or HuberScale()
+            'mad' or HuberScale()
             Indicates the estimate to use for scaling the weights in the IRLS.
             The default is 'mad' (median absolute deviation.  Other options are
-            use 'stand_mad' for the median absolute deviation standardized
-            around the median and 'HuberScale' for Huber's proposal 2.
-            Huber's proposal 2 has optional keyword arguments d, tol, and
-            maxiter for specifying the tuning constant, the convergence
-            tolerance, and the maximum number of iterations.
-            See models.robust.scale for more information.
+            'HuberScale' for Huber's proposal 2. Huber's proposal 2 has
+            optional keyword arguments d, tol, and maxiter for specifying the
+            tuning constant, the convergence tolerance, and the maximum number
+            of iterations. See statsmodels.robust.scale for more information.
         tol : float
             The convergence tolerance of the estimate.  Default is 1e-8.
         update_scale : Bool
@@ -590,9 +589,6 @@ if __name__=="__main__":
 
 #    model_ols = models.regression.OLS(endog, exog)
 #    results_ols = model_ols.fit()
-
-#    model_huber = RLM(endog, exog, M=norms.HuberT(t=2.))
-#    results_huber = model_huber.fit(scale_est="stand_mad", update_scale=False)
 
 #    model_ramsaysE = RLM(endog, exog, M=norms.RamsayE())
 #    results_ramsaysE = model_ramsaysE.fit(update_scale=False)
