@@ -8,6 +8,20 @@ from statsmodels.discrete.discrete_model import Poisson
 class PanelPoisson(PanelModel, GenericLikelihoodModel):#, Poisson):
 #NOTE: if we want to inherit also from Poisson, we need to add
 #      *args, **kwargs to discrete model inits
+    """
+    References
+    ----------
+    Cameron, C. and Trivedi, P. K. 1998. *Regression Analysis of Count Data*
+        1st Edition.
+    """
+    # one-way fixed effects only for now using conditional MLE of
+    # Hausman et al (1984)
+    # panel poisson avoids the incidental parameters problem by conditioning
+    # on sufficient statistics for the fixed effects, namely
+    # sum(s, y_is) for panel fixed effects and sum(j, y_jt) for time
+    # fixed effects. If you want to do two-way just include dummies for
+    # the fixed dimension (usually time in econometrics as T = Fixed and
+    # N -> inf
     def __init__(self, y, X, effects="oneway", panel=None, time=None,
                  hasconst=None, missing='none'):
         self.effects = effects
@@ -15,7 +29,6 @@ class PanelPoisson(PanelModel, GenericLikelihoodModel):#, Poisson):
         super(PanelPoisson, self).__init__(y, X, missing=missing,
                                            time=time, panel=panel,
                                            hasconst=hasconst)
-
 
     def loglike(self, params, concentrated=True):
         y = self.endog
@@ -36,6 +49,12 @@ class PanelPoisson(PanelModel, GenericLikelihoodModel):#, Poisson):
             llf -= sum(g.transform_array(special.gammaln(y + 1),
                          lambda x : x.sum(), level=level))
         return llf
+
+    def score(self, params):
+        pass
+
+    def hessian(self, params):
+        pass
 
 
 class PanelZIPoisson(object):
