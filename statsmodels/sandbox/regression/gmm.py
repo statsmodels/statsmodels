@@ -60,6 +60,7 @@ import statsmodels.stats.sandwich_covariance as smcov
 import statsmodels.tools.tools as tools
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
 
+DEBUG = 0
 
 def maxabs(x):
     '''just a shortcut to np.abs(x).max()
@@ -475,9 +476,15 @@ class GMM(object):
 
 
         '''
+
         #bug: where does start come from ???
         if start is None:
             start = self.fitstart() #TODO: temporary hack
+
+        if opt_args is None:
+            opt_args = {}
+        if not 'disp' in opt_args:
+            opt_args['disp'] = 1
 
         if maxiter == 0:
             # TODO invweights could be None
@@ -556,10 +563,11 @@ class GMM(object):
         else:
             raise ValueError('optimizer method not available')
 
-        print np.linalg.det(weights)
+        if DEBUG:
+            print np.linalg.det(weights)
 
         #TODO: add other optimization options and results
-        return optimizer(self.gmmobjective, start, args=(weights,), disp=1, **opt_args)
+        return optimizer(self.gmmobjective, start, args=(weights,), **opt_args)
 
 
     def fitgmm_cu(self, start, method='bfgs', opt_args=None):
@@ -649,7 +657,8 @@ class GMM(object):
 
 
     def fititer(self, start, maxiter=2, start_weights=None,
-                    weights_method='momcov', wargs=(), method='bfgs', opt_args=None):
+                    weights_method='momcov', wargs=(), method='bfgs',
+                    opt_args=None):
         '''iterative estimation with updating of optimal weighting matrix
 
         stopping criteria are maxiter or change in parameter estimate less
@@ -758,7 +767,8 @@ class GMM(object):
         '''
         nobs, k_moms = moms.shape
         # TODO: wargs are tuple or dict ?
-        print ' momcov wargs', wargs
+        if DEBUG:
+            print ' momcov wargs', wargs
         # TODO: store this outside to avoid doing this inside optimization loop
         if method == 'momcov':
             w = np.cov(moms, rowvar=0, bias=True) #  divide by n
@@ -766,7 +776,8 @@ class GMM(object):
                 if wargs['ddof'] == 'k_params':
                     w = w * nobs * 1. / (nobs - self.k_params)
                 else:
-                    print ' momcov ddof', wargs['ddof']
+                    if DEBUG:
+                        print ' momcov ddof', wargs['ddof']
                     w = w * nobs * 1. / (nobs - wargs['ddof'])
 
         elif method == 'flatkernel':
