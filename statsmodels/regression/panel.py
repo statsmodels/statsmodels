@@ -59,11 +59,6 @@ def _random_effects_mle_loglike(self, params):
                  T*np.log(2*np.pi*var_resid))
     return np.sum(llf)
 
-_effects_levels = dict(oneway=[0],
-                       time=[1],
-                       twoway=[0,1])
-#TODO: support any other aliases?
-
 def _maximize_loglike():
     """
     Amemiya (1971) shows that brute force maximization of the (log-)likelihood
