@@ -250,7 +250,7 @@ class TestPooling(CheckModelResults, FixedEffectsMixin):
         cls.res2 = res2
 
 
-class TestTwoWay(CheckModelResults, FixedEffectsMixin):
+class XestTwoWay(CheckModelResults, FixedEffectsMixin):
     pass
 
 class XestMLE(CheckModelResults):
