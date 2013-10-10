@@ -50,19 +50,18 @@ TODO
 
 import numpy as np
 import pandas as pd
-from statsmodels.base.model import (LikelihoodModel,
-                                    LikelihoodModelResults, ResultMixin)
 import statsmodels.api as sm
 import time
 from collections import OrderedDict
 from scipy import stats
-from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly)
+from statsmodels.tools.decorators import cache_readonly
 from halton_sequence import halton
 import re
+from dcm_base import DiscreteChoiceModel, DiscreteChoiceModelResults
 
+### Public Model Classes ####
 
-class MXLogit(LikelihoodModel):
+class MXLogit(DiscreteChoiceModel):
     __doc__ = """
     Mixed Logit
 
@@ -133,121 +132,31 @@ class MXLogit(LikelihoodModel):
         z are variables, like individual-specific, that have different
           coefficients across variables.
 
-    If there are choice (or alternative) specific constants, then they should
-    be contained in Z. For identification, the constant of one choice should be
-    dropped.
+    If there are choice (or alternative)LikelihoodModel specific constants,
+    then they should be contained in Z. For identification, the constant
+    of one choice should be dropped.
     """
 
     def __init__(self, endog_data, exog_data,  V, draws, ncommon,
                  NORMAL,ref_level, name_intercept = None, **kwds):
 
-        start_time = time.time()
-
-        self.endog_data = endog_data
-        self.exog_data = exog_data
-
-        self.V = V
-        self.ncommon = ncommon
-
-        self.ref_level = ref_level
-
-        if name_intercept == None:
-            self.exog_data['Intercept'] = 1
-            self.name_intercept = 'Intercept'
-        else:
-            self.name_intercept = name_intercept
-
-        self.draws = draws
-        self.NORMAL = NORMAL
-        self.num_rparam = len(NORMAL)
+        super(MXLogit, self).__init__(endog_data, exog_data,  V, ncommon,
+                 ref_level, name_intercept = None, **kwds)
 
         self._initialize()
 
-        # TODO : implement test
-        # from math import sqrt
-        # sqrt(210)/2 # the ratio should be small (See Train, 2001)
-        self.haltonsequence = halton(len(self.n_ramdon), self.draws)
-
-        super(MXLogit, self).__init__(endog = endog_data,
-                exog = self.exog_matrix, **kwds)
-
     def _initialize(self):
         """
-        Preprocesses the data discrete choice models
-
-        The data for MXLogit is almost equal as required for CLogit
+        Preprocesses the data for MXLogit
         """
+        # Need a private Model Class for preprocesses the data for this model?
 
-        self.J = len(self.V)
-        self.nobs = self.endog_data.shape[0] / self.J
+        super(MXLogit, self)._initialize()
 
-        # Endog_bychoices
-        self.endog_bychoices = self.endog_data.values.reshape(-1, self.J)
-
-        # Exog_bychoices
-        exog_bychoices = []
-        exog_bychoices_names = []
-        choice_index = np.array(self.V.keys() * self.nobs)
-
-        for key in iter(self.V):
-            (exog_bychoices.append(self.exog_data[self.V[key]]
-                                    [choice_index == key].values))
-
-        for key in self.V:
-            exog_bychoices_names.append(self.V[key])
-
-        self.exog_bychoices = exog_bychoices
-
-        # Betas
-        beta_not_common = ([len(exog_bychoices_names[ii]) - self.ncommon
-                            for ii in range(self.J)])
-
-        zi = np.r_[[self.ncommon], self.ncommon + np.array(beta_not_common)\
-                    .cumsum()]
-        z = np.arange(max(zi))
-        beta_ind = [np.r_[np.arange(self.ncommon), z[zi[ii]:zi[ii + 1]]]
-                               for ii in range(len(zi) - 1)]  # index of betas
-        self.beta_ind = beta_ind
-
-        beta_ind_str = ([map(str, beta_ind[ii]) for ii in range(self.J)])
-        beta_ind_J = ([map(str, beta_ind[ii]) for ii in range(self.J)])
-
-        for ii in range(self.J):
-            for jj, item in enumerate(beta_ind[ii]):
-                if item in np.arange(self.ncommon):
-                    beta_ind_J[ii][jj] = ''
-                else:
-                    beta_ind_J[ii][jj] = ' (' + self.V.keys()[ii] + ')'
-
-        self.betas = OrderedDict()
-
-        for sublist in range(self.J):
-            aa = []
-            for ii in range(len(exog_bychoices_names[sublist])):
-                aa.append(
-                beta_ind_str[sublist][ii] + ' ' +
-                exog_bychoices_names[sublist][ii]
-                + beta_ind_J[sublist][ii])
-            self.betas[sublist] = aa
-
-        # Exog
-        pieces = []
-        for ii in range(self.J):
-            pieces.append(pd.DataFrame(exog_bychoices[ii], columns=self.betas[ii]))
-
-        self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = self.V.keys(),
-                                     names = ['choice', 'nobs'])
-                           .fillna(value = 0).sortlevel(1).reset_index())
-
-        self.exog_matrix = self.exog_matrix_all.iloc[:, 2:]
-
-        self.K = len(self.exog_matrix.columns)
-
-        self.df_model = self.K
-        self.df_resid = int(self.nobs - self.K)
-
-        self.paramsnames = sorted(set([i for j in self.betas.values()
-                                       for i in j]))
+        self.NORMAL = NORMAL
+        if  NORMAL is not None:
+            self.draws = draws
+            self.num_rparam = len(NORMAL)
 
         self.values_ramdon = []
         self.n_ramdon = []
@@ -282,15 +191,10 @@ class MXLogit(LikelihoodModel):
             print self.paramsidx
             print self.nparams
 
-    def xbetas(self, params):
-        """the Utilities V_i
-
-        """
-        res = np.empty((self.nobs, self.J))
-        for ii in range(self.J):
-            res[:, ii] = np.dot(self.exog_bychoices[ii],
-                                      params[self.beta_ind[ii]])
-        return res
+        # TODO : implement test
+        # from math import sqrt
+        # sqrt(210)/2 # the ratio should be small (See Train, 2001)
+        self.haltonsequence = halton(len(self.n_ramdon), self.draws)
 
     def drawndistri(self, params):
         """
@@ -450,9 +354,9 @@ class MXLogit(LikelihoodModel):
             func_params = []
 
             for rand in self.values_ramdon:
-                mean = Logit_res.params[rand] # loc
+                mean = Logit_res.params[rand]  # loc
                 func_params.append(mean)
-                sd = 0.1 # loc
+                sd = 0.1   # loc
                 func_params.append(sd)
 
             start_params = np.r_[Logit_res.params, func_params]
@@ -490,115 +394,7 @@ class MXLogit(LikelihoodModel):
 
 
 ### Results Class ###
-class MXLogitResults(LikelihoodModelResults, ResultMixin):
-    __doc__ = """
-    Parameters
-    ----------
-    model : A Discrete Choice Model instance.
-
-    Returns
-    -------
-    aic : float
-        Akaike information criterion.  -2*(`llf` - p) where p is the number
-        of regressors including the intercept.
-    bic : float
-        Bayesian information criterion. -2*`llf` + ln(`nobs`)*p where p is the
-        number of regressors including the intercept.
-    bse : array
-        The standard errors of the coefficients.
-    df_resid : float
-        Residual degrees-of-freedom of model.
-    df_model : float
-        Params.
-    llf : float
-        Value of the loglikelihood
-    llnull : float
-        Value of the constant-only loglikelihood
-    llr : float
-        Likelihood ratio chi-squared statistic; -2*(`llnull` - `llf`)
-    llrt: float
-        Likelihood ratio test
-    llr_pvalue : float
-        The chi-squared probability of getting a log-likelihood ratio
-        statistic greater than llr.  llr has a chi-squared distribution
-        with degrees of freedom `df_model`.
-    prsquared : float
-        McFadden's pseudo-R-squared. 1 - (`llf`/`llnull`)
-
-    """
-
-    def __init__(self, model):
-
-        self.model = model
-        self.mlefit = model.fit()
-        self.nobs_bychoice = model.nobs
-        self.nobs = model.endog.shape[0]
-        self.alt = model.V.keys()
-        self.freq_alt = model.endog_bychoices[:, ].sum(0).tolist()
-        self.perc_alt = (model.endog_bychoices[:, ].sum(0) / model.nobs)\
-                        .tolist()
-        self.__dict__.update(self.mlefit.__dict__)
-        self._cache = resettable_cache()
-
-    def __getstate__(self):
-        try:
-            #remove unpicklable callback
-            self.mle_settings['callback'] = None
-        except (AttributeError, KeyError):
-            pass
-        return self.__dict__
-
-    @cache_readonly
-    def llnull(self):
-        # TODO: Use Clogit
-        # loglike model without predictors
-        model = self.model
-        V = model.V
-
-        V_null = OrderedDict()
-
-        for ii in range(len(V.keys())):
-            if V.keys()[ii] == model.ref_level:
-                V_null[V.keys()[ii]] = []
-            else:
-                V_null[V.keys()[ii]] = [model.name_intercept]
-
-        mxlogit_null_mod = model.__class__(endog_data = model.endog_data,
-                                           exog_data = model.exog_data,
-                                           V = V_null,
-                                           NORMAL = [],
-                                           draws = 0,
-                                           ncommon = 0,
-                                           ref_level = model.ref_level,
-                                           name_intercep = model.name_intercept)
-
-        mxlogit_null_mod.mean = None
-        mxlogit_null_mod.std = None
-        mxlogit_null_res = mxlogit_null_mod.fit(start_params = np.zeros(\
-                                                len(V.keys()) - 1), disp = 0)
-
-    # Fit model
-        return mxlogit_null_res.llf
-
-    @cache_readonly
-    def llr(self):
-        return -2 * (self.llnull - self.llf)
-
-    @cache_readonly
-    def llrt(self):
-        return 2 * (self.llf - self.llnull)
-
-    @cache_readonly
-    def llr_pvalue(self):
-        return stats.chisqprob(self.llr, self.model.df_model)
-
-    @cache_readonly
-    def prsquared(self):
-        """
-        McFadden's Pseudo R-Squared: comparing two models on the same data, would
-        be higher for the model with the greater likelihood.
-        """
-        return (1 - self.llf / self.llnull)
+class MXLogitResults(DiscreteChoiceModelResults):
 
     def summary(self, title = None, alpha = .05):
         """Summarize the MXLogit Results
@@ -678,8 +474,8 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
         # TODO
         # for ramdom parameters
         mydata = [self.model.satpar, self.params]
-        aa =  self.model.exog_names + self.model.ms_params
-        mystubs = aa
+        paramlist = self.model.exog_names + self.model.ms_params
+        mystubs = paramlist
         myheaders = ["Initial Params:", "Params: "]
 
         mytitle = ("Params MXLogit")
@@ -687,7 +483,6 @@ class MXLogitResults(LikelihoodModelResults, ResultMixin):
                           data_fmts = ["%5.4f"])
         smry.tables.append(tb2)
         return smry
-
 
 
 if __name__ == "__main__":
