@@ -442,7 +442,7 @@ class GMM(object):
     def fit(self, start=None, maxiter=10, inv_weights=None,
                   weights_method='cov', wargs=(),
                   has_optimal_weights=True,
-                  opt_method='bfgs', opt_args=None):
+                  optim_method='bfgs', optim_args=None):
         '''
         Estimate the parameters using default settings.
 
@@ -480,20 +480,24 @@ class GMM(object):
         #       currently a misspelled key is not detected,
         #       because I'm still adding options
 
+        # TODO: check repeated calls to fit with different options
+        #       arguments are dictionaries, i.e. mutable
+        #       unit test if anything  is stale or spilled over.
+
         #bug: where does start come from ???
         if start is None:
             start = self.fitstart() #TODO: temporary hack
 
-        if opt_args is None:
-            opt_args = {}
-        if not 'disp' in opt_args:
-            opt_args['disp'] = 1
+        if optim_args is None:
+            optim_args = {}
+        if not 'disp' in optim_args:
+            optim_args['disp'] = 1
 
         if maxiter == 0:
             # TODO invweights could be None
             weights = np.linalg.pinv(inv_weights)
             params = self.fitgmm(start, weights=weights,
-                                 method=opt_method, opt_args=opt_args)
+                                 optim_method=optim_method, optim_args=optim_args)
             weights_ = weights  # temporary alias used in jval
         else:
             params, weights = self.fititer(start,
@@ -501,26 +505,30 @@ class GMM(object):
                                            start_weights=inv_weights,
                                            weights_method=weights_method,
                                            wargs=wargs,
-                                           method=opt_method,
-                                           opt_args=opt_args)
-            # TODO weights returned by fititer is inv_weights
+                                           optim_method=optim_method,
+                                           optim_args=optim_args)
+            # TODO weights returned by fititer is inv_weights - not true anymore
+            # weights_ currently not necessary and used anymore
             weights_ = np.linalg.pinv(weights)
+
+        #TODO: use Bunch instead ?
+        options_other = {'weights_method':weights_method,
+                         'has_optimal_weights':has_optimal_weights,
+                         'optim_method':optim_method}
         #results = GMMResults()
-        results = results_class_dict[self.results_class](model=self)
-        #results.model = self
-        results.params = params
-        results.weights = weights
-        results.q = self.gmmobjective(params, weights)
-        # nobs_moms attached by momcond_mean
-        results.jval = results.q * self.nobs_moms
-        results.wargs = wargs
-        results.opt_args = opt_args
+        results = results_class_dict[self.results_class](
+                                        model = self,
+                                        params = params,
+                                        weights = weights,
+                                        wargs = wargs,
+                                        options_other = options_other,
+                                        optim_args = optim_args)
 
         self.results = results # FIXME: remove, still keeping it temporarily
         return results
 
 
-    def fitgmm(self, start, weights=None, method='bfgs', opt_args=None):
+    def fitgmm(self, start, weights=None, optim_method='bfgs', optim_args=None):
         '''estimate parameters using GMM
 
         Parameters
@@ -552,16 +560,16 @@ class GMM(object):
         if weights is None:
             weights = np.eye(self.nmoms)
 
-        if opt_args is None:
+        if optim_args is None:
             opt_args = {}
 
-        if method == 'nm':
+        if optim_method == 'nm':
             optimizer = optimize.fmin
-        elif method == 'bfgs':
+        elif optim_method == 'bfgs':
             optimizer = optimize.fmin_bfgs
             # TODO: add score
-            opt_args['fprime'] = self.score #lambda params: self.score(params, weights)
-        elif method == 'ncg':
+            optim_args['fprime'] = self.score #lambda params: self.score(params, weights)
+        elif optim_method == 'ncg':
             optimizer = optimize.fmin_ncg
         else:
             raise ValueError('optimizer method not available')
@@ -570,7 +578,8 @@ class GMM(object):
             print np.linalg.det(weights)
 
         #TODO: add other optimization options and results
-        return optimizer(self.gmmobjective, start, args=(weights,), **opt_args)
+        return optimizer(self.gmmobjective, start, args=(weights,),
+                         **optim_args)
 
 
     def fitgmm_cu(self, start, method='bfgs', opt_args=None):
@@ -660,8 +669,8 @@ class GMM(object):
 
 
     def fititer(self, start, maxiter=2, start_weights=None,
-                    weights_method='momcov', wargs=(), method='bfgs',
-                    opt_args=None):
+                    weights_method='momcov', wargs=(), optim_method='bfgs',
+                    optim_args=None):
         '''iterative estimation with updating of optimal weighting matrix
 
         stopping criteria are maxiter or change in parameter estimate less
@@ -712,12 +721,14 @@ class GMM(object):
             #this is still calling function not method
 ##            resgmm = fitgmm(momcond, (), start, weights=winv, fixed=None,
 ##                            weightsoptimal=False)
-            resgmm = self.fitgmm(start, weights=w, method=method,
-                                 opt_args=opt_args)
+            resgmm = self.fitgmm(start, weights=w, optim_method=optim_method,
+                                 optim_args=optim_args)
 
             moms = momcond(resgmm)
             # the following is S = cov_moments
-            winv_new = self.calc_weightmatrix(moms, method=weights_method, wargs=wargs)
+            winv_new = self.calc_weightmatrix(moms,
+                                              weights_method=weights_method,
+                                              wargs=wargs)
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
@@ -728,7 +739,7 @@ class GMM(object):
         return resgmm, w
 
 
-    def calc_weightmatrix(self, moms, method='cov', wargs=()):
+    def calc_weightmatrix(self, moms, weights_method='cov', wargs=()):
         '''calculate omega or the weighting matrix
 
         Parameters
@@ -780,7 +791,7 @@ class GMM(object):
             moms_ = moms - moms.mean()
 
         # TODO: store this outside to avoid doing this inside optimization loop
-        if method == 'cov':
+        if weights_method == 'cov':
             w = np.dot(moms_.T, moms_)
             if 'ddof' in wargs:
                 # caller requests degrees of freedom correction
@@ -794,7 +805,7 @@ class GMM(object):
                 # default: divide by nobs
                 w /= nobs
 
-        elif method == 'flatkernel':
+        elif weights_method == 'flatkernel':
             #uniform cut-off window
             if not 'maxlag' in wargs:
                 raise ValueError('flatkernel requires maxlag')
@@ -804,7 +815,7 @@ class GMM(object):
             w = np.dot(moms_.T, moms_)/nobs
             for i in range(1,maxlag+1):
                 w += (h[i] * np.dot(moms_[i:].T, moms_[:-i]) / (nobs-i))
-        elif method == 'hac':
+        elif weights_method == 'hac':
             print 'using HAC'
             maxlag = wargs['maxlag']
             if 'kernel' in wargs:
@@ -862,15 +873,36 @@ class GMMResults(LikelihoodModelResults):
         self.nobs = self.model.nobs
 
 
-    def cov_params(self, **kwds):  #TODO add options ???)
+    @property
+    def q(self):
+        return self.gmmobjective(self.params, self.weights)
+
+
+    @property
+    def jval(self):
+        # nobs_moms attached by momcond_mean
+        return self.q * self.model.nobs_moms
+
+
+    def cov_params(self, **kwds):
+        #TODO add options ???)
+        # this should use by default whatever options have been specified in
+        # fit
 
         # TODO: don't do this when we want to change options
 #         if hasattr(self, '_cov_params'):
 #             #replace with decorator later
 #             return self._cov_params
 
-        if self.wargs:
+        # set defaults based on fit arguments
+        if not 'wargs' in kwds:
+            # Note: we don't check the keys in wargs, use either all or nothing
             kwds['wargs'] = self.wargs
+        if not 'weights_method' in kwds:
+            kwds['weights_method'] = self.options_other['weights_method']
+        if not 'has_optimal_weights' in kwds:
+            kwds['has_optimal_weights'] = self.options_other['has_optimal_weights']
+
         gradmoms = self.model.gradient_momcond(self.params)
         moms = self.model.momcond(self.params)
         covparams = self.calc_cov_params(moms, gradmoms, **kwds)
@@ -881,7 +913,7 @@ class GMMResults(LikelihoodModelResults):
 
     def calc_cov_params(self, moms, gradmoms, weights=None, use_weights=False,
                                               has_optimal_weights=True,
-                                              method='cov', wargs=()):
+                                              weights_method='cov', wargs=()):
         '''calculate covariance of parameter estimates
 
         not all options tried out yet
@@ -912,12 +944,16 @@ class GMMResults(LikelihoodModelResults):
         if use_weights:
             omegahat = weights
         else:
-            omegahat = self.model.calc_weightmatrix(moms, method=method, wargs=wargs)
+            omegahat = self.model.calc_weightmatrix(
+                                                moms,
+                                                weights_method=weights_method,
+                                                wargs=wargs)
+
 
         if has_optimal_weights: #has_optimal_weights:
             # TOD0 make has_optimal_weights depend on convergence or iter >2
             cov = np.linalg.inv(np.dot(gradmoms.T,
-                                       np.dot(np.linalg.inv(omegahat), gradmoms)))
+                                    np.dot(np.linalg.inv(omegahat), gradmoms)))
         else:
             gw = np.dot(gradmoms.T, weights)
             gwginv = np.linalg.inv(np.dot(gw, gradmoms))
@@ -932,12 +968,21 @@ class GMMResults(LikelihoodModelResults):
         '''
         return self.get_bse()
 
-    def get_bse(self, method=None):
-        '''
+    def get_bse(self, **kwds):
+        '''standard error of the parameter estimates with options
 
-        method option not defined yet
+        Parameters
+        ----------
+        kwds : optional keywords
+            options for calculating cov_params
+
+        Returns
+        -------
+        bse : ndarray
+            estimated standard error of parameter estimates
+
         '''
-        return np.sqrt(np.diag(self.cov_params()))
+        return np.sqrt(np.diag(self.cov_params(**kwds)))
 
     def jtest(self):
         '''overidentification test
@@ -953,10 +998,18 @@ class GMMResults(LikelihoodModelResults):
 
 
     def compare_j(self, other):
-        '''hypothesis test for comparing two nested gmm estimates
+        '''overidentification test for comparing two nested gmm estimates
 
         This assumes that some moment restrictions have been dropped in one
         of the GMM estimates relative to the other.
+
+        Not tested yet
+
+        We are comparing two separately estimated models, that use different
+        weighting matrices. It is not guaranteed that the resulting
+        difference is positive.
+
+        TODO: Check in which cases Stata programs use the same weigths
 
         '''
         jstat1 = self.jval
@@ -1000,6 +1053,7 @@ class GMMResults(LikelihoodModelResults):
             results
 
         """
+        #TODO: add a summary text for options that have been used
 
         jvalue, jpvalue, jdf = self.jtest()
 
