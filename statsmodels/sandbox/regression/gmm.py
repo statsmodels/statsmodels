@@ -366,6 +366,51 @@ class IVRegressionResults(RegressionResults):
 
 ############# classes for Generalized Method of Moments GMM
 
+_gmm_options = '''\
+
+Options for GMM
+---------------
+
+Type of GMM
+~~~~~~~~~~~
+
+ - one-step
+ - iterated
+ - CUE : not tested yet
+
+weight matrix
+~~~~~~~~~~~~~
+
+ - `weights_method` : string, defines method for robust
+   Options here are similar to :mod:`statsmodels.stats.robust_covariance`
+   default is heteroscedasticity consistent, HC0
+   other methods:
+ - `wargs` : tuple or dict, required arguments for weights_method
+
+   - `centered` : bool,
+     indicates whether moments are centered for the calculation of the weights
+     and covariance matrix, applies to all weight_methods
+   - `ddof` : int
+     degrees of freedom correction, applies currently only to `cov`
+   - maxlag : int
+     number of lags to include in HAC calculation , applies only to `hac`
+   - others not yet, e.g. groups for cluster robust
+
+covariance matrix
+~~~~~~~~~~~~~~~~~
+
+The same options as for weight matrix also apply to the calculation of the
+estimate of the covariance matrix of the parameter estimates.
+The additional option is
+
+ - `has_optimal_weights`: If true, then the calculation of the covariance
+   matrix assumes that we have optimal GMM with :math:`W = S^{-1}`.
+   Default is True.
+   TODO: do we want to have a different default after `onestep`?
+
+
+'''
+
 class GMM(object):
     '''
     Class for estimation by Generalized Method of Moments
@@ -561,7 +606,7 @@ class GMM(object):
             weights = np.eye(self.nmoms)
 
         if optim_args is None:
-            opt_args = {}
+            optim_args = {}
 
         if optim_method == 'nm':
             optimizer = optimize.fmin
@@ -582,7 +627,7 @@ class GMM(object):
                          **optim_args)
 
 
-    def fitgmm_cu(self, start, method='bfgs', opt_args=None):
+    def fitgmm_cu(self, start, optim_method='bfgs', optim_args=None):
         '''estimate parameters using continuously updating GMM
 
         Parameters
@@ -605,20 +650,20 @@ class GMM(object):
 ##        if not fixed is None:  #fixed not defined in this version
 ##            raise NotImplementedError
 
-        if opt_args is None:
-            opt_args = {}
+        if optim_args is None:
+            optim_args = {}
 
-        if method == 'nm':
+        if optim_method == 'nm':
             optimizer = optimize.fmin
-        elif method == 'bfgs':
+        elif optim_method == 'bfgs':
             optimizer = optimize.fmin_bfgs
-        elif method == 'ncg':
+        elif optim_method == 'ncg':
             optimizer = optimize.fmin_ncg
         else:
             raise ValueError('optimizer method not available')
 
         #TODO: add other optimization options and results
-        return optimizer(self.gmmobjective_cu, start, args=(), disp=1, **opt_args)
+        return optimizer(self.gmmobjective_cu, start, args=(), **optim_args)
 
 
     def gmmobjective(self, params, weights):
@@ -644,7 +689,7 @@ class GMM(object):
         #return np.dot(np.dot(moms.mean(0),weights), moms.mean(0))
 
 
-    def gmmobjective_cu(self, params, weights_method='momcov',
+    def gmmobjective_cu(self, params, weights_method='cov',
                         wargs=()):
         '''
         objective function for continuously updating  GMM minimization
@@ -661,7 +706,7 @@ class GMM(object):
 
         '''
         moms = self.momcond(params)
-        inv_weights = self.calc_weightmatrix(moms, method=weights_method,
+        inv_weights = self.calc_weightmatrix(moms, weights_method=weights_method,
                                              wargs=wargs)
         weights = np.linalg.pinv(inv_weights)
         self._weights_cu = weights  # store if we need it later
@@ -791,6 +836,11 @@ class GMM(object):
             moms_ = moms - moms.mean()
 
         # TODO: store this outside to avoid doing this inside optimization loop
+        # TODO: subclasses need to be able to add weights_methods, and remove
+        #       IVGMM can have homoscedastic (OLS),
+        #       some options won't make sense in some cases
+        #       possible add all here and allow subclasses to define a list
+        # TODO: should other weights_methods also have `ddof`
         if weights_method == 'cov':
             w = np.dot(moms_.T, moms_)
             if 'ddof' in wargs:
@@ -807,6 +857,7 @@ class GMM(object):
 
         elif weights_method == 'flatkernel':
             #uniform cut-off window
+            # This was a trial version, can use HAC with flatkernel
             if not 'maxlag' in wargs:
                 raise ValueError('flatkernel requires maxlag')
 
@@ -815,6 +866,7 @@ class GMM(object):
             w = np.dot(moms_.T, moms_)/nobs
             for i in range(1,maxlag+1):
                 w += (h[i] * np.dot(moms_[i:].T, moms_[:-i]) / (nobs-i))
+
         elif weights_method == 'hac':
             print 'using HAC'
             maxlag = wargs['maxlag']
@@ -827,6 +879,7 @@ class GMM(object):
             w = smcov.S_hac_simple(moms_, nlags=maxlag,
                                    weights_func=weights_func)
             w /= nobs #(nobs - self.k_params)
+
         else:
             raise ValueError('weight method not available')
 
@@ -843,6 +896,7 @@ class GMM(object):
         momcond = self.momcond(params)
         self.nobs_moms, self.k_moms = momcond.shape
         return momcond.mean(0)
+
 
     def gradient_momcond(self, params, epsilon=1e-4, method='centered'):
 
@@ -873,12 +927,12 @@ class GMMResults(LikelihoodModelResults):
         self.nobs = self.model.nobs
 
 
-    @property
+    @cache_readonly
     def q(self):
         return self.gmmobjective(self.params, self.weights)
 
 
-    @property
+    @cache_readonly
     def jval(self):
         # nobs_moms attached by momcond_mean
         return self.q * self.model.nobs_moms
@@ -1164,12 +1218,12 @@ class IVGMMResults(GMMResults):
 
     @cache_readonly
     def resid(self):
-        return self.model.endog - self.fittedvalues()
+        return self.model.endog - self.fittedvalues
 
 
     @cache_readonly
     def ssr(self):
-        return (self.resid * self.resid).sum()
+        return (self.resid * self.resid).sum(0)
 
 
 
