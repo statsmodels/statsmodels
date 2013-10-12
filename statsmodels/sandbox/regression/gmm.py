@@ -476,6 +476,9 @@ class GMM(object):
 
 
         '''
+        # TODO: add check for correct wargs keys
+        #       currently a misspelled key is not detected,
+        #       because I'm still adding options
 
         #bug: where does start come from ???
         if start is None:
@@ -725,7 +728,7 @@ class GMM(object):
         return resgmm, w
 
 
-    def calc_weightmatrix(self, moms, method='momcov', wargs=()):
+    def calc_weightmatrix(self, moms, method='cov', wargs=()):
         '''calculate omega or the weighting matrix
 
         Parameters
@@ -769,29 +772,40 @@ class GMM(object):
         # TODO: wargs are tuple or dict ?
         if DEBUG:
             print ' momcov wargs', wargs
+
+        if 'centered' in wargs and not wargs['centered']:
+            # caller doesn't want centered moment conditions
+            moms_ = moms
+        else:
+            moms_ = moms - moms.mean()
+
         # TODO: store this outside to avoid doing this inside optimization loop
-        if method == 'momcov':
-            w = np.cov(moms, rowvar=0, bias=True) #  divide by n
+        if method == 'cov':
+            w = np.dot(moms_.T, moms_)
             if 'ddof' in wargs:
+                # caller requests degrees of freedom correction
                 if wargs['ddof'] == 'k_params':
-                    w = w * nobs * 1. / (nobs - self.k_params)
+                    w /= (nobs - self.k_params)
                 else:
                     if DEBUG:
                         print ' momcov ddof', wargs['ddof']
-                    w = w * nobs * 1. / (nobs - wargs['ddof'])
+                    w /= (nobs - wargs['ddof'])
+            else:
+                # default: divide by nobs
+                w /= nobs
 
         elif method == 'flatkernel':
             #uniform cut-off window
             if not 'maxlag' in wargs:
                 raise ValueError('flatkernel requires maxlag')
-            moms_centered = moms - moms.mean()
+
             maxlag = wargs['maxlag']
             h = np.ones(maxlag + 1)
-            w = np.dot(moms.T, moms)/nobs
+            w = np.dot(moms_.T, moms_)/nobs
             for i in range(1,maxlag+1):
-                w += (h[i] * np.dot(moms_centered[i:].T, moms_centered[:-i]) /
-                                                                  (nobs-i))
+                w += (h[i] * np.dot(moms_[i:].T, moms_[:-i]) / (nobs-i))
         elif method == 'hac':
+            print 'using HAC'
             maxlag = wargs['maxlag']
             if 'kernel' in wargs:
                 weights_func = wargs['kernel']
@@ -799,11 +813,11 @@ class GMM(object):
                 weights_func = smcov.weights_bartlett
                 wargs['kernel'] = weights_func
 
-            moms_centered = moms - moms.mean()
-            w = smcov.S_hac_simple(moms_centered, nlags=maxlag,
+            w = smcov.S_hac_simple(moms_, nlags=maxlag,
                                    weights_func=weights_func)
+            w /= nobs #(nobs - self.k_params)
         else:
-            w = np.dot(moms.T, moms)/nobs
+            raise ValueError('weight method not available')
 
         return w
 
@@ -867,7 +881,7 @@ class GMMResults(LikelihoodModelResults):
 
     def calc_cov_params(self, moms, gradmoms, weights=None, use_weights=False,
                                               has_optimal_weights=True,
-                                              method='momcov', wargs=()):
+                                              method='cov', wargs=()):
         '''calculate covariance of parameter estimates
 
         not all options tried out yet
