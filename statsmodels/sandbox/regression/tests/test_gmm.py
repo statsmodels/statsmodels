@@ -225,7 +225,8 @@ class TestGMMSt1(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res10 = mod.fit(start, maxiter=10, inv_weights=w0inv,
-                        opt_method='bfgs', opt_args={'gtol':1e-6})
+                        opt_method='bfgs', opt_args={'gtol':1e-6},
+                        wargs={'centered':False})
         self.res1 = res10
 
         from results_gmm_griliches_iter import results
@@ -246,7 +247,8 @@ class TestGMMStTwostep(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res10 = mod.fit(start, maxiter=2, inv_weights=w0inv,
-                        opt_method='bfgs', opt_args={'gtol':1e-6})
+                        opt_method='bfgs', opt_args={'gtol':1e-6},
+                        wargs={'centered':False})
         self.res1 = res10
 
         from results_gmm_griliches import results_twostep as results
@@ -349,8 +351,9 @@ class TestGMMSt2(object):
         #w0 = np.linalg.inv(w0inv)
 
         mod = gmm.IVGMM(endog, exog, instrument)
-        res = mod.fit(start, maxiter=2, inv_weights=w0inv, wargs={'ddof':0},
-                        opt_method='bfgs', opt_args={'gtol':1e-6})
+        res = mod.fit(start, maxiter=2, inv_weights=w0inv,
+                      wargs={'ddof':0, 'centered':False},
+                      opt_method='bfgs', opt_args={'gtol':1e-6})
         self.res1 = res
 
         from results_ivreg2_griliches import results_gmm2s_robust as results
@@ -359,8 +362,9 @@ class TestGMMSt2(object):
         # TODO: remove after testing, compare bse from 1 iteration
         # see test_basic
         mod = gmm.IVGMM(endog, exog, instrument)
-        res = mod.fit(start, maxiter=1, inv_weights=w0inv, wargs={'ddof':0},
-                        opt_method='bfgs', opt_args={'gtol':1e-6})
+        res = mod.fit(start, maxiter=1, inv_weights=w0inv,
+                      wargs={'ddof':0, 'centered':False},
+                      opt_method='bfgs', opt_args={'gtol':1e-6})
         self.res3 = res
 
 
