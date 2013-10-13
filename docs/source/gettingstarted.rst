@@ -26,7 +26,7 @@ provides labelled arrays of (potentially heterogenous) data, similar to the
 comma-separated values file to a ``DataFrame`` object.
 
 `patsy <https://github.com/pydata/patsy>`_ is a Python library for describing
-satistical models and building `Design Matrices
+statistical models and building `Design Matrices
 <http://en.wikipedia.org/wiki/Design_matrix>`_ using ``R``-like formulas.
 
 Data
