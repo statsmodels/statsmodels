@@ -49,17 +49,17 @@ TODO
 """
 
 import numpy as np
-import pandas as pd
 import statsmodels.api as sm
 import time
 from collections import OrderedDict
 from scipy import stats
-from statsmodels.tools.decorators import cache_readonly
-from halton_sequence import halton
+from statsmodels.discrete.halton_sequence import halton
 import re
-from dcm_base import DiscreteChoiceModel, DiscreteChoiceModelResults
+from statsmodels.discrete.dcm_base import (DiscreteChoiceModel,
+                                           DiscreteChoiceModelResults)
 
 ### Public Model Classes ####
+
 
 class MXLogit(DiscreteChoiceModel):
     __doc__ = """
@@ -491,20 +491,12 @@ if __name__ == "__main__":
 
     print 'Example:'
 
-    # Load data
-    from patsy import dmatrices
-
-    url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
-    file_ = "ModeChoice.csv"
-    import os
-    if not os.path.exists(file_):
-        import urllib
-        urllib.urlretrieve(url, "ModeChoice.csv")
-    df = pd.read_csv(file_)
-    df.describe()
-
-    f = 'mode  ~ ttme+invc+invt+gc+hinc+psize'
-    y, X = dmatrices(f, df, return_type='dataframe')
+    # Loading data as pandas object
+    data = sm.datasets.modechoice.load_pandas()
+    data.endog[:5]
+    data.exog[:5]
+    data.exog['Intercept'] = 1  # include an intercept
+    y, X = data.endog, data.exog
 
     # Set up model
     # Names of the variables for the utility function for each alternative

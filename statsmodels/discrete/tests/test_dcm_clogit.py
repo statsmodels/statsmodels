@@ -3,7 +3,7 @@ Tests for discrete choice models : clogit
 
 """
 from statsmodels.discrete.dcm_clogit import CLogit, CLogitResults
-from results.results_dcm_clogit import Travelmodechoice
+from statsmodels.discrete.tests.results.results_dcm_clogit import Travelmodechoice
 
 import numpy as np
 import pandas as pd
@@ -79,21 +79,12 @@ class TestCLogit(CheckDCMResults):
     def setupClass(cls):
         # set up model
 
-        # load data
-        from patsy import dmatrices
-
-        url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/\
-                ModeChoice.csv"
-        file_ = "ModeChoice.csv"
-        import os
-        if not os.path.exists(file_):
-            import urllib
-            urllib.urlretrieve(url, file_)
-        df = pd.read_csv(file_)
-        df.describe()
-
-        f = 'mode  ~ ttme+invc+invt+gc+hinc+psize'
-        y, X = dmatrices(f, df, return_type='dataframe')
+        # Loading data as pandas object
+        data = sm.datasets.modechoice.load_pandas()
+        data.endog[:5]
+        data.exog[:5]
+        data.exog['Intercept'] = 1  # include an intercept
+        y, X = data.endog, data.exog
 
         # Names of the variables for the utility function for each alternative
         V = OrderedDict((

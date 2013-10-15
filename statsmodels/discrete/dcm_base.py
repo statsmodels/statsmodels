@@ -22,6 +22,7 @@ Train, K. `Discrete Choice Methods with Simulation`.
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 from statsmodels.base.model import (LikelihoodModel,
                                     LikelihoodModelResults, ResultMixin)
 from collections import OrderedDict
@@ -265,26 +266,15 @@ class DiscreteChoiceModelResults(LikelihoodModelResults, ResultMixin):
 
 if __name__ == "__main__":
 
-    DEBUG = 0
+    # Example for text preprocessing data for discrete choice models
 
-    print 'Example:'
+    # Loading data as pandas object
+    data = sm.datasets.modechoice.load_pandas()
+    data.endog[:5]
+    data.exog[:5]
+    data.exog['Intercept'] = 1  # include an intercept
+    y, X = data.endog, data.exog
 
-    # Load data
-    from patsy import dmatrices
-
-    url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
-    file_ = "ModeChoice.csv"
-    import os
-    if not os.path.exists(file_):
-        import urllib
-        urllib.urlretrieve(url, "ModeChoice.csv")
-    df = pd.read_csv(file_)
-    df.describe()
-
-    f = 'mode  ~ ttme+invc+invt+gc+hinc+psize'
-    y, X = dmatrices(f, df, return_type='dataframe')
-
-    #_for test datapreprocesses data for discrete choice models
     ncommon = 2
     ref_level = 'car'
     name_intercept = 'Intercept'
@@ -300,6 +290,6 @@ if __name__ == "__main__":
                           name_intercept = name_intercept)
 
     # dir(base_mod)
-    print base_mod.endog_bychoices
-    print base_mod.exog_bychoices
+#    print base_mod.endog_bychoices
+#    print base_mod.exog_bychoices
     print base_mod.paramsnames
