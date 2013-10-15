@@ -8,14 +8,9 @@ See:
 https://github.com/statsmodels/statsmodels/wiki/DCM:-Discrete-choice-models
 
 """
-
-import pandas as pd
-import numpy as np
-from patsy import dmatrices
+import statsmodels.api as sm
+from statsmodels.discrete.dcm_clogit import CLogit, CLogitResults
 import time
-
-from dcm_clogit import CLogit
-from dcm_clogit import CLogitResults
 
 u"""
 Examples
@@ -36,29 +31,12 @@ Note: There's a typo on TABLE 21.11. βT isn't -0.19612 is -0.09612
     see TABLE 21.13 to check
 """
 
-# Load data
-# TODO: use datasets instead
-url = "http://vincentarelbundock.github.io/Rdatasets/csv/Ecdat/ModeChoice.csv"
-file_ = "ModeChoice.csv"
-import os
-if not os.path.exists(file_):
-    import urllib
-    urllib.urlretrieve(url, file_)
-df = pd.read_csv(file_)
-df.describe()
-
-nchoices = 4
-nobs = 210
-choice_index = np.arange(nchoices * nobs) % nchoices
-df['hinc_air'] = df['hinc'] * (choice_index == 0)
-
-f = 'mode  ~ ttme+invc+invt+gc+hinc+psize+hinc_air'
-y, X = dmatrices(f, df, return_type='dataframe')
-y.head()
-X.head()
-
-endog_data = y
-exog_data = X
+# Loading data as pandas object
+data = sm.datasets.modechoice.load_pandas()
+data.endog[:5]
+data.exog[:5]
+data.exog['Intercept'] = 1  # include an intercept
+y, X = data.endog, data.exog
 
 print u"""
 
@@ -72,7 +50,7 @@ TABLE 21.11 Parameter Estimates. Unweighted Sample
 # Names of the variables for the utility function for each alternative
 # variables with common coefficients have to be first in each array
 V = {
-    "1": ['gc', 'ttme', 'Intercept', 'hinc_air'],
+    "1": ['gc', 'ttme', 'Intercept', 'hinc'],
     "2": ['gc', 'ttme', 'Intercept'],
     "3": ['gc', 'ttme', 'Intercept'],
     "4": ['gc', 'ttme'],
@@ -84,7 +62,7 @@ ncommon = 2
 # Model
 start_time = time.time()
 
-clogit_mod = CLogit(endog_data, exog_data, V, ncommon,
+clogit_mod = CLogit(y, X, V, ncommon,
                        ref_level = '4', name_intercept = 'Intercept')
 clogit_res = clogit_mod.fit()
 
@@ -185,7 +163,7 @@ ncommon = 1
 # Model
 start_time = time.time()
 
-clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+clogit_mod = CLogit(y, X,  V, ncommon,
                         ref_level = '4', name_intercept = 'Intercept')
 clogit_res = clogit_mod.fit()
 
@@ -265,7 +243,7 @@ ncommon = 1
 # Model
 start_time = time.time()
 
-clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+clogit_mod = CLogit(y, X,  V, ncommon,
                         ref_level = '4', name_intercept = None)
 clogit_res = clogit_mod.fit()
 
@@ -310,7 +288,7 @@ ncommon = 1
 # Model
 start_time = time.time()
 
-clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+clogit_mod = CLogit(y, X,  V, ncommon,
                         ref_level = '4', name_intercept = 'Intercept')
 clogit_res = clogit_mod.fit()
 
@@ -348,7 +326,7 @@ ncommon = 0
 # Model
 start_time = time.time()
 
-clogit_mod = CLogit(endog_data, exog_data,  V, ncommon,
+clogit_mod = CLogit(y, X,  V, ncommon,
                         ref_level = '4', name_intercept = None)
 clogit_res =  clogit_mod.fit()
 
