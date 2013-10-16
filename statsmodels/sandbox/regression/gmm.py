@@ -1232,6 +1232,7 @@ class IVGMM(GMM):
     def get_error(self, params):
         return self.endog - self.predict(params)
 
+
     def predict(self, params, exog=None):
 
         if exog is None:
@@ -1302,27 +1303,28 @@ class LinearIVGMM(IVGMM):
         return np.dot(exog, params)
 
 
-    def gradient_momcond(self, params, weights, **kwds):
+    def gradient_momcond(self, params, **kwds):
         # **kwds for compatibility not used
 
         x, z = self.exog, self.instrument
-        gradmoms = -np.dot(z.T, x)
+        gradmoms = -np.dot(z.T, x) / self.nobs
 
         return gradmoms
 
     def score(self, params, weights, **kwds):
-        # **kwds for compatibility not used
+        # **kwds for compatibility, not used
         # Note: I coud use general formula with gradient_momcond instead
 
         x, z = self.exog, self.instrument
 
         u = self.get_errors(params)
-        score = 2 * np.dot(x.T, z).dot(weights.dot(z.T, u))
+        score = 2 * np.dot(x.T, z).dot(weights.dot(np.dot(z.T, u)))
+        score /= nobs * nobs
 
         return score
 
 
-#not tried out yet
+
 class NonlinearIVGMM(IVGMM):
     '''
     Class for non-linear instrumental variables estimation with GMM
@@ -1348,7 +1350,7 @@ class NonlinearIVGMM(IVGMM):
         if exog is None:
             exog = self.exog
 
-        return self.func(exog, params)
+        return self.func(params, exog)
 
     #----------  the following a semi-general versions,
     # TODO: move to higher class after testing
@@ -1361,7 +1363,7 @@ class NonlinearIVGMM(IVGMM):
         return deriv
 
 
-    def jac_errors(self, params, weights, args=None, centered=True,
+    def jac_error(self, params, weights, args=None, centered=True,
                    epsilon=None):
 
         jac_func = self.jac_func(params, weights, args=None, centered=True,
@@ -1375,14 +1377,16 @@ class NonlinearIVGMM(IVGMM):
         # Note: I coud use general formula with gradient_momcond instead
 
         z = self.instrument
+        nobs = z.shape[0]
 
-        jac_u = self.jac_errors(params, weights, args=None, epsilon=None,
-                           centered=True)
-        x = jac_u  # alias, plays the same role as X in linear model
+        jac_u = self.jac_error(params, weights, args=None, epsilon=None,
+                               centered=True)
+        x = -jac_u  # alias, plays the same role as X in linear model
 
-        u = self.get_errors(params)
+        u = self.get_error(params)
 
-        score = 2 * np.dot(x.T, z).dot(weights.dot(z.T, u))
+        score = 2 * np.dot(x.T, z).dot(weights.dot(np.dot(z.T, u)))
+        score /= nobs * nobs
 
         return score
 
