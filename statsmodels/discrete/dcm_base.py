@@ -84,7 +84,7 @@ class DiscreteChoiceModel(LikelihoodModel):
         # Exog_bychoices
         exog_bychoices = []
         exog_bychoices_names = []
-        choice_index = np.array(self.V.keys() * self.nobs)
+        choice_index = np.array(self.V.keys() * int(self.nobs))
 
         for key in iter(self.V):
             (exog_bychoices.append(self.exog_data[self.V[key]]
