@@ -1,12 +1,19 @@
 """
-Tests for discrete choice models : clogit
+Tests for discrete choice models:
+ * Conditional logit (dcm_clogit.py)
+ * Mixed logit or random-coefficients model (dcm_mxlogit.py)
 
+Copyright (c) 2013 Ana Martinez Pardo <anamartinezpardo@gmail.com>
+License: BSD-3 [see LICENSE.txt]
 """
+
+import statsmodels.api as sm
 from statsmodels.discrete.dcm_clogit import CLogit, CLogitResults
-from statsmodels.discrete.tests.results.results_dcm_clogit import Travelmodechoice
+
+from statsmodels.discrete.tests.results.results_dcm_clogit \
+    import Travelmodechoice
 
 import numpy as np
-import pandas as pd
 from collections import OrderedDict
 from numpy.testing import assert_almost_equal
 
@@ -72,7 +79,7 @@ class CheckDCMResults(object):
 
 class TestCLogit(CheckDCMResults):
     """
-    Tests the Clogit model
+    Tests the Condicional model (CLogit)
     """
 
     @classmethod
@@ -112,7 +119,6 @@ class TestCLogit(CheckDCMResults):
         cls.res2 = res2
 
 
-
 if __name__ == "__main__":
     import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)
+    nose.runmodule(argv = [__file__, '-vvs', '-x'], exit = False)
