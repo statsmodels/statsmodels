@@ -407,6 +407,72 @@ class TestGMMStOneiterNO(CheckGMM):
         self.res2 = results
 
 
+#------------ Crosscheck subclasses
+
+class TestGMMStOneiterNO_Linear(CheckGMM):
+
+    @classmethod
+    def setup_class(self):
+        # compare to Stata default options, onestep GMM
+        # this uses maxiter=1, one iteration in loop
+        self.params_tol = [5e-9, 1e-9]
+        self.bse_tol = [5e-10, 1e-10]
+        exog = exog_st  # with const at end
+        start = OLS(endog, exog).fit().params
+        nobs, k_instr = instrument.shape
+        w0inv = np.dot(instrument.T, instrument) / nobs
+        #w0 = np.linalg.inv(w0inv)
+
+        mod = gmm.LinearIVGMM(endog, exog, instrument)
+        res = mod.fit(start, maxiter=1, inv_weights=w0inv,
+                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        wargs={'centered':False}, has_optimal_weights=False)
+        self.res1 = res
+
+        mod = gmm.IVGMM(endog, exog, instrument)
+        res = mod.fit(start, maxiter=1, inv_weights=w0inv,
+                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        wargs={'centered':False}, has_optimal_weights=False)
+        self.res3 = res
+
+        from results_gmm_griliches import results_onestep as results
+        self.res2 = results
+
+
+class TestGMMStOneiterNO_Nonlinear(CheckGMM):
+
+    @classmethod
+    def setup_class(self):
+        # compare to Stata default options, onestep GMM
+        # this uses maxiter=1, one iteration in loop
+        self.params_tol = [1e-5, 1e-6]
+        self.bse_tol = [1e-6, 1e-7]
+        exog = exog_st  # with const at end
+        start = OLS(endog, exog).fit().params
+        nobs, k_instr = instrument.shape
+        w0inv = np.dot(instrument.T, instrument) / nobs
+        #w0 = np.linalg.inv(w0inv)
+
+        def func(params, exog):
+            return np.dot(exog, params)
+
+        mod = gmm.NonlinearIVGMM(endog, exog, instrument, func)
+        res = mod.fit(start, maxiter=1, inv_weights=w0inv,
+                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        wargs={'centered':False}, has_optimal_weights=False)
+        self.res1 = res
+
+        mod = gmm.IVGMM(endog, exog, instrument)
+        res = mod.fit(start, maxiter=1, inv_weights=w0inv,
+                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        wargs={'centered':False}, has_optimal_weights=False)
+        self.res3 = res
+
+        from results_gmm_griliches import results_onestep as results
+        self.res2 = results
+
+
+
 #------------------
 
 class TestGMMSt2(object):
