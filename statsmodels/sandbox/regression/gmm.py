@@ -384,7 +384,18 @@ weight matrix
  - `weights_method` : string, defines method for robust
    Options here are similar to :mod:`statsmodels.stats.robust_covariance`
    default is heteroscedasticity consistent, HC0
-   other methods:
+
+   currently available methods are
+
+   - `cov` : HC0, optionally with degrees of freedom correction
+   - `hac` :
+   - `iid` : untested, only for Z*u case, IV cases with u as error indep of Z
+   - `ac` : not available yet
+   - `cluster` : not connected yet
+   - others from robust_covariance
+
+other arguments:
+
  - `wargs` : tuple or dict, required arguments for weights_method
 
    - `centered` : bool,
@@ -547,7 +558,7 @@ class GMM(object):
         else:
             params, weights = self.fititer(start,
                                            maxiter=maxiter,
-                                           start_weights=inv_weights,
+                                           start_invweights=inv_weights,
                                            weights_method=weights_method,
                                            wargs=wargs,
                                            optim_method=optim_method,
@@ -600,10 +611,9 @@ class GMM(object):
 ##        if not fixed is None:  #fixed not defined in this version
 ##            raise NotImplementedError
 
-        #tmp = momcond(start, *args)  # forgott to delete this
-        #nmoms = tmp.shape[-1]
+        # TODO: should start_weights only be in `fit`
         if weights is None:
-            weights = np.eye(self.nmoms)
+            weights = self.start_weights(inv=False)
 
         if optim_args is None:
             optim_args = {}
@@ -666,6 +676,10 @@ class GMM(object):
         return optimizer(self.gmmobjective_cu, start, args=(), **optim_args)
 
 
+    def start_weights(self, inv=True):
+        return np.eye(self.nmoms)
+
+
     def gmmobjective(self, params, weights):
         '''
         objective function for GMM minimization
@@ -713,8 +727,8 @@ class GMM(object):
         return np.dot(np.dot(moms.mean(0), weights), moms.mean(0))
 
 
-    def fititer(self, start, maxiter=2, start_weights=None,
-                    weights_method='momcov', wargs=(), optim_method='bfgs',
+    def fititer(self, start, maxiter=2, start_invweights=None,
+                    weights_method='cov', wargs=(), optim_method='bfgs',
                     optim_args=None):
         '''iterative estimation with updating of optimal weighting matrix
 
@@ -749,12 +763,13 @@ class GMM(object):
 
 
         '''
+        self.history = []
         momcond = self.momcond
 
-        if start_weights is None:
-            w = np.eye(self.nmoms)
+        if start_invweights is None:
+            w = self.start_weights(inv=True)
         else:
-            w = start_weights
+            w = start_invweights
 
         #call fitgmm function
         #args = (self.endog, self.exog, self.instrument)
@@ -784,7 +799,8 @@ class GMM(object):
         return resgmm, w
 
 
-    def calc_weightmatrix(self, moms, weights_method='cov', wargs=()):
+    def calc_weightmatrix(self, moms, weights_method='cov', wargs=(),
+                          params=None):
         '''calculate omega or the weighting matrix
 
         Parameters
@@ -829,7 +845,8 @@ class GMM(object):
         if DEBUG:
             print ' momcov wargs', wargs
 
-        if 'centered' in wargs and not wargs['centered']:
+        centered = not ('centered' in wargs and not wargs['centered'])
+        if not centered:
             # caller doesn't want centered moment conditions
             moms_ = moms
         else:
@@ -880,6 +897,30 @@ class GMM(object):
                                    weights_func=weights_func)
             w /= nobs #(nobs - self.k_params)
 
+        elif weights_method == 'iid':
+            # only when we have instruments and residual mom = Z * u
+            # TODO: problem we don't have params in argument
+            #       I cannot keep everything in here w/o params as argument
+            u = self.get_errors(params)
+            if centered:
+                # Note: I'm not centering instruments,
+                #    shouldn't we always center u? Ok, with centered as default
+                ud = u - u.mean(0)  #demeaned
+            instrument = self.instrument
+            w = np.dot(instrument.T, instrument).dot(np.dot(ud.T, ud))
+            if 'ddof' in wargs:
+                # caller requests degrees of freedom correction
+                if wargs['ddof'] == 'k_params':
+                    w /= (nobs - self.k_params)
+                else:
+                    # assume ddof is a number
+                    if DEBUG:
+                        print ' momcov ddof', wargs['ddof']
+                    w /= (nobs - wargs['ddof'])
+            else:
+                # default: divide by nobs
+                w /= nobs
+
         else:
             raise ValueError('weight method not available')
 
@@ -892,16 +933,34 @@ class GMM(object):
 
         '''
 
-        #endog, exog = args
         momcond = self.momcond(params)
         self.nobs_moms, self.k_moms = momcond.shape
         return momcond.mean(0)
 
 
-    def gradient_momcond(self, params, epsilon=1e-4, method='centered'):
+    def gradient_momcond(self, params, epsilon=1e-4, centered=True):
+        '''gradient of moment conditions
+
+        Parameters
+        ----------
+        params : ndarray
+            parameter at which the moment conditions are evaluated
+        epsilon : float
+            stepsize for finite difference calculation
+        centered : bool
+            This refers to the finite difference calculation. If `centered`
+            is true, then the centered finite difference calculation is
+            used. Otherwise the one-sided forward differences are used.
+
+        TODO: looks like not used yet
+              missing argument `weights`
+
+        '''
 
         momcond = self.momcond_mean
-        if method == 'centered':
+
+        # TODO: approx_fprime has centered keyword
+        if centered:
             gradmoms = (approx_fprime(params, momcond, epsilon=epsilon) +
                     approx_fprime(params, momcond, epsilon=-epsilon))/2
         else:
@@ -1161,6 +1220,15 @@ class IVGMM(GMM):
     def fitstart(self):
         return np.zeros(self.exog.shape[1])
 
+
+    def start_weights(self, inv=True):
+        zz = np.dot(self.instrument.T, self.instrument)
+        if inv:
+            return np.linalg.pinv(zz)
+        else:
+            return zz
+
+
     def get_error(self, params):
         return self.endog - self.predict(params)
 
@@ -1174,6 +1242,84 @@ class IVGMM(GMM):
     def momcond(self, params):
         instrument = self.instrument
         return instrument * self.get_error(params)[:,None]
+
+
+class LinearIVGMM(IVGMM):
+
+
+    def fitgmm(self, start, weights=None, optim_method='bfgs', **kwds):
+        '''estimate parameters using GMM for linear model
+
+        uses closed form expression, instead of nonlinear optimizers
+
+        Parameters
+        ----------
+        start : array_like
+            starting values for minimization
+        weights : array
+            weighting matrix for moment conditions. If weights is None, then
+            the identity matrix is used
+        **kwds : keyword arguments
+            not used, will be silently ignored (for compatibility with generic)
+
+
+        Returns
+        -------
+        paramest : array
+            estimated parameters
+
+        Notes
+        -----
+        todo: add fixed parameter option, not here ???
+
+        uses scipy.optimize.fmin
+
+        '''
+##        if not fixed is None:  #fixed not defined in this version
+##            raise NotImplementedError
+
+        # TODO: should start_weights only be in `fit`
+        if weights is None:
+            weights = self.start_weights(inv=False)
+
+        y, x, z = self.endog, self.exog, self.instrument
+
+        zTx = np.dot(z.T, x)
+        zTy = np.dot(z.T, y)
+        # normal equation, solved with pinv
+        part0 = zTx.T.dot(weights)
+        part1 = part0.dot(zTx)
+        part2 = part0.dot(zTy)
+        params = np.linalg.pinv(part1).dot(part2)
+
+        return params
+
+
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+
+        return np.dot(exog, params)
+
+
+    def gradient_momcond(self, params, weights, **kwds):
+        # **kwds for compatibility not used
+
+        x, z = self.exog, self.instrument
+        gradmoms = -np.dot(z.T, x)
+
+        return gradmoms
+
+    def score(self, params, weights, **kwds):
+        # **kwds for compatibility not used
+        # Note: I coud use general formula with gradient_momcond instead
+
+        x, z = self.exog, self.instrument
+
+        u = self.get_errors(params)
+        score = 2 * np.dot(x.T, z).dot(weights.dot(z.T, u))
+
+        return score
 
 
 #not tried out yet
@@ -1195,7 +1341,7 @@ class NonlinearIVGMM(IVGMM):
 
     def __init__(self, endog, exog, instrument, func, **kwds):
         self.func = func
-        super(NonlinearIVGMM, self).__init__(endog, exog, instrument)
+        super(NonlinearIVGMM, self).__init__(endog, exog, instrument, **kwds)
 
 
     def predict(self, params, exog=None):
@@ -1204,6 +1350,41 @@ class NonlinearIVGMM(IVGMM):
 
         return self.func(exog, params)
 
+    #----------  the following a semi-general versions,
+    # TODO: move to higher class after testing
+
+    def jac_func(self, params, weights, args=None, centered=True, epsilon=None):
+
+        deriv = approx_fprime(params, self.func, args=(self.exog,),
+                              centered=centered, epsilon=epsilon)
+
+        return deriv
+
+
+    def jac_errors(self, params, weights, args=None, centered=True,
+                   epsilon=None):
+
+        jac_func = self.jac_func(params, weights, args=None, centered=True,
+                                 epsilon=None)
+
+        return -jac_func
+
+
+    def score(self, params, weights, **kwds):
+        # **kwds for compatibility not used
+        # Note: I coud use general formula with gradient_momcond instead
+
+        z = self.instrument
+
+        jac_u = self.jac_errors(params, weights, args=None, epsilon=None,
+                           centered=True)
+        x = jac_u  # alias, plays the same role as X in linear model
+
+        u = self.get_errors(params)
+
+        score = 2 * np.dot(x.T, z).dot(weights.dot(z.T, u))
+
+        return score
 
 
 class IVGMMResults(GMMResults):
@@ -1224,6 +1405,7 @@ class IVGMMResults(GMMResults):
     @cache_readonly
     def ssr(self):
         return (self.resid * self.resid).sum(0)
+
 
 
 
