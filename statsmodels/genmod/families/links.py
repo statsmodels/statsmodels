@@ -4,6 +4,7 @@ Defines the link functions to be used with GLM families.
 
 import numpy as np
 import scipy.stats
+FLOAT_EPS = np.finfo(float).eps
 
 #TODO: are the instance actually "aliases"
 # I used this terminology in varfuncs as well -ss
@@ -70,17 +71,15 @@ class Logit(Link):
     Notes
     -----
     call and derivative use a private method _clean to make trim p by
-    1e-10 so that p is in (0,1)
+    machine epsilon so that p is in (0,1)
 
     Alias of Logit:
     logit = Logit()
     """
 
-    tol = 1.0e-10
-
     def _clean(self, p):
         """
-        Clip logistic values to range (tol, 1-tol)
+        Clip logistic values to range (eps, 1-eps)
 
         Parameters
         -----------
@@ -92,7 +91,7 @@ class Logit(Link):
         pclip : array
             Clipped probabilities
         """
-        return np.clip(p, Logit.tol, 1. - Logit.tol)
+        return np.clip(p, FLOAT_EPS, 1. - FLOAT_EPS)
 
     def __call__(self, p):
         """
@@ -310,13 +309,11 @@ class Log(Link):
     Notes
     -----
     call and derivative call a private method _clean to trim the data by
-    1e-10 so that p is in (0,1). log is an alias of Log.
+    machine epsilon so that p is in (0,1). log is an alias of Log.
     """
 
-    tol = 1.0e-10
-
     def _clean(self, x):
-        return np.clip(x, Logit.tol, np.inf)
+        return np.clip(x, FLOAT_EPS, np.inf)
 
     def __call__(self, p, **extra):
         """
@@ -599,13 +596,11 @@ class NegativeBinomial(object):
         values are usually assumed to be in (.01,2).
     '''
 
-    tol = 1.0e-10
-
     def __init__(self, alpha=1.):
         self.alpha = alpha
 
     def _clean(self, x):
-        return np.clip(x, NegativeBinomial.tol, np.inf)
+        return np.clip(x, FLOAT_EPS, np.inf)
 
     def __call__(self, x):
         '''
