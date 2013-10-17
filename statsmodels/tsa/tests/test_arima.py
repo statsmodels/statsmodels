@@ -1831,6 +1831,40 @@ def test_arima_exog_predict_1d():
     newx = np.random.random(12)
     results = mod.forecast(steps=10, alpha=0.05, exog=newx)
 
+def test_arima_1123():
+    # test ARMAX predict when trend is none
+    np.random.seed(12345)
+    arparams = np.array([.75, -.25])
+    maparams = np.array([.65, .35])
+
+    arparam = np.r_[1, -arparams]
+    maparam = np.r_[1, maparams]
+
+    nobs = 20
+
+    dates = dates_from_range('1980',length=nobs)
+
+    y = arma_generate_sample(arparams, maparams, nobs)
+
+    X = np.random.randn(nobs)
+    y += 5*X
+    mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
+    res = mod.fit(trend='nc', disp=False)
+    fc = res.forecast(exog=X[-2:,None]) # has to be 2-d. could handhold here
+    # results from gretl
+    assert_almost_equal(fc[0], 2.200393, 6)
+    assert_almost_equal(fc[1], 1.030743, 6)
+    assert_almost_equal(fc[2][0,0], 0.180175, 6)
+    assert_almost_equal(fc[2][0,1], 4.220611, 6)
+
+    mod = ARMA(y[:-1], order=(1,1), exog=X[:-1])
+    res = mod.fit(trend='nc', disp=False)
+    fc = res.forecast(exog=X[-2:,None]) # make sure is 2-d
+    assert_almost_equal(fc[0], 2.765688, 6)
+    assert_almost_equal(fc[1], 0.835048, 6)
+    assert_almost_equal(fc[2][0,0], 1.129023, 6)
+    assert_almost_equal(fc[2][0,1], 4.402353, 6)
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
