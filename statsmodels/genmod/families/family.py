@@ -696,7 +696,7 @@ class Binomial(Family):
     endog for Binomial can be specified in one of three ways.
     """
 
-    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog]
+    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
     variance = V.binary # this is not used below in an effort to include n
 
     def __init__(self, link=L.logit):  #, n=1.):
