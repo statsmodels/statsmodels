@@ -788,7 +788,7 @@ class GMM(object):
             # the following is S = cov_moments
             winv_new = self.calc_weightmatrix(moms,
                                               weights_method=weights_method,
-                                              wargs=wargs)
+                                              wargs=wargs, params=resgmm)
 
             if it > 2 and maxabs(resgmm - start) < self.epsilon_iter:
                 #check rule for early stopping
@@ -901,13 +901,15 @@ class GMM(object):
             # only when we have instruments and residual mom = Z * u
             # TODO: problem we don't have params in argument
             #       I cannot keep everything in here w/o params as argument
-            u = self.get_errors(params)
+            u = self.get_error(params)
+
             if centered:
                 # Note: I'm not centering instruments,
                 #    shouldn't we always center u? Ok, with centered as default
-                ud = u - u.mean(0)  #demeaned
+                u -= u.mean(0)  #demean inplace, we don't need original u
+
             instrument = self.instrument
-            w = np.dot(instrument.T, instrument).dot(np.dot(ud.T, ud))
+            w = np.dot(instrument.T, instrument).dot(np.dot(u.T, u)) / nobs
             if 'ddof' in wargs:
                 # caller requests degrees of freedom correction
                 if wargs['ddof'] == 'k_params':
@@ -1060,7 +1062,8 @@ class GMMResults(LikelihoodModelResults):
             omegahat = self.model.calc_weightmatrix(
                                                 moms,
                                                 weights_method=weights_method,
-                                                wargs=wargs)
+                                                wargs=wargs,
+                                                params=self.params)
 
 
         if has_optimal_weights: #has_optimal_weights:
