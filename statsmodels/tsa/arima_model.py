@@ -219,10 +219,14 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
             mu = trendparam * (1 - arparams.sum())
             # arparams were reversed in unpack for ease later
             mu = mu + (np.r_[1, -arparams[::-1]]*X).sum(1)[:,None]
-
         else:
             mu = trendparam * (1 - arparams.sum())
             mu = np.array([mu]*steps)
+    elif k_exog > 0:
+        X = np.dot(exog, exparams)
+        #NOTE: you shouldn't have to give in-sample exog!
+        X = lagmat(X, p, original='in', trim='both')
+        mu = (np.r_[1, -arparams[::-1]]*X).sum(1)[:,None]
     else:
         mu = np.zeros(steps)
 
