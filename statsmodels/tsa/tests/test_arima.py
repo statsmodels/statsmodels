@@ -1673,7 +1673,7 @@ def test_arima_predict_exog():
     params = np.array([2.786912485145725, -0.122650190196475,
                        0.533223846028938, -0.319344321763337,
                        0.132883233000064])
-    assert_almost_equal(arma_res.params, params, 6)
+    assert_almost_equal(arma_res.params, params, 5)
     # no exog for in-sample
     predict = arma_res.predict()
     assert_almost_equal(predict, predict_expected.values[:100], 5)
