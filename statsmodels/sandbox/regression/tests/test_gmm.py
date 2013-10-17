@@ -445,8 +445,8 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
     def setup_class(self):
         # compare to Stata default options, onestep GMM
         # this uses maxiter=1, one iteration in loop
-        self.params_tol = [1e-5, 1e-6]
-        self.bse_tol = [1e-6, 1e-7]
+        self.params_tol = [5e-5, 5e-6]
+        self.bse_tol = [5e-6, 1e-1]
         exog = exog_st  # with const at end
         start = OLS(endog, exog).fit().params
         nobs, k_instr = instrument.shape
@@ -458,7 +458,7 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog, exog, instrument, func)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-8},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res
 
@@ -471,6 +471,33 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
         from results_gmm_griliches import results_onestep as results
         self.res2 = results
 
+
+class TestGMMStOneiterOLS_Linear(CheckGMM):
+
+    @classmethod
+    def setup_class(self):
+        # replicating OLS by GMM - high agreement
+        self.params_tol = [5e-12, 1e-12]
+        self.bse_tol = [1e-13, 1e-13]
+        exog = exog_st  # with const at end
+        res_ols = OLS(endog, exog).fit()
+        #Note: start is irrelevant but required
+        start = np.ones(len(res_ols.params))
+        nobs, k_instr = instrument.shape
+        w0inv = np.dot(exog.T, exog) / nobs
+        #w0 = np.linalg.inv(w0inv)
+
+        mod = gmm.LinearIVGMM(endog, exog, exog)
+        res = mod.fit(start, maxiter=0, inv_weights=w0inv,
+                        #optim_method='bfgs', optim_args={'gtol':1e-6},
+                        weights_method='iid',
+                        wargs={'centered':False, 'ddof':'k_params'},
+                        has_optimal_weights=True)
+        self.res1 = res
+
+        #from results_gmm_griliches import results_onestep as results
+        #self.res2 = results
+        self.res2 = res_ols
 
 
 #------------------
