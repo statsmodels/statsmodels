@@ -1372,6 +1372,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         if exog is not None:
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:,None]
+            if exog.shape[0] != steps:
+                raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
             exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
                               exog))
@@ -1625,6 +1627,8 @@ class ARIMAResults(ARMAResults):
         if exog is not None:
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:,None]
+            if exog.shape[0] != steps:
+                raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
             exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
                               exog))
