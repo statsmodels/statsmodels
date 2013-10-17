@@ -233,7 +233,7 @@ class NegativeBinomial(object):
             variance = mu + alpha*mu**2
         """
         p = self._clean(mu)
-        return mu + self.alpha*mu**2
+        return p + self.alpha*p**2
 
 nbinom = NegativeBinomial()
 nbinom.__doc__ = """
