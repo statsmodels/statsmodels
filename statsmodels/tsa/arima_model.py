@@ -1369,6 +1369,12 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         conf_int : array
             2d array of the confidence interval for the forecast
         """
+        if exog is not None:
+            if self.k_exog == 1 and exog.ndim == 1:
+                exog = exog[:,None]
+            # prepend in-sample exog observations
+            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                              exog))
 
         arparams = self.arparams
         maparams = self.maparams
@@ -1616,6 +1622,12 @@ class ARIMAResults(ARMAResults):
         Prediction is done in the levels of the original endogenous variable.
         If you would like prediction of differences in levels use `predict`.
         """
+        if exog is not None:
+            if self.k_exog == 1 and exog.ndim == 1:
+                exog = exog[:,None]
+            # prepend in-sample exog observations
+            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                              exog))
         forecast = _arma_predict_out_of_sample(self.params, steps, self.resid,
                                         self.k_ar, self.k_ma, self.k_trend,
                                         self.k_exog, self.model.endog,

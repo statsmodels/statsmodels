@@ -1850,7 +1850,7 @@ def test_arima_1123():
     y += 5*X
     mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
     res = mod.fit(trend='nc', disp=False)
-    fc = res.forecast(exog=X[-2:,None]) # has to be 2-d. could handhold here
+    fc = res.forecast(exog=X[-1:,None]) # has to be 2-d. could handhold here
     # results from gretl
     assert_almost_equal(fc[0], 2.200393, 6)
     assert_almost_equal(fc[1], 1.030743, 6)
@@ -1859,7 +1859,7 @@ def test_arima_1123():
 
     mod = ARMA(y[:-1], order=(1,1), exog=X[:-1])
     res = mod.fit(trend='nc', disp=False)
-    fc = res.forecast(exog=X[-2:,None]) # make sure is 2-d
+    fc = res.forecast(exog=X[-1:,None]) # make sure is 2-d
     assert_almost_equal(fc[0], 2.765688, 6)
     assert_almost_equal(fc[1], 0.835048, 6)
     assert_almost_equal(fc[2][0,0], 1.129023, 6)
