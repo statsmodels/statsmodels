@@ -620,6 +620,36 @@ def pooltest(endog, exog):
     p = 1 - stats.distributions.f.cdf(F, N-1, N*(T-1)-K)
     return F, p
 
+def _check_hausman_assumptions(chi2_stat):
+    #TODO: what other assumptions to check?
+    if chi2_stat < 0:
+        class StatsWarning(Warning): pass
+        from warning import warn
+        warn(StatsWarning, "The assumptions of the Hausman test are not met."
+                           "chi2 < 0.")
+
+def hausman_test(consistent, efficient, dof=None, force=False):
+    """
+    Hausman's specification test
+
+    Parameters
+    ----------
+    consistent
+    efficient
+
+    Returns
+    -------
+
+    """
+    from statsmodels.sandbox.regression.gmm import spec_hausman
+    chi2_stat, pval, dof, evals = spec_hausman(efficient.params,
+                                               consistent.params,
+                                               efficient.cov_params(),
+                                               consistent.cov_params())
+    if not force:
+        _check_hausman_assumptions(chi2_stat)
+
+    return chi2_stat, pval, dof, evals
 
 if __name__ == "__main__":
     import statsmodels.api as sm
