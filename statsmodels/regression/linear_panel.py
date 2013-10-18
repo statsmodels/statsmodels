@@ -523,9 +523,9 @@ class PanelLMRandomResults(PanelLMResults):
         return stats.chi2.sf(self.chi2, self.df_resid)
 
     @cache_readonly
-    def rho(self):
-        return self.std_dev_resid ** 2 / (self.std_dev_groups**2 +
-                                          self.std_dev_resid**2)
+    def rho(self): # fraction of variance due to u_i
+        return self.std_dev_groups ** 2 / (self.std_dev_groups**2 +
+                                           self.std_dev_resid**2)
 
         #    @cache_readonly
         #    def fittedvalues(self):

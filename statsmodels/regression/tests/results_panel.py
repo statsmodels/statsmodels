@@ -720,6 +720,7 @@ swar1w.residuals = swar1w.resid_combined
 swar1w.std_dev_groups =  78.75236266512795 # sigma_u
 swar1w.std_dev_resid = 50.29952133236894 # sigma_e
 swar1w.std_dev_overall = 93.44504519558689 # sigma
+swar1w.rho = .7102555355602879
 
 #########pooling
 pooling = Bunch()
