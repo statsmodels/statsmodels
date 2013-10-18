@@ -15,7 +15,7 @@ import statsmodels.api as sm
 import numpy as np
 import numpy.testing as npt
 import statsmodels
-from statsmodels.regression.panel import PanelLM
+from statsmodels.regression.linear_panel import PanelLM
 from statsmodels.datasets import grunfeld
 from patsy import dmatrices
 
@@ -233,6 +233,14 @@ class TestRandomSWAR(CheckModelResults):
     def test_wresid(self):
         npt.assert_almost_equal(self.res1.wresid,
                                 self.res2.wresid, 4)
+
+    def test_rsquared_other(self):
+        npt.assert_almost_equal(self.res1.rsquared_overall,
+                                self.res2.rsquared_overall, 4)
+        npt.assert_almost_equal(self.res1.rsquared_between,
+                                self.res2.rsquared_between, 4)
+        npt.assert_almost_equal(self.res1.rsquared_within,
+                                self.res2.rsquared_within, 4)
 
 
 class TestPooling(CheckModelResults, FixedEffectsMixin):
