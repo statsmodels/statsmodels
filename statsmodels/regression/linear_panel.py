@@ -533,7 +533,7 @@ class PanelLMRandomResults(PanelLMResults):
 
     @cache_readonly
     def rsquared_overall(self):
-        np.corrcoef(self.fittedvalues, self.model.endog)[0,1] ** 2
+        return np.corrcoef(self.fittedvalues, self.model.endog)[0,1] ** 2
 
     @cache_readonly
     def rsquared_between(self):
