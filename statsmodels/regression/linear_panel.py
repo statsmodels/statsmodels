@@ -653,20 +653,19 @@ def hausman_test(consistent, efficient, dof=None, force=False):
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    dta = sm.datasets.get_rdataset("EmplUK", "plm").data
-    dta.set_index(['firm', 'year'], inplace=True)
-    y = dta["emp"]
-    dta["const"] = 1
-    X = dta[["const", "wage", "capital"]]
-    mod1 = PanelLM(y, X, method='pooling').fit()
-    mod2 = PanelLM(y, X, method='between').fit()
-    mod3 = PanelLM(y, X.ix[:,1:], method='within').fit()
-    mod4 = PanelLM(y, X.ix[:,1:], method='within', effects='time').fit()
-    mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoway').fit()
-    mod6 = PanelLM(y, X, method='swar').fit()
+    #dta = sm.datasets.get_rdataset("EmplUK", "plm").data
+    #dta.set_index(['firm', 'year'], inplace=True)
+    #y = dta["emp"]
+    #dta["const"] = 1
+    #X = dta[["const", "wage", "capital"]]
+    #mod1 = PanelLM(y, X, method='pooling').fit()
+    #mod2 = PanelLM(y, X, method='between').fit()
+    #mod3 = PanelLM(y, X.ix[:,1:], method='within').fit()
+    #mod4 = PanelLM(y, X.ix[:,1:], method='within', effects='time').fit()
+    #mod5 = PanelLM(y, X.ix[:,1:], method='within', effects='twoway').fit()
+    #mod6 = PanelLM(y, X, method='swar').fit()
 
     from patsy import dmatrices
-    from panel import PanelLM
     from statsmodels.datasets import grunfeld
     data = grunfeld.load_pandas().data
     data.firm = data.firm.apply(lambda x: x.lower())
@@ -682,7 +681,7 @@ if __name__ == "__main__":
     between = PanelLM(y, X, method='between').fit(disp=0)
     swar = PanelLM(y, X, method="swar").fit()
     pooling = PanelLM(y, X, method="pooling").fit()
-    twoway = PanelLM(y, X, method="twoway").fit()
+    twoway = PanelLM(y, X, effects="twoway").fit()
 
     # check likelihood, params from Stata
     params = np.array([-53.9125431163, .109289189706, .30797722867,
