@@ -186,8 +186,8 @@ class PanelLM(PanelModel, RegressionModel):
             # do this here so endog and exog have been through data handling
             idx = g.index
             panel, time = (idx.get_level_values(0), idx.get_level_values(1))
-            (self.var_groups,
-             self.var_resid,
+            (self.var_resid,
+             self.var_groups,
              self.theta) = swar_ercomp(self.endog, self.exog, panel, time)
             out = g.transform_slices(array=data, function=swar_transform,
                                      theta=self.theta)
@@ -573,9 +573,9 @@ class PanelLMRandomResults(PanelLMResults):
         level = model._effects_level[0]
 
         #TODO: update for time effects
-        weight = (self.std_dev_resid**2/
-                  (model.data.n_time*self.std_dev_resid**2 +
-                   self.std_dev_groups**2))
+        weight = (self.std_dev_groups**2/
+                  (model.data.n_time*self.std_dev_groups**2 +
+                   self.std_dev_resid**2))
 
         # reindex
         idx = data.groupings.index.get_level_values(level)

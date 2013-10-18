@@ -242,6 +242,15 @@ class TestRandomSWAR(CheckModelResults):
         npt.assert_almost_equal(self.res1.rsquared_within,
                                 self.res2.rsquared_within, 4)
 
+    def test_sigma(self):
+        npt.assert_almost_equal(self.res1.std_dev_groups,
+                                self.res2.std_dev_groups, 4)
+        npt.assert_almost_equal(self.res1.std_dev_resid,
+                                self.res2.std_dev_resid, 4)
+        npt.assert_almost_equal(self.res1.std_dev_overall,
+                                self.res2.std_dev_overall, 4)
+        npt.assert_almost_equal(self.res1.rho, self.res2.rho, 4)
+
 
 class TestPooling(CheckModelResults, FixedEffectsMixin):
     @classmethod

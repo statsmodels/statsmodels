@@ -717,6 +717,9 @@ swar1w.resid_combined = np.array([37.55014, 38.49109, 35.69109, 32.12687,
         -9.118814, -21.50835, -25.35566, -10.74386, -13.54636, -40.27699,
         -73.17518])
 swar1w.residuals = swar1w.resid_combined
+swar1w.std_dev_groups =  78.75236266512795 # sigma_u
+swar1w.std_dev_resid = 50.29952133236894 # sigma_e
+swar1w.std_dev_overall = 93.44504519558689 # sigma
 
 #########pooling
 pooling = Bunch()
