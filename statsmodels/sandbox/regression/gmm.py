@@ -508,7 +508,16 @@ class GMM(object):
         ----------
         start : array (optional)
             starting value for parameters ub minimization. If None then
-            fitstart method is called for the starting values
+            fitstart method is called for the starting values.
+        maxiter : int or 'cue'
+            Number of iterations in iterated GMM. The onestep estimate can be
+            obtained with maxiter=0 or 1. If maxiter is large, then the
+            iteration will stop either at maxiter or on convergence of the
+            parameters (TODO: no options for convergence criteria yet.)
+            If `maxiter == 'cue'`, the the continuously updated GMM is
+            calculated which updates the weight matrix during the minimization
+            of the GMM objective function. The CUE estimation uses the onestep
+            parameters as starting values.
 
         Returns
         -------
@@ -549,7 +558,7 @@ class GMM(object):
         if not 'disp' in optim_args:
             optim_args['disp'] = 1
 
-        if maxiter == 0:
+        if maxiter == 0 or maxiter == 'cue':
             # TODO invweights could be None
             weights = np.linalg.pinv(inv_weights)
             params = self.fitgmm(start, weights=weights,
@@ -566,6 +575,15 @@ class GMM(object):
             # TODO weights returned by fititer is inv_weights - not true anymore
             # weights_ currently not necessary and used anymore
             weights_ = np.linalg.pinv(weights)
+
+        if maxiter == 'cue':
+            #we have params from maxiter= 0 as starting value
+            # TODO: need to give weights options to gmmobjective_cu
+            params = self.fitgmm_cu(params,
+                                     optim_method=optim_method,
+                                     optim_args=optim_args)
+            # weights is stored as attribute
+            weights = self._weights_cu
 
         #TODO: use Bunch instead ?
         options_other = {'weights_method':weights_method,
@@ -667,6 +685,7 @@ class GMM(object):
             optimizer = optimize.fmin
         elif optim_method == 'bfgs':
             optimizer = optimize.fmin_bfgs
+            optim_args['fprime'] = self.score_cu
         elif optim_method == 'ncg':
             optimizer = optimize.fmin_ncg
         else:
@@ -970,10 +989,17 @@ class GMM(object):
 
         return gradmoms
 
-    def score(self, params, weights, epsilon=1e-4, centered=True):
+    def score(self, params, weights, epsilon=None, centered=True):
 
         deriv = approx_fprime(params, self.gmmobjective, args=(weights,),
-                              centered=centered)
+                              centered=centered, epsilon=epsilon)
+
+        return deriv
+
+    def score_cu(self, params, epsilon=None, centered=True):
+
+        deriv = approx_fprime(params, self.gmmobjective_cu, args=(),
+                              centered=centered, epsilon=epsilon)
 
         return deriv
 
