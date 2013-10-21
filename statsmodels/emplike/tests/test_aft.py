@@ -1,15 +1,17 @@
 import numpy as np
 from numpy.testing import assert_almost_equal
-import statsmodels.api as sm
+from statsmodels.datasets import heart
+from statsmodels.tools import add_constant
+from statsmodels.emplike.aft_el import emplikeAFT
 from results.el_results import AFTRes
 
 
 class GenRes(object):
     def __init__(self):
-        data = sm.datasets.heart.load()
+        data = heart.load()
         endog = np.log10(data.endog)
-        exog = sm.add_constant(data.exog)
-        self.mod1 = sm.emplike.emplikeAFT(endog, exog, data.censors)
+        exog = add_constant(data.exog)
+        self.mod1 = emplikeAFT(endog, exog, data.censors)
         self.res1 = self.mod1.fit()
         self.res2 = AFTRes()
 

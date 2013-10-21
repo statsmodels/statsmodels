@@ -11,12 +11,12 @@ Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
 
 import numpy as np
-from descriptive import _OptFuncts
+from descriptive import _OptFunctsMixin
 from scipy import optimize
 from scipy.stats import chi2
 
 
-class _ANOVAOpt(_OptFuncts):
+class _ANOVAOptMixin(_OptFunctsMixin):
     """
 
     Class containing functions that are optimized over when
@@ -46,7 +46,7 @@ class _ANOVAOpt(_OptFuncts):
         for arr_num in range(len(endog)):
             new_obs_num = obs_num + len(endog[arr_num])
             endog_asarray[obs_num: new_obs_num, arr_num] = endog[arr_num] - \
-              mu
+                mu
             obs_num = new_obs_num
         est_vect = endog_asarray
         wts = np.ones(est_vect.shape[0]) * (1. / (est_vect.shape[0]))
@@ -57,7 +57,7 @@ class _ANOVAOpt(_OptFuncts):
         return -2 * llr
 
 
-class ANOVA(_ANOVAOpt):
+class ANOVA(_ANOVAOptMixin):
     """
     A class for ANOVA and comparing means.
 
