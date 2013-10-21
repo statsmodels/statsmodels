@@ -95,8 +95,7 @@ within.nobs = 220
 #    0.342452180140319
 #    ]).reshape(2, 2, order='F')
 # from Stata, based on t distribution
-#NOTE: we don't list a constant
-within.conf_int = [#(-76.7430990196, -33.7999981334),
+within.conf_int = [(-76.7430990196, -33.7999981334),
                    (.087851586551, .132406651501),
                    (.27742405134, .34264283241)]
 
@@ -110,7 +109,8 @@ within.corr = -.180540374145387
 within.llf = -1167.42553784263
 within.llf_null = -1327.509012032735
 
-# from R, doesn't include mean effect
+# from R, doesn't include mean effect - ie., they're centered around
+# model.endog.mean()
 within.fittedvalues = np.array([
      -7.96629834730292, -6.18923927042444, 1.25593293364281,
     -1.38830111340732, 0.958661233015066, -0.512986926149512,
@@ -183,7 +183,10 @@ within.fittedvalues = np.array([
     96.6866582422914
     ])
 
+# predict
+
 # from stata includes mean effect
+# predict , xb
 within.fittedvalues_stata = np.array([
          -35.81125, -34.03419, -26.58902, -29.23325,
          -26.88629, -28.35794, -29.00347, -29.72958,
@@ -345,18 +348,18 @@ within.resid_groups = np.array([
          -2.274943, -2.274943, -2.274943, -2.274943, -2.274943,
          -2.274943, -2.274943, -2.274943, -2.274943, -2.274943])
 
-
+#NOTE: Constant information is from Stata
 within.params = np.array([
-     0.11012911902576, 0.310033441875004
+     -55.27154857651658, 0.11012911902576, 0.310033441875004
     ])
 within.bse = np.array([
-     0.0112998432895952, 0.016540476519482
+    10.89102464394249, 0.0112998432895952, 0.016540476519482
     ])
 within.tvalues = np.array([
-     9.7460748970887, 18.7439244274392
+    -5.074963135563027, 9.7460748970887, 18.7439244274392
     ])
 within.pvalues = np.array([
-     1.03389477552542e-18, 1.74637965655695e-46
+    8.60858827081e-07, 1.03389477552542e-18, 1.74637965655695e-46
     ])
 within.rsquared = 0.766670651548843
 # R is wrong, see note elsewhere

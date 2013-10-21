@@ -116,6 +116,10 @@ class PanelLM(PanelModel, RegressionModel):
 
        (y_{it} - \bar{y}_i) = (X_{it}-\bar{X}_i)\beta + (\epsilon_{it} - \bar{\epsilon}_i)
 
+    The model that is fit is
+
+       (y_{it} - \bar{y}_i + \bar{\bar{y}}) = \alpha + (X_{it}-\bar{X}_i + \bar{\bar{x}})\beta + (\epsilon_{it} - \bar{\epsilon}_i + \bar{\upsilon}) + \bar{\bar{\epsilon}}
+
     Between-effects model
 
     .. math:
@@ -161,7 +165,7 @@ class PanelLM(PanelModel, RegressionModel):
 
     @cache_readonly
     def df_resid(self):
-        #NOTE: These should also depend on effects - needs to be a function
+        #NOTE: These should also depend on effects - needs to be a function?
         if self.method == 'within':
             # N(T-1) - K
             # -K doesn't matter asymptotically (for calc of sigma_u)
@@ -172,8 +176,8 @@ class PanelLM(PanelModel, RegressionModel):
     @cache_readonly
     def df_model(self):
         if self.method == 'within':
-            # -1 because n_panel is full rank
-            return float(self.rank + self.data.n_panel - 1)
+            # -1 because we estimate the overall mean as well
+            return float(self.rank + self.data.n_panel - self.k_constant - 1)
         else:
             return float(self.rank - self.k_constant)
 
@@ -195,6 +199,7 @@ class PanelLM(PanelModel, RegressionModel):
 
         elif method == 'within':
             func = lambda x : x - x.mean()
+            overall_mean = data.mean(0)
         elif method == "between":
             func = lambda x : x.mean()
 
@@ -203,6 +208,9 @@ class PanelLM(PanelModel, RegressionModel):
 
         for level in levels: #TODO: this should copy but be sure
             data = g.transform_array(data, func, level)
+        # so we can keep the grand mean as the constant
+        if method == 'within':
+            data += overall_mean
         return data
 
     def loglike(self, params):
@@ -267,10 +275,6 @@ class PanelLMResults(RegressionResults):
         return np.dot(wresid.T, wresid) / self.df_resid
 
     @cache_readonly
-    def ssr(self):
-        return np.sum(self.wresid**2)
-
-    @cache_readonly
     def rsquared_overall(self):
         return np.corrcoef(self.fittedvalues, self.model.endog)[0,1] ** 2
 
@@ -286,8 +290,10 @@ class PanelLMResults(RegressionResults):
             resid = model.wendog - model.predict(self.params, model.wexog)
         return resid
 
-    def predict(self):
-        return self.model.predict(self.params, self.model.wexog)
+    def predict(self, exog=None):
+        if exog is None:
+            exog = self.model.wexog
+        return self.model.predict(self.params, exog)
 
     @cache_readonly
     def fvalue(self):
@@ -314,14 +320,19 @@ class PanelLMWithinResults(PanelLMResults):
         return grouped_y - model.predict(self.params, grouped_X)
 
     @cache_readonly
+    def ess(self):
+        centered_xb = self.predict()
+        centered_xb -= centered_xb.mean()
+        return np.sum(centered_xb**2)
+
+    @cache_readonly
     def constant(self): # attach to params instead - handle up in fit?
         return self._fixed_effects.mean()
 
-    #NOTE: this makes fittedvalues different from predict()
-    @cache_readonly
+    @cache_readonly # xb
     def fittedvalues(self): # defined as deviations from the mean fixed effect
         model = self.model
-        return model.predict(self.params, model.exog) + self.constant
+        return np.dot(model.exog, self.params)
 
     #TODO: better names for std_devs?
     @cache_readonly
@@ -368,12 +379,19 @@ class PanelLMWithinResults(PanelLMResults):
                                            self.std_dev_resid**2)
 
     @cache_readonly
-    def fitted_with_effects(self):
+    def fitted_with_effects(self): # xbu
         return self.fittedvalues + self.resid_groups
 
     @cache_readonly
     def std_dev_overall(self):
         return (self.std_dev_groups**2 + self.std_dev_resid**2)**.5
+
+    @cache_readonly
+    def rsquared(self):
+    # r-squared from mean deviated regression
+        centered_tss = self.model.wendog.copy()
+        centered_tss -= self.model.wendog.mean()
+        return 1 - self.ssr/sum(centered_tss**2)
 
     @cache_readonly
     def rsquared_within(self):
@@ -671,13 +689,10 @@ if __name__ == "__main__":
     data.firm = data.firm.apply(lambda x: x.lower())
     data = data.set_index(['firm', 'year'])
     data = data.sort()
-    y, X = dmatrices("invest ~ value + capital - 1", data=data,
+    y, X = dmatrices("invest ~ value + capital", data=data,
         return_type='dataframe')
 
     within = PanelLM(y, X, method='within').fit(disp=0)
-
-    y, X = dmatrices("invest ~ value + capital", data=data,
-        return_type='dataframe')
     between = PanelLM(y, X, method='between').fit(disp=0)
     swar = PanelLM(y, X, method="swar").fit()
     pooling = PanelLM(y, X, method="pooling").fit()
