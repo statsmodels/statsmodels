@@ -110,8 +110,7 @@ def _is_using_pandas(endog, exog=None):
         return False
     from pandas import Series, DataFrame, WidePanel
     klasses = (Series, DataFrame, WidePanel)
-    return (isinstance(endog, klasses) and (isinstance(exog, klasses) or
-                                            exog is None))
+    return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 def _is_array_like(endog, exog=None):
     try: # do it like this in case of mixed types, ie., ndarray and list
