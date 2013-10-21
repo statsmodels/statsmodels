@@ -114,11 +114,16 @@ class TestWithin(CheckModelResults, FixedEffectsMixin):
         data.firm = data.firm.apply(lambda x: x.lower())
         data = data.set_index(['firm', 'year'])
         data = data.sort()
-        y, X = dmatrices("invest ~ value + capital - 1", data=data,
+        y, X = dmatrices("invest ~ value + capital", data=data,
                 return_type='dataframe')
         cls.res1 = PanelLM(y, X, method='within').fit(disp=0)
         res2 = within
         cls.res2 = res2
+
+    def test_predict(self):
+        npt.assert_almost_equal(self.res1.predict(),
+                            self.res2.fittedvalues +
+                            self.res1.model.endog.mean(), DECIMAL_4)
 
     def test_sigma(self):
         npt.assert_almost_equal(self.res1.std_dev_groups,
@@ -128,9 +133,6 @@ class TestWithin(CheckModelResults, FixedEffectsMixin):
         npt.assert_almost_equal(self.res1.std_dev_overall,
                                 self.res2.std_dev_overall, 4)
         npt.assert_almost_equal(self.res1.rho, self.res2.rho, 4)
-
-    def test_constant(self):
-        npt.assert_almost_equal(self.res1.constant, self.res2.constant, 4)
 
     def test_corr(self):
         npt.assert_almost_equal(self.res1.corr, self.res2.corr, 2)
