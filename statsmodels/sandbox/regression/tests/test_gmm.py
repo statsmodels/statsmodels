@@ -472,12 +472,27 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
         self.res2 = results
 
 
+    def test_score(self):
+        params = self.res1.params * 1.1
+        weights = self.res1.weights
+        sc1 = self.res1.model.score(params, weights)
+        sc2 = super(self.res1.model.__class__, self.res1.model).score(params,
+                                                                      weights)
+        assert_allclose(sc1, sc2, rtol=1e-6, atol=0)
+        assert_allclose(sc1, sc2, rtol=0, atol=1e-7)
+
+        # score at optimum
+        sc1 = self.res1.model.score(self.res1.params, weights)
+        assert_allclose(sc1, np.zeros(len(params)), rtol=0, atol=1e-8)
+
+
+
 class TestGMMStOneiterOLS_Linear(CheckGMM):
 
     @classmethod
     def setup_class(self):
         # replicating OLS by GMM - high agreement
-        self.params_tol = [5e-12, 1e-12]
+        self.params_tol = [1e-11, 1e-12]
         self.bse_tol = [1e-13, 1e-13]
         exog = exog_st  # with const at end
         res_ols = OLS(endog, exog).fit()

@@ -553,14 +553,21 @@ class GMM(object):
         if start is None:
             start = self.fitstart() #TODO: temporary hack
 
+        if inv_weights is None:
+            inv_weights
+
         if optim_args is None:
             optim_args = {}
         if not 'disp' in optim_args:
             optim_args['disp'] = 1
 
         if maxiter == 0 or maxiter == 'cue':
-            # TODO invweights could be None
-            weights = np.linalg.pinv(inv_weights)
+            if inv_weights is not None:
+                weights = np.linalg.pinv(inv_weights)
+            else:
+                # let start_weights handle the inv=False for maxiter=0
+                weights = self.start_weights(inv=False)
+
             params = self.fitgmm(start, weights=weights,
                                  optim_method=optim_method, optim_args=optim_args)
             weights_ = weights  # temporary alias used in jval
@@ -644,6 +651,17 @@ class GMM(object):
             optim_args['fprime'] = self.score #lambda params: self.score(params, weights)
         elif optim_method == 'ncg':
             optimizer = optimize.fmin_ncg
+            optim_args['fprime'] = self.score
+        elif optim_method == 'cg':
+            optimizer = optimize.fmin_cg
+            optim_args['fprime'] = self.score
+        elif optim_method == 'fmin_l_bfgs_b':
+            optimizer = optimize.fmin_l_bfgs_b
+            optim_args['fprime'] = self.score
+        elif optim_method == 'powell':
+            optimizer = optimize.fmin_powell
+        elif optim_method == 'slsqp':
+            optimizer = optimize.fmin_slsqp
         else:
             raise ValueError('optimizer method not available')
 
@@ -1016,7 +1034,7 @@ class GMMResults(LikelihoodModelResults):
 
     @cache_readonly
     def q(self):
-        return self.gmmobjective(self.params, self.weights)
+        return self.model.gmmobjective(self.params, self.weights)
 
 
     @cache_readonly
@@ -1252,10 +1270,11 @@ class IVGMM(GMM):
 
     def start_weights(self, inv=True):
         zz = np.dot(self.instrument.T, self.instrument)
+        nobs = self.instrument.shape[0]
         if inv:
-            return np.linalg.pinv(zz)
+            return zz / nobs
         else:
-            return zz
+            return np.linalg.pinv(zz / nobs)
 
 
     def get_error(self, params):
@@ -1347,7 +1366,7 @@ class LinearIVGMM(IVGMM):
         x, z = self.exog, self.instrument
 
         u = self.get_errors(params)
-        score = 2 * np.dot(x.T, z).dot(weights.dot(np.dot(z.T, u)))
+        score = -2 * np.dot(x.T, z).dot(weights.dot(np.dot(z.T, u)))
         score /= nobs * nobs
 
         return score
@@ -1414,7 +1433,7 @@ class NonlinearIVGMM(IVGMM):
 
         u = self.get_error(params)
 
-        score = 2 * np.dot(x.T, z).dot(weights.dot(np.dot(z.T, u)))
+        score = -2 * np.dot(np.dot(x.T, z), weights).dot(np.dot(z.T, u))
         score /= nobs * nobs
 
         return score
