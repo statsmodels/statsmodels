@@ -15,7 +15,7 @@ import statsmodels.api as sm
 import numpy as np
 import numpy.testing as npt
 import statsmodels
-from statsmodels.regression.linear_panel import PanelLM
+from statsmodels.regression.linear_panel import PanelLM, hausman_test
 from statsmodels.datasets import grunfeld
 from patsy import dmatrices
 
@@ -289,6 +289,28 @@ class XestMLE(CheckModelResults):
         X = data[['const', 'value', 'capital']]
         cls.res1 = PanelLM(y, X, method='mle').fit(disp=0)
         #cls.res2 = mle_results
+
+def test_hausman():
+    # from stata
+    chi2_exp =  3.967531716439797
+    dof_exp =  2
+    pval_exp =  .1375502659382795
+
+    from patsy import dmatrices
+    from statsmodels.datasets import grunfeld
+    data = grunfeld.load_pandas().data
+    data.firm = data.firm.apply(lambda x: x.lower())
+    data = data.set_index(['firm', 'year'])
+    data = data.sort()
+    y, X = dmatrices("invest ~ value + capital", data=data,
+        return_type='dataframe')
+    within = PanelLM(y, X, method='within').fit(disp=0)
+    swar = PanelLM(y, X, method='swar').fit(disp=0)
+    chi2, pval, dof, _ = hausman_test(within, swar)
+    np.testing.assert_almost_equal(chi2, chi2_exp, 8)
+    np.testing.assert_equal(dof, dof_exp)
+    np.testing.assert_almost_equal(pval, pval_exp, 8)
+
 
 #TODO:
 #        check constants
