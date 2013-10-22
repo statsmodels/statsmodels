@@ -7,11 +7,12 @@ TestGMMMultTwostepDefault() has lower precision
 
 import numpy as np
 import pandas
+from scipy import stats
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
 
-from numpy.testing import assert_allclose
+from numpy.testing import assert_allclose, assert_equal
 from statsmodels.sandbox.regression.tests import results_gmm_poisson as results
 
 def get_data():
@@ -105,6 +106,19 @@ class CheckGMM(object):
         rtol,  atol = self.j_tol
         assert_allclose(res1.jval, res2.J, rtol=atol, atol=rtol)
 
+        j, jpval, jdf = res1.jtest()
+        # j and jval should be the same
+        assert_allclose(res1.jval, res2.J, rtol=13, atol=13)
+        #pvalue is not saved in Stata results
+        pval = stats.chi2.sf(res2.J, res2.J_df)
+        #assert_allclose(jpval, pval, rtol=1e-4, atol=1e-6)
+        assert_allclose(jpval, pval, rtol=rtol, atol=atol)
+        assert_equal(jdf, res2.J_df)
+
+
+    def test_smoke(self):
+        res1 = self.res1
+        res1.summary()
 
 
 class TestGMMAddOnestep(CheckGMM):
@@ -347,6 +361,19 @@ class TestGMMMultTwostepCenter(CheckGMM):
 
         from results_gmm_poisson import results_multtwostepcenter as results
         self.res2 = results
+
+    def test_more(self):
+
+        # from Stata `overid`
+        J_df = 1
+        J_p = 0.332254330027383
+        J = 0.940091427212973
+
+        j, jpval, jdf = self.res1.jtest()
+
+        assert_allclose(jpval, J_p, rtol=5e-5, atol=0)
+
+
 
 if __name__ == '__main__':
     tt = TestGMMAddOnestep()
