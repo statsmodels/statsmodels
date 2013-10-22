@@ -160,6 +160,23 @@ def get_issues_list(project, auth=False, **params):
     pages = get_paged_request(url, headers=headers, **params)
     return pages
 
+def get_milestones(project, auth=False, **params):
+    url = "https://api.github.com/repos/{project}/milestones".format(project=project)
+    if auth:
+        headers = make_auth_header()
+    else:
+        headers = None
+    pages = get_paged_request(url, headers=headers, **params)
+    return pages
+
+def get_milestone_id(project, milestone, auth=False, **params):
+    pages = get_milestones(project, auth=auth, **params)
+    for page in pages:
+        if page['title'] == milestone:
+            return page['number']
+    else:
+        raise ValueError("milestone %s not found" % milestone)
+
 def is_pull_request(issue):
     """Return True if the given issue is a pull request."""
     return bool(issue.get('pull_request', {}).get('html_url', None))

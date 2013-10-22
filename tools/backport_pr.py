@@ -34,6 +34,7 @@ from gh_api import (
     get_pull_request,
     get_pull_request_files,
     is_pull_request,
+    get_milestone_id,
 )
 
 def find_rejects(root='.'):
@@ -109,18 +110,32 @@ def already_backported(branch, since_tag=None):
     lines = check_output(cmd).decode('utf8')
     return set(int(num) for num in backport_re.findall(lines))
 
-def should_backport(labels):
+def should_backport(labels=None, milestone=None):
     """return set of PRs marked for backport"""
-    issues = get_issues_list("statsmodels/statsmodels",
-            labels=labels,
-            state='closed',
-            auth=True,
-    )
+    if labels is None and milestone is None:
+        raise ValueError("Specify one of labels or milestone.")
+    elif labels is not None and milestone is not None:
+        raise ValueError("Specify only one of labels or milestone.")
+    if labels is not None:
+        issues = get_issues_list("statsmodels/statsmodels",
+                labels=labels,
+                state='closed',
+                auth=True,
+        )
+    else:
+        milestone_id = get_milestone_id("statsmodels/statsmodels", milestone,
+                auth=True)
+        issues = get_issues_list("statsmodels/statsmodels",
+                milestone=milestone_id,
+                state='closed',
+                auth=True,
+        )
+
     should_backport = set()
     for issue in issues:
         if not is_pull_request(issue):
             continue
-        pr = get_pull_request("statsmoedls/statsmodels", issue['number'],
+        pr = get_pull_request("statsmodels/statsmodels", issue['number'],
                 auth=True)
         if not pr['merged']:
             print ("Marked PR closed without merge: %i" % pr['number'])
@@ -138,7 +153,7 @@ if __name__ == '__main__':
         branch = sys.argv[1]
         already = already_backported(branch)
         #NOTE: change this to the label you've used for marking a backport
-        should = should_backport("backport-1.2")
+        should = should_backport(milestone="0.5.1")
         print ("The following PRs should be backported:")
         for pr in should.difference(already):
             print (pr)
