@@ -231,18 +231,16 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
 
 def _series_add_constant(data, prepend):
     const = np.ones_like(data)
-    const.name = 'const'
     if not prepend:
-        results = DataFrame([data, const]).T
-        results.columns = [data.name, 'const']
+        columns = [data.name, 'const']
     else:
-        results = DataFrame([const, data]).T
-        results.columns = ['const', data.name]
+        columns = ['const', data.name]
+    results = DataFrame({data.name : data, 'const' : const}, columns=columns)
     return results
 
 def _dataframe_add_constant(data, prepend):
     # check for const.
-    if np.any(data.var(0) == 1):
+    if np.any(data.var(0) == 0):
         return data
     if prepend:
         data.insert(0, 'const', 1)

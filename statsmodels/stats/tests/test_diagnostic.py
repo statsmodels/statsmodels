@@ -294,6 +294,11 @@ class TestDiagnosticG(object):
                 breushgodfrey_f['statistic'], breushgodfrey_f['pvalue']]
         assert_almost_equal(bg, bg_r, decimal=13)
 
+        # check that lag choice works
+        bg2 = smsdia.acorr_breush_godfrey(res, nlags=None)
+        bg3 = smsdia.acorr_breush_godfrey(res, nlags=14)
+        assert_almost_equal(bg2, bg3, decimal=13)
+
     def test_acorr_ljung_box(self):
         res = self.res
 

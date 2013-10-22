@@ -376,6 +376,8 @@ def test_pandas_const_df():
 
 def test_pandas_const_df_prepend():
     dta = longley.load_pandas().exog
+    # regression test for #1025
+    dta['UNEMP'] /= dta['UNEMP'].std()
     dta = tools.add_constant(dta, prepend=True)
     assert_string_equal('const', dta.columns[0])
     assert_equal(dta.var(0)[0], 0)

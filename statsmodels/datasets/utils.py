@@ -131,7 +131,9 @@ def _cache_it(data, cache_path):
     if sys.version_info[0] >= 3:
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
-        open(cache_path, "wb").write(zlib.compress(pickle.dumps(data)))
+        # use protocol 2 so can open with python 2.x if cached in 3.x
+        open(cache_path, "wb").write(zlib.compress(pickle.dumps(data,
+                                                                protocol=2)))
     else:
         open(cache_path, "wb").write(pickle.dumps(data).encode("zip"))
 
@@ -141,7 +143,8 @@ def _open_cache(cache_path):
         # Python 3 build
         import zlib
         data = zlib.decompress(open(cache_path, 'rb').read())
-        data = pickle.loads(data)
+        # return as bytes object encoded in utf-8 for cross-compat of cached
+        data = pickle.loads(data).encode('utf-8')
     else:
         data = open(cache_path, 'rb').read().decode('zip')
         data = pickle.loads(data)
@@ -181,9 +184,9 @@ def _get_data(base_url, dataname, cache, extension="csv"):
         else:
             raise err
 
-    #Python 3, don't think there will be any unicode in r datasets
+    #Python 3, always decode as unicode
     if sys.version[0] == '3':  # pragma: no cover
-        data = data.decode('ascii', errors='strict')
+        data = data.decode('utf-8', errors='strict')
     return StringIO(data), from_cache
 
 
@@ -202,7 +205,8 @@ def _get_dataset_meta(dataname, package, cache):
     return dataset_meta["Title"].item()
 
 def get_rdataset(dataname, package="datasets", cache=False):
-    """
+    """download and return R dataset
+
     Parameters
     ----------
     dataname : str

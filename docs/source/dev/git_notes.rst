@@ -231,7 +231,7 @@ git will know that it can safely delete your branch::
 
 Then you can just do::
 
-    git -d shiny-new-feature
+    git branch -d shiny-new-feature
 
 Make sure you use a lower-case -d. That way, git will complain if your feature
 branch has not actually been merged. The branch will still exist on github

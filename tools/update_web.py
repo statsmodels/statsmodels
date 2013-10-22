@@ -173,7 +173,10 @@ def build_docs(branch):
     retcode = subprocess.call(" && ".join([activate_virtualenv, sphinx_call]),
                                 shell=True,
         env = {'MATPLOTLIBRC' : # put this in the environment to use local rc
-               '/home/skipper/statsmodels/statsmodels/tools/'})
+               '/home/skipper/statsmodels/statsmodels/tools/',
+               # Need this for my openblas setup on my laptop
+               'LD_LIBRARY_PATH' : os.getenv('LD_LIBRARY_PATH')})
+
     if retcode != 0:
         os.chdir(dname)
         msg = """Could not build the html docs for branch %s""" % branch

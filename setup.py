@@ -149,14 +149,13 @@ def check_dependency_versions(min_versions):
 
 
 MAJ = 0
-MIN = 5
+MIN = 6
 REV = 0
-ISRELEASED = True
+ISRELEASED = False
 VERSION = '%d.%d.%d' % (MAJ,MIN,REV)
 
 classifiers = [ 'Development Status :: 4 - Beta',
               'Environment :: Console',
-              'Programming Language :: Python :: 2.5',
               'Programming Language :: Python :: 2.6',
               'Programming Language :: Python :: 2.7',
               'Programming Language :: Python :: 3.2',
@@ -425,22 +424,7 @@ if suffix == '.pyx' and 'setuptools' in sys.modules:
 if _have_setuptools:
     setuptools_kwargs["test_suite"] = "nose.collector"
 
-try:
-    from os.path import relpath
-except ImportError: # python 2.5
-
-    def relpath(path, start=os.curdir):
-        """Return a relative version of a path"""
-        if not path:
-            raise ValueError("no path specified")
-        start_list = os.path.abspath(start).split(os.path.sep)
-        path_list = os.path.abspath(path).split(os.path.sep)
-        # Work out how much of the filepath is shared by start and path.
-        i = len(os.path.commonprefix([start_list, path_list]))
-        rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
-        if not rel_list:
-            return os.curdir
-        return pjoin(*rel_list)
+from os.path import relpath
 
 def get_data_files():
     sep = os.path.sep

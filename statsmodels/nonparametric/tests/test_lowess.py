@@ -112,6 +112,11 @@ class  TestLowess(object):
         actual_lowess = lowess(y[::-1], x[::-1], return_sorted=False)
         assert_almost_equal(actual_lowess, actual_lowess1[::-1, 1], decimal=13)
 
+        # check returns yfitted only
+        actual_lowess = lowess(y, x, return_sorted=False, missing='none',
+                               is_sorted=True)
+        assert_almost_equal(actual_lowess, actual_lowess1[:, 1], decimal=13)
+
         # check integer input
         actual_lowess = lowess(np.round(y).astype(int), x, is_sorted=True)
         actual_lowess1 = lowess(np.round(y), x, is_sorted=True)
