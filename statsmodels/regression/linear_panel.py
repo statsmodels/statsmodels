@@ -638,7 +638,7 @@ def pooltest(endog, exog):
     p = 1 - stats.distributions.f.cdf(F, N-1, N*(T-1)-K)
     return F, p
 
-def _check_hausman_assumptions(chi2_stat):
+def _check_hausman_finite_sample(chi2_stat):
     #TODO: what other assumptions to check?
     if chi2_stat < 0:
         class StatsWarning(Warning): pass
@@ -646,26 +646,40 @@ def _check_hausman_assumptions(chi2_stat):
         warn(StatsWarning, "The assumptions of the Hausman test are not met."
                            "chi2 < 0.")
 
-def hausman_test(consistent, efficient, dof=None, force=False):
+def hausman_test(consistent, efficient, dof=None):
     """
     Hausman's specification test
 
     Parameters
     ----------
-    consistent
-    efficient
+    consistent : model results
+        The model results instance for the model that is consistent whether
+        or not the null hypothesis is true.
+    efficient: model results
+        The model results instance for the model that is efficient and
+        consistent under the null hypothesis but would not be consistent
+        if the null is not true.
+    dof : int or None
+        The degrees of freedom correction to be used. The default is
+        np.linalg.matrix_rank(var(params_consistent)-var(params_efficient))
 
     Returns
     -------
 
+    Notes
+    -----
+    Even if the assumptions for the consistent and efficient estimates are met,
+    it is possible that var(params_consistent - params_efficient) estimated by
+    var(params_consistent) - var(params_efficient) is not positive definite in
+    finite samples. In this case, the Hausman test is undefined. A warning
+    will be issued in this case.
     """
     from statsmodels.sandbox.regression.gmm import spec_hausman
     chi2_stat, pval, dof, evals = spec_hausman(efficient.params,
                                                consistent.params,
                                                efficient.cov_params(),
                                                consistent.cov_params())
-    if not force:
-        _check_hausman_assumptions(chi2_stat)
+    _check_hausman_finite_sample(chi2_stat)
 
     return chi2_stat, pval, dof, evals
 
