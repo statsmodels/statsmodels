@@ -85,6 +85,10 @@ class CheckModelResults(object):
         npt.assert_almost_equal(self.res1.resid,
                             self.res2.residuals, DECIMAL_4)
 
+    def test_summary(self):
+        # smoke test
+        self.res1.summary()
+
 
 class FixedEffectsMixin(object):
     def test_sum_of_squares(self):
