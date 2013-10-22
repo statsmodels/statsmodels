@@ -13,11 +13,11 @@ Owen, A.B.(2001). Empirical Likelihood. Chapman and Hall
 
 """
 import numpy as np
-from statsmodels.emplike.descriptive import _OptFuncts_mixin
+from statsmodels.emplike.descriptive import _OptFuncts
 
 
 
-class _ELRegOpts(_OptFuncts_mixin):
+class _ELRegOpts(_OptFuncts):
     """
 
     A class that holds functions to be optimized over when conducting

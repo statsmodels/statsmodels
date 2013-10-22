@@ -686,7 +686,7 @@ class DescStatUV(_OptFuncts):
         self.r0 = chi2.ppf(1 - sig, 1)
         llim = optimize.brentq(self._ci_limits_var, lower_bound, endog.var())
         ulim = optimize.brentq(self._ci_limits_var, endog.var(), upper_bound)
-        return   llim, ulim
+        return llim, ulim
 
     def plot_contour(self, mu_low, mu_high, var_low, var_high, mu_step,
                         var_step,
