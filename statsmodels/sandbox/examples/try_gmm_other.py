@@ -1,3 +1,15 @@
+
+import numpy as np
+from scipy import stats
+
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools import tools
+from statsmodels.sandbox.regression.gmm import IV2SLS, IVGMM, DistQuantilesGMM, spec_hausman
+
+from statsmodels.sandbox.regression import gmm
+
+
+
 if __name__ == '__main__':
     import statsmodels.api as sm
     examples = ['ivols', 'distquant'][:]
@@ -58,15 +70,15 @@ if __name__ == '__main__':
         #using GMM and IV2SLS classes
         #----------------------------
 
-        mod = IVGMM(endog, exog, instrument, nmoms=instrument.shape[1])
+        mod = gmm.IVGMM(endog, exog, instrument, nmoms=instrument.shape[1])
         res = mod.fit()
-        modgmmols = IVGMM(endog, exog, exog, nmoms=exog.shape[1])
+        modgmmols = gmm.IVGMM(endog, exog, exog, nmoms=exog.shape[1])
         resgmmols = modgmmols.fit()
         #the next is the same as IV2SLS, (Z'Z)^{-1} as weighting matrix
-        modgmmiv = IVGMM(endog, exog, instrument, nmoms=instrument.shape[1]) #same as mod
+        modgmmiv = gmm.IVGMM(endog, exog, instrument, nmoms=instrument.shape[1]) #same as mod
         resgmmiv = modgmmiv.fitgmm(np.ones(exog.shape[1], float),
                         weights=np.linalg.inv(np.dot(instrument.T, instrument)))
-        modls = IV2SLS(endog, exog, instrument)
+        modls = gmm.IV2SLS(endog, exog, instrument)
         resls = modls.fit()
         modols = OLS(endog, exog)
         resols = modols.fit()
@@ -82,19 +94,19 @@ if __name__ == '__main__':
 
         print '\nbse'
         print 'IV2SLS', resls.bse
-        print 'GMM   ', mod.bse   #bse currently only attached to model not results
-        print 'diff  ', mod.bse - resls.bse
-        print '%-diff', resls.bse / mod.bse * 100 - 100
+        print 'GMM   ', res.bse   #bse currently only attached to model not results
+        print 'diff  ', res.bse - resls.bse
+        print '%-diff', resls.bse / res.bse * 100 - 100
         print 'OLS   ', resols.bse
-        print 'GMMOLS', modgmmols.bse
+        print 'GMMOLS', resgmmols.bse
         #print 'GMMiv', modgmmiv.bse
 
         print "Hausman's specification test"
-        print modls.spec_hausman()
+        print resls.spec_hausman()
         print spec_hausman(resols.params, res.params, resols.cov_params(),
-                           mod.cov_params())
-        print spec_hausman(resgmmols.params, res.params, modgmmols.cov_params(),
-                           mod.cov_params())
+                           res.cov_params())
+        print spec_hausman(resgmmols.params, res.params, resgmmols.cov_params(),
+                           res.cov_params())
 
 
     if 'distquant' in examples:
@@ -107,7 +119,7 @@ if __name__ == '__main__':
         gparrvs = stats.genpareto.rvs(2, size=5000)
         x0p = [1., gparrvs.min()-5, 1]
 
-        moddist = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
+        moddist = gmm.DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto)
         #produces non-sense because optimal weighting matrix calculations don't
         #apply to this case
         #resgp = moddist.fit() #now with 'cov': LinAlgError: Singular matrix
@@ -115,7 +127,7 @@ if __name__ == '__main__':
         print pit1
         p1 = moddist.fitgmm([1.5,0,1.5])
         print p1
-        moddist2 = DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto,
+        moddist2 = gmm.DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto,
                                     pquant=np.linspace(0.01,0.99,10))
         pit1a, wit1a = moddist2.fititer([1.5,0,1.5], maxiter=1)
         print pit1a
@@ -125,7 +137,6 @@ if __name__ == '__main__':
         #      fitquantilesgmm version (functions instead of class)
         res1b = moddist2.fitonce([1.5,0,1.5])
         print res1b.params
-        print moddist2.bse  #they look much too large
+        print res1b.bse  #they look much too large
         print np.sqrt(np.diag(res1b._cov_params))
-
 

@@ -493,8 +493,20 @@ class GMM(Model):
 #         self.exog = exog
 #         self.instrument = instrument
         self.nobs = endog.shape[0]
-        self.nmoms = k_moms or instrument.shape[1]
-        self.k_params = k_params or exog.shape[1]
+        if k_moms is not None:
+            self.nmoms = k_moms
+        elif instrument is not None:
+            self.nmoms = instrument.shape[1]
+        else:
+            self.nmoms = np.nan
+
+        if k_params is not None:
+            self.k_params = k_params
+        elif instrument is not None:
+            self.k_params = exog.shape[1]
+        else:
+            self.k_params = np.nan
+
         self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
 
@@ -1556,7 +1568,7 @@ class DistQuantilesGMM(GMM):
 
     def __init__(self, endog, exog, instrument, **kwds):
         #TODO: something wrong with super
-        #super(self.__class__).__init__(endog, exog, instrument) #, **kwds)
+        super(DistQuantilesGMM, self).__init__(endog, exog, instrument)
         #self.func = func
         self.epsilon_iter = 1e-5
 
@@ -1657,19 +1669,24 @@ class DistQuantilesGMM(GMM):
         if weights is None:
             weights = np.eye(self.nmoms)
         params = self.fitgmm(start=start)
+        # TODO: rewrite this old hack, should use fitgmm or fit maxiter=0
         self.results.params = params  #required before call to self.cov_params
-        _cov_params = self.cov_params(weights=weights,
+        self.results.wargs = {} #required before call to self.cov_params
+        self.results.options_other = {'weights_method':'cov'}
+        # TODO: which weights_method?  There shouldn't be any needed ?
+        _cov_params = self.results.cov_params(weights=weights,
                                       has_optimal_weights=has_optimal_weights)
 
 
         self.results.weights = weights
         self.results.jval = self.gmmobjective(params, weights)
+        self.results.options_other.update({'has_optimal_weights':has_optimal_weights})
+
+
         return self.results
 
 
 results_class_dict = {'GMMResults': GMMResults,
-                      'IVGMMResults': IVGMMResults}
-
-
-
+                      'IVGMMResults': IVGMMResults,
+                      'DistQuantilesGMM': GMMResults}  #TODO: should be a default
 
