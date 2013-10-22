@@ -10,6 +10,8 @@ from statsmodels.base.model import LikelihoodModelResults
 from statsmodels.tools.grouputils import Grouping
 from statsmodels.panel.panel_model import PanelModel, _effects_levels
 
+from statsmodels.tools.decorators import nottest
+
 def _check_method_compat(method, effects):
     if method not in ['within', 'pooling', 'between', 'swar', 'mle', 'random']:
         raise ValueError("method %s not understood" % method)
@@ -660,6 +662,7 @@ def _mask_constant(params, const_idx, two_dim=False):
     else:
         return params[idx][:,idx]
 
+@nottest
 def hausman_test(consistent, efficient, dof=None):
     r"""
     Hausman's specification test
