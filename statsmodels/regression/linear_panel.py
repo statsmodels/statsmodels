@@ -155,6 +155,8 @@ class PanelLM(PanelModel, RegressionModel):
         self._loglike_funcs = dict(mle = _random_effects_mle_loglike,
                                    within = _ols_loglike,
                                    between = _ols_loglike,
+                                   swar = lambda *args : np.nan,
+                                   pooling = _ols_loglike,
                                    )
 
     def initialize(self, unit=None, time=None):
@@ -265,6 +267,10 @@ class PanelLMResults(RegressionResults):
     def __init__(self, model, params, normalized_cov_params=None):
         super(PanelLMResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
+
+    def summary(self, *args, **kwargs):
+        print "TODO: MAKE A SUMMARY FOR THESE MODELS"
+        return super(PanelLMResults, self).summary(*args, **kwargs)
 
     @cache_readonly
     def scale(self):
@@ -715,6 +721,7 @@ if __name__ == "__main__":
     # check likelihood, params from Stata
     params = np.array([-53.9125431163, .109289189706, .30797722867,
                         77.2671635329, 50.0622100182])
+
 
 
 
