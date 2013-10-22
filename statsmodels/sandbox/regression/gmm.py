@@ -53,7 +53,8 @@ License: BSD (3-clause)
 import numpy as np
 from scipy import optimize, stats
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
-from statsmodels.base.model import LikelihoodModel, LikelihoodModelResults
+from statsmodels.base.model import (Model,
+                                    LikelihoodModel, LikelihoodModelResults)
 from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
@@ -422,7 +423,7 @@ The additional option is
 
 '''
 
-class GMM(object):
+class GMM(Model):
     '''
     Class for estimation by Generalized Method of Moments
 
@@ -479,20 +480,48 @@ class GMM(object):
     results_class = 'GMMResults'
 
     def __init__(self, endog, exog, instrument, k_moms=None, k_params=None,
-                  **kwds):
+                 missing='none', **kwds):
         '''
         maybe drop and use mixin instead
 
         TODO: GMM doesn't really care about the data, just the moment conditions
         '''
-        self.endog = endog
-        self.exog = exog
-        self.instrument = instrument
+        instrument = self._check_inputs(instrument, endog) # attaches if needed
+        super(GMM, self).__init__(endog, exog, missing=missing,
+                instrument=instrument)
+#         self.endog = endog
+#         self.exog = exog
+#         self.instrument = instrument
         self.nobs = endog.shape[0]
         self.nmoms = k_moms or instrument.shape[1]
         self.k_params = k_params or exog.shape[1]
         self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
+
+    def _check_inputs(self, instrument, endog):
+        if instrument is not None:
+            offset = np.asarray(instrument)
+            if offset.shape[0] != endog.shape[0]:
+                raise ValueError("instrument is not the same length as endog")
+        return instrument
+
+    def _fix_param_names(self, params, param_names=None):
+        # TODO: this is a temporary fix, need
+        xnames = self.data.xnames
+
+        if not param_names is None:
+            if len(params) == len(param_names):
+                self.data.xnames = param_names
+            else:
+                raise ValueError('param_names has the wrong length')
+
+        else:
+            if len(params) < len(xnames):
+                # cut in front for poisson multiplicative
+                self.data.xnames = xnames[-len(params):]
+            elif len(params) > len(xnames):
+                # cut at the end
+                self.data.xnames = xnames[:len(params)]
 
 
     def fit(self, start=None, maxiter=10, inv_weights=None,
@@ -596,7 +625,9 @@ class GMM(object):
         options_other = {'weights_method':weights_method,
                          'has_optimal_weights':has_optimal_weights,
                          'optim_method':optim_method}
-        #results = GMMResults()
+
+        # check that we have the right number of xnames
+        self._fix_param_names(params, param_names=None)
         results = results_class_dict[self.results_class](
                                         model = self,
                                         params = params,
@@ -1549,7 +1580,7 @@ class DistQuantilesGMM(GMM):
         self.endog = endog
         self.exog = exog
         self.instrument = instrument
-        self.results = GMMResults()
+        self.results = GMMResults(model=self)
         #self.__dict__.update(kwds)
         self.epsilon_iter = 1e-6
 
