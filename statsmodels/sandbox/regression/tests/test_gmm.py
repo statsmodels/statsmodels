@@ -46,7 +46,6 @@ def get_griliches76_data():
                                        'D_73', 'med', 'kww', 'age', 'mrt']])
     Y = griliches76_data['lw']
 
-
     return Y, X, Z
 
 # use module global to load only once
@@ -55,7 +54,8 @@ yg_df, xg_df, zg_df = get_griliches76_data()
 endog = np.asarray(yg_df, dtype=float)  # TODO: why is yg_df float32
 exog, instrument = map(np.asarray, [xg_df, zg_df])
 
-
+assert exog.dtype == np.float64
+assert instrument.dtype == np.float64
 
 
 # from R
