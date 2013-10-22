@@ -652,8 +652,16 @@ def _check_hausman_finite_sample(chi2_stat):
         warn(StatsWarning, "The assumptions of the Hausman test are not met."
                            "chi2 < 0.")
 
+def _mask_constant(params, const_idx, two_dim=False):
+    idx = np.ones(params.shape[0], dtype=bool)
+    idx[const_idx] = False
+    if not two_dim:
+        return params[idx]
+    else:
+        return params[idx][:,idx]
+
 def hausman_test(consistent, efficient, dof=None):
-    """
+    r"""
     Hausman's specification test
 
     Parameters
@@ -668,23 +676,59 @@ def hausman_test(consistent, efficient, dof=None):
     dof : int or None
         The degrees of freedom correction to be used. The default is
         np.linalg.matrix_rank(var(params_consistent)-var(params_efficient))
+    summary : bool
+        If true, returns a SummaryTable class that displays the results.
 
     Returns
     -------
+    Hausman statistic : float
+        The Hausman test statistic
+    p-value : float
+        The p-value under the assumption that the test stastistic is
+        distributed chi-2 with `dof` degrees of freedom
+    dof : int
+        The degrees of freedom used to calculate p-value
+    evals : ndarray
+        The eigenvalues of the difference in covariances matrix.
 
     Notes
     -----
+    The test statistic is
+
+    .. math::
+
+       (\beta_c-\beta_e)^\prime [(\var(\beta_c)-\var(\beta_e))^{-1}](\beta_c-\beta_e)
+
+    where :math:`\beta_c` are the parameters of the consistent model and
+    :math:`beta_e` are the parameters of the efficient model. The null
+    hypothesis is that the there is not a significant difference between the
+    model parameters. Under the null hypothesis, both of the estimators are
+    consistent but the `consistent` model is also consistent under the
+    alternative while the `efficient` model is not.
+
     Even if the assumptions for the consistent and efficient estimates are met,
-    it is possible that var(params_consistent - params_efficient) estimated by
-    var(params_consistent) - var(params_efficient) is not positive definite in
-    finite samples. In this case, the Hausman test is undefined. A warning
-    will be issued in this case.
+    it is possible that :math:`var(\beta_c - \beta_e)` estimated by
+    :math:`var(\beta_c) - var(\beta_e)` is not positive definite in finite
+    samples. In this case, the Hausman test is undefined and a warning will be
+    issued.
     """
     from statsmodels.sandbox.regression.gmm import spec_hausman
-    chi2_stat, pval, dof, evals = spec_hausman(efficient.params,
-                                               consistent.params,
-                                               efficient.cov_params(),
-                                               consistent.cov_params())
+    if efficient.model.k_constant:
+        const_idx = consistent.model.data.const_idx
+        e_params = _mask_constant(efficient.params.copy(), const_idx)
+        e_cov_params = _mask_constant(efficient.cov_params(), const_idx,
+                                      True)
+    if consistent.model.k_constant:
+        const_idx = consistent.model.data.const_idx
+        c_params = _mask_constant(consistent.params.copy(), const_idx)
+        c_cov_params = _mask_constant(consistent.cov_params(), const_idx,
+                                      True)
+
+
+    chi2_stat, pval, dof, evals = spec_hausman(e_params,
+                                               c_params,
+                                               e_cov_params,
+                                               c_cov_params)
     _check_hausman_finite_sample(chi2_stat)
 
     return chi2_stat, pval, dof, evals
