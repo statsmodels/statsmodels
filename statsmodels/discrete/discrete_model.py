@@ -840,7 +840,7 @@ class Poisson(CountModel):
         The parameter `X` is :math:`x_{i}\\beta` in the above formula.
         """
         y = self.endog
-        return stats.poisson.pmf(y, np.exp(X))
+        return np.exp(stats.poisson.logpmf(y, np.exp(X)))
 
     def loglike(self, params):
         """
