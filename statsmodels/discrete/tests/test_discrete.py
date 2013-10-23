@@ -804,6 +804,15 @@ class TestPoissonNewton(CheckModelResults):
     def test_resid(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, 2)
 
+    def test_predict_prob(self):
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        probs_res = np.loadtxt(os.path.join(cur_dir, "results",
+                            "predict_prob_poisson.csv"), delimiter=",")
+
+        # just check the first 100 obs. vs R to save memory
+        probs = self.res1.predict_prob()[:100]
+        assert_almost_equal(probs, probs_res, 8)
+
 class TestNegativeBinomialNB2Newton(CheckModelResults):
     @classmethod
     def setupClass(cls):
