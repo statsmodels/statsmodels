@@ -1673,7 +1673,7 @@ def test_arima_predict_exog():
     params = np.array([2.786912485145725, -0.122650190196475,
                        0.533223846028938, -0.319344321763337,
                        0.132883233000064])
-    assert_almost_equal(arma_res.params, params, 6)
+    assert_almost_equal(arma_res.params, params, 5)
     # no exog for in-sample
     predict = arma_res.predict()
     assert_almost_equal(predict, predict_expected.values[:100], 5)
@@ -1828,8 +1828,51 @@ def test_arima_exog_predict_1d():
     y = np.random.random(100)
     x = np.random.random(100)
     mod = ARMA(y, (2, 1), x).fit(disp=-1)
-    newx = np.random.random(12)
+    newx = np.random.random(10)
     results = mod.forecast(steps=10, alpha=0.05, exog=newx)
+
+def test_arima_1123():
+    # test ARMAX predict when trend is none
+    np.random.seed(12345)
+    arparams = np.array([.75, -.25])
+    maparams = np.array([.65, .35])
+
+    arparam = np.r_[1, -arparams]
+    maparam = np.r_[1, maparams]
+
+    nobs = 20
+
+    dates = dates_from_range('1980',length=nobs)
+
+    y = arma_generate_sample(arparams, maparams, nobs)
+
+    X = np.random.randn(nobs)
+    y += 5*X
+    mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
+    res = mod.fit(trend='nc', disp=False)
+    fc = res.forecast(exog=X[-1:])
+    # results from gretl
+    assert_almost_equal(fc[0], 2.200393, 6)
+    assert_almost_equal(fc[1], 1.030743, 6)
+    assert_almost_equal(fc[2][0,0], 0.180175, 6)
+    assert_almost_equal(fc[2][0,1], 4.220611, 6)
+
+    mod = ARMA(y[:-1], order=(1,1), exog=X[:-1])
+    res = mod.fit(trend='nc', disp=False)
+    fc = res.forecast(exog=X[-1:])
+    assert_almost_equal(fc[0], 2.765688, 6)
+    assert_almost_equal(fc[1], 0.835048, 6)
+    assert_almost_equal(fc[2][0,0], 1.129023, 6)
+    assert_almost_equal(fc[2][0,1], 4.402353, 6)
+
+    # make sure this works to. code looked fishy.
+    mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
+    res = mod.fit(trend='c', disp=False)
+    fc = res.forecast(exog=X[-1:])
+    assert_almost_equal(fc[0], 2.481219, 6)
+    assert_almost_equal(fc[1], 0.968759, 6)
+    assert_almost_equal(fc[2][0], [0.582485, 4.379952], 6)
+
 
 if __name__ == "__main__":
     import nose
