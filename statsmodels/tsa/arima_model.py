@@ -1370,8 +1370,15 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             2d array of the confidence interval for the forecast
         """
         if exog is not None:
+            #TODO: make a convenience function for this. we're using the
+            # pattern elsewhere in the codebase
+            exog = np.asarray(exog)
             if self.k_exog == 1 and exog.ndim == 1:
                 exog = exog[:,None]
+            elif exog.ndim == 1:
+                if len(exog) != self.k_exog:
+                    raise ValueError("1d exog given and len(exog) != k_exog")
+                exog = exog[None, :]
             if exog.shape[0] != steps:
                 raise ValueError("new exog needed for each step")
             # prepend in-sample exog observations
