@@ -35,7 +35,7 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy.stats.stats import ss
 from statsmodels.tools.tools import (add_constant, rank,
-                                             recipr, chain_dot, extendedpinv)
+                                             recipr, chain_dot, pinv_extended)
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly, cache_writable)
 import statsmodels.base.model as base
@@ -88,28 +88,31 @@ class RegressionModel(base.LikelihoodModel):
 
         self._df_model = None
         self._df_resid = None
+        self.rank = None
 
-    def _get_df_model(self):
+    @property
+    def df_model(self):
         if self._df_model is None:
-            self.rank = rank(self.exog)
+            if self.rank is None:
+                self.rank = rank(self.exog)
             self._df_model = float(self.rank - self.k_constant)
         return self._df_model
 
-    def _set_df_model(self, value):
+    @df_model.setter
+    def df_model(self, value):
         self._df_model = value
 
-    df_model = property(_get_df_model, _set_df_model)
-
-    def _get_df_resid(self):
+    @property
+    def df_resid(self):
         if self._df_resid is None:
-            self.rank = rank(self.exog)
+            if self.rank is None:
+                self.rank = rank(self.exog)
             self._df_resid = self.nobs - self.rank
         return self._df_resid
 
-    def _set_df_resid(self, value):
+    @df_resid.setter
+    def df_resid(self, value):
         self._df_resid = value
-
-    df_resid = property(_get_df_resid, _set_df_resid)
 
     def fit(self, method="pinv", **kwargs):
         """
@@ -143,7 +146,7 @@ class RegressionModel(base.LikelihoodModel):
                 (not hasattr(self, 'normalized_cov_params')) or
                 (not hasattr(self, 'rank'))):
 
-                self.pinv_wexog, singular_values = extendedpinv(self.wexog)
+                self.pinv_wexog, singular_values = pinv_extended(self.wexog)
                 self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
 

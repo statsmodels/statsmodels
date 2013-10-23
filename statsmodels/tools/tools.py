@@ -345,7 +345,7 @@ def isestimable(C, D):
     return True
 
 
-def extendedpinv(X, rcond=1e-15):
+def pinv_extended(X, rcond=1e-15):
     """
     Return the pinv of an array X as well as the singular values
     used in computation.

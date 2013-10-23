@@ -10,7 +10,7 @@ from nose.tools import (assert_true, assert_false, assert_raises)
 
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
-from statsmodels.tools.tools import extendedpinv
+from statsmodels.tools.tools import pinv_extended
 
 
 class TestTools(TestCase):
@@ -58,7 +58,7 @@ class TestTools(TestCase):
         X = standard_normal((40, 10))
         np_inv = np.linalg.pinv(X)
         np_sing_vals = np.linalg.svd(X, 0, 0)
-        sm_inv, sing_vals = extendedpinv(X)
+        sm_inv, sing_vals = pinv_extended(X)
         assert_almost_equal(np_inv, sm_inv)
         assert_almost_equal(np_sing_vals, sing_vals)
 
@@ -67,7 +67,7 @@ class TestTools(TestCase):
         X[:, 5] = X[:, 1] + X[:, 3]
         np_inv = np.linalg.pinv(X)
         np_sing_vals = np.linalg.svd(X, 0, 0)
-        sm_inv, sing_vals = extendedpinv(X)
+        sm_inv, sing_vals = pinv_extended(X)
         assert_almost_equal(np_inv, sm_inv)
         assert_almost_equal(np_sing_vals, sing_vals)
 
