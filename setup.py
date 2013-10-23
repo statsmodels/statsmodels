@@ -436,12 +436,12 @@ def get_data_files():
             continue
         path = pjoin(root, i)
         if os.path.isdir(path):
-            data_files.update({relpath(path).replace(sep, ".") : ["*.csv",
+            data_files.update({relpath(path, start=curdir).replace(sep, ".") : ["*.csv",
                                                                   "*.dta"]})
     # add all the tests and results files
     for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
         if r.endswith('results') and 'sandbox' not in r:
-            data_files.update({relpath(r).replace(sep, ".") : ["*.csv",
+            data_files.update({relpath(r, start=curdir).replace(sep, ".") : ["*.csv",
                                                                "*.txt"]})
 
     return data_files
