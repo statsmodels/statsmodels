@@ -294,6 +294,11 @@ class TestDiagnosticG(object):
                 breushgodfrey_f['statistic'], breushgodfrey_f['pvalue']]
         assert_almost_equal(bg, bg_r, decimal=13)
 
+        # check that lag choice works
+        bg2 = smsdia.acorr_breush_godfrey(res, nlags=None)
+        bg3 = smsdia.acorr_breush_godfrey(res, nlags=14)
+        assert_almost_equal(bg2, bg3, decimal=13)
+
     def test_acorr_ljung_box(self):
         res = self.res
 
@@ -592,10 +597,10 @@ class TestDiagnosticG(object):
         lsdiag = json.load(fp)
 
         #basic
-        assert_almost_equal(lsdiag['cov.scaled'],
-                            res.cov_params().ravel(), decimal=14)
-        assert_almost_equal(lsdiag['cov.unscaled'],
-                            res.normalized_cov_params.ravel(), decimal=14)
+        assert_almost_equal(np.array(lsdiag['cov.scaled']).reshape(3, 3),
+                            res.cov_params(), decimal=14)
+        assert_almost_equal(np.array(lsdiag['cov.unscaled']).reshape(3, 3),
+                            res.normalized_cov_params, decimal=14)
 
         c0, c1 = infl.cooks_distance #TODO: what's c1
 
@@ -640,6 +645,35 @@ class TestDiagnosticG(object):
         >>> np.nonzero(np.asarray(infl_bool_r["hat"]))[0]
         array([ 62,  76,  84,  90,  91,  92,  95, 108, 197, 199])
         '''
+
+
+class TestDiagnosticGPandas(TestDiagnosticG):
+
+    def __init__(self):
+        d = macrodata.load_pandas().data
+        #growth rates
+        d['gs_l_realinv'] = 400 * np.log(d['realinv']).diff()
+        d['gs_l_realgdp'] = 400 * np.log(d['realgdp']).diff()
+        d['lint'] = d['realint'].shift(1)
+        d['tbilrate'] = d['tbilrate'].shift(1)
+
+        d = d.dropna()
+        self.d = d
+        endogg = d['gs_l_realinv']
+        exogg = add_constant(d[['gs_l_realgdp', 'lint']])
+        exogg2 = add_constant(d[['gs_l_realgdp', 'tbilrate']])
+        exogg3 = add_constant(d[['gs_l_realgdp']])
+
+        res_ols = OLS(endogg, exogg).fit()
+        res_ols2 = OLS(endogg, exogg2).fit()
+
+        res_ols3 = OLS(endogg, exogg3).fit()
+
+        self.res = res_ols
+        self.res2 = res_ols2
+        self.res3 = res_ols3
+        self.endog = self.res.model.endog
+        self.exog = self.res.model.exog
 
 
 def grangertest():
@@ -816,7 +850,7 @@ def test_outlier_test():
     res2 = np.c_[rstudent, unadj_p, bonf_p]
     res = oi.outlier_test(ndarray_mod, method='b', labels=labels, order=True)
     np.testing.assert_almost_equal(res.values, res2, 7)
-    np.testing.assert_equal(res.index.tolist(), sorted_labels)
+    np.testing.assert_equal(res.index.tolist(), sorted_labels)  # pylint: disable-msg=E1103
 
 
 if __name__ == '__main__':

@@ -56,6 +56,57 @@ class TLinearModel(GenericLikelihoodModel):
 
     '''
 
+    def initialize(self):
+        # TODO: here or in __init__
+        self.k_vars = self.exog.shape[1]
+        if not hasattr(self, 'fix_df'):
+            self.fix_df = False
+
+        if self.fix_df is False:
+            # df will be estimated, no parameter restrictions
+            self.fixed_params = None
+            self.fixed_paramsmask = None
+            self.k_params = self.exog.shape[1] + 2
+            extra_params_names = ['df', 'scale']
+        else:
+            # df fixed
+            self.k_params = self.exog.shape[1] + 1
+            fixdf = np.nan * np.zeros(self.exog.shape[1] + 2)
+            fixdf[-2] = self.fix_df
+            self.fixed_params = fixdf
+            self.fixed_paramsmask = np.isnan(fixdf)
+            extra_params_names = ['scale']
+
+        self._set_extra_params_names(extra_params_names)
+        self._set_start_params()
+
+        super(TLinearModel, self).initialize()
+
+    def _set_start_params(self, start_params=None, use_kurtosis=False):
+        if start_params is not None:
+            self.start_params = start_params
+        else:
+            from statsmodels.regression.linear_model import OLS
+            res_ols = OLS(self.endog, self.exog).fit()
+            start_params = 0.1*np.ones(self.k_params)
+            start_params[:self.k_vars] = res_ols.params
+
+            if self.fix_df is False:
+
+                if use_kurtosis:
+                    kurt = stats.kurtosis(res_ols.resid)
+                    df = 6./kurt + 4
+                else:
+                    df = 5
+
+                start_params[-2] = df
+                #TODO adjust scale for df
+                start_params[-1] = np.sqrt(res_ols.scale)
+
+            self.start_params = start_params
+
+
+
 
     def loglike(self, params):
         return -self.nloglikeobs(params).sum(0)
@@ -106,6 +157,11 @@ class TLinearModel(GenericLikelihoodModel):
         lPx -= np_log(scale)  # correction for scale
         return -lPx
 
+    def predict(self, params, exog=None):
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params[:self.exog.shape[1]])
+
 
 from scipy import stats
 from statsmodels.tsa.arma_mle import Arma
@@ -142,7 +198,7 @@ class TArma(Arma):
         the params vector
         """
 
-        errorsest = self.geterrors(params)
+        errorsest = self.geterrors(params[:-2])
         #sigma2 = np.maximum(params[-1]**2, 1e-6)  #do I need this
         #axis = 0
         #nobs = len(errorsest)
@@ -152,3 +208,20 @@ class TArma(Arma):
         llike  = - stats.t._logpdf(errorsest/scale, df) + np_log(scale)
         return llike
 
+    #TODO rename fit_mle -> fit, fit -> fit_ls
+    def fit_mle(self, order, start_params=None, method='nm', maxiter=5000,
+            tol=1e-08, **kwds):
+        nar, nma = order
+        if start_params is not None:
+            if len(start_params) != nar + nma + 2:
+                raise ValueError('start_param need sum(order) + 2 elements')
+        else:
+            start_params = np.concatenate((0.05*np.ones(nar + nma), [5, 1]))
+
+
+        res = super(TArma, self).fit_mle(order=order,
+                                         start_params=start_params,
+                                         method=method, maxiter=maxiter,
+                                         tol=tol, **kwds)
+
+        return res

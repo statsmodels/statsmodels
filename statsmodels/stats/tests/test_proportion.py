@@ -249,6 +249,7 @@ def test_binom_rejection_interval():
     pval = smprop.binom_test(ci_upp, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(pval, alpha)
+
     pval = smprop.binom_test(ci_upp - 1, nobs, prop=prop,
                                   alternative=alternative)
     assert_array_less(alpha, pval)
@@ -301,35 +302,38 @@ def test_power_ztost_prop():
                          discrete=True, dist='binom')[0]
     assert_almost_equal(power, 0.8204, decimal=4) # PASS example
 
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=False,
-                                    dist='binom')[0]
+    import warnings
+    with warnings.catch_warnings():  # python >= 2.6
+        warnings.simplefilter("ignore")
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=False,
+                                        dist='binom')[0]
 
-    res_power = np.array([ 0., 0., 0., 0.0889, 0.2356, 0.4770, 0.5530,
-        0.6154,  0.7365,  0.7708])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
-    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+        res_power = np.array([ 0., 0., 0., 0.0889, 0.2356, 0.4770, 0.5530,
+            0.6154,  0.7365,  0.7708])
+        # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+        assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
-    # with critval_continuity correction
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=False,
-                                    dist='binom', variance_prop=None,
-                                    continuity=2, critval_continuity=1)[0]
+        # with critval_continuity correction
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=False,
+                                        dist='binom', variance_prop=None,
+                                        continuity=2, critval_continuity=1)[0]
 
-    res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
-                          0.6154, 0.6674, 0.7708])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
-    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+        res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
+                              0.6154, 0.6674, 0.7708])
+        # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+        assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
-    power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
-                                    p_alt=0.5, alpha=0.05, discrete=False,
-                                    dist='binom', variance_prop=0.5,
-                                    critval_continuity=1)[0]
+        power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),
+                                        p_alt=0.5, alpha=0.05, discrete=False,
+                                        dist='binom', variance_prop=0.5,
+                                        critval_continuity=1)[0]
 
-    res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
-                          0.6154, 0.6674, 0.7112])
-    # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
-    assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
+        res_power = np.array([0., 0., 0., 0.0889, 0.2356, 0.3517, 0.4457,
+                              0.6154, 0.6674, 0.7112])
+        # TODO: I currently don't impose power>=0, i.e np.maximum(power, 0)
+        assert_almost_equal(np.maximum(power, 0), res_power, decimal=4)
 
 def test_ztost():
     xfair = np.repeat([1,0], [228, 762-228])

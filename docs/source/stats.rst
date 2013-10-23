@@ -144,10 +144,11 @@ Non-Parametric Tests
    :toctree: generated/
 
    mcnemar
+   symmetry_bowker
    median_test_ksample
    runstest_1samp
    runstest_2samp
-   cochran_q
+   cochrans_q
    Runs
 
 .. currentmodule:: statsmodels.stats.descriptivestats
@@ -156,6 +157,8 @@ Non-Parametric Tests
    :toctree: generated/
 
    sign_test
+
+.. _interrater:   
 
 Interrater Reliability and Agreement
 ------------------------------------
@@ -235,6 +238,7 @@ The following functions are not (yet) public
    set_remove_subs
    tiecorrect
 
+.. _tost:
 
 Basic Statistics and t-Tests with frequency weights
 ---------------------------------------------------
@@ -305,6 +309,8 @@ equations.
    tt_ind_solve_power
    zt_ind_solve_power
 
+
+.. _proportion_stats:
 
 Proportion
 ----------

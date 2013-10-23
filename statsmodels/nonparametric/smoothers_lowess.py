@@ -66,7 +66,7 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
     estimating the `smooth` y_i by taking the frac*N closest points
     to (x_i,y_i) based on their x values and estimating y_i
     using a weighted linear regression. The weight for (x_j,y_j)
-    is tricube function applied to |x_i-x_j|.
+    is tricube function applied to abs(x_i-x_j).
 
     If it > 1, then further weighted local linear regressions
     are performed, where the weights are the same as above
@@ -158,23 +158,25 @@ def lowess(endog, exog, frac=2.0/3.0, it=3, delta=0.0, is_sorted=False,
 
     if not is_sorted:
         # Sort both inputs according to the ascending order of x values
-        sort_index = np.argsort(exog)
+        sort_index = np.argsort(x)
         x = np.array(x[sort_index])
         y = np.array(y[sort_index])
 
     res = _lowess(y, x, frac=frac, it=it, delta=delta)
     _, yfitted = res.T
 
-    if return_sorted or (all_valid and is_sorted):
+    if return_sorted:
         return res
     else:
         # rebuild yfitted with original indices
         # a bit messy: y might have been selected twice
         if not is_sorted:
-            yfitted_ = np.empty_like(endog)
+            yfitted_ = np.empty_like(y)
             yfitted_.fill(np.nan)
             yfitted_[sort_index] = yfitted
             yfitted = yfitted_
+        else:
+            yfitted = yfitted
 
         if not all_valid:
             yfitted_ = np.empty_like(endog)

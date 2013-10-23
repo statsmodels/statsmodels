@@ -153,9 +153,19 @@ Releasing
 
     git tag -a v0.3.0rc1 -m "Version 0.3.0 Release Candidate 1" 7b2fb29
 
+#. If on a new minor release (major.minor.micro format) start a new maintenance branch, for example::
+
+    git checkout -b maintenance/0.3.x
+
+   Any bug fixes and maintenance commits for this minor release go into this branch and are merged back into master. If we have another micro release, then we make the tag and do this release in this branch and then merge the changes back into master so the tag is reachable. Check that the version number is still ok after the merge, fixing any conflicts here. 
+
 #. Upload the source distribution to PyPI::
 
     python setup.py sdist --formats=gztar,zip register upload
+
+#. Go back to setup.py and set `isreleased = False` and bump the major version in master.
+
+#. Update the version numbers in the statsmodels/statsmodels-website repo. These are in conf.py. Also upload the released version docs to stable/.
 
 #. Make an announcment
 

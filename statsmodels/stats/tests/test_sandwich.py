@@ -84,6 +84,11 @@ def test_hac_simple():
     assert_almost_equal(cov1, cov1_r, decimal=14)
     assert_almost_equal(cov2, cov2_r, decimal=14)
 
+    # compare default for nlags
+    cov3 = sw.cov_hac_simple(res_olsg, use_correction=False)
+    cov4 = sw.cov_hac_simple(res_olsg, nlags=4, use_correction=False)
+    assert_almost_equal(cov3, cov4, decimal=14)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False)

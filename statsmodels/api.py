@@ -24,6 +24,8 @@ from .formula import api as formula
 
 from .iolib.smpickle import load_pickle as load
 
+from .tools.print_version import show_versions
+
 import os
 
 chmpath = os.path.join(os.path.dirname(__file__), 'statsmodelsdoc.chm')

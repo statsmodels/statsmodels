@@ -11,8 +11,8 @@ import numpy as np
 class AllPairsResults(object):
     '''Results class for pairwise comparisons, based on p-values
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     pvals_raw : array_like, 1-D
         p-values from a pairwise comparison test
     all_pairs : list of tuples

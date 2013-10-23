@@ -73,14 +73,12 @@ class ELOriginRegress(object):
 
         """
         exog_with = add_constant(self.exog, prepend=True)
-        unrestricted_fit = OLS(self.endog, self.exog).fit()
         restricted_model = OLS(self.endog, exog_with)
         restricted_fit = restricted_model.fit()
         restricted_el = restricted_fit.el_test(
         np.array([0]), np.array([0]), ret_params=1)
         params = np.squeeze(restricted_el[3])
         beta_hat_llr = restricted_el[0]
-        ls_params = np.hstack((0, unrestricted_fit.params))
         llf = np.sum(np.log(restricted_el[2]))
         return OriginResults(restricted_model, params, beta_hat_llr, llf)
 

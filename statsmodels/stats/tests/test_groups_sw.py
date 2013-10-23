@@ -12,11 +12,11 @@ from numpy.testing import assert_equal, assert_raises
 import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.grouputils import Group, GroupSorted
 
-class CheckPanelLag(object):
+class CheckPanelLagMixin(object):
 
     def calculate(self):
-        self.g = g = GroupSorted(self.gind)
-        self.alla = [(lag, sw.lagged_groups(self.x, lag, g.groupidx))
+        self.g = g = GroupSorted(self.gind)  # pylint: disable-msg=W0201
+        self.alla = [(lag, sw.lagged_groups(self.x, lag, g.groupidx))  # pylint: disable-msg=W0201
                          for lag in range(5)]
 
     def test_values(self):
@@ -30,7 +30,7 @@ class CheckPanelLag(object):
                       self.g.groupidx)
 
 
-class TestBalanced(CheckPanelLag):
+class TestBalanced(CheckPanelLagMixin):
 
     def __init__(self):
         self.gind = np.repeat([0,1,2], 5)
@@ -50,7 +50,7 @@ class TestBalanced(CheckPanelLag):
             }
         self.calculate()
 
-class TestUnBalanced(CheckPanelLag):
+class TestUnBalanced(CheckPanelLagMixin):
 
     def __init__(self):
         self.gind = gind = np.repeat([0,1,2], [3, 5, 10])

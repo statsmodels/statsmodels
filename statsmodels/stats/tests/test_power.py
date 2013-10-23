@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=W0231, W0142
 """Tests for statistical power calculations
 
 Note:
@@ -26,7 +27,7 @@ from numpy.testing import dec
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
     have_matplotlib = True
-except:
+except ImportError:
     have_matplotlib = False
 
 
@@ -401,13 +402,13 @@ def test_normal_power_explicit():
     norm_pow = smp.normal_power(-0.01, nobs/2., 0.05)
     norm_pow_R = 0.05045832927039234
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="two.sided")
-    assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
+    assert_almost_equal(norm_pow, norm_pow_R, decimal=11)
 
     norm_pow = smp.NormalIndPower().power(0.01, nobs, 0.05,
                                           alternative="larger")
     norm_pow_R = 0.056869534873146124
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="greater")
-    assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
+    assert_almost_equal(norm_pow, norm_pow_R, decimal=11)
 
     # Note: negative effect size is same as switching one-sided alternative
     # TODO: should I switch to larger/smaller instead of "one-sided" options
@@ -415,7 +416,7 @@ def test_normal_power_explicit():
                                           alternative="larger")
     norm_pow_R = 0.0438089705093578
     #value from R: >pwr.2p.test(h=0.01,n=80,sig.level=0.05,alternative="less")
-    assert_almost_equal(norm_pow, norm_pow_R, decimal=13)
+    assert_almost_equal(norm_pow, norm_pow_R, decimal=11)
 
 class TestNormalIndPower1(CheckPowerMixin):
 

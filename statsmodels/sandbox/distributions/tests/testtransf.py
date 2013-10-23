@@ -84,12 +84,11 @@ class Test_Transf2(object):
             #The below fails on the SPARC box with scipy 10.1
             #(lognormalg, stats.lognorm(1)),
             #transf2
-            (squarenormalg, stats.chi2(1)),
-            (absnormalg, stats.halfnorm),
-            (absnormalg, stats.foldnorm(1e-5)),  #try frozen
-            #(negsquarenormalg, 1-stats.chi2),  # won't work as distribution
+           (squarenormalg, stats.chi2(1)),
+           (absnormalg, stats.halfnorm),
+           (absnormalg, stats.foldnorm(1e-5)),  #try frozen
+           #(negsquarenormalg, 1-stats.chi2),  # won't work as distribution
             (squaretg(10), stats.f(1, 10))]      #try both frozen
-
 
         l,s = 0.0, 1.0
         self.ppfq = [0.1,0.5,0.9]
@@ -137,6 +136,8 @@ class Test_Transf2(object):
             assert_almost_equal(s1[2:], s2[2:],
                                 decimal=2, #lognorm for kurtosis
                                 err_msg='stats '+d1.name+d2.name)
+
+
 
     def test_equivalent_negsq(self):
         #special case negsquarenormalg

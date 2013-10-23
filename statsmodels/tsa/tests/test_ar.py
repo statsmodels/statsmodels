@@ -3,7 +3,7 @@ Test AR Model
 """
 import statsmodels.api as sm
 from statsmodels.tsa.ar_model import AR
-from numpy.testing import (assert_almost_equal, assert_equal, #assert_allclose,
+from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
 from results import results_ar
 import numpy as np
@@ -14,7 +14,7 @@ DECIMAL_6 = 6
 DECIMAL_5 = 5
 DECIMAL_4 = 4
 
-class CheckAR(object):
+class CheckARMixin(object):
     def test_params(self):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_6)
 
@@ -39,7 +39,7 @@ class CheckAR(object):
         res_unpickled = self.res1.__class__.load(fh)
         assert_(type(res_unpickled) is type(self.res1))
 
-class TestAROLSConstant(CheckAR):
+class TestAROLSConstant(CheckARMixin):
     """
     Test AR fit by OLS with a constant.
     """
@@ -76,7 +76,7 @@ class TestAROLSConstant(CheckAR):
                 self.res2.FVOLSn15start312, DECIMAL_4)
 
 
-class TestAROLSNoConstant(CheckAR):
+class TestAROLSNoConstant(CheckARMixin):
     """f
     Test AR fit by OLS without a constant.
     """
@@ -151,57 +151,58 @@ class TestARMLEConstant(object):
         res1 = self.res1
         res2 = self.res2
 
+        rtol = 8e-6
         # assert_raises pre-sample
 
         # 9, 51
         start, end = 9, 51
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 9, 308
         start, end = 9, 308
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 9, 333
         start, end = 9, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[start:end+1], rtol=rtol)
 
         # 100, 151
         start, end = 100, 151
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 100, 308
         start, end = 100, 308
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 100, 333
         start, end = 100, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn2[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn2[start:end+1], rtol=rtol)
 
         # 308, 308
         start, end = 308, 308
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn3[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn3[start:end+1], rtol=rtol)
 
         # 308, 333
         start, end = 308, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn3[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn3[start:end+1], rtol=rtol)
 
         # 309, 333
         start, end = 309, 333
         fv = res1.predict(start, end, dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn4[start:end+1], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn4[start:end+1], rtol=rtol)
 
         # None, None
         start, end = None, None
         fv = res1.predict(dynamic=True)
-        assert_almost_equal(fv, res2.fcdyn[9:309], DECIMAL_4)
+        assert_allclose(fv, res2.fcdyn[9:309], rtol=rtol)
 
 
 class TestAutolagAR(object):
@@ -251,9 +252,9 @@ def test_ar_dates():
     pred = ar_model.predict(start='2005', end='2015')
     predict_dates = sm.tsa.datetools.dates_from_range('2005', '2015')
     try:
-        from pandas import DatetimeIndex
+        from pandas import DatetimeIndex  # pylint: disable-msg=E0611
         predict_dates = DatetimeIndex(predict_dates, freq='infer')
-    except:
+    except ImportError:
         pass
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)

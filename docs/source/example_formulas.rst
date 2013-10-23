@@ -1,3 +1,5 @@
+.. _formula_examples:
+
 Fitting models using R-style formulas
 =====================================
 

@@ -138,7 +138,7 @@ class ACSkewT_gen(distributions.rv_continuous):
     def __init__(self):
         #super(SkewT_gen,self).__init__(
         distributions.rv_continuous.__init__(self,
-            name = 'Skew T distribution', shapes = 'alpha',
+            name = 'Skew T distribution', shapes = 'df, alpha',
             extradoc = '''
 Skewed T distribution by Azzalini, A. & Capitanio, A. (2003)_
 
@@ -175,7 +175,7 @@ appears in J.Roy.Statist.Soc, series B, vol.65, pp.367-389
         # default stats calculation uses ppf
         return self._mom0_sc(n, df, alpha)
 
-    def _pdf(self,x,df,alpha):
+    def _pdf(self, x, df, alpha):
         # 2*normpdf(x)*normcdf(alpha*x)
         return 2.0*distributions.t._pdf(x, df) * special.stdtr(df+1, alpha*x*np.sqrt((1+df)/(x**2+df)))
 
@@ -835,6 +835,7 @@ class TransfTwo_gen(distributions.rv_continuous):
                          # possible to freeze the underlying distribution
 
         super(TransfTwo_gen,self).__init__(a=a, b=b, name = name,
+                                shapes = kls.shapes,
                                 longname = longname, extradoc = extradoc)
 
     def _rvs(self, *args):
@@ -935,6 +936,7 @@ def derivminus(x):
 
 def negsquarefunc(x):
     return -np.power(x,2)
+
 
 
 negsquarenormalg = TransfTwo_gen(stats.norm, negsquarefunc, inverseplus, inverseminus,
@@ -1227,6 +1229,8 @@ def mvnormcdf(upper, mu, cov, lower=None,  **kwds):
     #v/np.sqrt(np.atleast_2d(np.diag(covv)))/np.sqrt(np.atleast_2d(np.diag(covv))).T
 
     return mvstdnormcdf(lower, upper, corr, **kwds)
+
+
 
 
 if __name__ == '__main__':

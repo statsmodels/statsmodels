@@ -526,6 +526,46 @@ parameters, then the fit options might not be the correct ones anymore .'''
 
         return smry
 
+
+    def summary2(self, xname=None, yname=None, title=None, alpha=.05,
+                float_format="%.4f"):
+        """Experimental summary function for regression results
+
+        Parameters
+        -----------
+        xname : List of strings of length equal to the number of parameters
+            Names of the independent variables (optional)
+        yname : string
+            Name of the dependent variable (optional)
+        title : string, optional
+            Title for the top table. If not None, then this replaces the
+            default title
+        alpha : float
+            significance level for the confidence intervals
+        float_format: string
+            print format for floats in parameters summary
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be printed or
+            converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+        # Summary
+        from statsmodels.iolib import summary2
+        smry = summary2.Summary()
+        smry.add_base(results=self, alpha=alpha, float_format=float_format,
+                xname=xname, yname=yname, title=title)
+
+        return smry
+
+
 class RLMResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(RLMResultsWrapper, RLMResults)

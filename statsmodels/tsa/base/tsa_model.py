@@ -80,6 +80,12 @@ class TimeSeriesModel(base.LikelihoodModel):
             date = dates.indexMap[date]
         else:
             date = dates.get_loc(date)
+            try: # pandas 0.8.0 returns a boolean array
+                len(date)
+                from numpy import where
+                date = where(date)[0].item()
+            except TypeError: # this is expected behavior
+                pass
         return date
 
     def _str_to_date(self, date):
@@ -113,12 +119,11 @@ class TimeSeriesModel(base.LikelihoodModel):
         if isinstance(start, str):
             if dates is None:
                 raise ValueError("Got a string for start and dates is None")
+            dtstart = self._str_to_date(start)
+            self.data.predict_start = dtstart
             try:
-                dtstart = self._str_to_date(start)
-                self.data.predict_start = dtstart
                 start = self._get_dates_loc(dates, dtstart)
-            except: # this catches all errors in the above..
-                    #FIXME to be less greedy
+            except KeyError:
                 raise ValueError("Start must be in dates. Got %s | %s" %
                         (str(start), str(dtstart)))
 

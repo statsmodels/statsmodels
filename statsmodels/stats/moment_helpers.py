@@ -195,8 +195,8 @@ def cov2corr(cov, return_std=False):
 def corr2cov(corr, std):
     '''convert correlation matrix to covariance matrix given standard deviation
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     corr : array_like, 2d
         correlation matrix, see Notes
     std : array_like, 1d

@@ -6,13 +6,13 @@ from statsmodels.compatnp.py3k import asstr
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
 try:
-    from pandas.tseries.frequencies import get_offset
+    from pandas.tseries.frequencies import to_offset
     class _freq_to_pandas_class(object):
         # being lazy, don't want to replace dictionary below
         def __getitem__(self, key):
-            return get_offset(key)
+            return to_offset(key)
     _freq_to_pandas = _freq_to_pandas_class()
-except ImportError, err:
+except ImportError:
     _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
                        'D' : pandas_datetools.day,
                        'W' : pandas_datetools.Week(weekday=6),
@@ -35,7 +35,15 @@ def _index_date(date, dates):
     if isinstance(date, basestring):
         date = date_parser(date)
     try:
-        return dates.get_loc(date)
+        if hasattr(dates, 'indexMap'): # 0.7.x
+            return dates.indexMap[date]
+        else:
+            date = dates.get_loc(date)
+            try: # pandas 0.8.0 returns a boolean array
+                len(date)
+                return np.where(date)[0].item()
+            except TypeError: # expected behavior
+                return date
     except KeyError, err:
         freq = _infer_freq(dates)
         if freq is None:
@@ -139,10 +147,10 @@ def _is_leap(year):
 
 def date_parser(timestr, parserinfo=None, **kwargs):
     """
-    Uses dateutils.parser.parse, but also handles monthly dates of the form
+    Uses dateutil.parser.parse, but also handles monthly dates of the form
     1999m4, 1999:m4, 1999:mIV, 1999mIV and the same for quarterly data
     with q instead of m. It is not case sensitive. The default for annual
-    data is the end of the year, which also differs from dateutils.
+    data is the end of the year, which also differs from dateutil.
     """
     flags = re.IGNORECASE | re.VERBOSE
     if re.search(_q_pattern, timestr, flags):
@@ -159,7 +167,15 @@ def date_parser(timestr, parserinfo=None, **kwargs):
         month, day = 12, 31
         year = int(timestr)
     else:
-        return pandas_datetools.parser.parse(timestr, parserinfo, **kwargs)
+        if (hasattr(pandas_datetools, 'parser') and
+            not callable(pandas_datetools.parser)):
+            # exists in 0.8.0 pandas, but it's the class not the module
+            return pandas_datetools.parser.parse(timestr, parserinfo,
+                                                 **kwargs)
+        else: # 0.8.1 pandas version didn't import this into namespace
+            from dateutil import parser
+            return parser.parse(timestr, parserinfo, **kwargs)
+
 
     return datetime.datetime(year, month, day)
 

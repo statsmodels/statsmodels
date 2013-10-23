@@ -48,7 +48,6 @@ if __name__ == '__main__':
     nobs_p2 = ttind_solve_power(effect_size=effect_size, nobs1=None, alpha=alpha, power=power)
     print 'nobs  ', nobs_p2
     print 'effect', ttind_solve_power(effect_size=None, nobs1=nobs_p2, alpha=alpha, power=power), effect_size
-
     print 'alpha ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=None, power=power), alpha
     print 'power  ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, power=None), power
     print 'ratio  ', ttind_solve_power(effect_size=effect_size, nobs1=nobs_p2, alpha=alpha, power=power, ratio=None), 1
