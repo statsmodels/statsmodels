@@ -1828,7 +1828,7 @@ def test_arima_exog_predict_1d():
     y = np.random.random(100)
     x = np.random.random(100)
     mod = ARMA(y, (2, 1), x).fit(disp=-1)
-    newx = np.random.random(12)
+    newx = np.random.random(10)
     results = mod.forecast(steps=10, alpha=0.05, exog=newx)
 
 def test_arima_1123():
