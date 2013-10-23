@@ -129,7 +129,10 @@ class CheckCorrPSDMixin(object):
     def test_cov_nearest(self):
         x = self.x
         res_r = self.res
-        y = cov_nearest(x, method='nearest', threshold=1e-7)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            y = cov_nearest(x, method='nearest', threshold=1e-7)
         #print np.max(np.abs(x - y))
         assert_almost_equal(y, res_r.mat, decimal=2)
         d = norm_f(x, y)
