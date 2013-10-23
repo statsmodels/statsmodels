@@ -29,12 +29,12 @@ Statistics. 14:3, 643-656.
 """
 
 import numpy as np
-from statsmodels.api import OLS, WLS, add_constant
+from statsmodels.regression.linear_model import OLS, WLS
+from statsmodels.tools import add_constant
 #from elregress import ElReg
 from scipy import optimize
 from scipy.stats import chi2
 from descriptive import _OptFuncts
-# ^ this will change when descriptive gets merged
 import warnings
 
 
@@ -55,7 +55,7 @@ class OptAFT(_OptFuncts):
         likelihood of a parameter vector.
 
     """
-    def __init__(_OptFuncts):
+    def __init__(self):
         pass
 
     def _opt_wtd_nuis_regress(self, test_vals):
@@ -84,7 +84,6 @@ class OptAFT(_OptFuncts):
                                                          test_params))
         eta_star = self._modif_newton(np.zeros(self.model.nvar), est_vect,
                                          self.model._fit_weights)
-        self.eta_star = eta_star
         denom = np.sum(self.model._fit_weights) + np.dot(eta_star, est_vect.T)
         self.new_weights = self.model._fit_weights / denom
         return -1 * np.sum(np.log(self.new_weights))
@@ -478,7 +477,8 @@ class AFTResults(OptAFT):
         uncens_endog = endog[uncensored]
         uncens_exog = exog[uncensored, :]
         reg_model = OLS(uncens_endog, uncens_exog).fit()
-        llr, pval, new_weights = reg_model.el_test(b0_vals, param_nums, return_weights=True)  # Needs to be changed
+        llr, pval, new_weights = reg_model.el_test(b0_vals, param_nums,
+                                      return_weights=True)  # Needs to be changed
         km = self.model._make_km(endog, censors).flatten()  # when merged
         uncens_nobs = self.model.uncens_nobs
         F = np.asarray(new_weights).reshape(uncens_nobs)
@@ -503,7 +503,7 @@ class AFTResults(OptAFT):
                                    (params, param_nums, b0_vals, F, survidx,
                                     uncens_nobs, numcensbelow, km, uncensored,
                                     censored, maxiter, ftol), full_output=1,
-                                    disp = 0)
+                                    disp=0)
 
                 llr = res[1]
                 return llr, chi2.sf(llr, len(param_nums))
