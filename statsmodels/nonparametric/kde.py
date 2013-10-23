@@ -144,6 +144,7 @@ class KDEUnivariate(object):
             density, grid, bw = kdensity(endog, kernel=kernel, bw=bw,
                     adjust=adjust, weights=weights, gridsize=gridsize,
                     clip=clip, cut=cut)
+        self.fft = fft
         self.density = density
         self.support = grid
         self.bw = bw
@@ -263,7 +264,10 @@ class KDEUnivariate(object):
             return kaval/len(self.endog)
 
         else:
-            return np.cumsum(self.pdf_values)
+            cdf = np.zeros(len(self.support))
+            cdftrap = integrate.cumtrapz(self.pdf_values, self.support)
+            cdf[1:] = cdftrap/cdftrap[-1]
+            return cdf
 
 
     def cumhazard(self, point, method = 'exact'):
@@ -726,6 +730,11 @@ def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
 #    binned /= (nobs)*delta**2 # normalize binned to sum to 1/delta
 
 #NOTE: THE ABOVE IS WRONG, JUST TRY WITH LINEAR BINNING
+
+##TEMPFIX: If X is dtype=long, this fails - so cast to double.
+    if X.dtype==long:
+        X = X.astype(float)
+
     binned = fast_linbin(X,a,b,gridsize)/(delta*nobs)
 
     # step 2 compute FFT of the weights, using Munro (1976) FFT convention
