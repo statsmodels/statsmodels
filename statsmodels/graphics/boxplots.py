@@ -139,7 +139,20 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
                                        plot_opts)
 
     if show_boxplot:
-        ax.boxplot(data, notch=1, positions=positions, vert=1)
+        # if data is an ndarray mpl boxplot expects data in columns
+        # while we just iterated over axis 0, so transpose it
+        # see matplotlib #2539
+        try:
+            k, n = data.shape
+            npdata = np.asarray(data).T # could be
+        except AttributeError:
+            if isinstance(data, (list, tuple)):
+                npdata = np.asarray(data).T
+            else:
+                raise ValueError("type {} not currently handled for "
+                                 "show_boxplot. Please file a github issue.")
+
+        ax.boxplot(npdata, notch=1, positions=positions, vert=1)
 
     # Set ticks and tick labels of horizontal axis.
     _set_ticks_labels(ax, data, labels, positions, plot_opts)
