@@ -1407,6 +1407,7 @@ class LinearIVGMM(IVGMM):
         # Note: I coud use general formula with gradient_momcond instead
 
         x, z = self.exog, self.instrument
+        nobs = z.shape[0]
 
         u = self.get_errors(params)
         score = -2 * np.dot(x.T, z).dot(weights.dot(np.dot(z.T, u)))
@@ -1601,11 +1602,11 @@ class DistQuantilesGMM(GMM):
         #      added but not used during testing, avoid Travis
         distfn = self.distfn
         if hasattr(distfn, '_fitstart'):
-            start = distfn._fitstart(x)
+            start = distfn._fitstart(self.endog)
         else:
             start = [1]*distfn.numargs + [0.,1.]
 
-        return np.array([1]*self.distfn.numargs + [0,1])
+        return np.asarray(start)
 
     def momcond(self, params): #drop distfn as argument
         #, mom2, quantile=None, shape=None
@@ -1677,11 +1678,9 @@ class DistQuantilesGMM(GMM):
         _cov_params = self.results.cov_params(weights=weights,
                                       has_optimal_weights=has_optimal_weights)
 
-
         self.results.weights = weights
         self.results.jval = self.gmmobjective(params, weights)
         self.results.options_other.update({'has_optimal_weights':has_optimal_weights})
-
 
         return self.results
 
