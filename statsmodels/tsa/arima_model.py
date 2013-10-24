@@ -717,7 +717,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return llf
 
     def fit(self, order=None, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver=None, maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=35, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -846,6 +846,8 @@ class ARMA(tsbase.TimeSeriesModel):
         if transparams: # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
 
+        # NOTE: after having added 'lbfgs' to the list of fitting methods,
+        #       the solver-is-None branch should no longer be necessary
         if solver is None:  # use default limited memory bfgs
             bounds = [(None,)*2]*(k_ar+k_ma+k)
             pgtol = kwargs.get('pgtol', 1e-8)
