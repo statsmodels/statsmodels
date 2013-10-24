@@ -1,6 +1,13 @@
-===========
-0.5 Release
-===========
+==========
+0.5 Series
+==========
+
+Release 0.5.1
+=============
+
+Statsmodels 0.5.1 is a bugfix release of 0.5, pulling only bugfixes and some cleanup from 0.6. It is recommended that all users upgrade.
+
+See :ref:`list of fixed issues <issues_list_051>` for specific issues fixed.
 
 Release 0.5.0
 =============
