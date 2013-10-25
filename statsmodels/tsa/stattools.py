@@ -802,7 +802,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
         #add constant
         if addconst:
-            dtaown = add_constant(dta[:, 1:mxlg+1], prepend=False)
+            dtaown = add_constant(dta[:, 1:(mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
         else:
             raise NotImplementedError('Not Implemented')
@@ -839,11 +839,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
-        rconstr = np.column_stack((
-            np.zeros((mxlg, mxlg)),
-            np.eye(mxlg, mxlg),
-            np.zeros((mxlg, 1))
-        ))
+        rconstr = np.column_stack((np.zeros((mxlg, mxlg)),
+                                   np.eye(mxlg, mxlg),
+                                   np.zeros((mxlg, 1))))
         ftres = res2djoint.f_test(rconstr)
         if verbose:
             print 'parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
