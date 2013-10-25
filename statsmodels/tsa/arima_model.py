@@ -349,6 +349,10 @@ def _make_arma_exog(endog, exog, trend):
         k_trend = 0
     return k_trend, exog
 
+def _check_estimable(nobs, n_params):
+    if nobs <= n_params:
+        raise ValueError("Insufficient degrees of freedom to estimate")
+
 class ARMA(tsbase.TimeSeriesModel):
 
     __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
@@ -364,6 +368,7 @@ class ARMA(tsbase.TimeSeriesModel):
             warnings.warn("In the next release order will not be optional "
                     "in the model constructor.", FutureWarning)
         else:
+            _check_estimable(len(self.endog), sum(order))
             self.k_ar = k_ar = order[0]
             self.k_ma = k_ma = order[1]
             self.k_lags = k_lags = max(k_ar,k_ma+1)
@@ -794,6 +799,7 @@ class ARMA(tsbase.TimeSeriesModel):
                     "This will overwrite any order given in the model "
                     "constructor.", FutureWarning)
 
+            _check_estimable(len(self.endog), sum(order))
             # get model order and constants
             self.k_ar = k_ar = int(order[0])
             self.k_ma = k_ma = int(order[1])
@@ -820,6 +826,8 @@ class ARMA(tsbase.TimeSeriesModel):
         # (re)set trend and handle exogenous variables
         # always pass original exog
         k_trend, exog = _make_arma_exog(endog, self.exog, trend)
+        # check again now that we know the trend
+        _check_estimable(len(endog), k_ar + k_ma + k_exog + k_trend)
 
         self.k_trend = k_trend
         self.exog = exog    # overwrites original exog from __init__
@@ -899,6 +907,8 @@ class ARIMA(ARMA):
         super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq, missing)
         self.k_diff = d
         self.endog = np.diff(self.endog, n=d)
+        #NOTE: will check in ARMA but check again since differenced now
+        _check_estimable(len(self.endog), p+q)
         if exog is not None:
             self.exog = self.exog[d:]
         self.data.ynames = 'D.' + self.endog_names
