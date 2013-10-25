@@ -501,7 +501,9 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
     bounds = [(None, None)] * len(start_params)
     retvals = optimize.fmin_l_bfgs_b(f, start_params, fprime=score, args=fargs,
             bounds=bounds, m=m, factr=factr, pgtol=pgtol, epsilon=epsilon,
-            maxfun=maxfun, maxiter=maxiter, disp=disp, callback=callback)
+            # NOTE: old versions of scipy do not allow maxiter or callback
+            # maxiter=maxiter, callback=callback,
+            maxfun=maxfun, disp=disp)
     if full_output:
         xopt, fopt, d = retvals
         # The warnflag is
