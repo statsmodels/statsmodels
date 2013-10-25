@@ -68,3 +68,4 @@ Contents
    examples
    roadmap_todo
    internal
+   testing
