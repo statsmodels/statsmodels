@@ -493,17 +493,19 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
 def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=100, callback=None, retall=False,
                     full_output=True, hess=None):
-    m = kwargs.setdefault('m', 12)
-    pgtol = kwargs.setdefault('pgtol', 1e-8)
-    factr = kwargs.setdefault('factr', 1e2)
+
+    # Pass the following keyword argument names through to fmin_l_bfgs_b
+    # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
+    # default values.
+    names = ('m', 'pgtol', 'factr', 'maxfun')
+    extra_kwargs = dict((x, kwargs[x]) for x in names if x in kwargs)
+
     epsilon = kwargs.setdefault('epsilon', 1e-8)
-    maxfun = kwargs.setdefault('maxfun', 15000)
     bounds = [(None, None)] * len(start_params)
     retvals = optimize.fmin_l_bfgs_b(f, start_params, fprime=score, args=fargs,
-            bounds=bounds, m=m, factr=factr, pgtol=pgtol, epsilon=epsilon,
             # NOTE: old versions of scipy do not allow maxiter or callback
             # maxiter=maxiter, callback=callback,
-            maxfun=maxfun, disp=disp)
+            bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
     if full_output:
         xopt, fopt, d = retvals
         # The warnflag is

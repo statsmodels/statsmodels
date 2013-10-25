@@ -860,6 +860,10 @@ class ARMA(tsbase.TimeSeriesModel):
             params = mlefit[0]
 
         else:   # call the solver from LikelihoodModel
+            if solver == 'lbfgs':
+                kwargs.setdefault('pgtol', 1e-8)
+                kwargs.setdefault('factr', 1e2)
+                kwargs.setdefault('m', 12)
             mlefit = super(ARMA, self).fit(start_params, method=solver,
                         maxiter=maxiter, full_output=full_output, disp=disp,
                         callback = callback, **kwargs)
