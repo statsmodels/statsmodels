@@ -497,8 +497,11 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
     # Pass the following keyword argument names through to fmin_l_bfgs_b
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
     # default values.
-    names = ('m', 'pgtol', 'factr', 'maxfun')
+    names = ('m', 'pgtol', 'factr', 'maxfun', 'approx_grad')
     extra_kwargs = dict((x, kwargs[x]) for x in names if x in kwargs)
+
+    if extra_kwargs.get('approx_grad', False):
+        score = None
 
     epsilon = kwargs.setdefault('epsilon', 1e-8)
     bounds = [(None, None)] * len(start_params)
