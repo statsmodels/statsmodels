@@ -412,7 +412,11 @@ class WLS(RegressionModel):
         weights = np.array(weights)
         if weights.shape == ():
             weights = np.repeat(weights, len(endog))
-        weights = weights.squeeze()
+        # handle case that endog might be of len == 1
+        if len(weights) == 1:
+            weights = np.array([weights.squeeze()])
+        else:
+            weights = weights.squeeze()
         super(WLS, self).__init__(endog, exog, missing=missing,
                                   weights=weights, hasconst=hasconst)
         nobs = self.exog.shape[0]
