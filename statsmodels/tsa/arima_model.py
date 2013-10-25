@@ -417,7 +417,12 @@ class ARMA(tsbase.TimeSeriesModel):
             endog -= np.dot(exog, ols_params).squeeze()
         if q != 0:
             if p != 0:
-                armod = AR(endog).fit(ic='bic', trend='nc')
+                # make sure we don't run into small data problems in AR fit
+                nobs = len(endog)
+                maxlag = int(round(12*(nobs/100.)**(1/4.)))
+                if maxlag >= nobs:
+                    maxlag = nobs - 1
+                armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
                 # it's possible in small samples that optimal lag-order
