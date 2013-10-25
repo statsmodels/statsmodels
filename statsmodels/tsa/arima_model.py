@@ -741,7 +741,7 @@ class ARMA(tsbase.TimeSeriesModel):
             `start_params` as starting parameters.  See above for more
             information.
         trend : str {'c','nc'}
-            Whehter to include a constant or not.  'c' includes constant,
+            Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
             Solver to be used.  The default is 'l_bfgs' (limited memory
@@ -953,7 +953,7 @@ class ARIMA(ARMA):
         return end - self.k_diff, out_of_sample
 
     def fit(self, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver=None, maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=35, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
