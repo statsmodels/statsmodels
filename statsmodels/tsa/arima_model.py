@@ -369,6 +369,8 @@ class ARMA(tsbase.TimeSeriesModel):
                     "in the model constructor.", FutureWarning)
         else:
             _check_estimable(len(self.endog), sum(order))
+            if order[0] == 0 and order[1] == 0:
+                raise ValueError("Cannot fit order (0,0)")
             self.k_ar = k_ar = order[0]
             self.k_ma = k_ma = order[1]
             self.k_lags = k_lags = max(k_ar,k_ma+1)
@@ -805,6 +807,8 @@ class ARMA(tsbase.TimeSeriesModel):
                     "constructor.", FutureWarning)
 
             _check_estimable(len(self.endog), sum(order))
+            if order[0] == 0 and order[1] == 0:
+                raise ValueError("Cannot fit order (0,0)")
             # get model order and constants
             self.k_ar = k_ar = int(order[0])
             self.k_ma = k_ma = int(order[1])
@@ -909,6 +913,8 @@ class ARIMA(ARMA):
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                        missing='none'):
         p,d,q = order
+        if p == 0 and q == 0:
+            raise ValueError("Order (0, d, 0) not supported.")
         super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq, missing)
         self.k_diff = d
         self.endog = np.diff(self.endog, n=d)
