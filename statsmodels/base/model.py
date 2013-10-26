@@ -505,10 +505,20 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
 
     epsilon = kwargs.setdefault('epsilon', 1e-8)
     bounds = [(None, None)] * len(start_params)
-    retvals = optimize.fmin_l_bfgs_b(f, start_params, fprime=score, args=fargs,
-            # NOTE: old versions of scipy do not allow maxiter or callback
-            # maxiter=maxiter, callback=callback,
-            bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+    try:
+        retvals = optimize.fmin_l_bfgs_b(f, start_params,
+                fprime=score, args=fargs,
+                maxiter=maxiter, callback=callback,
+                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+    except TypeError:
+        if maxiter is not None or callback is not None:
+            from warnings import warn
+            warn("fmin_l_bfgs_b does not support maxiter or callback arguments"
+                    "Update your scipy, otherwise they have no effect",
+                    UserWarning)
+        retvals = optimize.fmin_l_bfgs_b(f, start_params,
+                fprime=score, args=fargs,
+                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
     if full_output:
         xopt, fopt, d = retvals
         # The warnflag is
