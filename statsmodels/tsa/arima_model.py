@@ -485,11 +485,9 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        loglike = self.loglike
-        #if self.transparams:
-        #    params = self._invtransparams(params)
-        #return approx_fprime(params, loglike, epsilon=1e-5)
-        return approx_fprime_cs(params, loglike)
+        def pure_loglike(params):
+            return self.loglike(params, set_sigma2=False)
+        return approx_fprime_cs(params, pure_loglike)
 
     def hessian(self, params):
         """
@@ -499,10 +497,9 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        loglike = self.loglike
-        #if self.transparams:
-        #    params = self._invtransparams(params)
-        return approx_hess_cs(params, loglike)
+        def pure_loglike(params):
+            return self.loglike(params, set_sigma2=False)
+        return approx_hess_cs(params, pure_loglike)
 
     def _transparams(self, params):
         """
@@ -665,7 +662,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return predictedvalues
     predict.__doc__ = _arma_predict
 
-    def loglike(self, params):
+    def loglike(self, params, set_sigma2=True):
         """
         Compute the log-likelihood for ARMA(p,q) model
 
@@ -675,17 +672,17 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         method = self.method
         if method in ['mle', 'css-mle']:
-            return self.loglike_kalman(params)
+            return self.loglike_kalman(params, set_sigma2)
         elif method == 'css':
             return self.loglike_css(params)
         else:
             raise ValueError("Method %s not understood" % method)
 
-    def loglike_kalman(self, params):
+    def loglike_kalman(self, params, set_sigma2=True):
         """
         Compute exact loglikelihood for ARMA(p,q) model using the Kalman Filter.
         """
-        return KalmanFilter.loglike(params, self)
+        return KalmanFilter.loglike(params, self, set_sigma2)
 
     def loglike_css(self, params):
         """
