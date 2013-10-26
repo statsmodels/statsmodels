@@ -485,9 +485,7 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        def pure_loglike(params):
-            return self.loglike(params, set_sigma2=False)
-        return approx_fprime_cs(params, pure_loglike)
+        return approx_fprime_cs(params, self.loglike, args=(False,))
 
     def hessian(self, params):
         """
@@ -497,9 +495,7 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        def pure_loglike(params):
-            return self.loglike(params, set_sigma2=False)
-        return approx_hess_cs(params, pure_loglike)
+        return approx_hess_cs(params, self.loglike, args=(False,))
 
     def _transparams(self, params):
         """
