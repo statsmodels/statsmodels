@@ -360,7 +360,7 @@ class LikelihoodModel(Model):
             'newton': _fit_mle_newton,
             'nm': _fit_mle_nm,  # Nelder-Mead
             'bfgs': _fit_mle_bfgs,
-            'lbfgs': _fit_mle_lbfgsb,
+            'lbfgs': _fit_mle_lbfgs,
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
@@ -495,7 +495,7 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_mle_lbfgsb(f, score, start_params, fargs, kwargs, disp=True,
+def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=None, callback=None, retall=False,
                     full_output=True, hess=None):
 
