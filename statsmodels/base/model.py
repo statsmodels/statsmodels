@@ -491,8 +491,15 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
 
 
 def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
-                    maxiter=100, callback=None, retall=False,
+                    maxiter=None, callback=None, retall=False,
                     full_output=True, hess=None):
+
+    # The maxiter may be set at multiple points throughout statsmodels.
+    # In the following lines of code, we track how its value changes
+    # between layers.
+    maxiter_ = maxiter
+    if maxiter is None:
+        maxiter = 100
 
     # Pass the following keyword argument names through to fmin_l_bfgs_b
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
@@ -511,7 +518,7 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
                 maxiter=maxiter, callback=callback,
                 bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
     except TypeError:
-        if maxiter is not None or callback is not None:
+        if maxiter_ is not None or callback is not None:
             from warnings import warn
             warn("fmin_l_bfgs_b does not support maxiter or callback arguments"
                     "Update your scipy, otherwise they have no effect",
