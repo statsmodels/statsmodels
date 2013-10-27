@@ -710,7 +710,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return llf
 
     def fit(self, order=None, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver='lbfgsb', maxiter=50, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -737,7 +737,7 @@ class ARMA(tsbase.TimeSeriesModel):
             Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'lbfgsb' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and
@@ -839,7 +839,7 @@ class ARMA(tsbase.TimeSeriesModel):
         if transparams: # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
 
-        if solver == 'lbfgsb':
+        if solver == 'lbfgs':
             kwargs.setdefault('pgtol', 1e-8)
             kwargs.setdefault('factr', 1e2)
             kwargs.setdefault('m', 12)
@@ -932,7 +932,7 @@ class ARIMA(ARMA):
         return end - self.k_diff, out_of_sample
 
     def fit(self, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver='lbfgsb', maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=35, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
@@ -959,7 +959,7 @@ class ARIMA(ARMA):
             Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'lbfgsb' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and

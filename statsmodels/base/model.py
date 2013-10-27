@@ -192,7 +192,7 @@ class LikelihoodModel(Model):
 
             - 'newton' for Newton-Raphson, 'nm' for Nelder-Mead
             - 'bfgs' for Broyden-Fletcher-Goldfarb-Shanno (BFGS)
-            - 'lbfgsb' for limited-memory BFGS with optional box constraints
+            - 'lbfgs' for limited-memory BFGS with optional box constraints
             - 'powell' for modified Powell's method
             - 'cg' for conjugate gradient
             - 'ncg' for Newton-conjugate gradient
@@ -248,7 +248,7 @@ class LikelihoodModel(Model):
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
-            'lbfgsb'
+            'lbfgs'
                 m : int
                     This many terms are used for the Hessian approximation.
                 factr : float
@@ -326,7 +326,7 @@ class LikelihoodModel(Model):
         cov_params_func = kwargs.setdefault('cov_params_func', None)
 
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'lbfgsb', 'powell', 'cg', 'ncg',
+        methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
                    'basinhopping']
         methods += extra_fit_funcs.keys()
         if start_params is None:
@@ -360,7 +360,7 @@ class LikelihoodModel(Model):
             'newton': _fit_mle_newton,
             'nm': _fit_mle_nm,  # Nelder-Mead
             'bfgs': _fit_mle_bfgs,
-            'lbfgsb': _fit_mle_lbfgsb,
+            'lbfgs': _fit_mle_lbfgsb,
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
@@ -1053,7 +1053,7 @@ class LikelihoodModelResults(Results):
                 True: converged.  False: did not converge.
             allvecs : list
                 Results at each iteration.
-        'lbfgsb'
+        'lbfgs'
             fopt : float
                 Value of the (negative) loglikelihood at its minimum.
             gopt : float
