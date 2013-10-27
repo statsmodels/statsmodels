@@ -192,7 +192,7 @@ class LikelihoodModel(Model):
 
             - 'newton' for Newton-Raphson, 'nm' for Nelder-Mead
             - 'bfgs' for Broyden-Fletcher-Goldfarb-Shanno (BFGS)
-            - 'lbfgs' for limited-memory BFGS
+            - 'lbfgsb' for limited-memory BFGS with optional box constraints
             - 'powell' for modified Powell's method
             - 'cg' for conjugate gradient
             - 'ncg' for Newton-conjugate gradient
@@ -248,7 +248,7 @@ class LikelihoodModel(Model):
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
-            'lbfgs'
+            'lbfgsb'
                 m : int
                     This many terms are used for the Hessian approximation.
                 factr : float
@@ -260,6 +260,11 @@ class LikelihoodModel(Model):
                     size. Only relevant if LikelihoodModel.score is None.
                 maxfun : int
                     Maximum number of function evaluations to make.
+                bounds : sequence
+                    (min, max) pairs for each element in x,
+                    defining the bounds on that parameter.
+                    Use None for one of min or max when there is no bound
+                    in that direction.
             'cg'
                 gtol : float
                     Stop when norm of gradient is less than gtol.
@@ -321,7 +326,7 @@ class LikelihoodModel(Model):
         cov_params_func = kwargs.setdefault('cov_params_func', None)
 
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
+        methods = ['newton', 'nm', 'bfgs', 'lbfgsb', 'powell', 'cg', 'ncg',
                    'basinhopping']
         methods += extra_fit_funcs.keys()
         if start_params is None:
@@ -355,7 +360,7 @@ class LikelihoodModel(Model):
             'newton': _fit_mle_newton,
             'nm': _fit_mle_nm,  # Nelder-Mead
             'bfgs': _fit_mle_bfgs,
-            'lbfgs': _fit_mle_lbfgs,
+            'lbfgsb': _fit_mle_lbfgsb,
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
@@ -490,7 +495,7 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
     return xopt, retvals
 
 
-def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
+def _fit_mle_lbfgsb(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=None, callback=None, retall=False,
                     full_output=True, hess=None):
 
@@ -511,7 +516,7 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
         score = None
 
     epsilon = kwargs.setdefault('epsilon', 1e-8)
-    bounds = [(None, None)] * len(start_params)
+    bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
     try:
         retvals = optimize.fmin_l_bfgs_b(f, start_params,
                 fprime=score, args=fargs,
@@ -1048,7 +1053,7 @@ class LikelihoodModelResults(Results):
                 True: converged.  False: did not converge.
             allvecs : list
                 Results at each iteration.
-        'lbfgs'
+        'lbfgsb'
             fopt : float
                 Value of the (negative) loglikelihood at its minimum.
             gopt : float
