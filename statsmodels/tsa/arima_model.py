@@ -670,7 +670,7 @@ class ARMA(tsbase.TimeSeriesModel):
         if method in ['mle', 'css-mle']:
             return self.loglike_kalman(params, set_sigma2)
         elif method == 'css':
-            return self.loglike_css(params)
+            return self.loglike_css(params, set_sigma2)
         else:
             raise ValueError("Method %s not understood" % method)
 
@@ -680,7 +680,7 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         return KalmanFilter.loglike(params, self, set_sigma2)
 
-    def loglike_css(self, params):
+    def loglike_css(self, params, set_sigma2=True):
         """
         Conditional Sum of Squares likelihood function.
         """
@@ -705,7 +705,8 @@ class ARMA(tsbase.TimeSeriesModel):
 
         ssr = np.dot(errors,errors)
         sigma2 = ssr/nobs
-        self.sigma2 = sigma2
+        if set_sigma2:
+            self.sigma2 = sigma2
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
