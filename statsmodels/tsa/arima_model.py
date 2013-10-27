@@ -839,30 +839,16 @@ class ARMA(tsbase.TimeSeriesModel):
         if transparams: # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
 
-        # NOTE: after having added 'lbfgs' to the list of fitting methods,
-        #       the solver-is-None branch should no longer be necessary
-        if solver is None:  # use default limited memory bfgs
-            bounds = [(None,)*2]*(k_ar+k_ma+k)
-            pgtol = kwargs.get('pgtol', 1e-8)
-            factr = kwargs.get('factr', 1e2)
-            m = kwargs.get('m', 12)
-            mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=m, pgtol=pgtol, factr=factr,
-                    bounds=bounds, iprint=disp)
-            self.mlefit = mlefit
-            params = mlefit[0]
-
-        else:   # call the solver from LikelihoodModel
-            if solver == 'lbfgs':
-                kwargs.setdefault('pgtol', 1e-8)
-                kwargs.setdefault('factr', 1e2)
-                kwargs.setdefault('m', 12)
-                kwargs.setdefault('approx_grad', True)
-            mlefit = super(ARMA, self).fit(start_params, method=solver,
-                        maxiter=maxiter, full_output=full_output, disp=disp,
-                        callback = callback, **kwargs)
-            self.mlefit = mlefit
-            params = mlefit.params
+        if solver == 'lbfgs':
+            kwargs.setdefault('pgtol', 1e-8)
+            kwargs.setdefault('factr', 1e2)
+            kwargs.setdefault('m', 12)
+            kwargs.setdefault('approx_grad', True)
+        mlefit = super(ARMA, self).fit(start_params, method=solver,
+                    maxiter=maxiter, full_output=full_output, disp=disp,
+                    callback = callback, **kwargs)
+        self.mlefit = mlefit
+        params = mlefit.params
 
         if transparams: # transform parameters back
             params = self._transparams(params)
