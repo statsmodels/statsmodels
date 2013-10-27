@@ -710,7 +710,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return llf
 
     def fit(self, order=None, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver='lbfgs', maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -737,7 +737,7 @@ class ARMA(tsbase.TimeSeriesModel):
             Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and
@@ -745,7 +745,7 @@ class ARMA(tsbase.TimeSeriesModel):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
+            The maximum number of function evaluations. Default is 50.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -973,7 +973,7 @@ class ARIMA(ARMA):
             Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and
@@ -981,7 +981,7 @@ class ARIMA(ARMA):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
+            The maximum number of function evaluations. Default is 50.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
