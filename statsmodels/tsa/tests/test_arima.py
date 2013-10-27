@@ -1891,6 +1891,11 @@ def test_small_data():
     mod = ARIMA(y, (1, 0, 2))
     res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
 
+def test_arima00():
+    y = np.random.random(10)
+    assert_raises(ValueError, ARMA, y, (0,0))
+    assert_raises(ValueError, ARIMA, y, (0,1,0))
+    assert_raises(ValueError, ARIMA, y, (0,0,0))
 
 if __name__ == "__main__":
     import nose
