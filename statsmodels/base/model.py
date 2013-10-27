@@ -1,4 +1,7 @@
+import distutils.version
+
 import numpy as np
+import scipy
 from scipy import optimize, stats
 from statsmodels.base.data import handle_data
 from statsmodels.tools.tools import recipr, nan_dot
@@ -517,17 +520,21 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
 
     epsilon = kwargs.setdefault('epsilon', 1e-8)
     bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
-    try:
-        # Newer scipy supports maxiter and callback.
+
+    # Customize the fmin_l_bfgs_b call according to the scipy version.
+    # Old scipy does not support maxiter and callback.
+    scipy_version_curr = distutils.version.LooseVersion(scipy.__version__)
+    scipy_version_12 = distutils.version.LooseVersion('0.12.0')
+    if scipy_version_curr < scipy_version_12:
+        retvals = optimize.fmin_l_bfgs_b(f, start_params,
+                fprime=score, args=fargs,
+                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+    else:
         retvals = optimize.fmin_l_bfgs_b(f, start_params,
                 fprime=score, args=fargs,
                 maxiter=maxiter, callback=callback,
                 bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
-    except TypeError:
-        # For older scipy, skip maxiter and callback.
-        retvals = optimize.fmin_l_bfgs_b(f, start_params,
-                fprime=score, args=fargs,
-                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+
     if full_output:
         xopt, fopt, d = retvals
         # The warnflag is
