@@ -497,11 +497,7 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        loglike = self.loglike
-        #if self.transparams:
-        #    params = self._invtransparams(params)
-        #return approx_fprime(params, loglike, epsilon=1e-5)
-        return approx_fprime_cs(params, loglike)
+        return approx_fprime_cs(params, self.loglike, args=(False,))
 
     def hessian(self, params):
         """
@@ -511,10 +507,7 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        loglike = self.loglike
-        #if self.transparams:
-        #    params = self._invtransparams(params)
-        return approx_hess_cs(params, loglike)
+        return approx_hess_cs(params, self.loglike, args=(False,))
 
     def _transparams(self, params):
         """
@@ -677,7 +670,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return predictedvalues
     predict.__doc__ = _arma_predict
 
-    def loglike(self, params):
+    def loglike(self, params, set_sigma2=True):
         """
         Compute the log-likelihood for ARMA(p,q) model
 
@@ -687,19 +680,19 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         method = self.method
         if method in ['mle', 'css-mle']:
-            return self.loglike_kalman(params)
+            return self.loglike_kalman(params, set_sigma2)
         elif method == 'css':
-            return self.loglike_css(params)
+            return self.loglike_css(params, set_sigma2)
         else:
             raise ValueError("Method %s not understood" % method)
 
-    def loglike_kalman(self, params):
+    def loglike_kalman(self, params, set_sigma2=True):
         """
         Compute exact loglikelihood for ARMA(p,q) model using the Kalman Filter.
         """
-        return KalmanFilter.loglike(params, self)
+        return KalmanFilter.loglike(params, self, set_sigma2)
 
-    def loglike_css(self, params):
+    def loglike_css(self, params, set_sigma2=True):
         """
         Conditional Sum of Squares likelihood function.
         """
@@ -724,12 +717,13 @@ class ARMA(tsbase.TimeSeriesModel):
 
         ssr = np.dot(errors,errors)
         sigma2 = ssr/nobs
-        self.sigma2 = sigma2
+        if set_sigma2:
+            self.sigma2 = sigma2
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
     def fit(self, order=None, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver=None, maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -753,10 +747,10 @@ class ARMA(tsbase.TimeSeriesModel):
             `start_params` as starting parameters.  See above for more
             information.
         trend : str {'c','nc'}
-            Whehter to include a constant or not.  'c' includes constant,
+            Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and
@@ -764,7 +758,7 @@ class ARMA(tsbase.TimeSeriesModel):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
+            The maximum number of function evaluations. Default is 50.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -863,23 +857,16 @@ class ARMA(tsbase.TimeSeriesModel):
         if transparams: # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
 
-        if solver is None:  # use default limited memory bfgs
-            bounds = [(None,)*2]*(k_ar+k_ma+k)
-            pgtol = kwargs.get('pgtol', 1e-8)
-            factr = kwargs.get('factr', 1e2)
-            m = kwargs.get('m', 12)
-            mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=m, pgtol=pgtol, factr=factr,
-                    bounds=bounds, iprint=disp)
-            self.mlefit = mlefit
-            params = mlefit[0]
-
-        else:   # call the solver from LikelihoodModel
-            mlefit = super(ARMA, self).fit(start_params, method=solver,
-                        maxiter=maxiter, full_output=full_output, disp=disp,
-                        callback = callback, **kwargs)
-            self.mlefit = mlefit
-            params = mlefit.params
+        if solver == 'lbfgs':
+            kwargs.setdefault('pgtol', 1e-8)
+            kwargs.setdefault('factr', 1e2)
+            kwargs.setdefault('m', 12)
+            kwargs.setdefault('approx_grad', True)
+        mlefit = super(ARMA, self).fit(start_params, method=solver,
+                    maxiter=maxiter, full_output=full_output, disp=disp,
+                    callback = callback, **kwargs)
+        self.mlefit = mlefit
+        params = mlefit.params
 
         if transparams: # transform parameters back
             params = self._transparams(params)
@@ -967,7 +954,7 @@ class ARIMA(ARMA):
         return end - self.k_diff, out_of_sample
 
     def fit(self, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver=None, maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=35, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
@@ -994,7 +981,7 @@ class ARIMA(ARMA):
             Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and
@@ -1002,7 +989,7 @@ class ARIMA(ARMA):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
+            The maximum number of function evaluations. Default is 50.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional

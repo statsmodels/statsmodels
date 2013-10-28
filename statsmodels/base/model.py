@@ -1,4 +1,7 @@
+import distutils.version
+
 import numpy as np
+import scipy
 from scipy import optimize, stats
 from statsmodels.base.data import handle_data
 from statsmodels.tools.tools import recipr, nan_dot
@@ -186,33 +189,39 @@ class LikelihoodModel(Model):
         start_params : array-like, optional
             Initial guess of the solution for the loglikelihood maximization.
             The default is an array of zeros.
-        method : str {'newton','nm','bfgs','powell','cg','ncg','basinhopping'}
-            Method can be 'newton' for Newton-Raphson, 'nm' for Nelder-Mead,
-            'bfgs' for Broyden-Fletcher-Goldfarb-Shanno, 'powell' for modified
-            Powell's method, 'cg' for conjugate gradient, 'ncg' for Newton-
-            conjugate gradient or 'basinhopping' for global basin-hopping
-            solver, if available. `method` determines which solver from
-            scipy.optimize is used. The explicit arguments in `fit` are passed
-            to the solver, with the exception of the basin-hopping solver. Each
+        method : str, optional
+            The `method` determines which solver from `scipy.optimize`
+            is used, and it can be chosen from among the following strings:
+
+            - 'newton' for Newton-Raphson, 'nm' for Nelder-Mead
+            - 'bfgs' for Broyden-Fletcher-Goldfarb-Shanno (BFGS)
+            - 'lbfgs' for limited-memory BFGS with optional box constraints
+            - 'powell' for modified Powell's method
+            - 'cg' for conjugate gradient
+            - 'ncg' for Newton-conjugate gradient
+            - 'basinhopping' for global basin-hopping solver
+
+            The explicit arguments in `fit` are passed to the solver,
+            with the exception of the basin-hopping solver. Each
             solver has several optional arguments that are not the same across
             solvers. See the notes section below (or scipy.optimize) for the
             available arguments and for the list of explicit arguments that the
-            basin-hopping solver supports..
-        maxiter : int
+            basin-hopping solver supports.
+        maxiter : int, optional
             The maximum number of iterations to perform.
-        full_output : bool
+        full_output : bool, optional
             Set to True to have all available output in the Results object's
             mle_retvals attribute. The output is dependent on the solver.
             See LikelihoodModelResults notes section for more information.
-        disp : bool
+        disp : bool, optional
             Set to True to print convergence messages.
-        fargs : tuple
+        fargs : tuple, optional
             Extra arguments passed to the likelihood function, i.e.,
             loglike(x,*args)
-        callback : callable callback(xk)
+        callback : callable callback(xk), optional
             Called after each iteration, as callback(xk), where xk is the
             current parameter vector.
-        retall : bool
+        retall : bool, optional
             Set to True to return list of solutions at each iteration.
             Available in Results object's mle_retvals attribute.
 
@@ -242,6 +251,23 @@ class LikelihoodModel(Model):
                 epsilon
                     If fprime is approximated, use this value for the step
                     size. Only relevant if LikelihoodModel.score is None.
+            'lbfgs'
+                m : int
+                    This many terms are used for the Hessian approximation.
+                factr : float
+                    A stop condition that is a variant of relative error.
+                pgtol : float
+                    A stop condition that uses the projected gradient.
+                epsilon
+                    If fprime is approximated, use this value for the step
+                    size. Only relevant if LikelihoodModel.score is None.
+                maxfun : int
+                    Maximum number of function evaluations to make.
+                bounds : sequence
+                    (min, max) pairs for each element in x,
+                    defining the bounds on that parameter.
+                    Use None for one of min or max when there is no bound
+                    in that direction.
             'cg'
                 gtol : float
                     Stop when norm of gradient is less than gtol.
@@ -303,7 +329,7 @@ class LikelihoodModel(Model):
         cov_params_func = kwargs.setdefault('cov_params_func', None)
 
         Hinv = None  # JP error if full_output=0, Hinv not defined
-        methods = ['newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg',
+        methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
                    'basinhopping']
         methods += extra_fit_funcs.keys()
         if start_params is None:
@@ -337,6 +363,7 @@ class LikelihoodModel(Model):
             'newton': _fit_mle_newton,
             'nm': _fit_mle_nm,  # Nelder-Mead
             'bfgs': _fit_mle_bfgs,
+            'lbfgs': _fit_mle_lbfgs,
             'cg': _fit_mle_cg,
             'ncg': _fit_mle_ncg,
             'powell': _fit_mle_powell,
@@ -465,6 +492,62 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
                 warnflag, 'converged': converged}
         if retall:
             retvals.update({'allvecs': allvecs})
+    else:
+        xopt = None
+
+    return xopt, retvals
+
+
+def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
+                    maxiter=None, callback=None, retall=False,
+                    full_output=True, hess=None):
+
+    # The maxiter may be set at multiple points throughout statsmodels.
+    # In the following lines of code, we track how its value changes
+    # between layers.
+    maxiter_ = maxiter
+    if maxiter is None:
+        maxiter = 100
+
+    # Pass the following keyword argument names through to fmin_l_bfgs_b
+    # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
+    # default values.
+    names = ('m', 'pgtol', 'factr', 'maxfun', 'approx_grad')
+    extra_kwargs = dict((x, kwargs[x]) for x in names if x in kwargs)
+
+    if extra_kwargs.get('approx_grad', False):
+        score = None
+
+    epsilon = kwargs.setdefault('epsilon', 1e-8)
+    bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
+
+    # Customize the fmin_l_bfgs_b call according to the scipy version.
+    # Old scipy does not support maxiter and callback.
+    scipy_version_curr = distutils.version.LooseVersion(scipy.__version__)
+    scipy_version_12 = distutils.version.LooseVersion('0.12.0')
+    if scipy_version_curr < scipy_version_12:
+        retvals = optimize.fmin_l_bfgs_b(f, start_params,
+                fprime=score, args=fargs,
+                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+    else:
+        retvals = optimize.fmin_l_bfgs_b(f, start_params,
+                fprime=score, args=fargs,
+                maxiter=maxiter, callback=callback,
+                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+
+    if full_output:
+        xopt, fopt, d = retvals
+        # The warnflag is
+        # 0 if converged
+        # 1 if too many function evaluations or too many iterations
+        # 2 if stopped for another reason, given in d['task']
+        warnflag = d['warnflag']
+        converged = (warnflag == 0)
+        gopt = d['grad']
+        fcalls = d['funcalls']
+        retvals = {'fopt': fopt, 'gopt': gopt,
+                'fcalls':fcalls, 'warnflag': warnflag,
+                'converged': converged}
     else:
         xopt = None
 
@@ -923,7 +1006,7 @@ class LikelihoodModelResults(Results):
     --------
     The covariance of params is given by scale times normalized_cov_params.
 
-    Return values by solver if full_ouput is True during fit:
+    Return values by solver if full_output is True during fit:
 
         'newton'
             fopt : float
@@ -974,6 +1057,22 @@ class LikelihoodModelResults(Results):
                 True: converged.  False: did not converge.
             allvecs : list
                 Results at each iteration.
+        'lbfgs'
+            fopt : float
+                Value of the (negative) loglikelihood at its minimum.
+            gopt : float
+                Value of gradient at minimum, which should be near 0.
+            fcalls : int
+                Number of calls to loglike.
+            warnflag : int
+                Warning flag:
+
+                - 0 if converged
+                - 1 if too many function evaluations or too many iterations
+                - 2 if stopped for another reason
+
+            converged : bool
+                True: converged.  False: did not converge.
         'powell'
             fopt : float
                 Value of the (negative) loglikelihood at its minimum.
