@@ -861,10 +861,9 @@ class ARMA(tsbase.TimeSeriesModel):
             kwargs.setdefault('pgtol', 1e-8)
             kwargs.setdefault('factr', 1e2)
             kwargs.setdefault('m', 12)
-            kwargs.setdefault('approx_grad', True)
         mlefit = super(ARMA, self).fit(start_params, method=solver,
                     maxiter=maxiter, full_output=full_output, disp=disp,
-                    callback = callback, **kwargs)
+                    callback=callback, **kwargs)
         self.mlefit = mlefit
         params = mlefit.params
 
