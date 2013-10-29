@@ -1022,7 +1022,23 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fvalue(self):
-        return self.mse_model/self.mse_resid
+        if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust':
+            # with heteroscedasticity or correlation robustness
+            k_params = self.normalized_cov_params.shape[0]
+            mat = np.eye(k_params)
+            const_idx = self.model.data.const_idx
+            if self.model.data.k_constant == 1:
+                # assume const_idx exists
+                idx = range(k_params)
+                idx.pop(const_idx)
+                mat = mat[idx]  # remove constant
+            ft = self.f_test(mat)
+            # using backdoor to set another attribute that we already have
+            self._cache['f_pvalue'] = ft.pvalue
+            return ft.fvalue
+        else:
+            # for standard homoscedastic case
+            return self.mse_model/self.mse_resid
 
     @cache_readonly
     def f_pvalue(self):
@@ -1224,6 +1240,51 @@ class RegressionResults(base.LikelihoodModelResults):
         return lrstat, lr_pvalue, lrdf
 
 
+    def get_robustcov_results(self, cov_type='HC1', use_t=False, **kwds):
+        '''experimental results instance with robust covariance as default
+
+
+        use_t
+
+        '''
+        import statsmodels.stats.sandwich_covariance as sw
+
+        res = self.__class__(self.model, self.params,
+                       normalized_cov_params=self.normalized_cov_params,
+                       scale=self.scale)
+
+        res.cov_type = cov_type = cov_type
+        res.cov_kwds = {'use_t':use_t}
+
+        # verify and set kwds
+        if cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+            if kwds:
+                raise ValueError('heteroscedasticity robust covarians ' +
+                                 'does not use keywords')
+            res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
+                                           'robust ' + '(' + cov_type + ')')
+            # TODO cannot access cov without calling se first
+            getattr(self, cov_type.upper() + '_se')
+            res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
+        elif cov_type == 'HAC':
+            maxlags = kwds['maxlags']   # required, default ?
+            res.cov_kwds['maxlags'] = maxlags
+            use_correction = kwds.get('use_correction', False)
+            res.cov_kwds['use_correction'] = use_correction
+            res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
+                 'and autocorrelation robust (HAC) using %d lags and %s small ' +
+                 'sample correction') % (maxlags, ['without', 'with'][use_correction])
+
+            res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
+                                                 use_correction=use_correction)
+        else:
+            raise ValueError('only HC and HAC are currently connected')
+
+        # TODO and so on should be in sandwich module
+        # self.cov_kwds.update(kwds)  # add all kwds for now
+        return res
+
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 
@@ -1283,6 +1344,9 @@ class RegressionResults(base.LikelihoodModelResults):
                     ('Df Model:', None), #[self.df_model])
                     ]
 
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
         top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
                      ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue] ),
@@ -1322,6 +1386,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         #add warnings/notes, added to text format only
         etext =[]
+        if hasattr(self, 'cov_type'):
+            etext.append(self.cov_kwds['description'])
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)

@@ -1243,7 +1243,10 @@ class LikelihoodModelResults(Results):
         if cov_p is None:
             if scale is None:
                 scale = self.scale
-            cov_p = self.normalized_cov_params * scale
+            if hasattr(self, 'cov_params_default'):
+                cov_p = self.cov_params_default
+            else:
+                cov_p = self.normalized_cov_params * scale
 
         if column is not None:
             column = np.asarray(column)
