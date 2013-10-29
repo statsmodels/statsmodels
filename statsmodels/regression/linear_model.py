@@ -1181,7 +1181,22 @@ class RegressionResults(base.LikelihoodModelResults):
         -----
         See mailing list discussion October 17,
 
+        This test compares the residual sum of squares of the two models.
+        This is not a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results under the assumption of homoscedasticity
+        and no autocorrelation (sphericity).
+
         '''
+        has_robust1 = (hasattr(self, 'cov_type') and
+                                     (self.cov_type != 'nonrobust'))
+        has_robust2 = (hasattr(restricted, 'cov_type') and
+                                     (restricted.cov_type != 'nonrobust'))
+
+        if has_robust1 or has_robust2:
+            import warnings
+            warnings.warn('F test for comparison is likely invalid with ' +
+                          'robust covariance, proceeding anyway', UserWarning)
         ssr_full = self.ssr
         ssr_restr = restricted.ssr
         df_full = self.df_resid
@@ -1225,9 +1240,26 @@ class RegressionResults(base.LikelihoodModelResults):
         distributed as chisquare with df equal to difference in number of
         parameters or equivalently difference in residual degrees of freedom
 
-        TODO: put into separate function, needs tests
+        This test compares the loglikelihood of the two models.
+        This may not be a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results without taking unspecified
+        heteroscedasticity or correlation into account.
+
+        TODO: put into separate function
+
         '''
-    #        See mailing list discussion October 17,
+        has_robust1 = (hasattr(self, 'cov_type') and
+                                     (self.cov_type != 'nonrobust'))
+        has_robust2 = (hasattr(restricted, 'cov_type') and
+                                     (restricted.cov_type != 'nonrobust'))
+
+        if has_robust1 or has_robust2:
+            import warnings
+            warnings.warn('Likelihood Ratio test is likely invalid with ' +
+                          'robust covariance, proceeding anyway', UserWarning)
+
+        # See mailing list discussion October 17,
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
