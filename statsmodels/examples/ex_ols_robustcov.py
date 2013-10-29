@@ -22,3 +22,10 @@ print res_hc0.summary()
 print '\n\n'
 res_hac4 = res_olsg.get_robustcov_results('HAC', maxlags=4, use_correction=True)
 print res_hac4.summary()
+
+
+print '\n\n'
+tt = res_hac4.t_test(np.eye(len(res_hac4.params)))
+print tt.summary()
+
+print tt.summary_frame()
