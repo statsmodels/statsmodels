@@ -9,7 +9,7 @@ numpy >= 1.5.1
 
     www.numpy.org
 
-scipy >= 0.7
+scipy >= 0.9.0
     
     www.scipy.org
 
