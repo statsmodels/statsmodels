@@ -501,6 +501,21 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
 def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=None, callback=None, retall=False,
                     full_output=True, hess=None):
+    """
+    Parameters
+    ----------
+    f : function
+        Returns negative log likelihood given parameters.
+    score : function
+        Returns gradient of negative log likelihood with respect to params.
+
+    Notes
+    -----
+    Within the mle part of statsmodels, the log likelihood function and
+    its gradient with respect to the parameters do not have notationally
+    consistent sign.
+
+    """
 
     # The maxiter may be set at multiple points throughout statsmodels.
     # In the following lines of code, we track how its value changes
@@ -509,31 +524,53 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
     if maxiter is None:
         maxiter = 100
 
+    # Use unconstrained optimization by default.
+    bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
+
     # Pass the following keyword argument names through to fmin_l_bfgs_b
     # if they are present in kwargs, otherwise use the fmin_l_bfgs_b
     # default values.
-    names = ('m', 'pgtol', 'factr', 'maxfun', 'approx_grad')
+    names = ('m', 'pgtol', 'factr', 'maxfun', 'epsilon', 'approx_grad')
     extra_kwargs = dict((x, kwargs[x]) for x in names if x in kwargs)
 
-    if extra_kwargs.get('approx_grad', False):
-        score = None
+    # Extract values for the options related to the gradient.
+    approx_grad = extra_kwargs.get('approx_grad', False)
+    loglike_and_score = kwargs.get('loglike_and_score', None)
+    epsilon = kwargs.get('epsilon', None)
 
-    epsilon = kwargs.setdefault('epsilon', 1e-8)
-    bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
+    # Choose among three options for dealing with the gradient (the gradient
+    # of a log likelihood function with respect to its parameters
+    # is more specifically called the score in statistics terminology).
+    # The first option is to use the finite-differences
+    # approximation that is built into the fmin_l_bfgs_b optimizer.
+    # The second option is to use the provided score function.
+    # The third option is to use the score component of a provided
+    # function that simultaneously evaluates the log likelihood and score.
+    if epsilon and not approx_grad:
+        raise ValueError('a finite-differences epsilon was provided '
+                'even though we are not using approx_grad')
+    if approx_grad and (score or loglike_and_score):
+        raise ValueError('gradient approximation was requested '
+                'even though an analytic score function was given')
+    if loglike_and_score:
+        func = lambda p, *a : tuple(-x for x in loglike_and_score(p, *a))
+    elif score:
+        func = f
+        extra_kwargs['fprime'] = score
+    elif approx_grad:
+        func = f
 
     # Customize the fmin_l_bfgs_b call according to the scipy version.
     # Old scipy does not support maxiter and callback.
     scipy_version_curr = distutils.version.LooseVersion(scipy.__version__)
     scipy_version_12 = distutils.version.LooseVersion('0.12.0')
     if scipy_version_curr < scipy_version_12:
-        retvals = optimize.fmin_l_bfgs_b(f, start_params,
-                fprime=score, args=fargs,
-                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+        retvals = optimize.fmin_l_bfgs_b(func, start_params,
+                args=fargs, bounds=bounds, disp=disp, **extra_kwargs)
     else:
-        retvals = optimize.fmin_l_bfgs_b(f, start_params,
-                fprime=score, args=fargs,
+        retvals = optimize.fmin_l_bfgs_b(func, start_params,
                 maxiter=maxiter, callback=callback,
-                bounds=bounds, epsilon=epsilon, disp=disp, **extra_kwargs)
+                args=fargs, bounds=bounds, disp=disp, **extra_kwargs)
 
     if full_output:
         xopt, fopt, d = retvals
