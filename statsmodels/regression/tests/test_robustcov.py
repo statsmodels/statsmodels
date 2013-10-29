@@ -9,7 +9,7 @@ Author: Josef Perktold
 import numpy as np
 from scipy import stats
 
-from numpy.testing import assert_allclose, assert_equal
+from numpy.testing import assert_allclose, assert_equal, assert_warns
 
 from statsmodels.regression.linear_model import OLS
 import statsmodels.stats.sandwich_covariance as sw
@@ -145,7 +145,7 @@ class TestOLSRobustHacLarge(TestOLSRobust1):
 
 
 class CheckOLSRobustNewMixin(object):
-
+    # This uses the robust covariance as default covariance
 
     def test_compare(self):
         assert_allclose(self.cov_robust, self.cov_robust2, rtol=1e-10)
@@ -181,6 +181,27 @@ class TestOLSRobust2New(TestOLSRobust1, CheckOLSRobustNewMixin):
         self.small = True
         self.res2 = res.results_ivhc0_small
 
+    def test_compare(self):
+        #check that we get a warning using the nested compare methods
+        res1 = self.res1
+        endog = res1.model.endog
+        exog = res1.model.exog[:, [0, 2]]  # drop one variable
+        res_ols2 = OLS(endog, exog).fit()
+        # results from Stata
+        r_pval =  .0307306938402991
+        r_chi2 =  4.667944083588736
+        r_df =  1
+        assert_warns(UserWarning, res1.compare_lr_test, res_ols2)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            chi2, pval, df = res1.compare_lr_test(res_ols2)
+        assert_allclose(chi2, r_chi2, rtol=1e-11)
+        assert_allclose(pval, r_pval, rtol=1e-11)
+        assert_equal(df, r_df)
+
+        assert_warns(UserWarning, res1.compare_f_test, res_ols2)
+        #fva, pval, df = res1.compare_f_test(res_ols2)
 
 
 
