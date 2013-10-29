@@ -66,7 +66,9 @@ class CheckOLSRobust(object):
             assert_equal(ft.df_num, res2.Fdf1)
             assert_equal(ft.df_denom, res2.Fdf2)
 
-
+        # SMOKE
+        tt.summary()
+        ft.summary()
 
 
 
