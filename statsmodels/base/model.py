@@ -1376,8 +1376,15 @@ class LikelihoodModelResults(Results):
         else:
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
-        return ContrastResults(effect=_effect, t=_t, sd=_sd,
-                               df_denom=self.model.df_resid)
+
+        use_t = not (hasattr(self, 'use_t') and not self.use_t)
+        if use_t:
+            return ContrastResults(effect=_effect, t=_t, sd=_sd,
+                                   df_denom=self.model.df_resid)
+        else:
+            return ContrastResults(effect=_effect, statistic=_t, sd=_sd,
+                                   df_denom=self.model.df_resid,
+                                   distribution='norm')
 
 
     #TODO: untested for GLMs?

@@ -37,16 +37,18 @@ class ContrastResults(object):
         elif 'statistic' in kwds:
             # TODO: currently targeted to normal distribution
             self.distribution = kwds['distribution']
-            self.statistic = value = kwds['statistic']
+            self.statistic = kwds['statistic']
+            self.tvalue = value = kwds['statistic']  # keep alias
+            # TODO: for results instance we decided to use tvalues also for normal
             self.sd = sd
-            self.dist = getattr(value, self.distribution)
+            self.dist = getattr(stats, self.distribution)
             self.dist_args = ()
             self.pvalue = self.dist.sf(np.abs(value)) * 2
 
     def conf_int(self, alpha=0.05):
         if self.effect is not None:
             # confidence intervals
-            q = self.dist.ppf(1 - alpha / 2., self.dist_args)
+            q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
             lower = self.effect - q * self.sd
             upper = self.effect + q * self.sd
             return np.column_stack((lower, upper))
