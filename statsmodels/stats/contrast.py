@@ -90,6 +90,25 @@ class ContrastResults(object):
             return self.__str__()
 
 
+    def summary_frame(self, xname=None, alpha=0.05):
+        if self.effect is not None:
+            # we have everything for a params table
+            use_t = (self.distribution == 't')
+            yname='constraints'  # Not used in params_frame
+            if xname is None:
+                xname = ['c%d'%ii for ii in range(len(self.effect))]
+            from statsmodels.iolib.summary import summary_params_frame
+            summ = summary_params_frame((self, self.effect, self.sd,
+                                         self.statistic,self.pvalue,
+                                         self.conf_int(alpha)), yname=yname,
+                                         xname=xname, use_t=use_t)
+            return summ
+        else:
+            # TODO: create something nicer
+            raise NotImplementedError('only available for t and z')
+
+
+
 class Contrast(object):
     """
     This class is used to construct contrast matrices in regression models.
