@@ -1243,8 +1243,42 @@ class RegressionResults(base.LikelihoodModelResults):
     def get_robustcov_results(self, cov_type='HC1', use_t=False, **kwds):
         '''experimental results instance with robust covariance as default
 
+        use_t is not implemented yet, only t-distribution is available
 
-        use_t
+        Parameters
+        ----------
+        cov_type : string
+            the type of robust sandwich estimator to use. see Notes below
+        use_t : bool
+            not implemented. If true, then the t distribution is used for
+            inference. If false, then the normal distribution is used.
+        kwds : depends on cov_type
+            Required or optional arguments for robust covariance calculation.
+            see Notes below
+
+        Returns
+        -------
+        results : results instance
+            This method creates a new results instance with the requested
+            robust covariance as the default covariance of the parameters.
+            Inferential statistics like p-values will be based on this
+            covariance matrix.
+
+        Notes
+        -----
+        The following covariance types and required or optional arguments are
+        currently available:
+
+        - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
+             heteroscedasticity robust covariance
+        - 'HAC' and keywords
+
+            - `maxlag` integer (required) : number of lags to use
+            - `kernel` string (optional) : kernel, default is Bartlett
+            - `use_correction` bool (optional) : If true, use small sample
+                  correction
+
+        - 'cluster' and required keyword `groups`, integer group indicator
 
         '''
         import statsmodels.stats.sandwich_covariance as sw
@@ -1256,7 +1290,9 @@ class RegressionResults(base.LikelihoodModelResults):
         res.cov_type = cov_type = cov_type
         res.cov_kwds = {'use_t':use_t}
 
-        # verify and set kwds
+        # verify and set kwds, and calculate cov
+        # TODO: this should be outsourced in a function so we can reuse it in
+        #       other models
         if cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
             if kwds:
                 raise ValueError('heteroscedasticity robust covarians ' +
@@ -1267,7 +1303,7 @@ class RegressionResults(base.LikelihoodModelResults):
             getattr(self, cov_type.upper() + '_se')
             res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
         elif cov_type == 'HAC':
-            maxlags = kwds['maxlags']   # required, default ?
+            maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
             res.cov_kwds['maxlags'] = maxlags
             use_correction = kwds.get('use_correction', False)
             res.cov_kwds['use_correction'] = use_correction
@@ -1277,8 +1313,12 @@ class RegressionResults(base.LikelihoodModelResults):
 
             res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
                                                  use_correction=use_correction)
+        elif cov_type == 'cluster':
+            #cluster robust standard errors
+            res.cov_kwds['groups'] = groups = kwds['groups']
+            res.cov_params_default = sw.cov_cluster(self, groups)
         else:
-            raise ValueError('only HC and HAC are currently connected')
+            raise ValueError('only HC, HAC and cluster are currently connected')
 
         # TODO and so on should be in sandwich module
         # self.cov_kwds.update(kwds)  # add all kwds for now
