@@ -143,3 +143,62 @@ class TestOLSRobustHacLarge(TestOLSRobust1):
 
         self.res2 = res.results_ivhac4_large
 
+
+class CheckOLSRobustNewMixin(object):
+
+
+    def test_compare(self):
+        assert_allclose(self.cov_robust, self.cov_robust2, rtol=1e-10)
+        assert_allclose(self.bse_robust, self.bse_robust2, rtol=1e-10)
+
+
+    def test_fvalue(self):
+        assert_allclose(self.res1.fvalue, self.res2.F, rtol=1e-10)
+        assert_allclose(self.res1.f_pvalue, self.res2.Fp, rtol=1e-10)
+
+
+    def test_confint(self):
+        ci1 = self.res1.conf_int()
+        ci2 = self.res2.params_table[:,4:6]
+        assert_allclose(ci1, ci2, rtol=1e-10)
+
+    def test_smoke(self):
+        self.res1.summary()
+
+
+
+class TestOLSRobust2New(TestOLSRobust1, CheckOLSRobustNewMixin):
+    # compare with ivreg robust small
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results('HC1')
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        self.bse_robust2 = res_ols.HC1_se
+        self.cov_robust2 = res_ols.cov_HC1
+        self.small = True
+        self.res2 = res.results_ivhc0_small
+
+
+
+
+class TestOLSRobustHACSmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
+    # compare with ivreg robust small
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results('HAC', maxlags=4,
+                                                  use_correction=True)
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_hac_simple(res_ols, nlags=4, use_correction=True)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = True
+        self.res2 = res.results_ivhac4_small
+
+
