@@ -1,3 +1,5 @@
+# TODO: Check tests with constant and without
+# TODO: Determine which tests are valid for GLSAR, and under what conditions
 """
 This module implements some standard regression models:
 
@@ -324,7 +326,7 @@ class GLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at params.
+        Returns the value of the Gaussian loglikelihood function at params.
 
         Given the whitened design matrix, the loglikelihood is evaluated
         at the parameter vector `params` for the dependent variable `endog`.
@@ -402,7 +404,7 @@ class WLS(RegressionModel):
 
     Notes
     -----
-    If the weights are a function of the data, then the postestimation
+    If the weights are a function of the data, then the post estimation
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
     """ % {'params' : base._model_params_doc,
@@ -442,7 +444,7 @@ class WLS(RegressionModel):
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            return np.sqrt(self.weights)[:,None]*X
+            return np.sqrt(self.weights)[:, None]*X
 
     def loglike(self, params):
         """
@@ -744,7 +746,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 
     rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
-    if inv == True:
+    if inv==True:
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
@@ -885,8 +887,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
-                                                 normalized_cov_params,
-                                                 scale)
+                                                normalized_cov_params,
+                                                scale)
         self._cache = resettable_cache()
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values
@@ -973,7 +975,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if weights is not None:
             return np.sum(weights*(model.endog - np.average(model.endog,
                                                         weights=weights))**2)
-        else: # this is probably broken for GLS
+        else:  # this is probably broken for GLS
             centered_endog = model.wendog - model.wendog.mean()
             return np.dot(centered_endog, centered_endog)
 
@@ -1223,9 +1225,9 @@ class RegressionResults(base.LikelihoodModelResults):
         equivalence with the Wald test.  Requires modification of HAC estimators to
         not demean the data before computing the covariance (LM) or to demean before (LR)
         '''
-        resid = restricted.resid.values
+        wresid = restricted.wresid.values
         wexog = self.model.wexog
-        scores = wexog.T * resid
+        scores = wexog.T * wresid
 
         n = self.nobs
         df_full = self.df_resid
@@ -1234,7 +1236,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         s = scores.mean(axis=1)
         if use_lr:
-            scores = wexog.T * self.resid.values
+            scores = wexog.T * self.wresid.values
             demean = False
 
         if demean:
@@ -1299,7 +1301,7 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value = stats.f.sf(f_value, df_diff, df_full)
         return f_value, p_value, df_diff
 
-    def compare_lr_test(self, restricted, large_sample = False):
+    def compare_lr_test(self, restricted, large_sample=False):
         '''
         Likelihood ratio test to test whether restricted model is correct
 
@@ -1312,8 +1314,8 @@ class RegressionResults(base.LikelihoodModelResults):
             freedom, `df_resid`.
 
         large_sample : bool
-            Flag indicating whether to use an heteroskedasticity robust version
-            of the LR test, which is a modificed LM test.
+            Flag indicating whether to use a heteroskedasticity robust version
+            of the LR test, which is a modified LM test.
 
         Returns
         -------
@@ -1329,12 +1331,28 @@ class RegressionResults(base.LikelihoodModelResults):
         Notes
         -----
 
+        The exact likelihood ratio is valid for homoskedastic data, and is
+        defined as
+
         .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}
            {\\mathcal{L}_{alternative}}\\right)
 
         where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
         distributed as chisquare with df equal to difference in number of
-        parameters or equivalently difference in residual degrees of freedom
+        parameters or equivalently difference in residual degrees of freedom.
+
+        The large sample version of the likelihood ratio is defined as
+
+        .. math:: D=n s^{\\prime}S^{-1}s
+
+        where :math:`s=n^{-1}\\sum_{i=1}^{n} s_{i}`
+
+        .. math:: s_{i} = x_{i,alternative} \\epsilon_{i,null}
+
+        is the average score of the model evaluated using the residuals from
+        null model and the regressors from the alternative model and :math:`S`
+        is the covariance of the scores, :math:`s_{i}`.  The covariance of the
+        scores is estimated using the same estimator as in the alternative model.
 
         This test compares the loglikelihood of the two models.
         This may not be a valid test, if there is unspecified heteroscedasticity
@@ -1359,7 +1377,7 @@ class RegressionResults(base.LikelihoodModelResults):
                           'robust covariance, proceeding anyway', UserWarning)
 
         if large_sample:
-            return self.compare_lr_test(restricted, use_lr = True)
+            return self.compare_lr_test(restricted, use_lr=True)
 
         llf_full = self.llf
         llf_restr = restricted.llf
@@ -1889,13 +1907,14 @@ class OLSResults(RegressionResults):
                      ret_params=0, method='nm',
                      stochastic_exog=1, return_params=0):
         """
-        Tests single or joint hypotheses of the regression parameters.
+        Tests single or joint hypotheses of the regression parameters using
+        Empirical Likelihood.
 
         Parameters
         ----------
 
         b0_vals : 1darray
-            The hypthesized value of the parameter to be tested
+            The hypothesized value of the parameter to be tested
 
         param_nums : 1darray
             The parameter number to be tested
@@ -1985,18 +2004,19 @@ class OLSResults(RegressionResults):
                     method='nm', stochastic_exog=1):
         """
         Computes the confidence interval for the parameter given by param_num
+        using Empirical Likelihood
 
         Parameters
         ----------
 
         param_num : float
-            The parameter thats confidence interval is desired
+            The parameter for which the confidence interval is desired
 
         sig : float
             The significance level.  Default is .05
 
         upper_bound : float
-            Tha mximum value the upper limit can be.  Default is the
+            The maximum value the upper limit can be.  Default is the
             99.9% confidence value under OLS assumptions.
 
         lower_bound : float
@@ -2034,7 +2054,7 @@ class OLSResults(RegressionResults):
         For alpha=.05, the value is 3.841459.
 
         To ensure optimization terminated successfully, it is suggested to
-        do test_beta([lower_limit], [param_num])
+        do el_test([lower_limit], [param_num])
 
         If the optimization does not terminate successfully, consider switching
         optimization algorithms.
