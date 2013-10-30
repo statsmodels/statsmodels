@@ -1140,6 +1140,66 @@ class RegressionResults(base.LikelihoodModelResults):
                              'deviation')
         return self.wresid * recipr(np.sqrt(self.scale))
 
+    def compare_lm_test(self, restricted, demean=True, use_lr=False):
+        '''Use Lagrange Multiplier test to test whether restricted model is correct
+
+        Parameters
+        ----------
+        restricted : Result instance
+            The restricted model is assumed to be nested in the current
+            model. The result instance of the restricted model is required to
+            have two attributes, residual sum of squares, `ssr`, residual
+            degrees of freedom, `df_resid`.
+
+        demean : bool
+            Flag indicating whether the demean the scores based on the residuals
+            from the restricted model.  If True, the covariance of the scores
+            are used and the LM test is identical to the large sample version
+            of the LR test.
+
+        Returns
+        -------
+        lm_value : float
+            test statistic, chi2 distributed
+        p_value : float
+            p-value of the test statistic
+        df_diff : int
+            degrees of freedom of the restriction, i.e. difference in df between
+            models
+
+        Notes
+        -----
+        TODO: explain LM text
+        TODO: Should use the same covariance estimator of S as the model uses.
+        This allows a general HAC-robust version of the test, and establishes the
+        equivalence with the Wald test.  Requires modification of HAC estimators to
+        not demean the data before computing the covariance (LM) or to demean before (LR)
+        '''
+        resid = restricted.resid.values
+        wexog = self.model.wexog
+        scores = wexog.T * resid
+
+        n = self.nobs
+        df_full = self.df_resid
+        df_restr = restricted.df_resid
+        df_diff = (df_restr - df_full)
+
+        s = scores.mean(axis=1)
+        if use_lr:
+            scores = wexog.T * self.resid.values
+            demean = False
+
+        if demean:
+            Sinv = np.linalg.inv(np.cov(scores))
+        else:
+            Sinv = np.linalg.inv(scores.dot(scores.T) / n)
+
+        lm_value = n * s.dot(Sinv).dot(s.T)
+        p_value = stats.chi2.sf(lm_value, df_diff)
+        return lm_value, p_value, df_diff
+
+
+
     def compare_f_test(self, restricted):
         '''use F test to test whether restricted model is correct
 
@@ -1176,7 +1236,7 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value = stats.f.sf(f_value, df_diff, df_full)
         return f_value, p_value, df_diff
 
-    def compare_lr_test(self, restricted):
+    def compare_lr_test(self, restricted, large_sample = False):
         '''
         Likelihood ratio test to test whether restricted model is correct
 
@@ -1187,6 +1247,10 @@ class RegressionResults(base.LikelihoodModelResults):
             The result instance of the restricted model is required to have two
             attributes, residual sum of squares, `ssr`, residual degrees of
             freedom, `df_resid`.
+
+        large_sample : bool
+            Flag indicating whether to use an heteroskedasticity robust version
+            of the LR test, which is a modificed LM test.
 
         Returns
         -------
@@ -1210,8 +1274,13 @@ class RegressionResults(base.LikelihoodModelResults):
         parameters or equivalently difference in residual degrees of freedom
 
         TODO: put into separate function, needs tests
+        TODO: explain large sample LR
         '''
     #        See mailing list discussion October 17,
+
+        if large_sample:
+            return self.compare_lr_test(restricted, use_lr = True)
+
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
