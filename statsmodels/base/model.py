@@ -64,6 +64,7 @@ class Model(object):
         self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
                                 'data.orig_endog', 'data.orig_exog'])
 
+
     @classmethod
     def from_formula(cls, formula, data, subset=None, *args, **kwargs):
         """
@@ -1157,6 +1158,7 @@ class LikelihoodModelResults(Results):
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
+        self.use_t = False # by default we use normal distribution
 
     def normalized_cov_params(self):
         raise NotImplementedError
@@ -1269,7 +1271,8 @@ class LikelihoodModelResults(Results):
             return cov_p
 
     #TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None):
+    def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None,
+               use_t=None):
         """
         Compute a t-test for a joint linear hypothesis of the form Rb = q
 
@@ -1293,6 +1296,11 @@ class LikelihoodModelResults(Results):
         scale : float, optional
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
+        use_t : bool, optional
+            If use_t is None, then the default of the model is used.
+            If use_t is True, then the p-values are based on the t distribution.
+            If use_t is False, then the p-values are based on the normal
+            distribution.
 
         Examples
         --------
@@ -1364,6 +1372,10 @@ class LikelihoodModelResults(Results):
                 raise ValueError("r_matrix and q_matrix must have the same "
                                  "number of rows")
 
+        if use_t is None:
+            #switch to use_t false if undefined
+            use_t = (hasattr(self, 'use_t') and self.use_t)
+
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
@@ -1377,7 +1389,6 @@ class LikelihoodModelResults(Results):
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
 
-        use_t = not (hasattr(self, 'use_t') and not self.use_t)
         if use_t:
             return ContrastResults(effect=_effect, t=_t, sd=_sd,
                                    df_denom=self.model.df_resid)
@@ -1386,10 +1397,15 @@ class LikelihoodModelResults(Results):
                                    df_denom=self.model.df_resid,
                                    distribution='norm')
 
+    def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
+                   invcov=None):
+        res = self.wald_test(self, r_matrix, q_matrix=q_matrix, cov_p=cov_p,
+                             scale=scale, invcov=invcov, use_f=True)
+        return res
 
     #TODO: untested for GLMs?
-    def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
-               invcov=None):
+    def wald_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
+               invcov=None, use_f=None):
         """
         Compute an F-test for a joint linear hypothesis.
 
@@ -1477,6 +1493,10 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
+        if use_f is None:
+            #switch to use_t false if undefined
+            use_f = (hasattr(self, 'use_t') and self.use_t)
+
         from patsy import DesignInfo
         if q_matrix is not None:
             from warnings import warn
@@ -1513,11 +1533,17 @@ class LikelihoodModelResults(Results):
 
         if (hasattr(self, 'mle_settings') and
             self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
-            F = nan_dot(nan_dot(Rbq.T, invcov), Rbq) / J
+            F = nan_dot(nan_dot(Rbq.T, invcov), Rbq)
         else:
-            F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
-        return ContrastResults(F=F, df_denom=self.model.df_resid,
-                    df_num=invcov.shape[0])
+            F = np.dot(np.dot(Rbq.T, invcov), Rbq)
+
+        if use_f:
+            F /= J
+            return ContrastResults(F=F, df_denom=self.model.df_resid,
+                                   df_num=invcov.shape[0])
+        else:
+            return ContrastResults(chi2=F, df_denom=J, statistic=F, distribution='chi2', distargs=(J,))
+
 
     def conf_int(self, alpha=.05, cols=None, method='default'):
         """

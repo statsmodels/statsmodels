@@ -187,11 +187,11 @@ class CheckOLSRobustNewMixin(object):
 
 
 
-class TestOLSRobust2New(TestOLSRobust1, CheckOLSRobustNewMixin):
+class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
     # compare with ivreg robust small
 
     def setup(self):
-        res_ols = self.res1.get_robustcov_results('HC1')
+        res_ols = self.res1.get_robustcov_results('HC1', use_t=True)
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
@@ -230,7 +230,7 @@ class TestOLSRobustHACSmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 
     def setup(self):
         res_ols = self.res1.get_robustcov_results('HAC', maxlags=4,
-                                                  use_correction=True)
+                                            use_correction=True, use_t=True)
         self.res3 = self.res1
         self.res1 = res_ols
         self.bse_robust = res_ols.bse
