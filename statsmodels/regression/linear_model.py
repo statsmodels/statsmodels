@@ -1024,7 +1024,23 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fvalue(self):
-        return self.mse_model/self.mse_resid
+        if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust':
+            # with heteroscedasticity or correlation robustness
+            k_params = self.normalized_cov_params.shape[0]
+            mat = np.eye(k_params)
+            const_idx = self.model.data.const_idx
+            if self.model.data.k_constant == 1:
+                # assume const_idx exists
+                idx = range(k_params)
+                idx.pop(const_idx)
+                mat = mat[idx]  # remove constant
+            ft = self.f_test(mat)
+            # using backdoor to set another attribute that we already have
+            self._cache['f_pvalue'] = ft.pvalue
+            return ft.fvalue
+        else:
+            # for standard homoscedastic case
+            return self.mse_model/self.mse_resid
 
     @cache_readonly
     def f_pvalue(self):
@@ -1227,7 +1243,22 @@ class RegressionResults(base.LikelihoodModelResults):
         -----
         See mailing list discussion October 17,
 
+        This test compares the residual sum of squares of the two models.
+        This is not a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results under the assumption of homoscedasticity
+        and no autocorrelation (sphericity).
+
         '''
+        has_robust1 = (hasattr(self, 'cov_type') and
+                                     (self.cov_type != 'nonrobust'))
+        has_robust2 = (hasattr(restricted, 'cov_type') and
+                                     (restricted.cov_type != 'nonrobust'))
+
+        if has_robust1 or has_robust2:
+            import warnings
+            warnings.warn('F test for comparison is likely invalid with ' +
+                          'robust covariance, proceeding anyway', UserWarning)
         ssr_full = self.ssr
         ssr_restr = restricted.ssr
         df_full = self.df_resid
@@ -1278,13 +1309,11 @@ class RegressionResults(base.LikelihoodModelResults):
         distributed as chisquare with df equal to difference in number of
         parameters or equivalently difference in residual degrees of freedom
 
-        The large sample version of the likelihood ratio is defined as
-
-        .. math:: D=n s^{\\prime}S^{-1}s
-
-        where :math:`s=n^{-1}\\sum_{i=1}^{n} s_{i}`
-
-        .. math:: s_{i} = x_{i,alternative} \\epsilon_{i,null}
+        This test compares the loglikelihood of the two models.
+        This may not be a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results without taking unspecified
+        heteroscedasticity or correlation into account.
 
         is the average score of the model evaluated using the residuals from
         null model and the regressors from the alternative model and :math:`S`
@@ -1298,6 +1327,14 @@ class RegressionResults(base.LikelihoodModelResults):
         if large_sample:
             return self.compare_lr_test(restricted, use_lr=True)
 
+        has_robust1 = (getattr(self, 'cov_type', None) != 'nonrobust')
+        has_robust2 = (getattr(restricted, 'cov_type', None) != 'nonrobust')
+
+        if has_robust1 or has_robust2:
+            import warnings
+            warnings.warn('Likelihood Ratio test is likely invalid with ' +
+                          'robust covariance, proceeding anyway', UserWarning)
+
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
@@ -1308,6 +1345,91 @@ class RegressionResults(base.LikelihoodModelResults):
         lr_pvalue = stats.chi2.sf(lrstat, lrdf)
 
         return lrstat, lr_pvalue, lrdf
+
+
+    def get_robustcov_results(self, cov_type='HC1', use_t=False, **kwds):
+        '''experimental results instance with robust covariance as default
+
+        use_t is not implemented yet, only t-distribution is available
+
+        Parameters
+        ----------
+        cov_type : string
+            the type of robust sandwich estimator to use. see Notes below
+        use_t : bool
+            not implemented. If true, then the t distribution is used for
+            inference. If false, then the normal distribution is used.
+        kwds : depends on cov_type
+            Required or optional arguments for robust covariance calculation.
+            see Notes below
+
+        Returns
+        -------
+        results : results instance
+            This method creates a new results instance with the requested
+            robust covariance as the default covariance of the parameters.
+            Inferential statistics like p-values will be based on this
+            covariance matrix.
+
+        Notes
+        -----
+        The following covariance types and required or optional arguments are
+        currently available:
+
+        - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
+             heteroscedasticity robust covariance
+        - 'HAC' and keywords
+
+            - `maxlag` integer (required) : number of lags to use
+            - `kernel` string (optional) : kernel, default is Bartlett
+            - `use_correction` bool (optional) : If true, use small sample
+                  correction
+
+        - 'cluster' and required keyword `groups`, integer group indicator
+
+        '''
+        import statsmodels.stats.sandwich_covariance as sw
+
+        res = self.__class__(self.model, self.params,
+                       normalized_cov_params=self.normalized_cov_params,
+                       scale=self.scale)
+
+        res.cov_type = cov_type = cov_type
+        res.cov_kwds = {'use_t':use_t}
+
+        # verify and set kwds, and calculate cov
+        # TODO: this should be outsourced in a function so we can reuse it in
+        #       other models
+        if cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+            if kwds:
+                raise ValueError('heteroscedasticity robust covarians ' +
+                                 'does not use keywords')
+            res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
+                                           'robust ' + '(' + cov_type + ')')
+            # TODO cannot access cov without calling se first
+            getattr(self, cov_type.upper() + '_se')
+            res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
+        elif cov_type == 'HAC':
+            maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
+            res.cov_kwds['maxlags'] = maxlags
+            use_correction = kwds.get('use_correction', False)
+            res.cov_kwds['use_correction'] = use_correction
+            res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
+                 'and autocorrelation robust (HAC) using %d lags and %s small ' +
+                 'sample correction') % (maxlags, ['without', 'with'][use_correction])
+
+            res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
+                                                 use_correction=use_correction)
+        elif cov_type == 'cluster':
+            #cluster robust standard errors
+            res.cov_kwds['groups'] = groups = kwds['groups']
+            res.cov_params_default = sw.cov_cluster(self, groups)
+        else:
+            raise ValueError('only HC, HAC and cluster are currently connected')
+
+        # TODO and so on should be in sandwich module
+        # self.cov_kwds.update(kwds)  # add all kwds for now
+        return res
 
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
@@ -1369,6 +1491,9 @@ class RegressionResults(base.LikelihoodModelResults):
                     ('Df Model:', None), #[self.df_model])
                     ]
 
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
         top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
                      ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue] ),
@@ -1408,6 +1533,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         #add warnings/notes, added to text format only
         etext =[]
+        if hasattr(self, 'cov_type'):
+            etext.append(self.cov_kwds['description'])
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)
