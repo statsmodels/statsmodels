@@ -407,7 +407,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
 
 def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
-                   skip_header=False):
+                   skip_header=False, title=None):
     '''create a summary table for the parameters
 
     Parameters
@@ -503,7 +503,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
-                                  title = None,
+                                  title = title,
                                   txt_fmt = fmt_params #gen_fmt #fmt_2, #gen_fmt,
                                   )
 
@@ -559,10 +559,10 @@ def summary_params_frame(results, yname=None, xname=None, alpha=.05,
     alp = str((1-alpha)*100)+'%'
     if use_t:
         param_header = ['coef', 'std err', 't', 'P>|t|',
-                        'Conf. Int. Low', 'Cont. Int. Hi.']
+                        'Conf. Int. Low', 'Conf. Int. Upp.']
     else:
         param_header = ['coef', 'std err', 'z', 'P>|z|',
-                        'Conf. Int. Low', 'Cont. Int. Hi.']
+                        'Conf. Int. Low', 'Conf. Int. Upp.']
 
     _, xname = _getnames(results, yname=yname, xname=xname)
 
