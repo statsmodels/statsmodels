@@ -27,6 +27,7 @@ print res_hac4.summary()
 print '\n\n'
 tt = res_hac4.t_test(np.eye(len(res_hac4.params)))
 print tt.summary()
+print '\n\n'
 print tt.summary_frame()
 
 res_hac4.use_t = False
@@ -34,4 +35,8 @@ res_hac4.use_t = False
 print '\n\n'
 tt = res_hac4.t_test(np.eye(len(res_hac4.params)))
 print tt.summary()
+print '\n\n'
 print tt.summary_frame()
+
+print vars(res_hac4.f_test(np.eye(len(res_hac4.params))[:-1], use_f=True))
+print vars(res_hac4.f_test(np.eye(len(res_hac4.params))[:-1], use_f=False))

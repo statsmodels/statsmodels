@@ -901,6 +901,8 @@ class RegressionResults(base.LikelihoodModelResults):
         else:
             self._wexog_singular_values = None
 
+        self.use_t = True  # default for linear models
+
     def __str__(self):
         self.summary()
 
@@ -1275,15 +1277,14 @@ class RegressionResults(base.LikelihoodModelResults):
     def get_robustcov_results(self, cov_type='HC1', use_t=False, **kwds):
         '''experimental results instance with robust covariance as default
 
-        use_t is not implemented yet, only t-distribution is available
 
         Parameters
         ----------
         cov_type : string
             the type of robust sandwich estimator to use. see Notes below
         use_t : bool
-            not implemented. If true, then the t distribution is used for
-            inference. If false, then the normal distribution is used.
+            If true, then the t distribution is used for inference.
+            If false, then the normal distribution is used.
         kwds : depends on cov_type
             Required or optional arguments for robust covariance calculation.
             see Notes below
@@ -1321,6 +1322,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         res.cov_type = cov_type = cov_type
         res.cov_kwds = {'use_t':use_t}
+        res.use_t = use_t
 
         # verify and set kwds, and calculate cov
         # TODO: this should be outsourced in a function so we can reuse it in

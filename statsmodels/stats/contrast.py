@@ -35,7 +35,7 @@ class ContrastResults(object):
             self.dist_args = (df_denom,)
             self.pvalue = self.dist.sf(np.abs(t), df_denom) * 2
         elif 'statistic' in kwds:
-            # TODO: currently targeted to normal distribution
+            # TODO: currently targeted to normal distribution, and chi2
             self.distribution = kwds['distribution']
             self.statistic = kwds['statistic']
             self.tvalue = value = kwds['statistic']  # keep alias
@@ -43,7 +43,16 @@ class ContrastResults(object):
             self.sd = sd
             self.dist = getattr(stats, self.distribution)
             self.dist_args = ()
-            self.pvalue = self.dist.sf(np.abs(value)) * 2
+            if self.distribution is 'chi2':
+                self.pvalue = self.dist.sf(self.statistic, df_denom)
+            else:
+                "normal"
+                self.pvalue = self.dist.sf(np.abs(value)) * 2
+
+        # cleanup
+        # should we return python scalar?
+        self.pvalue = np.squeeze(self.pvalue)
+
 
     def conf_int(self, alpha=0.05):
         if self.effect is not None:
@@ -67,6 +76,7 @@ class ContrastResults(object):
             return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
                    (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
         else:
+            return self.summary().__str__()
             return '<T test: effect=%s, sd=%s, t=%s, p=%s, df_denom=%d>' % \
                    (`self.effect`, `self.sd`, `self.tvalue`, `self.pvalue`,
                            self.df_denom)
@@ -75,8 +85,16 @@ class ContrastResults(object):
         return str(self.__class__) + '\n' + self.__str__()
 
 
-    def summary(self, xname=None, alpha=0.05):
+    def summary(self, xname=None, alpha=0.05, title=None):
         if self.effect is not None:
+            # TODO: should also add some extra information, e.g. robust cov ?
+            # TODO: can we infer names for constraints, xname in __init__ ?
+            if title is None:
+                title = 'Test for Constraints'
+            elif title == '':
+                # don't add any title,
+                # I think SimpleTable skips on None - check
+                title = None
             # we have everything for a params table
             use_t = (self.distribution == 't')
             yname='constraints' # Not used in params_frame
@@ -85,7 +103,8 @@ class ContrastResults(object):
             from statsmodels.iolib.summary import summary_params
             summ = summary_params((self, self.effect, self.sd, self.statistic,
                                    self.pvalue, self.conf_int(alpha)),
-                                  yname=yname, xname=xname, use_t=use_t)
+                                  yname=yname, xname=xname, use_t=use_t,
+                                  title=title)
             return summ
         else:
             # TODO: create something nicer
