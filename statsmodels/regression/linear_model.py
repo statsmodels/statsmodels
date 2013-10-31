@@ -1,12 +1,12 @@
-# TODO: Check tests with constant and without
+# TODO: Check tests with constant and without.  This might be an issue since df_model does nto include constant
 # TODO: Determine which tests are valid for GLSAR, and under what conditions
 """
-This module implements some standard regression models:
+This module implements standard regression models:
 
-Generalized Least Squares (GLS),
-Ordinary Least Squares (OLS),
-and Weighted Least Squares (WLS),
-as well as an GLS model with autoregressive error terms GLSAR(p)
+Generalized Least Squares (GLS)
+Ordinary Least Squares (OLS)
+Weighted Least Squares (WLS)
+Generalized Least Squares with autoregressive error terms GLSAR(p)
 
 Models are specified with an endogenous response variable and an
 exogenous design matrix and are fit using their `fit` method.
@@ -36,21 +36,25 @@ import numpy as np
 from scipy.linalg import toeplitz
 from scipy import stats
 from scipy.stats.stats import ss
-from statsmodels.tools.tools import (add_constant, rank,
-                                             recipr, chain_dot, pinv_extended)
-from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly, cache_writable)
-import statsmodels.base.model as base
-import statsmodels.base.wrapper as wrap
-from statsmodels.emplike.elregress import _ELRegOpts
 from scipy import optimize
 from scipy.stats import chi2
 
+from statsmodels.tools.tools import (add_constant, rank,
+                                     recipr, chain_dot, pinv_extended)
+from statsmodels.tools.decorators import (resettable_cache,
+                                          cache_readonly,
+                                          cache_writable)
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.emplike.elregress import _ELRegOpts
+
+
 def _get_sigma(sigma, nobs):
     """
-    Returns sigma for GLS and the inverse of its Cholesky decomposition.
-    Handles dimensions and checks integrity. If sigma is None, returns
-    None, None. Otherwise returns sigma, cholsigmainv.
+    Returns sigma (matrix, nbox by nobx) for GLS and the inverse of its
+    Cholesky decomposition.  Handles dimensions and checks integrity.
+    If sigma is None, returns None, None. Otherwise returns sigma,
+    cholsigmainv.
     """
     if sigma is None:
         return None, None
@@ -74,7 +78,7 @@ def _get_sigma(sigma, nobs):
 
 class RegressionModel(base.LikelihoodModel):
     """
-    Base class for linear regression models not used by users.
+    Base class for linear regression models. Should not be directly called.
 
     Intended for subclassing.
     """
@@ -1024,6 +1028,7 @@ class RegressionResults(base.LikelihoodModelResults):
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
+            # TODO: What if model includes implcit constant, e.g. all dummies but no constant regressor?
             if self.model.data.k_constant == 1:
                 # assume const_idx exists
                 idx = range(k_params)
@@ -1236,7 +1241,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         s = scores.mean(axis=1)
         if use_lr:
-            scores = wexog.T * self.wresid.values
+            scores = wexog.T * self.wresid
             demean = False
 
         if demean:
@@ -1366,10 +1371,9 @@ class RegressionResults(base.LikelihoodModelResults):
         '''
         # See mailing list discussion October 17,
 
-        has_robust1 = (hasattr(self, 'cov_type') and
-                                     (self.cov_type != 'nonrobust'))
-        has_robust2 = (hasattr(restricted, 'cov_type') and
-                                     (restricted.cov_type != 'nonrobust'))
+
+        has_robust1 = (getattr(self, 'cov_type', None) != 'nonrobust')
+        has_robust2 = (getattr(restricted, 'cov_type', None) != 'nonrobust')
 
         if has_robust1 or has_robust2:
             import warnings
