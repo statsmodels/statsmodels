@@ -152,6 +152,9 @@ class RegressionModel(base.LikelihoodModel):
         augmented_exog = add_constant(self.exog)
         return rank(augmented_exog)==rank(self.exog)
 
+    def whiten(self, X):
+        raise NotImplementedError("Subclasses should implement.")
+
     def fit(self, method="pinv", **kwargs):
         """
         Full fit of the model.
@@ -1236,7 +1239,7 @@ class RegressionResults(base.LikelihoodModelResults):
         return np.sqrt(np.diag(self.cov_HC3))
 
 
-    #TODO: this needs a test
+    @cache_readonly
     def norm_resid(self):
         """
         Residuals, normalized to have unit variance.
@@ -1244,10 +1247,6 @@ class RegressionResults(base.LikelihoodModelResults):
         Returns
         -------
         An array wresid/sqrt(scale)
-
-        Notes
-        -----
-        This method is untested
         """
 
         if not hasattr(self, 'resid'):
@@ -2236,19 +2235,19 @@ class RegressionResultsWrapper(wrap.ResultsWrapper):
         'HC0_se' : 'columns',
         'HC1_se' : 'columns',
         'HC2_se' : 'columns',
-        'HC3_se' : 'columns'
+        'HC3_se' : 'columns',
+        'norm_resid' : 'rows',
     }
 
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._attrs,
                                    _attrs)
 
-    _methods = {
-        'norm_resid' : 'rows',
-    }
+    _methods = {}
 
     _wrap_methods = wrap.union_dicts(
                         base.LikelihoodResultsWrapper._wrap_methods,
                         _methods)
+
 wrap.populate_wrapper(RegressionResultsWrapper,
                       RegressionResults)
 

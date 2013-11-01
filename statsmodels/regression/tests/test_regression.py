@@ -137,6 +137,11 @@ class CheckRegressionResults(object):
         assert_almost_equal(self.res1.resid, self.res2.resid,
             self.decimal_resids)
 
+    decimal_norm_resids = DECIMAL_4
+    def test_norm_resids(self):
+        assert_almost_equal(self.res1.norm_resid, self.res2.norm_resid,
+                            self.decimal_norm_resids)
+
 #TODO: test fittedvalues and what else?
 
 class TestOLS(CheckRegressionResults):
@@ -229,14 +234,14 @@ class TestOLS(CheckRegressionResults):
     def test_norm_resid(self):
         resid = self.res1.resid
         norm_resid = resid / np.sqrt(np.mean(resid**2.0))
-        model_norm_resid = self.res1.norm_resid()
+        model_norm_resid = self.res1.norm_resid
         assert_almost_equal(model_norm_resid, norm_resid, DECIMAL_7)
 
     def test_norm_resid_zero_variance(self):
         with warnings.catch_warnings(record=True):
             y = self.res1.model.endog
             res = OLS(y,y).fit()
-            assert_equal(res.resid, res.norm_resid())
+            assert_equal(res.resid, res.norm_resid)
 
 
 class TestRTO(CheckRegressionResults):
