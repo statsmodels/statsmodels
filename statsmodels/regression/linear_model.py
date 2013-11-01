@@ -114,6 +114,9 @@ class RegressionModel(base.LikelihoodModel):
     def df_resid(self, value):
         self._df_resid = value
 
+    def whiten(self, X):
+        raise NotImplementedError("Subclasses should implement.")
+
     def fit(self, method="pinv", **kwargs):
         """
         Full fit of the model.
@@ -1122,7 +1125,7 @@ class RegressionResults(base.LikelihoodModelResults):
             self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
         return self._HC3_se
 
-    #TODO: this needs a test
+    @cache_readonly
     def norm_resid(self):
         """
         Residuals, normalized to have unit length and unit variance.
@@ -1130,10 +1133,6 @@ class RegressionResults(base.LikelihoodModelResults):
         Returns
         -------
         An array wresid/sqrt(scale)
-
-        Notes
-        -----
-        This method is untested
         """
         if not hasattr(self, 'resid'):
             raise ValueError('need normalized residuals to estimate standard '
@@ -1691,19 +1690,19 @@ class RegressionResultsWrapper(wrap.ResultsWrapper):
         'HC0_se' : 'columns',
         'HC1_se' : 'columns',
         'HC2_se' : 'columns',
-        'HC3_se' : 'columns'
+        'HC3_se' : 'columns',
+        'norm_resid' : 'rows',
     }
 
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._attrs,
                                    _attrs)
 
-    _methods = {
-        'norm_resid' : 'rows',
-    }
+    _methods = {}
 
     _wrap_methods = wrap.union_dicts(
                         base.LikelihoodResultsWrapper._wrap_methods,
                         _methods)
+
 wrap.populate_wrapper(RegressionResultsWrapper,
                       RegressionResults)
 
