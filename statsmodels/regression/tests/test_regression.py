@@ -1,11 +1,14 @@
 """
 Test functions for models.regression
 """
+# TODO: Test for LM
+# TODO: Test for OLS, WLS, GLS equivalence
+
 import warnings
 import pandas
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_approx_equal,
-                            assert_raises, assert_equal)
+                            assert_raises, assert_equal, assert_allclose)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
 from statsmodels.regression.linear_model import OLS, WLS, GLS, yule_walker
@@ -454,6 +457,43 @@ class TestGLS_nosigma(CheckRegressionResults):
 
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
+
+class TestOLS_GLS_WLS_equivalence(CheckRegressionResults):
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
+        data.exog = add_constant(data.exog, prepend=False)
+        y = data.endog
+        X = data.exog
+        n = y.shape[0]
+        w = np.ones(n)
+        cls.results = []
+        cls.results.append(OLS(y, X).fit())
+        cls.results.append(WLS(y, X, w).fit())
+        cls.results.append(WLS(y, X, 100.0*w).fit())
+        cls.results.append(GLS(y, X, 0.5*w).fit())
+        cls.results.append(GLS(y, X, np.diag(2.0*w)).fit())
+
+    def test_ll(self):
+        llf = np.array([r.llf for r in self.results])
+        llf_1 = np.ones_like(llf) * self.results[0].llf
+        assert_almost_equal(llf, llf_1, DECIMAL_7)
+
+    def test_params(self):
+        params = np.array([r.params for r in self.results])
+        params_1 = np.array([self.results[0].params] * len(self.results))
+        assert_allclose(params, params_1)
+
+    def test_ss(self):
+        bse = np.array([r.bse for r in self.results])
+        bse_1 = np.array([self.results[0].bse] * len(self.results))
+        assert_allclose(bse, bse_1)
+
+    def test_rsquared(self):
+        rsquared = np.array([r.rsquare for r in self.results])
+        rsquared_1 = np.array([self.results[0].rsquare] * len(self.results))
+        assert_almost_equal(rsquared, rsquared_1, DECIMAL_7)
+
 
 class TestWLSExogWeights(CheckRegressionResults):
     #Test WLS with Greene's credit card data
