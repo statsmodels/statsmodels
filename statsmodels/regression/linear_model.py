@@ -865,6 +865,8 @@ class RegressionResults(base.LikelihoodModelResults):
         The two-tailed p values for the t-stats of the params.
     resid
         The residuals of the model.
+    resid_pearson
+        `wresid` normalized to have unit variance.
     rsquared
         R-squared of a model with an intercept.  This is defined here as
         1 - `ssr`/`centered_tss` if the constant is included in the model and
@@ -1126,9 +1128,9 @@ class RegressionResults(base.LikelihoodModelResults):
         return self._HC3_se
 
     @cache_readonly
-    def norm_resid(self):
+    def resid_pearson(self):
         """
-        Residuals, normalized to have unit length and unit variance.
+        Residuals, normalized to have unit variance.
 
         Returns
         -------
