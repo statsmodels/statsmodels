@@ -499,7 +499,7 @@ def _fit_mle_bfgs(f, score, start_params, fargs, kwargs, disp=True,
 
 
 def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
-                    maxiter=None, callback=None, retall=False,
+                    maxiter=100, callback=None, retall=False,
                     full_output=True, hess=None):
     """
     Parameters
@@ -517,13 +517,6 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
 
     """
 
-    # The maxiter may be set at multiple points throughout statsmodels.
-    # In the following lines of code, we track how its value changes
-    # between layers.
-    maxiter_ = maxiter
-    if maxiter is None:
-        maxiter = 100
-
     # Use unconstrained optimization by default.
     bounds = kwargs.setdefault('bounds', [(None, None)] * len(start_params))
 
@@ -534,9 +527,13 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
     extra_kwargs = dict((x, kwargs[x]) for x in names if x in kwargs)
 
     # Extract values for the options related to the gradient.
-    approx_grad = extra_kwargs.get('approx_grad', False)
+    approx_grad = kwargs.get('approx_grad', False)
     loglike_and_score = kwargs.get('loglike_and_score', None)
     epsilon = kwargs.get('epsilon', None)
+
+    # The approx_grad flag has superpowers nullifying the score function arg.
+    if approx_grad:
+        score = None
 
     # Choose among three options for dealing with the gradient (the gradient
     # of a log likelihood function with respect to its parameters
@@ -549,9 +546,9 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
     if epsilon and not approx_grad:
         raise ValueError('a finite-differences epsilon was provided '
                 'even though we are not using approx_grad')
-    if approx_grad and (score or loglike_and_score):
+    if approx_grad and loglike_and_score:
         raise ValueError('gradient approximation was requested '
-                'even though an analytic score function was given')
+                'even though an analytic loglike_and_score function was given')
     if loglike_and_score:
         func = lambda p, *a : tuple(-x for x in loglike_and_score(p, *a))
     elif score:
