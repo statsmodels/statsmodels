@@ -20,7 +20,7 @@ Other important new features
 ----------------------------
 
 * Other new changes can go
-* In a 
+* In a
 * Bullet list
 
 Major Bugs fixed
@@ -33,14 +33,14 @@ Major Bugs fixed
 Backwards incompatible changes and deprecations
 -----------------------------------------------
 
-* Note any backwards incompatible changes here
+* RegressionResults.norm_resid is now a readonly property, rather than a function.
 
 Development summary and credits
 -------------------------------
 
 A blurb about the number of changes and the contributors list.
 
-.. note:: 
+.. note::
 
    Obtained by running ``git log v0.5.0..HEAD --format='* %aN <%aE>' | sed 's/@/\-at\-/' | sed 's/<>//' | sort -u``.
 
