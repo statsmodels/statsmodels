@@ -864,7 +864,7 @@ class ARMA(tsbase.TimeSeriesModel):
             kwargs.setdefault('approx_grad', True)
         mlefit = super(ARMA, self).fit(start_params, method=solver,
                     maxiter=maxiter, full_output=full_output, disp=disp,
-                    callback = callback, **kwargs)
+                    callback=callback, **kwargs)
         self.mlefit = mlefit
         params = mlefit.params
 
@@ -954,7 +954,7 @@ class ARIMA(ARMA):
         return end - self.k_diff, out_of_sample
 
     def fit(self, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver='lbfgs', maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
