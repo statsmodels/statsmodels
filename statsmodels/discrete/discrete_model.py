@@ -1588,6 +1588,21 @@ class MNLogit(MultinomialModel):
         #NOTE: might need to switch terms if params is reshaped
         return np.dot(firstterm.T, self.exog).flatten()
 
+    def loglike_and_score(self, params):
+        """
+        Returns log likelihood and score, efficiently reusing calculations.
+
+        Note that both of these returned quantities will need to be negated
+        before being minimized by the maximum likelihood fitting machinery.
+
+        """
+        params = params.reshape(self.K, -1, order='F')
+        cdf_dot_exog_params = self.cdf(np.dot(self.exog, params))
+        loglike_value = np.sum(self.wendog * np.log(cdf_dot_exog_params))
+        firstterm = self.wendog[:, 1:] - cdf_dot_exog_params[:, 1:]
+        score_array = np.dot(firstterm.T, self.exog).flatten()
+        return loglike_value, score_array
+
     def jac(self, params):
         """
         Jacobian matrix for multinomial logit model log-likelihood
