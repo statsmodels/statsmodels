@@ -140,6 +140,24 @@ class RegressionModel(base.LikelihoodModel):
     def df_resid(self, value):
         self._df_resid = value
 
+    def _has_constant(self):
+        """
+        Determines whether a model contains a constant or implicit constant,
+        for example a non-unity constant or indicator variables which sum
+        to a constant value.
+
+        Returns
+        -------
+        has_constant: bool
+            True if the model has a constant or implicit constant.
+        """
+        # Easy check, most common case
+        if np.any(np.all(self.exog==1.0,axis=0)):
+            return True
+        # Compute rank of augmented matrix
+        augmented_exog = add_constant(self.exog)
+        return rank(augmented_exog)==rank(self.exog)
+
     def fit(self, method="pinv", **kwargs):
         """
         Full fit of the model.
@@ -810,7 +828,9 @@ class RegressionResults(base.LikelihoodModelResults):
         Heteroscedasticity robust covariance matrix. See HC2_se below.
     cov_HC3
         Heteroscedasticity robust covariance matrix. See HC3_se below.
-    df_model :
+    cov_type
+        Parameter covariance estimator used for standard errors and t-stats
+    df_model
         Model degress of freedom. The number of regressors `p`. Does not
         include the constant if one is present
     df_resid
@@ -920,6 +940,10 @@ class RegressionResults(base.LikelihoodModelResults):
             self._wexog_singular_values = model.wexog_singular_values
         else:
             self._wexog_singular_values = None
+        self.cov_type = 'nonrobust'
+        self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
+                         'covariance matrix of the errors is correctly ' +
+                         'specified.'}
 
         self.df_model = model.df_model
         self.df_resid = model.df_resid
@@ -1238,15 +1262,22 @@ class RegressionResults(base.LikelihoodModelResults):
         A most nests another model if the regressors in the smaller model are spanned
         by the regressors in the larger model and the regressand is identical.
         """
+
+        if self.model.nobs != restricted.model.nobs:
+            return False
+
         full_rank = self.model.rank
         restricted_rank = restricted.model.rank
+        if full_rank <= restricted_rank:
+            return False
 
         restricted_exog = restricted.model.wexog
         full_wresid  = self.wresid
 
         scores = restricted_exog * full_wresid[:,None]
-        score_l2 = np.sqrt(np.sum(scores.mean(0) ** 2))
-        return full_rank > restricted_rank and np.allclose(score_l2,0)
+        score_l2 = np.sqrt(np.mean(scores.mean(0) ** 2))
+        # TODO: Could be improved, and may fail depending on scale of regressors
+        return np.allclose(score_l2,0)
 
 
     def compare_lm_test(self, restricted, demean=True, use_lr=False):
@@ -1283,6 +1314,9 @@ class RegressionResults(base.LikelihoodModelResults):
         import statsmodels.stats.sandwich_covariance as sw
         from numpy.linalg import inv
 
+        if not self._is_nested(restricted):
+            raise ValueError("Restricted model is not nested by full model.")
+
         wresid = restricted.wresid
         wexog = self.model.wexog
         scores = wexog * wresid[:,None]
@@ -1304,8 +1338,8 @@ class RegressionResults(base.LikelihoodModelResults):
         # If HAC then need to use HAC
         # If Cluster, shoudl use cluster
 
-        cov_type = getattr(self, 'cov_type', 'Homoskedastic')
-        if cov_type == 'Homoskedastic':
+        cov_type = getattr(self, 'cov_type', 'nonrobust')
+        if cov_type == 'nonrobust':
             sigma2 = np.mean(wresid**2)
             XpX = np.dot(wexog.T,wexog) / n
             Sinv = inv(sigma2 * XpX)
@@ -1319,12 +1353,12 @@ class RegressionResults(base.LikelihoodModelResults):
         elif cov_type == 'cluster':
             #cluster robust standard errors
             groups = self.cov_kwds['groups']
-            # TODO: Might need demean option in S_crosssection by group
+            # TODO: Might need demean option in S_crosssection by group?
             Sinv = inv(sw.S_crosssection(scores, groups))
         else:
-            raise ValueError('only HC, HAC and cluster are currently connected')
+            raise ValueError('Only H, HC, HAC and cluster are currently connected')
 
-        lm_value = n * s.dot(Sinv).dot(s.T)
+        lm_value = n * chain_dot(s,Sinv,s.T)
         p_value = stats.chi2.sf(lm_value, df_diff)
         return lm_value, p_value, df_diff
 
@@ -1362,15 +1396,16 @@ class RegressionResults(base.LikelihoodModelResults):
         and no autocorrelation (sphericity).
 
         """
-        has_robust1 = (hasattr(self, 'cov_type') and
-                                     (self.cov_type != 'nonrobust'))
-        has_robust2 = (hasattr(restricted, 'cov_type') and
-                                     (restricted.cov_type != 'nonrobust'))
+
+        has_robust1 = getattr(self, 'cov_type', 'nonrobust') != 'nonrobust'
+        has_robust2 = (getattr(restricted, 'cov_type', 'nonrobust') !=
+                                                                   'nonrobust')
 
         if has_robust1 or has_robust2:
             import warnings
             warnings.warn('F test for comparison is likely invalid with ' +
                           'robust covariance, proceeding anyway', UserWarning)
+
         ssr_full = self.ssr
         ssr_restr = restricted.ssr
         df_full = self.df_resid
@@ -1440,14 +1475,28 @@ class RegressionResults(base.LikelihoodModelResults):
         but still return the results without taking unspecified
         heteroscedasticity or correlation into account.
 
+        This test compares the loglikelihood of the two models.
+        This may not be a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results without taking unspecified
+        heteroscedasticity or correlation into account.
+
+        is the average score of the model evaluated using the residuals from
+        null model and the regressors from the alternative model and :math:`S`
+        is the covariance of the scores, :math:`s_{i}`.  The covariance of the
+        scores is estimated using the same estimator as in the alternative model.
+
         TODO: put into separate function, needs tests
         """
 
         # See mailing list discussion October 17,
 
+        if large_sample:
+            return self.compare_lm_test(restricted, use_lr=True)
 
-        has_robust1 = (getattr(self, 'cov_type', None) != 'nonrobust')
-        has_robust2 = (getattr(restricted, 'cov_type', None) != 'nonrobust')
+        has_robust1 = (getattr(self, 'cov_type', 'nonrobust') != 'nonrobust')
+        has_robust2 = (getattr(restricted, 'cov_type', 'nonrobust') !=
+                                                                  'nonrobust')
 
         if has_robust1 or has_robust2:
             import warnings
@@ -1488,8 +1537,8 @@ class RegressionResults(base.LikelihoodModelResults):
         results : results instance
             This method creates a new results instance with the requested
             robust covariance as the default covariance of the parameters.
-            Inferential statistics like p-values and tests will be based on
-            this covariance matrix.
+            Inferential statistics like p-values and hypothesis tests will be
+            based on this covariance matrix.
 
         Notes
         -----
@@ -1563,7 +1612,6 @@ class RegressionResults(base.LikelihoodModelResults):
 
         TODO: Currently there is no check for extra or misspelled keywords,
             except in the case of cov_type `HCx`
-
 
         """
 
