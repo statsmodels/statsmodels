@@ -5,10 +5,7 @@
 # TODO: Fix issue with constant and GLS
 # TODO: GLS: add options Iterative GLS, for iterative fgls if sigma is None
 # TODO: GLS: default if sigma is none should be two-step GLS
-# TODO: GLS loglike is often -inf
-# TODO: Why is WLS loglike different from GLS log-like when the weights are constant?
 # TODO: Check nesting when performing model based tests, lr, wald, lm
-# TODO: Nesting test
 """
 This module implements standard regression models:
 
@@ -58,8 +55,6 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
 
 
-
-
 def _get_sigma(sigma, nobs):
     """
     Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
@@ -98,6 +93,7 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
+        self.k_constant = float(self._has_constant())
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -139,6 +135,24 @@ class RegressionModel(base.LikelihoodModel):
     @df_resid.setter
     def df_resid(self, value):
         self._df_resid = value
+
+    def _has_constant(self):
+        """
+        Determines whether a model contains a constant or implicit constant,
+        for example a non-unity constant or indicator variables which sum
+        to a constant value.
+
+        Returns
+        -------
+        has_constant: bool
+            True if the model has a constant or implicit constant.
+        """
+        # Easy check, most common case
+        if np.any(np.all(self.exog==1.0,axis=0)):
+            return True
+        # Compute rank of augmented matrix
+        augmented_exog = add_constant(self.exog)
+        return rank(augmented_exog)==rank(self.exog)
 
     def fit(self, method="pinv", **kwargs):
         """
@@ -323,6 +337,7 @@ class GLS(RegressionModel):
 
         #store attribute names for data arrays
         self._data_attr.extend(['sigma', 'cholsigmainv'])
+
 
 
     def whiten(self, X):
@@ -1206,16 +1221,21 @@ class RegressionResults(base.LikelihoodModelResults):
         A most nests another model if the regressors in the smaller model are spanned
         by the regressors in the larger model and the regressand is identical.
         """
+        if self.model.nobs != restricted.model.nobs:
+            return False
+
         full_rank = self.model.rank
         restricted_rank = restricted.model.rank
+        if full_rank <= restricted_rank:
+            return False
 
         restricted_exog = restricted.model.wexog
         full_wresid  = self.wresid
 
         scores = restricted_exog * full_wresid[:,None]
-        score_l2 = np.sqrt(np.sum(scores.mean(0) ** 2))
-        return full_rank > restricted_rank and np.allclose(score_l2,0)
-
+        score_l2 = np.sqrt(np.mean(scores.mean(0) ** 2))
+        # TODO: Could be improved, and may fail depending on scale of regressors
+        return np.allclose(score_l2,0)
 
     def compare_lm_test(self, restricted, demean=True, use_lr=False):
         """Use Lagrange Multiplier test to test whether restricted model is correct
