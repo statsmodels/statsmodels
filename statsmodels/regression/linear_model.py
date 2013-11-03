@@ -370,9 +370,9 @@ class GLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the Gaussian loglikelihood function at params.
+        Returns the value of the Gaussian log-likelihood function at params.
 
-        Given the whitened design matrix, the loglikelihood is evaluated
+        Given the whitened design matrix, the log-likelihood is evaluated
         at the parameter vector `params` for the dependent variable `endog`.
 
         Parameters
@@ -383,12 +383,12 @@ class GLS(RegressionModel):
         Returns
         -------
         loglike : float
-            The value of the loglikelihood function for a GLS Model.
+            The value of the log-likelihood function for a GLS Model.
 
 
         Notes
         -----
-        The loglikelihood function for the normal distribution is
+        The log-likelihood function for the normal distribution is
 
         .. math:: -\\frac{n}{2}\\log\\left(\\left(Y-\\hat{Y}\\right)^{\\prime}\\left(Y-\\hat{Y}\\right)\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}\\log\\left(\\left|\\Sigma\\right|\\right)
 
@@ -498,9 +498,9 @@ class WLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian log likelihood function at params.
+        Returns the value of the gaussian log-likelihood function at params.
 
-        Given the whitened design matrix, the log likelihood is evaluated
+        Given the whitened design matrix, the log-likelihood is evaluated
         at the parameter vector `params` for the dependent variable `Y`.
 
         Parameters
@@ -510,7 +510,8 @@ class WLS(RegressionModel):
 
         Returns
         -------
-        The value of the log likelihood function for a WLS Model.
+        llf : float
+            The value of the log-likelihood function for a WLS Model.
 
         Notes
         --------
@@ -579,7 +580,7 @@ class OLS(WLS):
         Parameters
         ----------
         params : array-like
-            The coefficients with which to estimate the loglikelihood.
+            The coefficients with which to estimate the log-likelihood.
 
         Returns
         -------
@@ -2078,7 +2079,7 @@ class OLSResults(RegressionResults):
         -------
 
         res : tuple
-            The p-value and -2 times the log likelihood ratio for the
+            The p-value and -2 times the log-likelihood ratio for the
             hypothesized values.
 
         Examples
@@ -2282,7 +2283,7 @@ if __name__ == "__main__":
 | Adjusted R-squared:        0.992465    Omnibus:                0.748615 |
 | F-statistic:                330.285    Prob(Omnibus):          0.687765 |
 | Prob (F-statistic):     4.98403e-10    JB:                     0.352773 |
-| Log likelihood:            -109.617    Prob(JB):               0.838294 |
+| log-likelihood:            -109.617    Prob(JB):               0.838294 |
 | AIC criterion:              233.235    Skew:                   0.419984 |
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
