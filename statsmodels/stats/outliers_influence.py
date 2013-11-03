@@ -55,7 +55,6 @@ def outlier_test(model_results, method='bonf', alpha=.05, labels=None,
     The unadjusted p-value is stats.t.sf(abs(resid), df) where
     df = df_resid - 1.
     """
-    # TODO: Is there a reference for this test?
     from scipy import stats # lazy import
     infl = getattr(model_results, 'get_influence', None)
     if infl is None:
@@ -117,7 +116,6 @@ def reset_ramsey(res, degree=5):
     r_matrix = np.eye(degree-1, exog.shape[1], k_vars)
     #df1 = degree - 1
     #df2 = exog.shape[0] - degree - res.df_model  (without constant)
-    # TODO: Should depend on the covariance estimator used
     return res_aux.f_test(r_matrix) #, r_matrix, res_aux
 
 
@@ -552,7 +550,6 @@ class OLSInfluence(object):
         det_cov_params = np.zeros_like(endog)
 
         cv_iter = LeaveOneOut(self.nobs)
-        # TODO: This can probably be implemented using partitioned inverse with the same complexity as a single OLS model
         for inidx, outidx in cv_iter:
             res_i = self.model_class(endog[inidx], exog[inidx]).fit()
             params[outidx] = res_i.params
