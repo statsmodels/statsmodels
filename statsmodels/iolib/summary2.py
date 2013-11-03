@@ -17,11 +17,7 @@ class Summary(object):
         self.title = None
 
     def __str__(self):
-        print "Calling __str__"
-        temp = self.as_text()
-        print "Printing the as_text() output"
-        print temp
-        return temp
+        return self.as_text()
 
     def __repr__(self):
         return str(type(self)) + '\n"""\n' + self.__str__() + '\n"""'
@@ -181,7 +177,7 @@ class Summary(object):
         txt = '\n'.join(txt)
 
         out = '\n'.join([title, tab, txt])
-        print out
+
         return out
 
     def as_html(self):
@@ -412,23 +408,20 @@ def _make_unique(list_of_names):
     return header
 
 
-def comparison(results, float_format='%.4f', model_names=[], stars=False,
+def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         info_dict=None, regressor_order=[]):
-    #TODO: Autoformat function to improve presentation of variables with different scales
-    '''Summary containing multiple models showing parameters, standard errors
-    and other model-specific quantities such as $R^2$, log-likelihood or J-test
-    statistic.
+    '''Summarize multiple results instances side-by-side (coefs and SEs)
 
     Parameters
     ----------
     results : statsmodels results instance or list of result instances
     float_format : string
-        float format for coefficients and standard errors, or format function
-        Default : autofmt
+        float format for coefficients and standard errors
+        Default : '%.4f'
     model_names : list of strings of length len(results) if the names are not
         unique, a roman number will be appended to all model names
     stars : bool
-        print significance stars using * for 10%, ** for 5% and *** for 1%, all assuming normality
+        print significance stars
     info_dict : dict
         dict of lambda functions to be applied to results instances to retrieve
         model info. To use specific information for different models, add a (nested)
@@ -437,8 +430,8 @@ def comparison(results, float_format='%.4f', model_names=[], stars=False,
         `R2` for OLS regression models, but additionally `N` for all other results.
         Default : None (use the info_dict specified in result.default_model_infos, if
         this property exists)
-    variable_order : list of strings
-        list of names of the variables in the desired order. All variables
+    regressor_order : list of strings
+        list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
     '''
 
@@ -446,6 +439,7 @@ def comparison(results, float_format='%.4f', model_names=[], stars=False,
         results = [results]
 
     cols = [_col_params(x, stars=stars, float_format=float_format) for x in results]
+
     # Unique column names (pandas has problems merging otherwise)
     if model_names:
         colnames = _make_unique(model_names)
@@ -481,7 +475,6 @@ def comparison(results, float_format='%.4f', model_names=[], stars=False,
         df.columns = [name]
     merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
     info = reduce(merg, cols)
-
     dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
     dat.columns = summ.columns
     dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
@@ -491,8 +484,6 @@ def comparison(results, float_format='%.4f', model_names=[], stars=False,
 
     smry = Summary()
     smry.add_df(summ, header=True, align='l')
-    if not info.empty:
-        smry.add_df(info, header=False, align='l')
     smry.add_text('Standard errors in parentheses.')
     if stars:
         smry.add_text('* p<.1, ** p<.05, ***p<.01')
@@ -548,21 +539,3 @@ def _simple_tables(tables, settings, pad_col=None, pad_index=None):
             float_format=float_format, header=header, index=index,
             pad_col=pad_col[i], pad_index=pad_index[i]))
     return simple_tables
-
-def _auto_fmt(value):
-    # TODO: Error handling
-    if isinstance(value, str):
-        return value
-    # TODO: Think of alternatives - don't want to convert the wrong thing
-    is_int_like = np.allclose(value, np.floor(value))
-    is_small = np.abs(value) < .01
-    if is_int_like:
-        return '{:0.0f}'.format(value)
-    elif is_small:
-        power = np.ceil(np.abs(np.log10(np.abs(value))))
-        value10 = value * 10.0 ** power
-        return '{:0.3e}'.format(value)
-    else:
-        return '{:0.4f}'.format(value)
-
-
