@@ -1,7 +1,6 @@
 # TODO: Check tests with constant and without.  This might be an issue since df_model does nto include constant
 # TODO: Determine which tests are valid for GLSAR, and under what conditions
 # TODO: Fix HCCM to work with GLS/WLS
-# TODO: Should always set cov_type
 # TODO: Fix issue with constant and GLS
 # TODO: GLS: add options Iterative GLS, for iterative fgls if sigma is None
 # TODO: GLS: default if sigma is none should be two-step GLS
@@ -463,6 +462,8 @@ class WLS(RegressionModel):
                                   weights=weights, hasconst=hasconst)
         nobs = self.exog.shape[0]
         weights = self.weights
+        # Experimental normalization of weights
+        weights = weights / np.sum(weights) * nobs
         if len(weights) != nobs and weights.size == nobs:
             raise ValueError('Weights must be scalar or same length as design')
 
@@ -512,7 +513,8 @@ class WLS(RegressionModel):
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
-        llf += 0.5 * np.sum(np.log(self.weights))
+        # This makes it GLS-like
+        #llf += 0.5 * np.sum(np.log(self.weights))
         return llf
 
 
@@ -825,6 +827,8 @@ class RegressionResults(base.LikelihoodModelResults):
         See HC2_se below.  Only available after calling HC2_se.
     cov_HC3
         See HC3_se below.  Only available after calling HC3_se.
+    cov_type
+        Parameter covariance estimator used for standard errors and t-stats
     df_model :
         Model degress of freedom. The number of regressors `p`. Does not
         include the constant if one is present
@@ -938,11 +942,14 @@ class RegressionResults(base.LikelihoodModelResults):
         super(RegressionResults, self).__init__(model, params,
                                                 normalized_cov_params,
                                                 scale)
+
         self._cache = resettable_cache()
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values
         else:
             self._wexog_singular_values = None
+        self.cov_type = 'nonrobust'
+        self.cov_kwds = {'description' : 'Standard Errors are assume homoskedasticity.'}
 
     def __str__(self):
         self.summary()
@@ -1292,8 +1299,8 @@ class RegressionResults(base.LikelihoodModelResults):
         # If HAC then need to use HAC
         # If Cluster, shoudl use cluster
 
-        cov_type = getattr(self, 'cov_type', 'Homoskedastic')
-        if cov_type == 'Homoskedastic':
+        cov_type = getattr(self, 'cov_type', 'nonrobust')
+        if cov_type == 'nonrobust':
             sigma2 = np.mean(wresid**2)
             XpX = np.dot(wexog.T,wexog) / n
             Sinv = inv(sigma2 * XpX)
@@ -1307,12 +1314,12 @@ class RegressionResults(base.LikelihoodModelResults):
         elif cov_type == 'cluster':
             #cluster robust standard errors
             groups = self.cov_kwds['groups']
-            # TODO: Might need demean option in S_crosssection by group
+            # TODO: Might need demean option in S_crosssection by group?
             Sinv = inv(sw.S_crosssection(scores, groups))
         else:
-            raise ValueError('only HC, HAC and cluster are currently connected')
+            raise ValueError('Only HC, HAC and cluster are currently connected')
 
-        lm_value = n * s.dot(Sinv).dot(s.T)
+        lm_value = n * chain_dot(s,Sinv,s.T)
         p_value = stats.chi2.sf(lm_value, df_diff)
         return lm_value, p_value, df_diff
 
