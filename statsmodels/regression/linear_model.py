@@ -5,10 +5,7 @@
 # TODO: Fix issue with constant and GLS
 # TODO: GLS: add options Iterative GLS, for iterative fgls if sigma is None
 # TODO: GLS: default if sigma is none should be two-step GLS
-# TODO: GLS loglike is often -inf
-# TODO: Why is WLS loglike different from GLS log-like when the weights are constant?
 # TODO: Check nesting when performing model based tests, lr, wald, lm
-# TODO: Nesting test
 """
 This module implements standard regression models:
 
@@ -58,8 +55,6 @@ import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
 
 
-
-
 def _get_sigma(sigma, nobs):
     """
     Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
@@ -98,6 +93,7 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
+        self.k_constant = float(self._has_constant())
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
