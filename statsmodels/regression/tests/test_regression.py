@@ -557,7 +557,6 @@ class TestOLS_GLS_WLS_equivalence(object):
         cls.results = []
         cls.results.append(OLS(y, X).fit())
         cls.results.append(WLS(y, X, w).fit())
-        cls.results.append(WLS(y, X, 100.0*w).fit())
         cls.results.append(GLS(y, X, 0.5*w).fit())
         cls.results.append(GLS(y, X, np.diag(2.0*w)).fit())
 
@@ -831,7 +830,6 @@ def test_summary():
 %\\caption{OLS Regression Results}
 \\end{center}"""
     assert_equal(table, expected)
-
 
 
 
