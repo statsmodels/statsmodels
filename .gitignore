@@ -48,3 +48,6 @@ help
 
 # Project specific
 statsmodels/version.py
+
+.idea
+.idea

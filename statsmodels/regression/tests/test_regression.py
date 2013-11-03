@@ -455,6 +455,7 @@ class TestGLS_nosigma(CheckRegressionResults):
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
+
 class TestLM(object):
     @classmethod
     def setupClass(cls):
@@ -820,7 +821,6 @@ def test_summary():
 %\\caption{OLS Regression Results}
 \\end{center}"""
     assert_equal(table, expected)
-
 
 
 

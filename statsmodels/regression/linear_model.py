@@ -35,14 +35,13 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy.stats.stats import ss
 from statsmodels.tools.tools import (add_constant, rank,
-                                             recipr, chain_dot, pinv_extended)
+                                     recipr, chain_dot, pinv_extended)
 from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly, cache_writable)
+                                          cache_readonly,
+                                          cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
-from scipy import optimize
-from scipy.stats import chi2
 
 def _get_sigma(sigma, nobs):
     """
@@ -73,7 +72,6 @@ def _get_sigma(sigma, nobs):
 
 class RegressionModel(base.LikelihoodModel):
     """
-    Base class for linear regression models not used by users.
 
     Intended for subclassing.
     """
@@ -471,7 +469,7 @@ class WLS(RegressionModel):
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            return np.sqrt(self.weights)[:,None]*X
+            return np.sqrt(self.weights)[:, None]*X
 
     def loglike(self, params):
         """
@@ -773,7 +771,6 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 
     rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
-    if inv == True:
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
@@ -924,8 +921,9 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
-                                                 normalized_cov_params,
-                                                 scale)
+                                                normalized_cov_params,
+                                                scale)
+
         self._cache = resettable_cache()
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values
@@ -1191,6 +1189,7 @@ class RegressionResults(base.LikelihoodModelResults):
                              'deviation')
         return self.wresid * recipr(np.sqrt(self.scale))
 
+
     def _is_nested(self, restricted):
         """
         Parameters
@@ -1336,6 +1335,7 @@ class RegressionResults(base.LikelihoodModelResults):
         Notes
         -----
         See mailing list discussion October 17,
+
 
         This test compares the residual sum of squares of the two models.
         This is not a valid test, if there is unspecified heteroscedasticity
