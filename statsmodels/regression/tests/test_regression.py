@@ -457,7 +457,10 @@ class TestGLS_nosigma(CheckRegressionResults):
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
-class TestLM(CheckRegressionResults):
+
+
+class TestLM(object):
+
     @classmethod
     def setupClass(cls):
         # TODO: Test HAC method
@@ -477,75 +480,68 @@ class TestLM(CheckRegressionResults):
         cls.X = X
         cls.Y = y
 
-        def test_LM_homoskedastic(self):
-            resid = self.res1_restricted.wresid
-            n = resid.shape[0]
-            X = self.X
-            S = np.dot(resid,resid) / n * np.dot(X.T,X) / n
-            Sinv = np.linalg.inv(S)
-            s = np.mean(X * resid[:,None], 0)
-            LMstat = n * np.dot(np.dot(s,Sinv),s.T)
-            LMstat_OLS = self.res1_full.compare_lm_test(self.res1_restricted)
-            LMstat2 = LMstat_OLS[0]
-            assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
-        def test_LM_heteroskedastic_nodemean(self):
-            resid = self.res1_restricted.wresid
-            n = resid.shape[0]
-            X = self.X
-            scores = X * resid[:,None]
-            S = np.dot(scores.T,scores) / n
-            Sinv = np.linalg.inv(S)
-            s = np.mean(scores, 0)
-            LMstat = n * np.dot(np.dot(s,Sinv),s.T)
-            LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, demean=False)
-            LMstat2 = LMstat_OLS[0]
-            assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
+    def test_LM_homoskedastic(self):
+        resid = self.res1_restricted.wresid
+        n = resid.shape[0]
+        X = self.X
+        S = np.dot(resid,resid) / n * np.dot(X.T,X) / n
+        Sinv = np.linalg.inv(S)
+        s = np.mean(X * resid[:,None], 0)
+        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
+        LMstat_OLS = self.res1_full.compare_lm_test(self.res1_restricted)
+        LMstat2 = LMstat_OLS[0]
+        assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
-        def test_LM_heteroskedastic_demean(self):
-            resid = self.res1_restricted.wresid
-            n = resid.shape[0]
-            X = self.X
-            scores = X * resid[:,None]
-            scores_demean = scores - scores.mean(0)
-            S = np.dot(scores_demean.T,scores_demean) / n
-            Sinv = np.linalg.inv(S)
-            s = np.mean(scores, 0)
-            LMstat = n * np.dot(np.dot(s,Sinv),s.T)
-            LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted)
-            LMstat2 = LMstat_OLS[0]
-            assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
+    def test_LM_heteroskedastic_nodemean(self):
+        resid = self.res1_restricted.wresid
+        n = resid.shape[0]
+        X = self.X
+        scores = X * resid[:,None]
+        S = np.dot(scores.T,scores) / n
+        Sinv = np.linalg.inv(S)
+        s = np.mean(scores, 0)
+        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
+        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, demean=False)
+        LMstat2 = LMstat_OLS[0]
+        assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
-        def test_LM_heteroskedastic_LRversion(self):
-            resid = self.res1_restricted.wresid
-            resid_full = self.res1_full.wresid
-            n = resid.shape[0]
-            X = self.X
-            scores = X * resid[:,None]
-            s = np.mean(scores, 0)
-            scores = X * resid_full[:,None]
-            S = np.dot(scores.T,scores) / n
-            Sinv = np.linalg.inv(S)
-            LMstat = n * np.dot(np.dot(s,Sinv),s.T)
-            LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, use_lr = True)
-            LMstat2 = LMstat_OLS[0]
-            assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
+    def test_LM_heteroskedastic_demean(self):
+        resid = self.res1_restricted.wresid
+        n = resid.shape[0]
+        X = self.X
+        scores = X * resid[:,None]
+        scores_demean = scores - scores.mean(0)
+        S = np.dot(scores_demean.T,scores_demean) / n
+        Sinv = np.linalg.inv(S)
+        s = np.mean(scores, 0)
+        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
+        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted)
+        LMstat2 = LMstat_OLS[0]
+        assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
-            pass
+    def test_LM_heteroskedastic_LRversion(self):
+        resid = self.res1_restricted.wresid
+        resid_full = self.res1_full.wresid
+        n = resid.shape[0]
+        X = self.X
+        scores = X * resid[:,None]
+        s = np.mean(scores, 0)
+        scores = X * resid_full[:,None]
+        S = np.dot(scores.T,scores) / n
+        Sinv = np.linalg.inv(S)
+        LMstat = n * np.dot(np.dot(s,Sinv),s.T)
+        LMstat_OLS = self.res2_full.compare_lm_test(self.res2_restricted, use_lr = True)
+        LMstat2 = LMstat_OLS[0]
+        assert_almost_equal(LMstat, LMstat2, DECIMAL_7)
 
-
-        n = y.shape[0]
-        w = np.ones(n)
-        cls.results = []
-        cls.results.append(OLS(y, X).fit())
-        cls.results.append(WLS(y, X, w).fit())
-        cls.results.append(WLS(y, X, 100.0*w).fit())
-        cls.results.append(GLS(y, X, 0.5*w).fit())
-        cls.results.append(GLS(y, X, np.diag(2.0*w)).fit())
+    def test_LM_nonnested(self):
+        assert_raises(ValueError, self.res2_restricted.compare_lm_test, self.res2_full)
 
 
 
-class TestOLS_GLS_WLS_equivalence(CheckRegressionResults):
+class TestOLS_GLS_WLS_equivalence(object):
+
     @classmethod
     def setupClass(cls):
         data = longley.load()
@@ -557,9 +553,9 @@ class TestOLS_GLS_WLS_equivalence(CheckRegressionResults):
         cls.results = []
         cls.results.append(OLS(y, X).fit())
         cls.results.append(WLS(y, X, w).fit())
-        cls.results.append(WLS(y, X, 100.0*w).fit())
-        cls.results.append(GLS(y, X, 0.5*w).fit())
-        cls.results.append(GLS(y, X, np.diag(2.0*w)).fit())
+        cls.results.append(GLS(y, X, 100*w).fit())
+        cls.results.append(GLS(y, X, np.diag(0.1*w)).fit())
+
 
     def test_ll(self):
         llf = np.array([r.llf for r in self.results])
@@ -577,8 +573,8 @@ class TestOLS_GLS_WLS_equivalence(CheckRegressionResults):
         assert_allclose(bse, bse_1)
 
     def test_rsquared(self):
-        rsquared = np.array([r.rsquare for r in self.results])
-        rsquared_1 = np.array([self.results[0].rsquare] * len(self.results))
+        rsquared = np.array([r.rsquared for r in self.results])
+        rsquared_1 = np.array([self.results[0].rsquared] * len(self.results))
         assert_almost_equal(rsquared, rsquared_1, DECIMAL_7)
 
 
@@ -807,6 +803,7 @@ def test_summary():
 \\textbf{Time:}             &     13:46:07     & \\textbf{  Log-Likelihood:    } &   -109.62   \\\\
 \\textbf{No. Observations:} &          16      & \\textbf{  AIC:               } &     233.2   \\\\
 \\textbf{Df Residuals:}     &           9      & \\textbf{  BIC:               } &     238.6   \\\\
+\\textbf{Df Model:}         &           6      & \\textbf{                     } &             \\\\
 \\bottomrule
 \\end{tabular}
 \\begin{tabular}{lccccc}
