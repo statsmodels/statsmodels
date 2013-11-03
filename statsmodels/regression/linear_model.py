@@ -35,13 +35,14 @@ from scipy.linalg import toeplitz
 from scipy import stats
 from scipy.stats.stats import ss
 from statsmodels.tools.tools import (add_constant, rank,
-                                     recipr, chain_dot, pinv_extended)
+                                             recipr, chain_dot, pinv_extended)
 from statsmodels.tools.decorators import (resettable_cache,
-                                          cache_readonly,
-                                          cache_writable)
+        cache_readonly, cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
+from scipy import optimize
+from scipy.stats import chi2
 
 def _get_sigma(sigma, nobs):
     """
@@ -771,6 +772,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 
     rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
+    if inv == True:
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
