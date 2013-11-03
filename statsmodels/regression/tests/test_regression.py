@@ -457,7 +457,7 @@ class TestGLS_nosigma(CheckRegressionResults):
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
 
-class TestLM(CheckRegressionResults):
+class TestLM(object):
     @classmethod
     def setupClass(cls):
         # TODO: Test HAC method
@@ -545,7 +545,7 @@ class TestLM(CheckRegressionResults):
 
 
 
-class TestOLS_GLS_WLS_equivalence(CheckRegressionResults):
+class TestOLS_GLS_WLS_equivalence(object):
     @classmethod
     def setupClass(cls):
         data = longley.load()
@@ -577,8 +577,8 @@ class TestOLS_GLS_WLS_equivalence(CheckRegressionResults):
         assert_allclose(bse, bse_1)
 
     def test_rsquared(self):
-        rsquared = np.array([r.rsquare for r in self.results])
-        rsquared_1 = np.array([self.results[0].rsquare] * len(self.results))
+        rsquared = np.array([r.rsquared for r in self.results])
+        rsquared_1 = np.array([self.results[0].rsquared] * len(self.results))
         assert_almost_equal(rsquared, rsquared_1, DECIMAL_7)
 
 
@@ -839,10 +839,9 @@ if __name__=="__main__":
 
     import nose
     # run_module_suite()
-    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
-                   exit=False)
-
-    # nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
+    #nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'], exit=False)
+    nose.runmodule()
+    nose.runmodule(argv=[__file__,'-vvs','-x'], exit=False) #, '--pdb'
 
 
 
