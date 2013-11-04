@@ -59,8 +59,7 @@ def _get_sigma(sigma, nobs):
         if sigma.shape != (nobs,):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                              "array of shape %s x %s" % (nobs, nobs))
-        cholsigmainv = np.diag(1/sigma**.5)
-        sigma = np.diag(sigma)
+        cholsigmainv = 1/np.sqrt(sigma)
     else:
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
@@ -291,6 +290,7 @@ class GLS(RegressionModel):
     #TODO: add options igls, for iterative fgls if sigma is None
     #TODO: default is sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
+
         super(GLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
                                   cholsigmainv=cholsigmainv)
@@ -317,10 +317,18 @@ class GLS(RegressionModel):
         regression.GLS
         """
         X = np.asarray(X)
-        if np.any(self.sigma) and not self.sigma.shape == ():
-            return np.dot(self.cholsigmainv, X)
-        else:
+        if self.sigma is None or self.sigma.shape == ():
             return X
+        else:
+            if self.sigma.ndim == 2:
+                return np.dot(self.cholsigmainv, X)
+            else:
+                if X.ndim == 2:
+                    return X * self.cholsigmainv[:, None]
+                else:
+                    return X * self.cholsigmainv
+
+
 
     def loglike(self, params):
         """
@@ -356,7 +364,10 @@ class GLS(RegressionModel):
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
         if np.any(self.sigma) and self.sigma.ndim == 2:
         #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
-            llf -= .5*np.log(np.linalg.det(self.sigma))
+            if self.sigma.ndim==2:
+                llf -= .5*np.log(np.linalg.det(self.sigma))
+            else:
+                llf -= 0.5*np.sum(np.log(self.sigma))
             # with error covariance matrix
         return llf
 
