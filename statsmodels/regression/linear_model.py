@@ -358,14 +358,13 @@ class GLS(RegressionModel):
         X = np.asarray(X)
         if self.sigma is None or self.sigma.shape == ():
             return X
-        else:
-            if self.sigma.ndim == 2:
-                return np.dot(self.cholsigmainv, X)
+        elif self.sigma.ndim == 1:
+            if X.ndim == 1:
+                return X * self.cholsigmainv
             else:
-                if X.ndim == 2:
-                    return X * self.cholsigmainv[:, None]
-                else:
-                    return X * self.cholsigmainv
+                return X * self.cholsigmainv[:, None]
+        else:
+            return np.dot(self.cholsigmainv, X)
 
 
 
