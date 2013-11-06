@@ -2283,7 +2283,7 @@ if __name__ == "__main__":
 | Adjusted R-squared:        0.992465    Omnibus:                0.748615 |
 | F-statistic:                330.285    Prob(Omnibus):          0.687765 |
 | Prob (F-statistic):     4.98403e-10    JB:                     0.352773 |
-| log-likelihood:            -109.617    Prob(JB):               0.838294 |
+| Log likelihood:            -109.617    Prob(JB):               0.838294 |
 | AIC criterion:              233.235    Skew:                   0.419984 |
 | BIC criterion:              238.643    Kurtosis:                2.43373 |
 ---------------------------------------------------------------------------
