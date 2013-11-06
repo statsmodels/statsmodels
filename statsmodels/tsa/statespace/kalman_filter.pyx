@@ -97,7 +97,9 @@ cpdef kalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed)
                     double [:]       mu, # kx0      (parameters)
                     double [::1,:]   F,  # kxk      (parameters)
                     double [::1,:]   R,  # nxn      (parameters: covariance matrix)
-                    double [::1,:]   Q): # kxk      (parameters: covariance matrix)
+                    double [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                    double [:]       beta_tt_init=None,
+                    double [::1,:]   P_tt_init=None):
     
     cdef double [::1,:,:] P_tt, P_tt1, f_tt1, gain
     cdef int [::1,:] ipiv
@@ -134,28 +136,34 @@ cpdef kalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed)
     y_tt1 = np.zeros((n,T+1), float, order="F")      # T+1xn
     eta_tt1 = np.zeros((n,T+1), float, order="F")    # T+1xn
     f_tt1 = np.zeros((n,n,T+1), float, order="F")    # T+1xnxn
-    gain = np.zeros((k,k,T+1), float, order="F")     # T+1xkxk
+    gain = np.zeros((k,n,T+1), float, order="F")     # T+1xkxn
     ll = np.zeros((T+1,), float)                     # T+1
-    tmp = np.empty((ldwork,ldwork), float, order="F")
     work = np.empty((ldwork,ldwork), float, order="F")
     ipiv = np.empty((ldwork,ldwork), np.int32, order="F")
     PHT = np.empty((k,n), float, order="F")
-    f_inv = np.empty((k,k), float, order="F")
+    f_inv = np.empty((n,n), float, order="F")
     
     # Initial values
-    #beta_tt[:,0] = np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
-    #print np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
-    tmp[:k,:k] = np.eye(k) - F
-    dgetrf(&k, &k, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-    dgetri(&k, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-    dgemv("N",&k,&k,&alpha,&tmp[0,0],&ldwork,&mu[0],&inc,&beta,&beta_tt[0,0],&inc)
-    #print np.asarray(beta_tt[:,0])
+    if beta_tt_init is None:
+        #beta_tt[:,0] = np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
+        tmp = np.array(np.eye(k), float, order="F") - F
+        dgetrf(&k, &k, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
+        dgetri(&k, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
+        dgemv("N",&k,&k,&alpha,&tmp[0,0],&ldwork,&mu[0],&inc,&beta,&beta_tt[0,0],&inc)
+    else:
+        beta_tt[::1,0] = beta_tt_init[::1]
 
-    #P_tt[0] = np.linalg.inv(np.eye(k**2) - np.kron(F,F)).dot(Q.reshape(Q.size, 1)).reshape(k,k) # kxk
-    tmp[:k2,:k2] = np.eye(k**2) - np.kron(F,F)
-    dgetrf(&k2, &k2, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-    dgetri(&k2, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-    dgemv("N",&k2,&k2,&alpha,&tmp[0,0],&ldwork,&Q[0,0],&inc,&beta,&P_tt[0,0,0],&inc)
+    if P_tt_init is None:
+        #P_tt[0] = np.linalg.inv(np.eye(k**2) - np.kron(F,F)).dot(Q.reshape(Q.size, 1)).reshape(k,k) # kxk
+        tmp = np.array(np.eye(k2) - np.kron(F,F), float, order="F")
+        dgetrf(&k2, &k2, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
+        dgetri(&k2, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
+        dgemv("N",&k2,&k2,&alpha,&tmp[0,0],&ldwork,&Q[0,0],&inc,&beta,&P_tt[0,0,0],&inc)
+    else:
+        P_tt[::1,:,0] = P_tt_init[::1,:]
+
+    # Redefine the tmp array
+    tmp = np.empty((ldwork,ldwork), float, order="F")
     
     # Iterate forwards
     for t in range(1,T+1):
@@ -173,8 +181,8 @@ cpdef kalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed)
         dgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
         
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t])
-        dgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &k, &beta, &y_tt1[0,t], &n)
-        dgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t], &r, &alpha, &y_tt1[0,t], &n)
+        dgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
+        dgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t], &inc, &alpha, &y_tt1[0,t], &inc)
         
         #eta_tt1[::1,t] = y[::1,t] - y_tt1[:,t]
         eta_tt1[::1,t] = y[::1,t]
@@ -204,7 +212,7 @@ cpdef kalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed)
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
         # ^ this doesn't work, crashes for some reason; probably related to taking .T as it did above
         ll[t] = -0.5*log(2*np.pi*det)
-        dgemv("N",&k,&k,&alpha,&f_inv[0,0],&k,&eta_tt1[0,t],&inc,&beta,&tmp[0,0],&inc)
+        dgemv("N",&n,&n,&alpha,&f_inv[0,0],&n,&eta_tt1[0,t],&inc,&beta,&tmp[0,0],&inc)
         ll[t] += -0.5*ddot(&n, &eta_tt1[0,t], &inc, &tmp[0,0], &inc)
     
         # Updating
