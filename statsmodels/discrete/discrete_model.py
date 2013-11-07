@@ -669,8 +669,12 @@ class CountModel(DiscreteModel):
             exog = self.exog
             offset = getattr(self, 'offset', 0)
             exposure = getattr(self, 'exposure', 0)
-
         else:
+            if isinstance(exog, (list, tuple)):
+                exog = np.array(exog)
+            if isinstance(exog, np.ndarray) and len(exog.shape) == 1:
+                    exog = exog.reshape((-1, 1))
+
             if exposure is None:
                 exposure = 0
             else:

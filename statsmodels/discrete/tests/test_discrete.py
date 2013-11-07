@@ -1211,6 +1211,19 @@ def test_poisson_predict():
     pred3 = res.predict(exog, offset=np.log(2), exposure=1)
     assert_almost_equal(2*pred1, pred3)
 
+
+def test_poisson_predict_convert_exog():
+    #GH: 1032: ensure exog is properly converted.
+    data = sm.datasets.randhie.load()
+    exog = sm.add_constant(data.exog, prepend=True)
+    res = sm.Poisson(data.endog, exog)
+    test_data = exog[1, :].reshape(-1)
+    pred1 = res.predict(np.ones(test_data.shape), exog=test_data.tolist())
+    # Pass 1 d array
+    pred2 = res.predict(np.ones(test_data.shape), exog=test_data)
+    assert_almost_equal(pred1, pred2)
+
+
 def test_poisson_newton():
     #GH: 24, Newton doesn't work well sometimes
     nobs = 10000
