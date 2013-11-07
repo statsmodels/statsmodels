@@ -221,10 +221,7 @@ class TestOLS(CheckRegressionResults):
     def test_norm_resid(self):
         resid = self.res1.resid
         norm_resid = resid / np.sqrt(np.mean(resid**2.0))
-        print norm_resid.dot(norm_resid)
-        print norm_resid.var()
         model_norm_resid = self.res1.norm_resid()
-        print model_norm_resid.var()
         assert_almost_equal(model_norm_resid, norm_resid, DECIMAL_7)
 
 class TestRTO(CheckRegressionResults):
