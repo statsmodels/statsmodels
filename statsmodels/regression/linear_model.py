@@ -196,6 +196,7 @@ class RegressionModel(base.LikelihoodModel):
 
         elif method == "qr":
             if ((not hasattr(self, 'exog_Q')) or
+                (not hasattr(self, 'exog_R')) or
                 (not hasattr(self, 'normalized_cov_params')) or
                 (getattr(self, 'rank', None) is None)):
                 Q, R = np.linalg.qr(self.wexog)
@@ -1252,6 +1253,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if not hasattr(self, 'resid'):
             raise ValueError('Method requires residuals.')
         if np.all(self.wresid <= 0.0):
+            # This is a very exact check, does not account for numerical error
             from warnings import warn
             warn("All residuals are 0, cannot compute normed residuals.")
             return self.wresid

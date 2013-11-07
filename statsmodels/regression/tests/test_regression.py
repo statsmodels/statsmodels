@@ -9,7 +9,7 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_approx_equal,
                             assert_raises, assert_equal, assert_allclose)
 from scipy.linalg import toeplitz
-from statsmodels.tools.tools import add_constant, categorical
+from statsmodels.tools.tools import add_constant, categorical, rank
 from statsmodels.regression.linear_model import OLS, WLS, GLS, yule_walker
 from statsmodels.datasets import longley
 from scipy.stats import t as student_t
@@ -157,13 +157,18 @@ class TestOLS(CheckRegressionResults):
         Q, R = np.linalg.qr(data.exog)
         model_qr.exog_Q, model_qr.exog_R  = Q, R
         model_qr.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
+        model_qr.rank = rank(R)
         res_qr2 = model_qr.fit(method="qr")
 
         cls.res_qr = res_qr
         cls.res_qr_manual = res_qr2
 
     def test_eigenvalues(self):
-        assert_almost_equal(self.res_qr.eigenvals, self.res_qr_manual.eigenvals, DECIMAL_7)
+        eigenval_perc_diff = (self.res_qr.eigenvals - self.res_qr_manual.eigenvals)
+        eigenval_perc_diff /= self.res_qr.eigenvals
+        zeros = np.zeros_like(eigenval_perc_diff)
+        assert_almost_equal(eigenval_perc_diff, zeros, DECIMAL_7)
+
 
     #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
@@ -225,6 +230,13 @@ class TestOLS(CheckRegressionResults):
         norm_resid = resid / np.sqrt(np.mean(resid**2.0))
         model_norm_resid = self.res1.norm_resid()
         assert_almost_equal(model_norm_resid, norm_resid, DECIMAL_7)
+
+    def test_norm_resid_zero_variance(self):
+        with warnings.catch_warnings(record=True):
+            y = self.res1.model.endog
+            res = OLS(y,y).fit()
+            assert_equal(res.resid, res.norm_resid())
+
 
 class TestRTO(CheckRegressionResults):
     @classmethod
@@ -484,7 +496,7 @@ class TestGLS_alt_sigma(CheckRegressionResults):
 
     def test_wrong_size_sigma_2d(self):
         n = len(self.endog)
-        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones(n-1))
+        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones((n-1,n-1)))
 
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
