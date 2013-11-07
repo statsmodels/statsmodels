@@ -179,7 +179,6 @@ class RegressionModel(base.LikelihoodModel):
                 self.rank = rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
-                print(self.rank)
 
             # used in ANOVA
             self.effects = effects = np.dot(Q.T, self.wendog)
