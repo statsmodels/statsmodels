@@ -38,9 +38,9 @@ def test_pacf_yw():
 
 def test_pacf_ols():
     pacfols = tsa.pacf_ols(x100, 20)
-    assert_array_almost_equal(mlpacf.pacf100.ravel(), pacfols, 2)
+    assert_array_almost_equal(mlpacf.pacf100.ravel(), pacfols, 8)
     pacfols = tsa.pacf_ols(x1000, 20)
-    assert_array_almost_equal(mlpacf.pacf1000.ravel(), pacfols, 5)
+    assert_array_almost_equal(mlpacf.pacf1000.ravel(), pacfols, 8)
     #assert False
 
 def test_ywcoef():
