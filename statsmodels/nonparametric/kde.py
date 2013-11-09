@@ -335,6 +335,8 @@ def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
         weights = np.ones(nobs)
         q = nobs
     else:
+        # ensure weights is a numpy array
+        weights = np.asarray(weights)
         if len(weights) != len(clip_x):
             msg = "The length of the weights must be the same as the given X."
             raise ValueError(msg)

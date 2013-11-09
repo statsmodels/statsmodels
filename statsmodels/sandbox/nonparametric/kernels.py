@@ -75,7 +75,7 @@ class NdKernel(object):
             #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
             #vectorized doesn't work:
             if self.weights is not None:
-                w = np.sum(self((xs-x)/h).T * self_Hrootinv * self.weights, axis=1)
+                w = np.mean(self((xs-x) * self._Hrootinv).T * self.weights)/sum(self.weights)
             else:
                 w = np.mean(self((xs-x) * self._Hrootinv )) #transposed
             #w = np.mean([self(xd) for xd in ((xs-x) * self._Hrootinv)] ) #transposed
