@@ -1222,6 +1222,8 @@ def test_poisson_predict_convert_exog():
     # Pass 1 d array
     pred2 = res.predict(np.ones(test_data.shape), exog=test_data)
     assert_almost_equal(pred1, pred2)
+    pred3 = res.predict(np.ones(test_data.shape), exog=test_data.T)
+    assert_almost_equal(pred1, pred3)
 
 
 def test_poisson_newton():

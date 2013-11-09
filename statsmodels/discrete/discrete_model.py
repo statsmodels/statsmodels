@@ -671,7 +671,7 @@ class CountModel(DiscreteModel):
             exposure = getattr(self, 'exposure', 0)
         else:
             exog = np.array(exog)
-            if exog.ndim == 1:
+            if exog.ndim == 1 and len(exog) == self.exog.shape[1]:
                 exog = exog.reshape((-1, 1))
 
             if exposure is None:
