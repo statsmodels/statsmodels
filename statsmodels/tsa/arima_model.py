@@ -120,7 +120,10 @@ _predict = """
             want out of sample prediction.
         exog : array-like, optional
             If the model is an ARMAX and out-of-sample forecasting is
-            requested, exog must be given.
+            requested, exog must be given. Note that you'll need to pass
+            `k_ar` additional lags for any exogenous variables. E.g., if you
+            fit an ARMAX(2, q) model and want to predict 5 steps, you need 7
+            observations to do this.
         dynamic : bool, optional
             The `dynamic` keyword affects in-sample prediction. If dynamic
             is False, then the in-sample lagged values are used for
@@ -203,14 +206,27 @@ def _get_predict_out_of_sample(endog, p, q, k_trend, k_exog, start, errors,
         if k_exog > 0:
             #TODO: technically should only hold for MLE not
             # conditional model. See #274.
+            # ensure 2-d for conformability
+            if np.ndim(exog) == 1 and k_exog == 1:
+                # have a 1d series of observations -> 2d
+                exog = exog[:, None]
+            elif np.ndim(exog) == 1:
+                # should have a 1d row of exog -> 2d
+                if len(exog) != k_exog:
+                    raise ValueError("1d exog given and len(exog) != k_exog")
+                exog = exog[None, :]
             X = lagmat(np.dot(exog, exparams), p, original='in', trim='both')
             mu = trendparam * (1 - arparams.sum())
             # arparams were reversed in unpack for ease later
             mu = mu + (np.r_[1, -arparams[::-1]]*X).sum(1)[:,None]
-
         else:
             mu = trendparam * (1 - arparams.sum())
             mu = np.array([mu]*steps)
+    elif k_exog > 0:
+        X = np.dot(exog, exparams)
+        #NOTE: you shouldn't have to give in-sample exog!
+        X = lagmat(X, p, original='in', trim='both')
+        mu = (np.r_[1, -arparams[::-1]]*X).sum(1)[:,None]
     else:
         mu = np.zeros(steps)
 
@@ -333,6 +349,10 @@ def _make_arma_exog(endog, exog, trend):
         k_trend = 0
     return k_trend, exog
 
+def _check_estimable(nobs, n_params):
+    if nobs <= n_params:
+        raise ValueError("Insufficient degrees of freedom to estimate")
+
 class ARMA(tsbase.TimeSeriesModel):
 
     __doc__ = tsbase._tsa_doc % {"model" : _arma_model,
@@ -348,6 +368,9 @@ class ARMA(tsbase.TimeSeriesModel):
             warnings.warn("In the next release order will not be optional "
                     "in the model constructor.", FutureWarning)
         else:
+            _check_estimable(len(self.endog), sum(order))
+            if order[0] == 0 and order[1] == 0:
+                raise ValueError("Cannot fit order (0,0)")
             self.k_ar = k_ar = order[0]
             self.k_ma = k_ma = order[1]
             self.k_lags = k_lags = max(k_ar,k_ma+1)
@@ -396,7 +419,12 @@ class ARMA(tsbase.TimeSeriesModel):
             endog -= np.dot(exog, ols_params).squeeze()
         if q != 0:
             if p != 0:
-                armod = AR(endog).fit(ic='bic', trend='nc')
+                # make sure we don't run into small data problems in AR fit
+                nobs = len(endog)
+                maxlag = int(round(12*(nobs/100.)**(1/4.)))
+                if maxlag >= nobs:
+                    maxlag = nobs - 1
+                armod = AR(endog).fit(ic='bic', trend='nc', maxlag=maxlag)
                 arcoefs_tmp = armod.params
                 p_tmp = armod.k_ar
                 # it's possible in small samples that optimal lag-order
@@ -469,11 +497,7 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        loglike = self.loglike
-        #if self.transparams:
-        #    params = self._invtransparams(params)
-        #return approx_fprime(params, loglike, epsilon=1e-5)
-        return approx_fprime_cs(params, loglike)
+        return approx_fprime_cs(params, self.loglike, args=(False,))
 
     def hessian(self, params):
         """
@@ -483,10 +507,7 @@ class ARMA(tsbase.TimeSeriesModel):
         -----
         This is a numerical approximation.
         """
-        loglike = self.loglike
-        #if self.transparams:
-        #    params = self._invtransparams(params)
-        return approx_hess_cs(params, loglike)
+        return approx_hess_cs(params, self.loglike, args=(False,))
 
     def _transparams(self, params):
         """
@@ -649,7 +670,7 @@ class ARMA(tsbase.TimeSeriesModel):
         return predictedvalues
     predict.__doc__ = _arma_predict
 
-    def loglike(self, params):
+    def loglike(self, params, set_sigma2=True):
         """
         Compute the log-likelihood for ARMA(p,q) model
 
@@ -659,19 +680,19 @@ class ARMA(tsbase.TimeSeriesModel):
         """
         method = self.method
         if method in ['mle', 'css-mle']:
-            return self.loglike_kalman(params)
+            return self.loglike_kalman(params, set_sigma2)
         elif method == 'css':
-            return self.loglike_css(params)
+            return self.loglike_css(params, set_sigma2)
         else:
             raise ValueError("Method %s not understood" % method)
 
-    def loglike_kalman(self, params):
+    def loglike_kalman(self, params, set_sigma2=True):
         """
         Compute exact loglikelihood for ARMA(p,q) model using the Kalman Filter.
         """
-        return KalmanFilter.loglike(params, self)
+        return KalmanFilter.loglike(params, self, set_sigma2)
 
-    def loglike_css(self, params):
+    def loglike_css(self, params, set_sigma2=True):
         """
         Conditional Sum of Squares likelihood function.
         """
@@ -696,12 +717,13 @@ class ARMA(tsbase.TimeSeriesModel):
 
         ssr = np.dot(errors,errors)
         sigma2 = ssr/nobs
-        self.sigma2 = sigma2
+        if set_sigma2:
+            self.sigma2 = sigma2
         llf = -nobs/2.*(log(2*pi) + log(sigma2)) - ssr/(2*sigma2)
         return llf
 
     def fit(self, order=None, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver=None, maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARMA(p,q) model using exact maximum likelihood via Kalman filter.
@@ -725,10 +747,10 @@ class ARMA(tsbase.TimeSeriesModel):
             `start_params` as starting parameters.  See above for more
             information.
         trend : str {'c','nc'}
-            Whehter to include a constant or not.  'c' includes constant,
+            Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and
@@ -736,7 +758,7 @@ class ARMA(tsbase.TimeSeriesModel):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
+            The maximum number of function evaluations. Default is 50.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -778,6 +800,9 @@ class ARMA(tsbase.TimeSeriesModel):
                     "This will overwrite any order given in the model "
                     "constructor.", FutureWarning)
 
+            _check_estimable(len(self.endog), sum(order))
+            if order[0] == 0 and order[1] == 0:
+                raise ValueError("Cannot fit order (0,0)")
             # get model order and constants
             self.k_ar = k_ar = int(order[0])
             self.k_ma = k_ma = int(order[1])
@@ -804,6 +829,8 @@ class ARMA(tsbase.TimeSeriesModel):
         # (re)set trend and handle exogenous variables
         # always pass original exog
         k_trend, exog = _make_arma_exog(endog, self.exog, trend)
+        # check again now that we know the trend
+        _check_estimable(len(endog), k_ar + k_ma + k_exog + k_trend)
 
         self.k_trend = k_trend
         self.exog = exog    # overwrites original exog from __init__
@@ -830,23 +857,16 @@ class ARMA(tsbase.TimeSeriesModel):
         if transparams: # transform initial parameters to ensure invertibility
             start_params = self._invtransparams(start_params)
 
-        if solver is None:  # use default limited memory bfgs
-            bounds = [(None,)*2]*(k_ar+k_ma+k)
-            pgtol = kwargs.get('pgtol', 1e-8)
-            factr = kwargs.get('factr', 1e2)
-            m = kwargs.get('m', 12)
-            mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=m, pgtol=pgtol, factr=factr,
-                    bounds=bounds, iprint=disp)
-            self.mlefit = mlefit
-            params = mlefit[0]
-
-        else:   # call the solver from LikelihoodModel
-            mlefit = super(ARMA, self).fit(start_params, method=solver,
-                        maxiter=maxiter, full_output=full_output, disp=disp,
-                        callback = callback, **kwargs)
-            self.mlefit = mlefit
-            params = mlefit.params
+        if solver == 'lbfgs':
+            kwargs.setdefault('pgtol', 1e-8)
+            kwargs.setdefault('factr', 1e2)
+            kwargs.setdefault('m', 12)
+            kwargs.setdefault('approx_grad', True)
+        mlefit = super(ARMA, self).fit(start_params, method=solver,
+                    maxiter=maxiter, full_output=full_output, disp=disp,
+                    callback=callback, **kwargs)
+        self.mlefit = mlefit
+        params = mlefit.params
 
         if transparams: # transform parameters back
             params = self._transparams(params)
@@ -880,9 +900,13 @@ class ARIMA(ARMA):
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                        missing='none'):
         p,d,q = order
+        if p == 0 and q == 0:
+            raise ValueError("Order (0, d, 0) not supported.")
         super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq, missing)
         self.k_diff = d
         self.endog = np.diff(self.endog, n=d)
+        #NOTE: will check in ARMA but check again since differenced now
+        _check_estimable(len(self.endog), p+q)
         if exog is not None:
             self.exog = self.exog[d:]
         self.data.ynames = 'D.' + self.endog_names
@@ -930,7 +954,7 @@ class ARIMA(ARMA):
         return end - self.k_diff, out_of_sample
 
     def fit(self, start_params=None, trend='c', method = "css-mle",
-            transparams=True, solver=None, maxiter=35, full_output=1,
+            transparams=True, solver='lbfgs', maxiter=50, full_output=1,
             disp=5, callback=None, **kwargs):
         """
         Fits ARIMA(p,d,q) model by exact maximum likelihood via Kalman filter.
@@ -957,7 +981,7 @@ class ARIMA(ARMA):
             Whether to include a constant or not.  'c' includes constant,
             'nc' no constant.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory
+            Solver to be used.  The default is 'lbfgs' (limited memory
             Broyden-Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs',
             'newton' (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' -
             (conjugate gradient), 'ncg' (non-conjugate gradient), and
@@ -965,7 +989,7 @@ class ARIMA(ARMA):
             approximate the Hessian, projected gradient tolerance of 1e-8 and
             factr = 1e2. You can change these by using kwargs.
         maxiter : int, optional
-            The maximum number of function evaluations. Default is 35.
+            The maximum number of function evaluations. Default is 50.
         tol : float
             The convergence tolerance.  Default is 1e-08.
         full_output : bool, optional
@@ -1337,7 +1361,10 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         exog : array
             If the model is an ARMAX, you must provide out of sample
             values for the exogenous variables. This should not include
-            the constant.
+            the constant. Note that you'll need to pass `k_ar` additional
+            lags for any exogenous variables. E.g., if you fit an ARMAX(2, q)
+            model and want to predict 5 steps, you need 7 observations
+            to do this.
         alpha : float
             The confidence intervals for the forecasts are (1 - alpha) %
 
@@ -1350,6 +1377,21 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         conf_int : array
             2d array of the confidence interval for the forecast
         """
+        if exog is not None:
+            #TODO: make a convenience function for this. we're using the
+            # pattern elsewhere in the codebase
+            exog = np.asarray(exog)
+            if self.k_exog == 1 and exog.ndim == 1:
+                exog = exog[:,None]
+            elif exog.ndim == 1:
+                if len(exog) != self.k_exog:
+                    raise ValueError("1d exog given and len(exog) != k_exog")
+                exog = exog[None, :]
+            if exog.shape[0] != steps:
+                raise ValueError("new exog needed for each step")
+            # prepend in-sample exog observations
+            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                              exog))
 
         arparams = self.arparams
         maparams = self.maparams
@@ -1597,6 +1639,14 @@ class ARIMAResults(ARMAResults):
         Prediction is done in the levels of the original endogenous variable.
         If you would like prediction of differences in levels use `predict`.
         """
+        if exog is not None:
+            if self.k_exog == 1 and exog.ndim == 1:
+                exog = exog[:,None]
+            if exog.shape[0] != steps:
+                raise ValueError("new exog needed for each step")
+            # prepend in-sample exog observations
+            exog = np.vstack((self.model.exog[-self.k_ar:, self.k_trend:],
+                              exog))
         forecast = _arma_predict_out_of_sample(self.params, steps, self.resid,
                                         self.k_ar, self.k_ma, self.k_trend,
                                         self.k_exog, self.model.endog,

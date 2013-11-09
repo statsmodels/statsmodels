@@ -804,6 +804,15 @@ class TestPoissonNewton(CheckModelResults):
     def test_resid(self):
         assert_almost_equal(self.res1.resid, self.res2.resid, 2)
 
+    def test_predict_prob(self):
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        probs_res = np.loadtxt(os.path.join(cur_dir, "results",
+                            "predict_prob_poisson.csv"), delimiter=",")
+
+        # just check the first 100 obs. vs R to save memory
+        probs = self.res1.predict_prob()[:100]
+        assert_almost_equal(probs, probs_res, 8)
+
 class TestNegativeBinomialNB2Newton(CheckModelResults):
     @classmethod
     def setupClass(cls):
@@ -1053,18 +1062,7 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
     test_jac = no_info
 
 
-class TestMNLogitNewtonBaseZero(CheckModelResults):
-    @classmethod
-    def setupClass(cls):
-        from results.results_discrete import Anes
-        data = sm.datasets.anes96.load()
-        cls.data = data
-        exog = data.exog
-        exog = sm.add_constant(exog, prepend=False)
-        cls.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
-        res2 = Anes()
-        res2.mnlogit_basezero()
-        cls.res2 = res2
+class CheckMNLogitBaseZero(CheckModelResults):
 
     def test_margeff_overall(self):
         me = self.res1.get_margeff()
@@ -1168,6 +1166,40 @@ class TestMNLogitNewtonBaseZero(CheckModelResults):
 
     def test_resid(self):
         assert_array_equal(self.res1.resid_misclassified, self.res2.resid)
+
+
+class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import Anes
+        data = sm.datasets.anes96.load()
+        cls.data = data
+        exog = data.exog
+        exog = sm.add_constant(exog, prepend=False)
+        cls.res1 = MNLogit(data.endog, exog).fit(method="newton", disp=0)
+        res2 = Anes()
+        res2.mnlogit_basezero()
+        cls.res2 = res2
+
+class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
+    @classmethod
+    def setupClass(cls):
+        from results.results_discrete import Anes
+        data = sm.datasets.anes96.load()
+        cls.data = data
+        exog = data.exog
+        exog = sm.add_constant(exog, prepend=False)
+        mymodel = MNLogit(data.endog, exog)
+        cls.res1 = mymodel.fit(method="lbfgs", disp=0, maxiter=50000,
+                #m=12, pgtol=1e-7, factr=1e3, # 5 failures
+                #m=20, pgtol=1e-8, factr=1e2, # 3 failures
+                #m=30, pgtol=1e-9, factr=1e1, # 1 failure
+                m=40, pgtol=1e-10, factr=5e0,
+                loglike_and_score=mymodel.loglike_and_score)
+        res2 = Anes()
+        res2.mnlogit_basezero()
+        cls.res2 = res2
+
 
 def test_perfect_prediction():
     cur_dir = os.path.dirname(os.path.abspath(__file__))

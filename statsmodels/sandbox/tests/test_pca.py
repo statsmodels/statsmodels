@@ -57,9 +57,9 @@ def test_pca_svd():
     xred_svd, factors_svd, evals_svd, evecs_svd = pcasvd(xf, keepdim=0)
     assert_array_almost_equal(evals_svd, evals, 14)
     msign = (evecs/evecs_svd)[0]
-    assert_array_almost_equal(msign*evecs_svd, evecs, 14)
-    assert_array_almost_equal(msign*factors_svd, factors, 13)
-    assert_array_almost_equal(xred_svd, xreduced, 14)
+    assert_array_almost_equal(msign*evecs_svd, evecs, 13)
+    assert_array_almost_equal(msign*factors_svd, factors, 12)
+    assert_array_almost_equal(xred_svd, xreduced, 13)
 
     pcares = pca(xf, keepdim=2)
     pcasvdres = pcasvd(xf, keepdim=2)

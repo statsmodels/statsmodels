@@ -611,7 +611,7 @@ class KalmanFilter(object):
                newparams, Z_mat, m, R_mat, T_mat, paramsdtype)
 
     @classmethod
-    def loglike(cls, params, arma_model):
+    def loglike(cls, params, arma_model, set_sigma2=True):
         """
         The loglikelihood for an ARMA model using the Kalman Filter recursions.
 
@@ -623,6 +623,10 @@ class KalmanFilter(object):
             coefficients, then the `q` MA coefficients.
         arma_model : `statsmodels.tsa.arima.ARMA` instance
             A reference to the ARMA model instance.
+        set_sigma2 : bool, optional
+            True if arma_model.sigma2 should be set.
+            Note that sigma2 will be computed in any case,
+            but it will be discarded if set_sigma2 is False.
 
         Notes
         -----
@@ -647,7 +651,9 @@ class KalmanFilter(object):
         else:
             raise TypeError("This dtype %s is not supported "
                             " Please files a bug report." % paramsdtype)
-        arma_model.sigma2 = sigma2
+        if set_sigma2:
+            arma_model.sigma2 = sigma2
+
         return loglike.item() # return a scalar not a 0d array
 
 

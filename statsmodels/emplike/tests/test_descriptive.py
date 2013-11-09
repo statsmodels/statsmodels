@@ -1,6 +1,7 @@
 import numpy as np
 from numpy.testing import assert_almost_equal
-import statsmodels.api as sm
+from statsmodels.datasets import star98
+from statsmodels.emplike.descriptive import DescStat
 from results.el_results import DescStatRes
 
 
@@ -10,12 +11,12 @@ class GenRes(object):
 
     """
     def __init__(self):
-        data = sm.datasets.star98.load()
+        data = star98.load()
         desc_stat_data = data.exog[:50, 5]
         mv_desc_stat_data = data.exog[:50, 5:7]  # mv = multivariate
-        self.res1 = sm.emplike.DescStat(desc_stat_data)
+        self.res1 = DescStat(desc_stat_data)
         self.res2 = DescStatRes()
-        self.mvres1 = sm.emplike.DescStat(mv_desc_stat_data)
+        self.mvres1 = DescStat(mv_desc_stat_data)
 
 
 class TestDescriptiveStatistics(GenRes):

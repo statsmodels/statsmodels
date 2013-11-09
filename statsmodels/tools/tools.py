@@ -345,6 +345,29 @@ def isestimable(C, D):
     return True
 
 
+def pinv_extended(X, rcond=1e-15):
+    """
+    Return the pinv of an array X as well as the singular values
+    used in computation.
+
+    Code adapted from numpy.
+    """
+    X = np.asarray(X)
+    X = X.conjugate()
+    u, s, vt = np.linalg.svd(X, 0)
+    s_orig = np.copy(s)
+    m = u.shape[0]
+    n = vt.shape[1]
+    cutoff = rcond * np.maximum.reduce(s)
+    for i in range(min(n, m)):
+        if s[i] > cutoff:
+            s[i] = 1./s[i]
+        else:
+            s[i] = 0.
+    res = np.dot(np.transpose(vt), np.multiply(s[:, np.core.newaxis], np.transpose(u)))
+    return res, s_orig
+
+
 def recipr(X):
     """
     Return the reciprocal of an array, setting all entries less than or

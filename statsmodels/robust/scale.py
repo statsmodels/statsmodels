@@ -14,7 +14,8 @@ from scipy.stats import norm as Gaussian
 import norms
 from statsmodels.tools import tools
 
-def mad(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
+def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):
+    # c \approx .6745
     """
     The Median Absolute Deviation along given axis of an array
 
@@ -26,40 +27,27 @@ def mad(a, c=Gaussian.ppf(3/4.), axis=0):  # c \approx .6745
         The normalization constant.  Defined as scipy.stats.norm.ppf(3/4.),
         which is approximately .6745.
     axis : int, optional
-        The defaul is 0.
+        The defaul is 0. Can also be None.
+    center : callable or float
+        If a callable is provided, such as the default `np.median` then it
+        is expected to be called center(a). The axis argument will be applied
+        via np.apply_over_axes. Otherwise, provide a float.
 
     Returns
     -------
     mad : float
-        `mad` = median(abs(`a`))/`c`
+        `mad` = median(abs(`a` - center))/`c`
     """
     a = np.asarray(a)
-    return np.median((np.fabs(a))/c, axis=axis)
+    if callable(center):
+        center = np.apply_over_axes(center, a, axis)
+    return np.median((np.fabs(a-center))/c, axis=axis)
 
 def stand_mad(a, c=Gaussian.ppf(3/4.), axis=0):
-    """
-    The standardized Median Absolute Deviation along given axis of an array.
-
-    Parameters
-    ----------
-    a : array-like
-        Input array.
-    c : float, optional
-        The normalization constant.  Defined as scipy.stats.norm.ppf(3/4.),
-        which is approximately .6745.
-    axis : int, optional
-        The defaul is 0.
-
-    Returns
-    -------
-    mad : float
-        `mad` = median(abs(`a`-median(`a`))/`c`
-    """
-
-    a = np.asarray(a)
-    d = np.median(a, axis = axis)
-    d = tools.unsqueeze(d, axis, a.shape)
-    return np.median(np.fabs(a - d)/c, axis = axis)
+    from warnings import warn
+    warn("stand_mad is deprecated and will be removed in 0.7.0. Use mad "
+         "instead.", FutureWarning)
+    return mad(a, c=c, axis=axis)
 
 class Huber(object):
     """
@@ -138,7 +126,7 @@ class Huber(object):
             est_mu = False
 
         if initscale is None:
-            scale = stand_mad(a, axis=axis)
+            scale = mad(a, axis=axis)
         else:
             scale = initscale
         scale = tools.unsqueeze(scale, axis, a.shape)
@@ -235,7 +223,7 @@ class HuberScale(object):
         h = (df_resid)/nobs*(self.d**2 + (1-self.d**2)*\
                     Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
                     np.exp(-.5*self.d**2))
-        s = stand_mad(resid)
+        s = mad(resid)
         subset = lambda x: np.less(np.fabs(resid/x),self.d)
         chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(self.d**2/2)
         scalehist = [np.inf,s]

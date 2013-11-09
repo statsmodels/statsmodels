@@ -76,7 +76,7 @@ def test_omni_normtest():
 
 def test_omni_normtest_axis():
     #test axis of omni_normtest
-    x = np.random.randn(15, 3)
+    x = np.random.randn(25, 3)
     nt1 = omni_normtest(x)
     nt2 = omni_normtest(x, axis=0)
     nt3 = omni_normtest(x.T, axis=1)

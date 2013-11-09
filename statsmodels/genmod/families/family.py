@@ -10,6 +10,7 @@ from scipy import special
 from scipy.stats import ss
 import links as L
 import varfuncs as V
+FLOAT_EPS = np.finfo(float).eps
 
 class Family(object):
 
@@ -28,7 +29,6 @@ class Family(object):
 #TODO: change these class attributes, use valid somewhere...
     valid = [-np.inf, np.inf]
 
-    tol = 1.0e-05
     links = []
 
     def _setlink(self, link):
@@ -563,7 +563,7 @@ class Gamma(Family):
         possible that other families might need a check for validity of the
         domain.
         """
-        return np.clip(x, 1.0e-10, np.inf)
+        return np.clip(x, FLOAT_EPS, np.inf)
 
     def deviance(self, Y, mu, scale=1.):
         """
@@ -696,7 +696,7 @@ class Binomial(Family):
     endog for Binomial can be specified in one of three ways.
     """
 
-    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog]
+    links = [L.logit, L.probit, L.cauchy, L.log, L.cloglog, L.identity]
     variance = V.binary # this is not used below in an effort to include n
 
     def __init__(self, link=L.logit):  #, n=1.):
@@ -1102,7 +1102,7 @@ class NegativeBinomial(Family):
         possible that other families might need a check for validity of the
         domain.
         """
-        return np.clip(x, 1.0e-10, np.inf)
+        return np.clip(x, FLOAT_EPS, np.inf)
 
     def deviance(self, Y, mu, scale=1.):
         """

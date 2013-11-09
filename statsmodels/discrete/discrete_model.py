@@ -840,7 +840,7 @@ class Poisson(CountModel):
         The parameter `X` is :math:`x_{i}\\beta` in the above formula.
         """
         y = self.endog
-        return stats.poisson.pmf(y, np.exp(X))
+        return np.exp(stats.poisson.logpmf(y, np.exp(X)))
 
     def loglike(self, params):
         """
@@ -896,7 +896,30 @@ class Poisson(CountModel):
         #np.sum(stats.poisson.logpmf(endog, np.exp(XB)))
         return -np.exp(XB) +  endog*XB - gammaln(endog+1)
 
+    def fit(self, start_params=None, method='newton', maxiter=35,
+            full_output=1, disp=1, callback=None, **kwargs):
+        cntfit = super(CountModel, self).fit(start_params=start_params,
+                method=method, maxiter=maxiter, full_output=full_output,
+                disp=disp, callback=callback, **kwargs)
+        discretefit = PoissonResults(self, cntfit)
+        return PoissonResultsWrapper(discretefit)
+    fit.__doc__ = DiscreteModel.fit.__doc__
 
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1PoissonResults(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+        return L1PoissonResultsWrapper(discretefit)
 
     def score(self, params):
         """
@@ -1564,6 +1587,21 @@ class MNLogit(MultinomialModel):
                                                   params))[:,1:]
         #NOTE: might need to switch terms if params is reshaped
         return np.dot(firstterm.T, self.exog).flatten()
+
+    def loglike_and_score(self, params):
+        """
+        Returns log likelihood and score, efficiently reusing calculations.
+
+        Note that both of these returned quantities will need to be negated
+        before being minimized by the maximum likelihood fitting machinery.
+
+        """
+        params = params.reshape(self.K, -1, order='F')
+        cdf_dot_exog_params = self.cdf(np.dot(self.exog, params))
+        loglike_value = np.sum(self.wendog * np.log(cdf_dot_exog_params))
+        firstterm = self.wendog[:, 1:] - cdf_dot_exog_params[:, 1:]
+        score_array = np.dot(firstterm.T, self.exog).flatten()
+        return loglike_value, score_array
 
     def jac(self, params):
         """
@@ -2362,6 +2400,38 @@ class L1CountResults(DiscreteResults):
         self.df_model = self.model.df_model
         self.df_resid = self.model.df_resid
 
+class PoissonResults(CountResults):
+    def predict_prob(self, n=None, exog=None, exposure=None, offset=None,
+                     transform=True):
+        """
+        Return predicted probability of each count level for each observation
+
+        Parameters
+        ----------
+        n : array-like or int
+            The counts for which you want the probabilities. If n is None
+            then the probabilities for each count from 0 to max(y) are
+            given.
+
+        Returns
+        -------
+        ndarray
+            A nobs x n array where len(`n`) columns are indexed by the count
+            n. If n is None, then column 0 is the probability that each
+            observation is 0, column 1 is the probability that each
+            observation is 1, etc.
+        """
+        if n is not None:
+            counts = np.atleast_2d(n)
+        else:
+            counts = np.atleast_2d(np.arange(0, np.max(self.model.endog)+1))
+        mu = self.predict(exog=exog, exposure=exposure, offset=offset,
+                          transform=transform, linear=False)[:,None]
+        # uses broadcasting
+        return stats.poisson.pmf(counts, mu)
+
+class L1PoissonResults(L1CountResults, PoissonResults):
+    pass
 
 class OrderedResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" : "A results class for ordered discrete data." , "extra_attr" : ""}
@@ -2727,9 +2797,28 @@ class NegativeBinomialAncillaryResultsWrapper(lm.RegressionResultsWrapper):
 wrap.populate_wrapper(NegativeBinomialAncillaryResultsWrapper,
                       NegativeBinomialAncillaryResults)
 
+class PoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+    #_methods = {
+    #        "predict_prob" : "rows",
+    #        }
+    #_wrap_methods = lm.wrap.union_dicts(
+    #                            lm.RegressionResultsWrapper._wrap_methods,
+    #                            _methods)
+wrap.populate_wrapper(PoissonResultsWrapper, PoissonResults)
+
 class L1CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(L1CountResultsWrapper, L1CountResults)
+
+class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+    #_methods = {
+    #        "predict_prob" : "rows",
+    #        }
+    #_wrap_methods = lm.wrap.union_dicts(
+    #                            lm.RegressionResultsWrapper._wrap_methods,
+    #                            _methods)
+wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
 
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {"resid_dev" : "rows",
