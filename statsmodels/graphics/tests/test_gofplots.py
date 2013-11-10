@@ -1,4 +1,5 @@
 import numpy as np
+np.random.seed(5)
 from numpy.testing import dec
 
 import statsmodels.api as sm
@@ -16,87 +17,161 @@ except:
     have_matplotlib = False
 
 
-@dec.skipif(not have_matplotlib)
-def test_qqplot():
-    #just test that it runs
-    data = sm.datasets.longley.load()
-    data.exog = sm.add_constant(data.exog, prepend=False)
-    mod_fit = sm.OLS(data.endog, data.exog).fit()
-    res = mod_fit.resid
-    fig = sm.qqplot(res, line='r')
+class _base_probplot:
+    def base_setup(self):
+        if have_matplotlib:
+            self.fig, self.ax = plt.subplots()
+        self.other_array = np.random.normal(size=self.prbplt.data.shape)
+        self.other_prbplot = sm.ProbPlot(self.other_array)
 
-    plt.close('all')
+    def teardown(self):
+        if have_matplotlib:
+            plt.close('all')
 
-@dec.skipif(not have_matplotlib)
-def test_ProbPlot():
-    #just test that it runs
-    data = sm.datasets.longley.load()
-    data.exog = sm.add_constant(data.exog, prepend=False)
-    mod_fit = sm.OLS(data.endog, data.exog).fit()
-    res = sm.ProbPlot(mod_fit.resid, stats.t, distargs=(4,))
 
-    # basic tests modeled after example in docstring
-    fig1 = res.qqplot(line='r')
-    fig2 = res.ppplot(line='r')
-    fig3 = res.probplot(line='r')
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot(self):
+        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line)
 
-    plt.close('all')
+    @dec.skipif(not have_matplotlib)
+    def test_ppplot(self):
+        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line)
 
-@dec.skipif(not have_matplotlib)
-def test_ProbPlot_comparison():
-    # two fake samples for comparison
-    x = np.random.normal(loc=8.25, scale=3.25, size=37)
-    y = np.random.normal(loc=8.25, scale=3.25, size=37)
-    pp_x = sm.ProbPlot(x)
-    pp_y = sm.ProbPlot(y)
+    @dec.skipif(not have_matplotlib)
+    def test_probplot(self):
+        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line)
 
-    # test `other` kwarg with `ProbPlot` instance
-    fig4 = pp_x.qqplot(other=pp_y)
-    fig5 = pp_x.ppplot(other=pp_y)
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot_other_array(self):
+        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
+                                        other=self.other_array)
+    @dec.skipif(not have_matplotlib)
+    def test_ppplot_other_array(self):
+        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
+                                        other=self.other_array)
+    @dec.skipif(not have_matplotlib)
+    def test_probplot_other_array(self):
+        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
+                                        other=self.other_array)
 
-    plt.close('all')
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot_other_prbplt(self):
+        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
+                                        other=self.other_prbplot)
+    @dec.skipif(not have_matplotlib)
+    def test_ppplot_other_prbplt(self):
+        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
+                                        other=self.other_prbplot)
+    @dec.skipif(not have_matplotlib)
+    def test_probplot_other_prbplt(self):
+        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
+                                        other=self.other_prbplot)
 
-@dec.skipif(not have_matplotlib)
-def test_ProbPlot_comparison_arrays():
-    # two fake samples for comparison
-    x = np.random.normal(loc=8.25, scale=3.25, size=37)
-    y = np.random.normal(loc=8.25, scale=3.25, size=37)
-    pp_x = sm.ProbPlot(x)
-    pp_y = sm.ProbPlot(y)
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot_custom_labels(self):
+        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
+                                      xlabel='Custom X-Label',
+                                      ylabel='Custom Y-Label')
 
-    # test `other` kwarg with array
-    fig6 = pp_x.qqplot(other=y)
-    fig7 = pp_x.ppplot(other=y)
-    plt.close('all')
+    @dec.skipif(not have_matplotlib)
+    def test_ppplot_custom_labels(self):
+        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
+                                      xlabel='Custom X-Label',
+                                      ylabel='Custom Y-Label')
 
-@dec.skipif(not have_matplotlib)
-def test_qqplot_2samples():
-    #just test that it runs
-    x = np.random.normal(loc=8.25, scale=3.25, size=37)
-    y = np.random.normal(loc=8.25, scale=3.25, size=37)
+    @dec.skipif(not have_matplotlib)
+    def test_probplot_custom_labels(self):
+        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
+                                        xlabel='Custom X-Label',
+                                        ylabel='Custom Y-Label')
 
-    pp_x = sm.ProbPlot(x)
-    pp_y = sm.ProbPlot(y)
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot_pltkwargs(self):
+        self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
+                                      marker='d', 
+                                      markerfacecolor='cornflowerblue',
+                                      markeredgecolor='white',
+                                      alpha=0.5)
 
-    # also tests all values for line
-    for line in ['r', 'q', '45', 's']:
-        # test with `ProbPlot` instances
-        fig2 = sm.qqplot_2samples(pp_x, pp_y, line=line)
+    @dec.skipif(not have_matplotlib)
+    def test_ppplot_pltkwargs(self):
+        self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
+                                      marker='d', 
+                                      markerfacecolor='cornflowerblue',
+                                      markeredgecolor='white',
+                                      alpha=0.5)
 
-    plt.close('all')
+    @dec.skipif(not have_matplotlib)
+    def test_probplot_pltkwargs(self):
+        self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
+                                        marker='d', 
+                                        markerfacecolor='cornflowerblue',
+                                        markeredgecolor='white',
+                                        alpha=0.5)
 
-@dec.skipif(not have_matplotlib)
-def test_qqplot_2samples_arrays():
-    #just test that it runs
-    x = np.random.normal(loc=8.25, scale=3.25, size=37)
-    y = np.random.normal(loc=8.25, scale=3.25, size=37)
 
-    pp_x = sm.ProbPlot(x)
-    pp_y = sm.ProbPlot(y)
+class test_ProbPlot_Longely(_base_probplot):
+    def setup(self):
+        self.data = sm.datasets.longley.load()
+        self.data.exog = sm.add_constant(self.data.exog, prepend=False)
+        self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
+        self.prbplt = sm.ProbPlot(self.mod_fit.resid, stats.t, distargs=(4,))
+        self.line = 'r'
+        self.base_setup()
 
-    # also tests all values for line
-    for line in ['r', 'q', '45', 's']:
-        # test with arrays
-        fig1 = sm.qqplot_2samples(x, y, line=line)
 
-    plt.close('all')
+class test_ProbPlot_RandomNormal_Minimal(_base_probplot):
+    def setup(self):
+        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        self.prbplt = sm.ProbPlot(self.data)
+        self.line = None
+        self.base_setup()
+
+
+class test_ProbPlot_RandomNormal_WithFit(_base_probplot):
+    def setup(self):
+        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        self.prbplt = sm.ProbPlot(self.data, fit=True)
+        self.line = 'q'
+        self.base_setup()
+
+
+class test_ProbPlot_RandomNormal_LocScale(_base_probplot):
+    def setup(self):
+        self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
+        self.prbplt = sm.ProbPlot(self.data, loc=8.25, scale=3.25)
+        self.line = '45'
+        self.base_setup()
+
+
+class test_top_level:
+    def setup(self):
+        self.data = sm.datasets.longley.load()
+        self.data.exog = sm.add_constant(self.data.exog, prepend=False)
+        self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
+        self.res = self.mod_fit.resid
+        self.prbplt = sm.ProbPlot(self.mod_fit.resid, stats.t, distargs=(4,))
+        self.other_array = np.random.normal(size=self.prbplt.data.shape)
+        self.other_prbplot = sm.ProbPlot(self.other_array)
+
+    def teardown(self):
+        if have_matplotlib:
+            plt.close('all')
+
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot():
+        fig = sm.qqplot(self.res, line='r')
+
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot_2samples_ProbPlotObjects():
+        # also tests all values for line
+        for line in ['r', 'q', '45', 's']:
+            # test with `ProbPlot` instances
+            fig = sm.qqplot_2samples(self.prbplt, self.other_prbplot, 
+                                     line=line)
+    @dec.skipif(not have_matplotlib)
+    def test_qqplot_2samples_arrays():
+        # also tests all values for line
+        for line in ['r', 'q', '45', 's']:
+            # test with arrays
+            fig = sm.qqplot_2samples(self.res, self.other_array, line=line)
