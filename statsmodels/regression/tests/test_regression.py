@@ -135,6 +135,11 @@ class CheckRegressionResults(object):
         assert_almost_equal(self.res1.resid, self.res2.resid,
             self.decimal_resids)
 
+    decimal_norm_resids = DECIMAL_4
+    def test_norm_resids(self):
+        assert_almost_equal(self.res1.resid_pearson, self.res2.resid_pearson,
+                            self.decimal_norm_resids)
+
 #TODO: test fittedvalues and what else?
 
 class TestOLS(CheckRegressionResults):
