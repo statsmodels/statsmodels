@@ -218,7 +218,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
     cdef:
         int k2 = k**2
         int n2 = n**2
-        int info # return code fro dgetri, dgetrf
+        int info # return code for dgetri, dgetrf
         int inc = 1 # incrementer for dgemv
         int ldwork = max(k2, n2) # number of rows/columns in work array
         int lwork = ldwork**2 # size of work array for dgetri
