@@ -99,21 +99,21 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
     # Initial values
     if beta_tt_init is None:
         #beta_tt[:,0] = np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
-        tmp = np.array(np.eye(k), np.float32, order="F") - F
-        sgetrf(&k, &k, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        sgetri(&k, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        sgemv("N",&k,&k,&alpha,&tmp[0,0],&ldwork,&mu[0],&inc,&beta,&beta_tt[0,0],&inc)
-    else:
-        beta_tt[::1,0] = beta_tt_init[::1]
+        beta_tt_init = np.zeros((k,), float, order="F")
+        tmp = np.array(np.eye(k), float, order="F") - F
+        sgetrf(&k, &k, &tmp[0,0], &k, &ipiv[0,0], &info)
+        sgetri(&k, &tmp[0,0], &k, &ipiv[0,0], &work[0,0], &lwork, &info)
+        sgemv("N",&k,&k,&alpha,&tmp[0,0],&k,&mu[0],&inc,&beta,&beta_tt_init[0],&inc)
+    beta_tt[::1,0] = beta_tt_init[::1]
 
     if P_tt_init is None:
         #P_tt[0] = np.linalg.inv(np.eye(k**2) - np.kron(F,F)).dot(Q.reshape(Q.size, 1)).reshape(k,k) # kxk
-        tmp = np.array(np.eye(k2) - np.kron(F,F), np.float32, order="F")
-        sgetrf(&k2, &k2, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        sgetri(&k2, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        sgemv("N",&k2,&k2,&alpha,&tmp[0,0],&ldwork,&Q[0,0],&inc,&beta,&P_tt[0,0,0],&inc)
-    else:
-        P_tt[::1,:,0] = P_tt_init[::1,:]
+        P_tt_init = np.zeros((k,k), float, order="F")
+        tmp = np.array(np.eye(k2) - np.kron(F,F), float, order="F")
+        sgetrf(&k2, &k2, &tmp[0,0], &k2, &ipiv[0,0], &info)
+        sgetri(&k2, &tmp[0,0], &k2, &ipiv[0,0], &work[0,0], &lwork, &info)
+        sgemv("N",&k2,&k2,&alpha,&tmp[0,0],&k2,&Q[0,0],&inc,&beta,&P_tt_init[0,0],&inc)
+    P_tt[::1,:,0] = P_tt_init[::1,:]
 
     # Redefine the tmp array
     tmp = np.empty((ldwork,ldwork), np.float32, order="F")
@@ -244,21 +244,21 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
     # Initial values
     if beta_tt_init is None:
         #beta_tt[:,0] = np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
+        beta_tt_init = np.zeros((k,), float, order="F")
         tmp = np.array(np.eye(k), float, order="F") - F
-        dgetrf(&k, &k, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        dgetri(&k, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        dgemv("N",&k,&k,&alpha,&tmp[0,0],&ldwork,&mu[0],&inc,&beta,&beta_tt[0,0],&inc)
-    else:
-        beta_tt[::1,0] = beta_tt_init[::1]
+        dgetrf(&k, &k, &tmp[0,0], &k, &ipiv[0,0], &info)
+        dgetri(&k, &tmp[0,0], &k, &ipiv[0,0], &work[0,0], &lwork, &info)
+        dgemv("N",&k,&k,&alpha,&tmp[0,0],&k,&mu[0],&inc,&beta,&beta_tt_init[0],&inc)
+    beta_tt[::1,0] = beta_tt_init[::1]
 
     if P_tt_init is None:
         #P_tt[0] = np.linalg.inv(np.eye(k**2) - np.kron(F,F)).dot(Q.reshape(Q.size, 1)).reshape(k,k) # kxk
+        P_tt_init = np.zeros((k,k), float, order="F")
         tmp = np.array(np.eye(k2) - np.kron(F,F), float, order="F")
-        dgetrf(&k2, &k2, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        dgetri(&k2, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        dgemv("N",&k2,&k2,&alpha,&tmp[0,0],&ldwork,&Q[0,0],&inc,&beta,&P_tt[0,0,0],&inc)
-    else:
-        P_tt[::1,:,0] = P_tt_init[::1,:]
+        dgetrf(&k2, &k2, &tmp[0,0], &k2, &ipiv[0,0], &info)
+        dgetri(&k2, &tmp[0,0], &k2, &ipiv[0,0], &work[0,0], &lwork, &info)
+        dgemv("N",&k2,&k2,&alpha,&tmp[0,0],&k2,&Q[0,0],&inc,&beta,&P_tt_init[0,0],&inc)
+    P_tt[::1,:,0] = P_tt_init[::1,:]
 
     # Redefine the tmp array
     tmp = np.empty((ldwork,ldwork), float, order="F")
@@ -386,21 +386,21 @@ cpdef ckalman_filter(
     # Initial values
     if beta_tt_init is None:
         #beta_tt[:,0] = np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
+        beta_tt_init = np.zeros((k,), np.complex64, order="F")
         tmp = np.array(np.eye(k), np.complex64, order="F") - F
-        cgetrf(&k, &k, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        cgetri(&k, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        cgemv("N",&k,&k,&alpha,&tmp[0,0],&ldwork,&mu[0],&inc,&beta,&beta_tt[0,0],&inc)
-    else:
-        beta_tt[::1,0] = beta_tt_init[::1]
+        cgetrf(&k, &k, &tmp[0,0], &k, &ipiv[0,0], &info)
+        cgetri(&k, &tmp[0,0], &k, &ipiv[0,0], &work[0,0], &lwork, &info)
+        cgemv("N",&k,&k,&alpha,&tmp[0,0],&k,&mu[0],&inc,&beta,&beta_tt_init[0],&inc)
+    beta_tt[::1,0] = beta_tt_init[::1]
 
     if P_tt_init is None:
         #P_tt[0] = np.linalg.inv(np.eye(k**2) - np.kron(F,F)).dot(Q.reshape(Q.size, 1)).reshape(k,k) # kxk
+        P_tt_init = np.zeros((k,k), np.complex64, order="F")
         tmp = np.array(np.eye(k2) - np.kron(F,F), np.complex64, order="F")
-        cgetrf(&k2, &k2, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        cgetri(&k2, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        cgemv("N",&k2,&k2,&alpha,&tmp[0,0],&ldwork,&Q[0,0],&inc,&beta,&P_tt[0,0,0],&inc)
-    else:
-        P_tt[::1,:,0] = P_tt_init[::1,:]
+        cgetrf(&k2, &k2, &tmp[0,0], &k2, &ipiv[0,0], &info)
+        cgetri(&k2, &tmp[0,0], &k2, &ipiv[0,0], &work[0,0], &lwork, &info)
+        cgemv("N",&k2,&k2,&alpha,&tmp[0,0],&k2,&Q[0,0],&inc,&beta,&P_tt_init[0,0],&inc)
+    P_tt[::1,:,0] = P_tt_init[::1,:]
 
     # Redefine the tmp array
     tmp = np.empty((ldwork,ldwork), np.complex64, order="F")
@@ -531,23 +531,23 @@ cpdef zkalman_filter(
     # Initial values
     if beta_tt_init is None:
         #beta_tt[:,0] = np.linalg.inv(np.eye(k) - F).dot(mu) # kxk * kx1 = kx1
+        beta_tt_init = np.zeros((k,), complex, order="F")
         tmp = np.array(np.eye(k), complex, order="F") - F
-        zgetrf(&k, &k, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        zgetri(&k, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        zgemv("N",&k,&k,&alpha,&tmp[0,0],&ldwork,&mu[0],&inc,&beta,&beta_tt[0,0],&inc)
-    else:
-        beta_tt[::1,0] = beta_tt_init[::1]
+        zgetrf(&k, &k, &tmp[0,0], &k, &ipiv[0,0], &info)
+        zgetri(&k, &tmp[0,0], &k, &ipiv[0,0], &work[0,0], &lwork, &info)
+        zgemv("N",&k,&k,&alpha,&tmp[0,0],&k,&mu[0],&inc,&beta,&beta_tt_init[0],&inc)
+    beta_tt[::1,0] = beta_tt_init[::1]
 
     if P_tt_init is None:
         #P_tt[0] = np.linalg.inv(np.eye(k**2) - np.kron(F,F)).dot(Q.reshape(Q.size, 1)).reshape(k,k) # kxk
+        P_tt_init = np.zeros((k,k), complex, order="F")
         tmp = np.array(np.eye(k2) - np.kron(F,F), complex, order="F")
-        zgetrf(&k2, &k2, &tmp[0,0], &ldwork, &ipiv[0,0], &info)
-        zgetri(&k2, &tmp[0,0], &ldwork, &ipiv[0,0], &work[0,0], &lwork, &info)
-        zgemv("N",&k2,&k2,&alpha,&tmp[0,0],&ldwork,&Q[0,0],&inc,&beta,&P_tt[0,0,0],&inc)
-    else:
-        P_tt[::1,:,0] = P_tt_init[::1,:]
+        zgetrf(&k2, &k2, &tmp[0,0], &k2, &ipiv[0,0], &info)
+        zgetri(&k2, &tmp[0,0], &k2, &ipiv[0,0], &work[0,0], &lwork, &info)
+        zgemv("N",&k2,&k2,&alpha,&tmp[0,0],&k2,&Q[0,0],&inc,&beta,&P_tt_init[0,0],&inc)
+    P_tt[::1,:,0] = P_tt_init[::1,:]
 
-    # Redefine the tmp array
+    # Define the tmp array
     tmp = np.empty((ldwork,ldwork), complex, order="F")
 
     # Iterate forwards
