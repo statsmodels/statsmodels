@@ -71,6 +71,22 @@ ctypedef int sgetri_t(
     int *info      # 0 if success, otherwise an error code (integer)
 )
 
+ctypedef int dsymm_t(
+    # Compute C := alpha*A*B + beta*C,
+    char *side,  # {'L','R'}
+    char *uplo,  # {'U','L'}
+    int *m,        # Rows of C
+    int *n,        # Columns C
+    double *alpha, # Scalar multiple
+    double *a,     # Matrix A: mxk
+    int *lda,      # The size of the first dimension of A (in memory)
+    double *b,     # Matrix B: kxn
+    int *ldb,      # The size of the first dimension of B (in memory)
+    double *beta,  # Scalar multiple
+    double *c,     # Matrix C: mxn
+    int *ldc       # The size of the first dimension of C (in memory)
+)
+
 ctypedef int dgemm_t(
     # Compute C := alpha*A*B + beta*C
     char *transa,  # {'T','C'}: o(A)=A'; {'N'}: o(A)=A
@@ -101,6 +117,14 @@ ctypedef int dgemv_t(
     double *beta,  # Scalar multiple
     double *y,     # Vector y, min(len(y)) = m
     int *incy      # The increment between elements of y (usually 1)
+)
+
+ctypedef int dcopy_t(
+    int *n,
+    double *x,
+    int *incx,
+    double *y,
+    int *incy
 )
 
 ctypedef int daxpy_t(
