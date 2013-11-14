@@ -1,5 +1,21 @@
 cimport numpy as np
 
+ctypedef int ssymm_t(
+    # Compute C := alpha*A*B + beta*C,
+    char *side,  # {'L','R'}
+    char *uplo,  # {'U','L'}
+    int *m,        # Rows of C
+    int *n,        # Columns C
+    np.float32_t *alpha, # Scalar multiple
+    np.float32_t *a,     # Matrix A: mxk
+    int *lda,      # The size of the first dimension of A (in memory)
+    np.float32_t *b,     # Matrix B: kxn
+    int *ldb,      # The size of the first dimension of B (in memory)
+    np.float32_t *beta,  # Scalar multiple
+    np.float32_t *c,     # Matrix C: mxn
+    int *ldc       # The size of the first dimension of C (in memory)
+)
+
 ctypedef int sgemm_t(
     # Compute C := alpha*A*B + beta*C
     char *transa,  # {'T','C'}: o(A)=A'; {'N'}: o(A)=A
@@ -30,6 +46,14 @@ ctypedef int sgemv_t(
     np.float32_t *beta,  # Scalar multiple
     np.float32_t *y,     # Vector y, min(len(y)) = m
     int *incy      # The increment between elements of y (usually 1)
+)
+
+ctypedef int scopy_t(
+    int *n,
+    np.float32_t *x,
+    int *incx,
+    np.float32_t *y,
+    int *incy
 )
 
 ctypedef int saxpy_t(
@@ -166,6 +190,22 @@ ctypedef int dgetri_t(
     int *info      # 0 if success, otherwise an error code (integer)
 )
 
+ctypedef int csymm_t(
+    # Compute C := alpha*A*B + beta*C,
+    char *side,  # {'L','R'}
+    char *uplo,  # {'U','L'}
+    int *m,        # Rows of C
+    int *n,        # Columns C
+    np.complex64_t *alpha, # Scalar multiple
+    np.complex64_t *a,     # Matrix A: mxk
+    int *lda,      # The size of the first dimension of A (in memory)
+    np.complex64_t *b,     # Matrix B: kxn
+    int *ldb,      # The size of the first dimension of B (in memory)
+    np.complex64_t *beta,  # Scalar multiple
+    np.complex64_t *c,     # Matrix C: mxn
+    int *ldc       # The size of the first dimension of C (in memory)
+)
+
 ctypedef int cgemm_t(
     # Compute C := alpha*A*B + beta*C
     char *transa,   # {'T','C'}: o(A)=A'; {'N'}: o(A)=A
@@ -198,6 +238,14 @@ ctypedef int cgemv_t(
     int *incy       # The increment between elements of y (usually 1)
 )
 
+ctypedef int ccopy_t(
+    int *n,
+    np.complex64_t *x,
+    int *incx,
+    np.complex64_t *y,
+    int *incy
+)
+
 ctypedef int caxpy_t(
     # Compute y := alpha*x + y
     int *n,        # Columns of o(A) / min(len(x))
@@ -225,6 +273,22 @@ ctypedef int cgetri_t(
     np.complex64_t *work, # Matrix: nxn (a workspace for the inversion, optimal size=nxn)
     int *lwork,    # Number of elements in the workspace: optimal is n**2
     int *info      # 0 if success, otherwise an error code (integer)
+)
+
+ctypedef int zsymm_t(
+    # Compute C := alpha*A*B + beta*C,
+    char *side,  # {'L','R'}
+    char *uplo,  # {'U','L'}
+    int *m,        # Rows of C
+    int *n,        # Columns C
+    complex *alpha, # Scalar multiple
+    complex *a,     # Matrix A: mxk
+    int *lda,      # The size of the first dimension of A (in memory)
+    complex *b,     # Matrix B: kxn
+    int *ldb,      # The size of the first dimension of B (in memory)
+    complex *beta,  # Scalar multiple
+    complex *c,     # Matrix C: mxn
+    int *ldc       # The size of the first dimension of C (in memory)
 )
 
 ctypedef int zgemm_t(
@@ -257,6 +321,14 @@ ctypedef int zgemv_t(
     complex *beta,  # Scalar multiple
     complex *y,     # Vector y, min(len(y)) = m
     int *incy       # The increment between elements of y (usually 1)
+)
+
+ctypedef int zcopy_t(
+    int *n,
+    complex *x,
+    int *incx,
+    complex *y,
+    int *incy
 )
 
 ctypedef int zaxpy_t(
