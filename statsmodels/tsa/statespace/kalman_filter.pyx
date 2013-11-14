@@ -13,8 +13,10 @@ cdef extern from "complex.h":
 
 from blas_lapack cimport *
 
+cdef ssymm_t *ssymm = <ssymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ssymm._cpointer)
 cdef sgemm_t *sgemm = <sgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sgemm._cpointer)
 cdef sgemv_t *sgemv = <sgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sgemv._cpointer)
+cdef scopy_t *scopy = <scopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.scopy._cpointer)
 cdef saxpy_t *saxpy = <saxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.saxpy._cpointer)
 cdef sdot_t *sdot = <sdot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sdot._cpointer)
 cdef sgetrf_t *sgetrf = <sgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.sgetrf._cpointer)
@@ -29,14 +31,18 @@ cdef ddot_t *ddot = <ddot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ddot._cpointe
 cdef dgetrf_t *dgetrf = <dgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dgetrf._cpointer)
 cdef dgetri_t *dgetri = <dgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dgetri._cpointer)
 
+cdef csymm_t *csymm = <csymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.csymm._cpointer)
 cdef cgemm_t *cgemm = <cgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.cgemm._cpointer)
 cdef cgemv_t *cgemv = <cgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.cgemv._cpointer)
+cdef ccopy_t *ccopy = <ccopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ccopy._cpointer)
 cdef caxpy_t *caxpy = <caxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.caxpy._cpointer)
 cdef cgetrf_t *cgetrf = <cgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cgetrf._cpointer)
 cdef cgetri_t *cgetri = <cgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cgetri._cpointer)
 
+cdef zsymm_t *zsymm = <zsymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zsymm._cpointer)
 cdef zgemm_t *zgemm = <zgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zgemm._cpointer)
 cdef zgemv_t *zgemv = <zgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zgemv._cpointer)
+cdef zcopy_t *zcopy = <zcopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.copy._cpointer)
 cdef zaxpy_t *zaxpy = <zaxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zaxpy._cpointer)
 cdef zgetrf_t *zgetrf = <zgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zgetrf._cpointer)
 cdef zgetri_t *zgetri = <zgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zgetri._cpointer)
@@ -127,12 +133,14 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
 
         # Prediction
         #beta_tt1[t] = mu + np.dot(F, beta_tt[t-1])
-        beta_tt1[::1,t] = mu[::1]
+        #beta_tt1[::1,t] = mu[::1]
+        scopy(&k, &mu[0], &inc, &beta_tt1[0,t], &inc)
         sgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        P_tt1[::1,:,t] = Q[::1,:]
-        sgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+        #P_tt1[::1,:,t] = Q[::1,:]
+        scopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+        ssymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
         sgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
@@ -141,7 +149,8 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         sgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
-        eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        scopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         saxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
@@ -149,11 +158,13 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         sgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
 
         #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        f_tt1[::1,:,t] = R[::1,:]
+        #f_tt1[::1,:,t] = R[::1,:]
+        scopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
         sgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
 
         #f_inv = np.linalg.inv(f_tt1[t])
-        f_inv[::1,:] = f_tt1[::1,:,t]
+        #f_inv[::1,:] = f_tt1[::1,:,t]
+        scopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
         sgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
         det = 1
         for i in range(n):
@@ -176,11 +187,13 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         sgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
-        beta_tt[::1,t] = beta_tt1[::1,t]
+        #beta_tt[::1,t] = beta_tt1[::1,t]
+        scopy(&k, &beta_tt1[0,t], &inc, &beta_tt[0,t], &inc)
         sgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        P_tt[::1,:,t] = P_tt1[::1,:,t]
+        #P_tt[::1,:,t] = P_tt1[::1,:,t]
+        scopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
         sgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
         sgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
 
@@ -421,12 +434,14 @@ cpdef ckalman_filter(
 
         # Prediction
         #beta_tt1[t] = mu + np.dot(F, beta_tt[t-1])
-        beta_tt1[::1,t] = mu[::1]
+        #beta_tt1[::1,t] = mu[::1]
+        ccopy(&k, &mu[0], &inc, &beta_tt1[0,t], &inc)
         cgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        P_tt1[::1,:,t] = Q[::1,:]
-        cgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+        #P_tt1[::1,:,t] = Q[::1,:]
+        ccopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+        csymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
         cgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
@@ -435,7 +450,8 @@ cpdef ckalman_filter(
         cgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
-        eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        ccopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         caxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
@@ -443,11 +459,13 @@ cpdef ckalman_filter(
         cgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
 
         #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        f_tt1[::1,:,t] = R[::1,:]
+        #f_tt1[::1,:,t] = R[::1,:]
+        ccopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
         cgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
 
         #f_inv = np.linalg.inv(f_tt1[t])
-        f_inv[::1,:] = f_tt1[::1,:,t]
+        #f_inv[::1,:] = f_tt1[::1,:,t]
+        ccopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
         cgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
         det = 1
         for i in range(n):
@@ -473,11 +491,13 @@ cpdef ckalman_filter(
         cgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
-        beta_tt[::1,t] = beta_tt1[::1,t]
+        #beta_tt[::1,t] = beta_tt1[::1,t]
+        ccopy(&k, &beta_tt1[0,t], &inc, &beta_tt[0,t], &inc)
         cgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        P_tt[::1,:,t] = P_tt1[::1,:,t]
+        #P_tt[::1,:,t] = P_tt1[::1,:,t]
+        ccopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
         cgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
         cgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
 
@@ -566,12 +586,14 @@ cpdef zkalman_filter(
 
         # Prediction
         #beta_tt1[t] = mu + np.dot(F, beta_tt[t-1])
-        beta_tt1[::1,t] = mu[::1]
+        #beta_tt1[::1,t] = mu[::1]
+        zcopy(&k, &mu[0], &inc, &beta_tt1[0,t], &inc)
         zgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        P_tt1[::1,:,t] = Q[::1,:]
-        zgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+        #P_tt1[::1,:,t] = Q[::1,:]
+        zcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+        zsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
         zgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
@@ -580,7 +602,8 @@ cpdef zkalman_filter(
         zgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
-        eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        zcopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         zaxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
@@ -588,11 +611,13 @@ cpdef zkalman_filter(
         zgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
 
         #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        f_tt1[::1,:,t] = R[::1,:]
+        #f_tt1[::1,:,t] = R[::1,:]
+        zcopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
         zgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
 
         #f_inv = np.linalg.inv(f_tt1[t])
-        f_inv[::1,:] = f_tt1[::1,:,t]
+        #f_inv[::1,:] = f_tt1[::1,:,t]
+        zcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
         zgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
         det = 1
         for i in range(n):
@@ -618,11 +643,13 @@ cpdef zkalman_filter(
         zgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
-        beta_tt[::1,t] = beta_tt1[::1,t]
+        #beta_tt[::1,t] = beta_tt1[::1,t]
+        zcopy(&k, &beta_tt1[0,t], &inc, &beta_tt[0,t], &inc)
         zgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        P_tt[::1,:,t] = P_tt1[::1,:,t]
+        #P_tt[::1,:,t] = P_tt1[::1,:,t]
+        zcopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
         zgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
         zgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
 
