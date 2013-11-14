@@ -20,8 +20,10 @@ cdef sdot_t *sdot = <sdot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sdot._cpointe
 cdef sgetrf_t *sgetrf = <sgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.sgetrf._cpointer)
 cdef sgetri_t *sgetri = <sgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.sgetri._cpointer)
 
+cdef dsymm_t *dsymm = <dsymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dsymm._cpointer)
 cdef dgemm_t *dgemm = <dgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dgemm._cpointer)
 cdef dgemv_t *dgemv = <dgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dgemv._cpointer)
+cdef dcopy_t *dcopy = <dcopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dcopy._cpointer)
 cdef daxpy_t *daxpy = <daxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.daxpy._cpointer)
 cdef ddot_t *ddot = <ddot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ddot._cpointer)
 cdef dgetrf_t *dgetrf = <dgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dgetrf._cpointer)
@@ -270,12 +272,14 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
 
         # Prediction
         #beta_tt1[t] = mu + np.dot(F, beta_tt[t-1])
-        beta_tt1[::1,t] = mu[::1]
+        #beta_tt1[::1,t] = mu[::1]
+        dcopy(&k, &mu[0], &inc, &beta_tt1[0,t], &inc)
         dgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        P_tt1[::1,:,t] = Q[::1,:]
-        dgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+        #P_tt1[::1,:,t] = Q[::1,:]
+        dcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+        dsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
         dgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
@@ -284,7 +288,8 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         dgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
-        eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
+        dcopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         daxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
@@ -292,11 +297,13 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         dgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
 
         #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        f_tt1[::1,:,t] = R[::1,:]
+        #f_tt1[::1,:,t] = R[::1,:]
+        dcopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
         dgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
 
         #f_inv = np.linalg.inv(f_tt1[t])
-        f_inv[::1,:] = f_tt1[::1,:,t]
+        #f_inv[::1,:] = f_tt1[::1,:,t]
+        dcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
         dgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
         det = 1
         for i in range(n):
@@ -319,11 +326,13 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         dgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
-        beta_tt[::1,t] = beta_tt1[::1,t]
+        #beta_tt[::1,t] = beta_tt1[::1,t]
+        dcopy(&k, &beta_tt1[0,t], &inc, &beta_tt[0,t], &inc)
         dgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        P_tt[::1,:,t] = P_tt1[::1,:,t]
+        #P_tt[::1,:,t] = P_tt1[::1,:,t]
+        dcopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
         dgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
         dgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
 
