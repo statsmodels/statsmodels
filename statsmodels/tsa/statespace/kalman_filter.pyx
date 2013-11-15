@@ -2,6 +2,12 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
+# TODO
+# - Have A and z be optiona parameters; if they are not set, then
+#   can ignore a couple of dgemm calls
+# - Other similar simplifications: e.g. is 1/f_inv faster when n == 1? It seems
+#   like it ought to be
+
 from cpython cimport PyCObject_AsVoidPtr
 import scipy
 __import__('scipy.linalg.blas')
@@ -52,13 +58,13 @@ cdef zgetri_t *zgetri = <zgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zgetr
 @cython.wraparound(False)
 @cython.cdivision(True)
 cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, observed)
-                     np.float32_t [::1,:]   z,  # rxT+1    (data: weakly exogenous, observed)
-                     np.float32_t [::1,:]   A,  # nxr      (parameters)
                      np.float32_t [::1,:,:] H,  # nxkxT+1  (parameters)
                      np.float32_t [:]       mu, # kx0      (parameters)
                      np.float32_t [::1,:]   F,  # kxk      (parameters)
                      np.float32_t [::1,:]   R,  # nxn      (parameters: covariance matrix)
                      np.float32_t [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                     np.float32_t [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
+                     np.float32_t [::1,:]   A=None,  # nxr      (parameters)
                      np.float32_t [:]       beta_tt_init=None,
                      np.float32_t [::1,:]   P_tt_init=None):
 
@@ -72,7 +78,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         int t
         int T = y.shape[1]
         int n = y.shape[0]
-        int r = z.shape[0]
+        int r = 0
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -88,6 +94,10 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         np.float32_t beta = 0.0 # second scalar multiple on sgemv, sgemm
         np.float32_t gamma = -1.0 # scalar multiple for saxpy
         np.float32_t delta = -0.5 # scalar multiple for log calculation
+
+    # Check if we have an exog matrix
+    if z is not None and A is not None:
+        r = z.shape[0]
 
     # Allocate memory for variables
     beta_tt = np.zeros((k,T+1), np.float32, order="F")    # T+1xk
@@ -146,8 +156,9 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         sgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
-        # z[0] corresponds to z[t=1]
-        sgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
+        if r > 0:
+            # z[0] corresponds to z[t=1]
+            sgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
@@ -205,13 +216,13 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
 @cython.wraparound(False)
 @cython.cdivision(True)
 cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed)
-                     double [::1,:]   z,  # rxT+1    (data: weakly exogenous, observed)
-                     double [::1,:]   A,  # nxr      (parameters)
                      double [::1,:,:] H,  # nxkxT+1  (parameters)
                      double [:]       mu, # kx0      (parameters)
                      double [::1,:]   F,  # kxk      (parameters)
                      double [::1,:]   R,  # nxn      (parameters: covariance matrix)
                      double [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                     double [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
+                     double [::1,:]   A=None,  # nxr      (parameters)
                      double [:]       beta_tt_init=None,
                      double [::1,:]   P_tt_init=None):
 
@@ -225,7 +236,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         int t
         int T = y.shape[1]
         int n = y.shape[0]
-        int r = z.shape[0]
+        int r = 0
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -241,6 +252,10 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         double beta = 0.0 # second scalar multiple on dgemv, dgemm
         double gamma = -1.0 # scalar multiple for daxpy
         double delta = -0.5 # scalar multiple for log calculation
+
+    # Check if we have an exog matrix
+    if z is not None and A is not None:
+        r = z.shape[0]
 
     # Allocate memory for variables
     beta_tt = np.zeros((k,T+1), float, order="F")    # T+1xk
@@ -299,8 +314,9 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         dgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
-        # z[0] corresponds to z[t=1]
-        dgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
+        if r > 0:
+            # z[0] corresponds to z[t=1]
+            dgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
@@ -355,13 +371,13 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
 
 cpdef ckalman_filter(
                     np.complex64_t [::1,:]   y,  # nxT+1    (data: endogenous, observed)
-                    np.complex64_t [::1,:]   z,  # rxT+1    (data: weakly exogenous, observed)
-                    np.complex64_t [::1,:]   A,  # nxr      (parameters)
                     np.complex64_t [::1,:,:] H,  # nxkxT+1  (parameters)
                     np.complex64_t [:]       mu, # kx0      (parameters)
                     np.complex64_t [::1,:]   F,  # kxk      (parameters)
                     np.complex64_t [::1,:]   R,  # nxn      (parameters: covariance matrix)
                     np.complex64_t [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                    np.complex64_t [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
+                    np.complex64_t [::1,:]   A=None,  # nxr      (parameters)
                     np.complex64_t [:]       beta_tt_init=None,
                     np.complex64_t [::1,:]   P_tt_init=None):
 
@@ -375,7 +391,7 @@ cpdef ckalman_filter(
         int t
         int T = y.shape[1]
         int n = y.shape[0]
-        int r = z.shape[0]
+        int r = 0
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -391,6 +407,10 @@ cpdef ckalman_filter(
         np.complex64_t beta = 0.0 # second scalar multiple on dgemv, dgemm
         np.complex64_t gamma = -1.0 # scalar multiple for daxpy
         np.complex64_t delta = -0.5 # scalar multiple for log calculation
+
+    # Check if we have an exog matrix
+    if z is not None and A is not None:
+        r = z.shape[0]
 
     # Allocate memory for variables
     beta_tt = np.zeros((k,T+1), np.complex64, order="F")    # T+1xk
@@ -449,8 +469,9 @@ cpdef ckalman_filter(
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         cgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
-        # z[0] corresponds to z[t=1]
-        cgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
+        if r > 0:
+            # z[0] corresponds to z[t=1]
+            cgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
@@ -508,13 +529,13 @@ cpdef ckalman_filter(
 
 cpdef zkalman_filter(
                     complex [::1,:]   y,  # nxT+1    (data: endogenous, observed)
-                    complex [::1,:]   z,  # rxT+1    (data: weakly exogenous, observed)
-                    complex [::1,:]   A,  # nxr      (parameters)
                     complex [::1,:,:] H,  # nxkxT+1  (parameters)
                     complex [:]       mu, # kx0      (parameters)
                     complex [::1,:]   F,  # kxk      (parameters)
                     complex [::1,:]   R,  # nxn      (parameters: covariance matrix)
                     complex [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                    complex [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
+                    complex [::1,:]   A=None,  # nxr      (parameters)
                     complex [:]       beta_tt_init=None,
                     complex [::1,:]   P_tt_init=None):
 
@@ -528,7 +549,7 @@ cpdef zkalman_filter(
         int t
         int T = y.shape[1]
         int n = y.shape[0]
-        int r = z.shape[0]
+        int r = 0
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -544,6 +565,10 @@ cpdef zkalman_filter(
         complex beta = 0.0 # second scalar multiple on dgemv, dgemm
         complex gamma = -1.0 # scalar multiple for daxpy
         complex delta = -0.5 # scalar multiple for log calculation
+
+    # Check if we have an exog matrix
+    if z is not None and A is not None:
+        r = z.shape[0]
 
     # Allocate memory for variables
     beta_tt = np.zeros((k,T+1), complex, order="F")    # T+1xk
@@ -602,8 +627,9 @@ cpdef zkalman_filter(
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         zgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
-        # z[0] corresponds to z[t=1]
-        zgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
+        if r > 0:
+            # z[0] corresponds to z[t=1]
+            zgemv("N", &n, &r, &alpha, &A[0,0], &n, &z[0,t-1], &inc, &alpha, &y_tt1[0,t], &inc)
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
