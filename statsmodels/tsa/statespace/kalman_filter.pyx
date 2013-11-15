@@ -2,20 +2,17 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
-# TODO
-# - Have A and z be optiona parameters; if they are not set, then
-#   can ignore a couple of dgemm calls
-# - Other similar simplifications: e.g. is 1/f_inv faster when n == 1? It seems
-#   like it ought to be
-
 from cpython cimport PyCObject_AsVoidPtr
 import scipy
 __import__('scipy.linalg.blas')
 __import__('scipy.linalg.lapack')
 
-from libc.math cimport log as dlog
+from libc.math cimport log as dlog, abs as dabs
 cdef extern from "complex.h":
-    complex log(complex x)
+    complex clog(complex x)
+    np.complex64_t clogf(np.complex64_t x)
+    complex cabs(complex x)
+    np.complex64_t cabsf(np.complex64_t x)
 
 from blas_lapack cimport *
 
@@ -176,16 +173,20 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
 
         #f_inv = np.linalg.inv(f_tt1[t])
         #f_inv[::1,:] = f_tt1[::1,:,t]
-        scopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-        sgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-        det = 1
-        for i in range(n):
-            if not ipiv[i,0] == i+1:
-                det *= -1*f_inv[i,i]
-            else:
-                det *= f_inv[i,i]
-        # Now complete taking the inverse
-        sgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+        if n == 1:
+            det = dabs(f_tt1[0,0,t])
+            f_inv[0,0] = 1/f_tt1[0,0,t]
+        else:
+            scopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+            sgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+            det = 1
+            for i in range(n):
+                if not ipiv[i,0] == i+1:
+                    det *= -1*f_inv[i,i]
+                else:
+                    det *= f_inv[i,i]
+            # Now complete taking the inverse
+            sgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
@@ -334,16 +335,20 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
 
         #f_inv = np.linalg.inv(f_tt1[t])
         #f_inv[::1,:] = f_tt1[::1,:,t]
-        dcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-        dgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-        det = 1
-        for i in range(n):
-            if not ipiv[i,0] == i+1:
-                det *= -1*f_inv[i,i]
-            else:
-                det *= f_inv[i,i]
-        # Now complete taking the inverse
-        dgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+        if n == 1:
+            det = dabs(f_tt1[0,0,t])
+            f_inv[0,0] = 1/f_tt1[0,0,t]
+        else:
+            dcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+            dgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+            det = 1
+            for i in range(n):
+                if not ipiv[i,0] == i+1:
+                    det *= -1*f_inv[i,i]
+                else:
+                    det *= f_inv[i,i]
+            # Now complete taking the inverse
+            dgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
@@ -489,21 +494,25 @@ cpdef ckalman_filter(
 
         #f_inv = np.linalg.inv(f_tt1[t])
         #f_inv[::1,:] = f_tt1[::1,:,t]
-        ccopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-        cgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-        det = 1
-        for i in range(n):
-            if not ipiv[i,0] == i+1:
-                det *= -1*f_inv[i,i]
-            else:
-                det *= f_inv[i,i]
-        # Now complete taking the inverse
-        cgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+        if n == 1:
+            det = cabsf(f_tt1[0,0,t])
+            f_inv[0,0] = 1/f_tt1[0,0,t]
+        else:
+            ccopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+            cgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+            det = 1
+            for i in range(n):
+                if not ipiv[i,0] == i+1:
+                    det *= -1*f_inv[i,i]
+                else:
+                    det *= f_inv[i,i]
+            # Now complete taking the inverse
+            cgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
         # ^ this doesn't work, crashes for some reason; probably related to taking .T as it did above
-        ll[t] = -0.5*log(2*np.pi*det)
+        ll[t] = -0.5*clogf(2*np.pi*det)
         cgemv("N",&n,&n,&alpha,&f_inv[0,0],&n,&eta_tt1[0,t],&inc,&beta,&tmp[0,0],&inc)
         # ll[t] += -0.5*zdotu(&n, &eta_tt1[0,t], &inc, &tmp[0,0], &inc)
         # ^ zdotu, cdotu don't work, give a segfault 11, not sure why
@@ -647,21 +656,25 @@ cpdef zkalman_filter(
 
         #f_inv = np.linalg.inv(f_tt1[t])
         #f_inv[::1,:] = f_tt1[::1,:,t]
-        zcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-        zgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-        det = 1
-        for i in range(n):
-            if not ipiv[i,0] == i+1:
-                det *= -1*f_inv[i,i]
-            else:
-                det *= f_inv[i,i]
-        # Now complete taking the inverse
-        zgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+        if n == 1:
+            det = cabs(f_tt1[0,0,t])
+            f_inv[0,0] = 1/f_tt1[0,0,t]
+        else:
+            zcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+            zgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+            det = 1
+            for i in range(n):
+                if not ipiv[i,0] == i+1:
+                    det *= -1*f_inv[i,i]
+                else:
+                    det *= f_inv[i,i]
+            # Now complete taking the inverse
+            zgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
         # ^ this doesn't work, crashes for some reason; probably related to taking .T as it did above
-        ll[t] = -0.5*log(2*np.pi*det)
+        ll[t] = -0.5*clog(2*np.pi*det)
         zgemv("N",&n,&n,&alpha,&f_inv[0,0],&n,&eta_tt1[0,t],&inc,&beta,&tmp[0,0],&inc)
         # ll[t] += -0.5*zdotu(&n, &eta_tt1[0,t], &inc, &tmp[0,0], &inc)
         # ^ zdotu, cdotu don't work, give a segfault 11, not sure why
