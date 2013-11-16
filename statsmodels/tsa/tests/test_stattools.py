@@ -241,6 +241,16 @@ def test_acovf2d():
     X = np.random.random((10,2))
     assert_raises(ValueError, acovf, X)
 
+def test_acovf_fft_vs_convolution():
+    np.random.seed(1)
+    q = np.random.normal(size=100)
+
+    for demean in [True, False]:
+        for unbiased in [True, False]:
+            F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
+            F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
+            assert_almost_equal(F1, F2, decimal=7)
+
 if __name__=="__main__":
     import nose
 #    nose.runmodule(argv=[__file__, '-vvs','-x','-pdb'], exit=False)
