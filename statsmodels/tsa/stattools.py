@@ -303,11 +303,11 @@ def acovf(x, unbiased=False, demean=True, fft=False):
         xi = np.arange(1, n+1)
         d = np.hstack((xi, xi[:-1][::-1]))
     else:
-        d = n
+        d = n * np.ones(n)
     if fft:
         nobs = len(xo)
         Frf = np.fft.fft(xo, n=nobs*2)
-        acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs]/d
+        acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs] / d[0:nobs]
         return acov.real
     else:
         return (np.correlate(xo, xo, 'full')/d)[n-1:]
