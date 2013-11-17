@@ -418,7 +418,7 @@ class RLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bcov_unscaled(self):
-        return self.cov_params(scale=1.)
+        return self.normalized_cov_params
 
     @cache_readonly
     def weights(self):
