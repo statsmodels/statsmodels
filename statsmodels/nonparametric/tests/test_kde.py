@@ -98,7 +98,7 @@ class test_kde_refit():
     pdf2 = KDE(data2)
     pdf2.fit()
 
-    for attr in ['icdf', 'cdf', 'sf']:
+    for attr in ['ppf_values', 'cdf_values', 'sf_values']:
         npt.assert_(not np.allclose(getattr(pdf, attr)[:10],
                                     getattr(pdf2, attr)[:10]))
 

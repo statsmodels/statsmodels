@@ -412,7 +412,11 @@ class Gaussian(CustomKernel):
         return v/w
 
     def cdf(self, Xi, x, h):
-        return 0.5 * (1 + erf( (x - Xi)/(h * np.sqrt(2) ) ) )
+        """
+        Returns the value of the integrated gaussian kernel, corresponding 
+        to it's CDF
+        """
+        return 0.5 * (1 + erf( (x - np.asarray([Xi]).T)/(h * np.sqrt(2) ) ) )
 
 class Cosine(CustomKernel):
     """

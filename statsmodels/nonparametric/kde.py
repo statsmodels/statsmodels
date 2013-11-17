@@ -155,7 +155,9 @@ class KDEUnivariate(object):
         # put here to ensure empty cache after re-fit with new options
         self._cache = resettable_cache()
 
-    def pdf(self, x, method = 'exact'):
+        return self
+
+    def pdf(self, point, method = 'exact'):
         """
         Returns the probability distribution function evaluated at a point.
 
@@ -198,9 +200,9 @@ class KDEUnivariate(object):
         _checkisfit(self)
         return self.density
 
-    def cdf(self, x, method = 'exact'):
+    def cdf(self, point, method = 'exact'):
         """
-        Returns the cumulative distribution function evaluated at x.
+        Returns the cumulative distribution function evaluated at point.
 
         Parameters
         ----------
@@ -225,8 +227,8 @@ class KDEUnivariate(object):
 
         if method == 'exact':
             if getattr(self.kernel, 'cdf', None):
-                kvals = sum(self.kernel.cdf(self.endog, x, self.bw))
-                return kvals/len(self.endog)
+                kvals = self.kernel.cdf(self.endog, point, self.bw)
+                return np.sum(kvals, axis=0)/len(self.endog)
 
             else:
                 kern = self.kernel
@@ -260,7 +262,7 @@ class KDEUnivariate(object):
 
         if getattr(self.kernel, 'cdf', None) and not self.fft:
             endog_tile = np.tile(self.endog,[len(self.support),1]).T
-            kvals = sum(self.kernel.cdf(endog_tile, self.support, self.bw))
+            kvals = np.sum(self.kernel.cdf(endog_tile, self.support, self.bw))
             return kaval/len(self.endog)
 
         else:
@@ -328,14 +330,14 @@ class KDEUnivariate(object):
 
         if method == 'exact':
             if getattr(self.kernel, 'cdf', None):
-                kvals = sum(self.kernel.cdf(self.endog, x, self.bw))
+                kvals = self.cdf(point, method=method)
                 return 1-kvals/len(self.endog)
 
             else:
                 kern = self.kernel
                 func = lambda y: kern.density(self.endog, y)
 
-                return integrate.quad(func, x, self.support[-1])[0]
+                return integrate.quad(func, point, self.support[-1])[0]
 
 
         if method == 'interpolate':
@@ -361,9 +363,8 @@ class KDEUnivariate(object):
         return 1 - self.cdf_values
 
         if getattr(self.kernel, 'cdf', None):
-            endog_tile = np.tile(self.endog,[len(self.support),1]).T
-            kvals = sum(self.kernel.cdf(endog_tile, self.support, self.bw))
-            return 1 - kaval/len(self.endog)
+            kval = self.cdf(self.support, method='exact')
+            return 1 - kval/len(self.endog)
 
         else:
             density = self.density
@@ -411,10 +412,11 @@ class KDEUnivariate(object):
         #TODO: below could run into integr problems, cf. stats.dist._entropy
         return -integrate.quad(entr, a,b, args=(endog,))[0]
 
-    def ppf(self, x, method = 'exact'):
+    def ppf(self, point, method = 'exact'):
         """
         Returns the Inverse Cumulative Distribution (Quantile) Function over the
-        evaluated at at point
+        evaluated at at point. If point is outside the 'support' of the KDE, a
+        value of + or - infinity is returned.
 
         Notes
         -----
@@ -439,17 +441,24 @@ class KDEUnivariate(object):
 
         if method == 'exact':
 
-            if x >= self.support[-1]:
-                return np.infty
-            if x <= self.support[0]:
-                return -1*np.infty
+            if len(np.asarray(point).shape)==0:
+                point = np.array([point])
 
-            index = np.searchsorted(self.cdf, x)
-            support = self.support
-            cdf = self.cdf
+            ppf = np.zeros(len(point))
 
-            scale = (cdf[index]-cdf[index-1])*(support[index]-support[index-1])
-            return (x-cdf[index-1])*1.0/scale + support[index-1]
+            # find index of cdf value just above 'point'
+            index = np.searchsorted(self.cdf_values, point)
+
+            # points inside support
+            inside = np.logical_and(index>0,index<len(self.cdf_values))
+            ksup = self.support
+            ppf[inside] = (ksup[index[inside]]+ksup[index[inside]-1])/2
+            
+            # outside
+            ppf[index<=0] = -1*np.infty
+            ppf[index>=len(self.cdf_values)] = np.infty 
+
+            return ppf
 
         if method == 'interpolate':
             return interpolate.interp1d(self.support, self.ppf_values)(point)
@@ -462,17 +471,17 @@ class KDEUnivariate(object):
         Returns the Inverse Cumulative Distribution (Quantile) Function over the
         range of the cdf stored.
 
+        Grid of evaluation is assumed to be the same as that of cdf_values, 
+        meaning this just returns self.support.
+
         Notes
         -----
         Will not work if fit has not been called.
 
-        Uses linear interpolation to get values on a uniform
-        grid.
         """
         _checkisfit(self)
 
-        intp = interpolate.interp1d(self.cdf, self.support, kind='linear')
-        return intp(np.linspace(self.cdf[0],self.cdf[-1],len(self.support)))
+        return self.support
 
     def variance(self, point):
         """
