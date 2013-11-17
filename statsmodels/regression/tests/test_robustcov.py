@@ -16,7 +16,7 @@ import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
-import results.results_macro_ols_robust as res
+from .results import results_macro_ols_robust as res
 
 #test_hac_simple():
 
