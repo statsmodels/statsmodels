@@ -1365,7 +1365,7 @@ class LikelihoodModelResults(Results):
 
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                    invcov=None):
-        res = self.wald_test(self, r_matrix, q_matrix=q_matrix, cov_p=cov_p,
+        res = self.wald_test(r_matrix, q_matrix=q_matrix, cov_p=cov_p,
                              scale=scale, invcov=invcov, use_f=True)
         return res
 
@@ -1373,7 +1373,7 @@ class LikelihoodModelResults(Results):
     def wald_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                invcov=None, use_f=None):
         """
-        Compute an F-test for a joint linear hypothesis.
+        Compute a Wald-test for a joint linear hypothesis.
 
         Parameters
         ----------
