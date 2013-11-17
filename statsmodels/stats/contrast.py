@@ -72,14 +72,8 @@ class ContrastResults(object):
             return self.tvalue
 
     def __str__(self):
-        if hasattr(self, 'fvalue'):
-            return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
-        else:
-            return self.summary().__str__()
-            return '<T test: effect=%s, sd=%s, t=%s, p=%s, df_denom=%d>' % \
-                   (`self.effect`, `self.sd`, `self.tvalue`, `self.pvalue`,
-                           self.df_denom)
+        return self.summary().__str__()
+
 
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
@@ -106,9 +100,14 @@ class ContrastResults(object):
                                   yname=yname, xname=xname, use_t=use_t,
                                   title=title)
             return summ
+        elif hasattr(self, 'fvalue'):
+            # TODO: create something nicer for these casee
+            return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
+                   (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
         else:
-            # TODO: create something nicer
-            return self.__str__()
+            # generic
+            return '<Wald test: statistic=%s, p-value=%s>' % \
+                   (self.statistic, self.pvalue)
 
 
     def summary_frame(self, xname=None, alpha=0.05):
