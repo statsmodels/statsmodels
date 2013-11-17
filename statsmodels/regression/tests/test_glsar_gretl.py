@@ -360,7 +360,7 @@ class TestGLSARGretl(object):
         #TODO
 
         assert_almost_equal(res.ssr, result_gretl_g1['ssr'][1], decimal=2)
-        #assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=7) #not in gretl
+        assert_almost_equal(res.llf, result_gretl_g1['llf'][1], decimal=4) #not in gretl
         assert_almost_equal(res.rsquared, result_gretl_g1['rsquared'][1], decimal=6) #FAIL
         assert_almost_equal(res.rsquared_adj, result_gretl_g1['rsquared_adj'][1], decimal=6) #FAIL
         assert_almost_equal(np.sqrt(res.mse_resid), result_gretl_g1['mse_resid_sqrt'][1], decimal=5)
