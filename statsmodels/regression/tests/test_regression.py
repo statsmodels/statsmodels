@@ -99,7 +99,7 @@ class CheckRegressionResults(object):
     decimal_mse_total = DECIMAL_4
     def test_mse_total(self):
         assert_almost_equal(self.res1.mse_total, self.res2.mse_total,
-                    self.decimal_mse_total)
+                    self.decimal_mse_total, err_msg="Test class %s" % self)
 
     decimal_fvalue = DECIMAL_4
     def test_fvalue(self):
@@ -596,7 +596,6 @@ class TestDataDimensions(CheckRegressionResults):
         cls.degen_exog = cls.exog_n_one[:-1]
         cls.mod1 = OLS(cls.endog_n_one, cls.exog_n_one)
         cls.mod1.df_model += 1
-        #cls.mod1.df_resid -= 1
         cls.res1 = cls.mod1.fit()
         # Note that these are created for every subclass..
         # A little extra overhead probably

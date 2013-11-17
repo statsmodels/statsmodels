@@ -1673,7 +1673,7 @@ def test_arima_predict_exog():
     params = np.array([2.786912485145725, -0.122650190196475,
                        0.533223846028938, -0.319344321763337,
                        0.132883233000064])
-    assert_almost_equal(arma_res.params, params, 6)
+    assert_almost_equal(arma_res.params, params, 5)
     # no exog for in-sample
     predict = arma_res.predict()
     assert_almost_equal(predict, predict_expected.values[:100], 5)
@@ -1821,6 +1821,81 @@ def test_arima_dataframe_integer_name():
     ts = pandas.TimeSeries(vals, index=dr)
     df = pandas.DataFrame(ts)
     mod = sm.tsa.ARIMA(df, (2, 0, 2))
+
+def test_arima_exog_predict_1d():
+    # test 1067
+    np.random.seed(12345)
+    y = np.random.random(100)
+    x = np.random.random(100)
+    mod = ARMA(y, (2, 1), x).fit(disp=-1)
+    newx = np.random.random(10)
+    results = mod.forecast(steps=10, alpha=0.05, exog=newx)
+
+def test_arima_1123():
+    # test ARMAX predict when trend is none
+    np.random.seed(12345)
+    arparams = np.array([.75, -.25])
+    maparams = np.array([.65, .35])
+
+    arparam = np.r_[1, -arparams]
+    maparam = np.r_[1, maparams]
+
+    nobs = 20
+
+    dates = dates_from_range('1980',length=nobs)
+
+    y = arma_generate_sample(arparams, maparams, nobs)
+
+    X = np.random.randn(nobs)
+    y += 5*X
+    mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
+    res = mod.fit(trend='nc', disp=False)
+    fc = res.forecast(exog=X[-1:])
+    # results from gretl
+    assert_almost_equal(fc[0], 2.200393, 6)
+    assert_almost_equal(fc[1], 1.030743, 6)
+    assert_almost_equal(fc[2][0,0], 0.180175, 6)
+    assert_almost_equal(fc[2][0,1], 4.220611, 6)
+
+    mod = ARMA(y[:-1], order=(1,1), exog=X[:-1])
+    res = mod.fit(trend='nc', disp=False)
+    fc = res.forecast(exog=X[-1:])
+    assert_almost_equal(fc[0], 2.765688, 6)
+    assert_almost_equal(fc[1], 0.835048, 6)
+    assert_almost_equal(fc[2][0,0], 1.129023, 6)
+    assert_almost_equal(fc[2][0,1], 4.402353, 6)
+
+    # make sure this works to. code looked fishy.
+    mod = ARMA(y[:-1], order=(1,0), exog=X[:-1])
+    res = mod.fit(trend='c', disp=False)
+    fc = res.forecast(exog=X[-1:])
+    assert_almost_equal(fc[0], 2.481219, 6)
+    assert_almost_equal(fc[1], 0.968759, 6)
+    assert_almost_equal(fc[2][0], [0.582485, 4.379952], 6)
+
+def test_small_data():
+    # 1146
+    y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
+
+    # refuse to estimate these
+    assert_raises(ValueError, ARIMA, y, (2, 0, 3))
+    assert_raises(ValueError, ARIMA, y, (1, 1, 3))
+    mod = ARIMA(y, (1, 0, 3))
+    assert_raises(ValueError, mod.fit, trend="c")
+
+    # try to estimate these...leave it up to the user to check for garbage
+    # and be clear, these are garbage parameters.
+    # X-12 arima will estimate, gretl refuses to estimate likely a problem
+    # in start params regression.
+    res = mod.fit(trend="nc", disp=0, start_params=[.1,.1,.1,.1])
+    mod = ARIMA(y, (1, 0, 2))
+    res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
+
+def test_arima00():
+    y = np.random.random(10)
+    assert_raises(ValueError, ARMA, y, (0,0))
+    assert_raises(ValueError, ARIMA, y, (0,1,0))
+    assert_raises(ValueError, ARIMA, y, (0,0,0))
 
 if __name__ == "__main__":
     import nose

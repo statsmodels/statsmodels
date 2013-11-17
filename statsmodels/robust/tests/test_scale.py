@@ -25,8 +25,8 @@ class TestChem(object):
     def test_median(self):
         assert_almost_equal(np.median(self.chem), 3.385, DECIMAL)
 
-    def test_stand_mad(self):
-        assert_almost_equal(scale.stand_mad(self.chem), 0.52632, DECIMAL)
+    def test_mad(self):
+        assert_almost_equal(scale.mad(self.chem), 0.52632, DECIMAL)
 
     def test_huber_scale(self):
         assert_almost_equal(scale.huber(self.chem)[0], 3.20549, DECIMAL)
@@ -51,12 +51,12 @@ class TestMad(object):
         np.random.seed(54321)
         self.X = standard_normal((40,10))
 
-    def test_stand_mad(self):
-        m = scale.stand_mad(self.X)
+    def test_mad(self):
+        m = scale.mad(self.X)
         assert_equal(m.shape, (10,))
 
-    def test_mad(self):
-        n = scale.mad(self.X)
+    def test_mad_center(self):
+        n = scale.mad(self.X, center=0)
         assert_equal(n.shape, (10,))
 
 class TestMadAxes():
@@ -65,19 +65,19 @@ class TestMadAxes():
         self.X = standard_normal((40,10,30))
 
     def test_axis0(self):
-        m = scale.stand_mad(self.X, axis=0)
+        m = scale.mad(self.X, axis=0)
         assert_equal(m.shape, (10,30))
 
     def test_axis1(self):
-        m = scale.stand_mad(self.X, axis=1)
+        m = scale.mad(self.X, axis=1)
         assert_equal(m.shape, (40,30))
 
     def test_axis2(self):
-        m = scale.stand_mad(self.X, axis=2)
+        m = scale.mad(self.X, axis=2)
         assert_equal(m.shape, (40,10))
 
     def test_axisneg1(self):
-        m = scale.stand_mad(self.X, axis=-1)
+        m = scale.mad(self.X, axis=-1)
         assert_equal(m.shape, (40,10))
 
 class TestHuber():

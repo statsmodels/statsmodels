@@ -14,10 +14,10 @@ maparams = np.array([.65, .35])
 # The conventions of the arma_generate function require that we specify a
 # 1 for the zero-lag of the AR and MA parameters and that the AR parameters
 # be negated.
-arparams = np.r_[1, -arparams]
-maparam = np.r_[1, maparams]
+ar = np.r_[1, -arparams]
+ma = np.r_[1, maparams]
 nobs = 250
-y = arma_generate_sample(arparams, maparams, nobs)
+y = arma_generate_sample(ar, ma, nobs)
 
 # Now, optionally, we can add some dates information. For this example,
 # we'll use a pandas time series.

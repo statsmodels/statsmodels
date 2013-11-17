@@ -22,7 +22,7 @@ import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import norm
-from statsmodels.tools.tools import chain_dot
+from statsmodels.tools.tools import chain_dot, rank
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
@@ -136,11 +136,14 @@ class QuantReg(RegressionModel):
         endog = self.endog
         exog = self.exog
         nobs = self.nobs
-        rank = self.rank
+        exog_rank = rank(self.exog)
+        self.rank = exog_rank
+        self.df_model = float(self.rank - self.k_constant)
+        self.df_resid = self.nobs - self.rank
         n_iter = 0
         xstar = exog
 
-        beta = np.ones(rank)
+        beta = np.ones(exog_rank)
         # TODO: better start, initial beta is used only for convergence check
 
         # Note the following doesn't work yet,
@@ -365,12 +368,8 @@ class QuantRegResults(RegressionResults):
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
 
-        #TODO: reuse condno from somewhere else ?
-        #condno = np.linalg.cond(np.dot(self.wexog.T, self.wexog))
-        wexog = self.model.wexog
-        eigvals = np.linalg.linalg.eigvalsh(np.dot(wexog.T, wexog))
-        eigvals = np.sort(eigvals) #in increasing order
-        condno = np.sqrt(eigvals[-1]/eigvals[0])
+        eigvals = self.eigenvals
+        condno = self.condition_number
 
         self.diagn = dict(jb=jb, jbpv=jbpv, skew=skew, kurtosis=kurtosis,
                           omni=omni, omnipv=omnipv, condno=condno,
@@ -421,12 +420,12 @@ class QuantRegResults(RegressionResults):
 
         #add warnings/notes, added to text format only
         etext =[]
-        if eigvals[0] < 1e-10:
+        if eigvals[-1] < 1e-10:
             wstr = "The smallest eigenvalue is %6.3g. This might indicate "
             wstr += "that there are\n"
-            wstr = "strong multicollinearity problems or that the design "
+            wstr += "strong multicollinearity problems or that the design "
             wstr += "matrix is singular."
-            wstr = wstr % eigvals[0]
+            wstr = wstr % eigvals[-1]
             etext.append(wstr)
         elif condno > 1000:  #TODO: what is recommended
             wstr = "The condition number is large, %6.3g. This might "

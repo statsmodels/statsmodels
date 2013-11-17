@@ -1,7 +1,9 @@
 from numpy.testing import assert_almost_equal
 from numpy.testing.decorators import slow
-import statsmodels.api as sm
+from statsmodels.regression.linear_model import OLS
+from statsmodels.tools import add_constant
 from results.el_results import RegressionResults
+from statsmodels.datasets import stackloss
 
 
 class GenRes(object):
@@ -10,9 +12,9 @@ class GenRes(object):
 
     """
     def __init__(self):
-        data = sm.datasets.stackloss.load()
-        data.exog = sm.add_constant(data.exog)
-        self.res1 = sm.OLS(data.endog, data.exog).fit()
+        data = stackloss.load()
+        data.exog = add_constant(data.exog)
+        self.res1 = OLS(data.endog, data.exog).fit()
         self.res2 = RegressionResults()
 
 
