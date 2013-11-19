@@ -49,11 +49,11 @@ ctypedef int sgemv_t(
 )
 
 ctypedef int scopy_t(
-    int *n,
-    np.float32_t *x,
-    int *incx,
-    np.float32_t *y,
-    int *incy
+    int *n,        # Number of vector elements to be copied.
+    np.float32_t *x,     # Vector from which to copy.
+    int *incx,     # Increment between elements of x.
+    np.float32_t *y,     # array of dimension (n-1) * |incy| + 1, result vector.
+    int *incy      # Increment between elements of y.
 )
 
 ctypedef int saxpy_t(
@@ -144,11 +144,11 @@ ctypedef int dgemv_t(
 )
 
 ctypedef int dcopy_t(
-    int *n,
-    double *x,
-    int *incx,
-    double *y,
-    int *incy
+    int *n,        # Number of vector elements to be copied.
+    double *x,     # Vector from which to copy.
+    int *incx,     # Increment between elements of x.
+    double *y,     # array of dimension (n-1) * |incy| + 1, result vector.
+    int *incy      # Increment between elements of y.
 )
 
 ctypedef int daxpy_t(
@@ -239,11 +239,11 @@ ctypedef int cgemv_t(
 )
 
 ctypedef int ccopy_t(
-    int *n,
-    np.complex64_t *x,
-    int *incx,
-    np.complex64_t *y,
-    int *incy
+    int *n,        # Number of vector elements to be copied.
+    np.complex64_t *x,     # Vector from which to copy.
+    int *incx,     # Increment between elements of x.
+    np.complex64_t *y,     # array of dimension (n-1) * |incy| + 1, result vector.
+    int *incy      # Increment between elements of y.
 )
 
 ctypedef int caxpy_t(
@@ -324,11 +324,11 @@ ctypedef int zgemv_t(
 )
 
 ctypedef int zcopy_t(
-    int *n,
-    complex *x,
-    int *incx,
-    complex *y,
-    int *incy
+    int *n,        # Number of vector elements to be copied.
+    complex *x,     # Vector from which to copy.
+    int *incx,     # Increment between elements of x.
+    complex *y,     # array of dimension (n-1) * |incy| + 1, result vector.
+    int *incy      # Increment between elements of y.
 )
 
 ctypedef int zaxpy_t(
