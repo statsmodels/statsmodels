@@ -159,7 +159,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
-        scopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
+        scopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         saxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
@@ -321,7 +321,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
-        dcopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
+        dcopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         daxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
@@ -480,7 +480,7 @@ cpdef ckalman_filter(
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
-        ccopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
+        ccopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         caxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
@@ -642,7 +642,7 @@ cpdef zkalman_filter(
 
         #eta_tt1[::1,t] = y[::1,t-1] - y_tt1[:,t]
         #eta_tt1[::1,t] = y[::1,t-1] # y[0] corresponds to y[t=1]
-        zcopy(&k, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
+        zcopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         zaxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
         #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
