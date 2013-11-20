@@ -10,6 +10,7 @@ from statsmodels.tools.tools import add_constant, Bunch
 from tsatools import lagmat, lagmat2ds, add_trend
 from adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa.arima_model import ARMA
+from statsmodels.compatnp.scipy_compat import _next_regular
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
@@ -418,7 +419,10 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
     else:
         #JP: move to acovf
         x0 = x - x.mean()
-        Frf = np.fft.fft(x0, n=nobs * 2)  # zero-pad for separability
+        # ensure that we always use a power of 2 for zero-padding, this way
+        # we'll ensure O(n log n) runtime of the fft.
+        n = _next_regular(2 * nobs + 1)
+        Frf = np.fft.fft(x0, n=n)  # zero-pad for separability
         if unbiased:
             d = nobs - np.arange(nobs)
         acf = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d
