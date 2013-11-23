@@ -1444,6 +1444,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
         if adjust_df:
             res._cache['df_resid'] = n_groups - 1
+            res.model.df_resid = n_groups - 1
 
         # TODO and so on should be in sandwich module
         # self.cov_kwds.update(kwds)  # add all kwds for now
