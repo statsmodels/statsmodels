@@ -46,7 +46,7 @@ class CheckOLSRobust(object):
         assert_allclose(tt.sd, res2.bse, rtol=rtol)
         assert_allclose(tt.tvalue, res2.tvalues, rtol=rtol)
         if self.small:
-            assert_allclose(tt.pvalue, res2.pvalues, rtol=5e-10)
+            assert_allclose(tt.pvalue, res2.pvalues, rtol=5 * rtol)
         else:
             pval = stats.norm.sf(np.abs(tt.tvalue)) * 2
             assert_allclose(pval, res2.pvalues, rtol=5e-10)
@@ -54,7 +54,7 @@ class CheckOLSRobust(object):
         ft = res1.f_test(mat[:-1], cov_p=self.cov_robust)
         if self.small:
             #'df_denom', 'df_num', 'fvalue', 'pvalue'
-            assert_allclose(ft.fvalue, res2.F, rtol=1e-10)
+            assert_allclose(ft.fvalue, res2.F, rtol=rtol)
             # f-pvalue is not directly available in Stata results, but is in ivreg2
             if hasattr(res2, 'Fp'):
                 assert_allclose(ft.pvalue, res2.Fp, rtol=1e-10)
@@ -187,7 +187,7 @@ class CheckOLSRobustNewMixin(object):
         assert_allclose(tt.effect, res2.params, rtol=rtolh)
         assert_allclose(tt.sd, res2.bse, rtol=rtol)
         assert_allclose(tt.tvalue, res2.tvalues, rtol=rtolh)
-        assert_allclose(tt.pvalue, res2.pvalues, rtol=5e-10)
+        assert_allclose(tt.pvalue, res2.pvalues, rtol=5 * rtol)
         ci1 = tt.conf_int()
         ci2 = self.res2.params_table[:,4:6]
         assert_allclose(ci1, ci2, rtol=rtol)
@@ -283,24 +283,12 @@ class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 #######################################################
 
 
-class TestOLSRobustCluster(CheckOLSRobust):
+class CheckOLSRobustCluster(CheckOLSRobust):
     # compare with regress robust
 
-    def setup(self):
-        res_ols = self.res1
-        self.bse_robust = res_ols.HC1_se
-        self.cov_robust = res_ols.cov_HC1
-        self.small = True
-        self.res2 = res.results_hc0
 
     @classmethod
     def setup_class(cls):
-        d2 = macrodata.load().data
-        g_gdp = 400*np.diff(np.log(d2['realgdp']))
-        g_inv = 400*np.diff(np.log(d2['realinv']))
-        exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)
-
-        cls.res1 = res_ols = OLS(g_inv, exogg).fit()
         #import pandas as pa
         from statsmodels.datasets import grunfeld
 
@@ -322,7 +310,7 @@ class TestOLSRobustCluster(CheckOLSRobust):
 
 
 
-class TestOLSRobustCluster2(TestOLSRobustCluster, CheckOLSRobustNewMixin):
+class TestOLSRobustCluster2(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup(self):
