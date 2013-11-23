@@ -142,7 +142,7 @@ class IV2SLS(LikelihoodModel):
         return lfit
 
     #copied from GLS, because I subclass currently LikelihoodModel and not GLS
-    def predict(self, exog, params=None):
+    def predict(self, params, exog=None):
         """
         Return linear predicted values from a design matrix.
 
@@ -161,6 +161,9 @@ class IV2SLS(LikelihoodModel):
         -----
         If the model as not yet been fit, params is not optional.
         """
+        if exog is None:
+            exog = self.exog
+        return np.dot(exog, params)
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
         if self._results is None and params is None:
