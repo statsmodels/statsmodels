@@ -49,7 +49,7 @@ class CheckOLSRobust(object):
             assert_allclose(tt.pvalue, res2.pvalues, rtol=5 * rtol)
         else:
             pval = stats.norm.sf(np.abs(tt.tvalue)) * 2
-            assert_allclose(pval, res2.pvalues, rtol=5e-10)
+            assert_allclose(pval, res2.pvalues, rtol=5 * rtol)
 
         ft = res1.f_test(mat[:-1], cov_p=self.cov_robust)
         if self.small:
@@ -59,8 +59,9 @@ class CheckOLSRobust(object):
             if hasattr(res2, 'Fp'):
                 assert_allclose(ft.pvalue, res2.Fp, rtol=1e-10)
         else:
-            dof_corr = res1.df_resid * 1. / res1.nobs
-            assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=1e-10)
+            if not getattr(self, 'skip_f', False):
+                dof_corr = res1.df_resid * 1. / res1.nobs
+                assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=1e-10)
 
         if hasattr(res2, 'df_r'):
             assert_equal(ft.df_num, res2.df_m)
@@ -331,3 +332,32 @@ class TestOLSRobustCluster2(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
 
         self.rtol = 1e-6
         self.rtolh = 1e-10
+
+
+class TestOLSRobustCluster2Large(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results('cluster',
+                                                  groups=self.groups,
+                                                  use_correction=False,
+                                                  use_t=False,
+                                                  df_correction=True)
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=False)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = False
+        self.res2 = res2.results_cluster_large
+
+        self.skip_f = True
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
+
+    # skipping see https://github.com/statsmodels/statsmodels/pull/1189#issuecomment-29141741
+    def test_fvalue(self):
+        pass
