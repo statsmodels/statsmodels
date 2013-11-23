@@ -924,8 +924,13 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         bse = self.bse
         params = self.params
-        dist = stats.t
-        q = dist.ppf(1 - alpha / 2, self.df_resid)
+        # TODO: should be obsolete if super uses use_t
+        if self.use_t:
+            dist = stats.t
+            q = dist.ppf(1 - alpha / 2, self.df_resid)
+        else:
+            dist = stats.norm
+            q = dist.ppf(1 - alpha / 2)
 
         if cols is None:
             lower = self.params - q * bse
@@ -1052,7 +1057,11 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
+        # TODO: should be obsolete if super uses use_t
+        if self.use_t:
+            return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
+        else:
+            return stats.norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def aic(self):
