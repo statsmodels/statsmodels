@@ -37,7 +37,7 @@ from gh_api import (
     get_milestone_id,
 )
 
-from numpy import argsort
+from pandas import Series
 
 def find_rejects(root='.'):
     for dirname, dirs, files in os.walk(root):
@@ -146,7 +146,7 @@ def should_backport(labels=None, milestone=None):
         if pr['number'] not in should_backport:
             merged_dates.append(pr['merged_at'])
             should_backport.append(pr['number'])
-    return [should_backport[i] for i in argsort(merged_dates)]
+    return Series(merged_dates, index=should_backport)
 
 if __name__ == '__main__':
 
@@ -160,7 +160,11 @@ if __name__ == '__main__':
         #NOTE: change this to the label you've used for marking a backport
         should = should_backport(milestone="0.5.1")
         print ("The following PRs should be backported:")
-        for pr in should.difference(already):
+        to_backport = []
+        if already:
+            should = should.ix[set(should.index).difference(already)]
+        should.sort()
+        for pr, date in should.iteritems():
             print (pr)
         sys.exit(0)
 
