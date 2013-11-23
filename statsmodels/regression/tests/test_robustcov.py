@@ -17,6 +17,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
 
 from .results import results_macro_ols_robust as res
+from .results import results_grunfeld_ols_robust_cluster as res2
 
 #test_hac_simple():
 
@@ -25,22 +26,25 @@ class CheckOLSRobust(object):
     def test_basic(self):
         res1 = self.res1
         res2 = self.res2
-        assert_allclose(res1.params, res2.params, rtol=1e-10)
-        assert_allclose(self.bse_robust, res2.bse, rtol=1e-10)
-        assert_allclose(self.cov_robust, res2.cov, rtol=1e-10)
+        rtol = getattr(self, 'rtol', 1e-10)
+        assert_allclose(res1.params, res2.params, rtol=rtol)
+        assert_allclose(self.bse_robust, res2.bse, rtol=rtol)
+        assert_allclose(self.cov_robust, res2.cov, rtol=rtol)
 
     def test_tests(self):
         # Note: differences between small (t-distribution, ddof) and large (normal)
         # F statistic has no ddof correction in large, but uses F distribution (?)
         res1 = self.res1
         res2 = self.res2
+        rtol = getattr(self, 'rtol', 1e-10)
+        rtolh = getattr(self, 'rtolh', 1e-12)
         mat = np.eye(len(res1.params))
         tt = res1.t_test(mat, cov_p=self.cov_robust)
         # has 'effect', 'pvalue', 'sd', 'tvalue'
         # TODO confint missing
-        assert_allclose(tt.effect, res2.params, rtol=1e-12)
-        assert_allclose(tt.sd, res2.bse, rtol=1e-10)
-        assert_allclose(tt.tvalue, res2.tvalues, rtol=1e-12)
+        assert_allclose(tt.effect, res2.params, rtol=rtol)
+        assert_allclose(tt.sd, res2.bse, rtol=rtol)
+        assert_allclose(tt.tvalue, res2.tvalues, rtol=rtol)
         if self.small:
             assert_allclose(tt.pvalue, res2.pvalues, rtol=5e-10)
         else:
@@ -151,35 +155,42 @@ class CheckOLSRobustNewMixin(object):
     # This uses the robust covariance as default covariance
 
     def test_compare(self):
-        assert_allclose(self.cov_robust, self.cov_robust2, rtol=1e-10)
-        assert_allclose(self.bse_robust, self.bse_robust2, rtol=1e-10)
+        rtol = getattr(self, 'rtol', 1e-10)
+        assert_allclose(self.cov_robust, self.cov_robust2, rtol=rtol)
+        assert_allclose(self.bse_robust, self.bse_robust2, rtol=rtol)
 
 
     def test_fvalue(self):
-        assert_allclose(self.res1.fvalue, self.res2.F, rtol=1e-10)
-        assert_allclose(self.res1.f_pvalue, self.res2.Fp, rtol=1e-10)
+        rtol = getattr(self, 'rtol', 1e-10)
+        assert_allclose(self.res1.fvalue, self.res2.F, rtol=rtol)
+        if hasattr(self.res2, 'Fp'):
+            #only available with ivreg2
+            assert_allclose(self.res1.f_pvalue, self.res2.Fp, rtol=rtol)
 
 
     def test_confint(self):
+        rtol = getattr(self, 'rtol', 1e-10)
         ci1 = self.res1.conf_int()
         ci2 = self.res2.params_table[:,4:6]
-        assert_allclose(ci1, ci2, rtol=1e-10)
+        assert_allclose(ci1, ci2, rtol=rtol)
 
     def test_ttest(self):
         res1 = self.res1
         res2 = self.res2
+        rtol = getattr(self, 'rtol', 1e-10)
+        rtolh = getattr(self, 'rtol', 1e-12)
 
         mat = np.eye(len(res1.params))
         tt = res1.t_test(mat, cov_p=self.cov_robust)
         # has 'effect', 'pvalue', 'sd', 'tvalue'
         # TODO confint missing
-        assert_allclose(tt.effect, res2.params, rtol=1e-12)
-        assert_allclose(tt.sd, res2.bse, rtol=1e-10)
-        assert_allclose(tt.tvalue, res2.tvalues, rtol=1e-12)
+        assert_allclose(tt.effect, res2.params, rtol=rtolh)
+        assert_allclose(tt.sd, res2.bse, rtol=rtol)
+        assert_allclose(tt.tvalue, res2.tvalues, rtol=rtolh)
         assert_allclose(tt.pvalue, res2.pvalues, rtol=5e-10)
         ci1 = tt.conf_int()
         ci2 = self.res2.params_table[:,4:6]
-        assert_allclose(ci1, ci2, rtol=1e-10)
+        assert_allclose(ci1, ci2, rtol=rtol)
 
 
     def test_smoke(self):
@@ -266,3 +277,69 @@ class TestOLSRobust2LargeNew(TestOLSRobust1, CheckOLSRobustNewMixin):
 
     def test_confint(self):
         pass
+
+#######################################################
+#    cluster robust standard errors
+#######################################################
+
+
+class TestOLSRobustCluster(CheckOLSRobust):
+    # compare with regress robust
+
+    def setup(self):
+        res_ols = self.res1
+        self.bse_robust = res_ols.HC1_se
+        self.cov_robust = res_ols.cov_HC1
+        self.small = True
+        self.res2 = res.results_hc0
+
+    @classmethod
+    def setup_class(cls):
+        d2 = macrodata.load().data
+        g_gdp = 400*np.diff(np.log(d2['realgdp']))
+        g_inv = 400*np.diff(np.log(d2['realinv']))
+        exogg = add_constant(np.c_[g_gdp, d2['realint'][:-1]], prepend=False)
+
+        cls.res1 = res_ols = OLS(g_inv, exogg).fit()
+        #import pandas as pa
+        from statsmodels.datasets import grunfeld
+
+        dtapa = grunfeld.data.load_pandas()
+        #Stata example/data seems to miss last firm
+        dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
+        #asserts don't work for pandas
+        cls.res1 = OLS(dtapa_endog, exog).fit()
+
+        firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
+                                    return_inverse=True)
+        cls.groups = firm_id
+        #time indicator in range(max Ti)
+        time = np.asarray(dtapa_exog[['year']])
+        time -= time.min()
+        cls.time = np.squeeze(time).astype(int)
+
+
+
+class TestOLSRobustCluster2(TestOLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results('cluster',
+                                                  groups=self.groups,
+                                                  use_correction=True,
+                                                  use_t=True)
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=True)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = True
+        self.res2 = res2.results_cluster
+
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
