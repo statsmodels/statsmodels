@@ -1,4 +1,4 @@
-global-include *.csv *.py *.txt *.pyx *.c
+global-include *.csv *.py *.txt
 #scikits*.*
 include MANIFEST.in
 
@@ -44,4 +44,4 @@ include statsmodels/stats/libqsturng/LICENSE.txt
 include statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt
 
 
-global-exclude *~ *.swp  *.pyc *.bak
+global-exclude *~ *.swp  *.pyc *.bak *.pyx
