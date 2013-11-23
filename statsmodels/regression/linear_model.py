@@ -1274,7 +1274,7 @@ class RegressionResults(base.LikelihoodModelResults):
         return lrstat, lr_pvalue, lrdf
 
 
-    def get_robustcov_results(self, cov_type='HC1', use_t=False, **kwds):
+    def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
         '''experimental results instance with robust covariance as default
 
 
@@ -1324,9 +1324,20 @@ class RegressionResults(base.LikelihoodModelResults):
         res.cov_kwds = {'use_t':use_t}
         res.use_t = use_t
 
+        adjust_df = False
+        if cov_type in ['cluster', 'nw-panel', 'nw-groupsum']:
+            df_correction = kwds.get('df_correction', None)
+            # TODO: check also use_correction, do I need all combinations?
+            if df_correction is not False: # i.e. in [None, True]:
+                # user didn't explicitely set it to False
+                adjust_df = True
+
+        res.cov_kwds['adjust_df'] = adjust_df
+
         # verify and set kwds, and calculate cov
         # TODO: this should be outsourced in a function so we can reuse it in
         #       other models
+        # TODO: make it DRYer   repeated code for checking kwds
         if cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
             if kwds:
                 raise ValueError('heteroscedasticity robust covarians ' +
@@ -1348,11 +1359,86 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
                                                  use_correction=use_correction)
         elif cov_type == 'cluster':
+            #cluster robust standard errors, one- or two-way
+            groups = kwds['groups']
+            if not hasattr(groups, 'shape'):
+                groups = np.asarray(groups).T
+            res.cov_kwds['groups'] = groups
+            use_correction = kwds.get('use_correction', True)
+            res.cov_kwds['use_correction'] = use_correction
+            if groups.ndim == 1:
+                if adjust_df:
+                    # need to find number of groups
+                    # duplicate work
+                    self.n_groups = n_groups = len(np.unique(groups))
+                res.cov_params_default = sw.cov_cluster(self, groups,
+                                                 use_correction=use_correction)
+
+            elif groups.ndim == 2:
+                if adjust_df:
+                    # need to find number of groups
+                    # duplicate work
+                    n_groups0 = len(np.unique(groups[:,0]))
+                    n_groups1 = len(np.unique(groups[:, 1]))
+                    self.n_groups = (n_groups0, n_groups1)
+                    n_groups = min(n_groups0, n_groups1) # use for adjust_df
+
+                # Note: sw.cov_cluster_2groups has 3 returns
+                res.cov_params_default = sw.cov_cluster_2groups(self, groups,
+                                             use_correction=use_correction)[0]
+            else:
+                raise ValueError('only two groups are supported')
+            res.cov_kwds['description'] = ('Standard Errors are robust to' +
+                                'cluster correlation ' + '(' + cov_type + ')')
+
+        elif cov_type == 'nw-panel':
             #cluster robust standard errors
-            res.cov_kwds['groups'] = groups = kwds['groups']
-            res.cov_params_default = sw.cov_cluster(self, groups)
+            res.cov_kwds['time'] = time = kwds['time']
+            #TODO: nlags is currently required
+            #nlags = kwds.get('nlags', True)
+            #res.cov_kwds['nlags'] = nlags
+            #TODO: `nlags` or `maxlags`
+            res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
+            use_correction = kwds.get('use_correction', True)
+            res.cov_kwds['use_correction'] = use_correction
+            weights_func = kwds.get('weights_func', sw.weights_bartlett)
+            res.cov_kwds['weights_func'] = weights_func
+            # TODO: clumsy time index in cov_nw_panel
+            tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
+            groupidx = zip([0] + tt, tt + [len(time)])
+            self.n_groups = n_groups = len(groupidx)
+            res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
+                                                weights_func=weights_func,
+                                                use_correction='hac')
+            res.cov_kwds['description'] = ('Standard Errors are robust to' +
+                                'cluster correlation ' + '(' + cov_type + ')')
+        elif cov_type == 'nw-groupsum':
+            # Driscoll-Kraay standard errors
+            res.cov_kwds['time'] = time = kwds['time']
+            #TODO: nlags is currently required
+            #nlags = kwds.get('nlags', True)
+            #res.cov_kwds['nlags'] = nlags
+            #TODO: `nlags` or `maxlags`
+            res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
+            use_correction = kwds.get('use_correction', True)
+            res.cov_kwds['use_correction'] = use_correction
+            weights_func = kwds.get('weights_func', sw.weights_bartlett)
+            res.cov_kwds['weights_func'] = weights_func
+            if adjust_df:
+                # need to find number of groups
+                tt = (np.nonzero(np.diff(time) < 0)[0] + 1)
+                self.n_groups = n_groups = len(tt) + 1
+            res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
+                                            weights_func=weights_func,
+                                            use_correction=0)
+            res.cov_kwds['description'] = (
+                        'Driscoll and Kraay Standard Errors are robust to ' +
+                        'cluster correlation ' + '(' + cov_type + ')')
         else:
             raise ValueError('only HC, HAC and cluster are currently connected')
+
+        if adjust_df:
+            res._cache['df_resid'] = n_groups - 1
 
         # TODO and so on should be in sandwich module
         # self.cov_kwds.update(kwds)  # add all kwds for now
@@ -1452,7 +1538,7 @@ class RegressionResults(base.LikelihoodModelResults):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                           yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=True)
+                             use_t=self.use_t)
 
         smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
                           yname=yname, xname=xname,
