@@ -1313,6 +1313,11 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster' and required keyword `groups`, integer group indicator
 
+
+        Reminder:
+        `use_correction` in "nw-groupsum" and "nw-panel" is not bool,
+            needs to be in [False, 'hac', 'cluster']
+
         '''
         import statsmodels.stats.sandwich_covariance as sw
 
@@ -1399,7 +1404,7 @@ class RegressionResults(base.LikelihoodModelResults):
             #res.cov_kwds['nlags'] = nlags
             #TODO: `nlags` or `maxlags`
             res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
-            use_correction = kwds.get('use_correction', True)
+            use_correction = kwds.get('use_correction', 'hac')
             res.cov_kwds['use_correction'] = use_correction
             weights_func = kwds.get('weights_func', sw.weights_bartlett)
             res.cov_kwds['weights_func'] = weights_func
@@ -1409,7 +1414,7 @@ class RegressionResults(base.LikelihoodModelResults):
             self.n_groups = n_groups = len(groupidx)
             res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                                 weights_func=weights_func,
-                                                use_correction='hac')
+                                                use_correction=use_correction)
             res.cov_kwds['description'] = ('Standard Errors are robust to' +
                                 'cluster correlation ' + '(' + cov_type + ')')
         elif cov_type == 'nw-groupsum':
@@ -1420,7 +1425,7 @@ class RegressionResults(base.LikelihoodModelResults):
             #res.cov_kwds['nlags'] = nlags
             #TODO: `nlags` or `maxlags`
             res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
-            use_correction = kwds.get('use_correction', True)
+            use_correction = kwds.get('use_correction', 'cluster')
             res.cov_kwds['use_correction'] = use_correction
             weights_func = kwds.get('weights_func', sw.weights_bartlett)
             res.cov_kwds['weights_func'] = weights_func
@@ -1430,7 +1435,7 @@ class RegressionResults(base.LikelihoodModelResults):
                 self.n_groups = n_groups = len(tt) + 1
             res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
                                             weights_func=weights_func,
-                                            use_correction=0)
+                                            use_correction=use_correction)
             res.cov_kwds['description'] = (
                         'Driscoll and Kraay Standard Errors are robust to ' +
                         'cluster correlation ' + '(' + cov_type + ')')
