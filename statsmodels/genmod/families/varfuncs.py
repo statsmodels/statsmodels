@@ -5,6 +5,7 @@ Variance functions for use with the link functions in statsmodels.family.links
 __docformat__ = 'restructuredtext'
 
 import numpy as np
+FLOAT_EPS = np.finfo(float).eps
 
 class VarianceFunction(object):
     """
@@ -147,16 +148,15 @@ class Binomial(object):
     Alias for Binomial:
     binary = Binomial()
 
-    A private method _clean trims the data by 1e-10 so that p is in (0,1)
+    A private method _clean trims the data by machine epsilon so that p is
+    in (0,1)
     """
-
-    tol = 1.0e-10
 
     def __init__(self, n=1):
         self.n = n
 
     def _clean(self, p):
-        return np.clip(p, Binomial.tol, 1 - Binomial.tol)
+        return np.clip(p, FLOAT_EPS, 1 - FLOAT_EPS)
 
     def __call__(self, mu):
         """
@@ -208,16 +208,15 @@ class NegativeBinomial(object):
     Alias for NegativeBinomial:
     nbinom = NegativeBinomial()
 
-    A private method _clean trims the data by 1e-10 so that p is in (0,inf)
+    A private method _clean trims the data by machine epsilon so that p is
+    in (0,inf)
     '''
-
-    tol = 1.0e-10
 
     def __init__(self, alpha=1.):
         self.alpha = alpha
 
     def _clean(self, p):
-        return np.clip(p, NegativeBinomial.tol, np.inf)
+        return np.clip(p, FLOAT_EPS, np.inf)
 
     def __call__(self, mu):
         """
@@ -234,7 +233,7 @@ class NegativeBinomial(object):
             variance = mu + alpha*mu**2
         """
         p = self._clean(mu)
-        return mu + self.alpha*mu**2
+        return p + self.alpha*p**2
 
 nbinom = NegativeBinomial()
 nbinom.__doc__ = """
