@@ -13,6 +13,11 @@ import sys
 import subprocess
 import re
 
+# temporarily redirect config directory to prevent matplotlib importing
+# testing that for writeable directory which results in sandbox error in
+# certain easy_install versions
+os.environ["MPLCONFIGDIR"] = "."
+
 # may need to work around setuptools bug by providing a fake Pyrex
 try:
     import Cython
