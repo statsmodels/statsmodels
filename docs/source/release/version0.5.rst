@@ -9,6 +9,20 @@ Statsmodels 0.5.1 is a bugfix release of 0.5, pulling only bugfixes and some cle
 
 See :ref:`list of fixed issues <issues_list_051>` for specific issues fixed.
 
+The following people contributed patches:
+
+* alex <argriffi-at-ncsu.edu>
+* Ana Martinez Pardo <anamartinezpardo-at-gmail.com>
+* benduffield <bduffield-at-palantir.com>
+* Josef Perktold <josef.pktd-at-gmail.com>
+* jsphon <jonathanhon-at-hotmail.com>
+* Justin Grana <jg3705a-at-student.american.edu>
+* Richard T. Guy <richardtguy84-at-gmail.com>
+* Skipper Seabold <jsseabold-at-gmail.com>
+* Vincent Arel-Bundock <varel-at-umich.edu>
+* Yaroslav Halchenko <debian-at-onerussian.com>
+
+
 Release 0.5.0
 =============
 
