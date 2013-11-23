@@ -1873,6 +1873,24 @@ def test_arima_1123():
     assert_almost_equal(fc[1], 0.968759, 6)
     assert_almost_equal(fc[2][0], [0.582485, 4.379952], 6)
 
+def test_small_data():
+    # 1146
+    y = [-1214.360173, -1848.209905, -2100.918158, -3647.483678, -4711.186773]
+
+    # refuse to estimate these
+    assert_raises(ValueError, ARIMA, y, (2, 0, 3))
+    assert_raises(ValueError, ARIMA, y, (1, 1, 3))
+    mod = ARIMA(y, (1, 0, 3))
+    assert_raises(ValueError, mod.fit, trend="c")
+
+    # try to estimate these...leave it up to the user to check for garbage
+    # and be clear, these are garbage parameters.
+    # X-12 arima will estimate, gretl refuses to estimate likely a problem
+    # in start params regression.
+    res = mod.fit(trend="nc", disp=0, start_params=[.1,.1,.1,.1])
+    mod = ARIMA(y, (1, 0, 2))
+    res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
+
 
 if __name__ == "__main__":
     import nose
