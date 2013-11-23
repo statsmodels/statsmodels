@@ -37,6 +37,8 @@ from gh_api import (
     get_milestone_id,
 )
 
+from numpy import argsort
+
 def find_rejects(root='.'):
     for dirname, dirs, files in os.walk(root):
         for fname in files:
@@ -131,7 +133,8 @@ def should_backport(labels=None, milestone=None):
                 auth=True,
         )
 
-    should_backport = set()
+    should_backport = []
+    merged_dates = []
     for issue in issues:
         if not is_pull_request(issue):
             continue
@@ -140,8 +143,10 @@ def should_backport(labels=None, milestone=None):
         if not pr['merged']:
             print ("Marked PR closed without merge: %i" % pr['number'])
             continue
-        should_backport.add(pr['number'])
-    return should_backport
+        if pr['number'] not in should_backport:
+            merged_dates.append(pr['merged_at'])
+            should_backport.append(pr['number'])
+    return [should_backport[i] for i in argsort(merged_dates)]
 
 if __name__ == '__main__':
 
