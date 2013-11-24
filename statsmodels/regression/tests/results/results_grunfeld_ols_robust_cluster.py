@@ -9,65 +9,6 @@ class Bunch(dict):
         for i,att in enumerate(['params', 'bse', 'tvalues', 'pvalues']):
             self[att] = self.params_table[:,i]
 
-est = dict(
-           N_clust = 10,
-           N = 200,
-           df_m = 2,
-           df_r = 9,
-           F = 51.59060716590177,
-           r2 = .8124080178314147,
-           rmse = 94.40840193979599,
-           mss = 7604093.484267689,
-           rss = 1755850.432294737,
-           r2_a = .8105035307027997,
-           ll = -1191.80235741801,
-           ll_0 = -1359.150955647688,
-           rank = 3,
-           cmdline = "regress invest mvalue kstock, vce(cluster company)",
-           title = "Linear regression",
-           marginsok = "XB default",
-           vce = "cluster",
-           depvar = "invest",
-           cmd = "regress",
-           properties = "b V",
-           predict = "regres_p",
-           model = "ols",
-           estat_cmd = "regress_estat",
-           vcetype = "Robust",
-           clustvar = "company",
-          )
-
-params_table = np.array([
-     .11556215606596,  .01589433647768,  7.2706499090564,  .00004710548549,
-     .07960666895505,  .15151764317688,                9,  2.2621571627982,
-                   0,  .23067848754982,  .08496711097464,  2.7149150406994,
-     .02380515903536,  .03846952885627,  .42288744624337,                9,
-     2.2621571627982,                0, -42.714369016733,  20.425202580078,
-    -2.0912580352272,  .06604843284516, -88.919387334862,  3.4906493013959,
-                   9,  2.2621571627982,                0]).reshape(3,9)
-
-params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
-
-params_table_rownames = 'mvalue kstock _cons'.split()
-
-cov = np.array([
-     .00025262993207, -.00065043385106,  .20961897960949, -.00065043385106,
-     .00721940994738, -1.2171040967615,  .20961897960949, -1.2171040967615,
-     417.18890043724]).reshape(3,3)
-
-cov_colnames = 'mvalue kstock _cons'.split()
-
-cov_rownames = 'mvalue kstock _cons'.split()
-
-results_ = Bunch(
-                params_table=params_table,
-                params_table_colnames=params_table_colnames,
-                params_table_rownames=params_table_rownames,
-                cov=cov,
-                cov_colnames=cov_colnames,
-                cov_rownames=cov_rownames,
-                **est
-                )
 
 est = dict(
            N_clust = 10,
@@ -481,7 +422,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_cluster_2groups_small = Bunch(
+results_cluster_2groups_large = Bunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
