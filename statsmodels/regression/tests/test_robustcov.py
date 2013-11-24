@@ -57,11 +57,11 @@ class CheckOLSRobust(object):
             assert_allclose(ft.fvalue, res2.F, rtol=rtol)
             # f-pvalue is not directly available in Stata results, but is in ivreg2
             if hasattr(res2, 'Fp'):
-                assert_allclose(ft.pvalue, res2.Fp, rtol=1e-10)
+                assert_allclose(ft.pvalue, res2.Fp, rtol=rtol)
         else:
             if not getattr(self, 'skip_f', False):
                 dof_corr = res1.df_resid * 1. / res1.nobs
-                assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=1e-10)
+                assert_allclose(ft.fvalue * dof_corr, res2.F, rtol=rtol)
 
         if hasattr(res2, 'df_r'):
             assert_equal(ft.df_num, res2.df_m)
@@ -424,8 +424,8 @@ class TestOLSRobustClusterNWP(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.rtolh = 1e-10
 
 
-#skip for now, 4 failures with small differences
-class T_estOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
+# TODO: low precision/agreement
+class TestOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
 
     def setup(self):
@@ -445,8 +445,10 @@ class T_estOLSRobustCluster2G(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
         self.small = True
         self.res2 = res2.results_cluster_2groups_small
 
-        self.rtol = 1e-1
-        self.rtolh = 1e-1
+        self.rtol = 0.35 # only f_pvalue and confint for constant differ >rtol=0.05
+        self.rtolh = 1e-10
+
+
 
 class TestOLSRobustCluster2GLarge(CheckOLSRobustCluster, CheckOLSRobustNewMixin):
     # compare with `reg cluster`
