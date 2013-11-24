@@ -210,7 +210,7 @@ class CompareJ(object):
         pval = res_zx.pvalues[0]
         if attach:
             self.res_zx = res_zx
-            self.dist = stats.t(res_zx.model.df_resid)
+            self.dist = stats.t(res_zx.df_resid)
             self.teststat = tstat
             self.pvalue = pval
 

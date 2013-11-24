@@ -901,6 +901,9 @@ class RegressionResults(base.LikelihoodModelResults):
         else:
             self._wexog_singular_values = None
 
+        self.df_model = model.df_model
+        self.df_resid = model.df_resid
+
         self.use_t = True  # default for linear models
 
     def __str__(self):
@@ -941,13 +944,6 @@ class RegressionResults(base.LikelihoodModelResults):
             upper = params[cols] + q * bse[cols]
         return np.asarray(zip(lower, upper))
 
-    @cache_readonly
-    def df_resid(self):
-        return self.model.df_resid
-
-    @cache_readonly
-    def df_model(self):
-        return self.model.df_model
 
     @cache_readonly
     def nobs(self):
@@ -1452,8 +1448,8 @@ class RegressionResults(base.LikelihoodModelResults):
             raise ValueError('only HC, HAC and cluster are currently connected')
 
         if adjust_df:
-            res._cache['df_resid'] = n_groups - 1
-            res.model.df_resid = n_groups - 1
+            # Note: we leave model.df_resid unchanged at original
+            res.df_resid = n_groups - 1
 
         # TODO and so on should be in sandwich module
         # self.cov_kwds.update(kwds)  # add all kwds for now

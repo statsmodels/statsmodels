@@ -1357,10 +1357,10 @@ class LikelihoodModelResults(Results):
 
         if use_t:
             return ContrastResults(effect=_effect, t=_t, sd=_sd,
-                                   df_denom=self.model.df_resid)
+                                   df_denom=self.df_resid)
         else:
             return ContrastResults(effect=_effect, statistic=_t, sd=_sd,
-                                   df_denom=self.model.df_resid,
+                                   df_denom=self.df_resid,
                                    distribution='norm')
 
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
@@ -1505,7 +1505,7 @@ class LikelihoodModelResults(Results):
 
         if use_f:
             F /= J
-            return ContrastResults(F=F, df_denom=self.model.df_resid,
+            return ContrastResults(F=F, df_denom=self.df_resid,
                                    df_num=invcov.shape[0])
         else:
             return ContrastResults(chi2=F, df_denom=J, statistic=F, distribution='chi2', distargs=(J,))
