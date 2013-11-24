@@ -305,7 +305,7 @@ cov_colnames = 'mvalue kstock _cons'.split()
 cov_rownames = 'mvalue kstock _cons'.split()
 
 
-results_nw_panel = Bunch(
+results_nw_panel4 = Bunch(
                 params_table=params_table,
                 params_table_colnames=params_table_colnames,
                 params_table_rownames=params_table_rownames,
