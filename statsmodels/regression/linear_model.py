@@ -1093,57 +1093,90 @@ class RegressionResults(base.LikelihoodModelResults):
             scale[:,None]*self.model.pinv_wexog.T)
         return H
 
-    @property
+
+    @cache_readonly
+    def cov_HC0(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        self.het_scale = self.resid**2 # or whitened residuals? only OLS?
+        cov_HC0 = self._HCCM(self.het_scale)
+        return cov_HC0
+
+
+    @cache_readonly
+    def cov_HC1(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        self.het_scale = self.nobs/(self.df_resid)*(self.resid**2)
+        cov_HC1 = self._HCCM(self.het_scale)
+        return cov_HC1
+
+
+    @cache_readonly
+    def cov_HC2(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        # probably could be optimized
+        h = np.diag(chain_dot(self.model.exog,
+                              self.normalized_cov_params,
+                              self.model.exog.T))
+        self.het_scale = self.resid**2/(1-h)
+        cov_HC2 = self._HCCM(self.het_scale)
+        return cov_HC2
+
+
+    @cache_readonly
+    def cov_HC3(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        # above probably could be optimized to only calc the diag
+        h = np.diag(chain_dot(self.model.exog,
+                              self.normalized_cov_params,
+                              self.model.exog.T))
+        self.het_scale=(self.resid/(1-h))**2
+        cov_HC3 = self._HCCM(self.het_scale)
+        return cov_HC3
+
+
+    @cache_readonly
     def HC0_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC0_se is None:
-            self.het_scale = self.resid**2 # or whitened residuals? only OLS?
-            self.cov_HC0 = self._HCCM(self.het_scale)
-            self._HC0_se = np.sqrt(np.diag(self.cov_HC0))
-        return self._HC0_se
+        return np.sqrt(np.diag(self.cov_HC0))
 
-    @property
+
+    @cache_readonly
     def HC1_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC1_se is None:
-            self.het_scale = self.nobs/(self.df_resid)*(self.resid**2)
-            self.cov_HC1 = self._HCCM(self.het_scale)
-            self._HC1_se = np.sqrt(np.diag(self.cov_HC1))
-        return self._HC1_se
+        return np.sqrt(np.diag(self.cov_HC1))
 
-    @property
+
+    @cache_readonly
     def HC2_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC2_se is None:
-            # probably could be optimized
-            h = np.diag(chain_dot(self.model.exog,
-                                  self.normalized_cov_params,
-                                  self.model.exog.T))
-            self.het_scale = self.resid**2/(1-h)
-            self.cov_HC2 = self._HCCM(self.het_scale)
-            self._HC2_se = np.sqrt(np.diag(self.cov_HC2))
-        return self._HC2_se
+        return np.sqrt(np.diag(self.cov_HC2))
 
-    @property
+
+    @cache_readonly
     def HC3_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC3_se is None:
-            # above probably could be optimized to only calc the diag
-            h = np.diag(chain_dot(self.model.exog,
-                                  self.normalized_cov_params,
-                                  self.model.exog.T))
-            self.het_scale=(self.resid/(1-h))**2
-            self.cov_HC3 = self._HCCM(self.het_scale)
-            self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
-        return self._HC3_se
+        return np.sqrt(np.diag(self.cov_HC3))
+
 
     #TODO: this needs a test
     def norm_resid(self):
