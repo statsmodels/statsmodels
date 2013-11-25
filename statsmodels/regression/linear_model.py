@@ -1311,7 +1311,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
 
     def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
-        '''experimental results instance with robust covariance as default
+        '''create new results instance with robust covariance as default
 
 
         Parameters
@@ -1330,8 +1330,8 @@ class RegressionResults(base.LikelihoodModelResults):
         results : results instance
             This method creates a new results instance with the requested
             robust covariance as the default covariance of the parameters.
-            Inferential statistics like p-values will be based on this
-            covariance matrix.
+            Inferential statistics like p-values and tests will be based on
+            this covariance matrix.
 
         Notes
         -----
@@ -1349,10 +1349,62 @@ class RegressionResults(base.LikelihoodModelResults):
 
         - 'cluster' and required keyword `groups`, integer group indicator
 
+            - `groups` array_like, integer (required) :
+                  index of clusters or groups
+            - `use_correction` bool (optional) :
+                  If True the sandwich covariance is calulated with a small
+                  sample correction.
+                  If False the the sandwich covariance is calulated without
+                  small sample correction.
+            - `df_correction` bool (optional)
+                  If True (default), then the degrees of freedom for the
+                  inferential statistics and hypothesis tests, such as
+                  pvalues, f_pvalue, conf_int, and t_test and f_test, are
+                  based on the number of groups minus one instead of the
+                  total number of observations minus the number of explanatory
+                  variables. `df_resid` of the results instance is adjusted.
+                  If False, then `df_resid` of the results instance is not
+                  adjusted.
+
+        - 'hac-groupsum' Driscoll and Kraay, heteroscedasticity and
+              autocorrelation robust standard errors in panel data
+              keywords
+
+            - `time` array_like (required) : index of time periods
+            - `maxlag` integer (required) : number of lags to use
+            - `kernel` string (optional) : kernel, default is Bartlett
+            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
+                  If False the the sandwich covariance is calulated without
+                  small sample correction.
+                  If `use_correction = 'cluster'` (default), then the same
+                  small sample correction as in the case of 'covtype='cluster''
+                  is used.
+            - `df_correction` bool (optional)
+                  adjustment to df_resid, see cov_type 'cluster' above
+                  #TODO: we need more options here
+
+        - 'hac-panel' heteroscedasticity and autocorrelation robust standard
+              errors in panel data.
+              The data needs to be sorted in this case, the time series for
+              each panel unit or cluster need to be stacked.
+              keywords
+
+            - `time` array_like (required) : index of time periods
+            - `maxlag` integer (required) : number of lags to use
+            - `kernel` string (optional) : kernel, default is Bartlett
+            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
+                  If False the the sandwich covariance is calulated without
+                  small sample correction.
+            - `df_correction` bool (optional)
+                  adjustment to df_resid, see cov_type 'cluster' above
+                  #TODO: we need more options here
 
         Reminder:
         `use_correction` in "nw-groupsum" and "nw-panel" is not bool,
             needs to be in [False, 'hac', 'cluster']
+
+        TODO: Currently there is no check for extra or misspelled keywords,
+            except in the case of cov_type `HCx`
 
         '''
         import statsmodels.stats.sandwich_covariance as sw
@@ -1476,14 +1528,13 @@ class RegressionResults(base.LikelihoodModelResults):
                         'Driscoll and Kraay Standard Errors are robust to ' +
                         'cluster correlation ' + '(' + cov_type + ')')
         else:
-            raise ValueError('only HC, HAC and cluster are currently connected')
+            raise ValueError('cov_type not recognized. See docstring for ' +
+                             'available options and spelling')
 
         if adjust_df:
             # Note: we leave model.df_resid unchanged at original
             res.df_resid = n_groups - 1
 
-        # TODO and so on should be in sandwich module
-        # self.cov_kwds.update(kwds)  # add all kwds for now
         return res
 
 
