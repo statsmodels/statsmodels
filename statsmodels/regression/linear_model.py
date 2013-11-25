@@ -775,13 +775,13 @@ class RegressionResults(base.LikelihoodModelResults):
     centered_tss
         The total (weighted) sum of squares centered about the mean.
     cov_HC0
-        See HC0_se below.  Only available after calling HC0_se.
+        Heteroscedasticity robust covariance matrix. See HC0_se below.
     cov_HC1
-        See HC1_se below.  Only available after calling HC1_se.
+        Heteroscedasticity robust covariance matrix. See HC1_se below.
     cov_HC2
-        See HC2_se below.  Only available after calling HC2_se.
+        Heteroscedasticity robust covariance matrix. See HC2_se below.
     cov_HC3
-        See HC3_se below.  Only available after calling HC3_se.
+        Heteroscedasticity robust covariance matrix. See HC3_se below.
     df_model :
         Model degress of freedom. The number of regressors `p`. Does not
         include the constant if one is present
@@ -801,45 +801,43 @@ class RegressionResults(base.LikelihoodModelResults):
     fittedvalues
         The predicted the values for the original (unwhitened) design.
     het_scale
-        Only available if HC#_se is called.  See HC#_se for more information.
+        adjusted squared residuals for heteroscedasticity robust standard
+        errors. Is only available after `HC#_se` or `cov_HC#` is called.
+        See HC#_se for more information.
     HC0_se
         White's (1980) heteroskedasticity robust standard errors.
         Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
         where e_i = resid[i]
-        HC0_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC0, which is the full heteroskedasticity
-        consistent covariance matrix and also `het_scale`, which is in
-        this case just resid**2.  HCCM matrices are only appropriate for OLS.
+        HC0_se is a cached property.
+        When HC0_se or cov_HC0 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is just
+        resid**2.  HCCM matrices are only appropriate for OLS.
     HC1_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
         Defined as sqrt(diag(n/(n-p)*HC_0)
-        HC1_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC1, which is the full HCCM and also `het_scale`,
-        which is in this case n/(n-p)*resid**2.  HCCM matrices are only
-        appropriate for OLS.
+        HC1_see is a cached property.
+        When HC1_se or cov_HC1 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        n/(n-p)*resid**2.  HCCM matrices are only appropriate for OLS.
     HC2_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T
-        HC2_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC2, which is the full HCCM and also `het_scale`,
-        which is in this case is resid^(2)/(1-h_ii).  HCCM matrices are only
-        appropriate for OLS.
+        HC2_see is a cached property.
+        When HC2_se or cov_HC2 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        resid^(2)/(1-h_ii).  HCCM matrices are only appropriate for OLS.
     HC3_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T
-        HC3_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC3, which is the full HCCM and also `het_scale`,
-        which is in this case is resid^(2)/(1-h_ii)^(2).  HCCM matrices are
-        only appropriate for OLS.
+        HC3_see is a cached property.
+        When HC3_se or cov_HC3 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        resid^(2)/(1-h_ii)^(2).  HCCM matrices are only appropriate for OLS.
     model
         A pointer to the model instance that called fit() or results.
     mse_model
