@@ -365,7 +365,7 @@ class CustomKernel(object):
 
 class Uniform(CustomKernel):
     def __init__(self, h=1.0):
-        CustomKernel.__init__(self, shape=lambda x: 0.5, h=h,
+        CustomKernel.__init__(self, shape=lambda x: 0.5 * np.ones(x.shape), h=h,
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.5
         self._kernel_var = 1. / 3
