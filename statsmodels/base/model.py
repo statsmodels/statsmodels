@@ -1365,15 +1365,8 @@ class LikelihoodModelResults(Results):
 
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
                    invcov=None):
-        res = self.wald_test(r_matrix, q_matrix=q_matrix, cov_p=cov_p,
-                             scale=scale, invcov=invcov, use_f=True)
-        return res
-
-    #TODO: untested for GLMs?
-    def wald_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
-               invcov=None, use_f=None):
         """
-        Compute a Wald-test for a joint linear hypothesis.
+        Compute the F-test for a joint linear hypothesis.
 
         Parameters
         ----------
@@ -1446,7 +1439,64 @@ class LikelihoodModelResults(Results):
         See also
         --------
         statsmodels.contrasts
-        statsmodels.model.t_test
+        statsmodels.model.LikelihoodModelResults.wald_test
+        statsmodels.model.LikelihoodModelResults.t_test
+        patsy.DesignInfo.linear_constraint
+
+        Notes
+        -----
+        The matrix `r_matrix` is assumed to be non-singular. More precisely,
+
+        r_matrix (pX pX.T) r_matrix.T
+
+        is assumed invertible. Here, pX is the generalized inverse of the
+        design matrix of the model. There can be problems in non-OLS models
+        where the rank of the covariance of the noise is not full.
+        """
+        res = self.wald_test(r_matrix, q_matrix=q_matrix, cov_p=cov_p,
+                             scale=scale, invcov=invcov, use_f=True)
+        return res
+
+    #TODO: untested for GLMs?
+    def wald_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
+               invcov=None, use_f=None):
+        """
+        Compute a Wald-test for a joint linear hypothesis.
+
+        Parameters
+        ----------
+        r_matrix : array-like, str, or tuple
+            - array : An r x k array where r is the number of restrictions to
+              test and k is the number of regressors.
+            - str : The full hypotheses to test can be given as a string.
+              See the examples.
+            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
+              deprecated.
+        q_matrix : array-like
+            This is deprecated. See `r_matrix` and the examples for more
+            information on new usage. Can be either a scalar or a length p
+            row vector. If omitted and r_matrix is an array, `q_matrix` is
+            assumed to be a conformable array of zeros.
+        cov_p : array-like, optional
+            An alternative estimate for the parameter covariance matrix.
+            If None is given, self.normalized_cov_params is used.
+        scale : float, optional
+            Default is 1.0 for no scaling.
+        invcov : array-like, optional
+            A q x q array to specify an inverse covariance matrix based on a
+            restrictions matrix.
+        use_f : bool
+            If True, then the F-distribution is used. If False, then the
+            asymptotic distribution, chisquare is used.
+            The test statistic is proportionally adjusted for the distribution
+            by the number of constraints in the hypothesis.
+
+
+        See also
+        --------
+        statsmodels.contrasts
+        statsmodels.model.LikelihoodModelResults.f_test
+        statsmodels.model.LikelihoodModelResults.t_test
         patsy.DesignInfo.linear_constraint
 
         Notes
