@@ -578,3 +578,61 @@ class TestWLSRobustSmall(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
         self.skip_f = True
         self.rtol = 1e-6
         self.rtolh = 1e-10
+
+
+class TestWLSOLSRobustSmall(object):
+
+    @classmethod
+    def setup_class(cls):
+        #import pandas as pa
+        from statsmodels.datasets import grunfeld
+
+        dtapa = grunfeld.data.load_pandas()
+        #Stata example/data seems to miss last firm
+        dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
+        #asserts don't work for pandas
+        cls.res_wls = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
+        w_sqrt = 1 / np.sqrt(np.asarray(dtapa_exog['value']))
+        cls.res_ols = WLS(dtapa_endog * w_sqrt,
+                          np.asarray(exog) * w_sqrt[:, None]).fit()
+
+        firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
+                                    return_inverse=True)
+        cls.groups = firm_id
+        #time indicator in range(max Ti)
+        time = np.asarray(dtapa_exog[['year']])
+        time -= time.min()
+        cls.time = np.squeeze(time).astype(int)
+        # nw_panel function requires interval bounds
+        cls.tidx = [(i*20, 20*(i+1)) for i in range(10)]
+
+
+    def test_all(self):
+        all_cov = [('HC0', dict(use_t=True)),
+                   ('HC1', dict(use_t=True)),
+                   ('HC2', dict(use_t=True)),
+                   ('HC3', dict(use_t=True))]
+
+        # fvalue are not the same
+        #res_ols = self.res_ols
+        #res_wls = self.res_wls
+        #assert_allclose(res_ols.fvalue, res_wls.fvalue, rtol=1e-13)
+
+        for cov_type, kwds in all_cov:
+            res1 = self.res_ols.get_robustcov_results(cov_type, **kwds)
+            res2 = self.res_wls.get_robustcov_results(cov_type, **kwds)
+            assert_allclose(res1.params, res2.params, rtol=1e-13)
+            assert_allclose(res1.cov_params(), res2.cov_params(), rtol=1e-13)
+            assert_allclose(res1.bse, res2.bse, rtol=1e-13)
+            assert_allclose(res1.pvalues, res2.pvalues, rtol=1e-13)
+            #Note: Fvalue doesn't match up, difference in calculation ?
+            #      The only difference should be in the constant detection
+            #assert_allclose(res1.fvalue, res2.fvalue, rtol=1e-13)
+            #assert_allclose(res1.f_value, res2.f_pvalue, rtol=1e-13)
+            mat = np.eye(len(res1.params))
+            ft1 = res1.f_test(mat)
+            ft2 = res2.f_test(mat)
+            assert_allclose(ft1.fvalue, ft2.fvalue, rtol=1e-13)
+            assert_allclose(ft1.pvalue, ft2.pvalue, rtol=1e-13)
