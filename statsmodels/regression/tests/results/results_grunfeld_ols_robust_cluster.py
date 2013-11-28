@@ -610,3 +610,214 @@ results_nw_groupsum4_ivreg_small = Bunch(
                 **est
                 )
 
+
+#########################   WLS
+
+est = dict(
+           N = 200,
+           df_m = 2,
+           df_r = 197,
+           F = 158.2726503915062,
+           r2 = .7728224625923459,
+           rmse = 35.1783035325949,
+           mss = 829335.6968772264,
+           rss = 243790.0687679817,
+           r2_a = .7705160916541971,
+           ll = -994.3622459900876,
+           ll_0 = -1142.564592396746,
+           rank = 3,
+           cmdline = "regress invest mvalue kstock [aw=1/mvalue], robust",
+           title = "Linear regression",
+           marginsok = "XB default",
+           vce = "robust",
+           depvar = "invest",
+           cmd = "regress",
+           properties = "b V",
+           predict = "regres_p",
+           model = "ols",
+           estat_cmd = "regress_estat",
+           wexp = "= 1/mvalue",
+           wtype = "aweight",
+           vcetype = "Robust",
+          )
+
+params_table = np.array([
+     .11694307068216,  .00768545583365,    15.2161528494,  4.371656843e-35,
+     .10178674436759,  .13209939699674,              197,  1.9720790337785,
+                   0,  .10410756769914,  .00986959606725,  10.548310892334,
+     6.565731752e-21,  .08464394422305,  .12357119117523,              197,
+     1.9720790337785,                0, -9.2723336171089,  2.3458404391932,
+    -3.9526702081656,  .00010767530575, -13.898516363832, -4.6461508703863,
+                 197,  1.9720790337785,                0]).reshape(3,9)
+
+params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+     .00005906623137,  6.805470065e-06, -.01210153268743,  6.805470065e-06,
+     .00009740892653, -.01511046663892, -.01210153268743, -.01511046663892,
+      5.502967366154]).reshape(3,3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_hc1_wls_small = Bunch(
+                params_table=params_table,
+                params_table_colnames=params_table_colnames,
+                params_table_rownames=params_table_rownames,
+                cov=cov,
+                cov_colnames=cov_colnames,
+                cov_rownames=cov_rownames,
+                **est
+                )
+
+est = dict(
+           N_clust = 10,
+           N = 200,
+           df_m = 2,
+           df_r = 9,
+           F = 22.90591346432732,
+           r2 = .7728224625923459,
+           rmse = 35.1783035325949,
+           mss = 829335.6968772264,
+           rss = 243790.0687679817,
+           r2_a = .7705160916541971,
+           ll = -994.3622459900876,
+           ll_0 = -1142.564592396746,
+           rank = 3,
+           cmdline = "regress invest mvalue kstock[aw=1/mvalue], vce(cluster company)",
+           title = "Linear regression",
+           marginsok = "XB default",
+           vce = "cluster",
+           depvar = "invest",
+           cmd = "regress",
+           properties = "b V",
+           predict = "regres_p",
+           model = "ols",
+           estat_cmd = "regress_estat",
+           wexp = "= 1/mvalue",
+           wtype = "aweight",
+           vcetype = "Robust",
+           clustvar = "company",
+          )
+
+params_table = np.array([
+     .11694307068216,  .02609630113434,  4.4812124936848,  .00152974827456,
+     .05790913614858,  .17597700521575,                9,  2.2621571627982,
+                   0,  .10410756769914,  .02285882773869,  4.5543703679489,
+     .00137730504553,  .05239730679689,  .15581782860139,                9,
+     2.2621571627982,                0, -9.2723336171089,  5.7204731422962,
+    -1.6209032690934,  .13948922172294, -22.212942910549,  3.6682756763312,
+                   9,  2.2621571627982,                0]).reshape(3,9)
+
+params_table_colnames = 'b se t pvalue ll ul df crit eform'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+     .00068101693289, -.00006496077364, -.08926939086077, -.00006496077364,
+     .00052252600559,  -.0697116307149, -.08926939086077,  -.0697116307149,
+     32.723812971732]).reshape(3,3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_wls_small = Bunch(
+                params_table=params_table,
+                params_table_colnames=params_table_colnames,
+                params_table_rownames=params_table_rownames,
+                cov=cov,
+                cov_colnames=cov_colnames,
+                cov_rownames=cov_rownames,
+                **est
+                )
+
+est = dict(
+           N = 200,
+           inexog_ct = 2,
+           exexog_ct = 0,
+           endog_ct = 0,
+           partial_ct = 0,
+           N_clust = 10,
+           df_m = 2,
+           sdofminus = 0,
+           dofminus = 0,
+           r2 = .772822462592346,
+           rmse = 34.91346937558495,
+           rss = 243790.0687679817,
+           mss = 829335.6968772268,
+           r2_a = .7705160916541972,
+           F = 22.9059134643273,
+           Fp = .000294548654088,
+           Fdf1 = 2,
+           Fdf2 = 9,
+           yy = 1401938.856802022,
+           yyc = 1073125.765645209,
+           partialcons = 0,
+           cons = 1,
+           jdf = 0,
+           j = 0,
+           ll = -994.3622459900874,
+           rankV = 3,
+           rankS = 3,
+           rankxx = 3,
+           rankzz = 3,
+           r2c = .772822462592346,
+           r2u = .8261050632949187,
+           clustvar = "company",
+           hacsubtitleV = "Statistics robust to heteroskedasticity and clustering on company",
+           hacsubtitleB = "Estimates efficient for homoskedasticity only",
+           title = "OLS estimation",
+           predict = "ivreg2_p",
+           version = "03.1.07",
+           cmdline = "ivreg2 invest mvalue kstock [aw=1/mvalue], cluster(company)",
+           cmd = "ivreg2",
+           wtype = "aweight",
+           wexp = "=1/mvalue",
+           model = "ols",
+           depvar = "invest",
+           vcetype = "Robust",
+           vce = "robust cluster",
+           partialsmall = "small",
+           inexog = "mvalue kstock",
+           insts = "mvalue kstock",
+           properties = "b V",
+          )
+
+params_table = np.array([
+     .11694307068216,  .02463240320082,  4.7475298990826,  2.059159576e-06,
+     .06866444755588,  .16522169380844, np.nan,  1.9599639845401,
+                   0,  .10410756769914,  .02157653909108,  4.8250355286218,
+     1.399783125e-06,  .06181832816961,  .14639680722867, np.nan,
+     1.9599639845401,                0, -9.2723336171089,  5.3995775192484,
+    -1.7172331694572,  .08593657730569, -19.855311086568,    1.31064385235,
+    np.nan,  1.9599639845401,                0]).reshape(3,9)
+
+params_table_colnames = 'b se z pvalue ll ul df crit eform'.split()
+
+params_table_rownames = 'mvalue kstock _cons'.split()
+
+cov = np.array([
+     .00060675528745, -.00005787711139, -.07953498994782, -.00005787711139,
+     .00046554703915, -.06210991017966, -.07953498994782, -.06210991017966,
+     29.155437386372]).reshape(3,3)
+
+cov_colnames = 'mvalue kstock _cons'.split()
+
+cov_rownames = 'mvalue kstock _cons'.split()
+
+
+results_cluster_wls_large = Bunch(
+                params_table=params_table,
+                params_table_colnames=params_table_colnames,
+                params_table_rownames=params_table_rownames,
+                cov=cov,
+                cov_colnames=cov_colnames,
+                cov_rownames=cov_rownames,
+                **est
+                )

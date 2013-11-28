@@ -811,7 +811,7 @@ class RegressionResults(base.LikelihoodModelResults):
         HC0_se is a cached property.
         When HC0_se or cov_HC0 is called the RegressionResults instance will
         then have another attribute `het_scale`, which is in this case is just
-        resid**2.  HCCM matrices are only appropriate for OLS.
+        resid**2.
     HC1_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
@@ -819,7 +819,7 @@ class RegressionResults(base.LikelihoodModelResults):
         HC1_see is a cached property.
         When HC1_se or cov_HC1 is called the RegressionResults instance will
         then have another attribute `het_scale`, which is in this case is
-        n/(n-p)*resid**2.  HCCM matrices are only appropriate for OLS.
+        n/(n-p)*resid**2.
     HC2_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
@@ -837,7 +837,7 @@ class RegressionResults(base.LikelihoodModelResults):
         HC3_see is a cached property.
         When HC3_se or cov_HC3 is called the RegressionResults instance will
         then have another attribute `het_scale`, which is in this case is
-        resid^(2)/(1-h_ii)^(2).  HCCM matrices are only appropriate for OLS.
+        resid^(2)/(1-h_ii)^(2).
     model
         A pointer to the model instance that called fit() or results.
     mse_model
@@ -880,12 +880,6 @@ class RegressionResults(base.LikelihoodModelResults):
     wresid
         The residuals of the transformed/whitened regressand and regressor(s)
     """
-
-    # For robust covariance matrix properties
-    _HC0_se = None
-    _HC1_se = None
-    _HC2_se = None
-    _HC3_se = None
 
     _cache = {} # needs to be a class attribute for scale setter?
 
@@ -1098,7 +1092,7 @@ class RegressionResults(base.LikelihoodModelResults):
         See statsmodels.RegressionResults
         """
 
-        self.het_scale = self.resid**2 # or whitened residuals? only OLS?
+        self.het_scale = self.wresid**2
         cov_HC0 = self._HCCM(self.het_scale)
         return cov_HC0
 
@@ -1109,7 +1103,7 @@ class RegressionResults(base.LikelihoodModelResults):
         See statsmodels.RegressionResults
         """
 
-        self.het_scale = self.nobs/(self.df_resid)*(self.resid**2)
+        self.het_scale = self.nobs/(self.df_resid)*(self.wresid**2)
         cov_HC1 = self._HCCM(self.het_scale)
         return cov_HC1
 
@@ -1121,10 +1115,10 @@ class RegressionResults(base.LikelihoodModelResults):
         """
 
         # probably could be optimized
-        h = np.diag(chain_dot(self.model.exog,
+        h = np.diag(chain_dot(self.model.wexog,
                               self.normalized_cov_params,
-                              self.model.exog.T))
-        self.het_scale = self.resid**2/(1-h)
+                              self.model.wexog.T))
+        self.het_scale = self.wresid**2/(1-h)
         cov_HC2 = self._HCCM(self.het_scale)
         return cov_HC2
 
@@ -1136,10 +1130,10 @@ class RegressionResults(base.LikelihoodModelResults):
         """
 
         # above probably could be optimized to only calc the diag
-        h = np.diag(chain_dot(self.model.exog,
+        h = np.diag(chain_dot(self.model.wexog,
                               self.normalized_cov_params,
-                              self.model.exog.T))
-        self.het_scale=(self.resid/(1-h))**2
+                              self.model.wexog.T))
+        self.het_scale=(self.wresid/(1-h))**2
         cov_HC3 = self._HCCM(self.het_scale)
         return cov_HC3
 

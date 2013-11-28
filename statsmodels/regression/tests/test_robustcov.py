@@ -11,7 +11,7 @@ from scipy import stats
 
 from numpy.testing import assert_allclose, assert_equal, assert_warns
 
-from statsmodels.regression.linear_model import OLS
+from statsmodels.regression.linear_model import OLS, WLS
 import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
@@ -472,4 +472,109 @@ class TestOLSRobustCluster2GLarge(CheckOLSRobustCluster, CheckOLSRobustNewMixin)
 
         self.skip_f = True
         self.rtol = 1e-7
+        self.rtolh = 1e-10
+
+
+######################################
+#                 WLS
+######################################
+
+class CheckWLSRobustCluster(CheckOLSRobust):
+    # compare with regress robust
+
+
+    @classmethod
+    def setup_class(cls):
+        #import pandas as pa
+        from statsmodels.datasets import grunfeld
+
+        dtapa = grunfeld.data.load_pandas()
+        #Stata example/data seems to miss last firm
+        dtapa_endog = dtapa.endog[:200]
+        dtapa_exog = dtapa.exog[:200]
+        exog = add_constant(dtapa_exog[['value', 'capital']], prepend=False)
+        #asserts don't work for pandas
+        cls.res1 = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
+
+        firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
+                                    return_inverse=True)
+        cls.groups = firm_id
+        #time indicator in range(max Ti)
+        time = np.asarray(dtapa_exog[['year']])
+        time -= time.min()
+        cls.time = np.squeeze(time).astype(int)
+        # nw_panel function requires interval bounds
+        cls.tidx = [(i*20, 20*(i+1)) for i in range(10)]
+
+
+# not available yet for WLS
+class T_estWLSRobustCluster2(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results('cluster',
+                                                  groups=self.groups,
+                                                  use_correction=True,
+                                                  use_t=True)
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=True)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = True
+        self.res2 = res2.results_cluster_wls_small
+
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
+
+
+# not available yet for WLS
+class T_estWLSRobustCluster2Large(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results('cluster',
+                                                  groups=self.groups,
+                                                  use_correction=False,
+                                                  use_t=False,
+                                                  df_correction=True)
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=False)
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = False
+        self.res2 = res2.results_cluster_wls_large
+
+        self.skip_f = True
+        self.rtol = 1e-6
+        self.rtolh = 1e-10
+
+class TestWLSRobustSmall(CheckWLSRobustCluster, CheckOLSRobustNewMixin):
+    # compare with `reg cluster`
+
+    def setup(self):
+        res_ols = self.res1.get_robustcov_results('HC1',
+                                                  use_t=True)
+        self.res3 = self.res1
+        self.res1 = res_ols
+        self.bse_robust = res_ols.bse
+        self.cov_robust = res_ols.cov_params()
+        #TODO: check standalone function
+        #cov1 = sw.cov_cluster(self.res1, self.groups, use_correction=False)
+        cov1 = res_ols.cov_HC1
+        se1 =  sw.se_cov(cov1)
+        self.bse_robust2 = se1
+        self.cov_robust2 = cov1
+        self.small = True
+        self.res2 = res2.results_hc1_wls_small
+
+        self.skip_f = True
+        self.rtol = 1e-6
         self.rtolh = 1e-10
