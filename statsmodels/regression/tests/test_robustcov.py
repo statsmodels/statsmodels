@@ -595,8 +595,8 @@ class TestWLSOLSRobustSmall(object):
         #asserts don't work for pandas
         cls.res_wls = WLS(dtapa_endog, exog, weights=1/dtapa_exog['value']).fit()
         w_sqrt = 1 / np.sqrt(np.asarray(dtapa_exog['value']))
-        cls.res_ols = WLS(dtapa_endog * w_sqrt,
-                          np.asarray(exog) * w_sqrt[:, None]).fit()
+        cls.res_ols = OLS(dtapa_endog * w_sqrt,
+                          np.asarray(exog) * w_sqrt[:, None]).fit() # hasconst=True ?
 
         firm_names, firm_id = np.unique(np.asarray(dtapa_exog[['firm']], 'S20'),
                                     return_inverse=True)
@@ -635,4 +635,4 @@ class TestWLSOLSRobustSmall(object):
             ft1 = res1.f_test(mat)
             ft2 = res2.f_test(mat)
             assert_allclose(ft1.fvalue, ft2.fvalue, rtol=1e-13)
-            assert_allclose(ft1.pvalue, ft2.pvalue, rtol=1e-13)
+            assert_allclose(ft1.pvalue, ft2.pvalue, rtol=1e-12)
