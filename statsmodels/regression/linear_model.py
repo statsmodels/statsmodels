@@ -51,7 +51,7 @@ from statsmodels.emplike.elregress import _ELRegOpts
 
 def _get_sigma(sigma, nobs):
     """
-    Returns sigma (matrix, nbox by nobx) for GLS and the inverse of its
+    Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
     Cholesky decomposition.  Handles dimensions and checks integrity.
     If sigma is None, returns None, None. Otherwise returns sigma,
     cholsigmainv.
