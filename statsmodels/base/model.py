@@ -64,6 +64,7 @@ class Model(object):
         self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
                                 'data.orig_endog', 'data.orig_exog'])
 
+
     @classmethod
     def from_formula(cls, formula, data, subset=None, *args, **kwargs):
         """
@@ -1157,6 +1158,7 @@ class LikelihoodModelResults(Results):
         super(LikelihoodModelResults, self).__init__(model, params)
         self.normalized_cov_params = normalized_cov_params
         self.scale = scale
+        self.use_t = False # by default we use normal distribution
 
     def normalized_cov_params(self):
         raise NotImplementedError
@@ -1243,7 +1245,10 @@ class LikelihoodModelResults(Results):
         if cov_p is None:
             if scale is None:
                 scale = self.scale
-            cov_p = self.normalized_cov_params * scale
+            if hasattr(self, 'cov_params_default'):
+                cov_p = self.cov_params_default
+            else:
+                cov_p = self.normalized_cov_params * scale
 
         if column is not None:
             column = np.asarray(column)
@@ -1266,7 +1271,8 @@ class LikelihoodModelResults(Results):
             return cov_p
 
     #TODO: make sure this works as needed for GLMs
-    def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None):
+    def t_test(self, r_matrix, q_matrix=None, cov_p=None, scale=None,
+               use_t=None):
         """
         Compute a t-test for a joint linear hypothesis of the form Rb = q
 
@@ -1290,6 +1296,11 @@ class LikelihoodModelResults(Results):
         scale : float, optional
             An optional `scale` to use.  Default is the scale specified
             by the model fit.
+        use_t : bool, optional
+            If use_t is None, then the default of the model is used.
+            If use_t is True, then the p-values are based on the t distribution.
+            If use_t is False, then the p-values are based on the normal
+            distribution.
 
         Examples
         --------
@@ -1361,6 +1372,10 @@ class LikelihoodModelResults(Results):
                 raise ValueError("r_matrix and q_matrix must have the same "
                                  "number of rows")
 
+        if use_t is None:
+            #switch to use_t false if undefined
+            use_t = (hasattr(self, 'use_t') and self.use_t)
+
         _t = _sd = None
 
         _effect = np.dot(r_matrix, self.params)
@@ -1373,15 +1388,19 @@ class LikelihoodModelResults(Results):
         else:
             _sd = np.sqrt(self.cov_params(r_matrix=r_matrix, cov_p=cov_p))
         _t = (_effect - q_matrix) * recipr(_sd)
-        return ContrastResults(effect=_effect, t=_t, sd=_sd,
-                               df_denom=self.model.df_resid)
 
+        if use_t:
+            return ContrastResults(effect=_effect, t=_t, sd=_sd,
+                                   df_denom=self.df_resid)
+        else:
+            return ContrastResults(effect=_effect, statistic=_t, sd=_sd,
+                                   df_denom=self.df_resid,
+                                   distribution='norm')
 
-    #TODO: untested for GLMs?
     def f_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
-               invcov=None):
+                   invcov=None):
         """
-        Compute an F-test for a joint linear hypothesis.
+        Compute the F-test for a joint linear hypothesis.
 
         Parameters
         ----------
@@ -1454,7 +1473,8 @@ class LikelihoodModelResults(Results):
         See also
         --------
         statsmodels.contrasts
-        statsmodels.model.t_test
+        statsmodels.model.LikelihoodModelResults.wald_test
+        statsmodels.model.LikelihoodModelResults.t_test
         patsy.DesignInfo.linear_constraint
 
         Notes
@@ -1467,6 +1487,66 @@ class LikelihoodModelResults(Results):
         design matrix of the model. There can be problems in non-OLS models
         where the rank of the covariance of the noise is not full.
         """
+        res = self.wald_test(r_matrix, q_matrix=q_matrix, cov_p=cov_p,
+                             scale=scale, invcov=invcov, use_f=True)
+        return res
+
+    #TODO: untested for GLMs?
+    def wald_test(self, r_matrix, q_matrix=None, cov_p=None, scale=1.0,
+               invcov=None, use_f=None):
+        """
+        Compute a Wald-test for a joint linear hypothesis.
+
+        Parameters
+        ----------
+        r_matrix : array-like, str, or tuple
+            - array : An r x k array where r is the number of restrictions to
+              test and k is the number of regressors.
+            - str : The full hypotheses to test can be given as a string.
+              See the examples.
+            - tuple : A tuple of arrays in the form (R, q), since q_matrix is
+              deprecated.
+        q_matrix : array-like
+            This is deprecated. See `r_matrix` and the examples for more
+            information on new usage. Can be either a scalar or a length p
+            row vector. If omitted and r_matrix is an array, `q_matrix` is
+            assumed to be a conformable array of zeros.
+        cov_p : array-like, optional
+            An alternative estimate for the parameter covariance matrix.
+            If None is given, self.normalized_cov_params is used.
+        scale : float, optional
+            Default is 1.0 for no scaling.
+        invcov : array-like, optional
+            A q x q array to specify an inverse covariance matrix based on a
+            restrictions matrix.
+        use_f : bool
+            If True, then the F-distribution is used. If False, then the
+            asymptotic distribution, chisquare is used.
+            The test statistic is proportionally adjusted for the distribution
+            by the number of constraints in the hypothesis.
+
+
+        See also
+        --------
+        statsmodels.contrasts
+        statsmodels.model.LikelihoodModelResults.f_test
+        statsmodels.model.LikelihoodModelResults.t_test
+        patsy.DesignInfo.linear_constraint
+
+        Notes
+        -----
+        The matrix `r_matrix` is assumed to be non-singular. More precisely,
+
+        r_matrix (pX pX.T) r_matrix.T
+
+        is assumed invertible. Here, pX is the generalized inverse of the
+        design matrix of the model. There can be problems in non-OLS models
+        where the rank of the covariance of the noise is not full.
+        """
+        if use_f is None:
+            #switch to use_t false if undefined
+            use_f = (hasattr(self, 'use_t') and self.use_t)
+
         from patsy import DesignInfo
         if q_matrix is not None:
             from warnings import warn
@@ -1503,11 +1583,17 @@ class LikelihoodModelResults(Results):
 
         if (hasattr(self, 'mle_settings') and
             self.mle_settings['optimizer'] in ['l1', 'l1_cvxopt_cp']):
-            F = nan_dot(nan_dot(Rbq.T, invcov), Rbq) / J
+            F = nan_dot(nan_dot(Rbq.T, invcov), Rbq)
         else:
-            F = np.dot(np.dot(Rbq.T, invcov), Rbq) / J
-        return ContrastResults(F=F, df_denom=self.model.df_resid,
-                    df_num=invcov.shape[0])
+            F = np.dot(np.dot(Rbq.T, invcov), Rbq)
+
+        if use_f:
+            F /= J
+            return ContrastResults(F=F, df_denom=self.df_resid,
+                                   df_num=invcov.shape[0])
+        else:
+            return ContrastResults(chi2=F, df_denom=J, statistic=F, distribution='chi2', distargs=(J,))
+
 
     def conf_int(self, alpha=.05, cols=None, method='default'):
         """

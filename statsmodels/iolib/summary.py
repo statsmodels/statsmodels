@@ -407,7 +407,7 @@ def summary_top(results, title=None, gleft=None, gright=None, yname=None, xname=
 
 
 def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
-                   skip_header=False):
+                   skip_header=False, title=None):
     '''create a summary table for the parameters
 
     Parameters
@@ -503,11 +503,76 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
     parameter_table = SimpleTable(params_data,
                                   param_header,
                                   params_stubs,
-                                  title = None,
+                                  title = title,
                                   txt_fmt = fmt_params #gen_fmt #fmt_2, #gen_fmt,
                                   )
 
     return parameter_table
+
+
+def summary_params_frame(results, yname=None, xname=None, alpha=.05,
+                         use_t=True):
+    '''create a summary table for the parameters
+
+    Parameters
+    ----------
+    res : results instance
+        some required information is directly taken from the result
+        instance
+    yname : string or None
+        optional name for the endogenous variable, default is "y"
+    xname : list of strings or None
+        optional names for the exogenous variables, default is "var_xx"
+    alpha : float
+        significance level for the confidence intervals
+    use_t : bool
+        indicator whether the p-values are based on the Student-t
+        distribution (if True) or on the normal distribution (if False)
+    skip_headers : bool
+        If false (default), then the header row is added. If true, then no
+        header row is added.
+
+    Returns
+    -------
+    params_table : SimpleTable instance
+    '''
+
+    #Parameters part of the summary table
+    #------------------------------------
+    #Note: this is not necessary since we standardized names, only t versus normal
+
+    if isinstance(results, tuple):
+        #for multivariate endog
+        #TODO: check whether I don't want to refactor this
+        #we need to give parameter alpha to conf_int
+        results, params, std_err, tvalues, pvalues, conf_int = results
+    else:
+        params = results.params
+        std_err = results.bse
+        tvalues = results.tvalues  #is this sometimes called zvalues
+        pvalues = results.pvalues
+        conf_int = results.conf_int(alpha)
+
+
+    #Dictionary to store the header names for the parameter part of the
+    #summary table. look up by modeltype
+    alp = str((1-alpha)*100)+'%'
+    if use_t:
+        param_header = ['coef', 'std err', 't', 'P>|t|',
+                        'Conf. Int. Low', 'Conf. Int. Upp.']
+    else:
+        param_header = ['coef', 'std err', 'z', 'P>|z|',
+                        'Conf. Int. Low', 'Conf. Int. Upp.']
+
+    _, xname = _getnames(results, yname=yname, xname=xname)
+
+
+    #------------------
+
+    from pandas import DataFrame
+    table = np.column_stack((params, std_err, tvalues, pvalues, conf_int))
+    return DataFrame(table, columns=param_header, index=xname)
+
 
 def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
                       title=None):
