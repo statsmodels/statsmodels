@@ -1,10 +1,10 @@
 """
-This module implements some standard regression models:
+This module implements standard regression models:
 
-Generalized Least Squares (GLS),
-Ordinary Least Squares (OLS),
-and Weighted Least Squares (WLS),
-as well as an GLS model with autoregressive error terms GLSAR(p)
+Generalized Least Squares (GLS)
+Ordinary Least Squares (OLS)
+Weighted Least Squares (WLS)
+Generalized Least Squares with autoregressive error terms GLSAR(p)
 
 Models are specified with an endogenous response variable and an
 exogenous design matrix and are fit using their `fit` method.
@@ -46,9 +46,10 @@ from scipy.stats import chi2
 
 def _get_sigma(sigma, nobs):
     """
-    Returns sigma for GLS and the inverse of its Cholesky decomposition.
-    Handles dimensions and checks integrity. If sigma is None, returns
-    None, None. Otherwise returns sigma, cholsigmainv.
+    Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
+    Cholesky decomposition.  Handles dimensions and checks integrity.
+    If sigma is None, returns None, None. Otherwise returns sigma,
+    cholsigmainv.
     """
     if sigma is None:
         return None, None
@@ -58,13 +59,13 @@ def _get_sigma(sigma, nobs):
     if sigma.ndim == 1:
         if sigma.shape != (nobs,):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
-                             "array of shape %s x %s" % (nobs, nobs))
+                             "array of shape %s x %s" % (nobs, nobs, nobs))
         cholsigmainv = np.diag(1/sigma**.5)
         sigma = np.diag(sigma)
     else:
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
-                             "array of shape %s x %s" % (nobs, nobs))
+                             "array of shape %s x %s" % (nobs, nobs, nobs))
         cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
 
     return sigma, cholsigmainv
@@ -92,6 +93,10 @@ class RegressionModel(base.LikelihoodModel):
 
     @property
     def df_model(self):
+        """
+        The model degree of freedom, defined as the rank of the regressor
+        matrix minus 1 if a constant is included.
+        """
         if self._df_model is None:
             if self.rank is None:
                 self.rank = rank(self.exog)
@@ -104,6 +109,11 @@ class RegressionModel(base.LikelihoodModel):
 
     @property
     def df_resid(self):
+        """
+        The residual degree of freedom, defined as the number of observations
+        minus the rank of the regressor matrix.
+        """
+
         if self._df_resid is None:
             if self.rank is None:
                 self.rank = rank(self.exog)
@@ -158,8 +168,9 @@ class RegressionModel(base.LikelihoodModel):
 
         elif method == "qr":
             if ((not hasattr(self, 'exog_Q')) or
+                (not hasattr(self, 'exog_R')) or
                 (not hasattr(self, 'normalized_cov_params')) or
-                (not hasattr(self, 'rank'))):
+                (getattr(self, 'rank', None) is None)):
                 Q, R = np.linalg.qr(self.wexog)
                 self.exog_Q, self.exog_R = Q, R
                 self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
@@ -289,7 +300,7 @@ class GLS(RegressionModel):
 
     def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None):
     #TODO: add options igls, for iterative fgls if sigma is None
-    #TODO: default is sigma is none should be two-step GLS
+    #TODO: default if sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
         super(GLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
@@ -324,9 +335,9 @@ class GLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at params.
+        Returns the value of the Gaussian log-likelihood function at params.
 
-        Given the whitened design matrix, the loglikelihood is evaluated
+        Given the whitened design matrix, the log-likelihood is evaluated
         at the parameter vector `params` for the dependent variable `endog`.
 
         Parameters
@@ -337,14 +348,14 @@ class GLS(RegressionModel):
         Returns
         -------
         loglike : float
-            The value of the loglikelihood function for a GLS Model.
+            The value of the log-likelihood function for a GLS Model.
 
 
         Notes
         -----
-        The loglikelihood function for the normal distribution is
+        The log-likelihood function for the normal distribution is
 
-        .. math:: -\\frac{n}{2}\\log\\left(Y-\\hat{Y}\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}\\log\\left(\\left|\\Sigma\\right|\\right)
+        .. math:: -\\frac{n}{2}\\log\\left(\\left(Y-\\hat{Y}\\right)^{\\prime}\\left(Y-\\hat{Y}\\right)\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}\\log\\left(\\left|\\Sigma\\right|\\right)
 
         Y and Y-hat are whitened.
 
@@ -356,7 +367,8 @@ class GLS(RegressionModel):
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
         if np.any(self.sigma) and self.sigma.ndim == 2:
         #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
-            llf -= .5*np.log(np.linalg.det(self.sigma))
+            det = np.linalg.slogdet(self.sigma)
+            llf -= .5*det[1]
             # with error covariance matrix
         return llf
 
@@ -402,7 +414,7 @@ class WLS(RegressionModel):
 
     Notes
     -----
-    If the weights are a function of the data, then the postestimation
+    If the weights are a function of the data, then the post estimation
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
     """ % {'params' : base._model_params_doc,
@@ -421,7 +433,7 @@ class WLS(RegressionModel):
                                   weights=weights, hasconst=hasconst)
         nobs = self.exog.shape[0]
         weights = self.weights
-        if len(weights) != nobs and weights.size == nobs:
+        if weights.size != nobs and weights.shape[0] != nobs:
             raise ValueError('Weights must be scalar or same length as design')
 
     def whiten(self, X):
@@ -446,9 +458,9 @@ class WLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at params.
+        Returns the value of the gaussian log-likelihood function at params.
 
-        Given the whitened design matrix, the loglikelihood is evaluated
+        Given the whitened design matrix, the log-likelihood is evaluated
         at the parameter vector `params` for the dependent variable `Y`.
 
         Parameters
@@ -458,7 +470,7 @@ class WLS(RegressionModel):
 
         Returns
         -------
-        The value of the loglikelihood function for a WLS Model.
+        The value of the log-likelihood function for a WLS Model.
 
         Notes
         --------
@@ -519,19 +531,19 @@ class OLS(WLS):
                                   hasconst=hasconst)
 
     def loglike(self, params):
-        '''
+        """
         The likelihood function for the clasical OLS model.
 
         Parameters
         ----------
         params : array-like
-            The coefficients with which to estimate the loglikelihood.
+            The coefficients with which to estimate the log-likelihood.
 
         Returns
         -------
         The concentrated likelihood function evaluated at params.
-        '''
-        nobs2 = self.nobs/2.
+        """
+        nobs2 = self.nobs / 2.0
         return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
                 np.dot(np.transpose(self.endog -
                     np.dot(self.exog, params)),
@@ -1173,7 +1185,7 @@ class RegressionResults(base.LikelihoodModelResults):
     #TODO: this needs a test
     def norm_resid(self):
         """
-        Residuals, normalized to have unit length and unit variance.
+        Residuals, normalized to have unit variance.
 
         Returns
         -------
@@ -1183,10 +1195,16 @@ class RegressionResults(base.LikelihoodModelResults):
         -----
         This method is untested
         """
+
         if not hasattr(self, 'resid'):
-            raise ValueError('need normalized residuals to estimate standard '
-                             'deviation')
-        return self.wresid * recipr(np.sqrt(self.scale))
+            raise ValueError('Method requires residuals.')
+        if np.all(self.wresid <= 0.0):
+            # This is a very exact check, does not account for numerical error
+            from warnings import warn
+            warn("All residuals are 0, cannot compute normed residuals.")
+            return self.wresid
+        else:
+            return self.wresid / np.sqrt(np.mean(self.wresid ** 2))
 
     def compare_f_test(self, restricted):
         '''use F test to test whether restricted model is correct
@@ -1820,13 +1838,14 @@ class OLSResults(RegressionResults):
                      ret_params=0, method='nm',
                      stochastic_exog=1, return_params=0):
         """
-        Tests single or joint hypotheses of the regression parameters.
+        Tests single or joint hypotheses of the regression parameters using
+        Empirical Likelihood.
 
         Parameters
         ----------
 
         b0_vals : 1darray
-            The hypthesized value of the parameter to be tested
+            The hypothesized value of the parameter to be tested
 
         param_nums : 1darray
             The parameter number to be tested
@@ -1855,7 +1874,7 @@ class OLSResults(RegressionResults):
         -------
 
         res : tuple
-            The p-value and -2 times the log likelihood ratio for the
+            The p-value and -2 times the log-likelihood ratio for the
             hypothesized values.
 
         Examples
@@ -1916,18 +1935,19 @@ class OLSResults(RegressionResults):
                     method='nm', stochastic_exog=1):
         """
         Computes the confidence interval for the parameter given by param_num
+        using Empirical Likelihood
 
         Parameters
         ----------
 
         param_num : float
-            The parameter thats confidence interval is desired
+            The parameter for which the confidence interval is desired
 
         sig : float
             The significance level.  Default is .05
 
         upper_bound : float
-            Tha mximum value the upper limit can be.  Default is the
+            The maximum value the upper limit can be.  Default is the
             99.9% confidence value under OLS assumptions.
 
         lower_bound : float
@@ -1965,7 +1985,7 @@ class OLSResults(RegressionResults):
         For alpha=.05, the value is 3.841459.
 
         To ensure optimization terminated successfully, it is suggested to
-        do test_beta([lower_limit], [param_num])
+        do el_test([lower_limit], [param_num])
 
         If the optimization does not terminate successfully, consider switching
         optimization algorithms.

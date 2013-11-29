@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_approx_equal,
                             assert_raises, assert_equal)
 from scipy.linalg import toeplitz
-from statsmodels.tools.tools import add_constant, categorical
+from statsmodels.tools.tools import add_constant, categorical, rank
 from statsmodels.regression.linear_model import OLS, WLS, GLS, yule_walker
 from statsmodels.datasets import longley
 from scipy.stats import t as student_t
@@ -21,10 +21,10 @@ DECIMAL_0 = 0
 
 
 class CheckRegressionResults(object):
-    '''
+    """
     res2 contains results from Rmodelwrap or were obtained from a statistical
     packages such as R, Stata, or SAS and were written to model_results
-    '''
+    """
 
     decimal_params = DECIMAL_4
     def test_params(self):
@@ -150,7 +150,23 @@ class TestOLS(CheckRegressionResults):
         cls.res2 = res2
 
         res_qr = OLS(data.endog, data.exog).fit(method="qr")
+
+        model_qr = OLS(data.endog, data.exog)
+        Q, R = np.linalg.qr(data.exog)
+        model_qr.exog_Q, model_qr.exog_R  = Q, R
+        model_qr.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
+        model_qr.rank = rank(R)
+        res_qr2 = model_qr.fit(method="qr")
+
         cls.res_qr = res_qr
+        cls.res_qr_manual = res_qr2
+
+    def test_eigenvalues(self):
+        eigenval_perc_diff = (self.res_qr.eigenvals - self.res_qr_manual.eigenvals)
+        eigenval_perc_diff /= self.res_qr.eigenvals
+        zeros = np.zeros_like(eigenval_perc_diff)
+        assert_almost_equal(eigenval_perc_diff, zeros, DECIMAL_7)
+
 
     #  Robust error tests.  Compare values computed with SAS
     def test_HC0_errors(self):
@@ -204,6 +220,22 @@ class TestOLS(CheckRegressionResults):
             rsquared_adj = results.rsquared_adj
             assert_equal(rsquared_adj, np.nan)
 
+    def test_qr_alternatives(self):
+        assert_equal(self.res_qr.params,self.res_qr_manual.params)
+
+    def test_norm_resid(self):
+        resid = self.res1.resid
+        norm_resid = resid / np.sqrt(np.mean(resid**2.0))
+        model_norm_resid = self.res1.norm_resid()
+        assert_almost_equal(model_norm_resid, norm_resid, DECIMAL_7)
+
+    def test_norm_resid_zero_variance(self):
+        with warnings.catch_warnings(record=True):
+            y = self.res1.model.endog
+            res = OLS(y,y).fit()
+            assert_equal(res.resid, res.norm_resid())
+
+
 class TestRTO(CheckRegressionResults):
     @classmethod
     def setupClass(cls):
@@ -243,13 +275,13 @@ class TestFtest(object):
         assert_equal(self.Ftest.df_num, 6)
 
 class TestFTest2(object):
-    '''
+    """
     A joint test that the coefficient on
     GNP = the coefficient on UNEMP  and that the coefficient on
     POP = the coefficient on YEAR for the Longley dataset.
 
     Ftest1 is from statsmodels.  Results are from Rpy using R's car library.
-    '''
+    """
     @classmethod
     def setupClass(cls):
         data = longley.load()
@@ -307,11 +339,11 @@ class TestFtestQ(object):
         assert_equal(self.Ftest1.df_num, 5)
 
 class TestTtest(object):
-    '''
+    """
     Test individual t-tests.  Ie., are the coefficients significantly
     different than zero.
 
-        '''
+        """
     @classmethod
     def setupClass(cls):
         data = longley.load()
@@ -343,12 +375,12 @@ class TestTtest(object):
         assert_almost_equal(self.Ttest.effect, self.res1.params)
 
 class TestTtest2(object):
-    '''
+    """
     Tests the hypothesis that the coefficients on POP and YEAR
     are equal.
 
     Results from RPy using 'car' package.
-    '''
+    """
     @classmethod
     def setupClass(cls):
         R = np.zeros(7)
@@ -376,9 +408,9 @@ class TestTtest2(object):
         assert_almost_equal(self.Ttest1.effect, -1829.2025687186533, DECIMAL_4)
 
 class TestGLS(object):
-    '''
+    """
     These test results were obtained by replication with R.
-    '''
+    """
     @classmethod
     def setupClass(cls):
         from results.results_regression import LongleyGls
@@ -438,22 +470,60 @@ class TestGLS(object):
         assert_equal(mod.exog.shape[0], 13)
         assert_equal(mod.sigma.shape, (13,13))
 
-class TestGLS_nosigma(CheckRegressionResults):
-    '''
+class TestGLS_alt_sigma(CheckRegressionResults):
+    """
     Test that GLS with no argument is equivalent to OLS.
-    '''
+    """
     @classmethod
     def setupClass(cls):
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         ols_res = OLS(data.endog, data.exog).fit()
         gls_res = GLS(data.endog, data.exog).fit()
+        gls_res_scalar = GLS(data.endog, data.exog, sigma=1)
+        cls.endog = data.endog
+        cls.exog = data.exog
         cls.res1 = gls_res
         cls.res2 = ols_res
+        cls.res3 = gls_res_scalar
 #        self.res2.conf_int = self.res2.conf_int()
+
+    def test_wrong_size_sigma_1d(self):
+        n = len(self.endog)
+        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones(n-1))
+
+    def test_wrong_size_sigma_2d(self):
+        n = len(self.endog)
+        assert_raises(ValueError, GLS, self.endog, self.exog, sigma=np.ones((n-1,n-1)))
 
 #    def check_confidenceintervals(self, conf1, conf2):
 #        assert_almost_equal(conf1, conf2, DECIMAL_4)
+
+class TestNonFit(object):
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
+        data.exog = add_constant(data.exog, prepend=False)
+        cls.endog = data.endog
+        cls.exog = data.exog
+        cls.ols_model = OLS(data.endog, data.exog)
+
+    def test_df_resid(self):
+        df_resid = self.endog.shape[0] - self.exog.shape[1]
+        assert_equal(self.ols_model.df_resid, 9L)
+
+class TestWLS_CornerCases(object):
+    @classmethod
+    def setupClass(cls):
+        cls.exog = np.ones((1,))
+        cls.endog = np.ones((1,))
+        weights = 1
+        cls.wls_res = WLS(cls.endog, cls.exog, weights=weights).fit()
+
+    def test_wrong_size_weights(self):
+        weights = np.ones((10,10))
+        assert_raises(ValueError, WLS, self.endog, self.exog, weights=weights)
+
 
 class TestWLSExogWeights(CheckRegressionResults):
     #Test WLS with Greene's credit card data
@@ -473,6 +543,7 @@ class TestWLSExogWeights(CheckRegressionResults):
         self.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
         self.res2 = CCardWLS()
         self.res2.wresid = scaled_weights ** .5 * self.res2.resid
+
 
 def test_wls_example():
     #example from the docstring, there was a note about a bug, should
@@ -613,6 +684,8 @@ class TestNxNx(TestDataDimensions):
         cls.mod2 = OLS(cls.endog_n_, cls.exog_n_)
         cls.mod2.df_model += 1
         cls.res2 = cls.mod2.fit()
+
+
 
 class TestNxOneNx(TestDataDimensions):
     @classmethod
