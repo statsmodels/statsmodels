@@ -401,6 +401,7 @@ class RLMResults(base.LikelihoodModelResults):
         #for remove_data
         self.data_in_cache = ['sresid']
 
+        self.cov_params_default = self.bcov_scaled
         #TODO: "pvals" should come from chisq on bse?
 
     @cache_readonly
@@ -417,7 +418,7 @@ class RLMResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def bcov_unscaled(self):
-        return self.cov_params(scale=1.)
+        return self.normalized_cov_params
 
     @cache_readonly
     def weights(self):

@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
+from scipy import stats
 from statsmodels.tools.tools import clean0, rank, fullrank
 
 
@@ -13,18 +14,56 @@ class ContrastResults(object):
     """
 
     def __init__(self, t=None, F=None, sd=None, effect=None, df_denom=None,
-                 df_num=None):
+                 df_num=None, alpha=0.05, **kwds):
+
+        self.effect = effect  # Let it be None for F
         if F is not None:
+            self.distribution = 'F'
             self.fvalue = F
             self.df_denom = df_denom
             self.df_num = df_num
+            self.dist = fdist
+            self.dist_args = (df_num, df_denom)
             self.pvalue = fdist.sf(F, df_num, df_denom)
-        else:
+        elif t is not None:
+            self.distribution = 't'
             self.tvalue = t
+            self.statistic = t  # generic alias
             self.sd = sd
-            self.effect = effect
             self.df_denom = df_denom
-            self.pvalue = student_t.sf(np.abs(t), df_denom) * 2
+            self.dist = student_t
+            self.dist_args = (df_denom,)
+            self.pvalue = self.dist.sf(np.abs(t), df_denom) * 2
+        elif 'statistic' in kwds:
+            # TODO: currently targeted to normal distribution, and chi2
+            self.distribution = kwds['distribution']
+            self.statistic = kwds['statistic']
+            self.tvalue = value = kwds['statistic']  # keep alias
+            # TODO: for results instance we decided to use tvalues also for normal
+            self.sd = sd
+            self.dist = getattr(stats, self.distribution)
+            self.dist_args = ()
+            if self.distribution is 'chi2':
+                self.pvalue = self.dist.sf(self.statistic, df_denom)
+            else:
+                "normal"
+                self.pvalue = self.dist.sf(np.abs(value)) * 2
+
+        # cleanup
+        # should we return python scalar?
+        self.pvalue = np.squeeze(self.pvalue)
+
+
+    def conf_int(self, alpha=0.05):
+        if self.effect is not None:
+            # confidence intervals
+            q = self.dist.ppf(1 - alpha / 2., *self.dist_args)
+            lower = self.effect - q * self.sd
+            upper = self.effect + q * self.sd
+            return np.column_stack((lower, upper))
+        else:
+            raise NotImplementedError('Confidence Interval not available')
+
 
     def __array__(self):
         if hasattr(self, "fvalue"):
@@ -33,16 +72,62 @@ class ContrastResults(object):
             return self.tvalue
 
     def __str__(self):
-        if hasattr(self, 'fvalue'):
-            return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
-        else:
-            return '<T test: effect=%s, sd=%s, t=%s, p=%s, df_denom=%d>' % \
-                   (`self.effect`, `self.sd`, `self.tvalue`, `self.pvalue`,
-                           self.df_denom)
+        return self.summary().__str__()
+
 
     def __repr__(self):
         return str(self.__class__) + '\n' + self.__str__()
+
+
+    def summary(self, xname=None, alpha=0.05, title=None):
+        if self.effect is not None:
+            # TODO: should also add some extra information, e.g. robust cov ?
+            # TODO: can we infer names for constraints, xname in __init__ ?
+            if title is None:
+                title = 'Test for Constraints'
+            elif title == '':
+                # don't add any title,
+                # I think SimpleTable skips on None - check
+                title = None
+            # we have everything for a params table
+            use_t = (self.distribution == 't')
+            yname='constraints' # Not used in params_frame
+            if xname is None:
+                xname = ['c%d'%ii for ii in range(len(self.effect))]
+            from statsmodels.iolib.summary import summary_params
+            summ = summary_params((self, self.effect, self.sd, self.statistic,
+                                   self.pvalue, self.conf_int(alpha)),
+                                  yname=yname, xname=xname, use_t=use_t,
+                                  title=title)
+            return summ
+        elif hasattr(self, 'fvalue'):
+            # TODO: create something nicer for these casee
+            return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
+                   (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
+        else:
+            # generic
+            return '<Wald test: statistic=%s, p-value=%s>' % \
+                   (self.statistic, self.pvalue)
+
+
+    def summary_frame(self, xname=None, alpha=0.05):
+        if self.effect is not None:
+            # we have everything for a params table
+            use_t = (self.distribution == 't')
+            yname='constraints'  # Not used in params_frame
+            if xname is None:
+                xname = ['c%d'%ii for ii in range(len(self.effect))]
+            from statsmodels.iolib.summary import summary_params_frame
+            summ = summary_params_frame((self, self.effect, self.sd,
+                                         self.statistic,self.pvalue,
+                                         self.conf_int(alpha)), yname=yname,
+                                         xname=xname, use_t=use_t)
+            return summ
+        else:
+            # TODO: create something nicer
+            raise NotImplementedError('only available for t and z')
+
+
 
 class Contrast(object):
     """

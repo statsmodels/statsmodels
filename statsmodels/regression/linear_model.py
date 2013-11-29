@@ -775,13 +775,13 @@ class RegressionResults(base.LikelihoodModelResults):
     centered_tss
         The total (weighted) sum of squares centered about the mean.
     cov_HC0
-        See HC0_se below.  Only available after calling HC0_se.
+        Heteroscedasticity robust covariance matrix. See HC0_se below.
     cov_HC1
-        See HC1_se below.  Only available after calling HC1_se.
+        Heteroscedasticity robust covariance matrix. See HC1_se below.
     cov_HC2
-        See HC2_se below.  Only available after calling HC2_se.
+        Heteroscedasticity robust covariance matrix. See HC2_se below.
     cov_HC3
-        See HC3_se below.  Only available after calling HC3_se.
+        Heteroscedasticity robust covariance matrix. See HC3_se below.
     df_model :
         Model degress of freedom. The number of regressors `p`. Does not
         include the constant if one is present
@@ -801,45 +801,43 @@ class RegressionResults(base.LikelihoodModelResults):
     fittedvalues
         The predicted the values for the original (unwhitened) design.
     het_scale
-        Only available if HC#_se is called.  See HC#_se for more information.
+        adjusted squared residuals for heteroscedasticity robust standard
+        errors. Is only available after `HC#_se` or `cov_HC#` is called.
+        See HC#_se for more information.
     HC0_se
         White's (1980) heteroskedasticity robust standard errors.
         Defined as sqrt(diag(X.T X)^(-1)X.T diag(e_i^(2)) X(X.T X)^(-1)
         where e_i = resid[i]
-        HC0_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC0, which is the full heteroskedasticity
-        consistent covariance matrix and also `het_scale`, which is in
-        this case just resid**2.  HCCM matrices are only appropriate for OLS.
+        HC0_se is a cached property.
+        When HC0_se or cov_HC0 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is just
+        resid**2.
     HC1_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
         Defined as sqrt(diag(n/(n-p)*HC_0)
-        HC1_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC1, which is the full HCCM and also `het_scale`,
-        which is in this case n/(n-p)*resid**2.  HCCM matrices are only
-        appropriate for OLS.
+        HC1_see is a cached property.
+        When HC1_se or cov_HC1 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        n/(n-p)*resid**2.
     HC2_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T
-        HC2_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC2, which is the full HCCM and also `het_scale`,
-        which is in this case is resid^(2)/(1-h_ii).  HCCM matrices are only
-        appropriate for OLS.
+        HC2_see is a cached property.
+        When HC2_se or cov_HC2 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        resid^(2)/(1-h_ii).  HCCM matrices are only appropriate for OLS.
     HC3_se
         MacKinnon and White's (1985) alternative heteroskedasticity robust
         standard errors.
         Defined as (X.T X)^(-1)X.T diag(e_i^(2)/(1-h_ii)^(2)) X(X.T X)^(-1)
         where h_ii = x_i(X.T X)^(-1)x_i.T
-        HC3_se is a property.  It is not evaluated until it is called.
-        When it is called the RegressionResults instance will then have
-        another attribute cov_HC3, which is the full HCCM and also `het_scale`,
-        which is in this case is resid^(2)/(1-h_ii)^(2).  HCCM matrices are
-        only appropriate for OLS.
+        HC3_see is a cached property.
+        When HC3_se or cov_HC3 is called the RegressionResults instance will
+        then have another attribute `het_scale`, which is in this case is
+        resid^(2)/(1-h_ii)^(2).
     model
         A pointer to the model instance that called fit() or results.
     mse_model
@@ -883,12 +881,6 @@ class RegressionResults(base.LikelihoodModelResults):
         The residuals of the transformed/whitened regressand and regressor(s)
     """
 
-    # For robust covariance matrix properties
-    _HC0_se = None
-    _HC1_se = None
-    _HC2_se = None
-    _HC3_se = None
-
     _cache = {} # needs to be a class attribute for scale setter?
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
@@ -900,6 +892,11 @@ class RegressionResults(base.LikelihoodModelResults):
             self._wexog_singular_values = model.wexog_singular_values
         else:
             self._wexog_singular_values = None
+
+        self.df_model = model.df_model
+        self.df_resid = model.df_resid
+
+        self.use_t = True  # default for linear models
 
     def __str__(self):
         self.summary()
@@ -922,8 +919,13 @@ class RegressionResults(base.LikelihoodModelResults):
         """
         bse = self.bse
         params = self.params
-        dist = stats.t
-        q = dist.ppf(1 - alpha / 2, self.df_resid)
+        # TODO: should be obsolete if super uses use_t
+        if self.use_t:
+            dist = stats.t
+            q = dist.ppf(1 - alpha / 2, self.df_resid)
+        else:
+            dist = stats.norm
+            q = dist.ppf(1 - alpha / 2)
 
         if cols is None:
             lower = self.params - q * bse
@@ -934,13 +936,6 @@ class RegressionResults(base.LikelihoodModelResults):
             upper = params[cols] + q * bse[cols]
         return np.asarray(zip(lower, upper))
 
-    @cache_readonly
-    def df_resid(self):
-        return self.model.df_resid
-
-    @cache_readonly
-    def df_model(self):
-        return self.model.df_model
 
     @cache_readonly
     def nobs(self):
@@ -1022,7 +1017,23 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def fvalue(self):
-        return self.mse_model/self.mse_resid
+        if hasattr(self, 'cov_type') and self.cov_type != 'nonrobust':
+            # with heteroscedasticity or correlation robustness
+            k_params = self.normalized_cov_params.shape[0]
+            mat = np.eye(k_params)
+            const_idx = self.model.data.const_idx
+            if self.model.data.k_constant == 1:
+                # assume const_idx exists
+                idx = range(k_params)
+                idx.pop(const_idx)
+                mat = mat[idx]  # remove constant
+            ft = self.f_test(mat)
+            # using backdoor to set another attribute that we already have
+            self._cache['f_pvalue'] = ft.pvalue
+            return ft.fvalue
+        else:
+            # for standard homoscedastic case
+            return self.mse_model/self.mse_resid
 
     @cache_readonly
     def f_pvalue(self):
@@ -1034,7 +1045,11 @@ class RegressionResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def pvalues(self):
-        return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
+        # TODO: should be obsolete if super uses use_t
+        if self.use_t:
+            return stats.t.sf(np.abs(self.tvalues), self.df_resid)*2
+        else:
+            return stats.norm.sf(np.abs(self.tvalues))*2
 
     @cache_readonly
     def aic(self):
@@ -1070,57 +1085,90 @@ class RegressionResults(base.LikelihoodModelResults):
             scale[:,None]*self.model.pinv_wexog.T)
         return H
 
-    @property
+
+    @cache_readonly
+    def cov_HC0(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        self.het_scale = self.wresid**2
+        cov_HC0 = self._HCCM(self.het_scale)
+        return cov_HC0
+
+
+    @cache_readonly
+    def cov_HC1(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        self.het_scale = self.nobs/(self.df_resid)*(self.wresid**2)
+        cov_HC1 = self._HCCM(self.het_scale)
+        return cov_HC1
+
+
+    @cache_readonly
+    def cov_HC2(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        # probably could be optimized
+        h = np.diag(chain_dot(self.model.wexog,
+                              self.normalized_cov_params,
+                              self.model.wexog.T))
+        self.het_scale = self.wresid**2/(1-h)
+        cov_HC2 = self._HCCM(self.het_scale)
+        return cov_HC2
+
+
+    @cache_readonly
+    def cov_HC3(self):
+        """
+        See statsmodels.RegressionResults
+        """
+
+        # above probably could be optimized to only calc the diag
+        h = np.diag(chain_dot(self.model.wexog,
+                              self.normalized_cov_params,
+                              self.model.wexog.T))
+        self.het_scale=(self.wresid/(1-h))**2
+        cov_HC3 = self._HCCM(self.het_scale)
+        return cov_HC3
+
+
+    @cache_readonly
     def HC0_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC0_se is None:
-            self.het_scale = self.resid**2 # or whitened residuals? only OLS?
-            self.cov_HC0 = self._HCCM(self.het_scale)
-            self._HC0_se = np.sqrt(np.diag(self.cov_HC0))
-        return self._HC0_se
+        return np.sqrt(np.diag(self.cov_HC0))
 
-    @property
+
+    @cache_readonly
     def HC1_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC1_se is None:
-            self.het_scale = self.nobs/(self.df_resid)*(self.resid**2)
-            self.cov_HC1 = self._HCCM(self.het_scale)
-            self._HC1_se = np.sqrt(np.diag(self.cov_HC1))
-        return self._HC1_se
+        return np.sqrt(np.diag(self.cov_HC1))
 
-    @property
+
+    @cache_readonly
     def HC2_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC2_se is None:
-            # probably could be optimized
-            h = np.diag(chain_dot(self.model.exog,
-                                  self.normalized_cov_params,
-                                  self.model.exog.T))
-            self.het_scale = self.resid**2/(1-h)
-            self.cov_HC2 = self._HCCM(self.het_scale)
-            self._HC2_se = np.sqrt(np.diag(self.cov_HC2))
-        return self._HC2_se
+        return np.sqrt(np.diag(self.cov_HC2))
 
-    @property
+
+    @cache_readonly
     def HC3_se(self):
         """
         See statsmodels.RegressionResults
         """
-        if self._HC3_se is None:
-            # above probably could be optimized to only calc the diag
-            h = np.diag(chain_dot(self.model.exog,
-                                  self.normalized_cov_params,
-                                  self.model.exog.T))
-            self.het_scale=(self.resid/(1-h))**2
-            self.cov_HC3 = self._HCCM(self.het_scale)
-            self._HC3_se = np.sqrt(np.diag(self.cov_HC3))
-        return self._HC3_se
+        return np.sqrt(np.diag(self.cov_HC3))
+
 
     #TODO: this needs a test
     def norm_resid(self):
@@ -1165,7 +1213,22 @@ class RegressionResults(base.LikelihoodModelResults):
         -----
         See mailing list discussion October 17,
 
+        This test compares the residual sum of squares of the two models.
+        This is not a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results under the assumption of homoscedasticity
+        and no autocorrelation (sphericity).
+
         '''
+        has_robust1 = (hasattr(self, 'cov_type') and
+                                     (self.cov_type != 'nonrobust'))
+        has_robust2 = (hasattr(restricted, 'cov_type') and
+                                     (restricted.cov_type != 'nonrobust'))
+
+        if has_robust1 or has_robust2:
+            import warnings
+            warnings.warn('F test for comparison is likely invalid with ' +
+                          'robust covariance, proceeding anyway', UserWarning)
         ssr_full = self.ssr
         ssr_restr = restricted.ssr
         df_full = self.df_resid
@@ -1209,9 +1272,26 @@ class RegressionResults(base.LikelihoodModelResults):
         distributed as chisquare with df equal to difference in number of
         parameters or equivalently difference in residual degrees of freedom
 
-        TODO: put into separate function, needs tests
+        This test compares the loglikelihood of the two models.
+        This may not be a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results without taking unspecified
+        heteroscedasticity or correlation into account.
+
+        TODO: put into separate function
+
         '''
-    #        See mailing list discussion October 17,
+        has_robust1 = (hasattr(self, 'cov_type') and
+                                     (self.cov_type != 'nonrobust'))
+        has_robust2 = (hasattr(restricted, 'cov_type') and
+                                     (restricted.cov_type != 'nonrobust'))
+
+        if has_robust1 or has_robust2:
+            import warnings
+            warnings.warn('Likelihood Ratio test is likely invalid with ' +
+                          'robust covariance, proceeding anyway', UserWarning)
+
+        # See mailing list discussion October 17,
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
@@ -1222,6 +1302,234 @@ class RegressionResults(base.LikelihoodModelResults):
         lr_pvalue = stats.chi2.sf(lrstat, lrdf)
 
         return lrstat, lr_pvalue, lrdf
+
+
+    def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
+        '''create new results instance with robust covariance as default
+
+
+        Parameters
+        ----------
+        cov_type : string
+            the type of robust sandwich estimator to use. see Notes below
+        use_t : bool
+            If true, then the t distribution is used for inference.
+            If false, then the normal distribution is used.
+        kwds : depends on cov_type
+            Required or optional arguments for robust covariance calculation.
+            see Notes below
+
+        Returns
+        -------
+        results : results instance
+            This method creates a new results instance with the requested
+            robust covariance as the default covariance of the parameters.
+            Inferential statistics like p-values and tests will be based on
+            this covariance matrix.
+
+        Notes
+        -----
+        The following covariance types and required or optional arguments are
+        currently available:
+
+        - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
+             heteroscedasticity robust covariance
+        - 'HAC' and keywords
+
+            - `maxlag` integer (required) : number of lags to use
+            - `kernel` string (optional) : kernel, default is Bartlett
+            - `use_correction` bool (optional) : If true, use small sample
+                  correction
+
+        - 'cluster' and required keyword `groups`, integer group indicator
+
+            - `groups` array_like, integer (required) :
+                  index of clusters or groups
+            - `use_correction` bool (optional) :
+                  If True the sandwich covariance is calulated with a small
+                  sample correction.
+                  If False the the sandwich covariance is calulated without
+                  small sample correction.
+            - `df_correction` bool (optional)
+                  If True (default), then the degrees of freedom for the
+                  inferential statistics and hypothesis tests, such as
+                  pvalues, f_pvalue, conf_int, and t_test and f_test, are
+                  based on the number of groups minus one instead of the
+                  total number of observations minus the number of explanatory
+                  variables. `df_resid` of the results instance is adjusted.
+                  If False, then `df_resid` of the results instance is not
+                  adjusted.
+
+        - 'hac-groupsum' Driscoll and Kraay, heteroscedasticity and
+              autocorrelation robust standard errors in panel data
+              keywords
+
+            - `time` array_like (required) : index of time periods
+            - `maxlag` integer (required) : number of lags to use
+            - `kernel` string (optional) : kernel, default is Bartlett
+            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
+                  If False the the sandwich covariance is calulated without
+                  small sample correction.
+                  If `use_correction = 'cluster'` (default), then the same
+                  small sample correction as in the case of 'covtype='cluster''
+                  is used.
+            - `df_correction` bool (optional)
+                  adjustment to df_resid, see cov_type 'cluster' above
+                  #TODO: we need more options here
+
+        - 'hac-panel' heteroscedasticity and autocorrelation robust standard
+              errors in panel data.
+              The data needs to be sorted in this case, the time series for
+              each panel unit or cluster need to be stacked.
+              keywords
+
+            - `time` array_like (required) : index of time periods
+            - `maxlag` integer (required) : number of lags to use
+            - `kernel` string (optional) : kernel, default is Bartlett
+            - `use_correction` False or string in ['hac', 'cluster'] (optional) :
+                  If False the the sandwich covariance is calulated without
+                  small sample correction.
+            - `df_correction` bool (optional)
+                  adjustment to df_resid, see cov_type 'cluster' above
+                  #TODO: we need more options here
+
+        Reminder:
+        `use_correction` in "nw-groupsum" and "nw-panel" is not bool,
+            needs to be in [False, 'hac', 'cluster']
+
+        TODO: Currently there is no check for extra or misspelled keywords,
+            except in the case of cov_type `HCx`
+
+        '''
+        import statsmodels.stats.sandwich_covariance as sw
+
+        res = self.__class__(self.model, self.params,
+                       normalized_cov_params=self.normalized_cov_params,
+                       scale=self.scale)
+
+        res.cov_type = cov_type = cov_type
+        res.cov_kwds = {'use_t':use_t}
+        res.use_t = use_t
+
+        adjust_df = False
+        if cov_type in ['cluster', 'nw-panel', 'nw-groupsum']:
+            df_correction = kwds.get('df_correction', None)
+            # TODO: check also use_correction, do I need all combinations?
+            if df_correction is not False: # i.e. in [None, True]:
+                # user didn't explicitely set it to False
+                adjust_df = True
+
+        res.cov_kwds['adjust_df'] = adjust_df
+
+        # verify and set kwds, and calculate cov
+        # TODO: this should be outsourced in a function so we can reuse it in
+        #       other models
+        # TODO: make it DRYer   repeated code for checking kwds
+        if cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+            if kwds:
+                raise ValueError('heteroscedasticity robust covarians ' +
+                                 'does not use keywords')
+            res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
+                                           'robust ' + '(' + cov_type + ')')
+            # TODO cannot access cov without calling se first
+            getattr(self, cov_type.upper() + '_se')
+            res.cov_params_default = getattr(self, 'cov_' + cov_type.upper())
+        elif cov_type == 'HAC':
+            maxlags = kwds['maxlags']   # required?, default in cov_hac_simple
+            res.cov_kwds['maxlags'] = maxlags
+            use_correction = kwds.get('use_correction', False)
+            res.cov_kwds['use_correction'] = use_correction
+            res.cov_kwds['description'] = ('Standard Errors are heteroscedasticity ' +
+                 'and autocorrelation robust (HAC) using %d lags and %s small ' +
+                 'sample correction') % (maxlags, ['without', 'with'][use_correction])
+
+            res.cov_params_default = sw.cov_hac_simple(self, nlags=maxlags,
+                                                 use_correction=use_correction)
+        elif cov_type == 'cluster':
+            #cluster robust standard errors, one- or two-way
+            groups = kwds['groups']
+            if not hasattr(groups, 'shape'):
+                groups = np.asarray(groups).T
+            res.cov_kwds['groups'] = groups
+            use_correction = kwds.get('use_correction', True)
+            res.cov_kwds['use_correction'] = use_correction
+            if groups.ndim == 1:
+                if adjust_df:
+                    # need to find number of groups
+                    # duplicate work
+                    self.n_groups = n_groups = len(np.unique(groups))
+                res.cov_params_default = sw.cov_cluster(self, groups,
+                                                 use_correction=use_correction)
+
+            elif groups.ndim == 2:
+                if adjust_df:
+                    # need to find number of groups
+                    # duplicate work
+                    n_groups0 = len(np.unique(groups[:,0]))
+                    n_groups1 = len(np.unique(groups[:, 1]))
+                    self.n_groups = (n_groups0, n_groups1)
+                    n_groups = min(n_groups0, n_groups1) # use for adjust_df
+
+                # Note: sw.cov_cluster_2groups has 3 returns
+                res.cov_params_default = sw.cov_cluster_2groups(self, groups,
+                                             use_correction=use_correction)[0]
+            else:
+                raise ValueError('only two groups are supported')
+            res.cov_kwds['description'] = ('Standard Errors are robust to' +
+                                'cluster correlation ' + '(' + cov_type + ')')
+
+        elif cov_type == 'nw-panel':
+            #cluster robust standard errors
+            res.cov_kwds['time'] = time = kwds['time']
+            #TODO: nlags is currently required
+            #nlags = kwds.get('nlags', True)
+            #res.cov_kwds['nlags'] = nlags
+            #TODO: `nlags` or `maxlags`
+            res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
+            use_correction = kwds.get('use_correction', 'hac')
+            res.cov_kwds['use_correction'] = use_correction
+            weights_func = kwds.get('weights_func', sw.weights_bartlett)
+            res.cov_kwds['weights_func'] = weights_func
+            # TODO: clumsy time index in cov_nw_panel
+            tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
+            groupidx = zip([0] + tt, tt + [len(time)])
+            self.n_groups = n_groups = len(groupidx)
+            res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
+                                                weights_func=weights_func,
+                                                use_correction=use_correction)
+            res.cov_kwds['description'] = ('Standard Errors are robust to' +
+                                'cluster correlation ' + '(' + cov_type + ')')
+        elif cov_type == 'nw-groupsum':
+            # Driscoll-Kraay standard errors
+            res.cov_kwds['time'] = time = kwds['time']
+            #TODO: nlags is currently required
+            #nlags = kwds.get('nlags', True)
+            #res.cov_kwds['nlags'] = nlags
+            #TODO: `nlags` or `maxlags`
+            res.cov_kwds['maxlags'] = maxlags = kwds['maxlags']
+            use_correction = kwds.get('use_correction', 'cluster')
+            res.cov_kwds['use_correction'] = use_correction
+            weights_func = kwds.get('weights_func', sw.weights_bartlett)
+            res.cov_kwds['weights_func'] = weights_func
+            if adjust_df:
+                # need to find number of groups
+                tt = (np.nonzero(np.diff(time) < 0)[0] + 1)
+                self.n_groups = n_groups = len(tt) + 1
+            res.cov_params_default = sw.cov_nw_groupsum(self, maxlags, time,
+                                            weights_func=weights_func,
+                                            use_correction=use_correction)
+            res.cov_kwds['description'] = (
+                        'Driscoll and Kraay Standard Errors are robust to ' +
+                        'cluster correlation ' + '(' + cov_type + ')')
+        else:
+            raise ValueError('cov_type not recognized. See docstring for ' +
+                             'available options and spelling')
+
+        if adjust_df:
+            # Note: we leave model.df_resid unchanged at original
+            res.df_resid = n_groups - 1
+
+        return res
 
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
@@ -1283,6 +1591,9 @@ class RegressionResults(base.LikelihoodModelResults):
                     ('Df Model:', None), #[self.df_model])
                     ]
 
+        if hasattr(self, 'cov_type'):
+            top_left.append(('Covariance Type:', [self.cov_type]))
+
         top_right = [('R-squared:', ["%#8.3f" % self.rsquared]),
                      ('Adj. R-squared:', ["%#8.3f" % self.rsquared_adj]),
                      ('F-statistic:', ["%#8.4g" % self.fvalue] ),
@@ -1314,7 +1625,7 @@ class RegressionResults(base.LikelihoodModelResults):
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
                           yname=yname, xname=xname, title=title)
         smry.add_table_params(self, yname=yname, xname=xname, alpha=alpha,
-                             use_t=True)
+                             use_t=self.use_t)
 
         smry.add_table_2cols(self, gleft=diagn_left, gright=diagn_right,
                           yname=yname, xname=xname,
@@ -1322,6 +1633,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         #add warnings/notes, added to text format only
         etext =[]
+        if hasattr(self, 'cov_type'):
+            etext.append(self.cov_kwds['description'])
         if self.model.exog.shape[0] < self.model.exog.shape[1]:
             wstr = "The input rank is higher than the number of observations."
             etext.append(wstr)
