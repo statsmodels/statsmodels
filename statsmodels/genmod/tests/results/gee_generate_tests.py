@@ -1,4 +1,3 @@
-import numpy as np
 from scipy.stats.distributions import norm
 
 def generate_logistic():

@@ -775,6 +775,7 @@ class NegativeBinomial(object):
             Usually the linear predictor for a GLM or GEE model
 
         Returns
+        -------
         The value of the inverse of the derivative of the negative binomial link
         '''
         t = np.exp(z)
