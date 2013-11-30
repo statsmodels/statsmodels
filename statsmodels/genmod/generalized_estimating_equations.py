@@ -35,7 +35,6 @@ from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import CovStruct
 
 
-
 # Workaround for block_diag, not available until scipy version
 # 0.11. When the statsmodels scipy dependency moves to version 0.11,
 # we can remove this function and use:
@@ -52,8 +51,6 @@ def block_diag(dblocks, format=None):
         blocks.append(b)
 
     return bmat(blocks, format)
-
-
 
 
 class ParameterConstraint(object):
@@ -92,7 +89,7 @@ class ParameterConstraint(object):
         # The columns of lhs0 are an orthogonal basis for the
         # orthogonal complement to row(lhs), the columns of lhs1 are
         # an orthogonal basis for row(lhs).  The columns of lhsf =
-        # [lhs0,lhs1] are mutually orthogonal.
+        # [lhs0, lhs1] are mutually orthogonal.
         lhs_u, lhs_s, lhs_vt = np.linalg.svd(lhs.T, full_matrices=1)
         self.lhs0 = lhs_u[:, len(lhs_s):]
         self.lhs1 = lhs_u[:, 0:len(lhs_s)]
@@ -107,7 +104,6 @@ class ParameterConstraint(object):
         self.orig_exog = exog
         self.exog_fulltrans = np.dot(exog, self.lhsf)
 
-
     def offset_increment(self):
         """
         Returns a vector that should be added to the offset vector to
@@ -121,7 +117,6 @@ class ParameterConstraint(object):
 
         return self._offset_increment
 
-
     def reduced_exog(self):
         """
         Returns a linearly transformed exog matrix whose columns span
@@ -134,14 +129,12 @@ class ParameterConstraint(object):
         """
         return self.exog_fulltrans[:, 0:self.lhs0.shape[1]]
 
-
     def restore_exog(self):
         """
         Returns the full exog matrix before it was reduced to
         satisfy the constraint.
         """
         return self.orig_exog
-
 
     def unpack_param(self, params):
         """
@@ -151,7 +144,6 @@ class ParameterConstraint(object):
 
         return self.param0 + np.dot(self.lhs0, params)
 
-
     def unpack_cov(self, bcov):
         """
         Converts the covariance matrix `bcov` from reduced to full
@@ -159,9 +151,6 @@ class ParameterConstraint(object):
         """
 
         return np.dot(self.lhs0, np.dot(bcov, self.lhs0.T))
-
-
-
 
 
 class GEE(base.Model):
@@ -232,11 +221,10 @@ class GEE(base.Model):
     DeRouen (Biometrics, 2001) reduces the downard bias of the robust
     estimator.
 
-    """ % {'extra_params' : base._missing_param_doc}
+    """ % {'extra_params': base._missing_param_doc}
 
     fit_history = None
     cached_means = None
-
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        covstruct=None, missing='none', offset=None,
@@ -306,10 +294,10 @@ class GEE(base.Model):
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
             if len(self.time.shape) == 1:
-                self.time = np.reshape(self.time, (len(self.time),1))
+                self.time = np.reshape(self.time, (len(self.time), 1))
             self.time_li = self._cluster_list(self.time)
         else:
-            self.time_li = [np.arange(len(y))[:,None]
+            self.time_li = [np.arange(len(y))[:, None]
                             for y in self.endog_li]
             self.time = np.concatenate(self.time_li)
 
@@ -335,9 +323,11 @@ class GEE(base.Model):
         except AttributeError:
             # Otherwise it can be obtained easily from inverse_deriv
             mean_deriv_lpr = self.family.link.inverse_deriv
+
             def mean_deriv(exog, lpr):
                 dmat = exog * mean_deriv_lpr(lpr)[:, None]
                 return dmat
+
             self.mean_deriv = mean_deriv
 
         # mean_deriv_exog is the derivative of E[endog|exog] with
@@ -349,12 +339,13 @@ class GEE(base.Model):
         except AttributeError:
             # Otherwise it can be obtained easily from inverse_deriv
             mean_deriv_lpr = self.family.link.inverse_deriv
+
             def mean_deriv_exog(exog, params):
                 lpr = np.dot(exog, params)
                 dmat = np.outer(mean_deriv_lpr(lpr), params)
                 return dmat
-            self.mean_deriv_exog = mean_deriv_exog
 
+            self.mean_deriv_exog = mean_deriv_exog
 
     def _cluster_list(self, array):
         """
@@ -368,8 +359,6 @@ class GEE(base.Model):
         else:
             return [np.array(array[self.row_indices[k], :])
                     for k in self.group_labels]
-
-
 
     def estimate_scale(self):
         """
@@ -405,8 +394,6 @@ class GEE(base.Model):
         scale_inv /= (nobs - exog_dim)
         scale = 1 / scale_inv
         return scale
-
-
 
     def _beta_update(self):
         """
@@ -450,7 +437,7 @@ class GEE(base.Model):
             try:
                 vco = spl.cho_factor(vmat)
             except np.linalg.LinAlgError:
-                return None,None
+                return None, None
 
             vinv_d = spl.cho_solve(vco, dmat)
             bmat += np.dot(dmat.T, vinv_d)
@@ -462,7 +449,6 @@ class GEE(base.Model):
         update = np.linalg.solve(bmat, score)
 
         return update, score
-
 
     def update_cached_means(self, beta):
         """
@@ -490,8 +476,6 @@ class GEE(base.Model):
             expval = linkinv(lpr)
 
             self.cached_means.append((expval, lpr))
-
-
 
     def _covmat(self):
         """
@@ -549,7 +533,7 @@ class GEE(base.Model):
                 warnings.warn("Singular matrix encountered in GEE "
                               "covariance estimation",
                               ConvergenceWarning)
-                return None,None,None,None
+                return None, None, None, None
 
             vinv_d = spl.cho_solve(vco, dmat)
 
@@ -589,7 +573,7 @@ class GEE(base.Model):
             try:
                 vco = spl.cho_factor(vmat)
             except np.linalg.LinAlgError:
-                return None,None
+                return None, None
 
             vinv_d = spl.cho_solve(vco, dmat)
             hmat = np.dot(vinv_d, naive_covariance)
@@ -605,7 +589,6 @@ class GEE(base.Model):
 
         return robust_covariance, naive_covariance, \
             robust_covariance_bc, cmat
-
 
     def predict(self, params, exog=None, offset=None, linear=False):
         """
@@ -641,7 +624,6 @@ class GEE(base.Model):
 
         return fitted
 
-
     def _starting_params(self, starting_params):
         """
         Returns a starting value for beta and a list of variable
@@ -668,9 +650,6 @@ class GEE(base.Model):
 
         return beta
 
-
-
-
     def fit(self, maxiter=60, ctol=1e-6, starting_params=None,
             covariance_type="robust"):
         """
@@ -696,9 +675,9 @@ class GEE(base.Model):
         An instance of the GEEResults class
         """
 
-        self.fit_history = {'params' : [],
+        self.fit_history = {'params': [],
                             'fitlack': [],
-                            'score_change' : []}
+                            'score_change': []}
 
         # Check starting_params, if supplied
         if starting_params is not None:
@@ -797,8 +776,6 @@ class GEE(base.Model):
 
         return results
 
-
-
     def _handle_constraint(self, beta, bcov):
         """
         Expand the parameter estimate `beta` and covariance matrix
@@ -881,14 +858,12 @@ class GEE(base.Model):
 
         return beta, bcov
 
-
     def _update_assoc(self, beta):
         """
         Update the association parameters
         """
 
         self.covstruct.update(beta, self)
-
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
             dummy_idx=None, count_idx=None):
@@ -903,18 +878,18 @@ class GEE(base.Model):
         """
         #note, this form should be appropriate for
         ## group 1 probit, logit, logistic, cloglog, heckprob, xtprobit
-        if exog == None:
+        if exog is None:
             exog = self.exog
         margeff = self.mean_deriv_exog(exog, params)
 #        lpr = np.dot(exog, params)
 #        margeff = (self.mean_deriv(exog, lpr) / exog) * params
-#        margeff = np.dot(self.pdf(np.dot(exog, params))[:,None],
+#        margeff = np.dot(self.pdf(np.dot(exog, params))[:, None],
 #                                                          params[None,:])
 
         if 'ex' in transform:
             margeff *= exog
         if 'ey' in transform:
-            margeff /= self.predict(params, exog)[:,None]
+            margeff /= self.predict(params, exog)[:, None]
         if count_idx is not None:
             from statsmodels.discrete.discrete_margins import (
                     _get_count_effects)
@@ -928,15 +903,12 @@ class GEE(base.Model):
         return margeff
 
 
-
-
 class GEEResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, cov_params, scale):
 
         super(GEEResults, self).__init__(model, params,
                 normalized_cov_params=cov_params, scale=scale)
-
 
     def standard_errors(self, covariance_type="robust"):
         """
@@ -958,7 +930,7 @@ class GEEResults(base.LikelihoodModelResults):
         allowed_covariances = ["robust", "naive", "bias reduced"]
         if covariance_type not in allowed_covariances:
             msg = "GEE: `covariance_type` must be one of " +\
-                ", ",join(allowed_covariances)
+                ", ".join(allowed_covariances)
             raise ValueError(msg)
 
         if covariance_type == "robust":
@@ -966,14 +938,12 @@ class GEEResults(base.LikelihoodModelResults):
         elif covariance_type == "naive":
             return np.sqrt(np.diag(self.naive_covariance))
         elif covariance_type == "bias_reduced":
-            return np.sqrt(np,diag(self.robust_covariance_bc))
-
+            return np.sqrt(np.diag(self.robust_covariance_bc))
 
     # Need to override to allow for different covariance types.
     @cache_readonly
     def bse(self):
         return self.standard_errors(self.covariance_type)
-
 
     @cache_readonly
     def resid(self):
@@ -982,7 +952,6 @@ class GEEResults(base.LikelihoodModelResults):
         values from the model.
         """
         return self.model.endog - self.fittedvalues
-
 
     @cache_readonly
     def centered_resid(self):
@@ -995,7 +964,6 @@ class GEEResults(base.LikelihoodModelResults):
             resid[ii] -= resid[ii].mean()
         return resid
 
-
     @cache_readonly
     def fittedvalues(self):
         """
@@ -1003,7 +971,6 @@ class GEEResults(base.LikelihoodModelResults):
         """
         return self.model.family.link.inverse(np.dot(self.model.exog,
                                                      self.params))
-
 
     def conf_int(self, alpha=.05, cols=None,
                  covariance_type="robust"):
@@ -1039,7 +1006,6 @@ class GEEResults(base.LikelihoodModelResults):
             lower = params[cols] - q * bse[cols]
             upper = params[cols] + q * bse[cols]
         return np.asarray(zip(lower, upper))
-
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 covariance_type="robust"):
@@ -1081,7 +1047,7 @@ class GEEResults(base.LikelihoodModelResults):
                      [self.model.covstruct.__class__.__name__]),
                     ('Date:', None),
                     ('Covariance type: ', [covariance_type,])
-        ]
+                   ]
 
         NY = [len(y) for y in self.model.endog_li]
 
@@ -1127,9 +1093,6 @@ class GEEResults(base.LikelihoodModelResults):
                              xname=xname, title="")
 
         return smry
-
-
-
 
 
 def gee_setup_ordinal(data, endog_col):
@@ -1179,15 +1142,15 @@ def gee_setup_ordinal(data, endog_col):
         index = data.index
         columns = data.columns
         endog = data[endog_col]
-        ine = [i for i,x in enumerate(columns) if x != endog_col]
+        ine = [i for i, x in enumerate(columns) if x != endog_col]
         use_pandas = True
         data = np.asarray(data)
     else:
-        endog = data[:,endog_col]
+        endog = data[:, endog_col]
         ine = range(data.shape[1])
         ine.remove(endog_col)
 
-    exog = data[:,ine]
+    exog = data[:, ine]
 
     # The unique outcomes, except the greatest one.
     endog_values = list(set(endog))
@@ -1202,14 +1165,14 @@ def gee_setup_ordinal(data, endog_col):
     intercepts = np.zeros((nrows, ncut), dtype=np.float64)
 
     jrow = 0
-    for exog_row,endog_value in zip(exog, endog):
+    for exog_row, endog_value in zip(exog, endog):
 
         # Loop over thresholds for the indicators
         for thresh_ix, thresh in enumerate(endog_cuts):
 
-            exog_ex[jrow,:] = exog_row
+            exog_ex[jrow, :] = exog_row
             endog_ex[jrow] = (int(endog_value > thresh))
-            intercepts[jrow,thresh_ix] = 1
+            intercepts[jrow, thresh_ix] = 1
             jrow += 1
 
     if use_pandas:
@@ -1227,7 +1190,6 @@ def gee_setup_ordinal(data, endog_col):
                                   columns=intercept_columns)
 
     return endog_ex, exog_ex, intercepts, len(endog_values)
-
 
 
 def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
@@ -1283,21 +1245,21 @@ def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
         index = data.index
         columns = data.columns
         endog = data[endog_col]
-        ine = [i for i,x in enumerate(columns) if x != endog_col
+        ine = [i for i, x in enumerate(columns) if x != endog_col
                            and x not in noexpand_cols]
-        inx = [i for i,x in enumerate(columns) if x in
+        inx = [i for i, x in enumerate(columns) if x in
                            noexpand_cols or x in noexpand_cols]
         use_pandas = True
         data = np.asarray(data)
     else:
-        endog = data[:,endog_col]
+        endog = data[:, endog_col]
         ine = range(data.shape[1])
         ine.remove(endog_col)
         [ine.remove(x) for x in noexpand_cols]
         inx = noexpand_cols
 
-    exog = data[:,ine]
-    exog_noexp_raw = data[:,inx]
+    exog = data[:, ine]
+    exog_noexp_raw = data[:, inx]
 
     # The unique outcomes, except the greatest one.
     endog_values = list(set(endog))
@@ -1313,7 +1275,7 @@ def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
     exog_noexp = np.zeros((nrows, len(inx)), dtype=np.float64)
 
     jrow = 0
-    for exog_row,exog_row_ne,endog_value in zip(exog, exog_noexp_raw,
+    for exog_row, exog_row_ne, endog_value in zip(exog, exog_noexp_raw,
                                                 endog):
 
         # Loop over thresholds for the indicators
@@ -1321,8 +1283,8 @@ def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
 
             u = np.zeros(len(endog_cuts), dtype=np.float64)
             u[thresh_ix] = 1
-            exog_ex[jrow,:] = np.kron(u, exog_row)
-            exog_noexp[jrow,:] = exog_row_ne
+            exog_ex[jrow, :] = np.kron(u, exog_row)
+            exog_noexp[jrow, :] = exog_row_ne
             endog_ex[jrow] = (int(endog_value == thresh))
             jrow += 1
 
@@ -1335,10 +1297,7 @@ def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
         exog_ex = pd.DataFrame(exog_ex, index=index_ex,
                                columns=columns1)
 
-
     return endog_ex, exog_ex, exog_noexp, len(endog_values)
-
-
 
 
 def gee_ordinal_starting_values(endog, n_exog):
@@ -1383,7 +1342,6 @@ def gee_nominal_starting_values(endog, n_exog):
     return np.zeros(n_exog * ncuts, dtype=np.float64)
 
 
-
 import statsmodels.genmod.families.varfuncs as varfuncs
 from statsmodels.genmod.families.links import Link
 from statsmodels.genmod.families import Family
@@ -1404,12 +1362,11 @@ class MultinomialLogit(Link):
     class.
 
     call and derivative use a private method _clean to trim p by 1e-10
-    so that p is in (0,1)
+    so that p is in (0, 1)
     """
 
     def __init__(self, ncut):
         self.ncut = ncut
-
 
     def inverse(self, lpr):
         """
@@ -1437,8 +1394,6 @@ class MultinomialLogit(Link):
         prob = expval / denom
 
         return prob
-
-
 
     def mean_deriv(self, exog, lpr):
         """
@@ -1472,10 +1427,9 @@ class MultinomialLogit(Link):
         ones = np.ones(self.ncut, dtype=np.float64)
         cmat = block_diag([np.outer(ones, x) for x in expval_m], "csr")
         rmat = cmat.dot(exog)
-        dmat -= expval[:,None] * rmat / denom[:, None]**2
+        dmat -= expval[:, None] * rmat / denom[:, None]**2
 
         return dmat
-
 
     # Minimally tested
     def mean_deriv_exog(self, exog, params):
@@ -1524,12 +1478,9 @@ class MultinomialLogit(Link):
         expval_mb = np.kron(expval_m, np.ones((self.ncut, 1)))
         expval_mb = np.kron(expval_mb, np.ones((1, self.ncut)))
 
-        dmat -= expval[:, None] * (bmat * expval_mb) / denom[:,None]**2
+        dmat -= expval[:, None] * (bmat * expval_mb) / denom[:, None]**2
 
         return dmat
-
-
-
 
 
 class Multinomial(Family):
@@ -1540,7 +1491,6 @@ class Multinomial(Family):
 
     links = [MultinomialLogit,]
     variance = varfuncs.binary
-
 
     def __init__(self, nlevels):
         """
@@ -1561,7 +1511,6 @@ from statsmodels.discrete.discrete_margins import \
     _get_margeff_exog, _get_const_index, _check_margeff_args, \
     _effects_at, margeff_cov_with_se, _check_at_is_all, \
     _transform_names
-
 
 
 
@@ -1587,7 +1536,6 @@ class GEEMargins(object):
 
     def _reset(self):
         self._cache = resettable_cache()
-
 
     @cache_readonly
     def tvalues(self):
@@ -1616,7 +1564,7 @@ class GEEMargins(object):
                                   'Conf. Int. Low', 'Cont. Int. Hi.']
         ind = self.results.model.exog.var(0) != 0 # True if not a constant
         exog_names = self.results.model.exog_names
-        var_names = [name for i,name in enumerate(exog_names) if ind[i]]
+        var_names = [name for i, name in enumerate(exog_names) if ind[i]]
         table = np.column_stack((self.margeff, self.margeff_se, self.tvalues,
                                  self.pvalues, self.conf_int(alpha)))
         return DataFrame(table, columns=names, index=var_names)
@@ -1705,8 +1653,8 @@ class GEEMargins(object):
         pvalues = self.pvalues
         if J > 1:
             for eq in range(J):
-                restup = (results, margeff[:,eq], margeff_se[:,eq],
-                          tvalues[:,eq], pvalues[:,eq], conf_int[:,:,eq])
+                restup = (results, margeff[:, eq], margeff_se[:, eq],
+                          tvalues[:, eq], pvalues[:, eq], conf_int[:, :, eq])
                 tble = summary_params(restup, yname=yname_list[eq],
                               xname=exog_names, alpha=alpha, use_t=False,
                               skip_header=True)
@@ -1801,7 +1749,7 @@ class GEEMargins(object):
         model = results.model
         params = results.params
         exog = model.exog.copy() # copy because values are changed
-        effects_idx, const_idx =  _get_const_index(exog)
+        effects_idx, const_idx = _get_const_index(exog)
 
         if dummy:
             _check_discrete_args(at, method)
