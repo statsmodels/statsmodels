@@ -71,8 +71,8 @@ class ParameterConstraint(object):
            constraint lhs * param = rhs.  The number of constraints is
            q >= 1 and p is the dimension of the parameter vector.
         rhs : ndarray
-          A q-dimensional vector which is the right hand side of the
-          constraint equation.
+          A 1-dimensional vector of length q which is the right hand side of
+          the constraint equation.
         exog : ndarray
           The n x p exognenous data for the full model.
         """
@@ -202,7 +202,7 @@ class GEE(base.Model):
        unconstrained model.
     %(extra_params)s
 
-    See also
+    See Also
     --------
     statsmodels.families.*
 
@@ -477,7 +477,7 @@ class GEE(base.Model):
         offset = self.offset_li
         num_clust = len(endog)
 
-        mean = self.family.link.inverse
+        linkinv = self.family.link.inverse
 
         self.cached_means = []
 
@@ -487,7 +487,7 @@ class GEE(base.Model):
                 continue
 
             lpr = offset[i] + np.dot(exog[i], beta)
-            expval = mean(lpr)
+            expval = linkinv(lpr)
 
             self.cached_means.append((expval, lpr))
 
@@ -671,14 +671,14 @@ class GEE(base.Model):
 
 
 
-    def fit(self, maxit=60, ctol=1e-6, starting_params=None,
+    def fit(self, maxiter=60, ctol=1e-6, starting_params=None,
             covariance_type="robust"):
         """
         Fits a GEE model.
 
         Parameters
         ----------
-        maxit : integer
+        maxiter : integer
             The maximum number of iterations
         ctol : float
             The convergence criterion for stopping the Gauss-Seidel
@@ -717,12 +717,12 @@ class GEE(base.Model):
                                          self.exog.shape[1])
                 raise ValueError(msg)
 
-        # Check maxit
-        msg = "GEE: the `maxit` argument to `fit` must be a "\
+        # Check maxiter
+        msg = "GEE: the `maxiter` argument to `fit` must be a "\
             "positive integer."
-        if not np.isscalar(maxit):
+        if not np.isscalar(maxiter):
             raise ValueError(msg)
-        if maxit <= 0 or (round(maxit) != maxit):
+        if maxiter <= 0 or (round(maxiter) != maxiter):
             raise ValueError(msg)
 
         # Check ctol
@@ -744,7 +744,7 @@ class GEE(base.Model):
         # iteration.
         fitlack = -1.
 
-        for itr in xrange(maxit):
+        for itr in xrange(maxiter):
             update, score = self._beta_update()
             if update is None:
                 warnings.warn("Singular matrix encountered in GEE "
@@ -1173,14 +1173,14 @@ def gee_setup_ordinal(data, endog_col):
         The number of distinct values of the endogeneous variable
     """
 
-    pandas = False
+    use_pandas = False
     import pandas as pd
     if type(data) == pd.core.frame.DataFrame:
         index = data.index
         columns = data.columns
         endog = data[endog_col]
         ine = [i for i,x in enumerate(columns) if x != endog_col]
-        pandas = True
+        use_pandas = True
         data = np.asarray(data)
     else:
         endog = data[:,endog_col]
@@ -1212,7 +1212,7 @@ def gee_setup_ordinal(data, endog_col):
             intercepts[jrow,thresh_ix] = 1
             jrow += 1
 
-    if pandas:
+    if use_pandas:
 
         index_ex = []
         [index_ex.extend(y) for y in [[x,]*ncut for x in index]]
@@ -1277,7 +1277,7 @@ def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
         The number of distinct values of the endogeneous variable
     """
 
-    pandas = False
+    use_pandas = False
     import pandas as pd
     if type(data) == pd.core.frame.DataFrame:
         index = data.index
@@ -1287,7 +1287,7 @@ def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
                            and x not in noexpand_cols]
         inx = [i for i,x in enumerate(columns) if x in
                            noexpand_cols or x in noexpand_cols]
-        pandas = True
+        use_pandas = True
         data = np.asarray(data)
     else:
         endog = data[:,endog_col]
@@ -1326,7 +1326,7 @@ def gee_setup_nominal(data, endog_col, noexpand_cols=[]):
             endog_ex[jrow] = (int(endog_value == thresh))
             jrow += 1
 
-    if pandas:
+    if use_pandas:
 
         index_ex = []
         [index_ex.extend(y) for y in [[x,]*ncut for x in index]]
