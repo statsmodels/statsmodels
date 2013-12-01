@@ -165,10 +165,10 @@ class ProbPlot(object):
         except TypeError:
             msg = '%s requires more parameters to ' \
                   'compute ppf'.format(self.dist.name,)
-            print(msg)
+            raise TypeError(msg)
         except:
             msg = 'failed to compute the ppf of {0}'.format(self.dist.name,)
-            print(msg)
+            raise
 
     @cache_readonly
     def sorted_data(self):
@@ -189,8 +189,8 @@ class ProbPlot(object):
             (self.sorted_data - self.fit_params[-2])/self.fit_params[-1]
         return self.dist.cdf(qntls)
 
-    def ppplot(self, ax=None, xlabel=None, ylabel=None, line=None, other=None,
-               **plotkwargs):
+    def ppplot(self, xlabel=None, ylabel=None, line=None, other=None,
+               ax=None, **plotkwargs):
         """
         P-P plot of the percentiles (probabilities) of x versus the
         probabilities (percetiles) of a distribution.
@@ -200,11 +200,9 @@ class ProbPlot(object):
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
-        
         xlabel, ylabel : str or None, optional
             User-provided lables for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
             - '45' - 45-degree line
@@ -216,15 +214,13 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
-
         other : `ProbPlot` instance, array-like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
             instance. If an array-like object is provided, it will be turned
             into a `ProbPlot` instance using default parameters. If not provided
             (default), the theoretical quantiles are used.
-
-        **plotkwargs : additional matplotlib arguments to be passed to the 
+        **plotkwargs : additional matplotlib arguments to be passed to the
             `plot` command.
 
         Returns
@@ -266,10 +262,8 @@ class ProbPlot(object):
 
         return fig
 
-        return fig
-
-    def qqplot(self, ax=None, xlabel=None, ylabel=None, line=None, other=None,
-               **plotkwargs):
+    def qqplot(self, xlabel=None, ylabel=None, line=None, other=None,
+                ax=None, **plotkwargs):
         """
         Q-Q plot of the quantiles of x versus the quantiles/ppf of a
         distribution or the quantiles of another `ProbPlot` instance.
@@ -279,11 +273,9 @@ class ProbPlot(object):
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
-        
         xlabel, ylabel : str or None, optional
             User-provided lables for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-        
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
             - '45' - 45-degree line
@@ -295,16 +287,20 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
-
         other : `ProbPlot` instance, array-like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
             instance. If an array-like object is provided, it will be turned
             into a `ProbPlot` instance using default parameters. If not provided
             (default), the theoretical quantiles are used.
-
-        **plotkwargs : additional matplotlib arguments to be passed to the 
+        **plotkwargs : additional matplotlib arguments to be passed to the
             `plot` command.
+
+        Returns
+        -------
+        fig : Matplotlib figure instance
+            If `ax` is None, the created figure.  Otherwise the figure to which
+            `ax` is connected.
         """
         if other is not None:
             check_other = isinstance(other, ProbPlot)
@@ -336,7 +332,7 @@ class ProbPlot(object):
 
         return fig
 
-    def probplot(self, ax=None, xlabel=None, ylabel=None, line=None, 
+    def probplot(self, ax=None, xlabel=None, ylabel=None, line=None,
                  exceed=False, **plotkwargs):
         """
         Probability plot of the unscaled quantiles of x versus the
@@ -375,7 +371,7 @@ class ProbPlot(object):
                figure displays the probability that a sample will exceed a
                given value.
 
-        **plotkwargs : additional matplotlib arguments to be passed to the 
+        **plotkwargs : additional matplotlib arguments to be passed to the
             `plot` command.
 
         Returns
@@ -402,7 +398,7 @@ class ProbPlot(object):
 
         if ylabel is None:
             ylabel = "Sample Quantiles"
-        
+
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         _fmt_probplot_axis(ax, self.dist, self.nobs)
