@@ -17,7 +17,7 @@ except:
     have_matplotlib = False
 
 
-class _base_probplot:
+class BaseProbplotMixin(object):
     def base_setup(self):
         if have_matplotlib:
             self.fig, self.ax = plt.subplots()
@@ -27,7 +27,6 @@ class _base_probplot:
     def teardown(self):
         if have_matplotlib:
             plt.close('all')
-
 
     @dec.skipif(not have_matplotlib)
     def test_qqplot(self):
@@ -110,7 +109,7 @@ class _base_probplot:
                                         alpha=0.5)
 
 
-class test_ProbPlot_Longely(_base_probplot):
+class TestProbPlotLongely(BaseProbplotMixin):
     def setup(self):
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
@@ -120,7 +119,7 @@ class test_ProbPlot_Longely(_base_probplot):
         self.base_setup()
 
 
-class test_ProbPlot_RandomNormal_Minimal(_base_probplot):
+class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
     def setup(self):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data)
@@ -128,7 +127,7 @@ class test_ProbPlot_RandomNormal_Minimal(_base_probplot):
         self.base_setup()
 
 
-class test_ProbPlot_RandomNormal_WithFit(_base_probplot):
+class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
     def setup(self):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data, fit=True)
@@ -136,7 +135,7 @@ class test_ProbPlot_RandomNormal_WithFit(_base_probplot):
         self.base_setup()
 
 
-class test_ProbPlot_RandomNormal_LocScale(_base_probplot):
+class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
     def setup(self):
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data, loc=8.25, scale=3.25)
@@ -144,7 +143,7 @@ class test_ProbPlot_RandomNormal_LocScale(_base_probplot):
         self.base_setup()
 
 
-class test_top_level:
+class TestTopLevel:
     def setup(self):
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
