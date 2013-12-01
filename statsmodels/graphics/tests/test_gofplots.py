@@ -87,7 +87,7 @@ class BaseProbplotMixin(object):
     @dec.skipif(not have_matplotlib)
     def test_qqplot_pltkwargs(self):
         self.fig = self.prbplt.qqplot(ax=self.ax, line=self.line,
-                                      marker='d', 
+                                      marker='d',
                                       markerfacecolor='cornflowerblue',
                                       markeredgecolor='white',
                                       alpha=0.5)
@@ -95,7 +95,7 @@ class BaseProbplotMixin(object):
     @dec.skipif(not have_matplotlib)
     def test_ppplot_pltkwargs(self):
         self.fig = self.prbplt.ppplot(ax=self.ax, line=self.line,
-                                      marker='d', 
+                                      marker='d',
                                       markerfacecolor='cornflowerblue',
                                       markeredgecolor='white',
                                       alpha=0.5)
@@ -103,7 +103,7 @@ class BaseProbplotMixin(object):
     @dec.skipif(not have_matplotlib)
     def test_probplot_pltkwargs(self):
         self.fig = self.prbplt.probplot(ax=self.ax, line=self.line,
-                                        marker='d', 
+                                        marker='d',
                                         markerfacecolor='cornflowerblue',
                                         markeredgecolor='white',
                                         alpha=0.5)
@@ -166,7 +166,7 @@ class TestTopLevel:
         # also tests all values for line
         for line in ['r', 'q', '45', 's']:
             # test with `ProbPlot` instances
-            fig = sm.qqplot_2samples(self.prbplt, self.other_prbplot, 
+            fig = sm.qqplot_2samples(self.prbplt, self.other_prbplot,
                                      line=line)
     @dec.skipif(not have_matplotlib)
     def test_qqplot_2samples_arrays():
