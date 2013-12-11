@@ -1,10 +1,17 @@
+# TODO: Check tests with constant and without.  This might be an issue since df_model does nto include constant
+# TODO: Determine which tests are valid for GLSAR, and under what conditions
+# TODO: Fix HCCM to work with GLS/WLS
+# TODO: Fix issue with constant and GLS
+# TODO: GLS: add options Iterative GLS, for iterative fgls if sigma is None
+# TODO: GLS: default if sigma is none should be two-step GLS
+# TODO: Check nesting when performing model based tests, lr, wald, lm
 """
-This module implements some standard regression models:
+This module implements standard regression models:
 
-Generalized Least Squares (GLS),
-Ordinary Least Squares (OLS),
-and Weighted Least Squares (WLS),
-as well as an GLS model with autoregressive error terms GLSAR(p)
+Generalized Least Squares (GLS)
+Ordinary Least Squares (OLS)
+Weighted Least Squares (WLS)
+Generalized Least Squares with autoregressive error terms GLSAR(p)
 
 Models are specified with an endogenous response variable and an
 exogenous design matrix and are fit using their `fit` method.
@@ -34,21 +41,25 @@ import numpy as np
 from scipy.linalg import toeplitz
 from scipy import stats
 from scipy.stats.stats import ss
-from statsmodels.tools.tools import (add_constant, rank,
-                                             recipr, chain_dot, pinv_extended)
-from statsmodels.tools.decorators import (resettable_cache,
-        cache_readonly, cache_writable)
-import statsmodels.base.model as base
-import statsmodels.base.wrapper as wrap
-from statsmodels.emplike.elregress import _ELRegOpts
 from scipy import optimize
 from scipy.stats import chi2
 
+from statsmodels.tools.tools import (add_constant, rank,
+                                     recipr, chain_dot, pinv_extended)
+from statsmodels.tools.decorators import (resettable_cache,
+                                          cache_readonly,
+                                          cache_writable)
+import statsmodels.base.model as base
+import statsmodels.base.wrapper as wrap
+from statsmodels.emplike.elregress import _ELRegOpts
+
+
 def _get_sigma(sigma, nobs):
     """
-    Returns sigma for GLS and the inverse of its Cholesky decomposition.
-    Handles dimensions and checks integrity. If sigma is None, returns
-    None, None. Otherwise returns sigma, cholsigmainv.
+    Returns sigma (matrix, nobs by nobs) for GLS and the inverse of its
+    Cholesky decomposition.  Handles dimensions and checks integrity.
+    If sigma is None, returns None, None. Otherwise returns sigma,
+    cholsigmainv.
     """
     if sigma is None:
         return None, None
@@ -58,13 +69,13 @@ def _get_sigma(sigma, nobs):
     if sigma.ndim == 1:
         if sigma.shape != (nobs,):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
-                             "array of shape %s x %s" % (nobs, nobs))
+                             "array of shape %s x %s" % (nobs, nobs, nobs))
         cholsigmainv = np.diag(1/sigma**.5)
         sigma = np.diag(sigma)
     else:
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
-                             "array of shape %s x %s" % (nobs, nobs))
+                             "array of shape %s x %s" % (nobs, nobs, nobs))
         cholsigmainv = np.linalg.cholesky(np.linalg.pinv(sigma)).T
 
     return sigma, cholsigmainv
@@ -72,7 +83,7 @@ def _get_sigma(sigma, nobs):
 
 class RegressionModel(base.LikelihoodModel):
     """
-    Base class for linear regression models not used by users.
+    Base class for linear regression models. Should not be directly called.
 
     Intended for subclassing.
     """
@@ -81,6 +92,7 @@ class RegressionModel(base.LikelihoodModel):
         self._data_attr.extend(['pinv_wexog', 'wendog', 'wexog', 'weights'])
 
     def initialize(self):
+        self.k_constant = float(self._has_constant())
         self.wexog = self.whiten(self.exog)
         self.wendog = self.whiten(self.endog)
         # overwrite nobs from class Model:
@@ -92,6 +104,10 @@ class RegressionModel(base.LikelihoodModel):
 
     @property
     def df_model(self):
+        """
+        The model degree of freedom, defined as the rank of the regressor
+        matrix minus 1 if a constant is included.
+        """
         if self._df_model is None:
             if self.rank is None:
                 self.rank = rank(self.exog)
@@ -104,6 +120,11 @@ class RegressionModel(base.LikelihoodModel):
 
     @property
     def df_resid(self):
+        """
+        The residual degree of freedom, defined as the number of observations
+        minus the rank of the regressor matrix.
+        """
+
         if self._df_resid is None:
             if self.rank is None:
                 self.rank = rank(self.exog)
@@ -113,6 +134,24 @@ class RegressionModel(base.LikelihoodModel):
     @df_resid.setter
     def df_resid(self, value):
         self._df_resid = value
+
+    def _has_constant(self):
+        """
+        Determines whether a model contains a constant or implicit constant,
+        for example a non-unity constant or indicator variables which sum
+        to a constant value.
+
+        Returns
+        -------
+        has_constant: bool
+            True if the model has a constant or implicit constant.
+        """
+        # Easy check, most common case
+        if np.any(np.all(self.exog==1.0,axis=0)):
+            return True
+        # Compute rank of augmented matrix
+        augmented_exog = add_constant(self.exog)
+        return rank(augmented_exog)==rank(self.exog)
 
     def fit(self, method="pinv", **kwargs):
         """
@@ -289,7 +328,7 @@ class GLS(RegressionModel):
 
     def __init__(self, endog, exog, sigma=None, missing='none', hasconst=None):
     #TODO: add options igls, for iterative fgls if sigma is None
-    #TODO: default is sigma is none should be two-step GLS
+    #TODO: default if sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
         super(GLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
@@ -324,7 +363,7 @@ class GLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at params.
+        Returns the value of the Gaussian loglikelihood function at params.
 
         Given the whitened design matrix, the loglikelihood is evaluated
         at the parameter vector `params` for the dependent variable `endog`.
@@ -344,7 +383,7 @@ class GLS(RegressionModel):
         -----
         The loglikelihood function for the normal distribution is
 
-        .. math:: -\\frac{n}{2}\\log\\left(Y-\\hat{Y}\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}\\log\\left(\\left|\\Sigma\\right|\\right)
+        .. math:: -\\frac{n}{2}\\log\\left(\\left(Y-\\hat{Y}\\right)^{\\prime}\\left(Y-\\hat{Y}\\right)\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}\\log\\left(\\left|\\Sigma\\right|\\right)
 
         Y and Y-hat are whitened.
 
@@ -356,7 +395,8 @@ class GLS(RegressionModel):
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
         if np.any(self.sigma) and self.sigma.ndim == 2:
         #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
-            llf -= .5*np.log(np.linalg.det(self.sigma))
+            det = np.linalg.slogdet(self.sigma)
+            llf -= .5*det[1]
             # with error covariance matrix
         return llf
 
@@ -402,7 +442,7 @@ class WLS(RegressionModel):
 
     Notes
     -----
-    If the weights are a function of the data, then the postestimation
+    If the weights are a function of the data, then the post estimation
     statistics such as fvalue and mse_model might not be correct, as the
     package does not yet support no-constant regression.
     """ % {'params' : base._model_params_doc,
@@ -421,6 +461,8 @@ class WLS(RegressionModel):
                                   weights=weights, hasconst=hasconst)
         nobs = self.exog.shape[0]
         weights = self.weights
+        # Experimental normalization of weights
+        weights = weights / np.sum(weights) * nobs
         if len(weights) != nobs and weights.size == nobs:
             raise ValueError('Weights must be scalar or same length as design')
 
@@ -442,13 +484,13 @@ class WLS(RegressionModel):
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
         elif X.ndim == 2:
-            return np.sqrt(self.weights)[:,None]*X
+            return np.sqrt(self.weights)[:, None]*X
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian loglikelihood function at params.
+        Returns the value of the gaussian log likelihood function at params.
 
-        Given the whitened design matrix, the loglikelihood is evaluated
+        Given the whitened design matrix, the log likelihood is evaluated
         at the parameter vector `params` for the dependent variable `Y`.
 
         Parameters
@@ -458,7 +500,7 @@ class WLS(RegressionModel):
 
         Returns
         -------
-        The value of the loglikelihood function for a WLS Model.
+        The value of the log likelihood function for a WLS Model.
 
         Notes
         --------
@@ -470,6 +512,8 @@ class WLS(RegressionModel):
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
+        # This makes it GLS-like
+        #llf += 0.5 * np.sum(np.log(self.weights))
         return llf
 
 
@@ -519,7 +563,7 @@ class OLS(WLS):
                                   hasconst=hasconst)
 
     def loglike(self, params):
-        '''
+        """
         The likelihood function for the clasical OLS model.
 
         Parameters
@@ -530,8 +574,8 @@ class OLS(WLS):
         Returns
         -------
         The concentrated likelihood function evaluated at params.
-        '''
-        nobs2 = self.nobs/2.
+        """
+        nobs2 = self.nobs / 2.0
         return -nobs2*np.log(2*np.pi)-nobs2*np.log(1/(2*nobs2) *\
                 np.dot(np.transpose(self.endog -
                     np.dot(self.exog, params)),
@@ -744,7 +788,7 @@ def yule_walker(X, order=1, method="unbiased", df=None, inv=False, demean=True):
 
     rho = np.linalg.solve(R, r[1:])
     sigmasq = r[0] - (r[1:]*rho).sum()
-    if inv == True:
+    if inv==True:
         return rho, np.sqrt(sigmasq), np.linalg.inv(R)
     else:
         return rho, np.sqrt(sigmasq)
@@ -782,7 +826,9 @@ class RegressionResults(base.LikelihoodModelResults):
         Heteroscedasticity robust covariance matrix. See HC2_se below.
     cov_HC3
         Heteroscedasticity robust covariance matrix. See HC3_se below.
-    df_model :
+    cov_type
+        Parameter covariance estimator used for standard errors and t-stats
+    df_model
         Model degress of freedom. The number of regressors `p`. Does not
         include the constant if one is present
     df_resid
@@ -885,18 +931,24 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, normalized_cov_params=None, scale=1.):
         super(RegressionResults, self).__init__(model, params,
-                                                 normalized_cov_params,
-                                                 scale)
+                                                normalized_cov_params,
+                                                scale)
+
         self._cache = resettable_cache()
         if hasattr(model, 'wexog_singular_values'):
             self._wexog_singular_values = model.wexog_singular_values
         else:
             self._wexog_singular_values = None
+        self.cov_type = 'nonrobust'
+        self.cov_kwds = {'description' : 'Standard Errors assume that the ' +
+                         'covariance matrix of the errors is correctly ' +
+                         'specified.'}
 
         self.df_model = model.df_model
         self.df_resid = model.df_resid
 
         self.use_t = True  # default for linear models
+
 
     def __str__(self):
         self.summary()
@@ -973,7 +1025,7 @@ class RegressionResults(base.LikelihoodModelResults):
         if weights is not None:
             return np.sum(weights*(model.endog - np.average(model.endog,
                                                         weights=weights))**2)
-        else: # this is probably broken for GLS
+        else:  # this is probably broken for GLS
             centered_endog = model.wendog - model.wendog.mean()
             return np.dot(centered_endog, centered_endog)
 
@@ -1022,6 +1074,8 @@ class RegressionResults(base.LikelihoodModelResults):
             k_params = self.normalized_cov_params.shape[0]
             mat = np.eye(k_params)
             const_idx = self.model.data.const_idx
+            # TODO: What if model includes implcit constant, e.g. all dummies but no constant regressor?
+            # TODO: Restats as LM test by projecting orthogonalizing to constant?
             if self.model.data.k_constant == 1:
                 # assume const_idx exists
                 idx = range(k_params)
@@ -1188,8 +1242,131 @@ class RegressionResults(base.LikelihoodModelResults):
                              'deviation')
         return self.wresid * recipr(np.sqrt(self.scale))
 
+    def _is_nested(self, restricted):
+        """
+        Parameters
+        ----------
+        restricted : Result instance
+            The restricted model is assumed to be nested in the current
+            model. The result instance of the restricted model is required to
+            have two attributes, residual sum of squares, `ssr`, residual
+            degrees of freedom, `df_resid`.
+
+        Returns
+        -------
+        nested : bool
+            True if nested, otherwise false
+
+        Notes
+        -----
+        A most nests another model if the regressors in the smaller model are spanned
+        by the regressors in the larger model and the regressand is identical.
+        """
+
+        if self.model.nobs != restricted.model.nobs:
+            return False
+
+        full_rank = self.model.rank
+        restricted_rank = restricted.model.rank
+        if full_rank <= restricted_rank:
+            return False
+
+        restricted_exog = restricted.model.wexog
+        full_wresid  = self.wresid
+
+        scores = restricted_exog * full_wresid[:,None]
+        score_l2 = np.sqrt(np.mean(scores.mean(0) ** 2))
+        # TODO: Could be improved, and may fail depending on scale of regressors
+        return np.allclose(score_l2,0)
+
+
+    def compare_lm_test(self, restricted, demean=True, use_lr=False):
+        """Use Lagrange Multiplier test to test whether restricted model is correct
+
+        Parameters
+        ----------
+        restricted : Result instance
+            The restricted model is assumed to be nested in the current
+            model. The result instance of the restricted model is required to
+            have two attributes, residual sum of squares, `ssr`, residual
+            degrees of freedom, `df_resid`.
+
+        demean : bool
+            Flag indicating whether the demean the scores based on the residuals
+            from the restricted model.  If True, the covariance of the scores
+            are used and the LM test is identical to the large sample version
+            of the LR test.
+
+        Returns
+        -------
+        lm_value : float
+            test statistic, chi2 distributed
+        p_value : float
+            p-value of the test statistic
+        df_diff : int
+            degrees of freedom of the restriction, i.e. difference in df between
+            models
+
+        Notes
+        -----
+        TODO: explain LM text
+        """
+        import statsmodels.stats.sandwich_covariance as sw
+        from numpy.linalg import inv
+
+        if not self._is_nested(restricted):
+            raise ValueError("Restricted model is not nested by full model.")
+
+        wresid = restricted.wresid
+        wexog = self.model.wexog
+        scores = wexog * wresid[:,None]
+
+        n = self.nobs
+        df_full = self.df_resid
+        df_restr = restricted.df_resid
+        df_diff = (df_restr - df_full)
+
+        s = scores.mean(axis=0)
+        if use_lr:
+            scores = wexog * self.wresid[:,None]
+            demean = False
+
+        if demean:
+            scores = scores - scores.mean(0)[None,:]
+        # Form matters here.  If homoskedastics can be sigma^2 (X'X)^-1
+        # If Heteroskedastic then the form below is fine
+        # If HAC then need to use HAC
+        # If Cluster, shoudl use cluster
+
+        cov_type = getattr(self, 'cov_type', 'nonrobust')
+        if cov_type == 'nonrobust':
+            sigma2 = np.mean(wresid**2)
+            XpX = np.dot(wexog.T,wexog) / n
+            Sinv = inv(sigma2 * XpX)
+        elif cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
+            Sinv = inv(np.dot(scores.T,scores) / n)
+        elif cov_type == 'HAC':
+            print "HAC"
+            maxlags = self.cov_kwds['maxlags']
+            use_correction = self.cov_kwds['use_correction']
+            Sinv = inv(sw.S_hac_simple(scores, maxlags) / n)
+        elif cov_type == 'cluster':
+            #cluster robust standard errors
+            groups = self.cov_kwds['groups']
+            # TODO: Might need demean option in S_crosssection by group?
+            Sinv = inv(sw.S_crosssection(scores, groups))
+        else:
+            raise ValueError('Only nonrobust, HC, HAC and cluster are ' +
+                             'currently connected')
+
+        lm_value = n * chain_dot(s,Sinv,s.T)
+        p_value = stats.chi2.sf(lm_value, df_diff)
+        return lm_value, p_value, df_diff
+
+
+
     def compare_f_test(self, restricted):
-        '''use F test to test whether restricted model is correct
+        """use F test to test whether restricted model is correct
 
         Parameters
         ----------
@@ -1219,16 +1396,17 @@ class RegressionResults(base.LikelihoodModelResults):
         but still return the results under the assumption of homoscedasticity
         and no autocorrelation (sphericity).
 
-        '''
-        has_robust1 = (hasattr(self, 'cov_type') and
-                                     (self.cov_type != 'nonrobust'))
-        has_robust2 = (hasattr(restricted, 'cov_type') and
-                                     (restricted.cov_type != 'nonrobust'))
+        """
+
+        has_robust1 = getattr(self, 'cov_type', 'nonrobust') != 'nonrobust'
+        has_robust2 = (getattr(restricted, 'cov_type', 'nonrobust') !=
+                                                                   'nonrobust')
 
         if has_robust1 or has_robust2:
             import warnings
             warnings.warn('F test for comparison is likely invalid with ' +
                           'robust covariance, proceeding anyway', UserWarning)
+
         ssr_full = self.ssr
         ssr_restr = restricted.ssr
         df_full = self.df_resid
@@ -1239,8 +1417,8 @@ class RegressionResults(base.LikelihoodModelResults):
         p_value = stats.f.sf(f_value, df_diff, df_full)
         return f_value, p_value, df_diff
 
-    def compare_lr_test(self, restricted):
-        '''
+    def compare_lr_test(self, restricted, large_sample=False):
+        """
         Likelihood ratio test to test whether restricted model is correct
 
         Parameters
@@ -1250,6 +1428,10 @@ class RegressionResults(base.LikelihoodModelResults):
             The result instance of the restricted model is required to have two
             attributes, residual sum of squares, `ssr`, residual degrees of
             freedom, `df_resid`.
+
+        large_sample : bool
+            Flag indicating whether to use a heteroskedasticity robust version
+            of the LR test, which is a modified LM test.
 
         Returns
         -------
@@ -1265,12 +1447,28 @@ class RegressionResults(base.LikelihoodModelResults):
         Notes
         -----
 
+        The exact likelihood ratio is valid for homoskedastic data, and is
+        defined as
+
         .. math:: D=-2\\log\\left(\\frac{\\mathcal{L}_{null}}
            {\\mathcal{L}_{alternative}}\\right)
 
         where :math:`\mathcal{L}` is the likelihood of the model. With :math:`D`
         distributed as chisquare with df equal to difference in number of
-        parameters or equivalently difference in residual degrees of freedom
+        parameters or equivalently difference in residual degrees of freedom.
+
+        The large sample version of the likelihood ratio is defined as
+
+        .. math:: D=n s^{\\prime}S^{-1}s
+
+        where :math:`s=n^{-1}\\sum_{i=1}^{n} s_{i}`
+
+        .. math:: s_{i} = x_{i,alternative} \\epsilon_{i,null}
+
+        is the average score of the model evaluated using the residuals from
+        null model and the regressors from the alternative model and :math:`S`
+        is the covariance of the scores, :math:`s_{i}`.  The covariance of the
+        scores is estimated using the same estimator as in the alternative model.
 
         This test compares the loglikelihood of the two models.
         This may not be a valid test, if there is unspecified heteroscedasticity
@@ -1278,20 +1476,34 @@ class RegressionResults(base.LikelihoodModelResults):
         but still return the results without taking unspecified
         heteroscedasticity or correlation into account.
 
-        TODO: put into separate function
+        This test compares the loglikelihood of the two models.
+        This may not be a valid test, if there is unspecified heteroscedasticity
+        or correlation. This method will issue a warning if this is detected
+        but still return the results without taking unspecified
+        heteroscedasticity or correlation into account.
 
-        '''
-        has_robust1 = (hasattr(self, 'cov_type') and
-                                     (self.cov_type != 'nonrobust'))
-        has_robust2 = (hasattr(restricted, 'cov_type') and
-                                     (restricted.cov_type != 'nonrobust'))
+        is the average score of the model evaluated using the residuals from
+        null model and the regressors from the alternative model and :math:`S`
+        is the covariance of the scores, :math:`s_{i}`.  The covariance of the
+        scores is estimated using the same estimator as in the alternative model.
+
+        TODO: put into separate function, needs tests
+        """
+
+        # See mailing list discussion October 17,
+
+        if large_sample:
+            return self.compare_lm_test(restricted, use_lr=True)
+
+        has_robust1 = (getattr(self, 'cov_type', 'nonrobust') != 'nonrobust')
+        has_robust2 = (getattr(restricted, 'cov_type', 'nonrobust') !=
+                                                                  'nonrobust')
 
         if has_robust1 or has_robust2:
             import warnings
             warnings.warn('Likelihood Ratio test is likely invalid with ' +
                           'robust covariance, proceeding anyway', UserWarning)
 
-        # See mailing list discussion October 17,
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
@@ -1305,8 +1517,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
 
     def get_robustcov_results(self, cov_type='HC1', use_t=None, **kwds):
-        '''create new results instance with robust covariance as default
-
+        """create new results instance with robust covariance as default
 
         Parameters
         ----------
@@ -1324,8 +1535,8 @@ class RegressionResults(base.LikelihoodModelResults):
         results : results instance
             This method creates a new results instance with the requested
             robust covariance as the default covariance of the parameters.
-            Inferential statistics like p-values and tests will be based on
-            this covariance matrix.
+            Inferential statistics like p-values and hypothesis tests will be
+            based on this covariance matrix.
 
         Notes
         -----
@@ -1400,7 +1611,8 @@ class RegressionResults(base.LikelihoodModelResults):
         TODO: Currently there is no check for extra or misspelled keywords,
             except in the case of cov_type `HCx`
 
-        '''
+        """
+
         import statsmodels.stats.sandwich_covariance as sw
 
         res = self.__class__(self.model, self.params,
@@ -1820,13 +2032,14 @@ class OLSResults(RegressionResults):
                      ret_params=0, method='nm',
                      stochastic_exog=1, return_params=0):
         """
-        Tests single or joint hypotheses of the regression parameters.
+        Tests single or joint hypotheses of the regression parameters using
+        Empirical Likelihood.
 
         Parameters
         ----------
 
         b0_vals : 1darray
-            The hypthesized value of the parameter to be tested
+            The hypothesized value of the parameter to be tested
 
         param_nums : 1darray
             The parameter number to be tested
@@ -1916,18 +2129,19 @@ class OLSResults(RegressionResults):
                     method='nm', stochastic_exog=1):
         """
         Computes the confidence interval for the parameter given by param_num
+        using Empirical Likelihood
 
         Parameters
         ----------
 
         param_num : float
-            The parameter thats confidence interval is desired
+            The parameter for which the confidence interval is desired
 
         sig : float
             The significance level.  Default is .05
 
         upper_bound : float
-            Tha mximum value the upper limit can be.  Default is the
+            The maximum value the upper limit can be.  Default is the
             99.9% confidence value under OLS assumptions.
 
         lower_bound : float
@@ -1965,7 +2179,7 @@ class OLSResults(RegressionResults):
         For alpha=.05, the value is 3.841459.
 
         To ensure optimization terminated successfully, it is suggested to
-        do test_beta([lower_limit], [param_num])
+        do el_test([lower_limit], [param_num])
 
         If the optimization does not terminate successfully, consider switching
         optimization algorithms.
