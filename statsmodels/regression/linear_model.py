@@ -152,6 +152,9 @@ class RegressionModel(base.LikelihoodModel):
         augmented_exog = add_constant(self.exog)
         return rank(augmented_exog)==rank(self.exog)
 
+    def whiten(self, X):
+        raise NotImplementedError("Subclasses should implement.")
+
     def fit(self, method="pinv", **kwargs):
         """
         Full fit of the model.
@@ -918,6 +921,8 @@ class RegressionResults(base.LikelihoodModelResults):
         The two-tailed p values for the t-stats of the params.
     resid
         The residuals of the model.
+    resid_pearson
+        `wresid` normalized to have unit variance.
     rsquared
         R-squared of a model with an intercept.  This is defined here as
         1 - `ssr`/`centered_tss` if the constant is included in the model and
@@ -1236,29 +1241,25 @@ class RegressionResults(base.LikelihoodModelResults):
         return np.sqrt(np.diag(self.cov_HC3))
 
 
-    #TODO: this needs a test
-    def norm_resid(self):
+    @cache_readonly
+    def resid_pearson(self):
         """
         Residuals, normalized to have unit variance.
 
         Returns
         -------
         An array wresid/sqrt(scale)
-
-        Notes
-        -----
-        This method is untested
         """
 
         if not hasattr(self, 'resid'):
             raise ValueError('Method requires residuals.')
-        if np.all(self.wresid <= 0.0):
+        if np.all(np.abs(self.wresid) <= 0.0):
             # This is a very exact check, does not account for numerical error
             from warnings import warn
             warn("All residuals are 0, cannot compute normed residuals.")
             return self.wresid
         else:
-            return self.wresid / np.sqrt(np.mean(self.wresid ** 2))
+            return self.wresid / np.sqrt(self.scale)
 
     def _is_nested(self, restricted):
         """
@@ -2236,19 +2237,19 @@ class RegressionResultsWrapper(wrap.ResultsWrapper):
         'HC0_se' : 'columns',
         'HC1_se' : 'columns',
         'HC2_se' : 'columns',
-        'HC3_se' : 'columns'
+        'HC3_se' : 'columns',
+        'norm_resid' : 'rows',
     }
 
     _wrap_attrs = wrap.union_dicts(base.LikelihoodResultsWrapper._attrs,
                                    _attrs)
 
-    _methods = {
-        'norm_resid' : 'rows',
-    }
+    _methods = {}
 
     _wrap_methods = wrap.union_dicts(
                         base.LikelihoodResultsWrapper._wrap_methods,
                         _methods)
+
 wrap.populate_wrapper(RegressionResultsWrapper,
                       RegressionResults)
 
