@@ -630,7 +630,7 @@ def cov_white_simple(results, use_correction=True):
     cov_w = _HCCM2(hessian_inv, sigma)  #add bread to sandwich
 
     if use_correction:
-        nobs, k_params = xu
+        nobs, k_params = xu.shape
         cov_w *= nobs / float(nobs - k_params)
 
     return cov_w
