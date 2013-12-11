@@ -729,6 +729,30 @@ class TestDataDimensions(CheckRegressionResults):
     def check_confidenceintervals(self, conf1, conf2):
         assert_almost_equal(conf1, conf2(), DECIMAL_4)
 
+class TestGLS_large_data(TestDataDimensions):
+    @classmethod
+    def setupClass(cls):
+        nobs = 1000
+        y = np.random.randn(nobs,1)
+        X = np.random.randn(nobs,20)
+        sigma = np.ones_like(y)
+        cls.gls_res = GLS(y, X, sigma=sigma).fit()
+        cls.gls_res_scalar = GLS(y, X, sigma=1).fit()
+        cls.gls_res_none= GLS(y, X).fit()
+        cls.ols_res = OLS(y, X).fit()
+
+    def test_large_equal_params(self):
+        assert_almost_equal(self.ols_res.params, self.gls_res.params, DECIMAL_7)
+
+    def test_large_equal_loglike(self):
+        assert_almost_equal(self.ols_res.llf, self.gls_res.llf, DECIMAL_7)
+
+    def test_large_equal_params_none(self):
+        assert_almost_equal(self.gls_res.params, self.gls_res_none.params,
+                            DECIMAL_7)
+
+
+
 class TestNxNx(TestDataDimensions):
     @classmethod
     def setupClass(cls):

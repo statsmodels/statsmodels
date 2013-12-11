@@ -70,8 +70,7 @@ def _get_sigma(sigma, nobs):
         if sigma.shape != (nobs,):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
                              "array of shape %s x %s" % (nobs, nobs, nobs))
-        cholsigmainv = np.diag(1/sigma**.5)
-        sigma = np.diag(sigma)
+        cholsigmainv = 1/np.sqrt(sigma)
     else:
         if sigma.shape != (nobs, nobs):
             raise ValueError("Sigma must be a scalar, 1d of length %s or a 2d "
@@ -330,6 +329,7 @@ class GLS(RegressionModel):
     #TODO: add options igls, for iterative fgls if sigma is None
     #TODO: default if sigma is none should be two-step GLS
         sigma, cholsigmainv = _get_sigma(sigma, len(endog))
+
         super(GLS, self).__init__(endog, exog, missing=missing,
                                   hasconst=hasconst, sigma=sigma,
                                   cholsigmainv=cholsigmainv)
@@ -356,10 +356,17 @@ class GLS(RegressionModel):
         regression.GLS
         """
         X = np.asarray(X)
-        if np.any(self.sigma) and not self.sigma.shape == ():
-            return np.dot(self.cholsigmainv, X)
-        else:
+        if self.sigma is None or self.sigma.shape == ():
             return X
+        elif self.sigma.ndim == 1:
+            if X.ndim == 1:
+                return X * self.cholsigmainv
+            else:
+                return X * self.cholsigmainv[:, None]
+        else:
+            return np.dot(self.cholsigmainv, X)
+
+
 
     def loglike(self, params):
         """
@@ -393,10 +400,13 @@ class GLS(RegressionModel):
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with likelihood constant
-        if np.any(self.sigma) and self.sigma.ndim == 2:
+        if np.any(self.sigma):
         #FIXME: robust-enough check?  unneeded if _det_sigma gets defined
-            det = np.linalg.slogdet(self.sigma)
-            llf -= .5*det[1]
+            if self.sigma.ndim==2:
+                det = np.linalg.slogdet(self.sigma)
+                llf -= .5*det[1]
+            else:
+                llf -= 0.5*np.sum(np.log(self.sigma))
             # with error covariance matrix
         return llf
 
