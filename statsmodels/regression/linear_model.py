@@ -196,8 +196,9 @@ class RegressionModel(base.LikelihoodModel):
 
         elif method == "qr":
             if ((not hasattr(self, 'exog_Q')) or
+                (not hasattr(self, 'exog_R')) or
                 (not hasattr(self, 'normalized_cov_params')) or
-                (not hasattr(self, 'rank'))):
+                (getattr(self, 'rank', None) is None)):
                 Q, R = np.linalg.qr(self.wexog)
                 self.exog_Q, self.exog_R = Q, R
                 self.normalized_cov_params = np.linalg.inv(np.dot(R.T, R))
@@ -370,9 +371,9 @@ class GLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the Gaussian loglikelihood function at params.
+        Returns the value of the Gaussian log-likelihood function at params.
 
-        Given the whitened design matrix, the loglikelihood is evaluated
+        Given the whitened design matrix, the log-likelihood is evaluated
         at the parameter vector `params` for the dependent variable `endog`.
 
         Parameters
@@ -383,12 +384,12 @@ class GLS(RegressionModel):
         Returns
         -------
         loglike : float
-            The value of the loglikelihood function for a GLS Model.
+            The value of the log-likelihood function for a GLS Model.
 
 
         Notes
         -----
-        The loglikelihood function for the normal distribution is
+        The log-likelihood function for the normal distribution is
 
         .. math:: -\\frac{n}{2}\\log\\left(\\left(Y-\\hat{Y}\\right)^{\\prime}\\left(Y-\\hat{Y}\\right)\\right)-\\frac{n}{2}\\left(1+\\log\\left(\\frac{2\\pi}{n}\\right)\\right)-\\frac{1}{2}\\log\\left(\\left|\\Sigma\\right|\\right)
 
@@ -473,7 +474,7 @@ class WLS(RegressionModel):
         weights = self.weights
         # Experimental normalization of weights
         weights = weights / np.sum(weights) * nobs
-        if len(weights) != nobs and weights.size == nobs:
+        if weights.size != nobs and weights.shape[0] != nobs:
             raise ValueError('Weights must be scalar or same length as design')
 
     def whiten(self, X):
@@ -498,9 +499,9 @@ class WLS(RegressionModel):
 
     def loglike(self, params):
         """
-        Returns the value of the gaussian log likelihood function at params.
+        Returns the value of the gaussian log-likelihood function at params.
 
-        Given the whitened design matrix, the log likelihood is evaluated
+        Given the whitened design matrix, the log-likelihood is evaluated
         at the parameter vector `params` for the dependent variable `Y`.
 
         Parameters
@@ -510,7 +511,8 @@ class WLS(RegressionModel):
 
         Returns
         -------
-        The value of the log likelihood function for a WLS Model.
+        llf : float
+            The value of the log-likelihood function for a WLS Model.
 
         Notes
         --------
@@ -579,7 +581,7 @@ class OLS(WLS):
         Parameters
         ----------
         params : array-like
-            The coefficients with which to estimate the loglikelihood.
+            The coefficients with which to estimate the log-likelihood.
 
         Returns
         -------
@@ -1237,7 +1239,7 @@ class RegressionResults(base.LikelihoodModelResults):
     #TODO: this needs a test
     def norm_resid(self):
         """
-        Residuals, normalized to have unit length and unit variance.
+        Residuals, normalized to have unit variance.
 
         Returns
         -------
@@ -1247,10 +1249,16 @@ class RegressionResults(base.LikelihoodModelResults):
         -----
         This method is untested
         """
+
         if not hasattr(self, 'resid'):
-            raise ValueError('need normalized residuals to estimate standard '
-                             'deviation')
-        return self.wresid * recipr(np.sqrt(self.scale))
+            raise ValueError('Method requires residuals.')
+        if np.all(self.wresid <= 0.0):
+            # This is a very exact check, does not account for numerical error
+            from warnings import warn
+            warn("All residuals are 0, cannot compute normed residuals.")
+            return self.wresid
+        else:
+            return self.wresid / np.sqrt(np.mean(self.wresid ** 2))
 
     def _is_nested(self, restricted):
         """
@@ -2078,7 +2086,7 @@ class OLSResults(RegressionResults):
         -------
 
         res : tuple
-            The p-value and -2 times the log likelihood ratio for the
+            The p-value and -2 times the log-likelihood ratio for the
             hypothesized values.
 
         Examples
