@@ -732,7 +732,7 @@ class TestDataDimensions(CheckRegressionResults):
 class TestGLS_large_data(TestDataDimensions):
     @classmethod
     def setupClass(cls):
-        nobs = 100000
+        nobs = 1000
         y = np.random.randn(nobs,1)
         X = np.random.randn(nobs,20)
         sigma = np.ones_like(y)
@@ -748,7 +748,8 @@ class TestGLS_large_data(TestDataDimensions):
         assert_almost_equal(self.ols_res.llf, self.gls_res.llf, DECIMAL_7)
 
     def test_large_equal_params_none(self):
-        assert_equal(self.gls_res.params, self.gls_res_none.params, DECIMAL_7)
+        assert_almost_equal(self.gls_res.params, self.gls_res_none.params,
+                            DECIMAL_7)
 
 
 
