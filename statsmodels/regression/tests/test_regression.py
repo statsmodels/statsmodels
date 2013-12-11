@@ -223,7 +223,8 @@ class TestOLS(CheckRegressionResults):
             assert_equal(rsquared_adj, np.nan)
 
     def test_qr_alternatives(self):
-        assert_equal(self.res_qr.params,self.res_qr_manual.params)
+        assert_allclose(self.res_qr.params, self.res_qr_manual.params,
+                        rtol=5e-12)
 
     def test_norm_resid(self):
         resid = self.res1.resid
