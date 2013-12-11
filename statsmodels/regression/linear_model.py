@@ -1504,9 +1504,6 @@ class RegressionResults(base.LikelihoodModelResults):
             warnings.warn('Likelihood Ratio test is likely invalid with ' +
                           'robust covariance, proceeding anyway', UserWarning)
 
-        if large_sample:
-            return self.compare_lr_test(restricted, use_lr=True)
-
         llf_full = self.llf
         llf_restr = restricted.llf
         df_full = self.df_resid
