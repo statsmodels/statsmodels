@@ -1253,13 +1253,13 @@ class RegressionResults(base.LikelihoodModelResults):
 
         if not hasattr(self, 'resid'):
             raise ValueError('Method requires residuals.')
-        if np.all(self.wresid <= 0.0):
+        if np.all(np.abs(self.wresid) <= 0.0):
             # This is a very exact check, does not account for numerical error
             from warnings import warn
             warn("All residuals are 0, cannot compute normed residuals.")
             return self.wresid
         else:
-            return self.wresid / np.sqrt(np.mean(self.wresid ** 2))
+            return self.wresid / np.sqrt(self.scale)
 
     def _is_nested(self, restricted):
         """
