@@ -131,8 +131,8 @@ ctypedef int dgemm_t(
 ctypedef int dgemv_t(
     # Compute C := alpha*A*x + beta*y
     char *trans,   # {'T','C'}: o(A)=A'; {'N'}: o(A)=A
-    int *m,        # Rows of o(A)
-    int *n,        # Columns of o(A) / min(len(x))
+    int *m,        # Rows of A (prior to transpose from *trans)
+    int *n,        # Columns of A / min(len(x))
     double *alpha, # Scalar multiple
     double *a,     # Matrix A: mxn
     int *lda,      # The size of the first dimension of A (in memory)
