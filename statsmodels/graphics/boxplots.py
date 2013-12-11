@@ -14,7 +14,7 @@ __all__ = ['violinplot', 'beanplot']
 
 
 def violinplot(data, ax=None, labels=None, positions=None, side='both',
-               show_boxplot=True, plot_opts={}):
+               show_boxplot=True, bw_method=None, plot_opts={}):
     """Make a violin plot of each dataset in the `data` sequence.
 
     A violin plot is a boxplot combined with a kernel density estimate of the
@@ -136,6 +136,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     # Plot violins.
     for pos_data, pos in zip(data, positions):
         xvals, violin = _single_violin(ax, pos, pos_data, width, side,
+                                       bw_method,
                                        plot_opts)
 
     if show_boxplot:
@@ -147,7 +148,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     return fig
 
 
-def _single_violin(ax, pos, pos_data, width, side, plot_opts):
+def _single_violin(ax, pos, pos_data, width, side, bw_method, plot_opts):
     """"""
 
     def _violin_range(pos_data, plot_opts):
@@ -169,7 +170,7 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
 
     pos_data = np.asarray(pos_data)
     # Kernel density estimate for data at this position.
-    kde = gaussian_kde(pos_data)
+    kde = gaussian_kde(pos_data, bw_method=bw_method)
 
     # Create violin for pos, scaled to the available space.
     xvals = _violin_range(pos_data, plot_opts)
