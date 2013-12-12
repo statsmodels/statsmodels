@@ -1253,7 +1253,8 @@ class RegressionResults(base.LikelihoodModelResults):
 
         if not hasattr(self, 'resid'):
             raise ValueError('Method requires residuals.')
-        if np.all(np.abs(self.wresid) <= 0.0):
+        if np.all(np.abs(self.wresid) <=
+                  1e-14 * np.abs(self.model.endog.mean())):
             # This is a very exact check, does not account for numerical error
             from warnings import warn
             warn("All residuals are 0, cannot compute normed residuals.")
