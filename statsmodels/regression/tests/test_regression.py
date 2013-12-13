@@ -241,7 +241,8 @@ class TestOLS(CheckRegressionResults):
         with warnings.catch_warnings(record=True):
             y = self.res1.model.endog
             res = OLS(y,y).fit()
-            assert_equal(res.wresid, res.resid_pearson)
+            assert_allclose(res.scale, 0, atol=1e-20)
+            assert_allclose(res.wresid, res.resid_pearson, atol=5e-11)
 
 
 class TestRTO(CheckRegressionResults):
