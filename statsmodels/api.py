@@ -4,6 +4,7 @@ import regression
 from .regression.linear_model import OLS, GLS, WLS, GLSAR
 from .regression.quantile_regression import QuantReg
 from .genmod.generalized_linear_model import GLM
+from .genmod.generalized_estimating_equations import GEE
 from .genmod import families
 import robust
 from .robust.robust_linear_model import RLM

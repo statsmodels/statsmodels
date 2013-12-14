@@ -6,23 +6,11 @@ This script checks Poisson models.
 See the generated file "gee_poisson_simulation_check.txt" for results.
 """
 
-##!!!! Delete before going to github
-import sys
-df = "/afs/umich.edu/user/k/s/kshedden/fork/statsmodels/"
-sys.path.insert(0, df)
-
-
 import numpy as np
-import scipy
-from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.families import Gaussian,Binomial,Poisson
-from statsmodels.genmod.dependence_structures import Exchangeable,\
-    Independence,Autoregressive,Nested
-import statsmodels.formula.api as sm
-from itertools import product
-
+from statsmodels.genmod.families import Poisson
 from gee_gaussian_simulation_check import GEE_simulator
-
+from statsmodels.genmod.generalized_estimating_equations import GEE
+from statsmodels.genmod.dependence_structures import Exchangeable,Independence
 
 
 class Exchangeable_simulator(GEE_simulator):

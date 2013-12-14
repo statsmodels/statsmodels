@@ -230,6 +230,7 @@ class GEE(base.Model):
                        covstruct=None, missing='none', offset=None,
                        constraint=None):
 
+        groups = np.array(groups) # in case groups is pandas
         # Pass groups, time, and offset so they are processed for
         # missing data along with endog and exog.  Calling super
         # creates self.exog, self.endog, etc. as ndarrays and the
