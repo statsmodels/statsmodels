@@ -7,25 +7,14 @@ See the generated file "gee_categorical_simulation_check.txt" for
 results.
 """
 
-##!!!! Delete before going to github
-import sys
-df = "/afs/umich.edu/user/k/s/kshedden/fork/statsmodels/"
-sys.path.insert(0, df)
-
-
 import numpy as np
+from scipy import stats
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
     gee_setup_ordinal, gee_setup_nominal,\
-    gee_ordinal_starting_values, Multinomial, GEEMargins
-from statsmodels.genmod.families import Gaussian,Binomial,Poisson
-from statsmodels.genmod.dependence_structures import Exchangeable,\
-    Independence, GlobalOddsRatio, Autoregressive, Nested
-import statsmodels.formula.api as sm
-from itertools import product
-from scipy import stats
-
+    gee_ordinal_starting_values, Multinomial
+from statsmodels.genmod.families import Binomial
+from statsmodels.genmod.dependence_structures import GlobalOddsRatio
 from gee_gaussian_simulation_check import GEE_simulator
-
 
 
 class ordinal_simulator(GEE_simulator):

@@ -6,20 +6,12 @@ Only Gaussian models are currently checked.
 See the generated file "gee_simulation_check.txt" for results.
 """
 
-##!!!! Delete before going to github
-import sys
-df = "/afs/umich.edu/user/k/s/kshedden/fork/statsmodels/"
-sys.path.insert(0, df)
-
-
-import numpy as np
 import scipy
-from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.families import Gaussian,Binomial,Poisson
-from statsmodels.genmod.dependence_structures import Exchangeable,\
-    Independence,Autoregressive,Nested
-import statsmodels.formula.api as sm
+import numpy as np
 from itertools import product
+from statsmodels.genmod.families import Gaussian
+from statsmodels.genmod.generalized_estimating_equations import GEE
+from statsmodels.genmod.dependence_structures import Autoregressive, Nested
 
 np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
                     suppress=True)

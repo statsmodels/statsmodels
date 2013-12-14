@@ -1,3 +1,4 @@
+import numpy as np
 from scipy.stats.distributions import norm
 
 def generate_logistic():
@@ -130,8 +131,6 @@ def generate_ordinal():
     beta[2] = 1
     beta[4] = -1
 
-    from scipy.stats.distributions import norm
-
     rz = 0.5
 
     OUT = open("gee_ordinal_1.csv", "w")
@@ -166,8 +165,6 @@ def generate_nominal():
     beta1 = np.r_[0.5, 0.5]
     beta2 = np.r_[-1, -0.5]
     p = len(beta1)
-
-    from scipy.stats.distributions import norm
 
     rz = 0.5
 
@@ -208,8 +205,6 @@ def generate_poisson():
     beta[4] = -0.5
 
     nclust = 100
-
-    from scipy.stats.distributions import norm
 
     rz = 0.5
 
