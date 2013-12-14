@@ -8,7 +8,7 @@ These functions haven't been formally tested.
 
 from scipy import stats
 import numpy as np
-
+from statsmodels.tools import apply_1d_function
 
 #TODO: these are pretty straightforward but they should be tested
 def durbin_watson(resids):
@@ -48,13 +48,10 @@ def omni_normtest(resids, axis=0):
     resids = np.asarray(resids)
     n = resids.shape[axis]
     if n < 8:
-        return np.nan, np.nan
-        return_shape = list(resids.shape)
-        del return_shape[axis]
-        return np.nan * np.zeros(return_shape), np.nan * np.zeros(return_shape)
-        raise ValueError(
-            "skewtest is not valid with less than 8 observations; %i samples"
+        from warnings import warn
+        warn("skewtest is not valid with less than 8 observations; %i samples"
             " were given." % int(n))
+        return np.nan, np.nan
 
     return stats.normaltest(resids, axis=axis)
 
@@ -90,3 +87,126 @@ def jarque_bera(resids):
 
     return JB, JBpv, skew, kurtosis
 
+def robust_kurtosis(resids):
+    """
+    Calculates the four kurtosis measures in Kim & White
+    """
+
+def _scalar_slice(i, axis, ndim):
+    if ndim==1:
+        return i
+
+    s = [slice(None)] * ndim
+    s[axis] = i
+    return s
+
+
+def _weighted_quantile(a, axis, q):
+
+    n = a.shape[axis]
+    ndim = a.ndim
+
+    loc1 = int(q*(n-1) - 1)
+    loc2 = loc1 + 1
+
+    w = 1 - ((n-1) * q  - loc2)
+
+    s1 = _scalar_slice(loc1, axis, ndim)
+    s2 = _scalar_slice(loc2, axis, ndim)
+
+    return w * a[s1] + (1-w) * a[s2]
+
+
+def robust_skewness(y, axis=0):
+    """
+    Calculates the four skewness measures in Kim & White
+    """
+    if axis is None:
+        y = y.flat[:]
+        axis = 0
+
+    y = np.sort(y, axis)
+
+    q1 = _weighted_quantile(y,axis,0.25)
+    q2 = _weighted_quantile(y,axis,0.25)
+    q3 = _weighted_quantile(y,axis,0.25)
+
+    mu = y.mean(axis)
+    sigma = np.mean(((y - mu) ** 2.0), axis)
+
+    sk1 =  np.mean(((y - mu) / sigma) ** 3.0, axis)
+    sk2 = (q1 + q3 - 2.0 * q2) / (q3 - q1)
+    sk3 = (mu - q2) / np.mean(abs(y - q2), axis)
+    sk4 = (mu - q2) / sigma
+
+    return sk1, sk2, sk3, sk4
+
+
+def _medcouple_1d(y):
+    """
+    Calculates the medcouple robust measure of skew.
+
+    Parameters
+    ----------
+    y : array-like, 1-d
+
+    Returns
+    -------
+    mc : float
+        The medcouple statistic
+
+    Notes
+    -----
+    The current algorithm requires a O(N**2) memory allocations, and so may
+    not work for very large arrays (N>10000).
+
+    .. [1] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
+    distributions" Computational Statistics & Data Analysis, vol. 52,
+    pp. 5186-5201, August 2008.
+    """
+
+    # Parameter changes the algorithm to the slower for large n
+
+    y = np.squeeze(np.asarray(y))
+    if len(y.shape) > 1:
+        raise ValueError("y must be squeezable to a 1-d array")
+
+    y = np.sort(y)
+
+    n = y.shape[0]
+    if n % 2 == 0:
+        mf = (y[n//2 - 1] + y[n//2 ])/2
+    else:
+        mf = y[(n-1)//2]
+
+    lower = y[y<mf]
+    upper = y[y>mf]
+    upper = upper[:,None]
+    diff = upper - lower
+    sum = upper + lower
+    return np.median((sum - 2.0 * mf) / diff)
+
+
+def medcouple(y, axis=0):
+    """
+    Calculates the medcouple robust measure of skew.
+
+    Parameters
+    ----------
+    y : array-like
+
+    Returns
+    -------
+    mc : float
+        The medcouple statistic
+
+    Notes
+    -----
+    The current algorithm requires a O(N**2) memory allocations, and so may
+    not work for very large arrays (N>10000).
+
+    .. [1] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
+    distributions" Computational Statistics & Data Analysis, vol. 52,
+    pp. 5186-5201, August 2008.
+    """
+    return apply_1d_function(_medcouple_1d, y, axis)
