@@ -1,0 +1,139 @@
+# -*- coding: utf-8 -*-
+"""
+
+Created on Sat Dec 14 17:23:25 2013
+
+Author: Josef Perktold
+"""
+
+import os
+import numpy as np
+from statsmodels.sandbox.nonparametric import kernels
+
+from numpy.testing import assert_allclose, assert_array_less
+
+DEBUG = 0
+
+curdir = os.path.dirname(os.path.abspath(__file__))
+fname = 'results/results_kernel_regression.csv'
+results = np.recfromcsv(os.path.join(curdir, fname))
+
+y = results['accident']
+x = np.log(results['service'])
+use_mask = ~np.isnan(x)
+x = x[use_mask]
+y = y[use_mask]
+xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
+
+#kern_name = 'gau'
+#kern = kernels.Gaussian()
+#kern_name = 'epan2'
+#kern = kernels.Epanechnikov()
+#kern_name = 'rec'
+#kern = kernels.Uniform()  # ours looks awful
+#kern_name = 'tri'
+#kern = kernels.Triangular()
+#kern_name = 'cos'
+#kern = kernels.Cosine()  #doesn't match up, nan in Stata results ?
+#kern_name = 'bi'
+#kern = kernels.Biweight()
+
+class CheckKernelMixin(object):
+
+    def test_smoothconf(self):
+        kern_name = self.kern_name
+        kern = self.kern
+        #fittedg = np.array([kernels.Epanechnikov().smoothconf(x, y, xi) for xi in xg])
+        fittedg = np.array([kern.smoothconf(x, y, xi) for xi in xg])
+        # attach for inspection from outside of test run
+        self.fittedg = fittedg
+
+        res_fitted = results['s_' + kern_name]
+        res_se = results['se_' + kern_name]
+        crit = 1.9599639845400545  # norm.isf(0.05 / 2)
+        # implied standard deviation from conf_int
+        se = (fittedg[:, 2] - fittedg[:, 1]) / crit
+        fitted = fittedg[:, 1]
+
+        # check both rtol & atol
+        assert_allclose(fitted, res_fitted, rtol=5e-7, atol=1e-20)
+        assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
+
+        # TODO: check we are using a different algorithm for se
+        # The following are very rough checks
+
+        self.se = se
+        self.res_se = res_se
+        se_valid = np.isfinite(res_se)
+        if np.any(~se_valid):
+            print 'nan in stata result', self.__class__.__name__
+        assert_allclose(se[se_valid], res_se[se_valid], rtol=0.7, atol=0.2)
+        # check that most values are closer
+        mask = np.abs(se - res_se) > (0.2 + 0.2 * res_se)
+        if not hasattr(self, 'se_n_diff'):
+            se_n_diff = 40 * 0.125
+        else:
+            se_n_diff = self.se_n_diff
+        assert_array_less(mask.sum(), se_n_diff + 1)  # at most 5 large diffs
+
+        if DEBUG:
+            # raises: RuntimeWarning: invalid value encountered in divide
+            print fitted / res_fitted - 1
+            print se / res_se - 1
+        # Stata only displays ci, doesn't save it
+        res_upp = res_fitted + crit * res_se
+        res_low = res_fitted - crit * res_se
+        self.res_fittedg = np.column_stack((res_low, res_fitted, res_upp))
+        if DEBUG:
+            print fittedg[:, 2] / res_upp - 1
+            print fittedg[:, 2] - res_upp
+            print fittedg[:, 0] - res_low
+            print np.max(np.abs(fittedg[:, 2] / res_upp - 1))
+        assert_allclose(fittedg[se_valid, 2], res_upp[se_valid], rtol=0.1, atol=0.2)
+        assert_allclose(fittedg[se_valid, 0], res_low[se_valid], rtol=0.2, atol=0.3)
+
+        #assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
+
+    def t_est_smoothconf_data(self):
+        kern = self.kern
+        crit = 1.9599639845400545  # norm.isf(0.05 / 2)
+        # no reference results saved to csv yet
+        fitted_x = np.array([kern.smoothconf(x, y, xi) for xi in x])
+        if DEBUG:
+            print (fitted_x[:, 2] - fitted_x[:, 1]) / crit
+
+class TestEpan(CheckKernelMixin):
+    kern_name = 'epan2'
+    kern = kernels.Epanechnikov()
+
+class TestGau(CheckKernelMixin):
+    kern_name = 'gau'
+    kern = kernels.Gaussian()
+
+class TestUniform(CheckKernelMixin):
+    kern_name = 'rec'
+    kern = kernels.Uniform()  # ours looks awful
+
+class TestTriangular(CheckKernelMixin):
+    kern_name = 'tri'
+    kern = kernels.Triangular()
+    se_n_diff = 10
+
+class T_estCosine(CheckKernelMixin):
+    # Stata results for Cosine look strange, has nans
+    kern_name = 'cos'
+    kern = kernels.Cosine()  #doesn't match up, nan in Stata results ?
+
+class TestBiweight(CheckKernelMixin):
+    kern_name = 'bi'
+    kern = kernels.Biweight()
+    se_n_diff = 9
+
+if __name__ == '__main__':
+    tt = TestEpan()
+    tt = TestGau()
+    tt = TestBiweight()
+    tt.test_smoothconf()
+    diff_rel = tt.fittedg / tt.res_fittedg - 1
+    diff_abs = tt.fittedg - tt.res_fittedg
+    mask = np.abs(tt.fittedg - tt.res_fittedg) > (0.3 + 0.1 * tt.res_fittedg)
