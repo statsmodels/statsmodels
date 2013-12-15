@@ -40,6 +40,11 @@ xg = np.linspace(x.min(), x.max(), 40) # grid points default in Stata
 
 class CheckKernelMixin(object):
 
+    se_rtol = 0.7
+    upp_rtol = 0.1
+    low_rtol = 0.2
+    low_atol = 0.3
+
     def test_smoothconf(self):
         kern_name = self.kern_name
         kern = self.kern
@@ -67,7 +72,7 @@ class CheckKernelMixin(object):
         se_valid = np.isfinite(res_se)
         if np.any(~se_valid):
             print 'nan in stata result', self.__class__.__name__
-        assert_allclose(se[se_valid], res_se[se_valid], rtol=0.7, atol=0.2)
+        assert_allclose(se[se_valid], res_se[se_valid], rtol=self.se_rtol, atol=0.2)
         # check that most values are closer
         mask = np.abs(se - res_se) > (0.2 + 0.2 * res_se)
         if not hasattr(self, 'se_n_diff'):
@@ -89,8 +94,10 @@ class CheckKernelMixin(object):
             print fittedg[:, 2] - res_upp
             print fittedg[:, 0] - res_low
             print np.max(np.abs(fittedg[:, 2] / res_upp - 1))
-        assert_allclose(fittedg[se_valid, 2], res_upp[se_valid], rtol=0.1, atol=0.2)
-        assert_allclose(fittedg[se_valid, 0], res_low[se_valid], rtol=0.2, atol=0.3)
+        assert_allclose(fittedg[se_valid, 2], res_upp[se_valid],
+                        rtol=self.upp_rtol, atol=0.2)
+        assert_allclose(fittedg[se_valid, 0], res_low[se_valid],
+                        rtol=self.low_rtol, atol=self.low_atol)
 
         #assert_allclose(fitted, res_fitted, rtol=0, atol=1e-6)
 
@@ -112,12 +119,19 @@ class TestGau(CheckKernelMixin):
 
 class TestUniform(CheckKernelMixin):
     kern_name = 'rec'
-    kern = kernels.Uniform()  # ours looks awful
+    kern = kernels.Uniform()
+    se_rtol = 0.8
+    se_n_diff = 8
+    upp_rtol = 0.4
+    low_rtol = 0.2
+    low_atol = 0.8
 
 class TestTriangular(CheckKernelMixin):
     kern_name = 'tri'
     kern = kernels.Triangular()
     se_n_diff = 10
+    upp_rtol = 0.15
+    low_rtol = 0.3
 
 class T_estCosine(CheckKernelMixin):
     # Stata results for Cosine look strange, has nans
@@ -128,6 +142,7 @@ class TestBiweight(CheckKernelMixin):
     kern_name = 'bi'
     kern = kernels.Biweight()
     se_n_diff = 9
+    low_rtol = 0.3
 
 if __name__ == '__main__':
     tt = TestEpan()
