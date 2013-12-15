@@ -1,17 +1,17 @@
-
-
+# TODO: Test robust skewness
+# TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import assert_almost_equal
+from numpy.testing import (assert_almost_equal, assert_array_equal, TestCase)
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
-                            durbin_watson)
+                                         durbin_watson, medcouple, robust_kurtosis,
+                                         robust_skewness)
 from statsmodels.stats.adnorm import normal_ad
 
-
 #a random array, rounded to 4 decimals
-x = np.array([-0.1184, -1.3403,  0.0063, -0.612 , -0.3869, -0.2313, -2.8485,
-       -0.2167,  0.4153,  1.8492, -0.3706,  0.9726, -0.1501, -0.0337,
-       -1.4423,  1.2489,  0.9182, -0.2331, -0.6182,  0.183 ])
+x = np.array([-0.1184, -1.3403, 0.0063, -0.612, -0.3869, -0.2313, -2.8485,
+              -0.2167, 0.4153, 1.8492, -0.3706, 0.9726, -0.1501, -0.0337,
+              -1.4423, 1.2489, 0.9182, -0.2331, -0.6182, 0.183])
 
 
 def test_durbin_watson():
@@ -31,48 +31,50 @@ def test_durbin_watson():
     assert_almost_equal(durbin_watson(x), st_R, 14)
 
     st_R = 1.848802400319998
-    assert_almost_equal(durbin_watson(x**2), st_R, 14)
+    assert_almost_equal(durbin_watson(x ** 2), st_R, 14)
 
     st_R = 1.09897993228779
-    assert_almost_equal(durbin_watson(x[1:]+0.5*x[:-1]), st_R, 14)
+    assert_almost_equal(durbin_watson(x[1:] + 0.5 * x[:-1]), st_R, 14)
 
     st_R = 0.937241876707273
-    assert_almost_equal(durbin_watson(x[1:]+0.8*x[:-1]), st_R, 14)
+    assert_almost_equal(durbin_watson(x[1:] + 0.8 * x[:-1]), st_R, 14)
 
     st_R = 0.921488912587806
-    assert_almost_equal(durbin_watson(x[1:]+0.9*x[:-1]), st_R, 14)
+    assert_almost_equal(durbin_watson(x[1:] + 0.9 * x[:-1]), st_R, 14)
 
 
 def test_omni_normtest():
     #tests against R fBasics
     from scipy import stats
+
     st_pv_R = np.array(
-              [[3.994138321207883, -1.129304302161460,  1.648881473704978],
-               [0.1357325110375005, 0.2587694866795507, 0.0991719192710234]])
+        [[3.994138321207883, -1.129304302161460, 1.648881473704978],
+         [0.1357325110375005, 0.2587694866795507, 0.0991719192710234]])
 
     nt = omni_normtest(x)
-    assert_almost_equal(nt, st_pv_R[:,0], 14)
+    assert_almost_equal(nt, st_pv_R[:, 0], 14)
 
     st = stats.skewtest(x)
-    assert_almost_equal(st, st_pv_R[:,1], 14)
+    assert_almost_equal(st, st_pv_R[:, 1], 14)
 
     kt = stats.kurtosistest(x)
-    assert_almost_equal(kt, st_pv_R[:,2], 11)
+    assert_almost_equal(kt, st_pv_R[:, 2], 11)
 
     st_pv_R = np.array(
-              [[34.523210399523926,  4.429509162503833,  3.860396220444025],
-               [3.186985686465249e-08, 9.444780064482572e-06, 1.132033129378485e-04]])
+        [[34.523210399523926, 4.429509162503833, 3.860396220444025],
+         [3.186985686465249e-08, 9.444780064482572e-06, 1.132033129378485e-04]])
 
-    x2 = x**2
+    x2 = x ** 2
     #TODO: fix precision in these test with relative tolerance
     nt = omni_normtest(x2)
-    assert_almost_equal(nt, st_pv_R[:,0], 12)
+    assert_almost_equal(nt, st_pv_R[:, 0], 12)
 
     st = stats.skewtest(x2)
-    assert_almost_equal(st, st_pv_R[:,1], 12)
+    assert_almost_equal(st, st_pv_R[:, 1], 12)
 
     kt = stats.kurtosistest(x2)
-    assert_almost_equal(kt, st_pv_R[:,2], 12)
+    assert_almost_equal(kt, st_pv_R[:, 2], 12)
+
 
 def test_omni_normtest_axis():
     #test axis of omni_normtest
@@ -83,6 +85,7 @@ def test_omni_normtest_axis():
     assert_almost_equal(nt2, nt1, decimal=13)
     assert_almost_equal(nt3, nt1, decimal=13)
 
+
 def test_jarque_bera():
     #tests against R fBasics
     st_pv_R = np.array([1.9662677226861689, 0.3741367669648314])
@@ -90,16 +93,17 @@ def test_jarque_bera():
     assert_almost_equal(jb, st_pv_R, 14)
 
     st_pv_R = np.array([78.329987305556, 0.000000000000])
-    jb = jarque_bera(x**2)[:2]
+    jb = jarque_bera(x ** 2)[:2]
     assert_almost_equal(jb, st_pv_R, 13)
 
     st_pv_R = np.array([5.7135750796706670, 0.0574530296971343])
-    jb = jarque_bera(np.log(x**2))[:2]
+    jb = jarque_bera(np.log(x ** 2))[:2]
     assert_almost_equal(jb, st_pv_R, 14)
 
     st_pv_R = np.array([2.6489315748495761, 0.2659449923067881])
-    jb = jarque_bera(np.exp(-x**2))[:2]
+    jb = jarque_bera(np.exp(-x ** 2))[:2]
     assert_almost_equal(jb, st_pv_R, 14)
+
 
 def test_shapiro():
     #tests against R fBasics
@@ -112,17 +116,18 @@ def test_shapiro():
 
     #st is ok -7.15e-06, pval agrees at -3.05e-10
     st_pv_R = np.array([5.799574255943298e-01, 1.838456834681376e-06 * 1e4])
-    sh = shapiro(x**2)*np.array([1,1e4])
+    sh = shapiro(x ** 2) * np.array([1, 1e4])
     assert_almost_equal(sh, st_pv_R, 5)
 
-    st_pv_R = np.array([0.91730442643165588, 0.08793704167882448 ])
-    sh = shapiro(np.log(x**2))
+    st_pv_R = np.array([0.91730442643165588, 0.08793704167882448])
+    sh = shapiro(np.log(x ** 2))
     assert_almost_equal(sh, st_pv_R, 5)
 
     #diff is [  9.38773155e-07,   5.48221246e-08]
-    st_pv_R = np.array([0.818361863493919373, 0.001644620895206969 ])
-    sh = shapiro(np.exp(-x**2))
+    st_pv_R = np.array([0.818361863493919373, 0.001644620895206969])
+    sh = shapiro(np.exp(-x ** 2))
     assert_almost_equal(sh, st_pv_R, 5)
+
 
 def test_adnorm():
     #tests against R fBasics
@@ -133,33 +138,95 @@ def test_adnorm():
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([2.976266267594575e+00, 8.753003709960645e-08])
-    ad = normal_ad(x**2)
+    ad = normal_ad(x ** 2)
     assert_almost_equal(ad, st_pv_R, 11)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([0.4892557856308528, 0.1968040759316307])
-    ad = normal_ad(np.log(x**2))
+    ad = normal_ad(np.log(x ** 2))
     assert_almost_equal(ad, st_pv_R, 12)
     st_pv.append(st_pv_R)
 
     st_pv_R = np.array([1.4599014654282669312, 0.0006380009232897535])
-    ad = normal_ad(np.exp(-x**2))
+    ad = normal_ad(np.exp(-x ** 2))
     assert_almost_equal(ad, st_pv_R, 12)
     st_pv.append(st_pv_R)
 
-    ad = normal_ad(np.column_stack((x,x**2, np.log(x**2),np.exp(-x**2))).T,
+    ad = normal_ad(np.column_stack((x, x ** 2, np.log(x ** 2), np.exp(-x ** 2))).T,
                    axis=1)
     assert_almost_equal(ad, np.column_stack(st_pv), 11)
 
+
 def test_durbin_watson_pandas():
-    x=np.random.randn(50)
-    x_series=pd.Series(x)
+    x = np.random.randn(50)
+    x_series = pd.Series(x)
     assert_almost_equal(durbin_watson(x), durbin_watson(x_series), decimal=13)
 
-if __name__ == '__main__':
-    test_durbin_watson()
-    test_omni_normtest()
-    test_jarque_bera()
-    test_shapiro()
-    test_adnorm()
-    test_durbin_watson_pandas()
+
+class TestStattools(TestCase):
+    def test_medcouple_symmetric(self):
+        mc = medcouple(np.arange(5.0))
+        assert_almost_equal(mc, 0)
+
+
+    def test_medcouple_nonzero(self):
+        # Note: The R example is wrong here.  This is the correct value.
+        mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
+        assert_almost_equal(mc, -0.38095238)
+
+
+    def test_medcouple_symmetry(self):
+        # Note: The R example is wrong here.  This is the correct value.
+        x = np.random.standard_normal(100)
+        mcp = medcouple(x)
+        mcn = medcouple(-x)
+        assert_almost_equal(mcp + mcn, 0)
+
+    def test_durbin_watson(self):
+        x = np.random.standard_normal(100)
+        dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
+        assert_almost_equal(dw, durbin_watson(x))
+
+    def test_durbin_watson_2d(self):
+        shape = (1, 10)
+        x = np.random.standard_normal(100)
+        dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
+        x = np.tile(x[:, None], shape)
+        assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x))
+
+    def test_durbin_watson_3d(self):
+        shape = (10, 1, 10)
+        x = np.random.standard_normal(100)
+        dw = sum(np.diff(x) ** 2.0) / np.dot(x, x)
+        x = np.tile(x[None, :, None], shape)
+        assert_almost_equal(np.squeeze(dw * np.ones(shape)), durbin_watson(x, axis=1))
+
+    def test_robust_skewness_1d(self):
+        x = np.arange(21.0)
+        sk = robust_skewness(x)
+        assert_almost_equal(np.array(sk), np.zeros(4))
+
+    def test_robust_skewness_symmetric(self):
+        x = np.random.standard_normal(100)
+        x = np.hstack([x,np.zeros(1),-x])
+        sk = robust_skewness(x)
+        assert_almost_equal(np.array(sk),np.zeros(4))
+
+    def test_robust_skewness_3d(self):
+        x = np.random.standard_normal(100)
+        x = np.hstack([x,np.zeros(1),-x])
+        x = np.tile(x,(10,10,1))
+        sk_3d = robust_skewness(x, axis=2)
+        result = np.zeros((10,10))
+        for sk in sk_3d:
+            assert_almost_equal(sk,result)
+
+
+if __name__ == "__main__":
+    import nose
+
+    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False) #, '--pdb'
+    # run_module_suite()
+    #nose.runmodule(argv=[__file__,'-vvs','-x','--pdb', '--pdb-failure'],
+    #               exit=False)
+
