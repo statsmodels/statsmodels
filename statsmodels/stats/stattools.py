@@ -8,10 +8,10 @@ These functions haven't been formally tested.
 
 from scipy import stats
 import numpy as np
-from statsmodels.tools import apply_1d_function
 
-#TODO: these are pretty straightforward but they should be tested
-def durbin_watson(resids):
+# TODO: these are pretty straightforward but they should be tested
+# TODO: Critical Values
+def durbin_watson(resids, axis=0):
     """
     Calculates the Durbin-Watson statistic
 
@@ -25,8 +25,8 @@ def durbin_watson(resids):
     sum_(t=2)^(T)((e_t - e_(t-1))^(2))/sum_(t=1)^(T)e_t^(2)
     """
     resids=np.asarray(resids)
-    diff_resids = np.diff(resids, 1)
-    dw = np.dot(diff_resids, diff_resids) / np.dot(resids, resids)
+    diff_resids = np.diff(resids, 1, axis=axis)
+    dw = np.sum(diff_resids ** 2.0, axis=axis) / np.sum(resids ** 2.0, axis=axis)
     return dw
 
 def omni_normtest(resids, axis=0):
@@ -49,13 +49,13 @@ def omni_normtest(resids, axis=0):
     n = resids.shape[axis]
     if n < 8:
         from warnings import warn
-        warn("skewtest is not valid with less than 8 observations; %i samples"
+        warn("omni_normtest is not valid with less than 8 observations; %i samples"
             " were given." % int(n))
         return np.nan, np.nan
 
     return stats.normaltest(resids, axis=axis)
 
-def jarque_bera(resids):
+def jarque_bera(resids, axis=0):
     """
     Calculate residual skewness, kurtosis, and do the JB test for normality
 
@@ -78,49 +78,40 @@ def jarque_bera(resids):
     """
     resids = np.asarray(resids)
     # Calculate residual skewness and kurtosis
-    skew = stats.skew(resids)
-    kurtosis = 3 + stats.kurtosis(resids)
+    skew = stats.skew(resids, axis=axis)
+    kurtosis = 3 + stats.kurtosis(resids, axis=axis)
 
     # Calculate the Jarque-Bera test for normality
-    JB = (resids.shape[0] / 6.) * (skew**2 + (1 / 4.) * (kurtosis-3)**2)
+    n = resids.shape[axis]
+    JB = (n / 6.) * (skew**2 + (1 / 4.) * (kurtosis-3)**2)
     JBpv = stats.chi2.sf(JB,2)
 
     return JB, JBpv, skew, kurtosis
 
-def robust_kurtosis(resids):
-    """
-    Calculates the four kurtosis measures in Kim & White
 
-    Notes
-    -----
-    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
-    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
-    March 2004.
-    """
-
-def _scalar_slice(i, axis, ndim):
-    if ndim==1:
-        return i
-
-    s = [slice(None)] * ndim
-    s[axis] = i
-    return s
+# def _scalar_slice(i, axis, ndim):
+#     if ndim==1:
+#         return i
+#
+#     s = [slice(None)] * ndim
+#     s[axis] = i
+#     return s
 
 
-def _weighted_quantile(a, axis, q):
-
-    n = a.shape[axis]
-    ndim = a.ndim
-
-    loc1 = int(q*(n-1) - 1)
-    loc2 = loc1 + 1
-
-    w = 1 - ((n-1) * q  - loc2)
-
-    s1 = _scalar_slice(loc1, axis, ndim)
-    s2 = _scalar_slice(loc2, axis, ndim)
-
-    return w * a[s1] + (1-w) * a[s2]
+# def _weighted_quantile(a, axis, q):
+#
+#     n = a.shape[axis]
+#     ndim = a.ndim
+#
+#     loc1 = int(q*(n-1) - 1)
+#     loc2 = loc1 + 1
+#
+#     w = 1 - ((n-1) * q  - loc1)
+#
+#     s1 = _scalar_slice(loc1, axis, ndim)
+#     s2 = _scalar_slice(loc2, axis, ndim)
+#
+#     return w * a[s1] + (1-w) * a[s2]
 
 
 def robust_skewness(y, axis=0):
@@ -140,19 +131,70 @@ def robust_skewness(y, axis=0):
 
     y = np.sort(y, axis)
 
-    q1 = _weighted_quantile(y,axis,0.25)
-    q2 = _weighted_quantile(y,axis,0.25)
-    q3 = _weighted_quantile(y,axis,0.25)
+    q1 = np.percentile(y,25.0,axis=axis)
+    q2 = np.percentile(y,50.0,axis=axis)
+    q3 = np.percentile(y,75.0,axis=axis)
 
     mu = y.mean(axis)
-    sigma = np.mean(((y - mu) ** 2.0), axis)
+    shape = (y.size,)
+    if axis is not None:
+        shape = list(mu.shape)
+        shape.insert(axis, 1)
+        shape = tuple(shape)
 
-    sk1 =  np.mean(((y - mu) / sigma) ** 3.0, axis)
+    mu_b = np.reshape(mu, shape)
+    q2_b = np.reshape(q2, shape)
+
+    sigma = np.mean(((y - mu_b) ** 2.0), axis)
+
+    sk1 =  stats.skew(y, axis=axis)
     sk2 = (q1 + q3 - 2.0 * q2) / (q3 - q1)
-    sk3 = (mu - q2) / np.mean(abs(y - q2), axis)
+    sk3 = (mu - q2) / np.mean(abs(y - q2_b), axis=axis)
     sk4 = (mu - q2) / sigma
 
     return sk1, sk2, sk3, sk4
+
+
+def _kr3(y, alpha, beta):
+
+    l_alpha = np.mean(y[y<np.percentile(y,alpha)])
+    u_alpha = np.mean(y[y>np.percentile(y,100.0-alpha)])
+
+    l_beta = np.mean(y[y<np.percentile(y,beta)])
+    u_beta = np.mean(y[y>np.percentile(y,100.0-beta)])
+
+    return (u_alpha - l_alpha) / (u_beta - l_beta) - 2.5852205221971283
+
+
+def robust_kurtosis(y, axis=0):
+    """
+    Calculates the four kurtosis measures in Kim & White
+
+    Notes
+    -----
+    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
+    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
+    March 2004.
+    """
+    e1 = np.percentile(y, 12.5, axis=axis)
+    e2 = np.percentile(y, 25.0, axis=axis)
+    e3 = np.percentile(y, 37.5, axis=axis)
+    e5 = np.percentile(y, 62.5, axis=axis)
+    e6 = np.percentile(y, 75.0, axis=axis)
+    e7 = np.percentile(y, 87.5, axis=axis)
+
+    alpha, beta = 5.0, 50.0
+
+    f1ma = np.percentile(y, 97.5, axis)
+    fa = np.percentile(y, 2.5, axis)
+    f1mb = np.percentile(y, 75.0, axis)
+    fb = np.percentile(y, 25.0, axis)
+
+    kr1 = stats.kurtosis(y,axis)
+    kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - 1.2330951154852172
+    kr3 = np.squeeze(np.apply_along_axis(_kr3, axis, y, alpha, beta))
+    kr4 = (f1ma - fa) / (f1mb - fb) - 2.9058469516701639
+    return kr1, kr2, kr3, kr4
 
 
 def _medcouple_1d(y):
@@ -207,11 +249,15 @@ def medcouple(y, axis=0):
     Parameters
     ----------
     y : array-like
+    axis : int or None, optional
+        Axis along which the medcouple statistic is computed.  If `None`, the
+        entire array is used.
 
     Returns
     -------
-    mc : float
-        The medcouple statistic
+    mc : ndarray
+        The medcouple statistic with the same shape as `y`, with the specified
+        axis removed.
 
     Notes
     -----
