@@ -90,6 +90,12 @@ def jarque_bera(resids):
 def robust_kurtosis(resids):
     """
     Calculates the four kurtosis measures in Kim & White
+
+    Notes
+    -----
+    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
+    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
+    March 2004.
     """
 
 def _scalar_slice(i, axis, ndim):
@@ -120,7 +126,14 @@ def _weighted_quantile(a, axis, q):
 def robust_skewness(y, axis=0):
     """
     Calculates the four skewness measures in Kim & White
+
+    Notes
+    -----
+    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
+    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
+    March 2004.
     """
+
     if axis is None:
         y = y.flat[:]
         axis = 0
@@ -209,4 +222,7 @@ def medcouple(y, axis=0):
     distributions" Computational Statistics & Data Analysis, vol. 52,
     pp. 5186-5201, August 2008.
     """
-    return apply_1d_function(_medcouple_1d, y, axis)
+    if axis is None:
+        return _medcouple_1d(y.flat[:])
+
+    return np.apply_along_axis(_medcouple_1d, axis, y)

@@ -554,25 +554,3 @@ def maybe_unwrap_results(results):
     """
     return getattr(results, '_results', results)
 
-
-def apply_1d_function(a, func, axis=0):
-    """
-    Applies a 1-dimensional function to an arbitrary array along a given axis
-    """
-    # TODO: Better docs
-    if axis is None:
-        return func(a.flat[:])
-
-    shape = list(a.shape)
-    shape.pop(axis)
-    if not shape:
-        return func(a)
-
-    out = np.zeros(shape)
-
-    for i in np.ndindex(shape):
-        s = list(i)
-        s.insert(axis, slice(None))
-        out[i] = func(a[s])
-
-    return out
