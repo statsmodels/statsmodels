@@ -151,6 +151,8 @@ class KDEUnivariate(object):
                                                 # should this passed to funcs?
         # put here to ensure empty cache after re-fit with new options
         self.kernel.weights = weights
+        if weights is not None:
+            self.kernel.weights /= weights.sum()
         self._cache = resettable_cache()
 
     @cache_readonly

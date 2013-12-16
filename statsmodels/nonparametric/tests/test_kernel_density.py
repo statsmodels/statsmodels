@@ -80,9 +80,12 @@ class TestKDEUnivariate(MyTest):
                         0.25594519303876273,
                         0.056593973915651047]
 
-        kde_vals = [kde.density[10*i] for i in range(6)]
+        kde_vals0 = kde.density[10 * np.arange(6)]
+        kde_vals = kde.evaluate(testx)
 
-        npt.assert_allclose(kde_vals,kde_expected,
+        npt.assert_allclose(kde_vals, kde_expected,
+                            atol=1e-6)
+        npt.assert_allclose(kde_vals0, kde_expected,
                             atol=1e-6)
 
 
@@ -102,11 +105,12 @@ class TestKDEUnivariate(MyTest):
                         0.2405445849994125,
                         0.06433170684797665]
 
+        kde_vals0 = kde.density[10 * np.arange(6)]
+        kde_vals = kde.evaluate(testx)
 
-
-        kde_vals = [kde.density[10*i] for i in range(6)]
-
-        npt.assert_allclose(kde_vals,kde_expected,
+        npt.assert_allclose(kde_vals, kde_expected,
+                            atol=1e-6)
+        npt.assert_allclose(kde_vals0, kde_expected,
                             atol=1e-6)
 
 
