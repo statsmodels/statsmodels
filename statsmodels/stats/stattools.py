@@ -26,7 +26,7 @@ def durbin_watson(resids, axis=0):
     """
     resids = np.asarray(resids)
     diff_resids = np.diff(resids, 1, axis=axis)
-    dw = np.sum(diff_resids**2.0, axis=axis) / np.sum(resids**2.0, axis=axis)
+    dw = np.sum(diff_resids**2, axis=axis) / np.sum(resids**2, axis=axis)
     return dw
 
 
@@ -143,7 +143,7 @@ def robust_skewness(y, axis=0):
     mu_b = np.reshape(mu, shape)
     q2_b = np.reshape(q2, shape)
 
-    sigma = np.mean(((y - mu_b)**2.0), axis)
+    sigma = np.mean(((y - mu_b)**2), axis)
 
     sk1 = stats.skew(y, axis=axis)
     sk2 = (q1 + q3 - 2.0 * q2) / (q3 - q1)
