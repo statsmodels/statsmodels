@@ -260,7 +260,7 @@ def _medcouple_1d(y):
     # Parameter changes the algorithm to the slower for large n
 
     y = np.squeeze(np.asarray(y))
-    if len(y.shape) > 1:
+    if y.ndim != 1:
         raise ValueError("y must be squeezable to a 1-d array")
 
     y = np.sort(y)
