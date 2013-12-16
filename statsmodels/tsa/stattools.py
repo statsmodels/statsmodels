@@ -114,8 +114,8 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         * 'nc' : no constant, no trend
     autolag : {'AIC', 'BIC', 't-stat', None}
         * if None, then maxlag lags are used
-        * if 'AIC' (default) or 'BIC', then the number of lags is chosen to minimize the
-          corresponding information criterium
+        * if 'AIC' (default) or 'BIC', then the number of lags is chosen
+          to minimize the corresponding information criterium
         * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant at
           the 95 % level.
