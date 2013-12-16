@@ -13,8 +13,7 @@ NOTE: As it is, this module does not interact with the existing API
 
 
 import numpy as np
-from scipy.special import erf
-
+from scipy.stats import norm
 
 #TODO:
 # - make sure we only receive int input for wang-ryzin and aitchison-aitken
@@ -155,7 +154,11 @@ def aitchison_aitken_convolution(h, Xi, Xj):
 
 
 def gaussian_cdf(h, Xi, x):
-    return 0.5 * h * (1 + erf((x - Xi) / (h * np.sqrt(2))))
+    return h * norm._cdf((x - Xi)/h)
+
+
+def gaussian_icdf(h, Xi, x):
+    return Xi + h**2 * norm._ppf(x)
 
 
 def aitchison_aitken_cdf(h, Xi, x_u):

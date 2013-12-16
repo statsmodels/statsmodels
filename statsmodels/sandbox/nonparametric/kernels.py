@@ -22,7 +22,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 import numpy as np
 import scipy.integrate
 from numpy import exp, multiply, square, divide, subtract, inf
-
+from scipy.special import erf
 
 class NdKernel(object):
     """Generic N-dimensial kernel
@@ -68,7 +68,6 @@ class NdKernel(object):
     def density(self, xs, x):
         n = len(xs)
         #xs = self.inDomain( xs, xs, x )[0]
-
         if len(xs)>0:  ## Need to do product of marginal distributions
             #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
             #vectorized doesn't work:
@@ -186,6 +185,29 @@ class CustomKernel(object):
         if len(xs)>0:
             h = self.h
             w = 1/h * np.mean(self((xs-x)/h), axis=0)
+            return w
+        else:
+            return np.nan
+
+    def density_variance(self, xs, x):
+        """Returns the variance of the kernel density estimate for a point x 
+        based on x-values xs. 
+
+        This uses the approximate variance formula:
+        $var(f(x))=\frac{1}{nh}R(K)-\frac{f(x)}{n}$
+        """
+
+        xs = np.asarray(xs)
+        n = len(xs)
+        xs = self.inDomain( xs, xs, x )[0]
+        if xs.ndim == 1:
+            xs = xs[:, None]
+        if len(xs)>0:
+            h = self.h
+            # Note 05/07/13 - _L2Norm actually seems to store the square of the
+            # norm. This is equal to R(K).
+            R = self._L2Norm
+            w =  (1./h * self.density(xs, x) * R - self.density(xs, x)**2)/n
             return w
         else:
             return np.nan
@@ -375,6 +397,7 @@ class Gaussian(CustomKernel):
                         np.exp(-x**2/2.0), h = h, domain = None, norm = 1.0)
         self._L2Norm = 1.0/(2.0*np.sqrt(np.pi))
 
+
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
         xs and y-values ys.
@@ -387,6 +410,13 @@ class Gaussian(CustomKernel):
         v = np.sum(multiply(ys, exp(multiply(square(divide(subtract(xs, x),
                                                           self.h)), -0.5))))
         return v/w
+
+    def cdf(self, Xi, x, h):
+        """
+        Returns the value of the integrated gaussian kernel, corresponding 
+        to it's CDF
+        """
+        return 0.5 * (1 + erf( (x - np.asarray([Xi]).T)/(h * np.sqrt(2) ) ) )
 
 class Cosine(CustomKernel):
     """
