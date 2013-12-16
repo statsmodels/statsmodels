@@ -9,8 +9,8 @@ These functions haven't been formally tested.
 from scipy import stats
 import numpy as np
 
+
 # TODO: these are pretty straightforward but they should be tested
-# TODO: Critical Values
 def durbin_watson(resids, axis=0):
     """
     Calculates the Durbin-Watson statistic
@@ -24,10 +24,11 @@ def durbin_watson(resids, axis=0):
     Durbin Watson statistic.  This is defined as
     sum_(t=2)^(T)((e_t - e_(t-1))^(2))/sum_(t=1)^(T)e_t^(2)
     """
-    resids=np.asarray(resids)
+    resids = np.asarray(resids)
     diff_resids = np.diff(resids, 1, axis=axis)
     dw = np.sum(diff_resids ** 2.0, axis=axis) / np.sum(resids ** 2.0, axis=axis)
     return dw
+
 
 def omni_normtest(resids, axis=0):
     """
@@ -49,11 +50,13 @@ def omni_normtest(resids, axis=0):
     n = resids.shape[axis]
     if n < 8:
         from warnings import warn
+
         warn("omni_normtest is not valid with less than 8 observations; %i samples"
-            " were given." % int(n))
+             " were given." % int(n))
         return np.nan, np.nan
 
     return stats.normaltest(resids, axis=axis)
+
 
 def jarque_bera(resids, axis=0):
     """
@@ -83,40 +86,35 @@ def jarque_bera(resids, axis=0):
 
     # Calculate the Jarque-Bera test for normality
     n = resids.shape[axis]
-    JB = (n / 6.) * (skew**2 + (1 / 4.) * (kurtosis-3)**2)
-    JBpv = stats.chi2.sf(JB,2)
+    jb = (n / 6.) * (skew ** 2 + (1 / 4.) * (kurtosis - 3) ** 2)
+    jb_pv = stats.chi2.sf(jb, 2)
 
-    return JB, JBpv, skew, kurtosis
-
-
-# def _scalar_slice(i, axis, ndim):
-#     if ndim==1:
-#         return i
-#
-#     s = [slice(None)] * ndim
-#     s[axis] = i
-#     return s
-
-
-# def _weighted_quantile(a, axis, q):
-#
-#     n = a.shape[axis]
-#     ndim = a.ndim
-#
-#     loc1 = int(q*(n-1) - 1)
-#     loc2 = loc1 + 1
-#
-#     w = 1 - ((n-1) * q  - loc1)
-#
-#     s1 = _scalar_slice(loc1, axis, ndim)
-#     s2 = _scalar_slice(loc2, axis, ndim)
-#
-#     return w * a[s1] + (1-w) * a[s2]
+    return jb, jb_pv, skew, kurtosis
 
 
 def robust_skewness(y, axis=0):
     """
     Calculates the four skewness measures in Kim & White
+
+    Parameters
+    ----------
+    y : array-like
+    axis : int or None, optional
+        Axis along which the skewness measures are computed.  If `None`, the
+        entire array is used.
+
+    Returns
+    -------
+    sk1 : ndarray
+          The standard skewness estimator.
+    sk2 : ndarray
+          Skewness estimator based on quartiles.
+    sk3 : ndarray
+          Skewness estimator based on mean-median difference, standardized by
+          absolute deviation.
+    sk4 : ndarray
+          Skewness estimator based on mean-median difference, standardized by
+          standard deviation.
 
     Notes
     -----
@@ -131,9 +129,9 @@ def robust_skewness(y, axis=0):
 
     y = np.sort(y, axis)
 
-    q1 = np.percentile(y,25.0,axis=axis)
-    q2 = np.percentile(y,50.0,axis=axis)
-    q3 = np.percentile(y,75.0,axis=axis)
+    q1 = np.percentile(y, 25.0, axis=axis)
+    q2 = np.percentile(y, 50.0, axis=axis)
+    q3 = np.percentile(y, 75.0, axis=axis)
 
     mu = y.mean(axis)
     shape = (y.size,)
@@ -147,7 +145,7 @@ def robust_skewness(y, axis=0):
 
     sigma = np.mean(((y - mu_b) ** 2.0), axis)
 
-    sk1 =  stats.skew(y, axis=axis)
+    sk1 = stats.skew(y, axis=axis)
     sk2 = (q1 + q3 - 2.0 * q2) / (q3 - q1)
     sk3 = (mu - q2) / np.mean(abs(y - q2_b), axis=axis)
     sk4 = (mu - q2) / sigma
@@ -155,13 +153,34 @@ def robust_skewness(y, axis=0):
     return sk1, sk2, sk3, sk4
 
 
-def _kr3(y, alpha, beta):
+def _kr3(y, alpha=5.0, beta=50.0):
+    """
+    KR3 estimator from Kim & White
 
-    l_alpha = np.mean(y[y<np.percentile(y,alpha)])
-    u_alpha = np.mean(y[y>np.percentile(y,100.0-alpha)])
+    Parameters
+    ----------
+    y : array-like, 1-d
+    alpha : float, optional
+            Lower cut-off for measuring expectation in tail.
+    beta :  float, optional
+            Lower cut-off for measuring expectation in center.
 
-    l_beta = np.mean(y[y<np.percentile(y,beta)])
-    u_beta = np.mean(y[y>np.percentile(y,100.0-beta)])
+    Returns
+    -------
+    kr3 : float
+          Robust kurtosis estimator based on
+
+    Notes
+    -----
+    .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
+    skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
+    March 2004.
+    """
+    l_alpha = np.mean(y[y < np.percentile(y, alpha)])
+    u_alpha = np.mean(y[y > np.percentile(y, 100.0 - alpha)])
+
+    l_beta = np.mean(y[y < np.percentile(y, beta)])
+    u_beta = np.mean(y[y > np.percentile(y, 100.0 - beta)])
 
     return (u_alpha - l_alpha) / (u_beta - l_beta) - 2.5852205221971283
 
@@ -169,6 +188,24 @@ def _kr3(y, alpha, beta):
 def robust_kurtosis(y, axis=0):
     """
     Calculates the four kurtosis measures in Kim & White
+
+    Parameters
+    ----------
+    y : array-like
+    axis : int or None, optional
+        Axis along which the kurtoses are computed.  If `None`, the
+        entire array is used.
+
+    Returns
+    -------
+    kr1 : ndarray
+          The standard kurtosis estimator.
+    kr2 : ndarray
+          Kurtosis estimator based on octiles.
+    kr3 : ndarray
+          Kurtosis estimators based on exceedence expectations.
+    kr4 : ndarray
+          Kurtosis measure based on the spread between high and low quantiles.
 
     Notes
     -----
@@ -190,7 +227,7 @@ def robust_kurtosis(y, axis=0):
     f1mb = np.percentile(y, 75.0, axis)
     fb = np.percentile(y, 25.0, axis)
 
-    kr1 = stats.kurtosis(y,axis)
+    kr1 = stats.kurtosis(y, axis)
     kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - 1.2330951154852172
     kr3 = np.squeeze(np.apply_along_axis(_kr3, axis, y, alpha, beta))
     kr4 = (f1ma - fa) / (f1mb - fb) - 2.9058469516701639
@@ -230,16 +267,16 @@ def _medcouple_1d(y):
 
     n = y.shape[0]
     if n % 2 == 0:
-        mf = (y[n//2 - 1] + y[n//2 ])/2
+        mf = (y[n // 2 - 1] + y[n // 2]) / 2
     else:
-        mf = y[(n-1)//2]
+        mf = y[(n - 1) // 2]
 
-    lower = y[y<mf]
-    upper = y[y>mf]
-    upper = upper[:,None]
-    diff = upper - lower
-    sum = upper + lower
-    return np.median((sum - 2.0 * mf) / diff)
+    lower = y[y < mf]
+    upper = y[y > mf]
+    upper = upper[:, None]
+    standardization = upper - lower
+    spread = upper + lower - 2.0 * mf
+    return np.median(spread / standardization)
 
 
 def medcouple(y, axis=0):
