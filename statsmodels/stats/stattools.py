@@ -18,9 +18,11 @@ def durbin_watson(resids, axis=0):
     Parameters
     -----------
     resids : array-like
+    axis : int, optional
+        Default is 0
 
     Returns
-        --------
+    --------
     Durbin Watson statistic.  This is defined as
     sum_(t=2)^(T)((e_t - e_(t-1))^(2))/sum_(t=1)^(T)e_t^(2)
     """
@@ -65,6 +67,8 @@ def jarque_bera(resids, axis=0):
     Parameters
     -----------
     resids : array-like
+    axis : int, optional
+        Default is 0
 
     Returns
     -------
@@ -123,7 +127,8 @@ def robust_skewness(y, axis=0):
     March 2004.
     """
 
-    if axis is None:
+    if (axis is None or
+            (y.squeeze().ndim == 1 and y.ndim != 1)):
         y = y.flat[:]
         axis = 0
 
@@ -193,7 +198,7 @@ def robust_kurtosis(y, axis=0):
     ----------
     y : array-like
     axis : int or None, optional
-        Axis along which the kurtoses are computed.  If `None`, the
+        Axis along which the kurtosis measures are computed.  If `None`, the
         entire array is used.
 
     Returns
@@ -213,6 +218,11 @@ def robust_kurtosis(y, axis=0):
     skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
     March 2004.
     """
+    if (axis is None or
+            (y.squeeze().ndim == 1 and y.ndim != 1)):
+        y = y.flat[:]
+        axis = 0
+
     e1 = np.percentile(y, 12.5, axis=axis)
     e2 = np.percentile(y, 25.0, axis=axis)
     e3 = np.percentile(y, 37.5, axis=axis)
@@ -229,8 +239,12 @@ def robust_kurtosis(y, axis=0):
 
     kr1 = stats.kurtosis(y, axis)
     kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - 1.2330951154852172
-    kr3 = np.squeeze(np.apply_along_axis(_kr3, axis, y, alpha, beta))
+    if y.ndim == 1:
+        kr3 = _kr3(y)
+    else:
+        kr3 = np.apply_along_axis(_kr3, axis, y, alpha, beta)
     kr4 = (f1ma - fa) / (f1mb - fb) - 2.9058469516701639
+
     return kr1, kr2, kr3, kr4
 
 
@@ -276,7 +290,8 @@ def _medcouple_1d(y):
     upper = z[z >= 0.0]
     upper = upper[:, None]
     standardization = upper - lower
-    standardization[standardization==0] = np.inf
+    is_zero = np.logical_and(lower==0.0,upper == 0.0)
+    standardization[is_zero] = np.inf
     spread = upper + lower
     return np.median(spread / standardization)
 
@@ -300,14 +315,19 @@ def medcouple(y, axis=0):
 
     Notes
     -----
-    The current algorithm requires a O(N**2) memory allocations, and so may
+    The current algorithm requires an O(N**2) memory allocation, and so may
     not work for very large arrays (N>10000).
 
-    .. [1] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
+    .. [1] G. Brys, M. Hubert and A. Struyf, "A robust measure of skewness,"
+    Journal of Computational and Graphical Statistics, vol. 13, pp. 996-1017,
+     2004.
+    .. [2] M. Huberta and E. Vandervierenb, "An adjusted boxplot for skewed
     distributions" Computational Statistics & Data Analysis, vol. 52,
     pp. 5186-5201, August 2008.
     """
-    if axis is None:
+
+    if axis is None or y.ndim == 1:
+
         return _medcouple_1d(y.flat[:])
 
     return np.apply_along_axis(_medcouple_1d, axis, y)
