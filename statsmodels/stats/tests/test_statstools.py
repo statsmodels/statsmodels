@@ -184,13 +184,11 @@ class TestStattools(TestCase):
 
 
     def test_medcouple_nonzero(self):
-        # Note: The R example is wrong here.  This is the correct value.
         mc = medcouple(np.array([1, 2, 7, 9, 10.0]))
-        assert_almost_equal(mc, -0.38095238)
+        assert_almost_equal(mc, -0.3333333)
 
 
     def test_medcouple_symmetry(self):
-        # Note: The R example is wrong here.  This is the correct value.
         x = np.random.standard_normal(100)
         mcp = medcouple(x)
         mcn = medcouple(-x)

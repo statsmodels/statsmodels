@@ -271,11 +271,13 @@ def _medcouple_1d(y):
     else:
         mf = y[(n - 1) // 2]
 
-    lower = y[y < mf]
-    upper = y[y > mf]
+    z = y - mf
+    lower = z[z <= 0.0]
+    upper = z[z >= 0.0]
     upper = upper[:, None]
     standardization = upper - lower
-    spread = upper + lower - 2.0 * mf
+    standardization[standardization==0] = np.inf
+    spread = upper + lower
     return np.median(spread / standardization)
 
 
