@@ -553,4 +553,3 @@ def maybe_unwrap_results(results):
     routines.
     """
     return getattr(results, '_results', results)
-
