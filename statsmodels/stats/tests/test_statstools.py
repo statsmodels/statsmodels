@@ -2,10 +2,10 @@
 # TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_almost_equal, TestCase)
+from numpy.testing import (assert_almost_equal, assert_raises, TestCase)
 from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
-                                         durbin_watson, medcouple, robust_kurtosis,
-                                         robust_skewness)
+                                         durbin_watson, _medcouple_1d, medcouple,
+                                         robust_kurtosis, robust_skewness)
 from statsmodels.stats.adnorm import normal_ad
 
 #a random array, rounded to 4 decimals
@@ -177,6 +177,10 @@ class TestStattools(TestCase):
         kr4 = (f975 - f025) / (f75 - f25) - 2.9058469516701639
         cls.kurtosis_x = x
         cls.expected_kurtosis = np.array([kr1, kr2, kr3, kr4])
+
+    def test_medcouple_1d(self):
+        x = np.reshape(np.arange(100.0),(50,2))
+        assert_raises(ValueError, _medcouple_1d, x)
 
     def test_medcouple_symmetric(self):
         mc = medcouple(np.arange(5.0))
