@@ -26,7 +26,7 @@ class CheckKDE(object):
         npt.assert_almost_equal(self.res1.density, self.res_density,
                 self.decimal_density)
 
-    def t_est_evaluate(self):
+    def test_evaluate(self):
         # disable test
         # fails for Epan, Triangular and Biweight, only Gaussian is correct
         # added it as test method to TestKDEGauss below

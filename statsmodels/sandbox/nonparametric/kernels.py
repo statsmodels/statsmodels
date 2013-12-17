@@ -186,16 +186,20 @@ class CustomKernel(object):
         """
         xs = np.asarray(xs)
         n = len(xs) # before inDomain?
-        xs = self.inDomain( xs, xs, x )[0]
+        if self.weights is not None:
+            xs, weights = self.inDomain( xs, self.weights, x )
+        else:
+            xs = self.inDomain( xs, xs, x )[0]
         xs = np.asarray(xs)
+        #print 'len(xs)', len(xs), x
         if xs.ndim == 1:
             xs = xs[:,None]
         if len(xs)>0:
             h = self.h
             if self.weights is not None:
-                w = 1/h * np.sum(self((xs-x)/h).T * self.weights, axis=1)
+                w = 1 / h * np.sum(self((xs-x)/h).T * weights, axis=1)
             else:
-                w = 1/h * np.mean(self((xs-x)/h), axis=0)
+                w = 1. / (h * n) * np.sum(self((xs-x)/h), axis=0)
             return w
         else:
             return np.nan
