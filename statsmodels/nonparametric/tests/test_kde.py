@@ -1,5 +1,6 @@
 import os
 import numpy.testing as npt
+from nose import SkipTest
 import numpy as np
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
@@ -11,6 +12,9 @@ curdir = os.path.dirname(os.path.abspath(__file__))
 rfname = os.path.join(curdir,'results','results_kde.csv')
 #print rfname
 KDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+
+rfname = os.path.join(curdir,'results','results_kde_univ_weights.csv')
+KDEWResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 
 # setup test data
 
@@ -126,6 +130,84 @@ class TestKDEGaussFFT(CheckKDE):
         cls.res1 = res1
         rfname2 = os.path.join(curdir,'results','results_kde_fft.csv')
         cls.res_density = np.genfromtxt(open(rfname2, 'rb'))
+
+class CheckKDEWeights(object):
+
+    @classmethod
+    def setupClass(cls):
+        cls.x = x = KDEWResults['x']
+        weights = KDEWResults['weights']
+        res1 = KDE(x)
+        res1.fit(kernel=cls.kernel_name, weights=weights, fft=False)
+        cls.res1 = res1
+        cls.res_density = KDEWResults[cls.res_kernel_name]
+
+    decimal_density = 7
+
+    def t_est_density(self):
+        npt.assert_almost_equal(self.res1.density, self.res_density,
+                self.decimal_density)
+
+    def test_evaluate(self):
+        if self.kernel_name == 'cos':
+            raise SkipTest("Cosine kernel fails against Stata")
+        kde_vals = [self.res1.evaluate(xi) for xi in self.x]
+        kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
+        npt.assert_almost_equal(kde_vals, self.res_density,
+                                self.decimal_density)
+
+    def test_compare(self):
+        xx = self.res1.support
+        kde_vals = [self.res1.evaluate(xi) for xi in xx]
+        kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
+        mask_valid = np.isfinite(kde_vals)
+        # TODO: nans at the boundaries
+        kde_vals[~mask_valid] = 0
+        npt.assert_almost_equal(self.res1.density, kde_vals,
+                                self.decimal_density)
+
+
+class TestKDEWGauss(CheckKDEWeights):
+
+    kernel_name = "gau"
+    res_kernel_name = "x_gau_wd"
+
+
+class TestKDEWEpa(CheckKDEWeights):
+
+    kernel_name = "epa"
+    res_kernel_name = "x_epan2_wd"
+
+
+class TestKDEWTri(CheckKDEWeights):
+
+    kernel_name = "tri"
+    res_kernel_name = "x_" + kernel_name + "_wd"
+
+
+class TestKDEWBiw(CheckKDEWeights):
+
+    kernel_name = "biw"
+    res_kernel_name = "x_bi_wd"
+
+
+class TestKDEWCos(CheckKDEWeights):
+
+    kernel_name = "cos"
+    res_kernel_name = "x_cos_wd"
+
+
+class T_estKDEWRect(CheckKDEWeights):
+    #TODO in docstring but not in kernel_switch
+    kernel_name = "rect"
+    res_kernel_name = "x_rec_wd"
+
+
+class T_estKDEWPar(CheckKDEWeights):
+    # TODO in docstring but not implemented in kernels
+    kernel_name = "par"
+    res_kernel_name = "x_par_wd"
+
 
 class test_kde_refit():
     np.random.seed(12345)
