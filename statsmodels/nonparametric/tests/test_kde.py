@@ -180,6 +180,26 @@ class CheckKDEWeights(object):
         hw = ci[:, 1] - kde_vals
         npt.assert_allclose(hw, crit * np.sqrt(v), rtol=1e-10)
 
+    def test_kernel_constants(self):
+        kern = self.res1.kernel
+
+        nc = kern.norm_const
+        # trigger numerical integration
+        kern._norm_const = None
+        nc2 = kern.norm_const
+        npt.assert_allclose(nc, nc2, rtol=1e-10)
+
+        l2n = kern.L2Norm
+        # trigger numerical integration
+        kern._L2Norm = None
+        l2n2 = kern.L2Norm
+        npt.assert_allclose(l2n, l2n2, rtol=1e-10)
+
+        v = kern.kernel_var
+        # trigger numerical integration
+        kern._kernel_var = None
+        v2 = kern.kernel_var
+        npt.assert_allclose(v, v2, rtol=1e-10)
 
 
 class TestKDEWGauss(CheckKDEWeights):

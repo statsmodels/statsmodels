@@ -138,9 +138,7 @@ class CustomKernel(object):
         or
         norm = True
         """
-        if norm is True:
-            norm = 1.0
-        self._normconst = norm
+        self._normconst = norm   # a value or None, if None, then calculate
         self.domain = domain
         self.weights = None
         if callable(shape):
@@ -149,6 +147,7 @@ class CustomKernel(object):
             raise TypeError("shape must be a callable object/function")
         self._h = h
         self._L2Norm = None
+        self._kernel_var = None
 
     def geth(self):
         """Getter for kernel bandwidth, h"""
@@ -245,8 +244,9 @@ class CustomKernel(object):
 
         Returns
         -------
-        kde_var : ndarray
-            estimated variance of the density estimate
+        conf_int : ndarray
+            estimated confidence interval of the density estimate, lower bound
+            in first column and upper bound in second column
 
         Notes
         -----
@@ -337,6 +337,18 @@ class CustomKernel(object):
                                                self.domain[1])
             self._normconst = 1.0/(quadres[0])
         return self._normconst
+
+    @property
+    def kernel_var(self):
+        """Returns the second moment of the kernel"""
+        if self._kernel_var is None:
+            func = lambda x: x**2 * self.norm_const * self._shape(x)
+            if self.domain is None:
+                self._kernel_var = scipy.integrate.quad(func, -inf, inf)[0]
+            else:
+                self._kernel_var = scipy.integrate.quad(func, self.domain[0],
+                                               self.domain[1])[0]
+        return self._kernel_var
 
     def weight(self, x):
         """This returns the normalised weight at distance x"""
