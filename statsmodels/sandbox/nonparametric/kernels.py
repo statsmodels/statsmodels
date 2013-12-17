@@ -69,7 +69,7 @@ class NdKernel(object):
     def density(self, xs, x):
 
         n = len(xs)
-        #xs = self.inDomain( xs, xs, x )[0]
+        #xs = self.in_domain( xs, xs, x )[0]
 
         if len(xs)>0:  ## Need to do product of marginal distributions
             #w = np.sum([self(self._Hrootinv * (xx-x).T ) for xx in xs])/n
@@ -117,26 +117,26 @@ class CustomKernel(object):
 
     def __init__(self, shape, h = 1.0, domain = None, norm = None):
         """
-        shape should be a lambda taking and returning numeric type.
+        shape should be a function taking and returning numeric type.
 
         For sanity it should always return positive or zero but this isn't
-        enforced incase you want to do weird things.  Bear in mind that the
+        enforced in case you want to do weird things. Bear in mind that the
         statistical tests etc. may not be valid for non-positive kernels.
 
         The bandwidth of the kernel is supplied as h.
 
-        You may specify a domain as a list of 2 values [min,max], in which case
-        kernel will be treated as zero outside these values.  This will speed up
+        You may specify a domain as a list of 2 values [min, max], in which case
+        kernel will be treated as zero outside these values. This will speed up
         calculation.
 
         You may also specify the normalisation constant for the supplied Kernel.
         If you do this number will be stored and used as the normalisation
         without calculation.  It is recommended you do this if you know the
         constant, to speed up calculation.  In particular if the shape function
-        provided is already normalised you should provide
-        norm = 1.0
-        or
-        norm = True
+        provided is already normalised you should provide norm = 1.0.
+
+        Warning: I think several calculations assume that the kernel is
+        normalized. No tests for non-normalized kernel.
         """
         self._normconst = norm   # a value or None, if None, then calculate
         self.domain = domain
@@ -157,7 +157,7 @@ class CustomKernel(object):
         self._h = value
     h = property(geth, seth, doc="Kernel Bandwidth")
 
-    def inDomain(self, xs, ys, x):
+    def in_domain(self, xs, ys, x):
         """
         Returns the filtered (xs, ys) based on the Kernel domain centred on x
         """
@@ -184,11 +184,11 @@ class CustomKernel(object):
         xs
         """
         xs = np.asarray(xs)
-        n = len(xs) # before inDomain?
+        n = len(xs) # before in_domain?
         if self.weights is not None:
-            xs, weights = self.inDomain( xs, self.weights, x )
+            xs, weights = self.in_domain( xs, self.weights, x )
         else:
-            xs = self.inDomain( xs, xs, x )[0]
+            xs = self.in_domain( xs, xs, x )[0]
         xs = np.asarray(xs)
         #print 'len(xs)', len(xs), x
         if xs.ndim == 1:
@@ -267,7 +267,7 @@ class CustomKernel(object):
         xs and y-values ys.
         Not expected to be called by the user.
         """
-        xs, ys = self.inDomain(xs, ys, x)
+        xs, ys = self.in_domain(xs, ys, x)
 
         if len(xs)>0:
             w = np.sum(self((xs-x)/self.h))
@@ -280,7 +280,7 @@ class CustomKernel(object):
     def smoothvar(self, xs, ys, x):
         """Returns the kernel smoothing estimate of the variance at point x.
         """
-        xs, ys = self.inDomain(xs, ys, x)
+        xs, ys = self.in_domain(xs, ys, x)
 
         if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
@@ -294,7 +294,7 @@ class CustomKernel(object):
     def smoothconf(self, xs, ys, x):
         """Returns the kernel smoothing estimate with confidence 1sigma bounds
         """
-        xs, ys = self.inDomain(xs, ys, x)
+        xs, ys = self.in_domain(xs, ys, x)
 
         if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
@@ -401,7 +401,7 @@ class Biweight(CustomKernel):
 
         Special implementation optimised for Biweight.
         """
-        xs, ys = self.inDomain(xs, ys, x)
+        xs, ys = self.in_domain(xs, ys, x)
 
         if len(xs) > 0:
             w = np.sum(square(subtract(1, square(divide(subtract(xs, x),
@@ -416,7 +416,7 @@ class Biweight(CustomKernel):
         """
         Returns the kernel smoothing estimate of the variance at point x.
         """
-        xs, ys = self.inDomain(xs, ys, x)
+        xs, ys = self.in_domain(xs, ys, x)
 
         if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
@@ -432,7 +432,7 @@ class Biweight(CustomKernel):
     def smoothconf(self, xs, ys, x):
         """Returns the kernel smoothing estimate with confidence 1sigma bounds
         """
-        xs, ys = self.inDomain(xs, ys, x)
+        xs, ys = self.in_domain(xs, ys, x)
 
         if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
