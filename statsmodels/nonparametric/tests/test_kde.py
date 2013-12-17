@@ -95,6 +95,7 @@ class TestKDEBiweight(CheckKDE):
 
 #weighted estimates taken from matlab so we can allow len(weights) != gridsize
 class TestKdeWeights(CheckKDE):
+
     @classmethod
     def setupClass(cls):
         res1 = KDE(Xi)
@@ -104,6 +105,16 @@ class TestKdeWeights(CheckKDE):
         cls.res1 = res1
         rfname = os.path.join(curdir,'results','results_kde_weights.csv')
         cls.res_density = np.genfromtxt(open(rfname, 'rb'), skip_header=1)
+
+    def test_evaluate(self):
+        #kde_vals = self.res1.evaluate(self.res1.support)
+        kde_vals = [self.res1.evaluate(xi) for xi in self.res1.support]
+        kde_vals = np.squeeze(kde_vals)  #kde_vals is a "column_list"
+        mask_valid = np.isfinite(kde_vals)
+        # TODO: nans at the boundaries
+        kde_vals[~mask_valid] = 0
+        npt.assert_almost_equal(kde_vals, self.res_density,
+                                self.decimal_density)
 
 
 class TestKDEGaussFFT(CheckKDE):
