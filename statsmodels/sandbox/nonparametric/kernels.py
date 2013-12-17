@@ -292,29 +292,37 @@ class CustomKernel(object):
         """
         return self._shape(x)
 
+
 class Uniform(CustomKernel):
     def __init__(self, h=1.0):
         CustomKernel.__init__(self, shape=lambda x: 0.5, h=h,
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.5
+        self._kernel_var = 1. / 3
+
 
 class Triangular(CustomKernel):
     def __init__(self, h=1.0):
         CustomKernel.__init__(self, shape=lambda x: 1 - abs(x), h=h,
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 2.0/3.0
+        self._kernel_var = 1. / 6
+
 
 class Epanechnikov(CustomKernel):
     def __init__(self, h=1.0):
         CustomKernel.__init__(self, shape=lambda x: 0.75*(1 - x*x), h=h,
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.6
+        self._kernel_var = 0.2
+
 
 class Biweight(CustomKernel):
     def __init__(self, h=1.0):
         CustomKernel.__init__(self, shape=lambda x: 0.9375*(1 - x*x)**2, h=h,
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 5.0/7.0
+        self._kernel_var = 1. / 7
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -377,6 +385,8 @@ class Triweight(CustomKernel):
         CustomKernel.__init__(self, shape=lambda x: 1.09375*(1 - x*x)**3, h=h,
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 350.0/429.0
+        self._kernel_var = 1. / 9
+
 
 class Gaussian(CustomKernel):
     """
@@ -388,6 +398,7 @@ class Gaussian(CustomKernel):
         CustomKernel.__init__(self, shape = lambda x: 0.3989422804014327 *
                         np.exp(-x**2/2.0), h = h, domain = None, norm = 1.0)
         self._L2Norm = 1.0/(2.0*np.sqrt(np.pi))
+        self._kernel_var = 1.0
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -412,6 +423,8 @@ class Cosine(CustomKernel):
         CustomKernel.__init__(self, shape=lambda x: 0.78539816339744828 *
                 np.cos(np.pi/2.0 * x), h=h, domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = np.pi**2/16.0
+        self._kernel_var = 0.1894305308612978 # = 1 - 8 / np.pi**2
+
 
 class Cosine2(CustomKernel):
     """
@@ -425,3 +438,4 @@ class Cosine2(CustomKernel):
         CustomKernel.__init__(self, shape=lambda x: 1 + np.cos(2.0 * np.pi * x)
                 , h=h, domain=[-0.5, 0.5], norm = 1.0)
         self._L2Norm = 1.5
+        self._kernel_var = 0.03267274151216444  # = 1/12. - 0.5 / np.pi**2
