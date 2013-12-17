@@ -187,6 +187,7 @@ class CustomKernel(object):
         xs = np.asarray(xs)
         n = len(xs) # before inDomain?
         xs = self.inDomain( xs, xs, x )[0]
+        xs = np.asarray(xs)
         if xs.ndim == 1:
             xs = xs[:,None]
         if len(xs)>0:
