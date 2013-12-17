@@ -166,6 +166,21 @@ class CheckKDEWeights(object):
         npt.assert_almost_equal(self.res1.density, kde_vals,
                                 self.decimal_density)
 
+        # regression test, not compared to another package
+        nobs = len(self.res1.endog)
+        kern = self.res1.kernel
+        v = kern.density_var(kde_vals, nobs)
+        v_direct = kde_vals * kern.L2Norm / kern.h / nobs
+        npt.assert_allclose(v, v_direct, rtol=1e-10)
+
+        ci = kern.density_confint(kde_vals, nobs)
+        crit = 1.9599639845400545 #stats.norm.isf(0.05 / 2)
+        hw = kde_vals - ci[:, 0]
+        npt.assert_allclose(hw, crit * np.sqrt(v), rtol=1e-10)
+        hw = ci[:, 1] - kde_vals
+        npt.assert_allclose(hw, crit * np.sqrt(v), rtol=1e-10)
+
+
 
 class TestKDEWGauss(CheckKDEWeights):
 

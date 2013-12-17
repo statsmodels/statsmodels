@@ -204,6 +204,64 @@ class CustomKernel(object):
         else:
             return np.nan
 
+    def density_var(self, density, nobs):
+        """approximate pointwise variance for kernel density
+
+        not verified
+
+        Parameters
+        ----------
+        density : array_lie
+            pdf of the kernel density
+        nobs : int
+            number of observations used in the KDE estimation
+
+        Returns
+        -------
+        kde_var : ndarray
+            estimated variance of the density estimate
+
+        Notes
+        -----
+        This uses the asymptotic normal approximation to the distribution of
+        the density estimate.
+        """
+        return np.asarray(density) * self.L2Norm / self.h / nobs
+
+    def density_confint(self, density, nobs, alpha=0.05):
+        """approximate pointwise confidence interval for kernel density
+
+        The confidence interval is centered at the estimated density and
+        ignores the bias of the density estimate.
+
+        not verified
+
+        Parameters
+        ----------
+        density : array_lie
+            pdf of the kernel density
+        nobs : int
+            number of observations used in the KDE estimation
+
+        Returns
+        -------
+        kde_var : ndarray
+            estimated variance of the density estimate
+
+        Notes
+        -----
+        This uses the asymptotic normal approximation to the distribution of
+        the density estimate. The lower bound can be negative for density
+        values close to zero.
+
+        """
+        from scipy import stats
+        crit = stats.norm.isf(alpha / 2.)
+        density = np.asarray(density)
+        half_width = crit * np.sqrt(self.density_var(density, nobs))
+        conf_int = np.column_stack((density - half_width, density + half_width))
+        return conf_int
+
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
         xs and y-values ys.
