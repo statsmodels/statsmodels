@@ -197,6 +197,12 @@ class TestKDEWCos(CheckKDEWeights):
     res_kernel_name = "x_cos_wd"
 
 
+class TestKDEWCos2(CheckKDEWeights):
+
+    kernel_name = "cos2"
+    res_kernel_name = "x_cos_wd"
+
+
 class T_estKDEWRect(CheckKDEWeights):
     #TODO in docstring but not in kernel_switch
     kernel_name = "rect"
