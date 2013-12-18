@@ -172,7 +172,7 @@ class TestStattools(TestCase):
         mean = np.mean
         kr1 = mean(((x - mean(x)) / np.std(x)) ** 4.0) - 3.0
         kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - 1.2330951154852172
-        kr3 = (mean(x[x > c95]) - mean(x[x < c05])) / (mean(x[x > c50]) - mean(x[x < c50])) - 2.5852205221971283
+        kr3 = (mean(x[x > c95]) - mean(x[x < c05])) / (mean(x[x > c50]) - mean(x[x < c50])) - 2.5852271228708048
         kr4 = (f975 - f025) / (f75 - f25) - 2.9058469516701639
         cls.kurtosis_x = x
         cls.expected_kurtosis = np.array([kr1, kr2, kr3, kr4])

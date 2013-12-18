@@ -182,10 +182,10 @@ def _kr3(y, alpha=5.0, beta=50.0):
     l_beta = np.mean(y[y < np.percentile(y, beta)])
     u_beta = np.mean(y[y > np.percentile(y, 100.0 - beta)])
 
-    return (u_alpha - l_alpha) / (u_beta - l_beta) - 2.5852205221971283
+    return (u_alpha - l_alpha) / (u_beta - l_beta)
 
 
-def robust_kurtosis(y, axis=0):
+def robust_kurtosis(y, axis=0, excess=True):
     """
     Calculates the four kurtosis measures in Kim & White
 
@@ -195,6 +195,9 @@ def robust_kurtosis(y, axis=0):
     axis : int or None, optional
         Axis along which the kurtoses are computed.  If `None`, the
         entire array is used.
+    excess : bool, optional
+        If true (default), computed values are excess of those for a standard
+        normal distribution.
 
     Returns
     -------
@@ -227,10 +230,23 @@ def robust_kurtosis(y, axis=0):
     f1mb = np.percentile(y, 75.0, axis)
     fb = np.percentile(y, 25.0, axis)
 
-    kr1 = stats.kurtosis(y, axis)
-    kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - 1.2330951154852172
-    kr3 = np.squeeze(np.apply_along_axis(_kr3, axis, y, alpha, beta))
-    kr4 = (f1ma - fa) / (f1mb - fb) - 2.9058469516701639
+    expected_value = np.zeros(4)
+    if excess:
+        ppf = stats.norm.ppf
+        pdf = stats.norm.pdf
+        expected_value[0] = 3
+        expected_value[1] = ((ppf(7.0/8)-ppf(5.0/8))
+                             +(ppf(3.0/8)-ppf(1.0/8)))/(ppf(6.0/8)-ppf(2.0/8))
+        expected_value[2] = ((pdf(ppf(.95))/.05 + pdf(ppf(.95))/.05) / (pdf(ppf(.5))/.5 + pdf(ppf(.5))/.5))
+        expected_value[3] = (ppf(.975) - ppf(.025)) / (ppf(6.0/8)-ppf(2.0/8))
+
+    kr1 = stats.kurtosis(y, axis, False) - expected_value[0]
+    kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - expected_value[1]
+    if y.ndim == 1:
+        kr3 = _kr3(y) - expected_value[2]
+    else:
+        kr3 = np.apply_along_axis(_kr3, axis, y, alpha, beta) - expected_value[2]
+    kr4 = (f1ma - fa) / (f1mb - fb) - expected_value[3]
     return kr1, kr2, kr3, kr4
 
 
