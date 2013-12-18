@@ -527,8 +527,7 @@ class WLS(RegressionModel):
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
-        # This makes it GLS-like
-        #llf += 0.5 * np.sum(np.log(self.weights))
+        llf += 0.5 * np.sum(np.log(self.weights))
         return llf
 
 
@@ -1253,8 +1252,9 @@ class RegressionResults(base.LikelihoodModelResults):
 
         if not hasattr(self, 'resid'):
             raise ValueError('Method requires residuals.')
-        if np.all(np.abs(self.wresid) <= 0.0):
-            # This is a very exact check, does not account for numerical error
+        eps = np.finfo(self.wresid.dtype).eps
+        if np.sqrt(self.scale) < 10 * eps * self.model.endog.mean():
+            # don't divide if scale is zero close to numerical precision
             from warnings import warn
             warn("All residuals are 0, cannot compute normed residuals.")
             return self.wresid

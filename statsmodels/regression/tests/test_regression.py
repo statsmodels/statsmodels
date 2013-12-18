@@ -241,7 +241,8 @@ class TestOLS(CheckRegressionResults):
         with warnings.catch_warnings(record=True):
             y = self.res1.model.endog
             res = OLS(y,y).fit()
-            assert_equal(res.wresid, res.resid_pearson)
+            assert_allclose(res.scale, 0, atol=1e-20)
+            assert_allclose(res.wresid, res.resid_pearson, atol=5e-11)
 
 
 class TestRTO(CheckRegressionResults):
@@ -609,6 +610,14 @@ class TestOLS_GLS_WLS_equivalence(object):
         llf_1 = np.ones_like(llf) * self.results[0].llf
         assert_almost_equal(llf, llf_1, DECIMAL_7)
 
+        ic = np.array([r.aic for r in self.results])
+        ic_1 = np.ones_like(ic) * self.results[0].aic
+        assert_almost_equal(ic, ic_1, DECIMAL_7)
+
+        ic = np.array([r.bic for r in self.results])
+        ic_1 = np.ones_like(ic) * self.results[0].bic
+        assert_almost_equal(ic, ic_1, DECIMAL_7)
+
     def test_params(self):
         params = np.array([r.params for r in self.results])
         params_1 = np.array([self.results[0].params] * len(self.results))
@@ -623,6 +632,35 @@ class TestOLS_GLS_WLS_equivalence(object):
         rsquared = np.array([r.rsquared for r in self.results])
         rsquared_1 = np.array([self.results[0].rsquared] * len(self.results))
         assert_almost_equal(rsquared, rsquared_1, DECIMAL_7)
+
+
+class TestGLS_WLS_equivalence(TestOLS_GLS_WLS_equivalence):
+    # reuse test methods
+
+    @classmethod
+    def setupClass(cls):
+        data = longley.load()
+        data.exog = add_constant(data.exog, prepend=False)
+        y = data.endog
+        X = data.exog
+        n = y.shape[0]
+        np.random.seed(5)
+        w = np.random.uniform(0.5, 1, n)
+        w_inv = 1. / w
+        cls.results = []
+        cls.results.append(WLS(y, X, w).fit())
+        cls.results.append(WLS(y, X, 0.01 * w).fit())
+        cls.results.append(GLS(y, X, 100 * w_inv).fit())
+        cls.results.append(GLS(y, X, np.diag(0.1 * w_inv)).fit())
+
+    def test_rsquared(self):
+        # TODO: WLS rsquared is ok, GLS might have wrong centered_tss
+        # We only check that WLS and GLS rsquared is invariant to scaling
+        # WLS and GLS have different rsquared
+        assert_almost_equal(self.results[1].rsquared, self.results[0].rsquared,
+                            DECIMAL_7)
+        assert_almost_equal(self.results[3].rsquared, self.results[2].rsquared,
+                            DECIMAL_7)
 
 
 class TestNonFit(object):
@@ -669,6 +707,12 @@ class TestWLSExogWeights(CheckRegressionResults):
         self.res1 = WLS(dta.endog, dta.exog, weights=scaled_weights).fit()
         self.res2 = CCardWLS()
         self.res2.wresid = scaled_weights ** .5 * self.res2.resid
+
+        # correction because we use different definition for loglike/llf
+        corr_ic = 2 * (self.res1.llf - self.res2.llf)
+        self.res2.aic -= corr_ic
+        self.res2.bic -= corr_ic
+        self.res2.llf += 0.5 * np.sum(np.log(self.res1.model.weights))
 
 
 def test_wls_example():

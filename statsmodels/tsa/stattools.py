@@ -108,22 +108,22 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
         Maximum lag which is included in test, default 12*(nobs/100)^{1/4}
     regression : str {'c','ct','ctt','nc'}
         Constant and trend order to include in regression
-        * 'c' : constant only
+        * 'c' : constant only (default)
         * 'ct' : constant and trend
         * 'ctt' : constant, and linear and quadratic trend
         * 'nc' : no constant, no trend
     autolag : {'AIC', 'BIC', 't-stat', None}
         * if None, then maxlag lags are used
-        * if 'AIC' or 'BIC', then the number of lags is chosen to minimize the
-          corresponding information criterium
+        * if 'AIC' (default) or 'BIC', then the number of lags is chosen
+          to minimize the corresponding information criterium
         * 't-stat' based choice of maxlag.  Starts with maxlag and drops a
           lag until the t-statistic on the last lag length is significant at
           the 95 % level.
     store : bool
         If True, then a result instance is returned additionally to
-        the adf statistic
+        the adf statistic (default is False)
     regresults : bool
-        If True, the full regression results are returned.
+        If True, the full regression results are returned (default is False)
 
     Returns
     -------
@@ -303,11 +303,11 @@ def acovf(x, unbiased=False, demean=True, fft=False):
         xi = np.arange(1, n+1)
         d = np.hstack((xi, xi[:-1][::-1]))
     else:
-        d = n
+        d = n * np.ones(2 * n - 1)
     if fft:
         nobs = len(xo)
         Frf = np.fft.fft(xo, n=nobs*2)
-        acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs]/d
+        acov = np.fft.ifft(Frf*np.conjugate(Frf))[:nobs] / d[n-1:]
         return acov.real
     else:
         return (np.correlate(xo, xo, 'full')/d)[n-1:]
