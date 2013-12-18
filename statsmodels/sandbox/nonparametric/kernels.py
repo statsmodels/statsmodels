@@ -291,23 +291,27 @@ class CustomKernel(object):
         else:
             return np.nan
 
-    def smoothconf(self, xs, ys, x):
+    def smoothconf(self, xs, ys, x, alpha=0.05):
         """Returns the kernel smoothing estimate with confidence 1sigma bounds
         """
         xs, ys = self.in_domain(xs, ys, x)
 
         if len(xs) > 0:
             fittedvals = np.array([self.smooth(xs, ys, xx) for xx in xs])
+            #fittedvals = self.smooth(xs, ys, x) # x or xs in Haerdle
             sqresid = square(
                 subtract(ys, fittedvals)
             )
             w = np.sum(self((xs-x)/self.h))
+            #var = sqresid.sum() / (len(sqresid) - 0)  # nonlocal var ? JP just trying
             v = np.sum([rr*self((xx-x)/self.h) for xx, rr in zip(xs, sqresid)])
             var = v / w
             sd = np.sqrt(var)
             K = self.L2Norm
             yhat = self.smooth(xs, ys, x)
-            err = sd * K / np.sqrt(w * self.h * self.norm_const)
+            from scipy import stats
+            crit = stats.norm.isf(alpha / 2)
+            err = crit * sd * np.sqrt(K) / np.sqrt(w * self.h * self.norm_const)
             return (yhat - err, yhat, yhat + err)
         else:
             return (np.nan, np.nan, np.nan)
@@ -365,7 +369,7 @@ class CustomKernel(object):
 
 class Uniform(CustomKernel):
     def __init__(self, h=1.0):
-        CustomKernel.__init__(self, shape=lambda x: 0.5, h=h,
+        CustomKernel.__init__(self, shape=lambda x: 0.5 * np.ones(x.shape), h=h,
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.5
         self._kernel_var = 1. / 3
@@ -429,7 +433,7 @@ class Biweight(CustomKernel):
         else:
             return np.nan
 
-    def smoothconf(self, xs, ys, x):
+    def smoothconf_(self, xs, ys, x):
         """Returns the kernel smoothing estimate with confidence 1sigma bounds
         """
         xs, ys = self.in_domain(xs, ys, x)
