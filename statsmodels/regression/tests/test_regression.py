@@ -671,6 +671,12 @@ class TestWLSExogWeights(CheckRegressionResults):
         self.res2 = CCardWLS()
         self.res2.wresid = scaled_weights ** .5 * self.res2.resid
 
+        # correction because we use different definition for loglike/llf
+        corr_ic = 2 * (self.res1.llf - self.res2.llf)
+        self.res2.aic -= corr_ic
+        self.res2.bic -= corr_ic
+        self.res2.llf += 0.5 * np.sum(np.log(self.res1.model.weights))
+
 
 def test_wls_example():
     #example from the docstring, there was a note about a bug, should
