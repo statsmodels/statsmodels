@@ -136,7 +136,7 @@ class TestTriangular(CheckKernelMixin):
 class T_estCosine(CheckKernelMixin):
     # Stata results for Cosine look strange, has nans
     kern_name = 'cos'
-    kern = kernels.Cosine()  #doesn't match up, nan in Stata results ?
+    kern = kernels.Cosine2()
 
 class TestBiweight(CheckKernelMixin):
     kern_name = 'bi'
