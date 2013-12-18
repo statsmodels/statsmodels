@@ -29,7 +29,7 @@ from .linbin import fast_linbin
 kernel_switch = dict(gau=kernels.Gaussian, epa=kernels.Epanechnikov,
                     uni=kernels.Uniform, tri=kernels.Triangular,
                     biw=kernels.Biweight, triw=kernels.Triweight,
-                    cos=kernels.Cosine)
+                    cos=kernels.Cosine, cos2=kernels.Cosine2)
 
 def _checkisfit(self):
     try:
@@ -150,6 +150,9 @@ class KDEUnivariate(object):
         self.kernel = kernel_switch[kernel](h=bw) # we instantiate twice,
                                                 # should this passed to funcs?
         # put here to ensure empty cache after re-fit with new options
+        self.kernel.weights = weights
+        if weights is not None:
+            self.kernel.weights /= weights.sum()
         self._cache = resettable_cache()
 
     @cache_readonly
@@ -334,6 +337,8 @@ def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
         weights = np.ones(nobs)
         q = nobs
     else:
+        # ensure weights is a numpy array
+        weights = np.asarray(weights)
         if len(weights) != len(clip_x):
             msg = "The length of the weights must be the same as the given X."
             raise ValueError(msg)

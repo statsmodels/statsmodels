@@ -58,6 +58,62 @@ class MyTest(object):
        0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0,
        0, 0, 0, 0]
 
+        self.weights = np.random.random(nobs)
+
+
+class TestKDEUnivariate(MyTest):
+
+    def test_pdf_non_fft(self):
+
+        kde = nparam.KDEUnivariate(self.noise)
+        kde.fit(fft=False)
+
+
+        grid = kde.support
+        testx = [grid[10*i] for i in range(6)]
+
+        # Test against values from R 'ks' package
+        kde_expected = [0.00016808277984236013,
+                        0.030759614592368954,
+                        0.14123404934759243,
+                        0.28807147408162409,
+                        0.25594519303876273,
+                        0.056593973915651047]
+
+        kde_vals0 = kde.density[10 * np.arange(6)]
+        kde_vals = kde.evaluate(testx)
+
+        npt.assert_allclose(kde_vals, kde_expected,
+                            atol=1e-6)
+        npt.assert_allclose(kde_vals0, kde_expected,
+                            atol=1e-6)
+
+
+    def test_weighted_pdf_non_fft(self):
+
+        kde = nparam.KDEUnivariate(self.noise)
+        kde.fit(weights=self.weights, fft=False)
+
+        grid = kde.support
+        testx = [grid[10*i] for i in range(6)]
+
+        # Test against values from R 'ks' package
+        kde_expected = [9.1998858033950757e-05,
+                        0.018761981151370496,
+                        0.14425925509365087,
+                        0.30307631742267443,
+                        0.2405445849994125,
+                        0.06433170684797665]
+
+        kde_vals0 = kde.density[10 * np.arange(6)]
+        kde_vals = kde.evaluate(testx)
+
+        npt.assert_allclose(kde_vals, kde_expected,
+                            atol=1e-6)
+        npt.assert_allclose(kde_vals0, kde_expected,
+                            atol=1e-6)
+
+
 
 class TestKDEMultivariate(MyTest):
     @dec.slow
@@ -305,3 +361,7 @@ class TestKDEMultivariateConditional(MyTest):
         bw_expected = np.array([0.73387, 0.43715])
         npt.assert_allclose(dens_efficient.bw, bw_expected, atol=0, rtol=1e-3)
 
+if __name__ == "__main__":
+    import nose
+    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
+                       exit=False)
