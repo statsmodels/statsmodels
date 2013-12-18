@@ -177,6 +177,7 @@ class TestStattools(TestCase):
         kr4 = (f975 - f025) / (f75 - f25) - 2.9058469516701639
         cls.kurtosis_x = x
         cls.expected_kurtosis = np.array([kr1, kr2, kr3, kr4])
+        cls.kurtosis_constants = np.array([3.0,1.2330951154852172,2.5852271228708048,2.9058469516701639])
 
     def test_medcouple_1d(self):
         x = np.reshape(np.arange(100.0),(50,2))
@@ -274,6 +275,12 @@ class TestStattools(TestCase):
         x = self.kurtosis_x
         kurtosis = np.array(robust_kurtosis(x, axis=None))
         assert_almost_equal(kurtosis, self.expected_kurtosis)
+
+    def test_robust_kurtosis_excess_false(self):
+        x = self.kurtosis_x
+        expected = self.expected_kurtosis + self.kurtosis_constants
+        kurtosis = np.array(robust_kurtosis(x, excess=False))
+        assert_almost_equal(expected, kurtosis)
 
 
 if __name__ == "__main__":
