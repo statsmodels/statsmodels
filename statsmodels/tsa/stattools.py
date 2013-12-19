@@ -3,13 +3,12 @@ Statistical tools for time series analysis
 """
 
 import numpy as np
-from scipy import stats, signal
+from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant
 from tsatools import lagmat, lagmat2ds, add_trend
-#from statsmodels.sandbox.tsa import var
 from adfvalues import mackinnonp, mackinnoncrit
-#from statsmodels.sandbox.rls import RLS
+
 
 #NOTE: now in two places to avoid circular import
 #TODO: I like the bunch pattern for this too.
@@ -69,7 +68,6 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
     elif method == "bic":
         icbest, bestlag = min((v.bic,k) for k,v in results.iteritems())
     elif method == "t-stat":
-        lags = sorted(results.keys())[::-1]
         #stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
         for lag in range(startlag + maxlag, startlag - 1, -1):
@@ -464,11 +462,11 @@ def pacf_yw(x, nlags=40, method='unbiased'):
     This solves yule_walker for each desired lag and contains
     currently duplicate calculations.
     '''
-    xm = x - x.mean()
     pacf = [1.]
     for k in range(1, nlags+1):
         pacf.append(yule_walker(x, k, method=method)[0][-1])
     return np.array(pacf)
+
 
 #NOTE: this is incorrect.
 def pacf_ols(x, nlags=40):
@@ -787,7 +785,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     x = np.asarray(x)
 
     if x.shape[0] <= 3 * maxlag + int(addconst):
-        raise ValueError("")
+        raise ValueError("Insufficient observations. Maximum allowable "
+                         "lag is {0}".format(int((x.shape[0] - int(addconst)) / 3) - 1))
 
     resli = {}
 
@@ -803,7 +802,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
 
         #add constant
         if addconst:
-            dtaown = add_constant(dta[:, 1:mxlg+1], prepend=False)
+            dtaown = add_constant(dta[:, 1:(mxlg + 1)], prepend=False)
             dtajoint = add_constant(dta[:, 1:], prepend=False)
         else:
             raise NotImplementedError('Not Implemented')
@@ -840,11 +839,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
-        rconstr = np.column_stack((
-            np.zeros((mxlg, mxlg)),
-            np.eye(mxlg, mxlg),
-            np.zeros((mxlg, 1))
-        ))
+        rconstr = np.column_stack((np.zeros((mxlg, mxlg)),
+                                   np.eye(mxlg, mxlg),
+                                   np.zeros((mxlg, 1))))
         ftres = res2djoint.f_test(rconstr)
         if verbose:
             print 'parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d, df_num=%d' % \
