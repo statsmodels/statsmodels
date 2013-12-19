@@ -932,7 +932,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         # Check covariance_type
         covariance_type = covariance_type.lower()
-        allowed_covariances = ["robust", "naive", "bias reduced"]
+        allowed_covariances = ["robust", "naive", "bias_reduced"]
         if covariance_type not in allowed_covariances:
             msg = "GEE: `covariance_type` must be one of " +\
                 ", ".join(allowed_covariances)
