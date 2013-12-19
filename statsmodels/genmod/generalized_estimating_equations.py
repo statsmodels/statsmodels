@@ -651,7 +651,7 @@ class GEE(base.Model):
 
         return beta
 
-    def fit(self, maxiter=60, ctol=1e-6, starting_params=None,
+    def fit(self, maxiter=60, ctol=1e-6, start_params=None,
             covariance_type="robust"):
         """
         Fits a GEE model.
@@ -663,7 +663,7 @@ class GEE(base.Model):
         ctol : float
             The convergence criterion for stopping the Gauss-Seidel
             iterations
-        starting_params : array-like
+        start_params : array-like
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
         covariance_type : string
@@ -680,20 +680,20 @@ class GEE(base.Model):
                             'fitlack': [],
                             'score_change': []}
 
-        # Check starting_params, if supplied
-        if starting_params is not None:
-            if type(starting_params) != np.ndarray:
-                msg = "GEE: the `starting_params` argument to "\
+        # Check start_params, if supplied
+        if start_params is not None:
+            if type(start_params) != np.ndarray:
+                msg = "GEE: the `start_params` argument to "\
                     "`fit` must be of type numpy.ndarray."
                 raise ValueError(msg)
-            if len(starting_params.shape) != 1:
-                msg = "GEE: the `starting_params` argument to "\
+            if len(start_params.shape) != 1:
+                msg = "GEE: the `start_params` argument to "\
                     "`fit` must be 1 dimensional."
                 raise ValueError(msg)
-            if len(starting_params) != self.exog.shape[1]:
-                msg = ("GEE: the `starting_params` argument to "
+            if len(start_params) != self.exog.shape[1]:
+                msg = ("GEE: the `start_params` argument to "
                        "fit has length %d, but there are %d "
-                       "covariates.") % (len(starting_params),
+                       "covariates.") % (len(start_params),
                                          self.exog.shape[1])
                 raise ValueError(msg)
 
@@ -713,7 +713,7 @@ class GEE(base.Model):
         if ctol <= 0:
             raise ValueError(msg)
 
-        beta = self._starting_params(starting_params)
+        beta = self._starting_params(start_params)
 
         self.update_cached_means(beta)
 

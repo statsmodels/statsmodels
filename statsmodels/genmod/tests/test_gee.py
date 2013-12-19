@@ -306,7 +306,7 @@ class TestGEE(object):
         ne = Nested(group_n)
 
         md = GEE(endog, exog, group, None, family, ne)
-        mdf2 = md.fit(starting_params=mdf1.params)
+        mdf2 = md.fit(start_params=mdf1.params)
 
         # From statsmodels.GEE (not an independent test)
         cf = np.r_[-0.16655319,  1.02183688, -2.00858719,  1.00101969]
@@ -339,7 +339,7 @@ class TestGEE(object):
                                            exog_orig.shape[1])
 
         md = GEE(endog, exog1, groups, None, family, v)
-        mdf = md.fit(starting_params = beta)
+        mdf = md.fit(start_params = beta)
 
         cf = np.r_[1.09238131, 0.02148193, -0.39879146, -0.01855666,
                    0.02983409, 1.18123172,  0.01845318, -1.10233886]
@@ -380,7 +380,7 @@ class TestGEE(object):
         # Test with global odds ratio dependence
         v = GlobalOddsRatio(nlevel, "nominal")
         md = GEE(endog, exog, groups, None, family, v)
-        mdf2 = md.fit(starting_params=mdf1.params)
+        mdf2 = md.fit(start_params=mdf1.params)
 
         # From statsmodels.GEE (not an independent test)
         cf2 = np.r_[0.45397549,  0.42278345, -0.91997131, -0.50115943]
@@ -416,7 +416,7 @@ class TestGEE(object):
                                            exog_orig.shape[1])
 
         md = GEE(endog, exog1, groups, None, family, v)
-        mdf = md.fit(starting_params = beta)
+        mdf = md.fit(start_params = beta)
 
         cf = np.r_[1.09238131, 0.02148193, -0.39879146, -0.01855666,
                    0.02983409, 1.18123172, 0.01845318, -1.10233886]

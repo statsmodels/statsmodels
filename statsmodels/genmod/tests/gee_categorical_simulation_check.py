@@ -210,7 +210,7 @@ if __name__ == '__main__':
 
             md = GEE(da.endog_ex, da.exog_ex, da.group_ex, None,
                      mt, va)
-            mdf = md.fit(starting_params = beta)
+            mdf = md.fit(start_params = beta)
 
             if mdf is None:
                 continue
@@ -228,7 +228,7 @@ if __name__ == '__main__':
 
             md = GEE(da.endog_ex, da.exog_ex, da.group_ex, None,
                      mt, va, constraint=constraint)
-            mdf = md.fit(starting_params = beta)
+            mdf = md.fit(start_params = beta)
 
             if mdf is None:
                 continue

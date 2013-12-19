@@ -207,7 +207,7 @@ if __name__ == "__main__":
             mdf = md.fit()
 
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
-            mdf = md.fit(starting_params = mdf.params)
+            mdf = md.fit(start_params = mdf.params)
             if mdf is None or (not mdf.converged):
                 print "Failed to converge"
                 continue
