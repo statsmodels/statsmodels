@@ -56,12 +56,12 @@ TypeError: unsupported operand type(s) for +: 'NoneType' and 'numpy.float64'
 mdf2.predict(da.exog.mean(0), offset=0)
 # -0.10867809062890971
 
-marg = GEEMargins(mdf, ())
-print marg.summary()
+marg2 = GEEMargins(mdf2, ())
+print marg2.summary()
 
 
-mdf_nc = md.fit(covariance_type='naive')
-mdf_bc = md.fit(covariance_type='bias_reduced')
+mdf_nc = md2.fit(covariance_type='naive')
+mdf_bc = md2.fit(covariance_type='bias_reduced')
 
 mdf_nc.use_t = False
 mdf_nc.df_resid = np.diff(mdf2.model.exog.shape)
@@ -78,12 +78,18 @@ print tt_nc
 print '\nttest bias corrected'
 print tt_bc
 
-print "implemented `standard_errors`"
+print "\nbse after fit option "
+bse = np.column_stack((mdf2.bse, mdf2.bse, mdf_nc.bse, mdf_bc.bse))
+print bse
+
+print "\nimplemented `standard_errors`"
 bse2 = np.column_stack((mdf2.bse, mdf2.standard_errors(),
                                  mdf2.standard_errors(covariance_type='naive'),
                                  mdf2.standard_errors(covariance_type='bias_reduced')))
 print bse2
-print "implied standard errors in t_test"
+print "bse and `standard_errors` agree:", np.allclose(bse, bse2)
+
+print "\nimplied standard errors in t_test"
 bse1 = np.column_stack((mdf2.bse, tt2.sd, tt_nc.sd, tt_bc.sd))
 print bse1
 print "t_test uses correct cov_params:", np.allclose(bse1, bse2)
