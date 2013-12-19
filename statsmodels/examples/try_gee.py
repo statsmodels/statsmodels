@@ -20,10 +20,13 @@ da,va = gees.gen_gendat_ar0(0.6)()
 ga = Gaussian()
 lhs = np.array([[0., 1, 1, 0, 0],])
 rhs = np.r_[0.,]
-md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
-                 constraint=(lhs, rhs))
-mdf = md.fit()
-print mdf.summary()
+
+example = []
+if 'constraint' in example:
+    md = GEE(da.endog, da.exog, da.group, da.time, ga, va,
+                     constraint=(lhs, rhs))
+    mdf = md.fit()
+    print mdf.summary()
 
 
 md2 = GEE(da.endog, da.exog, da.group, da.time, ga, va,
@@ -34,8 +37,8 @@ print mdf2.summary()
 
 
 mdf2.use_t = False
-mdf2.model.df_resid = np.diff(mdf2.model.exog.shape)
-print mdf2.t_test(np.eye(len(mdf2.params)))
+mdf2.df_resid = np.diff(mdf2.model.exog.shape)
+tt2 = mdf2.t_test(np.eye(len(mdf2.params)))
 # need master to get wald_test
 #print mdf2.wald_test(np.eye(len(mdf2.params))[1:])
 
@@ -55,3 +58,32 @@ mdf2.predict(da.exog.mean(0), offset=0)
 
 marg = GEEMargins(mdf, ())
 print marg.summary()
+
+
+mdf_nc = md.fit(covariance_type='naive')
+mdf_bc = md.fit(covariance_type='bias_reduced')
+
+mdf_nc.use_t = False
+mdf_nc.df_resid = np.diff(mdf2.model.exog.shape)
+mdf_bc.use_t = False
+mdf_bc.df_resid = np.diff(mdf2.model.exog.shape)
+
+tt_nc = mdf_nc.t_test(np.eye(len(mdf2.params)))
+tt_bc = mdf_bc.t_test(np.eye(len(mdf2.params)))
+
+print '\nttest robust'
+print tt2
+print '\nttest naive'
+print tt_nc
+print '\nttest bias corrected'
+print tt_bc
+
+print "implemented `standard_errors`"
+bse2 = np.column_stack((mdf2.bse, mdf2.standard_errors(),
+                                 mdf2.standard_errors(covariance_type='naive'),
+                                 mdf2.standard_errors(covariance_type='bias_reduced')))
+print bse2
+print "implied standard errors in t_test"
+bse1 = np.column_stack((mdf2.bse, tt2.sd, tt_nc.sd, tt_bc.sd))
+print bse1
+print "t_test uses correct cov_params:", np.allclose(bse1, bse2)
