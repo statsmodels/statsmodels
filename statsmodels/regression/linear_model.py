@@ -527,8 +527,7 @@ class WLS(RegressionModel):
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
-        # This makes it GLS-like
-        #llf += 0.5 * np.sum(np.log(self.weights))
+        llf += 0.5 * np.sum(np.log(self.weights))
         return llf
 
 
