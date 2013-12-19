@@ -20,7 +20,7 @@ def durbin_watson(resids, axis=0):
     resids : array-like
 
     Returns
-        --------
+    --------
     Durbin Watson statistic.  This is defined as
     sum_(t=2)^(T)((e_t - e_(t-1))^(2))/sum_(t=1)^(T)e_t^(2)
     """
@@ -65,6 +65,8 @@ def jarque_bera(resids, axis=0):
     Parameters
     -----------
     resids : array-like
+    axis : int, optional
+        Default is 0
 
     Returns
     -------
@@ -129,9 +131,7 @@ def robust_skewness(y, axis=0):
 
     y = np.sort(y, axis)
 
-    q1 = np.percentile(y, 25.0, axis=axis)
-    q2 = np.percentile(y, 50.0, axis=axis)
-    q3 = np.percentile(y, 75.0, axis=axis)
+    q1, q2, q3 = np.percentile(y, [25.0, 50.0, 75.0], axis=axis)
 
     mu = y.mean(axis)
     shape = (y.size,)
@@ -176,11 +176,13 @@ def _kr3(y, alpha=5.0, beta=50.0):
     skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
     March 2004.
     """
-    l_alpha = np.mean(y[y < np.percentile(y, alpha)])
-    u_alpha = np.mean(y[y > np.percentile(y, 100.0 - alpha)])
+    perc = (alpha, 100.0-alpha, beta, 100.0-beta)
+    lower_alpha, upper_alpha, lower_beta, upper_beta = np.percentile(y, perc)
+    l_alpha = np.mean(y[y < lower_alpha])
+    u_alpha = np.mean(y[y > upper_alpha])
 
-    l_beta = np.mean(y[y < np.percentile(y, beta)])
-    u_beta = np.mean(y[y > np.percentile(y, 100.0 - beta)])
+    l_beta = np.mean(y[y < lower_beta])
+    u_beta = np.mean(y[y > upper_beta])
 
     return (u_alpha - l_alpha) / (u_beta - l_beta)
 
@@ -216,29 +218,25 @@ def robust_kurtosis(y, axis=0, excess=True):
     skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
     March 2004.
     """
-    e1 = np.percentile(y, 12.5, axis=axis)
-    e2 = np.percentile(y, 25.0, axis=axis)
-    e3 = np.percentile(y, 37.5, axis=axis)
-    e5 = np.percentile(y, 62.5, axis=axis)
-    e6 = np.percentile(y, 75.0, axis=axis)
-    e7 = np.percentile(y, 87.5, axis=axis)
+    perc = (12.5, 25.0, 37.5, 62.5, 75.0, 87.5, 2.5, 97.5)
+    e1, e2, e3, e5, e6, e7, fa, f1ma = np.percentile(y, perc, axis=axis)
 
     alpha, beta = 5.0, 50.0
 
-    f1ma = np.percentile(y, 97.5, axis)
-    fa = np.percentile(y, 2.5, axis)
-    f1mb = np.percentile(y, 75.0, axis)
-    fb = np.percentile(y, 25.0, axis)
+    f1mb = e6
+    fb = e2
 
     expected_value = np.zeros(4)
     if excess:
         ppf = stats.norm.ppf
         pdf = stats.norm.pdf
+        q1, q2, q3, q5, q6, q7 = ppf(np.array((1.0, 2.0, 3.0, 5.0, 6.0, 7.0))/8)
         expected_value[0] = 3
-        expected_value[1] = ((ppf(7.0/8)-ppf(5.0/8))
-                             +(ppf(3.0/8)-ppf(1.0/8)))/(ppf(6.0/8)-ppf(2.0/8))
-        expected_value[2] = ((pdf(ppf(.95))/.05 + pdf(ppf(.95))/.05) / (pdf(ppf(.5))/.5 + pdf(ppf(.5))/.5))
-        expected_value[3] = (ppf(.975) - ppf(.025)) / (ppf(6.0/8)-ppf(2.0/8))
+        expected_value[1] = ((q7 - q5) +(q3 - q1)) / (q6 - q2)
+        q50, q95= ppf(np.array((.50, .95)))
+        expected_value[2] = (2 * pdf(q95)/.05) / (2 * pdf(q50)/.5)
+        q025, q975 = ppf(np.array((.025, .975)))
+        expected_value[3] = (q975 - q025) / (q6 - q2)
 
     kr1 = stats.kurtosis(y, axis, False) - expected_value[0]
     kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - expected_value[1]
