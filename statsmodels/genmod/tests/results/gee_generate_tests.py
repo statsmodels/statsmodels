@@ -229,9 +229,10 @@ def generate_poisson():
     OUT.close()
 
 
-#generate_logistic()
-#generate_linear()
-#generate_ordinal()
-#generate_poisson()
-generate_nested_linear()
-#generate_nominal()
+if __name__ == '__main__':
+    #generate_logistic()
+    #generate_linear()
+    #generate_ordinal()
+    #generate_poisson()
+    generate_nested_linear()
+    #generate_nominal()

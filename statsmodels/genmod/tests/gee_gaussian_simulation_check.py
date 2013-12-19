@@ -30,7 +30,7 @@ class GEE_simulator(object):
     params = None
 
     # The parameters defining the dependence structure
-    dparams = None
+    dep_params = None
 
     # The true scale parameter
     scale = None
@@ -70,7 +70,7 @@ class AR_simulator(GEE_simulator):
         OUT.write("AR coefficient estimate:   %8.4f\n" %
                   dparams_est[0])
         OUT.write("AR coefficient truth:      %8.4f\n" %
-                  self.dparams[0])
+                  self.dep_params[0])
         OUT.write("Error variance estimate:   %8.4f\n" %
                   dparams_est[1])
         OUT.write("Error variance truth:      %8.4f\n" %
@@ -100,7 +100,7 @@ class AR_simulator(GEE_simulator):
                                                      self.distfun[0])
 
             # Pairwise correlations within the cluster
-            correlations = self.dparams[0]**distances
+            correlations = self.dep_params[0]**distances
             correlations_sr = np.linalg.cholesky(correlations)
 
             errors = np.dot(correlations_sr, np.random.normal(size=gsize))
@@ -130,7 +130,7 @@ class Nested_simulator(GEE_simulator):
             OUT.write("Nest %d variance estimate:  %8.4f\n" % \
                           (j+1, dparams_est[j]))
             OUT.write("Nest %d variance truth:     %8.4f\n" % \
-                          (j+1, self.dparams[j]))
+                          (j+1, self.dep_params[j]))
 
         OUT.write("Error variance estimate:   %8.4f\n" % \
             (dparams_est[-1] - sum(dparams_est[0:-1])))
@@ -141,9 +141,9 @@ class Nested_simulator(GEE_simulator):
 
     def simulate(self):
 
-        group_effect_var = self.dparams[0]
+        group_effect_var = self.dep_params[0]
 
-        vcomp = self.dparams[1:]
+        vcomp = self.dep_params[1:]
         vcomp.append(0)
 
         endog, exog, group, id_matrix = [], [], [], []
@@ -199,7 +199,7 @@ def gen_gendat_ar0(ar):
         ars.ngroups = 200
         ars.params = np.r_[0, -1, 1, 0, 0.5]
         ars.error_sd = 2
-        ars.dparams = [ar,]
+        ars.dep_params = [ar,]
         ars.simulate()
         return ars, Autoregressive()
     return gendat_ar0
@@ -210,7 +210,7 @@ def gen_gendat_ar1(ar):
         ars.ngroups = 200
         ars.params = np.r_[0, -0.8, 1.2, 0, 0.5]
         ars.error_sd = 2
-        ars.dparams = [ar,]
+        ars.dep_params = [ar,]
         ars.simulate()
         return ars, Autoregressive()
     return gendat_ar1
@@ -221,7 +221,7 @@ def gendat_nested0():
     ns.params = np.r_[0., 1, 1, -1, -1]
     ns.ngroups = 50
     ns.nest_sizes = [10, 5]
-    ns.dparams = [2., 1.]
+    ns.dep_params = [2., 1.]
     ns.simulate()
     return ns, Nested(ns.id_matrix)
 
@@ -231,15 +231,19 @@ def gendat_nested1():
     ns.params = np.r_[0, 1, 1.3, -0.8, -1.2]
     ns.ngroups = 50
     ns.nest_sizes = [10, 5]
-    ns.dparams = [1., 3.]
+    ns.dep_params = [1., 3.]
     ns.simulate()
     return ns, Nested(ns.id_matrix)
 
 
 if __name__ == "__main__":
 
-    np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
-                        suppress=True)
+    try:
+        np.set_printoptions(formatter={'all': lambda x: "%8.3f" % x},
+                            suppress=True)
+    except TypeError:
+        # older numpy versions do not have formatter option
+        pass
 
     OUT = open("gee_gaussian_simulation_check.txt", "w")
 
@@ -258,7 +262,7 @@ if __name__ == "__main__":
         pvalues = []
         params = []
         std_errors = []
-        dparams = []
+        dep_params = []
 
         for j in range(nrep):
 
@@ -269,9 +273,9 @@ if __name__ == "__main__":
             mdf = md.fit()
 
             scale_inv = 1 / md.estimate_scale()
-            dparams.append(np.r_[va.dparams, scale_inv])
+            dep_params.append(np.r_[va.dep_params, scale_inv])
             params.append(np.asarray(mdf.params))
-            std_errors.append(np.asarray(mdf.standard_errors))
+            std_errors.append(np.asarray(mdf.standard_errors()))
 
             da,va = gendat()
             ga = Gaussian()
@@ -283,7 +287,7 @@ if __name__ == "__main__":
             pvalue = score["p-value"]
             pvalues.append(pvalue)
 
-        dparams_mean = np.array(sum(dparams) / len(dparams))
+        dparams_mean = np.array(sum(dep_params) / len(dep_params))
         OUT.write("Checking dependence parameters:\n")
         da.print_dparams(dparams_mean)
 
