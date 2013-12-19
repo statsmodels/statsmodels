@@ -995,6 +995,14 @@ class Results(object):
             from patsy import dmatrix
             exog = dmatrix(self.model.data.orig_exog.design_info.builder,
                     exog)
+
+        if exog is not None:
+            exog = np.asarray(exog)
+            if exog.ndim == 1 and (self.model.exog.ndim == 1 or
+                                   self.model.exog.shape[1] == 1):
+                exog = exog[:, None]
+            exog = np.atleast_2d(exog) # needed in count model shape[1]
+
         return self.model.predict(self.params, exog, *args, **kwargs)
 
 
