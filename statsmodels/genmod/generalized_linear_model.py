@@ -734,7 +734,6 @@ wrap.populate_wrapper(GLMResultsWrapper, GLMResults)
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    import numpy as np
     data = sm.datasets.longley.load()
     #data.exog = add_constant(data.exog)
     GLMmod = GLM(data.endog, data.exog).fit()
