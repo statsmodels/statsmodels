@@ -419,7 +419,7 @@ class QuantRegResults(RegressionResults):
                           #title="")
 
         #add warnings/notes, added to text format only
-        etext =[]
+        etext = []
         if eigvals[-1] < 1e-10:
             wstr = "The smallest eigenvalue is %6.3g. This might indicate "
             wstr += "that there are\n"
