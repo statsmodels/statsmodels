@@ -144,8 +144,8 @@ class Exchangeable(CovStruct):
                                 (1 - self.dep_params) * np.eye(dim), True
 
     def summary(self):
-        return "The correlation between two observations in the "\
-            "same cluster is %.3f" % self.dep_params
+        return ("The correlation between two observations in the " +
+                "same cluster is %.3f" % self.dep_params)
 
 
 
@@ -498,8 +498,8 @@ class Autoregressive(CovStruct):
 
     def summary(self):
 
-        print "Autoregressive(1) dependence parameter: %.3f\n" %\
-            self.dep_params
+        return ("Autoregressive(1) dependence parameter: %.3f\n" %
+                self.dep_params)
 
 
 
@@ -739,4 +739,4 @@ class GlobalOddsRatio(CovStruct):
 
     def summary(self):
 
-        print "Global odds ratio: %.3f\n" % self.dep_params[0]
+        return "Global odds ratio: %.3f\n" % self.dep_params[0]

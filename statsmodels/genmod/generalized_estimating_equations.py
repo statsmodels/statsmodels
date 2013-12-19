@@ -616,9 +616,13 @@ class GEE(base.Model):
         """
 
         if exog is None:
-            fitted = self.offset + np.dot(self.exog, params)
+            exog = self.exog
+            offset = self.offset
         else:
-            fitted = offset + np.dot(exog, params)
+            if offset is None:
+                offset = 0
+
+        fitted = offset + np.dot(exog, params)
 
         if not linear:
             fitted = self.family.link(fitted)
@@ -1042,7 +1046,8 @@ class GEEResults(base.LikelihoodModelResults):
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
-                    ('Method:', ['Generalized Estimating Equations']),
+                    ('Method:', ['Generalized']),
+                    ('', ['Estimating Equations']),
                     ('Family:', [self.model.family.__class__.__name__]),
                     ('Dependence structure:',
                      [self.model.covstruct.__class__.__name__]),
