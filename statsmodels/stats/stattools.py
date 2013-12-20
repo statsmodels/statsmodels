@@ -101,6 +101,7 @@ def robust_skewness(y, axis=0):
     Parameters
     ----------
     y : array-like
+
     axis : int or None, optional
         Axis along which the skewness measures are computed.  If `None`, the
         entire array is used.
@@ -120,6 +121,22 @@ def robust_skewness(y, axis=0):
 
     Notes
     -----
+    The robust skewness measures are defined
+
+    .. math ::
+
+        SK_{2}=\\frac{\\left(q_{.75}-q_{.5}\\right)
+        -\\left(q_{.5}-q_{.25}\\right)}{q_{.75}-q_{.25}}
+
+    .. math ::
+
+        SK_{3}=\\frac{\\mu-\\hat{q}_{0.5}}
+        {\\hat{E}\\left[\\left|y-\\hat{\\mu}\\right|\\right]}
+
+    .. math ::
+
+        SK_{4}=\\frac{\\mu-\\hat{q}_{0.5}}{\\hat{\\sigma}}
+
     .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
     skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
     March 2004.
@@ -187,7 +204,7 @@ def _kr3(y, alpha=5.0, beta=50.0):
     return (u_alpha - l_alpha) / (u_beta - l_beta)
 
 
-def robust_kurtosis(y, axis=0, excess=True):
+def robust_kurtosis(y, axis=0, ab=(5.0, 50.0), dg=(2.5, 25.0), excess=True):
     """
     Calculates the four kurtosis measures in Kim & White
 
@@ -197,6 +214,10 @@ def robust_kurtosis(y, axis=0, excess=True):
     axis : int or None, optional
         Axis along which the kurtoses are computed.  If `None`, the
         entire array is used.
+    ab: iterable, optional
+        Contains 100*(alpha, beta) in the kr3 measure
+    db: iterable, optional
+        Contains 100*(delta, gamma) in the kr4 measure
     excess : bool, optional
         If true (default), computed values are excess of those for a standard
         normal distribution.
@@ -214,17 +235,38 @@ def robust_kurtosis(y, axis=0, excess=True):
 
     Notes
     -----
+    The robust kurtosis measures are defined
+
+    .. math::
+
+        KR_{2}=\\frac{\\left(\\hat{q}_{.875}-\\hat{q}_{.625}\\right)
+        +\\left(\\hat{q}_{.375}-\\hat{q}_{.125}\\right)}
+        {\\hat{q}_{.75}-\\hat{q}_{.25}}
+
+    .. math::
+
+        KR_{3}=\\frac{\\hat{E}\\left(y|y>\\hat{q}_{1-\\alpha}\\right)
+        -\\hat{E}\\left(y|y<\\hat{q}_{\\alpha}\\right)}
+        {\\hat{E}\\left(y|y>\\hat{q}_{1-\\beta}\\right)
+        -\\hat{E}\\left(y|y<\\hat{q}_{\\beta}\\right)}
+
+    .. math::
+
+        KR_{4}=\\frac{\\hat{q}_{1-\\delta}-\\hat{q}_{\\delta}}
+        {\\hat{q}_{1-\\gamma}-\\hat{q}_{\\gamma}}
+
+    where :math:`\\hat{q}_{p}` is the estimated quantile at :math:`p`.
+
     .. [1] Tae-Hwan Kim and Halbert White, "On more robust estimation of
     skewness and kurtosis," Finance Research Letters, vol. 1, pp. 56-73,
     March 2004.
     """
-    perc = (12.5, 25.0, 37.5, 62.5, 75.0, 87.5, 2.5, 97.5)
-    e1, e2, e3, e5, e6, e7, fa, f1ma = np.percentile(y, perc, axis=axis)
+    alpha, beta = ab
+    delta, gamma = dg
 
-    alpha, beta = 5.0, 50.0
-
-    f1mb = e6
-    fb = e2
+    perc = (12.5, 25.0, 37.5, 62.5, 75.0, 87.5,
+            delta, 100.0 - delta, gamma, 100.0 - gamma)
+    e1, e2, e3, e5, e6, e7, fd, f1md, fg, f1mg = np.percentile(y, perc, axis=axis)
 
     expected_value = np.zeros(4)
     if excess:
@@ -232,19 +274,24 @@ def robust_kurtosis(y, axis=0, excess=True):
         pdf = stats.norm.pdf
         q1, q2, q3, q5, q6, q7 = ppf(np.array((1.0, 2.0, 3.0, 5.0, 6.0, 7.0))/8)
         expected_value[0] = 3
-        expected_value[1] = ((q7 - q5) +(q3 - q1)) / (q6 - q2)
-        q50, q95= ppf(np.array((.50, .95)))
-        expected_value[2] = (2 * pdf(q95)/.05) / (2 * pdf(q50)/.5)
-        q025, q975 = ppf(np.array((.025, .975)))
-        expected_value[3] = (q975 - q025) / (q6 - q2)
+
+        expected_value[1] = ((q7 - q5) + (q3 - q1)) / (q6 - q2)
+
+        q_alpha, q_beta = ppf(np.array((alpha / 100.0, beta / 100.0)))
+        expected_value[2] = (2 * pdf(q_alpha)/ alpha) / (2 * pdf(q_beta)/ beta)
+
+        delta = delta / 100.0
+        gamma = gamma / 100.0
+        q_delta, q_gamma = ppf(np.array((delta,gamma)))
+        expected_value[3] = (-2.0 * q_delta) / (-2.0 * q_gamma)
 
     kr1 = stats.kurtosis(y, axis, False) - expected_value[0]
     kr2 = ((e7 - e5) + (e3 - e1)) / (e6 - e2) - expected_value[1]
     if y.ndim == 1:
-        kr3 = _kr3(y) - expected_value[2]
+        kr3 = _kr3(y, alpha, beta) - expected_value[2]
     else:
         kr3 = np.apply_along_axis(_kr3, axis, y, alpha, beta) - expected_value[2]
-    kr4 = (f1ma - fa) / (f1mb - fb) - expected_value[3]
+    kr4 = (f1md - fd) / (f1mg - fg) - expected_value[3]
     return kr1, kr2, kr3, kr4
 
 
@@ -290,7 +337,8 @@ def _medcouple_1d(y):
     upper = z[z >= 0.0]
     upper = upper[:, None]
     standardization = upper - lower
-    standardization[standardization==0] = np.inf
+    is_zero = np.logical_and(lower == 0.0, upper == 0.0)
+    standardization[is_zero] = np.inf
     spread = upper + lower
     return np.median(spread / standardization)
 

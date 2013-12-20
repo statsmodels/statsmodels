@@ -245,6 +245,8 @@ class TestStattools(TestCase):
 
     def test_robust_kurtosis(self):
         x = self.kurtosis_x
+        print np.array(robust_kurtosis(x))
+        print self.expected_kurtosis
         assert_almost_equal(np.array(robust_kurtosis(x)), self.expected_kurtosis)
 
     def test_robust_kurtosis_3d(self):
@@ -259,6 +261,23 @@ class TestStattools(TestCase):
         expected = self.expected_kurtosis + self.kurtosis_constants
         kurtosis = np.array(robust_kurtosis(x, excess=False))
         assert_almost_equal(expected, kurtosis)
+
+    def test_robust_kurtosis_ab(self):
+        """Test custom alpha, beta in kr3"""
+        x = self.kurtosis_x
+        alpha, beta = (10.0, 45.0)
+        kurtosis = robust_kurtosis(self.kurtosis_x, ab=(alpha,beta), excess=False)
+        num = np.mean(x[x>np.percentile(x,100.0 - alpha)]) - np.mean(x[x<np.percentile(x,alpha)])
+        denom = np.mean(x[x>np.percentile(x,100.0 - beta)]) - np.mean(x[x<np.percentile(x,beta)])
+        assert_almost_equal(kurtosis[2], num/denom)
+
+    def test_robust_kurtosis_dg(self):
+        """Test custom delta, gamma in kr4"""
+        x = self.kurtosis_x
+        delta, gamma = (10.0, 45.0)
+        kurtosis = robust_kurtosis(self.kurtosis_x, dg=(delta,gamma), excess=False)
+        q = np.percentile(x,[delta, 100.0-delta, gamma, 100.0-gamma])
+        assert_almost_equal(kurtosis[3], (q[1] - q[0]) / (q[3] - q[2]))
 
 
 if __name__ == "__main__":
