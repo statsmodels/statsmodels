@@ -3,11 +3,11 @@ import numpy as np
 
 class CovStruct(object):
     """
-    A base class for correlation and covariance structures of repeated
-    measures data.  Each implementation of this class takes the
-    residuals from a regression model that has been fit to clustered
-    data, and uses them to estimate the within-cluster variance and
-    dependence structure of the model errors.
+    The base class for correlation and covariance structures of cluster data.
+
+    Each implementation of this class takes the residuals from a regression
+    model that has been fit to clustered data, and uses them to estimate the
+    within-cluster variance and dependence structure of the model errors.
     """
 
     # Parameters describing the dependency structure
@@ -505,8 +505,7 @@ class Autoregressive(CovStruct):
 
 class GlobalOddsRatio(CovStruct):
     """
-    Estimate the global odds ratio for a GEE with either ordinal or
-    nominal data.
+    Estimate the global odds ratio for a GEE with ordinal or nominal data.
 
     References
     ----------

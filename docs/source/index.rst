@@ -91,6 +91,7 @@ Table of Contents
 
    regression
    glm
+   gee
    rlm
    discretemod
    anova

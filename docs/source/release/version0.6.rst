@@ -11,6 +11,10 @@ Release summary.
 
 Major changes:
 
+Addition of Generalized Estimating Equations GEE
+
+
+
 Header for Change
 ~~~~~~~~~~~~~~~~~
 

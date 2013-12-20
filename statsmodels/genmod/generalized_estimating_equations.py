@@ -155,6 +155,12 @@ class ParameterConstraint(object):
 
 class GEE(base.Model):
     __doc__ = """
+    Generalized Estimating Equations Models
+
+    GEE estimates Generalized Linear Models when the data has a cluster
+    structure and the observations are possibly correlated within but not
+    across clusters
+
     Parameters
     ----------
     endog : array-like
@@ -909,6 +915,60 @@ class GEE(base.Model):
 
 
 class GEEResults(base.LikelihoodModelResults):
+    '''
+    Class to contain GEE results.
+
+    GEEResults inherits from statsmodels.LikelihoodModelResults
+
+    Parameters
+    ----------
+    See statsmodels.LikelihoodModelReesults
+
+    Returns
+    -------
+    **Attributes**
+
+    naive_covariance : ndarray
+        covariance of the parameter estimates that is not robust to correlation
+        or variance misspecification
+    robust_covariance_bc : ndarray
+        covariance of the parameter estimates that is robust and bias reduced
+    converged : bool
+        indicator for convergence of the optimization.
+        True if the norm of the score is smaller than a threshold
+    covariance_type : string
+        string indicating whether a "robust", "naive" or "robust bias reduced"
+        covariance is used as default
+    fit_history : dict
+        Contains information about the iterations. Its keys are `iterations`,
+        `deviance` and `params`.
+    fittedvalues : array
+        Linear predicted values for the fitted model.
+        dot(exog, params)
+    model : class instance
+        Pointer to GLM model instance that called fit.
+    nobs : float
+        The number of observations n.
+    normalized_cov_params : array
+        See GEE docstring
+    params : array
+        The coefficients of the fitted model.  Note that interpretation
+        of the coefficients often depends on the distribution family and the
+        data.
+    scale : float
+        The estimate of the scale / dispersion for the model fit.
+        See GLM.fit and GLM.estimate_scale for more information.
+    score_norm : float
+        norm of the score at the end of the iterative estimation.
+    stand_errors : array
+        The standard errors of the fitted GLM.   #TODO still named bse
+
+    See Also
+    --------
+    statsmodels.LikelihoodModelResults
+    GEE
+    '''
+
 
     def __init__(self, model, params, cov_params, scale):
 
