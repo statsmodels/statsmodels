@@ -2057,7 +2057,7 @@ class NegativeBinomial(CountModel):
         return hess_arr
 
     #TODO: replace this with analytic where is it used?
-    def scoreobs(self, params):
+    def jac(self, params):
         sc = approx_fprime_cs(params, self.loglikeobs)
         return sc
 

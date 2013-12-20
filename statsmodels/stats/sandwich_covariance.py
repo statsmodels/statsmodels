@@ -216,6 +216,35 @@ def cov_hc3(results):
 
 #---------------------------------------
 
+def _get_sandwich_arrays(results):
+    """Helper function to get scores from results
+
+    Parameters
+
+    """
+
+    if isinstance(results, tuple):
+        # assume we have jac and hessian_inv
+        jac, hessian_inv = results
+        jac = np.asarray(jac)
+        hessian_inv = np.asarray(hessian_inv)
+    elif hasattr(results, 'model'):
+        if hasattr(results, '_results'):
+            # remove wrapper
+            results = results._results
+        # assume we have a results instance
+        if hasattr(results.model, 'jac'):
+            xu = results.model.jac(results.params)
+        else:
+            xu = results.model.exog * results.resid[:, None]
+
+        hessian_inv = np.asarray(results.normalized_cov_params)
+    else:
+        raise ValueError('need either tuple of (jac, hessian_inv) or results' +
+                         'instance')
+
+    return xu, hessian_inv
+
 
 def _HCCM1(results, scale):
     '''
@@ -245,7 +274,7 @@ def _HCCM1(results, scale):
                    np.dot(scale, results.model.pinv_wexog.T))
     return H
 
-def _HCCM2(results, scale):
+def _HCCM2(hessian_inv, scale):
     '''
     sandwich with (X'X)^(-1) * scale * (X'X)^(-1)
 
@@ -268,7 +297,7 @@ def _HCCM2(results, scale):
     if scale.ndim == 1:
         scale = scale[:,None]
 
-    xxi = results.normalized_cov_params
+    xxi = hessian_inv
     H = np.dot(np.dot(xxi, scale), xxi.T)
     return H
 
@@ -494,16 +523,18 @@ def cov_cluster(results, group, use_correction=True):
 
     '''
     #TODO: currently used version of groupsums requires 2d resid
-    xu = results.model.exog * results.resid[:, None]
+    xu, hessian_inv = _get_sandwich_arrays(results)
+
     scale = S_crosssection(xu, group)
 
-    nobs, k_vars = results.model.exog.shape
+    nobs, k_params = xu.shape
     n_groups = len(np.unique(group)) #replace with stored group attributes if available
 
-    cov_c = _HCCM2(results, scale)
+    cov_c = _HCCM2(hessian_inv, scale)
 
     if use_correction:
-        cov_c *= n_groups / (n_groups - 1.) * ((nobs-1.) / float(nobs - k_vars))
+        cov_c *= (n_groups / (n_groups - 1.) *
+                  ((nobs-1.) / float(nobs - k_params)))
 
     return cov_c
 
@@ -593,14 +624,14 @@ def cov_white_simple(results, use_correction=True):
         with small sample corrections
 
     '''
-    xu = results.model.exog * results.resid[:, None]
+    xu, hessian_inv = _get_sandwich_arrays(results)
     sigma = S_white_simple(xu)
 
-    cov_w = _HCCM2(results, sigma)  #add bread to sandwich
+    cov_w = _HCCM2(hessian_inv, sigma)  #add bread to sandwich
 
     if use_correction:
-        nobs, k_vars = results.model.exog.shape
-        cov_w *= nobs / float(nobs - k_vars)
+        nobs, k_params = xu.shape
+        cov_w *= nobs / float(nobs - k_params)
 
     return cov_w
 
@@ -639,14 +670,14 @@ def cov_hac_simple(results, nlags=None, weights_func=weights_bartlett,
     options might change when other kernels besides Bartlett are available.
 
     '''
-    xu = results.model.exog * results.resid[:, None]
+    xu, hessian_inv = _get_sandwich_arrays(results)
     sigma = S_hac_simple(xu, nlags=nlags, weights_func=weights_func)
 
-    cov_hac = _HCCM2(results, sigma)
+    cov_hac = _HCCM2(hessian_inv, sigma)
 
     if use_correction:
-        nobs, k_vars = results.model.exog.shape
-        cov_hac *= nobs / float(nobs - k_vars)
+        nobs, k_params = xu.shape
+        cov_hac *= nobs / float(nobs - k_params)
 
     return cov_hac
 
@@ -749,20 +780,21 @@ def cov_nw_panel(results, nlags, groupidx, weights_func=weights_bartlett,
     else:
         weights = weights_func(nlags)
 
-    xw = (results.model.exog * results.resid[:,None])
+    xu, hessian_inv = _get_sandwich_arrays(results)
 
-    S_hac = S_nw_panel(xw, weights, groupidx)
-    cov_hac = _HCCM2(results, S_hac)
+    S_hac = S_nw_panel(xu, weights, groupidx)
+    cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
-        nobs, k_vars = results.model.exog.shape
+        nobs, k_params = xu.shape
         if use_correction == 'hac':
-            cov_hac *= nobs / float(nobs - k_vars)
+            cov_hac *= nobs / float(nobs - k_params)
         elif use_correction in ['c', 'clu', 'cluster']:
             n_groups = len(groupidx)
             cov_hac *= n_groups / (n_groups - 1.)
-            cov_hac *= ((nobs-1.) / float(nobs - k_vars))
+            cov_hac *= ((nobs-1.) / float(nobs - k_params))
 
     return cov_hac
+
 
 def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
                  use_correction=0):
@@ -824,19 +856,19 @@ def cov_nw_groupsum(results, nlags, time, weights_func=weights_bartlett,
 
     '''
 
-    xw = (results.model.exog * results.resid[:,None])
+    xu, hessian_inv = _get_sandwich_arrays(results)
 
     #S_hac = S_nw_panel(xw, weights, groupidx)
-    S_hac = S_hac_groupsum(xw, time, nlags=nlags, weights_func=weights_func)
-    cov_hac = _HCCM2(results, S_hac)
+    S_hac = S_hac_groupsum(xu, time, nlags=nlags, weights_func=weights_func)
+    cov_hac = _HCCM2(hessian_inv, S_hac)
     if use_correction:
-        nobs, k_vars = results.model.exog.shape
+        nobs, k_params = xu.shape
         if use_correction == 'hac':
-            cov_hac *= nobs / float(nobs - k_vars)
+            cov_hac *= nobs / float(nobs - k_params)
         elif use_correction in ['c', 'cluster']:
             n_groups = len(np.unique(time))
             cov_hac *= n_groups / (n_groups - 1.)
-            cov_hac *= ((nobs-1.) / float(nobs - k_vars))
+            cov_hac *= ((nobs-1.) / float(nobs - k_params))
 
     return cov_hac
 
