@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                           assert_raises, dec)
+                           assert_raises, dec, TestCase)
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
@@ -1891,12 +1891,52 @@ def test_small_data():
     mod = ARIMA(y, (1, 0, 2))
     res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
 
-def test_arima00():
-    y = np.random.random(10)
-    assert_raises(ValueError, ARMA, y, (0,0))
-    assert_raises(ValueError, ARIMA, y, (0,1,0))
-    assert_raises(ValueError, ARIMA, y, (0,0,0))
+
+class TestARMA00(TestCase):
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets.sunspots import load
+
+        sunspots = load().data['SUNACTIVITY']
+        cls.y = y = sunspots
+        cls.arma_00_model = ARMA(y, order=(0, 0))
+        cls.arma_00_res = cls.arma_00_model.fit()
+
+    def test_parameters(self):
+        params = self.arma_00_res.params
+        assert_almost_equal(self.y.mean(), params)
+
+    def test_predictions(self):
+        predictions = self.arma_00_res.predict()
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+
+    def test_information_criteria(self):
+        from statsmodels.regression.linear_model import OLS
+        res = self.arma_00_res
+        y = self.y
+        ols_res = OLS(y, np.ones_like(y)).fit()
+        ols_ic = np.array([ols_res.aic, ols_res.bic])
+        arma_ic = np.array([res.aic, res.bic])
+        assert_almost_equal(ols_ic, arma_ic, DECIMAL_4)
+
+    def test_arma_00_nc(self):
+        arma_00 = ARMA(self.y, order=(0, 0))
+        assert_raises(ValueError, arma_00.fit, trend='nc')
+
+    def test_css(self):
+        arma = ARMA(self.y, order=(0, 0))
+        fit = arma.fit(method='css')
+        predictions = fit.predict()
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+
+    def test_arima(self):
+        yi = np.cumsum(self.y)
+        arima = ARIMA(yi, order=(0, 1, 0))
+        fit = arima.fit()
+        assert_almost_equal(np.diff(yi).mean(), fit.params, DECIMAL_4)
+
 
 if __name__ == "__main__":
     import nose
-    nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
+    nose.runmodule(argv=[__file__, '-vvs', '-x'], exit=False) #, '--pdb'
+    #nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
