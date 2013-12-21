@@ -71,7 +71,7 @@ def maxabs(x):
 
 class IV2SLS(LikelihoodModel):
     '''
-    class for instrumental variables estimation using Two-Stage Least-Squares
+    Class for instrumental variables estimation using Two-Stage Least-Squares
 
 
     Parameters
@@ -535,19 +535,20 @@ class GMM(Model):
                 # cut at the end
                 self.data.xnames = xnames[:len(params)]
 
-
-    def fit(self, start=None, maxiter=10, inv_weights=None,
+    def fit(self, start_params=None, maxiter=10, inv_weights=None,
                   weights_method='cov', wargs=(),
                   has_optimal_weights=True,
                   optim_method='bfgs', optim_args=None):
         '''
-        Estimate the parameters using default settings.
+        Estimate parameters using GMM and return GMMResults
 
-        For estimation with more options use fititer method.
+        TODO: weight and covariance arguments still need to be made consistent
+        with similar options in other models,
+        see RegressionResult.get_robustcov_results
 
         Parameters
         ----------
-        start : array (optional)
+        start_params : array (optional)
             starting value for parameters ub minimization. If None then
             fitstart method is called for the starting values.
         maxiter : int or 'cue'
@@ -559,6 +560,45 @@ class GMM(Model):
             calculated which updates the weight matrix during the minimization
             of the GMM objective function. The CUE estimation uses the onestep
             parameters as starting values.
+        inv_weights : None or ndarray
+            inverse of the starting weighting matrix. If inv_weights are not
+            given then the method `start_weights` is used which depends on
+            the subclass, for IV subclasses `inv_weights = z'z` where `z` are
+            the instruments, otherwise an identity matrix is used.
+        weights_method : string, defines method for robust
+            Options here are similar to :mod:`statsmodels.stats.robust_covariance`
+            default is heteroscedasticity consistent, HC0
+
+            currently available methods are
+
+            - `cov` : HC0, optionally with degrees of freedom correction
+            - `hac` :
+            - `iid` : untested, only for Z*u case, IV cases with u as error indep of Z
+            - `ac` : not available yet
+            - `cluster` : not connected yet
+            - others from robust_covariance
+
+        wargs` : tuple or dict,
+            required and optional arguments for weights_method
+
+            - `centered` : bool,
+              indicates whether moments are centered for the calculation of the weights
+              and covariance matrix, applies to all weight_methods
+            - `ddof` : int
+              degrees of freedom correction, applies currently only to `cov`
+            - `maxlag` : int
+              number of lags to include in HAC calculation , applies only to `hac`
+            - others not yet, e.g. groups for cluster robust
+
+        has_optimal_weights: If true, then the calculation of the covariance
+              matrix assumes that we have optimal GMM with :math:`W = S^{-1}`.
+              Default is True.
+              TODO: do we want to have a different default after `onestep`?
+        optim_method : string, default is 'bfgs'
+            numerical optimization method. Currently not all optimizers that
+            are available in LikelihoodModels are connected.
+        optim_args : dict
+            keyword arguments for the numerical optimizer.
 
         Returns
         -------
@@ -567,12 +607,6 @@ class GMM(Model):
 
         Notes
         -----
-        This function attaches the estimated parameters, params, the
-        weighting matrix of the final iteration, weights, and the value
-        of the GMM objective function, jval to results. The results are
-        attached to this instance and also returned.
-
-        fititer is called with maxiter=10 by default.
 
         Warning: One-step estimation, `maxiter` either 0 or 1, still has
         problems (at least compared to Stata's gmm).
@@ -580,6 +614,8 @@ class GMM(Model):
         uses the assumption that the weight matrix is optimal.
         See options for cov_params in the results instance.
 
+        The same options as for weight matrix also apply to the calculation of
+        the estimate of the covariance matrix of the parameter estimates.
 
         '''
         # TODO: add check for correct wargs keys
@@ -591,6 +627,7 @@ class GMM(Model):
         #       unit test if anything  is stale or spilled over.
 
         #bug: where does start come from ???
+        start = start_params  # alias for renaming
         if start is None:
             start = self.fitstart() #TODO: temporary hack
 
@@ -650,7 +687,6 @@ class GMM(Model):
 
         self.results = results # FIXME: remove, still keeping it temporarily
         return results
-
 
     def fitgmm(self, start, weights=None, optim_method='bfgs', optim_args=None):
         '''estimate parameters using GMM
@@ -755,10 +791,8 @@ class GMM(Model):
         #TODO: add other optimization options and results
         return optimizer(self.gmmobjective_cu, start, args=(), **optim_args)
 
-
     def start_weights(self, inv=True):
         return np.eye(self.nmoms)
-
 
     def gmmobjective(self, params, weights):
         '''
@@ -881,19 +915,20 @@ class GMM(Model):
 
     def calc_weightmatrix(self, moms, weights_method='cov', wargs=(),
                           params=None):
-        '''calculate omega or the weighting matrix
+        '''
+        calculate omega or the weighting matrix
 
         Parameters
         ----------
-
         moms : array, (nobs, nmoms)
             moment conditions for all observations evaluated at a parameter
             value
-        method : 'momcov', anything else
-            If method='momcov' is cov then the matrix is calculated as simple
-            covariance of the moment conditions. For anything else, a
-            constant cutoff window of length 5 is used.
-        wargs : tuple
+        weights_method : string 'cov'
+            If method='cov' is cov then the matrix is calculated as simple
+            covariance of the moment conditions.
+            see fit method for available aoptions for the weight and covariance
+            matrix
+        wargs : tuple or dict
             parameters that are required by some kernel methods to
             estimate the long-run covariance. Not used yet.
 
@@ -1298,10 +1333,16 @@ class GMMResults(LikelihoodModelResults):
 
 class IVGMM(GMM):
     '''
-    Class for linear instrumental variables estimation with homoscedastic
-    errors
+    Basic class for instrumental variables estimation using GMM
 
-    currently mainly a test case, doesn't exploit linear structure
+    A linear function for the conditional mean is defined as default but the
+    methods should be overwritten by subclasses, currently `LinearIVGMM` and
+    `NonlinearIVGMM` are implemented as subclasses.
+
+    See Also
+    --------
+    LinearIVGMM
+    NonlinearIVGMM
 
     '''
 
@@ -1337,20 +1378,54 @@ class IVGMM(GMM):
 
 
 class LinearIVGMM(IVGMM):
+    """class for linear instrumental variables models estimated with GMM
+
+    Uses closed form expression instead of nonlinear optimizers for each step
+    of the iterative GMM.
+
+    The model is assumed to have the following moment condition
+
+        E( z * (y - x beta)) = 0
+
+    Where `y` is the dependent endogenous variable, `x` are the explanatory
+    variables and `z` are the instruments. Variables in `x` that are exogenous
+    need also be included in `z`.
+
+    Notation Warning: our name `exog` stands for the explanatory variables,
+    and includes both exogenous and explanatory variables that are endogenous,
+    i.e. included endogenous variables
+
+    Parameters
+    ----------
+    endog : array_like
+        dependent endogenous variable
+    exog : array_like
+        explanatory, right hand side variables, including explanatory variables
+        that are endogenous
+    instruments : array_like
+        Instrumental variables, variables that are exogenous to the error
+        in the linear model containing both included and excluded exogenous
+        variables
 
 
-    def fitgmm(self, start, weights=None, optim_method='bfgs', **kwds):
+    """
+
+    def fitgmm(self, start, weights=None, optim_method=None, **kwds):
         '''estimate parameters using GMM for linear model
 
-        uses closed form expression, instead of nonlinear optimizers
+        Uses closed form expression instead of nonlinear optimizers
 
         Parameters
         ----------
-        start : array_like
-            starting values for minimization
+        start : not used
+            starting values for minimization, not used, only for consistency
+            of method signature
         weights : array
             weighting matrix for moment conditions. If weights is None, then
             the identity matrix is used
+        optim_method : not used,
+            optimization method, not used, only for consistency of method
+            signature
         **kwds : keyword arguments
             not used, will be silently ignored (for compatibility with generic)
 
@@ -1359,12 +1434,6 @@ class LinearIVGMM(IVGMM):
         -------
         paramest : array
             estimated parameters
-
-        Notes
-        -----
-        todo: add fixed parameter option, not here ???
-
-        uses scipy.optimize.fmin
 
         '''
 ##        if not fixed is None:  #fixed not defined in this version
@@ -1418,15 +1487,50 @@ class LinearIVGMM(IVGMM):
 
 
 class NonlinearIVGMM(IVGMM):
-    '''
-    Class for non-linear instrumental variables estimation with GMM
+    """
+    Class for non-linear instrumental variables estimation wusing GMM
 
-    currently mainly a test case, not checked yet
+    The model is assumed to have the following moment condition
 
-    This should be reversed:
-    NonlinearIVGMM is IVGMM and need LinearIVGMM as special case (fit, predict)
+        E[ z * (y - f(X, beta)] = 0
 
-    '''
+    Where `y` is the dependent endogenous variable, `x` are the explanatory
+    variables and `z` are the instruments. Variables in `x` that are exogenous
+    need also be included in z. `f` is a nonlinear function.
+
+    Notation Warning: our name `exog` stands for the explanatory variables,
+    and includes both exogenous and explanatory variables that are endogenous,
+    i.e. included endogenous variables
+
+    Parameters
+    ----------
+    endog : array_like
+        dependent endogenous variable
+    exog : array_like
+        explanatory, right hand side variables, including explanatory variables
+        that are endogenous.
+    instruments : array_like
+        Instrumental variables, variables that are exogenous to the error
+        in the linear model containing both included and excluded exogenous
+        variables
+    func : callable
+        function for the mean or conditional expectation of the endogenous
+        variable. The function will be called with parameters and the array of
+        explanatory, right hand side variables, `func(params, exog)`
+
+    Notes
+    -----
+    This class uses numerical differences to obtain the derivative of the
+    objective function. If the jacobian of the conditional mean function, `func`
+    is available, then it can be used by subclassing this class and defining
+    a method `jac_func`.
+
+    TODO: check required signature of jac_error and jac_func
+
+    """
+    # This should be reversed:
+    # NonlinearIVGMM is IVGMM and need LinearIVGMM as special case (fit, predict)
+
 
     def fitstart(self):
         #might not make sense for more general functions
@@ -1449,6 +1553,7 @@ class NonlinearIVGMM(IVGMM):
 
     def jac_func(self, params, weights, args=None, centered=True, epsilon=None):
 
+        # TODO: Why are ther weights in the signature - copy-paste error?
         deriv = approx_fprime(params, self.func, args=(self.exog,),
                               centered=centered, epsilon=epsilon)
 
