@@ -1,6 +1,7 @@
 import os
 import numpy.testing as npt
 from nose import SkipTest
+from nose.tools import raises
 import numpy as np
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
@@ -21,6 +22,33 @@ KDEWResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 np.random.seed(12345)
 Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+
+class TestKDEExceptions(object):
+
+    @raises(ValueError)
+    def test_check_is_fit_exception(self):
+        kde = KDE(Xi)
+        kde.evaluate(0)
+
+    @raises(NotImplementedError)
+    def test_non_weighted_fft_exception(self):
+        kde = KDE(Xi)
+        weights = np.linspace(1,100,200)
+        kde.fit(kernel="gau", gridsize=50, weights=weights, fft=True,
+                    bw="silverman")
+
+    @raises(ValueError)
+    def test_wrong_weight_length_exception(self):
+        kde = KDE(Xi)
+        weights = np.linspace(1,100,100)
+        kde.fit(kernel="gau", gridsize=50, weights=weights, fft=False,
+                    bw="silverman")
+
+    @raises(NotImplementedError)
+    def test_non_gaussian_fft_exception(self):
+        kde = KDE(Xi)
+        kde.fit(kernel="epa", gridsize=50, fft=True,
+                    bw="silverman")
 
 class CheckKDE(object):
 
