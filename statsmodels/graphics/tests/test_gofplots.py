@@ -1,5 +1,4 @@
 import numpy as np
-np.random.seed(5)
 from numpy.testing import dec
 
 import statsmodels.api as sm
@@ -111,6 +110,7 @@ class BaseProbplotMixin(object):
 
 class TestProbPlotLongely(BaseProbplotMixin):
     def setup(self):
+        np.random.seed(5)
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)
         self.mod_fit = sm.OLS(self.data.endog, self.data.exog).fit()
@@ -121,6 +121,7 @@ class TestProbPlotLongely(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
     def setup(self):
+        np.random.seed(5)
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data)
         self.line = None
@@ -129,6 +130,7 @@ class TestProbPlotRandomNormalMinimal(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
     def setup(self):
+        np.random.seed(5)
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data, fit=True)
         self.line = 'q'
@@ -137,6 +139,7 @@ class TestProbPlotRandomNormalWithFit(BaseProbplotMixin):
 
 class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
     def setup(self):
+        np.random.seed(5)
         self.data = np.random.normal(loc=8.25, scale=3.25, size=37)
         self.prbplt = sm.ProbPlot(self.data, loc=8.25, scale=3.25)
         self.line = '45'

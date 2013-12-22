@@ -197,14 +197,12 @@ class ProbPlot(object):
 
         Parameters
         ----------
-        ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure
-            being created.
         xlabel, ylabel : str or None, optional
             User-provided lables for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
+
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -220,6 +218,9 @@ class ProbPlot(object):
             instance. If an array-like object is provided, it will be turned
             into a `ProbPlot` instance using default parameters. If not provided
             (default), the theoretical quantiles are used.
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
         **plotkwargs : additional matplotlib arguments to be passed to the
             `plot` command.
 
@@ -263,16 +264,13 @@ class ProbPlot(object):
         return fig
 
     def qqplot(self, xlabel=None, ylabel=None, line=None, other=None,
-                ax=None, **plotkwargs):
+               ax=None, **plotkwargs):
         """
         Q-Q plot of the quantiles of x versus the quantiles/ppf of a
         distribution or the quantiles of another `ProbPlot` instance.
 
         Parameters
         ----------
-        ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure
-            being created.
         xlabel, ylabel : str or None, optional
             User-provided lables for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
@@ -293,6 +291,9 @@ class ProbPlot(object):
             instance. If an array-like object is provided, it will be turned
             into a `ProbPlot` instance using default parameters. If not provided
             (default), the theoretical quantiles are used.
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
         **plotkwargs : additional matplotlib arguments to be passed to the
             `plot` command.
 
@@ -332,8 +333,8 @@ class ProbPlot(object):
 
         return fig
 
-    def probplot(self, ax=None, xlabel=None, ylabel=None, line=None,
-                 exceed=False, **plotkwargs):
+    def probplot(self, xlabel=None, ylabel=None, line=None,
+                 exceed=False, ax=None, **plotkwargs):
         """
         Probability plot of the unscaled quantiles of x versus the
         probabilities of a distibution (not to be confused with a P-P plot).
@@ -343,16 +344,12 @@ class ProbPlot(object):
 
         Parameters
         ----------
-        ax : Matplotlib AxesSubplot instance, optional
-            If given, this subplot is used to plot in instead of a new figure
-            being created.
-
         xlabel, ylabel : str or None, optional
             User-provided lables for the x-axis and y-axis. If None (default),
             other values are used depending on the status of the kwarg `other`.
-
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
+
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -362,15 +359,17 @@ class ProbPlot(object):
             - None - by default no reference line is added to the plot.
             - If True a reference line is drawn on the graph. The default is to
               fit a line via OLS regression.
+        exceed : boolean, optional
 
-        excced : boolean, optional
              - If False (default) the raw sample quantiles are plotted against
                the theoretical quantiles, show the probability that a sample
                will not exceed a given value
              - If True, the theoretical quantiles are flipped such that the
                figure displays the probability that a sample will exceed a
                given value.
-
+        ax : Matplotlib AxesSubplot instance, optional
+            If given, this subplot is used to plot in instead of a new figure
+            being created.
         **plotkwargs : additional matplotlib arguments to be passed to the
             `plot` command.
 
