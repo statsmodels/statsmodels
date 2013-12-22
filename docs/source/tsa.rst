@@ -117,7 +117,7 @@ Vector Autogressive Processes (VAR)
    vector_ar.var_model.VARResults
    vector_ar.dynamic.DynamicVAR
 
-.. seealso:: :ref:`VAR documentation <var>`
+.. seealso:: tutorial :ref:`VAR documentation <var>`
 
 .. currentmodule:: statsmodels.tsa
 
@@ -137,7 +137,7 @@ estimation are available for vector autoregressive processes.
    vector_ar.var_model.FEVD
    vector_ar.dynamic.DynamicVAR
 
-.. seealso:: :ref:`VAR documentation <var>`
+.. seealso:: tutorial :ref:`VAR documentation <var>`
 
 ARMA Process
 """"""""""""
