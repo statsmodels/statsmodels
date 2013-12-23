@@ -8,8 +8,8 @@ class test_norm_constant():
     
     def test_norm_constant_calculation(self):
         custom_gauss = kernels.CustomKernel(lambda x: np.exp(-x**2/2.0))
-        guass_true_const = 0.3989422804014327
-        npt.assert_almost_equal(guass_true_const, custom_gauss.norm_const)
+        gauss_true_const = 0.3989422804014327
+        npt.assert_almost_equal(gauss_true_const, custom_gauss.norm_const)
 
 
 if __name__ == "__main__":

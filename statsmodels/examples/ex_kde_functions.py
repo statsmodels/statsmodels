@@ -20,10 +20,6 @@ x = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
 kde = npar.KDEUnivariate(x)
 kde.fit('gau')
 
-kde = npar.KDEUnivariate(x)
-kde.fit('gau')
-ci = kde.kernel.density_confint(kde.density, len(x))
-
 fig = plt.figure()
 ax = fig.add_subplot(1, 1, 1)
 ax.hist(x, bins=15, normed=True, alpha=0.25)

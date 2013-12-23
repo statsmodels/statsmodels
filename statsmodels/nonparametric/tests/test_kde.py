@@ -25,28 +25,28 @@ Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
 
 class TestKDEExceptions(object):
 
+    @classmethod
+    def setupClass(cls):
+        kde = KDE(Xi)
+        weights_200 = np.linspace(1, 100, 200)
+        weights_100 = np.linspace(1, 100, 100)
+
     @raises(ValueError)
     def test_check_is_fit_exception(self):
-        kde = KDE(Xi)
         kde.evaluate(0)
 
     @raises(NotImplementedError)
     def test_non_weighted_fft_exception(self):
-        kde = KDE(Xi)
-        weights = np.linspace(1,100,200)
-        kde.fit(kernel="gau", gridsize=50, weights=weights, fft=True,
+        kde.fit(kernel="gau", gridsize=50, weights=weights_200, fft=True,
                     bw="silverman")
 
     @raises(ValueError)
     def test_wrong_weight_length_exception(self):
-        kde = KDE(Xi)
-        weights = np.linspace(1,100,100)
-        kde.fit(kernel="gau", gridsize=50, weights=weights, fft=False,
+        kde.fit(kernel="gau", gridsize=50, weights=weights_100, fft=False,
                     bw="silverman")
 
     @raises(NotImplementedError)
     def test_non_gaussian_fft_exception(self):
-        kde = KDE(Xi)
         kde.fit(kernel="epa", gridsize=50, fft=True,
                     bw="silverman")
 
@@ -76,10 +76,10 @@ class CheckKDE(object):
 class TestKDEGauss(CheckKDE):
     @classmethod
     def setupClass(cls):
-        res1 = KDE(Xi)
-        res1.fit(kernel="gau", fft=False, bw="silverman")
-        cls.res1 = res1
-        cls.res_density = KDEResults["gau_d"]
+            res1 = KDE(Xi)
+            res1.fit(kernel="gau", fft=False, bw="silverman")
+            cls.res1 = res1
+            cls.res_density = KDEResults["gau_d"]
 
     def test_evaluate(self):
         #kde_vals = self.res1.evaluate(self.res1.support)
