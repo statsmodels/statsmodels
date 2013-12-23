@@ -27,27 +27,27 @@ class TestKDEExceptions(object):
 
     @classmethod
     def setupClass(cls):
-        kde = KDE(Xi)
-        weights_200 = np.linspace(1, 100, 200)
-        weights_100 = np.linspace(1, 100, 100)
+        cls.kde = KDE(Xi)
+        cls.weights_200 = np.linspace(1, 100, 200)
+        cls.weights_100 = np.linspace(1, 100, 100)
 
     @raises(ValueError)
     def test_check_is_fit_exception(self):
-        kde.evaluate(0)
+        self.kde.evaluate(0)
 
     @raises(NotImplementedError)
     def test_non_weighted_fft_exception(self):
-        kde.fit(kernel="gau", gridsize=50, weights=weights_200, fft=True,
+        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_200, fft=True,
                     bw="silverman")
 
     @raises(ValueError)
     def test_wrong_weight_length_exception(self):
-        kde.fit(kernel="gau", gridsize=50, weights=weights_100, fft=False,
+        self.kde.fit(kernel="gau", gridsize=50, weights=self.weights_100, fft=False,
                     bw="silverman")
 
     @raises(NotImplementedError)
     def test_non_gaussian_fft_exception(self):
-        kde.fit(kernel="epa", gridsize=50, fft=True,
+        self.kde.fit(kernel="epa", gridsize=50, fft=True,
                     bw="silverman")
 
 class CheckKDE(object):
