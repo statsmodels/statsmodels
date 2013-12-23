@@ -946,9 +946,7 @@ class GEEResults(base.LikelihoodModelResults):
         Linear predicted values for the fitted model.
         dot(exog, params)
     model : class instance
-        Pointer to GLM model instance that called fit.
-    nobs : float
-        The number of observations n.
+        Pointer to GEE model instance that called fit.
     normalized_cov_params : array
         See GEE docstring
     params : array
@@ -957,11 +955,11 @@ class GEEResults(base.LikelihoodModelResults):
         data.
     scale : float
         The estimate of the scale / dispersion for the model fit.
-        See GLM.fit and GLM.estimate_scale for more information.
+        See GEE.fit for more information.
     score_norm : float
         norm of the score at the end of the iterative estimation.
-    stand_errors : array
-        The standard errors of the fitted GLM.   #TODO still named bse
+    bse : array
+        The standard errors of the fitted GEE parameters.
 
     See Also
     --------

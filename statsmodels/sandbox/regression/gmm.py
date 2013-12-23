@@ -1000,7 +1000,6 @@ class GMM(Model):
                 w += (h[i] * np.dot(moms_[i:].T, moms_[:-i]) / (nobs-i))
 
         elif weights_method == 'hac':
-            print 'using HAC'
             maxlag = wargs['maxlag']
             if 'kernel' in wargs:
                 weights_func = wargs['kernel']
