@@ -1,3 +1,9 @@
+# Note: The information criteria add 1 to the number of parameters
+#       whenever the model has an AR or MA term since, in principle,
+#       the variance could be treated as a free parameter and restricted
+#       This code does not allow this, but it adds consistency with other
+#       packages such as gretl and X12-ARIMA
+
 from __future__ import absolute_import
 # for 2to3 with extensions
 
@@ -814,11 +820,8 @@ class ARMA(tsbase.TimeSeriesModel):
         k_ar = self.k_ar
         k_ma = self.k_ma
 
-
         # enforce invertibility
         self.transparams = transparams
-
-        self.method = method.lower()
 
         endog, exog = self.endog, self.exog
         k_exog = self.k_exog
@@ -834,7 +837,6 @@ class ARMA(tsbase.TimeSeriesModel):
                          "AR term, MA term, a constant or an exogenous "
                          "variable.")
 
-
         # check again now that we know the trend
         _check_estimable(len(endog), k_ar + k_ma + k_exog + k_trend)
 
@@ -846,9 +848,12 @@ class ARMA(tsbase.TimeSeriesModel):
                                            self.exog_names)
         k = k_trend + k_exog
 
-
         # choose objective function
-        method = method.lower()
+        if k_ma == 0 and k_ar == 0:
+            method = "css"  # Always CSS when no AR or MA terms
+
+        self.method = method = method.lower()
+
         # adjust nobs for css
         if method == 'css':
             self.nobs = len(self.endog) - k_ar
@@ -1140,6 +1145,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     aic : float
         Akaike Information Criterion
         :math:`-2*llf+2* df_model`
+        where `df_model` includes all AR parameters, MA parameters, constant
+        terms parameters on constant terms and, when the model is estimated
+        using MLE, the variance parameter.
     arparams : array
         The parameters associated with the AR coefficients in the model.
     arroots : array
@@ -1239,6 +1247,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         k_ma = model.k_ma
         self.k_ma = k_ma
         df_model = k_exog + k_trend + k_ar + k_ma
+        self._ic_df_model = df_model
+        if k_ma > 0 or k_ar > 0 or model.method.lower().find("mle") > 0:
+            self._ic_df_model += 1
         self.df_model = df_model
         self.df_resid = self.nobs - df_model
         self._cache = resettable_cache()
@@ -1307,17 +1318,17 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def aic(self):
-        return -2 * self.llf + 2 * self.df_model
+        return -2 * self.llf + 2 * self._ic_df_model
 
     @cache_readonly
     def bic(self):
         nobs = self.nobs
-        return -2 * self.llf + np.log(nobs) * self.df_model
+        return -2 * self.llf + np.log(nobs) * self._ic_df_model
 
     @cache_readonly
     def hqic(self):
         nobs = self.nobs
-        return -2 * self.llf + 2 * self.df_model * np.log(np.log(nobs))
+        return -2 * self.llf + 2 * np.log(np.log(nobs)) * self._ic_df_model
 
     @cache_readonly
     def fittedvalues(self):
