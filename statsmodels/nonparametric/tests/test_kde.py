@@ -5,6 +5,7 @@ from nose.tools import raises
 import numpy as np
 from statsmodels.distributions.mixture_rvs import mixture_rvs
 from statsmodels.nonparametric.kde import KDEUnivariate as KDE
+import statsmodels.sandbox.nonparametric.kernels as kernels
 from scipy import stats
 
 # get results from Stata
@@ -76,10 +77,10 @@ class CheckKDE(object):
 class TestKDEGauss(CheckKDE):
     @classmethod
     def setupClass(cls):
-            res1 = KDE(Xi)
-            res1.fit(kernel="gau", fft=False, bw="silverman")
-            cls.res1 = res1
-            cls.res_density = KDEResults["gau_d"]
+        res1 = KDE(Xi)
+        res1.fit(kernel="gau", fft=False, bw="silverman")
+        cls.res1 = res1
+        cls.res_density = KDEResults["gau_d"]
 
     def test_evaluate(self):
         #kde_vals = self.res1.evaluate(self.res1.support)
@@ -278,7 +279,7 @@ class T_estKDEWPar(CheckKDEWeights):
     res_kernel_name = "x_par_wd"
 
 
-class test_kde_refit():
+class TestKdeRefit():
     np.random.seed(12345)
     data1 = np.random.randn(100) * 100
     pdf = KDE(data1)
@@ -288,9 +289,18 @@ class test_kde_refit():
     pdf2 = KDE(data2)
     pdf2.fit()
 
+
     for attr in ['icdf', 'cdf', 'sf']:
         npt.assert_(not np.allclose(getattr(pdf, attr)[:10],
                                     getattr(pdf2, attr)[:10]))
+
+class TestNormConstant():
+    
+    def test_norm_constant_calculation(self):
+        custom_gauss = kernels.CustomKernel(lambda x: np.exp(-x**2/2.0))
+        gauss_true_const = 0.3989422804014327
+        npt.assert_almost_equal(gauss_true_const, custom_gauss.norm_const)
+
 
 if __name__ == "__main__":
     import nose

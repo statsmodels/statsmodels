@@ -2,7 +2,7 @@
 """
 Author: Padarn Wilson
 
-Plot an example of the avaliable properties of a kernel density estimate.
+Plot an example of the available properties of a kernel density estimate.
 """
 
 import numpy as np
