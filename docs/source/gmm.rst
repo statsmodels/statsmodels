@@ -33,12 +33,8 @@ Module Reference
    GMM
    GMMResults
    IV2SLS
-
-not sure what the status is on the following
-
-.. autosummary::
-   :toctree: generated/
-
    IVGMM
+   IVGMMResults
+   IVRegressionResults
+   LinearIVGMM
    NonlinearIVGMM
-   DistQuantilesGMM
