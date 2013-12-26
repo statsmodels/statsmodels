@@ -9,7 +9,7 @@ Author: Padarn Wilson
 import numpy as np
 from statsmodels.sandbox.nonparametric import kernels
 
-from numpy.testing import assert_allclose,
+from numpy.testing import assert_allclose
 
 
 class CheckSilvermanConstant(object):
