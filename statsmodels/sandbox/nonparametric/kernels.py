@@ -21,6 +21,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 
 import numpy as np
 import scipy.integrate
+from scipy.misc import factorial
 from numpy import exp, multiply, square, divide, subtract, inf
 
 
@@ -148,6 +149,8 @@ class CustomKernel(object):
         self._h = h
         self._L2Norm = None
         self._kernel_var = None
+        self._silverman_constant = None
+        self._order = None
 
     def geth(self):
         """Getter for kernel bandwidth, h"""
@@ -354,6 +357,42 @@ class CustomKernel(object):
                                                self.domain[1])[0]
         return self._kernel_var
 
+    def moments(self, n):
+
+        if not n == 2:
+            msg = "Only second moment currently implemented"
+            raise NotImplementedError(msg)
+
+        if n == 2:
+            return self.kernel_var
+
+    @property
+    def silverman_constant(self):
+        """
+        Constant used for silverman bandwidth calculation.
+
+        C  = 2((pi^(1/2)*(nu!)^3 R(k))/(2nu(2nu)!kap_nu(k)^2))^(1/(2nu+1))
+        nu = kernel order
+        kap_nu = nu'th moment of kernel
+        R = kernel roughness (square of L^2 norm)
+
+        Note: L2Norm property returns square of norm.
+        """
+        nu = self._order
+
+        if not nu == 2:
+            msg = "Only implemented for second order kernels"
+            raise NotImplementedError(msg)
+
+        if self._silverman_constant is None:
+            C = np.pi**(.5) * factorial(nu)**3 * self.L2Norm
+            C = C/(2*nu * factorial(2*nu) * self.moments(nu)**2)
+            C = 2*C**(1.0/(2*nu+1))
+            self._silverman_constant = C
+
+        return self._silverman_constant
+
+
     def weight(self, x):
         """This returns the normalised weight at distance x"""
         return self.norm_const*self._shape(x)
@@ -389,6 +428,7 @@ class Epanechnikov(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.6
         self._kernel_var = 0.2
+        self._order = 2
 
 
 class Biweight(CustomKernel):
@@ -397,6 +437,7 @@ class Biweight(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 5.0/7.0
         self._kernel_var = 1. / 7
+        self._order = 2
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -460,6 +501,7 @@ class Triweight(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 350.0/429.0
         self._kernel_var = 1. / 9
+        self._order = 2
 
 
 class Gaussian(CustomKernel):
@@ -473,6 +515,7 @@ class Gaussian(CustomKernel):
                         np.exp(-x**2/2.0), h = h, domain = None, norm = 1.0)
         self._L2Norm = 1.0/(2.0*np.sqrt(np.pi))
         self._kernel_var = 1.0
+        self._order = 2
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
