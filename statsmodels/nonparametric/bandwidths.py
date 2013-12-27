@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.stats import scoreatpercentile as sap
+from statsmodels.sandbox.nonparametric import kernels
+
 
 #from scipy.stats import norm
 
@@ -20,7 +22,7 @@ def _select_sigma(X):
 
 
 ## Univariate Rule of Thumb Bandwidths ##
-def bw_scott(x, kernel):
+def bw_scott(x, kernel=None):
     """
     Scott's Rule of Thumb
 
@@ -51,9 +53,9 @@ def bw_scott(x, kernel):
     """
     A = _select_sigma(x)
     n = len(x)
-    return 1.059 * A * n ** -.2
+    return 1.059 * A * n **(-0.2)
 
-def bw_silverman(x, kernel):
+def bw_silverman(x, kernel=None):
     """
     Silverman's Rule of Thumb
 
@@ -83,10 +85,10 @@ def bw_silverman(x, kernel):
     """
     A = _select_sigma(x)
     n = len(x)
-    return .9 * A * n ** -.2
+    return .9 * A * n **(-0.2)
 
 
-def bw_silverman_kernel(x, kernel):
+def bw_normal_reference(x, kernel=kernels.gaussian):
     """
     Silverman's Rule of Thumb with constant calculated using specific kernel.
     Currently only second order kernels are supported.
@@ -117,10 +119,10 @@ def bw_silverman_kernel(x, kernel):
     Silverman, B.W. (1986) `Density Estimation.`
     Hansen, B.E. (2009) `Lecture Notes on Nonparametrics.`
     """
-    C = kernel.silverman_constant
+    C = kernel.normal_reference_constant
     A = _select_sigma(x)
     n = len(x)
-    return C * A * n ** -.2
+    return C * A * n **(-0.2)
 
 ## Plug-In Methods ##
 
@@ -131,7 +133,7 @@ def bw_silverman_kernel(x, kernel):
 bandwidth_funcs = {
     "scott": bw_scott,
     "silverman": bw_silverman,
-    "silverman_kernel": bw_silverman_kernel
+    "normal_reference": bw_normal_reference
 }
 
 
@@ -157,7 +159,7 @@ def select_bandwidth(x, bw, kernel):
 
     """
     bw = bw.lower()
-    if bw not in ["scott","silverman","silverman_kernel"]:
+    if bw not in ["scott","silverman","normal_reference"]:
         raise ValueError("Bandwidth %s not understood" % bw)
 #TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
 #    if kernel == "gauss":

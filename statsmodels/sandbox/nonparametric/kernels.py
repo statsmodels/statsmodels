@@ -149,7 +149,7 @@ class CustomKernel(object):
         self._h = h
         self._L2Norm = None
         self._kernel_var = None
-        self._silverman_constant = None
+        self._normal_reference_constant = None
         self._order = None
 
     def geth(self):
@@ -359,17 +359,21 @@ class CustomKernel(object):
 
     def moments(self, n):
 
-        if not n == 2:
-            msg = "Only second moment currently implemented"
+        if n > 2:
+            msg = "Only first and second moment currently implemented"
             raise NotImplementedError(msg)
+
+        if n == 1:
+            return 0
 
         if n == 2:
             return self.kernel_var
 
     @property
-    def silverman_constant(self):
+    def normal_reference_constant(self):
         """
-        Constant used for silverman bandwidth calculation.
+        Constant used for silverman normal reference asymtotic bandwidth
+        calculation.
 
         C  = 2((pi^(1/2)*(nu!)^3 R(k))/(2nu(2nu)!kap_nu(k)^2))^(1/(2nu+1))
         nu = kernel order
@@ -384,13 +388,13 @@ class CustomKernel(object):
             msg = "Only implemented for second order kernels"
             raise NotImplementedError(msg)
 
-        if self._silverman_constant is None:
+        if self._normal_reference_constant is None:
             C = np.pi**(.5) * factorial(nu)**3 * self.L2Norm
-            C = C/(2*nu * factorial(2*nu) * self.moments(nu)**2)
+            C /= (2 * nu * factorial(2 * nu) * self.moments(nu)**2)
             C = 2*C**(1.0/(2*nu+1))
-            self._silverman_constant = C
+            self._normal_reference_constant = C
 
-        return self._silverman_constant
+        return self._normal_reference_constant
 
 
     def weight(self, x):
