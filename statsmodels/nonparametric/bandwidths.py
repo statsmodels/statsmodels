@@ -88,7 +88,7 @@ def bw_silverman(x, kernel=None):
     return .9 * A * n **(-0.2)
 
 
-def bw_normal_reference(x, kernel=kernels.gaussian):
+def bw_normal_reference(x, kernel=kernels.Gaussian):
     """
     Silverman's Rule of Thumb with constant calculated using specific kernel.
     Currently only second order kernels are supported.
