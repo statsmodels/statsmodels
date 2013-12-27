@@ -18,6 +18,13 @@ KDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 rfname = os.path.join(curdir,'results','results_kde_univ_weights.csv')
 KDEWResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 
+# get results from R
+curdir = os.path.dirname(os.path.abspath(__file__))
+rfname = os.path.join(curdir,'results','results_kcde.csv')
+#print rfname
+KCDEResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
+
+
 # setup test data
 
 np.random.seed(12345)
@@ -91,6 +98,16 @@ class TestKDEGauss(CheckKDE):
         kde_vals[~mask_valid] = 0
         npt.assert_almost_equal(kde_vals, self.res_density,
                                 self.decimal_density)
+
+    def test_cdf(self):
+        # TODO: currently fails, update .csv values?
+        kcde_vals = KCDEResults["gau_cdf"]
+        xgrid = KCDEResults["xx_grid"]
+        kde = self.res1
+        # results from R 'ks' package.
+        # ks package normalizes to 1 and uses different grid
+        kde.support = xgrid
+        npt.assert_allclose(kcde_vals, kde.cdf/np.max(kde.cdf))
 
 
 class TestKDEEpanechnikov(CheckKDE):
