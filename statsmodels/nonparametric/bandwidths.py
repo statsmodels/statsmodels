@@ -152,7 +152,7 @@ def select_bandwidth(x, bw, kernel):
         are supported
     kernel : not used yet
 
-    returns
+    Returns
     -------
     bw : float
         The estimate of the bandwidth
