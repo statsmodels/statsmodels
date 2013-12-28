@@ -319,7 +319,6 @@ class CustomKernel(object):
         else:
             return (np.nan, np.nan, np.nan)
 
-
     @property
     def L2Norm(self):
         """Returns the integral of the square of the kernal from -inf to inf"""

@@ -364,8 +364,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
 
     k = (X.T - grid[:,None])/bw  # uses broadcasting to make a gridsize x nobs
 
-    # instantiate kernel class
-    # TODO: Fix domain size from kernel
+    # set kernel bandwidth
     kern.seth(bw)
 
     # truncate to domain
