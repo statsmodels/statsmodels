@@ -82,7 +82,7 @@ class KDEUnivariate(object):
     def __init__(self, endog):
         self.endog = np.asarray(endog)
 
-    def fit(self, kernel="gau", bw="scott", fft=True, weights=None,
+    def fit(self, kernel="gau", bw="normal_reference", fft=True, weights=None,
             gridsize=None, adjust=1, cut=3, clip=(-np.inf, np.inf)):
         """
         Attach the density estimate to the KDEUnivariate class.
@@ -107,6 +107,9 @@ class KDEUnivariate(object):
               `min(std(X),IQR/1.34)`
             - "silverman" - .9 * A * nobs ** (-1/5.), where A is
               `min(std(X),IQR/1.34)`
+            - "normal_reference" - C * A * nobs ** (-1/5.), where C is
+               calculated from the kernel. Same as "scott" for gaussian.
+               See bandwidths.py
             - If a float is given, it is the bandwidth.
 
         fft : bool
@@ -270,7 +273,7 @@ class KDE(KDEUnivariate):
 
 #### Kernel Density Estimator Functions ####
 
-def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
+def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None,
              adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatt-Parzen univariate kernel density estimator.
@@ -362,7 +365,9 @@ def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
     k = (X.T - grid[:,None])/bw  # uses broadcasting to make a gridsize x nobs
 
     # instantiate kernel class
-    kern = kernel_switch[kernel](h=bw)
+    # TODO: Fix domain size from kernel
+    kern.seth(bw)
+
     # truncate to domain
     if kern.domain is not None: # won't work for piecewise kernels like parzen
         z_lo, z_high = kern.domain
@@ -381,7 +386,7 @@ def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
     else:
         return dens, bw
 
-def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
+def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None,
                 adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
     """
     Rosenblatt-Parzen univariate kernel density estimator
