@@ -416,6 +416,7 @@ class Uniform(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.5
         self._kernel_var = 1. / 3
+        self._order = 2
 
 
 class Triangular(CustomKernel):
@@ -424,6 +425,7 @@ class Triangular(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 2.0/3.0
         self._kernel_var = 1. / 6
+        self._order = 2
 
 
 class Epanechnikov(CustomKernel):
@@ -545,6 +547,7 @@ class Cosine(CustomKernel):
                 np.cos(np.pi/2.0 * x), h=h, domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = np.pi**2/16.0
         self._kernel_var = 0.1894305308612978 # = 1 - 8 / np.pi**2
+        self._order = 2
 
 
 class Cosine2(CustomKernel):
@@ -560,3 +563,4 @@ class Cosine2(CustomKernel):
                 , h=h, domain=[-0.5, 0.5], norm = 1.0)
         self._L2Norm = 1.5
         self._kernel_var = 0.03267274151216444  # = 1/12. - 0.5 / np.pi**2
+        self._order = 2

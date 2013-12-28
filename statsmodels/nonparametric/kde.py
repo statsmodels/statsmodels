@@ -345,11 +345,14 @@ def kdensity(X, kernel="gau", bw="scott", weights=None, gridsize=None,
         weights = weights[clip_x.squeeze()]
         q = weights.sum()
 
+    # Added so that kernel is a kernel object not a string
+    kern = kernel_switch[kernel]()
+
     # if bw is None, select optimal bandwidth for kernel
     try:
         bw = float(bw)
     except:
-        bw = bandwidths.select_bandwidth(X, bw, kernel)
+        bw = bandwidths.select_bandwidth(X, bw, kern)
     bw *= adjust
 
     a = np.min(X,axis=0) - cut*bw
@@ -452,10 +455,14 @@ def kdensityfft(X, kernel="gau", bw="scott", weights=None, gridsize=None,
     X = np.asarray(X)
     X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
                                                 # will affect underlying data?
+    
+    # Added so that kernel is a kernel object not a string
+    kern = kernel_switch[kernel]()
+
     try:
         bw = float(bw)
     except:
-        bw = bandwidths.select_bandwidth(X, bw, kernel) # will cross-val fit this pattern?
+        bw = bandwidths.select_bandwidth(X, bw, kern) # will cross-val fit this pattern?
     bw *= adjust
 
     nobs = float(len(X)) # after trim
