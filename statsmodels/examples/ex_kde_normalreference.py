@@ -2,9 +2,9 @@
 """
 Author: Padarn Wilson
 
-Performance of normal reference plug-in estimator vs silverman. Plots the kde
-estimate based on 200 pts, and a histogram based on 4000 to give an idea of the
-true density.
+Performance of normal reference plug-in estimator vs silverman. Sample is drawn
+from a mixture of gaussians. Distribution has been chosen to be reasoanbly close
+to normal.
 """
 
 import numpy as np
@@ -16,12 +16,8 @@ from statsmodels.distributions.mixture_rvs import mixture_rvs
 
 # example from test_kde.py mixture of two normal distributions
 np.random.seed(12345)
-x = mixture_rvs([.25, .75], size=200, dist=[stats.norm, stats.norm],
-                kwargs=(dict(loc=-1, scale=.5), dict(loc=1, scale=.5)))
-
-# create a second data set to give a better view of true distribution
-x2 = mixture_rvs([.25, .75], size=4000, dist=[stats.norm, stats.norm],
-                kwargs=(dict(loc=-1, scale=.5), dict(loc=1, scale=.5)))
+x = mixture_rvs([.1, .9], size=200, dist=[stats.norm, stats.norm],
+                kwargs=(dict(loc=0, scale=.5), dict(loc=1, scale=.5)))
 
 kde = npar.KDEUnivariate(x)
 
@@ -34,11 +30,17 @@ kernel_switch = ['gau', 'epa', 'tri', 'biw',
                  'triw', 'cos'
                  ]
 
+
+def true_pdf(x):
+    pdf = 0.1 * stats.norm.pdf(x, loc=0, scale=0.5)
+    pdf += 0.9 * stats.norm.pdf(x, loc=1, scale=0.5)
+    return pdf
+
 fig = plt.figure()
 for ii, kn in enumerate(kernel_switch):
 
     ax = fig.add_subplot(2, 3, ii + 1)   # without uniform
-    ax.hist(x2, bins=40, normed=True, alpha=0.25)
+    ax.hist(x, bins=20, normed=True, alpha=0.25)
 
     kde.fit(kernel=kn, bw='silverman', fft=False)
     ax.plot(kde.support, kde.density)
@@ -46,8 +48,11 @@ for ii, kn in enumerate(kernel_switch):
     kde.fit(kernel=kn, bw='normal_reference', fft=False)
     ax.plot(kde.support, kde.density)
 
+    ax.plot(kde.support, true_pdf(kde.support), color='black', linestyle='--')
+
     ax.set_title(kernel_names[ii])
 
 
-ax.legend(['silverman', 'normal reference'], loc='lower right')
+ax.legend(['silverman', 'normal reference', 'true pdf'], loc='lower right')
+ax.set_title('200 points')
 plt.show()
