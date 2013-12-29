@@ -53,7 +53,7 @@ def bw_scott(x, kernel=None):
     """
     A = _select_sigma(x)
     n = len(x)
-    return 1.059 * A * n **(-0.2)
+    return 1.059 * A * n ** (-0.2)
 
 def bw_silverman(x, kernel=None):
     """
@@ -85,13 +85,16 @@ def bw_silverman(x, kernel=None):
     """
     A = _select_sigma(x)
     n = len(x)
-    return .9 * A * n **(-0.2)
+    return .9 * A * n ** (-0.2)
 
 
 def bw_normal_reference(x, kernel=kernels.Gaussian):
     """
-    Silverman's Rule of Thumb with constant calculated using specific kernel.
-    Currently only second order kernels are supported.
+    Plug-in bandwidth with kernel specific constant based on normal reference.
+    
+    This bandwidth minimizes the mean integrated square error if the true
+    distribution is the normal. This choice is an appropriate bandwidth for
+    single peaked distributions that are similar to the normal distribution.
 
     Parameters
     ----------
@@ -113,6 +116,10 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
        IQR = np.subtract.reduce(np.percentile(x, [75,25]))
        C = constant from Hansen (2009)
 
+    When using a gaussian kernel this is equivalent to the 'scott' bandwidth up
+    to two decimal places. This is the accuracy to which the 'scott' constant is
+    specified.
+
     References
     ----------
 
@@ -122,7 +129,7 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
     C = kernel.normal_reference_constant
     A = _select_sigma(x)
     n = len(x)
-    return C * A * n **(-0.2)
+    return C * A * n ** (-0.2)
 
 ## Plug-In Methods ##
 

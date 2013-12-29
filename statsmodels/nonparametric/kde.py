@@ -108,8 +108,8 @@ class KDEUnivariate(object):
             - "silverman" - .9 * A * nobs ** (-1/5.), where A is
               `min(std(X),IQR/1.34)`
             - "normal_reference" - C * A * nobs ** (-1/5.), where C is
-               calculated from the kernel. Same as "scott" for gaussian.
-               See bandwidths.py
+               calculated from the kernel. Equivalent (up to 2 dp) to the
+               "scott" bandwidth for gaussian kernels. See bandwidths.py
             - If a float is given, it is the bandwidth.
 
         fft : bool
@@ -348,7 +348,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
         weights = weights[clip_x.squeeze()]
         q = weights.sum()
 
-    # Added so that kernel is a kernel object not a string
+    # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
 
     # if bw is None, select optimal bandwidth for kernel
@@ -460,7 +460,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
                                                 # will affect underlying data?
     
-    # Added so that kernel is a kernel object not a string
+    # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
 
     try:
