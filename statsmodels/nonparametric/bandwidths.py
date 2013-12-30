@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.stats import scoreatpercentile as sap
+from statsmodels.sandbox.nonparametric import kernels
+
 
 #from scipy.stats import norm
 
@@ -20,7 +22,7 @@ def _select_sigma(X):
 
 
 ## Univariate Rule of Thumb Bandwidths ##
-def bw_scott(x):
+def bw_scott(x, kernel=None):
     """
     Scott's Rule of Thumb
 
@@ -28,6 +30,8 @@ def bw_scott(x):
     ----------
     x : array-like
         Array for which to get the bandwidth
+    kernel : CustomKernel object
+        Unused
 
     Returns
     -------
@@ -49,9 +53,9 @@ def bw_scott(x):
     """
     A = _select_sigma(x)
     n = len(x)
-    return 1.059 * A * n ** -.2
+    return 1.059 * A * n ** (-0.2)
 
-def bw_silverman(x):
+def bw_silverman(x, kernel=None):
     """
     Silverman's Rule of Thumb
 
@@ -59,6 +63,8 @@ def bw_silverman(x):
     ----------
     x : array-like
         Array for which to get the bandwidth
+    kernel : CustomKernel object
+        Unused
 
     Returns
     -------
@@ -79,7 +85,51 @@ def bw_silverman(x):
     """
     A = _select_sigma(x)
     n = len(x)
-    return .9 * A * n ** -.2
+    return .9 * A * n ** (-0.2)
+
+
+def bw_normal_reference(x, kernel=kernels.Gaussian):
+    """
+    Plug-in bandwidth with kernel specific constant based on normal reference.
+    
+    This bandwidth minimizes the mean integrated square error if the true
+    distribution is the normal. This choice is an appropriate bandwidth for
+    single peaked distributions that are similar to the normal distribution.
+
+    Parameters
+    ----------
+    x : array-like
+        Array for which to get the bandwidth
+    kernel : CustomKernel object
+        Used to calcualate the constant for the plug-in bandwidth.
+
+    Returns
+    -------
+    bw : float
+        The estimate of the bandwidth
+
+    Notes
+    -----
+    Returns C * A * n ** (-1/5.) where ::
+
+       A = min(std(x, ddof=1), IQR/1.349)
+       IQR = np.subtract.reduce(np.percentile(x, [75,25]))
+       C = constant from Hansen (2009)
+
+    When using a gaussian kernel this is equivalent to the 'scott' bandwidth up
+    to two decimal places. This is the accuracy to which the 'scott' constant is
+    specified.
+
+    References
+    ----------
+
+    Silverman, B.W. (1986) `Density Estimation.`
+    Hansen, B.E. (2009) `Lecture Notes on Nonparametrics.`
+    """
+    C = kernel.normal_reference_constant
+    A = _select_sigma(x)
+    n = len(x)
+    return C * A * n ** (-0.2)
 
 ## Plug-In Methods ##
 
@@ -87,7 +137,12 @@ def bw_silverman(x):
 
 ## Helper Functions ##
 
-bandwidth_funcs = dict(scott=bw_scott,silverman=bw_silverman)
+bandwidth_funcs = {
+    "scott": bw_scott,
+    "silverman": bw_silverman,
+    "normal_reference": bw_normal_reference
+}
+
 
 def select_bandwidth(x, bw, kernel):
     """
@@ -111,11 +166,11 @@ def select_bandwidth(x, bw, kernel):
 
     """
     bw = bw.lower()
-    if bw not in ["scott","silverman"]:
+    if bw not in ["scott","silverman","normal_reference"]:
         raise ValueError("Bandwidth %s not understood" % bw)
 #TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
 #    if kernel == "gauss":
-    return bandwidth_funcs[bw](x)
+    return bandwidth_funcs[bw](x, kernel)
 #    else:
 #        raise ValueError("Only Gaussian Kernels are currently supported")
 
