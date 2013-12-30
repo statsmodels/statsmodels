@@ -99,15 +99,27 @@ class TestKDEGauss(CheckKDE):
         npt.assert_almost_equal(kde_vals, self.res_density,
                                 self.decimal_density)
 
-    def test_cdf(self):
-        # TODO: currently fails, update .csv values?
-        kcde_vals = KCDEResults["gau_cdf"]
-        xgrid = KCDEResults["xx_grid"]
+    # The following tests are regression tests
+    # Values have been checked to be very close to R 'ks' package (Dec 2013)
+    def test_support_gridded(self):
         kde = self.res1
-        # results from R 'ks' package.
-        # ks package normalizes to 1 and uses different grid
-        kde.support = xgrid
-        npt.assert_allclose(kcde_vals, kde.cdf/np.max(kde.cdf))
+        support = KCDEResults['gau_support']
+        npt.assert_allclose(support, kde.support)
+
+    def test_cdf_gridded(self):
+        kde = self.res1
+        cdf = KCDEResults['gau_cdf']
+        npt.assert_allclose(cdf, kde.cdf)
+
+    def test_sf_gridded(self):
+        kde = self.res1
+        sf = KCDEResults['gau_sf']
+        npt.assert_allclose(sf, kde.sf)
+
+    def test_icdf_gridded(self):
+        kde = self.res1
+        icdf = KCDEResults['gau_icdf']
+        npt.assert_allclose(icdf, kde.icdf)
 
 
 class TestKDEEpanechnikov(CheckKDE):
