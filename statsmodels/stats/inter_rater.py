@@ -192,6 +192,43 @@ def to_table(data, bins=None):
 
     return tt[0], bins_
 
+def cronbach_alpha(itemscores):
+    '''Compute Cronbach's Alpha
+    Parameters
+    ----------
+    itemscores : array_like
+        n*p array or dataframe, n subjects and p items
+    Returns
+    -------
+    Calpha : float
+        To interpret the output the rule of George, D., & Mallery, P. (2003)
+        can be used
+        > .9 (Excellent),
+        > .8 (Good),
+        > .7 (Acceptable),
+        > .6 (Questionable),
+        > .5(Poor), and < .5 (Unacceptable)
+
+    Notes
+    -----
+    Cronbach's Alpha is the most commonly used measure of internal consistency.
+    One problem might be Cronbach's Alpha is not robust against missing data.
+
+
+    References
+    ----------
+    Wikipedia
+    '''
+
+    itemscores = np.asarray(itemscores)
+    itemscores = itemscores[~np.isnan(itemscores).any(axis = 1)]
+    itemvars = itemscores.var(axis = 1, ddof = 1)
+    tscores = itemscores.sum(axis = 0)
+    nitems = len(itemscores)
+    calpha = nitems / (nitems - 1.) * (1 - itemvars.sum() / tscores.var(ddof = 1))
+
+    return calpha
+    
 def fleiss_kappa(table):
     '''Fleiss' kappa multi-rater agreement measure
 
