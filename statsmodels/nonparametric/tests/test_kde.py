@@ -184,7 +184,8 @@ class CheckKDEWeights(object):
         cls.x = x = KDEWResults['x']
         weights = KDEWResults['weights']
         res1 = KDE(x)
-        res1.fit(kernel=cls.kernel_name, weights=weights, fft=False)
+        # default kernel was scott when reference values computed
+        res1.fit(kernel=cls.kernel_name, weights=weights, fft=False, bw="scott")
         cls.res1 = res1
         cls.res_density = KDEWResults[cls.res_kernel_name]
 

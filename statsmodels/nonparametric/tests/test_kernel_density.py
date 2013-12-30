@@ -66,7 +66,7 @@ class TestKDEUnivariate(MyTest):
     def test_pdf_non_fft(self):
 
         kde = nparam.KDEUnivariate(self.noise)
-        kde.fit(fft=False)
+        kde.fit(fft=False, bw='scott')
 
 
         grid = kde.support
@@ -92,7 +92,7 @@ class TestKDEUnivariate(MyTest):
     def test_weighted_pdf_non_fft(self):
 
         kde = nparam.KDEUnivariate(self.noise)
-        kde.fit(weights=self.weights, fft=False)
+        kde.fit(weights=self.weights, fft=False, bw='scott')
 
         grid = kde.support
         testx = [grid[10*i] for i in range(6)]

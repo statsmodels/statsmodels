@@ -21,6 +21,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 
 import numpy as np
 import scipy.integrate
+from scipy.misc import factorial
 from numpy import exp, multiply, square, divide, subtract, inf
 
 
@@ -148,6 +149,8 @@ class CustomKernel(object):
         self._h = h
         self._L2Norm = None
         self._kernel_var = None
+        self._normal_reference_constant = None
+        self._order = None
 
     def geth(self):
         """Getter for kernel bandwidth, h"""
@@ -354,6 +357,46 @@ class CustomKernel(object):
                                                self.domain[1])[0]
         return self._kernel_var
 
+    def moments(self, n):
+
+        if n > 2:
+            msg = "Only first and second moment currently implemented"
+            raise NotImplementedError(msg)
+
+        if n == 1:
+            return 0
+
+        if n == 2:
+            return self.kernel_var
+
+    @property
+    def normal_reference_constant(self):
+        """
+        Constant used for silverman normal reference asymtotic bandwidth
+        calculation.
+
+        C  = 2((pi^(1/2)*(nu!)^3 R(k))/(2nu(2nu)!kap_nu(k)^2))^(1/(2nu+1))
+        nu = kernel order
+        kap_nu = nu'th moment of kernel
+        R = kernel roughness (square of L^2 norm)
+
+        Note: L2Norm property returns square of norm.
+        """
+        nu = self._order
+
+        if not nu == 2:
+            msg = "Only implemented for second order kernels"
+            raise NotImplementedError(msg)
+
+        if self._normal_reference_constant is None:
+            C = np.pi**(.5) * factorial(nu)**3 * self.L2Norm
+            C /= (2 * nu * factorial(2 * nu) * self.moments(nu)**2)
+            C = 2*C**(1.0/(2*nu+1))
+            self._normal_reference_constant = C
+
+        return self._normal_reference_constant
+
+
     def weight(self, x):
         """This returns the normalised weight at distance x"""
         return self.norm_const*self._shape(x)
@@ -373,6 +416,7 @@ class Uniform(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.5
         self._kernel_var = 1. / 3
+        self._order = 2
 
 
 class Triangular(CustomKernel):
@@ -381,6 +425,7 @@ class Triangular(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 2.0/3.0
         self._kernel_var = 1. / 6
+        self._order = 2
 
 
 class Epanechnikov(CustomKernel):
@@ -389,6 +434,7 @@ class Epanechnikov(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 0.6
         self._kernel_var = 0.2
+        self._order = 2
 
 
 class Biweight(CustomKernel):
@@ -397,6 +443,7 @@ class Biweight(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 5.0/7.0
         self._kernel_var = 1. / 7
+        self._order = 2
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -460,6 +507,7 @@ class Triweight(CustomKernel):
                               domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = 350.0/429.0
         self._kernel_var = 1. / 9
+        self._order = 2
 
 
 class Gaussian(CustomKernel):
@@ -473,6 +521,7 @@ class Gaussian(CustomKernel):
                         np.exp(-x**2/2.0), h = h, domain = None, norm = 1.0)
         self._L2Norm = 1.0/(2.0*np.sqrt(np.pi))
         self._kernel_var = 1.0
+        self._order = 2
 
     def smooth(self, xs, ys, x):
         """Returns the kernel smoothing estimate for point x based on x-values
@@ -498,6 +547,7 @@ class Cosine(CustomKernel):
                 np.cos(np.pi/2.0 * x), h=h, domain=[-1.0, 1.0], norm = 1.0)
         self._L2Norm = np.pi**2/16.0
         self._kernel_var = 0.1894305308612978 # = 1 - 8 / np.pi**2
+        self._order = 2
 
 
 class Cosine2(CustomKernel):
@@ -513,3 +563,4 @@ class Cosine2(CustomKernel):
                 , h=h, domain=[-0.5, 0.5], norm = 1.0)
         self._L2Norm = 1.5
         self._kernel_var = 0.03267274151216444  # = 1/12. - 0.5 / np.pi**2
+        self._order = 2

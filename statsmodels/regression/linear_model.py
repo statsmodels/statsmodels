@@ -260,17 +260,17 @@ class GLS(RegressionModel):
 
     %(params)s
     sigma : scalar or array
-           `sigma` is the weighting matrix of the covariance.
-           The default is None for no scaling.  If `sigma` is a scalar, it is
-           assumed that `sigma` is an n x n diagonal matrix with the given
-           scalar, `sigma` as the value of each diagonal element.  If `sigma`
-           is an n-length vector, then `sigma` is assumed to be a diagonal
-           matrix with the given `sigma` on the diagonal.  This should be the
-           same as WLS.
+        `sigma` is the weighting matrix of the covariance.
+        The default is None for no scaling.  If `sigma` is a scalar, it is
+        assumed that `sigma` is an n x n diagonal matrix with the given
+        scalar, `sigma` as the value of each diagonal element.  If `sigma`
+        is an n-length vector, then `sigma` is assumed to be a diagonal
+        matrix with the given `sigma` on the diagonal.  This should be the
+        same as WLS.
     %(extra_params)s
 
-    Attributes
-    ----------
+    **Attributes**
+
     pinv_wexog : array
         `pinv_wexog` is the p x n Moore-Penrose pseudoinverse of `wexog`.
     cholsimgainv : array
@@ -527,8 +527,7 @@ class WLS(RegressionModel):
         SSR = ss(self.wendog - np.dot(self.wexog,params))
         llf = -np.log(SSR) * nobs2      # concentrated likelihood
         llf -= (1+np.log(np.pi/nobs2))*nobs2  # with constant
-        # This makes it GLS-like
-        #llf += 0.5 * np.sum(np.log(self.weights))
+        llf += 0.5 * np.sum(np.log(self.weights))
         return llf
 
 
@@ -1564,7 +1563,7 @@ class RegressionResults(base.LikelihoodModelResults):
         currently available:
 
         - 'HC0', 'HC1', 'HC2', 'HC3' and no keyword arguments:
-             heteroscedasticity robust covariance
+            heteroscedasticity robust covariance
         - 'HAC' and keywords
 
             - `maxlag` integer (required) : number of lags to use
@@ -1592,8 +1591,8 @@ class RegressionResults(base.LikelihoodModelResults):
                   adjusted.
 
         - 'hac-groupsum' Driscoll and Kraay, heteroscedasticity and
-              autocorrelation robust standard errors in panel data
-              keywords
+            autocorrelation robust standard errors in panel data
+            keywords
 
             - `time` array_like (required) : index of time periods
             - `maxlag` integer (required) : number of lags to use
@@ -1609,12 +1608,13 @@ class RegressionResults(base.LikelihoodModelResults):
                   #TODO: we need more options here
 
         - 'hac-panel' heteroscedasticity and autocorrelation robust standard
-              errors in panel data.
-              The data needs to be sorted in this case, the time series for
-              each panel unit or cluster need to be stacked.
-              keywords
+            errors in panel data.
+            The data needs to be sorted in this case, the time series for
+            each panel unit or cluster need to be stacked.
+            keywords
 
             - `time` array_like (required) : index of time periods
+
             - `maxlag` integer (required) : number of lags to use
             - `kernel` string (optional) : kernel, default is Bartlett
             - `use_correction` False or string in ['hac', 'cluster'] (optional) :
@@ -1626,10 +1626,10 @@ class RegressionResults(base.LikelihoodModelResults):
 
         Reminder:
         `use_correction` in "nw-groupsum" and "nw-panel" is not bool,
-            needs to be in [False, 'hac', 'cluster']
+        needs to be in [False, 'hac', 'cluster']
 
         TODO: Currently there is no check for extra or misspelled keywords,
-            except in the case of cov_type `HCx`
+        except in the case of cov_type `HCx`
 
         """
 

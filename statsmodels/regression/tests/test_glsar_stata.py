@@ -52,6 +52,8 @@ class TestGLSARCorc(CheckStataResultsPMixin):
     def test_rho(self):
         assert_almost_equal(self.res.model.rho, self.results.rho, 3)  # pylint: disable-msg=E1101
 
+        assert_almost_equal(self.res.llf, self.results.ll, 4)
+
 
 if __name__=="__main__":
     import nose
