@@ -78,3 +78,15 @@ def test_keyerror_start_date():
         model = TimeSeriesModel(series)
 
     npt.assert_raises(ValueError, model._get_predict_start, "1970-4-30")
+
+def test_period_index():
+    # test 1285
+    if _pandas_08x:
+        from pandas import PeriodIndex, TimeSeries
+        dates = PeriodIndex(start="1/1/1990", periods=20, freq="M")
+        x = np.arange(1, 21.)
+
+        model = TimeSeriesModel(Series(x, index=dates))
+        npt.assert_(model.data.freq == "M")
+        model = TimeSeriesModel(TimeSeries(x, index=dates))
+        npt.assert_(model.data.freq == "M")

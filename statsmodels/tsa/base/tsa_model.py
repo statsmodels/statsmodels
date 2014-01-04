@@ -6,6 +6,10 @@ from numpy import arange, asarray
 from pandas import Index
 from pandas import datetools as pandas_datetools
 import datetime
+try:
+    from pandas import Period
+except ImportError: # not sure what version this was added
+    Period = datetime.datetime # HACK
 
 _freq_to_pandas = datetools._freq_to_pandas
 
@@ -45,7 +49,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             dates = self.data.row_labels
 
         if dates is not None:
-            if (not isinstance(dates[0], datetime.datetime) and
+            if (not isinstance(dates[0], (datetime.datetime, Period)) and
                     isinstance(self.data, data.PandasData)):
                 raise ValueError("Given a pandas object and the index does "
                                  "not contain dates")

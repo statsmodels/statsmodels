@@ -155,3 +155,10 @@ def test_infer_freq():
     assert _infer_freq(m) == 'M'
     assert _infer_freq(d[:3]) == 'D'
     assert _infer_freq(m[:3]) == 'M'
+
+def test_period_index():
+    # tests 1285
+    if _pandas_08x:
+        from pandas import PeriodIndex
+        dates = PeriodIndex(start="1/1/1990", periods=20, freq="M")
+        npt.assert_(_infer_freq(dates) == "M")
