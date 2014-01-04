@@ -94,51 +94,37 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     ----------
     y: array
         Time series data
-
-    alpha:  float
+    alpha: float
         Smoothing factor for data between 0 and 1.
-
-    gamma: non zero integer or float
+    gamma: non-zero integer or float
         Smoothing factor for trend generally between 0 and 1
-
-    delta: non zero integer or float
+    delta: non-zero integer or float
         Smoothing factor for season generally between 0 and 1
-
     cycle: int
         Length of cycles in a season. (ie: 12 for months, 4 for quarters)
-
     damp: non zero integer or float {default = 1}
         Autoregressive or damping parameter specifies a rate of decay
-        in the trend. Generally 0>d>1
-
+        in the trend. Generally 0<d<1
     initial: str, {'3avg'}(Optional)
         Indicate initial point for bt and y
         default:     bt = y[0]-y[1],    st = y[0]
         3avg:        Yields the average of the first 3 differences for bt.
-
     trend: str, {'additive','multiplicative', 'brown'}
         Indicate model type of trend default is 'additive'
-
         additive: uses additive models such as Holt's linear & Damped-Trend
         Linear Exponential Smoothing. Generalized as:
         s_t = a * y_t + (1-a) * (s_t-1 + b_t-1)
         b_t = g *(s_t - s_t-1) + (1 - g) * b_t-1
-
         multiplicative: uses multiplicative models such as Exponential trend &
         Taylor's modification of Pegels' model. Generalized as:
         s_t = a * y_t + (1-a) * (s_t-1 * b_t-1)
         b_t = g *(s_t / s_t-1) + (1 - g) * b_t-1
-
         brown: used to deal with the special cases in Brown linear smoothing
-
     forecast: int (Optional)
         Number of periods ahead.
-
     season: str, {'additive','multiplicative'}
         Indicate type of season default is 'additive'
-
     output: str, {'data', 'describe','forecast'}(Not implemented)
-
 
     Returns
     -------
@@ -333,13 +319,10 @@ def ses(y, alpha, forecast=None, output='data'):
     ----------
     y: array
         Time series data
-
-    alpha:  float
+    alpha: float
         Smoothing factor for data between 0 and 1.
-
     forecast: int (Optional)
         Number of periods ahead.
-
     output: str, {'data', 'describe','forecast'}(Not implemented)
 
 
@@ -383,13 +366,10 @@ def brown_linear(y, alpha, forecast=None, output='data'):
     ----------
     y: array
         Time series data
-
-    alpha:  float
+    alpha: float
         Smoothing factor for data between 0 and 1.
-
     forecast: int (Optional)
         Number of periods ahead.
-
     output: str, {'data', 'describe','forecast'}(Not implemented)
 
 
@@ -435,20 +415,15 @@ def holt_des(y, alpha, gamma, forecast=None, trend='additive',
     ----------
     y: array
         Time series data
-
-    alpha:  float
+    alpha: float
         Smoothing factor for data between 0 and 1.
-
-    gamma: non zero integer or float
+    gamma: non-zero integer or float
         Smoothing factor for trend generally between 0 and 1
-
     forecast: int (Optional)
         Number of periods ahead.
-
     trend: str {'addative', 'multiplicative'}
         Additive use when trend is linear
         Multiplicative is used when trend is exponential
-
     initial: str, {'3avg'}(Optional)
         Indicate initial point for bt and y
         default:     bt = y[0]-y[1],    st = y[0]
@@ -500,23 +475,18 @@ def damp_es(y, alpha, gamma, damp=1, forecast=None, trend='additive',
     ----------
     y: array
         Time series data
-
-    alpha:  float
+    alpha: float
         Smoothing factor for data between 0 and 1.
-
-    gamma: non zero integer or float
+    gamma: non-zero integer or float
         Smoothing factor for trend generally between 0 and 1
-
-    damp:  non zero integer or float {default = 1}
+    damp:  non-zero integer or float {default = 1}
         Specify the rate of decay in a trend.
         If d=1 identical to Holt method or multiplicative method
         if d=0 identical to simple exponential smoothing
         (Gardner and McKenzie)
         d >1 applied to srongly trending series.(Tashman and Kruk 1996)
-
     forecast: int (Optional)
         Number of periods ahead.
-
     trend: str {'addative', 'multiplicative'}
         Additive use when trend is linear
         Multiplicative is used when trend is exponential
@@ -570,20 +540,15 @@ def seasonal_es(y, alpha, delta, cycle, forecast=None,
     ----------
     y: array
         Time series data
-
-    alpha:  float
+    alpha: float
         Smoothing factor for data between 0 and 1.
-
-    delta: non zero integer or float
+    delta: non-zero integer or float
         Smoothing factor for trend generally between 0 and 1
-
     cycle: int
         Length of cycles in a season. (ie: 12 for months, 4 for quarters)
-
     forecast: int (Optional)
         Number of periods ahead. Note that you can only forecast up to
         1 cycle ahead.
-
     season: str, {'additive','multiplicative'}
         Indicate type of season default is 'additive'
 
