@@ -72,8 +72,9 @@ TO DO: -Implement Solver for obtaining initial values
 
 References
 ----------
-*Exponential smoothing: The state of the art Part II
-*Forecasting with Exponential Smoothing: The State Space Approach
+*Exponential smoothing: The state of the art Part II, Everette S. Gardner, Jr. Houston, Texas 2005
+*Forecasting with Exponential Smoothing: The State Space Approach, Hyndman, R.J., Koehler, 
+ A.B., Ord, J.K., Snyder, R.D. 2008
 *Exponential Smoothing with a Damped Multiplicative Trend, James W. Taylor.
  International Journal of Forecasting, 2003
 '''
