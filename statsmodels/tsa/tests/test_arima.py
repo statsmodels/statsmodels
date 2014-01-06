@@ -1897,6 +1897,18 @@ def test_arima00():
     assert_raises(ValueError, ARIMA, y, (0,1,0))
     assert_raises(ValueError, ARIMA, y, (0,0,0))
 
+def test_arima_dates_startatend():
+    # bug
+    np.random.seed(18)
+    x = pandas.TimeSeries(np.random.random(36),
+                          index=pandas.DatetimeIndex(start='1/1/1990',
+                                                     periods=36, freq='M'))
+    res = ARIMA(x, (1, 0, 0)).fit(disp=0)
+    pred = res.predict(start=len(x), end=len(x))
+    assert_(pred.index[0] == x.index.shift(1)[-1])
+    fc = res.forecast()[0]
+    assert_almost_equal(pred.values[0], fc)
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)

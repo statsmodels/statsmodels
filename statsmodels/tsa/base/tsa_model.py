@@ -106,7 +106,7 @@ class TimeSeriesModel(base.LikelihoodModel):
             raise ValueError("Start must be <= len(endog)")
         if start == len(dates):
             self.data.predict_start = datetools._date_from_idx(dates[-1],
-                                                    start, self.data.freq)
+                                                    1, self.data.freq)
         elif start < len(dates):
             self.data.predict_start = dates[start]
         else:
