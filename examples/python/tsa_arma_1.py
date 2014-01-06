@@ -1,8 +1,6 @@
 
 ## Autoregressive Moving Average (ARMA): Artificial data
 
-# In[ ]:
-
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -11,15 +9,11 @@ np.random.seed(12345)
 
 # Generate some data from an ARMA process:
 
-# In[ ]:
-
 arparams = np.array([.75, -.25])
 maparams = np.array([.65, .35])
 
 
 # The conventions of the arma_generate function require that we specify a 1 for the zero-lag of the AR and MA parameters and that the AR parameters be negated.
-
-# In[ ]:
 
 arparams = np.r_[1, -arparams]
 maparam = np.r_[1, maparams]
@@ -28,8 +22,6 @@ y = arma_generate_sample(arparams, maparams, nobs)
 
 
 #  Now, optionally, we can add some dates information. For this example, we'll use a pandas time series.
-
-# In[ ]:
 
 import pandas
 dates = sm.tsa.datetools.dates_from_range('1980m1', length=nobs)

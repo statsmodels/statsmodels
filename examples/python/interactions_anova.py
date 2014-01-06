@@ -5,8 +5,6 @@
 # 
 # Download and format data:
 
-# In[ ]:
-
 import numpy as np
 np.set_printoptions(precision=4, suppress=True)
 import statsmodels.api as sm
@@ -33,8 +31,6 @@ S = salary_table.S
 
 # Take a look at the data:
 
-# In[ ]:
-
 plt.figure(figsize=(6,6))
 symbols = ['D', '^']
 colors = ['r', 'g', 'blue']
@@ -49,8 +45,6 @@ plt.ylabel('Salary');
 
 # Fit a linear model:
 
-# In[ ]:
-
 formula = 'S ~ C(E) + C(M) + X'
 lm = ols(formula, salary_table).fit()
 print lm.summary()
@@ -58,28 +52,20 @@ print lm.summary()
 
 # Have a look at the created design matrix: 
 
-# In[ ]:
-
 lm.model.exog[:5]
 
 
 # Or since we initially passed in a DataFrame, we have a DataFrame available in
-
-# In[ ]:
 
 lm.model.data.orig_exog[:5]
 
 
 # We keep a reference to the original untouched data in
 
-# In[ ]:
-
 lm.model.data.frame[:5]
 
 
 # Influence statistics
-
-# In[ ]:
 
 infl = lm.get_influence()
 print infl.summary_table()
@@ -87,19 +73,13 @@ print infl.summary_table()
 
 # or get a dataframe
 
-# In[ ]:
-
 df_infl = infl.summary_frame()
 
-
-# In[ ]:
 
 df_infl[:5]
 
 
 # Now plot the reiduals within the groups separately:
-
-# In[ ]:
 
 resid = lm.resid
 plt.figure(figsize=(6,6));
@@ -115,15 +95,11 @@ plt.ylabel('Residuals');
 
 # Now we will test some interactions using anova or f_test
 
-# In[ ]:
-
 interX_lm = ols("S ~ C(E) * X + C(M)", salary_table).fit()
 print interX_lm.summary()
 
 
 # Do an ANOVA check
-
-# In[ ]:
 
 from statsmodels.stats.api import anova_lm
 
@@ -139,20 +115,14 @@ print table2
 
 # The design matrix as a DataFrame
 
-# In[ ]:
-
 interM_lm.model.data.orig_exog[:5]
 
 
 # The design matrix as an ndarray
 
-# In[ ]:
-
 interM_lm.model.exog
 interM_lm.model.exog_names
 
-
-# In[ ]:
 
 infl = interM_lm.get_influence()
 resid = infl.resid_studentized_internal
@@ -167,8 +137,6 @@ plt.ylabel('standardized resids');
 
 
 # Looks like one observation is an outlier.
-
-# In[ ]:
 
 drop_idx = abs(resid).argmax()
 print drop_idx  # zero-based index
@@ -199,8 +167,6 @@ print '\n'
 
 #  Replot the residuals
 
-# In[ ]:
-
 try:
     resid = interM_lm32.get_influence().summary_frame()['standard_resid']
 except:
@@ -217,8 +183,6 @@ plt.ylabel('standardized resids');
 
 
 #  Plot the fitted values
-
-# In[ ]:
 
 lm_final = ols('S ~ X + C(E)*C(M)', data = salary_table.drop([drop_idx])).fit()
 mf = lm_final.model.data.orig_exog
@@ -239,8 +203,6 @@ plt.ylabel('Salary');
 
 # From our first look at the data, the difference between Master's and PhD in the management group is different than in the non-management group. This is an interaction between the two qualitative variables management,M and education,E. We can visualize this by first removing the effect of experience, then plotting the means within each of the 6 groups using interaction.plot.
 
-# In[ ]:
-
 U = S - X * interX_lm32.params['X']
 
 plt.figure(figsize=(6,6))
@@ -249,8 +211,6 @@ interaction_plot(E, M, U, colors=['red','blue'], markers=['^','D'],
 
 
 # ## Minority Employment Data
-
-# In[ ]:
 
 try:
     minority_table = pandas.read_table('minority.table')
@@ -327,8 +287,6 @@ abline_plot(intercept = min_lm4.params['Intercept'] + min_lm4.params['ETHN'],
         ax=plt.gca(), color='green');
 
 
-# In[ ]:
-
 # is there any effect of ETHN on slope or intercept?
 table5 = anova_lm(min_lm, min_lm4)
 print table5
@@ -347,8 +305,6 @@ print table8
 
 
 # ## One-way ANOVA
-
-# In[ ]:
 
 try:
     rehab_table = pandas.read_csv('rehab.table')
@@ -371,8 +327,6 @@ print rehab_lm.summary()
 
 # ## Two-way ANOVA
 
-# In[ ]:
-
 try:
     kidney_table = pandas.read_table('./kidney.table')
 except:
@@ -382,14 +336,10 @@ except:
 
 # Explore the dataset
 
-# In[ ]:
-
 kidney_table.groupby(['Weight', 'Duration']).size()
 
 
 # Balanced panel
-
-# In[ ]:
 
 kt = kidney_table
 plt.figure(figsize=(6,6))
@@ -398,8 +348,6 @@ interaction_plot(kt['Weight'], kt['Duration'], np.log(kt['Days']+1),
 
 
 # You have things available in the calling namespace available in the formula evaluation namespace
-
-# In[ ]:
 
 kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)', data=kt).fit()
 
@@ -425,8 +373,6 @@ print anova_lm(ols('np.log(Days+1) ~ C(Weight)', data=kt).fit(),
 # 
 #  Don't use Type III with non-orthogonal contrast - ie., Treatment
 
-# In[ ]:
-
 sum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
             data=kt).fit()
 
@@ -440,8 +386,6 @@ print anova_lm(nosum_lm)
 print anova_lm(nosum_lm, typ=2)
 print anova_lm(nosum_lm, typ=3)
 
-
-# In[ ]:
 
 
 

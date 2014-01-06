@@ -1,8 +1,6 @@
 
 ## Robust Linear Models
 
-# In[ ]:
-
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -13,15 +11,11 @@ from statsmodels.sandbox.regression.predstd import wls_prediction_std
 # 
 # Load data:
 
-# In[ ]:
-
 data = sm.datasets.stackloss.load()
 data.exog = sm.add_constant(data.exog)
 
 
 # Huber's T norm with the (default) median absolute deviation scaling
-
-# In[ ]:
 
 huber_t = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
 hub_results = huber_t.fit()
@@ -33,16 +27,12 @@ print hub_results.summary(yname='y',
 
 # Huber's T norm with 'H2' covariance matrix
 
-# In[ ]:
-
 hub_results2 = huber_t.fit(cov="H2")
 print hub_results2.params
 print hub_results2.bse
 
 
 # Andrew's Wave norm with Huber's Proposal 2 scaling and 'H3' covariance matrix
-
-# In[ ]:
 
 andrew_mod = sm.RLM(data.endog, data.exog, M=sm.robust.norms.AndrewWave())
 andrew_results = andrew_mod.fit(scale_est=sm.robust.scale.HuberScale(), cov="H3")
@@ -54,8 +44,6 @@ print 'Parameters: ', andrew_results.params
 # ## Comparing OLS and RLM
 # 
 # Artificial data with outliers:
-
-# In[ ]:
 
 nsample = 50
 x1 = np.linspace(0, 20, nsample)
@@ -72,8 +60,6 @@ y2[[39,41,43,45,48]] -= 5   # add some outliers (10% of nsample)
 # 
 # Note that the quadratic term in OLS regression will capture outlier effects. 
 
-# In[ ]:
-
 res = sm.OLS(y2, X).fit()
 print res.params
 print res.bse
@@ -82,16 +68,12 @@ print res.predict()
 
 # Estimate RLM:
 
-# In[ ]:
-
 resrlm = sm.RLM(y2, X).fit()
 print resrlm.params
 print resrlm.bse
 
 
 # Draw a plot to compare OLS estimates to the robust estimates:
-
-# In[ ]:
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
@@ -109,8 +91,6 @@ ax.legend(loc="best")
 # 
 # Fit a new OLS model using only the linear term and the constant:
 
-# In[ ]:
-
 X2 = X[:,[0,1]] 
 res2 = sm.OLS(y2, X2).fit()
 print res2.params
@@ -119,16 +99,12 @@ print res2.bse
 
 # Estimate RLM:
 
-# In[ ]:
-
 resrlm2 = sm.RLM(y2, X2).fit()
 print resrlm2.params
 print resrlm2.bse
 
 
 # Draw a plot to compare OLS estimates to the robust estimates:
-
-# In[ ]:
 
 prstd, iv_l, iv_u = wls_prediction_std(res2)
 

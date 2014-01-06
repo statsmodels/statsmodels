@@ -1,8 +1,6 @@
 
 ## Contrasts Overview
 
-# In[ ]:
-
 import statsmodels.api as sm
 
 
@@ -16,21 +14,15 @@ import statsmodels.api as sm
 
 ##### Example Data
 
-# In[ ]:
-
 import pandas
 url = 'http://www.ats.ucla.edu/stat/data/hsb2.csv'
 hsb2 = pandas.read_table(url, delimiter=",")
 
 
-# In[ ]:
-
 hsb2.head(10)
 
 
 # It will be instructive to look at the mean of the dependent variable, write, for each level of race ((1 = Hispanic, 2 = Asian, 3 = African American and 4 = Caucasian)).
-
-# In[ ]:
 
 hsb2.groupby('race')['write'].mean()
 
@@ -38,8 +30,6 @@ hsb2.groupby('race')['write'].mean()
 ##### Treatment (Dummy) Coding
 
 # Dummy coding is likely the most well known coding scheme. It compares each level of the categorical variable to a base reference level. The base reference level is the value of the intercept. It is the default contrast in Patsy for unordered categorical factors. The Treatment contrast matrix for race would be
-
-# In[ ]:
 
 from patsy.contrasts import Treatment
 levels = [1,2,3,4]
@@ -49,24 +39,16 @@ print contrast.matrix
 
 # Here we used `reference=0`, which implies that the first level, Hispanic, is the reference category against which the other level effects are measured. As mentioned above, the columns do not sum to zero and are thus not independent of the intercept. To be explicit, let's look at how this would encode the `race` variable.
 
-# In[ ]:
-
 hsb2.race.head(10)
 
 
-# In[ ]:
-
 print contrast.matrix[hsb2.race-1, :][:20]
 
-
-# In[ ]:
 
 sm.categorical(hsb2.race.values)
 
 
 # This is a bit of a trick, as the `race` category conveniently maps to zero-based indices. If it does not, this conversion happens under the hood, so this won't work in general but nonetheless is a useful exercise to fix ideas. The below illustrates the output using the three contrasts above
-
-# In[ ]:
 
 from statsmodels.formula.api import ols
 mod = ols("write ~ C(race, Treatment)", data=hsb2)
@@ -79,8 +61,6 @@ print res.summary()
 #### Simple Coding
 
 # Like Treatment Coding, Simple Coding compares each level to a fixed reference level. However, with simple coding, the intercept is the grand mean of all the levels of the factors. Patsy doesn't have the Simple contrast included, but you can easily define your own contrasts. To do so, write a class that contains a code_with_intercept and a code_without_intercept method that returns a patsy.contrast.ContrastMatrix instance
-
-# In[ ]:
 
 from patsy.contrasts import ContrastMatrix
 
@@ -104,18 +84,12 @@ class Simple(object):
         return ContrastMatrix(contrast, _name_levels("Simp.", levels[:-1]))
 
 
-# In[ ]:
-
 hsb2.groupby('race')['write'].mean().mean()
 
-
-# In[ ]:
 
 contrast = Simple().code_without_intercept(levels)
 print contrast.matrix
 
-
-# In[ ]:
 
 mod = ols("write ~ C(race, Simple)", data=hsb2)
 res = mod.fit()
@@ -126,14 +100,10 @@ print res.summary()
 
 # Sum coding compares the mean of the dependent variable for a given level to the overall mean of the dependent variable over all the levels. That is, it uses contrasts between each of the first k-1 levels and level k In this example, level 1 is compared to all the others, level 2 to all the others, and level 3 to all the others.
 
-# In[ ]:
-
 from patsy.contrasts import Sum
 contrast = Sum().code_without_intercept(levels)
 print contrast.matrix
 
-
-# In[ ]:
 
 mod = ols("write ~ C(race, Sum)", data=hsb2)
 res = mod.fit()
@@ -142,8 +112,6 @@ print res.summary()
 
 # This corresponds to a parameterization that forces all the coefficients to sum to zero. Notice that the intercept here is the grand mean where the grand mean is the mean of means of the dependent variable by each level.
 
-# In[ ]:
-
 hsb2.groupby('race')['write'].mean().mean()
 
 
@@ -151,14 +119,10 @@ hsb2.groupby('race')['write'].mean().mean()
 
 # In backward difference coding, the mean of the dependent variable for a level is compared with the mean of the dependent variable for the prior level. This type of coding may be useful for a nominal or an ordinal variable.
 
-# In[ ]:
-
 from patsy.contrasts import Diff
 contrast = Diff().code_without_intercept(levels)
 print contrast.matrix
 
-
-# In[ ]:
 
 mod = ols("write ~ C(race, Diff)", data=hsb2)
 res = mod.fit()
@@ -166,8 +130,6 @@ print res.summary()
 
 
 # For example, here the coefficient on level 1 is the mean of `write` at level 2 compared with the mean at level 1. Ie.,
-
-# In[ ]:
 
 res.params["C(race, Diff)[D.1]"]
 hsb2.groupby('race').mean()["write"][2] -      hsb2.groupby('race').mean()["write"][1]
@@ -177,14 +139,10 @@ hsb2.groupby('race').mean()["write"][2] -      hsb2.groupby('race').mean()["writ
 
 # Our version of Helmert coding is sometimes referred to as Reverse Helmert Coding. The mean of the dependent variable for a level is compared to the mean of the dependent variable over all previous levels. Hence, the name 'reverse' being sometimes applied to differentiate from forward Helmert coding. This comparison does not make much sense for a nominal variable such as race, but we would use the Helmert contrast like so:
 
-# In[ ]:
-
 from patsy.contrasts import Helmert
 contrast = Helmert().code_without_intercept(levels)
 print contrast.matrix
 
-
-# In[ ]:
 
 mod = ols("write ~ C(race, Helmert)", data=hsb2)
 res = mod.fit()
@@ -193,15 +151,11 @@ print res.summary()
 
 # To illustrate, the comparison on level 4 is the mean of the dependent variable at the previous three levels taken from the mean at level 4
 
-# In[ ]:
-
 grouped = hsb2.groupby('race')
 grouped.mean()["write"][4] - grouped.mean()["write"][:3].mean()
 
 
 # As you can see, these are only equal up to a constant. Other versions of the Helmert contrast give the actual difference in means. Regardless, the hypothesis tests are the same.
-
-# In[ ]:
 
 k = 4
 1./k * (grouped.mean()["write"][k] - grouped.mean()["write"][:k-1].mean())
@@ -213,21 +167,15 @@ k = 3
 
 # The coefficients taken on by polynomial coding for `k=4` levels are the linear, quadratic, and cubic trends in the categorical variable. The categorical variable here is assumed to be represented by an underlying, equally spaced numeric variable. Therefore, this type of encoding is used only for ordered categorical variables with equal spacing. In general, the polynomial contrast produces polynomials of order `k-1`. Since `race` is not an ordered factor variable let's use `read` as an example. First we need to create an ordered categorical from `read`.
 
-# In[ ]:
-
 hsb2['readcat'] = pandas.cut(hsb2.read, bins=3)
 hsb2.groupby('readcat').mean()['write']
 
-
-# In[ ]:
 
 from patsy.contrasts import Poly
 levels = hsb2.readcat.unique().tolist()
 contrast = Poly().code_without_intercept(levels)
 print contrast.matrix
 
-
-# In[ ]:
 
 mod = ols("write ~ C(readcat, Poly)", data=hsb2)
 res = mod.fit()

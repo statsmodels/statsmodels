@@ -1,43 +1,29 @@
 
 ## Time Series Filters
 
-# In[ ]:
-
 import pandas
 import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
 
 
-# In[ ]:
-
 dta = sm.datasets.macrodata.load_pandas().data
 
-
-# In[ ]:
 
 index = pandas.Index(sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3'))
 print index
 
-
-# In[ ]:
 
 dta.index = index
 del dta['year']
 del dta['quarter']
 
 
-# In[ ]:
-
 print sm.datasets.macrodata.NOTE
 
 
-# In[ ]:
-
 print dta.head(10)
 
-
-# In[ ]:
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
@@ -56,19 +42,13 @@ legend.prop.set_size(20);
 # 
 # $$\min_{\\{ \tau_{t}\\} }\sum_{t}^{T}\zeta_{t}^{2}+\lambda\sum_{t=1}^{T}\left[\left(\tau_{t}-\tau_{t-1}\right)-\left(\tau_{t-1}-\tau_{t-2}\right)\right]^{2}$$
 
-# In[ ]:
-
 gdp_cycle, gdp_trend = sm.tsa.filters.hpfilter(dta.realgdp)
 
-
-# In[ ]:
 
 gdp_decomp = dta[['realgdp']]
 gdp_decomp["cycle"] = gdp_cycle
 gdp_decomp["trend"] = gdp_trend
 
-
-# In[ ]:
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
@@ -104,14 +84,10 @@ legend.prop.set_size(20);
 # 
 # $P_L$ and $P_H$ are the periodicity of the low and high cut-off frequencies. Following Burns and Mitchell's work on US business cycles which suggests cycles last from 1.5 to 8 years, we use $P_L=6$ and $P_H=32$ by default.
 
-# In[ ]:
-
 bk_cycles = sm.tsa.filters.bkfilter(dta[["infl","unemp"]])
 
 
 # * We lose K observations on both ends. It is suggested to use K=12 for quarterly data.
-
-# In[ ]:
 
 fig = plt.figure(figsize=(14,10))
 ax = fig.add_subplot(111)
@@ -135,23 +111,15 @@ bk_cycles.plot(ax=ax, style=['r--', 'b-']);
 
 # The CF filter is appropriate for series that may follow a random walk.
 
-# In[ ]:
-
 print sm.tsa.stattools.adfuller(dta['unemp'])[:3]
 
-
-# In[ ]:
 
 print sm.tsa.stattools.adfuller(dta['infl'])[:3]
 
 
-# In[ ]:
-
 cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl","unemp"]])
 print cf_cycles.head(10)
 
-
-# In[ ]:
 
 fig = plt.figure(figsize=(14,10))
 ax = fig.add_subplot(111)

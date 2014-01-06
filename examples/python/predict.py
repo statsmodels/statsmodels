@@ -1,15 +1,11 @@
 
 ## Prediction (out of sample)
 
-# In[ ]:
-
 import numpy as np
 import statsmodels.api as sm
 
 
 # ## Artificial data
-
-# In[ ]:
 
 nsample = 50
 sig = 0.25
@@ -23,8 +19,6 @@ y = y_true + sig * np.random.normal(size=nsample)
 
 # ## Estimation 
 
-# In[ ]:
-
 olsmod = sm.OLS(y, X)
 olsres = olsmod.fit()
 print olsres.summary()
@@ -32,15 +26,11 @@ print olsres.summary()
 
 # ## In-sample prediction
 
-# In[ ]:
-
 ypred = olsres.predict(X)
 print ypred
 
 
 # ## Create a new sample of explanatory variables Xnew, predict and plot
-
-# In[ ]:
 
 x1n = np.linspace(20.5,25, 10)
 Xnew = np.column_stack((x1n, np.sin(x1n), (x1n-5)**2))
@@ -50,8 +40,6 @@ print ynewpred
 
 
 # ## Plot comparison
-
-# In[ ]:
 
 import matplotlib.pyplot as plt
 
@@ -66,8 +54,6 @@ ax.legend(loc="best");
 
 # Using formulas can make both estimation and prediction a lot easier
 
-# In[ ]:
-
 from statsmodels.formula.api import ols
 
 data = {"x1" : x1, "y" : y}
@@ -77,14 +63,10 @@ res = ols("y ~ x1 + np.sin(x1) + I((x1-5)**2)", data=data).fit()
 
 # We use the `I` to indicate use of the Identity transform. Ie., we don't want any expansion magic from using `**2`
 
-# In[ ]:
-
 res.params
 
 
 # Now we only have to pass the single variable and we get the transformed right-hand side variables automatically
-
-# In[ ]:
 
 res.predict(exog=dict(x1=x1n))
 

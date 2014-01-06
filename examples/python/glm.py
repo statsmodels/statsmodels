@@ -1,8 +1,6 @@
 
 ## Generalized Linear Models
 
-# In[ ]:
-
 import numpy as np
 import statsmodels.api as sm
 from scipy import stats
@@ -17,14 +15,10 @@ from matplotlib import pyplot as plt
 #  from Jeff Gill (2000) Generalized linear models: A unified approach. Codebook
 #  information can be obtained by typing: 
 
-# In[ ]:
-
 print sm.datasets.star98.NOTE
 
 
 # Load the data and add a constant to the exogenous (independent) variables:
-
-# In[ ]:
 
 data = sm.datasets.star98.load()
 data.exog = sm.add_constant(data.exog, prepend=False)
@@ -32,22 +26,16 @@ data.exog = sm.add_constant(data.exog, prepend=False)
 
 #  The dependent variable is N by 2 (Success: NABOVE, Failure: NBELOW): 
 
-# In[ ]:
-
 print data.endog[:5,:]
 
 
 #  The independent variables include all the other variables described above, as
 #  well as the interaction terms:
 
-# In[ ]:
-
 print data.exog[:2,:]
 
 
 # ### Fit and summary
-
-# In[ ]:
 
 glm_binom = sm.GLM(data.endog, data.exog, family=sm.families.Binomial())
 res = glm_binom.fit()
@@ -56,16 +44,12 @@ print res.summary()
 
 # ### Quantities of interest
 
-# In[ ]:
-
 print 'Total number of trials:',  data.endog[0].sum()
 print 'Parameters: ', res.params
 print 'T-values: ', res.tvalues
 
 
 # First differences: We hold all explanatory variables constant at their means and manipulate the percentage of low income households to assess its impact on the response variables: 
-
-# In[ ]:
 
 means = data.exog.mean(axis=0)
 means25 = means.copy()
@@ -79,16 +63,12 @@ diff = resp_75 - resp_25
 
 # The interquartile first difference for the percentage of low income households in a school district is:
 
-# In[ ]:
-
 print "%2.4f%%" % (diff*100)
 
 
 # ### Plots
 # 
 #  We extract information that will be used to draw some interesting plots: 
-
-# In[ ]:
 
 nobs = res.nobs
 y = data.endog[:,0]/data.endog.sum(1)
@@ -97,12 +77,8 @@ yhat = res.mu
 
 # Plot yhat vs y:
 
-# In[ ]:
-
 from statsmodels.graphics.api import abline_plot
 
-
-# In[ ]:
 
 fig, ax = plt.subplots()
 ax.scatter(yhat, y)
@@ -117,8 +93,6 @@ ax.set_xlabel('Fitted values');
 
 # Plot yhat vs. Pearson residuals:
 
-# In[ ]:
-
 fig, ax = plt.subplots()
 
 ax.scatter(yhat, res.resid_pearson)
@@ -130,8 +104,6 @@ ax.set_xlabel('Fitted values')
 
 
 # Histogram of standardized deviance residuals:
-
-# In[ ]:
 
 from scipy import stats
 
@@ -145,8 +117,6 @@ ax.set_title('Histogram of standardized deviance residuals');
 
 # QQ Plot of Deviance Residuals:
 
-# In[ ]:
-
 from statsmodels import graphics
 graphics.gofplots.qqplot(resid, line='r')
 
@@ -159,14 +129,10 @@ graphics.gofplots.qqplot(resid, line='r')
 #  Star98 dataset. Statsmodels datasets ships with other useful information. For
 #  example: 
 
-# In[ ]:
-
 print sm.datasets.scotland.DESCRLONG
 
 
 #  Load the data and add a constant to the exogenous variables:
-
-# In[ ]:
 
 data2 = sm.datasets.scotland.load()
 data2.exog = sm.add_constant(data2.exog, prepend=False)
@@ -175,8 +141,6 @@ print data2.endog[:5]
 
 
 # ### Fit and summary
-
-# In[ ]:
 
 glm_gamma = sm.GLM(data2.endog, data2.exog, family=sm.families.Gamma())
 glm_results = glm_gamma.fit()
@@ -187,8 +151,6 @@ print glm_results.summary()
 # 
 # ### Artificial data
 
-# In[ ]:
-
 nobs2 = 100
 x = np.arange(nobs2)
 np.random.seed(54321)
@@ -198,8 +160,6 @@ lny = np.exp(-(.03*x + .0001*x**2 - 1.0)) + .001 * np.random.rand(nobs2)
 
 
 # ### Fit and summary
-
-# In[ ]:
 
 gauss_log = sm.GLM(lny, X, family=sm.families.Gaussian(sm.families.links.log))
 gauss_log_results = gauss_log.fit()

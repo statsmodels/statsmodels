@@ -1,8 +1,6 @@
 
 ## Weighted Least Squares
 
-# In[ ]:
-
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
@@ -22,8 +20,6 @@ np.random.seed(1024)
 #  * Independent noise/error term
 #  * Two groups for error variance, low and high variance groups
 
-# In[ ]:
-
 nsample = 50
 x = np.linspace(0, 20, nsample)
 X = np.column_stack((x, (x - 5)**2))
@@ -40,8 +36,6 @@ X = X[:,[0,1]]
 
 # ### WLS knowing the true variance ratio of heteroscedasticity
 
-# In[ ]:
-
 mod_wls = sm.WLS(y, X, weights=1./w)
 res_wls = mod_wls.fit()
 print res_wls.summary()
@@ -51,16 +45,12 @@ print res_wls.summary()
 # 
 # Estimate an OLS model for comparison: 
 
-# In[ ]:
-
 res_ols = sm.OLS(y, X).fit()
 print res_ols.params
 print res_wls.params
 
 
 # Compare the WLS standard errors to  heteroscedasticity corrected OLS standard errors:
-
-# In[ ]:
 
 se = np.vstack([[res_wls.bse], [res_ols.bse], [res_ols.HC0_se], 
                 [res_ols.HC1_se], [res_ols.HC2_se], [res_ols.HC3_se]])
@@ -73,22 +63,16 @@ print tabl
 
 # Calculate OLS prediction interval:
 
-# In[ ]:
-
 covb = res_ols.cov_params()
 prediction_var = res_ols.mse_resid + (X * np.dot(covb,X.T).T).sum(1)
 prediction_std = np.sqrt(prediction_var)
 tppf = stats.t.ppf(0.975, res_ols.df_resid)
 
 
-# In[ ]:
-
 prstd_ols, iv_l_ols, iv_u_ols = wls_prediction_std(res_ols)
 
 
 # Draw a plot to compare predicted values in WLS and OLS:
-
-# In[ ]:
 
 prstd, iv_l, iv_u = wls_prediction_std(res_wls)
 
@@ -107,8 +91,6 @@ ax.legend(loc="best");
 
 
 # ## Feasible Weighted Least Squares (2-stage FWLS)
-
-# In[ ]:
 
 resid1 = res_ols.resid[w==1.]
 var1 = resid1.var(ddof=int(res_ols.df_model)+1)

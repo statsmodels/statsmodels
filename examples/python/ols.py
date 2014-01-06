@@ -1,8 +1,6 @@
 
 ## Ordinary Least Squares
 
-# In[ ]:
-
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -15,8 +13,6 @@ np.random.seed(9876789)
 # 
 # Artificial data:
 
-# In[ ]:
-
 nsample = 100
 x = np.linspace(0, 10, 100)
 X = np.column_stack((x, x**2))
@@ -26,23 +22,17 @@ e = np.random.normal(size=nsample)
 
 # Our model needs an intercept so we add a column of 1s:
 
-# In[ ]:
-
 X = sm.add_constant(X)
 y = np.dot(X, beta) + e
 
 
 # Inspect data:
 
-# In[ ]:
-
 X = sm.add_constant(X)
 y = np.dot(X, beta) + e
 
 
 # Fit and summary:
-
-# In[ ]:
 
 model = sm.OLS(y, X)
 results = model.fit()
@@ -51,8 +41,6 @@ print results.summary()
 
 # Quantities of interest can be extracted directly from the fitted model. Type ``dir(results)`` for a full list. Here are some examples:  
 
-# In[ ]:
-
 print 'Parameters: ', results.params
 print 'R2: ', results.rsquared
 
@@ -60,8 +48,6 @@ print 'R2: ', results.rsquared
 # ## OLS non-linear curve but linear in parameters
 # 
 # We simulate artificial data with a non-linear relationship between x and y:
-
-# In[ ]:
 
 nsample = 50
 sig = 0.5
@@ -75,15 +61,11 @@ y = y_true + sig * np.random.normal(size=nsample)
 
 # Fit and summary:
 
-# In[ ]:
-
 res = sm.OLS(y, X).fit()
 print res.summary()
 
 
 # Extract other quantities of interest:
-
-# In[ ]:
 
 print 'Parameters: ', res.params
 print 'Standard errors: ', res.bse
@@ -91,8 +73,6 @@ print 'Predicted values: ', res.predict()
 
 
 # Draw a plot to compare the true relationship to OLS predictions. Confidence intervals around the predictions are built using the ``wls_prediction_std`` command.
-
-# In[ ]:
 
 prstd, iv_l, iv_u = wls_prediction_std(res)
 
@@ -109,8 +89,6 @@ ax.legend(loc='best');
 # ## OLS with dummy variables
 # 
 # We generate some artificial data. There are 3 groups which will be modelled using dummy variables. Group 0 is the omitted/benchmark category.
-
-# In[ ]:
 
 nsample = 50
 groups = np.zeros(nsample, int)
@@ -132,8 +110,6 @@ y = y_true + e
 
 # Inspect the data:
 
-# In[ ]:
-
 print X[:5,:]
 print y[:5]
 print groups
@@ -142,15 +118,11 @@ print dummy[:5,:]
 
 # Fit and summary:
 
-# In[ ]:
-
 res2 = sm.OLS(y, X).fit()
 print res.summary()
 
 
 # Draw a plot to compare the true relationship to OLS predictions:
-
-# In[ ]:
 
 prstd, iv_l, iv_u = wls_prediction_std(res2)
 
@@ -170,16 +142,12 @@ ax.legend(loc="best")
 # 
 # We want to test the hypothesis that both coefficients on the dummy variables are equal to zero, that is, $R \times \beta = 0$. An F test leads us to strongly reject the null hypothesis of identical constant in the 3 groups:
 
-# In[ ]:
-
 R = [[0, 1, 0, 0], [0, 0, 1, 0]]
 print np.array(R)
 print res2.f_test(R)
 
 
 # You can also use formula-like syntax to test hypotheses
-
-# In[ ]:
 
 print res2.f_test("x2 = x3 = 0")
 
@@ -188,8 +156,6 @@ print res2.f_test("x2 = x3 = 0")
 # 
 # If we generate artificial data with smaller group effects, the T test can no longer reject the Null hypothesis: 
 
-# In[ ]:
-
 beta = [1., 0.3, -0.0, 10]
 y_true = np.dot(X, beta)
 y = y_true + np.random.normal(size=nsample)
@@ -197,12 +163,8 @@ y = y_true + np.random.normal(size=nsample)
 res3 = sm.OLS(y, X).fit()
 
 
-# In[ ]:
-
 print res3.f_test(R)
 
-
-# In[ ]:
 
 print res3.f_test("x2 = x3 = 0")
 
@@ -211,8 +173,6 @@ print res3.f_test("x2 = x3 = 0")
 # 
 # The Longley dataset is well known to have high multicollinearity. That is, the exogenous predictors are highly correlated. This is problematic because it can affect the stability of our coefficient estimates as we make minor changes to model specification. 
 
-# In[ ]:
-
 from statsmodels.datasets.longley import load_pandas
 y = load_pandas().endog
 X = load_pandas().exog
@@ -220,8 +180,6 @@ X = sm.add_constant(X)
 
 
 # Fit and summary:
-
-# In[ ]:
 
 ols_model = sm.OLS(y, X)
 ols_results = ols_model.fit()
@@ -232,8 +190,6 @@ print ols_results.summary()
 # 
 # One way to assess multicollinearity is to compute the condition number. Values over 20 are worrisome (see Greene 4.9). The first step is to normalize the independent variables to have unit length: 
 
-# In[ ]:
-
 for i, name in enumerate(X):
     if name == "const":
         continue
@@ -242,8 +198,6 @@ norm_xtx = np.dot(norm_x.T,norm_x)
 
 
 # Then, we take the square root of the ratio of the biggest to the smallest eigen values. 
-
-# In[ ]:
 
 eigs = np.linalg.eigvals(norm_xtx)
 condition_number = np.sqrt(eigs.max() / eigs.min())
@@ -254,27 +208,19 @@ print condition_number
 # 
 # Greene also points out that dropping a single observation can have a dramatic effect on the coefficient estimates: 
 
-# In[ ]:
-
 ols_results2 = sm.OLS(y.ix[:14], X.ix[:14]).fit()
 print "Percentage change %4.2f%%\n"*7 % tuple([i for i in (ols_results2.params - ols_results.params)/ols_results.params*100])
 
 
 # We can also look at formal statistics for this such as the DFBETAS -- a standardized measure of how much each coefficient changes when that observation is left out.
 
-# In[ ]:
-
 infl = ols_results.get_influence()
 
 
 # In general we may consider DBETAS in absolute value greater than $2/\sqrt{N}$ to be influential observations
 
-# In[ ]:
-
 2./len(X)**.5
 
-
-# In[ ]:
 
 print infl.summary_frame().filter(regex="dfb")
 

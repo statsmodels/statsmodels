@@ -12,8 +12,6 @@
 # 
 # We first need to load some modules and to retrieve the data. Conveniently, the Engel dataset is shipped with ``statsmodels``.
 
-# In[ ]:
-
 import patsy
 import numpy as np
 import pandas as pd
@@ -30,8 +28,6 @@ data.head()
 # 
 # The LAD model is a special case of quantile regression where q=0.5
 
-# In[ ]:
-
 mod = smf.quantreg('foodexp ~ income', data)
 res = mod.fit(q=.5)
 print res.summary()
@@ -44,8 +40,6 @@ print res.summary()
 # ### Prepare data for plotting
 # 
 # For convenience, we place the quantile regression results in a Pandas DataFrame, and the OLS results in a dictionary.
-
-# In[ ]:
 
 quantiles = np.arange(.05, .96, .1)
 def fit_model(q):
@@ -74,8 +68,6 @@ print ols
 # 2. The *dispersion* of food expenditure increases with income
 # 3. The least squares estimates fit low income observations quite poorly (i.e. the OLS line passes over most low income households)
 
-# In[ ]:
-
 x = np.arange(data.income.min(), data.income.max(), 50)
 get_y = lambda a, b: a + b * x
 
@@ -100,8 +92,6 @@ plt.show()
 # The dotted black lines form 95% point-wise confidence band around 10 quantile regression estimates (solid black line). The red lines represent OLS regression results along with their 95% confindence interval.
 # 
 # In most cases, the quantile regression point estimates lie outside the OLS confidence interval, which suggests that the effect of income on food expenditure may not be constant across the distribution.
-
-# In[ ]:
 
 from matplotlib import rc
 rc('text', usetex=True)

@@ -10,8 +10,6 @@
 
 # ## Example 1: Probit model
 
-# In[ ]:
-
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
@@ -19,8 +17,6 @@ from statsmodels.base.model import GenericLikelihoodModel
 
 
 # The ``Spector`` dataset is distributed with ``statsmodels``. You can access a vector of values for the dependent variable (``endog``) and a matrix of regressors (``exog``) like this:
-
-# In[ ]:
 
 data = sm.datasets.spector.load_pandas()
 exog = data.exog
@@ -31,14 +27,10 @@ print data.exog.head()
 
 # Them, we add a constant to the matrix of regressors:
 
-# In[ ]:
-
 exog = sm.add_constant(exog, prepend=True)
 
 
 # To create your own Likelihood Model, you simply need to overwrite the loglike method.
-
-# In[ ]:
 
 class MyProbit(GenericLikelihoodModel):
     def loglike(self, params):
@@ -50,26 +42,18 @@ class MyProbit(GenericLikelihoodModel):
 
 # Estimate the model and print a summary:
 
-# In[ ]:
-
 sm_probit_manual = MyProbit(endog, exog).fit()
 print sm_probit_manual.summary()
 
 
 # Compare your Probit implementation to ``statsmodels``' "canned" implementation:
 
-# In[ ]:
-
 sm_probit_canned = sm.Probit(endog, exog).fit()
 
-
-# In[ ]:
 
 print sm_probit_canned.params
 print sm_probit_manual.params
 
-
-# In[ ]:
 
 print sm_probit_canned.cov_params()
 print sm_probit_manual.cov_params()
@@ -97,13 +81,9 @@ print sm_probit_manual.cov_params()
 # simply as:
 # 
 
-# In[ ]:
-
 import numpy as np
 from scipy.stats import nbinom
 
-
-# In[ ]:
 
 def _ll_nb2(y, X, beta, alph):
     mu = np.exp(np.dot(X, beta))
@@ -117,12 +97,8 @@ def _ll_nb2(y, X, beta, alph):
 # 
 # We create a new model class which inherits from ``GenericLikelihoodModel``:
 
-# In[ ]:
-
 from statsmodels.base.model import GenericLikelihoodModel
 
-
-# In[ ]:
 
 class NBin(GenericLikelihoodModel):
     def __init__(self, endog, exog, **kwds):
@@ -162,12 +138,8 @@ class NBin(GenericLikelihoodModel):
 # in memory. We then print the first few columns: 
 # 
 
-# In[ ]:
-
 import statsmodels.api as sm
 
-
-# In[ ]:
 
 medpar = sm.datasets.get_rdataset("medpar", "COUNT", cache=True).data
 
@@ -180,8 +152,6 @@ medpar.head()
 # 
 # For estimation, we need to create two variables to hold our regressors and the outcome variable. These can be ndarrays or pandas objects.
 
-# In[ ]:
-
 y = medpar.los
 X = medpar[["type2", "type3", "hmo", "white"]]
 X["constant"] = 1
@@ -189,15 +159,11 @@ X["constant"] = 1
 
 # Then, we fit the model and extract some information: 
 
-# In[ ]:
-
 mod = NBin(y, X)
 res = mod.fit()
 
 
 #  Extract parameter estimates, standard errors, p-values, AIC, etc.:
-
-# In[ ]:
 
 print 'Parameters: ', res.params
 print 'Standard errors: ', res.bse
@@ -209,8 +175,6 @@ print 'AIC: ', res.aic
 # ``dir(res)``.
 # We can also look at the summary of the estimation results.
 
-# In[ ]:
-
 print res.summary()
 
 
@@ -218,18 +182,12 @@ print res.summary()
 
 # We can check the results by using the statsmodels implementation of the Negative Binomial model, which uses the analytic score function and Hessian.
 
-# In[ ]:
-
 res_nbin = sm.NegativeBinomial(y, X).fit(disp=0)
 print res_nbin.summary()
 
 
-# In[ ]:
-
 print res_nbin.params
 
-
-# In[ ]:
 
 print res_nbin.bse
 

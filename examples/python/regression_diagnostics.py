@@ -7,8 +7,6 @@
 
 # ## Estimate a regression model
 
-# In[ ]:
-
 import statsmodels
 import numpy as np
 import pandas as pd
@@ -30,16 +28,12 @@ print(results.summary())
 
 # Jarque-Bera test:
 
-# In[ ]:
-
 name = ['Jarque-Bera', 'Chi^2 two-tail prob.', 'Skew', 'Kurtosis']
 test = sms.jarque_bera(results.resid)
 zip(name, test)
 
 
 # Omni test:
-
-# In[ ]:
 
 name = ['Chi^2', 'Two-tail probability']
 test = sms.omni_normtest(results.resid)
@@ -50,8 +44,6 @@ zip(name, test)
 # 
 # Once created, an object of class ``OLSInfluence`` holds attributes and methods that allow users to assess the influence of each observation. For example, we can compute and extract the first few rows of DFbetas by:
 
-# In[ ]:
-
 from statsmodels.stats.outliers_influence import OLSInfluence
 test_class = OLSInfluence(results)
 test_class.dfbetas[:5,:]
@@ -60,8 +52,6 @@ test_class.dfbetas[:5,:]
 # Explore other options by typing ``dir(influence_test)``
 # 
 # Useful information on leverage can also be plotted:
-
-# In[ ]:
 
 from statsmodels.graphics.regressionplots import plot_leverage_resid2
 print(plot_leverage_resid2(results))
@@ -73,16 +63,12 @@ print(plot_leverage_resid2(results))
 # 
 # Condition number:
 
-# In[ ]:
-
 np.linalg.cond(results.model.exog)
 
 
 # ## Heteroskedasticity tests
 # 
 # Breush-Pagan test:
-
-# In[ ]:
 
 name = ['Lagrange multiplier statistic', 'p-value', 
         'f-value', 'f p-value']
@@ -92,8 +78,6 @@ zip(name, test)
 
 # Goldfeld-Quandt test
 
-# In[ ]:
-
 name = ['F statistic', 'p-value']
 test = sms.het_goldfeldquandt(results.resid, results.model.exog)
 zip(name, test)
@@ -102,8 +86,6 @@ zip(name, test)
 # ## Linearity
 # 
 # Harvey-Collier multiplier test for Null hypothesis that the linear specification is correct:
-
-# In[ ]:
 
 name = ['t value', 'p value']
 test = sms.linear_harvey_collier(results)
