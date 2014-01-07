@@ -12,8 +12,8 @@ except:
 
 def dotplot(points, intervals=None, lines=None, sections=None,
             styles=None, marker_props=None, line_props=None,
-            ax=None, split_names=None, order_sections=None,
-            order_lines=None, stacked=False, striped=False):
+            ax=None, split_names=None, section_order=None,
+            line_order=None, stacked=False, striped=False):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  Several extensions to the basic dotplot
@@ -68,22 +68,16 @@ def dotplot(points, intervals=None, lines=None, sections=None,
     ax : matplotlib.axes
         The axes on which the dotplot is drawn.  If None, a new axes
         is created.
-
     split_names : string
         If not None, this is used to split the values of groupby into
         substrings that are drawn in the left and right margins,
         respectively.
-
-    order_sections : array_like
+    section_order : array_like
         The section labels in the order in which they appear in the
-        dotplot; can also be used to select a subset of the section
-        names.
-
-    order_lines : array_like
-        The groupby labels in the order in which they appear in the
-        dotplot; can also be used to select a subset of the groupby
-        labels.
-
+        dotplot.
+    line_order : array_like
+        The line labels in the order in which they appear in the
+        dotplot.
     stacked : boolean
         If True, when multiple points or intervals are drawn on the
         same line, they are offset vertically from each other.
@@ -138,17 +132,17 @@ def dotplot(points, intervals=None, lines=None, sections=None,
     # axis limits are not cut in half.
     ax.set_xmargin(0.02)
 
-    if order_sections is None:
+    if section_order is None:
         lines0 = list(set(sections))
         lines0.sort()
     else:
-        lines0 = order_sections
+        lines0 = section_order
 
-    if order_lines is None:
+    if line_order is None:
         lines1 = list(set(lines))
         lines1.sort()
     else:
-        lines1 = order_lines
+        lines1 = line_order
 
     # A map from (section,line) codes to index positions.
     lines_map = {}
