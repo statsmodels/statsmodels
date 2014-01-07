@@ -1,9 +1,19 @@
 import numpy as np
 import utils
 
+try:
+    import matplotlib.transforms as transforms
+    if matplotlib.__version__ < '1':
+        raise
+    have_matplotlib = True
+except:
+    have_matplotlib = False
 
-def dotplot(vals, ax=None, left_labels=None, right_labels=None,
-            stack=False, striped=False, props={}):
+
+def dotplot(points, intervals=None, lines=None, sections=None,
+            styles=None, marker_props=None, line_props=None,
+            ax=None, split_names=None, order_sections=None,
+            order_lines=None, stacked=False, striped=False):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  Several extensions to the basic dotplot
@@ -13,87 +23,82 @@ def dotplot(vals, ax=None, left_labels=None, right_labels=None,
 
     Parameters
     ----------
-    vals : array_like
-        A list containing the data values to be plotted as points, and
-        optionally, information about intervals that are to be plotted
-        around the points.  Each element `v` of `vals` contains the
-        data to be plotted on a single row of the dotplot.  The
-        elements of `v` are either (1) scalars, if only points are to
-        be plotted, (2) sequences (x, w) if the interval x-w, x+w is
-        to be plotted, or (3) sequences (x, left, right) if the
-        interval x-left, x+right is to be plotted.
+    points : array_like
+        The quantitative values to be plotted as markers.
+
+    intervals : array_like
+
+        The intervals to be plotted around the points.  The elements
+        of intervals are either scalars or sequences of length 2.  A
+        scalar indicates the half width of a symmetric interval.  A
+        sequence of length 2 contains the left and right half-widths
+        (respectively) of a nonsymmetric interval.  If None, not
+        intervals are drawn.
+
+    lines : array_like
+
+        A grouping variable indicating which points/intervals are
+        drawn on a common line.  If None, each point/interval appears
+        on its own line.
+
+    sections : array_like
+
+        A grouping variable indicating which lines are grouped into
+        sections.  If None, everything is drawn in a single section.
+
+    styles : array_like
+
+        A label defining the plotting style of the marker.
+
+    marker_props : dict
+
+        A dictionary mapping style codes (the values in `styles`) to
+        dictionaries defining key/value pairs to be passed as keyword
+        arguments to `plot` when plotting markers.  Useful keyword
+        arguments are "color", "marker", and "ms" (marker size).
+
+    line_props : dict
+
+        A dictionary mapping style codes (the values in `styles`) to
+        dictionaries defining key/value pairs to be passed as keyword
+        arguments to `plot` when plotting interval lines.  Useful
+        keyword arguments are "color", "linestyle", "solid_capstyle",
+        and "linewidth".
+
     ax : matplotlib.axes
         The axes on which the dotplot is drawn.  If None, a new axes
         is created.
-    left_labels : array_like
-        A list of labels to be placed in the left margin.  If None,
-        integer row labels are drawn in the left margin.
-    right_labels : array_like
-        A list of labels to be placed in the right margin.  If None,
-        no labels are drawn in the right margin.
-    stack : boolean
+
+    split_names : string
+        If not None, this is used to split the values of groupby into
+        substrings that are drawn in the left and right margins,
+        respectively.
+
+    order_sections : array_like
+        The section labels in the order in which they appear in the
+        dotplot; can also be used to select a subset of the section
+        names.
+
+    order_lines : array_like
+        The groupby labels in the order in which they appear in the
+        dotplot; can also be used to select a subset of the groupby
+        labels.
+
+    stacked : boolean
         If True, when multiple points or intervals are drawn on the
         same line, they are offset vertically from each other.
     striped : boolean
         If True, every other line is enclosed in a shaded box.
-    props : dictionary
-        A dictionary containing parameters that affect the layout of
-        the dotplot.  See notes below for information about the
-        parameters in `props`.
 
     Returns
     -------
     fig : Figure
         The figure given by `ax.figure` or a new instance.
-    rslt : dictionary
-        A dictionary of matplotlib elements in the plot.  The `points`
-        and `intervals` are lists of lists containing the points and
-        intervals that are drawn on each line of the dotplot.
 
     Notes
     -----
-    The general format of `vals` is
-
-    [
-      # First line in the plot
-      [
-        point1, point2, ...
-      ]
-      ...
-      # Last line in the plot
-      [
-        point1, point2, ...
-      ]
-    ]
-
-    The elements of `vals` correspond to the lines of the plot.  Each
-    element of `vals` contains a sequence of points to be plotted on a
-    single line.  The points are represented as sequences of 1, 2, or
-    3 numeric values, specifying a point, a symmetric interval, or a
-    nonmsymmetric interval.  An element of `vals` that contains only a
-    single string defines a section title.
-
-    There are two special cases:
-
-      * If `vals` is a sequence of scalars, these are taken as points
-        to be plotted without intervals, with one point on each line.
-
-      * If `vals` is a sequence of sequences of length 2 or 3, these
-        are taken to be symmetric or nonsymmetric intervals to be
-        plotted, with one interval on each line.
-
-    Plotting properties that may be placed into `props`:
-
-      * top: the distance in inches between the top of the axes and
-        the top guide line, defaults to 0.5in.
-
-      * bottom : the distance in inches between the bottom of the axes
-        and the bottom guide line, defaults to 0.75in.
-
-      * axis_pos : the distance in inches between the bottom of the
-        axes and the axis, defaults to 0.5in.
-
-      * section_space : The space between sections, in inches.
+    `points`, `intervals`, `lines`, `sections`, `styles` must all have
+    the same length whenever present.
 
     References
     ----------
@@ -106,207 +111,226 @@ def dotplot(vals, ax=None, left_labels=None, right_labels=None,
 
     fig, ax = utils.create_mpl_ax(ax)
 
-    # Check the data argument.
-    if isinstance(vals, list):
+    npoint = len(points)
 
-        b1 = all([np.isscalar(x) for x in vals])
-        b2 = all([isinstance(x, (list, tuple, str)) for x in vals])
+    if lines is None:
+        lines = np.arange(npoint)
 
-        if not (b1 or b2):
-            print b1, b2, vals
-            raise ValueError("dotplot: `vals` must be either a list of scalars, a list of lists and strings, or a numpy.ndarray")
-    elif isinstance(vals, np.ndarray):
-        if len(vals.shape) == 1:
-            vals = vals.tolist()
-        elif len(vals.shape) == 2:
-            if vals.shape[1] not in (2,3):
-                raise ValueError("dotplot: if `vals` is a ndarray, it must have either 2 or 3 columns")
-            vals = [x for x in vals]
+    if sections is None:
+        sections = np.zeros(npoint)
 
+    if styles is None:
+        styles = np.zeros(npoint)
 
-    default_props = {"top": 0.5,
-                     "bottom": 0.75,
-                     "axis_pos": 0.5,
-                     "section_space": 0.5}
-
-    # Fill in any properties not specied by the user with the default.
-    for k in default_props:
-        if k not in props:
-            props[k] = default_props[k]
-
-    rslt = {}
+    # The vertical space (in inches) for a section title
+    section_title_space = 0.5
 
     # The number of sections
-    nsect = 0
-    for v in vals:
-        if np.isscalar(v) and isinstance(v, str):
-            nsect += 1
+    nsect = len(set(sections))
+
+    # The number of section titles
+    nsect_title = nsect if nsect > 1 else 0
 
     # The total vertical space devoted to section titles.
-    section_space_total = props["section_space"] * nsect
+    section_space_total = section_title_space * nsect_title
 
     # Add a bit of horizontal room so that points that fall at the
     # axis limits are not cut in half.
     ax.set_xmargin(0.02)
 
-    # Get the size of these axes on the parent figure in inches
-    fig = ax.figure
+    if order_sections is None:
+        lines0 = list(set(sections))
+        lines0.sort()
+    else:
+        lines0 = order_sections
+
+    if order_lines is None:
+        lines1 = list(set(lines))
+        lines1.sort()
+    else:
+        lines1 = order_lines
+
+    # A map from (section,line) codes to index positions.
+    lines_map = {}
+    for i in range(npoint):
+        ky = (sections[i], lines[i])
+        if ky not in lines_map:
+            lines_map[ky] = []
+        lines_map[ky].append(i)
+
+    # Get the size of the axes on the parent figure in inches
     bbox = ax.get_window_extent().transformed(
         fig.dpi_scale_trans.inverted())
     awidth, aheight = bbox.width, bbox.height
 
-    # The default colors.  To change the colors, use the `set_color`
-    # method of the objects in points.
-    colors = ['r', 'b', 'g', 'm', 'k']
-
-    # The number of lines in the plot (not including section title
-    # lines).
-    nrows = len(vals) - nsect
+    # The number of lines in the plot.
+    nrows = len(lines_map)
 
     # The position of the highest guideline in axes coordinates.
-    top = (aheight - props["top"]) / float(aheight)
+    top = 1
 
     # The position of the lowest guideline in axes coordinates.
-    bottom = props["bottom"] / float(aheight)
+    bottom = 0
 
     # x coordinate is data, y coordinate is axes
     trans = transforms.blended_transform_factory(ax.transData,
                                                  ax.transAxes)
 
-    # Space for a section title, in axes coordinates
-    title_space_axes = props["section_space"] / aheight
+    # Space used for a section title, in axes coordinates
+    title_space_axes = section_title_space / aheight
 
     # Space between lines
-    dy = (top - bottom - nsect*title_space_axes) / float(nrows - 1)
+    dy = (top - bottom - nsect_title*title_space_axes) /\
+        float(nrows)
 
     # Determine the spacing for stacked points
-    def len1(x):
-        if np.isscalar(x):
-            return 1
-        else:
-            return len(x)
     # The maximum number of points on one line.
-    nval = max([len1(val) for val in vals])
+    style_codes = list(set(styles))
+    style_codes.sort()
+    nval = len(style_codes)
     if nval > 1:
         stackd = dy / (2.5*(float(nval)-1))
     else:
         stackd = 0.
 
-    # Extend the color list (by recycling) if needed.
-    while len(colors) < nval:
-        colors.extend(colors)
+    # Map from style code to its integer position
+    style_codes_map = {x: style_codes.index(x) for x in style_codes}
 
-    points, intervals = [], []
+    # Setup default marker styles
+    colors = ["r", "g", "b", "y", "k", "purple", "orange"]
+    if marker_props is None:
+        marker_props = {x: {} for x in style_codes}
+    for j in range(nval):
+        sc = style_codes[j]
+        if "color" not in marker_props[sc]:
+            marker_props[sc]["color"] = colors[j]
+        if "marker" not in marker_props[sc]:
+            marker_props[sc]["marker"] = "o"
+        if "ms" not in marker_props[sc]:
+            marker_props[sc]["ms"] = 10 if stackd == 0 else 6
 
-    rslt["guidelines"] = []
-    rslt["section titles"] = []
-    rslt["left labels"] = []
-    rslt["right labels"] = []
+    # Setup default line styles
+    if line_props is None:
+        line_props = {x: {} for x in style_codes}
+    for j in range(nval):
+        sc = style_codes[j]
+        if "color" not in line_props[sc]:
+            line_props[sc]["color"] = "grey"
+        if "linewidth" not in line_props[sc]:
+            line_props[sc]["linewidth"] = 2 if stackd > 0 else 8
 
-    # The vertical position of the current line.
-    y = top
+    # The vertical position of the first line.
+    y = top - dy/2 if nsect == 1 else top
 
-    # Loop through the lines (rows of data in the plot)
-    jrow = 0
-    for j,val in enumerate(vals):
+    # Points that have already been labeled
+    labeled = set()
+
+    # Positions of the y axis grid lines
+    yticks = []
+
+    # Loop through the sections
+    for k0 in lines0:
 
         # Draw a section title
-        if np.isscalar(val) and isinstance(val, str):
-            y -= title_space_axes / 2
-            txt = ax.text(0.5, y, val, horizontalalignment='center',
-                          transform=ax.transAxes)
-            txt.set_fontweight("bold")
-            rslt["section titles"].append(txt)
-            y -= title_space_axes / 2
-            continue
+        if nsect_title > 0:
 
-        jrow += 1
+            y0 = y + dy/2 if k0 == lines0[0] else y
 
-        # The left margin label of the current line.
-        label = left_labels[j] if left_labels is not None \
-                  else str(jrow)
+            ax.fill_between((0, 1), (y0,y0),
+                            (y-0.7*title_space_axes, y-0.7*title_space_axes),
+                            color='darkgrey',
+                            transform=ax.transAxes,
+                            zorder=1)
 
-        # Special case: one scalar plots as one point
-        if np.isscalar(val):
-            val = [[val,],]
-
-        # Special case: one tuple plots as one interval
-        if all([np.isscalar(x) for x in val]):
-            val = [val,]
-
-        # Draw the left margin label
-        txt = ax.text(-0.02, y, label, horizontalalignment="right",
-                       verticalalignment='center',
-                       transform=ax.transAxes)
-        rslt["left labels"].append(txt)
-
-        # Draw the right margin label
-        if right_labels:
-            txt = ax.text(1.02, y, right_labels[j],
-                          horizontalalignment="left",
+            txt = ax.text(0.5, y - 0.35*title_space_axes, k0,
+                          horizontalalignment='center',
                           verticalalignment='center',
                           transform=ax.transAxes)
-            rslt["right labels"].append(txt)
+            txt.set_fontweight("bold")
+            y -= title_space_axes
 
-        # Draw the guide line
-        gl = ax.axhline(y, color='grey')
-        rslt["guidelines"].append(gl)
+        jrow = 0
+        for k1 in lines1:
 
-        # Draw the stripe
-        if striped and j % 2 == 0:
-            ax.fill_between((0, 1), (y-dy/2, y-dy/2),
-                            (y+dy/2, y+dy/2),
-                            color='lightgrey',
-                            transform=ax.transAxes)
+            # No data to plot
+            if (k0, k1) not in lines_map:
+                continue
 
-        # Loop over the points in one line
-        points_row, intervals_row = [], []
-        for jp,valp in enumerate(val):
+            # Draw the guideline
+            ax.axhline(y, color='grey')
 
-            # Calculate the vertical offset
-            yo = 0
-            if stack:
-                yo = -dy/5 + jp*stackd
-
-            # Plot the interval
-            if len(valp) > 1:
-
-                # Symmetric interval
-                if len(valp) == 2:
-                    lcb, ucb = valp[0] - valp[1], valp[0] + valp[1]
-
-                # Nonsymmetric interval
-                elif len(valp) == 3:
-                    lcb, ucb = valp[0] - valp[1], valp[0] + valp[2]
-
-                # Invalid data
+            # Set up the labels
+            if split_names is not None:
+                us = k1.split(split_names)
+                if len(us) >= 2:
+                    left_label, right_label = us[0], us[1]
                 else:
-                    msg = "dotplot: Element %d of `val` is %s\n" %\
-                        (j, str(val))
-                    msg += "It should be a numeric scalar, "\
-                        "or a sequence of 1-3 numeric scalars."
-                    raise Exception(msg)
+                    left_label, right_label = k1, None
+            else:
+                left_label, right_label = k1, None
 
-                # Draw the interval
-                lw = 2 if stack else 8
-                interval, = ax.plot([lcb, ucb], [y+yo, y+yo], '-',
-                                    color='grey', lw=lw, transform=trans)
-                intervals_row.append(interval)
+            # Draw the stripe
+            if striped and jrow % 2 == 0:
+                ax.fill_between((0, 1), (y-dy/2, y-dy/2),
+                                (y+dy/2, y+dy/2),
+                                color='lightgrey',
+                                transform=ax.transAxes,
+                                zorder=0)
+            jrow += 1
 
-            # Plot the point
-            ms = 5 if stack else 10
-            a, = ax.plot([valp[0],], [y+yo,], 'o', ms=ms, color=colors[jp],
-                         transform=trans)
+            # Draw the left margin label
+            txt = ax.text(-0.01, y, left_label,
+                           horizontalalignment="right",
+                           verticalalignment='center',
+                           transform=ax.transAxes, family='monospace')
 
-            points_row.append(a)
+            # Draw the right margin label
+            if right_label is not None:
+                txt = ax.text(1.01, y, right_label,
+                              horizontalalignment="left",
+                              verticalalignment='center',
+                              transform=ax.transAxes,
+                              family='monospace')
 
-        points.append(points_row)
-        intervals.append(intervals_row)
+            # Save the vertical position so that we can place the
+            # tick marks
+            yticks.append(y)
 
-        y -= dy
+            # Loop over the points in one line
+            for ji,jp in enumerate(lines_map[(k0,k1)]):
 
-    rslt["points"] = points
-    rslt["intervals"] = intervals
+                # Calculate the vertical offset
+                yo = 0
+                if stacked:
+                    yo = -dy/5 + style_codes_map[styles[jp]]*stackd
+
+                pt = points[jp]
+
+                # Plot the interval
+                if intervals is not None:
+
+                    # Symmetric interval
+                    if np.isscalar(intervals[jp]):
+                        lcb, ucb = pt - intervals[jp],\
+                            pt + intervals[jp]
+
+                    # Nonsymmetric interval
+                    else:
+                        lcb, ucb = pt - intervals[jp][0],\
+                            pt + intervals[jp][1]
+
+                    # Draw the interval
+                    ax.plot([lcb, ucb], [y+yo, y+yo], '-',
+                            transform=trans, **line_props[styles[jp]])
+
+                # Plot the point
+                sl = styles[jp]
+                sll = sl if sl not in labeled else None
+                labeled.add(sl)
+                ax.plot([pt,], [y+yo,], ls='None', transform=trans,
+                        label=sll, **marker_props[sl])
+
+            y -= dy
 
     # Set up the axis
     ax.xaxis.set_ticks_position("bottom")
@@ -315,14 +339,12 @@ def dotplot(vals, ax=None, left_labels=None, right_labels=None,
     ax.spines['left'].set_color('none')
     ax.spines['right'].set_color('none')
     ax.spines['top'].set_color('none')
-
-    # The position of the axis in axes coordinates.
-    hp = props["axis_pos"] / aheight
-    ax.spines['bottom'].set_position(('axes', hp))
+    ax.spines['bottom'].set_position(('axes', -0.01))
 
     ax.set_ylim(0, 1)
 
-    ax.autoscale_view(scaley=False, tight=True)
-    ax.autoscale(enable=False, axis='y')
+    ax.yaxis.set_ticks(yticks)
 
-    return fig,rslt
+    ax.autoscale_view(scaley=False, tight=True)
+
+    return fig
