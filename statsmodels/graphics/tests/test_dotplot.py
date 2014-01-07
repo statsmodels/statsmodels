@@ -1,6 +1,5 @@
 import numpy as np
-
-from dotplot import dotplot
+from dotplots import dotplot
 
 try:
     import matplotlib.pyplot as plt
@@ -17,40 +16,43 @@ pdf = PdfPages("test_dotplot.pdf")
 plt.clf()
 
 # Basic dotplot with points only
+points = range(20)
 ax = plt.axes()
-vals = range(20)
-dotplot(vals, ax)
-ax.set_title("Basic dotplot (input is list)")
-pdf.savefig(facecolor="yellow")
-
-# Basic dotplot with points only
-ax = plt.axes()
-vals = np.arange(20)
-dotplot(vals, ax)
-ax.set_title("Basic dotplot (input is 1D ndarray)")
+fig = dotplot(points, ax=ax)
+ax.set_title("Basic dotplot")
 pdf.savefig(facecolor="yellow")
 
 # Tall and skinny
 plt.figure(figsize=(4,12))
 ax = plt.axes()
 vals = np.arange(40)
-dotplot(vals, ax)
+dotplot(points, ax=ax)
 ax.set_title("Tall and skinny dotplot")
+ax.set_xlabel("x axis label")
+pdf.savefig()
+
+# Tall and skinny striped dotplot
+plt.figure(figsize=(4,12))
+ax = plt.axes()
+points = np.arange(40)
+dotplot(points, ax=ax, striped=True)
+ax.set_title("Tall and skinny striped dotplot")
+ax.set_xlim(-10, 50)
 pdf.savefig()
 
 # Basic dotplot with few points
 plt.figure()
 ax = plt.axes()
-vals = np.arange(4)
-dotplot(vals, ax)
+points = np.arange(4)
+dotplot(points, ax=ax)
 ax.set_title("Basic dotplot with few lines")
 pdf.savefig()
 
 # Manually set the x axis limits
 plt.figure()
 ax = plt.axes()
-vals = np.arange(20)
-dotplot(vals, ax)
+points = np.arange(20)
+dotplot(points, ax=ax)
 ax.set_xlim(-10, 30)
 ax.set_title("Dotplot with adjusted horizontal range")
 pdf.savefig()
@@ -58,142 +60,156 @@ pdf.savefig()
 # Left row labels
 plt.clf()
 ax = plt.axes()
-vals = np.random.normal(size=20)
-names = ["left %d" % k for k in range(1,21)]
-dotplot(vals, ax, names)
-ax.set_title("Dotplot with labels in the left margin")
-pdf.savefig()
-
-# Right row labels
-plt.clf()
-ax = plt.axes()
-vals = np.random.normal(size=20)
-right_names = ["right %d" % k for k in range(1,21)]
-dotplot(vals, ax, right_labels=right_names)
-ax.set_title("Dotplot with labels in the right margin")
+lines = ["ABCDEFGH"[np.random.randint(0, 8)] for k in range(20)]
+points = np.random.normal(size=20)
+dotplot(points, lines=lines, ax=ax)
+ax.set_title("Dotplot with user-supplied labels in the left margin")
 pdf.savefig()
 
 # Left and right row labels
 plt.clf()
-ax = plt.axes([0.1, 0.07, 0.78, 0.85])
-vals = np.random.normal(size=20)
-dotplot(vals, ax, names, right_labels=right_names)
-ax.set_title("Dotplot with labels in both margins")
+ax = plt.axes()
+points = np.random.normal(size=20)
+lines = ["ABCDEFGH"[np.random.randint(0, 8)] + "::" + str(k+1)
+         for k in range(20)]
+dotplot(points, lines=lines, ax=ax, split_names="::")
+ax.set_title("Dotplot with user-supplied labels in both margins")
 pdf.savefig()
 
-# Adjust the points after plotting
+# Custom colors and symbols
 plt.clf()
 ax = plt.axes([0.1, 0.07, 0.78, 0.85])
-vals = np.random.normal(size=20)
-fig,rslt = dotplot(vals, ax)
-for pr in rslt["points"]:
-    for p in pr:
-        p.set_ms(7)
-        p.set_mec("blue")
-        p.set_mfc("none")
-        p.set_marker("s")
+points = np.random.normal(size=20)
+lines = np.kron(range(5), np.ones(4)).astype(np.int32)
+styles = np.kron(np.ones(5), range(4)).astype(np.int32)
+marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
+                    "ms": 7, "alpha": 0.6} for k in range(4)}
+dotplot(points, lines=lines, styles=styles, ax=ax,
+        marker_props=marker_props)
 ax.set_title("Dotplot with custom colors and symbols")
 pdf.savefig()
 
 # Basic dotplot with symmetric intervals
 plt.clf()
 ax = plt.axes()
-vals = range(20)
-vals = [(x, 2) for x in vals]
-dotplot(vals, ax)
-ax.set_title("Dotplot with symmetric intervals (input is list of lists)")
-pdf.savefig()
-
-# Basic dotplot with symmetric intervals
-plt.clf()
-ax = plt.axes()
-vals = np.zeros((20,2))
-vals[:,0] = range(20)
-vals[:,1] = 2
-dotplot(vals, ax)
-ax.set_title("Dotplot with symmetric intervals (input is 2D ndarray)")
+points = range(20)
+dotplot(points, intervals=np.ones(20), ax=ax)
+ax.set_title("Dotplot with symmetric intervals")
 pdf.savefig()
 
 # Basic dotplot with nonsymmetric intervals
 plt.clf()
 ax = plt.axes()
-vals = np.arange(20)
-vals = [(x, np.random.uniform(0, 5), np.random.uniform(0, 5))
-        for x in vals]
-dotplot(vals, ax)
+points = np.arange(20)
+intervals = [(1, 3) for i in range(20)]
+dotplot(points, intervals=intervals, ax=ax)
 ax.set_title("Dotplot with nonsymmetric intervals")
 pdf.savefig()
 
 # Dotplot with nonsymmetric intervals, adjust line properties
 plt.clf()
 ax = plt.axes()
-vals = np.arange(20)
-vals = [(x, 1, 3) for x in vals]
-fig,rslt = dotplot(vals, ax)
-for interval in rslt["intervals"]:
-    interval[0].set_solid_capstyle("round")
-    interval[0].set_color("lightgrey")
+points = np.arange(20)
+intervals = [(1, 3) for x in range(20)]
+line_props = {0: {"color": "lightgrey",
+                  "solid_capstyle": "round"}}
+dotplot(points, intervals=intervals, line_props=line_props, ax=ax)
 ax.set_title("Dotplot with custom line properties")
 pdf.savefig()
 
 # Dotplot with two points per line and a legend
 plt.clf()
-ax = plt.axes([0.1, 0.1, 0.7, 0.8])
-vals = [((j-np.random.uniform(-5, 5),), (j+np.random.uniform(-3, 3),))
-        for j in range(20)]
-fig,rslt = dotplot(vals, ax)
-for point in rslt["points"]:
-    point[0].set_alpha(0.6)
-    point[0].set_marker("s")
-    point[0].set_color("orange")
-    point[1].set_alpha(0.6)
-    point[1].set_color("purple")
-leg = plt.figlegend(rslt["points"][0], ("Apple", "Orange"),
-                    "center right", numpoints=1, handletextpad=0.001)
+ax = plt.axes([0.1, 0.1, 0.75, 0.8])
+points = 5*np.random.normal(size=40)
+lines = np.kron(range(20), (1,1))
+intervals = [(1,3) for k in range(40)]
+styles = np.kron(np.ones(20), (0,1)).astype(np.int32)
+styles = [["Cat", "Dog"][i] for i in styles]
+dotplot(points, intervals=intervals, lines=lines, styles=styles,
+        ax=ax, stacked=True)
+handles, labels = ax.get_legend_handles_labels()
+leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+                    handletextpad=0.0001)
 leg.draw_frame(False)
 ax.set_title("Dotplot with two points per line")
 pdf.savefig()
 
-# Stacked dotplot with two points per line
+# Dotplot with color-matched points and intervals
 plt.clf()
-ax = plt.axes()
-vals = np.arange(20)
-vals = [((x, 1, 3), (x+2, 1)) for x in vals]
-fig,rslt = dotplot(vals, ax, stack="above")
-ax.set_title("Dotplot with stacked lines")
-pdf.savefig()
-
-# Stacked dotplot with three points per line and stripes
-plt.clf()
-plt.figure(figsize=(7,15))
-ax = plt.axes([0.1, 0.1, 0.7, 0.8])
-vals = []
-for k in range(20):
-    val = []
-    for j in range(3):
-        val.append([np.random.uniform(0, 20), 2, 2])
-    vals.append(val)
-names = [str(j+1) for j in range(20)]
-fig,rslt = dotplot(vals, ax, names, stack=True, stripe=True)
-leg = plt.figlegend(rslt["points"][0],
-                    ("Apple", "Orange", "Pear"),
-                    "center right", numpoints=1,
-                    handletextpad=0.001)
+ax = plt.axes([0.1, 0.1, 0.75, 0.8])
+points = 5*np.random.normal(size=40)
+lines = np.kron(range(20), (1,1))
+intervals = [(1,3) for k in range(40)]
+styles = np.kron(np.ones(20), (0,1)).astype(np.int32)
+styles = [["Cat", "Dog"][i] for i in styles]
+marker_props = {"Cat": {"color": "orange"},
+                "Dog": {"color": "purple"}}
+line_props = {"Cat": {"color": "orange"},
+              "Dog": {"color": "purple"}}
+dotplot(points, intervals=intervals, lines=lines, styles=styles,
+        ax=ax, stacked=True, marker_props=marker_props,
+        line_props=line_props)
+handles, labels = ax.get_legend_handles_labels()
+leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+                    handletextpad=0.0001)
 leg.draw_frame(False)
-ax.set_xlim(-5, 25)
-ax.set_title("Stacked dotplot with three points per line and stripes")
+ax.set_title("Dotplot with color-matched point and intervals")
 pdf.savefig()
 
 # Dotplot with sections
 plt.clf()
 ax = plt.axes()
-vals = np.arange(20)
-vals = [(x, 2) for x in vals]
-vals[0] = "Axx"
-vals[10] = "Byy"
-vals[15] = "Czz"
-dotplot(vals, ax)
+points = range(30)
+lines = np.kron(range(15), (1,1)).astype(np.int32)
+styles = np.kron(np.ones(15), (0,1)).astype(np.int32)
+sections = np.kron((0,1,2), np.ones(10)).astype(np.int32)
+sections = [["Axx", "Byy", "Czz"][k] for k in sections]
+dotplot(points, lines=lines, styles=styles, sections=sections, ax=ax)
 ax.set_title("Dotplot with sections")
+pdf.savefig()
+
+# Reorder sections
+plt.clf()
+ax = plt.axes()
+points = range(30)
+lines = np.kron(range(15), (1,1)).astype(np.int32)
+styles = np.kron(np.ones(15), (0,1)).astype(np.int32)
+sections = np.kron((0,1,2), np.ones(10)).astype(np.int32)
+sections = [["Axx", "Byy", "Czz"][k] for k in sections]
+dotplot(points, lines=lines, styles=styles, sections=sections, ax=ax,
+        section_order=["Byy", "Axx", "Czz"])
+ax.set_title("Dotplot with sections in specified order")
+pdf.savefig()
+
+# Reorder the lines.
+plt.figure()
+ax = plt.axes()
+points = np.arange(4)
+lines = ["A", "B", "C", "D"]
+line_order = ["B", "C", "A", "D"]
+dotplot(points, lines=lines, line_order=line_order, ax=ax)
+ax.set_title("Dotplot with reordered lines")
+pdf.savefig()
+
+# Dotplot with different numbers of points per line
+plt.clf()
+ax = plt.axes([0.1, 0.1, 0.75, 0.8])
+points = 5*np.random.normal(size=40)
+lines = []
+ii = 0
+while len(lines) < 40:
+    for k in range(np.random.randint(1, 4)):
+        lines.append(ii)
+    ii += 1
+styles = np.kron(np.ones(20), (0,1)).astype(np.int32)
+styles = [["Cat", "Dog"][i] for i in styles]
+dotplot(points, lines=lines, styles=styles,
+        ax=ax, stacked=True)
+handles, labels = ax.get_legend_handles_labels()
+leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+                    handletextpad=0.0001)
+leg.draw_frame(False)
+ax.set_title("Dotplot with different numbers of points per line")
 pdf.savefig()
 
 pdf.close()
