@@ -1,10 +1,9 @@
 import numpy as np
-import matplotlib.transforms as transforms
 import utils
 
 
 def dotplot(vals, ax=None, left_labels=None, right_labels=None,
-            stack=False, stripe=False, props={}):
+            stack=False, striped=False, props={}):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  Several extensions to the basic dotplot
@@ -35,7 +34,7 @@ def dotplot(vals, ax=None, left_labels=None, right_labels=None,
     stack : boolean
         If True, when multiple points or intervals are drawn on the
         same line, they are offset vertically from each other.
-    stripe : boolean
+    striped : boolean
         If True, every other line is enclosed in a shaded box.
     props : dictionary
         A dictionary containing parameters that affect the layout of
@@ -254,7 +253,7 @@ def dotplot(vals, ax=None, left_labels=None, right_labels=None,
         rslt["guidelines"].append(gl)
 
         # Draw the stripe
-        if stripe and j % 2 == 0:
+        if striped and j % 2 == 0:
             ax.fill_between((0, 1), (y-dy/2, y-dy/2),
                             (y+dy/2, y+dy/2),
                             color='lightgrey',
