@@ -1,7 +1,15 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from dotplot import dotplot
-from matplotlib.backends.backend_pdf import PdfPages
+
+try:
+    import matplotlib.pyplot as plt
+    import matplotlib
+    from matplotlib.backends.backend_pdf import PdfPages
+    if matplotlib.__version__ < '1':
+        raise
+    have_matplotlib = True
+except:
+    have_matplotlib = False
 
 pdf = PdfPages("test_dotplot.pdf")
 
