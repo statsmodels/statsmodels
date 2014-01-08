@@ -1,5 +1,5 @@
 import numpy as np
-from dotplots import dotplot
+from statsmodels.graphics.dotplots import dotplot
 
 try:
     import matplotlib.pyplot as plt
