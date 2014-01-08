@@ -11,7 +11,7 @@ try:
 except:
     have_matplotlib = False
 
-def test_all():
+def xxtest_all():
 
     pdf = PdfPages("test_dotplot.pdf")
 
