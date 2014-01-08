@@ -222,6 +222,20 @@ def month_plot(x, dates=None, ylabel=None, ax=None):
     Returns
     -------
     matplotlib.Figure
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> import pandas as pd
+
+    >>> dta = sm.datasets.elnino.load_pandas().data
+    >>> dta['YEAR'] = dta.YEAR.astype(int).astype(str)
+    >>> dta = dta.set_index('YEAR').T.unstack()
+    >>> dates = map(lambda x : pd.datetools.parse('1 '+' '.join(x)),
+    ...                                        dta.index.values)
+
+    >>> dta.index = pd.DatetimeIndex(dates, freq='M')
+    >>> fig = sm.graphics.tsa.month_plot(dta)
     """
     from pandas import DataFrame
 
