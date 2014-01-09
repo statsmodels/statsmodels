@@ -704,7 +704,7 @@ def _fmt_probplot_axis(ax, dist, nobs):
                        verticalalignment='center')
     ax.set_xlim([axis_qntls.min(), axis_qntls.max()])
 
-def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
+def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', step=False):
     """
     Boiler plate plotting function for the `ppplot`, `qqplot`, and
     `probplot` methods of the `ProbPlot` class
@@ -731,7 +731,10 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
     """
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
-    ax.plot(x, y, fmt)
+    if not step:
+        ax.plot(x, y, fmt)
+    else:
+        ax.step(x, y, fmt, where='post')
     if line:
         if line not in ['r','q','45','s']:
             msg = "%s option for line not understood" % line
