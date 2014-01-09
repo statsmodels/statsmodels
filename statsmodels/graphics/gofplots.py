@@ -187,7 +187,7 @@ class ProbPlot(object):
     def sample_percentiles(self):
         quantiles = \
             (self.sorted_data - self.fit_params[-2])/self.fit_params[-1]
-        return self.dist.cdf(qntls)
+        return self.dist.cdf(quantiles)
 
     def ppplot(self, xlabel=None, ylabel=None, line=None, other=None,
                ax=None, **plotkwargs):
