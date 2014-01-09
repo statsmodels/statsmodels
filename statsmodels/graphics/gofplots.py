@@ -747,3 +747,70 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', step=False):
 def _check_for_ppf(dist):
     if not hasattr(dist, 'ppf'):
         raise ValueError("distribution must have a ppf method")
+
+
+def mah_distancesq(data):
+    """squared Mahalanobis distance
+
+    Parameters
+    ----------
+    data : array_like
+        data with observation in rows and variables in columns
+
+    Returns
+    -------
+    md : ndarray, 1-D
+        squared Mahalanobis distance for each observation
+
+    """
+    x = np.asarray(data)
+    cov = np.cov(x, rowvar=False, bias=False)
+    mean = np.mean(x, 0)
+    x = x - mean
+    sigma_inv_half = np.linalg.cholesky(np.linalg.pinv(cov))
+    xw = np.dot(x, sigma_inv_half)
+    md = (xw * xw).sum(1)
+    return md
+
+
+def get_mvnormal_probplot(data, use_chi2=True):
+    """get ProbPlot instance for a multivariate normal probability plot
+
+    Parameters
+    ----------
+    data : array_like
+        data with observation in rows and variables in columns
+    use_chi2 : bool
+        If true (default), then the chisquare distribution is used.
+        If false, then the chi distribution is used.
+        In the qq-plot the chi distribution has the points more spread out
+        than the chisquare distribution. The pp-plot is the same in both cases.
+
+    Returns
+    -------
+    probplot : ProbPlot instance
+        instance that can be used to create qq-plots or pp-plots
+
+    See Also
+    --------
+    ProbPlot
+
+    Examples
+    --------
+    >>> pp = get_mvnormal_probplot(x, use_chi2=True)
+    >>> fig = pp.ppplot(line='45')
+    >>> fig.axes[0].set_title('Chi2 PP-PLot for Multivariate Normality for Iris Data')
+
+    """
+    x = np.asarray(data)
+    _, k_vars = x.shape
+    md = mah_distancesq(x)
+    if use_chi2:
+        probp = ProbPlot(md, dist=stats.chi2, distargs=(k_vars,), a=0.5)
+    else:
+        probp = ProbPlot(np.sqrt(md), dist=stats.chi, distargs=(k_vars,),
+                              a=0.5)
+
+    # TODO: remove when fit BUG is fixed
+    probp.fit_params = (k_vars, 0, 1)
+    return probp
