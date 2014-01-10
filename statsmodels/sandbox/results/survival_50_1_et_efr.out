@@ -1,0 +1,16 @@
+Call:
+coxph(formula = surv ~ exog, ties = ties)
+
+  n= 50, number of events= 25
+
+        coef exp(coef) se(coef)     z Pr(>|z|)
+exog -0.1351    0.8736   0.2369 -0.57    0.568
+
+     exp(coef) exp(-coef) lower .95 upper .95
+exog    0.8736      1.145    0.5492      1.39
+
+Concordance= 0.571  (se = 0.071 )
+Rsquare= 0.006   (max possible= 0.943 )
+Likelihood ratio test= 0.32  on 1 df,   p=0.5735
+Wald test            = 0.33  on 1 df,   p=0.5685
+Score (logrank) test = 0.33  on 1 df,   p=0.5682
