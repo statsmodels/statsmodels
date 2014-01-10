@@ -1,0 +1,16 @@
+Call:
+coxph(formula = surv ~ exog + strata(strata), ties = ties)
+
+  n= 20, number of events= 17
+
+       coef exp(coef) se(coef)     z Pr(>|z|)
+exog 0.5539    1.7400   0.6141 0.902    0.367
+
+     exp(coef) exp(-coef) lower .95 upper .95
+exog      1.74     0.5747    0.5222     5.798
+
+Concordance= 0.625  (se = 0.328 )
+Rsquare= 0.049   (max possible= 0.432 )
+Likelihood ratio test= 1  on 1 df,   p=0.3176
+Wald test            = 0.81  on 1 df,   p=0.3671
+Score (logrank) test = 0.9  on 1 df,   p=0.3415

@@ -1,0 +1,26 @@
+Call:
+coxph(formula = surv ~ exog + strata(strata), ties = ties)
+
+  n= 100, number of events= 54
+
+          coef exp(coef) se(coef)      z Pr(>|z|)
+exogV4 -0.7356    0.4792   0.1753 -4.197 2.71e-05 ***
+exogV5 -0.2253    0.7983   0.1720 -1.310    0.190
+exogV6 -0.2707    0.7629   0.1649 -1.642    0.101
+exogV7  0.2745    1.3158   0.1882  1.459    0.145
+exogV8  0.7287    2.0724   0.1823  3.996 6.43e-05 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+       exp(coef) exp(-coef) lower .95 upper .95
+exogV4    0.4792     2.0867    0.3399    0.6757
+exogV5    0.7983     1.2527    0.5698    1.1183
+exogV6    0.7629     1.3108    0.5522    1.0539
+exogV7    1.3158     0.7600    0.9100    1.9026
+exogV8    2.0724     0.4825    1.4496    2.9626
+
+Concordance= 0.728  (se = 0.115 )
+Rsquare= 0.289   (max possible= 0.886 )
+Likelihood ratio test= 34.12  on 5 df,   p=2.249e-06
+Wald test            = 29.4  on 5 df,   p=1.937e-05
+Score (logrank) test = 32.43  on 5 df,   p=4.872e-06
