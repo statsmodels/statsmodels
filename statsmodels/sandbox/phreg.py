@@ -9,12 +9,13 @@ from statsmodels.tools.decorators import cache_readonly, \
 
 class PH_SurvivalTime(object):
 
-
     def __init__(self, time, status, exog,
                  strata=None, entry=None):
         """
         Represent a collection of survival times with possible
-        stratification and left truncation.
+        stratification and left truncation.  Various indexes needed
+        for fitting proportional hazards regression models are then
+        precalculated.
 
         Parameters
         ----------
@@ -51,12 +52,19 @@ class PH_SurvivalTime(object):
             entry = np.zeros(len(time))
 
         # Parameter validity checks.
-        n1, n2, n3, n4 = len(time), len(status), len(strata), len(entry)
+        n1, n2, n3, n4 = len(time), len(status), len(strata),\
+            len(entry)
         nv = [n1, n2, n3, n4]
         if max(nv) != min(nv):
-            raise ValueError("SurvivalTime: time, status, strata, and entry must all have the same length")
+            raise ValueError("PHreg: time, status, strata, and " +
+                             "entry must all have the same length")
+        if min(time) < 0:
+            raise ValueError("PHreg: time must be non-negative")
+        if min(entry) < 0:
+            raise ValueError("PHreg: entry time must be non-negative")
         if np.any(entry > time):
-            raise ValueError("SurvivalTime: entry times may not occur after event or censoring times")
+            raise ValueError("PHreg: entry times may not occur " +
+                             "after event or censoring times")
 
         # Get the row indices for the cases in each stratum
         if strata is not None:
@@ -104,6 +112,16 @@ class PH_SurvivalTime(object):
             self.exog_s[stx] = self.exog_s[stx][ii,:]
             self.entry_s[stx] = self.entry_s[stx][ii]
 
+        # ufailt_ix[stx][k] is a list of indices for subjects who fail
+        # at the k^th sorted unique failure time in stratum stx
+        #
+        # risk_enter[stx][k] is a list of indices for subjects who
+        # enter the risk set at the k^th sorted unique failure time in
+        # stratum stx
+        #
+        # risk_exit[stx][k] is a list of indices for subjects who exit
+        # the risk set at the k^th sorted unique failure time in
+        # stratum stx
         self.ufailt_ix, self.risk_enter, self.risk_exit =\
             [], [], []
 
@@ -152,34 +170,53 @@ class PHreg(model.LikelihoodModel):
         """
         Fit the Cox proportional hazards regression model for right
         censored data.  The data may be left truncated, and strata may
-        be provided.  Efron's method is used to handle tied times.
+        be provided.  Either Breslow's method of Efron's method may be
+        used to handle tied times.
 
         Arguments
         ----------
         time : array-like
             The observed times
         status : array-like
-            The censoring status values (status=1 indicates that an event
-            occured, status=0 indicates that the observation was right
-            censored)
-        exog : array-like
-            The covariates, in a matrix or vector.
+            The censoring status values; status=1 indicates that an
+            event occured (e.g. failure or death), status=0 indicates
+            that the observation was right censored
+        exog : 2D array-like
+            The covariates or exogeneous variables
         entry : array-like
             The entry times, if left truncation occurs
         strata : array-like
-            Stratum labels.  If None, all observations are taken to be in
-            a single stratum.
+            Stratum labels.  If None, all observations are taken to be
+            in a single stratum.
         ties : string
             The method used to handle tied times.
         """
 
+        # time becomes self.endog
+        super(PHreg, self).__init__(time, exog, status=status,
+                                    entry=entry, strata=strata)
+
         n = len(time)
 
-        self.surv = PH_SurvivalTime(time, status, exog, strata, entry)
+        self.surv = PH_SurvivalTime(self.endog, self.status,
+                                    self.exog, self.strata,
+                                    self.entry)
 
-        self.exog = exog
-        self.endog = time
+        ties = ties.lower()
+        if ties not in ("efron", "breslow"):
+            raise ValueError("`ties` must be either `efron` or " +
+                             "`breslow`")
+
         self.ties = ties
+
+
+    def fit(self, **args):
+
+        rslts = model.LikelihoodModel.fit(self, **args)
+
+        results = PHregResults(self, rslts.params, rslts.cov_params())
+
+        return results
 
 
     def loglike(self, b):
@@ -497,19 +534,14 @@ class PHregResults(base.LikelihoodModelResults):
     -------
     **Attributes**
 
-    converged : bool
-        indicator for convergence of the optimization.
-        True if the norm of the score is smaller than a threshold
     model : class instance
-        Pointer to GEE model instance that called fit.
+        Pointer to PHreg model instance that called fit.
     normalized_cov_params : array
-        See GEE docstring
+        The sampling covariance matrix of the estimates
     params : array
-        The coefficients of the fitted model.  Note that interpretation
-        of the coefficients often depends on the distribution family and the
-        data.
-    score_norm : float
-        norm of the score at the end of the iterative estimation.
+        The coefficients of the fitted model.  Each coefficient is the
+        log hazard ratio corresponding to a 1 unit difference in a
+        single covariate while holding the other covariates fixed.
     bse : array
         The standard errors of the fitted parameters.
 
@@ -519,110 +551,13 @@ class PHregResults(base.LikelihoodModelResults):
     '''
 
 
-    def __init__(self, model, params, cov_params, scale):
+    def __init__(self, model, params, cov_params):
 
         super(PHregResults, self).__init__(model, params,
-                normalized_cov_params=cov_params)
+           normalized_cov_params=cov_params)
 
-    def standard_errors(self, covariance_type="robust"):
-        """
-        This is a convenience function that returns the standard
-        errors for any covariance type.  The value of `bse` is the
-        standard errors for whichever covariance type is specified as
-        an argument to `fit` (defaults to "robust").
 
-        Arguments:
-        ----------
-        covariance_type : string
-            One of "robust", "naive", or "bias reduced".  Determines
-            the covariance used to compute standard errors.  Defaults
-            to "robust".
-        """
-
-        # Check covariance_type
-        covariance_type = covariance_type.lower()
-        allowed_covariances = ["robust", "naive", "bias_reduced"]
-        if covariance_type not in allowed_covariances:
-            msg = "GEE: `covariance_type` must be one of " +\
-                ", ".join(allowed_covariances)
-            raise ValueError(msg)
-
-        if covariance_type == "robust":
-            return np.sqrt(np.diag(self.cov_params()))
-        elif covariance_type == "naive":
-            return np.sqrt(np.diag(self.naive_covariance))
-        elif covariance_type == "bias_reduced":
-            return np.sqrt(np.diag(self.robust_covariance_bc))
-
-    # Need to override to allow for different covariance types.
-    @cache_readonly
-    def bse(self):
-        return self.standard_errors(self.covariance_type)
-
-    @cache_readonly
-    def resid(self):
-        """
-        Returns the residuals, the endogeneous data minus the fitted
-        values from the model.
-        """
-        return self.model.endog - self.fittedvalues
-
-    @cache_readonly
-    def centered_resid(self):
-        """
-        Returns the residuals centered within each group.
-        """
-        resid = self.resid
-        for v in self.model.group_labels:
-            ii = self.model.row_indices[v]
-            resid[ii] -= resid[ii].mean()
-        return resid
-
-    @cache_readonly
-    def fittedvalues(self):
-        """
-        Returns the fitted values from the model.
-        """
-        return self.model.family.link.inverse(np.dot(self.model.exog,
-                                                     self.params))
-
-    def conf_int(self, alpha=.05, cols=None,
-                 covariance_type="robust"):
-        """
-        Returns confidence intervals for the fitted parameters.
-
-        Parameters
-        ----------
-        alpha : float, optional
-             The `alpha` level for the confidence interval.  i.e., The
-             default `alpha` = .05 returns a 95% confidence interval.
-        cols : array-like, optional
-             `cols` specifies which confidence intervals to return
-        covariance_type : string
-             The covariance type used for computing standard errors;
-             must be one of 'robust', 'naive', and 'bias reduced'.
-             See `GEE` for details.
-
-        Notes
-        -----
-        The confidence interval is based on the Gaussian distribution.
-        """
-        bse = self.standard_errors(covariance_type=covariance_type)
-        params = self.params
-        dist = stats.norm
-        q = dist.ppf(1 - alpha / 2)
-
-        if cols is None:
-            lower = self.params - q * bse
-            upper = self.params + q * bse
-        else:
-            cols = np.asarray(cols)
-            lower = params[cols] - q * bse[cols]
-            upper = params[cols] + q * bse[cols]
-        return np.asarray(zip(lower, upper))
-
-    def summary(self, yname=None, xname=None, title=None, alpha=.05,
-                covariance_type="robust"):
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 
         Parameters
@@ -630,15 +565,12 @@ class PHregResults(base.LikelihoodModelResults):
         yname : string, optional
             Default is `y`
         xname : list of strings, optional
-            Default is `var_##` for ## in p the number of regressors
+            Default is `x#` for ## in p the number of regressors
         title : string, optional
             Title for the top table. If not None, then this replaces
             the default title
         alpha : float
             significance level for the confidence intervals
-        covariance_type : string
-            The covariance type used to compute the standard errors;
-            one of 'robust', 'naive', and 'bias reduced'.
 
         Returns
         -------
@@ -653,58 +585,11 @@ class PHregResults(base.LikelihoodModelResults):
 
         """
 
-        top_left = [('Dep. Variable:', None),
-                    ('Model:', None),
-                    ('Method:', ['Generalized']),
-                    ('', ['Estimating Equations']),
-                    ('Family:', [self.model.family.__class__.__name__]),
-                    ('Dependence structure:',
-                     [self.model.covstruct.__class__.__name__]),
-                    ('Date:', None),
-                    ('Covariance type: ', [covariance_type,])
-                   ]
-
-        NY = [len(y) for y in self.model.endog_li]
-
-        top_right = [('No. Observations:', [sum(NY)]),
-                     ('No. clusters:', [len(self.model.endog_li)]),
-                     ('Min. cluster size', [min(NY)]),
-                     ('Max. cluster size', [max(NY)]),
-                     ('Mean cluster size', ["%.1f" % np.mean(NY)]),
-                     ('No. iterations', ['%d' %
-                                       len(self.model.fit_history)]),
-                     ('Time:', None),
-                 ]
-
-        # The skew of the residuals
-        skew1 = stats.skew(self.resid)
-        kurt1 = stats.kurtosis(self.resid)
-        skew2 = stats.skew(self.centered_resid)
-        kurt2 = stats.kurtosis(self.centered_resid)
-
-        diagn_left = [('Skew:', ["%12.4f" % skew1]),
-                      ('Centered skew:', ["%12.4f" % skew2])]
-
-        diagn_right = [('Kurtosis:', ["%12.4f" % kurt1]),
-                       ('Centered kurtosis:', ["%12.4f" % kurt2])
-                   ]
-
-        if title is None:
-            title = self.model.__class__.__name__ + ' ' +\
-                    "Regression Results"
-
-        #create summary table instance
-        from statsmodels.iolib.summary import Summary
-        smry = Summary()
-        smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=self.model.endog_names,
-                             xname=xname, title=title)
-        smry.add_table_params(self, yname=yname,
-                              xname=self.model.exog_names,
-                              alpha=alpha, use_t=False)
-
-        smry.add_table_2cols(self, gleft=diagn_left,
-                             gright=diagn_right, yname=yname,
-                             xname=xname, title="")
+        from statsmodels.iolib import summary2
+        smry = summary2.Summary()
+        float_format = "%.3f"
+        smry.add_base(results=self, alpha=alpha,
+                      float_format=float_format,
+                      xname=xname, yname=yname, title=title)
 
         return smry
