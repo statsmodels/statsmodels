@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.optimize import minimize
 from scipy import sparse
 from statsmodels.base import model
 import statsmodels.base.model as base
