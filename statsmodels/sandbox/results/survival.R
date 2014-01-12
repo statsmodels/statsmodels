@@ -25,28 +25,28 @@ for (ix in ixd) {
         # Base model
         surv = Surv(time, status)
         md = coxph(surv ~ exog, ties=ties)
-        fname2 = sprintf("%s_%s.out", fname1, ti)
+        fname2 = sprintf("%s_%s.txt", fname1, ti)
         output = capture.output(summary(md))
         cat(output, sep="\n", file=fname2)
 
         # With entry time
         surv = Surv(entry, time, status)
         md = coxph(surv ~ exog, ties=ties)
-        fname2 = sprintf("%s_et_%s.out", fname1, ti)
+        fname2 = sprintf("%s_et_%s.txt", fname1, ti)
         output = capture.output(summary(md))
         cat(output, sep="\n", file=fname2)
 
         # With strata
         surv = Surv(time, status)
         md = coxph(surv ~ exog + strata(strata), ties=ties)
-        fname2 = sprintf("%s_st_%s.out", fname1, ti)
+        fname2 = sprintf("%s_st_%s.txt", fname1, ti)
         output = capture.output(summary(md))
         cat(output, sep="\n", file=fname2)
 
         # With entry time and strata
         surv = Surv(entry, time, status)
         md = coxph(surv ~ exog + strata(strata), ties=ties)
-        fname2 = sprintf("%s_et_st_%s.out", fname1, ti)
+        fname2 = sprintf("%s_et_st_%s.txt", fname1, ti)
         output = capture.output(summary(md))
         cat(output, sep="\n", file=fname2)
     }
