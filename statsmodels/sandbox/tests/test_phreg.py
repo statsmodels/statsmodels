@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from phreg import PHreg
+from from statsmodels.sandbox.phreg import PHreg
 from numpy.testing import assert_almost_equal
 
 
