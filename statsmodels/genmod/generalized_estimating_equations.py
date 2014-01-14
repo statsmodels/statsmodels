@@ -661,8 +661,7 @@ class GEE(base.Model):
 
         return beta
 
-    def fit(self, maxiter=60, ctol=1e-6, start_params=None,
-            covariance_type="robust"):
+    def fit(self, maxiter=60, ctol=1e-6, start_params=None):
         """
         Fits a GEE model.
 
@@ -676,10 +675,6 @@ class GEE(base.Model):
         start_params : array-like
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
-        covariance_type : string
-            The covariance type used to calculate standard errors,
-            must be one of "robust" (default), "naive", or "bias
-            reduced" (after Mancl and DeRouen 2001).
 
         Returns
         -------
@@ -783,7 +778,6 @@ class GEE(base.Model):
         results.robust_covariance_bc = bc_cov
         results.score_norm = fitlack
         results.converged = (fitlack < ctol)
-        results.covariance_type = covariance_type
 
         return results
 
@@ -1087,7 +1081,9 @@ class GEEResults(base.LikelihoodModelResults):
             significance level for the confidence intervals
         covariance_type : string
             The covariance type used to compute the standard errors;
-            one of 'robust', 'naive', and 'bias reduced'.
+            one of 'robust' (the usual robust sandwich-type covariance
+            estimate), 'naive' (ignores dependence), and 'bias
+            reduced' (the Mancl/DeRouen estimate).
 
         Returns
         -------
@@ -1101,6 +1097,8 @@ class GEEResults(base.LikelihoodModelResults):
             results
 
         """
+
+        self.covariance_type = covariance_type
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
