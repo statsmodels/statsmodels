@@ -740,7 +740,7 @@ class GEE(base.Model):
             beta += update
             self.update_cached_means(beta)
             fitlack = np.sqrt(np.sum(score**2))
-            self.fit_history['params'].append(beta)
+            self.fit_history['params'].append(beta.copy())
             self.fit_history['fitlack'].append(fitlack)
 
             # Don't exit until the association parameters have been
