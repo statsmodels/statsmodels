@@ -3,11 +3,13 @@ import numpy as np
 
 class CovStruct(object):
     """
-    The base class for correlation and covariance structures of cluster data.
+    The base class for correlation and covariance structures of
+    cluster data.
 
-    Each implementation of this class takes the residuals from a regression
-    model that has been fitted to clustered data, and uses them to estimate the
-    within-cluster variance and dependence structure of the model errors.
+    Each implementation of this class takes the residuals from a
+    regression model that has been fitted to clustered data, and uses
+    them to estimate the within-cluster variance and dependence
+    structure of the model errors.
     """
 
     # Parameters describing the dependency structure
@@ -140,8 +142,8 @@ class Exchangeable(CovStruct):
 
     def covariance_matrix(self, expval, index):
         dim = len(expval)
-        return self.dep_params * np.ones((dim, dim), dtype=np.float64) +\
-                                (1 - self.dep_params) * np.eye(dim), True
+        dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
+        return  dp + (1 - self.dep_params) * np.eye(dim), True
 
     def summary(self):
         return ("The correlation between two observations in the " +
@@ -247,7 +249,7 @@ class Nested(CovStruct):
         n_nest = self.id_matrix.shape[1]
         for i in range(num_clust):
             ngrp = len(endog[i])
-            rix = parent.row_indices[i]
+            rix = parent.group_indices[i]
 
             ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
             for j1 in range(ngrp):
@@ -493,7 +495,8 @@ class Autoregressive(CovStruct):
         if self.dep_params == 0:
             return np.eye(ngrp, dtype=np.float64), True
         idx = np.arange(ngrp)
-        return self.dep_params**np.abs(idx[:, None] - idx[None, :]), True
+        cmat = self.dep_params**np.abs(idx[:, None] - idx[None, :])
+        return cmat, True
 
 
     def summary(self):
@@ -505,7 +508,8 @@ class Autoregressive(CovStruct):
 
 class GlobalOddsRatio(CovStruct):
     """
-    Estimate the global odds ratio for a GEE with ordinal or nominal data.
+    Estimate the global odds ratio for a GEE with ordinal or nominal
+    data.
 
     References
     ----------

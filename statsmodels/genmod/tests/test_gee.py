@@ -1,12 +1,19 @@
 """
 Test functions for GEE
 
-Esternal comparisons are to R.  The statmodels GEE implementation
+External comparisons are to R.  The statmodels GEE implementation
 should generally agree with the R GEE implementation for the
 independence and exchangeable correlation structures.  For other
 correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
+
+##!!!!!!!!!
+import sys
+sys.path = [x for x in sys.path if "statsmodels" not in x]
+sys.path.append("~kshedden/fork4/statsmodels")
+
+
 
 import numpy as np
 import os
@@ -76,6 +83,28 @@ class TestGEE(object):
         marg = GEEMargins(mdf, ())
         marg.summary()
 
+
+    def test_missing(self):
+
+        Y = np.random.normal(size=100)
+        X1 = np.random.normal(size=100)
+        X2 = np.random.normal(size=100)
+        X3 = np.random.normal(size=100)
+        groups = np.kron(range(20), np.ones(5))
+
+        Y[0] = np.nan
+        Y[5:7] = np.nan
+        X2[10:12] = np.nan
+
+        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
+                          "groups": groups})
+
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
+                              groups=D["groups"], missing='drop')
+        mdf = md.fit()
+
+        assert(len(md.endog) == 95)
+        assert(md.exog.shape) == (95,4)
 
 
     def test_logistic(self):
