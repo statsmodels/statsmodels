@@ -299,7 +299,8 @@ class GEE(base.Model):
 
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
-            self.time = self.time.astype(np.float64, copy=False)
+            if self.time.dtype != np.float64:
+                self.time = self.time.astype(np.float64)
             if self.time.ndim == 1:
                 self.time = self.time[:,None]
             self.time_li = self.cluster_array(self.time)
