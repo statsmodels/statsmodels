@@ -77,28 +77,27 @@ class TestGEE(object):
         marg.summary()
 
 
-    def test_missing(self):
+    # def test_missing(self):
 
-        Y = np.random.normal(size=100)
-        X1 = np.random.normal(size=100)
-        X2 = np.random.normal(size=100)
-        X3 = np.random.normal(size=100)
-        groups = np.kron(range(20), np.ones(5))
+    #     Y = np.random.normal(size=100)
+    #     X1 = np.random.normal(size=100)
+    #     X2 = np.random.normal(size=100)
+    #     X3 = np.random.normal(size=100)
+    #     groups = np.kron(range(20), np.ones(5))
 
-        Y[0] = np.nan
-        Y[5:7] = np.nan
-        X2[10:12] = np.nan
+    #     Y[0] = np.nan
+    #     Y[5:7] = np.nan
+    #     X2[10:12] = np.nan
 
-        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
-                          "groups": groups})
+    #     D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
+    #                       "groups": groups})
 
-        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
-                              groups=D["groups"], missing='drop')
-        mdf = md.fit()
+    #     md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
+    #                           groups=D["groups"], missing='drop')
+    #     mdf = md.fit()
 
-        assert(len(md.endog) == 95)
-        assert(md.exog.shape) == (95,4)
-
+    #     assert(len(md.endog) == 95)
+    #     assert(md.exog.shape) == (95,4)
 
     def test_default_time(self):
         """
