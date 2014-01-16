@@ -6,8 +6,7 @@ output.
 
 # prefer HTML over rST for now until nbconvert changes drop
 OUTPUT = "html"
-SOURCE_DIR = ("/home/skipper/statsmodels/statsmodels-skipper/examples/"
-              "notebooks")
+SOURCE_DIR = "/home/skipper/statsmodels/statsmodels/examples/notebooks"
 
 import os
 import io
