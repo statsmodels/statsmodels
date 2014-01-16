@@ -1146,8 +1146,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         Akaike Information Criterion
         :math:`-2*llf+2* df_model`
         where `df_model` includes all AR parameters, MA parameters, constant
-        terms parameters on constant terms and, when the model is estimated
-        using MLE, the variance parameter.
+        terms parameters on constant terms and the variance.
     arparams : array
         The parameters associated with the AR coefficients in the model.
     arroots : array
@@ -1247,9 +1246,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         k_ma = model.k_ma
         self.k_ma = k_ma
         df_model = k_exog + k_trend + k_ar + k_ma
-        self._ic_df_model = df_model
-        if k_ma > 0 or k_ar > 0 or model.method.lower().find("mle") > 0:
-            self._ic_df_model += 1
+        self._ic_df_model = df_model + 1
         self.df_model = df_model
         self.df_resid = self.nobs - df_model
         self._cache = resettable_cache()

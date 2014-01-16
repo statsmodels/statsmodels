@@ -1,4 +1,5 @@
 import numpy as np
+from nose.tools import nottest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
                            assert_raises, dec, TestCase)
 import statsmodels.sandbox.tsa.fftarma as fa
@@ -1912,7 +1913,10 @@ class TestARMA00(TestCase):
         predictions = self.arma_00_res.predict()
         assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
 
+    @nottest
     def test_information_criteria(self):
+        # This test is invalid since the ICs differ due to df_model differences
+        # between OLS and ARIMA
         res = self.arma_00_res
         y = self.y
         ols_res = OLS(y, np.ones_like(y)).fit()
