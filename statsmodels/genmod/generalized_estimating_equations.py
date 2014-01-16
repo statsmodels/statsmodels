@@ -156,9 +156,9 @@ class GEE(base.Model):
     __doc__ = """
     Generalized Estimating Equations Models
 
-    GEE estimates Generalized Linear Models when the data has a cluster
-    structure and the observations are possibly correlated within but not
-    across clusters
+    GEE estimates Generalized Linear Models when the data has a
+    cluster structure and the observations are possibly correlated
+    within but not across clusters
 
     Parameters
     ----------
@@ -299,12 +299,14 @@ class GEE(base.Model):
 
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
-            if len(self.time.shape) == 1:
-                self.time = np.reshape(self.time, (len(self.time), 1))
+            self.time = self.time.astype(np.float64, copy=False)
+            if self.time.ndim == 1:
+                self.time = self.time[:,None]
             self.time_li = self.cluster_array(self.time)
         else:
-            self.time_li = [np.arange(len(y))[:, None]
-                            for y in self.endog_li]
+            self.time_li = \
+                [np.arange(len(y), dtype=np.float64)[:, None]
+                 for y in self.endog_li]
             self.time = np.concatenate(self.time_li)
 
         self.offset_li = self.cluster_array(self.offset)
@@ -684,8 +686,7 @@ class GEE(base.Model):
         """
 
         self.fit_history = {'params': [],
-                            'fitlack': [],
-                            'score_change': []}
+                            'score': []}
 
         # Check start_params, if supplied
         if start_params is not None:
@@ -741,7 +742,7 @@ class GEE(base.Model):
             self.update_cached_means(beta)
             fitlack = np.sqrt(np.sum(score**2))
             self.fit_history['params'].append(beta.copy())
-            self.fit_history['fitlack'].append(fitlack)
+            self.fit_history['score'].append(score)
 
             # Don't exit until the association parameters have been
             # updated at least once.
@@ -937,8 +938,7 @@ class GEEResults(base.LikelihoodModelResults):
         string indicating whether a "robust", "naive" or "bias_
         reduced" covariance is used as default
     fit_history : dict
-        Contains information about the iterations. Its keys are
-        `iterations`, `deviance` and `params`.
+        Contains information about the iterations.
     fittedvalues : array
         Linear predicted values for the fitted model.
         dot(exog, params)
@@ -1150,7 +1150,7 @@ class GEEResults(base.LikelihoodModelResults):
                      ('Max. cluster size', [max(NY)]),
                      ('Mean cluster size', ["%.1f" % np.mean(NY)]),
                      ('No. iterations', ['%d' %
-                           len(self.model.fit_history['fitlack'])]),
+                           len(self.model.fit_history['params'])]),
                      ('Time:', None),
                  ]
 
