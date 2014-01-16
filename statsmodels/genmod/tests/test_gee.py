@@ -8,13 +8,6 @@ correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
 
-##!!!!!!!!!
-import sys
-sys.path = [x for x in sys.path if "statsmodels" not in x]
-sys.path.append("~kshedden/fork4/statsmodels")
-
-
-
 import numpy as np
 import os
 from numpy.testing import assert_almost_equal
@@ -105,6 +98,37 @@ class TestGEE(object):
 
         assert(len(md.endog) == 95)
         assert(md.exog.shape) == (95,4)
+
+
+    def test_default_time(self):
+        """
+        Check that the time defaults work correctly.
+        """
+
+        endog,exog,group = load_data("gee_logistic_1.csv")
+
+        # Time values for the autoregressive model
+        T = np.zeros(len(endog))
+        idx = set(group)
+        for ii in idx:
+            jj = np.flatnonzero(group == ii)
+            T[jj] = range(len(jj))
+
+        family = Binomial()
+        va = Autoregressive()
+
+
+        md1 = GEE(endog, exog, group, family=family, covstruct=va)
+        mdf1 = md1.fit()
+
+        md2 = GEE(endog, exog, group, time=T, family=family,
+                  covstruct=va)
+        mdf2 = md2.fit()
+
+        assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
+        assert_almost_equal(mdf1.standard_errors(),
+                            mdf2.standard_errors(), decimal=6)
+
 
 
     def test_logistic(self):
@@ -530,6 +554,7 @@ class TestGEE(object):
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors(), se[j],
                                  decimal=6)
+             print mdf.params
 
 
     def test_compare_OLS(self):
