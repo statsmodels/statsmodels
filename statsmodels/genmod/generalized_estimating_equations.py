@@ -67,8 +67,8 @@ class ParameterConstraint(object):
            constraint lhs * param = rhs.  The number of constraints is
            q >= 1 and p is the dimension of the parameter vector.
         rhs : ndarray
-          A 1-dimensional vector of length q which is the right hand side of
-          the constraint equation.
+          A 1-dimensional vector of length q which is the right hand
+          side of the constraint equation.
         exog : ndarray
           The n x p exognenous data for the full model.
         """
@@ -96,7 +96,8 @@ class ParameterConstraint(object):
 
         # param0 is one solution to the underdetermined system
         # L * param = R.
-        self.param0 = np.dot(self.lhs1, np.dot(lhs_vt, self.rhs) / lhs_s)
+        self.param0 = np.dot(self.lhs1, np.dot(lhs_vt, self.rhs) /
+                             lhs_s)
 
         self._offset_increment = np.dot(exog, self.param0)
 
@@ -299,8 +300,7 @@ class GEE(base.Model):
 
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
-            if self.time.dtype != np.float64:
-                self.time = self.time.astype(np.float64)
+            self.time = np.asarray(self.time, np.float64)
             if self.time.ndim == 1:
                 self.time = self.time[:,None]
             self.time_li = self.cluster_array(self.time)
