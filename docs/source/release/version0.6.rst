@@ -51,7 +51,7 @@ mdf1 = md1.fit()
 mdf1.summary()
 
 
-The dependence structure in a GEE is treated as a nuiscance parameter
+The dependence structure in a GEE is treated as a nuisance parameter
 and is modeled in terms of a "working dependence structure".  The
 statsmodels GEE implementation currently includes five working
 dependence structures (independent, exchangeable, autoregressive,
