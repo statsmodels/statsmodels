@@ -371,8 +371,8 @@ class GEE(base.Model):
 
     def estimate_scale(self):
         """
-        Returns an estimate of the scale parameter `phi` at the
-        current parameter value.
+        Returns an estimate of the scale parameter at the current
+        parameter value.
         """
 
         endog = self.endog_li
@@ -401,6 +401,7 @@ class GEE(base.Model):
             scale_inv += np.sum(resid**2)
 
         scale_inv /= (nobs - exog_dim)
+
         scale = 1 / scale_inv
         return scale
 

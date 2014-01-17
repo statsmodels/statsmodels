@@ -77,27 +77,53 @@ class TestGEE(object):
         marg.summary()
 
 
-    # def test_missing(self):
+    # This is in the release announcement for version 0.6.
+    def test_poisson_epil(self):
 
-    #     Y = np.random.normal(size=100)
-    #     X1 = np.random.normal(size=100)
-    #     X2 = np.random.normal(size=100)
-    #     X3 = np.random.normal(size=100)
-    #     groups = np.kron(range(20), np.ones(5))
+        data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
+        data = pd.read_csv(data_url)
 
-    #     Y[0] = np.nan
-    #     Y[5:7] = np.nan
-    #     X2[10:12] = np.nan
+        fam = Poisson()
+        ind = Independence()
+        md1 = GEE.from_formula("y ~ age + trt + base", data,
+                               groups=data["subject"], covstruct=ind,
+                               family=fam)
+        mdf1 = md1.fit()
 
-    #     D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
-    #                       "groups": groups})
+        # Coefficients should agree with GLM
+        from statsmodels.genmod.generalized_linear_model import GLM
+        from statsmodels.genmod import families
 
-    #     md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
-    #                           groups=D["groups"], missing='drop')
-    #     mdf = md.fit()
+        md2 = GLM.from_formula("y ~ age + trt + base", data,
+                               family=families.Poisson())
+        mdf2 = md2.fit(scale="X2")
 
-    #     assert(len(md.endog) == 95)
-    #     assert(md.exog.shape) == (95,4)
+        assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
+        assert_almost_equal(1/mdf1.scale, mdf2.scale, decimal=6)
+
+
+    # TODO: why does this test fail?
+    def t_est_missing(self):
+
+        Y = np.random.normal(size=100)
+        X1 = np.random.normal(size=100)
+        X2 = np.random.normal(size=100)
+        X3 = np.random.normal(size=100)
+        groups = np.kron(range(20), np.ones(5))
+
+        Y[0] = np.nan
+        Y[5:7] = np.nan
+        X2[10:12] = np.nan
+
+        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
+                          "groups": groups})
+
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
+                              groups=D["groups"], missing='drop')
+        mdf = md.fit()
+
+        assert(len(md.endog) == 95)
+        assert(md.exog.shape) == (95,4)
 
     def test_default_time(self):
         """
