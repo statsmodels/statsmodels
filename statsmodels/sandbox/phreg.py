@@ -8,13 +8,12 @@ from statsmodels.tools.decorators import cache_readonly, \
 
 class PH_SurvivalTime(object):
 
-    def __init__(self, time, status, exog,
-                 strata=None, entry=None):
+    def __init__(self, time, status, exog, strata=None, entry=None):
         """
         Represent a collection of survival times with possible
         stratification and left truncation.  Various indexes needed
-        for fitting proportional hazards regression models are then
-        precalculated.
+        for fitting proportional hazards regression models are
+        precalculated and used in the PHreg class.
 
         Parameters
         ----------
@@ -26,15 +25,17 @@ class PH_SurvivalTime(object):
             (`status` is 1), or `time` is a censoring time (`status`
             is 0).
         exog : array_like
-            The exogeneous data matrix.
+            The exogeneous data matrix, cases are rows and variables
+            are columns.
         strata : array_like
             Grouping variable defining the strata.  If None, all
             observations are in a single stratum.
         entry : array_like
             Entry (left truncation) times.  The observation is not
             part of the risk set for times before the entry time.  If
-            None, the entry time is treated as being zero.  The entry
-            time must be less than or equal to `time`.
+            None, the entry time is treated as being zero, which
+            corresponds to no left truncation.  The entry time must be
+            less than or equal to `time`.
 
         Notes
         ------
@@ -92,8 +93,8 @@ class PH_SurvivalTime(object):
         nstrat = len(self.time_s)
         self.nstrat = nstrat
 
-        # Remove subjects whose entry time is after the last event in
-        # their stratum.
+        # Remove subjects whose entry time occurs after the last event
+        # in their stratum.
         for stx in range(nstrat):
             last_failure = max(self.time_s[stx][self.status_s[stx]==1])
             ii = [i for i,t in enumerate(self.entry_s[stx]) if
@@ -111,6 +112,10 @@ class PH_SurvivalTime(object):
             self.exog_s[stx] = self.exog_s[stx][ii,:]
             self.entry_s[stx] = self.entry_s[stx][ii]
 
+        # Precalculate some indices needed to fit Cox models.
+        # Distinct failure times within a stratum are always taken to
+        # be sorted in ascending order.
+        #
         # ufailt_ix[stx][k] is a list of indices for subjects who fail
         # at the k^th sorted unique failure time in stratum stx
         #
