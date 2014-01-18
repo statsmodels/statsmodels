@@ -47,44 +47,39 @@ class TestPHreg(object):
         n = int(vs[2])
         p = int(vs[3].split(".")[0])
 
-        # Rename the R parameter estimates and standard errors for
-        # this data set.
-        for et in False,True:
-            ets = {False: "", True: "_et"}[et]
-            for st in False,True:
-                sts = {False: "", True: "_st"}[st]
-                cmd = "coef%s%s = coef_%d_%d%s%s_%s" %\
-                    (ets, sts, n, p, ets, sts, ties[0:3])
-                exec(cmd)
-                cmd = "se%s%s = se_%d_%d%s%s_%s" %\
-                    (ets, sts, n, p, ets, sts, ties[0:3])
-                exec(cmd)
-
         # Needs to match the kronecker statement in survival.R
         strata = np.kron(range(5), np.ones(n/5))
 
         # No stratification or entry times
         phrb = PHreg(time, status, exog, ties=ties).fit(**args)
+        coef = globals()["coef_%d_%d_%s" % (n, p, ties[0:3])]
+        se = globals()["se_%d_%d_%s" % (n, p, ties[0:3])]
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Entry times but no stratification
         phrb = PHreg(time, status, exog, entry=entry,
                      ties=ties).fit(**args)
-        assert_almost_equal(phrb.params, coef_et, decimal=4)
-        assert_almost_equal(phrb.bse, se_et, decimal=4)
+        coef = globals()["coef_%d_%d_et_%s" % (n, p, ties[0:3])]
+        se = globals()["se_%d_%d_et_%s" % (n, p, ties[0:3])]
+        assert_almost_equal(phrb.params, coef, decimal=4)
+        assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification but no entry times
         phrb = PHreg(time, status, exog, strata=strata,
                       ties=ties).fit(**args)
-        assert_almost_equal(phrb.params, coef_st, decimal=4)
-        assert_almost_equal(phrb.bse, se_st, decimal=4)
+        coef = globals()["coef_%d_%d_st_%s" % (n, p, ties[0:3])]
+        se = globals()["se_%d_%d_st_%s" % (n, p, ties[0:3])]
+        assert_almost_equal(phrb.params, coef, decimal=4)
+        assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification and entry times
         phrb = PHreg(time, status, exog, entry=entry,
                      strata=strata, ties=ties).fit(**args)
-        assert_almost_equal(phrb.params, coef_et_st, decimal=4)
-        assert_almost_equal(phrb.bse, se_et_st, decimal=4)
+        coef = globals()["coef_%d_%d_et_st_%s" % (n, p, ties[0:3])]
+        se = globals()["se_%d_%d_et_st_%s" % (n, p, ties[0:3])]
+        assert_almost_equal(phrb.params, coef, decimal=4)
+        assert_almost_equal(phrb.bse, se, decimal=4)
 
 
     # Run all the tests
