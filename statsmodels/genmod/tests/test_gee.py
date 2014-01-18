@@ -100,7 +100,7 @@ class TestGEE(object):
 
         assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
         assert_almost_equal(1/mdf1.scale, mdf2.scale, decimal=6)
-
+        1/0
 
     # TODO: why does this test fail?
     def t_est_missing(self):
