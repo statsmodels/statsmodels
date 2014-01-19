@@ -95,6 +95,17 @@ def dotplot(points, intervals=None, lines=None, sections=None,
 
     fig, ax = utils.create_mpl_ax(ax)
 
+    # Convert to numpy arrays if that is not what we are given.
+    points = np.asarray(points)
+    if intervals is not None:
+        intervals = np.asarray(intervals)
+    if lines is not None:
+        lines = np.asarray(lines)
+    if sections is not None:
+        sections = np.asarray(sections)
+    if styles is not None:
+        styles = np.asarray(styles)
+
     # Total number of points
     npoint = len(points)
 
