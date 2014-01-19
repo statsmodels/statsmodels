@@ -1,5 +1,6 @@
 import numpy as np
 from statsmodels.graphics.dotplots import dotplot
+import pandas as pd
 
 try:
     import matplotlib.pyplot as plt
@@ -11,7 +12,7 @@ try:
 except:
     have_matplotlib = False
 
-def xxtest_all():
+def test_all():
 
     pdf = PdfPages("test_dotplot.pdf")
 
@@ -143,6 +144,15 @@ def xxtest_all():
     points = range(20)
     dotplot(points, intervals=np.ones(20), ax=ax)
     ax.set_title("Dotplot with symmetric intervals")
+    pdf.savefig()
+
+    # Basic dotplot with symmetric intervals, pandas inputs.
+    plt.clf()
+    ax = plt.axes()
+    points = pd.Series(range(20))
+    intervals = pd.Series(np.ones(20))
+    dotplot(points, intervals=intervals, ax=ax)
+    ax.set_title("Dotplot with symmetric intervals (Pandas inputs)")
     pdf.savefig()
 
     # Basic dotplot with nonsymmetric intervals
