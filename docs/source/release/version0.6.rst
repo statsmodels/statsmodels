@@ -18,11 +18,11 @@ Addition of Generalized Estimating Equations GEE
 Generalized Estimating Equations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Generalized Estimating Equations (GEE) provide and approach to
-handling dependent data in a regression analysis.  Dependent data
-arise commonly in practice, such as in a longitudinal study where
-repeated observations are collected on subjects. GEE can be viewed as
-an extension of the generalized linear modeling (GLM) framework to the
+Generalized Estimating Equations (GEE) provide an approach to handling
+dependent data in a regression analysis.  Dependent data arise
+commonly in practice, such as in a longitudinal study where repeated
+observations are collected on subjects. GEE can be viewed as an
+extension of the generalized linear modeling (GLM) framework to the
 dependent data setting.  The familiar GLM families such as the
 Gaussian, Poisson, and logistic families can be used to accommodate
 dependent variables with various distributions.
@@ -36,8 +36,7 @@ covariates.
 import numpy as np
 import pandas as pd
 from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.dependence_structures import Exchangeable,\
-    Independence,Autoregressive
+from statsmodels.genmod.dependence_structures import Independence
 from statsmodels.genmod.families import Poisson
 
 data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
@@ -48,7 +47,7 @@ ind = Independence()
 md1 = GEE.from_formula("y ~ age + trt + base", data, groups=data["subject"],\
                        covstruct=ind, family=fam)
 mdf1 = md1.fit()
-mdf1.summary()
+print mdf1.summary()
 
 
 The dependence structure in a GEE is treated as a nuisance parameter
@@ -59,8 +58,8 @@ nested, and a global odds ratio for working with categorical data).
 Since the GEE estimates are not maximum likelihood estimates,
 alternative approaches to some common inference procedures have been
 developed.  The statsmodels GEE implementation currently provides
-Wald-type standard errors and allows score tests for arbitrary
-parameter contrasts.
+standard errors and allows score tests for arbitrary parameter
+contrasts.
 
 
 
