@@ -295,25 +295,25 @@ class GEE(base.Model):
         self.group_indices = group_indices
         self.group_labels = group_labels
 
-        self.endog_li = self.cluster_array(self.endog)
-        self.exog_li = self.cluster_array(self.exog)
+        self.endog_li = self.cluster_list(self.endog)
+        self.exog_li = self.cluster_list(self.exog)
 
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
             self.time = np.asarray(self.time, np.float64)
             if self.time.ndim == 1:
                 self.time = self.time[:,None]
-            self.time_li = self.cluster_array(self.time)
+            self.time_li = self.cluster_list(self.time)
         else:
             self.time_li = \
                 [np.arange(len(y), dtype=np.float64)[:, None]
                  for y in self.endog_li]
             self.time = np.concatenate(self.time_li)
 
-        self.offset_li = self.cluster_array(self.offset)
+        self.offset_li = self.cluster_list(self.offset)
         if constraint is not None:
             self.constraint.exog_fulltrans_li = \
-                self.cluster_array(self.constraint.exog_fulltrans)
+                self.cluster_list(self.constraint.exog_fulltrans)
 
         self.family = family
 
@@ -356,7 +356,7 @@ class GEE(base.Model):
 
             self.mean_deriv_exog = mean_deriv_exog
 
-    def cluster_array(self, array):
+    def cluster_list(self, array):
         """
         Returns `array` split into subarrays corresponding to the
         cluster structure.
@@ -679,7 +679,7 @@ class GEE(base.Model):
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
         covariance_type : string
-            One of "robust", "naive", or "biase_reduced".
+            One of "robust", "naive", or "bias_reduced".
 
         Returns
         -------

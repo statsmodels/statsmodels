@@ -8,6 +8,10 @@ correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
 
+##!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 import numpy as np
 import os
 from numpy.testing import assert_almost_equal
@@ -80,8 +84,9 @@ class TestGEE(object):
     # This is in the release announcement for version 0.6.
     def test_poisson_epil(self):
 
-        data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
-        data = pd.read_csv(data_url)
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        fname = os.path.join(cur_dir, "results", "epil.csv")
+        data = pd.read_csv(fname)
 
         fam = Poisson()
         ind = Independence()
