@@ -118,7 +118,7 @@ def check_dependency_versions(min_versions):
         except ImportError:
             raise ImportError("statsmodels requires scipy")
     try:
-        from pandas.version import version as pversion
+        from pandas.version import short_version as pversion
     except ImportError:
         raise ImportError("statsmodels requires pandas")
     try:
@@ -137,10 +137,7 @@ def check_dependency_versions(min_versions):
         raise ImportError("Scipy version is %s. Requires >= %s" %
                 (spversion, min_versions['scipy']))
     try:
-        #NOTE: not sure how robust this regex is but it at least allows
-        # double digit version numbering
-        pversion = re.match("\d*\.\d*\.\d*", pversion).group()
-        assert StrictVersion(pversion) >= min_versions['pandas']
+        assert StrictVersion(strip_rc(pversion)) >= min_versions['pandas']
     except AssertionError:
         raise ImportError("Pandas version is %s. Requires >= %s" %
                 (pversion, min_versions['pandas']))
