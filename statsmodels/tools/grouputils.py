@@ -283,6 +283,166 @@ class GroupSorted(Group):
         return lag_idx[mask_ok]
 
 
+import pandas as pd
+class Grouping():
+    def __init__(self, index_pandas=None, index_list=None):
+        '''
+        index_pandas pandas (multi-)index
+        index_list list of numpy arrays, pandas series or lists, all of which are
+            of length nobs 
+        '''
+        if index_list != None:
+            try:
+                index_list = [np.array(x) for x in index_list]
+                tup = zip(*index_list)
+                self.index = pd.MultiIndex.from_tuples(tup)
+            except:
+                raise Exception("index_list must be a list of lists, pandas series, \
+                        or numpy arrays, each of identitcal length nobs.") 
+        else:
+            self.index = index_pandas
+        self.nobs = len(self.index)
+        self.slices = None
+        self.index_shape = self.index.levshape
+        self.index_int = self.index.labels
+
+    def reindex(self, index_pandas=None):
+        if type(index_pandas) in [pd.core.index.MultiIndex, pd.core.index.Index]:
+            self.index = index_pandas
+            self.index_shape = self.index.levshape
+            self.index_int = self.index.labels
+        else:
+            raise Exception('index_pandas must be Pandas index')
+
+    def get_slices(self):
+        '''Only works on first index level'''
+        groups = self.index.get_level_values(0).unique()
+        self.slices = [self.index.get_loc(x) for x in groups]
+
+    def count_categories(self, level=0):
+        self.counts = np.bincount(self.index_int[level])
+
+    def check_index(self, sorted=True, unique=True, index=None):
+        '''Sanity checks'''
+        if not index:
+            index = self.index
+        if sorted:
+            test = pd.DataFrame(range(len(index)), index=index)
+            test_sorted = test.sort()
+            if any(test.index != test_sorted.index):
+                raise Exception('Index suggests that data may not be sorted')
+        if unique:
+            if len(index) != len(index.unique()):
+                raise Exception('Duplicate index entries')
+
+    def sort(self, data, index=None):
+        '''Applies a (potentially hierarchical) sort operation on a numpy array
+        or pandas series/dataframe based on the grouping index or a
+        user-suplied index.  Returns an object of the same type as the original
+        data as well as the matching (sorted) Pandas index.  
+        '''
+
+        if not index:
+            index = self.index
+        if type(data) == np.ndarray:
+            out = pd.DataFrame(data, index=index)
+            out = out.sort()
+            return np.array(out), index
+        elif type(data) in [pd.core.series.Series, pd.core.frame.DataFrame]:
+            out = data
+            out.index = index
+            out = out.sort()
+            return out, index
+        else:
+            msg = 'data must be a Numpy array or a Pandas Series/DataFrame'
+            raise Exception(msg)
+
+    def transform_dataframe(self, dataframe, function, level=0):
+        '''Apply function to each column, by group
+        Assumes that the dataframe already has a proper index'''
+        if dataframe.shape[0] != self.nobs:
+            raise Exception('dataframe does not have the same shape as index')
+        out = dataframe.groupby(level=level).apply(function)
+        if 1 in out.shape:
+            return np.ravel(out)
+        else:
+            return np.array(out)
+     
+    def transform_array(self, array, function, level=0):
+        '''Apply function to each column, by group'''
+        if array.shape[0] != self.nobs:
+            raise Exception('array does not have the same shape as index')
+        dataframe = pd.DataFrame(array, index=self.index)
+        return self.transform_dataframe(dataframe, function, level=level)
+
+    def transform_slices(self, array, function, **kwargs):
+        '''Assumes array is a 1D or 2D numpy array'''
+        if array.shape[0] != self.nobs:
+            raise Exception('array does not have the same shape as index')
+        if self.slices == None:
+            self.get_slices()
+        processed = []
+        for s in self.slices:
+            if array.ndim == 2:
+                subset = array[s,:]
+            elif array.ndim == 1:
+                subset = array[s]
+            processed.append(function(subset, s, **kwargs))
+        return np.concatenate(processed)
+
+    def dummy_sparse(self, level=0):
+        '''create a sparse indicator from a group array with integer labels
+
+        Parameters
+        ----------
+        groups: ndarray, int, 1d (nobs,) an array of group indicators for each
+            observation. Group levels are assumed to be defined as consecutive
+            integers, i.e. range(n_groups) where n_groups is the number of
+            group levels. A group level with no observations for it will still
+            produce a column of zeros.
+
+        Returns
+        -------
+        indi : ndarray, int8, 2d (nobs, n_groups)
+            an indicator array with one row per observation, that has 1 in the
+            column of the group level for that observation
+
+        Examples
+        --------
+
+        >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
+        >>> indi = dummy_sparse(g)
+        >>> indi
+        <7x3 sparse matrix of type '<type 'numpy.int8'>'
+            with 7 stored elements in Compressed Sparse Row format>
+        >>> indi.todense()
+        matrix([[1, 0, 0],
+                [1, 0, 0],
+                [0, 0, 1],
+                [0, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 0]], dtype=int8)
+
+
+        current behavior with missing groups
+        >>> g = np.array([0, 0, 2, 0, 2, 0])
+        >>> indi = dummy_sparse(g)
+        >>> indi.todense()
+        matrix([[1, 0, 0],
+                [1, 0, 0],
+                [0, 0, 1],
+                [1, 0, 0],
+                [0, 0, 1],
+                [1, 0, 0]], dtype=int8)
+
+        '''
+        
+        groups = self.index.labels[level]
+        indptr = np.arange(len(groups)+1)
+        data = np.ones(len(groups), dtype=np.int8)
+        self.dummies = scipy.sparse.csr_matrix((data, groups, indptr))
+
 if __name__ == '__main__':
 
     #---------- examples combine_indices
