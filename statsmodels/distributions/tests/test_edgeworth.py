@@ -110,7 +110,7 @@ class TestExpandedNormal(TestCase):
         # compate the pdf
         m, s = df, np.sqrt(2*df)
         x = np.linspace(m - s, m + s, 10)
-        assert_allclose(ne.pdf(x), stats.chi2.pdf(x, df=df),
+        assert_allclose(ne.pdf(x), stats.chi2.pdf(x, df),
                 atol=1e-4, rtol=1e-5)
 
         # pdf-cdf roundtrip

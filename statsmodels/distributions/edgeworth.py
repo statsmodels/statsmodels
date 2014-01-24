@@ -151,7 +151,7 @@ class ExpandedNormal(rv_continuous):
         distributions, Astron. Astrophys. Suppl. Ser. 130, 193 (1998)
 
     """
-    def __init__(self, cum, **kwds):
+    def __init__(self, cum, name='Edgeworth expanded normal', **kwds):
         if len(cum) < 2:
             raise ValueError("At least two cumulants are needed.")
         self._coef, self._mu, self._sigma = self._compute_coefs_pdf(cum)
@@ -168,7 +168,8 @@ class ExpandedNormal(rv_continuous):
             mesg = 'PDF has zeros at %s ' % r
             warnings.warn(mesg, UserWarning)
 
-        kwds.update({'momtype': 0})   # use pdf, not ppf in self.moment()
+        kwds.update({'name': name,
+                     'momtype': 0})   # use pdf, not ppf in self.moment()
         super(ExpandedNormal, self).__init__(**kwds)
 
     def _pdf(self, x):
