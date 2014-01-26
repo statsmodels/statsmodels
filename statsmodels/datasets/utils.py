@@ -184,9 +184,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
         else:
             raise err
 
-    #Python 3, always decode as unicode
-    if sys.version[0] == '3':  # pragma: no cover
-        data = data.decode('utf-8', errors='strict')
+    data = data.decode('utf-8', errors='strict')
     return StringIO(data), from_cache
 
 
