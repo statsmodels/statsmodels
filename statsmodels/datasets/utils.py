@@ -198,7 +198,7 @@ def _get_dataset_meta(dataname, package, cache):
     data, _ = _urlopen_cached(index_url, cache)
     #Python 3
     if sys.version[0] == '3':  # pragma: no cover
-        data = data.decode('ascii', errors='strict')
+        data = data.decode('utf-8', errors='strict')
     index = read_csv(StringIO(data))
     idx = np.logical_and(index.Item == dataname, index.Package == package)
     dataset_meta = index.ix[idx]
