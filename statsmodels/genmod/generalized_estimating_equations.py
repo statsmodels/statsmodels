@@ -73,9 +73,14 @@ class ParameterConstraint(object):
           The n x p exognenous data for the full model.
         """
 
-        if type(lhs) != np.ndarray:
-            raise ValueError("The left hand side constraint matrix L "
-                             "must be a NumPy array.")
+        # In case a row or column vector is passed (patsy linear
+        # constraints passes a column vector).
+        rhs = np.atleast_1d(rhs.squeeze())
+
+        if rhs.ndim > 1:
+            raise ValueError("The right hand side of the constraint "
+                             "must be a vector.")
+
         if len(rhs) != lhs.shape[0]:
             raise ValueError("The number of rows of the left hand "
                              "side constraint matrix L must equal "
