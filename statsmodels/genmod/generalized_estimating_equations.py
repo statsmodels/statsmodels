@@ -560,10 +560,9 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
-        naive_covariance = np.linalg.inv(bmat) * scale
-        #cmat /= np.sqrt(scale) #*= scale**2
-        robust_covariance = np.dot(naive_covariance,
-                           np.dot(cmat, naive_covariance)) / scale**2
+        bmati = np.linalg.inv(bmat)
+        naive_covariance = bmati * scale
+        robust_covariance = np.dot(bmati, np.dot(cmat, bmati))
 
         # Calculate the bias-corrected sandwich estimate of Mancl and
         # DeRouen (requires naive_covariance so cannot be calculated
@@ -780,8 +779,9 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
-        # superclass will scale bcov by scale, which we don't want, so
-        # we divide by scale here
+        # The superclass constructor will scale the covariance matrix
+        # argument bcov by scale, which we don't want, so we divide
+        # bvov by the scale parameter here
         results = GEEResults(self, beta, bcov / scale, scale)
         results.covariance_type = covariance_type
         results.fit_history = self.fit_history
