@@ -553,3 +553,11 @@ def maybe_unwrap_results(results):
     routines.
     """
     return getattr(results, '_results', results)
+
+class Bunch(dict):
+    """
+    Returns a dict-like object with keys accessible via attribute lookup.
+    """
+    def __init__(self, **kw):
+        dict.__init__(self, kw)
+        self.__dict__  = self
