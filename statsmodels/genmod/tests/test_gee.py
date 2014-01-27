@@ -100,7 +100,7 @@ class TestGEE(object):
         mdf2 = md2.fit(scale="X2")
 
         assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
-        assert_almost_equal(1/mdf1.scale, mdf2.scale, decimal=6)
+        assert_almost_equal(mdf1.scale, mdf2.scale, decimal=6)
 
 
     # TODO: why does this test fail?
@@ -609,6 +609,9 @@ class TestGEE(object):
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
 
         assert_almost_equal(ols.params.values, mdf.params, decimal=10)
+
+        se = mdf.standard_errors(covariance_type="naive")
+        assert_almost_equal(ols.bse, se, decimal=10)
 
         naive_tvalues = mdf.params / \
             np.sqrt(np.diag(mdf.naive_covariance))

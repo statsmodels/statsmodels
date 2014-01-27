@@ -392,7 +392,7 @@ class GEE(base.Model):
 
         varfunc = self.family.variance
 
-        scale_inv = 0.
+        scale = 0.
         for i in range(num_clust):
 
             if len(endog[i]) == 0:
@@ -403,11 +403,10 @@ class GEE(base.Model):
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - offset[i] - expval) / sdev
 
-            scale_inv += np.sum(resid**2)
+            scale += np.sum(resid**2)
 
-        scale_inv /= (nobs - exog_dim)
+        scale /= (nobs - exog_dim)
 
-        scale = 1 / scale_inv
         return scale
 
     def _beta_update(self):
@@ -561,10 +560,10 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
-        naive_covariance = np.linalg.inv(bmat) / scale
-        cmat *= scale**2
+        naive_covariance = np.linalg.inv(bmat) * scale
+        #cmat /= np.sqrt(scale) #*= scale**2
         robust_covariance = np.dot(naive_covariance,
-                                   np.dot(cmat, naive_covariance))
+                           np.dot(cmat, naive_covariance)) / scale**2
 
         # Calculate the bias-corrected sandwich estimate of Mancl and
         # DeRouen (requires naive_covariance so cannot be calculated
@@ -781,6 +780,8 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
+        # superclass will scale bcov by scale, which we don't want, so
+        # we divide by scale here
         results = GEEResults(self, beta, bcov / scale, scale)
         results.covariance_type = covariance_type
         results.fit_history = self.fit_history
