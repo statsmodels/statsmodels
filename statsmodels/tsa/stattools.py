@@ -9,6 +9,8 @@ from statsmodels.tools.tools import add_constant
 from tsatools import lagmat, lagmat2ds, add_trend
 from adfvalues import mackinnonp, mackinnoncrit
 
+__all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
+           'periodogram', 'q_stat', 'coint']
 
 #NOTE: now in two places to avoid circular import
 #TODO: I like the bunch pattern for this too.
@@ -913,8 +915,6 @@ def coint(y1, y2, regression="c"):
     crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
     return coint_t, pvalue, crit_value
 
-__all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
-           'periodogram', 'q_stat', 'coint']
 
 if __name__=="__main__":
     import statsmodels.api as sm
