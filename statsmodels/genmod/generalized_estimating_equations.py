@@ -691,7 +691,8 @@ class GEE(base.Model):
         """
 
         self.fit_history = {'params': [],
-                            'score': []}
+                            'score': [],
+                            'dep_params': []}
 
         # Check start_params, if supplied
         if start_params is not None:
@@ -746,8 +747,11 @@ class GEE(base.Model):
             beta += update
             self.update_cached_means(beta)
             fitlack = np.sqrt(np.sum(score**2))
+
             self.fit_history['params'].append(beta.copy())
             self.fit_history['score'].append(score)
+            self.fit_history['dep_params'].append(
+                self.covstruct.dep_params)
 
             # Don't exit until the association parameters have been
             # updated at least once.
@@ -779,10 +783,11 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
-        # The superclass constructor will scale the covariance matrix
-        # argument bcov by scale, which we don't want, so we divide
-        # bvov by the scale parameter here
+        # The superclass constructor will multiply the covariance
+        # matrix argument bcov by scale, which we don't want, so we
+        # divide bvov by the scale parameter here
         results = GEEResults(self, beta, bcov / scale, scale)
+
         results.covariance_type = covariance_type
         results.fit_history = self.fit_history
         results.naive_covariance = ncov
@@ -1179,19 +1184,24 @@ class GEEResults(base.LikelihoodModelResults):
             title = self.model.__class__.__name__ + ' ' +\
                     "Regression Results"
 
-        #create summary table instance
+        # Override the dataframe names if xname is provided as an
+        # argument.
+        if xname is not None:
+            xna = xname
+        else:
+            xna = self.model.exog_names
+
+        # Create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=self.model.endog_names,
-                             xname=xname, title=title)
-        smry.add_table_params(self, yname=yname,
-                              xname=self.model.exog_names,
+                             yname=self.model.endog_names, xname=xna,
+                             title=title)
+        smry.add_table_params(self, yname=yname, xname=xna,
                               alpha=alpha, use_t=False)
-
         smry.add_table_2cols(self, gleft=diagn_left,
                              gright=diagn_right, yname=yname,
-                             xname=xname, title="")
+                             xname=xna, title="")
 
         return smry
 

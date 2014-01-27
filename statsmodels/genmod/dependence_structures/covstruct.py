@@ -205,17 +205,17 @@ class Nested(CovStruct):
         in classrooms, nested in schools, nested in school districts.
         The school district id would be provided to GEE as the
         top-level cluster, and the school and classroom id's would be
-        provided to the Nested class s the `id_matrix` argument, for
+        provided to the Nested class as the `id_matrix` argument, for
         example:
 
-        0 0  School 0, classroom 0
-        0 0  School 0, classroom 0
-        0 1  School 0, classroom 1
-        0 1  School 0, classroom 1
-        1 0  School 1, classroom 0
-        1 0  School 1, classroom 0
-        1 1  School 1, classroom 1
-        1 1  School 1, classroom 1
+        0 0  # School 0, classroom 0
+        0 0  # School 0, classroom 0
+        0 1  # School 0, classroom 1
+        0 1  # School 0, classroom 1
+        1 0  # School 1, classroom 0
+        1 0  # School 1, classroom 0
+        1 1  # School 1, classroom 1
+        1 1  # School 1, classroom 1
         """
 
         # A bit of processing of the Id argument
