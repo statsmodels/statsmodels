@@ -5,7 +5,7 @@ Statistical tools for time series analysis
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
-from statsmodels.tools.tools import add_constant
+from statsmodels.tools.tools import add_constant, Bunch
 from tsatools import lagmat, lagmat2ds, add_trend
 from adfvalues import mackinnonp, mackinnoncrit
 
@@ -914,6 +914,91 @@ def coint(y1, y2, regression="c"):
     pvalue = mackinnonp(coint_t, regression="c", N=2, lags=None)
     crit_value = mackinnoncrit(N=1, regression="c", nobs=len(y1))
     return coint_t, pvalue, crit_value
+
+
+def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
+                         model_kw={}, fit_kw={}):
+    """
+    Returns information criteria for many ARMA models
+
+    Parameters
+    ----------
+    y : array-like
+        Time-series data
+    max_ar : int
+        Maximum number of AR lags to use. Default 4.
+    max_ma : int
+        Maximum number of MA lags to use. DEfault 2.
+    ic : str, list
+        Information criteria to report. Either a single string or a list
+        of different criteria is possible.
+    trend : str
+        The trend to use when fitting the ARMA models.
+
+    Returns
+    -------
+    obj : Results object
+        Each ic is an attribute with a DataFrame for the results. The AR order
+        used is the row index. The ma order used is the column index.
+
+    Examples
+    --------
+
+    >>> from statsmodels.tsa.arima_process import arma_generate_sample
+    >>> import statsmodels.api as sm
+    >>> import numpy as np
+
+    >>> arparams = np.array([.75, -.25])
+    >>> maparams = np.array([.65, .35])
+    >>> arparams = np.r_[1, -arparams]
+    >>> maparam = np.r_[1, maparams]
+    >>> nobs = 250
+    >>> np.random.seed(2014)
+    >>> y = arma_generate_sample(arparams, maparams, nobs)
+    >>> res = sm.tsa.arma_order_select_ic(y, ic=['aic', 'bic'], trend='nc')
+    >>> np.where(res.aic == res.aic.min().min())
+    >>> np.where(res.bic = res.bic.min().min())
+
+    """
+    from statsmodels.tsa.arima_model import ARMA
+    from pandas import DataFrame
+
+    ar_range = range(0, max_ar + 1)
+    ma_range = range(0, max_ma + 1)
+    if isinstance(ic, basestring):
+        ic = [ic]
+    elif not isinstance(ic, (list, tuple)):
+        raise ValueError("Need a list or a tuple for ic if not a string.")
+
+    results = np.zeros((len(ic), max_ar + 1, max_ma + 1))
+
+    for ar in ar_range:
+        for ma in ma_range:
+            if ar == 0 and ma == 0:
+                results[:, ar, ma] = np.nan
+                continue
+            try:
+                mod = ARMA(y, order=(ar,ma), **model_kw).fit(disp=0,
+                                                             trend=trend,
+                                                             **fit_kw)
+            except ValueError, error:
+                if 'initial' in error.message:
+                    # try a little harder, should be done in model
+                    start_params = [.1] * (ar + ma)
+                    if trend == 'c':
+                        start_params = [.1] + start_params
+                    mod = ARMA(y, order=(ar, ma), **model_kw).fit(disp=0,
+                                                    trend=trend,
+                                                    start_params=start_params,
+                                                    **fit_kw)
+
+            for i, criteria in enumerate(ic):
+                results[i, ar, ma] = getattr(mod, criteria)
+
+    dfs = map(lambda x : DataFrame(x, columns=ma_range, index=ar_range),
+              results)
+
+    return Bunch(**dict(zip(ic, dfs)))
 
 
 if __name__=="__main__":
