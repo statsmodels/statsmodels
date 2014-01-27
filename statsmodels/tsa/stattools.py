@@ -934,6 +934,10 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
         of different criteria is possible.
     trend : str
         The trend to use when fitting the ARMA models.
+    model_kw : dict
+        Keyword arguments to be passed to the `ARMA` model
+    fit_kw : dict
+        Keyword arguments to be passed to `ARMA.fit`.
 
     Returns
     -------
@@ -959,6 +963,14 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     >>> np.where(res.aic == res.aic.min().min())
     >>> np.where(res.bic = res.bic.min().min())
 
+    Notes
+    -----
+    This method can be used to tentatively identify the order of an ARMA
+    process, provided that the time series is stationary and invertible. This
+    function computes the full exact MLE estimate of each model and can be,
+    therefore a little slow. An implementation using approximate estimates
+    will be provided in the future. In the meantime, consider passing
+    {method : 'css'} to fit_kw.
     """
     from statsmodels.tsa.arima_model import ARMA
     from pandas import DataFrame
