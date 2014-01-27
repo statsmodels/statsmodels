@@ -10,7 +10,7 @@ from tsatools import lagmat, lagmat2ds, add_trend
 from adfvalues import mackinnonp, mackinnoncrit
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
-           'periodogram', 'q_stat', 'coint']
+           'periodogram', 'q_stat', 'coint', 'arma_order_select_ic']
 
 #NOTE: now in two places to avoid circular import
 #TODO: I like the bunch pattern for this too.
