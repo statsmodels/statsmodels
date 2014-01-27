@@ -224,6 +224,13 @@ class HuberScale(object):
                     Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
                     np.exp(-.5*self.d**2))
         s = mad(resid, center=0)
+        if s == 0:
+            # lower bound on s for winsorized mean
+            n_outliers = (resid != 0).mean() # fraction of outliers
+            # standard deviation for winsorized outliers
+            # without bias correction, but divided by two to reduce
+            s = self.d * np.sqrt(n_outliers) / 2
+
         subset = lambda x: np.less(np.fabs(resid/x),self.d)
         chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(self.d**2/2)
         scalehist = [np.inf,s]

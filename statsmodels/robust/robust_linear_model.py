@@ -280,6 +280,17 @@ class RLM(base.LikelihoodModel):
         history = self._update_history(wls_results, history, conv)
         iteration = 1
         converged = 0
+
+        if wls_results.scale == 0:
+            # handle case where we have perfect prediction immediately
+            # extra check, once we have scale == 0
+            # this could be relevant if we allow for start_weights`with zeros
+            if (wls_results.resid == 0).all():
+                converged = True
+                if np.isnan(self.scale):
+                    # in case self._estimate_scale returned nan
+                    self.scale = 0
+
         while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
             if self.scale == 0:
