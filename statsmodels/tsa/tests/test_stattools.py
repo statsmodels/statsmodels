@@ -1,6 +1,7 @@
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
-                                               coint, acovf)
+                                               coint, acovf,
+                                               arma_order_select_ic)
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal, assert_raises
@@ -260,6 +261,22 @@ def test_acovf_fft_vs_convolution():
             F1 = acovf(q, demean=demean, unbiased=unbiased, fft=True)
             F2 = acovf(q, demean=demean, unbiased=unbiased, fft=False)
             assert_almost_equal(F1, F2, decimal=7)
+
+def test_arma_order_select_ic():
+    # smoke test, assumes info-criteria are right
+    from statsmodels.tsa.arima_process import arma_generate_sample
+    import statsmodels.api as sm
+
+    arparams = np.array([.75, -.25])
+    maparams = np.array([.65, .35])
+    arparams = np.r_[1, -arparams]
+    maparam = np.r_[1, maparams]
+    nobs = 250
+    np.random.seed(2014)
+    y = arma_generate_sample(arparams, maparams, nobs)
+    res = arma_order_select_ic(y, ic=['aic', 'bic'], trend='nc')
+    res = arma_order_select_ic(y, ic='aic', trend='c')
+
 
 if __name__=="__main__":
     import nose
