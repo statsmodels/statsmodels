@@ -282,6 +282,11 @@ class RLM(base.LikelihoodModel):
         converged = 0
         while not converged:
             self.weights = self.M.weights(wls_results.resid/self.scale)
+            if self.scale == 0:
+                # only for case when scale is exactly zero
+                # there could also be problems if scale is close to zero
+                # assumes we get nans only where resid == 0
+                self.weights[np.isnan(self.weights)] = 1.
             wls_results = lm.WLS(self.endog, self.exog,
                                  weights=self.weights).fit()
             if update_scale is True:
