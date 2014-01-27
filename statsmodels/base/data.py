@@ -309,13 +309,11 @@ class PandasData(ModelData):
             return super(PandasData, self)._drop_nans_2d(x, nan_mask)
 
     def _check_integrity(self):
-        try:
-            endog, exog = self.orig_endog, self.orig_exog
-            # exog can be None and we could be upcasting one or the other
-            if exog is not None and (hasattr(endog, 'index') and
-                    hasattr(exog, 'index')):
-                assert self.orig_endog.index.equals(self.orig_exog.index)
-        except AssertionError:
+        endog, exog = self.orig_endog, self.orig_exog
+        # exog can be None and we could be upcasting one or the other
+        if (exog is not None and
+                (hasattr(endog, 'index') and hasattr(exog, 'index')) and
+                not self.orig_endog.index.equals(self.orig_exog.index)):
             raise ValueError("The indices for endog and exog are not aligned")
         super(PandasData, self)._check_integrity()
 
