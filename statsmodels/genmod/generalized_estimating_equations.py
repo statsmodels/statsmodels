@@ -581,7 +581,7 @@ class GEE(base.Model):
             vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
-            vmat /= scale
+            vmat *= scale
 
             try:
                 vco = spl.cho_factor(vmat)
@@ -842,6 +842,7 @@ class GEE(base.Model):
 
         _, ncov1, _, cmat = self._covmat()
         scale = self.estimate_scale()
+        cmat = cmat / scale**2
         score2 = score[len(beta):] * scale
 
         amat = np.linalg.inv(ncov1)
