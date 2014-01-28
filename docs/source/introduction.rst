@@ -177,8 +177,8 @@ Financial Support
 We are grateful for the financial support that we obtained for the
 development of statsmodels:
 
- Google `www.google.com <http://www.google.com/>`_ : two Google Summer of Code,
- GSOC 2009, GSOC 2010 and GSOC 2011
+ Google `www.google.com <http://www.google.com/>`_ : Google Summer of Code
+ (GSOC) 2009-2013
 
  AQR `www.aqr.com <http://www.aqr.com/>`_ : financial sponsor for the work on
  Vector Autoregressive Models (VAR) by Wes McKinney
