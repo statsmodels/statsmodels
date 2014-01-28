@@ -4,10 +4,11 @@ from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                arma_order_select_ic)
 from statsmodels.tsa.base.datetools import dates_from_range
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_raises, dec
+from numpy.testing import (assert_almost_equal, assert_equal, assert_raises,
+                           dec, assert_)
 from numpy import genfromtxt#, concatenate
 from statsmodels.datasets import macrodata, sunspots
-from pandas import Series, Index
+from pandas import Series, Index, DataFrame
 import os
 
 
@@ -276,7 +277,30 @@ def test_arma_order_select_ic():
     np.random.seed(2014)
     y = arma_generate_sample(arparams, maparams, nobs)
     res = arma_order_select_ic(y, ic=['aic', 'bic'], trend='nc')
-    res = arma_order_select_ic(y, ic='aic', trend='c')
+    # regression tests in case we change algorithm to minic in sas
+    aic_x = np.array([[       np.nan,  552.7342255 ,  484.29687843],
+                      [ 562.10924262,  485.5197969 ,  480.32858497],
+                      [ 507.04581344,  482.91065829,  481.91926034],
+                      [ 484.03995962,  482.14868032,  483.86378955],
+                      [ 481.8849479 ,  483.8377379 ,  485.83756612]])
+    bic_x = np.array([[       np.nan,  559.77714733,  494.86126118],
+                      [ 569.15216446,  496.08417966,  494.41442864],
+                      [ 517.61019619,  496.99650196,  499.52656493],
+                      [ 498.12580329,  499.75598491,  504.99255506],
+                      [ 499.49225249,  504.96650341,  510.48779255]])
+    aic = DataFrame(aic_x , index=range(5), columns=range(3))
+    bic = DataFrame(bic_x , index=range(5), columns=range(3))
+    assert_almost_equal(res.aic.values, aic.values, 5)
+    assert_almost_equal(res.bic.values, bic.values, 5)
+    assert_(res.aic.index.equals(aic.index))
+    assert_(res.aic.columns.equals(aic.columns))
+    assert_(res.bic.index.equals(bic.index))
+    assert_(res.bic.columns.equals(bic.columns))
+
+    res = arma_order_select_ic(y, ic='aic', trend='nc')
+    assert_almost_equal(res.aic.values, aic.values, 5)
+    assert_(res.aic.index.equals(aic.index))
+    assert_(res.aic.columns.equals(aic.columns))
 
 
 if __name__=="__main__":
