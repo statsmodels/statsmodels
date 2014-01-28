@@ -943,7 +943,8 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     -------
     obj : Results object
         Each ic is an attribute with a DataFrame for the results. The AR order
-        used is the row index. The ma order used is the column index.
+        used is the row index. The ma order used is the column index. The
+        minimum orders are available as `ic`_min_order.
 
     Examples
     --------
@@ -960,8 +961,8 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     >>> np.random.seed(2014)
     >>> y = arma_generate_sample(arparams, maparams, nobs)
     >>> res = sm.tsa.arma_order_select_ic(y, ic=['aic', 'bic'], trend='nc')
-    >>> np.where(res.aic == res.aic.min().min())
-    >>> np.where(res.bic = res.bic.min().min())
+    >>> res.aic_min_order
+    >>> res.bic_min_order
 
     Notes
     -----
@@ -1010,7 +1011,16 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     dfs = map(lambda x : DataFrame(x, columns=ma_range, index=ar_range),
               results)
 
-    return Bunch(**dict(zip(ic, dfs)))
+    res = dict(zip(ic, dfs))
+
+    # add the minimums to the results dict
+    min_res = {}
+    for i, result in res.iteritems():
+        mins = np.where(result.min().min() == result)
+        min_res.update({i + '_min_order' : (mins[0][0], mins[1][0])})
+    res.update(min_res)
+
+    return Bunch(**res)
 
 
 if __name__=="__main__":

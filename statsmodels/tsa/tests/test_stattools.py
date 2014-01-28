@@ -292,6 +292,8 @@ def test_arma_order_select_ic():
     bic = DataFrame(bic_x , index=range(5), columns=range(3))
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert_almost_equal(res.bic.values, bic.values, 5)
+    assert_equal(res.aic_min_order, (1, 2))
+    assert_equal(res.bic_min_order, (1, 2))
     assert_(res.aic.index.equals(aic.index))
     assert_(res.aic.columns.equals(aic.columns))
     assert_(res.bic.index.equals(bic.index))
@@ -301,6 +303,7 @@ def test_arma_order_select_ic():
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert_(res.aic.index.equals(aic.index))
     assert_(res.aic.columns.equals(aic.columns))
+    assert_equal(res.aic_min_order, (1, 2))
 
 
 if __name__=="__main__":
