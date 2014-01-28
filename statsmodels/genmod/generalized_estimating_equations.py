@@ -297,6 +297,8 @@ class GEE(base.Model):
         group_indices = dict((s, []) for s in group_labels)
         for i in range(len(self.endog)):
             group_indices[groups[i]].append(i)
+        for k in group_indices.keys():
+            group_indices[k] = np.asarray(group_indices[k])
         self.group_indices = group_indices
         self.group_labels = group_labels
 
