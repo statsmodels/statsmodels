@@ -43,9 +43,7 @@ Adding functionality to look at seasonality in plots. Two new functions are :fun
 Other important new features
 ----------------------------
 
-* Other new changes can go
-* In a
-* Bullet list
+* Added :func:`sm.tsa.arma_order_select_ic`. A convenience function to quickly get the information criteria for use in tentative order selection of ARMA processes.
 
 Major Bugs fixed
 ----------------

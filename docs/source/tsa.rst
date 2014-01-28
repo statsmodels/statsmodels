@@ -74,6 +74,7 @@ Descriptive Statistics and Tests
    stattools.q_stat
    stattools.grangercausalitytests
    stattools.levinson_durbin
+   stattools.arma_order_select_ic
 
 Estimation
 """"""""""
