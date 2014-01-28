@@ -118,7 +118,7 @@ class Exchangeable(CovStruct):
 
         cached_means = parent.cached_means
 
-        residsq_sum, scale_inv, nterm = 0, 0, 0
+        residsq_sum, scale, nterm = 0, 0, 0
         for i in range(num_clust):
 
             if len(endog[i]) == 0:
@@ -131,13 +131,13 @@ class Exchangeable(CovStruct):
 
             ngrp = len(resid)
             residsq = np.outer(resid, resid)
-            scale_inv += np.diag(residsq).sum()
+            scale += np.diag(residsq).sum()
             residsq = np.tril(residsq, -1)
             residsq_sum += residsq.sum()
             nterm += 0.5 * ngrp * (ngrp - 1)
 
-        scale_inv /= (nobs - dim)
-        self.dep_params = residsq_sum / (scale_inv * (nterm - dim))
+        scale /= (nobs - dim)
+        self.dep_params = residsq_sum / (scale * (nterm - dim))
 
 
     def covariance_matrix(self, expval, index):
@@ -176,7 +176,7 @@ class Nested(CovStruct):
     designx_v = None
 
     # The inverse of the scale parameter
-    scale_inv = None
+    scale = None
 
     # The regression coefficients for estimating the variance
     # components
@@ -197,16 +197,15 @@ class Nested(CovStruct):
            so that two observations with the same value for column j
            of Id should also have the same value for cluster j' < j of
            Id (this only applies to observations in the same top-level
-           cluster).
+           cluster given by the `groups` argument to GEE).
 
         Notes
         -----
         Suppose our data are student test scores, and the students are
         in classrooms, nested in schools, nested in school districts.
-        The school district id would be provided to GEE as the
-        top-level cluster, and the school and classroom id's would be
-        provided to the Nested class as the `id_matrix` argument, for
-        example:
+        The school district id would be provided to GEE as `groups`,
+        and the school and classroom id's would be provided to the
+        Nested class as the `id_matrix` argument, for example:
 
         0 0  # School 0, classroom 0
         0 0  # School 0, classroom 0
@@ -219,10 +218,9 @@ class Nested(CovStruct):
         """
 
         # A bit of processing of the Id argument
-        if type(id_matrix) != np.ndarray:
-            id_matrix = np.array(id_matrix)
-        if len(id_matrix.shape) == 1:
-            id_matrix = id_matrix[:, None]
+        id_matrix = np.asarray(id_matrix)
+        if id_matrix.ndim == 1:
+            id_matrix = id_matrix[:,None]
         self.id_matrix = id_matrix
 
         # To be defined on the first call to update
@@ -246,27 +244,30 @@ class Nested(CovStruct):
         endog = parent.endog_li
         num_clust = len(endog)
         designx, ilabels = [], []
+
+        # The number of layers of nesting
         n_nest = self.id_matrix.shape[1]
+
         for i in range(num_clust):
             ngrp = len(endog[i])
-            rix = parent.group_indices[i]
+            glab = parent.group_labels[i]
+            rix = parent.group_indices[glab]
 
             ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
-            for j1 in range(ngrp):
-                for j2 in range(j1):
-
-                    # Number of common nests.
-                    ncm = np.sum(self.id_matrix[rix[j1], :] ==
-                                 self.id_matrix[rix[j2], :])
-
-                    dsx = np.zeros(n_nest+1, dtype=np.float64)
-                    dsx[0] = 1
-                    dsx[1:ncm+1] = 1
-                    designx.append(dsx)
-                    ilabel[j1, j2] = ncm + 1
-                    ilabel[j2, j1] = ncm + 1
+            ix1, ix2 = np.tril_indices(len(rix), -1)
+            ncm = (self.id_matrix[rix[ix1], :] ==
+                   self.id_matrix[rix[ix2], :]).sum(1)
+            ilabel[[ix1,ix2]] = ncm + 1
+            ilabel[[ix2,ix1]] = ncm + 1
+            dsx = np.zeros((len(ix1), n_nest+1), dtype=np.float64)
+            dsx[:,0] = 1
+            ncmh = {k: np.flatnonzero(ncm == k) for k in np.unique(ncm)}
+            for k in ncmh:
+                dsx[ncmh[k],1:k+1] = 1
+            designx.append(dsx)
             ilabels.append(ilabel)
-        self.designx = np.array(designx)
+
+        self.designx = np.concatenate(designx, axis=0)
         self.ilabels = ilabels
 
         svd = np.linalg.svd(self.designx, 0)
@@ -292,7 +293,7 @@ class Nested(CovStruct):
         varfunc = parent.family.variance
 
         dvmat = []
-        scale_inv = 0.
+        scale = 0.
         for i in range(num_clust):
 
             if len(endog[i]) == 0:
@@ -308,10 +309,10 @@ class Nested(CovStruct):
                 for j2 in range(j1):
                     dvmat.append(resid[j1] * resid[j2])
 
-            scale_inv += np.sum(resid**2)
+            scale += np.sum(resid**2)
 
         dvmat = np.array(dvmat)
-        scale_inv /= (nobs - dim)
+        scale /= (nobs - dim)
 
         # Use least squares regression to estimate the variance
         # components
@@ -319,7 +320,7 @@ class Nested(CovStruct):
                                 dvmat) / self.designx_s)
 
         self.vcomp_coeff = np.clip(vcomp_coeff, 0, np.inf)
-        self.scale_inv = scale_inv
+        self.scale = scale
 
         self.dep_params = self.vcomp_coeff.copy()
 
@@ -334,9 +335,9 @@ class Nested(CovStruct):
 
         ilabel = self.ilabels[index]
 
-        c = np.r_[self.scale_inv, np.cumsum(self.vcomp_coeff)]
+        c = np.r_[self.scale, np.cumsum(self.vcomp_coeff)]
         vmat = c[ilabel]
-        vmat /= self.scale_inv
+        vmat /= self.scale
         return vmat, True
 
 
@@ -345,7 +346,7 @@ class Nested(CovStruct):
         msg = "Variance estimates\n------------------\n"
         for k in range(len(self.vcomp_coeff)):
             msg += "Component %d: %.3f\n" % (k+1, self.vcomp_coeff[k])
-        msg += "Residual: %.3f\n" % (self.scale_inv -
+        msg += "Residual: %.3f\n" % (self.scale -
                                      np.sum(self.vcomp_coeff))
         return msg
 
