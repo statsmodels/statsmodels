@@ -87,7 +87,7 @@ Testing
 Most results have been verified with at least one other statistical package: R,
 Stata or SAS. The guiding principal for the initial rewrite and for continued
 development is that all numbers have to be verified. Some statistical
-methods are tested with Monte Carlo studies. While we strife to follow this
+methods are tested with Monte Carlo studies. While we strive to follow this
 test driven approach, there is no guarantee that the code is bug-free and
 always works. Some auxiliary function are still insufficiently tested, some
 edge cases might not be correctly taken into account, and the possibility of
@@ -175,10 +175,10 @@ Financial Support
 -----------------
 
 We are grateful for the financial support that we obtained for the
-developement of statsmodels:
+development of statsmodels:
 
- Google `www.google.com <http://www.google.com/>`_ : two Google Summer of Code,
- GSOC 2009, GSOC 2010 and GSOC 2011
+ Google `www.google.com <http://www.google.com/>`_ : Google Summer of Code
+ (GSOC) 2009-2013
 
  AQR `www.aqr.com <http://www.aqr.com/>`_ : financial sponsor for the work on
  Vector Autoregressive Models (VAR) by Wes McKinney
