@@ -215,6 +215,11 @@ class Nested(CovStruct):
         1 0  # School 1, classroom 0
         1 1  # School 1, classroom 1
         1 1  # School 1, classroom 1
+
+        The calculations for this dependence structure involve all
+        pairs within a group (that is, within the top level `group`
+        structure passed to GEE).  Large group sizes will result in
+        very slow iterations.
         """
 
         # A bit of processing of the Id argument
@@ -253,19 +258,26 @@ class Nested(CovStruct):
             glab = parent.group_labels[i]
             rix = parent.group_indices[glab]
 
-            ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
-            ix1, ix2 = np.tril_indices(len(rix), -1)
+            # Determine the number of common variance components
+            # shared by each pair of observations.
+            ix1, ix2 = np.tril_indices(ngrp, -1)
             ncm = (self.id_matrix[rix[ix1], :] ==
                    self.id_matrix[rix[ix2], :]).sum(1)
-            ilabel[[ix1,ix2]] = ncm + 1
-            ilabel[[ix2,ix1]] = ncm + 1
+
+            # This is used to construct the working correlation
+            # matrix.
+            ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
+            ilabel[[ix1, ix2]] = ncm + 1
+            ilabel[[ix2, ix1]] = ncm + 1
+            ilabels.append(ilabel)
+
+            # This is used to estimate the variance components.
             dsx = np.zeros((len(ix1), n_nest+1), dtype=np.float64)
             dsx[:,0] = 1
-            ncmh = {k: np.flatnonzero(ncm == k) for k in np.unique(ncm)}
-            for k in ncmh:
-                dsx[ncmh[k],1:k+1] = 1
+            for k in np.unique(ncm):
+                ii = np.flatnonzero(ncm == k)
+                dsx[ii, 1:k+1] = 1
             designx.append(dsx)
-            ilabels.append(ilabel)
 
         self.designx = np.concatenate(designx, axis=0)
         self.ilabels = ilabels
@@ -296,6 +308,7 @@ class Nested(CovStruct):
         scale = 0.
         for i in range(num_clust):
 
+            # Needed?
             if len(endog[i]) == 0:
                 continue
 
@@ -304,14 +317,12 @@ class Nested(CovStruct):
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - offset[i] - expval) / sdev
 
-            ngrp = len(resid)
-            for j1 in range(ngrp):
-                for j2 in range(j1):
-                    dvmat.append(resid[j1] * resid[j2])
+            ix1, ix2 = np.tril_indices(len(resid), -1)
+            dvmat.append(resid[ix1] * resid[ix2])
 
             scale += np.sum(resid**2)
 
-        dvmat = np.array(dvmat)
+        dvmat = np.concatenate(dvmat)
         scale /= (nobs - dim)
 
         # Use least squares regression to estimate the variance
@@ -342,6 +353,10 @@ class Nested(CovStruct):
 
 
     def summary(self):
+        """
+        Returns a summary string describing the state of the
+        dependence structure.
+        """
 
         msg = "Variance estimates\n------------------\n"
         for k in range(len(self.vcomp_coeff)):
