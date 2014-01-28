@@ -87,7 +87,7 @@ Testing
 Most results have been verified with at least one other statistical package: R,
 Stata or SAS. The guiding principal for the initial rewrite and for continued
 development is that all numbers have to be verified. Some statistical
-methods are tested with Monte Carlo studies. While we strife to follow this
+methods are tested with Monte Carlo studies. While we strive to follow this
 test driven approach, there is no guarantee that the code is bug-free and
 always works. Some auxiliary function are still insufficiently tested, some
 edge cases might not be correctly taken into account, and the possibility of
