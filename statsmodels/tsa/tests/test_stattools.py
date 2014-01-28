@@ -305,6 +305,21 @@ def test_arma_order_select_ic():
     assert_(res.aic.columns.equals(aic.columns))
     assert_equal(res.aic_min_order, (1, 2))
 
+def test_arma_order_select_ic_failure():
+    # this should trigger an SVD convergence failure, smoke test that it
+    # returns, likely platform dependent failure...
+    y = np.array([ 0.86074377817203640006,  0.85316549067906921611,
+        0.87104653774363305363,  0.60692382068987393851,
+        0.69225941967301307667,  0.73336177248909339976,
+        0.03661329261479619179,  0.15693067239962379955,
+        0.12777403512447857437, -0.27531446294481976   ,
+       -0.24198139631653581283, -0.23903317951236391359,
+       -0.26000241325906497947, -0.21282920015519238288,
+       -0.15943768324388354896,  0.25169301564268781179,
+        0.1762305709151877342 ,  0.12678133368791388857,
+        0.89755829086753169399,  0.82667068795350151511])
+    res = arma_order_select_ic(y)
+
 
 if __name__=="__main__":
     import nose
