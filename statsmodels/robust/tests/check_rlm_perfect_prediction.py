@@ -73,9 +73,9 @@ for scale in scales2:
     for y in (endogs + [np.arange(5)] + [yi - yi.mean() for yi in endogs]):
         try:
             if isinstance(scale, rscale.HuberScale):
-                res = scale(len(y) - 1., len(y), y) # BUG requires float
+                res = scale(len(y) - 1, len(y), y)
             elif isinstance(scale, rscale.Huber):
-                res = scale(y, mu=np.array(0))[1]
+                res = scale(y, mu=0)[1]
             else:
                 res = scale(y)
             #print res.params, res.bse, res.scale

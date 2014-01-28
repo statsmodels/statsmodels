@@ -122,7 +122,7 @@ class Huber(object):
             est_mu = True
         else:
             n = a.shape[0]
-            mu = mu
+            mu = np.asarray(mu)
             est_mu = False
 
         if initscale is None:
@@ -220,7 +220,7 @@ class HuberScale(object):
         self.maxiter = maxiter
 
     def __call__(self, df_resid, nobs, resid):
-        h = (df_resid)/nobs*(self.d**2 + (1-self.d**2)*\
+        h = df_resid * 1. /nobs*(self.d**2 + (1-self.d**2)*\
                     Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
                     np.exp(-.5*self.d**2))
         s = mad(resid, center=0)
