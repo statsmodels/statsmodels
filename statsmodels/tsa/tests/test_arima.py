@@ -1909,6 +1909,13 @@ def test_arima_dates_startatend():
     fc = res.forecast()[0]
     assert_almost_equal(pred.values[0], fc)
 
+def test_arma_missing():
+    from statsmodels.base.data import MissingDataError
+    # bug 1343
+    y = np.random.random(40)
+    y[-1] = np.nan
+    assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
+
 if __name__ == "__main__":
     import nose
     nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb'], exit=False)
