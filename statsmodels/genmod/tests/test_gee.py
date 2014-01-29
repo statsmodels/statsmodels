@@ -103,6 +103,7 @@ class TestGEE(object):
         assert_almost_equal(mdf1.scale, mdf2.scale, decimal=6)
 
 
+
     # TODO: why does this test fail?
     def t_est_missing(self):
 
@@ -335,7 +336,6 @@ class TestGEE(object):
             assert_almost_equal(mdf.standard_errors(), se[j],
                                 decimal=10)
 
-
     def test_linear_constrained(self):
 
         family = Gaussian()
@@ -382,9 +382,9 @@ class TestGEE(object):
         assert_almost_equal(mdf1.standard_errors(), se,
                             decimal=6)
 
-        ne = Nested(group_n)
-
-        md = GEE(endog, exog, group, None, family, ne)
+        ne = Nested()
+        md = GEE(endog, exog, group, None, family, ne,
+                 dep_data=group_n)
         mdf2 = md.fit(start_params=mdf1.params)
 
         # From statsmodels.GEE (not an independent test)
