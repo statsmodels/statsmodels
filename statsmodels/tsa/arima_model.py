@@ -361,7 +361,7 @@ class ARMA(tsbase.TimeSeriesModel):
 
     def __init__(self, endog, order=None, exog=None, dates=None, freq=None,
                         missing='none'):
-        super(ARMA, self).__init__(endog, exog, dates, freq)
+        super(ARMA, self).__init__(endog, exog, dates, freq, missing=missing)
         exog = self.data.exog # get it after it's gone through processing
         if order is None:
             import warnings
