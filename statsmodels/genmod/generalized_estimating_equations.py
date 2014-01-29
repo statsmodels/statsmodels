@@ -193,6 +193,8 @@ class GEE(base.Model):
     offset : array-like
         An offset to be included in the fit.  If provided, must be
         an array whose length is the number of rows in exog.
+    dep_data : array-like
+        Additional data passed to the dependence structure.
     constraint : (ndarray, ndarray)
        If provided, the constraint is a tuple (L, R) such that the
        model parameters are estimated under the constraint L *
@@ -239,16 +241,17 @@ class GEE(base.Model):
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        covstruct=None, missing='none', offset=None,
-                       constraint=None):
+                       dep_data=None, constraint=None):
 
         groups = np.array(groups) # in case groups is pandas
-        # Pass groups, time, and offset so they are processed for
-        # missing data along with endog and exog.  Calling super
-        # creates self.exog, self.endog, etc. as ndarrays and the
-        # original exog, endog, etc. are self.data.endog, etc.
+        # Pass groups, time, offset, and dep_data so they are
+        # processed for missing data along with endog and exog.
+        # Calling super creates self.exog, self.endog, etc. as
+        # ndarrays and the original exog, endog, etc. are
+        # self.data.endog, etc.
         super(GEE, self).__init__(endog, exog, groups=groups,
                                   time=time, offset=offset,
-                                  missing=missing)
+                                  dep_data=dep_data, missing=missing)
 
         # Handle the family argument
         if family is None:
