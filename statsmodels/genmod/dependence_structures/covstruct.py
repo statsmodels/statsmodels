@@ -155,11 +155,47 @@ class Exchangeable(CovStruct):
 class Nested(CovStruct):
     """A nested working dependence structure.
 
-    The variance components are estimated using least squares
-    regression of the products y*y', for outcomes y and y' in the same
-    cluster, on a vector of indicators defining which variance
-    components are shared by y and y'.
+    A working dependence structure that captures a nested sequence of
+    clusters.
 
+    When using this working covariance structure, `dep_data` of the
+    GEE instance should contain a n_obs x k matrix of 0/1 indicators,
+    corresponding to the k subgroups nested under the top-level
+    `groups` of the GEE instance.  These subgroups should be nested
+    from left to right, so that two observations with the same value
+    for column j of `dep_data` should also have the same value for all
+    columns j' < j (this only applies to observations in the same
+    top-level cluster given by the `groups` argument to GEE).
+
+    Example
+    -------
+    Suppose our data are student test scores, and the students are in
+    classrooms, nested in schools, nested in school districts.  The
+    school district is the highest level of grouping, so the school
+    district id would be provided to GEE as `groups`, and the school
+    and classroom id's would be provided to the Nested class as the
+    `dep_data` argument, e.g.
+
+        0 0  # School 0, classroom 0
+        0 0  # School 0, classroom 0
+        0 1  # School 0, classroom 1
+        0 1  # School 0, classroom 1
+        1 0  # School 1, classroom 0
+        1 0  # School 1, classroom 0
+        1 1  # School 1, classroom 1
+        1 1  # School 1, classroom 1
+
+    Notes
+    -----
+    The calculations for this dependence structure involve all pairs
+    of observations within a group (that is, within the top level
+    `group` structure passed to GEE).  Large group sizes will result
+    in very slow iterations.
+
+    The variance components are estimated using least squares
+    regression of the products r*r', for standardized residuals r and
+    r' in the same group, on a vector of indicators defining which
+    variance components are shared by r and r'.
     """
 
     # The regression design matrix for estimating the variance
@@ -175,7 +211,7 @@ class Nested(CovStruct):
     designx_s = None
     designx_v = None
 
-    # The inverse of the scale parameter
+    # The scale parameter
     scale = None
 
     # The regression coefficients for estimating the variance
@@ -183,56 +219,8 @@ class Nested(CovStruct):
     vcomp_coeff = None
 
 
-    def __init__(self, id_matrix):
-        """
-        A working dependence structure that captures a nested sequence
-        of clusters.
 
-        Parameters
-        ----------
-        id_matrix : array-like
-           An n_obs x k matrix of cluster indicators, corresponding to
-           clusters nested under the top-level clusters provided to
-           GEE.  These clusters should be nested from left to right,
-           so that two observations with the same value for column j
-           of Id should also have the same value for cluster j' < j of
-           Id (this only applies to observations in the same top-level
-           cluster given by the `groups` argument to GEE).
-
-        Notes
-        -----
-        Suppose our data are student test scores, and the students are
-        in classrooms, nested in schools, nested in school districts.
-        The school district id would be provided to GEE as `groups`,
-        and the school and classroom id's would be provided to the
-        Nested class as the `id_matrix` argument, for example:
-
-        0 0  # School 0, classroom 0
-        0 0  # School 0, classroom 0
-        0 1  # School 0, classroom 1
-        0 1  # School 0, classroom 1
-        1 0  # School 1, classroom 0
-        1 0  # School 1, classroom 0
-        1 1  # School 1, classroom 1
-        1 1  # School 1, classroom 1
-
-        The calculations for this dependence structure involve all
-        pairs within a group (that is, within the top level `group`
-        structure passed to GEE).  Large group sizes will result in
-        very slow iterations.
-        """
-
-        # A bit of processing of the Id argument
-        id_matrix = np.asarray(id_matrix)
-        if id_matrix.ndim == 1:
-            id_matrix = id_matrix[:,None]
-        self.id_matrix = id_matrix
-
-        # To be defined on the first call to update
-        self.designx = None
-
-
-    def _compute_design(self, parent):
+    def initialize(self, parent):
         """
         Called on the first call to update
 
@@ -245,6 +233,12 @@ class Nested(CovStruct):
         variables indicating which variance components are associated
         with the corresponding element of QY.
         """
+
+        # A bit of processing of the nest data
+        id_matrix = np.asarray(parent.dep_data)
+        if id_matrix.ndim == 1:
+            id_matrix = id_matrix[:,None]
+        self.id_matrix = id_matrix
 
         endog = parent.endog_li
         num_clust = len(endog)
@@ -341,7 +335,7 @@ class Nested(CovStruct):
         dim = len(expval)
 
         # First iteration
-        if self.designx is None:
+        if self.dep_params is None:
             return np.eye(dim, dtype=np.float64), True
 
         ilabel = self.ilabels[index]
