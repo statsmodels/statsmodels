@@ -619,15 +619,22 @@ class Hampel(RobustNorm):
 
             rho(z) = a*(b + c - a)                  for \|z\| > c
         """
-
-        z = np.fabs(z)
+        np.fabs(z)
+        z_isscalar = np.isscalar(z)
+        z = np.atleast_1d(z)
         a = self.a; b = self.b; c = self.c
         t1, t2, t3 = self._subset(z)
-        v = (t1 * z**2 * 0.5 +
-             t2 * (a * z - a**2 * 0.5) +
-             t3 * (a * (c * z - z**2 * 0.5) / (c - b) - 7 * a**2 / 6.) +
-             (1 - t1 + t2 + t3) * a * (b + c - a))
-        return v
+        t34 = ~(t1 | t2 )
+        v = np.zeros(z.shape, float)
+        v[t1] = z[t1]**2 * 0.5
+        v[t2] = (a * z[t2] - a**2 * 0.5)
+        v[t3] = a * (c - z[t2])**2  / (c - b) * (-0.5)
+        v[t34] += a * (b + c - a) * 0.5
+
+        if z_isscalar:
+            return v[0]
+        else:
+            return v
 
     def psi(self, z):
         """
