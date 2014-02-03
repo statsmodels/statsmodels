@@ -287,6 +287,8 @@ class RLM(base.LikelihoodModel):
             # this could be relevant if we allow for start_weights`with zeros
             if (wls_results.resid == 0).all():
                 converged = True
+                # TODO: Problem, we skip the while loop, set attributes?
+                self.weights = wls_results.model.weights # all ones
                 if np.isnan(self.scale):
                     # in case self._estimate_scale returned nan
                     self.scale = 0
