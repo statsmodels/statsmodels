@@ -24,6 +24,7 @@ cdef saxpy_t *saxpy = <saxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.saxpy._cpo
 cdef sdot_t *sdot = <sdot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sdot._cpointer)
 cdef sgetrf_t *sgetrf = <sgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.sgetrf._cpointer)
 cdef sgetri_t *sgetri = <sgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.sgetri._cpointer)
+cdef spotrf_t *spotrf = <spotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.spotrf._cpointer)
 
 #cdef dsymm_t *dsymm = <dsymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dsymm._cpointer)
 cdef dgemm_t *dgemm = <dgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dgemm._cpointer)
@@ -33,6 +34,7 @@ cdef daxpy_t *daxpy = <daxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.daxpy._cpo
 cdef ddot_t *ddot = <ddot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ddot._cpointer)
 cdef dgetrf_t *dgetrf = <dgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dgetrf._cpointer)
 cdef dgetri_t *dgetri = <dgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dgetri._cpointer)
+cdef dpotrf_t *dpotrf = <dpotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dpotrf._cpointer)
 
 #cdef csymm_t *csymm = <csymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.csymm._cpointer)
 cdef cgemm_t *cgemm = <cgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.cgemm._cpointer)
@@ -41,6 +43,7 @@ cdef ccopy_t *ccopy = <ccopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ccopy._cpo
 cdef caxpy_t *caxpy = <caxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.caxpy._cpointer)
 cdef cgetrf_t *cgetrf = <cgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cgetrf._cpointer)
 cdef cgetri_t *cgetri = <cgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cgetri._cpointer)
+cdef cpotrf_t *cpotrf = <cpotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cpotrf._cpointer)
 
 #cdef zsymm_t *zsymm = <zsymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zsymm._cpointer)
 cdef zgemm_t *zgemm = <zgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zgemm._cpointer)
@@ -49,6 +52,7 @@ cdef zcopy_t *zcopy = <zcopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zcopy._cpo
 cdef zaxpy_t *zaxpy = <zaxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zaxpy._cpointer)
 cdef zgetrf_t *zgetrf = <zgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zgetrf._cpointer)
 cdef zgetri_t *zgetri = <zgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zgetri._cpointer)
+cdef zpotrf_t *zpotrf = <zpotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zpotrf._cpointer)
 
 # Kalman Filter: Single Precision
 @cython.boundscheck(False)
