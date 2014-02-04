@@ -95,6 +95,17 @@ ctypedef int sgetri_t(
     int *info      # 0 if success, otherwise an error code (integer)
 )
 
+ctypedef int spotrf_t(
+    # Compute the Cholesky factorization of a
+    # real  symmetric positive definite matrix A
+    char *uplo,    # 'U':  A = U'U and U is stored, 'L': A = LL' and L is stored
+    int *n,        #  The order of the matrix A.  n >= 0.
+    np.float32_t *a,    # Matrix A: nxn
+    int *lda,      # The size of the first dimension of A (in memory)
+    int *info      # 0 if success, otherwise an error code (integer)
+)
+
+
 ctypedef int dsymm_t(
     # Compute C := alpha*A*B + beta*C,
     char *side,  # {'L','R'}
@@ -129,7 +140,7 @@ ctypedef int dgemm_t(
 )
 
 ctypedef int dgemv_t(
-    # Compute C := alpha*A*x + beta*y
+    # Compute y := alpha*A*x + beta*y
     char *trans,   # {'T','C'}: o(A)=A'; {'N'}: o(A)=A
     int *m,        # Rows of A (prior to transpose from *trans)
     int *n,        # Columns of A / min(len(x))
@@ -187,6 +198,16 @@ ctypedef int dgetri_t(
     int *ipiv,     # Matrix P: nxn (the pivot indices from the LUP decomposition)
     double *work,  # Matrix: nxn (a workspace for the inversion, optimal size=nxn)
     int *lwork,    # Number of elements in the workspace: optimal is n**2
+    int *info      # 0 if success, otherwise an error code (integer)
+)
+
+ctypedef int dpotrf_t(
+    # Compute the Cholesky factorization of a
+    # real  symmetric positive definite matrix A
+    char *uplo,    # 'U':  A = U'U and U is stored, 'L': A = LL' and L is stored
+    int *n,        #  The order of the matrix A.  n >= 0.
+    double *a,     # Matrix A: nxn
+    int *lda,      # The size of the first dimension of A (in memory)
     int *info      # 0 if success, otherwise an error code (integer)
 )
 
@@ -275,6 +296,16 @@ ctypedef int cgetri_t(
     int *info      # 0 if success, otherwise an error code (integer)
 )
 
+ctypedef int cpotrf_t(
+    # Compute the Cholesky factorization of a
+    # real  symmetric positive definite matrix A
+    char *uplo,    # 'U':  A = U'U and U is stored, 'L': A = LL' and L is stored
+    int *n,        #  The order of the matrix A.  n >= 0.
+    np.complex64_t *a,     # Matrix A: nxn
+    int *lda,      # The size of the first dimension of A (in memory)
+    int *info      # 0 if success, otherwise an error code (integer)
+)
+
 ctypedef int zsymm_t(
     # Compute C := alpha*A*B + beta*C,
     char *side,  # {'L','R'}
@@ -357,5 +388,15 @@ ctypedef int zgetri_t(
     int *ipiv,     # Matrix P: nxn (the pivot indices from the LUP decomposition)
     complex *work, # Matrix: nxn (a workspace for the inversion, optimal size=nxn)
     int *lwork,    # Number of elements in the workspace: optimal is n**2
+    int *info      # 0 if success, otherwise an error code (integer)
+)
+
+ctypedef int zpotrf_t(
+    # Compute the Cholesky factorization of a
+    # real  symmetric positive definite matrix A
+    char *uplo,    # 'U':  A = U'U and U is stored, 'L': A = LL' and L is stored
+    int *n,        #  The order of the matrix A.  n >= 0.
+    complex *a,    # Matrix A: nxn
+    int *lda,      # The size of the first dimension of A (in memory)
     int *info      # 0 if success, otherwise an error code (integer)
 )
