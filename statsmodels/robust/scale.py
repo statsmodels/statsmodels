@@ -126,7 +126,7 @@ class Huber(object):
             est_mu = False
 
         if initscale is None:
-            scale = mad(a - mu, axis=axis, center=0)
+            scale = mad(a - np.expand_dims(mu, axis), axis=axis, center=0)
         else:
             scale = initscale
         scale = tools.unsqueeze(scale, axis, a.shape)
