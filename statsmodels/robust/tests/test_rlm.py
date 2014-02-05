@@ -183,6 +183,13 @@ class TestRlmBisquare(TestRlm):
         assert_almost_equal(self.res1.bic, bic, decimal)
         assert_almost_equal(self.res1.deviance, deviance, decimal)
 
+        statistic = 0.8092,
+        pvalue=0.3683
+        wt = self.res1.wald_test(np.eye(4)[2])
+        assert_almost_equal(np.squeeze(wt.statistic), statistic, decimal)
+        assert_almost_equal(wt.pvalue, pvalue, decimal)
+
+
 class TestRlmAndrews(TestRlm):
     def __init__(self):
         results = RLM(self.data.endog, self.data.exog,
