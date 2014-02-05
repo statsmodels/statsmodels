@@ -417,7 +417,7 @@ class RLMResults(base.LikelihoodModelResults):
         self.nobs = model.nobs
         self._cache = resettable_cache()
         #for remove_data
-        self.data_in_cache = ['sresid']
+        self.data_in_cache = ['sresid', 'rho']
 
         self.cov_params_default = self.bcov_scaled
         #TODO: "pvals" should come from chisq on bse?
