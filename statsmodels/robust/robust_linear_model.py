@@ -484,6 +484,58 @@ class RLMResults(base.LikelihoodModelResults):
     def chisq(self):
         return (self.params/self.bse)**2
 
+    @cache_readonly
+    def rho(self):
+        return self.model.M.rho(self.sresid)
+
+    @cache_readonly
+    def rho_sum(self):
+        return self.model.M.rho(self.sresid).sum()
+
+    @cache_readonly
+    def deviance(self):
+        return 2 * self.scale**2 * self.rho.sum()
+
+    @cache_readonly
+    def rsquared(self):
+        endog = self.model.endog
+        mod0 = RLM(endog, np.ones(len(endog)), M=self.model.M)
+
+        # Note: fixed_scale is not exposed
+        # rsquared is cached attribute and replicates SAS
+        fixed_scale = False
+        if not fixed_scale:
+            # this replicates an example in SAS documentation
+            res0 = mod0.fit()
+            #rho0 = res0.rho_sum
+            rho0 = self.model.M.rho((endog - res0.params) / self.scale).sum()
+        else:
+            # alternative definition with fixed scale in regression on constant
+            mod0.scale = self.scale   # TODO: BUG `init` doesn't set scale
+            res0 = mod0.fit(init=self.scale, update_scale=False)
+            rho0 = res0.rho_sum
+            rho0_ = self.model.M.rho((endog - res0.params)/self.scale).sum()
+            #just an assert as cross check
+            assert np.allclose(rho0, rho0_, rtol=1e-15)
+
+        rsquared = (rho0 - self.rho_sum) / rho0
+        return rsquared
+
+    @cache_readonly
+    def aic(self):
+        psi_squared = (self.model.M.psi(self.sresid)**2).sum()
+        psi_deriv = self.model.M.psi_deriv(self.sresid).sum()
+        penalty_factor = 2 * psi_squared / psi_deriv
+        nobs, k_vars = self.model.exog.shape
+        aicr = 2 * self.rho_sum + penalty_factor * k_vars
+        return aicr
+
+    @cache_readonly
+    def bic(self):
+        nobs, k_vars = self.model.exog.shape
+        bicr = 2 * self.rho_sum + k_vars * np.log(nobs)
+        return bicr
+
     def remove_data(self):
         super(self.__class__, self).remove_data()
         #self.model.history['sresid'] = None

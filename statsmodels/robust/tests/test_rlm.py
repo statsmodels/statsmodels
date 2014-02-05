@@ -171,6 +171,17 @@ class TestRlmBisquare(TestRlm):
         from results.results_rlm import BiSquare
         self.res2 = BiSquare()
 
+    def test_other(self):
+        # reference numbers are from SAS manual
+        rsquared = 0.6659
+        aic = 29.5231
+        bic = 36.3361
+        deviance = 125.7905
+        decimal = 4
+        assert_almost_equal(self.res1.rsquared, rsquared, decimal)
+        assert_almost_equal(self.res1.aic, aic, decimal)
+        assert_almost_equal(self.res1.bic, bic, decimal)
+        assert_almost_equal(self.res1.deviance, deviance, decimal)
 
 class TestRlmAndrews(TestRlm):
     def __init__(self):
