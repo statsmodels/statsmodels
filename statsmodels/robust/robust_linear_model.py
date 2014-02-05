@@ -536,6 +536,25 @@ class RLMResults(base.LikelihoodModelResults):
         bicr = 2 * self.rho_sum + k_vars * np.log(nobs)
         return bicr
 
+    # TODO: this should go into LikelihoodModel but needs checking across models
+    def wald_null(self):
+        # wald test that all slope coefficients are zero
+        # TODO Note: this will not work when params are 2d
+        #      not clear about tsa models
+        # next part copied from RegressionResults fvalue
+        k_params = self.params.size
+        mat = np.eye(k_params)
+        const_idx = self.model.data.const_idx
+        # TODO: What if model includes implicit constant, e.g. all dummies but no constant regressor?
+        # TODO: Restats as LM test by projecting orthogonalizing to constant?
+        if self.model.data.k_constant == 1:
+            # assume const_idx exists
+            idx = range(k_params)
+            idx.pop(const_idx)
+            mat = mat[idx]  # remove constant
+        wt = self.wald_test(mat)
+        return wt
+
     def remove_data(self):
         super(self.__class__, self).remove_data()
         #self.model.history['sresid'] = None

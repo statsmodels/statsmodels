@@ -3,7 +3,7 @@ Test functions for sm.rlm
 """
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_allclose
+from numpy.testing import assert_almost_equal, assert_allclose, assert_equal
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.robust.robust_linear_model import RLM
@@ -188,6 +188,13 @@ class TestRlmBisquare(TestRlm):
         wt = self.res1.wald_test(np.eye(4)[2])
         assert_almost_equal(np.squeeze(wt.statistic), statistic, decimal)
         assert_almost_equal(wt.pvalue, pvalue, decimal)
+
+        # consistency test, check wald_null returns same as wald_test
+        wt1 = self.res1.wald_test(np.eye(4)[:-1])
+        wt0 = self.res1.wald_null()
+        assert_almost_equal(wt0.statistic, wt1.statistic, decimal)
+        assert_almost_equal(wt0.pvalue, wt1.pvalue, decimal)
+        assert_equal(wt0.distribution, 'chi2')
 
 
 class TestRlmAndrews(TestRlm):
