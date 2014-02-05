@@ -194,7 +194,7 @@ class RLM(base.LikelihoodModel):
                 raise ValueError("Option %s for scale_est not understood" %
                                  self.scale_est)
         elif isinstance(self.scale_est, scale.HuberScale):
-            return self.scale_est(self.df_resid, self.nobs, resid)
+            return self.scale_est(self.df_resid, self.nobs, resid, self.scale)
         else:
             return scale.scale_est(self, resid)**2
 
@@ -261,6 +261,7 @@ class RLM(base.LikelihoodModel):
 
         wls_results = lm.WLS(self.endog, self.exog).fit()
         if not init:
+            self.scale = wls_results.scale
             self.scale = self._estimate_scale(wls_results.resid)
 
         history = dict(params = [np.inf], scale = [])
