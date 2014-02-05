@@ -224,7 +224,7 @@ class HuberScale(object):
                     Gaussian.cdf(self.d)-.5 - self.d/(np.sqrt(2*np.pi))*\
                     np.exp(-.5*self.d**2))
         if s is None:
-            s = mad(resid)
+            s = mad(resid, center=0)
         subset = lambda x: np.less(np.fabs(resid/x),self.d)
         chi = lambda s: subset(s)*(resid/s)**2/2+(1-subset(s))*(self.d**2/2)
         scalehist = [np.inf,s]
