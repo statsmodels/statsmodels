@@ -619,7 +619,7 @@ class Hampel(RobustNorm):
 
             rho(z) = a*(b + c - a)                  for \|z\| > c
         """
-        np.fabs(z)
+        z = np.fabs(z)
         z_isscalar = np.isscalar(z)
         z = np.atleast_1d(z)
         a = self.a; b = self.b; c = self.c
@@ -627,8 +627,8 @@ class Hampel(RobustNorm):
         t34 = ~(t1 | t2 )
         v = np.zeros(z.shape, float)
         v[t1] = z[t1]**2 * 0.5
-        v[t2] = (a * z[t2] - a**2 * 0.5)
-        v[t3] = a * (c - z[t2])**2  / (c - b) * (-0.5)
+        v[t2] = (a * (z[t2] - a) + a**2 * 0.5)
+        v[t3] = a * (c - z[t3])**2  / (c - b) * (-0.5)
         v[t34] += a * (b + c - a) * 0.5
 
         if z_isscalar:
@@ -663,7 +663,7 @@ class Hampel(RobustNorm):
         t1, t2, t3 = self._subset(z)
         s = np.sign(z)
         z = np.fabs(z)
-        v = s * (t1 * z +
+        v =  (t1 * z*s +
                  t2 * a*s +
                  t3 * a*s * (c - z) / (c - b))
         return v
@@ -747,7 +747,8 @@ class TukeyBiweight(RobustNorm):
             rho(z) = 0                              for \|z\| > R
         """
         subset = self._subset(z)
-        return -(1 - (z / self.c)**2)**3 * subset * self.c**2 / 6.
+        factor = self.c**2 / 6.
+        return -(1 - (z / self.c)**2)**3 * subset * factor + factor
 
     def psi(self, z):
         """
