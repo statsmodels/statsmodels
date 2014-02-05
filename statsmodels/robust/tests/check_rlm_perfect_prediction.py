@@ -10,6 +10,7 @@ Author: Josef Perktold
 """
 
 import numpy as np
+from numpy.testing import assert_allclose, assert_equal
 
 from statsmodels.robust.robust_linear_model import RLM
 import statsmodels.robust.scale as rscale
@@ -55,16 +56,25 @@ for norm in norms:
                 print '   using  ', norm, scale
                 print e
 
+params_all = np.array([r[2] for r in success]).reshape(-1, len(endogs))
+scale_all = np.array([r[4] for r in success]).reshape(-1, len(endogs))
+bse_all = np.array([r[3] for r in success]).reshape(-1, len(endogs))
+
+assert_allclose(params_all, 4, atol=0.32)
+assert_equal(len(fail), 0)
+assert_equal(len(np.isnan(scale_all)), 0)
+# TODO: check bse has 3 nans and the last column (y4) is all nan
 
 rlm = RLM(y, np.ones(len(y)), M=rnorms.HuberT())
 res = rlm.fit(scale_est=rscale.HuberScale())
 
+
 print 'params'
-print(np.array([r[2] for r in success]).reshape(-1, len(endogs)))
+print(params_all)
 print '\nscale'
-print(np.array([r[4] for r in success]).reshape(-1, len(endogs)))
+print(scale_all)
 print '\nbse'
-print(np.array([r[3] for r in success]).reshape(-1, len(endogs)))
+print(bse_all)
 
 
 success = []
@@ -85,8 +95,22 @@ for scale in scales2:
             print '   using  ', scale, y
             print e
 
+scale_estimates = np.array([r[2] for r in success]).reshape(-1, len(endogs))
+# regression test, currently two cases with nan scale in HuberScale
+assert_equal(np.isnan(scale_estimates).sum(), 2)
+assert_equal(len(fail), 0)
+
 print fail
 print '\nscale'
 scale_estimates = np.array([r[2] for r in success]).reshape(-1, len(endogs))
 print(scale_estimates)
-print '\n numbe of nan scales', np.isnan(scale_estimates).sum()
+print '\n number of nan scales', np.isnan(scale_estimates).sum()
+
+# values for regression test, printed so rows are datasets
+scale_regression = np.array([
+       [ 0.,  1.483,  0., -0., -0.   ,  4.312,  0.541,  4.884, 0.639],
+       [ 0.,  0.   , -0., -0., -0.   ,  4.264,  0.686,  4.832, 0.023],
+       [ 0.,  0.   , -0., -0.,  4.924,  2.77 , np.nan,  4.779, 0.157],
+       [ 0.,  0.   , -0., -0.,  4.359,  0.671,  5.518,  3.104, np.nan]]).T
+
+assert_allclose(scale_estimates, scale_regression, atol=0.0005)
