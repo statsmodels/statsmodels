@@ -315,6 +315,7 @@ class RLM(base.LikelihoodModel):
         results.fit_options = dict(cov=cov.upper(), scale_est=scale_est,
                                    norm=self.M.__class__.__name__, conv=conv)
         #norm is not changed in fit, no old state
+        results.wls_results = wls_results
 
         #doing the next causes exception
         #self.cov = self.scale_est = None #reset for additional fits
@@ -418,6 +419,7 @@ class RLMResults(base.LikelihoodModelResults):
         self._cache = resettable_cache()
         #for remove_data
         self.data_in_cache = ['sresid', 'rho']
+        self._data_attr = ['wls_results']
 
         self.cov_params_default = self.bcov_scaled
         #TODO: "pvals" should come from chisq on bse?
