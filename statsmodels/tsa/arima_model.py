@@ -865,7 +865,6 @@ class ARMA(tsbase.TimeSeriesModel):
         mlefit = super(ARMA, self).fit(start_params, method=solver,
                     maxiter=maxiter, full_output=full_output, disp=disp,
                     callback=callback, **kwargs)
-        self.mlefit = mlefit
         params = mlefit.params
 
         if transparams: # transform parameters back
@@ -875,6 +874,9 @@ class ARMA(tsbase.TimeSeriesModel):
 
         normalized_cov_params = None #TODO: fix this
         armafit = ARMAResults(self, params, normalized_cov_params)
+        armafit.mle_retvals = mlefit.mle_retvals
+        armafit.mle_setting = mlefit.mle_settings
+        armafit.mlefit = mlefit
         return ARMAResultsWrapper(armafit)
 
 
