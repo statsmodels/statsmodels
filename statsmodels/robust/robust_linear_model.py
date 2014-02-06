@@ -261,7 +261,7 @@ class RLM(base.LikelihoodModel):
 
         wls_results = lm.WLS(self.endog, self.exog).fit()
         if not init:
-            self.scale = wls_results.scale
+            self.scale = scale.mad(wls_results.resid, center=0)
             self.scale = self._estimate_scale(wls_results.resid)
 
         history = dict(params = [np.inf], scale = [])
