@@ -523,6 +523,100 @@ class RLMResults(base.LikelihoodModelResults):
         rsquared = (rho0 - self.rho_sum) / rho0
         return rsquared
 
+    def compare_lrtype(self, results_other, use_scale='full',
+                       chi2_factor='normal'):
+        """test of linear hypothesis comparing loss rho
+
+        Currently assumes results_other is a nested restricted model of self
+        without verifying this.
+
+        Parameters
+        ----------
+        results_other : RLMResults instance
+            The nested restricted model which is compared to self, which is
+            the unrestricted, full model.
+        use_scale : 'full' (default) 'full_rho' or 'separate'
+
+            - 'full' The scale estimate of the full model is used to
+                reestimate the restricted model with the norm of the full
+                model and a fixed scale in the RLM estimation.
+            - 'full_rho' The scale estimate of the full model is used to
+                evaluate the loss function rho for the scaled residuals.
+                The restricted model is not reestimated, so the parameter
+                estimates still depend on the original model.
+                The loss function rho of the full model is used.
+            - 'separate' In this case the test statistics is based on the rho
+                calculated from each model separately.
+                This should not be used and is here only for comparison.
+
+        chi2_factor : 'normal', 'full', 'reduced' or a float
+            This is a proportional scaling factor for the asymptotic chisquare
+            distribution.
+            'normal' assumes that the underlying distribution is the normal
+            distribution.
+            'full' uses the empirical distribution based on the scaled
+            residuals of the full model.
+            A float can be given to use the scale factor based on other
+            distributions.
+
+        Returns
+        -------
+
+        """
+        #endog = self.model.endog
+        #mod0 = RLM(endog, np.ones(len(endog)), M=self.model.M)
+        res0 = results_other # alias as shortcut
+
+        if use_scale == 'full':
+            # alternative definition with fixed scale in regression on constant
+            mod0 = RLM(res0.model.endog, res0.model.exog, M=self.model.M)
+            mod0.scale = self.scale   # TODO: BUG `init` doesn't set scale
+            res0 = mod0.fit(init=self.scale, update_scale=False)
+            rho0 = res0.rho_sum
+            rho0_ = self.model.M.rho(res0.resid / self.scale).sum()
+            #just an assert as cross check
+            assert np.allclose(rho0, rho0_, rtol=1e-15)
+        elif use_scale == 'full_rho':
+            # this replicates an example in SAS documentation
+            #res0 = mod0.fit()
+            #rho0 = res0.rho_sum
+            rho0 = self.model.M.rho(res0.resid / self.scale).sum()
+        elif use_scale == 'separate':
+            rho0 = res0.rho_sum
+        else:
+            raise ValueError('use_scale should be "full", "full_rho" or "separate"')
+
+        if chi2_factor == 'normal':
+            #SAS uses this
+            #based on normal distribution
+            #psi_deriv = stats.norm.expect(res.model.M.psi_deriv)
+            #psi_squared = stats.norm.expect(lambda x: res.model.M.psi(x)**2)
+            chi2_factor = 1. / 0.7976610867006327
+        elif np.isreal(chi2_factor):
+            pass
+        else:
+            if chi2_factor == 'full':
+                psi_squared = (self.model.M.psi(self.sresid)**2).sum()
+                psi_deriv = self.model.M.psi_deriv(self.sresid).sum()
+            elif chi2_factor == 'reduced':
+                psi_squared = (self.model.M.psi(res0.sresid)**2).sum()
+                psi_deriv = self.model.M.psi_deriv(res0.sresid).sum()
+
+            chi2_factor = psi_deriv / psi_squared
+
+        diff = rho0 - self.rho_sum
+        df = self.model.exog.shape[1] - res0.model.exog.shape[1]
+        statistic = chi2_factor * diff * 2. / df
+        from scipy.stats import chi2
+        pvalue = chi2.sf(statistic, df)
+        from statsmodels.stats.contrast import ContrastResults
+        tres = ContrastResults(chi2=statistic, df_denom=df, statistic=statistic,
+                               distribution='chi2', distargs=(df,))
+        # TODO: **kwds are not automatically attached
+        tres.chi2_factor = chi2_factor
+        tres.name = 'LR-type test'
+        return tres
+
     @cache_readonly
     def aic(self):
         psi_squared = (self.model.M.psi(self.sresid)**2).sum()

@@ -196,6 +196,21 @@ class TestRlmBisquare(TestRlm):
         assert_almost_equal(wt0.pvalue, wt1.pvalue, decimal)
         assert_equal(wt0.distribution, 'chi2')
 
+        # LR-type test, one example against SAS
+        lambda_ = 0.7977
+        S2 = 0.9378
+        chi2_statistic = 1.18
+        chi2_pvalue = 0.2782
+
+        # drop the last non-constant variable
+        keep = range(self.data.exog.shape[1])
+        del keep[2]
+        res_re = RLM(self.data.endog, self.data.exog[:, keep],
+                     M=sm.robust.norms.TukeyBiweight()).fit()
+        lrtt1 = self.res1.compare_lrtype(res_re)
+        assert_almost_equal(lrtt1.statistic, chi2_statistic, 2)
+        assert_almost_equal(lrtt1.pvalue, chi2_pvalue, decimal)
+
 
 class TestRlmAndrews(TestRlm):
     def __init__(self):

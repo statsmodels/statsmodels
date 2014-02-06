@@ -106,8 +106,9 @@ class ContrastResults(object):
                    (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
         else:
             # generic
-            return '<Wald test: statistic=%s, p-value=%s>' % \
-                   (self.statistic, self.pvalue)
+            name = getattr(self, 'name', 'Wald test')
+            return '<%s: statistic=%s, p-value=%s>' % \
+                   (name, self.statistic, self.pvalue)
 
 
     def summary_frame(self, xname=None, alpha=0.05):
