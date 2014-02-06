@@ -12,7 +12,8 @@ from adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa.arima_model import ARMA
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
-           'periodogram', 'q_stat', 'coint', 'arma_order_select_ic']
+           'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',
+           'adfuller']
 
 
 #NOTE: now in two places to avoid circular import
