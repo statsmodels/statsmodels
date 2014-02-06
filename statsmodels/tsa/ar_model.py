@@ -453,7 +453,7 @@ class AR(tsbase.TimeSeriesModel):
         return bestlag
 
     def fit(self, maxlag=None, method='cmle', ic=None, trend='c',
-            transparams=True, start_params=None, solver=None, maxiter=35,
+            transparams=True, start_params=None, solver='lbfgs', maxiter=35,
             full_output=1, disp=1, callback=None, **kwargs):
         """
         Fit the unconditional maximum likelihood of an AR(p) process.
@@ -491,14 +491,11 @@ class AR(tsbase.TimeSeriesModel):
         start_params : array-like, optional
             A first guess on the parameters.  Default is cmle estimates.
         solver : str or None, optional
-            Solver to be used.  The default is 'l_bfgs' (limited memory Broyden-
-            Fletcher-Goldfarb-Shanno).  Other choices are 'bfgs', 'newton'
-            (Newton-Raphson), 'nm' (Nelder-Mead), 'cg' - (conjugate gradient),
-            'ncg' (non-conjugate gradient), and 'powell'.
-            The limited memory BFGS uses m=30 to approximate the Hessian,
-            projected gradient tolerance of 1e-7 and factr = 1e3.  These
-            cannot currently be changed for l_bfgs.  See notes for more
-            information.
+            Solver to be used if method is 'mle'.  The default is 'lbfgs'
+            (limited memory Broyden-Fletcher-Goldfarb-Shanno).  Other choices
+            are 'bfgs', 'newton' (Newton-Raphson), 'nm' (Nelder-Mead),
+            'cg' - (conjugate gradient), 'ncg' (non-conjugate gradient),
+            and 'powell'.
         maxiter : int, optional
             The maximum number of function evaluations. Default is 35.
         tol : float
@@ -560,14 +557,14 @@ class AR(tsbase.TimeSeriesModel):
         self.Y = Y
         self.X = X
 
-        if solver:
-            solver = solver.lower()
         if method == "cmle":     # do OLS
             arfit = OLS(Y,X).fit()
             params = arfit.params
             self.nobs = nobs - k_ar
             self.sigma2 = arfit.ssr/arfit.nobs #needed for predict fcasterr
-        if method == "mle":
+
+        elif method == "mle":
+            solver = solver.lower()
             self.nobs = nobs
             if start_params is None:
                 start_params = OLS(Y,X).fit().params
@@ -578,20 +575,17 @@ class AR(tsbase.TimeSeriesModel):
                                                      k_trend + k_ar))
             start_params = self._invtransparams(start_params)
             loglike = lambda params : -self.loglike(params)
-            if solver == None:  # use limited memory bfgs
-                bounds = [(None,)*2]*(k_ar+k)
-                mlefit = optimize.fmin_l_bfgs_b(loglike, start_params,
-                    approx_grad=True, m=12, pgtol=1e-8, factr=1e2,
-                    bounds=bounds, iprint=disp)
-                self.mlefit = mlefit
-                params = mlefit[0]
-            else:
-                mlefit = super(AR, self).fit(start_params=start_params,
+            if solver == 'lbfgs':
+                kwargs.setdefault('pgtol', 1e-8)
+                kwargs.setdefault('factr', 1e2)
+                kwargs.setdefault('m', 12)
+                kwargs.setdefault('approx_grad', True)
+            mlefit = super(AR, self).fit(start_params=start_params,
                             method=solver, maxiter=maxiter,
                             full_output=full_output, disp=disp,
                             callback = callback, **kwargs)
-                self.mlefit = mlefit
-                params = mlefit.params
+
+            params = mlefit.params
             if self.transparams:
                 params = self._transparams(params)
                 self.transparams = False # turn off now for other results
