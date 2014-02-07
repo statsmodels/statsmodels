@@ -18,7 +18,6 @@ cimport numpy as np
 import numpy as np
 from cpython cimport bool
 cimport cython
-from libc.math cimport fabs
 
 # there's no fmax in math.h with windows SDK apparently
 cdef inline double fmax(double x, double y): return x if x >= y else y
