@@ -1,3 +1,9 @@
+# Note: The information criteria add 1 to the number of parameters
+#       whenever the model has an AR or MA term since, in principle,
+#       the variance could be treated as a free parameter and restricted
+#       This code does not allow this, but it adds consistency with other
+#       packages such as gretl and X12-ARIMA
+
 from __future__ import absolute_import
 # for 2to3 with extensions
 
@@ -285,7 +291,7 @@ def _arma_predict_in_sample(start, end, endog, resid, k_ar,
     """
     if 'mle' in method:
         fittedvalues = endog - resid #get them all then trim
-    elif k_ar > 0:
+    else:
         fittedvalues = endog[k_ar:] - resid
 
     fv_start = start
@@ -369,8 +375,6 @@ class ARMA(tsbase.TimeSeriesModel):
                     "in the model constructor.", FutureWarning)
         else:
             _check_estimable(len(self.endog), sum(order))
-            if order[0] == 0 and order[1] == 0:
-                raise ValueError("Cannot fit order (0,0)")
             self.k_ar = k_ar = order[0]
             self.k_ma = k_ma = order[1]
             self.k_lags = k_lags = max(k_ar,k_ma+1)
@@ -801,8 +805,6 @@ class ARMA(tsbase.TimeSeriesModel):
                     "constructor.", FutureWarning)
 
             _check_estimable(len(self.endog), sum(order))
-            if order[0] == 0 and order[1] == 0:
-                raise ValueError("Cannot fit order (0,0)")
             # get model order and constants
             self.k_ar = k_ar = int(order[0])
             self.k_ma = k_ma = int(order[1])
@@ -814,13 +816,12 @@ class ARMA(tsbase.TimeSeriesModel):
             except:
                 raise ValueError("Please give order to the model constructor "
                         "before calling fit.")
-            k_ar = self.k_ar
-            k_ma = self.k_ma
+
+        k_ar = self.k_ar
+        k_ma = self.k_ma
 
         # enforce invertibility
         self.transparams = transparams
-
-        self.method = method.lower()
 
         endog, exog = self.endog, self.exog
         k_exog = self.k_exog
@@ -829,6 +830,13 @@ class ARMA(tsbase.TimeSeriesModel):
         # (re)set trend and handle exogenous variables
         # always pass original exog
         k_trend, exog = _make_arma_exog(endog, self.exog, trend)
+
+        # Check has something to estimate
+        if k_ar == 0 and k_ma == 0 and k_trend == 0 and k_exog == 0:
+            raise ValueError("Estimation requires the inclusion of least one "
+                         "AR term, MA term, a constant or an exogenous "
+                         "variable.")
+
         # check again now that we know the trend
         _check_estimable(len(endog), k_ar + k_ma + k_exog + k_trend)
 
@@ -840,9 +848,12 @@ class ARMA(tsbase.TimeSeriesModel):
                                            self.exog_names)
         k = k_trend + k_exog
 
-
         # choose objective function
-        method = method.lower()
+        if k_ma == 0 and k_ar == 0:
+            method = "css"  # Always CSS when no AR or MA terms
+
+        self.method = method = method.lower()
+
         # adjust nobs for css
         if method == 'css':
             self.nobs = len(self.endog) - k_ar
@@ -902,8 +913,6 @@ class ARIMA(ARMA):
     def __init__(self, endog, order, exog=None, dates=None, freq=None,
                        missing='none'):
         p,d,q = order
-        if p == 0 and q == 0:
-            raise ValueError("Order (0, d, 0) not supported.")
         super(ARIMA, self).__init__(endog, (p,q), exog, dates, freq, missing)
         self.k_diff = d
         self.endog = np.diff(self.endog, n=d)
@@ -1137,7 +1146,9 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     aic : float
         Akaike Information Criterion
-        :math:`-2*llf+2*(df_model+1)`
+        :math:`-2*llf+2* df_model`
+        where `df_model` includes all AR parameters, MA parameters, constant
+        terms parameters on constant terms and the variance.
     arparams : array
         The parameters associated with the AR coefficients in the model.
     arroots : array
@@ -1147,7 +1158,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         circle.
     bic : float
         Bayes Information Criterion
-        -2*llf + log(nobs)*(df_model+1)
+        -2*llf + log(nobs)*df_model
         Where if the model is fit using conditional sum of squares, the
         number of observations `nobs` does not include the `p` pre-sample
         observations.
@@ -1237,6 +1248,7 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         k_ma = model.k_ma
         self.k_ma = k_ma
         df_model = k_exog + k_trend + k_ar + k_ma
+        self._ic_df_model = df_model + 1
         self.df_model = df_model
         self.df_resid = self.nobs - df_model
         self._cache = resettable_cache()
@@ -1305,17 +1317,17 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
 
     @cache_readonly
     def aic(self):
-        return -2*self.llf + 2*(self.df_model+1)
+        return -2 * self.llf + 2 * self._ic_df_model
 
     @cache_readonly
     def bic(self):
         nobs = self.nobs
-        return -2*self.llf + np.log(nobs)*(self.df_model+1)
+        return -2 * self.llf + np.log(nobs) * self._ic_df_model
 
     @cache_readonly
     def hqic(self):
         nobs = self.nobs
-        return -2*self.llf + 2*(self.df_model+1)*np.log(np.log(nobs))
+        return -2 * self.llf + 2 * np.log(np.log(nobs)) * self._ic_df_model
 
     @cache_readonly
     def fittedvalues(self):
