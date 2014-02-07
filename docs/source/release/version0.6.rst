@@ -37,13 +37,14 @@ Adding functionality to look at seasonality in plots. Two new functions are :fun
                                            dta.index.values)
 
     dta.index = pd.DatetimeIndex(dates, freq='M')
-    fig = sm.graphics.tsa.month_plot(dta)
+    fig = sm.tsa.graphics.month_plot(dta)
 
 
 Other important new features
 ----------------------------
 
 * Added :func:`sm.tsa.arma_order_select_ic`. A convenience function to quickly get the information criteria for use in tentative order selection of ARMA processes.
+* Plotting functions for timeseries is now imported under the ``sm.tsa.graphics`` namespace in addition to ``sm.graphics.tsa``.
 
 Major Bugs fixed
 ----------------
