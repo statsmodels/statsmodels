@@ -157,7 +157,7 @@ Releasing
 
     git checkout -b maintenance/0.3.x
 
-   Any bug fixes and maintenance commits for this minor release go into this branch and are merged back into master. If we have another micro release, then we make the tag and do this release in this branch and then merge the changes back into master so the tag is reachable. Check that the version number is still ok after the merge, fixing any conflicts here. 
+   Any bug fixes and maintenance commits intended for the next micro release should be made against master as usual, but tagged with the milestone for the micro release it is intended for. Then merge into master as usual. When ready to do the backports, use the file ``tools/backport_pr.py`` to identify which PRs need to be backported and to apply them to the maintenance branch. The tag for the release should be made in the maintenance branch.
 
 #. Upload the source distribution to PyPI::
 
