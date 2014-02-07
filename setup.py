@@ -379,7 +379,8 @@ else:
 common_include = []
 
 # some linux distros require it
-libraries = ['m'] if 'win32' not in sys.platform else []
+#NOTE: we are not currently using this but add it to Extension, if needed.
+# libraries = ['m'] if 'win32' not in sys.platform else []
 
 ext_data = dict(
         kalman_loglike = {"pyxfile" : "tsa/kalmanf/kalman_loglike",
