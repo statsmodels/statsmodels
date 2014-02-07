@@ -1,10 +1,12 @@
 import numpy as np
+from nose.tools import nottest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                           assert_raises, dec)
+                           assert_raises, dec, TestCase)
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.base.datetools import dates_from_range
 from results import results_arma, results_arima
 import os
@@ -1891,11 +1893,73 @@ def test_small_data():
     mod = ARIMA(y, (1, 0, 2))
     res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
 
-def test_arima00():
-    y = np.random.random(10)
-    assert_raises(ValueError, ARMA, y, (0,0))
-    assert_raises(ValueError, ARIMA, y, (0,1,0))
-    assert_raises(ValueError, ARIMA, y, (0,0,0))
+
+class TestARMA00(TestCase):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets.sunspots import load
+
+        sunspots = load().data['SUNACTIVITY']
+        cls.y = y = sunspots
+        cls.arma_00_model = ARMA(y, order=(0, 0))
+        cls.arma_00_res = cls.arma_00_model.fit(disp=-1)
+
+    def test_parameters(self):
+        params = self.arma_00_res.params
+        assert_almost_equal(self.y.mean(), params)
+
+    def test_predictions(self):
+        predictions = self.arma_00_res.predict()
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+
+    @nottest
+    def test_information_criteria(self):
+        # This test is invalid since the ICs differ due to df_model differences
+        # between OLS and ARIMA
+        res = self.arma_00_res
+        y = self.y
+        ols_res = OLS(y, np.ones_like(y)).fit()
+        ols_ic = np.array([ols_res.aic, ols_res.bic])
+        arma_ic = np.array([res.aic, res.bic])
+        assert_almost_equal(ols_ic, arma_ic, DECIMAL_4)
+
+    def test_arma_00_nc(self):
+        arma_00 = ARMA(self.y, order=(0, 0))
+        assert_raises(ValueError, arma_00.fit, trend='nc', disp=-1)
+
+    def test_css(self):
+        arma = ARMA(self.y, order=(0, 0))
+        fit = arma.fit(method='css', disp=-1)
+        predictions = fit.predict()
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+
+    def test_arima(self):
+        yi = np.cumsum(self.y)
+        arima = ARIMA(yi, order=(0, 1, 0))
+        fit = arima.fit(disp=-1)
+        assert_almost_equal(np.diff(yi).mean(), fit.params, DECIMAL_4)
+
+    def test_arma_ols(self):
+        y = self.y
+        y_lead = y[1:]
+        y_lag = y[:-1]
+        T = y_lag.shape[0]
+        X = np.hstack((np.ones((T,1)), y_lag[:,None]))
+        ols_res = OLS(y_lead, X).fit()
+        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='c')
+        assert_almost_equal(ols_res.params, arma_res.params)
+
+    def test_arma_exog_no_constant(self):
+        y = self.y
+        y_lead = y[1:]
+        y_lag = y[:-1]
+        X = y_lag[:,None]
+        ols_res = OLS(y_lead, X).fit()
+        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='nc', disp=-1)
+        assert_almost_equal(ols_res.params, arma_res.params)
+        pass
+
 
 def test_arima_dates_startatend():
     # bug
