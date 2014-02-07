@@ -11,3 +11,4 @@ import interp
 import stattools
 from .stattools import *
 from .base import datetools
+from ..graphics import tsaplots as graphics
