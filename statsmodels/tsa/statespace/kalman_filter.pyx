@@ -73,7 +73,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
     cdef int [::1,:] ipiv
     cdef np.float32_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef double [:] ll
-    cdef np.float32_t det
+    cdef np.float32_t det, tol = 10e-5
     cdef:
         int i
         int t
@@ -83,7 +83,9 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
+        int converged = 0
     cdef:
+        int kn = k*n
         int k2 = k**2
         int n2 = n**2
         int info # return code fro sgetri, sgetrf
@@ -149,11 +151,14 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         sgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        #P_tt1[::1,:,t] = Q[::1,:]
-        scopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
-        #ssymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        sgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        sgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
+        if converged:
+            scopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
+        else:
+            #P_tt1[::1,:,t] = Q[::1,:]
+            scopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            #ssymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            sgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            sgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         sgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
@@ -166,31 +171,34 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         scopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         saxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
-        #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
-        #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
-        sgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
-
-        #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        #f_tt1[::1,:,t] = R[::1,:]
-        scopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
-        sgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
-
-        #f_inv = np.linalg.inv(f_tt1[t])
-        #f_inv[::1,:] = f_tt1[::1,:,t]
-        if n == 1:
-            det = dabs(f_tt1[0,0,t])
-            f_inv[0,0] = 1/f_tt1[0,0,t]
+        if converged:
+            scopy(&n2, &f_tt1[0,0,t-1], &inc, &f_tt1[0,0,t], &inc)
         else:
-            scopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-            sgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-            det = 1
-            for i in range(n):
-                if not ipiv[i,0] == i+1:
-                    det *= -1*f_inv[i,i]
-                else:
-                    det *= f_inv[i,i]
-            # Now complete taking the inverse
-            sgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+            #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
+            #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
+            sgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
+
+            #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
+            #f_tt1[::1,:,t] = R[::1,:]
+            scopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
+            sgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
+
+            #f_inv = np.linalg.inv(f_tt1[t])
+            #f_inv[::1,:] = f_tt1[::1,:,t]
+            if n == 1:
+                det = dabs(f_tt1[0,0,t])
+                f_inv[0,0] = 1/f_tt1[0,0,t]
+            else:
+                scopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+                sgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+                det = 1
+                for i in range(n):
+                    if not ipiv[i,0] == i+1:
+                        det *= -1*f_inv[i,i]
+                    else:
+                        det *= f_inv[i,i]
+                # Now complete taking the inverse
+                sgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
@@ -201,7 +209,10 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
 
         # Updating
         #gain[t] = np.dot(PHT, f_inv) # kxn * nxn = kxn
-        sgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
+        if converged:
+            scopy(&kn, &gain[0,0,t-1], &inc, &gain[0,0,t], &inc)
+        else:
+            sgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
         #beta_tt[::1,t] = beta_tt1[::1,t]
@@ -209,14 +220,28 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         sgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        #P_tt[::1,:,t] = P_tt1[::1,:,t]
-        scopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
-        sgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
-        sgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+        if converged:
+            scopy(&k2, &P_tt[0,0,t-1], &inc, &P_tt[0,0,t], &inc)
+        else:
+            #P_tt[::1,:,t] = P_tt1[::1,:,t]
+            scopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
+            sgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
+            sgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+
+        # Check if we have converged (by finding the determinant of P
+        if not converged and not time_varying_H:
+            scopy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
+            saxpy(&k2, &gamma, &P_tt[0,0,t-1], &inc, &tmp[0,0], &inc)
+            if sdot(&k2, &tmp[0,0], &inc, &tmp[0,0], &inc) < tol:
+                converged = 1
 
     return beta_tt, P_tt, beta_tt1, P_tt1, y_tt1, eta_tt1, f_tt1, gain, ll
 
 # Kalman Filter: Double Precision
+# TODO add G
+# TODO for models where H, F, R, and Q (and G) are constant over time,
+#      P_tt1 will converge, meaning that f_tt1, gain, and P_tt do not
+#      have to be calculated anymore
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -235,7 +260,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
     cdef int [::1,:] ipiv
     cdef double [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef double [:] ll
-    cdef double det
+    cdef double det, tol = 10e-5
     cdef:
         int i
         int t
@@ -245,7 +270,9 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
+        int converged = 0
     cdef:
+        int kn = k*n
         int k2 = k**2
         int n2 = n**2
         int info # return code for dgetri, dgetrf
@@ -311,11 +338,14 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         dgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        #P_tt1[::1,:,t] = Q[::1,:]
-        dcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
-        #dsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        dgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        dgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
+        if converged:
+            dcopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
+        else:
+            #P_tt1[::1,:,t] = Q[::1,:]
+            dcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            #dsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            dgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            dgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         dgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
@@ -328,31 +358,34 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         dcopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         daxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
-        #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
-        #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
-        dgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
-
-        #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        #f_tt1[::1,:,t] = R[::1,:]
-        dcopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
-        dgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
-
-        #f_inv = np.linalg.inv(f_tt1[t])
-        #f_inv[::1,:] = f_tt1[::1,:,t]
-        if n == 1:
-            det = dabs(f_tt1[0,0,t])
-            f_inv[0,0] = 1/f_tt1[0,0,t]
+        if converged:
+            dcopy(&n2, &f_tt1[0,0,t-1], &inc, &f_tt1[0,0,t], &inc)
         else:
-            dcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-            dgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-            det = 1
-            for i in range(n):
-                if not ipiv[i,0] == i+1:
-                    det *= -1*f_inv[i,i]
-                else:
-                    det *= f_inv[i,i]
-            # Now complete taking the inverse
-            dgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+            #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
+            #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
+            dgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
+    
+            #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
+            #f_tt1[::1,:,t] = R[::1,:]
+            dcopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
+            dgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
+    
+            #f_inv = np.linalg.inv(f_tt1[t])
+            #f_inv[::1,:] = f_tt1[::1,:,t]
+            if n == 1:
+                det = dabs(f_tt1[0,0,t])
+                f_inv[0,0] = 1/f_tt1[0,0,t]
+            else:
+                dcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+                dgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+                det = 1
+                for i in range(n):
+                    if not ipiv[i,0] == i+1:
+                        det *= -1*f_inv[i,i]
+                    else:
+                        det *= f_inv[i,i]
+                # Now complete taking the inverse
+                dgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
@@ -363,7 +396,10 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
 
         # Updating
         #gain[t] = np.dot(PHT, f_inv) # kxn * nxn = kxn
-        dgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
+        if converged:
+            dcopy(&kn, &gain[0,0,t-1], &inc, &gain[0,0,t], &inc)
+        else:
+            dgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
         #beta_tt[::1,t] = beta_tt1[::1,t]
@@ -371,10 +407,20 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         dgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        #P_tt[::1,:,t] = P_tt1[::1,:,t]
-        dcopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
-        dgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
-        dgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+        if converged:
+            dcopy(&k2, &P_tt[0,0,t-1], &inc, &P_tt[0,0,t], &inc)
+        else:
+            #P_tt[::1,:,t] = P_tt1[::1,:,t]
+            dcopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
+            dgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
+            dgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+        
+        # Check if we have converged (by finding the determinant of P
+        if not converged and not time_varying_H:
+            dcopy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
+            daxpy(&k2, &gamma, &P_tt[0,0,t-1], &inc, &tmp[0,0], &inc)
+            if ddot(&k2, &tmp[0,0], &inc, &tmp[0,0], &inc) < tol:
+                converged = 1
 
     return beta_tt, P_tt, beta_tt1, P_tt1, y_tt1, eta_tt1, f_tt1, gain, ll
 
@@ -395,6 +441,7 @@ cpdef ckalman_filter(
     cdef np.complex64_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef np.complex64_t [:] ll
     cdef np.complex64_t det
+    cdef double tol = 10e-5
     cdef:
         int i
         int t
@@ -404,7 +451,9 @@ cpdef ckalman_filter(
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
+        int converged = 0
     cdef:
+        int kn = k*n
         int k2 = k**2
         int n2 = n**2
         int info # return code fro dgetri, dgetrf
@@ -470,11 +519,14 @@ cpdef ckalman_filter(
         cgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        #P_tt1[::1,:,t] = Q[::1,:]
-        ccopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
-        #csymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        cgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        cgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
+        if converged:
+            ccopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
+        else:
+            #P_tt1[::1,:,t] = Q[::1,:]
+            ccopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            #csymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            cgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            cgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         cgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
@@ -487,31 +539,34 @@ cpdef ckalman_filter(
         ccopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         caxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
-        #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
-        #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
-        cgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
-
-        #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        #f_tt1[::1,:,t] = R[::1,:]
-        ccopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
-        cgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
-
-        #f_inv = np.linalg.inv(f_tt1[t])
-        #f_inv[::1,:] = f_tt1[::1,:,t]
-        if n == 1:
-            det = cabsf(f_tt1[0,0,t])
-            f_inv[0,0] = 1/f_tt1[0,0,t]
+        if converged:
+            ccopy(&n2, &f_tt1[0,0,t-1], &inc, &f_tt1[0,0,t], &inc)
         else:
-            ccopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-            cgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-            det = 1
-            for i in range(n):
-                if not ipiv[i,0] == i+1:
-                    det *= -1*f_inv[i,i]
-                else:
-                    det *= f_inv[i,i]
-            # Now complete taking the inverse
-            cgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+            #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
+            #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
+            cgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
+
+            #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
+            #f_tt1[::1,:,t] = R[::1,:]
+            ccopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
+            cgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
+
+            #f_inv = np.linalg.inv(f_tt1[t])
+            #f_inv[::1,:] = f_tt1[::1,:,t]
+            if n == 1:
+                det = cabsf(f_tt1[0,0,t])
+                f_inv[0,0] = 1/f_tt1[0,0,t]
+            else:
+                ccopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+                cgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+                det = 1
+                for i in range(n):
+                    if not ipiv[i,0] == i+1:
+                        det *= -1*f_inv[i,i]
+                    else:
+                        det *= f_inv[i,i]
+                # Now complete taking the inverse
+                cgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
@@ -525,7 +580,10 @@ cpdef ckalman_filter(
 
         # Updating
         #gain[t] = np.dot(PHT, f_inv) # kxn * nxn = kxn
-        cgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
+        if converged:
+            ccopy(&kn, &gain[0,0,t-1], &inc, &gain[0,0,t], &inc)
+        else:
+            cgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
         #beta_tt[::1,t] = beta_tt1[::1,t]
@@ -533,10 +591,21 @@ cpdef ckalman_filter(
         cgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        #P_tt[::1,:,t] = P_tt1[::1,:,t]
-        ccopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
-        cgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
-        cgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+        if converged:
+            ccopy(&k2, &P_tt[0,0,t-1], &inc, &P_tt[0,0,t], &inc)
+        else:
+            #P_tt[::1,:,t] = P_tt1[::1,:,t]
+            ccopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
+            cgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
+            cgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+
+        # Check if we have converged (by finding the determinant of P
+        if not converged and not time_varying_H:
+            ccopy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
+            caxpy(&k2, &gamma, &P_tt[0,0,t-1], &inc, &tmp[0,0], &inc)
+            cgemv("N",&inc,&k2,&alpha,&tmp[0,0],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
+            if <float> cabs(work[0,0]) < tol:
+                converged = 1
 
     return beta_tt, P_tt, beta_tt1, P_tt1, y_tt1, eta_tt1, f_tt1, gain, ll
 
@@ -557,6 +626,7 @@ cpdef zkalman_filter(
     cdef complex [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef complex [:] ll
     cdef complex det
+    cdef double tol = 10e-5
     cdef:
         int i
         int t
@@ -566,7 +636,9 @@ cpdef zkalman_filter(
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
+        int converged = 0
     cdef:
+        int kn = k*n
         int k2 = k**2
         int n2 = n**2
         int info # return code fro dgetri, dgetrf
@@ -632,11 +704,14 @@ cpdef zkalman_filter(
         zgemv("N",&k,&k,&alpha,&F[0,0],&k,&beta_tt[0,t-1],&inc,&alpha,&beta_tt1[0,t],&inc)
 
         #P_tt1[t] = np.dot(F, P_tt[t-1]).dot(F.T) + Q
-        #P_tt1[::1,:,t] = Q[::1,:]
-        zcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
-        #zsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        zgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
-        zgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
+        if converged:
+            zcopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
+        else:
+            #P_tt1[::1,:,t] = Q[::1,:]
+            zcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            #zsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            zgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
+            zgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
 
         #y_tt1[t] = np.dot(H[:,:,H_idx], beta_tt1[:,t]) + np.dot(A,z[:,t-1])
         zgemv("N", &n, &k, &alpha, &H[0,0,H_idx], &n, &beta_tt1[0,t], &inc, &beta, &y_tt1[0,t], &inc)
@@ -649,31 +724,34 @@ cpdef zkalman_filter(
         zcopy(&n, &y[0,t-1], &inc, &eta_tt1[0,t], &inc)
         zaxpy(&n, &gamma, &y_tt1[0,t], &inc, &eta_tt1[0,t], &inc)
 
-        #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
-        #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
-        zgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
-
-        #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
-        #f_tt1[::1,:,t] = R[::1,:]
-        zcopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
-        zgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
-
-        #f_inv = np.linalg.inv(f_tt1[t])
-        #f_inv[::1,:] = f_tt1[::1,:,t]
-        if n == 1:
-            det = cabs(f_tt1[0,0,t])
-            f_inv[0,0] = 1/f_tt1[0,0,t]
+        if converged:
+            zcopy(&n2, &f_tt1[0,0,t-1], &inc, &f_tt1[0,0,t], &inc)
         else:
-            zcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
-            zgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
-            det = 1
-            for i in range(n):
-                if not ipiv[i,0] == i+1:
-                    det *= -1*f_inv[i,i]
-                else:
-                    det *= f_inv[i,i]
-            # Now complete taking the inverse
-            zgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
+            #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
+            #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
+            zgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
+
+            #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
+            #f_tt1[::1,:,t] = R[::1,:]
+            zcopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
+            zgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
+
+            #f_inv = np.linalg.inv(f_tt1[t])
+            #f_inv[::1,:] = f_tt1[::1,:,t]
+            if n == 1:
+                det = cabs(f_tt1[0,0,t])
+                f_inv[0,0] = 1/f_tt1[0,0,t]
+            else:
+                zcopy(&n2, &f_tt1[0,0,t], &inc, &f_inv[0,0], &inc)
+                zgetrf(&n, &n, &f_inv[0,0], &n, &ipiv[0,0], &info)
+                det = 1
+                for i in range(n):
+                    if not ipiv[i,0] == i+1:
+                        det *= -1*f_inv[i,i]
+                    else:
+                        det *= f_inv[i,i]
+                # Now complete taking the inverse
+                zgetri(&n, &f_inv[0,0], &n, &ipiv[0,0], &work[0,0], &lwork, &info)
 
         # Log-likelihood as byproduct
         #ll[t] -0.5*log(2*np.pi*np.linalg.det(f_tt1[:,:,t])) - 0.5*np.dot(np.dot(eta_tt1[:,t].T, f_inv), eta_tt1[:,t])
@@ -687,7 +765,10 @@ cpdef zkalman_filter(
 
         # Updating
         #gain[t] = np.dot(PHT, f_inv) # kxn * nxn = kxn
-        zgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
+        if converged:
+            zcopy(&kn, &gain[0,0,t-1], &inc, &gain[0,0,t], &inc)
+        else:
+            zgemm("N", "N", &k, &n, &n, &alpha, &PHT[0,0], &k, &f_inv[0,0], &n, &beta, &gain[0,0,t], &k)
 
         #beta_tt[t] = np.dot(gain[:,:,t], eta_tt1[:,t]) + beta_tt1[:,t] # kxn * nx1 + kx1
         #beta_tt[::1,t] = beta_tt1[::1,t]
@@ -695,9 +776,20 @@ cpdef zkalman_filter(
         zgemv("N",&k,&n,&alpha,&gain[0,0,t],&k,&eta_tt1[0,t],&inc,&alpha,&beta_tt[0,t],&inc)
 
         #P_tt[t] =  -1* gain[t].dot(H_view).dot(P_tt1[t]) + P_tt1[t] # kxn * nxk * kxk + kxk
-        #P_tt[::1,:,t] = P_tt1[::1,:,t]
-        zcopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
-        zgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
-        zgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+        if converged:
+            zcopy(&k2, &P_tt[0,0,t-1], &inc, &P_tt[0,0,t], &inc)
+        else:
+            #P_tt[::1,:,t] = P_tt1[::1,:,t]
+            zcopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
+            zgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
+            zgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
+
+        # Check if we have converged (by finding the determinant of P
+        if not converged and not time_varying_H:
+            zcopy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
+            zaxpy(&k2, &gamma, &P_tt[0,0,t-1], &inc, &tmp[0,0], &inc)
+            zgemv("N",&inc,&k2,&alpha,&tmp[0,0],&inc,&tmp[0,0],&inc,&beta,&work[0,0],&inc)
+            if <float> cabs(work[0,0]) < tol:
+                converged = 1
 
     return beta_tt, P_tt, beta_tt1, P_tt1, y_tt1, eta_tt1, f_tt1, gain, ll
