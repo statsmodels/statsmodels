@@ -73,7 +73,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
     cdef int [::1,:] ipiv
     cdef np.float32_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef double [:] ll
-    cdef np.float32_t det, tol = 10e-5
+    cdef np.float32_t det, tol = 10e-20
     cdef:
         int i
         int t
@@ -260,7 +260,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
     cdef int [::1,:] ipiv
     cdef double [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef double [:] ll
-    cdef double det, tol = 10e-5
+    cdef double det, tol = 10e-20
     cdef:
         int i
         int t
@@ -441,7 +441,7 @@ cpdef ckalman_filter(
     cdef np.complex64_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef np.complex64_t [:] ll
     cdef np.complex64_t det
-    cdef double tol = 10e-5
+    cdef double tol = 10e-20
     cdef:
         int i
         int t
@@ -626,7 +626,7 @@ cpdef zkalman_filter(
     cdef complex [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, f_inv
     cdef complex [:] ll
     cdef complex det
-    cdef double tol = 10e-5
+    cdef double tol = 10e-20
     cdef:
         int i
         int t
