@@ -63,7 +63,8 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
                      np.float32_t [:]       mu, # kx0      (parameters)
                      np.float32_t [::1,:]   F,  # kxk      (parameters)
                      np.float32_t [::1,:]   R,  # nxn      (parameters: covariance matrix)
-                     np.float32_t [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                     np.float32_t [::1,:]   G,  # kxg      (parameters)
+                     np.float32_t [::1,:]   Q,  # gxg      (parameters: covariance matrix)
                      np.float32_t [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                      np.float32_t [::1,:]   A=None,  # nxr      (parameters)
                      np.float32_t [:]       beta_tt_init=None,
@@ -80,6 +81,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
+        int g = Q.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -155,7 +157,9 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
             scopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
         else:
             #P_tt1[::1,:,t] = Q[::1,:]
-            scopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            sgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q[0,0], &g, &beta, &tmp[0,0], &ldwork)
+            sgemm("N", "T", &k, &g, &g, &alpha, &tmp[0,0], &ldwork, &G[0,0], &k, &beta, &P_tt1[0,0,t], &k)
+            #scopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
             #ssymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             sgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             sgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
@@ -248,6 +252,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
                      double [:]       mu, # kx0      (parameters)
                      double [::1,:]   F,  # kxk      (parameters)
                      double [::1,:]   R,  # nxn      (parameters: covariance matrix)
+                     double [::1,:]   G,  # kxg      (parameters)
                      double [::1,:]   Q,  # kxk      (parameters: covariance matrix)
                      double [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                      double [::1,:]   A=None,  # nxr      (parameters)
@@ -265,6 +270,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
+        int g = Q.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -340,7 +346,9 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
             dcopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
         else:
             #P_tt1[::1,:,t] = Q[::1,:]
-            dcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            dgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q[0,0], &g, &beta, &tmp[0,0], &ldwork)
+            dgemm("N", "T", &k, &g, &g, &alpha, &tmp[0,0], &ldwork, &G[0,0], &k, &beta, &P_tt1[0,0,t], &k)
+            #dcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
             #dsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             dgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             dgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
@@ -429,7 +437,8 @@ cpdef ckalman_filter(
                     np.complex64_t [:]       mu, # kx0      (parameters)
                     np.complex64_t [::1,:]   F,  # kxk      (parameters)
                     np.complex64_t [::1,:]   R,  # nxn      (parameters: covariance matrix)
-                    np.complex64_t [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                    np.complex64_t [::1,:]   G,  # kxg      (parameters)
+                    np.complex64_t [::1,:]   Q,  # gxg      (parameters: covariance matrix)
                     np.complex64_t [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                     np.complex64_t [::1,:]   A=None,  # nxr      (parameters)
                     np.complex64_t [:]       beta_tt_init=None,
@@ -447,6 +456,7 @@ cpdef ckalman_filter(
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
+        int g = Q.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -522,7 +532,9 @@ cpdef ckalman_filter(
             ccopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
         else:
             #P_tt1[::1,:,t] = Q[::1,:]
-            ccopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            cgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q[0,0], &g, &beta, &tmp[0,0], &ldwork)
+            cgemm("N", "T", &k, &g, &g, &alpha, &tmp[0,0], &ldwork, &G[0,0], &k, &beta, &P_tt1[0,0,t], &k)
+            #ccopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
             #csymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             cgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             cgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
@@ -615,7 +627,8 @@ cpdef zkalman_filter(
                     complex [:]       mu, # kx0      (parameters)
                     complex [::1,:]   F,  # kxk      (parameters)
                     complex [::1,:]   R,  # nxn      (parameters: covariance matrix)
-                    complex [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                    complex [::1,:]   G,  # kxg      (parameters)
+                    complex [::1,:]   Q,  # gxg      (parameters: covariance matrix)
                     complex [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                     complex [::1,:]   A=None,  # nxr      (parameters)
                     complex [:]       beta_tt_init=None,
@@ -633,6 +646,7 @@ cpdef zkalman_filter(
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
+        int g = Q.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -708,7 +722,9 @@ cpdef zkalman_filter(
             zcopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
         else:
             #P_tt1[::1,:,t] = Q[::1,:]
-            zcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            zgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q[0,0], &g, &beta, &tmp[0,0], &ldwork)
+            zgemm("N", "T", &k, &g, &g, &alpha, &tmp[0,0], &ldwork, &G[0,0], &k, &beta, &P_tt1[0,0,t], &k)
+            #zcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
             #zsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             zgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             zgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
