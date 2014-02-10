@@ -8,6 +8,10 @@ correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
 
+##!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 import numpy as np
 import os
 from numpy.testing import assert_almost_equal
