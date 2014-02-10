@@ -64,7 +64,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
                      np.float32_t [::1,:]   F,  # kxk      (parameters)
                      np.float32_t [::1,:]   R,  # nxn      (parameters: covariance matrix)
                      np.float32_t [::1,:]   G,  # kxg      (parameters)
-                     np.float32_t [::1,:]   Q,  # gxg      (parameters: covariance matrix)
+                     np.float32_t [::1,:]   Q_star,  # gxg      (parameters: covariance matrix)
                      np.float32_t [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                      np.float32_t [::1,:]   A=None,  # nxr      (parameters)
                      np.float32_t [:]       beta_tt_init=None,
@@ -72,7 +72,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
 
     cdef np.float32_t [::1,:,:] P_tt, P_tt1, f_tt1, gain, f_inv
     cdef int [::1,:] ipiv
-    cdef np.float32_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT
+    cdef np.float32_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, Q
     cdef double [:] ll
     cdef np.float32_t det, tol = 10e-20
     cdef:
@@ -81,7 +81,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
-        int g = Q.shape[0]
+        int g = Q_star.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -114,10 +114,15 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
     f_tt1 = np.zeros((n,n,T+1), np.float32, order="F")    # T+1xnxn
     gain = np.zeros((k,n,T+1), np.float32, order="F")     # T+1xkxn
     ll = np.zeros((T+1,), float)                          # T+1
-    work = np.empty((ldwork,ldwork), np.float32, order="F")
+    work = np.zeros((ldwork,ldwork), np.float32, order="F")
     ipiv = np.empty((ldwork,ldwork), np.int32, order="F")
     PHT = np.empty((k,n), np.float32, order="F")
     f_inv = np.empty((n,n,T+1), np.float32, order="F")
+    Q = np.zeros((k,k), np.float32, order="F")
+    
+    # Get Q = G Q^* G'
+    sgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
+    sgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
 
     # Initial values
     if beta_tt_init is None:
@@ -253,7 +258,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
                      double [::1,:]   F,  # kxk      (parameters)
                      double [::1,:]   R,  # nxn      (parameters: covariance matrix)
                      double [::1,:]   G,  # kxg      (parameters)
-                     double [::1,:]   Q,  # kxk      (parameters: covariance matrix)
+                     double [::1,:]   Q_star,  # gxg      (parameters: covariance matrix)
                      double [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                      double [::1,:]   A=None,  # nxr      (parameters)
                      double [:]       beta_tt_init=None,
@@ -261,7 +266,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
 
     cdef double [::1,:,:] P_tt, P_tt1, f_tt1, gain, f_inv
     cdef int [::1,:] ipiv
-    cdef double [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT
+    cdef double [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, Q
     cdef double [:] ll
     cdef double det, tol = 10e-20
     cdef:
@@ -270,7 +275,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
-        int g = Q.shape[0]
+        int g = Q_star.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -303,10 +308,15 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
     f_tt1 = np.zeros((n,n,T+1), float, order="F")    # T+1xnxn
     gain = np.zeros((k,n,T+1), float, order="F")     # T+1xkxn
     ll = np.zeros((T+1,), float)                     # T+1
-    work = np.empty((ldwork,ldwork), float, order="F")
+    work = np.zeros((ldwork,ldwork), float, order="F")
     ipiv = np.empty((ldwork,ldwork), np.int32, order="F")
     PHT = np.empty((k,n), float, order="F")
     f_inv = np.empty((n,n,T+1), float, order="F")
+    Q = np.zeros((k,k), float, order="F")
+    
+    # Get Q = G Q^* G'
+    dgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
+    dgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
 
     # Initial values
     if beta_tt_init is None:
@@ -328,7 +338,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
     P_tt[::1,:,0] = P_tt_init[::1,:]
 
     # Redefine the tmp array
-    tmp = np.empty((ldwork,ldwork), float, order="F")
+    tmp = np.zeros((ldwork,ldwork), float, order="F")
 
     # Iterate forwards
     for t in range(1,T+1):
@@ -346,9 +356,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
             dcopy(&k2, &P_tt1[0,0,t-1], &inc, &P_tt1[0,0,t], &inc)
         else:
             #P_tt1[::1,:,t] = Q[::1,:]
-            dgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q[0,0], &g, &beta, &tmp[0,0], &ldwork)
-            dgemm("N", "T", &k, &g, &g, &alpha, &tmp[0,0], &ldwork, &G[0,0], &k, &beta, &P_tt1[0,0,t], &k)
-            #dcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
+            dcopy(&k2, &Q[0,0], &inc, &P_tt1[0,0,t], &inc)
             #dsymm("R", "L", &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             dgemm("N", "N", &k, &k, &k, &alpha, &F[0,0], &k, &P_tt[0,0,t-1], &k, &beta, &tmp[0,0], &ldwork)
             dgemm("N", "T", &k, &k, &k, &alpha, &tmp[0,0], &ldwork, &F[0,0], &k, &alpha, &P_tt1[0,0,t], &k)
@@ -438,7 +446,7 @@ cpdef ckalman_filter(
                     np.complex64_t [::1,:]   F,  # kxk      (parameters)
                     np.complex64_t [::1,:]   R,  # nxn      (parameters: covariance matrix)
                     np.complex64_t [::1,:]   G,  # kxg      (parameters)
-                    np.complex64_t [::1,:]   Q,  # gxg      (parameters: covariance matrix)
+                    np.complex64_t [::1,:]   Q_star,  # gxg      (parameters: covariance matrix)
                     np.complex64_t [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                     np.complex64_t [::1,:]   A=None,  # nxr      (parameters)
                     np.complex64_t [:]       beta_tt_init=None,
@@ -446,7 +454,7 @@ cpdef ckalman_filter(
 
     cdef np.complex64_t [::1,:,:] P_tt, P_tt1, f_tt1, gain, f_inv
     cdef int [::1,:] ipiv
-    cdef np.complex64_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT
+    cdef np.complex64_t [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, Q
     cdef np.complex64_t [:] ll
     cdef np.complex64_t det
     cdef double tol = 10e-20
@@ -456,7 +464,7 @@ cpdef ckalman_filter(
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
-        int g = Q.shape[0]
+        int g = Q_star.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -489,10 +497,15 @@ cpdef ckalman_filter(
     f_tt1 = np.zeros((n,n,T+1), np.complex64, order="F")    # T+1xnxn
     gain = np.zeros((k,n,T+1), np.complex64, order="F")     # T+1xkxn
     ll = np.zeros((T+1,), np.complex64)                     # T+1
-    work = np.empty((ldwork,ldwork), np.complex64, order="F")
+    work = np.zeros((ldwork,ldwork), np.complex64, order="F")
     ipiv = np.empty((ldwork,ldwork), np.int32, order="F")
     PHT = np.empty((k,n), np.complex64, order="F")
     f_inv = np.empty((n,n), np.complex64, order="F")
+    Q = np.zeros((k,k), np.complex64, order="F")
+    
+    # Get Q = G Q^* G'
+    cgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
+    cgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
 
     # Initial values
     if beta_tt_init is None:
@@ -628,7 +641,7 @@ cpdef zkalman_filter(
                     complex [::1,:]   F,  # kxk      (parameters)
                     complex [::1,:]   R,  # nxn      (parameters: covariance matrix)
                     complex [::1,:]   G,  # kxg      (parameters)
-                    complex [::1,:]   Q,  # gxg      (parameters: covariance matrix)
+                    complex [::1,:]   Q_star,  # gxg      (parameters: covariance matrix)
                     complex [::1,:]   z=None,  # rxT+1    (data: weakly exogenous, observed)
                     complex [::1,:]   A=None,  # nxr      (parameters)
                     complex [:]       beta_tt_init=None,
@@ -636,7 +649,7 @@ cpdef zkalman_filter(
 
     cdef complex [::1,:,:] P_tt, P_tt1, f_tt1, gain, f_inv
     cdef int [::1,:] ipiv
-    cdef complex [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT
+    cdef complex [::1,:] beta_tt, beta_tt1, y_tt1, eta_tt1, tmp, work, PHT, Q
     cdef complex [:] ll
     cdef complex det
     cdef double tol = 10e-20
@@ -646,7 +659,7 @@ cpdef zkalman_filter(
         int T = y.shape[1]
         int n = y.shape[0]
         int r = 0
-        int g = Q.shape[0]
+        int g = Q_star.shape[0]
         int k = mu.shape[0]
         int time_varying_H = H.shape[2] == T
         int H_idx = 0
@@ -679,10 +692,15 @@ cpdef zkalman_filter(
     f_tt1 = np.zeros((n,n,T+1), complex, order="F")    # T+1xnxn
     gain = np.zeros((k,n,T+1), complex, order="F")     # T+1xkxn
     ll = np.zeros((T+1,), complex)                     # T+1
-    work = np.empty((ldwork,ldwork), complex, order="F")
+    work = np.zeros((ldwork,ldwork), complex, order="F")
     ipiv = np.empty((ldwork,ldwork), np.int32, order="F")
     PHT = np.empty((k,n), complex, order="F")
     f_inv = np.empty((n,n,T+1), complex, order="F")
+    Q = np.zeros((k,k), complex, order="F")
+    
+    # Get Q = G Q^* G'
+    zgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
+    zgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
 
     # Initial values
     if beta_tt_init is None:
