@@ -9,7 +9,7 @@ class CovStruct(object):
     Each implementation of this class takes the residuals from a
     regression model that has been fitted to clustered data, and uses
     them to estimate the within-cluster variance and dependence
-    structure of the model errors.
+    structure of the random errors in the model.
     """
 
     # Parameters describing the dependency structure
@@ -155,8 +155,9 @@ class Exchangeable(CovStruct):
 class Nested(CovStruct):
     """A nested working dependence structure.
 
-    A working dependence structure that captures a nested sequence of
-    clusters.
+    A working dependence structure that captures a nested hierarchy of
+    groups, each level of which contributes to the random error term
+    of the model.
 
     When using this working covariance structure, `dep_data` of the
     GEE instance should contain a n_obs x k matrix of 0/1 indicators,
@@ -176,21 +177,24 @@ class Nested(CovStruct):
     and classroom id's would be provided to the Nested class as the
     `dep_data` argument, e.g.
 
-        0 0  # School 0, classroom 0
-        0 0  # School 0, classroom 0
-        0 1  # School 0, classroom 1
-        0 1  # School 0, classroom 1
-        1 0  # School 1, classroom 0
-        1 0  # School 1, classroom 0
-        1 1  # School 1, classroom 1
-        1 1  # School 1, classroom 1
+        0 0  # School 0, classroom 0, student 0
+        0 0  # School 0, classroom 0, student 1
+        0 1  # School 0, classroom 1, student 0
+        0 1  # School 0, classroom 1, student 1
+        1 0  # School 1, classroom 0, student 0
+        1 0  # School 1, classroom 0, student 1
+        1 1  # School 1, classroom 1, student 0
+        1 1  # School 1, classroom 1, student 1
+
+    Labels lower in the hierarchy are recycled, so that student 0 in
+    classroom 0 is different fro student 0 in classroom 1, etc.
 
     Notes
     -----
     The calculations for this dependence structure involve all pairs
     of observations within a group (that is, within the top level
     `group` structure passed to GEE).  Large group sizes will result
-    in very slow iterations.
+    in slow iterations.
 
     The variance components are estimated using least squares
     regression of the products r*r', for standardized residuals r and
