@@ -39,10 +39,15 @@ Adding functionality to look at seasonality in plots. Two new functions are :fun
     dta.index = pd.DatetimeIndex(dates, freq='M')
     fig = sm.tsa.graphics.month_plot(dta)
 
+ARMA Fitting Speed-ups
+~~~~~~~~~~~~~~~~~~~~~~
+
+The Cython code for the Kalman filter which the ARIMA model code relies on has been rewritten to be significantly faster. You can expect speed-ups from about 10 to 20x. As a consequence of these changes, Cython >= 0.18 is now required to build statsmodels from github source. The generated C files will still be included in all released source distributions, so, again, Cython is only required when building from github.
 
 Other important new features
 ----------------------------
 
+* Statsmodels now requires Cython >= 0.18 to build from source.
 * Added :func:`sm.tsa.arma_order_select_ic`. A convenience function to quickly get the information criteria for use in tentative order selection of ARMA processes.
 * Plotting functions for timeseries is now imported under the ``sm.tsa.graphics`` namespace in addition to ``sm.graphics.tsa``.
 
