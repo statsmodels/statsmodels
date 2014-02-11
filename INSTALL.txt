@@ -22,7 +22,7 @@ patsy >= 0.1.0
     patsy.readthedocs.org
 
 
-cython >= 0.15.1
+cython >= 0.18
 
     http://cython.org/
 
