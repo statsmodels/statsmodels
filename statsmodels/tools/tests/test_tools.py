@@ -48,11 +48,14 @@ class TestTools(TestCase):
         assert_almost_equal(Y, np.array([[0.5,1],[-0.25,0]]))
 
     def test_rank(self):
-        X = standard_normal((40,10))
-        self.assertEquals(tools.rank(X), 10)
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            X = standard_normal((40,10))
+            self.assertEquals(tools.rank(X), np.linalg.matrix_rank(X))
 
-        X[:,0] = X[:,1] + X[:,2]
-        self.assertEquals(tools.rank(X), 9)
+            X[:,0] = X[:,1] + X[:,2]
+            self.assertEquals(tools.rank(X), np.linalg.matrix_rank(X))
 
     def test_extendedpinv(self):
         X = standard_normal((40, 10))
@@ -72,17 +75,21 @@ class TestTools(TestCase):
         assert_almost_equal(np_sing_vals, sing_vals)
 
     def test_fullrank(self):
-        X = standard_normal((40,10))
-        X[:,0] = X[:,1] + X[:,2]
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            X = standard_normal((40,10))
+            X[:,0] = X[:,1] + X[:,2]
 
-        Y = tools.fullrank(X)
-        self.assertEquals(Y.shape, (40,9))
-        self.assertEquals(tools.rank(Y), 9)
+            Y = tools.fullrank(X)
+            self.assertEquals(Y.shape, (40,9))
+            self.assertEquals(tools.rank(Y), 9)
 
-        X[:,5] = X[:,3] + X[:,4]
-        Y = tools.fullrank(X)
-        self.assertEquals(Y.shape, (40,8))
-        self.assertEquals(tools.rank(Y), 8)
+            X[:,5] = X[:,3] + X[:,4]
+            Y = tools.fullrank(X)
+            self.assertEquals(Y.shape, (40,8))
+            warnings.simplefilter("ignore")
+            self.assertEquals(tools.rank(Y), 8)
 
 
 def test_estimable():

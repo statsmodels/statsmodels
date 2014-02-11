@@ -20,7 +20,6 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 
 import numpy as np
 import families
-from statsmodels.tools.tools import rank
 from statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
 
@@ -210,8 +209,8 @@ class GLM(base.LikelihoodModel):
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
 
-        self.df_model = rank(self.exog)-1
-        self.df_resid = self.exog.shape[0] - rank(self.exog)
+        self.df_model = np.linalg.matrix_rank(self.exog)-1
+        self.df_resid = self.exog.shape[0] - np.linalg.matrix_rank(self.exog)
 
     def _check_inputs(self, family, offset, exposure, endog):
         if family is None:

@@ -653,9 +653,8 @@ def het_white(resid, exog, retres=False):
     # Note: degrees of freedom for LM test is nvars minus constant
     #degrees of freedom take possible reduced rank in exog into account
     #df_model checks the rank to determine df
-    from statsmodels.tools.tools import rank
     #extra calculation that can be removed:
-    assert resols.df_model == rank(exog) - 1
+    assert resols.df_model == np.linalg.matrix_rank(exog) - 1
     lmpval = stats.chi2.sf(lm, resols.df_model)
     return lm, lmpval, fval, fpval
 

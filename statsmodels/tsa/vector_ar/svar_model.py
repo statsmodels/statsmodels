@@ -26,8 +26,6 @@ from statsmodels.tsa.vector_ar.var_model import VARProcess, \
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
 
-from statsmodels.tools.tools import rank as smrank
-
 mat = np.array
 
 def svar_ckerr(svar_type, A, B):
@@ -457,7 +455,7 @@ class SVAR(tsbase.TimeSeriesModel):
                              "solution may not be unique")
 
     def check_rank(self, J):
-        rank = smrank(J)
+        rank = np.linalg.matrix_rank(J)
         if rank < np.size(J, axis=1):
             raise ValueError("Rank condition not met: "
                              "solution may not be unique.")
