@@ -6,12 +6,18 @@ Created on Mon May 27 12:07:02 2013
 Author: Josef Perktold
 """
 
+
+##!!!!!!!!!!!!!!!!!!!!!!
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 import numpy as np
 import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
-    corr_nearest, corr_clipped, cov_nearest, _project_correlation_factors,
-    corr_nearest_factor, spgopt, nmls, cov_nearest_eye_factor)
+    corr_nearest, corr_clipped, cov_nearest,
+    _project_correlation_factors, corr_nearest_factor, spgopt, nmls,
+    corr_thresholded, cov_nearest_eye_factor)
 
 import warnings
 
@@ -341,3 +347,19 @@ class Test_Factor(object):
             mat2 = np.dot(f, f.T) + k*np.eye(d)
 
             assert_allclose(mat1, mat2, rtol=0.25, atol=1e-3)
+
+    def test_corr_thresholded(self):
+
+        import datetime
+
+        t1 = datetime.datetime.now()
+        X = np.random.normal(size=(2000,10))
+        tcor = corr_thresholded(X, 0.2, max_elt=4e6)
+        t2 = datetime.datetime.now()
+        ss = (t2-t1).seconds
+
+        fcor = np.corrcoef(X)
+        fcor *= (np.abs(fcor) >= 0.2)
+
+        assert_allclose(tcor.todense(), fcor, rtol=0.25, atol=1e-3)
+
