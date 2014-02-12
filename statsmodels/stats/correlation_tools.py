@@ -432,10 +432,10 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
     Notes
     -----
     This routine is useful when one has an approximate correlation
-    matrix that is not SPD, and there is need to invert it, calculate
-    its square root, or calculate the square root of its inverse (for
-    decorrelating data).  The factor structure allows these
-    computations to be done without constructing any nxn matrices.
+    matrix that is not SPD, and there is need to estimate the inverse,
+    square root, or inverse square root of the population correlation
+    matrix.  The factor structure allows these tasks to be done
+    without constructing any nxn matrices.
 
     This is a non-convex problem with no known guaranteed globally
     convergent algorithm for computing the solution.  Borsdof, Higham
@@ -541,9 +541,9 @@ def cov_nearest_eye_factor(mat, rank):
     Notes
     -----
     This routine is useful if one has an estimated correlation matrix
-    that is not SPD, and the ultimate goal is to invert, calculate the
-    square root of, or calculate the inverted square root of this
-    matrix.  The factor structure allows these tasks to be performed
+    that is not SPD, and the ultimate goal is to estimate the inverse,
+    square root, or inverse square root of the true correlation
+    matrix. The factor structure allows these tasks to be performed
     without ever constructing n x n matrices.
 
     The calculations use the fact that if k is known, then X can be
