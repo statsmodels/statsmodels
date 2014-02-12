@@ -463,8 +463,11 @@ if __name__ == "__main__":
         # 3.3 needs numpy 1.7+
         min_versions.update({"numpy" : "1.7.0b2"})
 
-    check_dependency_versions(min_versions)
-    write_version_py()
+    if not (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
+            sys.argv[1] in ('--help-commands', 'egg_info', '--version',
+                            'clean'))):
+        check_dependency_versions(min_versions)
+        write_version_py()
 
     # this adds *.csv and *.dta files in datasets folders
     # and *.csv and *.txt files in test/results folders
