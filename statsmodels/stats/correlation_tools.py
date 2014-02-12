@@ -8,6 +8,9 @@ License: BSD-3
 """
 
 import numpy as np
+import scipy.sparse as sparse
+from scipy.sparse.linalg import svds
+from scipy.optimize import fminbound
 
 def clip_evals(x, value=0): #threshold=0, value=0):
     evals, evecs = np.linalg.eigh(x)
@@ -92,7 +95,7 @@ def corr_clipped(corr, threshold=1e-15):
     diagonal elements are one.
     Compared to corr_nearest, the distance between the original correlation
     matrix and the positive definite correlation matrix is larger, however,
-    it is much faster since it only computes eigenvalues only once.
+    it is much faster since it only computes eigenvalues once.
 
     Parameters
     ----------
@@ -212,6 +215,361 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
         return cov_, corr_, std_
     else:
         return cov_
+
+def nmls(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
+         gam=1e-4, maxit=100):
+    """
+    Implements the non-monotone line search of Grippo et al. (1986),
+    as described in Birgin, Martinez and Raydan (2013).  The basic
+    idea is to take a big step in the direction of the gradient, even
+    if the function value is not decreased (but there is a maximum
+    allowed increase in terms of the recent history of the iterates).
+
+    Parameters
+    ----------
+    obj : real-valued function
+        The objective function, to be minimized
+    grad : vector-valued function
+        The gradient of the objective function
+    x : array_like
+        The starting point for the line search
+    d : array_like
+        The search direction
+    obj_hist : array_like
+        Objective function history (must contain at least one value)
+    M : positive integer
+        Number of previous function points to consider (see references
+        for details).
+    sig1 : real
+        Tuning parameter, see references for details.
+    sig2 : real
+        Tuning parameter, see references for details.
+    gam : real
+        Tuning parameter, see references for details.
+    maxit : positive integer
+        The maximum number of iterations; returns Nones if convergence
+        does not occur by this point
+
+    Returns
+    -------
+    alpha : real
+        The step value
+    x : Array_like
+        The function argument at the final step
+    obval : Real
+        The function value at the final step
+    g : Array_like
+        The gradient at the final step
+
+    References
+    ----------
+    Grippo L, Lampariello F, Lucidi S (1986). A Nonmonotone Line
+    Search Technique for Newton's Method. SIAM Journal on Numerical
+    Analysis, 23, 707-716.
+
+    E. Birgin, J.M. Martinez, and M. Raydan. Spectral projected
+    gradient methods: Review and perspectives. Journal of Statistical
+    Software (preprint).
+    """
+
+    alpha = 1.
+    last_obval = obj(x)
+    obj_max = max(obj_hist[-M:])
+
+    for iter in range(maxit):
+
+        obval = obj(x + alpha*d)
+        g = grad(x)
+        gtd = (g * d).sum()
+
+        if obval <= obj_max + gam*alpha*gtd:
+            return alpha, x + alpha*d, obval, g
+
+        a1 = -0.5*alpha**2*gtd / (obval - last_obval - alpha*gtd)
+
+        if (sig1 <= a1) and (a1 <= sig2*alpha):
+            alpha = a1
+        else:
+            alpha /= 2.
+
+        last_obval = obval
+
+    return None, None, None, None
+
+
+def spgopt(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
+           maxit_nmls=200, lam_min=1e-30, lam_max=1e30, sig1=0.1,
+           sig2=0.9, gam=1e-4):
+    """
+    Implements the spectral projected gradient method for minimizing a
+    differentiable function on a convex domain.  This can be an
+    effective heuristic algorithm for problems where no gauranteed
+    algorithm for computing a global minimizer is known.
+
+    Parameters
+    ----------
+    func : real valued function
+        The objective function to be minimized.
+    grad : real array-valued function
+        The gradient of the objective function
+    start : array_like
+        The starting point
+    project : array_like
+        In-place projection of the argument to the domain
+        of func.
+    ... See notes regarding additional arguments
+
+    Returns
+    -------
+    rslt : array-like
+        The converged solution, or None if the algorithm does not
+        converge.
+
+    Notes
+    -----
+    There are a number of tuning parameters, but these generally
+    should not be changed except for maxit (positive integer) and
+    ctol (small positive real).  See the Birgin et al reference for
+    more information about the tuning parameters.
+
+    Reference
+    ---------
+    E. Birgin, J.M. Martinez, and M. Raydan. Spectral projected
+    gradient methods: Review and perspectives. Journal of Statistical
+    Software (preprint).  Available at:
+    http://www.ime.usp.br/~egbirgin/publications/bmr5.pdf
+    """
+
+    lam = min(10*lam_min, lam_max)
+
+    X = start
+    gval = grad(X)
+
+    obj_hist = [func(X),]
+
+    for itr in range(int(maxit)):
+
+        # Check convergence
+        df = X - gval
+        project(df)
+        df -= X
+        if np.max(np.abs(df)) < ctol:
+            return {"Converged": True, "X": X, "Message": "Converged successfully"}
+
+        # The line search direction
+        d = X - lam*gval
+        project(d)
+        d -= X
+
+        # Carry out the nonmonotone line search
+        alpha, X1, fval, gval1 = nmls(func, grad, X, d, obj_hist,
+                                      M=M, sig1=sig1, sig2=sig2,
+                                      gam=gam, maxit=maxit_nmls)
+        if alpha is None:
+            return {"Converged": False, "X": X, "Message": "Failed in nmls"}
+
+        obj_hist.append(fval)
+        s = X1 - X
+        y = gval1 - gval
+
+        sy = (s*y).sum()
+        if sy <= 0:
+            lam = lam_max
+        else:
+            ss = (s*s).sum()
+            lam = max(lam_min, min(ss/sy, lam_max))
+
+        X = X1
+        gval = gval1
+
+    return {"Converged": False, "X": X, "Message": "spgopt did not converge"}
+
+
+def _project_correlation_factors(X):
+    """
+    This is a projection used to find the nearest correlation matrix
+    with factor structure to a given matrix (implemented by
+    corr_nearest_factor).  That problem is parameterized in terms of a
+    matrix X whose rows sum-square to at most 1.  This projection
+    takes an arbitrary matrix and projects it into that domain, by
+    rescaling the rows whose norm exceeds 1 to have unit norm.
+    """
+    nm = np.sqrt((X*X).sum(1))
+    ii = np.flatnonzero(nm > 1)
+    if len(ii) > 0:
+        X[ii,:] /= nm[ii][:,None]
+
+
+def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
+                        lam_max=1e30, maxit=1000):
+    """
+    Attempts to find the nearest correlation matrix with factor
+    structure to a given square matrix.  A correlation matrix has
+    factor structure if it can be written in the form I + XX' -
+    diag(XX'), where X is n x k with linearly independent columns, and
+    with each row having sum of squares at most equal to 1.  The
+    approximation is made in terms of the Frobenius norm.
+
+    Parameters
+    ----------
+    mat : square array
+        The target matrix (to which the nearest correlation matrix is
+        sought).
+    rank : positive integer
+        The rank of the factor structure of the solution, i.e., the
+        number of linearly independent columns of X.
+    ctol : positive real
+        Convergence criterion.
+
+    Returns
+    -------
+    rslt : dict
+        rslt["corr"] is the matrix X defining the estimated low rank
+        structure.  To obtain the fitted correlation matrix use
+        C = np.dot(X, X.T); np.fill_diagonal(C, 1).  rslt also has
+        fields describing how the optimization terminated
+
+    Notes
+    -----
+    This routine is useful when one has an approximate correlation
+    matrix that is not SPD, and there is need to invert it, calculate
+    its square root, or calculate the square root of its inverse (for
+    decorrelating data).  The factor structure allows these
+    computations to be done without constructing any nxn matrices.
+
+    This is a non-convex problem with no known guaranteed globally
+    convergent algorithm for computing the solution.  Borsdof, Higham
+    and Raydan (2010) compared several methods for this problem and
+    found the spectral projected gradient (SPG) method (used here) to
+    perform best.
+
+    The input matrix `mat` can be a dense numpy array or any scipy
+    sparse matrix.  The latter is useful if the input matrix is
+    obtained by thresholding a very large sample correlation matrix.
+    If `mat` is sparse, the calculations are optimized to save memory,
+    so no working matrix with more than 10^6 elements is constructed.
+
+    References
+    ----------
+    R Borsdof, N Higham, M Raydan (2010).  Computing a nearest
+    correlation matrix with factor structure. SIAM J Matrix Anal
+    Appl, 31:5, 2603-2622.
+    http://eprints.ma.man.ac.uk/1523/01/covered/MIMS_ep2009_87.pdf
+    """
+
+    p,_ = mat.shape
+
+    # Starting values (following the PCA method in BHR).
+    u,s,vt = svds(mat, rank)
+    X = u * np.sqrt(s)
+    nm = np.sqrt((X**2).sum(1))
+    ii = np.flatnonzero(nm > 1e-5)
+    X[ii,:] /= nm[ii][:,None]
+
+    # Zero the diagonal
+    mat1 = mat.copy()
+    if type(mat1) == np.ndarray:
+        np.fill_diagonal(mat1, 0)
+    elif sparse.issparse(mat1):
+        mat1.setdiag(np.zeros(mat1.shape[0]))
+        mat1.eliminate_zeros()
+        mat1.sort_indices()
+    else:
+        raise ValueError("Matrix type not supported")
+
+    # The gradient, from lemma 4.1 of BHR.
+    def grad(X):
+        gr = np.dot(X, np.dot(X.T, X))
+        if type(mat1) == np.ndarray:
+            gr -= np.dot(mat1, X)
+        else:
+            gr -= mat1.dot(X)
+        gr -= (X*X).sum(1)[:,None] * X
+        return 4*gr
+
+    # The objective function (sum of squared deviations between fitted
+    # and observed arrays).
+    def func(X):
+        if type(mat1) == np.ndarray:
+            M = np.dot(X, X.T)
+            np.fill_diagonal(M, 0)
+            M -= mat1
+            fval = (M*M).sum()
+            return fval
+        else:
+            fval = 0.
+            # Control the size of intermediates
+            max_ws = 1e6
+            bs = int(max_ws / X.shape[0])
+            ir = 0
+            while ir < X.shape[0]:
+                ir2 = min(ir+bs, X.shape[0])
+                u = np.dot(X[ir:ir2,:], X.T)
+                ii = np.arange(u.shape[0])
+                u[ii,ir+ii] = 0
+                u -= np.asarray(mat1[ir:ir2,:].todense())
+                fval += (u*u).sum()
+                ir += bs
+            return fval
+
+    rslt = spgopt(func, grad, X, _project_correlation_factors)
+    rslt["corr"] = rslt["X"]
+    del rslt["X"]
+    return rslt
+
+
+def cov_nearest_eye_factor(mat, rank):
+    """
+    This function returns a matrix X having `rank` linearly
+    independent columns, and a constant k such that k*I + XX' is the
+    best Frobenius norm approximation of `mat` with this structure.
+
+    Notes
+    -----
+    This routine is useful if one has an estimated correlation matrix
+    that is not SPD, and the ultimate goal is to invert, calculate the
+    square root, or calculate the inverted square root of this matrix.
+    The factor structure allows these tasks to be performed without
+    ever constructing n x n matrices.
+
+    The calculations use the fact that if k is known, then X can be
+    determined from the eigen-decomposition of mat - k*I, which can in
+    turn be easily obtained form the eigen-decomposition of mat.  Thus
+    the probem can be reduced to a 1-dimensional search for k.
+
+    If the input matrix is sparse, then mat - k*I is also sparse, so
+    the eigen-decomposition can be done effciciently using sparse
+    routines.
+    """
+
+    m,n = mat.shape
+
+    Q,Lambda,_ = svds(mat, rank)
+
+    if sparse.issparse(mat):
+        QSQ = np.dot(Q.T, mat.dot(Q))
+        ts = mat.diagonal().sum()
+        tss = mat.dot(mat).diagonal().sum()
+    else:
+        QSQ = np.dot(Q.T, np.dot(mat, Q))
+        ts = np.trace(mat)
+        tss = np.trace(np.dot(mat, mat))
+
+    def fun(k):
+        Lambda_t = Lambda - k
+        v = tss + m*(k**2) + np.sum(Lambda_t**2) - 2*k*ts
+        v += 2*k*np.sum(Lambda_t) - 2*np.sum(np.diag(QSQ) * Lambda_t)
+        return v
+
+    # Get the optimal decomposition
+    k_opt = fminbound(fun, 0, 1e5)
+    Lambda_opt = Lambda - k_opt
+    fac_opt = Q * np.sqrt(Lambda_opt)
+
+    return k_opt, fac_opt
+
+
+
 
 if __name__ == '__main__':
     pass

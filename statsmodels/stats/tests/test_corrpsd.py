@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for findind a positive semi-definite correlation of covariance matrix
+"""Tests for finding a positive semi-definite correlation of covariance matrix
 
 Created on Mon May 27 12:07:02 2013
 
@@ -7,9 +7,11 @@ Author: Josef Perktold
 """
 
 import numpy as np
+import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
-                 corr_nearest, corr_clipped, cov_nearest)
+    corr_nearest, corr_clipped, cov_nearest, _project_correlation_factors,
+    corr_nearest_factor, spgopt, nmls, cov_nearest_eye_factor)
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays
@@ -208,3 +210,133 @@ def test_corrpsd_threshold():
         #print 'evals', evals, threshold
         #print evals[0] / threshold - 1
         assert_allclose(evals[0], threshold, rtol=0.25, atol=1e-15)
+
+class Test_Factor(object):
+
+    def test_corr_nearest_factor(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Construct a test matrix with exact factor structure
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+            _project_correlation_factors(X)
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, 1)
+
+            # Try to recover the structure
+            rslt = corr_nearest_factor(mat, dm)
+            X1 = rslt["corr"]
+            mat1 = np.dot(X1, X1.T)
+            np.fill_diagonal(mat1, 1)
+
+            assert(np.abs(mat - mat1).max() < 1e-3)
+
+
+    # Test that we get the same result if the input is dense or sparse
+    def test_corr_nearest_factor_sparse(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Generate a test matrix of factors
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+
+            # Get the correlation matrix
+            _project_correlation_factors(X)
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, 1)
+
+            # Threshold it
+            mat *= (np.abs(mat) >= 0.4)
+            smat = sparse.csr_matrix(mat)
+
+            fac_dense = corr_nearest_factor(smat, dm)["corr"]
+            mat_dense = np.dot(fac_dense, fac_dense.T)
+            np.fill_diagonal(mat_dense, 1)
+
+            fac_sparse = corr_nearest_factor(smat, dm)["corr"]
+            mat_sparse = np.dot(fac_sparse, fac_sparse.T)
+            np.fill_diagonal(mat_sparse, 1)
+
+            assert_allclose(mat_dense, mat_sparse, rtol=0.25, atol=1e-3)
+
+
+    # Test on a quadratic function.
+    def test_spgopt(self):
+
+        dm = 100
+
+        ind = np.arange(dm)
+        indmat = np.abs(ind[:,None] - ind[None,:])
+        M = 0.8**indmat
+
+        def obj(x):
+            return np.dot(x, np.dot(M, x))
+
+        def grad(x):
+            return 2*np.dot(M, x)
+
+        def project(x):
+            return x
+
+        x = np.random.normal(size=dm)
+        rslt = spgopt(obj, grad, x, project)
+        xnew = rslt["X"]
+        assert(obj(xnew) < 1e-4)
+
+
+    def test_cov_nearest_eye_factor(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Construct a test matrix with exact factor structure
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, np.diag(mat) + 3.1)
+
+            # Try to recover the structure
+            k,f = cov_nearest_eye_factor(mat, dm)
+            mat1 = np.dot(f, f.T) + k*np.eye(d)
+
+            assert(np.abs(mat - mat1).max() < 1e-4)
+
+
+    # Check that dense and sparse inputs give the same result
+    def test_cov_nearest_eye_factor_sparse(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Construct a test matrix with exact factor structure
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, np.diag(mat) + 3.1)
+
+            # Fit to dense
+            k,f = cov_nearest_eye_factor(mat, dm)
+            mat1 = np.dot(f, f.T) + k*np.eye(d)
+
+            # Fit to sparse
+            smat = sparse.csr_matrix(mat)
+            k,f = cov_nearest_eye_factor(smat, dm)
+            mat2 = np.dot(f, f.T) + k*np.eye(d)
+
+            assert_allclose(mat1, mat2, rtol=0.25, atol=1e-3)
