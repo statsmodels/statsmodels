@@ -435,7 +435,7 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
     matrix that is not SPD, and there is need to estimate the inverse,
     square root, or inverse square root of the population correlation
     matrix.  The factor structure allows these tasks to be done
-    without constructing any nxn matrices.
+    without constructing any n x n matrices.
 
     This is a non-convex problem with no known guaranteed globally
     convergent algorithm for computing the solution.  Borsdof, Higham
@@ -549,7 +549,7 @@ def cov_nearest_eye_factor(mat, rank):
     The calculations use the fact that if k is known, then X can be
     determined from the eigen-decomposition of mat - k*I, which can in
     turn be easily obtained form the eigen-decomposition of mat.  Thus
-    the probem can be reduced to a 1-dimensional search for k.
+    the problem can be reduced to a 1-dimensional search for k.
 
     If the input matrix is sparse, then mat - k*I is also sparse, so
     the eigen-decomposition can be done effciciently using sparse
@@ -585,6 +585,74 @@ def cov_nearest_eye_factor(mat, rank):
 
     return k_opt, fac_opt
 
+def corr_thresholded(mat, minabs, max_elt=1e7):
+    """
+    Returns a sparse matrix containing the thresholded row-wise
+    correlation matrix of `mat`.  The calculations are done in a way
+    that limits the memory usage, so `mat` can have a large number of
+    rows (e.g. 100,000).
+
+    Parameters
+    ----------
+    mat : array_like
+        The data of which the row-wise thresholded correlation matrix
+        is to be computed.
+    minabs : non-negative real
+        The threshold value; correlation coefficients smaller in
+        magnitude than minabs are set to zero.
+
+    Returns
+    -------
+    cormat : sparse.coo_matrix
+        The thresholded correlation matrix, in COO format.
+
+    Notes
+    -----
+    This is an alternative to C = np.corrcoef(mat); C *= (np.abs(C) >=
+    absmin), suitable for very tall data matrices.
+
+    No intermediate matrix with more than `max_elt` values will be
+    constructed.  However memory use could still be >high if a large
+    number of correlation values exceed `minabs` in magnitude.
+
+    The thresholded matrix is returned in COO format, which can easily
+    be converted to other sparse formats.
+    """
+
+    n,ncol = mat.shape
+
+    # Row-standardize the data
+    mat = mat.copy()
+    mat -= mat.mean(1)[:,None]
+    sd = mat.std(1, ddof=1)
+    ii = np.flatnonzero(sd > 1e-5)
+    mat[ii,:] /= sd[ii][:,None]
+    ii = np.flatnonzero(sd <= 1e-5)
+    mat[ii,:] = 0
+
+    # Number of rows to process in one pass
+    bs = int(np.floor(max_elt/n))
+
+    ipos_all, jpos_all, data = [], [], []
+
+    ir = 0
+    while ir < n:
+        ir2 = min(mat.shape[0], ir + bs)
+        cm = np.dot(mat[ir:ir2,:], mat.T) / (ncol - 1)
+        cma = np.abs(cm)
+        ipos, jpos = np.nonzero(cma >= minabs)
+        ipos_all.append(ipos + ir)
+        jpos_all.append(jpos)
+        data.append(cm[ipos, jpos])
+        ir += bs
+
+    ipos = np.concatenate(ipos_all)
+    jpos = np.concatenate(jpos_all)
+    data = np.concatenate(data)
+
+    cmat = sparse.coo_matrix((data, (ipos, jpos)), (n,n))
+
+    return cmat
 
 
 
