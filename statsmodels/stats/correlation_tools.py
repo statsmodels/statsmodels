@@ -526,13 +526,27 @@ def cov_nearest_eye_factor(mat, rank):
     independent columns, and a constant k such that k*I + XX' is the
     best Frobenius norm approximation of `mat` with this structure.
 
+    Parameters
+    ----------
+    mat : array-like
+        The input array, must be square
+    rank : positive integer
+        The rank of the fitted factor structure
+
+    Returns
+    -------
+    k : positive real
+        The value of k in the fitted structure k*I + XX'
+    X : array_like
+        The value of X in the fitted structure k*I + XX'
+
     Notes
     -----
     This routine is useful if one has an estimated correlation matrix
     that is not SPD, and the ultimate goal is to invert, calculate the
-    square root, or calculate the inverted square root of this matrix.
-    The factor structure allows these tasks to be performed without
-    ever constructing n x n matrices.
+    square root of, or calculate the inverted square root of this
+    matrix.  The factor structure allows these tasks to be performed
+    without ever constructing n x n matrices.
 
     The calculations use the fact that if k is known, then X can be
     determined from the eigen-decomposition of mat - k*I, which can in
@@ -542,6 +556,9 @@ def cov_nearest_eye_factor(mat, rank):
     If the input matrix is sparse, then mat - k*I is also sparse, so
     the eigen-decomposition can be done effciciently using sparse
     routines.
+
+    The one-dimensional search for the optimal value of k is not
+    convex, so a local minimum could be obtained.
     """
 
     m,n = mat.shape
