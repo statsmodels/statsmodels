@@ -323,9 +323,9 @@ def spgopt(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
 
     Returns
     -------
-    rslt : array-like
-        The converged solution, or None if the algorithm does not
-        converge.
+    rslt : dict
+        rslt['X'] is the final iterate, other fields describe
+        convergence status.
 
     Notes
     -----
@@ -389,12 +389,9 @@ def spgopt(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
 
 def _project_correlation_factors(X):
     """
-    This is a projection used to find the nearest correlation matrix
-    with factor structure to a given matrix (implemented by
-    corr_nearest_factor).  That problem is parameterized in terms of a
-    matrix X whose rows sum-square to at most 1.  This projection
-    takes an arbitrary matrix and projects it into that domain, by
-    rescaling the rows whose norm exceeds 1 to have unit norm.
+    This projection takes an arbitrary matrix and projects it into the
+    domain of matrices whose rows square-sum to at most 1.  It does
+    this by rescaling the rows whose norm exceeds 1 to have unit norm.
     """
     nm = np.sqrt((X*X).sum(1))
     ii = np.flatnonzero(nm > 1)
@@ -551,7 +548,8 @@ def cov_nearest_eye_factor(mat, rank):
     The calculations use the fact that if k is known, then X can be
     determined from the eigen-decomposition of mat - k*I, which can in
     turn be easily obtained form the eigen-decomposition of mat.  Thus
-    the problem can be reduced to a 1-dimensional search for k.
+    the problem can be reduced to a 1-dimensional search for k that
+    does not require repeated eigen-decompositions.
 
     If the input matrix is sparse, then mat - k*I is also sparse, so
     the eigen-decomposition can be done effciciently using sparse
@@ -597,8 +595,8 @@ def corr_thresholded(mat, minabs, max_elt=1e7):
     Parameters
     ----------
     mat : array_like
-        The data of which the row-wise thresholded correlation matrix
-        is to be computed.
+        The data from which the row-wise thresholded correlation
+        matrix is to be computed.
     minabs : non-negative real
         The threshold value; correlation coefficients smaller in
         magnitude than minabs are set to zero.
@@ -614,7 +612,7 @@ def corr_thresholded(mat, minabs, max_elt=1e7):
     absmin), suitable for very tall data matrices.
 
     No intermediate matrix with more than `max_elt` values will be
-    constructed.  However memory use could still be >high if a large
+    constructed.  However memory use could still be high if a large
     number of correlation values exceed `minabs` in magnitude.
 
     The thresholded matrix is returned in COO format, which can easily
