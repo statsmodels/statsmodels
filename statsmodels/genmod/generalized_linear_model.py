@@ -26,6 +26,7 @@ from statsmodels.tools.decorators import (cache_readonly,
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
@@ -209,8 +210,8 @@ class GLM(base.LikelihoodModel):
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
 
-        self.df_model = np.linalg.matrix_rank(self.exog)-1
-        self.df_resid = self.exog.shape[0] - np.linalg.matrix_rank(self.exog)
+        self.df_model = np_matrix_rank(self.exog)-1
+        self.df_resid = self.exog.shape[0] - np_matrix_rank(self.exog)
 
     def _check_inputs(self, family, offset, exposure, endog):
         if family is None:

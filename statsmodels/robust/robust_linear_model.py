@@ -23,6 +23,7 @@ import statsmodels.robust.norms as norms
 import statsmodels.robust.scale as scale
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 __all__ = ['RLM']
 
@@ -126,8 +127,8 @@ class RLM(base.LikelihoodModel):
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
         self.df_resid = (np.float(self.exog.shape[0] -
-                         np.linalg.matrix_rank(self.exog)))
-        self.df_model = np.float(np.linalg.matrix_rank(self.exog)-1)
+                         np_matrix_rank(self.exog)))
+        self.df_model = np.float(np_matrix_rank(self.exog)-1)
         self.nobs = float(self.endog.shape[0])
 
     def score(self, params):

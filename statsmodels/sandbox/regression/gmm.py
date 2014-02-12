@@ -59,6 +59,7 @@ from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 DEBUG = 0
 
@@ -244,7 +245,7 @@ class IVRegressionResults(RegressionResults):
         #use linalg.lstsq or svd directly
         #cov_diff will very often be in-definite (singular)
         if not dof:
-            dof = np.linalg.matrix_rank(cov_diff)
+            dof = np_matrix_rank(cov_diff)
         cov_diffpinv = np.linalg.pinv(cov_diff)
         H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))/se2
         pval = stats.chi2.sf(H, dof)
@@ -1647,7 +1648,7 @@ def spec_hausman(params_e, params_i, cov_params_e, cov_params_i, dof=None):
     #use linalg.lstsq or svd directly
     #cov_diff will very often be in-definite (singular)
     if not dof:
-        dof = np.linalg.matrix_rank(cov_diff)
+        dof = np_matrix_rank(cov_diff)
     cov_diffpinv = np.linalg.pinv(cov_diff)
     H = np.dot(params_diff, np.dot(cov_diffpinv, params_diff))
     pval = stats.chi2.sf(H, dof)

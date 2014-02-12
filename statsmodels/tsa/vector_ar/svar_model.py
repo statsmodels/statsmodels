@@ -25,6 +25,7 @@ from statsmodels.tsa.vector_ar.var_model import VARProcess, \
 
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 mat = np.array
 
@@ -455,7 +456,7 @@ class SVAR(tsbase.TimeSeriesModel):
                              "solution may not be unique")
 
     def check_rank(self, J):
-        rank = np.linalg.matrix_rank(J)
+        rank = np_matrix_rank(J)
         if rank < np.size(J, axis=1):
             raise ValueError("Rank condition not met: "
                              "solution may not be unique.")

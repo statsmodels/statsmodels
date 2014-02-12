@@ -11,6 +11,7 @@ from nose.tools import (assert_true, assert_false, assert_raises)
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 
 class TestTools(TestCase):
@@ -52,10 +53,10 @@ class TestTools(TestCase):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             X = standard_normal((40,10))
-            self.assertEquals(tools.rank(X), np.linalg.matrix_rank(X))
+            self.assertEquals(tools.rank(X), np_matrix_rank(X))
 
             X[:,0] = X[:,1] + X[:,2]
-            self.assertEquals(tools.rank(X), np.linalg.matrix_rank(X))
+            self.assertEquals(tools.rank(X), np_matrix_rank(X))
 
     def test_extendedpinv(self):
         X = standard_normal((40, 10))

@@ -8,6 +8,7 @@ from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 
 _model_params_doc = """
@@ -849,9 +850,9 @@ class GenericLikelihoodModel(LikelihoodModel):
         from statsmodels.tools import tools
         if self.exog is not None:
             # assume constant
-            self.df_model = float(np.linalg.matrix_rank(self.exog) - 1)
+            self.df_model = float(np_matrix_rank(self.exog) - 1)
             self.df_resid = (float(self.exog.shape[0] -
-                             np.linalg.matrix_rank(self.exog)))
+                             np_matrix_rank(self.exog)))
         else:
             self.df_model = np.nan
             self.df_resid = np.nan
