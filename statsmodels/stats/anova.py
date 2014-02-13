@@ -208,11 +208,11 @@ def anova2_lm_single(model, design_info, n_rows, test, pr_test, robust):
         #from IPython.core.debugger import Pdb; Pdb().set_trace()
         if test == 'F':
             f = model.f_test(L12, cov_p=robust_cov)
-            table.ix[i][test] = test_value = f.fvalue
-            table.ix[i][pr_test] = f.pvalue
+            table.ix[i, test] = test_value = f.fvalue
+            table.ix[i, pr_test] = f.pvalue
 
         # need to back out SSR from f_test
-        table.ix[i]['df'] = r
+        table.ix[i, 'df'] = r
         col_order.append(cols.start)
         index.append(term.name())
 
@@ -247,11 +247,11 @@ def anova3_lm_single(model, design_info, n_rows, test, pr_test, robust):
 
         if test == 'F':
             f = model.f_test(L12, cov_p=cov)
-            table.ix[i][test] = test_value = f.fvalue
-            table.ix[i][pr_test] = f.pvalue
+            table.ix[i, test] = test_value = f.fvalue
+            table.ix[i, pr_test] = f.pvalue
 
         # need to back out SSR from f_test
-        table.ix[i]['df'] = r
+        table.ix[i, 'df'] = r
         #col_order.append(cols.start)
         index.append(term.name())
 
