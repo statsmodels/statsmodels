@@ -3,7 +3,10 @@ from __future__ import division
 __all__ = ['facet_plot']
 
 import numpy as np
-from mpl_toolkits.mplot3d.axes3d import Axes3D
+try:
+    from mpl_toolkits.mplot3d.axes3d import Axes3D
+except ImportError:
+    pass
 
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
