@@ -211,7 +211,7 @@ to specify the "initial value" for the forecast:
 ::
 
     >>> lag_order = results.k_ar
-    >>> results.forecast(data.values[-lagorder:], 5)
+    >>> results.forecast(data.values[-lag_order:], 5)
     array([[ 0.00616044,  0.00500006,  0.00916198],
            [ 0.00427559,  0.00344836, -0.00238478],
            [ 0.00416634,  0.0070728 , -0.01193629],
