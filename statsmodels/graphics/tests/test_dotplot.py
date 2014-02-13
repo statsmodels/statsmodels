@@ -1,6 +1,7 @@
 import numpy as np
 from statsmodels.graphics.dotplots import dotplot
 import pandas as pd
+from numpy.testing import dec
 
 try:
     import matplotlib.pyplot as plt
@@ -12,9 +13,9 @@ try:
 except:
     have_matplotlib = False
 
-def test_all():
 
-    pdf = PdfPages("test_dotplot.pdf")
+@dec.skipif(not have_matplotlib)
+def test_all():
 
     plt.clf()
 
@@ -23,7 +24,7 @@ def test_all():
     ax = plt.axes()
     fig = dotplot(points, ax=ax)
     ax.set_title("Basic horizontal dotplot")
-    pdf.savefig(facecolor="yellow")
+    plt.close(fig)
 
     # Basic vertical dotplot
     plt.clf()
@@ -31,7 +32,7 @@ def test_all():
     ax = plt.axes()
     fig = dotplot(points, ax=ax, horizontal=False)
     ax.set_title("Basic vertical dotplot")
-    pdf.savefig(facecolor="yellow")
+    plt.close(fig)
 
     # Tall and skinny
     plt.figure(figsize=(4,12))
@@ -40,7 +41,7 @@ def test_all():
     dotplot(points, ax=ax)
     ax.set_title("Tall and skinny dotplot")
     ax.set_xlabel("x axis label")
-    pdf.savefig()
+    plt.close()
 
     # Short and wide
     plt.figure(figsize=(12,4))
@@ -49,7 +50,7 @@ def test_all():
     dotplot(points, ax=ax, horizontal=False)
     ax.set_title("Short and wide dotplot")
     ax.set_ylabel("y axis label")
-    pdf.savefig()
+    plt.close()
 
     # Tall and skinny striped dotplot
     plt.figure(figsize=(4,12))
@@ -58,7 +59,7 @@ def test_all():
     dotplot(points, ax=ax, striped=True)
     ax.set_title("Tall and skinny striped dotplot")
     ax.set_xlim(-10, 50)
-    pdf.savefig()
+    plt.close()
 
     # Short and wide striped
     plt.figure(figsize=(12,4))
@@ -67,7 +68,7 @@ def test_all():
     dotplot(points, ax=ax, striped=True, horizontal=False)
     ax.set_title("Short and wide striped dotplot")
     ax.set_ylim(-10, 50)
-    pdf.savefig()
+    plt.close()
 
     # Basic dotplot with few points
     plt.figure()
@@ -75,7 +76,7 @@ def test_all():
     points = np.arange(4)
     dotplot(points, ax=ax)
     ax.set_title("Basic horizontal dotplot with few lines")
-    pdf.savefig()
+    plt.close()
 
     # Basic dotplot with few points
     plt.figure()
@@ -83,7 +84,7 @@ def test_all():
     points = np.arange(4)
     dotplot(points, ax=ax, horizontal=False)
     ax.set_title("Basic vertical dotplot with few lines")
-    pdf.savefig()
+    plt.close()
 
     # Manually set the x axis limits
     plt.figure()
@@ -92,7 +93,7 @@ def test_all():
     dotplot(points, ax=ax)
     ax.set_xlim(-10, 30)
     ax.set_title("Dotplot with adjusted horizontal range")
-    pdf.savefig()
+    plt.close()
 
     # Left row labels
     plt.clf()
@@ -101,7 +102,7 @@ def test_all():
     points = np.random.normal(size=20)
     dotplot(points, lines=lines, ax=ax)
     ax.set_title("Dotplot with user-supplied labels in the left margin")
-    pdf.savefig()
+    plt.close()
 
     # Left and right row labels
     plt.clf()
@@ -111,7 +112,7 @@ def test_all():
              for k in range(20)]
     dotplot(points, lines=lines, ax=ax, split_names="::")
     ax.set_title("Dotplot with user-supplied labels in both margins")
-    pdf.savefig()
+    plt.close()
 
     # Both sides row labels
     plt.clf()
@@ -123,7 +124,7 @@ def test_all():
             horizontal=False)
     txt = ax.set_title("Vertical dotplot with user-supplied labels in both margins")
     txt.set_position((0.5, 1.06))
-    pdf.savefig()
+    plt.close()
 
     # Custom colors and symbols
     plt.clf()
@@ -136,7 +137,7 @@ def test_all():
     dotplot(points, lines=lines, styles=styles, ax=ax,
             marker_props=marker_props)
     ax.set_title("Dotplot with custom colors and symbols")
-    pdf.savefig()
+    plt.close()
 
     # Basic dotplot with symmetric intervals
     plt.clf()
@@ -144,7 +145,7 @@ def test_all():
     points = range(20)
     dotplot(points, intervals=np.ones(20), ax=ax)
     ax.set_title("Dotplot with symmetric intervals")
-    pdf.savefig()
+    plt.close()
 
     # Basic dotplot with symmetric intervals, pandas inputs.
     plt.clf()
@@ -153,7 +154,7 @@ def test_all():
     intervals = pd.Series(np.ones(20))
     dotplot(points, intervals=intervals, ax=ax)
     ax.set_title("Dotplot with symmetric intervals (Pandas inputs)")
-    pdf.savefig()
+    plt.close()
 
     # Basic dotplot with nonsymmetric intervals
     plt.clf()
@@ -162,7 +163,7 @@ def test_all():
     intervals = [(1, 3) for i in range(20)]
     dotplot(points, intervals=intervals, ax=ax)
     ax.set_title("Dotplot with nonsymmetric intervals")
-    pdf.savefig()
+    plt.close()
 
     # Vertical dotplot with nonsymmetric intervals
     plt.clf()
@@ -171,7 +172,7 @@ def test_all():
     intervals = [(1, 3) for i in range(20)]
     dotplot(points, intervals=intervals, ax=ax, horizontal=False)
     ax.set_title("Vertical dotplot with nonsymmetric intervals")
-    pdf.savefig()
+    plt.close()
 
     # Dotplot with nonsymmetric intervals, adjust line properties
     plt.clf()
@@ -182,7 +183,7 @@ def test_all():
                       "solid_capstyle": "round"}}
     dotplot(points, intervals=intervals, line_props=line_props, ax=ax)
     ax.set_title("Dotplot with custom line properties")
-    pdf.savefig()
+    plt.close()
 
     # Dotplot with two points per line and a legend
     plt.clf()
@@ -199,7 +200,7 @@ def test_all():
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with two points per line")
-    pdf.savefig()
+    plt.close()
 
     # Vertical dotplot with two points per line and a legend
     plt.clf()
@@ -216,7 +217,7 @@ def test_all():
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Vertical dotplot with two points per line")
-    pdf.savefig()
+    plt.close()
 
     # Vertical dotplot with two points per line and a legend
     plt.clf()
@@ -234,7 +235,7 @@ def test_all():
     leg.draw_frame(False)
     plt.ylim(-20, 20)
     ax.set_title("Vertical dotplot with two points per line")
-    pdf.savefig()
+    plt.close()
 
     # Dotplot with color-matched points and intervals
     plt.clf()
@@ -256,7 +257,7 @@ def test_all():
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with color-matched points and intervals")
-    pdf.savefig()
+    plt.close()
 
     # Dotplot with color-matched points and intervals
     plt.clf()
@@ -278,7 +279,7 @@ def test_all():
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with color-matched points and intervals")
-    pdf.savefig()
+    plt.close()
 
     # Dotplot with sections
     plt.clf()
@@ -290,7 +291,7 @@ def test_all():
     sections = [["Axx", "Byy", "Czz"][k] for k in sections]
     dotplot(points, lines=lines, styles=styles, sections=sections, ax=ax)
     ax.set_title("Dotplot with sections")
-    pdf.savefig()
+    plt.close()
 
     # Vertical dotplot with sections
     plt.clf()
@@ -304,7 +305,7 @@ def test_all():
             horizontal=False)
     txt = ax.set_title("Vertical dotplot with sections")
     txt.set_position((0.5, 1.08))
-    pdf.savefig()
+    plt.close()
 
     # Reorder sections
     plt.clf()
@@ -317,7 +318,7 @@ def test_all():
     dotplot(points, lines=lines, styles=styles, sections=sections, ax=ax,
             section_order=["Byy", "Axx", "Czz"])
     ax.set_title("Dotplot with sections in specified order")
-    pdf.savefig()
+    plt.close()
 
     # Reorder the lines.
     plt.figure()
@@ -327,7 +328,7 @@ def test_all():
     line_order = ["B", "C", "A", "D"]
     dotplot(points, lines=lines, line_order=line_order, ax=ax)
     ax.set_title("Dotplot with reordered lines")
-    pdf.savefig()
+    plt.close()
 
     # Dotplot with different numbers of points per line
     plt.clf()
@@ -348,9 +349,5 @@ def test_all():
                         handletextpad=0.0001)
     leg.draw_frame(False)
     ax.set_title("Dotplot with different numbers of points per line")
-    pdf.savefig()
+    plt.close()
 
-    pdf.close()
-
-
-#test_all()
