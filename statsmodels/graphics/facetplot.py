@@ -1321,7 +1321,7 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
         for pos, val, name in level_idx_v_l:
             positions = [pos+deltas[index]]
             widths = [0.3/L]
-            notch = kwargs.setdefault('notch', True)
+            notch = kwargs.pop('notch', True)
             artist = ax.boxplot([val], notch=notch, positions=positions,
                                 vert=vertical, widths=widths,
                                 patch_artist=True, **kwargs)
