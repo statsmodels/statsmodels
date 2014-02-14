@@ -1020,7 +1020,8 @@ def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
 
         bins_y = np.linspace(min(y)-1-Db_y, max(y)+1+Db_y, nbinsy+3)
 
-        matrix, xedges, yedges = np.histogram2d(x, y, bins=[bins_x, bins_y])
+        matrix, xedges, yedges = np.histogram2d(x.values, y.values,
+                                                bins=[bins_x, bins_y])
         kwargs.setdefault('interpolation', 'nearest')
         kwargs.setdefault('origin', 'lower')
         kwargs.setdefault('cmap', plt.cm.binary)
