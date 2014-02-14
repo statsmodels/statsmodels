@@ -7,13 +7,11 @@ Created on Wed Mar 13 11:34:21 2013
 
 import pandas as pd
 import numpy as np
-from numpy.testing import run_module_suite
+from numpy.testing import run_module_suite, assert_
 from statsmodels.graphics.facetplot import facet_plot
 from nose.tools import with_setup
 from nose.tools import nottest
 from nose import SkipTest
-import os
-import logging
 from statsmodels.graphics.facetplot import _formula_terms
 from statsmodels.graphics.facetplot import _beautify
 
@@ -21,7 +19,7 @@ try:
     import matplotlib.pylab as plt
     #It's less pretty but make easier tests
     import matplotlib as mpl
-    mpl.rcParams['axes.unicode_minus']=False
+    mpl.rcParams['axes.unicode_minus'] = False
     have_matplotlib = True
 except:
     have_matplotlib = False
@@ -54,6 +52,7 @@ def my_setup():
     data['x 1'] = np.random.randn(N)
     data['x%&$1'] = np.random.randn(N)
 
+
 class base4test(object):
     def setUp(self):
         if not have_matplotlib:
@@ -65,29 +64,26 @@ class base4test(object):
         self.data = data
 
     def tearDown(self):
-        if hasattr(self.__class__, '__show__') and self.__show__:
-            plt.show()
-        else:
-            plt.draw()
         plt.close("all")
 
 ####################################################################
 # HELPERS FUNCTIONS
 ####################################################################
 
+
 @with_setup(my_setup)
 def test_formula_split():
     from statsmodels.graphics.facetplot import _formula_split
     #test the formula split
-    assert _formula_split('y ~ x | f') == ('y', 'x', 'f', None)
-    assert _formula_split('y ~ x') == ('y', 'x', None, None)
-    assert _formula_split('x | f') == (None, 'x', 'f', None)
-    assert _formula_split('x') == (None, 'x', None, None)
+    assert_(_formula_split('y ~ x | f') == ('y', 'x', 'f', None))
+    assert_(_formula_split('y ~ x') == ('y', 'x', None, None))
+    assert_(_formula_split('x | f') == (None, 'x', 'f', None))
+    assert_(_formula_split('x') == (None, 'x', None, None))
 
-    assert _formula_split('y ~ x | f ~ p') == ('y', 'x', 'f', 'p')
-    assert _formula_split('y ~ x | ~ p') == ('y', 'x', None, 'p')
-    assert _formula_split('x | f ~ p') == (None, 'x', 'f', 'p')
-    assert _formula_split('x | ~ p') == (None, 'x', None, 'p')
+    assert_(_formula_split('y ~ x | f ~ p') == ('y', 'x', 'f', 'p'))
+    assert_(_formula_split('y ~ x | ~ p') == ('y', 'x', None, 'p'))
+    assert_(_formula_split('x | f ~ p') == (None, 'x', 'f', 'p'))
+    assert_(_formula_split('x | ~ p') == (None, 'x', None, 'p'))
 
 
 @with_setup(my_setup)
@@ -97,7 +93,7 @@ def test_stack_by():
     reduced = _stack_by(small, 'cat_3')
     expected_col = ['Q("cat_1: 0")', 'Q("cat_1: 1")',
                     'Q("cat_2: 0")', 'Q("cat_2: 1")']
-    assert sorted(reduced.columns) == expected_col
+    assert_(sorted(reduced.columns) == expected_col)
     reduced2 = _stack_by(small, ['cat_2', 'cat_3'])
     expected_col = ['Q("cat_1: B: 0")',
                     'Q("cat_1: B: 1")',
@@ -107,116 +103,116 @@ def test_stack_by():
                     'Q("cat_1: D: 1")',
                     'Q("cat_1: F: 0")',
                     'Q("cat_1: F: 1")']
-    assert sorted(reduced2.columns) == expected_col
+    assert_(sorted(reduced2.columns) == expected_col)
 
 
 @with_setup(my_setup)
 def test_analyze_categories():
     from statsmodels.graphics.facetplot import _analyze_categories
-    assert (_analyze_categories(data[['int_1']]) ==
-            {'int_1':[5, 6, 7, 8, 9, 10, 11, 12, 13, 14]})
-    assert (_analyze_categories(data[['float_1']]) ==
-            {'float_1':sorted(data.float_1.unique())})
-    assert (_analyze_categories(data[['cat_1']]) ==
-            {'cat_1': ['a', 'e', 'i', 'o', 'u']})
-    assert (_analyze_categories(data[['cat_1', 'float_1']])
+    assert_((_analyze_categories(data[['int_1']]) ==
+            {'int_1':[5, 6, 7, 8, 9, 10, 11, 12, 13, 14]}))
+    assert_((_analyze_categories(data[['float_1']]) ==
+            {'float_1':sorted(data.float_1.unique())}))
+    assert_((_analyze_categories(data[['cat_1']]) ==
+            {'cat_1': ['a', 'e', 'i', 'o', 'u']}))
+    assert_((_analyze_categories(data[['cat_1', 'float_1']])
             == {'cat_1': ['a', 'e', 'i', 'o', 'u'],
-                'float_1':sorted(data.float_1.unique())})
-    assert (_analyze_categories(data[['cat_1', 'float_1', 'cat_2']])
+                'float_1':sorted(data.float_1.unique())}))
+    assert_((_analyze_categories(data[['cat_1', 'float_1', 'cat_2']])
             == {'cat_1': ['a', 'e', 'i', 'o', 'u'],
                 'cat_2': ['B', 'C', 'D', 'F'],
-                'float_1':sorted(data.float_1.unique())})
+                'float_1':sorted(data.float_1.unique())}))
 
 
 @with_setup(my_setup)
 def test_array4name():
     from statsmodels.graphics.facetplot import _array4name
     #test the array4name
-    assert all(_array4name('int_1 + int_2', data).columns == ['int_1', 'int_2'])
-    assert all(_array4name('int_1 + cat_2', data).columns == ['cat_2', 'int_1'])
-    assert all(_array4name('cat_2', data).columns == ['cat_2'])
-    assert all(_array4name('int_1', data).columns == ['int_1'])
+    assert_(all(_array4name('int_1 + int_2', data).columns == ['int_1', 'int_2']))
+    assert_(all(_array4name('int_1 + cat_2', data).columns == ['cat_2', 'int_1']))
+    assert_(all(_array4name('cat_2', data).columns == ['cat_2']))
+    assert_(all(_array4name('int_1', data).columns == ['int_1']))
 
 
 @with_setup(my_setup)
 def test_oracle():
     from statsmodels.graphics.facetplot import _oracle
     # single dimension
-    assert _oracle(data[['float_1']], None) == 'kde'
-    assert _oracle(data[['float_2', 'float_3']], None) == 'kde'
-    assert _oracle(data[['int_1']], None) == 'counter'
-    assert _oracle(data[['cat_1']], None) == 'counter'
+    assert_(_oracle(data[['float_1']], None) == 'kde')
+    assert_(_oracle(data[['float_2', 'float_3']], None) == 'kde')
+    assert_(_oracle(data[['int_1']], None) == 'counter')
+    assert_(_oracle(data[['cat_1']], None) == 'counter')
     #monovariate
-    assert _oracle(data[['float_1']], data[['float_1']]) == 'scatter'
-    assert _oracle(data[['int_1']], data[['float_1']]) == 'scatter'
-    assert _oracle(data[['cat_1']], data[['float_1']]) == 'violinplot'
-    assert _oracle(data[['float_1']], data[['int_1']]) == 'scatter'
-    assert _oracle(data[['int_1']], data[['int_1']]) == 'scatter'
-    assert _oracle(data[['cat_1']], data[['int_1']]) == 'violinplot'
-    assert _oracle(data[['float_1']], data[['cat_1']]) == 'violinplot'
-    assert _oracle(data[['int_1']], data[['cat_1']]) == 'violinplot'
-    assert _oracle(data[['cat_1']], data[['cat_1']]) == 'mosaic'
+    assert_(_oracle(data[['float_1']], data[['float_1']]) == 'scatter')
+    assert_(_oracle(data[['int_1']], data[['float_1']]) == 'scatter')
+    assert_(_oracle(data[['cat_1']], data[['float_1']]) == 'violinplot')
+    assert_(_oracle(data[['float_1']], data[['int_1']]) == 'scatter')
+    assert_(_oracle(data[['int_1']], data[['int_1']]) == 'scatter')
+    assert_(_oracle(data[['cat_1']], data[['int_1']]) == 'violinplot')
+    assert_(_oracle(data[['float_1']], data[['cat_1']]) == 'violinplot')
+    assert_(_oracle(data[['int_1']], data[['cat_1']]) == 'violinplot')
+    assert_(_oracle(data[['cat_1']], data[['cat_1']]) == 'mosaic')
 
 class Test_formula_terms(base4test):
     __show__ = True
     def test_formula_terms_1(self):
         f1 = '(a+b)'
         f = " + ".join(_formula_terms(f1))
-        assert f == " + ".join(_formula_terms(f))
+        assert_(f == " + ".join(_formula_terms(f)))
     def test_formula_terms_2(self):
         f1 = 'I(a+b)'
         f = " + ".join(_formula_terms(f1))
-        assert f == " + ".join(_formula_terms(f))
+        assert_(f == " + ".join(_formula_terms(f)))
     def test_formula_terms_3(self):
         f1 = 'I(c + d) + Intercept + a + a: b + b'
         f = " + ".join(_formula_terms(f1))
-        assert f == " + ".join(_formula_terms(f))
+        assert_(f == " + ".join(_formula_terms(f)))
     def test_formula_terms_4(self):
         f1 = 'I(c + d) + Intercept + a + a: b + b + 1'
         f = " + ".join(_formula_terms(f1))
-        assert f == " + ".join(_formula_terms(f))
+        assert_(f == " + ".join(_formula_terms(f)))
     def test_formula_terms_5(self):
         f1 = 'I(c + d) + Intercept + a + a: b + b + 0'
         f = " + ".join(_formula_terms(f1))
-        assert f == " + ".join(_formula_terms(f))
+        assert_(f == " + ".join(_formula_terms(f)))
     def test_formula_terms_6(self):
         f1 = 'I(c + d) + Intercept + a + a: b + b -1'
         f = " + ".join(_formula_terms(f1))
-        assert f == " + ".join(_formula_terms(f))
+        assert_(f == " + ".join(_formula_terms(f)))
     def test_formula_terms_7(self):
-        assert 'Intercept' in _formula_terms('a+b',1)
-        assert 'Intercept' in _formula_terms('a+b+1',1)
-        assert 'Intercept' not in _formula_terms('a+b-1',1)
-        assert 'Intercept' not in _formula_terms('a+b+0',1)
+        assert_('Intercept' in _formula_terms('a+b',1))
+        assert_('Intercept' in _formula_terms('a+b+1',1))
+        assert_('Intercept' not in _formula_terms('a+b-1',1))
+        assert_('Intercept' not in _formula_terms('a+b+0',1))
 
-        assert 'Intercept' not in _formula_terms('a+b',0)
-        assert 'Intercept' not in _formula_terms('a+b+1',0)
-        assert 'Intercept' not in _formula_terms('a+b-1',0)
-        assert 'Intercept' not in _formula_terms('a+b+0',0)
+        assert_('Intercept' not in _formula_terms('a+b',0))
+        assert_('Intercept' not in _formula_terms('a+b+1',0))
+        assert_('Intercept' not in _formula_terms('a+b-1',0))
+        assert_('Intercept' not in _formula_terms('a+b+0',0))
 
     def test_formula_terms_8(self):
-        assert 'Intercept' in _formula_terms('Intercept+a+b',1)
-        assert 'Intercept' in _formula_terms('Intercept+a+b+1',1)
-        assert 'Intercept' in _formula_terms('Intercept+a+b-1',1)
-        assert 'Intercept' in _formula_terms('Intercept+a+b+0',1)
+        assert_('Intercept' in _formula_terms('Intercept+a+b',1))
+        assert_('Intercept' in _formula_terms('Intercept+a+b+1',1))
+        assert_('Intercept' in _formula_terms('Intercept+a+b-1',1))
+        assert_('Intercept' in _formula_terms('Intercept+a+b+0',1))
 
-        assert 'Intercept' in _formula_terms('Intercept+a+b',0)
-        assert 'Intercept' in _formula_terms('Intercept+a+b+1',0)
-        assert 'Intercept' in _formula_terms('Intercept+a+b-1',0)
-        assert 'Intercept' in _formula_terms('Intercept+a+b+0',0)
+        assert_('Intercept' in _formula_terms('Intercept+a+b',0))
+        assert_('Intercept' in _formula_terms('Intercept+a+b+1',0))
+        assert_('Intercept' in _formula_terms('Intercept+a+b-1',0))
+        assert_('Intercept' in _formula_terms('Intercept+a+b+0',0))
 
 
 
 class Test_beautify(base4test):
     def test_beutify_1(self):
         s = 'I(Q("float_1") ** 0.5) + I(float_2) ~ Q("float_3") | cat_3'
-        assert 'float_1 ** 0.5 + float_2 ~ float_3 | cat_3' == _beautify(s)
+        assert_('float_1 ** 0.5 + float_2 ~ float_3 | cat_3' == _beautify(s))
     def test_beutify_2(self):
         s = "whather comes to mind, with Q, I, and () or ( op )"
-        assert s == _beautify(s)
-    def test_beutify_1(self):
+        assert_(s == _beautify(s))
+    def test_beutify_3(self):
         s = 'I(Q("float_1") ** 0.5) + I(float_2) ~ Q("float_3") | cat_3'
-        assert 'I(float_1 ** 0.5) + I(float_2) ~ float_3 | cat_3' == _beautify(s,0)
+        assert_('I(float_1 ** 0.5) + I(float_2) ~ float_3 | cat_3' == _beautify(s,0))
 
 
 ####################################################################
@@ -226,7 +222,6 @@ class Test_beautify(base4test):
 
 @nottest
 class Test_violin(base4test):
-    __show__ = True
     def test_violin_1(self):
         facet_plot('float_1 ~ cat_1 | cat_2', data)
     def test_violin_2(self):
@@ -238,7 +233,6 @@ class Test_violin(base4test):
 
 @nottest
 class Test_boxplot(base4test):
-    __show__ = True
     def test_boxplot_1(self):
         facet_plot('float_1 ~ cat_1 | cat_2', data, kind='boxplot')
     def test_boxplot_2(self):
@@ -260,7 +254,6 @@ class Test_boxplot(base4test):
 
 @nottest
 class Test_kde(base4test):
-    __show__ = True
     def test_kde_1(self):
         facet_plot('float_1', data)
     def test_kde_2(self):
@@ -272,7 +265,6 @@ class Test_kde(base4test):
 
 @nottest
 class Test_scatter(base4test):
-    __show__ = True
     def test_scatter_1(self):
         facet_plot('float_1', data, 'scatter')
     def test_scatter_2(self):
@@ -292,7 +284,6 @@ class Test_scatter(base4test):
 
 @nottest
 class Test_lines(base4test):
-    __show__ = True
     def test_lines_1(self):
         facet_plot('float_1 + float_2', data, 'lines')
     def test_lines_2(self):
@@ -313,7 +304,6 @@ class Test_lines(base4test):
 
 @nottest
 class Test_matrix(base4test):
-    __show__ = True
     def test_matrix_1(self):
         facet_plot('cat_1', data, 'matrix')
     def test_matrix_2(self):
@@ -327,7 +317,6 @@ class Test_matrix(base4test):
 
 @nottest
 class Test_axes_insertion(base4test):
-    __show__ = True
     def test_axes_insertion(self):
         fig = plt.figure()
         ax = fig.add_subplot(2, 2, 1)
@@ -347,7 +336,6 @@ class Test_axes_insertion(base4test):
 
 @nottest
 class Test_create_dataframe(base4test):
-    __show__ = True
     def test_database_1(self):
         float_1 = np.random.randn(100)
         facet_plot('float_1', {'float_1': float_1})
@@ -384,7 +372,7 @@ class Test_create_dataframe(base4test):
 class TestSpecialNames(base4test):
     def test_names_unicode_1(self):
         fig = facet_plot(u'float_1 ~ Q(u"àèéòù")', self.data, kind='scatter')
-        assert fig.axes[0].get_xlabel() == u'àèéòù'
+        assert_(fig.axes[0].get_xlabel() == u'àèéòù')
 
     def test_names_unicode_2(self):
         fig = facet_plot(u'float_1*Q(u"àèéòù") ~ float_2', self.data, kind='scatter')
@@ -406,24 +394,23 @@ class TestSpecialNames(base4test):
 
     def test_names_invalid_1(self):
         fig = facet_plot(u'float_1 ~ Q("x.1")', self.data, kind='scatter')
-        assert fig.axes[0].get_xlabel() == 'x.1'
+        assert_(fig.axes[0].get_xlabel() == 'x.1')
 
     def test_names_invalid_2(self):
         fig = facet_plot(u'float_1 ~ Q("x 1")', self.data, kind='scatter')
-        assert fig.axes[0].get_xlabel() == 'x 1'
+        assert_(fig.axes[0].get_xlabel() == 'x 1')
 
     def test_names_invalid_3(self):
         fig = facet_plot(u'float_1*Q("x 1") ~ float_2', self.data, kind='scatter')
-        #assert fig.axes[0].get_xlabel() == 'x 1'
+        #assert_(fig.axes[0].get_xlabel() == 'x 1')
 
     def test_names_invalid_4(self):
         fig = facet_plot(u'float_1 ~ Q("x%&$1")', self.data, kind='scatter')
-        assert fig.axes[0].get_xlabel() == 'x%&$1'
+        assert_(fig.axes[0].get_xlabel() == 'x%&$1')
 
 
 @nottest
 class Test_ellipse(base4test):
-    __show__ = True
     def test_ellipse_1(self):
         facet_plot('float_1 ~ float_2 | cat_1', data, 'ellipse')
     def test_ellipse_2(self):
@@ -433,7 +420,6 @@ class Test_ellipse(base4test):
 
 @nottest
 class Test_hexbin(base4test):
-    __show__ = True
     def test_hexbin_1(self):
         facet_plot('float_1 ~ float_2 | cat_1', data, 'hexbin')
     def test_hexbin_2(self):
@@ -443,7 +429,6 @@ class Test_hexbin(base4test):
 
 @nottest
 class Test_counter(base4test):
-    __show__ = True
     def test_counter_1(self):
         facet_plot('cat_1', data, 'counter')
     def test_counter_2(self):
@@ -479,7 +464,7 @@ class Test_counter(base4test):
         labels = [t.get_text().replace(u'\u2212', '-')
                   for t in ax.get_xticklabels() ]
         positions = [float(t) for t in ax.get_xticks() ]
-        assert positions[1:-1] == [ float(t) for t in labels if t]
+        assert_(positions[1:-1] == [ float(t) for t in labels if t])
     def test_labeling_simple_2(self):
         # treating them as categorical they should be always
         # equal to the complete level of the variable
@@ -489,11 +474,10 @@ class Test_counter(base4test):
         labels = [int(t.get_text().replace(u'\u2212', '-'))
                   for t in ax.get_xticklabels() ]
         expected = sorted(self.data['int_4'].unique())
-        assert labels == expected
+        assert_(labels == expected)
 
 @nottest
 class Test_hist(base4test):
-    __show__ = True
     def test_hist_simple_1(self):
         fig = facet_plot('float_1', self.data, 'hist')
     def test_hist_simple_2(self):
@@ -503,7 +487,6 @@ class Test_hist(base4test):
 
 @nottest
 class Test_mosaic(base4test):
-    __show__ = True
     def test_hist_simple_1(self):
         fig = facet_plot('cat_1', self.data, 'mosaic')
     def test_hist_simple_2(self):
@@ -516,7 +499,6 @@ class Test_mosaic(base4test):
 
 #@nottest
 class Test_corr(base4test):
-    __show__ = True
     def test_corr_simple_1(self):
         fig = facet_plot('float_1 | cat_1', self.data, kind='corr')
     def test_corr_simple_2(self):
@@ -526,7 +508,6 @@ class Test_corr(base4test):
 
 
 class Test_psd(base4test):
-    __show__ = True
     def test_psd_simple_1(self):
         fig = facet_plot('float_1 | cat_1', self.data, kind='psd')
     def test_psd_simple_2(self):
@@ -537,7 +518,6 @@ class Test_psd(base4test):
 
 @nottest
 class Test_stack_faced(base4test):
-    __show__ = True
     def test_stack_faced_scatter_1(self):
         fig = facet_plot('float_1 ~ float_2 | cat_3', self.data, kind='scatter')
     def test_stack_faced_scatter_2(self):
@@ -552,7 +532,6 @@ class Test_stack_faced(base4test):
 
 @nottest
 class Test_IQ(base4test):
-    __show__ = True
     def test_IQ_1(self):
         fig = facet_plot('I(Q("float_1")**0.5) ~ float_2 | Q("cat_3")', self.data, kind='scatter')
         plt.draw()
@@ -576,7 +555,6 @@ class Test_categorical(base4test):
 
 @nottest
 class Test_strict_patsy(base4test):
-    __show__ = False
     def test_strict_patsy_1(self):
         facet_plot('float_1', self.data, kind='_dump', strict_patsy=False)
     def test_strict_patsy_2(self):
@@ -592,13 +570,11 @@ class Test_strict_patsy(base4test):
 
 @nottest
 class Test_OLS(base4test):
-    __show__ = True
     def test_ols_1(self):
         facet_plot('I(int_3 + float_3) ~ float_1 | cat_3', self.data, kind='ols', strict_patsy=False)
 
 @nottest
 class Test_mangled(base4test):
-    __show__ = True
     def test_ols_1(self):
         facet_plot('float_3 ~ cat_1', self.data, kind='boxplot')
     def test_ols_2(self):
