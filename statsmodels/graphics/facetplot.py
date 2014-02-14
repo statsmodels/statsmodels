@@ -1194,7 +1194,7 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
         if x.dtype == object or y.dtype == object:
             raise TypeError('the kde plot is only for numerical variables')
         fig, ax = _build_axes(ax, projection='3d')
-        x_grid, y_grid = plt.mgrid[min(x):max(x):100j, min(y):max(y):100j]
+        x_grid, y_grid = np.mgrid[min(x):max(x):100j, min(y):max(y):100j]
         data = pd.DataFrame(np.vstack([x.values, y.values]))
         data = data.dropna()
         data = data.values
