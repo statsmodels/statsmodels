@@ -146,15 +146,15 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     ========
     Let's create a very simple dataset to work on
 
-        >>> import pylab as plt
+        >>> import numpy as np
         >>> N = 300
         >>> data = pd.DataFrame({
-        ...     'int_1': plt.randint(0, 5, size=N),
-        ...     'int_2': plt.randint(0, 5, size=N),
-        ...     'float_1': plt.randn(N),
-        ...     'float_2': plt.randn(N),
-        ...     'cat_1': ['aeiou'[i] for i in plt.randint(0, 5, size=N)],
-        ...     'cat_2': ['BCDF'[i] for i in plt.randint(0, 4, size=N)]})
+        ...     'int_1': np.random.randint(0, 5, size=N),
+        ...     'int_2': np.random.randint(0, 5, size=N),
+        ...     'float_1': np.random.randn(N),
+        ...     'float_2': np.random.randn(N),
+        ...     'cat_1': ['aeiou'[i] for i in np.random..randint(0, 5, size=N)],
+        ...     'cat_2': ['BCDF'[i] for i in np.random.randint(0, 4, size=N)]})
 
     basic facet_plots for variuos combinations
 
@@ -205,8 +205,8 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     for exploratory analysis is possible to use the function to explore:
     the current environment
 
-        >>> x = randn(10)
-        >>> y = x + 2*x**2 +randn(10)
+        >>> x = np.random.randn(10)
+        >>> y = x + 2 * x**2 + np.random.randn(10)
         >>> facet_plot('y ~ x')
         >>> facet_plot('y ~ x', kind='kde')
 
@@ -218,13 +218,13 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     and non standard names like those using special characters (using unicode)
     and non valid python names
 
-        >>> data[u'à'] = plt.randn(N)
+        >>> data[u'à'] = np.random.randn(N)
         >>> facet_plot(u' float_1 ~ à ', data)
 
-        >>> data['x.1'] = plt.randn(N)
+        >>> data['x.1'] = np.random.randn(N)
         >>> facet_plot(u' float_1 ~ x.1 ', data)
 
-        >>> data['x 1'] = plt.randn(N)
+        >>> data['x 1'] = np.random.randn(N)
         >>> facet_plot(' float_1 ~ x 1 ', data)
 
     """
@@ -442,7 +442,7 @@ def _jitter(x, jitter_level=1.0):
     diff = abs(np.subtract.outer(u, u))
     diff[diff == 0] = np.max(u)
     min_diff = np.min(diff)
-    res = x + jitter_level * min_diff * 0.2 * (plt.rand(len(x)) - 0.5)
+    res = x + jitter_level * min_diff * 0.2 * (np.random.rand(len(x)) - 0.5)
     return res
 
 
