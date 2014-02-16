@@ -123,10 +123,13 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     ----------
 
     '''
+    import gc
+    gc.collect()
     pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
     sortind = np.argsort(pvals)
-    pvals = pvals[sortind]
+    #pvals = pvals[sortind]
+    pvals = np.take(pvals, sortind)
     sortrevind = sortind.argsort()
     ntests = len(pvals)
     alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
@@ -168,6 +171,8 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         reject = ~notreject
         pvals_corrected_raw = pvals * np.arange(ntests, 0, -1)
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
+        del pvals_corrected_raw
+        gc.collect()
 
     elif method.lower() in ['sh', 'simes-hochberg']:
         alphash = alphaf / np.arange(ntests, 0, -1)
