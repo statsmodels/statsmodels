@@ -301,6 +301,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep'):
 
     pvals_corrected_raw = pvals_sorted / ecdffactor
     pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
+    del pvals_corrected_raw
     pvals_corrected[pvals_corrected>1] = 1
     return reject[sortrevind], pvals_corrected[sortrevind]
     #return reject[pvals_sortind.argsort()]
