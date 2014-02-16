@@ -338,7 +338,7 @@ class SimpleTable(list):
             if isinstance(v, list):
                 call_args.append((k, tuple(v)))
             elif isinstance(v, dict):
-                call_args.append((k, sorted(v.items())))
+                call_args.append((k, tuple(sorted(v.items()))))
             else:
                 call_args.append((k, v))
         key = tuple(call_args)
