@@ -196,11 +196,13 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     elif method.lower() in ['fdr_bh', 'fdr_i', 'fdr_p', 'fdri', 'fdrp']:
         # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
-                                                 method='indep')
+                                                 method='indep',
+                                                 is_sorted=True)
     elif method.lower() in ['fdr_by', 'fdr_n', 'fdr_c', 'fdrn', 'fdrcorr']:
         # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection(pvals, alpha=alpha,
-                                                 method='n')
+                                                 method='n',
+                                                 is_sorted=True)
     elif method.lower() in ['fdr_tsbky', 'fdr_2sbky', 'fdr_twostage']:
         # delegate, call with sorted pvals
         reject, pvals_corrected = fdrcorrection_twostage(pvals, alpha=alpha,
@@ -239,7 +241,7 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
             return reject[sortrevind], pvals_corrected[sortrevind], alphacSidak, alphacBonf
 
 #TODO: rename drop 0 at end
-def fdrcorrection(pvals, alpha=0.05, method='indep'):
+def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     '''pvalue correction for false discovery rate
 
     This covers Benjamini/Hochberg for independent or positively correlated and
@@ -280,9 +282,12 @@ def fdrcorrection(pvals, alpha=0.05, method='indep'):
     '''
     pvals = np.asarray(pvals)
 
-    pvals_sortind = np.argsort(pvals)
-    pvals_sorted = pvals[pvals_sortind]
-    sortrevind = pvals_sortind.argsort()
+    if not is_sorted:
+        pvals_sortind = np.argsort(pvals)
+        pvals_sorted = pvals[pvals_sortind]
+        sortrevind = pvals_sortind.argsort()
+    else:
+        pvals_sorted = pvals  # alias
 
     if method in ['i', 'indep', 'p', 'poscorr']:
         ecdffactor = _ecdf(pvals_sorted)
@@ -303,7 +308,10 @@ def fdrcorrection(pvals, alpha=0.05, method='indep'):
     pvals_corrected = np.minimum.accumulate(pvals_corrected_raw[::-1])[::-1]
     del pvals_corrected_raw
     pvals_corrected[pvals_corrected>1] = 1
-    return reject[sortrevind], pvals_corrected[sortrevind]
+    if not is_sorted:
+        return reject[sortrevind], pvals_corrected[sortrevind]
+    else:
+        return reject, pvals_corrected
     #return reject[pvals_sortind.argsort()]
 
 def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False):
