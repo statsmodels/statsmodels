@@ -402,7 +402,6 @@ class TestSpecialNames(base4test):
         assert_(fig.axes[0].get_xlabel() == 'x%&$1')
 
 
-@nottest
 class Test_ellipse(base4test):
     def test_ellipse_1(self):
         facet_plot('float_1 ~ float_2 | cat_1', data, 'ellipse')
@@ -411,7 +410,7 @@ class Test_ellipse(base4test):
     def test_ellipse_3(self):
         facet_plot('float_3 ~ float_1 | cat_1', data, 'ellipse')
 
-@nottest
+
 class Test_hexbin(base4test):
     def test_hexbin_1(self):
         facet_plot('float_1 ~ float_2 | cat_1', data, 'hexbin')
@@ -420,7 +419,7 @@ class Test_hexbin(base4test):
     def test_hexbin_3(self):
         facet_plot('float_3 ~ float_1 | cat_1', data, 'hexbin', gridsize=10)
 
-@nottest
+
 class Test_counter(base4test):
     def test_counter_1(self):
         facet_plot('cat_1', data, 'counter')
