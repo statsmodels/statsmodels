@@ -220,7 +220,6 @@ class Test_beautify(base4test):
 ####################################################################
 
 
-@nottest
 class Test_violin(base4test):
     def test_violin_1(self):
         facet_plot('float_1 ~ cat_1 | cat_2', data)
@@ -231,7 +230,8 @@ class Test_violin(base4test):
     def test_violin_4(self):
         facet_plot('cat_1 ~ float_1 | cat_1', data)
 
-@nottest
+
+# this raises a warning in matplotlib?
 class Test_boxplot(base4test):
     def test_boxplot_1(self):
         facet_plot('float_1 ~ cat_1 | cat_2', data, kind='boxplot')
@@ -252,7 +252,7 @@ class Test_boxplot(base4test):
     def test_boxplot_9(self):
         facet_plot('float_1 ~ int_1 | cat_2', data, kind='boxplot')
 
-@nottest
+
 class Test_kde(base4test):
     def test_kde_1(self):
         facet_plot('float_1', data)
@@ -263,7 +263,7 @@ class Test_kde(base4test):
     def test_kde_4(self):
         facet_plot('float_1 ~ float_2 | cat_1', data, 'kde')
 
-@nottest
+
 class Test_scatter(base4test):
     def test_scatter_1(self):
         facet_plot('float_1', data, 'scatter')
@@ -282,7 +282,7 @@ class Test_scatter(base4test):
     def test_scatter_8(self):
         facet_plot('float_1 + float_4 ~ cat_2 + float_3', data, 'scatter')
 
-@nottest
+
 class Test_lines(base4test):
     def test_lines_1(self):
         facet_plot('float_1 + float_2', data, 'lines')
@@ -302,7 +302,6 @@ class Test_lines(base4test):
         facet_plot('float_1 + float_4 ~ cat_2 + float_3', data, 'lines')
 
 
-@nottest
 class Test_matrix(base4test):
     def test_matrix_1(self):
         facet_plot('cat_1', data, 'matrix')
@@ -315,7 +314,7 @@ class Test_matrix(base4test):
     def test_matrix_5(self):
         facet_plot('int_1 ~ cat_2', data, 'matrix')
 
-@nottest
+
 class Test_axes_insertion(base4test):
     def test_axes_insertion(self):
         fig = plt.figure()
@@ -334,7 +333,6 @@ class Test_axes_insertion(base4test):
         #facet_plot('cat_2 ~ cat_1 | int_1', data, ax=ax)
 
 
-@nottest
 class Test_create_dataframe(base4test):
     def test_database_1(self):
         float_1 = np.random.randn(100)
@@ -367,30 +365,25 @@ class Test_create_dataframe(base4test):
         facet_plot('np.log(float_1) + float_1')
 
 
-#this test will trigger some fails...
-@nottest
 class TestSpecialNames(base4test):
     def test_names_unicode_1(self):
-        fig = facet_plot(u'float_1 ~ Q(u"àèéòù")', self.data, kind='scatter')
+        fig = facet_plot(u'float_1 ~ Q("àèéòù")', self.data, kind='scatter')
         assert_(fig.axes[0].get_xlabel() == u'àèéòù')
 
     def test_names_unicode_2(self):
-        fig = facet_plot(u'float_1*Q(u"àèéòù") ~ float_2', self.data, kind='scatter')
-        plt.show()
+        fig = facet_plot(u'float_1*Q("àèéòù") ~ float_2', self.data, kind='scatter')
 
     def test_names_unicode_3(self):
         data = {'float_1': np.random.randn(20),
                 'float_2': np.random.randn(20),
                 'àèéòù': np.random.randn(20)}
         fig = facet_plot('float_1*Q("àèéòù") ~ float_2', data, kind='scatter')
-        plt.show()
 
     def test_names_unicode_4(self):
         data = {'float_1': np.random.randn(20),
                 'float_2': np.random.randn(20),
                 'dose μ/ml': np.random.randn(20)}
         fig = facet_plot('float_1*Q("dose μ/ml") ~ float_2', data, kind='scatter')
-        plt.show()
 
     def test_names_invalid_1(self):
         fig = facet_plot(u'float_1 ~ Q("x.1")', self.data, kind='scatter')
