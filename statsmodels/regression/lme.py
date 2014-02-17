@@ -6,9 +6,9 @@ Linear mixed effects models
 import numpy as np
 import statsmodels.base.model as base
 from scipy.optimize import fmin_cg, fmin
+from scipy.misc import derivative
 
 class LME(base.Model):
-
 
     def __init__(self, endog, exog, exog_re, groups, missing='none'):
 
@@ -342,41 +342,98 @@ class LME(base.Model):
 
         params_fe, revar, sig2 = self.EM(num_em)
 
-        params = self._pack(params_fe, revar, sig2)
+        params_em = self._pack(params_fe, revar, sig2)
 
-        rslt = fmin_cg(like, params, score)
-        1/0
+        params = fmin_cg(like, params_em, score)
 
+        m = len(params)
+        hess = np.zeros((m,m), dtype=np.float64)
+        for j1 in range(m):
+            for j2 in range(j1+1):
+                params0 = params.copy()
+                def g(x):
+                    params0[j2] = x
+                    return self.score(params0)[j1]
+                hess[j1, j2] = derivative(g, params[j2], dx=1e-6)
+        pcov = np.linalg.inv(-hess)
 
-def test():
-
-    XFE = []
-    XRE = []
-    Y = []
-    G = []
-    for k in range(300):
-        xfe = np.random.normal(size=(5,3))
-        xre = np.ones((5,2), dtype=np.float64)
-        xre[:,1] = np.linspace(0, 1, 5)
-        fe = np.dot(xfe, np.r_[1, 0, -1])
-        re = np.random.normal(size=2) * np.r_[2, 0.5]
-        re = np.dot(xre, re)
-        y = fe + re + 1*np.random.normal(size=5)
-        XRE.append(xre)
-        XFE.append(xfe)
-        Y.append(y)
-        G.append(k*np.ones(5))
-
-    XFE = np.concatenate(XFE)
-    XRE = np.concatenate(XRE)
-    Y = np.concatenate(Y)
-    G = np.concatenate(G)
-
-    lme = LME(Y, XFE, XRE, G)
-    lme.fit()
-    1/0
+        results = LMEResults(self, params, pcov)
+        return results
 
 
+class LMEResults(base.LikelihoodModelResults):
+    '''
+    Class to contain results of fitting a linear mixed effects model.
+
+    LMEResults inherits from statsmodels.LikelihoodModelResults
+
+    Parameters
+    ----------
+    See statsmodels.LikelihoodModelResults
+
+    Returns
+    -------
+    **Attributes**
+
+    model : class instance
+        Pointer to PHreg model instance that called fit.
+    normalized_cov_params : array
+        The sampling covariance matrix of the estimates
+    params_fe : array
+        The fitted fixed-effects coefficients
+    params_re : array
+        The fitted random-effects covariance matrix
+    bse_fe : array
+        The standard errors of the fitted fixed effects coefficients
+    bse_re : array
+        The standard errors of the fitted random effects covariance
+        matrix
+
+    See Also
+    --------
+    statsmodels.LikelihoodModelResults
+    '''
 
 
-test()
+    def __init__(self, model, params, cov_params):
+
+        super(LMEResults, self).__init__(model, params,
+           normalized_cov_params=cov_params)
+
+
+    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+        """Summarize the Regression Results
+
+        Parameters
+        -----------
+        yname : string, optional
+            Default is `y`
+        xname : list of strings, optional
+            Default is `x#` for ## in p the number of regressors
+        title : string, optional
+            Title for the top table. If not None, then this replaces
+            the default title
+        alpha : float
+            significance level for the confidence intervals
+
+        Returns
+        -------
+        smry : Summary instance
+            this holds the summary tables and text, which can be
+            printed or converted to various output formats.
+
+        See Also
+        --------
+        statsmodels.iolib.summary.Summary : class to hold summary
+            results
+
+        """
+
+        from statsmodels.iolib import summary2
+        smry = summary2.Summary()
+        float_format = "%.3f"
+        smry.add_base(results=self, alpha=alpha,
+                      float_format=float_format,
+                      xname=xname, yname=yname, title=title)
+
+        return smry
