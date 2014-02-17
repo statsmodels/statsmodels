@@ -1389,7 +1389,6 @@ def kind_ols(x, y, ax=None, categories={}, jitter=1.0, facet=None,
     y_est = model.fittedvalues
     if isinstance(y_est, pd.Series):
         y_est = pd.DataFrame({'estimated': y_est})
-    print y_est
     if len(y.columns) == 1:
         kind_ellipse(y_est, y, ax=ax, categories={},
                      jitter=1.0, facet=facet, encoding=encoding, **kwargs)

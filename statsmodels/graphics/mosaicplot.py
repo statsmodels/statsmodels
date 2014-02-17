@@ -328,7 +328,6 @@ def _normalize_dataframe(dataframe, index):
     if index is None:
         index = list(dataframe.columns)
     data = dataframe[index].dropna()
-    print data, index
     grouped = data.groupby(index)  #, sort=False)
     counted = grouped[index].count()
     averaged = counted.mean(axis=1)
