@@ -24,9 +24,14 @@ import re
 from scipy.stats import spearmanr
 from itertools import product
 
-import sys
-
 import logging
+
+def _safe_encode(x, encoding='utf-8'):
+    try:
+        return x.encode(encoding)
+    except:
+        return x
+
 ##########################################################
 # THE PRINCIPAL FUNCTIONS
 ##########################################################
@@ -35,7 +40,7 @@ import logging
 def facet_plot(formula, data=None, kind=None, subset=None,
                drop_na=True, ax=None, jitter=1.0, facet_grid=False,
                include_total=False, title_y=1.0, strict_patsy=False,
-               **kwargs):
+               encoding='utf-8', **kwargs):
     """make a faceted plot of two set of variables divided into categories
 
     the formula should follow the sintax of the faceted plot:
@@ -226,9 +231,10 @@ def facet_plot(formula, data=None, kind=None, subset=None,
 
         >>> data['x 1'] = np.random.randn(N)
         >>> facet_plot(' float_1 ~ x 1 ', data)
-
     """
-    formula = unicode(formula)
+    if isinstance(formula, unicode):
+        formula = _safe_encode(formula, encoding)
+
     if not ax:
         fig = plt.figure()
         PARTIAL = False
@@ -237,7 +243,11 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         PARTIAL = True
     y, x, facet, projection = _formula_split(formula)
     if data is None:
+        # this is going to be broken for unicode and is probably a bad idea
         data = patsy.EvalEnvironment.capture(1).namespace
+    else: # make sure it's a DataFrame and encode the keys
+        data = pd.DataFrame(data)
+        data.columns = map(lambda x : _safe_encode(x, encoding), data.columns)
     #create the x and y values of the arrays
     value_y = _array4name(y, data, strict_patsy, intercept=False)
     value_x = _array4name(x, data, strict_patsy)
@@ -246,9 +256,11 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     #create the x dataframe with patsy of the modified versione
     # recreate the expression based on the columns of the relative dataframes
 
+    # NOTE: Might need to decode unicode column names
     def as_formula(df):
-        return (u" + ".join(unicode(c) for c in df.columns)
-                if df is not None else None)
+        if df is None:
+            return
+        return " + ".join(df.columns)
     y = as_formula(value_y)
     x = as_formula(value_x)
     facet = as_formula(value_f)
@@ -261,10 +273,10 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         data_p = _stack_by(data_p, list(value_p.columns))
         if value_y is not None:
             value_y = data_p
-            y = u" + ".join(list(value_y.columns))
+            y = " + ".join(list(value_y.columns))
         else:
             value_x = data_p
-            x = u" + ".join(list(value_x.columns))
+            x = " + ".join(list(value_x.columns))
 
     #reconstruct the dataframe from the pieces created before
     data = pd.concat([value_x, value_y, value_f], axis=1)
@@ -292,7 +304,10 @@ def facet_plot(formula, data=None, kind=None, subset=None,
                          facet_plot.registered_plots.keys()))
     # load the function among the available ones, troubles
     # can happens if the user chooses something not present
-    plot_function = registered_plots[kind]
+    try:
+        plot_function = registered_plots[kind]
+    except KeyError:
+        raise ValueError("Plot kind '{}' not understood".format(kind))
     #create a dictionary with all the levels for all the categories
     categories = _analyze_categories(value_x)
     categories.update(_analyze_categories(value_y))
@@ -303,13 +318,13 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         if facet:
             raise ValueError('facet are incompatibles with single axes')
         plot_function(value_x, value_y,
-                      ax=ax,  jitter=jitter, facet=u'__TOTAL__',
-                      categories=categories, **kwargs)
+                      ax=ax,  jitter=jitter, facet='__TOTAL__',
+                      categories=categories, encoding=encoding, **kwargs)
         return fig
     # obtain a list of (category, subset of the dataframe)
     elements = _elements4facet(facet, data)
     if include_total:
-        elements.append([u'__TOTAL__', data])
+        elements.append(['__TOTAL__', data])
     # automatically select the number of subplots
     # it may ust optimize given the number of facets or try
     # to create a regular grid. Works fine for monovariate,
@@ -376,10 +391,11 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         # launch the autoplot
         # I pass the construction to it as it can decide
         # to build it as a 3d or polar axis
-        level = level if level not in ['', None] else u'__TOTAL__'
+        level = level if level not in ['', None] else '__TOTAL__'
         ax = [fig, row_num, col_num, idx + 1, base_ax]
         ax = plot_function(value_x, value_y, ax=ax, jitter=jitter,
-                           categories=categories, facet=level, **kwargs)
+                           categories=categories, facet=level,
+                           encoding=encoding, **kwargs)
         # all the subplots share the same axis with the first one being
         # of the same variable
         if not base_ax:
@@ -582,7 +598,7 @@ def _elements4facet(facet, data):
                 elements.append((column, data[value > 0]))
     # facet is none, so simply use the whole dataset
     else:
-        elements = [[u'', data]]
+        elements = [['', data]]
     return elements
 
 
@@ -591,18 +607,18 @@ def _formula_terms(formula, use_intercept=True):
     env = patsy.EvalEnvironment({})
     terms = patsy.ModelDesc.from_formula(formula, env).rhs_termlist
     factors = [t.factors for t in terms]
-    intercept = (patsy.EvalFactor(u'Intercept', env),)
+    intercept = (patsy.EvalFactor('Intercept', env),)
     if use_intercept:
         factors = [f if f else intercept for f in factors]
     else:
         factors = [f for f in factors if f]
-    factors = [u":".join(c.code for c in f) for f in factors]
+    factors = [":".join(c.code for c in f) for f in factors]
     factors = [patsy.EvalFactor(f, {}).code.strip() for f in factors]
     results = []
     for f in factors:
         if f not in results:
             results.append(f)
-    return sorted(unicode(c) for c in results)
+    return sorted(results)
 
 
 def _array4name(formula, data, strict_patsy=False, intercept=True):
@@ -627,24 +643,22 @@ def _array4name(formula, data, strict_patsy=False, intercept=True):
         return None
     if strict_patsy:
         if not intercept:
-            formula = formula + u' +0'
-        #FIXME: need to create the formula here, or unicode will bite
+            formula = formula + ' +0'
         value = patsy.dmatrix(formula, data, return_type="dataframe")
-        pEF = patsy.EvalFactor
-        value.columns = [unicode(pEF(c, {}).code.strip())
-                         for c in value.columns]
+        EvalFactor = patsy.EvalFactor
+        value.columns = [EvalFactor(c, {}).code.strip() for c in
+                         value.columns]
         value.name = formula
         return value
     result = []
 
-    pEF = lambda s: unicode(patsy.EvalFactor(s, {}).code)
+    EvalFactor = lambda s: patsy.EvalFactor(s, {}).code
     for name in _formula_terms(formula, intercept):
-        #name = name.strip()
         #this should allow to follow the same structure as patsy
         name = name.strip()
-        logging.warning(u'name: {}, {}'.format(name, type(name)))
+        logging.warning('name: {}, {}'.format(name, type(name)))
         try:
-            name = pEF(name)
+            name = EvalFactor(name)
         except SyntaxError:
             pass
         try:
@@ -662,10 +676,8 @@ def _array4name(formula, data, strict_patsy=False, intercept=True):
                 value.name = name
         except KeyError:
             # if it fails try it as a patsy formula
-            #if sys.version_info[0]==2:
-            #name = name.encode('unicode-escape')
             value = patsy.dmatrix(name+'+0', data, return_type="dataframe")
-            value.columns = [pEF(c) for c in value.columns]
+            value.columns = [EvalFactor(c) for c in value.columns]
             value.name = name
         result.append(value)
     #merge all the resulting dataframe
@@ -754,10 +766,10 @@ def _stack_by(df, keys):
     for k, g in df.groupby(keys):
         g = g[residui]
         if isinstance(k, tuple):
-            addendum = u": ".join(unicode(c) for c in k)
+            addendum = ": ".join(map(str, k))
         else:
-            addendum = unicode(k)
-        g.columns = [u'Q("'+col+u': '+addendum+u'")' for col in g.columns]
+            addendum = str(k)
+        g.columns = ['Q("'+col+': '+addendum+'")' for col in g.columns]
         #g.index = range(len(g))
         results.append(g)
     return pd.concat(results, axis=1)
@@ -836,7 +848,8 @@ def _oracle(x, y):
     return ''
 
 
-def kind_corr(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
+def kind_corr(x, y, ax=None, categories={}, jitter=0.0, facet=None,
+              encoding='utf-8', **kwargs):
     if not len(x.columns) == 1:
         raise TypeError('corr do not accept multiple exogenous variables')
     if y is not None:
@@ -851,15 +864,17 @@ def kind_corr(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     fig, ax = _build_axes(ax)
     if y is None:
         ax.acorr(x.values, maxlags=None, **kwargs)
-        ax.set_xlabel(x.name)
+        ax.set_xlabel(x.name.decode(encoding))
     else:
         ax.xcorr(x.values, y.values, maxlags=None, **kwargs)
-        ax.set_xlabel("{} Vs {}".format(x.name, y.name))
+        ax.set_xlabel("{} Vs {}".format(x.name.decode(encoding),
+                                        y.name.decode(encoding)))
     ax.set_ylabel('correlation')
     return ax
 
 
-def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
+def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, facet=None,
+                encoding='utf-8', **kwargs):
     # I can also merge the x with the y, but should I??
     if y is not None:
         raise TypeError('mosaic do not accept endogenous variables')
@@ -868,11 +883,13 @@ def kind_mosaic(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
         ax[-1] = None
     fig, ax = _build_axes(ax)
     data = x.sort()
+    #NOTE: might need to pass encoding here?
     mosaicplot.mosaic(data, ax=ax, **kwargs)
     return ax
 
 
-def kind_hist(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
+def kind_hist(x, y, ax=None, categories={}, jitter=0.0, facet=None,
+              encoding='utf-8', **kwargs):
     """make the kernel density estimation of a single variable"""
     # compute the number of bin by means of the rule, but should also
     # implement something like
@@ -914,14 +931,15 @@ def kind_hist(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
         #ax.set_ylim(0.0, None)
         ax.set_ylabel('Density')
     if len(x.columns) == 1:
-        ax.set_xlabel(x.columns[0])
+        ax.set_xlabel(x.columns[0].decode(encoding))
     #ax.set_ylim(0.0, None)
     ax.set_ylabel('Density')
     _multi_legend(ax)
     return ax
 
 
-def kind_counter(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
+def kind_counter(x, y, ax=None, categories={}, jitter=0.0, facet=None,
+                 encoding='utf-8', **kwargs):
     if y is not None or not len(x.columns) == 1:
         raise TypeError('counter can only work with a single array')
     fig, ax = _build_axes(ax)
@@ -971,7 +989,8 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs)
     return ax
 
 
-def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
+def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, facet=None,
+                encoding='utf-8', **kwargs):
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the hexbin plot')
@@ -988,14 +1007,15 @@ def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     kwargs.setdefault('gridsize', 20)
     img = ax.hexbin(x_data, y_data, **kwargs)
     plt.colorbar(img)
-    ax.set_ylabel(y.name)
-    ax.set_xlabel(x.name)
+    ax.set_ylabel(y.name.decode(encoding))
+    ax.set_xlabel(x.name.decode(encoding))
     ax.margins(0.05)
     ax.set_axis_bgcolor(kwargs['cmap'](0))
     return ax
 
 
-def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
+def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, facet=None,
+                encoding='utf-8', **kwargs):
     if len(x.columns) > 1:
         raise TypeError('matrix plot is defined only for monovariate plots')
     if y is not None:
@@ -1057,7 +1077,8 @@ def kind_matrix(x, y, ax=None, categories={}, jitter=0.0, facet=None, **kwargs):
     return ax
 
 
-def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+                 encoding='utf-8', **kwargs):
     if y is None:
         raise TypeError('an endogenous variable is '
                         'required for the ellipse plot')
@@ -1090,8 +1111,8 @@ def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
     art.set_facecolor('purple')
     art.set_alpha(0.5)
     art.set_zorder(7)
-    ax.set_ylabel(y.name)
-    ax.set_xlabel(x.name)
+    ax.set_ylabel(y.name.decode(encoding))
+    ax.set_xlabel(x.name.decode(encoding))
     ax.margins(0.05)
     spearman = spearmanr(x_data, y_data)[0]
     ax.text(0.5, 0.98, "spearman: {:.3f}".format(spearman),
@@ -1103,14 +1124,17 @@ def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
     return ax
 
 
-def kind_lines(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_lines(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+               encoding='utf-8', **kwargs):
     kwargs['marker'] = None
     kwargs['linestyle'] = '-'
     return kind_scatter(x, y, ax=ax, categories=categories,
-                        jitter=jitter, facet=facet, order=True, **kwargs)
+                        jitter=jitter, facet=facet, order=True,
+                        encoding=encoding, **kwargs)
 
 
-def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+                 encoding='utf-8', **kwargs):
     order = kwargs.pop('order', False)
     if y is None:
         #zero-variate
@@ -1131,7 +1155,7 @@ def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
             kwargs.setdefault('linestyle', 'none')
             ax.plot(data.index, data, label=_beautify(column), **kwargs)
         if len(x.columns) == 1:
-            ax.set_xlabel(_beautify(x.columns[0]))
+            ax.set_xlabel(_beautify(x.columns[0]).decode(encoding))
         _multi_legend(ax)
         ax.set_ylabel('Value')
         return ax
@@ -1153,9 +1177,10 @@ def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(x, data, label=_beautify(column), **kwargs)
+            ax.plot(x, data, label=_beautify(column).decode(encoding),
+                    **kwargs)
         _multi_legend(ax)
-        ax.set_xlabel(_beautify(x.name))
+        ax.set_xlabel(_beautify(x.name).decode(encoding))
         return ax
     if isinstance(x, pd.DataFrame) and len(x.columns) == 2:
         fig, ax = _build_axes(ax, projection='3d')
@@ -1174,18 +1199,20 @@ def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(new_x, new_y, zs=data, label=_beautify(column), **kwargs)
+            ax.plot(new_x, new_y, zs=data,
+                    label=_beautify(column).decode(encoding), **kwargs)
         _multi_legend(ax)
-        ax.set_xlabel(_beautify(new_x.name))
-        ax.set_ylabel(_beautify(new_y.name))
+        ax.set_xlabel(_beautify(new_x.name).decode(encoding))
+        ax.set_ylabel(_beautify(new_y.name).decode(encoding))
         if len(z.columns) == 1:
-            ax.set_zlabel(_beautify(z.columns[0]))
+            ax.set_zlabel(_beautify(z.columns[0]).decode(encoding))
         return ax
     else:
         raise TypeError("scatter can't manage this kind of data")
 
 
-def kind_kde(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_kde(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+             encoding='utf-8', **kwargs):
     """make the kernel density estimation of a single variable"""
     if y is not None:
         if not len(y.columns) == 1 or not len(x.columns) == 1:
@@ -1205,8 +1232,8 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
         ax.plot_surface(x_grid, y_grid, z, cmap=plt.cm.jet)
         linespacing = 3.0
         ax.set_zlabel('\nDensity', linespacing=linespacing)
-        ax.set_ylabel('\n'+y.name, linespacing=linespacing)
-        ax.set_xlabel('\n'+x.name, linespacing=linespacing)
+        ax.set_ylabel('\n'+y.name.decode(encoding), linespacing=linespacing)
+        ax.set_xlabel('\n'+x.name.decode(encoding), linespacing=linespacing)
         return ax
     fig, ax = _build_axes(ax)
     colors = ['#777777', 'b', 'g', 'r', 'c', 'm', 'y', 'k']
@@ -1235,7 +1262,8 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     return ax
 
 
-def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+                    encoding='utf-8', **kwargs):
     """perform the violinplot on monovariate data, vertical or horizontals"""
     if (y is None or not len(x.columns) == 1 or
             not len(y.columns) == 1):
@@ -1277,12 +1305,13 @@ def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwar
         ax.set_xlim(-1, len(levels))
     else:
         ax.set_ylim(-1, len(levels))
-    ax.set_ylabel(ylab)
-    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab.decode(encoding))
+    ax.set_xlabel(xlab.decode(encoding))
     return ax
 
 
-def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+                 encoding='utf-8', **kwargs):
     """perform the boxplot on monovariate data, vertical or horizontals.
     Should be expanded to manage multivariate data. For multivariate
     data should put the barplots one next to the other for each series"""
@@ -1293,20 +1322,20 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
     ylab = y.name
     if len(x.columns) == 1 and x.icol(0).dtype != float:
         vertical = True
-        ax.set_xlabel(_beautify(xlab))
+        ax.set_xlabel(_beautify(xlab).decode(encoding))
     elif len(y.columns) == 1 and y.icol(0).dtype != float:
         vertical = False
         x, y = y, x
-        ax.set_ylabel(_beautify(ylab))
+        ax.set_ylabel(_beautify(ylab).decode(encoding))
     else:
         raise TypeError('the boxplot is not adeguate for this data')
     x = x.icol(0)
     L = len(y.columns)
     if L == 1:
         if vertical:
-            ax.set_ylabel(_beautify(ylab))
+            ax.set_ylabel(_beautify(ylab).decode(encoding))
         else:
-            ax.set_xlabel(_beautify(xlab))
+            ax.set_xlabel(_beautify(xlab).decode(encoding))
     # ok, data is clean, create the axes and do the plot
     kwargs.pop('y_label', None)
     levels = categories[xlab if vertical else ylab]
@@ -1337,6 +1366,7 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
                            color=colors[index], **temp_args)
     if x.dtype == int:
         ax.set_xticks(range(len(levels)))
+        #NOTE: probably needs to be decoded as well?
         ax.set_xticklabels(levels)
     x = _make_numeric(x, ax, 'x' if vertical else 'y', categories=categories)
 
@@ -1349,7 +1379,8 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs)
     return ax
 
 from statsmodels.api import OLS
-def kind_ols(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_ols(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+             encoding='utf-8', **kwargs):
     if y is None:
         raise TypeError("can implement the GLM only on a single endog")
     fig, ax = _build_axes(ax)
@@ -1360,14 +1391,15 @@ def kind_ols(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     print y_est
     if len(y.columns) == 1:
         kind_ellipse(y_est, y, ax=ax, categories={},
-                     jitter=1.0, facet=facet, **kwargs)
+                     jitter=1.0, facet=facet, encoding=encoding, **kwargs)
     else:
         kind_scatter(y_est, y, ax=ax, categories={},
-                     jitter=1.0, facet=facet, **kwargs)
+                     jitter=1.0, facet=facet, encoding=encoding, **kwargs)
     return ax
 
 
-def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
+def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None,
+             encoding='utf-8', **kwargs):
     if not len(x.columns) == 1:
         raise TypeError('psd do not accept multiple exogenous variables')
     if y is not None:
@@ -1383,11 +1415,12 @@ def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None, **kwargs):
     if y is None:
         ax.psd(x.values, **kwargs)
         ax.set_ylabel('power spectral density')
-        ax.set_xlabel(x.name)
+        ax.set_xlabel(x.name.decode(encoding))
     else:
         ax.csd(x.values, y.values, **kwargs)
         ax.set_ylabel('cross spectral density')
-        ax.set_xlabel("{} Vs {}".format(x.name, y.name))
+        ax.set_xlabel("{} Vs {}".format(x.name.decode(encoding),
+                                        y.name.decode(encoding)))
     return ax
 
 ###################################################
