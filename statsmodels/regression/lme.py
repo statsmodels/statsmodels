@@ -3,7 +3,6 @@ Linear mixed effects models
 
 """
 
-
 import numpy as np
 import statsmodels.base.model as base
 from scipy.optimize import fmin_cg, fmin
@@ -21,7 +20,7 @@ class LME(base.Model):
                                   groups=groups, missing=missing)
 
         # Convert the data to the internal representation, which is a
-        # list of arrays, corresponding to the clusters.
+        # list of arrays, corresponding to the groups.
         group_labels = list(set(groups))
         group_labels.sort()
         row_indices = dict((s, []) for s in group_labels)
@@ -30,15 +29,19 @@ class LME(base.Model):
         self.group_labels = group_labels
         self.ngroup = len(self.group_labels)
 
-        self.endog_li = self.cluster_list(self.endog)
-        self.exog_li = self.cluster_list(self.exog)
-        self.exog_re_li = self.cluster_list(self.exog_re)
+        # Split the data by groups
+        self.endog_li = self.group_list(self.endog)
+        self.exog_li = self.group_list(self.exog)
+        self.exog_re_li = self.group_list(self.exog_re)
+
+        # The total number of observations, summed over all groups
+        self.ntot = sum([len(y) for y in self.endog_li])
 
 
-    def cluster_list(self, array):
+    def group_list(self, array):
         """
         Returns `array` split into subarrays corresponding to the
-        cluster structure.
+        grouping structure.
         """
 
         if array.ndim == 1:
@@ -51,7 +54,8 @@ class LME(base.Model):
 
     def _unpack(self, params):
         """
-        Takes as input the packed parameter vector and returns three values:
+        Takes as input the packed parameter vector and returns three
+        values:
 
         params : 1d ndarray
             The fixed effects coefficients
@@ -76,8 +80,37 @@ class LME(base.Model):
 
         return params_fe, revar, params_rv
 
+    def _pack(self, params_fe, revar, sig2):
+        """
+        Packs the model parameters into a single vector.
+
+        Arguments
+        ---------
+        params_fe : 1d ndarray
+            The fixed effects parameters
+        revar : 2d ndarray
+            The covariance matrix of the random effects
+        sig2 : non-negative scalar
+            The error variance
+        """
+
+        ix = np.tril_indices(revar.shape[0])
+        return np.concatenate((params_fe, revar[ix], np.r_[sig2,]))
 
     def like(self, params):
+        """
+        Evaluate the log-likelihood of the model.
+
+        Arguments
+        ---------
+        params : 1d ndarray
+            The parameter values, packed into a single vector
+
+        Returns
+        -------
+        likeval : scalar
+            The log-likelihood valuoe at `params`.
+        """
 
         params_fe, revar, sig2 = self._unpack(params)
 
@@ -106,11 +139,23 @@ class LME(base.Model):
             _,ld = np.linalg.slogdet(vmat)
             likeval -= 0.5*(ld + np.dot(resid, u))
 
-        print likeval
         return likeval
 
 
     def score(self, params):
+        """
+        Calculates the score vector for the mixed effects model.
+
+        Parameters
+        ----------
+        params : 1d ndarray
+            All model parameters i packed form
+
+        Returns
+        -------
+        scorevec : 1d ndarray
+            The score vector, calculated at `params`.
+        """
 
         params_fe, revar, sig2 = self._unpack(params)
 
@@ -150,12 +195,140 @@ class LME(base.Model):
 
             score_rv += np.sum(np.diag(score_dv))
 
-        if self.like(params) > 1e5: 1/0
-
-        return np.concatenate((score_fe, 0*score_re, np.r_[score_rv,]))
+        return np.concatenate((score_fe, score_re, np.r_[score_rv,]))
 
 
-    def fit(self):
+    def Estep(self, params_fe, revar, sig2):
+        """
+        The E-step of the EM algorithm.
+
+        Parameters
+        ----------
+        params_fe : 1d ndarray
+            The current value of the fixed effect coefficients
+        revar : 2d ndarray
+            The current value of the covariance matrix of random
+            effects
+        sig2 : positive scalar
+            The current value of the error variance
+
+        Returns
+        -------
+        m1x : 1d ndarray
+            sum_groups X'*Z*E[gamma | Y], where X and Z are the fixed
+            and random effects covariates, gamma is the random
+            effects, and Y is the observed data
+        m1y : scalar
+            sum_groups Y'*E[gamma | Y]
+        m2 : 2d ndarray
+            sum_groups E[gamma * gamma' | Y]
+        m2xx : 2d ndarray
+            sum_groups Z'*Z * E[gamma * gamma' | Y]
+        """
+
+        m1x, m1y, m2, m2xx = 0., 0., 0., 0.
+
+        for k in range(self.ngroup):
+
+            # Get the residuals
+            expval = np.dot(self.exog_li[k], params_fe)
+            resid = self.endog_li[k] - expval
+
+            # Contruct the marginal covariance matrix for this group
+            ex_r = self.exog_re_li[k]
+            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
+            vmat += sig2*np.eye(vmat.shape[0])
+
+            vr1 = np.linalg.solve(vmat, resid)
+            vr1 = np.dot(ex_r.T, vr1)
+            vr1 = np.dot(revar, vr1)
+
+            vr2 = np.linalg.solve(vmat, self.exog_re_li[k])
+            vr2 = np.dot(vr2, revar)
+            vr2 = np.dot(ex_r.T, vr2)
+            vr2 = np.dot(revar, vr2)
+
+            rg = np.dot(ex_r, vr1)
+            m1x += np.dot(self.exog_li[k].T, rg)
+            m1y += np.dot(self.endog_li[k].T, rg)
+            egg = revar - vr2 + np.outer(vr1, vr1)
+            m2 += egg
+            m2xx += np.dot(np.dot(ex_r.T, ex_r), egg)
+
+        return m1x, m1y, m2, m2xx
+
+
+    def EM(self, num_em=10, full_output=False):
+        """
+        Performs `num_em` steps of the EM algorithm.
+
+        Returns
+        -------
+        params_fe : 1d ndarray
+            The final value of the fixed effects coefficients
+        revar : 2d ndarray
+            The final value of the random effects covariance
+            matrix
+        sig2 : float
+            The final value of the error variance
+        hist : list
+            The iteration history, only returned if `full_output`
+            is True.
+        """
+
+        # The iteration history
+        hist = []
+
+        # Starting values
+        pf = self.exog_li[0].shape[1]
+        pr = self.exog_re_li[0].shape[1]
+        params_fe = np.zeros(pf, dtype=np.float64)
+        revar = np.eye(pr, dtype=np.float64)
+        sig2 = 1
+
+        xxtot = 0.
+        for x in self.exog_li:
+            xxtot += np.dot(x.T, x)
+
+        xytot = 0.
+        for x,y in zip(self.exog_li, self.endog_li):
+            xytot += np.dot(x.T, y)
+
+        pp = []
+        for itr in range(num_em):
+
+            m1x, m1y, m2, m2xx = self.Estep(params_fe, revar, sig2)
+
+            params_fe = np.linalg.solve(xxtot, xytot - m1x)
+            revar = m2 / self.ngroup
+
+            sig2 = 0.
+            for x,y in zip(self.exog_li, self.endog_li):
+                sig2 += np.sum((y - np.dot(x, params_fe))**2)
+            sig2 -= 2*m1y
+            sig2 += 2*np.dot(params_fe, m1x)
+            sig2 += np.trace(m2xx)
+            sig2 /= self.ntot
+
+            if full_output:
+                hist.append([params_fe, revar, sig2])
+
+        if full_output:
+            return params_fe, revar, sig2, hist
+        else:
+            return params_fe, revar, sig2
+
+    def fit(self, num_em=10):
+        """
+        Fit a linear mixed model to the data.
+
+        Parameters
+        ----------
+        num_em : non-negative integer
+            The number of EM steps to take before switching to
+            gradient optimization
+
+        """
 
         like = lambda x: -self.like(x)
         score = lambda x: -self.score(x)
@@ -167,7 +340,11 @@ class LME(base.Model):
         x1 = x1[ix]
         x0 = np.concatenate((x0, x1, np.r_[1.,]))
 
-        rslt = fmin_cg(like, x0, score)
+        params_fe, revar, sig2 = self.EM(num_em)
+
+        params = self._pack(params_fe, revar, sig2)
+
+        rslt = fmin_cg(like, params, score)
         1/0
 
 
@@ -179,10 +356,12 @@ def test():
     G = []
     for k in range(300):
         xfe = np.random.normal(size=(5,3))
-        xre = np.random.normal(size=(5,3))
-        fe = xfe.sum(1)
-        re = np.dot(xre, np.random.normal(size=3))
-        y = fe + re + np.random.normal(size=5)
+        xre = np.ones((5,2), dtype=np.float64)
+        xre[:,1] = np.linspace(0, 1, 5)
+        fe = np.dot(xfe, np.r_[1, 0, -1])
+        re = np.random.normal(size=2) * np.r_[2, 0.5]
+        re = np.dot(xre, re)
+        y = fe + re + 1*np.random.normal(size=5)
         XRE.append(xre)
         XFE.append(xfe)
         Y.append(y)
@@ -196,5 +375,8 @@ def test():
     lme = LME(Y, XFE, XRE, G)
     lme.fit()
     1/0
+
+
+
 
 test()
