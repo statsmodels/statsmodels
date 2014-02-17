@@ -292,15 +292,15 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         data = data.dropna()
     # if a subset is specified use it to trim the dataframe
     if not len(data):
-        raise TypeError("""empty dataframe. Check the
-                        subset and drop_na options for possible causes""")
+        raise TypeError("Empty dataframe. Check the "
+                        "subset and drop_na options for possible causes")
     #interrogate the oracle: which plot it's the best?
     #only if one is not specified by default, should give the same
     #results of the choice used in the data-centric functions
     kind = kind or _oracle(value_x, value_y)
     if not kind:
-        raise ValueError("the oracle couldn't determine the best plot, "
-                         "please choose betwenn: {}".format(
+        raise ValueError("Could not determine the best plot, "
+                         "please choose between: {}".format(
                          facet_plot.registered_plots.keys()))
     # load the function among the available ones, troubles
     # can happens if the user chooses something not present
@@ -316,7 +316,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
     # not very smooth
     if ax:
         if facet:
-            raise ValueError('facet are incompatibles with single axes')
+            raise ValueError('facet is incompatibles with single axes')
         plot_function(value_x, value_y,
                       ax=ax,  jitter=jitter, facet='__TOTAL__',
                       categories=categories, encoding=encoding, **kwargs)
@@ -1153,7 +1153,8 @@ def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None,
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(data.index, data, label=_beautify(column), **kwargs)
+            ax.plot(data.index, data, label=_beautify(column).decode(encoding),
+                    **kwargs)
         if len(x.columns) == 1:
             ax.set_xlabel(_beautify(x.columns[0]).decode(encoding))
         _multi_legend(ax)
