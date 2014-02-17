@@ -57,7 +57,8 @@ for m in _alias_list:
     for a in m[1:]:
         multitest_alias[a] = m[0]
 
-def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
+def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
+                  returnsorted=False):
     '''test results and p-value correction for multiple tests
 
 
@@ -82,6 +83,10 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
         `fdr_tsbh` : two stage fdr correction (non-negative)
         `fdr_tsbky` : two stage fdr correction (non-negative)
 
+    is_sorted : bool
+        If False (default), the p_values will be sorted, but the corrected
+        pvalues are in the original order. If True, then it assumed that the
+        pvalues are already sorted in ascending order.
     returnsorted : bool
          not tested, return sorted p-values instead of original sequence
 
@@ -104,17 +109,23 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     the corrected p-values are specific to the given alpha, see
     ``fdrcorrection_twostage``.
 
-    all corrected pvalues now tested against R.
+    all corrected p-values now tested against R.
     insufficient "cosmetic" tests yet
-    new procedure 'fdr_gbs' not verified yet, p-values derived from scratch not
-    reference
+    The 'fdr_gbs' procedure is not verified against another package, p-values
+    are derived from scratch and are not derived in the reference. In Monte
+    Carlo experiments the method worked correctly and maintained the false
+    discovery rate.
 
     All procedures that are included, control FWER or FDR in the independent
     case, and most are robust in the positively correlated case.
 
-    fdr_gbs: high power, fdr control for independent case and only small
+    `fdr_gbs`: high power, fdr control for independent case and only small
     violation in positively correlated case
 
+    **Timing**: Most of the time with large arrays is spent in `argsort`. When
+    we want to calculate the p-value for several methods, then it is more
+    efficient to presort the pvalues, and put the results back into the
+    original order outside of the function.
 
     there will be API changes.
 
@@ -124,13 +135,15 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
 
     '''
     import gc
-    gc.collect()
     pvals = np.asarray(pvals)
     alphaf = alpha  # Notation ?
-    sortind = np.argsort(pvals)
-    #pvals = pvals[sortind]
-    pvals = np.take(pvals, sortind)
-    sortrevind = sortind.argsort()
+
+    if not is_sorted:
+        sortind = np.argsort(pvals)
+        #pvals = pvals[sortind]
+        pvals = np.take(pvals, sortind)
+        #sortrevind = sortind.argsort()
+
     ntests = len(pvals)
     alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
     alphacBonf = alphaf / float(ntests)
@@ -237,18 +250,19 @@ def multipletests(pvals, alpha=0.05, method='hs', returnsorted=False):
     else:
         raise ValueError('method not recognized')
 
-
     if not pvals_corrected is None: #not necessary anymore
         pvals_corrected[pvals_corrected>1] = 1
-    if returnsorted:
+    if is_sorted or returnsorted:
         return reject, pvals_corrected, alphacSidak, alphacBonf
     else:
-        if pvals_corrected is None:
-            return reject[sortrevind], pvals_corrected, alphacSidak, alphacBonf
-        else:
-            return reject[sortrevind], pvals_corrected[sortrevind], alphacSidak, alphacBonf
+        pvals_corrected_ = np.empty_like(pvals_corrected)
+        pvals_corrected_[sortind] = pvals_corrected
+        del pvals_corrected
+        reject_ = np.empty_like(reject)
+        reject_[sortind] = reject
+        return reject_, pvals_corrected_, alphacSidak, alphacBonf
 
-#TODO: rename drop 0 at end
+
 def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     '''pvalue correction for false discovery rate
 
@@ -293,8 +307,6 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
         pvals_sorted = pvals[pvals_sortind]
-        sortrevind = pvals_sortind.argsort()
-        del pvals_sortind
     else:
         pvals_sorted = pvals  # alias
 
@@ -318,10 +330,15 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
     del pvals_corrected_raw
     pvals_corrected[pvals_corrected>1] = 1
     if not is_sorted:
-        return reject[sortrevind], pvals_corrected[sortrevind]
+        pvals_corrected_ = np.empty_like(pvals_corrected)
+        pvals_corrected_[pvals_sortind] = pvals_corrected
+        del pvals_corrected
+        reject_ = np.empty_like(reject)
+        reject_[pvals_sortind] = reject
+        return reject_, pvals_corrected_
     else:
         return reject, pvals_corrected
-    #return reject[pvals_sortind.argsort()]
+
 
 def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
                            is_sorted=False):
@@ -381,8 +398,6 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
         pvals = pvals[pvals_sortind]
-        sortrevind = pvals_sortind.argsort()
-        del pvals_sortind
 
     ntests = len(pvals)
     if method == 'bky':
@@ -424,7 +439,11 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
         pvalscorr *= (1. + alpha)
 
     if not is_sorted:
-        return rej[sortrevind], pvalscorr[sortrevind], ntests - ri, alpha_stages
-        #return reject[sortrevind], pvals_corrected[sortrevind]
+        pvalscorr_ = np.empty_like(pvalscorr)
+        pvalscorr_[pvals_sortind] = pvalscorr
+        del pvalscorr
+        reject = np.empty_like(rej)
+        reject[pvals_sortind] = rej
+        return reject, pvalscorr_, ntests - ri, alpha_stages
     else:
         return rej, pvalscorr, ntests - ri, alpha_stages
