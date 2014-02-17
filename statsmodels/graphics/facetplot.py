@@ -10,6 +10,9 @@ try:
 except:
     have_matplotlib = False
 
+import sys
+py3 = sys.version[0] == '3'
+from statsmodels.compatnp.py3k import asunicode
 from statsmodels.graphics import utils
 from statsmodels.graphics import mosaicplot
 from statsmodels.graphics.boxplots import _single_violin
@@ -232,7 +235,7 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         >>> data['x 1'] = np.random.randn(N)
         >>> facet_plot(' float_1 ~ x 1 ', data)
     """
-    if isinstance(formula, unicode):
+    if isinstance(formula, unicode) and not py3:
         formula = _safe_encode(formula, encoding)
 
     if not ax:
@@ -247,7 +250,9 @@ def facet_plot(formula, data=None, kind=None, subset=None,
         data = patsy.EvalEnvironment.capture(1).namespace
     else: # make sure it's a DataFrame and encode the keys
         data = pd.DataFrame(data)
-        data.columns = map(lambda x : _safe_encode(x, encoding), data.columns)
+        if not py3:
+            data.columns = map(lambda x : _safe_encode(x, encoding),
+                               data.columns)
     #create the x and y values of the arrays
     value_y = _array4name(y, data, strict_patsy, intercept=False)
     value_x = _array4name(x, data, strict_patsy)
@@ -864,11 +869,11 @@ def kind_corr(x, y, ax=None, categories={}, jitter=0.0, facet=None,
     fig, ax = _build_axes(ax)
     if y is None:
         ax.acorr(x.values, maxlags=None, **kwargs)
-        ax.set_xlabel(x.name.decode(encoding))
+        ax.set_xlabel(asunicode(x.name, encoding))
     else:
         ax.xcorr(x.values, y.values, maxlags=None, **kwargs)
-        ax.set_xlabel("{} Vs {}".format(x.name.decode(encoding),
-                                        y.name.decode(encoding)))
+        ax.set_xlabel("{} Vs {}".format(asunicode(x.name, encoding),
+                                        asunicode(y.name, encoding)))
     ax.set_ylabel('correlation')
     return ax
 
@@ -931,7 +936,7 @@ def kind_hist(x, y, ax=None, categories={}, jitter=0.0, facet=None,
         #ax.set_ylim(0.0, None)
         ax.set_ylabel('Density')
     if len(x.columns) == 1:
-        ax.set_xlabel(x.columns[0].decode(encoding))
+        ax.set_xlabel(asunicode(x.columns[0], encoding))
     #ax.set_ylim(0.0, None)
     ax.set_ylabel('Density')
     _multi_legend(ax)
@@ -1007,8 +1012,8 @@ def kind_hexbin(x, y, ax=None, categories={}, jitter=0.0, facet=None,
     kwargs.setdefault('gridsize', 20)
     img = ax.hexbin(x_data, y_data, **kwargs)
     plt.colorbar(img)
-    ax.set_ylabel(y.name.decode(encoding))
-    ax.set_xlabel(x.name.decode(encoding))
+    ax.set_ylabel(asunicode(y.name, encoding))
+    ax.set_xlabel(asunicode(x.name, encoding))
     ax.margins(0.05)
     ax.set_axis_bgcolor(kwargs['cmap'](0))
     return ax
@@ -1111,8 +1116,8 @@ def kind_ellipse(x, y, ax=None, categories={}, jitter=1.0, facet=None,
     art.set_facecolor('purple')
     art.set_alpha(0.5)
     art.set_zorder(7)
-    ax.set_ylabel(y.name.decode(encoding))
-    ax.set_xlabel(x.name.decode(encoding))
+    ax.set_ylabel(asunicode(y.name, encoding))
+    ax.set_xlabel(asunicode(x.name, encoding))
     ax.margins(0.05)
     spearman = spearmanr(x_data, y_data)[0]
     ax.text(0.5, 0.98, "spearman: {:.3f}".format(spearman),
@@ -1153,10 +1158,11 @@ def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None,
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(data.index, data, label=_beautify(column).decode(encoding),
+            ax.plot(data.index, data, label=asunicode(_beautify(column),
+                                                      encoding),
                     **kwargs)
         if len(x.columns) == 1:
-            ax.set_xlabel(_beautify(x.columns[0]).decode(encoding))
+            ax.set_xlabel(asunicode(_beautify(x.columns[0]), encoding))
         _multi_legend(ax)
         ax.set_ylabel('Value')
         return ax
@@ -1178,10 +1184,10 @@ def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None,
             kwargs.setdefault('alpha', 0.5)
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
-            ax.plot(x, data, label=_beautify(column).decode(encoding),
+            ax.plot(x, data, label=asunicode(_beautify(column), encoding),
                     **kwargs)
         _multi_legend(ax)
-        ax.set_xlabel(_beautify(x.name).decode(encoding))
+        ax.set_xlabel(asunicode(_beautify(x.name), encoding))
         return ax
     if isinstance(x, pd.DataFrame) and len(x.columns) == 2:
         fig, ax = _build_axes(ax, projection='3d')
@@ -1201,12 +1207,12 @@ def kind_scatter(x, y, ax=None, categories={}, jitter=1.0, facet=None,
             kwargs.setdefault('marker', 'o')
             kwargs.setdefault('linestyle', 'none')
             ax.plot(new_x, new_y, zs=data,
-                    label=_beautify(column).decode(encoding), **kwargs)
+                    label=asunicode(_beautify(column), encoding), **kwargs)
         _multi_legend(ax)
-        ax.set_xlabel(_beautify(new_x.name).decode(encoding))
-        ax.set_ylabel(_beautify(new_y.name).decode(encoding))
+        ax.set_xlabel(asunicode(_beautify(new_x.name), encoding))
+        ax.set_ylabel(asunicode(_beautify(new_y.name), encoding))
         if len(z.columns) == 1:
-            ax.set_zlabel(_beautify(z.columns[0]).decode(encoding))
+            ax.set_zlabel(asunicode(_beautify(z.columns[0]), encoding))
         return ax
     else:
         raise TypeError("scatter can't manage this kind of data")
@@ -1233,8 +1239,10 @@ def kind_kde(x, y, ax=None, categories={}, jitter=1.0, facet=None,
         ax.plot_surface(x_grid, y_grid, z, cmap=plt.cm.jet)
         linespacing = 3.0
         ax.set_zlabel('\nDensity', linespacing=linespacing)
-        ax.set_ylabel('\n'+y.name.decode(encoding), linespacing=linespacing)
-        ax.set_xlabel('\n'+x.name.decode(encoding), linespacing=linespacing)
+        ax.set_ylabel('\n' + asunicode(y.name, encoding),
+                      linespacing=linespacing)
+        ax.set_xlabel('\n' + asunicode(x.name, encoding),
+                      linespacing=linespacing)
         return ax
     fig, ax = _build_axes(ax)
     colors = ['#777777', 'b', 'g', 'r', 'c', 'm', 'y', 'k']
@@ -1306,8 +1314,8 @@ def kind_violinplot(x, y, ax=None, categories={}, jitter=1.0, facet=None,
         ax.set_xlim(-1, len(levels))
     else:
         ax.set_ylim(-1, len(levels))
-    ax.set_ylabel(ylab.decode(encoding))
-    ax.set_xlabel(xlab.decode(encoding))
+    ax.set_ylabel(asunicode(ylab, encoding))
+    ax.set_xlabel(asunicode(xlab, encoding))
     return ax
 
 
@@ -1323,20 +1331,20 @@ def kind_boxplot(x, y, ax=None, categories={}, jitter=1.0, facet=None,
     ylab = y.name
     if len(x.columns) == 1 and x.icol(0).dtype != float:
         vertical = True
-        ax.set_xlabel(_beautify(xlab).decode(encoding))
+        ax.set_xlabel(asunicode(_beautify(xlab), encoding))
     elif len(y.columns) == 1 and y.icol(0).dtype != float:
         vertical = False
         x, y = y, x
-        ax.set_ylabel(_beautify(ylab).decode(encoding))
+        ax.set_ylabel(asunicode(_beautify(ylab), encoding))
     else:
         raise TypeError('the boxplot is not adeguate for this data')
     x = x.icol(0)
     L = len(y.columns)
     if L == 1:
         if vertical:
-            ax.set_ylabel(_beautify(ylab).decode(encoding))
+            ax.set_ylabel(asunicode(_beautify(ylab), encoding))
         else:
-            ax.set_xlabel(_beautify(xlab).decode(encoding))
+            ax.set_xlabel(asunicode(_beautify(xlab), encoding))
     # ok, data is clean, create the axes and do the plot
     kwargs.pop('y_label', None)
     levels = categories[xlab if vertical else ylab]
@@ -1415,12 +1423,12 @@ def kind_psd(x, y, ax=None, categories={}, jitter=1.0, facet=None,
     if y is None:
         ax.psd(x.values, **kwargs)
         ax.set_ylabel('power spectral density')
-        ax.set_xlabel(x.name.decode(encoding))
+        ax.set_xlabel(asunicode(x.name, encoding))
     else:
         ax.csd(x.values, y.values, **kwargs)
         ax.set_ylabel('cross spectral density')
-        ax.set_xlabel("{} Vs {}".format(x.name.decode(encoding),
-                                        y.name.decode(encoding)))
+        ax.set_xlabel("{} Vs {}".format(asunicode(x.name, encoding),
+                                        asunicode(y.name, encoding)))
     return ax
 
 ###################################################
