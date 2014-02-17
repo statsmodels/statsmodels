@@ -5,7 +5,7 @@ Linear mixed effects models
 
 import numpy as np
 import statsmodels.base.model as base
-from scipy.optimize import fmin_cg, fmin
+from scipy.optimize import fmin_cg, fmin_bfgs
 from scipy.misc import derivative
 
 class LME(base.Model):
@@ -97,7 +97,7 @@ class LME(base.Model):
         ix = np.tril_indices(revar.shape[0])
         return np.concatenate((params_fe, revar[ix], np.r_[sig2,]))
 
-    def like(self, params):
+    def like(self, params, pen):
         """
         Evaluate the log-likelihood of the model.
 
@@ -105,24 +105,26 @@ class LME(base.Model):
         ---------
         params : 1d ndarray
             The parameter values, packed into a single vector
+        pen : non-negative float
+            Weight for the penalty parameter for negative variances
 
         Returns
         -------
         likeval : scalar
-            The log-likelihood valuoe at `params`.
+            The log-likelihood value at `params`.
         """
 
         params_fe, revar, sig2 = self._unpack(params)
 
         try:
-            np.linalg.cholesky(revar)
+            cy = np.linalg.cholesky(revar)
         except np.linalg.LinAlgError:
             return -np.inf
 
         if sig2 <= 0:
             return -np.inf
 
-        likeval = 0.
+        likeval = pen * (2*np.sum(np.log(np.diag(cy))) + np.log(sig2))
         for k in range(self.ngroup):
 
             # Get the residuals
@@ -142,7 +144,7 @@ class LME(base.Model):
         return likeval
 
 
-    def score(self, params):
+    def score(self, params, pen=0):
         """
         Calculates the score vector for the mixed effects model.
 
@@ -150,6 +152,8 @@ class LME(base.Model):
         ----------
         params : 1d ndarray
             All model parameters i packed form
+        pen : non-negative float
+            Weight for the penalty parameter for negative variances
 
         Returns
         -------
@@ -161,9 +165,13 @@ class LME(base.Model):
 
         # Construct the score.
         score_fe = 0.
+
         pr = self.exog_re.shape[1]
-        score_re = np.zeros(pr*(pr+1)/2, dtype=np.float64)
-        score_rv = 0.
+        ix = np.tril_indices(pr)
+        pi = np.linalg.inv(revar)
+        pi = 2*pi - np.diag(np.diag(pi))
+        score_re = pen*pi[ix]
+        score_rv = pen / sig2
         for k in range(self.ngroup):
 
             # Get the residuals
@@ -177,7 +185,7 @@ class LME(base.Model):
 
             # Update the fixed effects score
             u = np.linalg.solve(vmat, resid)
-            score_fe += 2*np.dot(self.exog_li[k].T, u)
+            score_fe += np.dot(self.exog_li[k].T, u)
 
             # Variance score with respect to the marginal covariance
             vmati = np.linalg.inv(vmat)
@@ -258,7 +266,8 @@ class LME(base.Model):
         return m1x, m1y, m2, m2xx
 
 
-    def EM(self, num_em=10, full_output=False):
+    def EM(self, params_fe, revar, sig2, num_em=10,
+           hist=None):
         """
         Performs `num_em` steps of the EM algorithm.
 
@@ -271,20 +280,7 @@ class LME(base.Model):
             matrix
         sig2 : float
             The final value of the error variance
-        hist : list
-            The iteration history, only returned if `full_output`
-            is True.
         """
-
-        # The iteration history
-        hist = []
-
-        # Starting values
-        pf = self.exog_li[0].shape[1]
-        pr = self.exog_re_li[0].shape[1]
-        params_fe = np.zeros(pf, dtype=np.float64)
-        revar = np.eye(pr, dtype=np.float64)
-        sig2 = 1
 
         xxtot = 0.
         for x in self.exog_li:
@@ -310,15 +306,14 @@ class LME(base.Model):
             sig2 += np.trace(m2xx)
             sig2 /= self.ntot
 
-            if full_output:
-                hist.append([params_fe, revar, sig2])
+            if hist is not None:
+                hist.append(["EM", params_fe, revar, sig2])
 
-        if full_output:
-            return params_fe, revar, sig2, hist
-        else:
-            return params_fe, revar, sig2
+        return params_fe, revar, sig2
 
-    def fit(self, num_em=10):
+
+    def fit(self, num_em=10, max_em_cycles=3, pen=0., gtol=1e-4,
+            full_output=False):
         """
         Fit a linear mixed model to the data.
 
@@ -327,25 +322,74 @@ class LME(base.Model):
         num_em : non-negative integer
             The number of EM steps to take before switching to
             gradient optimization
+        max_em_cycles : non-negative integer
+            Maximum number of EM/gradient attempts
+        pen : non-negative float
+            Coefficient of a logarithmic barrier function
+            for SPD covariance and non-negative error variance
+        gtol : non-negtive float
+            Algorithm is considered converged if the sup-norm of
+            the gradient is smaller than this value.
+        full_output : bool
+            If true, attach iteration history to results
 
+        Returns
+        -------
+        A LMEResults instance.
         """
 
-        like = lambda x: -self.like(x)
-        score = lambda x: -self.score(x)
+        like = lambda x: -self.like(x, pen)
+        score = lambda x: -self.score(x, pen)
 
-        x0 = np.zeros(self.exog.shape[1])
-        pr = self.exog_re.shape[1]
-        x1 = np.eye(pr)
-        ix = np.tril_indices(pr)
-        x1 = x1[ix]
-        x0 = np.concatenate((x0, x1, np.r_[1.,]))
+        if full_output:
+            hist = []
+        else:
+            hist = None
 
-        params_fe, revar, sig2 = self.EM(num_em)
+        # Starting values
+        params_fe = np.zeros(self.exog.shape[1], dtype=np.float64)
+        revar = np.eye(self.exog_re.shape[1])
+        sig2 = 1.
 
-        params_em = self._pack(params_fe, revar, sig2)
+        success = False
+        for ke in range(max_em_cycles):
 
-        params = fmin_cg(like, params_em, score)
+            # EM iterations
+            params_fe, revar, sig2 = self.EM(params_fe, revar, sig2,
+                                             num_em, hist)
+            params = self._pack(params_fe, revar, sig2)
+            if np.max(np.abs(self.score(params))) < gtol:
+                success = True
+                break
 
+            # Gradient iterations
+            try:
+                rslt = fmin_bfgs(like, params, score,
+                                 full_output=True,
+                                 disp=False,
+                                 retall=hist is not None)
+            except np.linalg.LinAlgError:
+                rslt = None
+                continue
+            if hist is not None:
+                hist.append(["Gradient", rslt['allvecs']])
+            params = rslt[0]
+            if np.max(np.abs(rslt[2])) < gtol:
+                success = True
+                break
+
+        if not success:
+            import warnings
+            from statsmodels.tools.sm_exceptions import \
+                 ConvergenceWarning
+            if rslt is None:
+                msg = "Gradient optimization failed, try increasing num_em or pen."
+            else:
+                msg = "Gradient sup norm=%.3f, try increasing num_em or pen." %\
+                      np.max(np.abs(rslt[2]))
+            warnings.warn(msg, ConvergenceWarning)
+
+        # Numerical derivatives to get Hessian.
         m = len(params)
         hess = np.zeros((m,m), dtype=np.float64)
         for j1 in range(m):
@@ -355,6 +399,7 @@ class LME(base.Model):
                     params0[j2] = x
                     return self.score(params0)[j1]
                 hess[j1, j2] = derivative(g, params[j2], dx=1e-6)
+                hess[j2, j1] = hess[j1, j2]
         pcov = np.linalg.inv(-hess)
 
         results = LMEResults(self, params, pcov)
