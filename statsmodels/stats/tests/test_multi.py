@@ -14,7 +14,8 @@ are tested against R:multtest
 '''
 
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal, assert_
+from numpy.testing import (assert_almost_equal, assert_equal, assert_,
+                          assert_allclose)
 
 from statsmodels.stats.multitest import (multipletests, fdrcorrection,
                                          fdrcorrection_twostage)
@@ -292,6 +293,25 @@ def test_fdr_bky():
     assert_almost_equal([0.047619, 0.0649], res_tst[-1][:2],3) #alpha_star for stage 2
     assert_equal(8, res_tst[0].sum())
     #print fdrcorrection_twostage(pvals, alpha=0.05, iter=True)
+
+def test_issorted():
+    # test that is_sorted keyword works correctly
+    # the fdrcorrection functions are tested indirectly
+    from statsmodels.stats.multitest import multitest_methods_names
+
+    # data generated as random numbers np.random.beta(0.2, 0.5, size=10)
+    pvals = np.array([31, 9958111, 7430818, 8653643, 9892855, 876, 2651691,
+                      145836, 9931, 6174747]) * 1e-7
+    sortind = np.argsort(pvals)
+    sortrevind = sortind.argsort()
+    pvals_sorted = pvals[sortind]
+
+    for method in multitest_methods_names:
+        res1 = multipletests(pvals, method=method, is_sorted=False)
+        res2 = multipletests(pvals_sorted, method=method, is_sorted=True)
+        assert_equal(res2[0][sortrevind], res1[0])
+        assert_allclose(res2[0][sortrevind], res1[0], rtol=1e-10)
+
 
 def test_tukeyhsd():
     #example multicomp in R p 83
