@@ -956,10 +956,10 @@ def kind_counter(x, y, ax=None, categories={}, jitter=0.0, facet=None,
     if is_categorical:
         key = categories[x.name]
     else:
-        key = list(res.index)
+        key = res.index.tolist()
         # if it's numerical fill the keys between the present values
         key = range(int(min(key)), int(max(key) + 1))
-    res = pd.Series(dict(((k, res.get(k, 0)) for k in key))).sort_index()
+    res = res[key].fillna(0)
     x = _make_numeric(x, ax, 'x', jitter, categories)
     val = np.array([res[i] for i in key])
     #set the defaul options
