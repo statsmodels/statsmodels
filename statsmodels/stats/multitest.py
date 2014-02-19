@@ -122,10 +122,15 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
     `fdr_gbs`: high power, fdr control for independent case and only small
     violation in positively correlated case
 
-    **Timing**: Most of the time with large arrays is spent in `argsort`. When
+    **Timing**:
+
+    Most of the time with large arrays is spent in `argsort`. When
     we want to calculate the p-value for several methods, then it is more
     efficient to presort the pvalues, and put the results back into the
     original order outside of the function.
+
+    Method='hommel' is very slow for large arrays, since it requires the
+    evaluation of n partitions, where n is the number of p-values.
 
     there will be API changes.
 
@@ -140,9 +145,7 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
 
     if not is_sorted:
         sortind = np.argsort(pvals)
-        #pvals = pvals[sortind]
         pvals = np.take(pvals, sortind)
-        #sortrevind = sortind.argsort()
 
     ntests = len(pvals)
     alphacSidak = 1 - np.power((1. - alphaf), 1./ntests)
@@ -170,6 +173,7 @@ def multipletests(pvals, alpha=0.05, method='hs', is_sorted=False,
         notreject[notrejectmin:] = True
         reject = ~notreject
         del notreject
+
         pvals_corrected_raw = 1 - np.power((1. - pvals),
                                            np.arange(ntests, 0, -1))
         pvals_corrected = np.maximum.accumulate(pvals_corrected_raw)
@@ -306,7 +310,7 @@ def fdrcorrection(pvals, alpha=0.05, method='indep', is_sorted=False):
 
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
-        pvals_sorted = pvals[pvals_sortind]
+        pvals_sorted = np.take(pvals, pvals_sortind)
     else:
         pvals_sorted = pvals  # alias
 
@@ -397,7 +401,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
 
     if not is_sorted:
         pvals_sortind = np.argsort(pvals)
-        pvals = pvals[pvals_sortind]
+        pvals = np.take(pvals, pvals_sortind)
 
     ntests = len(pvals)
     if method == 'bky':
