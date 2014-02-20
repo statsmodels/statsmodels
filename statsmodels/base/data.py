@@ -381,8 +381,13 @@ def _make_exog_names(exog):
 
     return exog_names
 
-def handle_data_class_factory(endog, exog, missing='none', hasconst=None,
-                               **kwargs):
+
+def handle_missing(endog, exog=None, missing='none', **kwargs):
+    klass = handle_data_class_factory(endog, exog)
+    return klass.handle_missing(endog, exog, missing=missing, **kwargs)
+
+
+def handle_data_class_factory(endog, exog):
     """
     Given inputs
     """
@@ -408,7 +413,6 @@ def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
     if isinstance(exog, (list, tuple)):
         exog = np.asarray(exog)
 
-    klass = handle_data_class_factory(endog, exog, missing='none',
-                                      hasconst=None, **kwargs)
+    klass = handle_data_class_factory(endog, exog)
     return klass(endog, exog=exog, missing=missing, hasconst=hasconst,
                  **kwargs)
