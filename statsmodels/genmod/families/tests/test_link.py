@@ -2,7 +2,7 @@
 Test functions for genmod.families.links
 """
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_allclose
 import statsmodels.genmod.families as families
 
 # Family instances
@@ -31,7 +31,7 @@ class Test_inverse(object):
             for k in range(10):
                 p = np.random.uniform() # In domain for all families
                 d = p - link.inverse(link(p))
-                assert_almost_equal(d, 0, 8)
+                assert_allclose(d, 0, atol=1e-8)
 
 
 class Test_inverse_deriv(object):
@@ -42,7 +42,7 @@ class Test_inverse_deriv(object):
                 z = -np.log(np.random.uniform()) # In domain for all families
                 d = link.inverse_deriv(z)
                 f = 1 / link.deriv(link.inverse(z))
-                assert_almost_equal(d, f, 8)
+                assert_allclose(d, f, rtol=1e-8, atol=1e-10)
 
 
 
