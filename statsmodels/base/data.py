@@ -104,7 +104,8 @@ class ModelData(object):
     def _drop_nans_2d(self, x, nan_mask):
         return x[nan_mask][:, nan_mask]
 
-    def _handle_missing(self, endog, exog, missing, **kwargs):
+    @classmethod
+    def _handle_missing(cls, endog, exog, missing, **kwargs):
         """
         This returns a dictionary with keys endog, exog and the keys of
         kwargs. It preserves Nones.
@@ -152,8 +153,8 @@ class ModelData(object):
 
         elif missing == 'drop':
             nan_mask = ~nan_mask
-            drop_nans = lambda x : self._drop_nans(x, nan_mask)
-            drop_nans_2d = lambda x : self._drop_nans_2d(x, nan_mask)
+            drop_nans = lambda x : cls._drop_nans(x, nan_mask)
+            drop_nans_2d = lambda x : cls._drop_nans_2d(x, nan_mask)
             combined = dict(zip(combined_names, map(drop_nans, combined)))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names,
@@ -376,7 +377,8 @@ def _make_exog_names(exog):
 
     return exog_names
 
-def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
+def handle_data_class_factory(endog, exog, missing='none', hasconst=None,
+                               **kwargs):
     """
     Given inputs
     """
@@ -398,5 +400,11 @@ def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
     else:
         raise ValueError('unrecognized data structures: %s / %s' %
                          (type(endog), type(exog)))
+    return klass
 
-    return klass(endog, exog=exog, missing=missing, hasconst=hasconst, **kwargs)
+
+def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
+    klass = handle_data_class_factory(endog, exog, missing='none',
+                                       hasconst=None, **kwargs)
+    return klass(endog, exog=exog, missing=missing, hasconst=hasconst,
+                 **kwargs)
