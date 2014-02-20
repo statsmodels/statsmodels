@@ -9,9 +9,11 @@ Author: Josef Perktold
 import numpy as np
 from scipy import stats
 
-from statsmodels.sandbox.distributions.extras import (SkewNorm_gen,
-                                NormExpan_gen, pdf_moments)
-from statsmodels.stats.moment_helpers import mc2mvsk, mnc2mc
+from statsmodels.sandbox.distributions.extras import (SkewNorm_gen, skewnorm,
+                                ACSkewT_gen,
+                                NormExpan_gen, pdf_moments,
+                                ExpTransf_gen, LogTransf_gen)
+from statsmodels.stats.moment_helpers import mc2mvsk, mnc2mc, mvsk2mnc
 
 
 def example_n():
@@ -60,7 +62,6 @@ def examples_normexpand():
     print mc2mvsk(normexpan.cnt)
     print normexpan.mvsk
 
-    from statsmodels.stats.momenthelpers import mvsk2mnc, mnc2mc
     mnc = mvsk2mnc(dmvsk)
     mc = mnc2mc(mnc)
     print 'central moments'
@@ -118,3 +119,9 @@ def examples_transf():
     #0.98148148148148151
     loglaplaceexpg._cdf(3,0,1./3)
     #0.98148148148148151
+
+if __name__ == '__main__':
+    example_n()
+    example_T()
+    examples_normexpand()
+    examples_transf()
