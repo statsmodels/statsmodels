@@ -420,7 +420,7 @@ class NormExpan_gen(distributions.rv_continuous):
     def __init__(self,args, **kwds):
         #todo: replace with super call
         distributions.rv_continuous.__init__(self,
-            name = 'Normal Expansion distribution', shapes = 'alpha',
+            name = 'Normal Expansion distribution',
             extradoc = '''
         The distribution is defined as the Gram-Charlier expansion of
         the normal distribution using the first four moments. The pdf
