@@ -22,29 +22,25 @@ Links = [logit, inverse_power, sqrt, inverse_squared, identity, log, probit, cau
          cloglog, negbinom]
 
 
-class Test_inverse(object):
+def test_inverse():
 
-    def __init__(self):
-
-        ## Logic check that link.inverse(link) is the identity
-        for link in Links:
-            for k in range(10):
-                p = np.random.uniform() # In domain for all families
-                d = p - link.inverse(link(p))
-                assert_allclose(d, 0, atol=1e-8)
+    ## Logic check that link.inverse(link) is the identity
+    for link in Links:
+        for k in range(10):
+            p = np.random.uniform() # In domain for all families
+            d = p - link.inverse(link(p))
+            assert_allclose(d, 0, atol=1e-8)
 
 
-class Test_inverse_deriv(object):
+def test_inverse_deriv():
 
-        ## Logic check that inverse_deriv equals 1/link.deriv(link.inverse)
-        for link in Links:
-            for k in range(10):
-                z = -np.log(np.random.uniform()) # In domain for all families
-                d = link.inverse_deriv(z)
-                f = 1 / link.deriv(link.inverse(z))
-                assert_allclose(d, f, rtol=1e-8, atol=1e-10)
-
-
+    ## Logic check that inverse_deriv equals 1/link.deriv(link.inverse)
+    for link in Links:
+        for k in range(10):
+            z = -np.log(np.random.uniform()) # In domain for all families
+            d = link.inverse_deriv(z)
+            f = 1 / link.deriv(link.inverse(z))
+            assert_allclose(d, f, rtol=1e-8, atol=1e-10)
 
 
 if __name__=="__main__":
