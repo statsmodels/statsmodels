@@ -10,6 +10,7 @@ Depends
 -------
 virtualenv
 """
+import traceback
 import base64
 import subprocess
 import os
@@ -258,7 +259,6 @@ def email_me(status='ok'):
 
 def main():
     # get branch, install in virtualenv, build the docs, upload, and cleanup
-    msg = ''
     for branch in branches:
         try:
             create_virtualenv()
@@ -268,8 +268,10 @@ def main():
             upload_docs(branch)
     #        build_pdf(new_branch_dir)
     #        upload_pdf(branch, new_branch_dir)
-        except Exception as status:
-            msg += str(status) + '\n'
+        except:
+            msg = traceback.format_exc()
+        else:
+            msg = ''
 
     if msg == '': # if it doesn't something went wrong and was caught above
         email_me()
