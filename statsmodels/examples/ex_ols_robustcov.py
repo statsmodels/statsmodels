@@ -57,3 +57,9 @@ print(res_hc1b.summary())
 # force t-distribution
 res_hc1c = mod_olsg.fit(cov_type='HC1', cov_kwds={'use_t':True})
 print(res_hc1c.summary())
+
+# force t-distribution
+decade = (d2['year'][1:] // 10).astype(int)  # just make up a group variable
+res_clu = mod_olsg.fit(cov_type='cluster',
+                       cov_kwds={'groups':decade, 'use_t':True})
+print(res_clu.summary())
