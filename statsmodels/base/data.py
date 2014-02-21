@@ -384,6 +384,10 @@ def _make_exog_names(exog):
 
 def handle_missing(endog, exog=None, missing='none', **kwargs):
     klass = handle_data_class_factory(endog, exog)
+    if missing == 'none':
+        ret_dict = dict(endog=endog, exog=exog)
+        ret_dict.update(kwargs)
+        return ret_dict, None
     return klass.handle_missing(endog, exog, missing=missing, **kwargs)
 
 
