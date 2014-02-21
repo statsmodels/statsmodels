@@ -40,3 +40,20 @@ print(tt.summary_frame())
 
 print(vars(res_hac4.f_test(np.eye(len(res_hac4.params))[:-1], use_f=True)))
 print(vars(res_hac4.f_test(np.eye(len(res_hac4.params))[:-1], use_f=False)))
+
+print(vars(res_hac4.wald_test(np.eye(len(res_hac4.params))[:-1], use_f=True)))
+print(vars(res_hac4.wald_test(np.eye(len(res_hac4.params))[:-1], use_f=False)))
+
+# new cov_type can be set in fit method of model
+
+mod_olsg = OLS(g_inv, exogg)
+res_hac4b = mod_olsg.fit(cov_type='HAC',
+                         cov_kwds=dict(maxlags=4, use_correction=True))
+print(res_hac4b.summary())
+
+res_hc1b = mod_olsg.fit(cov_type='HC1')
+print(res_hc1b.summary())
+
+# force t-distribution
+res_hc1c = mod_olsg.fit(cov_type='HC1', cov_kwds={'use_t':True})
+print(res_hc1c.summary())
