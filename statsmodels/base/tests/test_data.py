@@ -692,6 +692,18 @@ class TestHandleMissing(object):
         ptesting.assert_frame_equal(data['exog'], X_exp)
         np.testing.assert_array_equal(data['endog'], y_exp)
 
+    def test_noop(self):
+        df = ptesting.makeDataFrame()
+        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        y, X = df[df.columns[0]], df[df.columns[1:]]
+        data, _ = sm_data.handle_missing(y, X, missing='none')
+
+        y_exp, X_exp = df[df.columns[0]], df[df.columns[1:]]
+        ptesting.assert_frame_equal(data['exog'], X_exp)
+        ptesting.assert_series_equal(data['endog'], y_exp)
+
+
+
 if __name__ == "__main__":
     import nose
     #nose.runmodule(argv=[__file__, '-vvs', '-x', '--pdb', '--pdb-failure'],
