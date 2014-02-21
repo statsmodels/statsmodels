@@ -59,7 +59,7 @@ class ModelData(object):
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
                        **kwargs):
         if missing != 'none':
-            arrays, nan_idx = self._handle_missing(endog, exog, missing,
+            arrays, nan_idx = self.handle_missing(endog, exog, missing,
                                                        **kwargs)
             self.missing_row_idx = nan_idx
             self.__dict__.update(arrays) # attach all the data arrays
@@ -98,13 +98,16 @@ class ModelData(object):
                 self.const_idx = None
                 self.k_constant = 0
 
-    def _drop_nans(self, x, nan_mask):
+    @classmethod
+    def _drop_nans(cls, x, nan_mask):
         return x[nan_mask]
 
-    def _drop_nans_2d(self, x, nan_mask):
+    @classmethod
+    def _drop_nans_2d(cls, x, nan_mask):
         return x[nan_mask][:, nan_mask]
 
-    def _handle_missing(self, endog, exog, missing, **kwargs):
+    @classmethod
+    def handle_missing(cls, endog, exog, missing, **kwargs):
         """
         This returns a dictionary with keys endog, exog and the keys of
         kwargs. It preserves Nones.
@@ -152,8 +155,8 @@ class ModelData(object):
 
         elif missing == 'drop':
             nan_mask = ~nan_mask
-            drop_nans = lambda x : self._drop_nans(x, nan_mask)
-            drop_nans_2d = lambda x : self._drop_nans_2d(x, nan_mask)
+            drop_nans = lambda x : cls._drop_nans(x, nan_mask)
+            drop_nans_2d = lambda x : cls._drop_nans_2d(x, nan_mask)
             combined = dict(zip(combined_names, map(drop_nans, combined)))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names,
@@ -296,17 +299,19 @@ class PandasData(ModelData):
     Data handling class which knows how to reattach pandas metadata to model
     results
     """
-    def _drop_nans(self, x, nan_mask):
+    @classmethod
+    def _drop_nans(cls, x, nan_mask):
         if hasattr(x, 'ix'):
             return x.ix[nan_mask]
         else: # extra arguments could be plain ndarrays
-            return super(PandasData, self)._drop_nans(x, nan_mask)
+            return super(PandasData, cls)._drop_nans(x, nan_mask)
 
-    def _drop_nans_2d(self, x, nan_mask):
+    @classmethod
+    def _drop_nans_2d(cls, x, nan_mask):
         if hasattr(x, 'ix'):
             return x.ix[nan_mask].ix[:, nan_mask]
         else:  # extra arguments could be plain ndarrays
-            return super(PandasData, self)._drop_nans_2d(x, nan_mask)
+            return super(PandasData, cls)._drop_nans_2d(x, nan_mask)
 
     def _check_integrity(self):
         endog, exog = self.orig_endog, self.orig_exog
@@ -376,16 +381,16 @@ def _make_exog_names(exog):
 
     return exog_names
 
-def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
+
+def handle_missing(endog, exog=None, missing='none', **kwargs):
+    klass = handle_data_class_factory(endog, exog)
+    return klass.handle_missing(endog, exog, missing=missing, **kwargs)
+
+
+def handle_data_class_factory(endog, exog):
     """
     Given inputs
     """
-    # deal with lists and tuples up-front
-    if isinstance(endog, (list, tuple)):
-        endog = np.asarray(endog)
-    if isinstance(exog, (list, tuple)):
-        exog = np.asarray(exog)
-
     if data_util._is_using_ndarray_type(endog, exog):
         klass = ModelData
     elif data_util._is_using_pandas(endog, exog):
@@ -398,5 +403,16 @@ def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
     else:
         raise ValueError('unrecognized data structures: %s / %s' %
                          (type(endog), type(exog)))
+    return klass
 
-    return klass(endog, exog=exog, missing=missing, hasconst=hasconst, **kwargs)
+
+def handle_data(endog, exog, missing='none', hasconst=None, **kwargs):
+    # deal with lists and tuples up-front
+    if isinstance(endog, (list, tuple)):
+        endog = np.asarray(endog)
+    if isinstance(exog, (list, tuple)):
+        exog = np.asarray(exog)
+
+    klass = handle_data_class_factory(endog, exog)
+    return klass(endog, exog=exog, missing=missing, hasconst=hasconst,
+                 **kwargs)
