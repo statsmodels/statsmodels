@@ -379,6 +379,11 @@ class ProbPlot(object):
             If `ax` is None, the created figure.  Otherwise the figure to which
             `ax` is connected.
         """
+        oth = plotkwargs.pop('other', None)
+        if oth is not None:
+            import warnings
+            warnings.warn('other is not implemented in probplot')
+
         if exceed:
             fig, ax = _do_plot(self.theoretical_quantiles[::-1],
                                self.sorted_data,
