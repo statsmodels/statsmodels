@@ -223,6 +223,7 @@ class SimpleTable(list):
         rows = self._data2rows(data)  # a list of Row instances
         list.__init__(self, rows)
         self._add_headers_stubs(headers, stubs)
+        self._colwidths = dict()
     def __str__(self):
         return self.as_text()
     def __repr__(self):
@@ -309,7 +310,8 @@ class SimpleTable(list):
     def pad(self, s, width, align):
         """DEPRECATED: just use the pad function"""
         return pad(s, width, align)
-    def get_colwidths(self, output_format, **fmt_dict):
+    def _get_colwidths(self, output_format, **fmt_dict):
+        """Return list, the calculated widths of each column."""
         output_format = get_output_format(output_format)
         fmt = self.output_formats[output_format].copy()
         fmt.update(fmt_dict)
@@ -329,6 +331,22 @@ class SimpleTable(list):
             min_widths.append(maxwidth)
         result = map(max, min_widths, request)
         return result
+    def get_colwidths(self, output_format, **fmt_dict):
+        """Return list, the widths of each column."""
+        call_args = [output_format]
+        for k, v in sorted(fmt_dict.items()):
+            if isinstance(v, list):
+                call_args.append((k, tuple(v)))
+            elif isinstance(v, dict):
+                call_args.append((k, tuple(sorted(v.items()))))
+            else:
+                call_args.append((k, v))
+        key = tuple(call_args)
+        try:
+            return self._colwidths[key]
+        except KeyError:
+            self._colwidths[key] = self._get_colwidths(output_format, **fmt_dict)
+            return self._colwidths[key]
     def _get_fmt(self, output_format, **fmt_dict):
         """Return dict, the formatting options.
         """
@@ -390,12 +408,12 @@ class SimpleTable(list):
         Note: will require the booktabs package.'''
         #fetch the text format, override with fmt_dict
         fmt = self._get_fmt('latex', **fmt_dict)
-        
+
         formatted_rows = ["\\begin{center}"]
-        
+
         table_dec_above = fmt['table_dec_above'] or ''
         table_dec_below = fmt['table_dec_below'] or ''
-        
+
         prev_aligns = None
         last = None
         for row in self + [last]:
@@ -403,7 +421,7 @@ class SimpleTable(list):
                 aligns = None
             else:
                 aligns = row.get_aligns('latex', **fmt)
-            
+
             if aligns != prev_aligns:
                 # When the number/type of columns changes...
                 if prev_aligns:
@@ -685,7 +703,7 @@ class Cell(object):
                 if isinstance( data, str ):
                     for repl in fmt["replacements"]:
                         data = data.replace( repl, fmt["replacements"][repl] )
-            
+
             dfmt = fmt.get(datatype)
             try:
                 content = dfmt % (data,)
