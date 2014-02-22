@@ -23,7 +23,6 @@ LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
 
-
 import numpy as np
 from scipy import stats
 from scipy import linalg as spl
@@ -68,15 +67,20 @@ class ParameterConstraint(object):
            constraint lhs * param = rhs.  The number of constraints is
            q >= 1 and p is the dimension of the parameter vector.
         rhs : ndarray
-          A 1-dimensional vector of length q which is the right hand side of
-          the constraint equation.
+          A 1-dimensional vector of length q which is the right hand
+          side of the constraint equation.
         exog : ndarray
           The n x p exognenous data for the full model.
         """
 
-        if type(lhs) != np.ndarray:
-            raise ValueError("The left hand side constraint matrix L "
-                             "must be a NumPy array.")
+        # In case a row or column vector is passed (patsy linear
+        # constraints passes a column vector).
+        rhs = np.atleast_1d(rhs.squeeze())
+
+        if rhs.ndim > 1:
+            raise ValueError("The right hand side of the constraint "
+                             "must be a vector.")
+
         if len(rhs) != lhs.shape[0]:
             raise ValueError("The number of rows of the left hand "
                              "side constraint matrix L must equal "
@@ -97,7 +101,8 @@ class ParameterConstraint(object):
 
         # param0 is one solution to the underdetermined system
         # L * param = R.
-        self.param0 = np.dot(self.lhs1, np.dot(lhs_vt, self.rhs) / lhs_s)
+        self.param0 = np.dot(self.lhs1, np.dot(lhs_vt, self.rhs) /
+                             lhs_s)
 
         self._offset_increment = np.dot(exog, self.param0)
 
@@ -157,9 +162,9 @@ class GEE(base.Model):
     __doc__ = """
     Generalized Estimating Equations Models
 
-    GEE estimates Generalized Linear Models when the data has a cluster
-    structure and the observations are possibly correlated within but not
-    across clusters
+    GEE estimates Generalized Linear Models when the data has a
+    cluster structure and the observations are possibly correlated
+    within but not across clusters
 
     Parameters
     ----------
@@ -188,6 +193,8 @@ class GEE(base.Model):
     offset : array-like
         An offset to be included in the fit.  If provided, must be
         an array whose length is the number of rows in exog.
+    dep_data : array-like
+        Additional data passed to the dependence structure.
     constraint : (ndarray, ndarray)
        If provided, the constraint is a tuple (L, R) such that the
        model parameters are estimated under the constraint L *
@@ -234,16 +241,17 @@ class GEE(base.Model):
 
     def __init__(self, endog, exog, groups, time=None, family=None,
                        covstruct=None, missing='none', offset=None,
-                       constraint=None):
+                       dep_data=None, constraint=None):
 
         groups = np.array(groups) # in case groups is pandas
-        # Pass groups, time, and offset so they are processed for
-        # missing data along with endog and exog.  Calling super
-        # creates self.exog, self.endog, etc. as ndarrays and the
-        # original exog, endog, etc. are self.data.endog, etc.
+        # Pass groups, time, offset, and dep_data so they are
+        # processed for missing data along with endog and exog.
+        # Calling super creates self.exog, self.endog, etc. as
+        # ndarrays and the original exog, endog, etc. are
+        # self.data.endog, etc.
         super(GEE, self).__init__(endog, exog, groups=groups,
                                   time=time, offset=offset,
-                                  missing=missing)
+                                  dep_data=dep_data, missing=missing)
 
         # Handle the family argument
         if family is None:
@@ -289,29 +297,33 @@ class GEE(base.Model):
         # list of arrays, corresponding to the clusters.
         group_labels = list(set(groups))
         group_labels.sort()
-        row_indices = dict((s, []) for s in group_labels)
+        group_indices = dict((s, []) for s in group_labels)
         for i in range(len(self.endog)):
-            row_indices[groups[i]].append(i)
-        self.row_indices = row_indices
+            group_indices[groups[i]].append(i)
+        for k in group_indices.keys():
+            group_indices[k] = np.asarray(group_indices[k])
+        self.group_indices = group_indices
         self.group_labels = group_labels
 
-        self.endog_li = self._cluster_list(self.endog)
-        self.exog_li = self._cluster_list(self.exog)
+        self.endog_li = self.cluster_list(self.endog)
+        self.exog_li = self.cluster_list(self.exog)
 
         # Time defaults to a 1d grid with equal spacing
         if self.time is not None:
-            if len(self.time.shape) == 1:
-                self.time = np.reshape(self.time, (len(self.time), 1))
-            self.time_li = self._cluster_list(self.time)
+            self.time = np.asarray(self.time, np.float64)
+            if self.time.ndim == 1:
+                self.time = self.time[:,None]
+            self.time_li = self.cluster_list(self.time)
         else:
-            self.time_li = [np.arange(len(y))[:, None]
-                            for y in self.endog_li]
+            self.time_li = \
+                [np.arange(len(y), dtype=np.float64)[:, None]
+                 for y in self.endog_li]
             self.time = np.concatenate(self.time_li)
 
-        self.offset_li = self._cluster_list(self.offset)
+        self.offset_li = self.cluster_list(self.offset)
         if constraint is not None:
             self.constraint.exog_fulltrans_li = \
-                self._cluster_list(self.constraint.exog_fulltrans)
+                self.cluster_list(self.constraint.exog_fulltrans)
 
         self.family = family
 
@@ -354,17 +366,17 @@ class GEE(base.Model):
 
             self.mean_deriv_exog = mean_deriv_exog
 
-    def _cluster_list(self, array):
+    def cluster_list(self, array):
         """
         Returns `array` split into subarrays corresponding to the
         cluster structure.
         """
 
-        if len(array.shape) == 0:
-            return [np.array(array[self.row_indices[k]])
+        if array.ndim == 1:
+            return [np.array(array[self.group_indices[k]])
                     for k in self.group_labels]
         else:
-            return [np.array(array[self.row_indices[k], :])
+            return [np.array(array[self.group_indices[k], :])
                     for k in self.group_labels]
 
     def estimate_scale(self):
@@ -385,7 +397,7 @@ class GEE(base.Model):
 
         varfunc = self.family.variance
 
-        scale_inv = 0.
+        scale = 0.
         for i in range(num_clust):
 
             if len(endog[i]) == 0:
@@ -396,10 +408,10 @@ class GEE(base.Model):
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - offset[i] - expval) / sdev
 
-            scale_inv += np.sum(resid**2)
+            scale += np.sum(resid**2)
 
-        scale_inv /= (nobs - exog_dim)
-        scale = 1 / scale_inv
+        scale /= (nobs - exog_dim)
+
         return scale
 
     def _beta_update(self):
@@ -553,10 +565,9 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
-        naive_covariance = np.linalg.inv(bmat) / scale
-        cmat *= scale**2
-        robust_covariance = np.dot(naive_covariance,
-                                   np.dot(cmat, naive_covariance))
+        bmati = np.linalg.inv(bmat)
+        naive_covariance = bmati * scale
+        robust_covariance = np.dot(bmati, np.dot(cmat, bmati))
 
         # Calculate the bias-corrected sandwich estimate of Mancl and
         # DeRouen (requires naive_covariance so cannot be calculated
@@ -575,7 +586,7 @@ class GEE(base.Model):
             vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
-            vmat /= scale
+            vmat *= scale
 
             try:
                 vco = spl.cho_factor(vmat)
@@ -662,7 +673,7 @@ class GEE(base.Model):
         return beta
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
-            covariance_type="robust"):
+            covariance_type='robust'):
         """
         Fits a GEE model.
 
@@ -677,9 +688,7 @@ class GEE(base.Model):
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
         covariance_type : string
-            The covariance type used to calculate standard errors,
-            must be one of "robust" (default), "naive", or "bias
-            reduced" (after Mancl and DeRouen 2001).
+            One of "robust", "naive", or "bias_reduced".
 
         Returns
         -------
@@ -687,8 +696,8 @@ class GEE(base.Model):
         """
 
         self.fit_history = {'params': [],
-                            'fitlack': [],
-                            'score_change': []}
+                            'score': [],
+                            'dep_params': []}
 
         # Check start_params, if supplied
         if start_params is not None:
@@ -743,8 +752,11 @@ class GEE(base.Model):
             beta += update
             self.update_cached_means(beta)
             fitlack = np.sqrt(np.sum(score**2))
-            self.fit_history['params'].append(beta)
-            self.fit_history['fitlack'].append(fitlack)
+
+            self.fit_history['params'].append(beta.copy())
+            self.fit_history['score'].append(score)
+            self.fit_history['dep_params'].append(
+                self.covstruct.dep_params)
 
             # Don't exit until the association parameters have been
             # updated at least once.
@@ -776,14 +788,17 @@ class GEE(base.Model):
 
         scale = self.estimate_scale()
 
+        # The superclass constructor will multiply the covariance
+        # matrix argument bcov by scale, which we don't want, so we
+        # divide bvov by the scale parameter here
         results = GEEResults(self, beta, bcov / scale, scale)
 
+        results.covariance_type = covariance_type
         results.fit_history = self.fit_history
         results.naive_covariance = ncov
         results.robust_covariance_bc = bc_cov
         results.score_norm = fitlack
         results.converged = (fitlack < ctol)
-        results.covariance_type = covariance_type
 
         return results
 
@@ -832,6 +847,7 @@ class GEE(base.Model):
 
         _, ncov1, _, cmat = self._covmat()
         scale = self.estimate_scale()
+        cmat = cmat / scale**2
         score2 = score[len(beta):] * scale
 
         amat = np.linalg.inv(ncov1)
@@ -929,19 +945,19 @@ class GEEResults(base.LikelihoodModelResults):
     **Attributes**
 
     naive_covariance : ndarray
-        covariance of the parameter estimates that is not robust to correlation
-        or variance misspecification
+        covariance of the parameter estimates that is not robust to
+        correlation or variance misspecification
     robust_covariance_bc : ndarray
-        covariance of the parameter estimates that is robust and bias reduced
+        covariance of the parameter estimates that is robust and bias
+        reduced
     converged : bool
         indicator for convergence of the optimization.
         True if the norm of the score is smaller than a threshold
     covariance_type : string
-        string indicating whether a "robust", "naive" or "robust bias reduced"
-        covariance is used as default
+        string indicating whether a "robust", "naive" or "bias_
+        reduced" covariance is used as default
     fit_history : dict
-        Contains information about the iterations. Its keys are `iterations`,
-        `deviance` and `params`.
+        Contains information about the iterations.
     fittedvalues : array
         Linear predicted values for the fitted model.
         dot(exog, params)
@@ -950,9 +966,9 @@ class GEEResults(base.LikelihoodModelResults):
     normalized_cov_params : array
         See GEE docstring
     params : array
-        The coefficients of the fitted model.  Note that interpretation
-        of the coefficients often depends on the distribution family and the
-        data.
+        The coefficients of the fitted model.  Note that
+        interpretation of the coefficients often depends on the
+        distribution family and the data.
     scale : float
         The estimate of the scale / dispersion for the model fit.
         See GEE.fit for more information.
@@ -967,6 +983,8 @@ class GEEResults(base.LikelihoodModelResults):
     GEE
     '''
 
+    # Default covariance type
+    covariance_type = "robust"
 
     def __init__(self, model, params, cov_params, scale):
 
@@ -983,7 +1001,7 @@ class GEEResults(base.LikelihoodModelResults):
         Arguments:
         ----------
         covariance_type : string
-            One of "robust", "naive", or "bias reduced".  Determines
+            One of "robust", "naive", or "bias_reduced".  Determines
             the covariance used to compute standard errors.  Defaults
             to "robust".
         """
@@ -1017,15 +1035,41 @@ class GEEResults(base.LikelihoodModelResults):
         return self.model.endog - self.fittedvalues
 
     @cache_readonly
+    def split_resid(self):
+        """
+        Returns the residuals, the endogeneous data minus the fitted
+        values from the model.  The residuals are returned as a list
+        of arrays containing the residuals for each cluster.
+        """
+        sresid = []
+        for v in self.model.group_labels:
+            ii = self.model.group_indices[v]
+            sresid.append(self.resid[ii])
+        return sresid
+
+    @cache_readonly
     def centered_resid(self):
         """
         Returns the residuals centered within each group.
         """
-        resid = self.resid
+        cresid = self.resid.copy()
         for v in self.model.group_labels:
-            ii = self.model.row_indices[v]
-            resid[ii] -= resid[ii].mean()
-        return resid
+            ii = self.model.group_indices[v]
+            cresid[ii] -= cresid[ii].mean()
+        return cresid
+
+    @cache_readonly
+    def split_centered_resid(self):
+        """
+        Returns the residuals centered within each group.  The
+        residuals are returned as a list of arrays containing the
+        centered residuals for each cluster.
+        """
+        sresid = []
+        for v in self.model.group_labels:
+            ii = self.model.group_indices[v]
+            sresid.append(self.centered_resid[ii])
+        return sresid
 
     @cache_readonly
     def fittedvalues(self):
@@ -1087,7 +1131,9 @@ class GEEResults(base.LikelihoodModelResults):
             significance level for the confidence intervals
         covariance_type : string
             The covariance type used to compute the standard errors;
-            one of 'robust', 'naive', and 'bias reduced'.
+            one of 'robust' (the usual robust sandwich-type covariance
+            estimate), 'naive' (ignores dependence), and 'bias
+            reduced' (the Mancl/DeRouen estimate).
 
         Returns
         -------
@@ -1101,6 +1147,8 @@ class GEEResults(base.LikelihoodModelResults):
             results
 
         """
+
+        self.covariance_type = covariance_type
 
         top_left = [('Dep. Variable:', None),
                     ('Model:', None),
@@ -1121,7 +1169,7 @@ class GEEResults(base.LikelihoodModelResults):
                      ('Max. cluster size', [max(NY)]),
                      ('Mean cluster size', ["%.1f" % np.mean(NY)]),
                      ('No. iterations', ['%d' %
-                                       len(self.model.fit_history)]),
+                           len(self.model.fit_history['params'])]),
                      ('Time:', None),
                  ]
 
@@ -1142,19 +1190,24 @@ class GEEResults(base.LikelihoodModelResults):
             title = self.model.__class__.__name__ + ' ' +\
                     "Regression Results"
 
-        #create summary table instance
+        # Override the dataframe names if xname is provided as an
+        # argument.
+        if xname is not None:
+            xna = xname
+        else:
+            xna = self.model.exog_names
+
+        # Create summary table instance
         from statsmodels.iolib.summary import Summary
         smry = Summary()
         smry.add_table_2cols(self, gleft=top_left, gright=top_right,
-                             yname=self.model.endog_names,
-                             xname=xname, title=title)
-        smry.add_table_params(self, yname=yname,
-                              xname=self.model.exog_names,
+                             yname=self.model.endog_names, xname=xna,
+                             title=title)
+        smry.add_table_params(self, yname=yname, xname=xna,
                               alpha=alpha, use_t=False)
-
         smry.add_table_2cols(self, gleft=diagn_left,
                              gright=diagn_right, yname=yname,
-                             xname=xname, title="")
+                             xname=xna, title="")
 
         return smry
 

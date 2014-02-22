@@ -15,10 +15,53 @@ Addition of Generalized Estimating Equations GEE
 
 
 
-Header for Change
-~~~~~~~~~~~~~~~~~
+Generalized Estimating Equations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Change blurb and example code.
+Generalized Estimating Equations (GEE) provide an approach to handling
+dependent data in a regression analysis.  Dependent data arise
+commonly in practice, such as in a longitudinal study where repeated
+observations are collected on subjects. GEE can be viewed as an
+extension of the generalized linear modeling (GLM) framework to the
+dependent data setting.  The familiar GLM families such as the
+Gaussian, Poisson, and logistic families can be used to accommodate
+dependent variables with various distributions.
+
+Here is an example of GEE Poisson regression in a data set with four
+count-type repeated measures per subject, and three explanatory
+covariates.
+
+.. code-block:: python
+
+import numpy as np
+import pandas as pd
+from statsmodels.genmod.generalized_estimating_equations import GEE
+from statsmodels.genmod.dependence_structures import Independence
+from statsmodels.genmod.families import Poisson
+
+data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
+data = pd.read_csv(data_url)
+
+fam = Poisson()
+ind = Independence()
+md1 = GEE.from_formula("y ~ age + trt + base", data, groups=data["subject"],\
+                       covstruct=ind, family=fam)
+mdf1 = md1.fit()
+print mdf1.summary()
+
+
+The dependence structure in a GEE is treated as a nuisance parameter
+and is modeled in terms of a "working dependence structure".  The
+statsmodels GEE implementation currently includes five working
+dependence structures (independent, exchangeable, autoregressive,
+nested, and a global odds ratio for working with categorical data).
+Since the GEE estimates are not maximum likelihood estimates,
+alternative approaches to some common inference procedures have been
+developed.  The statsmodels GEE implementation currently provides
+standard errors and allows score tests for arbitrary parameter
+contrasts.
+
+
 
 Seasonality Plots
 ~~~~~~~~~~~~~~~~~
