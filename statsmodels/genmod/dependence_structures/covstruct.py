@@ -131,7 +131,7 @@ class Exchangeable(CovStruct):
 
             ngrp = len(resid)
             residsq = np.outer(resid, resid)
-            scale += np.diag(residsq).sum()
+            scale += np.trace(residsq)
             residsq = np.tril(residsq, -1)
             residsq_sum += residsq.sum()
             nterm += 0.5 * ngrp * (ngrp - 1)
