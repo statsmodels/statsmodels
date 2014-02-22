@@ -92,6 +92,13 @@ class LME(base.Model):
             The covariance matrix of the random effects
         sig2 : non-negative scalar
             The error variance
+
+        Returns
+        -------
+        params : 1d ndarray
+            A vector containing all model parameters, only the lower
+            triangle of the random effects covariance matrix is
+            included.
         """
 
         ix = np.tril_indices(revar.shape[0])
@@ -116,18 +123,20 @@ class LME(base.Model):
 
         params_fe, revar, sig2 = self._unpack(params)
 
+        # Check domain for random effects covariance
         try:
             cy = np.linalg.cholesky(revar)
         except np.linalg.LinAlgError:
             return -np.inf
 
+        # Check domain for error variance
         if sig2 <= 0:
             return -np.inf
 
         likeval = pen * (2*np.sum(np.log(np.diag(cy))) + np.log(sig2))
         for k in range(self.ngroup):
 
-            # Get the residuals
+            # The residuals
             expval = np.dot(self.exog_li[k], params_fe)
             resid = self.endog_li[k] - expval
 
@@ -151,9 +160,10 @@ class LME(base.Model):
         Parameters
         ----------
         params : 1d ndarray
-            All model parameters i packed form
+            All model parameters in packed form
         pen : non-negative float
-            Weight for the penalty parameter for negative variances
+            Weight for the penalty parameter to deter negative
+            variances
 
         Returns
         -------
@@ -174,11 +184,11 @@ class LME(base.Model):
         score_rv = pen / sig2
         for k in range(self.ngroup):
 
-            # Get the residuals
+            # The residuals
             expval = np.dot(self.exog_li[k], params_fe)
             resid = self.endog_li[k] - expval
 
-            # Contruct the marginal covariance matrix for this group
+            # The marginal covariance matrix for this group
             ex_r = self.exog_re_li[k]
             vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
             vmat += sig2*np.eye(vmat.shape[0])
@@ -196,7 +206,7 @@ class LME(base.Model):
             jx = 0
             for j1 in range(pr):
                 for j2 in range(j1 + 1):
-                    f = 1 if j1 ==j2 else 2
+                    f = 1 if j1 == j2 else 2
                     score_re[jx] += f*np.sum(score_dv *
                                   np.outer(ex_r[:, j1], ex_r[:, j2]))
                     jx += 1
@@ -269,7 +279,7 @@ class LME(base.Model):
     def EM(self, params_fe, revar, sig2, num_em=10,
            hist=None):
         """
-        Performs `num_em` steps of the EM algorithm.
+        Run the EM algorithm from a given starting point.
 
         Returns
         -------
