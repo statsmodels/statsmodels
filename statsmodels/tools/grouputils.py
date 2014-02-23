@@ -303,6 +303,16 @@ class Grouping():
             self.index = index_pandas
         self.nobs = len(self.index)
         self.slices = None
+        self.index_shape = self.index.levshape
+        self.index_int = self.index.labels
+
+    def reindex(self, index_pandas=None):
+        if type(index_pandas) in [pd.core.index.MultiIndex, pd.core.index.Index]:
+            self.index = index_pandas
+            self.index_shape = self.index.levshape
+            self.index_int = self.index.labels
+        else:
+            raise Exception('index_pandas must be Pandas index')
 
     def get_slices(self):
         '''Only works on first index level'''
@@ -310,7 +320,7 @@ class Grouping():
         self.slices = [self.index.get_loc(x) for x in groups]
 
     def count_categories(self, level=0):
-        self.counts = np.bincount(self.index.labels[level])
+        self.counts = np.bincount(self.index_int[level])
 
     def check_index(self, sorted=True, unique=True, index=None):
         '''Sanity checks'''
