@@ -244,8 +244,9 @@ class Group(object):
         return group_sums(x, self.group_int, use_bincount=use_bincount)
 
     def group_demean(self, x, use_bincount=True):
-        means_g = group_demean(x / float(nobs), self.group_int,
-                               use_bincount=use_bincount)
+        nobs = float(len(x))
+        means_g = group_sums(x / nobs, self.group_int,
+                             use_bincount=use_bincount)
         x_demeaned = x - means_g[self.group_int]  # check reverse_index?
         return x_demeaned, means_g
 
