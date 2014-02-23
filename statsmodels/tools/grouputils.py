@@ -287,7 +287,7 @@ class GroupSorted(Group):
         return lag_idx[mask_ok]
 
 
-class Grouping():
+class Grouping(object):
     def __init__(self, index_pandas=None, index_list=None):
         '''
         index_pandas : pandas.MultiIndex
