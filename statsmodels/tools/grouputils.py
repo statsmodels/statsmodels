@@ -36,6 +36,7 @@ import pandas as pd
 from statsmodels.compatnp.np_compat import npc_unique
 import statsmodels.tools.data as data_util
 from statsmodels.tools.decorators import cache_readonly
+from pandas.core.index import Index, MultiIndex
 
 
 def combine_indices(groups, prefix='', sep='.', return_labels=False):
@@ -117,7 +118,7 @@ def group_sums_dummy(x, group_dummy):
 
     group_dummy can be either ndarray or sparse matrix
     '''
-    if data_util._is_using_ndarray_type(group_dummy):
+    if data_util._is_using_ndarray_type(group_dummy, None):
         return np.dot(x.T, group_dummy)
     else:  # check for sparse
         return x.T * group_dummy
@@ -287,68 +288,129 @@ class GroupSorted(Group):
         return lag_idx[mask_ok]
 
 
+def _is_hierarchical(x):
+    """
+    Checks if the first item of an array-like object is also array-like
+    If so, we have a MultiIndex and returns True. Else returns False.
+    """
+    item = x[0]
+    # is there a better way to do this?
+    if isinstance(item, (list, tuple, np.ndarray, pd.Series, pd.DataFrame)):
+        return True
+    else:
+        return False
+
+
+def _make_hierarchical_index(index, names):
+    return MultiIndex.from_tuples(*[index], names=names)
+
+
+def _make_generic_names(index):
+    n_names = len(index.names)
+    pad = str(len(str(n_names)))  # number of digits
+    return [("group{:0"+pad+"}").format(i) for i in range(n_names)]
+
+
 class Grouping(object):
-    def __init__(self, index_pandas=None, index_list=None):
+    def __init__(self, index, names=None):
         '''
-        index_pandas : pandas.MultiIndex
-            The hierarchical index with panels and dates
-        index_list : list
-            A list of numpy arrays, pandas series or lists, all of which
-            are of length nobs.
+        index : index-like
+            Can be pandas MultiIndex or Index or array-like. If array-like
+            and is a MultipleIndex (more than one grouping variable),
+            groups are expected to be in each row. E.g., [('red', 1),
+            ('red', 2), ('green', 1), ('green', 2)]
+        names : list or str, optional
+            The names to use for the groups. Should be a str if only
+            one grouping variable is used.
+
+        Notes
+        -----
+        If index is already a pandas Index then there is no copy.
         '''
-        if index_list is not None:
-            try:
-                index_list = [np.array(x) for x in index_list]
-                tup = zip(*index_list)
-                self.index = pd.MultiIndex.from_tuples(tup)
-            except:
-                raise Exception("index_list must be a list of lists, pandas "
-                                "series, or numpy arrays, each of identitcal "
-                                "length nobs.")
-        else:
-            self.index = index_pandas
+        if isinstance(index, (Index, MultiIndex)):
+            if names is not None:
+                index.set_names(names, inplace=True)
+            self.index = index
+        else:  # array-like
+            if _is_hierarchical(index):
+                self.index = _make_hierarchical_index(index, names)
+            else:
+                self.index = Index(index, name=names)
+            if names is None:
+                names = _make_generic_names(self.index)
+                self.index.set_names(names, inplace=True)
+
         self.nobs = len(self.index)
         self.slices = None
-        self.index_shape = self.index.levshape
-        self.index_int = self.index.labels
 
-    def reindex(self, index_pandas=None):
+    @property
+    def index_shape(self):
+        if hasattr(self.index, 'levshape'):
+            return self.index.levshape
+        else:
+            return self.index.shape
+
+    @property
+    def levels(self):
+        if hasattr(self.index, 'levels'):
+            return self.index.levels
+        else:
+            return pd.Categorical(self.index).levels
+
+    @property
+    def labels(self):
+        # this was index_int, but that's not a very good name...
+        if hasattr(self.index, 'labels'):
+            return self.index.labels
+        else:  # pandas version issue here
+            return pd.Categorical(self.index).labels[None]
+
+    @property
+    def group_names(self):
+        return self.index.names
+
+    def reindex(self, index=None, names=None):
         """
         Resets the index in-place.
         """
-        if type(index_pandas) in [pd.core.index.MultiIndex,
-                                  pd.core.index.Index]:
-            self.index = index_pandas
-            self.index_shape = self.index.levshape
-            self.index_int = self.index.labels
-        else:
-            raise Exception('index_pandas must be Pandas index')
+        #NOTE: this isn't of much use if the rest of the data doesn't change
+        #This needs to reset cache
+        if names is None:
+            names = self.group_names
+        self = Grouping(index, names)
 
-    def get_slices(self):
+    def get_slices(self, level=0):
         '''
         Sets the slices attribute to be a list of indices of the sorted
         groups for the first index level. I.e., self.slices[0] is the
         index where each observation is in the first (sorted) group.
         '''
-        groups = self.index.get_level_values(0).unique()
-        self.slices = [self.index.get_loc(x) for x in groups]
+        #TODO: refactor this
+        groups = self.index.get_level_values(level).unique()
+        groups.sort()
+        if isinstance(self.index, MultiIndex):
+            self.slices = [self.index.get_loc_level(x, level=level)[0]
+                           for x in groups]
+        else:
+            self.slices = [self.index.get_loc(x) for x in groups]
 
     def count_categories(self, level=0):
         """
         Sets the attribute counts to equal the bincount of the (integer-valued)
         labels.
         """
-        self.counts = np.bincount(self.index_int[level])
+        #TODO: refactor this not to set an attribute. Why would we do this?
+        self.counts = np.bincount(self.labels[level])
 
-    def check_index(self, sorted=True, unique=True, index=None):
+    def check_index(self, is_sorted=True, unique=True, index=None):
         '''Sanity checks'''
         if not index:
             index = self.index
-        if sorted:
+        if is_sorted:
             test = pd.DataFrame(range(len(index)), index=index)
             test_sorted = test.sort()
-            if any(test.index != test_sorted.index):
-                raise Exception('Index suggests that data may not be sorted')
+            if not test.index.equals(test_sorted.index):
+                raise Exception('Data is not be sorted')
         if unique:
             if len(index) != len(index.unique()):
                 raise Exception('Duplicate index entries')
@@ -356,72 +418,73 @@ class Grouping(object):
     def sort(self, data, index=None):
         '''Applies a (potentially hierarchical) sort operation on a numpy array
         or pandas series/dataframe based on the grouping index or a
-        user-suplied index.  Returns an object of the same type as the original
-        data as well as the matching (sorted) Pandas index.
+        user-supplied index.  Returns an object of the same type as the
+        original data as well as the matching (sorted) Pandas index.
         '''
 
-        if not index:
+        if index is None:
             index = self.index
-        if data_util._is_using_ndarray_type(data):
+        if data_util._is_using_ndarray_type(data, None):
             if data.ndim == 1:
                 out = pd.Series(data, index=index, copy=True)
                 out = out.sort_index()
             else:
                 out = pd.DataFrame(data, index=index)
-                out = out.sort(inplace=False) # copies
+                out = out.sort(inplace=False)  # copies
             return np.array(out), out.index
-        elif data_util._is_using_pandas(data):
+        elif data_util._is_using_pandas(data, None):
             out = data
-            out.index = index
-            out = out.sort()
+            out = out.reindex(index)  # copies?
+            out = out.sort_index()
             return out, out.index
         else:
             msg = 'data must be a Numpy array or a Pandas Series/DataFrame'
-            raise Exception(msg)
+            raise ValueError(msg)
 
-    def transform_dataframe(self, dataframe, function, level=0):
+    def transform_dataframe(self, dataframe, function, level=0, **kwargs):
         '''Apply function to each column, by group
         Assumes that the dataframe already has a proper index'''
         if dataframe.shape[0] != self.nobs:
             raise Exception('dataframe does not have the same shape as index')
-        out = dataframe.groupby(level=level).apply(function)
+        out = dataframe.groupby(level=level).apply(function, **kwargs)
         if 1 in out.shape:
             return np.ravel(out)
         else:
             return np.array(out)
 
-    def transform_array(self, array, function, level=0):
+    def transform_array(self, array, function, level=0, **kwargs):
         '''Apply function to each column, by group'''
         if array.shape[0] != self.nobs:
             raise Exception('array does not have the same shape as index')
         dataframe = pd.DataFrame(array, index=self.index)
-        return self.transform_dataframe(dataframe, function, level=level)
+        return self.transform_dataframe(dataframe, function, level=level,
+                                        **kwargs)
 
-    def transform_slices(self, array, function, **kwargs):
+    def transform_slices(self, array, function, level=0, **kwargs):
         '''Apply function to each group. Similar to transform_array but does
         not coerce array to a DataFrame and back and only works on a 1D or 2D
         numpy array'''
+        array = np.asarray(array)
         if array.shape[0] != self.nobs:
             raise Exception('array does not have the same shape as index')
-        if self.slices is None:
-            self.get_slices()
+        # always reset because level is given. need to refactor this.
+        self.get_slices(level=level)
         processed = []
         for s in self.slices:
             if array.ndim == 2:
                 subset = array[s, :]
             elif array.ndim == 1:
                 subset = array[s]
-            processed.append(function(subset, s, **kwargs))
-        return np.concatenate(processed)
+            processed.append(function(subset, **kwargs))
+        return np.array(processed)
 
-    @cache_readonly
+    #TODO: this isn't general needs to be a PanelGrouping object
     def dummies_time(self):
         self.dummy_sparse(level=1)
         return self._dummies
 
-    @cache_readonly
-    def dummies_groups(self):
-        self.dummy_sparse(level=0)
+    def dummies_groups(self, level=0):
+        self.dummy_sparse(level=level)
         return self._dummies
 
     def dummy_sparse(self, level=0):
@@ -469,13 +532,13 @@ class Grouping(object):
                 [1, 0, 0],
                 [0, 0, 1],
                 [1, 0, 0]], dtype=int8)
-
         '''
         from scipy import sparse
-        groups = self.index.labels[level]
+        groups = self.labels[level]
         indptr = np.arange(len(groups)+1)
         data = np.ones(len(groups), dtype=np.int8)
         self._dummies = sparse.csr_matrix((data, groups, indptr))
+
 
 if __name__ == '__main__':
 
