@@ -26,7 +26,8 @@ class CheckGrouping(object):
         np.testing.assert_(not index.equals(self.grouping.index))
 
         # make sure it copied
-        np.testing.assert_(not sorted_data.equals(self.data))
+        if hasattr(sorted_data, 'equals'): # newer pandas
+            np.testing.assert_(not sorted_data.equals(self.data))
 
         # 2d arrays
         sorted_data, index = self.grouping.sort(self.data.values)
@@ -41,7 +42,8 @@ class CheckGrouping(object):
         expected_sorted_data = series.sort_index()
         ptesting.assert_series_equal(sorted_data, expected_sorted_data)
         np.testing.assert_(isinstance(sorted_data, pd.Series))
-        np.testing.assert_(not sorted_data.equals(series))
+        if hasattr(sorted_data, 'equals'):
+            np.testing.assert_(not sorted_data.equals(series))
 
         # 1d array
         array = series.values

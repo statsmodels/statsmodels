@@ -329,7 +329,10 @@ class Grouping(object):
         '''
         if isinstance(index, (Index, MultiIndex)):
             if names is not None:
-                index.set_names(names, inplace=True)
+                if hasattr(index, 'set_names'): # newer pandas
+                    index.set_names(names, inplace=True)
+                else:
+                    index.names = names
             self.index = index
         else:  # array-like
             if _is_hierarchical(index):
@@ -338,7 +341,10 @@ class Grouping(object):
                 self.index = Index(index, name=names)
             if names is None:
                 names = _make_generic_names(self.index)
-                self.index.set_names(names, inplace=True)
+                if hasattr(self.index, 'set_names'):
+                    self.index.set_names(names, inplace=True)
+                else:
+                    self.index.names = names
 
         self.nobs = len(self.index)
         self.slices = None
