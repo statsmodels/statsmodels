@@ -32,7 +32,12 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 """
 
 import numpy as np
+import pandas as pd
 from statsmodels.compatnp.np_compat import npc_unique
+import statsmodels.tools.data as data_util
+from statsmodels.tools.decorators import cache_readonly
+from pandas.core.index import Index, MultiIndex
+
 
 def combine_indices(groups, prefix='', sep='.', return_labels=False):
     '''use np.unique to get integer group indices for product, intersection
@@ -46,33 +51,33 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
     dt = groups.dtype
     #print dt
 
-    is2d = (groups.ndim == 2) #need to store
+    is2d = (groups.ndim == 2)  # need to store
 
     if is2d:
         ncols = groups.shape[1]
         if not groups.flags.c_contiguous:
             groups = np.array(groups, order='C')
 
-        groups_ = groups.view([('',groups.dtype)]*groups.shape[1])
+        groups_ = groups.view([('', groups.dtype)] * groups.shape[1])
     else:
         groups_ = groups
 
     uni, uni_idx, uni_inv = npc_unique(groups_, return_index=True,
-                                      return_inverse=True)
+                                       return_inverse=True)
 
     if is2d:
         uni = uni.view(dt).reshape(-1, ncols)
 
         #avoiding a view would be
-#        for t in uni.dtype.fields.values():
-#            assert (t[0] == dt)
-#
-#        uni.dtype = dt
-#        uni.shape = (uni.size//ncols, ncols)
+        #for t in uni.dtype.fields.values():
+        #    assert (t[0] == dt)
+        #
+        #uni.dtype = dt
+        #uni.shape = (uni.size//ncols, ncols)
 
     if return_labels:
         label = [(prefix+sep.join(['%s']*len(uni[0]))) % tuple(ii)
-                                           for ii in uni]
+                 for ii in uni]
         return uni_inv, uni_idx, uni, label
     else:
         return uni_inv, uni_idx, uni
@@ -93,18 +98,18 @@ def group_sums(x, group, use_bincount=True):
     '''
     x = np.asarray(x)
     if x.ndim == 1:
-        x = x[:,None]
+        x = x[:, None]
     elif x.ndim > 2 and use_bincount:
         raise ValueError('not implemented yet')
 
     if use_bincount:
-        return np.array([np.bincount(group, weights=x[:,col])
-                               for col in range(x.shape[1])])
+        return np.array([np.bincount(group, weights=x[:, col])
+                         for col in range(x.shape[1])])
     else:
         uniques = np.unique(group)
         result = np.zeros([len(uniques)] + list(x.shape[1:]))
         for ii, cat in enumerate(uniques):
-            result[ii] = x[g==cat].sum(0)
+            result[ii] = x[g == cat].sum(0)
         return result
 
 
@@ -113,10 +118,11 @@ def group_sums_dummy(x, group_dummy):
 
     group_dummy can be either ndarray or sparse matrix
     '''
-    if type(group_dummy) is np.ndarray:
+    if data_util._is_using_ndarray_type(group_dummy, None):
         return np.dot(x.T, group_dummy)
-    else:  #check for sparse
+    else:  # check for sparse
         return x.T * group_dummy
+
 
 def dummy_sparse(groups):
     '''create a sparse indicator from a group array with integer labels
@@ -124,9 +130,9 @@ def dummy_sparse(groups):
     Parameters
     ----------
     groups: ndarray, int, 1d (nobs,)
-        an array of group indicators for each observation. Group levels are assumed
-        to be defined as consecutive integers, i.e. range(n_groups) where
-        n_groups is the number of group levels. A group level with no
+        an array of group indicators for each observation. Group levels are
+        assumed to be defined as consecutive integers, i.e. range(n_groups)
+        where n_groups is the number of group levels. A group level with no
         observations for it will still produce a column of zeros.
 
     Returns
@@ -206,7 +212,7 @@ class Group(object):
 
         if uni.ndim > 1:
             label = [(prefix+sep.join(['%s']*len(uni[0]))) % tuple(ii)
-            for ii in uni]
+                     for ii in uni]
         else:
             label = [prefix + '%s' % ii for ii in uni]
         return label
@@ -226,8 +232,7 @@ class Group(object):
         group = self.group
 
         if not sparse:
-            return (group[:,None] == uni[None,:]).astype(dtype)
-
+            return (group[:, None] == uni[None, :]).astype(dtype)
         else:
             return dummy_sparse(self.group_int)
 
@@ -240,14 +245,14 @@ class Group(object):
         return group_sums(x, self.group_int, use_bincount=use_bincount)
 
     def group_demean(self, x, use_bincount=True):
-        means_g = group_demean(x/float(nobs), self.group_int,
-                               use_bincount=use_bincount)
-        x_demeaned = x - means_g[self.group_int]  #check reverse_index?
+        nobs = float(len(x))
+        means_g = group_sums(x / nobs, self.group_int,
+                             use_bincount=use_bincount)
+        x_demeaned = x - means_g[self.group_int]  # check reverse_index?
         return x_demeaned, means_g
 
 
 class GroupSorted(Group):
-
     def __init__(self, group, name=''):
         super(self.__class__, self).__init__(group, name=name)
 
@@ -276,11 +281,269 @@ class GroupSorted(Group):
         not tested yet
 
         '''
-        lag_idx = np.asarray(self.groupidx)[:,1] - lag   #asarray or already?
-        mask_ok = (low <= lag_idx)
+        lag_idx = np.asarray(self.groupidx)[:, 1] - lag  # asarray or already?
+        mask_ok = (lag <= lag_idx)
         #still an observation that belongs to the same individual
 
         return lag_idx[mask_ok]
+
+
+def _is_hierarchical(x):
+    """
+    Checks if the first item of an array-like object is also array-like
+    If so, we have a MultiIndex and returns True. Else returns False.
+    """
+    item = x[0]
+    # is there a better way to do this?
+    if isinstance(item, (list, tuple, np.ndarray, pd.Series, pd.DataFrame)):
+        return True
+    else:
+        return False
+
+
+def _make_hierarchical_index(index, names):
+    return MultiIndex.from_tuples(*[index], names=names)
+
+
+def _make_generic_names(index):
+    n_names = len(index.names)
+    pad = str(len(str(n_names)))  # number of digits
+    return [("group{:0"+pad+"}").format(i) for i in range(n_names)]
+
+
+class Grouping(object):
+    def __init__(self, index, names=None):
+        '''
+        index : index-like
+            Can be pandas MultiIndex or Index or array-like. If array-like
+            and is a MultipleIndex (more than one grouping variable),
+            groups are expected to be in each row. E.g., [('red', 1),
+            ('red', 2), ('green', 1), ('green', 2)]
+        names : list or str, optional
+            The names to use for the groups. Should be a str if only
+            one grouping variable is used.
+
+        Notes
+        -----
+        If index is already a pandas Index then there is no copy.
+        '''
+        if isinstance(index, (Index, MultiIndex)):
+            if names is not None:
+                if hasattr(index, 'set_names'): # newer pandas
+                    index.set_names(names, inplace=True)
+                else:
+                    index.names = names
+            self.index = index
+        else:  # array-like
+            if _is_hierarchical(index):
+                self.index = _make_hierarchical_index(index, names)
+            else:
+                self.index = Index(index, name=names)
+            if names is None:
+                names = _make_generic_names(self.index)
+                if hasattr(self.index, 'set_names'):
+                    self.index.set_names(names, inplace=True)
+                else:
+                    self.index.names = names
+
+        self.nobs = len(self.index)
+        self.slices = None
+
+    @property
+    def index_shape(self):
+        if hasattr(self.index, 'levshape'):
+            return self.index.levshape
+        else:
+            return self.index.shape
+
+    @property
+    def levels(self):
+        if hasattr(self.index, 'levels'):
+            return self.index.levels
+        else:
+            return pd.Categorical(self.index).levels
+
+    @property
+    def labels(self):
+        # this was index_int, but that's not a very good name...
+        if hasattr(self.index, 'labels'):
+            return self.index.labels
+        else:  # pandas version issue here
+            return pd.Categorical(self.index).labels[None]
+
+    @property
+    def group_names(self):
+        return self.index.names
+
+    def reindex(self, index=None, names=None):
+        """
+        Resets the index in-place.
+        """
+        #NOTE: this isn't of much use if the rest of the data doesn't change
+        #This needs to reset cache
+        if names is None:
+            names = self.group_names
+        self = Grouping(index, names)
+
+    def get_slices(self, level=0):
+        '''
+        Sets the slices attribute to be a list of indices of the sorted
+        groups for the first index level. I.e., self.slices[0] is the
+        index where each observation is in the first (sorted) group.
+        '''
+        #TODO: refactor this
+        groups = self.index.get_level_values(level).unique()
+        groups.sort()
+        if isinstance(self.index, MultiIndex):
+            self.slices = [self.index.get_loc_level(x, level=level)[0]
+                           for x in groups]
+        else:
+            self.slices = [self.index.get_loc(x) for x in groups]
+
+    def count_categories(self, level=0):
+        """
+        Sets the attribute counts to equal the bincount of the (integer-valued)
+        labels.
+        """
+        #TODO: refactor this not to set an attribute. Why would we do this?
+        self.counts = np.bincount(self.labels[level])
+
+    def check_index(self, is_sorted=True, unique=True, index=None):
+        '''Sanity checks'''
+        if not index:
+            index = self.index
+        if is_sorted:
+            test = pd.DataFrame(range(len(index)), index=index)
+            test_sorted = test.sort()
+            if not test.index.equals(test_sorted.index):
+                raise Exception('Data is not be sorted')
+        if unique:
+            if len(index) != len(index.unique()):
+                raise Exception('Duplicate index entries')
+
+    def sort(self, data, index=None):
+        '''Applies a (potentially hierarchical) sort operation on a numpy array
+        or pandas series/dataframe based on the grouping index or a
+        user-supplied index.  Returns an object of the same type as the
+        original data as well as the matching (sorted) Pandas index.
+        '''
+
+        if index is None:
+            index = self.index
+        if data_util._is_using_ndarray_type(data, None):
+            if data.ndim == 1:
+                out = pd.Series(data, index=index, copy=True)
+                out = out.sort_index()
+            else:
+                out = pd.DataFrame(data, index=index)
+                out = out.sort(inplace=False)  # copies
+            return np.array(out), out.index
+        elif data_util._is_using_pandas(data, None):
+            out = data
+            out = out.reindex(index)  # copies?
+            out = out.sort_index()
+            return out, out.index
+        else:
+            msg = 'data must be a Numpy array or a Pandas Series/DataFrame'
+            raise ValueError(msg)
+
+    def transform_dataframe(self, dataframe, function, level=0, **kwargs):
+        '''Apply function to each column, by group
+        Assumes that the dataframe already has a proper index'''
+        if dataframe.shape[0] != self.nobs:
+            raise Exception('dataframe does not have the same shape as index')
+        out = dataframe.groupby(level=level).apply(function, **kwargs)
+        if 1 in out.shape:
+            return np.ravel(out)
+        else:
+            return np.array(out)
+
+    def transform_array(self, array, function, level=0, **kwargs):
+        '''Apply function to each column, by group'''
+        if array.shape[0] != self.nobs:
+            raise Exception('array does not have the same shape as index')
+        dataframe = pd.DataFrame(array, index=self.index)
+        return self.transform_dataframe(dataframe, function, level=level,
+                                        **kwargs)
+
+    def transform_slices(self, array, function, level=0, **kwargs):
+        '''Apply function to each group. Similar to transform_array but does
+        not coerce array to a DataFrame and back and only works on a 1D or 2D
+        numpy array'''
+        array = np.asarray(array)
+        if array.shape[0] != self.nobs:
+            raise Exception('array does not have the same shape as index')
+        # always reset because level is given. need to refactor this.
+        self.get_slices(level=level)
+        processed = []
+        for s in self.slices:
+            if array.ndim == 2:
+                subset = array[s, :]
+            elif array.ndim == 1:
+                subset = array[s]
+            processed.append(function(subset, **kwargs))
+        return np.array(processed)
+
+    #TODO: this isn't general needs to be a PanelGrouping object
+    def dummies_time(self):
+        self.dummy_sparse(level=1)
+        return self._dummies
+
+    def dummies_groups(self, level=0):
+        self.dummy_sparse(level=level)
+        return self._dummies
+
+    def dummy_sparse(self, level=0):
+        '''create a sparse indicator from a group array with integer labels
+
+        Parameters
+        ----------
+        groups: ndarray, int, 1d (nobs,) an array of group indicators for each
+            observation. Group levels are assumed to be defined as consecutive
+            integers, i.e. range(n_groups) where n_groups is the number of
+            group levels. A group level with no observations for it will still
+            produce a column of zeros.
+
+        Returns
+        -------
+        indi : ndarray, int8, 2d (nobs, n_groups)
+            an indicator array with one row per observation, that has 1 in the
+            column of the group level for that observation
+
+        Examples
+        --------
+
+        >>> g = np.array([0, 0, 2, 1, 1, 2, 0])
+        >>> indi = dummy_sparse(g)
+        >>> indi
+        <7x3 sparse matrix of type '<type 'numpy.int8'>'
+            with 7 stored elements in Compressed Sparse Row format>
+        >>> indi.todense()
+        matrix([[1, 0, 0],
+                [1, 0, 0],
+                [0, 0, 1],
+                [0, 1, 0],
+                [0, 1, 0],
+                [0, 0, 1],
+                [1, 0, 0]], dtype=int8)
+
+
+        current behavior with missing groups
+        >>> g = np.array([0, 0, 2, 0, 2, 0])
+        >>> indi = dummy_sparse(g)
+        >>> indi.todense()
+        matrix([[1, 0, 0],
+                [1, 0, 0],
+                [0, 0, 1],
+                [1, 0, 0],
+                [0, 0, 1],
+                [1, 0, 0]], dtype=int8)
+        '''
+        from scipy import sparse
+        groups = self.labels[level]
+        indptr = np.arange(len(groups)+1)
+        data = np.ones(len(groups), dtype=np.int8)
+        self._dummies = sparse.csr_matrix((data, groups, indptr))
 
 
 if __name__ == '__main__':
@@ -289,13 +552,13 @@ if __name__ == '__main__':
     from numpy.testing import assert_equal
 
     np.random.seed(985367)
-    groups = np.random.randint(0,2,size=(10,2))
+    groups = np.random.randint(0, 2, size=(10, 2))
     uv, ux, u, label = combine_indices(groups, return_labels=True)
     uv, ux, u, label = combine_indices(groups, prefix='g1,g2=', sep=',',
                                        return_labels=True)
 
-    group0 = np.array(['sector0', 'sector1'])[groups[:,0]]
-    group1 = np.array(['region0', 'region1'])[groups[:,1]]
+    group0 = np.array(['sector0', 'sector1'])[groups[:, 0]]
+    group1 = np.array(['region0', 'region1'])[groups[:, 1]]
     uv, ux, u, label = combine_indices((group0, group1),
                                        prefix='sector,region=',
                                        sep=',',
@@ -345,33 +608,34 @@ if __name__ == '__main__':
     data = np.ones(len(g), dtype=np.int8)
     a = sparse.csr_matrix((data, g, indptr))
     print a.todense()
-    print np.all(a.todense() == (g[:,None] == np.arange(3)).astype(int))
+    print np.all(a.todense() == (g[:, None] == np.arange(3)).astype(int))
 
     x = np.arange(len(g)*3).reshape(len(g), 3, order='F')
 
     print 'group means'
     print x.T * a
-    print np.dot(x.T, g[:,None] == np.arange(3))
-    print np.array([np.bincount(g, weights=x[:,col]) for col in range(3)])
+    print np.dot(x.T, g[:, None] == np.arange(3))
+    print np.array([np.bincount(g, weights=x[:, col]) for col in range(3)])
     for cat in u:
-        print x[g==cat].sum(0)
-    for cat in u: x[g==cat].sum(0)
+        print x[g == cat].sum(0)
+    for cat in u:
+        x[g == cat].sum(0)
 
     cc = sparse.csr_matrix([[0, 1, 0, 1, 0, 0, 0, 0, 0],
-                [1, 0, 1, 0, 1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 1, 0, 0, 0],
-                [1, 0, 0, 0, 1, 0, 1, 0, 0],
-                [0, 1, 0, 1, 0, 1, 0, 1, 0],
-                [0, 0, 1, 0, 1, 0, 0, 0, 1],
-                [0, 0, 0, 1, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 1, 0, 1, 0, 1],
-                [0, 0, 0, 0, 0, 1, 0, 1, 0]])
+                            [1, 0, 1, 0, 1, 0, 0, 0, 0],
+                            [0, 1, 0, 0, 0, 1, 0, 0, 0],
+                            [1, 0, 0, 0, 1, 0, 1, 0, 0],
+                            [0, 1, 0, 1, 0, 1, 0, 1, 0],
+                            [0, 0, 1, 0, 1, 0, 0, 0, 1],
+                            [0, 0, 0, 1, 0, 0, 0, 1, 0],
+                            [0, 0, 0, 0, 1, 0, 1, 0, 1],
+                            [0, 0, 0, 0, 0, 1, 0, 1, 0]])
 
     #------------- groupsums
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2), g,
-                    use_bincount=False).T
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2)[:,:,0], g)
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g),3,2)[:,:,1], g)
+    print group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2), g,
+                     use_bincount=False).T
+    print group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 0], g)
+    print group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 1], g)
 
     #------------- examples class
     x = np.arange(len(g)*3).reshape(len(g), 3, order='F')
