@@ -104,7 +104,7 @@ class CheckGrouping(object):
         names = self.data.index.names
         transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x : x.mean(0),
+                                            lambda x, idx : x.mean(0),
                                             level=0)
         expected = self.data.reset_index().groupby(names[0]).mean()[
                                                     self.data.columns]
@@ -114,7 +114,8 @@ class CheckGrouping(object):
         if len(names) > 1:
             transformed_slices = self.grouping.transform_slices(
                                             self.data.values,
-                                            lambda x : x.mean(0), level=1)
+                                            lambda x, idx : x.mean(0),
+                                            level=1)
             expected = self.data.reset_index().groupby(names[1]
                                                        ).mean()[
                                                         self.data.columns]
@@ -142,6 +143,7 @@ class CheckGrouping(object):
             np.testing.assert_equal(self.grouping._dummies.toarray(),
                                     expected)
 
+
 class TestMultiIndexGrouping(CheckGrouping):
     @classmethod
     def setupClass(cls):
@@ -164,6 +166,7 @@ class TestIndexGrouping(CheckGrouping):
         cls.data = index_data
 
         cls.expected_counts = [20] * 11
+
 
 def test_init_api():
     # make a multi-index panel
