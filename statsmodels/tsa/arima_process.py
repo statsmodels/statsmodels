@@ -406,17 +406,17 @@ def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
     #p,q = pq
     def msear_err(arma, ar_des):
         ar, ma = np.r_[1, arma[:p-1]], np.r_[1, arma[p-1:]]
-        ar_approx = arma_impulse_response(ma, ar,  n)
+        ar_approx = arma_impulse_response(ma, ar, n)
 ##        print(ar,ma)
 ##        print(ar_des.shape, ar_approx.shape)
 ##        print(ar_des)
 ##        print(ar_approx)
-        return (ar_des - ar_approx) #((ar - ar_approx)**2).sum()
+        return (ar_des - ar_approx)  # ((ar - ar_approx)**2).sum()
     if start is None:
-        arma0 = np.r_[-0.9* np.ones(p-1), np.zeros(q-1)]
+        arma0 = np.r_[-0.9 * np.ones(p-1), np.zeros(q-1)]
     else:
         arma0 = start
-    res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)#, full_output=True)
+    res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)
     #print(res)
     arma_app = np.atleast_1d(res[0])
     ar_app = np.r_[1, arma_app[:p-1]],
@@ -489,7 +489,7 @@ def lpol_fima(d, n=20):
 
     '''
     #hide import inside function until we use this heavily
-    from scipy.special import gamma, gammaln
+    from scipy.special import gammaln
     j = np.arange(n)
     return np.exp(gammaln(d+j) - gammaln(j+1) - gammaln(d))
 
@@ -517,7 +517,7 @@ def lpol_fiar(d, n=20):
     ar(L)*x_t
     '''
     #hide import inside function until we use this heavily
-    from scipy.special import gamma, gammaln
+    from scipy.special import gammaln
     j = np.arange(n)
     ar = - np.exp(gammaln(-d+j) - gammaln(j+1) - gammaln(-d))
     ar[0] = 1
@@ -579,8 +579,8 @@ def deconvolve(num, den, n=None):
     N = len(num)
     D = len(den)
     if D > N and n is None:
-        quot = [];
-        rem = num;
+        quot = []
+        rem = num
     else:
         if n is None:
             n = N-D+1
@@ -816,11 +816,11 @@ class ArmaProcess(object):
         '''
         #TODO: variable returns like this?
         pr = self.ma_roots()
-        insideroots = np.abs(pr)<1
+        insideroots = np.abs(pr) < 1
         if insideroots.any():
-            pr[np.abs(pr)<1] = 1./pr[np.abs(pr)<1]
-            pnew = poly.Polynomial.fromroots(pr)
-            mainv = pn.coef/pnew.coef[0]
+            pr[np.abs(pr) < 1] = 1./pr[np.abs(pr) < 1]
+            pnew = np.polynomial.Polynomial.fromroots(pr)
+            mainv = pnew.coef/pnew.coef[0]
             wasinvertible = False
         else:
             mainv = self.ma
