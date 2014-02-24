@@ -347,6 +347,7 @@ class Grouping(object):
                     self.index.names = names
 
         self.nobs = len(self.index)
+        self.nlevels = len(self.index.names)
         self.slices = None
 
     @property
@@ -469,7 +470,8 @@ class Grouping(object):
     def transform_slices(self, array, function, level=0, **kwargs):
         '''Apply function to each group. Similar to transform_array but does
         not coerce array to a DataFrame and back and only works on a 1D or 2D
-        numpy array'''
+        numpy array. function is called function(group, group_idx, **kwargs).
+        '''
         array = np.asarray(array)
         if array.shape[0] != self.nobs:
             raise Exception('array does not have the same shape as index')
@@ -481,8 +483,9 @@ class Grouping(object):
                 subset = array[s, :]
             elif array.ndim == 1:
                 subset = array[s]
-            processed.append(function(subset, **kwargs))
-        return np.array(processed)
+            processed.append(function(subset, s, **kwargs))
+        processed = np.array(processed)
+        return processed.reshape(-1, processed.shape[-1])
 
     #TODO: this isn't general needs to be a PanelGrouping object
     def dummies_time(self):
