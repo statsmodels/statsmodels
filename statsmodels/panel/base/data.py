@@ -46,7 +46,7 @@ class _CommonPanelMethods(object):
 class PanelData(ModelData, _CommonPanelMethods):
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         panel, time = _check_panel_time(kwargs)
-        self.groupings = Grouping(index_list=[panel, time])
+        self.groupings = Grouping(index=zip(panel, time))
         super(PanelData, self).__init__(endog, exog, missing, hasconst,
                                       **kwargs)
         self._initialize()
@@ -55,7 +55,7 @@ class PanelData(ModelData, _CommonPanelMethods):
 class PatsyPanelData(PatsyData, _CommonPanelMethods):
     def __init__(self, endog, exog, missing='none', hasconst=None, **kwargs):
         panel, time = _check_panel_time(kwargs)
-        self.groupings = Grouping(index_list=[panel, time])
+        self.groupings = Grouping(index=zip(panel, time))
         super(PanelData, self).__init__(endog, exog, missing, hasconst,
                                       **kwargs)
         self._initialize()
@@ -71,7 +71,7 @@ class PandasPanelData(PandasData, _CommonPanelMethods):
         if not isinstance(endog.index, MultiIndex):
             raise ValueError("index is not a MultiIndex")
 
-        self.groupings = Grouping(index_pandas=endog.index)
+        self.groupings = Grouping(index=endog.index)
 
         super(PandasPanelData, self).__init__(endog, exog, missing, hasconst,
                                               **kwargs)
