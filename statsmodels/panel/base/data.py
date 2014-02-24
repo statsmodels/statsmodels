@@ -71,7 +71,7 @@ class PandasPanelData(PandasData, _CommonPanelMethods):
         if not isinstance(endog.index, MultiIndex):
             raise ValueError("index is not a MultiIndex")
 
-        self.groupings = Grouping(index_pandas=endog.index)
+        self.groupings = Grouping(index=endog.index)
 
         super(PandasPanelData, self).__init__(endog, exog, missing, hasconst,
                                               **kwargs)
