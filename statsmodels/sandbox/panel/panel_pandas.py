@@ -21,7 +21,7 @@ class PanelLM(RegressionModel):
             self.groupings = Grouping(index_list=[unit, time])
         self.exog, idx = self.groupings.sort(exog)
         self.endog, idx = self.groupings.sort(endog)
-        self.groupings.index = idx # relevant index order may have changed
+        self.groupings.reindex(idx) # sorting may have altered index
 
         self.method = method
         self.effects = effects
