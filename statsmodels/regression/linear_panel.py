@@ -199,6 +199,8 @@ class PanelLM(PanelModel, RegressionModel):
              self.theta) = swar_ercomp(self.endog, self.exog, panel, time)
             out = g.transform_slices(array=data, function=swar_transform,
                                      theta=self.theta)
+            if data.ndim == 1: # preserve 1d in 1d out
+                out = np.squeeze(out)
             return out
 
         elif method == 'within':
