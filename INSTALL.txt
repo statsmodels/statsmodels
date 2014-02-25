@@ -52,6 +52,9 @@ nose >= 1.0.0
 
     Nose is needed to run the tests.
 
+IPython >= 1.0
+
+    Needed to build the docs.
 
 Easy Install
 ------------
