@@ -1919,7 +1919,7 @@ class TestARMA00(TestCase):
         # between OLS and ARIMA
         res = self.arma_00_res
         y = self.y
-        ols_res = OLS(y, np.ones_like(y)).fit()
+        ols_res = OLS(y, np.ones_like(y)).fit(disp=-1)
         ols_ic = np.array([ols_res.aic, ols_res.bic])
         arma_ic = np.array([res.aic, res.bic])
         assert_almost_equal(ols_ic, arma_ic, DECIMAL_4)
@@ -1947,7 +1947,7 @@ class TestARMA00(TestCase):
         T = y_lag.shape[0]
         X = np.hstack((np.ones((T,1)), y_lag[:,None]))
         ols_res = OLS(y_lead, X).fit()
-        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='c')
+        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='c', disp=-1)
         assert_almost_equal(ols_res.params, arma_res.params)
 
     def test_arma_exog_no_constant(self):
