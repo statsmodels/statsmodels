@@ -20,6 +20,16 @@ import smtplib
 import sys
 from email.MIMEText import MIMEText
 
+
+# Environment for subprocess calls. Needed for cron execution
+env = {'MATPLOTLIBRC' : ('/home/skipper/statsmodels/statsmodels/tools/'),
+       'HOME' : '/home/skipper',
+       'PATH' : ':'.join((os.getenv('PATH', ''), '/home/skipper/.local/bin')),
+       # Need this for my openblas setup on my laptop
+       # maybe no longer necessary with newer numpy
+       'LD_LIBRARY_PATH' : os.getenv('LD_LIBRARY_PATH', '')}
+
+
 ######### INITIAL SETUP ##########
 
 #hard-coded "current working directory" ie., you will need file permissions
@@ -65,7 +75,7 @@ def create_virtualenv():
     # make a virtualenv for installation if it doesn't exist
     # and easy_install sphinx
     if not os.path.exists(virtual_dir):
-        retcode = subprocess.call(['/usr/local/bin/virtualenv',
+        retcode = subprocess.call(['/home/skipper/.local/bin/virtualenv',
                                    "--system-site-packages", virtual_dir])
         if retcode != 0:
             msg = """There was a problem creating the virtualenv"""
@@ -150,6 +160,15 @@ def install_branch(branch):
         raise Exception(msg)
     os.chdir(dname)
 
+def print_info():
+    info = subprocess.Popen([virtual_python, os.path.join(gitdname,
+                                                          "statsmodels",
+                                                          "tools",
+                                                          "print_version.py"
+                                                          )],
+                            stdout=subprocess.PIPE).stdout.read()
+    print info
+
 def build_docs(branch):
     """
     Changes into gitdname and builds the docs using BUILDENV virtualenv
@@ -172,11 +191,7 @@ def build_docs(branch):
     # getting the correct env from bin/activate and passing to env is
     # annoying
     retcode = subprocess.call(" && ".join([activate_virtualenv, sphinx_call]),
-                                shell=True,
-        env = {'MATPLOTLIBRC' : # put this in the environment to use local rc
-               '/home/skipper/statsmodels/statsmodels/tools/',
-               # Need this for my openblas setup on my laptop
-               'LD_LIBRARY_PATH' : os.getenv('LD_LIBRARY_PATH')})
+                                shell=True, env=env)
 
     if retcode != 0:
         os.chdir(dname)
@@ -264,6 +279,7 @@ def main():
             create_virtualenv()
             create_update_gitdir()
             install_branch(branch)
+            print_info()
             build_docs(branch)
             upload_docs(branch)
     #        build_pdf(new_branch_dir)
