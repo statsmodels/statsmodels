@@ -190,7 +190,8 @@ class ARIMAProcess(LikelihoodModel):
 
 
 def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn, burnin=0):
-    '''generate an random sample of an ARMA process
+    """
+    Generate a random sample of an ARMA process
 
     Parameters
     ----------
@@ -211,14 +212,32 @@ def arma_generate_sample(ar, ma, nsample, sigma=1, distrvs=np.random.randn, burn
         to reduce the effect of initial conditions, burnin observations at the
         beginning of the sample are dropped
 
-
     Returns
     -------
     sample : array
         sample of ARMA process given by ar, ma of length nsample
 
+    Notes
+    -----
+    As mentioned above, both the AR and MA components should include the
+    coefficient on the zero-lag. This is typically 1. Further, due to the
+    conventions used in signal processing used in signal.lfilter vs.
+    conventions in statistics for ARMA processes, the AR paramters should
+    have the opposite sign of what you might expect. See the examples below.
 
-    '''
+    Examples
+    --------
+    >>> import numpy as np
+    >>> np.random.seed(12345)
+    >>> ar = np.array([.75, -.25])
+    >>> ma = np.array([.65, .35])
+    >>> arparams = np.r_[1, -ar] # add zero-lag and negate
+    >>> maparams = np.r_[1, ma] # add zero-lag
+    >>> y = sm.tsa.arma_generate_sample(arparams, maparams, 250)
+    >>> model = sm.tsa.ARMA(y, (2, 2)).fit(trend='nc', disp=0)
+    >>> model.params
+    array([ 0.79044189, -0.23140636,  0.70072904,  0.40608028])
+    """
     #TODO: unify with ArmaProcess method
     eta = sigma * distrvs(nsample+burnin)
     return signal.lfilter(ma, ar, eta)[burnin:]
