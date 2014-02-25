@@ -1,5 +1,3 @@
-import distutils.version
-
 import numpy as np
 import scipy
 from scipy import optimize, stats
@@ -566,8 +564,9 @@ def _fit_mle_lbfgs(f, score, start_params, fargs, kwargs, disp=True,
 
     # Customize the fmin_l_bfgs_b call according to the scipy version.
     # Old scipy does not support maxiter and callback.
-    scipy_version_curr = distutils.version.LooseVersion(scipy.__version__)
-    scipy_version_12 = distutils.version.LooseVersion('0.12.0')
+    from statsmodels.compatnp.np_compat import NumpyVersion
+    scipy_version_curr = NumpyVersion(scipy.__version__)
+    scipy_version_12 = NumpyVersion('0.12.0')
     if scipy_version_curr < scipy_version_12:
         retvals = optimize.fmin_l_bfgs_b(func, start_params, args=fargs,
                                          bounds=bounds, disp=disp,

@@ -11,6 +11,7 @@ import sys
 
 if sys.version_info[0] >= 3:
     import io
+    string_types = basestring
     bytes = bytes
     unicode = str
     asunicode = str
@@ -36,6 +37,7 @@ if sys.version_info[0] >= 3:
     strchar = 'U'
     from io import BytesIO, StringIO  #statsmodels
 else:
+    string_types = str
     bytes = str
     unicode = unicode
     asbytes = str
