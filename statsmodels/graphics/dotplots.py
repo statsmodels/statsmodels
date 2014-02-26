@@ -13,8 +13,8 @@ except:
 def dotplot(points, intervals=None, lines=None, sections=None,
             styles=None, marker_props=None, line_props=None,
             ax=None, split_names=None, section_order=None,
-            line_order=None, stacked=False, striped=False,
-            horizontal=True):
+            line_order=None, stacked=False, styles_order=None,
+            striped=False, horizontal=True):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  These are also known as "forest plots".
@@ -68,6 +68,10 @@ def dotplot(points, intervals=None, lines=None, sections=None,
     stacked : boolean
         If True, when multiple points or intervals are drawn on the
         same line, they are offset from each other.
+    styles_order : array_like
+        If stacked=True, this is the order in which the point styles
+        on a given line are drawn from bottom to top or from left to
+        right.  If None, the order is lexical.
     striped : boolean
         If True, every other line is enclosed in a shaded box.
     horizontal : boolean
@@ -191,9 +195,12 @@ def dotplot(points, intervals=None, lines=None, sections=None,
         dpos = (top - bottom) / float(nrows)
 
     # Determine the spacing for stacked points
-    # The maximum number of points on one line.
-    style_codes = list(set(styles))
-    style_codes.sort()
+    if styles_order is not None:
+        style_codes = styles_order
+    else:
+        style_codes = list(set(styles))
+        style_codes.sort()
+    # nval is the maximum number of points on one line.
     nval = len(style_codes)
     if nval > 1:
         stackd = dpos / (2.5*(float(nval)-1))
