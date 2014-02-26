@@ -70,13 +70,14 @@ def dotplot(points, intervals=None, lines=None, sections=None,
         same line, they are offset from each other.
     styles_order : array_like
         If stacked=True, this is the order in which the point styles
-        on a given line are drawn from bottom to top or from left to
-        right.  If None, the order is lexical.
+        on a given line are drawn from top to bottom (if horizontal
+        is True) or from left to right (if horiontal is False).  If
+        None (default), the order is lexical.
     striped : boolean
         If True, every other line is enclosed in a shaded box.
     horizontal : boolean
-        If True, the lines are drawn horizontally, otherwise they are
-        drawn vertically.
+        If True (default), the lines are drawn horizontally, otherwise
+        they are drawn vertically.
 
     Returns
     -------
@@ -200,6 +201,10 @@ def dotplot(points, intervals=None, lines=None, sections=None,
     else:
         style_codes = list(set(styles))
         style_codes.sort()
+    # Order is top to bottom for horizontal plots, so need to
+    # flip.
+    if horizontal:
+        style_codes = style_codes[::-1]
     # nval is the maximum number of points on one line.
     nval = len(style_codes)
     if nval > 1:

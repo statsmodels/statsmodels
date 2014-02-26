@@ -215,6 +215,19 @@ def test_all():
     ax.set_title("Dotplot with two points per line")
     close_or_save(pdf, fig)
 
+    # Dotplot with two points per line and a legend
+    plt.clf()
+    ax = plt.axes([0.1, 0.1, 0.75, 0.8])
+    fig = dotplot(points, intervals=intervals, lines=lines,
+                  styles=styles, ax=ax, stacked=True,
+                  styles_order=["Dog", "Cat"])
+    handles, labels = ax.get_legend_handles_labels()
+    leg = plt.figlegend(handles, labels, "center right", numpoints=1,
+                        handletextpad=0.0001)
+    leg.draw_frame(False)
+    ax.set_title("Dotplot with two points per line (reverse order)")
+    close_or_save(pdf, fig)
+
     # Vertical dotplot with two points per line and a legend
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
