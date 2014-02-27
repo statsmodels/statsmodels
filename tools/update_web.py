@@ -15,11 +15,17 @@ import base64
 import subprocess
 import os
 import shutil
-import re
 import smtplib
 import sys
 from email.MIMEText import MIMEText
-
+import logging
+logging.basicConfig(filename='/home/skipper/statsmodels/statsmodels/tools/'
+                             'docs_build_config.log', level=logging.DEBUG,
+                    format="%(asctime)s %(message)s")
+sys.stdout = open('/home/skipper/statsmodels/statsmodels/tools/crontab.out',
+                  'w')
+sys.stderr = open('/home/skipper/statsmodels/statsmodels/tools/crontab.err',
+                  'w')
 
 # Environment for subprocess calls. Needed for cron execution
 env = {'MATPLOTLIBRC' : ('/home/skipper/statsmodels/statsmodels/tools/'),
@@ -34,16 +40,20 @@ env = {'MATPLOTLIBRC' : ('/home/skipper/statsmodels/statsmodels/tools/'),
 
 #hard-coded "current working directory" ie., you will need file permissions
 #for this folder
-script = os.path.abspath(sys.argv[0])
+# follow symbolic links
+script = os.path.realpath(sys.argv[0])
 dname = os.path.abspath(os.path.dirname(script))
 gname = 'statsmodels'
 gitdname = os.path.join(dname, gname)
 os.chdir(dname)
 
+logging.debug('script: {}'.format(script))
+logging.debug('dname: {}'.format(dname))
+
 # hard-coded git branch names
 repo = 'git://github.com/statsmodels/statsmodels.git'
 stable_trunk = 'master'
-last_release = 'v0.4.3'
+last_release = 'v0.5.0'
 branches = [stable_trunk]
 # change last_release above and uncomment the below to update for a release
 #branches = [stable_trunk, last_release]
@@ -53,7 +63,6 @@ virtual_dir = 'BUILDENV'
 virtual_dir = os.path.join(dname, virtual_dir)
 # this points to the newly installed python in the virtualenv
 virtual_python = os.path.join(virtual_dir,'bin','python')
-
 
 # my security holes
 with open('/home/skipper/statsmodels/gmail.txt') as f:
