@@ -23,6 +23,13 @@ Change blurb and example code.
 Other important new features
 ----------------------------
 
+* A dotplot is a way to visualize a small dataset in a way that
+  retains the identity of every point in the plot.  Dotplots are very
+  commonly found in meta-analyses, where they are known as "forest
+  plots", but can be used in many other settings as well.  Most tables
+  that appear in research papers can be represented graphically as a
+  dotplot.
+
 * Other new changes can go
 * In a
 * Bullet list
