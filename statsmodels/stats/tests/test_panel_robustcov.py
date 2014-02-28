@@ -57,6 +57,10 @@ def test_panel_robust_cov():
     cov_clu = sw.cov_cluster(res, firm_id)
     assert_almost_equal(cov_clu, res_stata.cov_clu_stata, decimal=4)
 
+    #cluster robust standard errors, non-int groups
+    cov_clu = sw.cov_cluster(res, map(str, firm_id))
+    assert_almost_equal(cov_clu, res_stata.cov_clu_stata, decimal=4)
+
     #Driscoll and Kraay panel robust standard errors
     rcov = sw.cov_nw_groupsum(res, 0, time, use_correction=0)
     assert_almost_equal(rcov, res_stata.cov_dk0_stata, decimal=4)
