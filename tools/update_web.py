@@ -9,6 +9,11 @@ Then it installs the devel version, builds the docs, and uploads them to
 Depends
 -------
 virtualenv
+
+Notes
+-----
+If you set it up as an anacron job, you should do it as a user, so that it
+has access to your ssh keys.
 """
 import traceback
 import base64
@@ -88,7 +93,8 @@ def create_virtualenv():
     # and easy_install sphinx
     if not os.path.exists(virtual_dir):
         retcode = subprocess.call(['/home/skipper/.local/bin/virtualenv',
-                                   "--system-site-packages", virtual_dir])
+                                   "--system-site-packages", virtual_dir],
+                                   stderr=sys.stderr, stdout=sys.stdout)
         if retcode != 0:
             msg = """There was a problem creating the virtualenv"""
             raise Exception(msg)
@@ -104,7 +110,8 @@ def create_update_gitdir():
     updates repo otherwise.
     """
     if not os.path.exists(gitdname):
-        retcode = subprocess.call('git clone '+repo, shell=True)
+        retcode = subprocess.call('git clone '+repo, shell=True,
+                                  stdout=sys.stdout, stderr=sys.stderr)
         if retcode != 0:
             msg = """There was a problem cloning the repo"""
             raise Exception(msg)
@@ -159,19 +166,21 @@ def install_branch(branch):
 
     # checkout the branch
     os.chdir(gitdname)
-    retcode = subprocess.call('git checkout ' + branch, shell=True)
+    retcode = subprocess.call('git checkout ' + branch, shell=True,
+                              stdout=sys.stdout, stderr=sys.stderr)
     if retcode != 0:
         msg = """Could not checkout out branch %s""" % branch
         raise Exception(msg)
 
     # build and install
     retcode = subprocess.call(" ".join([virtual_python, 'setup.py', 'build']),
-                              shell=True)
+                              shell=True, stdout=sys.stdout, stderr=sys.stderr)
     if retcode != 0:
         msg = """Could not build branch %s""" % branch
         raise Exception(msg)
     retcode = subprocess.call(" ".join([virtual_python, os.path.join(gitdname,
-                                        'setup.py'), 'install']), shell=True)
+                                        'setup.py'), 'install']), shell=True,
+                              stdout=sys.stdout, stderr=sys.stderr)
     if retcode != 0:
         os.chdir(dname)
         msg = """Could not install branch %s""" % branch
@@ -180,13 +189,12 @@ def install_branch(branch):
 
 
 def print_info():
-    info = subprocess.Popen([virtual_python, os.path.join(gitdname,
-                                                          "statsmodels",
-                                                          "tools",
-                                                          "print_version.py"
-                                                          )],
-                            stdout=subprocess.PIPE).stdout.read()
-    print info
+    subprocess.Popen([virtual_python, os.path.join(gitdname,
+                                                   "statsmodels",
+                                                   "tools",
+                                                   "print_version.py"
+                                                   )],
+                     stdout=sys.stdout, stderr=sys.stderr)
 
 
 def build_docs(branch):
@@ -194,7 +202,8 @@ def build_docs(branch):
     Changes into gitdname and builds the docs using BUILDENV virtualenv
     """
     os.chdir(os.path.join(gitdname, 'docs'))
-    retcode = subprocess.call("make clean", shell=True)
+    retcode = subprocess.call("make clean", shell=True,
+                              stdout=sys.stdout, stderr=sys.stderr)
     if retcode != 0:
         os.chdir(dname)
         msg = """Could not clean the html docs for branch %s""" % branch
@@ -210,7 +219,8 @@ def build_docs(branch):
     # getting the correct env from bin/activate and passing to env is
     # annoying
     retcode = subprocess.call(" && ".join([activate_virtualenv, sphinx_call]),
-                              shell=True, env=env)
+                              shell=True, env=env, stdout=sys.stdout,
+                              stderr=sys.stderr)
 
     if retcode != 0:
         os.chdir(dname)
@@ -241,8 +251,10 @@ def upload_docs(branch):
     else:
         remote_dir = 'stable'
     os.chdir(os.path.join(gitdname, 'docs'))
-    retcode = subprocess.call(['rsync', '-avPr', '-e ssh', 'build/html/',
-                               sf_account + ':htdocs/'+remote_dir])
+    retcode = subprocess.call(['rsync', '-avPrzh', '--inplace', '-e ssh',
+                               'build/html/', sf_account + ':htdocs/' +
+                               remote_dir],
+                              stderr=sys.stderr, stdout=sys.stdout)
     if retcode != 0:
         msg = """Could not upload html to %s for branch %s""" % (remote_dir,
                                                                  branch)
