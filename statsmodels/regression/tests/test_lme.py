@@ -7,12 +7,14 @@ import csv
 
 class TestLME(object):
 
-    def do1(self, ds_ix):
+    def do1(self, reml, ds_ix):
 
-        coef = globals()["coef_%d" % ds_ix]
-        vcov_r = globals()["vcov_%d" % ds_ix]
-        revar_r = globals()["revar_%d" % ds_ix]
-        sig2_r = globals()["sig2_%d" % ds_ix]
+        meth = "reml" if reml else "ml"
+
+        coef = globals()["coef_%s_%d" % (meth, ds_ix)]
+        vcov_r = globals()["vcov_%s_%d" % (meth, ds_ix)]
+        revar_r = globals()["revar_%s_%d" % (meth, ds_ix)]
+        sig2_r = globals()["sig2_%s_%d" % (meth, ds_ix)]
 
         # Variance component MLE ~ 0 currently requires manual
         # tweaking of algorithm parameters, so exclude from tests.
@@ -42,8 +44,10 @@ class TestLME(object):
 
         # Fit the model
         md = LME(endog, exog_fe, exog_re, groups)
-        mdf = md.fit(num_em=50)
-        params_fe, revar, sig2 = md._unpack(mdf.params)
+        mdf = md.fit(reml=reml, num_em=50)
+        params_fe, revar = md._unpack(mdf.params)
+        sig2 = md.get_sig2(params_fe, revar, reml)
+        revar *= sig2
 
         assert_almost_equal(params_fe, coef, decimal=4)
         assert_almost_equal(revar, revar_r, decimal=4)
@@ -66,8 +70,9 @@ class TestLME(object):
                   and x.endswith(".csv")]
 
         for fname in fnames:
-            ds_ix = int(fname[3:5])
-            yield self.do1, ds_ix
+            for reml in False,True:
+                ds_ix = int(fname[3:5])
+                yield self.do1, reml, ds_ix
 
 
 
