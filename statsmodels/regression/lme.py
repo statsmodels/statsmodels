@@ -5,7 +5,7 @@ Linear mixed effects models
 
 import numpy as np
 import statsmodels.base.model as base
-from scipy.optimize import fmin_cg, fmin_bfgs
+from scipy.optimize import fmin_cg, fmin_bfgs, fmin
 from scipy.misc import derivative
 
 class LME(base.Model):
@@ -54,23 +54,20 @@ class LME(base.Model):
 
     def _unpack(self, params):
         """
-        Takes as input the packed parameter vector and returns three
+        Takes as input the packed parameter vector and returns two
         values:
 
         params : 1d ndarray
             The fixed effects coefficients
         revar : 2d ndarray
             The random effects covariance matrix
-        sig2 : non-negative real scaoar
-            The error variance
         """
 
         pf = self.exog.shape[1]
         pr = self.exog_re.shape[1]
         nr = pr * (pr + 1) / 2
         params_fe = params[0:pf]
-        params_re = params[pf:pf+nr]
-        params_rv = params[-1]
+        params_re = params[pf:]
 
         # Unpack the covariance matrix of the random effects
         revar = np.zeros((pr, pr), dtype=np.float64)
@@ -78,9 +75,9 @@ class LME(base.Model):
         revar[ix] = params_re
         revar = (revar + revar.T) - np.diag(np.diag(revar))
 
-        return params_fe, revar, params_rv
+        return params_fe, revar
 
-    def _pack(self, params_fe, revar, sig2):
+    def _pack(self, params_fe, revar):
         """
         Packs the model parameters into a single vector.
 
@@ -90,8 +87,6 @@ class LME(base.Model):
             The fixed effects parameters
         revar : 2d ndarray
             The covariance matrix of the random effects
-        sig2 : non-negative scalar
-            The error variance
 
         Returns
         -------
@@ -102,16 +97,21 @@ class LME(base.Model):
         """
 
         ix = np.tril_indices(revar.shape[0])
-        return np.concatenate((params_fe, revar[ix], np.r_[sig2,]))
+        return np.concatenate((params_fe, revar[ix]))
 
-    def like(self, params, pen):
+    def like(self, params, reml=False, pen=0.):
         """
-        Evaluate the log-likelihood of the model.
+        Evaluate the log-likelihood of the linear mixed effects model.
+        Specifically, this is the profile likelihood in which the
+        scale parameter sig2 has been profiled out.
 
         Arguments
         ---------
         params : 1d ndarray
             The parameter values, packed into a single vector
+        reml : bool
+            If true, return REML log likelihood, else return ML
+            log likelihood
         pen : non-negative float
             Weight for the penalty parameter for negative variances
 
@@ -121,7 +121,7 @@ class LME(base.Model):
             The log-likelihood value at `params`.
         """
 
-        params_fe, revar, sig2 = self._unpack(params)
+        params_fe, revar = self._unpack(params)
 
         # Check domain for random effects covariance
         try:
@@ -129,38 +129,57 @@ class LME(base.Model):
         except np.linalg.LinAlgError:
             return -np.inf
 
-        # Check domain for error variance
-        if sig2 <= 0:
-            return -np.inf
-
-        likeval = pen * (2*np.sum(np.log(np.diag(cy))) + np.log(sig2))
+        likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
+        xvx = 0.
+        qf = 0.
         for k in range(self.ngroup):
 
+            exog = self.exog_li[k]
+            ex_r = self.exog_re_li[k]
+
             # The residuals
-            expval = np.dot(self.exog_li[k], params_fe)
+            expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
             # The marginal covariance matrix for this group
-            ex_r = self.exog_re_li[k]
             vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += sig2*np.eye(vmat.shape[0])
+            vmat += np.eye(vmat.shape[0])
 
-            # Update the log-likelihood
-            u = np.linalg.solve(vmat, resid)
+            # Part 1 of the log likelihood (for both ML and REML)
             _,ld = np.linalg.slogdet(vmat)
-            likeval -= 0.5*(ld + np.dot(resid, u))
+            likeval -= ld / 2.
+
+            # Part 2 of the log likelihood (for both ML and REML)
+            u = np.linalg.solve(vmat, resid)
+            qf += np.dot(resid, u)
+
+            # Adjustment for REML
+            if reml:
+                xvx += np.dot(exog.T, np.linalg.solve(vmat, exog))
+
+        if reml:
+            p = self.exog.shape[1]
+            likeval -= (self.ntot - p) * np.log(qf) / 2.
+            _,ld = np.linalg.slogdet(xvx)
+            likeval -= ld / 2.
+        else:
+            likeval -= self.ntot * np.log(qf) / 2.
 
         return likeval
 
 
-    def score(self, params, pen=0):
+    def score(self, params, reml=False, pen=0.):
         """
         Calculates the score vector for the mixed effects model.
+        Specifically, this is the score for the profile likelihood in
+        which the scale parameter sig2 has been profiled out.
 
         Parameters
         ----------
         params : 1d ndarray
             All model parameters in packed form
+        reml : bool
+            If true, return REML score, else return ML score
         pen : non-negative float
             Weight for the penalty parameter to deter negative
             variances
@@ -171,54 +190,83 @@ class LME(base.Model):
             The score vector, calculated at `params`.
         """
 
-        params_fe, revar, sig2 = self._unpack(params)
+        params_fe, revar = self._unpack(params)
 
         # Construct the score.
         score_fe = 0.
 
         pr = self.exog_re.shape[1]
-        ix = np.tril_indices(pr)
-        pi = np.linalg.inv(revar)
-        pi = 2*pi - np.diag(np.diag(pi))
-        score_re = pen*pi[ix]
-        score_rv = pen / sig2
+        prr = pr * (pr + 1) / 2
+        score_re = np.zeros(prr, dtype=np.float64)
+        score_rv = np.zeros(self.exog.shape[1], dtype=np.float64)
+        rvir = 0.
+        rvrb = 0.
+        xtvix = 0.
+        xtax = [0.,] * prr
+        B = np.zeros(prr, dtype=np.float64)
+        C = np.zeros(prr, dtype=np.float64)
         for k in range(self.ngroup):
 
+            exog = self.exog_li[k]
+            ex_r = self.exog_re_li[k]
+
             # The residuals
-            expval = np.dot(self.exog_li[k], params_fe)
+            expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
             # The marginal covariance matrix for this group
-            ex_r = self.exog_re_li[k]
             vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += sig2*np.eye(vmat.shape[0])
+            vmat += np.eye(vmat.shape[0])
 
-            # Update the fixed effects score
-            u = np.linalg.solve(vmat, resid)
-            score_fe += np.dot(self.exog_li[k].T, u)
+            if reml:
+                xtvix += np.dot(exog.T, np.linalg.solve(vmat, exog))
 
-            # Variance score with respect to the marginal covariance
-            vmati = np.linalg.inv(vmat)
-            score_dv = -0.5*vmati + 0.5*np.outer(u, u)
-
-            # Pack the variance score.
-            # TODO: try to reduce looping via broadcasting
-            jx = 0
+            # Contributions to the covariance parameter gradient
+            jj = 0
+            vex = np.linalg.solve(vmat, ex_r)
             for j1 in range(pr):
                 for j2 in range(j1 + 1):
-                    f = 1 if j1 == j2 else 2
-                    score_re[jx] += f*np.sum(score_dv *
-                                  np.outer(ex_r[:, j1], ex_r[:, j2]))
-                    jx += 1
+                    mat = np.outer(ex_r[:,j1], ex_r[:,j2])
+                    if j1 != j2:
+                        mat += mat.T
+                    B[jj] = np.trace(np.linalg.solve(vmat, mat))
+                    mat = np.outer(vex[:,j1], vex[:,j2])
+                    if j1 != j2:
+                        mat += mat.T
+                    C[jj] -= np.dot(resid, np.dot(mat, resid))
+                    if reml:
+                        xtax[jj] += np.dot(exog.T, np.dot(mat, exog))
+                    jj += 1
 
-            score_rv += np.sum(np.diag(score_dv))
+            # Contribution of log|V| to the covariance parameter
+            # gradient.
+            score_re -= 0.5 * B
 
-        return np.concatenate((score_fe, score_re, np.r_[score_rv,]))
+            # Neded for the fixed effects params gradient
+            vir = np.linalg.solve(vmat, resid)
+            rvir += np.dot(resid, vir)
+            rvrb -= 2 * np.dot(exog.T, vir)
 
+        fac = self.ntot
+        if reml:
+            fac -= self.exog.shape[1]
+
+        score_fe = -0.5 * fac * rvrb / rvir
+
+        score_re -= 0.5 * fac * C / rvir
+
+        if reml:
+            for j in range(prr):
+                score_re[j] += 0.5 * np.trace(np.linalg.solve(
+                    xtvix, xtax[j]))
+
+        return np.concatenate((score_fe, score_re))
 
     def Estep(self, params_fe, revar, sig2):
         """
-        The E-step of the EM algorithm.
+        The E-step of the EM algorithm.  This is for ML (not REML),
+        but it seems to be good enough to use for REML starting
+        values.
 
         Parameters
         ----------
@@ -279,7 +327,9 @@ class LME(base.Model):
     def EM(self, params_fe, revar, sig2, num_em=10,
            hist=None):
         """
-        Run the EM algorithm from a given starting point.
+        Run the EM algorithm from a given starting point.  This is for
+        ML (not REML), but it seems to be good enough to use for REML
+        starting values.
 
         Returns
         -------
@@ -290,6 +340,12 @@ class LME(base.Model):
             matrix
         sig2 : float
             The final value of the error variance
+
+        Notes
+        -----
+        This uses the parameterization of the likelihood sig2*I +
+        Z'*V*Z, note that this differs from the profile likelihood
+        used in the gradient calculations.
         """
 
         xxtot = 0.
@@ -322,13 +378,44 @@ class LME(base.Model):
         return params_fe, revar, sig2
 
 
-    def fit(self, num_em=10, max_em_cycles=3, pen=0., gtol=1e-4,
-            full_output=False):
+    def get_sig2(self, params_fe, revar, reml):
+
+        qf = 0.
+        for k in range(self.ngroup):
+
+            exog = self.exog_li[k]
+            ex_r = self.exog_re_li[k]
+
+            # The residuals
+            expval = np.dot(exog, params_fe)
+            resid = self.endog_li[k] - expval
+
+            # The marginal covariance matrix for this group
+            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
+            vmat += np.eye(vmat.shape[0])
+
+            qf += np.dot(resid, np.linalg.solve(vmat, resid))
+
+        p = self.exog.shape[1]
+        if reml:
+            qf /=(self.ntot - p)
+        else:
+            qf /= self.ntot
+
+        return qf
+
+
+
+    def fit(self, reml=False, num_em=10, max_em_cycles=3, pen=0.,
+            gtol=1e-4, full_output=False):
         """
         Fit a linear mixed model to the data.
 
         Parameters
         ----------
+        reml : bool
+            If true, fit according to the REML likelihood, else
+            fit the standard likelihood using ML.
         num_em : non-negative integer
             The number of EM steps to take before switching to
             gradient optimization
@@ -348,8 +435,8 @@ class LME(base.Model):
         A LMEResults instance.
         """
 
-        like = lambda x: -self.like(x, pen)
-        score = lambda x: -self.score(x, pen)
+        like = lambda x: -self.like(x, reml, pen)
+        score = lambda x: -self.score(x, reml, pen)
 
         if full_output:
             hist = []
@@ -367,9 +454,14 @@ class LME(base.Model):
             # EM iterations
             params_fe, revar, sig2 = self.EM(params_fe, revar, sig2,
                                              num_em, hist)
-            params = self._pack(params_fe, revar, sig2)
-            if np.max(np.abs(self.score(params))) < gtol:
+
+            # Scoring algorithm uses a different parameterization and
+            # profiles out sigma^2.
+            revar /= sig2
+            params = self._pack(params_fe, revar)
+            if np.max(np.abs(score(params))) < gtol:
                 success = True
+                revar *= sig2
                 break
 
             # Gradient iterations
@@ -384,6 +476,9 @@ class LME(base.Model):
             if hist is not None:
                 hist.append(["Gradient", rslt['allvecs']])
             params = rslt[0]
+            params_fe, revar = self._unpack(params)
+            sig2 = self.get_sig2(params_fe, revar, reml)
+            revar *= sig2
             if np.max(np.abs(rslt[2])) < gtol:
                 success = True
                 break
