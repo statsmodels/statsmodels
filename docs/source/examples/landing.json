@@ -1,6 +1,7 @@
 [
   {
       "header":"Linear Regression Models",
+      "id":"regression",
       "links":[
         {
           "text": "Ordinary Least Squares",
@@ -31,6 +32,7 @@
   },
   {
     "header":"Plotting",
+    "id":"plotting",
     "links":[
     {
         "text": "Regression Diagnostics",
@@ -47,6 +49,7 @@
   },
   {
     "header": "Discrete Choice Models",
+    "id":"discrete",
     "links":[
     {
         "text": "Getting Started",
@@ -62,6 +65,7 @@
   },
   {
       "header": "Nonparametric Statistics",
+      "id":"nonparametric",
       "links":[
         {
           "text": "Univariate Kernel Density Estimator",
@@ -72,6 +76,7 @@
   },
   {
     "header":"Generalized Linear Models",
+    "id":"glm",
     "links":[
         {
             "text": "Generalized Linear Models Overview",
@@ -88,6 +93,7 @@
   },
  {
       "header":"Robust Regression",
+      "id":"robust",
       "links":[
         {
           "text": "M-estimators for Robust Regression",
@@ -103,6 +109,7 @@
   },
   {
       "header":"Statistics",
+      "id":"stats",
       "links":[
         {   
             "text": "ANOVA",
@@ -113,6 +120,7 @@
   },
   {
       "header":"Time Series Analysis",
+      "id":"stats",
       "links":[
         {
             "text": "ARMA: Sunspots Data",
@@ -133,6 +141,7 @@
   },
   {
     "header":"User Notes",
+    "id":"user",
     "links":[
     {   
         "text": "Contrasts",

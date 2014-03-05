@@ -4,8 +4,18 @@
     margin-right: -30px;
 }
 
-.examples-page h2 {
+.examples-page .padleft {
+    padding-left: 30px;
+}
+
+.examples-page h1, h2, h3 {
     padding-left: 30px; /* to make up for margin above */
+}
+
+.examples-page .toclist {
+    list-style:none;
+    margin-bottom:0px;
+    margin-top:0px;
 }
 
 /* Marketing section of Overview

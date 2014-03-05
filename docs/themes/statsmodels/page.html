@@ -8,20 +8,25 @@
 {% if pagename == 'examples/index' %}
 <div class="examples-page">
     <h1>Statsmodels Examples</h1>
+    <div class="padleft">
+This page provides a series of examples, tutorials and recipes to help you get started with statsmodels. Each of the examples shown here is made available as an IPython Notebook and as a plain python script on the <a href="https://github.com/statsmodels/statsmodels/tree/master/examples">statsmodels github repository</a>.<br /><br />
 
-This page provides a series of examples, tutorials and recipes to help you get
-started with statsmodels. Each of the examples shown here is made available
-as an IPython Notebook and as a plain python script on the <a href="https://github.com/statsmodels/statsmodels/tree/master/examples">statsmodels github
-    repository</a>.<br /><br />
-
-We also encourage users to submit their own examples, tutorials or cool
-`statsmodels` trick to the <a href="https://github.com/statsmodels/statsmodels/wiki/Examples">Examples wiki page</a>.
+If you are not comfortable with git, we also encourage users to submit their own examples, tutorials or cool statsmodels tricks to the <a href="https://github.com/statsmodels/statsmodels/wiki/Examples">Examples wiki page</a>.
+</div>
 
 
+    <h2 style="padding-left:-30px;">Topics</h2>
+    <div class="padleft">
+    {% for section in examples %}
+    <ul class="toclist">
+        <li><a href="#{{section.id}}">{{section.header}}</a></li>
+    </ul>
+    {% endfor %}
 
+    </div> <!-- end padleft -->
 
     {% for section in examples %}
-    <h2>{{ section.header }}</h2>
+    <h2 id="{{ section.id }}">{{ section.header }}</h2>
 
     <div class="marketing">
       <ul class="thumbnails example-sites">
