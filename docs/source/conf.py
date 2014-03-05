@@ -321,3 +321,8 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 
 # ghissue config
 github_project_url = "https://github.com/statsmodels/statsmodels"
+
+# for the examples landing page
+import json
+example_context = json.load(open('examples/landing.json'))
+html_context = {'examples': example_context }

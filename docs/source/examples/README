@@ -1,0 +1,1 @@
+The format for landing.json should be self-explanatory. The images should be placed in docs/source/_static/images/. They will be displayed at 360 x 225 (W x H). It's best to save them as a png with a resolution of a multiple of at least 720 x 450. If you want, you can use png crush to make the images smaller.
