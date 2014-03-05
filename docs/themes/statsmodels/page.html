@@ -1,0 +1,34 @@
+{#
+    Overwrites what is displayed on the examples landing page.
+#}
+{%- extends "layout.html" %}
+{% block body %}
+
+
+{% if pagename == 'examples/index' %}
+<div class="examples-page">
+
+    {% for section in examples %}
+    <h2>{{ section.header }}</h2>
+
+    <div class="marketing">
+      <ul class="thumbnails example-sites">
+        {% for link in section.links %}
+        <li class="span4">
+        <p class="marketing-byline">{{link.text}}</p>
+        <a class="thumbnail" href="{{link.target}}" target="_blank">
+            <img src="{{link.img}}" >
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+  </div>
+    {% endfor %}
+</div>
+{% else %}
+
+  {{ body }}
+
+{% endif %}
+
+{% endblock %}
