@@ -19,9 +19,11 @@ import traceback
 import base64
 import subprocess
 import os
+import re
 import shutil
 import smtplib
 import sys
+from urllib2 import urlopen
 from email.MIMEText import MIMEText
 import logging
 logging.basicConfig(filename='/home/skipper/statsmodels/statsmodels/tools/'
@@ -121,6 +123,36 @@ def create_update_gitdir():
         create_update_gitdir()
 
 
+def check_version(branch, latest_hash=None):
+    if branch == 'master':
+        remote_dir = 'devel'
+        regex = ("(?<=This documentation is for version <b>\d{1}\.\d{1}\."
+                 "\d{1}\.dev-)(\w{7})")
+    else:
+        remote_dir = 'stable'
+        regex = ("(?<=This documentation is for the <b>)(\d{1}\.\d{1}\.\d{1})"
+                 "(?=</b> release.)")
+    base_url = 'http://statsmodels.sourceforge.net/{}'
+    page = urlopen(base_url.format(remote_dir)).read()
+
+    try:
+        version = re.search(regex, page).group()
+    except AttributeError:
+        return True
+
+    if remote_dir == 'stable':
+        if last_release[1:] == version:
+            return False
+        else:
+            return True
+
+    # get the lastest hash
+    if latest_hash == version:
+        return False
+    else:
+        return True
+
+
 def getdirs():
     """
     Get current directories of cwd in order to restore to this
@@ -172,6 +204,10 @@ def install_branch(branch):
         msg = """Could not checkout out branch %s""" % branch
         raise Exception(msg)
 
+    p = subprocess.Popen('git rev-parse HEAD ', shell=True,
+                              stdout=subprocess.PIPE, stderr=sys.stderr)
+    version = p.communicate()[0][:7]
+
     # build and install
     retcode = subprocess.call(" ".join([virtual_python, 'setup.py', 'build']),
                               shell=True, stdout=sys.stdout, stderr=sys.stderr)
@@ -186,6 +222,7 @@ def install_branch(branch):
         msg = """Could not install branch %s""" % branch
         raise Exception(msg)
     os.chdir(dname)
+    return version
 
 
 def print_info():
@@ -307,20 +344,23 @@ def email_me(status='ok'):
 
 def main():
     # get branch, install in virtualenv, build the docs, upload, and cleanup
+    msg = ''
     for branch in branches:
         try:
             create_virtualenv()
             create_update_gitdir()
-            install_branch(branch)
-            print_info()
-            build_docs(branch)
-            upload_docs(branch)
+            version = install_branch(branch)
+            if check_version(branch, version):
+                print_info()
+                build_docs(branch)
+                upload_docs(branch)
+            else:
+                msg += ('Latest version already available for branch '
+                        '{}.\n'.format(branch))
     #        build_pdf(new_branch_dir)
     #        upload_pdf(branch, new_branch_dir)
         except:
-            msg = traceback.format_exc()
-        else:
-            msg = ''
+            msg += traceback.format_exc()
 
     if msg == '':  # if it doesn't something went wrong and was caught above
         email_me()
