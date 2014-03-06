@@ -167,6 +167,29 @@ class LME(base.Model):
 
         return likeval
 
+    def _gen_dV_dPsi(self, ex_r, max_ix=None):
+        """
+        A generator that yields the derivative of the covariance
+        matrix V (=I + Z*Psi*Z') with respect to the free elements of
+        Psi.  Each call to the generator yields the index of Psi with
+        respect to which the derivative is taken, and the derivative
+        matrix with respect to that element of Psi.  Psi is a
+        symmetric matrix, so the free elements are the lower triangle.
+        If max_ix is not None, the iterations terminate after max_ix
+        values are yielded.
+        """
+        pr = ex_r.shape[1]
+        jj = 0
+        for j1 in range(pr):
+            for j2 in range(j1 + 1):
+                if max_ix is not None and jj > max_ix:
+                    return
+                mat = np.outer(ex_r[:,j1], ex_r[:,j2])
+                if j1 != j2:
+                    mat += mat.T
+                yield jj,mat
+                jj += 1
+
 
     def score(self, params, reml=False, pen=0.):
         """
@@ -219,31 +242,24 @@ class LME(base.Model):
             vmat += np.eye(vmat.shape[0])
 
             if reml:
-                xtvix += np.dot(exog.T, np.linalg.solve(vmat, exog))
+                viexog = np.linalg.solve(vmat, exog)
+                xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
             jj = 0
             vex = np.linalg.solve(vmat, ex_r)
-            for j1 in range(pr):
-                for j2 in range(j1 + 1):
-                    mat = np.outer(ex_r[:,j1], ex_r[:,j2])
-                    if j1 != j2:
-                        mat += mat.T
-                    B[jj] = np.trace(np.linalg.solve(vmat, mat))
-                    mat = np.outer(vex[:,j1], vex[:,j2])
-                    if j1 != j2:
-                        mat += mat.T
-                    C[jj] -= np.dot(resid, np.dot(mat, resid))
-                    if reml:
-                        xtax[jj] += np.dot(exog.T, np.dot(mat, exog))
-                    jj += 1
+            vir = np.linalg.solve(vmat, resid)
+            for jj,mat in self._gen_dV_dPsi(ex_r):
+                B[jj] = np.trace(np.linalg.solve(vmat, mat))
+                C[jj] -= np.dot(vir, np.dot(mat, vir))
+                if reml:
+                    xtax[jj] += np.dot(viexog.T, np.dot(mat, viexog))
 
             # Contribution of log|V| to the covariance parameter
             # gradient.
             score_re -= 0.5 * B
 
-            # Neded for the fixed effects params gradient
-            vir = np.linalg.solve(vmat, resid)
+            # Nededed for the fixed effects params gradient
             rvir += np.dot(resid, vir)
             rvrb -= 2 * np.dot(exog.T, vir)
 
@@ -261,6 +277,122 @@ class LME(base.Model):
                     xtvix, xtax[j]))
 
         return np.concatenate((score_fe, score_re))
+
+    def hessian(self, params, reml=False, pen=0.):
+        """
+        Calculates the Hessian matrix for the mixed effects model.
+        Specifically, this is the Hessian matrix for the profile
+        likelihood in which the scale parameter sig2 has been profiled
+        out.
+
+        Parameters
+        ----------
+        params : 1d ndarray
+            All model parameters in packed form
+        reml : bool
+            If true, return REML Hessian, else return ML Hessian
+        pen : non-negative float
+            Weight for the penalty parameter to deter negative
+            variances
+
+        Returns
+        -------
+        hess : 2d ndarray
+            The Hessian matrix, evaluated at `params`.
+        """
+
+        params_fe, revar = self._unpack(params)
+
+        pr = self.exog_re.shape[1]
+        prr = pr * (pr + 1) / 2
+        p = self.exog.shape[1]
+
+        # Blocks for the fixed and random effects parameters.
+        hess_fe = 0.
+        hess_re = np.zeros((prr, prr), dtype=np.float64)
+        hess_fere = np.zeros((prr, p), dtype=np.float64)
+
+        fac = self.ntot
+        if reml:
+            fac -= self.exog.shape[1]
+
+        rvir = 0.
+        xtvix = 0.
+        xtax = [0.,] * prr
+        B = np.zeros(prr, dtype=np.float64)
+        D = np.zeros((prr, prr), dtype=np.float64)
+        F = [[0.,]*prr for k in range(prr)]
+        for k in range(self.ngroup):
+
+            exog = self.exog_li[k]
+            ex_r = self.exog_re_li[k]
+
+            # The residuals
+            expval = np.dot(exog, params_fe)
+            resid = self.endog_li[k] - expval
+
+            # The marginal covariance matrix for this group
+            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
+            vmat += np.eye(vmat.shape[0])
+
+            viexog = np.linalg.solve(vmat, exog)
+            xtvix += np.dot(exog.T, viexog)
+            vir = np.linalg.solve(vmat, resid)
+            rvir += np.dot(resid, vir)
+
+            for jj1,mat1 in self._gen_dV_dPsi(ex_r):
+
+                hess_fere[jj1,:] += np.dot(viexog.T,
+                                           np.dot(mat1, vir))
+                if reml:
+                    xtax[jj1] += np.dot(viexog.T, np.dot(mat1, viexog))
+
+                B[jj1] += np.dot(vir, np.dot(mat1, vir))
+                E = np.linalg.solve(vmat, mat1)
+
+                for jj2,mat2 in self._gen_dV_dPsi(ex_r, jj1):
+                    Q = np.dot(mat2, E)
+                    Q1 = Q + Q.T
+                    vt = np.dot(vir, np.dot(Q1, vir))
+                    D[jj1, jj2] += vt
+                    if jj1 != jj2:
+                        D[jj2, jj1] += vt
+                    R = np.linalg.solve(vmat, Q)
+                    rt = np.trace(R) / 2
+                    hess_re[jj1, jj2] += rt
+                    if jj1 != jj2:
+                        hess_re[jj2, jj1] += rt
+                    if reml:
+                        F[jj1][jj2] += np.dot(viexog.T,
+                                              np.dot(Q, viexog))
+
+        hess_fe -= fac * xtvix / rvir
+
+        hess_re -= 0.5 * fac * (D / rvir - np.outer(B, B) / rvir**2)
+
+        hess_fere = -fac * hess_fere / rvir
+
+        if reml:
+            for j1 in range(prr):
+                Q1 = np.linalg.solve(xtvix, xtax[j1])
+                for j2 in range(j1 + 1):
+                    Q2 = np.linalg.solve(xtvix, xtax[j1])
+                    a = np.linalg.trace(Q1, Q2)
+                    a -= np.linalg.trace(np.linalg.solve(xtvix,
+                                                         F[j1][j2]))
+                    a *= 0.5
+                    hess_re[j1, j2] += a
+                    if j1 > j2:
+                        hess_re[j2, j1] += a
+
+        # Put the blocks together to get the Hessian.
+        hess = np.zeros((p+prr, p+prr), dtype=np.float64)
+        hess[0:p,0:p] = hess_fe
+        hess[0:p,p:] = hess_fere.T
+        hess[p:,0:p] = hess_fere
+        hess[p:,p:] = hess_re
+
+        return hess
 
     def Estep(self, params_fe, revar, sig2):
         """
@@ -495,16 +627,19 @@ class LME(base.Model):
             warnings.warn(msg, ConvergenceWarning)
 
         # Numerical derivatives to get Hessian.
-        m = len(params)
-        hess = np.zeros((m,m), dtype=np.float64)
-        for j1 in range(m):
-            for j2 in range(j1+1):
-                params0 = params.copy()
-                def g(x):
-                    params0[j2] = x
-                    return self.score(params0)[j1]
-                hess[j1, j2] = derivative(g, params[j2], dx=1e-6)
-                hess[j2, j1] = hess[j1, j2]
+        # m = len(params)
+        # hess = np.zeros((m,m), dtype=np.float64)
+        # for j1 in range(m):
+        #     for j2 in range(j1+1):
+        #         params0 = params.copy()
+        #         def g(x):
+        #             params0[j2] = x
+        #             return self.score(params0)[j1]
+        #         hess[j1, j2] = derivative(g, params[j2], dx=1e-6)
+        #         hess[j2, j1] = hess[j1, j2]
+        # pcov = np.linalg.inv(-hess)
+
+        hess = self.hessian(params)
         pcov = np.linalg.inv(-hess)
 
         results = LMEResults(self, params, pcov)
