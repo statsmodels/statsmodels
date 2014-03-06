@@ -7,12 +7,23 @@ import numpy as np
 import statsmodels.base.model as base
 from scipy.optimize import fmin_cg, fmin_bfgs, fmin
 from scipy.misc import derivative
+from scipy.stats.distributions import norm
+import pandas as pd
+#import collections  # OrderedDict requires python >= 2.7
+from statsmodels.compatnp.collections import OrderedDict
 
 class LME(base.Model):
 
     def __init__(self, endog, exog, exog_re, groups, missing='none'):
 
         groups = np.array(groups)
+
+        # If there is one covariate, it may be passed in as a column
+        # vector, convert these to 2d arrays.
+        if exog.ndim == 1:
+            exog = exog[:,None]
+        if exog_re.ndim == 1:
+            exog_re = exog_re[:,None]
 
         # Calling super creates self.ndog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
@@ -99,7 +110,7 @@ class LME(base.Model):
         ix = np.tril_indices(revar.shape[0])
         return np.concatenate((params_fe, revar[ix]))
 
-    def like(self, params, reml=False, pen=0.):
+    def like(self, params, reml=True, pen=0.):
         """
         Evaluate the log-likelihood of the linear mixed effects model.
         Specifically, this is the profile likelihood in which the
@@ -167,6 +178,78 @@ class LME(base.Model):
 
         return likeval
 
+
+    def full_like(self, params, sig2, reml=True, pen=0.):
+        """
+        Evaluate the full log-likelihood of the linear mixed effects
+        model.
+
+        Arguments
+        ---------
+        params : 1d ndarray
+            The parameter values for the profile likelihood, packed
+            into a single vector
+        sig2 : float
+            The error variance
+        reml : bool
+            If true, return REML log likelihood, else return ML
+            log likelihood
+        pen : non-negative float
+            Weight for the penalty parameter for negative variances
+
+        Returns
+        -------
+        likeval : scalar
+            The log-likelihood value at `params`.
+        """
+
+        params_fe, revar = self._unpack(params)
+
+        # Check domain for random effects covariance
+        try:
+            cy = np.linalg.cholesky(revar)
+        except np.linalg.LinAlgError:
+            return -np.inf
+
+        revar *= sig2
+
+        likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
+        xvx = 0.
+        for k in range(self.ngroup):
+
+            exog = self.exog_li[k]
+            ex_r = self.exog_re_li[k]
+
+            # The residuals
+            expval = np.dot(exog, params_fe)
+            resid = self.endog_li[k] - expval
+
+            # The marginal covariance matrix for this group
+            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
+            vmat += sig2 * np.eye(vmat.shape[0])
+
+            # Part 1 of the log likelihood (for both ML and REML)
+            _,ld = np.linalg.slogdet(vmat)
+            likeval -= ld / 2.
+
+            # Part 2 of the log likelihood (for both ML and REML)
+            u = np.linalg.solve(vmat, resid)
+            qf = np.dot(resid, u)
+            likeval -= qf / 2
+
+            if reml:
+                u = np.linalg.solve(vmat, exog)
+                xvx += np.dot(exog.T, u)
+
+        if reml:
+            _,ld = np.linalg.slogdet(xvx)
+            likeval -= ld / 2
+
+        likeval -= self.ntot * np.log(2 * np.pi) / 2
+
+        return likeval
+
+
     def _gen_dV_dPsi(self, ex_r, max_ix=None):
         """
         A generator that yields the derivative of the covariance
@@ -191,7 +274,7 @@ class LME(base.Model):
                 jj += 1
 
 
-    def score(self, params, reml=False, pen=0.):
+    def score(self, params, reml=True, pen=0.):
         """
         Calculates the score vector for the mixed effects model.
         Specifically, this is the score for the profile likelihood in
@@ -278,7 +361,7 @@ class LME(base.Model):
 
         return np.concatenate((score_fe, score_re))
 
-    def hessian(self, params, reml=False, pen=0.):
+    def hessian(self, params, reml=True, pen=0.):
         """
         Calculates the Hessian matrix for the mixed effects model.
         Specifically, this is the Hessian matrix for the profile
@@ -376,10 +459,9 @@ class LME(base.Model):
             for j1 in range(prr):
                 Q1 = np.linalg.solve(xtvix, xtax[j1])
                 for j2 in range(j1 + 1):
-                    Q2 = np.linalg.solve(xtvix, xtax[j1])
-                    a = np.linalg.trace(Q1, Q2)
-                    a -= np.linalg.trace(np.linalg.solve(xtvix,
-                                                         F[j1][j2]))
+                    Q2 = np.linalg.solve(xtvix, xtax[j2])
+                    a = np.trace(np.dot(Q1, Q2))
+                    a -= np.trace(np.linalg.solve(xtvix, F[j1][j2]))
                     a *= 0.5
                     hess_re[j1, j2] += a
                     if j1 > j2:
@@ -530,7 +612,7 @@ class LME(base.Model):
 
         p = self.exog.shape[1]
         if reml:
-            qf /=(self.ntot - p)
+            qf /= (self.ntot - p)
         else:
             qf /= self.ntot
 
@@ -538,7 +620,7 @@ class LME(base.Model):
 
 
 
-    def fit(self, reml=False, num_em=10, max_em_cycles=3, pen=0.,
+    def fit(self, reml=True, num_em=10, max_em_cycles=3, pen=0.,
             gtol=1e-4, full_output=False):
         """
         Fit a linear mixed model to the data.
@@ -581,6 +663,7 @@ class LME(base.Model):
         sig2 = 1.
 
         success = False
+        likeval = None
         for ke in range(max_em_cycles):
 
             # EM iterations
@@ -589,16 +672,14 @@ class LME(base.Model):
 
             # Scoring algorithm uses a different parameterization and
             # profiles out sigma^2.
-            revar /= sig2
-            params = self._pack(params_fe, revar)
-            if np.max(np.abs(score(params))) < gtol:
+            params_prof = self._pack(params_fe, revar / sig2)
+            if np.max(np.abs(score(params_prof))) < gtol:
                 success = True
-                revar *= sig2
                 break
 
             # Gradient iterations
             try:
-                rslt = fmin_bfgs(like, params, score,
+                rslt = fmin_bfgs(like, params_prof, score,
                                  full_output=True,
                                  disp=False,
                                  retall=hist is not None)
@@ -607,8 +688,9 @@ class LME(base.Model):
                 continue
             if hist is not None:
                 hist.append(["Gradient", rslt['allvecs']])
-            params = rslt[0]
-            params_fe, revar = self._unpack(params)
+            likeval = -rslt[1]
+            params_prof = rslt[0]
+            params_fe, revar = self._unpack(params_prof)
             sig2 = self.get_sig2(params_fe, revar, reml)
             revar *= sig2
             if np.max(np.abs(rslt[2])) < gtol:
@@ -626,23 +708,18 @@ class LME(base.Model):
                       np.max(np.abs(rslt[2]))
             warnings.warn(msg, ConvergenceWarning)
 
-        # Numerical derivatives to get Hessian.
-        # m = len(params)
-        # hess = np.zeros((m,m), dtype=np.float64)
-        # for j1 in range(m):
-        #     for j2 in range(j1+1):
-        #         params0 = params.copy()
-        #         def g(x):
-        #             params0[j2] = x
-        #             return self.score(params0)[j1]
-        #         hess[j1, j2] = derivative(g, params[j2], dx=1e-6)
-        #         hess[j2, j1] = hess[j1, j2]
-        # pcov = np.linalg.inv(-hess)
-
-        hess = self.hessian(params)
+        hess = self.hessian(params_prof)
         pcov = np.linalg.inv(-hess)
 
-        results = LMEResults(self, params, pcov)
+        results = LMEResults(self, params_prof, pcov)
+        results.params_fe = params_fe
+        results.revar = revar
+        results.sig2 = sig2
+        results.method = "REML" if reml else "ML"
+        results.converged = success
+        results.hist = hist
+        results.likeval = self.full_like(params_prof, sig2, reml)
+
         return results
 
 
@@ -685,6 +762,25 @@ class LMEResults(base.LikelihoodModelResults):
         super(LMEResults, self).__init__(model, params,
            normalized_cov_params=cov_params)
 
+    def bse_fe(self):
+        """
+        Returns the standard errors of the fixed effect regression
+        coefficients.
+        """
+        p = self.model.exog.shape[1]
+        return np.sqrt(np.diag(self.cov_params())[0:p])
+
+    def bse_re(self):
+        """
+        Returns the standard errors of the variance parameters.  Note
+        that the sampling distribution of variance parameters is
+        strongly skewed unless the sample size is large, so these
+        standard errors may not give meaningful confidence intervals
+        of p-values if used in the usual way.
+        """
+        p = self.model.exog.shape[1]
+        return np.sqrt(self.sig2 * np.diag(self.cov_params())[p:])
+
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
@@ -716,9 +812,76 @@ class LMEResults(base.LikelihoodModelResults):
 
         from statsmodels.iolib import summary2
         smry = summary2.Summary()
-        float_format = "%.3f"
-        smry.add_base(results=self, alpha=alpha,
-                      float_format=float_format,
-                      xname=xname, yname=yname, title=title)
+
+        info = OrderedDict()
+        info["Model:"] = "LME"
+        if yname is None:
+            yname = self.model.endog_names
+        info["Dependent Variable:"] = yname
+        info["No. Groups:"] = str(self.model.ngroup)
+        info["No. Observations:"] = str(self.model.ntot)
+        info["Method:"] = self.method
+        info["Res. Var.:"] = self.sig2
+        info["Likelihood:"] = self.likeval
+        info["Converged:"] = "Yes" if self.converged else "No"
+        smry.add_dict(info)
+
+        # Number of fixed effects covariates
+        p = self.model.exog.shape[1]
+
+        # Number of random effects covariates
+        pr = self.model.exog_re.shape[1]
+
+        # Number of random efects parameters
+        prr = pr * (pr + 1) / 2
+
+        if xname is not None:
+            xname_fe = list(xname)
+            if len(xname) > p:
+                xname_re = xname[p:]
+            else:
+                xname_re = []
+        else:
+            xname_fe = []
+            xname_re = []
+
+        while len(xname_fe) < p:
+            xname_fe.append("FE%d" % (len(xname_fe) + 1))
+        xname_fe = xname_fe[0:p]
+
+        while len(xname_re) < pr:
+            xname_re.append("RE%d" % (len(xname_re) + 1))
+        xname_re = xname_re[0:pr]
+
+        float_fmt = "%.3f"
+
+        names = xname_fe
+        sdf = np.nan * np.ones((p + prr, 6), dtype=np.float64)
+        sdf[0:p, 0] = self.params_fe
+        sdf[0:p, 1] = np.sqrt(np.diag(self.cov_params()[0:p]))
+        sdf[0:p, 2] = sdf[0:p, 0] / sdf[0:p, 1]
+        sdf[0:p, 3] = 2 * norm.cdf(-np.abs(sdf[0:p, 2]))
+        qm = -norm.ppf(alpha / 2)
+        sdf[0:p, 4] = sdf[0:p, 0] - qm * sdf[0:p, 1]
+        sdf[0:p, 5] = sdf[0:p, 0] + qm * sdf[0:p, 1]
+        jj = p
+        for i in range(pr):
+            for j in range(i + 1):
+                if i == j:
+                    names.append(xname_re[i])
+                else:
+                    names.append(xname_re[i] + " x " + xname_re[j])
+                sdf[jj, 0] = self.revar[i, j]
+                sdf[jj, 1] = np.sqrt(self.sig2) * self.bse[jj]
+                jj += 1
+
+        sdf = pd.DataFrame(index=names, data=sdf)
+        sdf.columns = ['Coef.', 'Std.Err.', 'z', 'P>|z|',
+                          '[' + str(alpha/2), str(1-alpha/2) + ']']
+        for col in sdf.columns:
+            sdf[col] = [float_fmt % x if np.isfinite(x) else ""
+                        for x in sdf[col]]
+
+        smry.add_df(sdf, align='l')
 
         return smry

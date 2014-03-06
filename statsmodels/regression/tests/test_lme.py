@@ -5,6 +5,9 @@ from lme_r_results import *
 import os
 import csv
 
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 class TestLME(object):
 
     def do1(self, reml, ds_ix):
