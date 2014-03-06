@@ -53,8 +53,6 @@ class TestLME(object):
         assert_almost_equal(revar, revar_r, decimal=4)
         assert_almost_equal(sig2, sig2_r, decimal=4)
 
-        # Our cov_params uses numerical differentiation, so
-        # agreement won't be very high.
         pf = exog_fe.shape[1]
         assert_almost_equal(vcov_r, mdf.cov_params()[0:pf,0:pf],
                             decimal=3)
@@ -72,6 +70,7 @@ class TestLME(object):
         for fname in fnames:
             for reml in False,True:
                 ds_ix = int(fname[3:5])
+                print ds_ix, reml
                 yield self.do1, reml, ds_ix
 
 
