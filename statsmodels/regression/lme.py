@@ -5,7 +5,7 @@ Linear mixed effects models
 
 import numpy as np
 import statsmodels.base.model as base
-from scipy.optimize import fmin_cg, fmin_bfgs, fmin
+from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
 from scipy.misc import derivative
 from scipy.stats.distributions import norm
 import pandas as pd
@@ -669,7 +669,6 @@ class LME(base.Model):
                 sl /= 2
 
             if not success:
-                print "failed sd..."
                 break
 
         return params, np.max(np.abs(gro)) < gtol
@@ -723,7 +722,6 @@ class LME(base.Model):
         params_prof = self._pack(params_fe, revar)
 
         success = False
-        likeval = None
 
         # EM iterations
         if num_em > 0:
@@ -747,25 +745,26 @@ class LME(base.Model):
 
             # Gradient iterations
             try:
-                rslt = fmin_bfgs(like, params_prof, score,
-                                 full_output=True,
-                                 disp=False,
-                                 retall=hist is not None)
+                #rslt = fmin_bfgs(like, params_prof, score,
+                #                 full_output=True,
+                #                 disp=False,
+                #                 retall=hist is not None)
+                rslt = fmin_cg(like, params_prof, score,
+                               full_output=True,
+                               disp=False,
+                               retall=hist is not None)
             # scipy.optimize routines have trouble staying in the
             # feasible region
             except np.linalg.LinAlgError:
                 rslt = None
             if rslt is not None:
-                print "failed grad"
                 if hist is not None:
-                    hist.append(["Gradient", rslt[7]])
-                likeval = -rslt[1]
+                    hist.append(["Gradient", rslt[5]])
                 params_prof = rslt[0]
-                if np.max(np.abs(rslt[2])) < gtol:
+                if np.max(np.abs(score(params_prof))) < gtol:
                     success = True
                     break
 
-        print "cycle=", cycle
         params_fe, revar = self._unpack(params_prof)
         sig2 = self.get_sig2(params_fe, revar, reml)
         revar *= sig2
