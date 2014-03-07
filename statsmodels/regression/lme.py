@@ -245,7 +245,11 @@ class LME(base.Model):
             _,ld = np.linalg.slogdet(xvx)
             likeval -= ld / 2
 
-        likeval -= self.ntot * np.log(2 * np.pi) / 2
+        if reml:
+            p = self.exog.shape[1]
+            likeval -= (self.ntot - p) * np.log(2 * np.pi) / 2
+        else:
+            likeval -= self.ntot * np.log(2 * np.pi) / 2
 
         return likeval
 
