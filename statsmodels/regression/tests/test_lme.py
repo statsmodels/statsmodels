@@ -5,9 +5,6 @@ from lme_r_results import *
 import os
 import csv
 
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
-
 class TestLME(object):
 
     def do1(self, reml, ds_ix):
@@ -47,7 +44,7 @@ class TestLME(object):
 
         # Fit the model
         md = LME(endog, exog_fe, exog_re, groups)
-        mdf = md.fit(reml=reml, num_em=50)
+        mdf = md.fit(reml=reml)
         params_fe, revar = md._unpack(mdf.params)
         sig2 = md.get_sig2(params_fe, revar, reml)
         revar *= sig2
@@ -62,7 +59,7 @@ class TestLME(object):
 
 
     # Run all the tests
-    def t_est_r(self):
+    def test_r(self):
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')

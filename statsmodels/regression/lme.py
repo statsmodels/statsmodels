@@ -9,8 +9,12 @@ from scipy.optimize import fmin_cg, fmin_bfgs, fmin
 from scipy.misc import derivative
 from scipy.stats.distributions import norm
 import pandas as pd
+from statsmodels.stats.correlation_tools import cov_nearest
 #import collections  # OrderedDict requires python >= 2.7
 from statsmodels.compatnp.collections import OrderedDict
+import warnings
+from statsmodels.tools.sm_exceptions import \
+     ConvergenceWarning
 
 class LME(base.Model):
 
@@ -119,17 +123,29 @@ class LME(base.Model):
         Arguments
         ---------
         params : 1d ndarray
-            The parameter values, packed into a single vector
+            The parameter values, packed into a single vector.  See
+            below for details.
         reml : bool
             If true, return REML log likelihood, else return ML
             log likelihood
         pen : non-negative float
-            Weight for the penalty parameter for negative variances
+            Weight for the penalty parameter for non-SPD covariances
 
         Returns
         -------
         likeval : scalar
             The log-likelihood value at `params`.
+
+        Notes
+        -----
+        The first p elements of the packed vector are the regression
+        slopes, and the remaining q*(q+1)/2 elements are the lower
+        triangle of the random effects covariance matrix Psi, packed
+        row-wise.  The matrix Psi is used to form the covariance
+        matrix V = I + Z * Psi * Z', where is the design matrix for
+        the random effects structure.  To convert this to the full
+        likelihood (not profiled) parameterization, calculate the
+        error variance sig2, and divide Psi by sig2.
         """
 
         params_fe, revar = self._unpack(params)
@@ -302,13 +318,18 @@ class LME(base.Model):
 
         params_fe, revar = self._unpack(params)
 
-        # Construct the score.
         score_fe = 0.
 
         pr = self.exog_re.shape[1]
         prr = pr * (pr + 1) / 2
         score_re = np.zeros(prr, dtype=np.float64)
-        score_rv = np.zeros(self.exog.shape[1], dtype=np.float64)
+
+        if pen > 0:
+            cy = np.linalg.inv(revar)
+            cy = 2*cy - np.diag(np.diag(cy))
+            i,j = np.tril_indices(pr)
+            score_re = pen * cy[i,j]
+
         rvir = 0.
         rvrb = 0.
         xtvix = 0.
@@ -623,8 +644,44 @@ class LME(base.Model):
         return qf
 
 
+    def _steepest_descent(self, func, params, score, gtol=1e-4,
+                          max_iter=50):
 
-    def fit(self, reml=True, num_em=10, max_em_cycles=3, pen=0.,
+        fval = func(params)
+
+        for itr in range(max_iter):
+
+            gro = score(params)
+            gr = gro / np.max(np.abs(gro))
+
+            sl = 1.
+            success = False
+            while sl > 1e-20:
+                params1 = self.project(params - sl * gr)
+                fval1 = func(params1)
+
+                if fval1 < fval:
+                    params = params1
+                    fval = fval1
+                    success = True
+                    break
+
+                sl /= 2
+
+            if not success:
+                print "failed sd..."
+                break
+
+        return params, np.max(np.abs(gro)) < gtol
+
+
+    def project(self, vec):
+        a, b = self._unpack(vec)
+        b = cov_nearest(b, method="nearest")
+        return self._pack(a, b)
+
+
+    def fit(self, reml=True, num_sd=5, num_em=0, do_cg=True, pen=0.,
             gtol=1e-4, full_output=False):
         """
         Fit a linear mixed model to the data.
@@ -637,8 +694,6 @@ class LME(base.Model):
         num_em : non-negative integer
             The number of EM steps to take before switching to
             gradient optimization
-        max_em_cycles : non-negative integer
-            Maximum number of EM/gradient attempts
         pen : non-negative float
             Coefficient of a logarithmic barrier function
             for SPD covariance and non-negative error variance
@@ -665,20 +720,29 @@ class LME(base.Model):
         params_fe = np.zeros(self.exog.shape[1], dtype=np.float64)
         revar = np.eye(self.exog_re.shape[1])
         sig2 = 1.
+        params_prof = self._pack(params_fe, revar)
 
         success = False
         likeval = None
-        for ke in range(max_em_cycles):
 
-            # EM iterations
+        # EM iterations
+        if num_em > 0:
             params_fe, revar, sig2 = self.EM(params_fe, revar, sig2,
                                              num_em, hist)
 
-            # Scoring algorithm uses a different parameterization and
-            # profiles out sigma^2.
+            # Gradient algorithms use a different parameterization
+            # that profiles out sigma^2.
             params_prof = self._pack(params_fe, revar / sig2)
             if np.max(np.abs(score(params_prof))) < gtol:
                 success = True
+
+        for cycle in range(10):
+
+            # Steepest descent iterations
+            params_prof, success = self._steepest_descent(like,
+                                  params_prof, score,
+                                  gtol=gtol, max_iter=num_sd)
+            if success:
                 break
 
             # Gradient iterations
@@ -687,29 +751,35 @@ class LME(base.Model):
                                  full_output=True,
                                  disp=False,
                                  retall=hist is not None)
+            # scipy.optimize routines have trouble staying in the
+            # feasible region
             except np.linalg.LinAlgError:
                 rslt = None
-                continue
-            if hist is not None:
-                hist.append(["Gradient", rslt['allvecs']])
-            likeval = -rslt[1]
-            params_prof = rslt[0]
-            params_fe, revar = self._unpack(params_prof)
-            sig2 = self.get_sig2(params_fe, revar, reml)
-            revar *= sig2
-            if np.max(np.abs(rslt[2])) < gtol:
-                success = True
-                break
+            if rslt is not None:
+                print "failed grad"
+                if hist is not None:
+                    hist.append(["Gradient", rslt[7]])
+                likeval = -rslt[1]
+                params_prof = rslt[0]
+                if np.max(np.abs(rslt[2])) < gtol:
+                    success = True
+                    break
+
+        print "cycle=", cycle
+        params_fe, revar = self._unpack(params_prof)
+        sig2 = self.get_sig2(params_fe, revar, reml)
+        revar *= sig2
 
         if not success:
-            import warnings
-            from statsmodels.tools.sm_exceptions import \
-                 ConvergenceWarning
             if rslt is None:
                 msg = "Gradient optimization failed, try increasing num_em or pen."
             else:
                 msg = "Gradient sup norm=%.3f, try increasing num_em or pen." %\
                       np.max(np.abs(rslt[2]))
+            warnings.warn(msg, ConvergenceWarning)
+
+        if np.min(np.abs(np.diag(revar))) < 0.01:
+            msg = "The MLE may be on the boundary of the parameter space."
             warnings.warn(msg, ConvergenceWarning)
 
         hess = self.hessian(params_prof)
