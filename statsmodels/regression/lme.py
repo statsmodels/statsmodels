@@ -735,34 +735,35 @@ class LME(base.Model):
                 success = True
 
         for cycle in range(10):
-
+            print "cycle ", cycle
             # Steepest descent iterations
             params_prof, success = self._steepest_descent(like,
                                   params_prof, score,
                                   gtol=gtol, max_iter=num_sd)
+            print "SD ", success
             if success:
                 break
 
             # Gradient iterations
             try:
-                #rslt = fmin_bfgs(like, params_prof, score,
-                #                 full_output=True,
-                #                 disp=False,
-                #                 retall=hist is not None)
-                rslt = fmin_cg(like, params_prof, score,
-                               full_output=True,
-                               disp=False,
-                               retall=hist is not None)
+                # bfgs works better on my machine, but fails
+                # on travis
+                rslt = fmin_bfgs(like, params_prof, score,
+                                 full_output=True,
+                                 disp=False,
+                                 retall=hist is not None)
             # scipy.optimize routines have trouble staying in the
             # feasible region
             except np.linalg.LinAlgError:
+                print "gradient linalg error"
                 rslt = None
             if rslt is not None:
                 if hist is not None:
-                    hist.append(["Gradient", rslt[5]])
+                    hist.append(["Gradient", rslt[7]])
                 params_prof = rslt[0]
                 if np.max(np.abs(score(params_prof))) < gtol:
                     success = True
+                    print "gradient success"
                     break
 
         params_fe, revar = self._unpack(params_prof)
