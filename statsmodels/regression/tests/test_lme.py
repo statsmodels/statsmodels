@@ -62,7 +62,7 @@ class TestLME(object):
 
 
     # Run all the tests
-    def test_r(self):
+    def t_est_r(self):
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))
         rdir = os.path.join(cur_dir, 'results')
