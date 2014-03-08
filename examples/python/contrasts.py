@@ -7,16 +7,16 @@ import statsmodels.api as sm
 # This document is based heavily on this excellent resource from UCLA http://www.ats.ucla.edu/stat/r/library/contrast_coding.htm
 
 # A categorical variable of K categories, or levels, usually enters a regression as a sequence of K-1 dummy variables. This amounts to a linear hypothesis on the level means. That is, each test statistic for these variables amounts to testing whether the mean for that level is statistically significantly different from the mean of the base category. This dummy coding is called Treatment coding in R parlance, and we will follow this convention. There are, however, different coding methods that amount to different sets of linear hypotheses.
-# 
+#
 # In fact, the dummy coding is not technically a contrast coding. This is because the dummy variables add to one and are not functionally independent of the model's intercept. On the other hand, a set of *contrasts* for a categorical variable with `k` levels is a set of `k-1` functionally independent linear combinations of the factor level means that are also independent of the sum of the dummy variables. The dummy coding isn't wrong *per se*. It captures all of the coefficients, but it complicates matters when the model assumes independence of the coefficients such as in ANOVA. Linear regression models do not assume independence of the coefficients and thus dummy coding is often the only coding that is taught in this context.
-# 
+#
 # To have a look at the contrast matrices in Patsy, we will use data from UCLA ATS. First let's load the data.
 
 ##### Example Data
 
-import pandas
+import pandas as pd
 url = 'http://www.ats.ucla.edu/stat/data/hsb2.csv'
-hsb2 = pandas.read_table(url, delimiter=",")
+hsb2 = pd.read_table(url, delimiter=",")
 
 
 hsb2.head(10)
@@ -167,7 +167,7 @@ k = 3
 
 # The coefficients taken on by polynomial coding for `k=4` levels are the linear, quadratic, and cubic trends in the categorical variable. The categorical variable here is assumed to be represented by an underlying, equally spaced numeric variable. Therefore, this type of encoding is used only for ordered categorical variables with equal spacing. In general, the polynomial contrast produces polynomials of order `k-1`. Since `race` is not an ordered factor variable let's use `read` as an example. First we need to create an ordered categorical from `read`.
 
-hsb2['readcat'] = pandas.cut(hsb2.read, bins=3)
+hsb2['readcat'] = pd.cut(hsb2.read, bins=3)
 hsb2.groupby('readcat').mean()['write']
 
 

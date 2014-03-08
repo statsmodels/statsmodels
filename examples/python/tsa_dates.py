@@ -2,8 +2,7 @@
 ## Dates in timeseries models
 
 import statsmodels.api as sm
-import numpy as np
-import pandas
+import pandas as pd
 
 
 # ## Getting started
@@ -13,15 +12,14 @@ data = sm.datasets.sunspots.load()
 
 # Right now an annual date series must be datetimes at the end of the year.
 
-from datetime import datetime
 dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
 
 
 # ## Using Pandas
-# 
+#
 # Make a pandas TimeSeries or DataFrame
 
-endog = pandas.TimeSeries(data.endog, index=dates)
+endog = pd.TimeSeries(data.endog, index=dates)
 
 
 # Instantiate the model

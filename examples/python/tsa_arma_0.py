@@ -3,7 +3,7 @@
 
 import numpy as np
 from scipy import stats
-import pandas
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import statsmodels.api as sm
@@ -20,7 +20,7 @@ print sm.datasets.sunspots.NOTE
 dta = sm.datasets.sunspots.load_pandas().data
 
 
-dta.index = pandas.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
+dta.index = pd.Index(sm.tsa.datetools.dates_from_range('1700', '2008'))
 del dta["YEAR"]
 
 
@@ -80,7 +80,7 @@ fig = sm.graphics.tsa.plot_pacf(resid, lags=40, ax=ax2)
 
 r,q,p = sm.tsa.acf(resid.values.squeeze(), qstat=True)
 data = np.c_[range(1,41), r[1:], q, p]
-table = pandas.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
+table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
 print table.set_index('lag')
 
 
@@ -152,14 +152,14 @@ ax2 = fig.add_subplot(212)
 fig = sm.graphics.tsa.plot_pacf(arma_rvs, lags=40, ax=ax2)
 
 
-# * For mixed ARMA processes the Autocorrelation function is a mixture of exponentials and damped sine waves after (q-p) lags. 
+# * For mixed ARMA processes the Autocorrelation function is a mixture of exponentials and damped sine waves after (q-p) lags.
 # * The partial autocorrelation function is a mixture of exponentials and dampened sine waves after (p-q) lags.
 
 arma11 = sm.tsa.ARMA(arma_rvs, (1,1)).fit()
 resid = arma11.resid
 r,q,p = sm.tsa.acf(resid, qstat=True)
 data = np.c_[range(1,41), r[1:], q, p]
-table = pandas.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
+table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
 print table.set_index('lag')
 
 
@@ -167,18 +167,18 @@ arma41 = sm.tsa.ARMA(arma_rvs, (4,1)).fit()
 resid = arma41.resid
 r,q,p = sm.tsa.acf(resid, qstat=True)
 data = np.c_[range(1,41), r[1:], q, p]
-table = pandas.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
+table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
 print table.set_index('lag')
 
 
 #### Exercise: How good of in-sample prediction can you do for another series, say, CPI
 
 macrodta = sm.datasets.macrodata.load_pandas().data
-macrodta.index = pandas.Index(sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3'))
+macrodta.index = pd.Index(sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3'))
 cpi = macrodta["cpi"]
 
 
-##### Hint: 
+##### Hint:
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
