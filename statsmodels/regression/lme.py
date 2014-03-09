@@ -213,16 +213,18 @@ class LME(base.Model):
         return likeval
 
 
-    def full_like(self, params, sig2, reml=True, pen=0.):
+    def full_like(self, params_fe, revar, sig2, reml=True, pen=0.):
         """
         Evaluate the full log-likelihood of the linear mixed effects
         model.
 
         Arguments
         ---------
-        params : 1d ndarray
-            The parameter values for the profile likelihood, packed
-            into a single vector
+        params_fe : 1d ndarray
+            The slope parameter values.
+        revar : 2d ndarray
+            The covariance matrix of the random effects.  The
+            covariance of the data is sig2 * I + Z * revar * Z'.
         sig2 : float
             The error variance
         reml : bool
@@ -234,18 +236,14 @@ class LME(base.Model):
         Returns
         -------
         likeval : scalar
-            The log-likelihood value at `params`.
+            The log-likelihood value at the given parameters.
         """
-
-        params_fe, revar = self._unpack(params)
 
         # Check domain for random effects covariance
         try:
             cy = np.linalg.cholesky(revar)
         except np.linalg.LinAlgError:
             return -np.inf
-
-        revar *= sig2
 
         likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
         xvx = 0.
@@ -822,8 +820,9 @@ class LME(base.Model):
 
         return params, np.max(np.abs(gro)) < gtol
 
-    def fit(self, reml=True, num_sd=2, num_em=0, do_cg=True, pen=0.,
-            gtol=1e-4, full_output=False):
+    def fit(self, start_fe=None, start_re=None, reml=True, num_sd=2,
+            num_em=0, do_cg=True, pen=0., gtol=1e-4,
+            full_output=False):
         """
         Fit a linear mixed model to the data.
 
@@ -858,15 +857,21 @@ class LME(base.Model):
             hist = None
 
         # Starting values
-        params_fe = np.zeros(self.exog.shape[1], dtype=np.float64)
-        revar = np.eye(self.exog_re.shape[1])
-        sig2 = 1.
-        params_prof = self._pack(params_fe, revar)
+        if start_fe is not None:
+            params_fe = start_fe.copy()
+        else:
+            params_fe = np.zeros(self.exog.shape[1], dtype=np.float64)
+        if start_re is not None:
+            revar_rt = np.linalg.cholesky(start_re)
+        else:
+            revar_rt = np.eye(self.exog_re.shape[1])
+        params_prof = self._pack(params_fe, revar_rt)
 
         success = False
 
         # EM iterations
         if num_em > 0:
+            sig2 = 1.
             params_fe, revar, sig2 = self.EM(params_fe, revar, sig2,
                                              num_em, hist)
 
@@ -939,7 +944,8 @@ class LME(base.Model):
         results.method = "REML" if reml else "ML"
         results.converged = success
         results.hist = hist
-        results.likeval = self.full_like(params_prof, sig2, reml)
+
+        results.likeval = self.full_like(params_fe, revar, sig2, reml)
 
         return results
 
