@@ -1,6 +1,57 @@
 """
 Linear mixed effects models
 
+The primary reference for this implementation is:
+
+MJ Lindstrom, DM Bates (1988).  Newton Raphson and EM algorithms for
+linear mixed effects models for repeated measures data.  Journal of
+the American Statistical Association. Volume 83, Issue 404, pages
+1014-1022.
+
+
+Notation:
+
+* `revar` is the random effects covariance matrix and `sig2` is the
+  (scalar) error variance.  For a single group, the marginal
+  covariance matrix of endog given exog is sig2*I + Z * revar * Z',
+  where Z is the design matrix for random effects.
+
+Notes:
+
+1. Three different parameterizations are used here in different
+places.  The regression slopes (usually called `params_fe`) are
+identical in all three parameterizations, but the variance parameters
+differ.  The parameterizations are:
+
+* The "natural parameterization" in which cov(endog) = sig2*I +
+  Z * revar * Z'.  This is the main parameterization visible to the
+  user, and is used explicitly by `full_like`.
+
+* The "profile parameterization" in which cov(endog) = I +
+  Z * revar * Z'.  This is the parameterization of the profile
+  likelihood that is maximized to produce parameter estimates.
+  (see Lindstrom and Bates for details).  The "natural" revar is
+  equal to the "profile" revar times sig2.
+
+* The "square root parameterization" in which we work with the
+  Cholesky factor of revar instead of revar directly.
+
+All three parameterizations can be "packed" by concatenating params_fe
+with the lower triangle of the dependence structure.  Note that when
+unpacking, it is important to either square or reflect the dependence
+structure depending on which parameterization is being used.
+
+2. The situation where the random effects covariance matrix is
+singular is very challenging.  Very small changes in the covariance
+parameters may lead to large changes in the likelihood and
+derivatives.
+
+3. The optimization strategy is to optionally perform a few EM steps,
+followed by optionally performing a few steepest descent steps,
+followed by conjugate gradient descent using one of the scipy gradient
+optimizers.  The EM and steepest descent steps are used to get
+adequate starting values for the conjugate gradient optimization,
+which is much faster.
 """
 
 import numpy as np
@@ -161,13 +212,6 @@ class LME(base.Model):
         """
 
         params_fe, revar = self._unpack(params)
-
-        # Check domain for random effects covariance Don't need this
-        # since writing Psi = LL' gaurantees that this will pass.
-        #try:
-        #    cy = np.linalg.cholesky(revar)
-        #except np.linalg.LinAlgError:
-        #    return -np.inf
 
         if pen > 0:
             cy = np.linalg.cholesky(revar)
