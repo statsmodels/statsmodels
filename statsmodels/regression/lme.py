@@ -337,7 +337,7 @@ class LME(base.Model):
         score_fe = 0.
 
         pr = self.exog_re.shape[1]
-        prr = pr * (pr + 1) / 2
+        prr = int(pr * (pr + 1) / 2)
         score_re = np.zeros(prr, dtype=np.float64)
 
         if pen > 0:
@@ -464,7 +464,7 @@ class LME(base.Model):
         """
 
         pr = self.exog_re.shape[1]
-        prr = pr * (pr + 1) / 2
+        prr = int(pr * (pr + 1) / 2)
 
         params_fe, L = self._unpack(params, sym=False)
         revar = np.dot(L, L.T)
@@ -513,7 +513,7 @@ class LME(base.Model):
         params_fe, revar = self._unpack(params)
 
         pr = self.exog_re.shape[1]
-        prr = pr * (pr + 1) / 2
+        prr = int(pr * (pr + 1) / 2)
         p = self.exog.shape[1]
 
         # Blocks for the fixed and random effects parameters.
@@ -828,12 +828,26 @@ class LME(base.Model):
 
         Parameters
         ----------
+        start_fe : 1d array-like
+            Starting values for the regression slopes.
+        start_re : 2d array-like (symmetric)
+            Starting values for the covariance matrix of the
+            random effects (in the profile parameterization,
+            meaning that cov(Y) = I + Z * start_re * Z').
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
+        num_sd : integer
+            The number of steepest descent iterations
         num_em : non-negative integer
-            The number of EM steps to take before switching to
-            gradient optimization
+            The number of EM steps.  The EM steps always
+            preceed steepest descent and conjugate gradient
+            optimization.  The EM algorithm implemented here
+            is for ML estimation.
+        do_cg : bool
+            If True, a conjugate gradient algorithm is
+            used for optimization (following any steepest
+            descent or EM steps).
         pen : non-negative float
             Coefficient of a logarithmic barrier function
             for SPD covariance and non-negative error variance
@@ -892,7 +906,6 @@ class LME(base.Model):
 
             # Gradient iterations
             try:
-                # bfgs fails on travis
                 rslt = fmin_bfgs(like, params_prof, score,
                                  full_output=True,
                                  disp=False,
@@ -1060,7 +1073,7 @@ class LMEResults(base.LikelihoodModelResults):
         pr = self.model.exog_re.shape[1]
 
         # Number of random efects parameters
-        prr = pr * (pr + 1) / 2
+        prr = int(pr * (pr + 1) / 2)
 
         if xname is not None:
             xname_fe = list(xname)
