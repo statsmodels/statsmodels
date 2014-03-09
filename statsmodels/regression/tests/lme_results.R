@@ -32,7 +32,7 @@ for (file in files) {
         rslt[[sprintf("revar_%s_%d", meth, ds_ix)]] = array(as.numeric(VarCorr(md)$groups),
                 c(pr, pr))
         rslt[[sprintf("sig2_%s_%d", meth, ds_ix)]] = attr(VarCorr(md), "sc")^2
-        stop()
+        rslt[[sprintf("loglike_%s_%d", meth, ds_ix)]] = as.numeric(logLik(md))
     }
 }
 

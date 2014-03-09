@@ -61,6 +61,7 @@ class TestLME(object):
         vcov_r = globals()["vcov_%s_%d" % (meth, ds_ix)]
         revar_r = globals()["revar_%s_%d" % (meth, ds_ix)]
         sig2_r = globals()["sig2_%s_%d" % (meth, ds_ix)]
+        loglike = globals()["loglike_%s_%d" % (meth, ds_ix)]
 
         # Variance component MLE ~ 0 currently requires manual
         # tweaking of algorithm parameters, so exclude from tests.
@@ -100,6 +101,7 @@ class TestLME(object):
         assert_almost_equal(vcov_r, mdf.cov_params()[0:pf,0:pf],
                             decimal=3)
 
+        assert_almost_equal(mdf.likeval, loglike[0], decimal=2)
 
     # Run all the tests against R
     def test_r(self):
