@@ -45,13 +45,10 @@ class TestLME(object):
         # Fit the model
         md = LME(endog, exog_fe, exog_re, groups)
         mdf = md.fit(reml=reml)
-        params_fe, revar = md._unpack(mdf.params)
-        sig2 = md.get_sig2(params_fe, revar, reml)
-        revar *= sig2
 
-        assert_almost_equal(params_fe, coef, decimal=4)
-        assert_almost_equal(revar, revar_r, decimal=4)
-        assert_almost_equal(sig2, sig2_r, decimal=4)
+        assert_almost_equal(mdf.params_fe, coef, decimal=4)
+        assert_almost_equal(mdf.revar, revar_r, decimal=4)
+        assert_almost_equal(mdf.sig2, sig2_r, decimal=4)
 
         pf = exog_fe.shape[1]
         assert_almost_equal(vcov_r, mdf.cov_params()[0:pf,0:pf],

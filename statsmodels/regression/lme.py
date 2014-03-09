@@ -6,10 +6,8 @@ Linear mixed effects models
 import numpy as np
 import statsmodels.base.model as base
 from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
-from scipy.misc import derivative
 from scipy.stats.distributions import norm
 import pandas as pd
-from statsmodels.stats.correlation_tools import cov_nearest
 #import collections  # OrderedDict requires python >= 2.7
 from statsmodels.compatnp.collections import OrderedDict
 import warnings
@@ -67,11 +65,23 @@ class LME(base.Model):
                     for k in self.group_labels]
 
 
-    def _unpack(self, params):
+    def _unpack(self, params, sym=True):
         """
-        Takes as input the packed parameter vector and returns two
-        values:
+        Takes as input the packed parameter vector and returns a
+        vector containing the regression slopes and a matrix defining
+        the dependence structure.
 
+        Arguments:
+        ----------
+        params : array-like
+            The packed parameters
+        sym : bool
+          If true, the variance parameters are returned as a symmetric
+          matrix; if False, the variance parameters are returned as a
+          lower triangular matrix.
+
+        Returns:
+        --------
         params : 1d ndarray
             The fixed effects coefficients
         revar : 2d ndarray
@@ -88,7 +98,9 @@ class LME(base.Model):
         revar = np.zeros((pr, pr), dtype=np.float64)
         ix = np.tril_indices(pr)
         revar[ix] = params_re
-        revar = (revar + revar.T) - np.diag(np.diag(revar))
+
+        if sym:
+            revar = (revar + revar.T) - np.diag(np.diag(revar))
 
         return params_fe, revar
 
@@ -142,7 +154,7 @@ class LME(base.Model):
         slopes, and the remaining q*(q+1)/2 elements are the lower
         triangle of the random effects covariance matrix Psi, packed
         row-wise.  The matrix Psi is used to form the covariance
-        matrix V = I + Z * Psi * Z', where is the design matrix for
+        matrix V = I + Z * Psi * Z', where Z is the design matrix for
         the random effects structure.  To convert this to the full
         likelihood (not profiled) parameterization, calculate the
         error variance sig2, and divide Psi by sig2.
@@ -150,15 +162,19 @@ class LME(base.Model):
 
         params_fe, revar = self._unpack(params)
 
-        # Check domain for random effects covariance
-        try:
-            cy = np.linalg.cholesky(revar)
-        except np.linalg.LinAlgError:
-            return -np.inf
+        # Check domain for random effects covariance Don't need this
+        # since writing Psi = LL' gaurantees that this will pass.
+        #try:
+        #    cy = np.linalg.cholesky(revar)
+        #except np.linalg.LinAlgError:
+        #    return -np.inf
 
-        likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
-        xvx = 0.
-        qf = 0.
+        if pen > 0:
+            cy = np.linalg.cholesky(revar)
+            likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
+        else:
+            likeval =0.
+        xvx, qf = 0., 0.
         for k in range(self.ngroup):
 
             exog = self.exog_li[k]
@@ -177,11 +193,13 @@ class LME(base.Model):
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
+            # TODO: use SMW here
             u = np.linalg.solve(vmat, resid)
             qf += np.dot(resid, u)
 
             # Adjustment for REML
             if reml:
+                # TODO: Use SMW here
                 xvx += np.dot(exog.T, np.linalg.solve(vmat, exog))
 
         if reml:
@@ -350,11 +368,13 @@ class LME(base.Model):
             vmat += np.eye(vmat.shape[0])
 
             if reml:
+                # TODO: Use SMW here
                 viexog = np.linalg.solve(vmat, exog)
                 xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
             jj = 0
+            # TOTO: Use SMW here (3 places)
             vex = np.linalg.solve(vmat, ex_r)
             vir = np.linalg.solve(vmat, resid)
             for jj,mat in self._gen_dV_dPsi(ex_r):
@@ -386,12 +406,95 @@ class LME(base.Model):
 
         return np.concatenate((score_fe, score_re))
 
+
+    def like_L(self, params, reml=True, pen=0.):
+        """
+        Returns the log likelihood evaluated at a given point.  The
+        random effects covariance is passed as a square root.
+
+        Arguments:
+        ----------
+        params : array-like
+            The model parameters (for the profile likelihood) in
+            packed form.  The first p elements are the regression
+            slopes, and the remaining elements are the lower triangle
+            of a lower triangular matrix L such that Psi = LL'
+        reml : bool
+            If true, returns the REML log likelihood, else returns
+            the standard log likeihood.
+        pen : non-negative float
+            The penalty parameter of the logarithmic barrrier
+            function for the covariance matrix.
+
+        Returns:
+        --------
+        The value of the log-likelihood or REML criterion.
+        """
+
+        params_fe, L = self._unpack(params, sym=False)
+
+        revar = np.dot(L, L.T)
+        params_r = self._pack(params_fe, revar)
+
+        likeval = self.like(params_r, reml, pen)
+        return likeval
+
+
+
+    def score_L(self, params, reml=True, pen=0.):
+        """
+        Returns the score vector valuated at a given point.  The
+        random effects covariance matrix is passed as a square root.
+
+        Arguments:
+        ----------
+        params : array-like
+            The model parameters (for the profile likelihood) in
+            packed form.  The first p elements are the regression
+            slopes, and the remaining elements are the lower triangle
+            of a lower triangular matrix L such that Psi = LL'
+        reml : bool
+            If true, returns the REML log likelihood, else returns
+            the standard log likeihood.
+        pen : non-negative float
+            The penalty parameter of the logarithmic barrrier
+            function for the covariance matrix.
+
+        Returns:
+        --------
+        The score vector for the log-likelihood or REML criterion.
+        """
+
+        pr = self.exog_re.shape[1]
+        prr = pr * (pr + 1) / 2
+
+        params_fe, L = self._unpack(params, False)
+
+        revar = np.dot(L, L.T)
+        params_f = self._pack(params_fe, revar)
+        svec = self.score(params_f, reml, pen)
+        s_fe, s_re = self._unpack(svec)
+
+        # Use the chain rule to get d/dL from d/dPsi
+        s_l = np.zeros(prr, dtype=np.float64)
+        jj = 0
+        for i in range(pr):
+            for j in range(i+1):
+                s_l[jj] += np.dot(s_re[:,i], L[:,j])
+                s_l[jj] += np.dot(s_re[i,:], L[:,j])
+                jj += 1
+
+        gr = np.concatenate((s_fe, s_l))
+
+        return gr
+
     def hessian(self, params, reml=True, pen=0.):
         """
         Calculates the Hessian matrix for the mixed effects model.
         Specifically, this is the Hessian matrix for the profile
         likelihood in which the scale parameter sig2 has been profiled
-        out.
+        out.  The parameters are passed in packed form, with only the
+        lower triangle of the covariance (not its square root) passed.
 
         Parameters
         ----------
@@ -618,6 +721,24 @@ class LME(base.Model):
 
 
     def get_sig2(self, params_fe, revar, reml):
+        """
+        Returns the estimated error variance based on given estimates
+        of the slopes and random effects covariance matrix.
+
+        Arguments:
+        ----------
+        params_fe : array-like
+            The regression slope estimates
+        revar : 2d array
+            Estimate of the random effects covariance matrix (Psi).
+        reml : bool
+            If true, use the REML esimate, otherwise use the MLE.
+
+        Returns:
+        --------
+        sig2 : float
+            The estimated error variance.
+        """
 
         qf = 0.
         for k in range(self.ngroup):
@@ -633,6 +754,7 @@ class LME(base.Model):
             vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
             vmat += np.eye(vmat.shape[0])
 
+            # TODO: use SMW here
             qf += np.dot(resid, np.linalg.solve(vmat, resid))
 
         p = self.exog.shape[1]
@@ -646,6 +768,33 @@ class LME(base.Model):
 
     def _steepest_descent(self, func, params, score, gtol=1e-4,
                           max_iter=50):
+        """
+        Uses the steepest descent algorithm to minimize a function.
+
+        Arguments:
+        ----------
+        func : function
+            The real-valued function to minimize.
+        params : array-like
+            A point in the domain of `func`, used as the starting
+            point for the iterative minimization.
+        score : function
+            A function implementing the score vector (gradient) of
+            `func`.
+        gtol : non-negative float
+            Return if the sup norm of the score vector is less than
+            this value.
+        max_iter: non-negative integer
+            Return once this number of iterations have occured.
+
+        Returns:
+        --------
+        params_out : array-like
+            The final value of the iterations
+        success : bool
+            True if the final score vector has sup-norm no larger
+            than `gtol`.
+        """
 
         fval = func(params)
 
@@ -657,7 +806,7 @@ class LME(base.Model):
             sl = 1.
             success = False
             while sl > 1e-20:
-                params1 = self.project(params - sl * gr)
+                params1 = params - sl * gr
                 fval1 = func(params1)
 
                 if fval1 < fval:
@@ -673,14 +822,7 @@ class LME(base.Model):
 
         return params, np.max(np.abs(gro)) < gtol
 
-
-    def project(self, vec):
-        a, b = self._unpack(vec)
-        b = cov_nearest(b, method="nearest")
-        return self._pack(a, b)
-
-
-    def fit(self, reml=True, num_sd=5, num_em=0, do_cg=True, pen=0.,
+    def fit(self, reml=True, num_sd=2, num_em=0, do_cg=True, pen=0.,
             gtol=1e-4, full_output=False):
         """
         Fit a linear mixed model to the data.
@@ -707,8 +849,8 @@ class LME(base.Model):
         A LMEResults instance.
         """
 
-        like = lambda x: -self.like(x, reml, pen)
-        score = lambda x: -self.score(x, reml, pen)
+        like = lambda x: -self.like_L(x, reml, pen)
+        score = lambda x: -self.score_L(x, reml, pen)
 
         if full_output:
             hist = []
@@ -720,6 +862,25 @@ class LME(base.Model):
         revar = np.eye(self.exog_re.shape[1])
         sig2 = 1.
         params_prof = self._pack(params_fe, revar)
+
+        # ##!!!!!
+        # params_fe = np.random.normal(size=len(params_fe))
+        # revar = np.random.normal(size=revar.shape)
+        # revar = np.dot(revar.T, revar)
+        # params_prof = self._pack(params_fe, revar)
+        # reml = True
+        # pen = 10
+        # gr = score(params_prof, reml, pen)
+
+        # from scipy.misc import derivative
+        # ngr = np.zeros_like(gr)
+        # for k in range(len(ngr)):
+        #     def f(x):
+        #         pp = params_prof.copy()
+        #         pp[k] = x
+        #         return like(pp, reml, pen)
+        #     ngr[k] = derivative(f, params_prof[k], dx=1e-8)
+        # 1/0
 
         success = False
 
@@ -735,19 +896,17 @@ class LME(base.Model):
                 success = True
 
         for cycle in range(10):
-            print "cycle ", cycle
+
             # Steepest descent iterations
             params_prof, success = self._steepest_descent(like,
                                   params_prof, score,
                                   gtol=gtol, max_iter=num_sd)
-            print "SD ", success
             if success:
                 break
 
             # Gradient iterations
             try:
-                # bfgs works better on my machine, but fails
-                # on travis
+                # bfgs fails on travis
                 rslt = fmin_bfgs(like, params_prof, score,
                                  full_output=True,
                                  disp=False,
@@ -755,7 +914,6 @@ class LME(base.Model):
             # scipy.optimize routines have trouble staying in the
             # feasible region
             except np.linalg.LinAlgError:
-                print "gradient linalg error"
                 rslt = None
             if rslt is not None:
                 if hist is not None:
@@ -763,12 +921,15 @@ class LME(base.Model):
                 params_prof = rslt[0]
                 if np.max(np.abs(score(params_prof))) < gtol:
                     success = True
-                    print "gradient success"
                     break
 
-        params_fe, revar = self._unpack(params_prof)
-        sig2 = self.get_sig2(params_fe, revar, reml)
-        revar *= sig2
+        # Convert to the final parameterization (i.e. undo the square
+        # root transform of the covariance matrix, and the profiling
+        # over the error variance).
+        params_fe, revar_ltri = self._unpack(params_prof, sym=False)
+        revar_unscaled = np.dot(revar_ltri, revar_ltri.T)
+        sig2 = self.get_sig2(params_fe, revar_unscaled, reml)
+        revar = sig2 * revar_unscaled
 
         if not success:
             if rslt is None:
@@ -782,9 +943,14 @@ class LME(base.Model):
             msg = "The MLE may be on the boundary of the parameter space."
             warnings.warn(msg, ConvergenceWarning)
 
-        hess = self.hessian(params_prof)
+        # Compute the Hessian at the MLE.  The hessian function
+        # expacts the random effects covariance matrix, not the square
+        # root, so we square it first.
+        params_hess = self._pack(params_fe, revar_unscaled)
+        hess = self.hessian(params_hess)
         pcov = np.linalg.inv(-hess)
 
+        # Prepare a results class instance
         results = LMEResults(self, params_prof, pcov)
         results.params_fe = params_fe
         results.revar = revar
@@ -959,3 +1125,5 @@ class LMEResults(base.LikelihoodModelResults):
         smry.add_df(sdf, align='l')
 
         return smry
+
+
