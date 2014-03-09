@@ -2,10 +2,56 @@ import numpy as np
 from statsmodels.regression.lme import LME
 from numpy.testing import assert_almost_equal
 from lme_r_results import *
+from scipy.misc import derivative
 import os
 import csv
 
 class TestLME(object):
+
+
+    # Test analytic scores using numeric differentiation
+    def test_score(self):
+
+        n = 200
+        m = 5
+        p = 3
+        pr = 2
+
+        for jl in 0,1:
+            for reml in False,True:
+                for pen in 0,10:
+
+                    exog_fe = np.random.normal(size=(n*m, p))
+                    exog_re = np.random.normal(size=(n*m, pr))
+                    endog = exog_fe.sum(1) + np.random.normal(size=n*m)
+                    groups = np.kron(range(n), np.ones(m))
+
+                    md = LME(endog, exog_fe, exog_re, groups)
+                    if jl == 0:
+                        like = lambda x: -md.like_L(x, reml, pen)
+                        score = lambda x: -md.score_L(x, reml, pen)
+                    else:
+                        like = lambda x: -md.like(x, reml, pen)
+                        score = lambda x: -md.score(x, reml, pen)
+
+                    for kr in range(5):
+                        params_fe = np.random.normal(size=p)
+                        revar = np.random.normal(size=(pr,pr))
+                        revar = np.dot(revar.T, revar)
+                        params_prof = md._pack(params_fe, revar)
+                        gr = score(params_prof)
+
+                        ngr = np.zeros_like(gr)
+                        for k in range(len(ngr)):
+                            def f(x):
+                                pp = params_prof.copy()
+                                pp[k] = x
+                                return like(pp)
+                            ngr[k] = derivative(f, params_prof[k], dx=1e-6)
+
+                        assert_almost_equal(gr / ngr, np.ones(len(gr)),
+                                            decimal=3)
+
 
     def do1(self, reml, ds_ix):
 
@@ -55,7 +101,7 @@ class TestLME(object):
                             decimal=3)
 
 
-    # Run all the tests
+    # Run all the tests against R
     def test_r(self):
 
         cur_dir = os.path.dirname(os.path.abspath(__file__))

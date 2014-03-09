@@ -432,8 +432,8 @@ class LME(base.Model):
         """
 
         params_fe, L = self._unpack(params, sym=False)
-
         revar = np.dot(L, L.T)
+
         params_r = self._pack(params_fe, revar)
 
         likeval = self.like(params_r, reml, pen)
@@ -468,12 +468,12 @@ class LME(base.Model):
         pr = self.exog_re.shape[1]
         prr = pr * (pr + 1) / 2
 
-        params_fe, L = self._unpack(params, False)
-
+        params_fe, L = self._unpack(params, sym=False)
         revar = np.dot(L, L.T)
+
         params_f = self._pack(params_fe, revar)
         svec = self.score(params_f, reml, pen)
-        s_fe, s_re = self._unpack(svec)
+        s_fe, s_re = self._unpack(svec, sym=False)
 
         # Use the chain rule to get d/dL from d/dPsi
         s_l = np.zeros(prr, dtype=np.float64)
@@ -862,25 +862,6 @@ class LME(base.Model):
         revar = np.eye(self.exog_re.shape[1])
         sig2 = 1.
         params_prof = self._pack(params_fe, revar)
-
-        # ##!!!!!
-        # params_fe = np.random.normal(size=len(params_fe))
-        # revar = np.random.normal(size=revar.shape)
-        # revar = np.dot(revar.T, revar)
-        # params_prof = self._pack(params_fe, revar)
-        # reml = True
-        # pen = 10
-        # gr = score(params_prof, reml, pen)
-
-        # from scipy.misc import derivative
-        # ngr = np.zeros_like(gr)
-        # for k in range(len(ngr)):
-        #     def f(x):
-        #         pp = params_prof.copy()
-        #         pp[k] = x
-        #         return like(pp, reml, pen)
-        #     ngr[k] = derivative(f, params_prof[k], dx=1e-8)
-        # 1/0
 
         success = False
 
