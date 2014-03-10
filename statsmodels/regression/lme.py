@@ -1093,7 +1093,13 @@ class LME(base.Model):
         # root, so we square it first.
         params_hess = self._pack(params_fe, revar_unscaled)
         hess = self.hessian(params_hess)
-        pcov = np.linalg.inv(-hess)
+        if free_revar is not None:
+            ii = np.flatnonzero(pat)
+            hess1 = hess[ii,:][:,ii]
+            pcov = np.zeros_like(hess)
+            pcov[np.ix_(ii,ii)] = np.linalg.inv(-hess1)
+        else:
+            pcov = np.linalg.inv(-hess)
 
         # Prepare a results class instance
         results = LMEResults(self, params_prof, pcov)
