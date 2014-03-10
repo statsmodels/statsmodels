@@ -1119,7 +1119,9 @@ class LMEResults(base.LikelihoodModelResults):
         Returns:
         --------
         ranef_dict : dict
-
+            A dictionary mapping the distinct values of the `group`
+            variable to the conditional means of the random effects
+            given the data.
         """
 
         ranef_dict = {}
@@ -1143,6 +1145,40 @@ class LMEResults(base.LikelihoodModelResults):
 
             ranef_dict[label] = np.dot(self.revar,
                                        np.dot(ex_r.T, vresid))
+
+        return ranef_dict
+
+
+    def ranef_cov(self):
+        """
+        Returns the conditional covariance matrix of the random
+        effects for each group.
+
+        Returns:
+        --------
+        ranef_dict : dict
+            A dictionary mapping the distinct values of the `group`
+            variable to the conditional covariance matrix of the
+            random effects given the data.
+        """
+
+        ranef_dict = {}
+        for k in range(self.model.ngroup):
+
+            endog = self.model.endog_li[k]
+            exog = self.model.exog_li[k]
+            ex_r = self.model.exog_re_li[k]
+            label = self.model.group_labels[k]
+
+            # The marginal covariance matrix for this group
+            vmat = np.dot(ex_r, np.dot(self.revar, ex_r.T))
+            vmat += self.sig2 * np.eye(vmat.shape[0])
+
+            mat1 = np.dot(ex_r, self.revar)
+            mat2 = np.linalg.solve(vmat, mat1)
+            mat2 = np.dot(mat1.T, mat2)
+
+            ranef_dict[label] = self.revar - mat2
 
         return ranef_dict
 
