@@ -78,7 +78,7 @@ from statsmodels.tools.sm_exceptions import \
 no_smw = False
 
 
-def smw_solve(f, A, B, rhs):
+def smw_solve(f, A, B, BI, rhs):
     """
     Solves the system (f*I + A*B*A') * x = rhs for x and returns x.
     """
@@ -90,7 +90,7 @@ def smw_solve(f, A, B, rhs):
         return np.linalg.solve(mat, rhs)
 
     # Use SMW identity
-    qmat = np.linalg.inv(B) + np.dot(A.T, A)/f
+    qmat = BI + np.dot(A.T, A)/f
     u = np.dot(A.T, rhs)
     qmat = np.linalg.solve(qmat, u)
     qmat = np.dot(A, qmat)
@@ -98,7 +98,7 @@ def smw_solve(f, A, B, rhs):
     return rslt
 
 
-def smw_logdet(f, A, B):
+def smw_logdet(f, A, B, BI):
     """
     Use the matrix determinant lemma to accelerate the calculation of
     the log determinant of f*I + A*B*A'.
@@ -115,7 +115,7 @@ def smw_logdet(f, A, B):
     p = A.shape[0]
     ld += p*np.log(f)
 
-    qmat = np.linalg.inv(B) + np.dot(A.T, A) / f
+    qmat = BI + np.dot(A.T, A) / f
     _, ld1 = np.linalg.slogdet(qmat)
 
     return ld + ld1
@@ -163,8 +163,8 @@ class LME(base.Model):
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
-        super(LME, self).__init__(endog, exog, exog_re=exog_re,
-                                  groups=groups, missing=missing)
+        super(LME, self).__init__(endog, exog, groups=groups,
+                                  exog_re=exog_re, missing=missing)
 
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the groups.
@@ -314,6 +314,7 @@ class LME(base.Model):
         """
 
         params_fe, revar = self._unpack(params)
+        revari = np.linalg.inv(revar)
 
         if pen > 0:
             cy = np.linalg.cholesky(revar)
@@ -331,16 +332,16 @@ class LME(base.Model):
             resid = self.endog_li[k] - expval
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = smw_logdet(1., ex_r, revar)
+            ld = smw_logdet(1., ex_r, revar, revari)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
-            u = smw_solve(1., ex_r, revar, resid)
+            u = smw_solve(1., ex_r, revar, revari, resid)
             qf += np.dot(resid, u)
 
             # Adjustment for REML
             if reml:
-                mat = smw_solve(1., ex_r, revar, exog)
+                mat = smw_solve(1., ex_r, revar, revari, exog)
                 xvx += np.dot(exog.T, mat)
 
         if reml:
@@ -386,6 +387,8 @@ class LME(base.Model):
         except np.linalg.LinAlgError:
             return -np.inf
 
+        revari = np.linalg.inv(revar)
+
         likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
         xvx = 0.
         for k in range(self.ngroup):
@@ -398,16 +401,16 @@ class LME(base.Model):
             resid = self.endog_li[k] - expval
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = smw_logdet(sig2, ex_r, revar)
+            ld = smw_logdet(sig2, ex_r, revar, revari)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
-            u = smw_solve(sig2, ex_r, revar, resid)
+            u = smw_solve(sig2, ex_r, revar, revari, resid)
             qf = np.dot(resid, u)
             likeval -= qf / 2
 
             if reml:
-                u = smw_solve(sig2, ex_r, revar, exog)
+                u = smw_solve(sig2, ex_r, revar, revari, exog)
                 xvx += np.dot(exog.T, u)
 
         if reml:
@@ -470,7 +473,7 @@ class LME(base.Model):
         """
 
         params_fe, revar = self._unpack(params)
-
+        revari = np.linalg.inv(revar)
         score_fe = 0.
 
         pr = self.exog_re.shape[1]
@@ -499,15 +502,16 @@ class LME(base.Model):
             resid = self.endog_li[k] - expval
 
             if reml:
-                viexog = smw_solve(1., ex_r, revar, exog)
+                viexog = smw_solve(1., ex_r, revar, revari, exog)
                 xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
             jj = 0
-            vex = smw_solve(1., ex_r, revar, ex_r)
-            vir = smw_solve(1., ex_r, revar, resid)
+            vex = smw_solve(1., ex_r, revar, revari, ex_r)
+            vir = smw_solve(1., ex_r, revar, revari, resid)
             for jj,mat in self._gen_dV_dPsi(ex_r):
-                B[jj] = np.trace(smw_solve(1., ex_r, revar, mat))
+                B[jj] = np.trace(smw_solve(1., ex_r, revar, revari,
+                                           mat))
                 C[jj] -= np.dot(vir, np.dot(mat, vir))
                 if reml:
                     xtax[jj] += np.dot(viexog.T, np.dot(mat, viexog))
@@ -642,6 +646,7 @@ class LME(base.Model):
         """
 
         params_fe, revar = self._unpack(params)
+        revari = np.linalg.inv(revar)
 
         pr = self.exog_re.shape[1]
         prr = int(pr * (pr + 1) / 2)
@@ -671,9 +676,9 @@ class LME(base.Model):
             expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
-            viexog = smw_solve(1., ex_r, revar, exog)
+            viexog = smw_solve(1., ex_r, revar, revari, exog)
             xtvix += np.dot(exog.T, viexog)
-            vir = smw_solve(1., ex_r, revar, resid)
+            vir = smw_solve(1., ex_r, revar, revari, resid)
             rvir += np.dot(resid, vir)
 
             for jj1,mat1 in self._gen_dV_dPsi(ex_r):
@@ -684,7 +689,7 @@ class LME(base.Model):
                     xtax[jj1] += np.dot(viexog.T, np.dot(mat1, viexog))
 
                 B[jj1] += np.dot(vir, np.dot(mat1, vir))
-                E = smw_solve(1., ex_r, revar, mat1)
+                E = smw_solve(1., ex_r, revar, revari, mat1)
 
                 for jj2,mat2 in self._gen_dV_dPsi(ex_r, jj1):
                     Q = np.dot(mat2, E)
@@ -693,7 +698,7 @@ class LME(base.Model):
                     D[jj1, jj2] += vt
                     if jj1 != jj2:
                         D[jj2, jj1] += vt
-                    R = smw_solve(1., ex_r, revar, Q)
+                    R = smw_solve(1., ex_r, revar, revari, Q)
                     rt = np.trace(R) / 2
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
@@ -760,6 +765,7 @@ class LME(base.Model):
         """
 
         m1x, m1y, m2, m2xx = 0., 0., 0., 0.
+        revari = np.linalg.inv(revar)
 
         for k in range(self.ngroup):
 
@@ -770,11 +776,12 @@ class LME(base.Model):
             # Contruct the marginal covariance matrix for this group
             ex_r = self.exog_re_li[k]
 
-            vr1 = smw_solve(sig2, ex_r, revar, resid)
+            vr1 = smw_solve(sig2, ex_r, revar, revari, resid)
             vr1 = np.dot(ex_r.T, vr1)
             vr1 = np.dot(revar, vr1)
 
-            vr2 = smw_solve(sig2, ex_r, revar, self.exog_re_li[k])
+            vr2 = smw_solve(sig2, ex_r, revar, revari,
+                            self.exog_re_li[k])
             vr2 = np.dot(vr2, revar)
             vr2 = np.dot(ex_r.T, vr2)
             vr2 = np.dot(revar, vr2)
@@ -863,6 +870,8 @@ class LME(base.Model):
             The estimated error variance.
         """
 
+        revari = np.linalg.inv(revar)
+
         qf = 0.
         for k in range(self.ngroup):
 
@@ -873,7 +882,7 @@ class LME(base.Model):
             expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
-            mat = smw_solve(1., ex_r, revar, resid)
+            mat = smw_solve(1., ex_r, revar, revari, resid)
             qf += np.dot(resid, mat)
 
         p = self.exog.shape[1]
@@ -1171,6 +1180,8 @@ class LMEResults(base.LikelihoodModelResults):
             given the data.
         """
 
+        revari = np.linalg.inv(self.revar)
+
         ranef_dict = {}
         for k in range(self.model.ngroup):
 
@@ -1183,7 +1194,8 @@ class LMEResults(base.LikelihoodModelResults):
             expval = np.dot(exog, self.params_fe)
             resid = endog - expval
 
-            vresid = smw_solve(self.sig2, ex_r, self.revar, resid)
+            vresid = smw_solve(self.sig2, ex_r, self.revar, revari,
+                               resid)
 
             ranef_dict[label] = np.dot(self.revar,
                                        np.dot(ex_r.T, vresid))
@@ -1204,6 +1216,8 @@ class LMEResults(base.LikelihoodModelResults):
             random effects given the data.
         """
 
+        revari = np.linalg.inv(self.revar)
+
         ranef_dict = {}
         for k in range(self.model.ngroup):
 
@@ -1213,7 +1227,8 @@ class LMEResults(base.LikelihoodModelResults):
             label = self.model.group_labels[k]
 
             mat1 = np.dot(ex_r, self.revar)
-            mat2 = smw_solve(self.sig2, ex_r, self.revar, mat1)
+            mat2 = smw_solve(self.sig2, ex_r, self.revar, revari,
+                             mat1)
             mat2 = np.dot(mat1.T, mat2)
 
             ranef_dict[label] = self.revar - mat2
