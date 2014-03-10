@@ -65,6 +65,55 @@ import warnings
 from statsmodels.tools.sm_exceptions import \
      ConvergenceWarning
 
+# Global option to use direct linear algebra calculations for solving
+# factor-structured linear systems and calculating factor-structured
+# determinants.  Should be False except when testing.
+no_smw = False
+
+
+def smw_solve(f, A, B, rhs):
+    """
+    Solves the system (f*I + A*B*A') * x = rhs for x and returns x.
+    """
+
+    # Direct calculation
+    if no_smw:
+        mat = np.dot(A, np.dot(B, A.T))
+        mat += f*np.eye(A.shape[0])
+        return np.linalg.solve(mat, rhs)
+
+    # Use SMW identity
+    qmat = np.linalg.inv(B) + np.dot(A.T, A)/f
+    u = np.dot(A.T, rhs)
+    qmat = np.linalg.solve(qmat, u)
+    qmat = np.dot(A, qmat)
+    rslt = rhs / f - qmat / f**2
+    return rslt
+
+
+def smw_logdet(f, A, B):
+    """
+    Use the matrix determinant lemma to accelerate the calculation of
+    the log determinant of f*I + A*B*A'.
+    """
+
+    if no_smw:
+        mat = np.dot(A, np.dot(B, A.T))
+        mat += f*np.eye(A.shape[0])
+        _, ld = np.linalg.slogdet(mat)
+        return ld
+
+    _, ld = np.linalg.slogdet(B)
+
+    p = A.shape[0]
+    ld += p*np.log(f)
+
+    qmat = np.linalg.inv(B) + np.dot(A.T, A) / f
+    _, ld1 = np.linalg.slogdet(qmat)
+
+    return ld + ld1
+
+
 class LME(base.Model):
 
     def __init__(self, endog, exog, groups, exog_re=None,
@@ -274,23 +323,18 @@ class LME(base.Model):
             expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
-            # The marginal covariance matrix for this group
-            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += np.eye(vmat.shape[0])
-
             # Part 1 of the log likelihood (for both ML and REML)
-            _,ld = np.linalg.slogdet(vmat)
+            ld = smw_logdet(1., ex_r, revar)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
-            # TODO: use SMW here
-            u = np.linalg.solve(vmat, resid)
+            u = smw_solve(1., ex_r, revar, resid)
             qf += np.dot(resid, u)
 
             # Adjustment for REML
             if reml:
-                # TODO: Use SMW here
-                xvx += np.dot(exog.T, np.linalg.solve(vmat, exog))
+                mat = smw_solve(1., ex_r, revar, exog)
+                xvx += np.dot(exog.T, mat)
 
         if reml:
             p = self.exog.shape[1]
@@ -346,21 +390,17 @@ class LME(base.Model):
             expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
-            # The marginal covariance matrix for this group
-            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += sig2 * np.eye(vmat.shape[0])
-
             # Part 1 of the log likelihood (for both ML and REML)
-            _,ld = np.linalg.slogdet(vmat)
+            ld = smw_logdet(sig2, ex_r, revar)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
-            u = np.linalg.solve(vmat, resid)
+            u = smw_solve(sig2, ex_r, revar, resid)
             qf = np.dot(resid, u)
             likeval -= qf / 2
 
             if reml:
-                u = np.linalg.solve(vmat, exog)
+                u = smw_solve(sig2, ex_r, revar, exog)
                 xvx += np.dot(exog.T, u)
 
         if reml:
@@ -451,22 +491,16 @@ class LME(base.Model):
             expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
-            # The marginal covariance matrix for this group
-            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += np.eye(vmat.shape[0])
-
             if reml:
-                # TODO: Use SMW here
-                viexog = np.linalg.solve(vmat, exog)
+                viexog = smw_solve(1., ex_r, revar, exog)
                 xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
             jj = 0
-            # TOTO: Use SMW here (3 places)
-            vex = np.linalg.solve(vmat, ex_r)
-            vir = np.linalg.solve(vmat, resid)
+            vex = smw_solve(1., ex_r, revar, ex_r)
+            vir = smw_solve(1., ex_r, revar, resid)
             for jj,mat in self._gen_dV_dPsi(ex_r):
-                B[jj] = np.trace(np.linalg.solve(vmat, mat))
+                B[jj] = np.trace(smw_solve(1., ex_r, revar, mat))
                 C[jj] -= np.dot(vir, np.dot(mat, vir))
                 if reml:
                     xtax[jj] += np.dot(viexog.T, np.dot(mat, viexog))
@@ -630,13 +664,9 @@ class LME(base.Model):
             expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
-            # The marginal covariance matrix for this group
-            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += np.eye(vmat.shape[0])
-
-            viexog = np.linalg.solve(vmat, exog)
+            viexog = smw_solve(1., ex_r, revar, exog)
             xtvix += np.dot(exog.T, viexog)
-            vir = np.linalg.solve(vmat, resid)
+            vir = smw_solve(1., ex_r, revar, resid)
             rvir += np.dot(resid, vir)
 
             for jj1,mat1 in self._gen_dV_dPsi(ex_r):
@@ -647,7 +677,7 @@ class LME(base.Model):
                     xtax[jj1] += np.dot(viexog.T, np.dot(mat1, viexog))
 
                 B[jj1] += np.dot(vir, np.dot(mat1, vir))
-                E = np.linalg.solve(vmat, mat1)
+                E = smw_solve(1., ex_r, revar, mat1)
 
                 for jj2,mat2 in self._gen_dV_dPsi(ex_r, jj1):
                     Q = np.dot(mat2, E)
@@ -656,7 +686,7 @@ class LME(base.Model):
                     D[jj1, jj2] += vt
                     if jj1 != jj2:
                         D[jj2, jj1] += vt
-                    R = np.linalg.solve(vmat, Q)
+                    R = smw_solve(1., ex_r, revar, Q)
                     rt = np.trace(R) / 2
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
@@ -732,14 +762,12 @@ class LME(base.Model):
 
             # Contruct the marginal covariance matrix for this group
             ex_r = self.exog_re_li[k]
-            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += sig2*np.eye(vmat.shape[0])
 
-            vr1 = np.linalg.solve(vmat, resid)
+            vr1 = smw_solve(sig2, ex_r, revar, resid)
             vr1 = np.dot(ex_r.T, vr1)
             vr1 = np.dot(revar, vr1)
 
-            vr2 = np.linalg.solve(vmat, self.exog_re_li[k])
+            vr2 = smw_solve(sig2, ex_r, revar, self.exog_re_li[k])
             vr2 = np.dot(vr2, revar)
             vr2 = np.dot(ex_r.T, vr2)
             vr2 = np.dot(revar, vr2)
@@ -838,12 +866,8 @@ class LME(base.Model):
             expval = np.dot(exog, params_fe)
             resid = self.endog_li[k] - expval
 
-            # The marginal covariance matrix for this group
-            vmat = np.dot(ex_r, np.dot(revar, ex_r.T))
-            vmat += np.eye(vmat.shape[0])
-
-            # TODO: use SMW here
-            qf += np.dot(resid, np.linalg.solve(vmat, resid))
+            mat = smw_solve(1., ex_r, revar, resid)
+            qf += np.dot(resid, mat)
 
         p = self.exog.shape[1]
         if reml:
@@ -1136,12 +1160,7 @@ class LMEResults(base.LikelihoodModelResults):
             expval = np.dot(exog, self.params_fe)
             resid = endog - expval
 
-            # The marginal covariance matrix for this group
-            vmat = np.dot(ex_r, np.dot(self.revar, ex_r.T))
-            vmat += self.sig2 * np.eye(vmat.shape[0])
-
-            # TODO: use SMW here
-            vresid = np.linalg.solve(vmat, resid)
+            vresid = smw_solve(self.sig2, ex_r, self.revar, resid)
 
             ranef_dict[label] = np.dot(self.revar,
                                        np.dot(ex_r.T, vresid))
@@ -1170,12 +1189,8 @@ class LMEResults(base.LikelihoodModelResults):
             ex_r = self.model.exog_re_li[k]
             label = self.model.group_labels[k]
 
-            # The marginal covariance matrix for this group
-            vmat = np.dot(ex_r, np.dot(self.revar, ex_r.T))
-            vmat += self.sig2 * np.eye(vmat.shape[0])
-
             mat1 = np.dot(ex_r, self.revar)
-            mat2 = np.linalg.solve(vmat, mat1)
+            mat2 = smw_solve(self.sig2, ex_r, self.revar, mat1)
             mat2 = np.dot(mat1.T, mat2)
 
             ranef_dict[label] = self.revar - mat2
