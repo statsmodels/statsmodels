@@ -62,6 +62,7 @@ class TestLME(object):
         revar_r = globals()["revar_%s_%d" % (meth, ds_ix)]
         sig2_r = globals()["sig2_%s_%d" % (meth, ds_ix)]
         loglike = globals()["loglike_%s_%d" % (meth, ds_ix)]
+        ranef = globals()["ranef_%s_%d" % (meth, ds_ix)]
 
         # Variance component MLE ~ 0 currently requires manual
         # tweaking of algorithm parameters, so exclude from tests.
@@ -102,6 +103,8 @@ class TestLME(object):
                             decimal=3)
 
         assert_almost_equal(mdf.likeval, loglike[0], decimal=2)
+
+        assert_almost_equal(mdf.ranef()[0], ranef, decimal=3)
 
     # Run all the tests against R
     def test_r(self):
