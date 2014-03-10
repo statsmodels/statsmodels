@@ -1,12 +1,19 @@
 """
 Linear mixed effects models
 
-The primary reference for this implementation is:
+The primary reference for the implementation details is:
 
 MJ Lindstrom, DM Bates (1988).  "Newton Raphson and EM algorithms for
 linear mixed effects models for repeated measures data".  Journal of
 the American Statistical Association. Volume 83, Issue 404, pages
 1014-1022.
+
+The following two documents are written more from the perspective of
+users:
+
+http://lme4.r-forge.r-project.org/lMMwR/lrgprt.pdf
+
+http://lme4.r-forge.r-project.org/slides/2009-07-07-Rennes/3Longitudinal-4.pdf
 
 Notation:
 
@@ -936,7 +943,7 @@ class LME(base.Model):
 
     def fit(self, start_fe=None, start_re=None, reml=True, num_sd=2,
             num_em=0, do_cg=True, pen=0., gtol=1e-4,
-            full_output=False):
+            free_revar=None, full_output=False):
         """
         Fit a linear mixed model to the data.
 
@@ -968,6 +975,15 @@ class LME(base.Model):
         gtol : non-negtive float
             Algorithm is considered converged if the sup-norm of
             the gradient is smaller than this value.
+        free_revar : 2d array-like
+            If not `None`, the is a square 2 dimensional matrix with
+            size equal to the number of random effects.  The elements
+            of the matrix should all be 0 or 1.  A 1 indicates that
+            the corresponding element of revar is estimated as a free
+            parameter; a 0 indicates that the element is fixed at
+            its starting value.  A primary use case if to set
+            free_revar equal to the identity matrix to estimate a
+            model with independent random effects.
         full_output : bool
             If true, attach iteration history to results
 
@@ -977,7 +993,14 @@ class LME(base.Model):
         """
 
         like = lambda x: -self.like_L(x, reml, pen)
-        score = lambda x: -self.score_L(x, reml, pen)
+
+        if free_revar is not None:
+            ix = np.tril_indices(self.exog_re.shape[1])
+            pat = free_revar[ix]
+            pat = np.concatenate((np.ones(self.exog.shape[1]), pat))
+            score = lambda x: -pat*self.score_L(x, reml, pen)
+        else:
+            score = lambda x: -self.score_L(x, reml, pen)
 
         if full_output:
             hist = []

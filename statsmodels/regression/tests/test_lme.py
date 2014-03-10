@@ -52,18 +52,29 @@ class TestLME(object):
                                             decimal=3)
 
 
-    def do1(self, reml, ds_ix):
+    def do1(self, reml, irf, ds_ix):
+
+        # No need to check independent random effects when there is
+        # only one of them.
+        if irf and ds_ix < 6:
+            return
+
+        irfs = "irf" if irf else "drf"
 
         meth = "reml" if reml else "ml"
 
-        coef = globals()["coef_%s_%d" % (meth, ds_ix)]
-        vcov_r = globals()["vcov_%s_%d" % (meth, ds_ix)]
-        revar_r = globals()["revar_%s_%d" % (meth, ds_ix)]
-        sig2_r = globals()["sig2_%s_%d" % (meth, ds_ix)]
-        loglike = globals()["loglike_%s_%d" % (meth, ds_ix)]
-        ranef_postmean = globals()["ranef_mean_%s_%d" % (meth, ds_ix)]
-        ranef_postvar = globals()["ranef_postvar_%s_%d" % (meth, ds_ix)]
-        ranef_postvar = np.atleast_2d(ranef_postvar)
+        coef = globals()["coef_%s_%s_%d" % (meth, irfs, ds_ix)]
+        vcov_r = globals()["vcov_%s_%s_%d" % (meth, irfs, ds_ix)]
+        revar_r = globals()["revar_%s_%s_%d" % (meth, irfs, ds_ix)]
+        sig2_r = globals()["sig2_%s_%s_%d" % (meth, irfs, ds_ix)]
+        loglike = globals()["loglike_%s_%s_%d" % (meth, irfs, ds_ix)]
+
+        if not irf:
+            ranef_postmean = globals()["ranef_mean_%s_%s_%d" %
+                                       (meth, irfs, ds_ix)]
+            ranef_postvar = globals()["ranef_postvar_%s_%s_%d" %
+                                      (meth, irfs, ds_ix)]
+            ranef_postvar = np.atleast_2d(ranef_postvar)
 
         # Variance component MLE ~ 0 may require manual tweaking of
         # algorithm parameters, so exclude from tests for now.
@@ -93,7 +104,10 @@ class TestLME(object):
 
         # Fit the model
         md = LME(endog, exog_fe, groups, exog_re)
-        mdf = md.fit(reml=reml)
+        if not irf: # Free random effects covariance
+            mdf = md.fit(reml=reml)
+        else: # Independent random effects
+            mdf = md.fit(reml=reml, free_revar=np.eye(exog_re.shape[1]))
 
         assert_almost_equal(mdf.params_fe, coef, decimal=4)
         assert_almost_equal(mdf.revar, revar_r, decimal=4)
@@ -105,9 +119,11 @@ class TestLME(object):
 
         assert_almost_equal(mdf.likeval, loglike[0], decimal=2)
 
-        assert_almost_equal(mdf.ranef()[0], ranef_postmean, decimal=3)
-        assert_almost_equal(mdf.ranef_cov()[0], ranef_postvar,
-                            decimal=3)
+        # Not supported in R
+        if not irf:
+            assert_almost_equal(mdf.ranef()[0], ranef_postmean, decimal=3)
+            assert_almost_equal(mdf.ranef_cov()[0], ranef_postvar,
+                                decimal=3)
 
     # Run all the tests against R
     def test_r(self):
@@ -120,9 +136,10 @@ class TestLME(object):
 
         for fname in fnames:
             for reml in False,True:
-                ds_ix = int(fname[3:5])
-                print ds_ix, reml
-                yield self.do1, reml, ds_ix
+                for irf in False,True:
+                    ds_ix = int(fname[3:5])
+                    print ds_ix, reml
+                    yield self.do1, reml, irf, ds_ix
 
 
 
