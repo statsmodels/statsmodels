@@ -443,9 +443,10 @@ def get_data_files():
                                                                   "*.dta"]})
     # add all the tests and results files
     for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
-        if r.endswith('results') and 'sandbox' not in r:
-            data_files.update({relpath(r, start=curdir).replace(sep, ".") : ["*.csv",
-                                                               "*.txt"]})
+        r_ = relpath(r, start=curdir)
+        if r_.endswith('results') and 'sandbox' not in r_:
+            data_files.update({r_.replace(sep, ".") : ["*.csv",
+                                                       "*.txt"]})
 
     return data_files
 
