@@ -8,7 +8,6 @@ import csv
 
 class TestLME(object):
 
-
     # Test analytic scores using numeric differentiation
     def test_score(self):
 
@@ -62,10 +61,12 @@ class TestLME(object):
         revar_r = globals()["revar_%s_%d" % (meth, ds_ix)]
         sig2_r = globals()["sig2_%s_%d" % (meth, ds_ix)]
         loglike = globals()["loglike_%s_%d" % (meth, ds_ix)]
-        ranef = globals()["ranef_%s_%d" % (meth, ds_ix)]
+        ranef_postmean = globals()["ranef_mean_%s_%d" % (meth, ds_ix)]
+        ranef_postvar = globals()["ranef_postvar_%s_%d" % (meth, ds_ix)]
+        ranef_postvar = np.atleast_2d(ranef_postvar)
 
-        # Variance component MLE ~ 0 currently requires manual
-        # tweaking of algorithm parameters, so exclude from tests.
+        # Variance component MLE ~ 0 may require manual tweaking of
+        # algorithm parameters, so exclude from tests for now.
         if np.min(np.diag(revar_r)) < 0.01:
             print "Skipping %d since solution is on boundary." % ds_ix
             return
@@ -104,7 +105,9 @@ class TestLME(object):
 
         assert_almost_equal(mdf.likeval, loglike[0], decimal=2)
 
-        assert_almost_equal(mdf.ranef()[0], ranef, decimal=3)
+        assert_almost_equal(mdf.ranef()[0], ranef_postmean, decimal=3)
+        assert_almost_equal(mdf.ranef_cov()[0], ranef_postvar,
+                            decimal=3)
 
     # Run all the tests against R
     def test_r(self):

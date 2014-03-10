@@ -10,7 +10,9 @@ sig2_ml_0 = np.array([0.2237437])
 
 loglike_ml_0 = np.array([-222.8711])
 
-ranef_ml_0 = np.array([0.7056292])
+ranef_mean_ml_0 = np.array([0.7056292])
+
+ranef_postvar_ml_0 = np.array([0.04322625])
 
 coef_reml_0 = np.array([-0.9815246])
 
@@ -22,7 +24,9 @@ sig2_reml_0 = np.array([0.2249622])
 
 loglike_reml_0 = np.array([-225.3094])
 
-ranef_reml_0 = np.array([0.704705])
+ranef_mean_reml_0 = np.array([0.704705])
+
+ranef_postvar_reml_0 = np.array([0.0434064])
 
 coef_ml_1 = np.array([-0.9737625])
 
@@ -34,7 +38,9 @@ sig2_ml_1 = np.array([3.757546])
 
 loglike_ml_1 = np.array([-518.7708])
 
-ranef_ml_1 = np.array([0.09404405])
+ranef_mean_ml_1 = np.array([0.09404405])
+
+ranef_postvar_ml_1 = np.array([0.3445323])
 
 coef_reml_1 = np.array([-0.97384])
 
@@ -46,7 +52,9 @@ sig2_reml_1 = np.array([3.771481])
 
 loglike_reml_1 = np.array([-519.8296])
 
-ranef_reml_1 = np.array([0.09435733])
+ranef_mean_reml_1 = np.array([0.09435733])
+
+ranef_postvar_reml_1 = np.array([0.3469428])
 
 coef_ml_2 = np.array([-1.007761,0.9251571])
 
@@ -58,7 +66,9 @@ sig2_ml_2 = np.array([0.2546829])
 
 loglike_ml_2 = np.array([-230.6125])
 
-ranef_ml_2 = np.array([0.4673402])
+ranef_mean_ml_2 = np.array([0.4673402])
+
+ranef_postvar_ml_2 = np.array([0.05543224])
 
 coef_reml_2 = np.array([-1.007838,0.9249907])
 
@@ -70,7 +80,9 @@ sig2_reml_2 = np.array([0.2572982])
 
 loglike_reml_2 = np.array([-235.3843])
 
-ranef_reml_2 = np.array([0.4657632])
+ranef_mean_reml_2 = np.array([0.4657632])
+
+ranef_postvar_reml_2 = np.array([0.05581094])
 
 coef_ml_3 = np.array([-0.8610373,0.8800953])
 
@@ -82,7 +94,9 @@ sig2_ml_3 = np.array([4.232289])
 
 loglike_ml_3 = np.array([-502.9728])
 
-ranef_ml_3 = np.array([-1.297706e-10])
+ranef_mean_ml_3 = np.array([-1.297706e-10])
+
+ranef_postvar_ml_3 = np.array([1.479387e-14])
 
 coef_reml_3 = np.array([-0.8610373,0.8800953])
 
@@ -94,7 +108,9 @@ sig2_reml_3 = np.array([4.268618])
 
 loglike_reml_3 = np.array([-505.132])
 
-ranef_reml_3 = np.array([-2.268446e-11])
+ranef_mean_reml_3 = np.array([-2.268446e-11])
+
+ranef_postvar_reml_3 = np.array([4.499894e-16])
 
 coef_ml_4 = np.array([-1.007392,0.02811325,1.05658])
 
@@ -106,7 +122,9 @@ sig2_ml_4 = np.array([0.2430336])
 
 loglike_ml_4 = np.array([-233.313])
 
-ranef_ml_4 = np.array([0.062229])
+ranef_mean_ml_4 = np.array([0.062229])
+
+ranef_postvar_ml_4 = np.array([0.0598963])
 
 coef_reml_4 = np.array([-1.007537,0.0281258,1.056566])
 
@@ -118,7 +136,9 @@ sig2_reml_4 = np.array([0.2471246])
 
 loglike_reml_4 = np.array([-240.4875])
 
-ranef_reml_4 = np.array([0.06194257])
+ranef_mean_reml_4 = np.array([0.06194257])
+
+ranef_postvar_reml_4 = np.array([0.06063994])
 
 coef_ml_5 = np.array([-0.9042863,0.3148459,1.168292])
 
@@ -130,7 +150,9 @@ sig2_ml_5 = np.array([3.544089])
 
 loglike_ml_5 = np.array([-492.379])
 
-ranef_ml_5 = np.array([-8.084977e-11])
+ranef_mean_ml_5 = np.array([-8.084977e-11])
+
+ranef_postvar_ml_5 = np.array([1.72954e-14])
 
 coef_reml_5 = np.array([-0.9042863,0.3148459,1.168292])
 
@@ -142,7 +164,9 @@ sig2_reml_5 = np.array([3.58895])
 
 loglike_reml_5 = np.array([-495.9686])
 
-ranef_reml_5 = np.array([-7.014589e-11])
+ranef_mean_reml_5 = np.array([-7.014589e-11])
+
+ranef_postvar_reml_5 = np.array([1.299295e-14])
 
 coef_ml_6 = np.array([-1.050962])
 
@@ -154,7 +178,9 @@ sig2_ml_6 = np.array([0.2458377])
 
 loglike_ml_6 = np.array([-384.207])
 
-ranef_ml_6 = np.array([0.2674646,-2.977088])
+ranef_mean_ml_6 = np.array([0.2674646,-2.977088])
+
+ranef_postvar_ml_6 = np.array([0.08562785,-0.002494977,-0.002494977,0.1171282]).reshape(2,2, order='F')
 
 coef_reml_6 = np.array([-1.051086])
 
@@ -166,7 +192,9 @@ sig2_reml_6 = np.array([0.2483587])
 
 loglike_reml_6 = np.array([-386.3161])
 
-ranef_reml_6 = np.array([0.2672834,-2.975625])
+ranef_mean_reml_6 = np.array([0.2672834,-2.975625])
+
+ranef_postvar_reml_6 = np.array([0.08622758,-0.002540501,-0.002540501,0.1182715]).reshape(2,2, order='F')
 
 coef_ml_7 = np.array([-1.081455])
 
@@ -178,7 +206,9 @@ sig2_ml_7 = np.array([4.493966])
 
 loglike_ml_7 = np.array([-546.44])
 
-ranef_ml_7 = np.array([0.01001719,-0.2415294])
+ranef_mean_ml_7 = np.array([0.01001719,-0.2415294])
+
+ranef_postvar_ml_7 = np.array([0.3062631,0.269284,0.269284,1.163024]).reshape(2,2, order='F')
 
 coef_reml_7 = np.array([-1.081383])
 
@@ -190,7 +220,9 @@ sig2_reml_7 = np.array([4.513998])
 
 loglike_reml_7 = np.array([-547.3918])
 
-ranef_reml_7 = np.array([0.009852155,-0.2417316])
+ranef_mean_reml_7 = np.array([0.009852155,-0.2417316])
+
+ranef_postvar_reml_7 = np.array([0.3058774,0.2693747,0.2693747,1.167924]).reshape(2,2, order='F')
 
 coef_ml_8 = np.array([-1.073453,1.053418])
 
@@ -202,7 +234,9 @@ sig2_ml_8 = np.array([0.3140142])
 
 loglike_ml_8 = np.array([-373.296])
 
-ranef_ml_8 = np.array([0.3161281,-2.683597])
+ranef_mean_ml_8 = np.array([0.3161281,-2.683597])
+
+ranef_postvar_ml_8 = np.array([0.07021237,-0.0006739007,-0.0006739007,0.1465923]).reshape(2,2, order='F')
 
 coef_reml_8 = np.array([-1.073794,1.053323])
 
@@ -214,7 +248,9 @@ sig2_reml_8 = np.array([0.3200637])
 
 loglike_reml_8 = np.array([-377.3301])
 
-ranef_reml_8 = np.array([0.3143876,-2.679739])
+ranef_mean_reml_8 = np.array([0.3143876,-2.679739])
+
+ranef_postvar_reml_8 = np.array([0.07112226,-0.0006985097,-0.0006985097,0.1492243]).reshape(2,2, order='F')
 
 coef_ml_9 = np.array([-0.9818097,1.008153])
 
@@ -226,7 +262,9 @@ sig2_ml_9 = np.array([3.153975])
 
 loglike_ml_9 = np.array([-506.8125])
 
-ranef_ml_9 = np.array([-0.5169716,1.269013])
+ranef_mean_ml_9 = np.array([-0.5169716,1.269013])
+
+ranef_postvar_ml_9 = np.array([0.541754,0.03947762,0.03947762,0.7527236]).reshape(2,2, order='F')
 
 coef_reml_9 = np.array([-0.98178,1.007719])
 
@@ -238,7 +276,9 @@ sig2_reml_9 = np.array([3.194069])
 
 loglike_reml_9 = np.array([-508.7771])
 
-ranef_reml_9 = np.array([-0.5128893,1.260547])
+ranef_mean_reml_9 = np.array([-0.5128893,1.260547])
+
+ranef_postvar_reml_9 = np.array([0.5446423,0.04000054,0.04000054,0.7574266]).reshape(2,2, order='F')
 
 coef_ml_10 = np.array([-1.051735,0.0301456,0.9428524])
 
@@ -250,7 +290,9 @@ sig2_ml_10 = np.array([0.2262265])
 
 loglike_ml_10 = np.array([-357.3961])
 
-ranef_ml_10 = np.array([-0.9528117,-0.5062426])
+ranef_mean_ml_10 = np.array([-0.9528117,-0.5062426])
+
+ranef_postvar_ml_10 = np.array([0.0541667,0.001190719,0.001190719,0.1073186]).reshape(2,2, order='F')
 
 coef_reml_10 = np.array([-1.051718,0.03018926,0.9431163])
 
@@ -262,7 +304,9 @@ sig2_reml_10 = np.array([0.232731])
 
 loglike_reml_10 = np.array([-363.7185])
 
-ranef_reml_10 = np.array([-0.9460148,-0.5055537])
+ranef_mean_reml_10 = np.array([-0.9460148,-0.5055537])
+
+ranef_postvar_reml_10 = np.array([0.05532027,0.001245608,0.001245608,0.1102413]).reshape(2,2, order='F')
 
 coef_ml_11 = np.array([-0.8595207,-0.1011351,1.339517])
 
@@ -274,7 +318,9 @@ sig2_ml_11 = np.array([4.524381])
 
 loglike_ml_11 = np.array([-593.7777])
 
-ranef_ml_11 = np.array([0.01068134,-0.3103455])
+ranef_mean_ml_11 = np.array([0.01068134,-0.3103455])
+
+ranef_postvar_ml_11 = np.array([0.2433299,0.1886378,0.1886378,1.782266]).reshape(2,2, order='F')
 
 coef_reml_11 = np.array([-0.860192,-0.1009165,1.339279])
 
@@ -286,5 +332,7 @@ sig2_reml_11 = np.array([4.597795])
 
 loglike_reml_11 = np.array([-596.5262])
 
-ranef_reml_11 = np.array([0.01053167,-0.3070622])
+ranef_mean_reml_11 = np.array([0.01053167,-0.3070622])
+
+ranef_postvar_reml_11 = np.array([0.241817,0.1869892,0.1869892,1.78987]).reshape(2,2, order='F')
 
