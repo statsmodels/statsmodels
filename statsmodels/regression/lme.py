@@ -1112,6 +1112,41 @@ class LMEResults(base.LikelihoodModelResults):
         return np.sqrt(self.sig2 * np.diag(self.cov_params())[p:])
 
 
+    def ranef(self):
+        """
+        Returns posterior means of all random effects.
+
+        Returns:
+        --------
+        ranef_dict : dict
+
+        """
+
+        ranef_dict = {}
+        for k in range(self.model.ngroup):
+
+            endog = self.model.endog_li[k]
+            exog = self.model.exog_li[k]
+            ex_r = self.model.exog_re_li[k]
+            label = self.model.group_labels[k]
+
+            # Get the residuals
+            expval = np.dot(exog, self.params_fe)
+            resid = endog - expval
+
+            # The marginal covariance matrix for this group
+            vmat = np.dot(ex_r, np.dot(self.revar, ex_r.T))
+            vmat += self.sig2 * np.eye(vmat.shape[0])
+
+            # TODO: use SMW here
+            vresid = np.linalg.solve(vmat, resid)
+
+            ranef_dict[label] = np.dot(self.revar,
+                                       np.dot(ex_r.T, vresid))
+
+        return ranef_dict
+
+
     def summary(self, yname=None, xname=None, title=None, alpha=.05):
         """Summarize the Regression Results
 

@@ -33,6 +33,9 @@ for (file in files) {
                 c(pr, pr))
         rslt[[sprintf("sig2_%s_%d", meth, ds_ix)]] = attr(VarCorr(md), "sc")^2
         rslt[[sprintf("loglike_%s_%d", meth, ds_ix)]] = as.numeric(logLik(md))
+
+        re = as.matrix(ranef(md)$groups)
+        rslt[[sprintf("ranef_%s_%d", meth, ds_ix)]] = re[1,]
     }
 }
 
