@@ -26,7 +26,7 @@ class TestLME(object):
                     endog = exog_fe.sum(1) + np.random.normal(size=n*m)
                     groups = np.kron(range(n), np.ones(m))
 
-                    md = LME(endog, exog_fe, exog_re, groups)
+                    md = LME(endog, exog_fe, groups, exog_re)
                     if jl == 0:
                         like = lambda x: -md.like_L(x, reml, pen)
                         score = lambda x: -md.score_L(x, reml, pen)
@@ -90,7 +90,7 @@ class TestLME(object):
         exog_re = data[:,ii]
 
         # Fit the model
-        md = LME(endog, exog_fe, exog_re, groups)
+        md = LME(endog, exog_fe, groups, exog_re)
         mdf = md.fit(reml=reml)
 
         assert_almost_equal(mdf.params_fe, coef, decimal=4)

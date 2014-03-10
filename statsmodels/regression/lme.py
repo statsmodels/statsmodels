@@ -3,11 +3,10 @@ Linear mixed effects models
 
 The primary reference for this implementation is:
 
-MJ Lindstrom, DM Bates (1988).  Newton Raphson and EM algorithms for
-linear mixed effects models for repeated measures data.  Journal of
+MJ Lindstrom, DM Bates (1988).  "Newton Raphson and EM algorithms for
+linear mixed effects models for repeated measures data".  Journal of
 the American Statistical Association. Volume 83, Issue 404, pages
 1014-1022.
-
 
 Notation:
 
@@ -59,6 +58,7 @@ import statsmodels.base.model as base
 from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
 from scipy.stats.distributions import norm
 import pandas as pd
+import patsy
 #import collections  # OrderedDict requires python >= 2.7
 from statsmodels.compatnp.collections import OrderedDict
 import warnings
@@ -67,18 +67,45 @@ from statsmodels.tools.sm_exceptions import \
 
 class LME(base.Model):
 
-    def __init__(self, endog, exog, exog_re, groups, missing='none'):
+    def __init__(self, endog, exog, groups, exog_re=None,
+                 missing='none'):
+        """
+        Creates an LME object specifying a linear mixed effects model.
+        Use the `fit` method to fit the model.
 
-        groups = np.array(groups)
+        Arguments:
+        ----------
+        endog : 1d array-like
+            The dependent variable
+        exog : 2d array-like
+            A matrix of independent variables used to determine the
+            mean structure
+        groups : 1d array-like
+            A vector of labels determining the groups -- data from
+            different groups are independent
+        exog_re : 2d array-like
+            A matrix of independent variables used to determine the
+            variance structure.  If None, defaults to a random
+            intercept for each of the groups.  May be set from
+            a formula using a call to `set_random`.
+        missing : string
+            The approach to missing data handling
+        """
+
+        groups = np.asarray(groups)
 
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
         if exog.ndim == 1:
             exog = exog[:,None]
-        if exog_re.ndim == 1:
+        if exog_re is not None and exog_re.ndim == 1:
             exog_re = exog_re[:,None]
 
-        # Calling super creates self.ndog, etc. as ndarrays and the
+        # Default random effects structure (random intercepts).
+        if exog_re is None:
+            exog_re = np.ones((len(endog), 1), dtype=np.float64)
+
+        # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
         super(LME, self).__init__(endog, exog, exog_re=exog_re,
                                   groups=groups, missing=missing)
@@ -101,6 +128,25 @@ class LME(base.Model):
         # The total number of observations, summed over all groups
         self.ntot = sum([len(y) for y in self.endog_li])
 
+
+    def set_random(self, re_formula, data):
+        """
+        Set the random effects structure using a formula.
+
+        Arguments:
+        ----------
+        re_formula : string
+            A string defining the variance structure of the model
+            as a formula.
+        data : array-like
+            The data referenced in re_formula.  Currently must be a
+            Pandas DataFrame.
+        """
+
+        # TODO: need a way to process this for missing data
+        self.exog_re = patsy.dmatrix(re_formula, data)
+        self.exog_re = np.asarray(self.exog_re)
+        self.exog_re_li = self.group_list(self.exog_re)
 
     def group_list(self, array):
         """
