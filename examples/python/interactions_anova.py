@@ -2,25 +2,25 @@
 ## Interactions and ANOVA
 
 # Note: This script is based heavily on Jonathan Taylor's class notes http://www.stanford.edu/class/stats191/interactions.html
-# 
+#
 # Download and format data:
 
 import numpy as np
 np.set_printoptions(precision=4, suppress=True)
 import statsmodels.api as sm
-import pandas
+import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.formula.api import ols
 from statsmodels.graphics.api import interaction_plot, abline_plot
 from statsmodels.stats.anova import anova_lm
 
 try:
-    salary_table = pandas.read_csv('salary.table')
+    salary_table = pd.read_csv('salary.table')
 except:  # recent pandas can read URL without urlopen
     from urllib2 import urlopen
     url = 'http://stats191.stanford.edu/data/salary.table'
     fh = urlopen(url)
-    salary_table = pandas.read_table(fh)
+    salary_table = pd.read_table(fh)
     salary_table.to_csv('salary.table')
 
 E = salary_table.E
@@ -50,7 +50,7 @@ lm = ols(formula, salary_table).fit()
 print lm.summary()
 
 
-# Have a look at the created design matrix: 
+# Have a look at the created design matrix:
 
 lm.model.exog[:5]
 
@@ -213,10 +213,10 @@ interaction_plot(E, M, U, colors=['red','blue'], markers=['^','D'],
 # ## Minority Employment Data
 
 try:
-    minority_table = pandas.read_table('minority.table')
+    minority_table = pd.read_table('minority.table')
 except:  # don't have data already
     url = 'http://stats191.stanford.edu/data/minority.table'
-    minority_table = pandas.read_table(url)
+    minority_table = pd.read_table(url)
 
 factor_group = minority_table.groupby(['ETHN'])
 
@@ -307,10 +307,10 @@ print table8
 # ## One-way ANOVA
 
 try:
-    rehab_table = pandas.read_csv('rehab.table')
+    rehab_table = pd.read_csv('rehab.table')
 except:
     url = 'http://stats191.stanford.edu/data/rehab.csv'
-    rehab_table = pandas.read_table(url, delimiter=",")
+    rehab_table = pd.read_table(url, delimiter=",")
     rehab_table.to_csv('rehab.table')
 
 plt.figure(figsize=(6,6))
@@ -328,10 +328,10 @@ print rehab_lm.summary()
 # ## Two-way ANOVA
 
 try:
-    kidney_table = pandas.read_table('./kidney.table')
+    kidney_table = pd.read_table('./kidney.table')
 except:
     url = 'http://stats191.stanford.edu/data/kidney.table'
-    kidney_table = pandas.read_table(url, delimiter=" *")
+    kidney_table = pd.read_table(url, delimiter=" *")
 
 
 # Explore the dataset
@@ -364,13 +364,13 @@ print anova_lm(ols('np.log(Days+1) ~ C(Weight)', data=kt).fit(),
 
 
 # ## Sum of squares
-# 
+#
 #  Illustrates the use of different types of sums of squares (I,II,II)
 #  and how the Sum contrast can be used to produce the same output between
 #  the 3.
-# 
+#
 #  Types I and II are equivalent under a balanced design.
-# 
+#
 #  Don't use Type III with non-orthogonal contrast - ie., Treatment
 
 sum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',

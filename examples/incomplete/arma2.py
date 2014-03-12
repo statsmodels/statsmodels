@@ -21,8 +21,8 @@ y = arma_generate_sample(ar, ma, nobs)
 
 # Now, optionally, we can add some dates information. For this example,
 # we'll use a pandas time series.
-import pandas
+import pandas as pd
 dates = sm.tsa.datetools.dates_from_range('1980m1', length=nobs)
-y = pandas.TimeSeries(y, index=dates)
+y = pd.TimeSeries(y, index=dates)
 arma_mod = sm.tsa.ARMA(y, order=(2, 2))
 arma_res = arma_mod.fit(trend='nc', disp=-1)

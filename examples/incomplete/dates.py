@@ -2,7 +2,7 @@
 Using dates with timeseries models
 """
 import statsmodels.api as sm
-import pandas
+import pandas as pd
 
 # Getting started
 # ---------------
@@ -17,7 +17,7 @@ dates = sm.tsa.datetools.dates_from_range('1700', length=len(data.endog))
 # ------------
 
 # Make a pandas TimeSeries or DataFrame
-endog = pandas.TimeSeries(data.endog, index=dates)
+endog = pd.TimeSeries(data.endog, index=dates)
 
 # and instantiate the model
 ar_model = sm.tsa.AR(endog, freq='A')

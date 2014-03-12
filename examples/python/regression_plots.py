@@ -2,7 +2,7 @@
 ## Regression Plots
 
 import numpy as np
-import pandas
+import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
@@ -29,19 +29,19 @@ print prestige_model.summary()
 #### Influence plots
 
 # Influence plots show the (externally) studentized residuals vs. the leverage of each observation as measured by the hat matrix.
-# 
-# Externally studentized residuals are residuals that are scaled by their standard deviation where 
-# 
+#
+# Externally studentized residuals are residuals that are scaled by their standard deviation where
+#
 # $$var(\\hat{\epsilon}_i)=\hat{\sigma}^2_i(1-h_{ii})$$
-# 
+#
 # with
-# 
+#
 # $$\hat{\sigma}^2_i=\frac{1}{n - p - 1 \;\;}\sum_{j}^{n}\;\;\;\forall \;\;\; j \neq i$$
-# 
+#
 # $n$ is the number of observations and $p$ is the number of regressors. $h_{ii}$ is the $i$-th diagonal element of the hat matrix
-# 
+#
 # $$H=X(X^{\;\prime}X)^{-1}X^{\;\prime}$$
-# 
+#
 # The influence of each point can be visualized by the criterion keyword argument. Options are Cook's distance and DFFITS, two measures of influence.
 
 fig, ax = plt.subplots(figsize=(12,8))
@@ -57,12 +57,12 @@ fig = sm.graphics.influence_plot(prestige_model, ax=ax, criterion="cooks")
 # Since we are doing multivariate regressions, we cannot just look at individual bivariate plots to discern relationships. <br />
 # Instead, we want to look at the relationship of the dependent variable and independent variables conditional on the other <br />
 # independent variables. We can do this through using partial regression plots, otherwise known as added variable plots. <br />
-# 
+#
 # In a partial regression plot, to discern the relationship between the response variable and the $k$-th variabe, we compute <br />
 # the residuals by regressing the response variable versus the independent variables excluding $X_k$. We can denote this by <br />
 # $X_{\sim k}$. We then compute the residuals by regressing $X_k$ on $X_{\sim k}$. The partial regression plot is the plot <br />
 # of the former versus the latter residuals. <br />
-# 
+#
 # The notable points of this plot are that the fitted line has slope $\beta_k$ and intercept zero. The residuals of this plot <br />
 # are the same as those of the least squares fit of the original model with full $X$. You can discern the effects of the <br />
 # individual data values on the estimation of a coefficient easily. If obs_labels is True, then these points are annotated <br />
@@ -135,10 +135,10 @@ fig = sm.graphics.plot_fit(prestige_model, "education", ax=ax)
 ### Statewide Crime 2009 Dataset
 
 # Compare the following to http://www.ats.ucla.edu/stat/stata/webbooks/reg/chapter4/statareg_self_assessment_answers4.htm
-# 
+#
 # Though the data here is not the same as in that example. You could run that example by uncommenting the necessary cells below.
 
-#dta = pandas.read_csv("http://www.stat.ufl.edu/~aa/social/csv_files/statewide-crime-2.csv")
+#dta = pd.read_csv("http://www.stat.ufl.edu/~aa/social/csv_files/statewide-crime-2.csv")
 #dta = dta.set_index("State", inplace=True).dropna()
 #dta.rename(columns={"VR" : "crime",
 #                    "MR" : "murder",
@@ -190,7 +190,7 @@ fig = sm.graphics.influence_plot(crime_model, ax=ax)
 from statsmodels.formula.api import rlm
 
 
-rob_crime_model = rlm("murder ~ urban + poverty + hs_grad + single", data=dta, 
+rob_crime_model = rlm("murder ~ urban + poverty + hs_grad + single", data=dta,
                       M=sm.robust.norms.TukeyBiweight(3)).fit(conv="weights")
 print rob_crime_model.summary()
 
@@ -217,7 +217,7 @@ rm = resid2.mean()
 from statsmodels.graphics import utils
 fig, ax = plt.subplots(figsize=(12,8))
 ax.plot(resid2[idx], hat_matrix_diag, 'o')
-ax = utils.annotate_axes(range(nobs), labels=rob_crime_model.model.data.row_labels[idx], 
+ax = utils.annotate_axes(range(nobs), labels=rob_crime_model.model.data.row_labels[idx],
                     points=zip(resid2[idx], hat_matrix_diag), offset_points=[(-5,5)]*nobs,
                     size="large", ax=ax)
 ax.set_xlabel("resid2")
