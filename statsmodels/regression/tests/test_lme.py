@@ -107,7 +107,8 @@ class TestLME(object):
         if not irf: # Free random effects covariance
             mdf = md.fit(reml=reml)
         else: # Independent random effects
-            mdf = md.fit(reml=reml, free_revar=np.eye(exog_re.shape[1]))
+            mdf = md.fit(reml=reml, free=(np.ones(exog_fe.shape[1]),
+                                          np.eye(exog_re.shape[1])))
 
         assert_almost_equal(mdf.params_fe, coef, decimal=4)
         assert_almost_equal(mdf.revar, revar_r, decimal=4)

@@ -31,7 +31,7 @@ differ.  The parameterizations are:
 
 * The "natural parameterization" in which cov(endog) = sig2*I +
   Z * revar * Z'.  This is the main parameterization visible to the
-  user, and is used explicitly by `full_like`.
+  user.
 
 * The "profile parameterization" in which cov(endog) = I +
   Z * revar * Z'.  This is the parameterization of the profile
@@ -281,9 +281,9 @@ class LME(base.Model):
 
     def like(self, params, reml=True, pen=0.):
         """
-        Evaluate the log-likelihood of the linear mixed effects model.
-        Specifically, this is the profile likelihood in which the
-        scale parameter sig2 has been profiled out.
+        Evaluate the profile log-likelihood of the linear mixed
+        effects model.  Specifically, this is the profile likelihood
+        in which the scale parameter sig2 has been profiled out.
 
         Arguments
         ---------
@@ -349,82 +349,16 @@ class LME(base.Model):
             likeval -= (self.ntot - p) * np.log(qf) / 2.
             _,ld = np.linalg.slogdet(xvx)
             likeval -= ld / 2.
+            likeval -= (self.ntot - p) * np.log(2 * np.pi) / 2.
+            likeval += (self.ntot - p) * np.log(self.ntot - p) / 2.
+            likeval -= (self.ntot - p) / 2.
         else:
             likeval -= self.ntot * np.log(qf) / 2.
+            likeval -= self.ntot * np.log(2 * np.pi) / 2.
+            likeval += self.ntot * np.log(self.ntot) / 2.
+            likeval -= self.ntot / 2.
 
         return likeval
-
-
-    def full_like(self, params_fe, revar, sig2, reml=True, pen=0.):
-        """
-        Evaluate the full log-likelihood of the linear mixed effects
-        model.
-
-        Arguments
-        ---------
-        params_fe : 1d ndarray
-            The slope parameter values.
-        revar : 2d ndarray
-            The covariance matrix of the random effects.  The
-            covariance of the data is sig2 * I + Z * revar * Z'.
-        sig2 : float
-            The error variance
-        reml : bool
-            If true, return REML log likelihood, else return ML
-            log likelihood
-        pen : non-negative float
-            Weight for the penalty parameter for negative variances
-
-        Returns
-        -------
-        likeval : scalar
-            The log-likelihood value at the given parameters.
-        """
-
-        # Check domain for random effects covariance
-        try:
-            cy = np.linalg.cholesky(revar)
-        except np.linalg.LinAlgError:
-            return -np.inf
-
-        revari = np.linalg.inv(revar)
-
-        likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
-        xvx = 0.
-        for k in range(self.ngroup):
-
-            exog = self.exog_li[k]
-            ex_r = self.exog_re_li[k]
-
-            # The residuals
-            expval = np.dot(exog, params_fe)
-            resid = self.endog_li[k] - expval
-
-            # Part 1 of the log likelihood (for both ML and REML)
-            ld = smw_logdet(sig2, ex_r, revar, revari)
-            likeval -= ld / 2.
-
-            # Part 2 of the log likelihood (for both ML and REML)
-            u = smw_solve(sig2, ex_r, revar, revari, resid)
-            qf = np.dot(resid, u)
-            likeval -= qf / 2
-
-            if reml:
-                u = smw_solve(sig2, ex_r, revar, revari, exog)
-                xvx += np.dot(exog.T, u)
-
-        if reml:
-            _,ld = np.linalg.slogdet(xvx)
-            likeval -= ld / 2
-
-        if reml:
-            p = self.exog.shape[1]
-            likeval -= (self.ntot - p) * np.log(2 * np.pi) / 2
-        else:
-            likeval -= self.ntot * np.log(2 * np.pi) / 2
-
-        return likeval
-
 
     def _gen_dV_dPsi(self, ex_r, max_ix=None):
         """
@@ -951,8 +885,8 @@ class LME(base.Model):
         return params, np.max(np.abs(gro)) < gtol
 
     def fit(self, start_fe=None, start_re=None, reml=True, num_sd=2,
-            num_em=0, do_cg=True, pen=0., gtol=1e-4,
-            free_revar=None, full_output=False):
+            num_em=0, do_cg=True, pen=0., gtol=1e-4, use_L=True,
+            free=None, full_output=False):
         """
         Fit a linear mixed model to the data.
 
@@ -984,15 +918,21 @@ class LME(base.Model):
         gtol : non-negtive float
             Algorithm is considered converged if the sup-norm of
             the gradient is smaller than this value.
-        free_revar : 2d array-like
-            If not `None`, the is a square 2 dimensional matrix with
-            size equal to the number of random effects.  The elements
-            of the matrix should all be 0 or 1.  A 1 indicates that
-            the corresponding element of revar is estimated as a free
-            parameter; a 0 indicates that the element is fixed at
-            its starting value.  A primary use case if to set
-            free_revar equal to the identity matrix to estimate a
-            model with independent random effects.
+        use_L : bool
+            If True, optimization is carried out using the lower
+            triangle of the square root of the random effects
+            covariance matrix, otherwise it is carried out using the
+            lower triangle of the random effects covariance matrix.
+        free : tuple of ndarrays
+            If not `None`, this is a tuple of length 2 containing 2
+            0/1 indicator arrays.  The first element of `free`
+            corresponds to the regression slopes and the second
+            element of `free` corresponds to the random effects
+            covariance matrix.  A 1 in either array indicates that the
+            corresponding parameter is estimated, a 0 indicates that
+            it is fixed at its starting value.  One use case if to set
+            free[1] to the identity matrix to estimate a model
+            with independent random effects.
         full_output : bool
             If true, attach iteration history to results
 
@@ -1001,15 +941,31 @@ class LME(base.Model):
         A LMEResults instance.
         """
 
-        like = lambda x: -self.like_L(x, reml, pen)
+        # Check if we must force use_L=False due to covariance
+        # parameter constraints.
+        if free is not None and use_L == True:
+            if (free[1] != np.eye(free[1].shape[0])).all():
+                use_L = False
 
-        if free_revar is not None:
-            ix = np.tril_indices(self.exog_re.shape[1])
-            pat = free_revar[ix]
-            pat = np.concatenate((np.ones(self.exog.shape[1]), pat))
-            score = lambda x: -pat*self.score_L(x, reml, pen)
+        if use_L:
+            like = lambda x: -self.like_L(x, reml, pen)
         else:
-            score = lambda x: -self.score_L(x, reml, pen)
+            like = lambda x: -self.like(x, reml, pen)
+
+        if free is not None:
+            pat_slopes = free[0]
+            ix = np.tril_indices(self.exog_re.shape[1])
+            pat_revar = free[1][ix]
+            pat = np.concatenate((pat_slopes, pat_revar))
+            if use_L:
+                score = lambda x: -pat*self.score_L(x, reml, pen)
+            else:
+                score = lambda x: -pat*self.score(x, reml, pen)
+        else:
+            if use_L:
+                score = lambda x: -self.score_L(x, reml, pen)
+            else:
+                score = lambda x: -self.score(x, reml, pen)
 
         if full_output:
             hist = []
@@ -1022,7 +978,10 @@ class LME(base.Model):
         else:
             params_fe = np.zeros(self.exog.shape[1], dtype=np.float64)
         if start_re is not None:
-            revar_rt = np.linalg.cholesky(start_re)
+            if use_L:
+                revar_rt = np.linalg.cholesky(start_re)
+            else:
+                revar_rt = start_re
         else:
             revar_rt = np.eye(self.exog_re.shape[1])
         params_prof = self._pack(params_fe, revar_rt)
@@ -1037,7 +996,11 @@ class LME(base.Model):
 
             # Gradient algorithms use a different parameterization
             # that profiles out sigma^2.
-            params_prof = self._pack(params_fe, revar / sig2)
+            if use_L:
+                params_prof = self._pack(params_fe, revar / sig2)
+            else:
+                revar_rt = np.linalg.cholesky(revar / sig2)
+                params_prof = self._pack(params_fe, revar_rt)
             if np.max(np.abs(score(params_prof))) < gtol:
                 success = True
 
@@ -1072,7 +1035,10 @@ class LME(base.Model):
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
         params_fe, revar_ltri = self._unpack(params_prof, sym=False)
-        revar_unscaled = np.dot(revar_ltri, revar_ltri.T)
+        if use_L:
+            revar_unscaled = np.dot(revar_ltri, revar_ltri.T)
+        else:
+            revar_unscaled = revar_ltri
         sig2 = self.get_sig2(params_fe, revar_unscaled, reml)
         revar = sig2 * revar_unscaled
 
@@ -1088,12 +1054,12 @@ class LME(base.Model):
             msg = "The MLE may be on the boundary of the parameter space."
             warnings.warn(msg, ConvergenceWarning)
 
-        # Compute the Hessian at the MLE.  The hessian function
-        # expacts the random effects covariance matrix, not the square
-        # root, so we square it first.
+        # Compute the Hessian at the MLE.  Noe that the hessian
+        # function expects the random effects covariance matrix (not
+        # its square root).
         params_hess = self._pack(params_fe, revar_unscaled)
         hess = self.hessian(params_hess)
-        if free_revar is not None:
+        if free is not None:
             ii = np.flatnonzero(pat)
             hess1 = hess[ii,:][:,ii]
             pcov = np.zeros_like(hess)
@@ -1110,7 +1076,7 @@ class LME(base.Model):
         results.converged = success
         results.hist = hist
 
-        results.likeval = self.full_like(params_fe, revar, sig2, reml)
+        results.likeval = -like(params_prof)
 
         return results
 
@@ -1345,5 +1311,3 @@ class LMEResults(base.LikelihoodModelResults):
         smry.add_df(sdf, align='l')
 
         return smry
-
-
