@@ -38,6 +38,24 @@ def cffilter(X, low=6, high=32, drift=True):
         The features of `X` between periodicities given by low and high
     trend : array
         The trend in the data with the cycles removed.
+
+    Examples
+    --------
+    >>> import statsmodels.api as sm
+    >>> import pandas as pd
+    >>> dta = sm.datasets.macrodata.load_pandas().data
+    >>> dates = sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3')
+    >>> index = pd.DatetimeIndex(dates)
+    >>> dta.set_index(index, inplace=True)
+
+    >>> cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl", "unemp"]])
+
+    >>> import matplotlib.pyplot as plt
+    >>> fig, ax = plt.subplots()
+    >>> cf_cycles.plot(ax=ax, style=['r--', 'b-'])
+    >>> plt.show()
+
+    .. plot:: plots/cff_plot.py
     """
     #TODO: cythonize/vectorize loop?, add ability for symmetric filter,
     #      and estimates of theta other than random walk.
