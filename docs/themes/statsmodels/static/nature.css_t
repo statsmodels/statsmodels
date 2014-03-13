@@ -270,3 +270,9 @@ div.viewcode-block:target {
 .field-name {
     white-space: nowrap;
 }
+
+.field-body {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    max-width: 600px;
+}
