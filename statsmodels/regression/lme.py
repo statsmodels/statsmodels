@@ -157,9 +157,17 @@ class LME(base.Model):
         if exog_re is not None and exog_re.ndim == 1:
             exog_re = exog_re[:,None]
 
-        # Default random effects structure (random intercepts).
+        self.exog_re_names = None
         if exog_re is None:
+            # Default random effects structure (random intercepts).
             exog_re = np.ones((len(endog), 1), dtype=np.float64)
+        else:
+            try:
+                self.exog_re_names = exog_re.columns
+            except:
+                pass
+            self.exog_re_orig = exog_re
+            self.exog_re = np.asarray(exog_re)
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
@@ -201,6 +209,7 @@ class LME(base.Model):
 
         # TODO: need a way to process this for missing data
         self.exog_re = patsy.dmatrix(re_formula, data)
+        self.exog_re_names = self.exog_re.design_info.column_names
         self.exog_re = np.asarray(self.exog_re)
         self.exog_re_li = self.group_list(self.exog_re)
 
@@ -884,7 +893,7 @@ class LME(base.Model):
 
         return params, np.max(np.abs(gro)) < gtol
 
-    def fit(self, start_fe=None, start_re=None, reml=True, num_sd=2,
+    def fit(self, start=None, reml=True, num_sd=2,
             num_em=0, do_cg=True, pen=0., gtol=1e-4, use_L=True,
             free=None, full_output=False):
         """
@@ -892,12 +901,18 @@ class LME(base.Model):
 
         Parameters
         ----------
-        start_fe : 1d array-like
-            Starting values for the regression slopes.
-        start_re : 2d array-like (symmetric)
-            Starting values for the covariance matrix of the
-            random effects (in the profile parameterization,
-            meaning that cov(Y) = I + Z * start_re * Z').
+        start: dict
+            If provided, this is a dict containing starting values.
+            `start["fe"]` contains starting values for the fixed
+            effects regression slopes.  `start["revar"]` contains
+            the covariance matrix of random effects as found
+            in the `revar` component of LMEResults.  If
+            `start["revar"]` is provided, then `start["sig2"]` must
+            also be provided (this is the error variance).
+            Alternatively, the random effects may be specified as
+            `start["revar_L_unscaled"]`, which is the packed lower
+            triangle of the covariance matrix in the
+            profile parameterization (in this case sig2 is not used).
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
@@ -928,10 +943,11 @@ class LME(base.Model):
             0/1 indicator arrays.  The first element of `free`
             corresponds to the regression slopes and the second
             element of `free` corresponds to the random effects
-            covariance matrix.  A 1 in either array indicates that the
-            corresponding parameter is estimated, a 0 indicates that
-            it is fixed at its starting value.  One use case if to set
-            free[1] to the identity matrix to estimate a model
+            covariance matrix (if `use_L` is False) or it square root
+            (if `use_L` is True).  A 1 in either array indicates that
+            the corresponding parameter is estimated, a 0 indicates
+            that it is fixed at its starting value.  One use case if
+            to set free[1] to the identity matrix to estimate a model
             with independent random effects.
         full_output : bool
             If true, attach iteration history to results
@@ -940,12 +956,6 @@ class LME(base.Model):
         -------
         A LMEResults instance.
         """
-
-        # Check if we must force use_L=False due to covariance
-        # parameter constraints.
-        if free is not None and use_L == True:
-            if (free[1] != np.eye(free[1].shape[0])).all():
-                use_L = False
 
         if use_L:
             like = lambda x: -self.like_L(x, reml, pen)
@@ -973,18 +983,33 @@ class LME(base.Model):
             hist = None
 
         # Starting values
-        if start_fe is not None:
-            params_fe = start_fe.copy()
+        pr = self.exog_re.shape[1]
+        ix = np.tril_indices(pr)
+        if start is None:
+            start = {}
+        if "fe" in start:
+            params_fe = start["fe"]
         else:
             params_fe = np.zeros(self.exog.shape[1], dtype=np.float64)
-        if start_re is not None:
+        if "revar_L_unscaled" in start:
             if use_L:
-                revar_rt = np.linalg.cholesky(start_re)
+                params_re = start["revar_L_unscaled"]
             else:
-                revar_rt = start_re
+                vec = start["revar_L_unscaled"]
+                mat = np.zeros((pr,pr), dtype=np.float64)
+                mat[ix] = vec
+                mat = np.dot(mat, mat.T)
+                params_re = mat[ix]
+        elif "revar" in start:
+            revar_unscaled = start["revar_scaled"] / start["sig2"]
+            if use_L:
+                revar_L_unscaled = np.linalg.cholesky(revar_unscaled)
+                params_re = revar_L_unscaled[ix]
+            else:
+                params_re = revar_unscaled[ix]
         else:
-            revar_rt = np.eye(self.exog_re.shape[1])
-        params_prof = self._pack(params_fe, revar_rt)
+            params_re = np.eye(self.exog_re.shape[1])[ix]
+        params_prof = np.concatenate((params_fe, params_re))
 
         success = False
 
@@ -1072,13 +1097,17 @@ class LME(base.Model):
         results.params_fe = params_fe
         results.revar = revar
         results.sig2 = sig2
+        results.revar_unscaled = revar_unscaled
         results.method = "REML" if reml else "ML"
         results.converged = success
         results.hist = hist
-
+        results.reml = reml
+        results.pen = pen
         results.likeval = -like(params_prof)
 
         return results
+
+
 
 
 class LMEResults(base.LikelihoodModelResults):
@@ -1208,15 +1237,18 @@ class LMEResults(base.LikelihoodModelResults):
         return ranef_dict
 
 
-    def summary(self, yname=None, xname=None, title=None, alpha=.05):
+    def summary(self, yname=None, xname_fe=None, xname_re=None,
+                title=None, alpha=.05):
         """Summarize the Regression Results
 
         Parameters
         -----------
         yname : string, optional
             Default is `y`
-        xname : list of strings, optional
-            Default is `x#` for ## in p the number of regressors
+        xname_fe : list of strings, optional
+            Fixed effects covariate names
+        xname_re : list of strings, optional
+            Random effects covariate names
         title : string, optional
             Title for the top table. If not None, then this replaces
             the default title
@@ -1261,23 +1293,25 @@ class LMEResults(base.LikelihoodModelResults):
         # Number of random efects parameters
         prr = int(pr * (pr + 1) / 2)
 
-        if xname is not None:
-            xname_fe = list(xname)
-            if len(xname) > p:
-                xname_re = xname[p:]
-            else:
-                xname_re = []
+        if xname_fe is not None:
+            xname_fe = xname_fe
+        elif self.model.exog_names is not None:
+            xname_fe = self.model.exog_names
         else:
             xname_fe = []
+
+        if xname_re is not None:
+            xname_re = xname_re
+        elif self.model.exog_re_names is not None:
+            xname_re = self.model.exog_re_names
+        else:
             xname_re = []
 
         while len(xname_fe) < p:
             xname_fe.append("FE%d" % (len(xname_fe) + 1))
-        xname_fe = xname_fe[0:p]
 
         while len(xname_re) < pr:
             xname_re.append("RE%d" % (len(xname_re) + 1))
-        xname_re = xname_re[0:pr]
 
         float_fmt = "%.3f"
 
@@ -1311,3 +1345,86 @@ class LMEResults(base.LikelihoodModelResults):
         smry.add_df(sdf, align='l')
 
         return smry
+
+
+    def profile_re(self, re_ix, num_low=5, dist_low=1., num_high=5,
+                   dist_high=1.):
+        """
+        Calculate a series of values along a 1-dimensional profile
+        likelihood.
+
+        Arguments:
+        ----------
+        re_ix : integer
+            The index of the variance parameter for which to construct
+            a profile likelihood.
+        num_low : integer
+            The number of points at which to calculate the likelihood
+            below the MLE of the parameter of interest.
+        dist_low : float
+            The distance below the MLE of the parameter of interest to
+            begin calculating points on the profile likelihood.
+        num_high : integer
+            The number of points at which to calculate the likelihood
+            abov the MLE of the parameter of interest.
+        dist_high : float
+            The distance above the MLE of the parameter of interest to
+            begin calculating points on the profile likelihood.
+
+        Result
+        ------
+        A matrix with two columns.  The first column contains the
+        values to which the parameter of interest is constrained.  The
+        second column contains the corresponding likelihood values.
+        """
+
+        model = self.model
+        p = model.exog.shape[1]
+        pr = model.exog_re.shape[1]
+
+        # Need to permute the variables so that the profiled variable
+        # is first.
+        exog_re_li_save = [x.copy() for x in model.exog_re_li]
+        ix = range(pr)
+        ix[0] = re_ix
+        ix[re_ix] = 0
+        for k in range(len(model.exog_re_li)):
+           model.exog_re_li[k] = model.exog_re_li[k][:,ix]
+
+        # Permute the covariance structure to match the permuted data.
+        ru = self.params[p:]
+        ik = np.tril_indices(pr)
+        mat = np.zeros((pr ,pr), dtype=np.float64)
+        mat[ik] = ru
+        mat = np.dot(mat, mat.T)
+        mat = mat[ix,:][:,ix]
+        ix = np.tril_indices(pr)
+        params_re = np.linalg.cholesky(mat)[ix]
+
+        # Define the values to which the parameter of interest will be
+        # constrained.
+        ru0 = params_re[0]
+        left = np.linspace(ru0 - dist_low, ru0, num_low + 1)
+        right = np.linspace(ru0, ru0 + dist_high, num_high+1)[1:]
+        rvalues = np.concatenate((left, right))
+
+        # Indicators of which parameters are free and fixed.
+        free_slopes = np.ones(p, dtype=np.float64)
+        free_revar = np.ones((pr, pr), dtype=np.float64)
+        free_revar[0] = 0
+
+        start = {"fe": self.params_fe}
+
+        likev = []
+        for x in rvalues:
+            params_re[0] = x
+            start["revar_L_unscaled"] = params_re
+            md1 = model.fit(start=start,
+                            free=(free_slopes, free_revar),
+                            reml=self.reml, pen=self.pen)
+            likev.append([md1.revar[0,0], md1.likeval])
+        likev = np.asarray(likev)
+
+        model.exog_re = exog_re_li_save
+
+        return likev
