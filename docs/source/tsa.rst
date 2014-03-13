@@ -175,8 +175,8 @@ process for given lag-polynomials.
 
 .. currentmodule:: statsmodels.tsa
 
-Other Time Series Filters
-"""""""""""""""""""""""""
+Time Series Filters
+"""""""""""""""""""
 
 .. autosummary::
    :toctree: generated/
