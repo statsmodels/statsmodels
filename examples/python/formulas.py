@@ -25,7 +25,7 @@ sm.formula.ols
 
 # Or you can use the following conventioin
 
-import statsmodels.formula as smf
+import statsmodels.formula.api as smf
 
 
 # These names are just a convenient way to get access to each model's `from_formula` classmethod. See, for instance
