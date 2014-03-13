@@ -97,7 +97,7 @@
       "links":[
         {
           "text": "M-estimators for Robust Regression",
-          "target": "notebooks/generated/robust_model_1.html",
+          "target": "notebooks/generated/robust_models_1.html",
           "img": "../_static/images/rlm_overview.png"
         },
         {
@@ -113,7 +113,7 @@
       "links":[
         {   
             "text": "ANOVA",
-            "target": "notebooks/generated/interactions_anova",
+            "target": "notebooks/generated/interactions_anova.html",
             "img": "../_static/images/anova.png"
         }
           ]
