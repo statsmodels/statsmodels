@@ -49,6 +49,11 @@ cleancache:
 	-rm -rf source/examples/notebooks/generated/*
 	-rm -rf ../tools/hash_dict.pickle
 
+
+notebooks:
+	@echo "Generating notebooks from examples/notebooks folder" 
+	$(TOOLSPATH)$(NOTEBOOKBUILD)
+
 html:
 	# generate the examples rst files
 	@echo "Generating reST from examples folder"
