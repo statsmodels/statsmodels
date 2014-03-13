@@ -30,9 +30,24 @@ def hpfilter(X, lamb=1600):
     Examples
     ---------
     >>> import statsmodels.api as sm
-    >>> dta = sm.datasets.macrodata.load()
-    >>> X = dta.data['realgdp']
-    >>> cycle, trend = sm.tsa.filters.hpfilter(X,1600)
+    >>> import pandas as pd
+    >>> dta = sm.datasets.macrodata.load_pandas().data
+    >>> dates = sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3')
+    >>> index = pd.DatetimeIndex(dates)
+    >>> dta.set_index(index, inplace=True)
+
+    >>> cycle, trend = sm.tsa.filters.hpfilter(dta.realgdp, 1600)
+    >>> gdp_decomp = dta[['realgdp']]
+    >>> gdp_decomp["cycle"] = cycle
+    >>> gdp_decomp["trend"] = trend
+
+    >>> import matplotlib.pyplot as plt
+    >>> fig, ax = plt.subplots()
+    >>> gdp_decomp[["realgdp", "trend"]]["2000-03-31":].plot(ax=ax,
+    ...                                                      fontsize=16);
+    >>> plt.show()
+
+    .. plot:: plots/hpf_plot.py
 
     Notes
     -----
