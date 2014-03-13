@@ -1,5 +1,32 @@
 """
-Linear mixed effects models
+Linear mixed effects models for Statsmodels
+
+The data are partitioned into non-overlapping groups, and the model
+for group i is:
+
+Y = X*beta + Z*gamma + epsilon
+
+where
+
+* Y is a n_i dimensional response vector
+* X is a n_i x p dimensional matrix of fixed effects
+  coefficients
+* beta is a p-dimensional vector of fixed effects slopes
+* Z is a n_i x pr dimensional matrix of random effects
+  coefficients
+* gamma is a pr-dimensional random vector with mean 0
+  and covariance matrix Psi; note that each group
+  gets its own independent realization of gamma.
+* epsilon is a n_i dimensional vector of iid normal
+  errors with mean 0 and variance sigma^2; the epsilon
+  values are independent both within and between groups
+
+Y, X and Z must be entirely observed.  beta, Psi, and sigma^2 are
+estimated using ML or REML estimation, and gamma and epsilon are
+random so define the probability model.
+
+The mean structure is E[Y|X,Z] = X*beta.  If only the mean structure
+is of interest, GEE is a good alternative to mixed models.
 
 The primary reference for the implementation details is:
 
@@ -7,6 +34,9 @@ MJ Lindstrom, DM Bates (1988).  "Newton Raphson and EM algorithms for
 linear mixed effects models for repeated measures data".  Journal of
 the American Statistical Association. Volume 83, Issue 404, pages
 1014-1022.
+
+All the likelihood, gradient, and Hessian calculations closely follow
+Lindstrom and Bates.
 
 The following two documents are written more from the perspective of
 users:
@@ -17,10 +47,10 @@ http://lme4.r-forge.r-project.org/slides/2009-07-07-Rennes/3Longitudinal-4.pdf
 
 Notation:
 
-* `revar` is the random effects covariance matrix and `sig2` is the
-  (scalar) error variance.  For a single group, the marginal
-  covariance matrix of endog given exog is sig2*I + Z * revar * Z',
-  where Z is the design matrix for random effects.
+* `revar` is the random effects covariance matrix (Psi above) and
+  `sig2` is the (scalar) error variance.  For a single group, the
+  marginal covariance matrix of endog given exog is sig2*I + Z * revar
+  * Z', where Z is the design matrix for the random effects.
 
 Notes:
 
@@ -29,26 +59,27 @@ places.  The regression slopes (usually called `params_fe`) are
 identical in all three parameterizations, but the variance parameters
 differ.  The parameterizations are:
 
-* The "natural parameterization" in which cov(endog) = sig2*I +
-  Z * revar * Z'.  This is the main parameterization visible to the
-  user.
+* The "natural parameterization" in which cov(endog) = sig2*I + Z *
+  revar * Z', as described above.  This is the main parameterization
+  visible to the user.
 
 * The "profile parameterization" in which cov(endog) = I +
-  Z * revar * Z'.  This is the parameterization of the profile
+  Z * revar1 * Z'.  This is the parameterization of the profile
   likelihood that is maximized to produce parameter estimates.
   (see Lindstrom and Bates for details).  The "natural" revar is
-  equal to the "profile" revar times sig2.
+  equal to the "profile" revar1 times sig2.
 
 * The "square root parameterization" in which we work with the
-  Cholesky factor of revar instead of revar directly.
+  Cholesky factor of revar1 instead of revar1 directly.
 
 All three parameterizations can be "packed" by concatenating params_fe
-with the lower triangle of the dependence structure.  Note that when
-unpacking, it is important to either square or reflect the dependence
-structure depending on which parameterization is being used.
+together with the lower triangle of the dependence structure.  Note
+that when unpacking, it is important to either square or reflect the
+dependence structure depending on which parameterization is being
+used.
 
 2. The situation where the random effects covariance matrix is
-singular is very challenging.  Very small changes in the covariance
+singular is numerically challenging.  Small changes in the covariance
 parameters may lead to large changes in the likelihood and
 derivatives.
 
@@ -174,6 +205,12 @@ class LME(base.Model):
         super(LME, self).__init__(endog, exog, groups=groups,
                                   exog_re=exog_re, missing=missing)
 
+        # Model dimensions
+        self.p = exog.shape[1]
+        if exog_re is not None:
+            self.pr = exog_re.shape[1]
+            self.prr = int(self.pr * (self.pr + 1) / 2)
+
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the groups.
         group_labels = list(set(groups))
@@ -195,7 +232,8 @@ class LME(base.Model):
 
     def set_random(self, re_formula, data):
         """
-        Set the random effects structure using a formula.
+        Set the random effects structure using a formula.  This is an
+        alternative to providing `exog_re` in the LME constructor.
 
         Arguments:
         ----------
@@ -205,6 +243,13 @@ class LME(base.Model):
         data : array-like
             The data referenced in re_formula.  Currently must be a
             Pandas DataFrame.
+
+        Notes
+        -----
+        If the random effects structure is not set either by providing
+        `exog_re` to the LME constructor, or by calling `set_random`,
+        then the default is a structure with random intercepts for the
+        groups.
         """
 
         # TODO: need a way to process this for missing data
@@ -212,6 +257,8 @@ class LME(base.Model):
         self.exog_re_names = self.exog_re.design_info.column_names
         self.exog_re = np.asarray(self.exog_re)
         self.exog_re_li = self.group_list(self.exog_re)
+        self.pr = exog_re.shape
+        self.prr = int(self.pr * (self.pr + 1) / 2)
 
     def group_list(self, array):
         """
@@ -250,15 +297,12 @@ class LME(base.Model):
             The random effects covariance matrix
         """
 
-        pf = self.exog.shape[1]
-        pr = self.exog_re.shape[1]
-        nr = pr * (pr + 1) / 2
-        params_fe = params[0:pf]
-        params_re = params[pf:]
+        params_fe = params[0:self.p]
+        params_re = params[self.p:]
 
         # Unpack the covariance matrix of the random effects
-        revar = np.zeros((pr, pr), dtype=np.float64)
-        ix = np.tril_indices(pr)
+        revar = np.zeros((self.pr, self.pr), dtype=np.float64)
+        ix = np.tril_indices(self.pr)
         revar[ix] = params_re
 
         if sym:
@@ -354,13 +398,13 @@ class LME(base.Model):
                 xvx += np.dot(exog.T, mat)
 
         if reml:
-            p = self.exog.shape[1]
-            likeval -= (self.ntot - p) * np.log(qf) / 2.
+            likeval -= (self.ntot - self.p) * np.log(qf) / 2.
             _,ld = np.linalg.slogdet(xvx)
             likeval -= ld / 2.
-            likeval -= (self.ntot - p) * np.log(2 * np.pi) / 2.
-            likeval += (self.ntot - p) * np.log(self.ntot - p) / 2.
-            likeval -= (self.ntot - p) / 2.
+            likeval -= (self.ntot - self.p) * np.log(2 * np.pi) / 2.
+            likeval += ((self.ntot - self.p) *
+                        np.log(self.ntot - self.p) / 2.)
+            likeval -= (self.ntot - self.p) / 2.
         else:
             likeval -= self.ntot * np.log(qf) / 2.
             likeval -= self.ntot * np.log(2 * np.pi) / 2.
@@ -380,9 +424,9 @@ class LME(base.Model):
         If max_ix is not None, the iterations terminate after max_ix
         values are yielded.
         """
-        pr = ex_r.shape[1]
+
         jj = 0
-        for j1 in range(pr):
+        for j1 in range(self.pr):
             for j2 in range(j1 + 1):
                 if max_ix is not None and jj > max_ix:
                     return
@@ -419,22 +463,20 @@ class LME(base.Model):
         revari = np.linalg.inv(revar)
         score_fe = 0.
 
-        pr = self.exog_re.shape[1]
-        prr = int(pr * (pr + 1) / 2)
-        score_re = np.zeros(prr, dtype=np.float64)
+        score_re = np.zeros(self.prr, dtype=np.float64)
 
         if pen > 0:
             cy = np.linalg.inv(revar)
             cy = 2*cy - np.diag(np.diag(cy))
-            i,j = np.tril_indices(pr)
+            i,j = np.tril_indices(self.pr)
             score_re = pen * cy[i,j]
 
         rvir = 0.
         rvrb = 0.
         xtvix = 0.
-        xtax = [0.,] * prr
-        B = np.zeros(prr, dtype=np.float64)
-        C = np.zeros(prr, dtype=np.float64)
+        xtax = [0.,] * self.prr
+        B = np.zeros(self.prr, dtype=np.float64)
+        C = np.zeros(self.prr, dtype=np.float64)
         for k in range(self.ngroup):
 
             exog = self.exog_li[k]
@@ -476,7 +518,7 @@ class LME(base.Model):
         score_re -= 0.5 * fac * C / rvir
 
         if reml:
-            for j in range(prr):
+            for j in range(self.prr):
                 score_re[j] += 0.5 * np.trace(np.linalg.solve(
                     xtvix, xtax[j]))
 
@@ -541,9 +583,6 @@ class LME(base.Model):
         The score vector for the log-likelihood or REML criterion.
         """
 
-        pr = self.exog_re.shape[1]
-        prr = int(pr * (pr + 1) / 2)
-
         params_fe, L = self._unpack(params, sym=False)
         revar = np.dot(L, L.T)
 
@@ -552,9 +591,9 @@ class LME(base.Model):
         s_fe, s_re = self._unpack(svec, sym=False)
 
         # Use the chain rule to get d/dL from d/dPsi
-        s_l = np.zeros(prr, dtype=np.float64)
+        s_l = np.zeros(self.prr, dtype=np.float64)
         jj = 0
-        for i in range(pr):
+        for i in range(self.pr):
             for j in range(i+1):
                 s_l[jj] += np.dot(s_re[:,i], L[:,j])
                 s_l[jj] += np.dot(s_re[i,:], L[:,j])
@@ -591,14 +630,10 @@ class LME(base.Model):
         params_fe, revar = self._unpack(params)
         revari = np.linalg.inv(revar)
 
-        pr = self.exog_re.shape[1]
-        prr = int(pr * (pr + 1) / 2)
-        p = self.exog.shape[1]
-
         # Blocks for the fixed and random effects parameters.
         hess_fe = 0.
-        hess_re = np.zeros((prr, prr), dtype=np.float64)
-        hess_fere = np.zeros((prr, p), dtype=np.float64)
+        hess_re = np.zeros((self.prr, self.prr), dtype=np.float64)
+        hess_fere = np.zeros((self.prr, self.p), dtype=np.float64)
 
         fac = self.ntot
         if reml:
@@ -606,10 +641,10 @@ class LME(base.Model):
 
         rvir = 0.
         xtvix = 0.
-        xtax = [0.,] * prr
-        B = np.zeros(prr, dtype=np.float64)
-        D = np.zeros((prr, prr), dtype=np.float64)
-        F = [[0.,]*prr for k in range(prr)]
+        xtax = [0.,] * self.prr
+        B = np.zeros(self.prr, dtype=np.float64)
+        D = np.zeros((self.prr, self.prr), dtype=np.float64)
+        F = [[0.,]*self.prr for k in range(self.prr)]
         for k in range(self.ngroup):
 
             exog = self.exog_li[k]
@@ -657,7 +692,7 @@ class LME(base.Model):
         hess_fere = -fac * hess_fere / rvir
 
         if reml:
-            for j1 in range(prr):
+            for j1 in range(self.prr):
                 Q1 = np.linalg.solve(xtvix, xtax[j1])
                 for j2 in range(j1 + 1):
                     Q2 = np.linalg.solve(xtvix, xtax[j2])
@@ -669,11 +704,12 @@ class LME(base.Model):
                         hess_re[j2, j1] += a
 
         # Put the blocks together to get the Hessian.
-        hess = np.zeros((p+prr, p+prr), dtype=np.float64)
-        hess[0:p,0:p] = hess_fe
-        hess[0:p,p:] = hess_fere.T
-        hess[p:,0:p] = hess_fere
-        hess[p:,p:] = hess_re
+        hess = np.zeros((self.p+self.prr, self.p+self.prr),
+                        dtype=np.float64)
+        hess[0:self.p, 0:self.p] = hess_fe
+        hess[0:self.p, self.p:] = hess_fere.T
+        hess[self.p:, 0:self.p] = hess_fere
+        hess[self.p:, self.p:] = hess_re
 
         return hess
 
@@ -828,9 +864,8 @@ class LME(base.Model):
             mat = smw_solve(1., ex_r, revar, revari, resid)
             qf += np.dot(resid, mat)
 
-        p = self.exog.shape[1]
         if reml:
-            qf /= (self.ntot - p)
+            qf /= (self.ntot - self.p)
         else:
             qf /= self.ntot
 
@@ -983,8 +1018,7 @@ class LME(base.Model):
             hist = None
 
         # Starting values
-        pr = self.exog_re.shape[1]
-        ix = np.tril_indices(pr)
+        ix = np.tril_indices(self.pr)
         if start is None:
             start = {}
         if "fe" in start:
@@ -996,7 +1030,7 @@ class LME(base.Model):
                 params_re = start["revar_L_unscaled"]
             else:
                 vec = start["revar_L_unscaled"]
-                mat = np.zeros((pr,pr), dtype=np.float64)
+                mat = np.zeros((self.pr, self.pr), dtype=np.float64)
                 mat[ix] = vec
                 mat = np.dot(mat, mat.T)
                 params_re = mat[ix]
@@ -1104,6 +1138,9 @@ class LME(base.Model):
         results.reml = reml
         results.pen = pen
         results.likeval = -like(params_prof)
+        results.p = self.p
+        results.pr = self.pr
+        results.prr = self.prr
 
         return results
 
@@ -1284,15 +1321,6 @@ class LMEResults(base.LikelihoodModelResults):
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
 
-        # Number of fixed effects covariates
-        p = self.model.exog.shape[1]
-
-        # Number of random effects covariates
-        pr = self.model.exog_re.shape[1]
-
-        # Number of random efects parameters
-        prr = int(pr * (pr + 1) / 2)
-
         if xname_fe is not None:
             xname_fe = xname_fe
         elif self.model.exog_names is not None:
@@ -1316,7 +1344,7 @@ class LMEResults(base.LikelihoodModelResults):
         float_fmt = "%.3f"
 
         names = xname_fe
-        sdf = np.nan * np.ones((p + prr, 6), dtype=np.float64)
+        sdf = np.nan * np.ones((p + self.prr, 6), dtype=np.float64)
         sdf[0:p, 0] = self.params_fe
         sdf[0:p, 1] = np.sqrt(np.diag(self.cov_params()[0:p]))
         sdf[0:p, 2] = sdf[0:p, 0] / sdf[0:p, 1]
