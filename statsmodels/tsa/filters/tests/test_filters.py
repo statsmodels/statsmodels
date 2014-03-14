@@ -5,7 +5,7 @@ from numpy import array, column_stack
 from statsmodels.datasets import macrodata
 from statsmodels.tsa.base.datetools import dates_from_range
 from pandas import Series, Index, DataFrame
-from statsmodels.tsa.filters import bkfilter, hpfilter, cffilter
+from statsmodels.tsa.filters.api import bkfilter, hpfilter, cffilter
 
 def test_bking1d():
     """
