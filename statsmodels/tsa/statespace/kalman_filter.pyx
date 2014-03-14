@@ -1,3 +1,11 @@
+"""
+Multivariate Kalman Filter (Cython and BLAS/LAPACK)
+
+Author: Chad Fulton
+License: Simplified-BSD
+
+"""
+
 import numpy as np
 cimport numpy as np
 cimport cython
