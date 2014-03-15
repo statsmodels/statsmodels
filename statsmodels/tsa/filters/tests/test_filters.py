@@ -751,7 +751,7 @@ class TestDecompose:
         assert_raises(ValueError, seasonal_decompose, self.data.values)
         assert_raises(ValueError, seasonal_decompose, self.data, 'm',
                       freq=4)
-        x = self.data.copy()
+        x = self.data.astype(float).copy()
         x.ix[2] = np.nan
         assert_raises(ValueError, seasonal_decompose, x)
 
