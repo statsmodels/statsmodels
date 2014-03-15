@@ -2,6 +2,7 @@
 Seasonal Decomposition by Moving Averages
 """
 import numpy as np
+from pandas.core.nanops import nanmean as pd_nanmean
 from .utils import _maybe_get_pandas_wrapper_freq
 from .filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
@@ -84,7 +85,7 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
     else:
         detrended = X - trend
 
-    period_averages = np.array([np.nanmean(detrended[i::freq])
+    period_averages = np.array([pd_nanmean(detrended[i::freq])
                                 for i in range(freq)])
     if model.startswith('m'):
         period_averages /= np.mean(period_averages)
