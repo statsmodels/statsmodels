@@ -27,4 +27,4 @@ def _maybe_get_pandas_wrapper_freq(X, trim=None):
         freq = index.inferred_freq
         return func, freq
     else:
-        return None, None
+        return lambda x : x, None
