@@ -23,9 +23,6 @@ def _maybe_get_pandas_wrapper(X, trim=None):
 def _maybe_get_pandas_wrapper_freq(X, trim=None):
     if _is_using_pandas(X, None):
         index = X.index
-        if not datetools._is_datetime_index(index):
-            raise ValueError("Index does not contain datetime.datetime or "
-                             "is not a pandas timeseries Index")
         func = _maybe_get_pandas_wrapper(X, trim)
         freq = index.inferred_freq
         return func, freq
