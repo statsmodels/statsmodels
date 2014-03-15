@@ -46,6 +46,10 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
     --------
     statsmodels.tsa.filters.convolution_filter
     """
+    _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(X)
+    X = np.asanyarray(X).squeeze()
+    nobs = len(X)
+
     if not np.all(np.isfinite(X)):
         raise ValueError("This function does not handle missing values")
     if model.startswith('m'):
@@ -53,7 +57,6 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
             raise ValueError("Multiplicative seasonality is not appropriate "
                              "for zero and negative values")
 
-    _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(X)
     if pfreq is not None:
         pfreq = freq_to_period(pfreq)
         if freq and pfreq != freq:
@@ -66,8 +69,6 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
         raise ValueError("You must specify a freq or X must be a "
                          "pandas object with a timeseries index")
 
-    X = np.asanyarray(X).squeeze()
-    nobs = len(X)
 
     if filt is None:
         if freq % 2 == 0:  # split weights at ends
