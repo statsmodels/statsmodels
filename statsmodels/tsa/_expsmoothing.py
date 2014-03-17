@@ -1,4 +1,4 @@
-'''
+"""
 Statsmodel Eponential Smoothing
 This code handles 15 different variation Standard Exponential Smoothing models
 
@@ -72,22 +72,25 @@ TO DO: -Implement Solver for obtaining initial values
 
 References
 ----------
-*Exponential smoothing: The state of the art Part II, Everette S. Gardner, Jr. Houston, Texas 2005
-*Forecasting with Exponential Smoothing: The State Space Approach, Hyndman, R.J., Koehler, 
- A.B., Ord, J.K., Snyder, R.D. 2008
-*Exponential Smoothing with a Damped Multiplicative Trend, James W. Taylor.
- International Journal of Forecasting, 2003
-'''
+
+::
+
+    Exponential smoothing: The state of the art Part II, Everette S. Gardner,
+        Jr. Houston, Texas 2005
+    Forecasting with Exponential Smoothing: The State Space Approach,
+        Hyndman, R.J., Koehler, A.B., Ord, J.K., Snyder, R.D. 2008
+    Exponential Smoothing with a Damped Multiplicative Trend, James W.
+        Taylor. International Journal of Forecasting, 2003
+"""
 
 import numpy as np
 import statsmodels.tools.eval_measures as em
 
-#debug use
-##numpy.set_printoptions(suppress=True)
 
 def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
-                  trend='additive', forecast=None, season='additive', output='data'):
-    '''
+                  trend='additive', forecast=None, season='additive',
+                  output='data'):
+    """
     Exponential Smoothing
     This function handles 15 different Standard Exponential Smoothing models
 
@@ -134,32 +137,37 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
     Notes
     -----
-    This function is able to perform the following algorithms:
-        Simple Exponential Smoothing(SES)
-        Simple Seasonal models (both multiplicative and additive)
-        Brown's Linear Exponential Smoothing
-        Holt's Double Exponential Smoothing
-        Exponential trend method
-        Damped-Trend Linear Exponential Smoothing
-        Multiplicative damped trend (Taylor  2003)
-        Holt-Winters Exponential Smoothing:
-        multiplicative trend, additive trend, and damped models for both
-        multiplicative season, additive season, and damped models for both
+    This function is able to perform the following algorithms::
+
+       * Simple Exponential Smoothing(SES)
+       * Simple Seasonal models (both multiplicative and additive)
+       * Brown's Linear Exponential Smoothing
+       * Holt's Double Exponential Smoothing
+       * Exponential trend method
+       * Damped-Trend Linear Exponential Smoothing
+       * Multiplicative damped trend (Taylor  2003)
+       * Holt-Winters Exponential Smoothing:
+       * multiplicative trend, additive trend, and damped models for both
+       * multiplicative season, additive season, and damped models for both
 
     References
     ----------
-    *Wikipedia
-    *Forecasting: principles and practice by Hyndman & Athanasopoulos
-    *NIST.gov http://www.itl.nist.gov/div898/handbook/pmc/section4/pmc433.htm
-    *Oklahoma State SAS chapter 30 section 11
-    *IBM SPSS Custom Exponential Smoothing Models
-    '''
+
+    ::
+
+     * Wikipedia
+     * Forecasting: principles and practice by Hyndman & Athanasopoulos
+     * NIST.gov http://www.itl.nist.gov/div898/handbook/pmc/section4/pmc433.htm
+     * Oklahoma State SAS chapter 30 section 11
+     * IBM SPSS Custom Exponential Smoothing Models
+    """
 
     #Initialize data
     y = np.asarray(y)
     ylen = len(y)
     if ylen <= 3:
-        raise ValueError("Cannot implement model, must have at least 4 data points")
+        raise ValueError("Cannot implement model, must have at least 4 "
+                         "data points")
     if alpha == 0:
         raise ValueError("Cannot fit model, alpha must not be 0")
     #forcast length
@@ -173,7 +181,8 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     # Setup seasonal values
     if type(cycle) is int:
         if ylen < 2 * cycle:
-            raise ValueError("Cannot implement model, must be 2 at least cycles long")
+            raise ValueError("Cannot implement model, must be 2 at least "
+                             "cycles long")
         #Setting b1 value
         bdata[0] = np.mean((y[cycle:2 * cycle] - y[:cycle]) / float(cycle))
         #Setup initial seasonal indicies
@@ -208,29 +217,39 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
         #handles multiplicative seasons
         if season == 'multiplicative':
             if trend == 'multiplicative':
-                sdata[i + 1] = alpha * (y[i + 2] / cdata[i]) + (1 - alpha) * s * (b**damp)
-                bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b ** damp)
-                cdata[i + cycle] = delta * (y[i + 2] / sdata[i + 1]) + (1 - delta) * cdata[i]
+                sdata[i + 1] = (alpha * (y[i + 2] / cdata[i]) + (1 - alpha) *
+                                s * (b**damp))
+                bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
+                                (b ** damp))
+                cdata[i + cycle] = (delta * (y[i + 2] / sdata[i + 1]) +
+                                    (1 - delta) * cdata[i])
         #handles additive models
             else:
-                sdata[i + 1] = alpha * (y[i + 2] / cdata[i]) + (1 - alpha) * (s + damp * b)
-                bdata[i + 1] = gamma * (sdata[i + 1] - s) + (1 - gamma) * damp * b
-                cdata[i + cycle] = delta * (y[i + 2] / sdata[i + 1]) + (1 - delta) * cdata[i]
+                sdata[i + 1] = (alpha * (y[i + 2] / cdata[i]) + (1 - alpha) *
+                                (s + damp * b))
+                bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
+                                damp * b)
+                cdata[i + cycle] = (delta * (y[i + 2] / sdata[i + 1]) +
+                                    (1 - delta) * cdata[i])
         else:
             if trend == 'multiplicative':
-                sdata[i + 1] = alpha * (y[i + 2] - cdata[i]) + (1 - alpha) * s * (b**damp)
-                bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b ** damp)
-                cdata[i + cycle] = delta * (y[i + 2] - sdata[i + 1]) + (1 - delta) * cdata[i]
+                sdata[i + 1] = (alpha * (y[i + 2] - cdata[i]) + (1 - alpha) *
+                                s * (b**damp))
+                bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
+                                (b ** damp))
+                cdata[i + cycle] = (delta * (y[i + 2] - sdata[i + 1]) +
+                                    (1 - delta) * cdata[i])
             #handles additive models
             else:
-                sdata[i + 1] = alpha * (y[i + 2] - cdata[i]) + (1 - alpha) * (s + damp * b)
-                bdata[i + 1] = gamma * (sdata[i + 1] - s) + (1 - gamma) * damp * b
-                cdata[i + cycle] = delta * (y[i + 2] - sdata[i + 1]) + (1 - delta) * cdata[i]
-                #debug
-##                print 'period=', i ,'cdata=', cdata[i+cycle],'sdata=', sdata[i]
+                sdata[i + 1] = (alpha * (y[i + 2] - cdata[i]) + (1 - alpha) *
+                                (s + damp * b))
+                bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
+                                damp * b)
+                cdata[i + cycle] = (delta * (y[i + 2] - sdata[i + 1]) +
+                                    (1 - delta) * cdata[i])
 
     #Temporary fix: back fill data with Nan to align with y
-    filx = [np.nan,np.nan]
+    filx = [np.nan, np.nan]
     bdata = np.concatenate([filx, bdata])
     sdata = np.concatenate([filx, sdata])
     if season == 'multiplicative':
@@ -254,7 +273,7 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     #Calculations for summary items (NOT USED YET)
     x1 = y[2:]
     x2 = pdata[2:len(y)]
-    rmse = em.rmse(x1,x2)
+    rmse = em.rmse(x1, x2)
 
     #forcast
     if forecast >= 2:
@@ -272,7 +291,8 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
             else:
                 c = 0
         elif forecast > cycle:
-            raise NotImplementedError("Forecast beyond cycle length is unavailable")
+            raise NotImplementedError("Forecast beyond cycle length is "
+                                      "unavailable")
         else:
             c = cdata[ylen+1:]
             c = c[:forecast-1]
@@ -288,31 +308,17 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
                 fdata = sdata[ylen] * (bdata[ylen] ** m) + c
             else:
                 fdata = sdata[ylen] + m * bdata[ylen] + c
-                #debug
-##                print 'fdata=', fdata, 'sdata=', sdata[ylen], 'm=', m, 'bdata', bdata[ylen], 'c=', c
 
         pdata = np.append(pdata, fdata)
-        #debug
-##        print 'fdata=', fdata
-##        print 'sdata=', sdata
-##        print 'bdata=', bdata
-##        print 'cdata=', cdata
-##        print 'pdata=', pdata
-        return pdata
-    else:
-##        print 'sdata=', sdata
-##        print 'bdata=', bdata
-##        print 'cdata=', cdata
-##        print 'pdata=', pdata
-        return pdata
+    return pdata
 
 ########################################################
 ######################Exponential Smoothing Wrappers####
 ########################################################
 
-def ses(y, alpha, forecast=None, output='data'):
 
-    '''
+def ses(y, alpha, forecast=None, output='data'):
+    """
     Simple Exponential Smoothing (SES)
     This function is a wrapper that performs simple exponential smoothing.
 
@@ -335,29 +341,38 @@ def ses(y, alpha, forecast=None, output='data'):
     Notes
     -----
     It is used when there is no trend or seasonality.
-    s_t = alpha * y_t + (1-a) * (s_t-1)
 
-    Forecast equation
-    y_t(n)=S_t
+    .. math::
+
+      s_t = alpha * y_t + (1-a) * (s_t-1)
+
+    Forecast equation.
+
+    .. math::
+
+       y_t(n) = S_t
 
 
     References
     ----------
-    *Wikipedia
-    *Forecasting: principles and practice by Hyndman & Athanasopoulos
-    *NIST.gov
-    *Oklahoma State SAS chapter 30 section 11
-    *IBM SPSS Custom Exponential Smoothing Models
-    '''
-    s_es = exp_smoothing(y, alpha, 0, 0, None, 0, None,'additive',
+
+    ::
+
+     * Wikipedia
+     * Forecasting: principles and practice by Hyndman & Athanasopoulos
+     * NIST.gov
+     * Oklahoma State SAS chapter 30 section 11
+     * IBM SPSS Custom Exponential Smoothing Models
+    """
+    s_es = exp_smoothing(y, alpha, 0, 0, None, 0, None, 'additive',
                          forecast, 'additive', output)
 
     return s_es
 
+
 ################Double Exponential Smoothing###############
 def brown_linear(y, alpha, forecast=None, output='data'):
-
-    '''
+    """
     Brown's Linear Exponential Smoothing (LES)
     This function a special case of the Holt's Exponential smoothing
     using alpha as the smoothing factor and smoothing trend factor.
@@ -382,30 +397,40 @@ def brown_linear(y, alpha, forecast=None, output='data'):
     Notes
     -----
     It is used when there is a trend but no seasonality.
-    s_t = a * y_t + (1 - a) * (s_t-1)
-    b_t = a *(s_t - s_t-1) + (1 - a) * T_t-1
-    a'=2*(s_t - b_t)
-    b'=a/(1-a)*(s_t - b_t)
-    F_t = a' + b'
+
+    .. math::
+
+       s_t = a * y_t + (1 - a) * (s_t-1)
+       b_t = a *(s_t - s_t-1) + (1 - a) * T_t-1
+       a'=2*(s_t - b_t)
+       b'=a/(1-a)*(s_t - b_t)
+       F_t = a' + b'
+
     Forecast equation
-    F_t+n = a' + m * b'
+
+    .. math::
+
+       F_t+n = a' + m * b'
 
     References
     ----------
-    *Wikipedia
-    *Forecasting: principles and practice by Hyndman & Athanasopoulos
-    *IBM SPSS Custom Exponential Smoothing Models
-    '''
+
+    ::
+
+     * Wikipedia
+     * Forecasting: principles and practice by Hyndman & Athanasopoulos
+     * IBM SPSS Custom Exponential Smoothing Models
+    """
     brown = exp_smoothing(y, alpha, alpha, 0, None, 1, None, 'brown',
                           forecast, 'additive', output)
 
     return brown
 
+
 #General Double Exponential Smoothing Models
 def holt_des(y, alpha, gamma, forecast=None, trend='additive',
              initial=None, output='data',):
-
-    '''
+    """
     Holt's Double Exponential Smoothing
     Use when linear trend is present with no seasonality.
     Multiplicative model is used for exponential or strong trends
@@ -442,31 +467,42 @@ def holt_des(y, alpha, gamma, forecast=None, trend='additive',
     -----
     Based on Holt's 1957 method. It is similar to ARIMA(0, 2, 2).
     Additive model Equations:
-        s_t=a * y_t + (1 - a)(s_t-1 + b_t-1)
-        b_t=g * (s_t - s_t-1) + (1-g) * b_t-1
-        Forecast (n periods):
-        F_t+n = S_t + m * b_t
-    The multiplicative or exponential model is used for models
-    with an exponential trend.(Pegels 1969, Hyndman 2002)
+
+    .. math ::
+
+       s_t=a * y_t + (1 - a)(s_t-1 + b_t-1)
+       b_t=g * (s_t - s_t-1) + (1-g) * b_t-1
+
+    Forecast (n periods):
+
+    .. math ::
+
+       F_t+n = S_t + m * b_t
+
+    The multiplicative or exponential model is used for models with an
+    exponential trend. (Pegels 1969, Hyndman 2002)
 
     References
     ----------
-    *Wikipedia
-    *Forecasting: principles and practice by Hyndman & Athanasopoulos
-    *IBM SPSS Custom Exponential Smoothing Models
-    *Exponential Smoothing with a Damped Multiplicative Trend, James W. Taylor.
-     International Journal of Forecasting, 2003
-    '''
+
+    ::
+
+     * Wikipedia
+     * Forecasting: principles and practice by Hyndman & Athanasopoulos
+     * IBM SPSS Custom Exponential Smoothing Models
+     * Exponential Smoothing with a Damped Multiplicative Trend,
+       James W. Taylor. International Journal of Forecasting, 2003
+    """
     holt = exp_smoothing(y, alpha, gamma, 0, None, 1, initial, trend,
                          forecast, 'additive', output)
 
     return holt
 
+
 #Damped-Trend Linear Exponential Smoothing Models
 def damp_es(y, alpha, gamma, damp=1, forecast=None, trend='additive',
             initial=None, output='data',):
-
-    '''
+    """
     Damped-Trend Linear Exponential Smoothing
     Multiplicative damped trend (Taylor  2003)
     Use when linear trend is decaying and with no seasonality
@@ -517,22 +553,26 @@ def damp_es(y, alpha, gamma, damp=1, forecast=None, trend='additive',
 
     References
     ----------
-    *Wikipedia
-    *Forecasting: principles and practice by Hyndman & Athanasopoulos
-    *IBM SPSS Custom Exponential Smoothing Models
-    *Exponential Smoothing with a Damped Multiplicative Trend, James W. Taylor.
-     International Journal of Forecasting, 2003
-    '''
+
+    ::
+
+     * Wikipedia
+     * Forecasting: principles and practice by Hyndman & Athanasopoulos
+     * IBM SPSS Custom Exponential Smoothing Models
+     * Exponential Smoothing with a Damped Multiplicative Trend, James W.
+       Taylor. International Journal of Forecasting, 2003
+
+    """
     dampend = exp_smoothing(y, alpha, gamma, 0, None, damp, initial, trend,
                             forecast, 'additive', output)
 
     return dampend
 
+
 ################Seasonal Exponential Smoothing###############
 def seasonal_es(y, alpha, delta, cycle, forecast=None,
                 season='additive', output='data',):
-
-    '''
+    """
     Simple Seasonal Smoothing
     Use when there is a seasonal element but no trend
     Multiplicative model is used exponential seasonal components
@@ -566,12 +606,15 @@ def seasonal_es(y, alpha, delta, cycle, forecast=None,
 
     References
     ----------
-    *Wikipedia
-    *Forecasting: principles and practice by Hyndman & Athanasopoulos
-    *IBM SPSS Custom Exponential Smoothing Models
-    *Exponential Smoothing with a Damped Multiplicative Trend, James W. Taylor.
-     International Journal of Forecasting, 2003
-    '''
+
+    ::
+
+     * Wikipedia
+     * Forecasting: principles and practice by Hyndman & Athanasopoulos
+     * IBM SPSS Custom Exponential Smoothing Models
+     * Exponential Smoothing with a Damped Multiplicative Trend, James W.
+       Taylor. International Journal of Forecasting, 2003
+    """
 
     ssexp = exp_smoothing(y, alpha, 0, delta, cycle, 1, None, 'additive',
                           forecast, 'additive', output)
