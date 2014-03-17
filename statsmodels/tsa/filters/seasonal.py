@@ -8,6 +8,14 @@ from .filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 from statsmodels.tools.tools import Bunch
 
+def seasonal_mean(x, freq):
+    """
+    Return means for each period in x. freq is an int that gives the
+    number of periods per cycle. E.g., 12 for monthly. NaNs are ignored
+    in the mean.
+    """
+    return np.array([pd_nanmean(x[i::freq]) for i in range(freq)])
+
 
 def seasonal_decompose(X, model="additive", filt=None, freq=None):
     """
@@ -86,8 +94,8 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
     else:
         detrended = X - trend
 
-    period_averages = np.array([pd_nanmean(detrended[i::freq])
-                                for i in range(freq)])
+    period_averages = seasonal_mean(detrended, freq)
+
     if model.startswith('m'):
         period_averages /= np.mean(period_averages)
     else:
