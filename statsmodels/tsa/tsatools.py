@@ -604,7 +604,7 @@ def freq_to_period(freq):
         return 1
     elif freq == 'Q' or freq.startswith(('Q-', 'QS-')):
         return 4
-    elif freq == 'M' or freq.startswith(('M-', 'MS-')):
+    elif freq == 'M' or freq.startswith(('M-', 'MS')):
         return 12
     elif freq == 'B' or freq == 'W' or freq.startswith('W-'):
         return 52
