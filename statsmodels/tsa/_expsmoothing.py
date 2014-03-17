@@ -87,6 +87,69 @@ import numpy as np
 import statsmodels.tools.eval_measures as em
 
 
+### helper functions that do the smoothing ###
+# the general pattern is seasonality_trend_
+
+def _mult_mult(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta,
+               nobs):
+    for i in len(nobs):
+        s = sdata[i]
+        b = bdata[i]
+        sdata[i + 1] = (alpha * (y[i + 2] / cdata[i]) + (1 - alpha) *
+                        s * (b**damp))
+        bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
+                        (b ** damp))
+        cdata[i + cycle] = (delta * (y[i + 2] / sdata[i + 1]) +
+                            (1 - delta) * cdata[i])
+    return sdata, bdata, cdata
+
+
+def _mult_add(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta,
+              nobs):
+    for i in len(nobs):
+        s = sdata[i]
+        b = bdata[i]
+        sdata[i + 1] = (alpha * (y[i + 2] / cdata[i]) + (1 - alpha) *
+                        (s + damp * b))
+        bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
+                        damp * b)
+        cdata[i + cycle] = (delta * (y[i + 2] / sdata[i + 1]) +
+                            (1 - delta) * cdata[i])
+
+
+def _add_mult(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta,
+              nobs):
+    for i in len(nobs):
+        s = sdata[i]
+        b = bdata[i]
+        sdata[i + 1] = (alpha * (y[i + 2] - cdata[i]) + (1 - alpha) *
+                        s * (b**damp))
+        bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
+                        (b ** damp))
+        cdata[i + cycle] = (delta * (y[i + 2] - sdata[i + 1]) +
+                            (1 - delta) * cdata[i])
+
+
+def _add_add(y, sdata, bdata, cdata, alpha, b, gamma, damp, cycle, delta,
+             nobs):
+    for i in len(nobs):
+        s = sdata[i]
+        b = bdata[i]
+        sdata[i + 1] = (alpha * (y[i + 2] - cdata[i]) + (1 - alpha) *
+                        (s + damp * b))
+        bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
+                        damp * b)
+        cdata[i + cycle] = (delta * (y[i + 2] - sdata[i + 1]) +
+                            (1 - delta) * cdata[i])
+
+
+_compute_smoothing = {('m', 'm'): _mult_mult,
+                        ('m', 'a'): _mult_add,
+                        ('a', 'm'): _add_mult,
+                        ('a', 'a'): _add_add,
+}
+
+
 def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
                   trend='additive', forecast=None, season='additive',
                   output='data'):
@@ -164,23 +227,24 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
     #Initialize data
     y = np.asarray(y)
-    ylen = len(y)
-    if ylen <= 3:
+    nobs = len(y)
+    if nobs <= 3:
         raise ValueError("Cannot implement model, must have at least 4 "
                          "data points")
     if alpha == 0:
         raise ValueError("Cannot fit model, alpha must not be 0")
+
     #forcast length
     if forecast >= 1:
-        ylen += 1
+        nobs += 1
 
     #Setup array lengths
-    sdata = np.zeros(ylen - 2)
-    bdata = np.zeros(ylen - 2)
+    sdata = np.zeros(nobs - 2)
+    bdata = np.zeros(nobs - 2)
 
     # Setup seasonal values
     if type(cycle) is int:
-        if ylen < 2 * cycle:
+        if nobs < 2 * cycle:
             raise ValueError("Cannot implement model, must be 2 at least "
                              "cycles long")
         #Setting b1 value
@@ -192,11 +256,11 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
         else:
             cdata = y.reshape(-1, cycle)
         cdata = (cdata / cdata.mean(axis=1).reshape(-1, 1)).mean(axis=0)
-        cdata = np.concatenate([cdata, np.zeros(ylen - 3)])
+        cdata = np.concatenate([cdata, np.zeros(nobs - 3)])
     else:
         #Initialize to bypass delta function with 0
         cycle = 0
-        cdata = np.zeros(ylen)
+        cdata = np.zeros(nobs)
 
     #Setting b1 value
     if gamma == 0:
@@ -209,44 +273,12 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     #Setting s1 value
     sdata[0] = y[0]
 
-    #Equations & Update ylen to align array
-    ylen -= 3
-    for i in range(ylen):
-        s = sdata[i]
-        b = bdata[i]
-        #handles multiplicative seasons
-        if season == 'multiplicative':
-            if trend == 'multiplicative':
-                sdata[i + 1] = (alpha * (y[i + 2] / cdata[i]) + (1 - alpha) *
-                                s * (b**damp))
-                bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
-                                (b ** damp))
-                cdata[i + cycle] = (delta * (y[i + 2] / sdata[i + 1]) +
-                                    (1 - delta) * cdata[i])
-        #handles additive models
-            else:
-                sdata[i + 1] = (alpha * (y[i + 2] / cdata[i]) + (1 - alpha) *
-                                (s + damp * b))
-                bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
-                                damp * b)
-                cdata[i + cycle] = (delta * (y[i + 2] / sdata[i + 1]) +
-                                    (1 - delta) * cdata[i])
-        else:
-            if trend == 'multiplicative':
-                sdata[i + 1] = (alpha * (y[i + 2] - cdata[i]) + (1 - alpha) *
-                                s * (b**damp))
-                bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
-                                (b ** damp))
-                cdata[i + cycle] = (delta * (y[i + 2] - sdata[i + 1]) +
-                                    (1 - delta) * cdata[i])
-            #handles additive models
-            else:
-                sdata[i + 1] = (alpha * (y[i + 2] - cdata[i]) + (1 - alpha) *
-                                (s + damp * b))
-                bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
-                                damp * b)
-                cdata[i + cycle] = (delta * (y[i + 2] - sdata[i + 1]) +
-                                    (1 - delta) * cdata[i])
+    #Equations & Update nobs to align array
+    nobs -= 3
+
+    smooth_func = _compute_smoothing[(season, trend)]
+    sdata, bdata, cdata = smooth_func(y, sdata, bdata, cdata, alpha, gamma,
+                                      damp, cycle, delta, nobs)
 
     #Temporary fix: back fill data with Nan to align with y
     filx = [np.nan, np.nan]
@@ -294,20 +326,20 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
             raise NotImplementedError("Forecast beyond cycle length is "
                                       "unavailable")
         else:
-            c = cdata[ylen+1:]
+            c = cdata[nobs+1:]
             c = c[:forecast-1]
 
         #Config trend
         if season == 'multiplicative':
             if trend == 'multiplicative':
-                fdata = sdata[ylen] * (bdata[ylen] ** m) * c
+                fdata = sdata[nobs] * (bdata[nobs] ** m) * c
             else:
-                fdata = sdata[ylen] + m * bdata[ylen] * c
+                fdata = sdata[nobs] + m * bdata[nobs] * c
         else:
             if trend == 'multiplicative':
-                fdata = sdata[ylen] * (bdata[ylen] ** m) + c
+                fdata = sdata[nobs] * (bdata[nobs] ** m) + c
             else:
-                fdata = sdata[ylen] + m * bdata[ylen] + c
+                fdata = sdata[nobs] + m * bdata[nobs] + c
 
         pdata = np.append(pdata, fdata)
     return pdata
