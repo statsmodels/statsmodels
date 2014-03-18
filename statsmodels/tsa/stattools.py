@@ -282,7 +282,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
-def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
+def acovf(x, unbiased=False, demean=True, fft=False):
     '''
     Autocovariance for 1D
 
@@ -297,8 +297,6 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     fft : bool
         If True, use FFT convolution.  This method should be preferred
         for long time series.
-    missing : str
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. 
 
     Returns
     -------
@@ -308,26 +306,44 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     x = np.squeeze(np.asarray(x))
     if x.ndim > 1:
         raise ValueError("x must be 1d. Got %d dims." % x.ndim)
-
-    x = missing_handler(x, missing)
     n = len(x)
 
-    if demean:
+    x_is_masked = has_missing(x)
+    if x_is_masked:
+        notmask = ~np.isnan(x) #bool
+        #need this even in the biased case to return x unaltered
+        x[~notmask] = 0
+        notmask = notmask.astype(int) #int
+
+    if demean and x_is_masked:
+        xo = x - x.sum()/notmask.sum()
+    elif demean:
         xo = x - x.mean()
     else:
         xo = x
-    if unbiased:
+
+    if unbiased and x_is_masked:
+        d = np.correlate(notmask, notmask, 'full')
+    elif unbiased:
         xi = np.arange(1, n + 1)
         d = np.hstack((xi, xi[:-1][::-1]))
     else:
         d = n * np.ones(2 * n - 1)
+
     if fft:
         nobs = len(xo)
         Frf = np.fft.fft(xo, n=nobs * 2)
         acov = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d[n - 1:]
-        return acov.real
+        acov = acov.real
     else:
-        return (np.correlate(xo, xo, 'full') / d)[n - 1:]
+        acov = (np.correlate(xo, xo, 'full') / d)[n - 1:]
+
+    if x_is_masked:
+        # restore data for the user
+        x[~notmask] = np.nan
+
+    return acov
+
 
 
 def q_stat(x, nobs, type="ljungbox"):
@@ -392,7 +408,8 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         returned where the standard deviation is computed according to
         Bartlett\'s formula.
     missing : str, optional
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. 
+        A string in ['none', 'drop', 'raise'] specifying how the NaNs
+        are to be treated.
 
     Returns
     -------
@@ -554,7 +571,8 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None, missing='none'):
         1/sqrt(len(x))
 
     missing : str, optional
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. 
+        A string in ['none', 'drop', 'raise'] specifying how the NaNs
+        are to be treated.
 
     Returns
     -------
@@ -1078,6 +1096,12 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
 
     return Bunch(**res)
 
+def has_missing(data):
+    """
+    Returns True if 'data' contains missing entries, otherwise False
+    """
+    return np.isnan(np.sum(data))
+
 def missing_handler(data, missing):
     """
     Pre-processes missing data
@@ -1087,13 +1111,18 @@ def missing_handler(data, missing):
     data : 1d numpy array
         The data array, possibly containing NaNs
     missing : str 
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs are to be treated. If 'none', no changes are made to the data. If 'drop', the NaN entries are removed. If 'raise', NaNs in the data will give rise to an error of type MissingDataError.
+        A string in ['none', 'drop', 'raise'] specifying how the NaNs
+        are to be treated. If 'none', no changes are made to the
+        data. If 'drop', the NaN entries are removed. If 'raise', NaNs
+        in the data will give rise to an error of type
+        MissingDataError.
 
     Returns
     -------
     1d numpy array
 
     """
+    missing = missing.lower()
     if missing not in ['none', 'drop', 'raise']:
         raise ValueError("missing option %s not understood" % missing)
     if missing == 'none':
@@ -1134,14 +1163,18 @@ if __name__ == "__main__":
     grangercausalitytests(y, 2)
 
 # tests for missing data
-#    xn = data['realgdp']
-#    xn[0] = np.nan
+    xn = x.copy()
+    xn[0] = np.nan
+#    print x
 #    print xn
 #    print missing_handler(xn, 'drop')
 #    print missing_handler(xn, 'raise')
-#    print acovf(xn)
-#    print acovf(xn, missing='drop')
-#    print acovf(xn, missing='raise')
+    print acovf(x)[:5]
+    print acovf(x, unbiased=True)[:5]
+    print acovf(xn)[:5]
+    print acovf(xn, unbiased=True)[:5]
+    print acovf(xn, unbiased=True, demean=False)[:5]
+    print acovf(xn, unbiased=True, demean=False, fft=True)[:5]
 #    print acf(xn)
 #    print acf(xn, missing='drop')
 #    print acf(xn, missing='raise')
