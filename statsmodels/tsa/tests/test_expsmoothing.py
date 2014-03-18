@@ -45,7 +45,7 @@ class TestExpSmoothing:
     def test_holt_des_ndarray(self):
         # model with trend for additive
         dta = self.decomposed.resid + self.decomposed.trend
-        results = holt_des(dta.values, .9, .2, initial=None)
+        results = holt_des(dta.values, .86, .523, initial=None)
 
         # model with exponential trend for multiplicative
         dta = self.decomposed.resid + np.exp(self.decomposed.trend)
