@@ -330,9 +330,9 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
         #Configure damp
         if damp == 1:
-            m = np.arange(1,forecast+1)
+            m = np.arange(1, forecast + 1)
         else:
-            m = np.cumsum(damp ** np.arange(1, forecast+1))[1:]
+            m = np.cumsum(damp ** np.arange(1, forecast+1))
 
         #Config season
         if cycle == 0:
