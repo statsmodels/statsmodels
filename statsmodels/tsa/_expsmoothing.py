@@ -135,10 +135,8 @@ def _add_add(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
         cdata = np.concatenate([cdata, ])
         s = sdata[i]
         b = bdata[i]
-        sdata[i + 1] = (alpha * (y[i] - cdata[i]) + (1 - alpha) *
-                        (s + damp * b))
-        bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
-                        damp * b)
+        sdata[i + 1] = (alpha * (y[i] - cdata[i]) + (1 - alpha) * (s + damp * b))
+        bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) * damp * b)
         cdata[i + cycle] = (delta * (y[i] - sdata[i + 1]) +
                             (1 - delta) * cdata[i])
     return sdata, bdata, cdata
@@ -284,7 +282,8 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     elif initial == '3avg':
         bdata[0] = np.mean(abs(np.diff(y[:4])))
     else:
-        bdata[0] = abs(y[0] - y[1])
+        # might need an abs here?
+        bdata[0] = y[1] - y[0]
 
     #Setting s1 value
     sdata[0] = y[0]
@@ -359,11 +358,12 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
             else:
                 fdata = first_forecast + m * bdata[nobs - 2] + c
 
-        return Bunch(fitted=pdata, forecasts=fdata, resid=y - pdata)
+        return Bunch(fitted=pdata, forecasts=fdata, resid=y - pdata,
+                     trend=bdata)
 
     else:
 
-        return Bunch(fitted=pdata, resid=y - pdata)
+        return Bunch(fitted=pdata, resid=y - pdata, trend=bdata)
 
 ########################################################
 ######################Exponential Smoothing Wrappers####
@@ -616,8 +616,9 @@ def damp_es(y, alpha, gamma, damp=1, forecast=None, trend='additive',
        Taylor. International Journal of Forecasting, 2003
 
     """
-    dampend = exp_smoothing(y, alpha, gamma, 0, None, damp, initial, trend,
-                            forecast, 'additive', output)
+    dampend = exp_smoothing(y, alpha=alpha, gamma=gamma, delta=0, cycle=None,
+                            damp=damp, initial=initial, trend=trend,
+                            forecast=forecast, season='additive', output=output)
 
     return dampend
 
