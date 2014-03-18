@@ -154,16 +154,20 @@ class MDependent(CovStruct):
     """
     An m-dependent working dependence structure.
     """
+	def __init__(self, m):
+		self.m = m
+		self.r = 0
 
-    # The correlation between any two values in the same cluster
-	r = 0
+    # The correlation between any values in the same cluster within m time
 
 
     def update(self, beta, parent):
+		
+		if len(endog[i]) == 0:
+            continue
 		time = parent.time_li
 		mprod = []
         endog = parent.endog_li
-		m = 2
         num_clust = len(endog)
         nobs = parent.nobs
         dim = len(beta)
@@ -174,25 +178,34 @@ class MDependent(CovStruct):
 
         residsq_sum, scale, nterm = 0, 0, 0
         for i in range(num_clust):
+            expval, _ = cached_means[i]
 			sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / sdev
             resid_op = np.outer(resid, resid)
 			time_od = np.abs(time - time[:,None])
-			np.set_diagonal(time_od, 2*m)
-			ix,jx = np.nonzero(time_od < m)
+			np.set_diagonal(time_od, 2*self.m)
+			ix,jx = np.nonzero(time_od <= self.m)
 			mprod.append(time_od[ix,jx])
 
         mprod = np.concatenate(mprod)
-		r = np.mean(mprod[:,0] * mprod[:,1])
+		self.r = np.mean(mprod)
 
 
     def covariance_matrix(self, expval, index):
-        dim = len(expval)
-        dp = self.r * np.ones((dim, dim), dtype=np.float64)
-        return  dp + (1 - self.r) * np.eye(dim), True
+        varfunc = parent.family.variance
+		p = len(expval)
+		mat = np.eye(p)
+		time = self.time_li[index]
+		time_od = np.abs(time - time[:,None])
+		np.set_diagonal(time_od, 2*self.m)
+		ix,jx = np.nonzero(time_od < self.m)
+		mat[ix,jx] = self.r
+		sdev = np.sqrt(varfunc(expval))
+		mat *= np.outer(sdev, sdev)
+		return mat
 
     def summary(self):
-        return ("The correlation between observations in the " +
+        return ("The correlation between observations m time steps away in the " +
                 "same cluster is %.3f" % self.r)
 
 
@@ -603,8 +616,7 @@ class GlobalOddsRatio(CovStruct):
 
     # See docstring
     cpp = None
-
-
+	
     def __init__(self, nlevel, endog_type):
         super(GlobalOddsRatio, self).__init__()
         self.nlevel = nlevel
