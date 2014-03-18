@@ -150,6 +150,50 @@ class Exchangeable(CovStruct):
                 "same cluster is %.3f" % self.dep_params)
 
 
+class MDependent(CovStruct):
+    """
+    An m-dependent working dependence structure.
+    """
+
+    # The correlation between any two values in the same cluster
+	r = 0
+
+
+    def update(self, beta, parent):
+		time = parent.time_li
+		mprod = []
+        endog = parent.endog_li
+		m = 2
+        num_clust = len(endog)
+        nobs = parent.nobs
+        dim = len(beta)
+
+        varfunc = parent.family.variance
+
+        cached_means = parent.cached_means
+
+        residsq_sum, scale, nterm = 0, 0, 0
+        for i in range(num_clust):
+			sdev = np.sqrt(varfunc(expval))
+            resid = (endog[i] - expval) / sdev
+            resid_op = np.outer(resid, resid)
+			time_od = np.abs(time - time[:,None])
+			np.set_diagonal(time_od, 2*m)
+			ix,jx = np.nonzero(time_od < m)
+			mprod.append(time_od[ix,jx])
+
+        mprod = np.concatenate(mprod)
+		r = np.mean(mprod[:,0] * mprod[:,1])
+
+
+    def covariance_matrix(self, expval, index):
+        dim = len(expval)
+        dp = self.r * np.ones((dim, dim), dtype=np.float64)
+        return  dp + (1 - self.r) * np.eye(dim), True
+
+    def summary(self):
+        return ("The correlation between observations in the " +
+                "same cluster is %.3f" % self.r)
 
 
 class Nested(CovStruct):
