@@ -111,9 +111,9 @@ class TestExpSmoothing:
         np.testing.assert_almost_equal(results.fitted,
                                        expected_res.fitted, 1)
         np.testing.assert_almost_equal(results.resid,
-                                       expected_res.resid, 2)
+                                       expected_res.resid, 0)
         np.testing.assert_almost_equal(results.forecasts,
-                                       expected_res.forecasts, 3)
+                                       expected_res.forecasts, 0)
 
 
 
