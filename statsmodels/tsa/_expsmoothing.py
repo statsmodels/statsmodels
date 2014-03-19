@@ -89,56 +89,61 @@ import statsmodels.tools.eval_measures as em
 
 
 ### helper functions that do the smoothing ###
-# the general pattern is seasonality_trend_
+# the general pattern is _seasonality_trend_
 
 def _mult_mult(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
-    for i in range(nob - 1):
+    for i in range(nobs):
         s = sdata[i]
         b = bdata[i]
-        sdata[i + 1] = (alpha * (y[i] / cdata[i]) + (1 - alpha) *
-                        s * (b**damp))
-        bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
-                        (b ** damp))
+        sdata[i + 1] = alpha * (y[i] / cdata[i]) + (1 - alpha) * s * (b**damp)
+        bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b ** damp)
         cdata[i + cycle] = (delta * (y[i] / sdata[i + 1]) +
                             (1 - delta) * cdata[i])
     return sdata, bdata, cdata
 
 
 def _mult_add(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
-    for i in range(nobs - 1):
+    for i in range(nobs):
         s = sdata[i]
         b = bdata[i]
-        sdata[i + 1] = (alpha * (y[i] / cdata[i]) + (1 - alpha) *
-                        (s + damp * b))
-        bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) *
-                        damp * b)
-        cdata[i + cycle] = (delta * (y[i] / sdata[i + 1]) +
-                            (1 - delta) * cdata[i])
+        cycle_i = cdata[i]
+        sdata[i + 1] = alpha * (y[i] / cycle_i) + (1 - alpha) * (s + damp * b)
+        bdata[i + 1] = gamma * (sdata[i + 1] - s) + (1 - gamma) * damp * b
+        #see note in _add_add
+        #bdata[i + 1] = gamma * (sdata[i + 1] - s) + (damp - gamma) * b
+        cdata[i + cycle] = delta * (y[i] / s) + (1 - delta) * cycle_i
     return sdata, bdata, cdata
 
 
 def _add_mult(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
-    for i in range(nobs - 1):
+    for i in range(nobs):
         s = sdata[i]
         b = bdata[i]
-        sdata[i + 1] = (alpha * (y[i] - cdata[i]) + (1 - alpha) *
-                        s * (b**damp))
-        bdata[i + 1] = (gamma * (sdata[i + 1] / s) + (1 - gamma) *
-                        (b ** damp))
-        cdata[i + cycle] = (delta * (y[i] - sdata[i + 1]) +
-                            (1 - delta) * cdata[i])
+        sdata[i + 1] = alpha * (y[i] - cdata[i]) + (1 - alpha) * s * (b**damp)
+        bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b ** damp)
+        cdata[i + cycle] = (delta * (y[i] - sdata[i + 1]) + (1 - delta) * cdata[i])
     return sdata, bdata, cdata
 
 
 def _add_add(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
-    for i in range(nobs - 1):
-        cdata = np.concatenate([cdata, ])
+    for i in range(nobs):
         s = sdata[i]
         b = bdata[i]
-        sdata[i + 1] = (alpha * (y[i] - cdata[i]) + (1 - alpha) * (s + damp * b))
-        bdata[i + 1] = (gamma * (sdata[i + 1] - s) + (1 - gamma) * damp * b)
-        cdata[i + cycle] = (delta * (y[i] - sdata[i + 1]) +
-                            (1 - delta) * cdata[i])
+        cycle_i = cdata[i]
+        sdata[i + 1] = alpha * (y[i] - cycle_i) + (1 - alpha) * (s + damp * b)
+        bdata[i + 1] = gamma * (sdata[i + 1] - s) + (1 - gamma) * damp * b
+        #bdata[i + 1] = damp * b + gamma / alpha * (sdata[i + 1] - s - damp*b)
+        # the below is the update equation in Makridakis et al. 1998
+        # and Hyndman, Koehler, Snyder, and Grose
+        #bdata[i + 1] = gamma * (sdata[i + 1] - s) + (damp - gamma) * b
+        cdata[i + cycle] = delta * (y[i] - s) + (1 - delta) * cycle_i
+    return sdata, bdata, cdata
+
+
+def _simple_smoothing(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta,
+                      nobs):
+    for i in range(nobs - 1):
+        sdata[i + 1] = alpha * y[i] + (1 - alpha) * sdata[i]
     return sdata, bdata, cdata
 
 
@@ -148,6 +153,74 @@ _compute_smoothing = {('m', 'm'): _mult_mult,
                       ('a', 'a'): _add_add,
                       ('a', 'b'): _add_add,
                       }
+
+def _init_nonseasonal_params(initial, sdata, bdata, y, gamma, trend):
+    if isinstance(initial, dict):
+        sdata[0] = initial.get('st', y[0])
+        if gamma == 0: # no trend
+            if hasattr(initial, 'bt'):
+                raise ValueError("Model does not contain a trend and got "
+                                 "initial value for one.")
+        else:
+            if trend.startswith('m'):
+                bdata[0] = initial.get('bt', y[1] / y[0])
+            else:
+                bdata[0] = initial.get('bt', y[1] - y[0])
+    else:
+        sdata[0] = y[0]
+        if gamma != 0:
+            if trend.startswith('m'):
+                bdata[0] = y[1] / y[0]
+            else:
+                bdata[0] = y[1] - y[0]
+
+    return sdata, bdata
+
+
+def _init_seasonal_params(initial, sdata, bdata, cdata, cycle, gamma, y,
+                          season):
+    if isinstance(initial, dict):
+        # initial level
+        sdata[0] = initial.get('st', y[:cycle].mean())
+        if gamma == 0:
+            if hasattr(initial, 'bt'):
+                raise ValueError("Model does not contain a trend and got "
+                                 "initial value for one.")
+        else:
+            bdata[0] = initial.get('bt',
+                                   (np.mean((y[cycle:2 * cycle] -
+                                            y[:cycle])) /
+                                    float(cycle)))
+        if not hasattr(initial, 'ct'):
+            if season.startswith('m'):
+                if np.any(y < 0):
+                    raise ValueError("Multiplicative seasonality requires"
+                                     " positive y")
+                cdata[:cycle] = y[:cycle] / y[:cycle].mean()
+            else:
+                cdata[:cycle] = y[:cycle] - y[:cycle].mean()
+        else:
+            cdata0 = initial['ct']
+            if not len(cdata0) == cycle:
+                raise ValueError("Initial ct must be same length as cycle")
+            cdata[:cycle] = cdata0
+    else:
+        sdata[0] = y[:cycle].mean()
+        # initial trend value
+        if gamma != 0:
+            bdata[0] = (np.mean((y[cycle:2 * cycle] - y[:cycle])) /
+                        float(cycle))
+        #NOTE: Alternative at NIST uses whole sample
+        # http://www.itl.nist.gov/div898/handbook/pmc/section4/pmc435.htm
+        if season.startswith('m'):
+            if np.any(y < 0):
+                raise ValueError("Multiplicative seasonality requires positive"
+                                 " y")
+            cdata[:cycle] = y[:cycle] / y[:cycle].mean()
+        else:
+            cdata[:cycle] = y[:cycle] - y[:cycle].mean()
+
+    return sdata, bdata, cdata
 
 
 def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
@@ -172,11 +245,20 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     damp: non zero integer or float {default = 1}
         Autoregressive or damping parameter specifies a rate of decay
         in the trend. Generally 0<d<1
-    initial: str, {'3avg'}(Optional)
-        Indicate initial point for bt and y
-        default:     bt = y[0]-y[1],    st = y[0]
-        3avg:        Yields the average of the first 3 differences for bt.
-    trend: str, {'additive','multiplicative', 'brown'}
+    initial: dict, optional
+        The keys should be one or all of 'bt', 'st', and 'ct'. Indicates
+        initial point for bt, st, and ct where bt is the trend, st is the
+        level, and ct is the seasonal component. If st is given it must be
+        of the same length as the period. The defaults are ::
+
+           * bt = y[1] - y[0], for additive trend and in seasonal models
+           * bt = y[1] / y[0], for multiplicative trend in non-seasonal models
+           * st = y[0]
+           * st = y[:cycle].mean(), for seasonal models
+           * ct = y[:cycle] / y[:cycle].mean(), for multiplicative seasonality
+           * ct = y[:cycle] - y[:cycle].mean(), for additive seasonality
+
+    trend: str, {'additive', 'multiplicative', 'brown'}
         Allows partial matching of string. Indicate model type of trend.
         Default is 'additive'. Additive uses additive models such as Holt's
         linear & Damped-Trend Linear Exponential Smoothing. Generalized as:
@@ -185,6 +267,9 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
            s_t = a * y_t + (1-a) * (s_t-1 + b_t-1)
            b_t = g * (s_t - s_t-1) + (1 - g) * b_t-1
+           c_t = d * (y_t - s_t-1) + (1 - d) * c_t-p
+
+        where p is the period of the time-series.
 
         Multiplicative uses multiplicative models such as Exponential trend &
         Taylor's modification of Pegels' model. Generalized as:
@@ -192,7 +277,8 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
         .. math::
 
            s_t = a * y_t + (1-a) * (s_t-1 * b_t-1)
-           b_t = g *(s_t / s_t-1) + (1 - g) * b_t-1
+           b_t = g * (s_t / s_t-1) + (1 - g) * b_t-1
+           c_t = d * (y_t / s_t) + (1 - d) * c_t-p
 
         Brown is used to deal with the special cases in Brown linear smoothing.
     forecast: int (Optional)
@@ -235,7 +321,7 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     """
 
     #Initialize data
-    y = np.asarray(y)
+    y = np.asarray(y).squeeze()
     nobs = len(y)
     if nobs <= 3:
         raise ValueError("Cannot implement model, must have at least 4 "
@@ -245,77 +331,50 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
     season, trend = season[0].lower(), trend[0].lower()
 
-    #forcast length
-    if forecast >= 1:
-        h = 1
-    else:
-        h = 0
-
     #Setup array lengths, go ahead and do last forecast in funcs if necessary
     # smoothed data
-    sdata = np.zeros(nobs + h)
+    sdata = np.zeros(nobs + 1)  # + 1 for initial data
     # trend
-    bdata = np.zeros(nobs + h)
+    bdata = np.zeros(nobs + 1)  # + 1 for initial data
+    cdata = np.zeros(nobs + cycle if cycle else nobs)
+    # + cycle for initial data and forecasts
 
     # Setup seasonal values
-    if isinstance(cycle, int):
-        if (nobs + h) < 2 * cycle:
+    if cycle is not None:
+        if nobs < 2 * cycle:
             raise ValueError("Cannot implement model, must be 2 at least "
                              "cycles long")
-        #Setting b1 value
-        bdata[0] = np.mean((y[cycle:2 * cycle] - y[:cycle]) / float(cycle))
-        #Setup initial seasonal indicies
-        #coerce cycle start lengths
-        if nobs % cycle != 0:
-            cdata = y[:nobs % cycle*-1].reshape(-1, cycle)
-        else:
-            cdata = y.reshape(-1, cycle)
-        cdata = (cdata / cdata.mean(axis=1).reshape(-1, 1)).mean(axis=0)
+        sdata, bdata, cdata = _init_seasonal_params(initial, sdata, bdata,
+                                                    cdata, cycle, gamma,
+                                                    y, season)
     else:
+        sdata, bdata = _init_nonseasonal_params(initial, sdata, bdata, y,
+                                                gamma, trend)
         #Initialize to bypass delta function with 0
         cycle = 0
-        cdata = np.zeros(nobs)
-
-    #Setting b1 value
-    if gamma == 0:
-        bdata[0] = 0
-    elif initial == '3avg':
-        bdata[0] = np.mean(abs(np.diff(y[:4])))
-    else:
-        # might need an abs here?
-        bdata[0] = y[1] - y[0]
-
-    #Setting s1 value
-    sdata[0] = y[0]
-
-    #Equations & Update nobs to align array
 
     smooth_func = _compute_smoothing[(season, trend)]
     sdata, bdata, cdata = smooth_func(y, sdata, bdata, cdata, alpha, gamma,
-                                      damp, cycle, delta, nobs + h)
-
-    #Temporary fix: back fill data with Nan to align with y
-    #filx = [np.nan, np.nan]
-    #bdata = np.concatenate([filx, bdata])
-    #sdata = np.concatenate([filx, sdata])
+                                      damp, cycle, delta, nobs)
 
     if season.startswith('m'):
         if trend.startswith('m'):
-            pdata = (sdata * bdata) * cdata[:len(cdata) - cycle+3]
+            pdata = (sdata[:nobs] * bdata[:nobs]) * cdata[:nobs]
         else:
-            pdata = (sdata + bdata) * cdata[:len(cdata) - cycle+3]
+            pdata = (sdata[:nobs] + bdata[:nobs]) * cdata[:nobs]
     else:
         if trend.startswith('m'):
-            pdata = sdata * bdata + cdata[:len(cdata) - cycle+3]
+            pdata = sdata[:nobs] * bdata[:nobs] + cdata[:nobs]
         #Handles special case for Brown linear
         elif trend.startswith('b'):
             at = 2 * sdata - bdata
             bt = alpha / (1 - alpha) * (sdata - bdata)
             sdata = at
             bdata = bt
-            pdata = sdata[:nobs] + bdata[:nobs] + cdata[:len(cdata) - cycle+3]
+            pdata = sdata[:nobs] + bdata[:nobs] + cdata[:nobs]
         else:
-            pdata = sdata[:nobs] + bdata[:nobs] + cdata[:len(cdata) - cycle+3]
+            pdata = sdata[:nobs] + bdata[:nobs] + cdata[:nobs]
+
 
     #Calculations for summary items (NOT USED YET)
     x1 = y[2:]
@@ -330,6 +389,8 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
         #Configure damp
         if damp == 1:
             m = np.arange(1, forecast + 1)
+        elif damp == 0:
+            m = 1
         else:
             m = np.cumsum(damp ** np.arange(1, forecast+1))
 
@@ -339,16 +400,17 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
                 c = 1
             else:
                 c = 0
-        elif forecast > cycle:
-            raise NotImplementedError("Forecast beyond cycle length is "
-                                      "unavailable")
         else:
-            c = cdata[nobs - 1:]  # nobs + 1 - 2 pre-series values
-            c = c[:forecast - 1]
+            # last of the seasonality from the model
+            c = cdata[nobs:nobs + forecast]
+            if forecast > cycle:
+                c = np.tile(c, np.ceil(forecast / float(cycle)))[:forecast]
 
         #Config trend
         if season.startswith('m'):
-            if trend.startswith('m'):
+            if gamma == 0:  # no trend
+                fdata = first_forecast * c
+            elif trend.startswith('m'):
                 fdata = first_forecast * (first_b ** m) * c
             else:
                 fdata = first_forecast + m * first_b * c
@@ -356,7 +418,7 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
             if trend.startswith('m'):
                 fdata = first_forecast * (first_b ** m) + c
             else:
-                fdata = first_forecast + m * bdata[nobs - 2] + c
+                fdata = first_forecast + m * first_b + c
 
         return Bunch(fitted=pdata, forecasts=fdata, resid=y - pdata,
                      trend=bdata)
@@ -546,11 +608,13 @@ def holt_des(y, alpha, gamma, forecast=None, trend='additive',
      * Exponential Smoothing with a Damped Multiplicative Trend,
        James W. Taylor. International Journal of Forecasting, 2003
     """
-    holt = exp_smoothing(y, alpha, gamma, 0, None, 1, initial, trend,
-                         forecast, 'additive', output)
+    holt = exp_smoothing(y=y, alpha=alpha, gamma=gamma, delta=0, cycle=None,
+                         damp=1, initial=initial, trend=trend,
+                         forecast=forecast, season='additive', output=output)
 
     return holt
 
+#NOTE: gamma < damp < 1 for damped models
 
 #Damped-Trend Linear Exponential Smoothing Models
 def damp_es(y, alpha, gamma, damp=1, forecast=None, trend='additive',
@@ -624,8 +688,8 @@ def damp_es(y, alpha, gamma, damp=1, forecast=None, trend='additive',
 
 
 ################Seasonal Exponential Smoothing###############
-def seasonal_es(y, alpha, delta, cycle, forecast=None,
-                season='additive', output='data',):
+def seasonal_es(y, alpha, delta, cycle, forecast=None, damp=False,
+                season='additive', output='data'):
     """
     Simple Seasonal Smoothing
     Use when there is a seasonal element but no trend
@@ -670,7 +734,8 @@ def seasonal_es(y, alpha, delta, cycle, forecast=None,
        Taylor. International Journal of Forecasting, 2003
     """
 
-    ssexp = exp_smoothing(y, alpha, 0, delta, cycle, 1, None, 'additive',
-                          forecast, 'additive', output)
+    ssexp = exp_smoothing(y, alpha=alpha, gamma=0, delta=delta, cycle=cycle,
+                          damp=damp, initial=None, trend='additive',
+                          forecast=forecast, season=season, output=output)
 
     return ssexp
