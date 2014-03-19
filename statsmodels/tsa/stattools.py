@@ -282,7 +282,7 @@ def adfuller(x, maxlag=None, regression="c", autolag='AIC',
             return adfstat, pvalue, usedlag, nobs, critvalues, icbest
 
 
-def acovf(x, unbiased=False, demean=True, fft=False):
+def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     '''
     Autocovariance for 1D
 
@@ -297,7 +297,10 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     fft : bool
         If True, use FFT convolution.  This method should be preferred
         for long time series.
-
+    missing : str
+        A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
+        are to be treated.
+        
     Returns
     -------
     acovf : array
@@ -306,28 +309,41 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     x = np.squeeze(np.asarray(x))
     if x.ndim > 1:
         raise ValueError("x must be 1d. Got %d dims." % x.ndim)
-    n = len(x)
+ #   print 'received %s' % repr(x[:3])
 
-    x_is_masked = has_missing(x)
-    if x_is_masked:
-        notmask = ~np.isnan(x) #bool
-        #need this even in the biased case to return x unaltered
-        x[~notmask] = 0
-        notmask = notmask.astype(int) #int
+    missing = missing.lower()
+    if missing not in ['none', 'raise', 'conservative', 'drop']:
+        raise ValueError("missing option %s not understood" % missing)
+    if missing == 'none':
+        deal_with_masked = False
+    else:
+        deal_with_masked = has_missing(x)
+    if deal_with_masked:
+        if missing == 'raise': 
+            raise MissingDataError("NaNs were encountered in the data")
+        notmask_bool = ~np.isnan(x) #bool
+        if missing == 'conservative':
+            x[~notmask_bool] = 0
+        else: #'drop'
+            x = x[notmask_bool] #copies non-missing
+        notmask_int = notmask_bool.astype(int) #int
+#    print 'after unmasking %s' % repr(x[:3])
 
-    if demean and x_is_masked:
-        xo = x - x.sum()/notmask.sum()
+    if demean and deal_with_masked:
+        # whether 'drop' or 'conservative':
+        xo = x - x.sum()/notmask_int.sum()
     elif demean:
         xo = x - x.mean()
     else:
         xo = x
 
-    if unbiased and x_is_masked:
-        d = np.correlate(notmask, notmask, 'full')
+    n = len(x);# print n
+    if unbiased and deal_with_masked and missing=='conservative':
+        d = np.correlate(notmask_int, notmask_int, 'full')
     elif unbiased:
         xi = np.arange(1, n + 1)
         d = np.hstack((xi, xi[:-1][::-1]))
-    else:
+    else: #biased and (no missing or 'drop' or 'none')
         d = n * np.ones(2 * n - 1)
 
     if fft:
@@ -338,9 +354,9 @@ def acovf(x, unbiased=False, demean=True, fft=False):
     else:
         acov = (np.correlate(xo, xo, 'full') / d)[n - 1:]
 
-    if x_is_masked:
+    if deal_with_masked and missing=='conservative':
         # restore data for the user
-        x[~notmask] = np.nan
+        x[~notmask_bool] = np.nan
 
     return acov
 
@@ -1165,16 +1181,32 @@ if __name__ == "__main__":
 # tests for missing data
     xn = x.copy()
     xn[0] = np.nan
+    lags = 3
 #    print x
 #    print xn
 #    print missing_handler(xn, 'drop')
 #    print missing_handler(xn, 'raise')
-    print acovf(x)[:5]
-    print acovf(x, unbiased=True)[:5]
-    print acovf(xn)[:5]
-    print acovf(xn, unbiased=True)[:5]
-    print acovf(xn, unbiased=True, demean=False)[:5]
-    print acovf(xn, unbiased=True, demean=False, fft=True)[:5]
+    print 'acovf tests, ignore missing'
+    print acovf(x[1:])[:lags]
+    print acovf(x[1:], unbiased=True)[:lags]
+    print acovf(xn)[:lags]
+    print acovf(xn, unbiased=True)[:lags]
+    print acovf(xn, unbiased=True, demean=False)[:lags]
+    print acovf(xn, unbiased=True, demean=False, fft=True)[:lags]
+    print 'acovf tests with missing, biased:'
+#    print acovf(xn, missing='raise')[:lags]
+    print acovf(xn, missing='conservative')[:lags]
+    print acovf(xn, missing='drop')[:lags]
+    print 'acovf tests with missing, unbiased:'
+#    print acovf(xn, unbiased=True, missing='raise')[:lags]
+    print acovf(xn, unbiased=True, missing='conservative')[:lags]
+    print acovf(xn, unbiased=True, missing='drop')[:lags]
+    print 'acovf tests with missing, unbiased nodemean:'
+    print acovf(xn, unbiased=True, demean=False, missing='conservative')[:lags]
+    print acovf(xn, unbiased=True, demean=False, missing='drop')[:lags]
+    print 'acovf test with missing, unbiased nodemean fft:'
+    print acovf(xn, unbiased=True, demean=False, fft=True, missing='conservative')[:lags]
+    print acovf(xn, unbiased=True, demean=False, fft=True, missing='drop')[:lags]
 #    print acf(xn)
 #    print acf(xn, missing='drop')
 #    print acf(xn, missing='raise')
