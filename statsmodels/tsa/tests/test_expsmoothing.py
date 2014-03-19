@@ -11,7 +11,7 @@ class TestExpSmoothing:
     @classmethod
     def setupClass(cls):
         dta = co2.load_pandas().data
-        dta.co2.interpolate(inplace=True)
+        dta.co2 = dta.co2.interpolate()
         cls.dta = dta.resample('MS')  # shorter better to test
 
         # decompose it - to use appropriate methods for results
