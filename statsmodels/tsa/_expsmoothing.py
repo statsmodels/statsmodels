@@ -95,10 +95,10 @@ def _mult_mult(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
     for i in range(nobs):
         s = sdata[i]
         b = bdata[i]
-        sdata[i + 1] = alpha * (y[i] / cdata[i]) + (1 - alpha) * s * (b**damp)
-        bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b ** damp)
-        cdata[i + cycle] = (delta * (y[i] / sdata[i + 1]) +
-                            (1 - delta) * cdata[i])
+        cycle_i = cdata[i]
+        sdata[i + 1] = alpha * (y[i] / cycle_i) + (1 - alpha) * s * (b**damp)
+        bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b**damp)
+        cdata[i + cycle] = delta * (y[i] / (s*b**damp)) + (1 - delta) * cycle_i
     return sdata, bdata, cdata
 
 
@@ -120,8 +120,8 @@ def _add_mult(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
         s = sdata[i]
         b = bdata[i]
         sdata[i + 1] = alpha * (y[i] - cdata[i]) + (1 - alpha) * s * (b**damp)
-        bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b ** damp)
-        cdata[i + cycle] = (delta * (y[i] - sdata[i + 1]) + (1 - delta) * cdata[i])
+        bdata[i + 1] = gamma * (sdata[i + 1] / s) + (1 - gamma) * (b**damp)
+        cdata[i + cycle] = delta * (y[i] - s) + (1 - delta) * cdata[i]
     return sdata, bdata, cdata
 
 
@@ -132,6 +132,7 @@ def _add_add(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
         cycle_i = cdata[i]
         sdata[i + 1] = alpha * (y[i] - cycle_i) + (1 - alpha) * (s + damp * b)
         bdata[i + 1] = gamma * (sdata[i + 1] - s) + (1 - gamma) * damp * b
+        # this is the update equation recommended for optimization stability
         #bdata[i + 1] = damp * b + gamma / alpha * (sdata[i + 1] - s - damp*b)
         # the below is the update equation in Makridakis et al. 1998
         # and Hyndman, Koehler, Snyder, and Grose
@@ -141,7 +142,7 @@ def _add_add(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta, nobs):
 
 
 def _simple_smoothing(y, sdata, bdata, cdata, alpha, gamma, damp, cycle, delta,
-                      nobs):
+                      nobs):  # pragma : no cover
     for i in range(nobs - 1):
         sdata[i + 1] = alpha * y[i] + (1 - alpha) * sdata[i]
     return sdata, bdata, cdata
@@ -157,8 +158,9 @@ _compute_smoothing = {('m', 'm'): _mult_mult,
 def _init_nonseasonal_params(initial, sdata, bdata, y, gamma, trend):
     if isinstance(initial, dict):
         sdata[0] = initial.get('st', y[0])
-        if gamma == 0: # no trend
-            if hasattr(initial, 'bt'):
+        # no trend
+        if gamma == 0:  # pragma : no cover
+            if 'bt' in initial:
                 raise ValueError("Model does not contain a trend and got "
                                  "initial value for one.")
         else:
@@ -179,11 +181,11 @@ def _init_nonseasonal_params(initial, sdata, bdata, y, gamma, trend):
 
 def _init_seasonal_params(initial, sdata, bdata, cdata, cycle, gamma, y,
                           season):
-    if isinstance(initial, dict):
+    if isinstance(initial, dict):  # pragma : no cover
         # initial level
         sdata[0] = initial.get('st', y[:cycle].mean())
         if gamma == 0:
-            if hasattr(initial, 'bt'):
+            if 'bt' in initial:  # pragma : no cover
                 raise ValueError("Model does not contain a trend and got "
                                  "initial value for one.")
         else:
@@ -191,7 +193,7 @@ def _init_seasonal_params(initial, sdata, bdata, cdata, cycle, gamma, y,
                                    (np.mean((y[cycle:2 * cycle] -
                                             y[:cycle])) /
                                     float(cycle)))
-        if not hasattr(initial, 'ct'):
+        if not 'ct' in initial:
             if season.startswith('m'):
                 if np.any(y < 0):
                     raise ValueError("Multiplicative seasonality requires"
@@ -244,12 +246,15 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
         Length of cycles in a season. (ie: 12 for months, 4 for quarters)
     damp: non zero integer or float {default = 1}
         Autoregressive or damping parameter specifies a rate of decay
-        in the trend. Generally 0<d<1
+        in the trend. Generally 0<d<1. I.e., damp = 1, means no-dampening
+        is applied. damp = 0 will remove the trend, though you should use
+        gamma to control for this properly.
     initial: dict, optional
         The keys should be one or all of 'bt', 'st', and 'ct'. Indicates
         initial point for bt, st, and ct where bt is the trend, st is the
         level, and ct is the seasonal component. If st is given it must be
-        of the same length as the period. The defaults are ::
+        of the same length as the period and should be in proper time order i.e.,
+        ``-cycle, -cycle+1, ...``. The defaults are ::
 
            * bt = y[1] - y[0], for additive trend and in seasonal models
            * bt = y[1] / y[0], for multiplicative trend in non-seasonal models
@@ -323,13 +328,16 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
     #Initialize data
     y = np.asarray(y).squeeze()
     nobs = len(y)
-    if nobs <= 3:
+    if nobs <= 3:  # pragma : no cover
         raise ValueError("Cannot implement model, must have at least 4 "
                          "data points")
-    if alpha == 0:
+    if alpha == 0:  # pragma : no cover
         raise ValueError("Cannot fit model, alpha must not be 0")
 
     season, trend = season[0].lower(), trend[0].lower()
+
+    if damp != 1 and trend.startswith('b'):
+        raise ValueError("Dampening not available for Brown's LES model")
 
     #Setup array lengths, go ahead and do last forecast in funcs if necessary
     # smoothed data
@@ -341,7 +349,7 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
     # Setup seasonal values
     if cycle is not None:
-        if nobs < 2 * cycle:
+        if nobs < 2 * cycle:  # pragma : no cover
             raise ValueError("Cannot implement model, must be 2 at least "
                              "cycles long")
         sdata, bdata, cdata = _init_seasonal_params(initial, sdata, bdata,
@@ -359,12 +367,17 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
     if season.startswith('m'):
         if trend.startswith('m'):
-            pdata = (sdata[:nobs] * bdata[:nobs]) * cdata[:nobs]
+            pdata = (sdata[:nobs] * damp * bdata[:nobs]) * cdata[:nobs]
+            #resid = np.log(y/pdata)
         else:
-            pdata = (sdata[:nobs] + bdata[:nobs]) * cdata[:nobs]
+            pdata = (sdata[:nobs] + damp * bdata[:nobs]) * cdata[:nobs]
+            #resid = (np.log((y / (sdata[:nobs] -
+            #         damp * bdata[:nobs]))/cdata[:nobs]))
     else:
         if trend.startswith('m'):
-            pdata = sdata[:nobs] * bdata[:nobs] + cdata[:nobs]
+            pdata = sdata[:nobs] * bdata[:nobs] ** damp + cdata[:nobs]
+            #resid = (np.log(y) - np.log(sdata[:nobs]) -
+            #         damp * np.log(bdata[:nobs])) - cdata
         #Handles special case for Brown linear
         elif trend.startswith('b'):
             at = 2 * sdata - bdata
@@ -372,8 +385,12 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
             sdata = at
             bdata = bt
             pdata = sdata[:nobs] + bdata[:nobs] + cdata[:nobs]
+            #resid = y - pdata
         else:
-            pdata = sdata[:nobs] + bdata[:nobs] + cdata[:nobs]
+            pdata = sdata[:nobs] + damp * bdata[:nobs] + cdata[:nobs]
+
+    # NOTE: could compute other residuals for the non-linear model
+    resid = y - pdata
 
 
     #Calculations for summary items (NOT USED YET)
@@ -388,11 +405,11 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
 
         #Configure damp
         if damp == 1:
-            m = np.arange(1, forecast + 1)
+            m = np.arange(1, forecast+1)
         elif damp == 0:
             m = 1
         else:
-            m = np.cumsum(damp ** np.arange(1, forecast+1))
+            m = np.cumsum(damp ** np.arange(forecast))
 
         #Config season
         if cycle == 0:
@@ -420,12 +437,12 @@ def exp_smoothing(y, alpha, gamma, delta=0, cycle=None, damp=1, initial=None,
             else:
                 fdata = first_forecast + m * first_b + c
 
-        return Bunch(fitted=pdata, forecasts=fdata, resid=y - pdata,
+        return Bunch(fitted=pdata, forecasts=fdata, resid=resid,
                      trend=bdata)
 
     else:
 
-        return Bunch(fitted=pdata, resid=y - pdata, trend=bdata)
+        return Bunch(fitted=pdata, resid=resid, trend=bdata)
 
 ########################################################
 ######################Exponential Smoothing Wrappers####
