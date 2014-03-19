@@ -154,58 +154,54 @@ class MDependent(CovStruct):
     """
     An m-dependent working dependence structure.
     """
-	def __init__(self, m):
-		self.m = m
-		self.r = 0
+    def __init__(self, m):
+        self.m = m
+        self.r = 0.
 
     # The correlation between any values in the same cluster within m time
 
 
-    def update(self, beta, parent):
-		
-		if len(endog[i]) == 0:
-            continue
-		time = parent.time_li
-		mprod = []
+    def update(self, beta, parent):		
+        time = parent.time_li #check indentation, option for tabs to 4 spaces, delete trailing white spaces
+        mprod = []
         endog = parent.endog_li
         num_clust = len(endog)
         nobs = parent.nobs
         dim = len(beta)
-
         varfunc = parent.family.variance
-
         cached_means = parent.cached_means
-
         residsq_sum, scale, nterm = 0, 0, 0
         for i in range(num_clust):
+            if len(endog[i]) == 0:
+                continue
             expval, _ = cached_means[i]
-			sdev = np.sqrt(varfunc(expval))
+            sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / sdev
             resid_op = np.outer(resid, resid)
-			time_od = np.abs(time - time[:,None])
-			np.set_diagonal(time_od, 2*self.m)
-			ix,jx = np.nonzero(time_od <= self.m)
-			mprod.append(time_od[ix,jx])
+            time_od = np.abs(time - time[:,None])
+            np.set_diagonal(time_od, 2*self.m)
+            ix,jx = np.nonzero(time_od <= self.m)
+            mprod.append(time_od[ix,jx])
 
         mprod = np.concatenate(mprod)
-		self.r = np.mean(mprod)
+        self.r = np.mean(mprod)
 
 
     def covariance_matrix(self, expval, index):
         varfunc = parent.family.variance
-		p = len(expval)
-		mat = np.eye(p)
-		time = self.time_li[index]
-		time_od = np.abs(time - time[:,None])
-		np.set_diagonal(time_od, 2*self.m)
-		ix,jx = np.nonzero(time_od < self.m)
-		mat[ix,jx] = self.r
-		sdev = np.sqrt(varfunc(expval))
-		mat *= np.outer(sdev, sdev)
-		return mat
+        p = len(expval)
+        mat = np.eye(p)
+        time = self.time_li[index]
+        time_od = np.abs(time - time[:,None])
+        np.set_diagonal(time_od, 2*self.m)
+        ix,jx = np.nonzero(time_od <= self.m)
+        mat[ix,jx] = self.r
+        sdev = np.sqrt(varfunc(expval))
+        mat *= np.outer(sdev, sdev)
+        return mat
 
     def summary(self):
-        return ("The correlation between observations m time steps away in the " +
+        return ("The correlation between observations <= m time steps away in the " +
                 "same cluster is %.3f" % self.r)
 
 
