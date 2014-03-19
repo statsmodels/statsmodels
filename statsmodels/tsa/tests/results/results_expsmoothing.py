@@ -41,3 +41,9 @@ class ExpSmoothingResults:
         return Bunch(forecasts=res.forecasts, fitted=res.xhat,
                      level=res.level,
                      resid=res.resid, trend=res.trend)
+
+    def multmult(self):
+        import co2_mult_mult_results as res
+        return Bunch(forecasts=res.forecasts, fitted=res.xhat,
+                     level=res.level,
+                     resid=res.resid, trend=res.trend)

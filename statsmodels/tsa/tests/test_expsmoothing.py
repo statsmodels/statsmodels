@@ -81,39 +81,47 @@ class TestExpSmoothing:
         trend = self.decomposed.trend[::-1]
         dta = (self.decomposed.resid + trend.values).dropna()
 
-        results = damp_es(dta.values, alpha=.7826, gamma=.0299, trend='a',
+        alpha = .7826
+        # NOTE: Hyndman writes it like this for stability in optimization
+        #  these are the update equations used
+        gamma = .0299/alpha
+
+        results = damp_es(dta.values, alpha=.7826, gamma=gamma, trend='a',
                           damp=.98, forecast=48,
                           initial={'bt' : -0.25091078545258960197,
                                    'st' : 372.02473545186114733951})
         # NOTE: technically you should only used optimized initial params
         # with damped. took these from R
         expected_res = expected.damped_trend()
-        # NOTE: This error seems a little big to be rounding error only
         np.testing.assert_almost_equal(results.trend,
-                                       expected_res.trend, 1)
+                                       expected_res.trend, 8)
         np.testing.assert_almost_equal(results.fitted,
-                                       expected_res.fitted, 1)
+                                       expected_res.fitted, 8)
         np.testing.assert_almost_equal(results.resid,
-                                       expected_res.resid, 1)
-        np.testing.assert_allclose(results.forecasts,
-                                   expected_res.forecasts, rtol=1e-3)
+                                       expected_res.resid, 8)
+        np.testing.assert_almost_equal(results.forecasts,
+                                       expected_res.forecasts, 8)
 
 
-        results = damp_es(dta.values, alpha=.782599999999999962341,
-                          gamma=0.029899999999999999495, trend='m',
+        alpha = .7826
+        gamma = .0299/alpha
+        results = damp_es(dta.values, alpha=alpha,
+                          gamma=gamma, trend='m',
                           damp=.98, forecast=48,
                           initial={'bt' : 0.999321789870789678467,
                                    'st' : 372.028495898940150254930})
         expected_res = expected.damped_mult_trend()
         # NOTE: technically you should only used optimized initial params
         np.testing.assert_almost_equal(results.trend,
-                                       expected_res.trend, 3)
+                                       expected_res.trend, 8)
         np.testing.assert_almost_equal(results.fitted,
-                                       expected_res.fitted, 1)
-        np.testing.assert_almost_equal(results.resid,
-                                       expected_res.resid, 0)
+                                       expected_res.fitted, 8)
+        #NOTE: see commented out code for ets-matched residuals
+        #np.testing.assert_almost_equal(results.resid,
+        #                               expected_res.resid, 5)
+        #NOTE: not sure why the precision is low here. should be right.
         np.testing.assert_almost_equal(results.forecasts,
-                                       expected_res.forecasts, 0)
+                                       expected_res.forecasts, 3)
 
 
 
@@ -157,7 +165,34 @@ class TestExpSmoothing:
         np.testing.assert_almost_equal(results.forecasts,
                                        expected_res.forecasts, 3)
 
+    def test_exp_smoothing_ndarray(self):
+        dta = self.dta
+        init_ct = np.array([1.001843291395, 0.999992706537, 0.997342232980,
+                            0.994001023919, 0.990791351262, 0.991124074728,
+                            0.996183466518, 1.002105875039, 1.006614389201,
+                            1.008529917146, 1.007285317008, 1.004186354267])
+        init_ct = init_ct[::-1] # proper time order
+        init = {'st': 314.78888791602560104366,
+                'bt': 1.00024658183093162478,
+                'ct' : init_ct,
+                }
+        alpha = .7198
+        # ets defines the model like this in the update equations for
+        # stability in optimization cf. Hyndman book
+        gamma = .0387/alpha
+        delta = .01
+        results = exp_smoothing(dta.values, initial=init, alpha=alpha,
+                                gamma=gamma, delta=delta, cycle=12,
+                                season='m', trend='m', forecast=48,
+                                damp=1)
 
-    def exp_smoothing_ndarray(self):
-
-        pass
+        expected_res = expected.multmult()
+        np.testing.assert_almost_equal(results.fitted,
+                                       expected_res.fitted, 8)
+        np.testing.assert_almost_equal(results.trend,
+                                       expected_res.trend, 8)
+        #NOTE: see commented out code for ets-matched residuals
+        #np.testing.assert_almost_equal(results.resid,
+        #                               expected_res.resid, 5)
+        np.testing.assert_almost_equal(results.forecasts,
+                                       expected_res.forecasts, 8)
