@@ -488,7 +488,7 @@ def ses(y, alpha, forecast=None, output='data'):
 ################Double Exponential Smoothing###############
 def brown_linear(y, alpha, forecast=None, output='data'):
     """
-    Brown's Linear Exponential Smoothing (LES)
+    Brown's Linear (aka Double) Exponential Smoothing (LES)
     This function a special case of the Holt's Exponential smoothing
     using alpha as the smoothing factor and smoothing trend factor.
 
@@ -517,15 +517,18 @@ def brown_linear(y, alpha, forecast=None, output='data'):
 
        s_t = a * y_t + (1 - a) * (s_t-1)
        b_t = a *(s_t - s_t-1) + (1 - a) * T_t-1
-       a'=2*(s_t - b_t)
-       b'=a/(1-a)*(s_t - b_t)
+       a' = 2*s_t - b_t
+       b' = a/(1-a) * (s_t - b_t)
        F_t = a' + b'
 
     Forecast equation
 
     .. math::
 
-       F_t+n = a' + m * b'
+       F_t+m = a' + m * b'
+
+    This model is equivalent to Holt's method in the special case where a == b
+    with the forecasts adjusted as above.
 
     References
     ----------
