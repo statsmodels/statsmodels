@@ -316,7 +316,6 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     x = np.squeeze(np.asarray(x))
     if x.ndim > 1:
         raise ValueError("x must be 1d. Got %d dims." % x.ndim)
- #   print 'received %s' % repr(x[:3])
 
     missing = missing.lower()
     if missing not in ['none', 'raise', 'conservative', 'drop']:
@@ -334,7 +333,6 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
         else: #'drop'
             x = x[notmask_bool] #copies non-missing
         notmask_int = notmask_bool.astype(int) #int
-#    print 'after unmasking %s' % repr(x[:3])
 
     if demean and deal_with_masked:
         # whether 'drop' or 'conservative':
@@ -344,7 +342,7 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     else:
         xo = x
 
-    n = len(x);# print n
+    n = len(x)
     if unbiased and deal_with_masked and missing=='conservative':
         d = np.correlate(notmask_int, notmask_int, 'full')
     elif unbiased:
@@ -402,8 +400,8 @@ def q_stat(x, nobs, type="ljungbox"):
 #see for example
 # http://www.itl.nist.gov/div898/handbook/eda/section3/autocopl.htm
 def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
-        confint=None, missing='none'):
-    '''
+        missing='none'):
+    """
     Autocorrelation function for 1d arrays.
 
     Parameters
@@ -425,7 +423,7 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
         returned where the standard deviation is computed according to
         Bartlett\'s formula.
     missing : str, optional
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs
+        A string in ['none', 'raise', 'conservative', 'drop'] specifying how the NaNs
         are to be treated.
 
     Returns
@@ -449,28 +447,10 @@ def acf(x, unbiased=False, nlags=40, qstat=False, fft=False, alpha=None,
 
     If unbiased is true, the denominator for the autocovariance is adjusted
     but the autocorrelation is not an unbiased estimtor.
-    '''
-    x = missing_handler(x, missing)
-    nobs = len(x)
-    d = nobs  # changes if unbiased
-    if not fft:
-        avf = acovf(x, unbiased=unbiased, demean=True)
-        #acf = np.take(avf/avf[0], range(1,nlags+1))
-        acf = avf[:nlags + 1] / avf[0]
-    else:
-        x = np.squeeze(np.asarray(x))
-        #JP: move to acovf
-        x0 = x - x.mean()
-        # ensure that we always use a power of 2 or 3 for zero-padding,
-        # this way we'll ensure O(n log n) runtime of the fft.
-        n = _next_regular(2 * nobs + 1)
-        Frf = np.fft.fft(x0, n=n)  # zero-pad for separability
-        if unbiased:
-            d = nobs - np.arange(nobs)
-        acf = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d
-        acf /= acf[0]
-        #acf = np.take(np.real(acf), range(1,nlags+1))
-        acf = np.real(acf[:nlags + 1])   # keep lag 0
+    """
+    nobs = len(x)  # should this shrink for missing='drop' and NaNs in x?
+    avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
+    acf = avf[:nlags + 1] / avf[0]
     if not (qstat or alpha):
         return acf
     if alpha is not None:
@@ -554,7 +534,7 @@ def pacf_ols(x, nlags=40):
     return np.array(pacf)
 
 
-def pacf(x, nlags=40, method='ywunbiased', alpha=None, missing='none'):
+def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     '''Partial autocorrelation estimated
 
     Parameters
@@ -579,10 +559,6 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None, missing='none'):
         returned where the standard deviation is computed according to
         1/sqrt(len(x))
 
-    missing : str, optional
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs
-        are to be treated.
-
     Returns
     -------
     pacf : 1d array
@@ -595,7 +571,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None, missing='none'):
     This solves yule_walker equations or ols for each desired lag
     and contains currently duplicate calculations.
     '''
-    x = missing_handler(x, missing)
+
     if method == 'ols':
         ret = pacf_ols(x, nlags=nlags)
     elif method in ['yw', 'ywu', 'ywunbiased', 'yw_unbiased']:
@@ -1327,9 +1303,12 @@ if __name__ == "__main__":
     print 'acovf test with missing, unbiased nodemean fft:'
     print acovf(xn, unbiased=True, demean=False, fft=True, missing='conservative')[:lags]
     print acovf(xn, unbiased=True, demean=False, fft=True, missing='drop')[:lags]
-#    print acf(xn)
-#    print acf(xn, missing='drop')
-#    print acf(xn, missing='raise')
+    print 'acf tests:'
+    print acf(xn)[:lags]
+    print acf(xn, missing='conservative')[:lags]
+    print acf(xn, missing='drop')[:lags]
+#    print acf(xn, missing='raise')[:lags]
+    print acf(xn, missing='drop', fft=True)[:lags]
 #    print pacf(xn)
 #    print pacf(xn, missing='drop')
 #    print pacf(xn, missing='raise')
