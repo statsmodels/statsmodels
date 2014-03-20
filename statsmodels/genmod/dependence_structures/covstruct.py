@@ -157,28 +157,30 @@ class MDependent(CovStruct):
     def __init__(self, m):
         self.m = m
         self.r = 0.
-
+        self.varfunc = 0.
+        self.time = [[]]
     # The correlation between any values in the same cluster within m time
 
 
     def update(self, beta, parent):		
-        time = parent.time_li #check indentation, option for tabs to 4 spaces, delete trailing white spaces
+        self.time = parent.time_li #check indentation, option for tabs to 4 spaces, delete trailing white spaces
+        print '[%s]' % ', '.join(map(str, self.time))
         mprod = []
         endog = parent.endog_li
         num_clust = len(endog)
         nobs = parent.nobs
         dim = len(beta)
-        varfunc = parent.family.variance
+        self.varfunc = parent.family.variance
         cached_means = parent.cached_means
         residsq_sum, scale, nterm = 0, 0, 0
         for i in range(num_clust):
             if len(endog[i]) == 0:
                 continue
             expval, _ = cached_means[i]
-            sdev = np.sqrt(varfunc(expval))
+            sdev = np.sqrt(self.varfunc(expval))
             resid = (endog[i] - expval) / sdev
             resid_op = np.outer(resid, resid)
-            time_od = np.abs(time - time[:,None])
+            time_od = np.abs(self.time - self.time[:,None])
             np.set_diagonal(time_od, 2*self.m)
             ix,jx = np.nonzero(time_od <= self.m)
             mprod.append(time_od[ix,jx])
@@ -188,15 +190,15 @@ class MDependent(CovStruct):
 
 
     def covariance_matrix(self, expval, index):
-        varfunc = parent.family.variance
+        #varfunc = parent.family.variance
         p = len(expval)
         mat = np.eye(p)
-        time = self.time_li[index]
-        time_od = np.abs(time - time[:,None])
+        #time = self.time_li[index]
+        time_od = np.abs(self.time - self.time[:,None])
         np.set_diagonal(time_od, 2*self.m)
         ix,jx = np.nonzero(time_od <= self.m)
         mat[ix,jx] = self.r
-        sdev = np.sqrt(varfunc(expval))
+        sdev = np.sqrt(self.varfunc(expval))
         mat *= np.outer(sdev, sdev)
         return mat
 
@@ -612,7 +614,7 @@ class GlobalOddsRatio(CovStruct):
 
     # See docstring
     cpp = None
-	
+        
     def __init__(self, nlevel, endog_type):
         super(GlobalOddsRatio, self).__init__()
         self.nlevel = nlevel
