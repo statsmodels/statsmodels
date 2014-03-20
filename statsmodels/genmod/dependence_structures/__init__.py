@@ -4,4 +4,4 @@ generalized estimating equations (GEE).
 '''
 
 from covstruct import Independence, Exchangeable, GlobalOddsRatio,\
-    Autoregressive, Nested, CovStruct
+    Autoregressive, Nested, CovStruct, MDependent

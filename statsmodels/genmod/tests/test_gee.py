@@ -9,8 +9,8 @@ differ among implementations and the results will not agree exactly.
 """
 
 ##!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+# import sys
+# sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
 
 import numpy as np
 import os
@@ -20,7 +20,7 @@ from statsmodels.genmod.generalized_estimating_equations import GEE,\
     gee_setup_nominal, Multinomial
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
-    Independence,GlobalOddsRatio,Autoregressive,Nested
+    Independence,GlobalOddsRatio,Autoregressive,Nested,MDependent
 import pandas as pd
 import statsmodels.formula.api as sm
 
@@ -161,7 +161,31 @@ class TestGEE(object):
                             mdf2.standard_errors(), decimal=6)
 
 
+    def test_mdependent(self):
+        """
+        Check that the mdependent defaults work correctly.
+        """
 
+        endog,exog,group = load_data("gee_logistic_1.csv")
+
+        # Time values here
+        T = np.zeros(len(endog))
+        idx = set(group)
+        for ii in idx:
+            jj = np.flatnonzero(group == ii)
+            T[jj] = range(len(jj))
+
+        family = Binomial()
+        va = MDependent(2)
+
+
+        md1 = GEE(endog, exog, group, family=family, covstruct=va)
+        mdf1 = md1.fit()
+
+        # assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
+        # assert_almost_equal(mdf1.standard_errors(),
+                            # mdf2.standard_errors(), decimal=6)
+                            
     def test_logistic(self):
         """
         R code for comparing results:
