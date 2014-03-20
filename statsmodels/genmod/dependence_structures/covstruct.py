@@ -157,20 +157,20 @@ class MDependent(CovStruct):
     def __init__(self, m):
         self.m = m
         self.r = 0.
-        self.varfunc = 0.
-        self.time = [[]]
-    # The correlation between any values in the same cluster within m time
-
-
+        
+      # The correlation between any values in the same cluster within m time
+    def initialize(self, parent):
+        self.time = parent.time_li
+        self.varfunc = parent.family.variance
+        
     def update(self, beta, parent):		
-        self.time = parent.time_li #check indentation, option for tabs to 4 spaces, delete trailing white spaces
-        print '[%s]' % ', '.join(map(str, self.time))
+        #check indentation, option for tabs to 4 spaces, delete trailing white spaces
+        #print '[%s]' % ', '.join(map(str, self.time))
         mprod = []
         endog = parent.endog_li
         num_clust = len(endog)
         nobs = parent.nobs
-        dim = len(beta)
-        self.varfunc = parent.family.variance
+        dim = len(beta)        
         cached_means = parent.cached_means
         residsq_sum, scale, nterm = 0, 0, 0
         for i in range(num_clust):
@@ -180,8 +180,8 @@ class MDependent(CovStruct):
             sdev = np.sqrt(self.varfunc(expval))
             resid = (endog[i] - expval) / sdev
             resid_op = np.outer(resid, resid)
-            time_od = np.abs(self.time - self.time[:,None])
-            np.set_diagonal(time_od, 2*self.m)
+            time_od = np.abs(self.time[i][:,0] - self.time[i][:,0:1])
+            np.fill_diagonal(time_od, 2*self.m)
             ix,jx = np.nonzero(time_od <= self.m)
             mprod.append(time_od[ix,jx])
 
@@ -193,14 +193,14 @@ class MDependent(CovStruct):
         #varfunc = parent.family.variance
         p = len(expval)
         mat = np.eye(p)
-        #time = self.time_li[index]
-        time_od = np.abs(self.time - self.time[:,None])
-        np.set_diagonal(time_od, 2*self.m)
+        #time = self.time_li[index]        
+        time_od = np.abs(self.time[index][:,0] - self.time[index][:,0:1])
+        np.fill_diagonal(time_od, 2*self.m)
         ix,jx = np.nonzero(time_od <= self.m)
         mat[ix,jx] = self.r
         sdev = np.sqrt(self.varfunc(expval))
         mat *= np.outer(sdev, sdev)
-        return mat
+        return mat, False
 
     def summary(self):
         return ("The correlation between observations <= m time steps away in the " +

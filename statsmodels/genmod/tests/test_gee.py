@@ -168,7 +168,7 @@ class TestGEE(object):
 
         endog,exog,group = load_data("gee_logistic_1.csv")
 
-        # Time values here
+        #Time values here
         T = np.zeros(len(endog))
         idx = set(group)
         for ii in idx:
@@ -177,11 +177,12 @@ class TestGEE(object):
 
         family = Binomial()
         va = MDependent(2)
-
+        
 
         md1 = GEE(endog, exog, group, family=family, covstruct=va)
         mdf1 = md1.fit()
-
+        #break point below
+        #1/0
         # assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
         # assert_almost_equal(mdf1.standard_errors(),
                             # mdf2.standard_errors(), decimal=6)
