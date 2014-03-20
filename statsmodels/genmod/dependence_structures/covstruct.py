@@ -152,30 +152,31 @@ class Exchangeable(CovStruct):
 
 class MDependent(CovStruct):
     """
-    An m-dependent working dependence structure.
+    An m-dependent working dependence structure. 
     """
+    
+    #User inputs m, the number of time periods away less than or equal to which correlation is non zero 
     def __init__(self, m):
-        self.m = m
-        self.r = 0.
+        self.m = float(m)
         
-      # The correlation between any values in the same cluster within m time
+    # Initialize the parent dependent variables used in the covariance_matrix function
     def initialize(self, parent):
         self.time = parent.time_li
         self.varfunc = parent.family.variance
-        
+    
+    #Initialize correlation parameter for within cluster and <=m time away observations
+    dep_params = 0.
+
     def update(self, beta, parent):		
-        #check indentation, option for tabs to 4 spaces, delete trailing white spaces
-        #print '[%s]' % ', '.join(map(str, self.time))
         mprod = []
         endog = parent.endog_li
         num_clust = len(endog)
-        nobs = parent.nobs
-        dim = len(beta)        
         cached_means = parent.cached_means
-        residsq_sum, scale, nterm = 0, 0, 0
         for i in range(num_clust):
+        
             if len(endog[i]) == 0:
                 continue
+                
             expval, _ = cached_means[i]
             sdev = np.sqrt(self.varfunc(expval))
             resid = (endog[i] - expval) / sdev
@@ -183,28 +184,26 @@ class MDependent(CovStruct):
             time_od = np.abs(self.time[i][:,0] - self.time[i][:,0:1])
             np.fill_diagonal(time_od, 2*self.m)
             ix,jx = np.nonzero(time_od <= self.m)
-            mprod.append(time_od[ix,jx])
+            mprod.append(resid_op[ix,jx])
 
         mprod = np.concatenate(mprod)
-        self.r = np.mean(mprod)
+        self.dep_params = np.mean(mprod)
 
 
     def covariance_matrix(self, expval, index):
-        #varfunc = parent.family.variance
         p = len(expval)
         mat = np.eye(p)
-        #time = self.time_li[index]        
         time_od = np.abs(self.time[index][:,0] - self.time[index][:,0:1])
         np.fill_diagonal(time_od, 2*self.m)
         ix,jx = np.nonzero(time_od <= self.m)
-        mat[ix,jx] = self.r
+        mat[ix,jx] = self.dep_params
         sdev = np.sqrt(self.varfunc(expval))
         mat *= np.outer(sdev, sdev)
         return mat, False
 
     def summary(self):
         return ("The correlation between observations <= m time steps away in the " +
-                "same cluster is %.3f" % self.r)
+                "same cluster is %.3f" % self.dep_params)
 
 
 class Nested(CovStruct):
