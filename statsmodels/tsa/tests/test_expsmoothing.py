@@ -1,5 +1,5 @@
 import numpy as np
-from statsmodels.tsa._expsmoothing import (exp_smoothing, ses, brown_linear,
+from statsmodels.tsa._expsmoothing import (ExpSmoothing, ses, brown_linear,
                                            holt_des, damp_es, seasonal_es)
 from statsmodels.tsa.filters.seasonal import seasonal_decompose
 from statsmodels.datasets import co2
@@ -29,18 +29,17 @@ class TestExpSmoothing:
 
         np.testing.assert_almost_equal(results.fitted,
                                        expected_res.fitted, 8)
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
         np.testing.assert_almost_equal(results.fitted,
                                        expected_res.fitted, 8)
 
     def test_brown_linear_ndarray(self):
         # smoke tests, no reference implementation
-        dta = self.decomposed.trend + self.decomposed.resid
-
+        dta = (self.decomposed.trend + self.decomposed.resid).dropna()
         results = brown_linear(dta.values, alpha=.9)
-
-        results = brown_linear(dta.values, alpha=.9, forecast=48)
+        forecasts = results.forecast(48)
+        raise ValueError("This doesn't look right")
 
     def test_holt_des_ndarray(self):
         # model with trend for additive
@@ -54,25 +53,19 @@ class TestExpSmoothing:
                                        expected_res.fitted, 8)
         np.testing.assert_almost_equal(results.resid,
                                        expected_res.resid, 8)
-        results = holt_des(dta.values, .86, .523, initial=None,
-                           forecast=48)
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
 
         # model with exponential trend for multiplicative
         expected_res = expected.holt_des_mult()
-        results = holt_des(dta.values, .86, .523, trend='mult',
-                           initial=None)
-
+        results = holt_des(dta.values, .86, .523, trend='mult', initial=None)
         np.testing.assert_almost_equal(results.trend,
                                        expected_res.trend, 8)
         np.testing.assert_almost_equal(results.fitted,
                                        expected_res.fitted, 8)
         np.testing.assert_almost_equal(results.resid,
                                        expected_res.resid, 8)
-        results = holt_des(dta.values, .86, .523, initial=None,
-                           forecast=48, trend='m')
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
 
     def test_damp_es_ndarray(self):
@@ -87,7 +80,7 @@ class TestExpSmoothing:
         gamma = .0299/alpha
 
         results = damp_es(dta.values, alpha=.7826, gamma=gamma, trend='a',
-                          damp=.98, forecast=48,
+                          damp=.98,
                           initial={'bt' : -0.25091078545258960197,
                                    'st' : 372.02473545186114733951})
         # NOTE: technically you should only used optimized initial params
@@ -99,7 +92,7 @@ class TestExpSmoothing:
                                        expected_res.fitted, 8)
         np.testing.assert_almost_equal(results.resid,
                                        expected_res.resid, 8)
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
 
 
@@ -107,7 +100,7 @@ class TestExpSmoothing:
         gamma = .0299/alpha
         results = damp_es(dta.values, alpha=alpha,
                           gamma=gamma, trend='m',
-                          damp=.98, forecast=48,
+                          damp=.98,
                           initial={'bt' : 0.999321789870789678467,
                                    'st' : 372.028495898940150254930})
         expected_res = expected.damped_mult_trend()
@@ -120,14 +113,14 @@ class TestExpSmoothing:
         #np.testing.assert_almost_equal(results.resid,
         #                               expected_res.resid, 5)
         #NOTE: not sure why the precision is low here. should be right.
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 3)
 
 
 
     def test_seasonal_es_ndarray(self):
         dta = (self.decomposed.resid + self.decomposed.seasonal).dropna()
-        results = seasonal_es(dta.values, alpha=.0043, delta=.2586, cycle=12,
+        results = seasonal_es(dta.values, alpha=.0043, delta=.2586, period=12,
                               damp=False)
 
         expected_res = expected.hw_seas()
@@ -136,19 +129,17 @@ class TestExpSmoothing:
                                        expected_res.fitted, 8)
         np.testing.assert_almost_equal(results.resid,
                                        expected_res.resid, 8)
-        results = seasonal_es(dta.values, alpha=.0043, delta=.2586,
-                              cycle=12, forecast=48, damp=False)
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
 
         # multiplicative
         # shift to be positive
         np.testing.assert_raises(ValueError, seasonal_es,
                                  dta.values, alpha=.0043, delta=.2586,
-                                 cycle=12, damp=False, season='m')
+                                 period=12, damp=False, season='m')
 
         results = seasonal_es(dta.values + 5, alpha=.0043, delta=.2586,
-                              cycle=12,
+                              period=12,
                               damp=False, season='m')
 
         expected_res = expected.hw_seas_mult()
@@ -157,12 +148,9 @@ class TestExpSmoothing:
                                        expected_res.fitted, 8)
         np.testing.assert_almost_equal(results.resid,
                                        expected_res.resid, 8)
-        results = seasonal_es(dta.values + 5, alpha=.0043, delta=.2586,
-                              cycle=12, forecast=48, damp=False,
-                              season='m')
-        #NOTE: This loses a little precision each cycle in R, why?
+        #NOTE: This loses a little precision each period in R, why?
         # is it numerical or is there are reason the forecasts shrink?
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 3)
 
     def test_exp_smoothing_ndarray(self):
@@ -181,10 +169,10 @@ class TestExpSmoothing:
         # stability in optimization cf. Hyndman book
         gamma = .0387/alpha
         delta = .01
-        results = exp_smoothing(dta.values, initial=init, alpha=alpha,
-                                gamma=gamma, delta=delta, cycle=12,
-                                season='m', trend='m', forecast=48,
-                                damp=1)
+        model = ExpSmoothing(dta.values, alpha=alpha,
+                                gamma=gamma, delta=delta, period=12,
+                                season='m', trend='m', damp=1)
+        results = model.fit(initial=init)
 
         expected_res = expected.multmult()
         np.testing.assert_almost_equal(results.fitted,
@@ -194,5 +182,39 @@ class TestExpSmoothing:
         #NOTE: see commented out code for ets-matched residuals
         #np.testing.assert_almost_equal(results.resid,
         #                               expected_res.resid, 5)
-        np.testing.assert_almost_equal(results.forecasts,
+        np.testing.assert_almost_equal(results.forecast(h=48),
                                        expected_res.forecasts, 8)
+
+    def test_exp_smoothing_pandas(self):
+        dta = self.dta
+        init_ct = np.array([1.001843291395, 0.999992706537, 0.997342232980,
+                            0.994001023919, 0.990791351262, 0.991124074728,
+                            0.996183466518, 1.002105875039, 1.006614389201,
+                            1.008529917146, 1.007285317008, 1.004186354267])
+        init_ct = init_ct[::-1] # proper time order
+        init = {'st': 314.78888791602560104366,
+                'bt': 1.00024658183093162478,
+                'ct' : init_ct,
+                }
+        alpha = .7198
+        # ets defines the model like this in the update equations for
+        # stability in optimization cf. Hyndman book
+        gamma = .0387/alpha
+        delta = .01
+        model = ExpSmoothing(dta, alpha=alpha,
+                                gamma=gamma, delta=delta, period=12,
+                                season='m', trend='m', damp=1)
+        results = model.fit(initial=init)
+
+        expected_res = expected.multmult()
+        np.testing.assert_almost_equal(results.fitted.values,
+                                       expected_res.fitted, 8)
+        np.testing.assert_almost_equal(results.trend.values,
+                                       expected_res.trend, 8)
+        #NOTE: see commented out code for ets-matched residuals
+        #np.testing.assert_almost_equal(results.resid,
+        #                               expected_res.resid, 5)
+        np.testing.assert_almost_equal(results.forecast(h=48),
+                                       expected_res.forecasts, 8)
+
+
