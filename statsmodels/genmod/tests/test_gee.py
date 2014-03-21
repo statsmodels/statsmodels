@@ -175,9 +175,9 @@ class TestGEE(object):
         null_md = GEE(endog, exog, group, family=family, covstruct=null_va)
         null_mdf = null_md.fit()
         
-        assert_almost_equal(null_va.dep_params,-0.012419,decimal=3)
+        assert_almost_equal(null_va.dep_params,-0.012419,decimal=2)
         
-        ex_va1 = MDependent(sys.float_info.max)
+        ex_va1 = MDependent(np.inf)
         ex_va2 = Exchangeable()
         
         ex_md1 = GEE(endog, exog, group, family=family, covstruct=ex_va1)
@@ -185,16 +185,16 @@ class TestGEE(object):
         ex_md2 = GEE(endog, exog, group, family=family, covstruct=ex_va2)
         ex_mdf2 = ex_md2.fit()
         
-        assert_almost_equal(ex_mdf1.params,ex_mdf2.params,decimal=3)
+        assert_almost_equal(ex_mdf1.params,ex_mdf2.params,decimal=2)
         
-        ind_va1 = MDependent(1/sys.float_info.max)
+        ind_va1 = MDependent(0)
         ind_va2 = Independence()
         
         ind_md1 = GEE(endog, exog, group, family=family, covstruct=ind_va1)
         ind_mdf1 = ind_md1.fit()
         ind_md2 = GEE(endog, exog, group, family=family, covstruct=ind_va2)
         ind_mdf2 = ind_md2.fit()
-        assert_almost_equal(ind_mdf1.params,ind_mdf2.params,decimal=3)
+        assert_almost_equal(ind_mdf1.params,ind_mdf2.params,decimal=2)
          
     def test_logistic(self):
         """

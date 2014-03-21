@@ -152,7 +152,10 @@ class Exchangeable(CovStruct):
 
 class MDependent(CovStruct):
     """
-    An m-dependent working dependence structure. 
+    An m-dependent working dependence structure. Assumes cross correlations are all 
+    zero except for observations within the same cluster and within m time steps away 
+    from each other, where correlation is equal to a constant. Currently uses only the 
+    first column of time.
     """
     
     #User inputs m, the number of time periods away less than or equal to which correlation is non zero 
@@ -166,40 +169,48 @@ class MDependent(CovStruct):
     
     #Initialize correlation parameter for within cluster and <=m time away observations
     dep_params = 0.
-
+    
+    #Take residuals and update correlation parameter
     def update(self, beta, parent):		
         mprod = []
         endog = parent.endog_li
         num_clust = len(endog)
+        nobs = parent.nobs
+        dim = len(beta)
+
         cached_means = parent.cached_means
+        scale = 0.
+        nterm = 0
         for i in range(num_clust):
         
             if len(endog[i]) == 0:
                 continue
-                
+            
             expval, _ = cached_means[i]
             sdev = np.sqrt(self.varfunc(expval))
             resid = (endog[i] - expval) / sdev
+            scale += np.sum(resid**2)
             resid_op = np.outer(resid, resid)
-            time_od = np.abs(self.time[i][:,0] - self.time[i][:,0:1])
-            np.fill_diagonal(time_od, 2*self.m)
+            time_od = np.abs(self.time[i][:,0] - self.time[i][:,0:1]) 
+            #TODO: extend to handle the case where time has more than one column
+            np.fill_diagonal(time_od, np.nan)
             ix,jx = np.nonzero(time_od <= self.m)
             mprod.append(resid_op[ix,jx])
-
+            nterm +=len(ix)
+        
+        scale /= (nobs - dim)
         mprod = np.concatenate(mprod)
-        self.dep_params = np.mean(mprod)
-
-
+        self.dep_params = np.sum(mprod) / (scale * (nterm - 2*dim)) 
+    
+    #Construct the correlation matrix
     def covariance_matrix(self, expval, index):
         p = len(expval)
         mat = np.eye(p)
         time_od = np.abs(self.time[index][:,0] - self.time[index][:,0:1])
-        np.fill_diagonal(time_od, 2*self.m)
+        np.fill_diagonal(time_od, np.nan)
         ix,jx = np.nonzero(time_od <= self.m)
         mat[ix,jx] = self.dep_params
-        sdev = np.sqrt(self.varfunc(expval))
-        mat *= np.outer(sdev, sdev)
-        return mat, False
+        return mat, True
 
     def summary(self):
         return ("The correlation between observations <= m time steps away in the " +
