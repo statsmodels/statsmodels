@@ -166,35 +166,39 @@ class TestGEE(object):
         """
         Check that the mdependent defaults work correctly.
         """
-
+        
+        #load test case
         endog,exog,group = load_data("gee_linear_1.csv")
 
+        #Test for replicability
         family = Gaussian()
         null_va = MDependent(2)        
 
         null_md = GEE(endog, exog, group, family=family, covstruct=null_va)
         null_mdf = null_md.fit()
         
-        assert_almost_equal(null_va.dep_params,-0.012419,decimal=2)
+        assert_almost_equal(null_va.dep_params,-0.0159111016131,decimal=6)
         
+        #Test for infinite m correspondence to Exchangeable case
         ex_va1 = MDependent(np.inf)
         ex_va2 = Exchangeable()
         
         ex_md1 = GEE(endog, exog, group, family=family, covstruct=ex_va1)
-        ex_mdf1 = ex_md1.fit()
         ex_md2 = GEE(endog, exog, group, family=family, covstruct=ex_va2)
+        ex_mdf1 = ex_md1.fit()
         ex_mdf2 = ex_md2.fit()
         
-        assert_almost_equal(ex_mdf1.params,ex_mdf2.params,decimal=2)
+        assert_almost_equal(ex_mdf1.params,ex_mdf2.params,decimal=6)
         
+        #Test for 0 m correspondence to Independence case
         ind_va1 = MDependent(0)
         ind_va2 = Independence()
         
         ind_md1 = GEE(endog, exog, group, family=family, covstruct=ind_va1)
-        ind_mdf1 = ind_md1.fit()
         ind_md2 = GEE(endog, exog, group, family=family, covstruct=ind_va2)
+        ind_mdf1 = ind_md1.fit()
         ind_mdf2 = ind_md2.fit()
-        assert_almost_equal(ind_mdf1.params,ind_mdf2.params,decimal=2)
+        assert_almost_equal(ind_mdf1.params,ind_mdf2.params,decimal=6)
          
     def test_logistic(self):
         """

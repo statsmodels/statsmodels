@@ -139,7 +139,6 @@ class Exchangeable(CovStruct):
         scale /= (nobs - dim)
         self.dep_params = residsq_sum / (scale * (nterm - dim))
 
-
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
@@ -158,26 +157,25 @@ class MDependent(CovStruct):
     first column of time.
     """
     
-    #User inputs m, the number of time periods away less than or equal to which correlation is non zero 
+    #User inputs m, the number of time periods away less than or equal to which correlation 
+    #is non zero. Initialize constant correlation to 0.
+    
     def __init__(self, m):
         self.m = float(m)
+        self.dep_params = 0.
         
     # Initialize the parent dependent variables used in the covariance_matrix function
     def initialize(self, parent):
         self.time = parent.time_li
         self.varfunc = parent.family.variance
     
-    #Initialize correlation parameter for within cluster and <=m time away observations
-    dep_params = 0.
-    
-    #Take residuals and update correlation parameter
+    #Get residuals and update correlation parameter
     def update(self, beta, parent):		
         mprod = []
         endog = parent.endog_li
         num_clust = len(endog)
         nobs = parent.nobs
         dim = len(beta)
-
         cached_means = parent.cached_means
         scale = 0.
         nterm = 0
@@ -199,9 +197,10 @@ class MDependent(CovStruct):
             nterm +=len(ix)
         
         scale /= (nobs - dim)
+        
         mprod = np.concatenate(mprod)
         self.dep_params = np.sum(mprod) / (scale * (nterm - 2*dim)) 
-    
+        
     #Construct the correlation matrix
     def covariance_matrix(self, expval, index):
         p = len(expval)
