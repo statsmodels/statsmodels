@@ -6,6 +6,9 @@ from scipy.misc import derivative
 import os
 import csv
 
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 class TestLME(object):
 
     # Test analytic scores using numeric differentiation
@@ -35,9 +38,9 @@ class TestLME(object):
 
                     for kr in range(5):
                         params_fe = np.random.normal(size=p)
-                        revar = np.random.normal(size=(pr,pr))
-                        revar = np.dot(revar.T, revar)
-                        params_prof = md._pack(params_fe, revar)
+                        cov_re = np.random.normal(size=(pr,pr))
+                        cov_re = np.dot(cov_re.T, cov_re)
+                        params_prof = md._pack(params_fe, cov_re)
                         gr = score(params_prof)
 
                         ngr = np.zeros_like(gr)
@@ -65,20 +68,20 @@ class TestLME(object):
 
         coef = globals()["coef_%s_%s_%d" % (meth, irfs, ds_ix)]
         vcov_r = globals()["vcov_%s_%s_%d" % (meth, irfs, ds_ix)]
-        revar_r = globals()["revar_%s_%s_%d" % (meth, irfs, ds_ix)]
+        cov_re_r = globals()["cov_re_%s_%s_%d" % (meth, irfs, ds_ix)]
         sig2_r = globals()["sig2_%s_%s_%d" % (meth, irfs, ds_ix)]
         loglike = globals()["loglike_%s_%s_%d" % (meth, irfs, ds_ix)]
 
         if not irf:
             ranef_postmean = globals()["ranef_mean_%s_%s_%d" %
                                        (meth, irfs, ds_ix)]
-            ranef_postvar = globals()["ranef_postvar_%s_%s_%d" %
+            ranef_condvar = globals()["ranef_condvar_%s_%s_%d" %
                                       (meth, irfs, ds_ix)]
-            ranef_postvar = np.atleast_2d(ranef_postvar)
+            ranef_condvar = np.atleast_2d(ranef_condvar)
 
         # Variance component MLE ~ 0 may require manual tweaking of
         # algorithm parameters, so exclude from tests for now.
-        if np.min(np.diag(revar_r)) < 0.01:
+        if np.min(np.diag(cov_re_r)) < 0.01:
             print "Skipping %d since solution is on boundary." % ds_ix
             return
 
@@ -111,7 +114,7 @@ class TestLME(object):
                                           np.eye(exog_re.shape[1])))
 
         assert_almost_equal(mdf.params_fe, coef, decimal=4)
-        assert_almost_equal(mdf.revar, revar_r, decimal=4)
+        assert_almost_equal(mdf.cov_re, cov_re_r, decimal=4)
         assert_almost_equal(mdf.sig2, sig2_r, decimal=4)
 
         pf = exog_fe.shape[1]
@@ -123,7 +126,7 @@ class TestLME(object):
         # Not supported in R
         if not irf:
             assert_almost_equal(mdf.ranef()[0], ranef_postmean, decimal=3)
-            assert_almost_equal(mdf.ranef_cov()[0], ranef_postvar,
+            assert_almost_equal(mdf.ranef_cov()[0], ranef_condvar,
                                 decimal=3)
 
     # Run all the tests against R
