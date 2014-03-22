@@ -1,7 +1,7 @@
 """
 Linear mixed effects models for Statsmodels
 
-The data are partitioned into non-overlapping groups, and the model
+The data are partitioned into disjoint groups.  The probability model
 for group i is:
 
 Y = X*beta + Z*gamma + epsilon
@@ -49,13 +49,13 @@ Notation:
 
 * `cov_re` is the random effects covariance matrix (Psi above) and
   `sig2` is the (scalar) error variance.  For a single group, the
-  marginal covariance matrix of endog given exog is sig2*I + Z * cov_re
-  * Z', where Z is the design matrix for the random effects.
+  marginal covariance matrix of endog given exog is sig2*I + Z *
+  cov_re * Z', where Z is the design matrix for the random effects.
 
 Notes:
 
 1. Three different parameterizations are used here in different
-places.  The regression slopes (usually called `params_fe`) are
+places.  The regression slopes (usually called `fe_params`) are
 identical in all three parameterizations, but the variance parameters
 differ.  The parameterizations are:
 
@@ -72,7 +72,7 @@ differ.  The parameterizations are:
 * The "square root parameterization" in which we work with the
   Cholesky factor of cov_re1 instead of cov_re1 directly.
 
-All three parameterizations can be "packed" by concatenating params_fe
+All three parameterizations can be "packed" by concatenating fe_params
 together with the lower triangle of the dependence structure.  Note
 that when unpacking, it is important to either square or reflect the
 dependence structure depending on which parameterization is being
@@ -105,85 +105,125 @@ from statsmodels.tools.sm_exceptions import \
 
 # Global option to use direct linear algebra calculations for solving
 # factor-structured linear systems and calculating factor-structured
-# determinants.  Should be False except when testing.
-no_smw = False
+# determinants.  If False, use the Sherman-Morrison-Woodbury update
+# which is more efficient for factor-structured matrices.  Should be
+# False except when testing.
+_no_smw = False
 
 
-def smw_solve(f, A, B, BI, rhs):
+def _smw_solve(s, A, B, BI, rhs):
     """
-    Solves the system (f*I + A*B*A') * x = rhs for x and returns x.
+    Solves the system (s*I + A*B*A') * x = rhs for x and returns x.
+
+    Parameters:
+    -----------
+    s : scalar
+        See above for usage
+    A : square symmetric ndarray
+        See above for usage
+    B : square symmetric ndarray
+        See above for usage
+    BI : square symmetric ndarray
+        The inverse of `B`
+    rhs : ndarray
+        See above for usage
+
+    Returns:
+    --------
+    x : ndarray
+        See above
+
+    If the global variable `_no_smw` is True, this routine uses direct
+    linear algebra calculations.  Otherwise it uses the
+    Sherman-Morrison-Woodbury identity to speed up the calculation.
     """
 
     # Direct calculation
-    if no_smw:
+    if _no_smw:
         mat = np.dot(A, np.dot(B, A.T))
-        mat += f*np.eye(A.shape[0])
+        mat += s * np.eye(A.shape[0])
         return np.linalg.solve(mat, rhs)
 
     # Use SMW identity
-    qmat = BI + np.dot(A.T, A)/f
+    qmat = BI + np.dot(A.T, A) / s
     u = np.dot(A.T, rhs)
     qmat = np.linalg.solve(qmat, u)
     qmat = np.dot(A, qmat)
-    rslt = rhs / f - qmat / f**2
+    rslt = rhs / s - qmat / s**2
     return rslt
 
 
-def smw_logdet(f, A, B, BI):
+def _smw_logdet(s, A, B, BI):
     """
     Use the matrix determinant lemma to accelerate the calculation of
-    the log determinant of f*I + A*B*A'.
+    the log determinant of s*I + A*B*A'.
+
+    Parameters:
+    -----------
+    s : scalar
+        See above for usage
+    A : square symmetric ndarray
+        See above for usage
+    B : square symmetric ndarray
+        See above for usage
+    BI : square symmetric ndarray
+        The inverse of `B`.
     """
 
-    if no_smw:
+    if _no_smw:
         mat = np.dot(A, np.dot(B, A.T))
-        mat += f*np.eye(A.shape[0])
+        mat += s * np.eye(A.shape[0])
         _, ld = np.linalg.slogdet(mat)
         return ld
 
     _, ld = np.linalg.slogdet(B)
 
     p = A.shape[0]
-    ld += p*np.log(f)
+    ld += p * np.log(s)
 
-    qmat = BI + np.dot(A.T, A) / f
+    qmat = BI + np.dot(A.T, A) / s
     _, ld1 = np.linalg.slogdet(qmat)
 
     return ld + ld1
 
 
-class LME(base.Model):
+class MixedLM(base.Model):
+    """
+    An object specifying a linear mixed effects model.  Use the `fit`
+    method to fit the model and obtain a results object.
+
+    Arguments:
+    ----------
+    endog : 1d array-like
+        The dependent variable
+    exog : 2d array-like
+        A matrix of independent variables used to determine the
+        mean structure
+    groups : 1d array-like
+        A vector of labels determining the groups -- data from
+        different groups are independent
+    exog_re : 2d array-like
+        A matrix of independent variables used to determine the
+        variance structure.  If None, defaults to a random
+        intercept for each of the groups.  May also be set from
+        a formula using a call to `set_random`.
+    missing : string
+        The approach to missing data handling
+
+    Notes:
+    ------
+    The covariates in `exog` and `exog_re` may (but need not)
+    partially or wholly overlap.
+    """
 
     def __init__(self, endog, exog, groups, exog_re=None,
                  missing='none'):
-        """
-        Creates an LME object specifying a linear mixed effects model.
-        Use the `fit` method to fit the model.
-
-        Arguments:
-        ----------
-        endog : 1d array-like
-            The dependent variable
-        exog : 2d array-like
-            A matrix of independent variables used to determine the
-            mean structure
-        groups : 1d array-like
-            A vector of labels determining the groups -- data from
-            different groups are independent
-        exog_re : 2d array-like
-            A matrix of independent variables used to determine the
-            variance structure.  If None, defaults to a random
-            intercept for each of the groups.  May be set from
-            a formula using a call to `set_random`.
-        missing : string
-            The approach to missing data handling
-        """
 
         groups = np.asarray(groups)
 
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
-        if exog.ndim == 1:
+        if exog is not None and exog.ndim == 1:
             exog = exog[:,None]
         if exog_re is not None and exog_re.ndim == 1:
             exog_re = exog_re[:,None]
@@ -202,21 +242,26 @@ class LME(base.Model):
 
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
-        super(LME, self).__init__(endog, exog, groups=groups,
+        super(MixedLM, self).__init__(endog, exog, groups=groups,
                                   exog_re=exog_re, missing=missing)
 
         # Model dimensions
-        self.p = exog.shape[1]
+        self.k_fe = exog.shape[1] # Number of fixed effects parameters
         if exog_re is not None:
-            self.pr = exog_re.shape[1]
-            self.prr = int(self.pr * (self.pr + 1) / 2)
+
+            # Number of random effect covariates
+            self.k_re = exog_re.shape[1]
+
+            # Number of covariance parameters
+            self.k_re2 = self.k_re * (self.k_re + 1) // 2
 
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the groups.
         group_labels = list(set(groups))
         group_labels.sort()
         row_indices = dict((s, []) for s in group_labels)
-        [row_indices[groups[i]].append(i) for i in range(len(self.endog))]
+        for i,g in enumerate(groups):
+            row_indices[g].append(i)
         self.row_indices = row_indices
         self.group_labels = group_labels
         self.ngroup = len(self.group_labels)
@@ -233,7 +278,7 @@ class LME(base.Model):
     def set_random(self, re_formula, data):
         """
         Set the random effects structure using a formula.  This is an
-        alternative to providing `exog_re` in the LME constructor.
+        alternative to providing `exog_re` in the MixedLM constructor.
 
         Arguments:
         ----------
@@ -247,9 +292,14 @@ class LME(base.Model):
         Notes
         -----
         If the random effects structure is not set either by providing
-        `exog_re` to the LME constructor, or by calling `set_random`,
-        then the default is a structure with random intercepts for the
-        groups.
+        `exog_re` to the MixedLM constructor, or by calling
+        `set_random`, then the default is a structure with random
+        intercepts for the groups.
+
+        This does not automatically drop missing values, so if
+        `missing` is set to "drop" in the model construction, the
+        missing values must be dropped from the data frame before
+        calling this function.
         """
 
         # TODO: need a way to process this for missing data
@@ -257,8 +307,8 @@ class LME(base.Model):
         self.exog_re_names = self.exog_re.design_info.column_names
         self.exog_re = np.asarray(self.exog_re)
         self.exog_re_li = self.group_list(self.exog_re)
-        self.pr = self.exog_re.shape[1]
-        self.prr = int(self.pr * (self.pr + 1) / 2)
+        self.k_re = self.exog_re.shape[1]
+        self.k_re2 = self.k_re * (self.k_re + 1) // 2
 
     def group_list(self, array):
         """
@@ -297,26 +347,26 @@ class LME(base.Model):
             The random effects covariance matrix
         """
 
-        params_fe = params[0:self.p]
-        params_re = params[self.p:]
+        fe_params = params[0:self.k_fe]
+        re_params = params[self.k_fe:]
 
         # Unpack the covariance matrix of the random effects
-        cov_re = np.zeros((self.pr, self.pr), dtype=np.float64)
-        ix = np.tril_indices(self.pr)
-        cov_re[ix] = params_re
+        cov_re = np.zeros((self.k_re, self.k_re), dtype=np.float64)
+        ix = np.tril_indices(self.k_re)
+        cov_re[ix] = re_params
 
         if sym:
             cov_re = (cov_re + cov_re.T) - np.diag(np.diag(cov_re))
 
-        return params_fe, cov_re
+        return fe_params, cov_re
 
-    def _pack(self, params_fe, cov_re):
+    def _pack(self, fe_params, cov_re):
         """
         Packs the model parameters into a single vector.
 
         Arguments
         ---------
-        params_fe : 1d ndarray
+        fe_params : 1d ndarray
             The fixed effects parameters
         cov_re : 2d ndarray
             The covariance matrix of the random effects
@@ -330,9 +380,9 @@ class LME(base.Model):
         """
 
         ix = np.tril_indices(cov_re.shape[0])
-        return np.concatenate((params_fe, cov_re[ix]))
+        return np.concatenate((fe_params, cov_re[ix]))
 
-    def like(self, params, reml=True, pen=0.):
+    def loglike(self, params, reml=True, pen=0.):
         """
         Evaluate the profile log-likelihood of the linear mixed
         effects model.  Specifically, this is the profile likelihood
@@ -347,7 +397,8 @@ class LME(base.Model):
             If true, return REML log likelihood, else return ML
             log likelihood
         pen : non-negative float
-            Weight for the penalty parameter for non-SPD covariances
+            Weight for the penalty parameter for non-positive
+            semidefinite covariances
 
         Returns
         -------
@@ -366,7 +417,7 @@ class LME(base.Model):
         error variance sig2, and divide Psi by sig2.
         """
 
-        params_fe, cov_re = self._unpack(params)
+        fe_params, cov_re = self._unpack(params)
         cov_re_inv = np.linalg.inv(cov_re)
 
         if pen > 0:
@@ -381,30 +432,30 @@ class LME(base.Model):
             ex_r = self.exog_re_li[k]
 
             # The residuals
-            expval = np.dot(exog, params_fe)
+            expval = np.dot(exog, fe_params)
             resid = self.endog_li[k] - expval
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = smw_logdet(1., ex_r, cov_re, cov_re_inv)
+            ld = _smw_logdet(1., ex_r, cov_re, cov_re_inv)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
-            u = smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            u = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
             qf += np.dot(resid, u)
 
             # Adjustment for REML
             if reml:
-                mat = smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
+                mat = _smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
                 xvx += np.dot(exog.T, mat)
 
         if reml:
-            likeval -= (self.ntot - self.p) * np.log(qf) / 2.
+            likeval -= (self.ntot - self.k_fe) * np.log(qf) / 2.
             _,ld = np.linalg.slogdet(xvx)
             likeval -= ld / 2.
-            likeval -= (self.ntot - self.p) * np.log(2 * np.pi) / 2.
-            likeval += ((self.ntot - self.p) *
-                        np.log(self.ntot - self.p) / 2.)
-            likeval -= (self.ntot - self.p) / 2.
+            likeval -= (self.ntot - self.k_fe) * np.log(2 * np.pi) / 2.
+            likeval += ((self.ntot - self.k_fe) *
+                        np.log(self.ntot - self.k_fe) / 2.)
+            likeval -= (self.ntot - self.k_fe) / 2.
         else:
             likeval -= self.ntot * np.log(qf) / 2.
             likeval -= self.ntot * np.log(2 * np.pi) / 2.
@@ -426,7 +477,7 @@ class LME(base.Model):
         """
 
         jj = 0
-        for j1 in range(self.pr):
+        for j1 in range(self.k_re):
             for j2 in range(j1 + 1):
                 if max_ix is not None and jj > max_ix:
                     return
@@ -459,43 +510,43 @@ class LME(base.Model):
             The score vector, calculated at `params`.
         """
 
-        params_fe, cov_re = self._unpack(params)
+        fe_params, cov_re = self._unpack(params)
         cov_re_inv = np.linalg.inv(cov_re)
         score_fe = 0.
 
-        score_re = np.zeros(self.prr, dtype=np.float64)
+        score_re = np.zeros(self.k_re2, dtype=np.float64)
 
         if pen > 0:
             cy = np.linalg.inv(cov_re)
             cy = 2*cy - np.diag(np.diag(cy))
-            i,j = np.tril_indices(self.pr)
+            i,j = np.tril_indices(self.k_re)
             score_re = pen * cy[i,j]
 
         rvir = 0.
         rvrb = 0.
         xtvix = 0.
-        xtax = [0.,] * self.prr
-        B = np.zeros(self.prr, dtype=np.float64)
-        C = np.zeros(self.prr, dtype=np.float64)
+        xtax = [0.,] * self.k_re2
+        B = np.zeros(self.k_re2, dtype=np.float64)
+        C = np.zeros(self.k_re2, dtype=np.float64)
         for k in range(self.ngroup):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
 
             # The residuals
-            expval = np.dot(exog, params_fe)
+            expval = np.dot(exog, fe_params)
             resid = self.endog_li[k] - expval
 
             if reml:
-                viexog = smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
+                viexog = _smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
                 xtvix += np.dot(exog.T, viexog)
 
             # Contributions to the covariance parameter gradient
             jj = 0
-            vex = smw_solve(1., ex_r, cov_re, cov_re_inv, ex_r)
-            vir = smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            vex = _smw_solve(1., ex_r, cov_re, cov_re_inv, ex_r)
+            vir = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
             for jj,mat in self._gen_dV_dPsi(ex_r):
-                B[jj] = np.trace(smw_solve(1., ex_r, cov_re, cov_re_inv,
+                B[jj] = np.trace(_smw_solve(1., ex_r, cov_re, cov_re_inv,
                                            mat))
                 C[jj] -= np.dot(vir, np.dot(mat, vir))
                 if reml:
@@ -518,14 +569,14 @@ class LME(base.Model):
         score_re -= 0.5 * fac * C / rvir
 
         if reml:
-            for j in range(self.prr):
+            for j in range(self.k_re2):
                 score_re[j] += 0.5 * np.trace(np.linalg.solve(
                     xtvix, xtax[j]))
 
         return np.concatenate((score_fe, score_re))
 
 
-    def like_L(self, params, reml=True, pen=0.):
+    def loglike_L(self, params, reml=True, pen=0.):
         """
         Returns the log likelihood evaluated at a given point.  The
         random effects covariance is passed as a square root.
@@ -549,12 +600,12 @@ class LME(base.Model):
         The value of the log-likelihood or REML criterion.
         """
 
-        params_fe, L = self._unpack(params, sym=False)
+        fe_params, L = self._unpack(params, sym=False)
         cov_re = np.dot(L, L.T)
 
-        params_r = self._pack(params_fe, cov_re)
+        params_r = self._pack(fe_params, cov_re)
 
-        likeval = self.like(params_r, reml, pen)
+        likeval = self.loglike(params_r, reml, pen)
         return likeval
 
 
@@ -583,17 +634,17 @@ class LME(base.Model):
         The score vector for the log-likelihood or REML criterion.
         """
 
-        params_fe, L = self._unpack(params, sym=False)
+        fe_params, L = self._unpack(params, sym=False)
         cov_re = np.dot(L, L.T)
 
-        params_f = self._pack(params_fe, cov_re)
+        params_f = self._pack(fe_params, cov_re)
         svec = self.score(params_f, reml, pen)
         s_fe, s_re = self._unpack(svec, sym=False)
 
         # Use the chain rule to get d/dL from d/dPsi
-        s_l = np.zeros(self.prr, dtype=np.float64)
+        s_l = np.zeros(self.k_re2, dtype=np.float64)
         jj = 0
-        for i in range(self.pr):
+        for i in range(self.k_re):
             for j in range(i+1):
                 s_l[jj] += np.dot(s_re[:,i], L[:,j])
                 s_l[jj] += np.dot(s_re[i,:], L[:,j])
@@ -627,13 +678,14 @@ class LME(base.Model):
             The Hessian matrix, evaluated at `params`.
         """
 
-        params_fe, cov_re = self._unpack(params)
+        fe_params, cov_re = self._unpack(params)
         cov_re_inv = np.linalg.inv(cov_re)
 
         # Blocks for the fixed and random effects parameters.
         hess_fe = 0.
-        hess_re = np.zeros((self.prr, self.prr), dtype=np.float64)
-        hess_fere = np.zeros((self.prr, self.p), dtype=np.float64)
+        hess_re = np.zeros((self.k_re2, self.k_re2), dtype=np.float64)
+        hess_fere = np.zeros((self.k_re2, self.k_fe),
+                             dtype=np.float64)
 
         fac = self.ntot
         if reml:
@@ -641,22 +693,22 @@ class LME(base.Model):
 
         rvir = 0.
         xtvix = 0.
-        xtax = [0.,] * self.prr
-        B = np.zeros(self.prr, dtype=np.float64)
-        D = np.zeros((self.prr, self.prr), dtype=np.float64)
-        F = [[0.,]*self.prr for k in range(self.prr)]
+        xtax = [0.,] * self.k_re2
+        B = np.zeros(self.k_re2, dtype=np.float64)
+        D = np.zeros((self.k_re2, self.k_re2), dtype=np.float64)
+        F = [[0.,]*self.k_re2 for k in range(self.k_re2)]
         for k in range(self.ngroup):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
 
             # The residuals
-            expval = np.dot(exog, params_fe)
+            expval = np.dot(exog, fe_params)
             resid = self.endog_li[k] - expval
 
-            viexog = smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
+            viexog = _smw_solve(1., ex_r, cov_re, cov_re_inv, exog)
             xtvix += np.dot(exog.T, viexog)
-            vir = smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            vir = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
             rvir += np.dot(resid, vir)
 
             for jj1,mat1 in self._gen_dV_dPsi(ex_r):
@@ -667,7 +719,7 @@ class LME(base.Model):
                     xtax[jj1] += np.dot(viexog.T, np.dot(mat1, viexog))
 
                 B[jj1] += np.dot(vir, np.dot(mat1, vir))
-                E = smw_solve(1., ex_r, cov_re, cov_re_inv, mat1)
+                E = _smw_solve(1., ex_r, cov_re, cov_re_inv, mat1)
 
                 for jj2,mat2 in self._gen_dV_dPsi(ex_r, jj1):
                     Q = np.dot(mat2, E)
@@ -676,7 +728,7 @@ class LME(base.Model):
                     D[jj1, jj2] += vt
                     if jj1 != jj2:
                         D[jj2, jj1] += vt
-                    R = smw_solve(1., ex_r, cov_re, cov_re_inv, Q)
+                    R = _smw_solve(1., ex_r, cov_re, cov_re_inv, Q)
                     rt = np.trace(R) / 2
                     hess_re[jj1, jj2] += rt
                     if jj1 != jj2:
@@ -692,7 +744,7 @@ class LME(base.Model):
         hess_fere = -fac * hess_fere / rvir
 
         if reml:
-            for j1 in range(self.prr):
+            for j1 in range(self.k_re2):
                 Q1 = np.linalg.solve(xtvix, xtax[j1])
                 for j2 in range(j1 + 1):
                     Q2 = np.linalg.solve(xtvix, xtax[j2])
@@ -704,16 +756,16 @@ class LME(base.Model):
                         hess_re[j2, j1] += a
 
         # Put the blocks together to get the Hessian.
-        hess = np.zeros((self.p+self.prr, self.p+self.prr),
-                        dtype=np.float64)
-        hess[0:self.p, 0:self.p] = hess_fe
-        hess[0:self.p, self.p:] = hess_fere.T
-        hess[self.p:, 0:self.p] = hess_fere
-        hess[self.p:, self.p:] = hess_re
+        m = self.k_fe + self.k_re2
+        hess = np.zeros((m, m), dtype=np.float64)
+        hess[0:self.k_fe, 0:self.k_fe] = hess_fe
+        hess[0:self.k_fe, self.k_fe:] = hess_fere.T
+        hess[self.k_fe:, 0:self.k_fe] = hess_fere
+        hess[self.k_fe:, self.k_fe:] = hess_re
 
         return hess
 
-    def Estep(self, params_fe, cov_re, sig2):
+    def Estep(self, fe_params, cov_re, sig2):
         """
         The E-step of the EM algorithm.  This is for ML (not REML),
         but it seems to be good enough to use for REML starting
@@ -721,7 +773,7 @@ class LME(base.Model):
 
         Parameters
         ----------
-        params_fe : 1d ndarray
+        fe_params : 1d ndarray
             The current value of the fixed effect coefficients
         cov_re : 2d ndarray
             The current value of the covariance matrix of random
@@ -749,17 +801,17 @@ class LME(base.Model):
         for k in range(self.ngroup):
 
             # Get the residuals
-            expval = np.dot(self.exog_li[k], params_fe)
+            expval = np.dot(self.exog_li[k], fe_params)
             resid = self.endog_li[k] - expval
 
             # Contruct the marginal covariance matrix for this group
             ex_r = self.exog_re_li[k]
 
-            vr1 = smw_solve(sig2, ex_r, cov_re, cov_re_inv, resid)
+            vr1 = _smw_solve(sig2, ex_r, cov_re, cov_re_inv, resid)
             vr1 = np.dot(ex_r.T, vr1)
             vr1 = np.dot(cov_re, vr1)
 
-            vr2 = smw_solve(sig2, ex_r, cov_re, cov_re_inv,
+            vr2 = _smw_solve(sig2, ex_r, cov_re, cov_re_inv,
                             self.exog_re_li[k])
             vr2 = np.dot(vr2, cov_re)
             vr2 = np.dot(ex_r.T, vr2)
@@ -775,7 +827,7 @@ class LME(base.Model):
         return m1x, m1y, m2, m2xx
 
 
-    def EM(self, params_fe, cov_re, sig2, num_em=10,
+    def EM(self, fe_params, cov_re, sig2, num_em=10,
            hist=None):
         """
         Run the EM algorithm from a given starting point.  This is for
@@ -784,7 +836,7 @@ class LME(base.Model):
 
         Returns
         -------
-        params_fe : 1d ndarray
+        fe_params : 1d ndarray
             The final value of the fixed effects coefficients
         cov_re : 2d ndarray
             The final value of the random effects covariance
@@ -810,33 +862,33 @@ class LME(base.Model):
         pp = []
         for itr in range(num_em):
 
-            m1x, m1y, m2, m2xx = self.Estep(params_fe, cov_re, sig2)
+            m1x, m1y, m2, m2xx = self.Estep(fe_params, cov_re, sig2)
 
-            params_fe = np.linalg.solve(xxtot, xytot - m1x)
+            fe_params = np.linalg.solve(xxtot, xytot - m1x)
             cov_re = m2 / self.ngroup
 
             sig2 = 0.
             for x,y in zip(self.exog_li, self.endog_li):
-                sig2 += np.sum((y - np.dot(x, params_fe))**2)
+                sig2 += np.sum((y - np.dot(x, fe_params))**2)
             sig2 -= 2*m1y
-            sig2 += 2*np.dot(params_fe, m1x)
+            sig2 += 2*np.dot(fe_params, m1x)
             sig2 += np.trace(m2xx)
             sig2 /= self.ntot
 
             if hist is not None:
-                hist.append(["EM", params_fe, cov_re, sig2])
+                hist.append(["EM", fe_params, cov_re, sig2])
 
-        return params_fe, cov_re, sig2
+        return fe_params, cov_re, sig2
 
 
-    def get_sig2(self, params_fe, cov_re, reml):
+    def get_sig2(self, fe_params, cov_re, reml):
         """
         Returns the estimated error variance based on given estimates
         of the slopes and random effects covariance matrix.
 
         Arguments:
         ----------
-        params_fe : array-like
+        fe_params : array-like
             The regression slope estimates
         cov_re : 2d array
             Estimate of the random effects covariance matrix (Psi).
@@ -858,14 +910,14 @@ class LME(base.Model):
             ex_r = self.exog_re_li[k]
 
             # The residuals
-            expval = np.dot(exog, params_fe)
+            expval = np.dot(exog, fe_params)
             resid = self.endog_li[k] - expval
 
-            mat = smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
+            mat = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
             qf += np.dot(resid, mat)
 
         if reml:
-            qf /= (self.ntot - self.p)
+            qf /= (self.ntot - self.k_fe)
         else:
             qf /= self.ntot
 
@@ -941,7 +993,7 @@ class LME(base.Model):
             `start["fe"]` contains starting values for the fixed
             effects regression slopes.  `start["cov_re"]` contains
             the covariance matrix of random effects as found
-            in the `cov_re` component of LMEResults.  If
+            in the `cov_re` component of MixedLMResults.  If
             `start["cov_re"]` is provided, then `start["sig2"]` must
             also be provided (this is the error variance).
             Alternatively, the random effects may be specified as
@@ -989,13 +1041,13 @@ class LME(base.Model):
 
         Returns
         -------
-        A LMEResults instance.
+        A MixedLMResults instance.
         """
 
         if use_L:
-            like = lambda x: -self.like_L(x, reml, pen)
+            like = lambda x: -self.loglike_L(x, reml, pen)
         else:
-            like = lambda x: -self.like(x, reml, pen)
+            like = lambda x: -self.loglike(x, reml, pen)
 
         if free is not None:
             pat_slopes = free[0]
@@ -1018,48 +1070,48 @@ class LME(base.Model):
             hist = None
 
         # Starting values
-        ix = np.tril_indices(self.pr)
+        ix = np.tril_indices(self.k_re)
         if start is None:
             start = {}
         if "fe" in start:
-            params_fe = start["fe"]
+            fe_params = start["fe"]
         else:
-            params_fe = np.zeros(self.exog.shape[1], dtype=np.float64)
+            fe_params = np.zeros(self.exog.shape[1], dtype=np.float64)
         if "cov_re_L_unscaled" in start:
             if use_L:
-                params_re = start["cov_re_L_unscaled"]
+                re_params = start["cov_re_L_unscaled"]
             else:
                 vec = start["cov_re_L_unscaled"]
-                mat = np.zeros((self.pr, self.pr), dtype=np.float64)
+                mat = np.zeros((self.k_re, self.k_re), dtype=np.float64)
                 mat[ix] = vec
                 mat = np.dot(mat, mat.T)
-                params_re = mat[ix]
+                re_params = mat[ix]
         elif "cov_re" in start:
             cov_re_unscaled = start["cov_re_scaled"] / start["sig2"]
             if use_L:
                 cov_re_L_unscaled = np.linalg.cholesky(cov_re_unscaled)
-                params_re = cov_re_L_unscaled[ix]
+                re_params = cov_re_L_unscaled[ix]
             else:
-                params_re = cov_re_unscaled[ix]
+                re_params = cov_re_unscaled[ix]
         else:
-            params_re = np.eye(self.exog_re.shape[1])[ix]
-        params_prof = np.concatenate((params_fe, params_re))
+            re_params = np.eye(self.exog_re.shape[1])[ix]
+        params_prof = np.concatenate((fe_params, re_params))
 
         success = False
 
         # EM iterations
         if num_em > 0:
             sig2 = 1.
-            params_fe, cov_re, sig2 = self.EM(params_fe, cov_re, sig2,
+            fe_params, cov_re, sig2 = self.EM(fe_params, cov_re, sig2,
                                              num_em, hist)
 
             # Gradient algorithms use a different parameterization
             # that profiles out sigma^2.
             if use_L:
-                params_prof = self._pack(params_fe, cov_re / sig2)
+                params_prof = self._pack(fe_params, cov_re / sig2)
             else:
                 cov_re_rt = np.linalg.cholesky(cov_re / sig2)
-                params_prof = self._pack(params_fe, cov_re_rt)
+                params_prof = self._pack(fe_params, cov_re_rt)
             if np.max(np.abs(score(params_prof))) < gtol:
                 success = True
 
@@ -1093,12 +1145,12 @@ class LME(base.Model):
         # Convert to the final parameterization (i.e. undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
-        params_fe, cov_re_ltri = self._unpack(params_prof, sym=False)
+        fe_params, cov_re_ltri = self._unpack(params_prof, sym=False)
         if use_L:
             cov_re_unscaled = np.dot(cov_re_ltri, cov_re_ltri.T)
         else:
             cov_re_unscaled = cov_re_ltri
-        sig2 = self.get_sig2(params_fe, cov_re_unscaled, reml)
+        sig2 = self.get_sig2(fe_params, cov_re_unscaled, reml)
         cov_re = sig2 * cov_re_unscaled
 
         if not success:
@@ -1116,7 +1168,7 @@ class LME(base.Model):
         # Compute the Hessian at the MLE.  Noe that the hessian
         # function expects the random effects covariance matrix (not
         # its square root).
-        params_hess = self._pack(params_fe, cov_re_unscaled)
+        params_hess = self._pack(fe_params, cov_re_unscaled)
         hess = self.hessian(params_hess)
         if free is not None:
             ii = np.flatnonzero(pat)
@@ -1127,8 +1179,8 @@ class LME(base.Model):
             pcov = np.linalg.inv(-hess)
 
         # Prepare a results class instance
-        results = LMEResults(self, params_prof, pcov)
-        results.params_fe = params_fe
+        results = MixedLMResults(self, params_prof, pcov)
+        results.fe_params = fe_params
         results.cov_re = cov_re
         results.sig2 = sig2
         results.cov_re_unscaled = cov_re_unscaled
@@ -1138,20 +1190,20 @@ class LME(base.Model):
         results.reml = reml
         results.pen = pen
         results.likeval = -like(params_prof)
-        results.p = self.p
-        results.pr = self.pr
-        results.prr = self.prr
+        results.k = self.k_fe
+        results.k_re = self.k_re
+        results.k_re2 = self.k_re2
 
         return results
 
 
 
 
-class LMEResults(base.LikelihoodModelResults):
+class MixedLMResults(base.LikelihoodModelResults):
     '''
     Class to contain results of fitting a linear mixed effects model.
 
-    LMEResults inherits from statsmodels.LikelihoodModelResults
+    MixedLMResults inherits from statsmodels.LikelihoodModelResults
 
     Parameters
     ----------
@@ -1165,9 +1217,9 @@ class LMEResults(base.LikelihoodModelResults):
         Pointer to PHreg model instance that called fit.
     normalized_cov_params : array
         The sampling covariance matrix of the estimates
-    params_fe : array
+    fe_params : array
         The fitted fixed-effects coefficients
-    params_re : array
+    re_params : array
         The fitted random-effects covariance matrix
     bse_fe : array
         The standard errors of the fitted fixed effects coefficients
@@ -1183,7 +1235,7 @@ class LMEResults(base.LikelihoodModelResults):
 
     def __init__(self, model, params, cov_params):
 
-        super(LMEResults, self).__init__(model, params,
+        super(MixedLMResults, self).__init__(model, params,
            normalized_cov_params=cov_params)
 
     def bse_fe(self):
@@ -1229,11 +1281,11 @@ class LMEResults(base.LikelihoodModelResults):
             label = self.model.group_labels[k]
 
             # Get the residuals
-            expval = np.dot(exog, self.params_fe)
+            expval = np.dot(exog, self.fe_params)
             resid = endog - expval
 
-            vresid = smw_solve(self.sig2, ex_r, self.cov_re, cov_re_inv,
-                               resid)
+            vresid = _smw_solve(self.sig2, ex_r, self.cov_re,
+                                cov_re_inv, resid)
 
             ranef_dict[label] = np.dot(self.cov_re,
                                        np.dot(ex_r.T, vresid))
@@ -1265,7 +1317,7 @@ class LMEResults(base.LikelihoodModelResults):
             label = self.model.group_labels[k]
 
             mat1 = np.dot(ex_r, self.cov_re)
-            mat2 = smw_solve(self.sig2, ex_r, self.cov_re, cov_re_inv,
+            mat2 = _smw_solve(self.sig2, ex_r, self.cov_re, cov_re_inv,
                              mat1)
             mat2 = np.dot(mat1.T, mat2)
 
@@ -1309,7 +1361,7 @@ class LMEResults(base.LikelihoodModelResults):
         smry = summary2.Summary()
 
         info = OrderedDict()
-        info["Model:"] = "LME"
+        info["Model:"] = "MixedLM"
         if yname is None:
             yname = self.model.endog_names
         info["Dependent Variable:"] = yname
@@ -1337,27 +1389,27 @@ class LMEResults(base.LikelihoodModelResults):
 
         xname = ["%s (RE)" % x for x in xname_re]
 
-        while len(xname_fe) < self.p:
+        while len(xname_fe) < self.k_fe:
             xname_fe.append("FE%d" % (len(xname_fe) + 1))
 
-        while len(xname_re) < self.pr:
+        while len(xname_re) < self.k_re:
             xname_re.append("RE%d" % (len(xname_re) + 1))
 
         float_fmt = "%.3f"
 
         names = xname_fe
-        sdf = np.nan * np.ones((self.p + self.prr, 6),
+        sdf = np.nan * np.ones((self.k_fe + self.k_re2, 6),
                                dtype=np.float64)
-        sdf[0:self.p, 0] = self.params_fe
-        sdf[0:self.p, 1] =\
-                      np.sqrt(np.diag(self.cov_params()[0:self.p]))
-        sdf[0:self.p, 2] = sdf[0:self.p, 0] / sdf[0:self.p, 1]
-        sdf[0:self.p, 3] = 2 * norm.cdf(-np.abs(sdf[0:self.p, 2]))
+        sdf[0:self.k_fe, 0] = self.fe_params
+        sdf[0:self.k_fe, 1] =\
+                      np.sqrt(np.diag(self.cov_params()[0:self.k_fe]))
+        sdf[0:self.k_fe, 2] = sdf[0:self.k_fe, 0] / sdf[0:self.k_fe, 1]
+        sdf[0:self.k_fe, 3] = 2 * norm.cdf(-np.abs(sdf[0:self.k_fe, 2]))
         qm = -norm.ppf(alpha / 2)
-        sdf[0:self.p, 4] = sdf[0:self.p, 0] - qm * sdf[0:self.p, 1]
-        sdf[0:self.p, 5] = sdf[0:self.p, 0] + qm * sdf[0:self.p, 1]
-        jj = self.p
-        for i in range(self.pr):
+        sdf[0:self.k_fe, 4] = sdf[0:self.k_fe, 0] - qm * sdf[0:self.k_fe, 1]
+        sdf[0:self.k_fe, 5] = sdf[0:self.k_fe, 0] + qm * sdf[0:self.k_fe, 1]
+        jj = self.k_fe
+        for i in range(self.k_re):
             for j in range(i + 1):
                 if i == j:
                     names.append(xname_re[i])
@@ -1431,11 +1483,11 @@ class LMEResults(base.LikelihoodModelResults):
         mat = np.dot(mat, mat.T)
         mat = mat[ix,:][:,ix]
         ix = np.tril_indices(pr)
-        params_re = np.linalg.cholesky(mat)[ix]
+        re_params = np.linalg.cholesky(mat)[ix]
 
         # Define the values to which the parameter of interest will be
         # constrained.
-        ru0 = params_re[0]
+        ru0 = re_params[0]
         left = np.linspace(ru0 - dist_low, ru0, num_low + 1)
         right = np.linspace(ru0, ru0 + dist_high, num_high+1)[1:]
         rvalues = np.concatenate((left, right))
@@ -1445,12 +1497,12 @@ class LMEResults(base.LikelihoodModelResults):
         free_cov_re = np.ones((pr, pr), dtype=np.float64)
         free_cov_re[0] = 0
 
-        start = {"fe": self.params_fe}
+        start = {"fe": self.fe_params}
 
         likev = []
         for x in rvalues:
-            params_re[0] = x
-            start["cov_re_L_unscaled"] = params_re
+            re_params[0] = x
+            start["cov_re_L_unscaled"] = re_params
             md1 = model.fit(start=start,
                             free=(free_slopes, free_cov_re),
                             reml=self.reml, pen=self.pen)
