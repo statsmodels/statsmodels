@@ -66,9 +66,9 @@ for (file in files) {
                     rev[k] = as.numeric(VarCorr(md)[[k]])
                 }
                 rev = diag(rev)
-                rslt[[sprintf("revar_%s_%s_%d", meth, rf, ds_ix)]] = rev
+                rslt[[sprintf("cov_re_%s_%s_%d", meth, rf, ds_ix)]] = rev
             } else {
-                rslt[[sprintf("revar_%s_%s_%d", meth, rf, ds_ix)]] = array(as.numeric(VarCorr(md)$groups),
+                rslt[[sprintf("cov_re_%s_%s_%d", meth, rf, ds_ix)]] = array(as.numeric(VarCorr(md)$groups),
                         c(pr, pr))
             }
             rslt[[sprintf("sig2_%s_%s_%d", meth, rf, ds_ix)]] = attr(VarCorr(md), "sc")^2
@@ -77,11 +77,11 @@ for (file in files) {
             # Apparently lmer does not support these things when the random effects
             # are independent.
             if (!irf) {
-                reo = ranef(md, postVar=TRUE)
+                reo = ranef(md, condVar=TRUE)
                 re = as.matrix(reo$groups)
-                postvar = attr(reo$groups, "postVar")
+                condvar = attr(reo$groups, "postVar")
                 rslt[[sprintf("ranef_mean_%s_%s_%d", meth, rf, ds_ix)]] = re[1,]
-                rslt[[sprintf("ranef_postvar_%s_%s_%d", meth, rf, ds_ix)]] = postvar[,,1]
+                rslt[[sprintf("ranef_condvar_%s_%s_%d", meth, rf, ds_ix)]] = condvar[,,1]
             }
         }
     }
