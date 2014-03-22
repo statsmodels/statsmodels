@@ -9,12 +9,12 @@ Y = X*beta + Z*gamma + epsilon
 where
 
 * Y is a n_i dimensional response vector
-* X is a n_i x p dimensional matrix of fixed effects
+* X is a n_i x k_fe dimensional matrix of fixed effects
   coefficients
-* beta is a p-dimensional vector of fixed effects slopes
-* Z is a n_i x pr dimensional matrix of random effects
+* beta is a k_fe-dimensional vector of fixed effects slopes
+* Z is a n_i x k_re dimensional matrix of random effects
   coefficients
-* gamma is a pr-dimensional random vector with mean 0
+* gamma is a k_re-dimensional random vector with mean 0
   and covariance matrix Psi; note that each group
   gets its own independent realization of gamma.
 * epsilon is a n_i dimensional vector of iid normal
@@ -47,10 +47,11 @@ http://lme4.r-forge.r-project.org/slides/2009-07-07-Rennes/3Longitudinal-4.pdf
 
 Notation:
 
-* `cov_re` is the random effects covariance matrix (Psi above) and
-  `sig2` is the (scalar) error variance.  For a single group, the
-  marginal covariance matrix of endog given exog is sig2*I + Z *
-  cov_re * Z', where Z is the design matrix for the random effects.
+* `cov_re` is the random effects covariance matrix (referred to above
+  as Psi) and `sig2` is the (scalar) error variance.  For a single
+  group, the marginal covariance matrix of endog given exog is sig2*I
+  + Z * cov_re * Z', where Z is the design matrix for the random
+  effects.
 
 Notes:
 
@@ -103,11 +104,11 @@ import warnings
 from statsmodels.tools.sm_exceptions import \
      ConvergenceWarning
 
-# Global option to use direct linear algebra calculations for solving
-# factor-structured linear systems and calculating factor-structured
-# determinants.  If False, use the Sherman-Morrison-Woodbury update
-# which is more efficient for factor-structured matrices.  Should be
-# False except when testing.
+# This is a global switch to use direct linear algebra calculations
+# for solving factor-structured linear systems and calculating
+# factor-structured determinants.  If False, use the
+# Sherman-Morrison-Woodbury update which is more efficient for
+# factor-structured matrices.  Should be False except when testing.
 _no_smw = False
 
 
@@ -264,7 +265,7 @@ class MixedLM(base.Model):
             row_indices[g].append(i)
         self.row_indices = row_indices
         self.group_labels = group_labels
-        self.ngroup = len(self.group_labels)
+        self.n_groups = len(self.group_labels)
 
         # Split the data by groups
         self.endog_li = self.group_list(self.endog)
@@ -272,7 +273,7 @@ class MixedLM(base.Model):
         self.exog_re_li = self.group_list(self.exog_re)
 
         # The total number of observations, summed over all groups
-        self.ntot = sum([len(y) for y in self.endog_li])
+        self.n_totobs = sum([len(y) for y in self.endog_li])
 
 
     def set_random(self, re_formula, data):
@@ -382,7 +383,7 @@ class MixedLM(base.Model):
         ix = np.tril_indices(cov_re.shape[0])
         return np.concatenate((fe_params, cov_re[ix]))
 
-    def loglike(self, params, reml=True, pen=0.):
+    def loglike(self, params, reml=True, cov_pen=0.):
         """
         Evaluate the profile log-likelihood of the linear mixed
         effects model.  Specifically, this is the profile likelihood
@@ -396,9 +397,9 @@ class MixedLM(base.Model):
         reml : bool
             If true, return REML log likelihood, else return ML
             log likelihood
-        pen : non-negative float
-            Weight for the penalty parameter for non-positive
-            semidefinite covariances
+        cov_pen : non-negative float
+            Weight for the penalty for non-positive semidefinite
+            covariance matrices
 
         Returns
         -------
@@ -420,13 +421,13 @@ class MixedLM(base.Model):
         fe_params, cov_re = self._unpack(params)
         cov_re_inv = np.linalg.inv(cov_re)
 
-        if pen > 0:
+        if cov_pen > 0:
             cy = np.linalg.cholesky(cov_re)
-            likeval = pen * 2 * np.sum(np.log(np.diag(cy)))
+            likeval = cov_pen * 2 * np.sum(np.log(np.diag(cy)))
         else:
             likeval =0.
         xvx, qf = 0., 0.
-        for k in range(self.ngroup):
+        for k in range(self.n_groups):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
@@ -449,18 +450,18 @@ class MixedLM(base.Model):
                 xvx += np.dot(exog.T, mat)
 
         if reml:
-            likeval -= (self.ntot - self.k_fe) * np.log(qf) / 2.
+            likeval -= (self.n_totobs - self.k_fe) * np.log(qf) / 2.
             _,ld = np.linalg.slogdet(xvx)
             likeval -= ld / 2.
-            likeval -= (self.ntot - self.k_fe) * np.log(2 * np.pi) / 2.
-            likeval += ((self.ntot - self.k_fe) *
-                        np.log(self.ntot - self.k_fe) / 2.)
-            likeval -= (self.ntot - self.k_fe) / 2.
+            likeval -= (self.n_totobs - self.k_fe) * np.log(2 * np.pi) / 2.
+            likeval += ((self.n_totobs - self.k_fe) *
+                        np.log(self.n_totobs - self.k_fe) / 2.)
+            likeval -= (self.n_totobs - self.k_fe) / 2.
         else:
-            likeval -= self.ntot * np.log(qf) / 2.
-            likeval -= self.ntot * np.log(2 * np.pi) / 2.
-            likeval += self.ntot * np.log(self.ntot) / 2.
-            likeval -= self.ntot / 2.
+            likeval -= self.n_totobs * np.log(qf) / 2.
+            likeval -= self.n_totobs * np.log(2 * np.pi) / 2.
+            likeval += self.n_totobs * np.log(self.n_totobs) / 2.
+            likeval -= self.n_totobs / 2.
 
         return likeval
 
@@ -488,7 +489,7 @@ class MixedLM(base.Model):
                 jj += 1
 
 
-    def score(self, params, reml=True, pen=0.):
+    def score(self, params, reml=True, cov_pen=0.):
         """
         Calculates the score vector for the mixed effects model.
         Specifically, this is the score for the profile likelihood in
@@ -500,9 +501,9 @@ class MixedLM(base.Model):
             All model parameters in packed form
         reml : bool
             If true, return REML score, else return ML score
-        pen : non-negative float
-            Weight for the penalty parameter to deter negative
-            variances
+        cov_pen : non-negative float
+            Weight for the penalty for non positive semidefinite
+            covariance matrices
 
         Returns
         -------
@@ -516,19 +517,34 @@ class MixedLM(base.Model):
 
         score_re = np.zeros(self.k_re2, dtype=np.float64)
 
-        if pen > 0:
+        if cov_pen > 0:
             cy = np.linalg.inv(cov_re)
             cy = 2*cy - np.diag(np.diag(cy))
             i,j = np.tril_indices(self.k_re)
-            score_re = pen * cy[i,j]
+            score_re = cov_pen * cy[i,j]
 
+        # resid' V^{-1} resid, summed over the groups (a scalar)
         rvir = 0.
-        rvrb = 0.
+
+        # exog' V^{-1} resid, summed over the groups (a k_fe
+        # dimensional vector)
+        xtvir = 0.
+
+        # exog' V^{_1} exog, summed over the groups (a k_fe x k_fe
+        # matrix)
         xtvix = 0.
+
+        # V^{-1} exog' dV/dQ_jj exog V^{-1}, where Q_jj is the jj^th
+        # covariance parameter.
         xtax = [0.,] * self.k_re2
-        B = np.zeros(self.k_re2, dtype=np.float64)
-        C = np.zeros(self.k_re2, dtype=np.float64)
-        for k in range(self.ngroup):
+
+        # Temporary related to the gradient of log |V|
+        dlv = np.zeros(self.k_re2, dtype=np.float64)
+
+        # resid' V^{-1} dV/dQ_jj V^{-1} resid (a scalar)
+        rvavr = np.zeros(self.k_re2, dtype=np.float64)
+
+        for k in range(self.n_groups):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
@@ -546,27 +562,26 @@ class MixedLM(base.Model):
             vex = _smw_solve(1., ex_r, cov_re, cov_re_inv, ex_r)
             vir = _smw_solve(1., ex_r, cov_re, cov_re_inv, resid)
             for jj,mat in self._gen_dV_dPsi(ex_r):
-                B[jj] = np.trace(_smw_solve(1., ex_r, cov_re, cov_re_inv,
-                                           mat))
-                C[jj] -= np.dot(vir, np.dot(mat, vir))
+                dlv[jj] = np.trace(_smw_solve(1., ex_r, cov_re,
+                                     cov_re_inv, mat))
+                rvavr[jj] += np.dot(vir, np.dot(mat, vir))
                 if reml:
                     xtax[jj] += np.dot(viexog.T, np.dot(mat, viexog))
 
             # Contribution of log|V| to the covariance parameter
             # gradient.
-            score_re -= 0.5 * B
+            score_re -= 0.5 * dlv
 
             # Nededed for the fixed effects params gradient
             rvir += np.dot(resid, vir)
-            rvrb -= 2 * np.dot(exog.T, vir)
+            xtvir += np.dot(exog.T, vir)
 
-        fac = self.ntot
+        fac = self.n_totobs
         if reml:
             fac -= self.exog.shape[1]
 
-        score_fe = -0.5 * fac * rvrb / rvir
-
-        score_re -= 0.5 * fac * C / rvir
+        score_fe = fac * xtvir / rvir
+        score_re += 0.5 * fac * rvavr / rvir
 
         if reml:
             for j in range(self.k_re2):
@@ -576,7 +591,7 @@ class MixedLM(base.Model):
         return np.concatenate((score_fe, score_re))
 
 
-    def loglike_L(self, params, reml=True, pen=0.):
+    def loglike_L(self, params, reml=True, cov_pen=0.):
         """
         Returns the log likelihood evaluated at a given point.  The
         random effects covariance is passed as a square root.
@@ -591,9 +606,9 @@ class MixedLM(base.Model):
         reml : bool
             If true, returns the REML log likelihood, else returns
             the standard log likeihood.
-        pen : non-negative float
-            The penalty parameter of the logarithmic barrrier
-            function for the covariance matrix.
+        cov_pen : non-negative float
+            The weight for the barrrier function for the covariance
+            matrix.
 
         Returns:
         --------
@@ -605,12 +620,12 @@ class MixedLM(base.Model):
 
         params_r = self._pack(fe_params, cov_re)
 
-        likeval = self.loglike(params_r, reml, pen)
+        likeval = self.loglike(params_r, reml, cov_pen)
         return likeval
 
 
 
-    def score_L(self, params, reml=True, pen=0.):
+    def score_L(self, params, reml=True, cov_pen=0.):
         """
         Returns the score vector valuated at a given point.  The
         random effects covariance matrix is passed as a square root.
@@ -625,9 +640,9 @@ class MixedLM(base.Model):
         reml : bool
             If true, returns the REML log likelihood, else returns
             the standard log likeihood.
-        pen : non-negative float
-            The penalty parameter of the logarithmic barrrier
-            function for the covariance matrix.
+        cov_pen : non-negative float
+            The weight for the penalty function for the covariance
+            matrix.
 
         Returns:
         --------
@@ -638,7 +653,7 @@ class MixedLM(base.Model):
         cov_re = np.dot(L, L.T)
 
         params_f = self._pack(fe_params, cov_re)
-        svec = self.score(params_f, reml, pen)
+        svec = self.score(params_f, reml, cov_pen)
         s_fe, s_re = self._unpack(svec, sym=False)
 
         # Use the chain rule to get d/dL from d/dPsi
@@ -654,7 +669,7 @@ class MixedLM(base.Model):
 
         return gr
 
-    def hessian(self, params, reml=True, pen=0.):
+    def hessian(self, params, reml=True, cov_pen=0.):
         """
         Calculates the Hessian matrix for the mixed effects model.
         Specifically, this is the Hessian matrix for the profile
@@ -668,9 +683,9 @@ class MixedLM(base.Model):
             All model parameters in packed form
         reml : bool
             If true, return REML Hessian, else return ML Hessian
-        pen : non-negative float
-            Weight for the penalty parameter to deter negative
-            variances
+        cov_pen : non-negative float
+            Weight for the penalty that deters non-positive
+            definite covariance matrices
 
         Returns
         -------
@@ -687,7 +702,7 @@ class MixedLM(base.Model):
         hess_fere = np.zeros((self.k_re2, self.k_fe),
                              dtype=np.float64)
 
-        fac = self.ntot
+        fac = self.n_totobs
         if reml:
             fac -= self.exog.shape[1]
 
@@ -697,7 +712,7 @@ class MixedLM(base.Model):
         B = np.zeros(self.k_re2, dtype=np.float64)
         D = np.zeros((self.k_re2, self.k_re2), dtype=np.float64)
         F = [[0.,]*self.k_re2 for k in range(self.k_re2)]
-        for k in range(self.ngroup):
+        for k in range(self.n_groups):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
@@ -798,7 +813,7 @@ class MixedLM(base.Model):
         m1x, m1y, m2, m2xx = 0., 0., 0., 0.
         cov_re_inv = np.linalg.inv(cov_re)
 
-        for k in range(self.ngroup):
+        for k in range(self.n_groups):
 
             # Get the residuals
             expval = np.dot(self.exog_li[k], fe_params)
@@ -865,7 +880,7 @@ class MixedLM(base.Model):
             m1x, m1y, m2, m2xx = self.Estep(fe_params, cov_re, sig2)
 
             fe_params = np.linalg.solve(xxtot, xytot - m1x)
-            cov_re = m2 / self.ngroup
+            cov_re = m2 / self.n_groups
 
             sig2 = 0.
             for x,y in zip(self.exog_li, self.endog_li):
@@ -873,7 +888,7 @@ class MixedLM(base.Model):
             sig2 -= 2*m1y
             sig2 += 2*np.dot(fe_params, m1x)
             sig2 += np.trace(m2xx)
-            sig2 /= self.ntot
+            sig2 /= self.n_totobs
 
             if hist is not None:
                 hist.append(["EM", fe_params, cov_re, sig2])
@@ -904,7 +919,7 @@ class MixedLM(base.Model):
         cov_re_inv = np.linalg.inv(cov_re)
 
         qf = 0.
-        for k in range(self.ngroup):
+        for k in range(self.n_groups):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
@@ -917,9 +932,9 @@ class MixedLM(base.Model):
             qf += np.dot(resid, mat)
 
         if reml:
-            qf /= (self.ntot - self.k_fe)
+            qf /= (self.n_totobs - self.k_fe)
         else:
-            qf /= self.ntot
+            qf /= self.n_totobs
 
         return qf
 
@@ -980,8 +995,8 @@ class MixedLM(base.Model):
 
         return params, np.max(np.abs(gro)) < gtol
 
-    def fit(self, start=None, reml=True, num_sd=2,
-            num_em=0, do_cg=True, pen=0., gtol=1e-4, use_L=True,
+    def fit(self, start=None, reml=True, num_sd=1,
+            num_em=0, do_cg=True, cov_pen=0., gtol=1e-4, use_L=True,
             free=None, full_output=False):
         """
         Fit a linear mixed model to the data.
@@ -1014,7 +1029,7 @@ class MixedLM(base.Model):
             If True, a conjugate gradient algorithm is
             used for optimization (following any steepest
             descent or EM steps).
-        pen : non-negative float
+        cov_pen : non-negative float
             Coefficient of a logarithmic barrier function
             for SPD covariance and non-negative error variance
         gtol : non-negtive float
@@ -1045,9 +1060,9 @@ class MixedLM(base.Model):
         """
 
         if use_L:
-            like = lambda x: -self.loglike_L(x, reml, pen)
+            like = lambda x: -self.loglike_L(x, reml, cov_pen)
         else:
-            like = lambda x: -self.loglike(x, reml, pen)
+            like = lambda x: -self.loglike(x, reml, cov_pen)
 
         if free is not None:
             pat_slopes = free[0]
@@ -1055,14 +1070,14 @@ class MixedLM(base.Model):
             pat_cov_re = free[1][ix]
             pat = np.concatenate((pat_slopes, pat_cov_re))
             if use_L:
-                score = lambda x: -pat*self.score_L(x, reml, pen)
+                score = lambda x: -pat*self.score_L(x, reml, cov_pen)
             else:
-                score = lambda x: -pat*self.score(x, reml, pen)
+                score = lambda x: -pat*self.score(x, reml, cov_pen)
         else:
             if use_L:
-                score = lambda x: -self.score_L(x, reml, pen)
+                score = lambda x: -self.score_L(x, reml, cov_pen)
             else:
-                score = lambda x: -self.score(x, reml, pen)
+                score = lambda x: -self.score(x, reml, cov_pen)
 
         if full_output:
             hist = []
@@ -1087,7 +1102,7 @@ class MixedLM(base.Model):
                 mat = np.dot(mat, mat.T)
                 re_params = mat[ix]
         elif "cov_re" in start:
-            cov_re_unscaled = start["cov_re_scaled"] / start["sig2"]
+            cov_re_unscaled = start["cov_re"] / start["sig2"]
             if use_L:
                 cov_re_L_unscaled = np.linalg.cholesky(cov_re_unscaled)
                 re_params = cov_re_L_unscaled[ix]
@@ -1155,9 +1170,9 @@ class MixedLM(base.Model):
 
         if not success:
             if rslt is None:
-                msg = "Gradient optimization failed, try increasing num_sd or pen."
+                msg = "Gradient optimization failed, try increasing num_sd or cov_pen."
             else:
-                msg = "Gradient sup norm=%.3f, try increasing num_sd or pen." %\
+                msg = "Gradient sup norm=%.3f, try increasing num_sd or cov_pen." %\
                       np.max(np.abs(rslt[2]))
             warnings.warn(msg, ConvergenceWarning)
 
@@ -1188,7 +1203,7 @@ class MixedLM(base.Model):
         results.converged = success
         results.hist = hist
         results.reml = reml
-        results.pen = pen
+        results.cov_pen = cov_pen
         results.likeval = -like(params_prof)
         results.k = self.k_fe
         results.k_re = self.k_re
@@ -1273,7 +1288,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         cov_re_inv = np.linalg.inv(self.cov_re)
 
         ranef_dict = {}
-        for k in range(self.model.ngroup):
+        for k in range(self.model.n_groups):
 
             endog = self.model.endog_li[k]
             exog = self.model.exog_li[k]
@@ -1309,7 +1324,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         cov_re_inv = np.linalg.inv(self.cov_re)
 
         ranef_dict = {}
-        for k in range(self.model.ngroup):
+        for k in range(self.model.n_groups):
 
             endog = self.model.endog_li[k]
             exog = self.model.exog_li[k]
@@ -1365,8 +1380,8 @@ class MixedLMResults(base.LikelihoodModelResults):
         if yname is None:
             yname = self.model.endog_names
         info["Dependent Variable:"] = yname
-        info["No. Groups:"] = str(self.model.ngroup)
-        info["No. Observations:"] = str(self.model.ntot)
+        info["No. Groups:"] = str(self.model.n_groups)
+        info["No. Observations:"] = str(self.model.n_totobs)
         info["Method:"] = self.method
         info["Res. Var.:"] = self.sig2
         info["Likelihood:"] = self.likeval
@@ -1505,7 +1520,7 @@ class MixedLMResults(base.LikelihoodModelResults):
             start["cov_re_L_unscaled"] = re_params
             md1 = model.fit(start=start,
                             free=(free_slopes, free_cov_re),
-                            reml=self.reml, pen=self.pen)
+                            reml=self.reml, cov_pen=self.cov_pen)
             likev.append([md1.cov_re[0,0], md1.likeval])
         likev = np.asarray(likev)
 
