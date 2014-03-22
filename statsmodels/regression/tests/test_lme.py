@@ -1,15 +1,12 @@
 import numpy as np
-from statsmodels.regression.lme import LME
+from statsmodels.regression.lme import MixedLM
 from numpy.testing import assert_almost_equal
 from lme_r_results import *
 from scipy.misc import derivative
 import os
 import csv
 
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
-
-class TestLME(object):
+class TestMixedLM(object):
 
     # Test analytic scores using numeric differentiation
     def test_score(self):
@@ -28,19 +25,19 @@ class TestLME(object):
                     endog = exog_fe.sum(1) + np.random.normal(size=n*m)
                     groups = np.kron(range(n), np.ones(m))
 
-                    md = LME(endog, exog_fe, groups, exog_re)
+                    md = MixedLM(endog, exog_fe, groups, exog_re)
                     if jl == 0:
-                        like = lambda x: -md.like_L(x, reml, pen)
+                        like = lambda x: -md.loglike_L(x, reml, pen)
                         score = lambda x: -md.score_L(x, reml, pen)
                     else:
-                        like = lambda x: -md.like(x, reml, pen)
+                        like = lambda x: -md.loglike(x, reml, pen)
                         score = lambda x: -md.score(x, reml, pen)
 
                     for kr in range(5):
-                        params_fe = np.random.normal(size=p)
+                        fe_params = np.random.normal(size=p)
                         cov_re = np.random.normal(size=(pr,pr))
                         cov_re = np.dot(cov_re.T, cov_re)
-                        params_prof = md._pack(params_fe, cov_re)
+                        params_prof = md._pack(fe_params, cov_re)
                         gr = score(params_prof)
 
                         ngr = np.zeros_like(gr)
@@ -49,7 +46,8 @@ class TestLME(object):
                                 pp = params_prof.copy()
                                 pp[k] = x
                                 return like(pp)
-                            ngr[k] = derivative(f, params_prof[k], dx=1e-6)
+                            ngr[k] = derivative(f, params_prof[k],
+                                                dx=1e-6)
 
                         assert_almost_equal(gr / ngr, np.ones(len(gr)),
                                             decimal=3)
@@ -106,14 +104,14 @@ class TestLME(object):
         exog_re = data[:,ii]
 
         # Fit the model
-        md = LME(endog, exog_fe, groups, exog_re)
+        md = MixedLM(endog, exog_fe, groups, exog_re)
         if not irf: # Free random effects covariance
             mdf = md.fit(reml=reml)
         else: # Independent random effects
             mdf = md.fit(reml=reml, free=(np.ones(exog_fe.shape[1]),
                                           np.eye(exog_re.shape[1])))
 
-        assert_almost_equal(mdf.params_fe, coef, decimal=4)
+        assert_almost_equal(mdf.fe_params, coef, decimal=4)
         assert_almost_equal(mdf.cov_re, cov_re_r, decimal=4)
         assert_almost_equal(mdf.sig2, sig2_r, decimal=4)
 
@@ -125,7 +123,8 @@ class TestLME(object):
 
         # Not supported in R
         if not irf:
-            assert_almost_equal(mdf.ranef()[0], ranef_postmean, decimal=3)
+            assert_almost_equal(mdf.ranef()[0], ranef_postmean,
+                                decimal=3)
             assert_almost_equal(mdf.ranef_cov()[0], ranef_condvar,
                                 decimal=3)
 
