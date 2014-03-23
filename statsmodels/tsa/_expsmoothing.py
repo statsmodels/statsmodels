@@ -819,7 +819,7 @@ class SmoothingResults(object):
         if self.model.data.dates is not None:
             from pandas import DatetimeIndex
             first_date = self.model.data.dates[0] + shift
-            freq = first_date.freq
+            freq = self.model.data.dates.inferred_freq
             nobs = self.model.nobs + abs(shift)
             self.model.data.predict_dates = DatetimeIndex(start=first_date,
                                                           periods=nobs,
