@@ -1,57 +1,96 @@
-# Adapted from M. Brett's .yaml file for nipy:
-# https://github.com/nipy/nipy/blob/master/.travis.yml
-#
-# We pretend to be erlang because we can't use the python support in
-# travis-ci; it uses virtualenvs, they do not have numpy, scipy, matplotlib,
-# and it is impractical to build them
-language: erlang
+language: python
+
+matrix:
+  fast_finish: true
+  include:
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.7
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.20.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=3.3
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.17.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.6
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.17.4
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.7
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=3.3
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+  allow_failures:
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.6
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.17.4
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.7
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=3.3
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+
 notifications:
-    email:
-        - statsmodels-commits@googlegroups.com
-env:
-    # Enable python 2 and python 3 builds. Python3.2 available in Ubuntu 12.04.
-    - PYTHON=python PYSUF=''
-    - PYTHON=python3 PYSUF=3
+  email:
+    on_success: always
+
+# Setup anaconda
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
+  # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
+  - sudo rm -rf /dev/shm
+  - sudo ln -s /run/shm /dev/shm
+  # Fix for headless TravisCI
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  # Avoid noise from matplotlib
+  - mkdir $HOME/.config
+  - mkdir $HOME/.config/matplotlib
+  - SRCDIR=$PWD
+  - cp $SRCDIR/tools/matplotlibrc $HOME/.config/matplotlib/matplotlibrc
+
+# Install packages
 install:
-    - sudo apt-get update
-    - sudo apt-get install $PYTHON-dev
-    - sudo apt-get install $PYTHON-numpy
-    - sudo apt-get install $PYTHON-scipy
-    - sudo apt-get install $PYTHON-setuptools
-    - sudo apt-get install $PYTHON-nose
-    # Cython needs manual install under Python 3
-    - if [ "${PYSUF}" == "3" ]; then
-         wget http://cython.org/release/Cython-0.17.1.tar.gz ;
-         tar xfvz Cython-0.17.1.tar.gz ;
-         cd Cython-0.17.1 ;
-         sudo python3 setup.py install ;
-         cd .. ;
-      else
-         sudo apt-get install cython ;
-      fi
-    - echo ${DISTRIB_CODENAME}
-    - wget -O- http://neuro.debian.net/lists/precise.us-nh.full | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
-    - sudo apt-key adv --recv-keys --keyserver pgp.mit.edu 2649A5A9
-    - sudo apt-get update -qq
-    - sudo apt-get install $PYTHON-dateutil
-    - sudo apt-get --no-install-recommends install $PYTHON-pandas
-    - sudo apt-get --no-install-recommends install $PYTHON-pandas-lib
-    - sudo easy_install$PYSUF -U patsy
-    - if [ "${PYSUF}" != "3" ]; then sudo pip install coverage; fi
-    - if [ "${PYSUF}" != "3" ]; then sudo pip install coveralls; fi
+  - conda create --yes -n statsmodels-test python=$PYTHON_VERSION numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION Cython=$CYTHON_VERSION pip matplotlib nose dateutil pandas setuptools patsy pyyaml
+  - source activate statsmodels-test
+  - pip install coverage coveralls
+  - python setup.py install
+
 script:
-    - SRCDIR=$PWD
-    - sudo $PYTHON setup.py install
-    # Ubuntu 12.04 installs statsmodels under the wrong path for Python 3
-    - if [ "${PYSUF}" == "3" ]; then
-         sudo mv /usr/local/lib/python3.2/dist-packages/statsmodels-*/statsmodels /usr/local/lib/python3.2/dist-packages/statsmodels ;
-         sudo rm -rf /usr/lib/python3.2/dist-packages/statsmodels-* ;
-      fi
-    # statsmodels was installed "system-wide" thus cd under dedicated
-    # travis-test/ directory to not try using local version without built extensions
-    - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
-    # Compose a script to run testing with coverage
-    - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
-    - if [ "${PYSUF}" != "3" ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else $PYTHON test.py; fi
+  - SRCDIR=$PWD
+  - python setup.py install
+  - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
+  - python -c 'import statsmodels.api as sm; sm.show_versions();'
+  # Compose a script to run testing with coverage
+  - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
+  - coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py
+
 after_success:
-    - if [ "${PYSUF}" != "3" ]; then coveralls; fi
+  - coveralls --rcfile=${SRCDIR}/.travis_coveragerc
