@@ -818,19 +818,19 @@ class SmoothingResults(object):
     def _set_dates_with_initial_state(self, shift=-1):
         if self.model.data.dates is not None:
             from pandas import DatetimeIndex
-            first_date = self.model.data.dates[0]
+            first_date = self.model.data.dates[0] + shift
             freq = first_date.freq
-            nobs = self.model.nobs
-            self.model.data.predict_dates = DatetimeIndex(start=first_date - 1,
-                                                          periods=nobs + 1,
+            nobs = self.model.nobs + abs(shift)
+            self.model.data.predict_dates = DatetimeIndex(start=first_date,
+                                                          periods=nobs,
                                                           freq=freq)
 
     def _set_forecast_dates(self, h):
         if self.model.data.dates is not None:
             from pandas import DatetimeIndex
-            last_date = self.model.data.dates[-1]
+            last_date = self.model.data.dates[-1] + 1
             freq = self.model.data.dates.inferred_freq
-            self.model.data.predict_dates = DatetimeIndex(start=last_date + 1,
+            self.model.data.predict_dates = DatetimeIndex(start=last_date,
                                                           periods=h,
                                                           freq=freq)
 
@@ -845,7 +845,7 @@ class SmoothingResults(object):
         return self._trend
 
     @property
-    def season(self):
+    def seasonal(self):
         self._set_dates_with_initial_state(-self.period)
         return self._season
 
@@ -861,7 +861,7 @@ class SmoothingResults(object):
         first_b = self._forecast_trend
         damp = self.damp
         period = self.period
-        cdata = self.season
+        cdata = self.seasonal
         trend = self.trendtype
         season = self.seasontype
         nobs = self.model.nobs
@@ -911,7 +911,7 @@ class SmoothingResults(object):
 class SmoothingResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
     _wrap_attrs = {'trend' : 'dates', 'resid' : 'rows', 'fitted' : 'rows',
-                   'level' : 'dates', 'season' : 'rows'}
+                   'level' : 'dates', 'seasonal' : 'dates'}
     _methods = {}
     _wrap_methods = {'forecast' : 'dates'}
 

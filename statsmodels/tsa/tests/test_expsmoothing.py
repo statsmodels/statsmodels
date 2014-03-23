@@ -235,3 +235,5 @@ class TestExpSmoothing:
         assert_series_equal(results.level, expected_res.level, 8)
         assert_series_equal(results.forecast(h=48),
                             expected_res.forecasts, 8)
+        assert_series_equal(results.seasonal,
+                            expected_res.seasonal, 8)

@@ -6,7 +6,7 @@ class ExpSmoothingResults:
     def ses(self):
         import co2_ses_results as res
         return Bunch(forecasts=res.forecasts, fitted=res.fitted,
-                     level=res.level, resid=res.resid)
+                     level=res.level.squeeze(), resid=res.resid)
 
     def holt_des(self):
         import co2_holt_des_results as res
@@ -69,4 +69,6 @@ class ExpSmoothingResults:
                                        index_with_initial),
                      resid=make_series(res.resid, 'resid', index),
                      trend=make_series(res.trend, 'trend',
-                                       index_with_initial))
+                                       index_with_initial),
+                     seasonal=make_series(res.seasonal.squeeze(), 'seasonal',
+                                          season_index))

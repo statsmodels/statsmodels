@@ -159,7 +159,20 @@ R2nparray(list(xhat=co2.damped.m$fitted,
 
 co2.multmult = ets(co2.ts, model="MMM", alpha=.7198, beta=.0387, gamma=.01,
                    damped=FALSE)
+seasonal <- c(co2.multmult$states[1,"s12"], # Mar 1957
+              co2.multmult$states[1,"s11"], # Apr 1957
+              co2.multmult$states[1,"s10"], # May 1957
+              co2.multmult$states[1,"s9"], # Jun 1957
+              co2.multmult$states[1,"s8"], # Jul 1957
+              co2.multmult$states[1,"s7"], # Aug 1957
+              co2.multmult$states[1,"s6"], # Sep 1957
+              co2.multmult$states[1,"s5"], # Oct 1957
+              co2.multmult$states[1,"s4"], # Nov 1957
+              co2.multmult$states[1,"s3"], # Dec 1957
+              co2.multmult$states[1,"s2"], # Jan 1958
+              co2.multmult$states[,"s1"]) # Feb 1958
 R2nparray(list(xhat=co2.multmult$fitted, 
+               seasonal=seasonal,
                level=co2.multmult$states[,1],
                trend=co2.multmult$states[,2],
                resid=co2.multmult$residuals,
