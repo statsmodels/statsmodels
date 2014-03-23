@@ -62,7 +62,8 @@ co2.ses <- ses(na.omit(co2.decompose.monthly$random), h=48, alpha=.9,
                initial="simple")
 options(digits = 12)
 R2nparray(list(fitted=co2.ses$fitted, resid=-co2.ses$residuals, 
-          forecasts=co2.ses$mean), fname='/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/co2_ses_results.py')
+               level=co2.ses$model$states, forecasts=co2.ses$mean), 
+          fname='/home/skipper/statsmodels/statsmodels-skipper/statsmodels/tsa/tests/results/co2_ses_results.py')
 
 co2.ses.optimal <- ses(co2.ts, h=48, alpha=.9, initial="optimal")
 

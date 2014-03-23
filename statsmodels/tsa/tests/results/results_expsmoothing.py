@@ -1,11 +1,12 @@
 from statsmodels.tools.tools import Bunch
 from pandas import Series, DatetimeIndex
 
+
 class ExpSmoothingResults:
     def ses(self):
         import co2_ses_results as res
         return Bunch(forecasts=res.forecasts, fitted=res.fitted,
-                     resid=res.resid)
+                     level=res.level, resid=res.resid)
 
     def holt_des(self):
         import co2_holt_des_results as res

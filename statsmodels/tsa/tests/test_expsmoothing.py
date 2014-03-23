@@ -34,6 +34,8 @@ class TestExpSmoothing:
                                        expected_res.forecasts, 8)
         np.testing.assert_almost_equal(results.fitted,
                                        expected_res.fitted, 8)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
 
     def test_brown_linear_ndarray(self):
         # smoke tests, no reference implementation
@@ -57,6 +59,8 @@ class TestExpSmoothing:
                                        expected_res.resid, 8)
         np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
 
         # model with exponential trend for multiplicative
         expected_res = expected.holt_des_mult()
@@ -69,6 +73,8 @@ class TestExpSmoothing:
                                        expected_res.resid, 8)
         np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
 
     def test_damp_es_ndarray(self):
         dta = self.dta
@@ -96,6 +102,8 @@ class TestExpSmoothing:
                                        expected_res.resid, 8)
         np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
 
 
         alpha = .7826
@@ -117,6 +125,8 @@ class TestExpSmoothing:
         #NOTE: not sure why the precision is low here. should be right.
         np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 3)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
 
 
 
@@ -133,6 +143,8 @@ class TestExpSmoothing:
                                        expected_res.resid, 8)
         np.testing.assert_almost_equal(results.forecast(48),
                                        expected_res.forecasts, 8)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
 
         # multiplicative
         # shift to be positive
@@ -150,6 +162,8 @@ class TestExpSmoothing:
                                        expected_res.fitted, 8)
         np.testing.assert_almost_equal(results.resid,
                                        expected_res.resid, 8)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
         #NOTE: This loses a little precision each period in R, why?
         # is it numerical or is there are reason the forecasts shrink?
         np.testing.assert_almost_equal(results.forecast(48),
@@ -184,6 +198,8 @@ class TestExpSmoothing:
         #NOTE: see commented out code for ets-matched residuals
         #np.testing.assert_almost_equal(results.resid,
         #                               expected_res.resid, 5)
+        np.testing.assert_almost_equal(results.level,
+                                       expected_res.level, 8)
         np.testing.assert_almost_equal(results.forecast(h=48),
                                        expected_res.forecasts, 8)
 
@@ -216,5 +232,6 @@ class TestExpSmoothing:
         #NOTE: see commented out code for ets-matched residuals
         #np.testing.assert_almost_equal(results.resid,
         #                               expected_res.resid, 5)
+        assert_series_equal(results.level, expected_res.level, 8)
         assert_series_equal(results.forecast(h=48),
                             expected_res.forecasts, 8)
