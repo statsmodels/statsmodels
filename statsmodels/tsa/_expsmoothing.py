@@ -164,20 +164,21 @@ _compute_smoothing = {('m', 'm'): _mult_mult,
                       ('a', 'b'): _add_add,
                       }
 
-def _brown_fitted(sdata, bdata, cdata, damp):
-    at = 2 * sdata - bdata
-    bt = alpha / (1 - alpha) * (sdata - bdata)
 
 _compute_fitted = {
-    ('m', 'm'): lambda sdata, bdata, cdata, damp : sdata * damp * bdata * cdata,
+    ('m', 'm'): lambda sdata, bdata, cdata, damp : (sdata * damp * bdata *
+                                                    cdata),
     #resid = np.log(y/pdata)
-    ('m', 'a'): lambda sdata, bdata, cdata, damp : (sdata + damp * bdata) * cdata,
+    ('m', 'a'): lambda sdata, bdata, cdata, damp : ((sdata + damp * bdata) *
+                                                    cdata),
     #resid = (np.log((y / (sdata[:nobs] - damp * bdata[:nobs]))/cdata[:nobs]))
-    ('a', 'm'): lambda sdata, bdata, cdata, damp : sdata * bdata ** damp + cdata,
+    ('a', 'm'): lambda sdata, bdata, cdata, damp : (sdata * bdata ** damp +
+                                                    cdata),
     #resid = (np.log(y) - np.log(sdata[:nobs]) -
     #         damp * np.log(bdata[:nobs])) - cdata
     ('a', 'b'): lambda sdata, bdata, cdata, damp : sdata + bdata + cdata,
-    ('a', 'a'): lambda sdata, bdata, cdata, damp : sdata + damp * bdata + cdata,
+    ('a', 'a'): lambda sdata, bdata, cdata, damp : (sdata + damp * bdata +
+                                                    cdata),
 }
 
 
@@ -491,11 +492,10 @@ class ExpSmoothing(object):
         _forecast_level = sdata[-1]
         _forecast_trend = bdata[-1]
 
-        import ipdb; ipdb.set_trace()
         res = SmoothingResults(self, Bunch(fitted=pdata, resid=resid,
-                                           trend=bdata[:nobs],
-                                           season_init=cdata[:period],
-                                           season=cdata[period:],
+                                           _level=sdata,
+                                           _trend=bdata,
+                                           _season=cdata,
                                            trendtype=trend, seasontype=season,
                                            damp=damp, period=period,
                                            alpha=alpha, gamma=gamma,
@@ -815,6 +815,40 @@ class SmoothingResults(object):
         for key, result in fitted.iteritems():
             setattr(self, key, result)
 
+    def _set_dates_with_initial_state(self, shift=-1):
+        if self.model.data.dates is not None:
+            from pandas import DatetimeIndex
+            first_date = self.model.data.dates[0]
+            freq = first_date.freq
+            nobs = self.model.nobs
+            self.model.data.predict_dates = DatetimeIndex(start=first_date - 1,
+                                                          periods=nobs + 1,
+                                                          freq=freq)
+
+    def _set_forecast_dates(self, h):
+        if self.model.data.dates is not None:
+            from pandas import DatetimeIndex
+            last_date = self.model.data.dates[-1]
+            freq = self.model.data.dates.inferred_freq
+            self.model.data.predict_dates = DatetimeIndex(start=last_date + 1,
+                                                          periods=h,
+                                                          freq=freq)
+
+    @property
+    def level(self):
+        self._set_dates_with_initial_state()
+        return self._level
+
+    @property
+    def trend(self):
+        self._set_dates_with_initial_state()
+        return self._trend
+
+    @property
+    def season(self):
+        self._set_dates_with_initial_state(-self.period)
+        return self._season
+
     def forecast(self, h):
         """
         Forecast using smoothed results
@@ -866,6 +900,7 @@ class SmoothingResults(object):
             else:
                 fdata = first_forecast + m * first_b + c
 
+        self._set_forecast_dates(h)
         return fdata
 
 
@@ -875,8 +910,8 @@ class SmoothingResults(object):
 
 class SmoothingResultsWrapper(wrap.ResultsWrapper):
     _attrs = {}
-    _wrap_attrs = {'trend' : 'rows', 'resid' : 'rows', 'fitted' : 'rows',
-                   'season' : 'rows'}
+    _wrap_attrs = {'trend' : 'dates', 'resid' : 'rows', 'fitted' : 'rows',
+                   'level' : 'dates', 'season' : 'rows'}
     _methods = {}
     _wrap_methods = {'forecast' : 'dates'}
 
