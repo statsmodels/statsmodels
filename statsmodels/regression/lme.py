@@ -112,6 +112,286 @@ from statsmodels.tools.sm_exceptions import \
 _no_smw = False
 
 
+class SolutionPath(object):
+    """
+    A solution path for regularized regression.
+
+    Parameters:
+    -----------
+    func : function
+        The function that is minimized to produce parameter
+        estimates
+    penalty : function
+        The penalty function that is added (with a weight)
+        to `func` to produce a regularized estimating function.
+    ndim : integer
+        The dimension of the parameter
+    ceps : float
+        Coefficients smaller than this number in absolute value
+        are treated as zero
+    xtol : float
+        Steps in the soution path are resolved to this level of
+        accuracy.
+    ftol : float
+        Convergence criterion for line searchers
+    maxitp : integer
+        The maximum number of iterations per parameter in the
+        coordinate descent.
+
+    Notes:
+    ------
+    In some cases two variabes may enter/exit the model
+    simultaneously, so some model sizes may not be present in the
+    solution path.
+    """
+
+    # The sorted list of penalty weights for all points on the
+    # solution path.
+    weights = []
+
+    # The indices of zero coefficients for each point on the solution
+    # path.
+    ix_zero = []
+
+    # The indices of nonzero coefficients for each point on the
+    # solution path.
+    ix_nonzero = []
+
+    # The values of the nonzero coefficients for each point on the
+    # solution path.
+    params = []
+
+    # The number of nonzero coefficients for each point on the
+    # solution path
+    num_nonzero = []
+
+    def __init__(self, func, penalty, ndim, ceps=1e-4, ftol=1e-4,
+                 xtol=0.1, maxitp=100):
+        self.func = func
+        self.penalty = penalty
+        self.ndim = ndim
+        self.ceps = ceps
+        self.ftol = ftol
+        self.xtol = xtol
+        self.maxitp = 100
+
+    def cyclic_descent(self, func, start):
+        """
+        Minimize a function using cyclic coordinate descent.
+
+        Parameters:
+        -----------
+        func : func-like
+            A real valued function to be minimized
+        start : array-like
+            A starting point for the minimization
+
+        Returns:
+        --------
+        params : array-like
+            The final point of the algorithm
+        """
+
+        from scipy.optimize import golden
+
+        ndim = len(start)
+        params = start.copy()
+        fval0 = None
+
+        for iter in range(self.maxitp):
+
+            # Loop over the coordinates
+            for j in range(ndim):
+
+                # Once a coordinate reaches 0, leave it alone
+                if abs(params[j]) < self.ceps:
+                    continue
+
+                # Restrict func to the j^th coordinate.
+                def f(x):
+                    params[j] = x
+                    return func(params)
+
+                x, fval, nfev = golden(f, full_output=True)
+                params[j] = x
+
+            if fval0 is not None and fval0 - fval < self.ftol:
+                return params
+
+            fval0 = fval
+
+        return None
+
+
+    def extend(self, lam):
+        """
+        Add a point to the solution path.
+
+        Parameters:
+        -----------
+        lam : float
+            The penalty weight at which a new point is added to the
+            solution path
+
+        Returns:
+        --------
+        nvar : integer
+            The number of nonzero variables at the point that was
+            added to the solution path.
+        """
+
+        kx = np.searchsorted(self.weights, lam)
+
+        # Indices of coefficients that we know will be zero at lam.
+        ix0 = self.ix_zero[kx-1] if kx > 0 else np.array([])
+
+        # Indices of coefficients that may be nonzero at lam.
+        ix1 = self.ix_nonzero[kx-1] if kx > 0 else np.arange(self.ndim)
+
+        # The penalized version of func, restricted to the coordinates
+        # that may be nonzero.
+        def func1(x):
+            z = np.zeros(self.ndim, dtype=np.float64)
+            z[ix1] = x
+            return self.func(z) + lam * self.penalty(x)
+
+        # Minimize the penalized loss function
+        start1 = self.params[kx-1] if kx > 0 else self.params[0]
+        params = self.cyclic_descent(func1, start1)
+        params1 = np.zeros(self.ndim, dtype=np.float64)
+        params1[ix1] = params
+
+        # Add the new point to the solution path
+        abspa = np.abs(params1)
+        ix0 = np.flatnonzero(abspa < self.ceps)
+        ix1 = np.flatnonzero(abspa >= self.ceps)
+        self.weights.insert(kx, lam)
+        self.ix_zero.insert(kx, ix0)
+        self.ix_nonzero.insert(kx, ix1)
+        self.params.insert(kx, params1[ix1])
+        self.num_nonzero.insert(kx, len(ix1))
+
+        return len(ix1)
+
+
+    def weights_less_complex(self, nvar):
+        """
+        Return all the weights on the path corresponding to models
+        with fewer than `nvar` variables.
+        """
+
+        nv = [len(x) for x in self.ix_zero]
+        ii = np.searchsorted(nv, self.ndim - nvar, side='right')
+
+        return self.weights[ii:]
+
+    def weights_more_complex(self, nvar):
+        """
+        Return all the weights on the path corresponding to models
+        with more than `nvar` variables.
+        """
+
+        nv = [len(x) for x in self.ix_zero]
+        ii = np.searchsorted(nv, self.ndim - nvar)
+
+        return self.weights[0:ii]
+
+
+    def weights_as_complex(self, nvar):
+        """
+        Return all the weights on the path corresponding to models
+        with exactly `nvar` variables.
+        """
+
+        nv = [len(x) for x in self.ix_zero]
+        i0 = np.searchsorted(nv, self.ndim - nvar)
+        i1 = np.searchsorted(nv, self.ndim - nvar, side='right')
+
+        return self.weights[i0:i1]
+
+
+    def initialize(self, start):
+        """
+        Determine a sequence of penalty coefficients such that each
+        possible model size is represented at least once, if possible.
+
+        Parameters:
+        -----------
+        start : array-like
+            The minimizer of the unpenalized loss function.
+        """
+
+        # Start with the unregularized fit
+        starta = np.abs(start)
+        ix0 = np.flatnonzero(starta <= self.ceps)
+        ix1 = np.flatnonzero(starta > self.ceps)
+        self.weights = [0.,]
+        self.ix_zero = [ix0,]
+        self.ix_nonzero = [ix1,]
+        self.params = [start[ix1],]
+        self.num_nonzero = [len(ix1),]
+
+        # Increase the tuning parameter until all coefficients are
+        # zero
+        lam = 1.
+        while True:
+            nvar = self.extend(lam)
+            if nvar == 0:
+                break
+            lam *= 2
+
+        # Fill in the gaps
+        for nv in range(1, self.ndim):
+
+            # Check for models that have the desired number of
+            # variables
+            if nv in [len(x) for x in self.ix_zero]:
+                continue
+
+            # Try to find a penalty weight that gives the desired
+            # model size
+            while True:
+                w0 = max(self.weights_more_complex(nv))
+                w2 = min(self.weights_less_complex(nv))
+
+                # It may not be possible to obtain certain model sizes
+                if w2 - w0 < 1e-4:
+                    break
+
+                lam = (w0 + w2) / 2
+                nvar = self.extend(lam)
+                if nvar == nv:
+                    break
+
+
+    def refine(self, xtol=1e-4):
+        """
+        Extend the solution path so that the minimal weight with each
+        model size is included.
+
+        Parameters:
+        -----------
+        xtol : float
+            Tolerance for finding the minimal weights.
+        """
+
+        from scipy.optimize import brentq
+
+        for i in range(1, self.ndim):
+
+            w0 = self.weights_more_complex(i)
+            w1 = self.weights_as_complex(i)
+
+            if len(w0) == 0 or len(w1) == 0:
+                continue
+
+            def f(lam):
+                nvar = self.extend(lam)
+                return nvar - (i + 0.5)
+
+            brentq(f, max(w0), min(w1), xtol=xtol)
+
+
 def _smw_solve(s, A, B, BI, rhs):
     """
     Solves the system (s*I + A*B*A') * x = rhs for x and returns x.
@@ -361,27 +641,26 @@ class MixedLM(base.Model):
 
         return fe_params, cov_re
 
-    def _pack(self, fe_params, cov_re):
+    def _pack(self, vec, mat):
         """
         Packs the model parameters into a single vector.
 
         Arguments
         ---------
-        fe_params : 1d ndarray
-            The fixed effects parameters
-        cov_re : 2d ndarray
-            The covariance matrix of the random effects
+        vec : 1d ndarray
+            A vector
+        mat : 2d ndarray
+            An (assumed) symmetric matrix
 
         Returns
         -------
         params : 1d ndarray
-            A vector containing all model parameters, only the lower
-            triangle of the random effects covariance matrix is
-            included.
+            The vector and the lower triangle of the matrix,
+            concatenated.
         """
 
-        ix = np.tril_indices(cov_re.shape[0])
-        return np.concatenate((fe_params, cov_re[ix]))
+        ix = np.tril_indices(mat.shape[0])
+        return np.concatenate((vec, mat[ix]))
 
     def loglike(self, params, reml=True, cov_pen=0.):
         """
@@ -464,6 +743,64 @@ class MixedLM(base.Model):
             likeval -= self.n_totobs / 2.
 
         return likeval
+
+    def fit_regularized(self, reml=True, cov_pen=0., xtol=0.1):
+        """
+        Return coefficient estimates obtained using L1 regularization.
+
+        Parameters:
+        -----------
+        reml : bool
+            If True, fit the model using the REML criterion, else fit
+            the model using the log likelihood.
+        cov_pen : float
+            The weight for the penalty function for the random effects
+            covariance matrix.
+        xtol : float
+            The accuracy for identifying the points where the
+            coefficients become zero.
+
+        Returns:
+        --------
+        A Pandas DataFrame containing the parameters estimates at each
+        value of the penalty parameter.
+
+        Notes:
+        ------
+        The covariance parameters are held fixed at the values
+        obtained when estimating the full model without penalty.
+        """
+
+        penalty = lambda x: np.abs(x).sum()
+
+        mdf = self.fit(reml=reml, cov_pen=cov_pen)
+        start = mdf.fe_params
+
+        def func(x):
+            z = mdf.params
+            z[0:mdf.k_fe] = x
+            return -self.loglike_L(z, reml=reml, cov_pen=cov_pen)
+
+        soln_path = SolutionPath(func, penalty, self.k_fe, xtol=xtol)
+        soln_path.initialize(start)
+        soln_path.refine(xtol=1)
+
+        rslt = []
+        for i in range(len(soln_path.weights)):
+            vec = [soln_path.weights[i],]
+            pa = np.zeros(soln_path.ndim, dtype=np.float64)
+            pa[soln_path.ix_nonzero[i]] = soln_path.params[i]
+            vec.extend(pa.tolist())
+            rslt.append(vec)
+        rslt = np.asarray(rslt)
+
+        rslt = pd.DataFrame(rslt)
+        vn = ["Penalty weight",]
+        vn.extend(self.exog_names)
+        rslt.columns = vn
+
+        return rslt
+
 
     def _gen_dV_dPsi(self, ex_r, max_ix=None):
         """
@@ -1066,7 +1403,7 @@ class MixedLM(base.Model):
 
         if free is not None:
             pat_slopes = free[0]
-            ix = np.tril_indices(self.exog_re.shape[1])
+            ix = np.tril_indices(self.k_re)
             pat_cov_re = free[1][ix]
             pat = np.concatenate((pat_slopes, pat_cov_re))
             if use_L:
@@ -1109,7 +1446,7 @@ class MixedLM(base.Model):
             else:
                 re_params = cov_re_unscaled[ix]
         else:
-            re_params = np.eye(self.exog_re.shape[1])[ix]
+            re_params = np.eye(self.k_re)[ix]
         params_prof = np.concatenate((fe_params, re_params))
 
         success = False
@@ -1153,6 +1490,7 @@ class MixedLM(base.Model):
                 if hist is not None:
                     hist.append(["Gradient", rslt[7]])
                 params_prof = rslt[0]
+                # TODO: do we need to recompute the score?
                 if np.max(np.abs(score(params_prof))) < gtol:
                     success = True
                     break
@@ -1180,7 +1518,7 @@ class MixedLM(base.Model):
             msg = "The MLE may be on the boundary of the parameter space."
             warnings.warn(msg, ConvergenceWarning)
 
-        # Compute the Hessian at the MLE.  Noe that the hessian
+        # Compute the Hessian at the MLE.  Note that the hessian
         # function expects the random effects covariance matrix (not
         # its square root).
         params_hess = self._pack(fe_params, cov_re_unscaled)
@@ -1205,7 +1543,7 @@ class MixedLM(base.Model):
         results.reml = reml
         results.cov_pen = cov_pen
         results.likeval = -like(params_prof)
-        results.k = self.k_fe
+        results.k_fe = self.k_fe
         results.k_re = self.k_re
         results.k_re2 = self.k_re2
 
