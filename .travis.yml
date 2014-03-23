@@ -1,10 +1,7 @@
 # Adapted from M. Brett's .yaml file for nipy:
 # https://github.com/nipy/nipy/blob/master/.travis.yml
 #
-# We pretend to be erlang because we can't use the python support in
-# travis-ci; it uses virtualenvs, they do not have numpy, scipy, matplotlib,
-# and it is impractical to build them
-language: erlang
+language: python
 notifications:
     email:
         - statsmodels-commits@googlegroups.com
