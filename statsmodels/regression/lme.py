@@ -438,7 +438,7 @@ def _smw_solve(s, A, B, BI, rhs):
     return rslt
 
 
-def _smw_logdet(s, A, B, BI):
+def _smw_logdet(s, A, B, BI, B_logdet):
     """
     Use the matrix determinant lemma to accelerate the calculation of
     the log determinant of s*I + A*B*A'.
@@ -453,6 +453,8 @@ def _smw_logdet(s, A, B, BI):
         See above for usage
     BI : square symmetric ndarray
         The inverse of `B`.
+    B_logdet : real
+        The log determinant of B
     """
 
     if _no_smw:
@@ -461,15 +463,13 @@ def _smw_logdet(s, A, B, BI):
         _, ld = np.linalg.slogdet(mat)
         return ld
 
-    _, ld = np.linalg.slogdet(B)
-
     p = A.shape[0]
-    ld += p * np.log(s)
+    ld = p * np.log(s)
 
     qmat = BI + np.dot(A.T, A) / s
     _, ld1 = np.linalg.slogdet(qmat)
 
-    return ld + ld1
+    return B_logdet + ld + ld1
 
 
 class MixedLM(base.Model):
@@ -703,6 +703,7 @@ class MixedLM(base.Model):
 
         fe_params, cov_re = self._unpack(params)
         cov_re_inv = np.linalg.inv(cov_re)
+        _, cov_re_logdet = np.linalg.slogdet(cov_re)
 
         # The residuals
         expval = np.dot(self.exog, fe_params)
@@ -721,7 +722,8 @@ class MixedLM(base.Model):
             resid = resid_all[self.row_indices[lab]]
 
             # Part 1 of the log likelihood (for both ML and REML)
-            ld = _smw_logdet(1., ex_r, cov_re, cov_re_inv)
+            ld = _smw_logdet(1., ex_r, cov_re, cov_re_inv,
+                             cov_re_logdet)
             likeval -= ld / 2.
 
             # Part 2 of the log likelihood (for both ML and REML)
