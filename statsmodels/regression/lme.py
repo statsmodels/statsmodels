@@ -212,7 +212,8 @@ class SolutionPath(object):
                     params[j] = x
                     return func(params)
 
-                x, fval, nfev = golden(f, full_output=True)
+                x, fval, nfev = golden(f, tol=self.ftol,
+                                       full_output=True)
                 params[j] = x
 
             if fval0 is not None and fval0 - fval < self.ftol:
@@ -239,7 +240,6 @@ class SolutionPath(object):
             The number of nonzero variables at the point that was
             added to the solution path.
         """
-
         kx = np.searchsorted(self.weights, lam)
 
         # Indices of coefficients that we know will be zero at lam.
@@ -338,7 +338,7 @@ class SolutionPath(object):
             nvar = self.extend(lam)
             if nvar == 0:
                 break
-            lam *= 2
+            lam *= 2.
 
         # Fill in the gaps
         for nv in range(1, self.ndim):
@@ -358,7 +358,7 @@ class SolutionPath(object):
                 if w2 - w0 < 1e-4:
                     break
 
-                lam = (w0 + w2) / 2
+                lam = (w0 + w2) / 2.
                 nvar = self.extend(lam)
                 if nvar == nv:
                     break
@@ -386,7 +386,11 @@ class SolutionPath(object):
                 continue
 
             def f(lam):
-                nvar = self.extend(lam)
+                if lam in self.weights:
+                    ii = np.argmin(np.abs(self.weights == lam))
+                    nvar = self.num_nonzero[ii]
+                else:
+                    nvar = self.extend(lam)
                 return nvar - (i + 0.5)
 
             brentq(f, max(w0), min(w1), xtol=xtol)
@@ -700,20 +704,21 @@ class MixedLM(base.Model):
         fe_params, cov_re = self._unpack(params)
         cov_re_inv = np.linalg.inv(cov_re)
 
+        # The residuals
+        expval = np.dot(self.exog, fe_params)
+        resid_all = self.endog - expval
+
         if cov_pen > 0:
             cy = np.linalg.cholesky(cov_re)
             likeval = cov_pen * 2 * np.sum(np.log(np.diag(cy)))
         else:
             likeval =0.
         xvx, qf = 0., 0.
-        for k in range(self.n_groups):
+        for k, lab in enumerate(self.group_labels):
 
             exog = self.exog_li[k]
             ex_r = self.exog_re_li[k]
-
-            # The residuals
-            expval = np.dot(exog, fe_params)
-            resid = self.endog_li[k] - expval
+            resid = resid_all[self.row_indices[lab]]
 
             # Part 1 of the log likelihood (for both ML and REML)
             ld = _smw_logdet(1., ex_r, cov_re, cov_re_inv)
@@ -773,16 +778,23 @@ class MixedLM(base.Model):
 
         penalty = lambda x: np.abs(x).sum()
 
+        # First fit without regularization
         mdf = self.fit(reml=reml, cov_pen=cov_pen)
-        start = mdf.fe_params
+
+        # Get the covariance so we can call loglike directly
+        fe_params, L = self._unpack(mdf.params, sym=False)
+        cov_re = np.dot(L, L.T)
+        params_r = self._pack(fe_params, cov_re)
 
         def func(x):
-            z = mdf.params
-            z[0:mdf.k_fe] = x
-            return -self.loglike_L(z, reml=reml, cov_pen=cov_pen)
+            params_r[0:mdf.k_fe] = x
+            # reml=False is faster and equivalent since the dependence
+            # structure is not changing
+            return -self.loglike(params_r, reml=False,
+                                 cov_pen=cov_pen)
 
         soln_path = SolutionPath(func, penalty, self.k_fe, xtol=xtol)
-        soln_path.initialize(start)
+        soln_path.initialize(fe_params)
         soln_path.refine(xtol=1)
 
         rslt = []
