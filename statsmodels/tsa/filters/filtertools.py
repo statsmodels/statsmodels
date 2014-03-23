@@ -131,101 +131,155 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
 
 #original changes and examples in sandbox.tsa.try_var_convolve
 #examples and tests are there
-def arfilter(x, a):
-    '''apply an autoregressive filter to a series x
+def recursive_filter(x, filt, init=None):
+    '''
+    Autoregressive, or recursive, filtering.
 
-    x can be 2d, a can be 1d, 2d, or 3d
+    Parameters
+    ----------
+    x : array-like
+        Time-series data.
+    filt : array-like
+        AR lag polynomial. See Notes
+    init : array-like
+        Initial values of the time-series prior to the first value of y.
+        The default is zero.
+
+    Returns
+    -------
+    y : array
+        Filtered array, number of columns determined by x and filt. If a
+        pandas object is given, a pandas object is returned.
+
+    Notes
+    -----
+
+    Computes the recursive filter ::
+
+        y[n] = x[n] + filt[0]*y[n-1] + ... + a[n_filt-1]*y[n-n_filt]
+
+    where n_filt = len(filt). This uses scipy.signal.lfilter, which does
+    not currently handle missing values well. If you need, to handle missing
+    values, you can roll your own using pandas.rolling_apply.
+    '''
+    x = np.asarray(x)
+    filt = np.asarray(filt)
+    if x.ndim > 2:
+        raise ValueError('x array has to be 1d or 2d')
+    if not np.all(np.isfinite(x)):
+        raise ValueError("Missing values are not handled. See Notes section"
+                         " of the docstring")
+        #TODO:
+        # have to use pandas. signal.lfilter doesn't properly handle this
+
+    if filt.ndim == 1:
+        if init is not None:
+            init = signal.lfiltic([1], [1, -filt], init, x)
+        # case: identical ar filter (lag polynomial)
+        return signal.lfilter([1.], np.r_[1, -filt], x, init=init)
+    elif filt.ndim == 2:
+        nlags = filt.shape[0]
+        nvar = x.shape[1]
+        if min(filt.shape) == 1:
+            # case: identical ar filter (lag polynomial)
+            return signal.lfilter([1], np.r[1, -filt], x, init=init)
+
+        # case: independent ar
+        #(a bit like recserar in gauss, but no x yet)
+        result = np.zeros((x.shape[0] - nlags + 1, nvar))
+        for i in range(nvar):
+            # could also use np.convolve, but easier for swiching to fft
+            zi = signal.lfiltic([1], [1, -filt[:, i]], init[:,i], x[:,i])
+            result[:, i] = signal.lfilter([1], np.r_[1, -filt[:, i]],
+                                            x[:, i], init=init)
+        return result
+
+
+def convolution_filter(x, filt, nsides=2):
+    '''
+    Linear filtering via convolution. Centered and backward displaced moving
+    weighted average.
 
     Parameters
     ----------
     x : array_like
         data array, 1d or 2d, if 2d then observations in rows
-    a : array_like
-        autoregressive filter coefficients, ar lag polynomial
-        see Notes
+    filt : array_like
+        Linear filter coefficients in reverse time-order.
+    nsides : int, optional
+        If 2, a centered moving average is computed using the filter
+        coefficients and scipy.signal.convolve. If 1, the filter
+        coefficients are for past values only, and the filtered series is
+        computed using scipy.signal.lfilter.
 
     Returns
     -------
     y : ndarray, 2d
-        filtered array, number of columns determined by x and a
+        Filtered array, number of columns determined by x and filt. If a
+        pandas object is given, a pandas object is returned.
 
     Notes
     -----
+    In nsides == 1, x is filtered ::
 
-    In general form this uses the linear filter ::
+        y[n] = filt[0]*x[n-1] + ... + filt[n_filt-1]*x[n-n_filt]
 
-        y = a(L)x
+    where n_filt is len(filt).
 
-    where
-    x : nobs, nvars
-    a : nlags, nvars, npoly
+    If nsides == 2, x is filtered around lag 0 ::
 
-    Depending on the shape and dimension of a this uses different
-    Lag polynomial arrays
+        y[n] = filt[0]*x[n - n_filt/2] + ... + filt[n_filt / 2] * x[n]
+               + ... + x[n + n_filt/2]
 
-    case 1 : a is 1d or (nlags,1)
-        one lag polynomial is applied to all variables (columns of x)
-    case 2 : a is 2d, (nlags, nvars)
-        each series is independently filtered with its own
-        lag polynomial, uses loop over nvar
-    case 3 : a is 3d, (nlags, nvars, npoly)
-        the ith column of the output array is given by the linear filter
-        defined by the 2d array a[:,:,i], i.e. ::
+    where n_filt is len(filt). If n_filt is even, then more of the filter
+    is back in time than forward.
 
-            y[:,i] = a(.,.,i)(L) * x
-            y[t,i] = sum_p sum_j a(p,j,i)*x(t-p,j)
-                     for p = 0,...nlags-1, j = 0,...nvars-1,
-                     for all t >= nlags
+    If filt is 1d or (nlags,1) one lag polynomial is applied to all
+    variables (columns of x). If filt is 2d, (nlags, nvars) each series is
+    independently filtered with its own lag polynomial, uses loop over nvar.
 
-    All filtering is done with scipy.signal.convolve, so it will be reasonably
-    fast for medium sized arrays. For large arrays fft convolution would be
-    faster.
+    2-sided filtering is done with scipy.signal.convolve, so it will be
+    reasonably fast for medium sized arrays. For large arrays fft
+    convolution would be faster.
 
-    Note: maybe convert to axis=1, Not
-
-    TODO:
-        initial conditions,
-        make sure tests for 3d case are done, I don't remember how much I
-        tested the 3d case
-
+    scipy.signal.lfilter does not currently work well with missing values.
+    If you need to compute a one-sided filter with missing values, you
+    can use pandas.rolling_apply
     '''
     x = np.asarray(x)
-    a = np.asarray(a)
-    if x.ndim == 1:
-        x = x[:,None]
+    filt = np.asarray(filt)
     if x.ndim > 2:
         raise ValueError('x array has to be 1d or 2d')
-    nvar = x.shape[1]
-    nlags = a.shape[0]
-    ntrim = nlags//2
-    # for x is 2d with ncols >1
 
-    if a.ndim == 1:
+    if filt.ndim == 1:
         # case: identical ar filter (lag polynomial)
-        return signal.convolve(x, a[:,None], mode='valid')
-        # alternative:
-        #return signal.lfilter(a,[1],x.astype(float),axis=0)
-    elif a.ndim == 2:
-        if min(a.shape) == 1:
+        if nsides == 2:
+            return signal.convolve(x, filt, mode='valid')
+        elif nsides == 1:
+            return signal.lfilter(np.r_[0, filt], [1.], x)
+    elif filt.ndim == 2:
+        nlags = filt.shape[0]
+        nvar = x.shape[1]
+        if min(filt.shape) == 1:
             # case: identical ar filter (lag polynomial)
-            return signal.convolve(x, a, mode='valid')
+            if nsides == 2:
+                return signal.convolve(x, filt, mode='valid')
+            elif nsides == 1:
+                return signal.lfilter(np.r[0, filt], [1.], x)
 
         # case: independent ar
         #(a bit like recserar in gauss, but no x yet)
-        result = np.zeros((x.shape[0]-nlags+1, nvar))
-        for i in range(nvar):
-            # could also use np.convolve, but easier for swiching to fft
-            result[:,i] = signal.convolve(x[:,i], a[:,i], mode='valid')
+        result = np.zeros((x.shape[0] - nlags + 1, nvar))
+        if nsides == 2:
+            for i in range(nvar):
+                # could also use np.convolve, but easier for swiching to fft
+                result[:, i] = signal.convolve(x[:, i], filt[:, i],
+                                               mode='valid')
+        elif nsides == 1:
+            for i in range(nvar):
+                result[:, i] = signal.lfilter(np.r[0, filt[:, i]], [1.],
+                                              x[:, i])
         return result
-
-    elif a.ndim == 3:
-        # case: vector autoregressive with lag matrices
-#        #not necessary:
-#        if np.any(a.shape[1:] != nvar):
-#            raise ValueError('if 3d shape of a has to be (nobs,nvar,nvar)')
-        yf = signal.convolve(x[:,:,None], a)
-        yvalid = yf[ntrim:-ntrim, yf.shape[1]//2,:]
-        return yvalid
 
 
 #copied from sandbox.tsa.garch
