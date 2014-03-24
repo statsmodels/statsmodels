@@ -308,7 +308,7 @@ def _make_hierarchical_index(index, names):
 def _make_generic_names(index):
     n_names = len(index.names)
     pad = str(len(str(n_names)))  # number of digits
-    return [("group{:0"+pad+"}").format(i) for i in range(n_names)]
+    return [("group{0:0"+pad+"}").format(i) for i in range(n_names)]
 
 
 class Grouping(object):
