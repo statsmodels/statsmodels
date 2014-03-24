@@ -114,7 +114,9 @@ _no_smw = False
 
 class SolutionPath(object):
     """
-    A solution path for regularized regression.
+    A class for calculating the solution path for a regularized
+    regression.  The solution path is calculated using a pathwise
+    coordinate descent algorithm.
 
     Parameters:
     -----------
@@ -126,6 +128,9 @@ class SolutionPath(object):
         to `func` to produce a regularized estimating function.
     ndim : integer
         The dimension of the parameter
+    maxvar : integer
+        The maximum number of variables with nonzero coefficients
+        (see notes)
     ceps : float
         Coefficients smaller than this number in absolute value
         are treated as zero
@@ -140,9 +145,25 @@ class SolutionPath(object):
 
     Notes:
     ------
-    In some cases two variabes may enter/exit the model
+    The penalty function must produce zero coefficients.  The
+    best-known choice is the L1 norm of the coefficients.
+
+    The returned solution path may contain some models with more than
+    `maxvar` variables, but only the solution path for models with up
+    to `maxvar` variables is thoroughly explored.
+
+    In some cases two variables may enter/exit the model
     simultaneously, so some model sizes may not be present in the
     solution path.
+
+    References:
+    -----------
+    Friedman, J. H., Hastie, T. and Tibshirani, R. Regularized Paths
+    for Generalized Linear Models via Coordinate Descent. Journal of
+    Statistical Software, 33(1) (2008)
+    http://www.jstatsoft.org/v33/i01/paper
+
+    http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
     """
 
     # The sorted list of penalty weights for all points on the
@@ -165,11 +186,12 @@ class SolutionPath(object):
     # solution path
     num_nonzero = []
 
-    def __init__(self, func, penalty, ndim, ceps=1e-4, ftol=1e-4,
-                 xtol=0.1, maxitp=100):
+    def __init__(self, func, penalty, ndim, maxvar=5, ceps=1e-4,
+                 ftol=1e-4, xtol=0.1, maxitp=100):
         self.func = func
         self.penalty = penalty
         self.ndim = ndim
+        self.maxvar = maxvar
         self.ceps = ceps
         self.ftol = ftol
         self.xtol = xtol
@@ -212,7 +234,10 @@ class SolutionPath(object):
                     params[j] = x
                     return func(params)
 
-                x, fval, nfev = golden(f, tol=self.ftol,
+                sv = params[j]
+                asv = 0.1*abs(sv)
+                x, fval, nfev = golden(f, brack=[sv-asv, sv+asv],
+                                       tol=self.ftol,
                                        full_output=True)
                 params[j] = x
 
@@ -341,7 +366,7 @@ class SolutionPath(object):
             lam *= 2.
 
         # Fill in the gaps
-        for nv in range(1, self.ndim):
+        for nv in range(1, self.maxvar+1):
 
             # Check for models that have the desired number of
             # variables
@@ -377,7 +402,7 @@ class SolutionPath(object):
 
         from scipy.optimize import brentq
 
-        for i in range(1, self.ndim):
+        for i in range(1, self.maxvar+1):
 
             w0 = self.weights_more_complex(i)
             w1 = self.weights_as_complex(i)
@@ -386,8 +411,8 @@ class SolutionPath(object):
                 continue
 
             def f(lam):
-                if lam in self.weights:
-                    ii = np.argmin(np.abs(self.weights == lam))
+                ii = np.searchsorted(self.weights, lam)
+                if abs(lam - self.weights[ii]) < self.xtol:
                     nvar = self.num_nonzero[ii]
                 else:
                     nvar = self.extend(lam)
@@ -751,7 +776,8 @@ class MixedLM(base.Model):
 
         return likeval
 
-    def fit_regularized(self, reml=True, cov_pen=0., xtol=0.1):
+    def fit_regularized(self, reml=True, cov_pen=0., maxvar=5,
+                        xtol=0.1):
         """
         Return coefficient estimates obtained using L1 regularization.
 
@@ -763,6 +789,8 @@ class MixedLM(base.Model):
         cov_pen : float
             The weight for the penalty function for the random effects
             covariance matrix.
+        maxvar : integer
+            The maximum number of variables with nonzero coefficients
         xtol : float
             The accuracy for identifying the points where the
             coefficients become zero.
