@@ -11,6 +11,14 @@ changes for statsmodels (Josef Perktold)
 '''
 
 
+class ModuleUnavailableWarning(Warning):
+    pass
+
+module_unavialable_doc = """
+The module {0} is not available. Cannot run in parallel.
+"""
+
+
 def parallel_func(func, n_jobs, verbose=5):
     """Return parallel instance with delayed function
 
@@ -56,11 +64,15 @@ def parallel_func(func, n_jobs, verbose=5):
                 import multiprocessing
                 n_jobs = multiprocessing.cpu_count()
             except (ImportError, NotImplementedError):
-                print "multiprocessing not installed. Cannot run in parallel."
+                import warnings
+                warnings.warn(ModuleUnavailableWarning,
+                              module_unavialable_doc.format('multiprocessing'))
                 n_jobs = 1
 
     except ImportError:
-        print "joblib not installed. Cannot run in parallel."
+        import warnings
+        warnings.warn(ModuleUnavailableWarning,
+                      module_unavialable_doc.format('joblib'))
         n_jobs = 1
         my_func = func
         parallel = list
