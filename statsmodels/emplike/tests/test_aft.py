@@ -5,7 +5,6 @@ from statsmodels.tools import add_constant
 from statsmodels.emplike.aft_el import emplikeAFT
 from results.el_results import AFTRes
 
-
 class GenRes(object):
     def __init__(self):
         data = heart.load()

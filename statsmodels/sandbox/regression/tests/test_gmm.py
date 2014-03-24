@@ -14,7 +14,6 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
 import statsmodels.sandbox.regression.gmm as gmm
 
-
 def get_griliches76_data():
     import os
     curdir = os.path.split(__file__)[0]
@@ -83,8 +82,8 @@ def test_iv2sls_r():
     mod = gmm.IV2SLS(endog, exog, instrument)
     res = mod.fit()
 
-    print res.params
-    print res.params - params
+    # print res.params
+    # print res.params - params
 
     n, k = exog.shape
 
@@ -104,7 +103,8 @@ def test_ivgmm0_r():
 
     mod = gmm.IVGMM(endog, exog, instrument)
     res = mod.fit(np.ones(exog.shape[1], float), maxiter=0, inv_weights=w0inv,
-                  optim_method='bfgs', optim_args={'gtol':1e-8})
+                  optim_method='bfgs',
+                  optim_args={'gtol':1e-8, 'disp': 0})
 
 
     assert_allclose(res.params, params, rtol=1e-4, atol=1e-4)
@@ -138,7 +138,7 @@ def test_ivgmm1_stata():
     start = OLS(endog, exog).fit().params
 
     mod = gmm.IVGMM(endog, exog, instrument)
-    res = mod.fit(start, maxiter=1, inv_weights=w0inv, optim_method='bfgs', optim_args={'gtol':1e-6})
+    res = mod.fit(start, maxiter=1, inv_weights=w0inv, optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
 
 
 # move constant to end for Stata
@@ -161,7 +161,7 @@ class TestGMMOLS(object):
 
         mod = gmm.IVGMM(endog, exog, exog)
         res = mod.fit(np.ones(exog.shape[1], float), maxiter=0, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6})
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
 
         self.res1 = res
         self.res2 = res_ols
@@ -225,7 +225,7 @@ class TestGMMSt1(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res10 = mod.fit(start, maxiter=10, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False})
         self.res1 = res10
 
@@ -248,7 +248,7 @@ class TestGMMStTwostep(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res10 = mod.fit(start, maxiter=2, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False})
         self.res1 = res10
 
@@ -272,7 +272,7 @@ class TestGMMStTwostepNO(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res10 = mod.fit(start, maxiter=2, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res10
 
@@ -295,7 +295,8 @@ class TestGMMStOnestep(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=0, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6})
+                        optim_method='bfgs',
+                        optim_args={'gtol':1e-6, 'disp': 0})
         self.res1 = res
 
         from results_gmm_griliches import results_onestep as results
@@ -330,7 +331,7 @@ class TestGMMStOnestepNO(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=0, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res
 
@@ -353,7 +354,7 @@ class TestGMMStOneiter(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6})
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
         self.res1 = res
 
         from results_gmm_griliches import results_onestep as results
@@ -399,7 +400,7 @@ class TestGMMStOneiterNO(CheckGMM):
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res
 
@@ -425,13 +426,13 @@ class TestGMMStOneiterNO_Linear(CheckGMM):
 
         mod = gmm.LinearIVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res3 = res
 
@@ -458,13 +459,13 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog, exog, instrument, func)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-8},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res
 
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-6},
+                        optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res3 = res
 
@@ -504,7 +505,8 @@ class TestGMMStOneiterOLS_Linear(CheckGMM):
 
         mod = gmm.LinearIVGMM(endog, exog, exog)
         res = mod.fit(start, maxiter=0, inv_weights=w0inv,
-                        #optim_method='bfgs', optim_args={'gtol':1e-6},
+                        #optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0},
+                        optim_args={'disp': 0},
                         weights_method='iid',
                         wargs={'centered':False, 'ddof':'k_params'},
                         has_optimal_weights=True)
@@ -533,7 +535,7 @@ class TestGMMSt2(object):
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=2, inv_weights=w0inv,
                       wargs={'ddof':0, 'centered':False},
-                      optim_method='bfgs', optim_args={'gtol':1e-6})
+                      optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
         self.res1 = res
 
         from results_ivreg2_griliches import results_gmm2s_robust as results
@@ -544,7 +546,7 @@ class TestGMMSt2(object):
         mod = gmm.IVGMM(endog, exog, instrument)
         res = mod.fit(start, maxiter=1, inv_weights=w0inv,
                       wargs={'ddof':0, 'centered':False},
-                      optim_method='bfgs', optim_args={'gtol':1e-6})
+                      optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
         self.res3 = res
 
 

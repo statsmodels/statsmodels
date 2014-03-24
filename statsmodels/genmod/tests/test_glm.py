@@ -18,7 +18,6 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
-
 class CheckModelResultsMixin(object):
     '''
     res2 should be either the results from RModelWrap

@@ -75,7 +75,7 @@ class TestPoissonClu(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_poisson_clu
         mod = smd.Poisson(endog, exog)
-        cls.res1 = mod.fit()
+        cls.res1 = mod.fit(disp=False)
         cls.get_robust_clu()
 
 
@@ -85,7 +85,7 @@ class TestNegbinClu(CheckCountRobustMixin):
     def setup_class(cls):
         cls.res2 = results_st.results_negbin_clu
         mod = smd.NegativeBinomial(endog, exog)
-        cls.res1 = mod.fit()
+        cls.res1 = mod.fit(disp=False)
         cls.get_robust_clu()
 
 

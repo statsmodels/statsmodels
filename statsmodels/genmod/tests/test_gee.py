@@ -23,7 +23,6 @@ from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
 import pandas as pd
 import statsmodels.formula.api as sm
-
 def load_data(fname, icept=True):
     """
     Load a data set from the results directory.  The data set should
@@ -251,7 +250,7 @@ class TestGEE(object):
                                  decimal=6)
 
         # Check for run-time exceptions in summary
-        print mdf.summary()
+        # print mdf.summary()
 
 
     def test_post_estimation(self):
@@ -584,7 +583,7 @@ class TestGEE(object):
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors(), se[j],
                                  decimal=6)
-             print mdf.params
+             # print mdf.params
 
 
     def test_compare_OLS(self):
@@ -638,7 +637,7 @@ class TestGEE(object):
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
                                family=family, covstruct=vs).fit()
 
-        sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit()
+        sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
 
         assert_almost_equal(sml.params.values, md.params, decimal=10)
 
@@ -659,7 +658,7 @@ class TestGEE(object):
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
                                family=family, covstruct=vs).fit()
 
-        sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit()
+        sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
 
         assert_almost_equal(sml.params.values, md.params, decimal=10)
 

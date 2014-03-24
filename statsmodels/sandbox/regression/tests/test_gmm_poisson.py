@@ -154,7 +154,7 @@ class TestGMMAddOnestep(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog, exog, instrument, moment_exponential_add)
         res0 = mod.fit(start, maxiter=0, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-8},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False})
         self.res1 = res0
 
@@ -189,7 +189,7 @@ class TestGMMAddTwostep(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog, exog, instrument, moment_exponential_add)
         res0 = mod.fit(start, maxiter=2, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-8},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res0
 
@@ -232,7 +232,7 @@ class TestGMMMultOnestep(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog_, exog_, instrument, moment_exponential_mult)
         res0 = mod.fit(start, maxiter=0, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-8},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res0
 
@@ -272,7 +272,7 @@ class TestGMMMultTwostep(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog_, exog_, instrument, moment_exponential_mult)
         res0 = mod.fit(start, maxiter=2, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-8},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res0
 
@@ -315,7 +315,7 @@ class TestGMMMultTwostepDefault(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog_, exog_, instrument, moment_exponential_mult)
         res0 = mod.fit(start, maxiter=2, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-8},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         #wargs={'centered':True}, has_optimal_weights=True
                        )
         self.res1 = res0
@@ -359,7 +359,7 @@ class TestGMMMultTwostepCenter(CheckGMM):
 
         mod = gmm.NonlinearIVGMM(endog_, exog_, instrument, moment_exponential_mult)
         res0 = mod.fit(start, maxiter=2, inv_weights=w0inv,
-                        optim_method='bfgs', optim_args={'gtol':1e-8},
+                        optim_method='bfgs', optim_args={'gtol':1e-8, 'disp': 0},
                         wargs={'centered':True}, has_optimal_weights=False
                        )
         self.res1 = res0

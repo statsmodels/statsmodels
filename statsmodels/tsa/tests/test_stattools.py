@@ -234,8 +234,8 @@ class TestGrangerCausality(object):
     def test_granger_fails_on_nobs_check(self):
         # Test that if maxlag is too large, Granger Test raises a clear error.
         X = np.random.rand(10, 2)
-        grangercausalitytests(X, 2)  # This should pass.
-        assert_raises(ValueError, grangercausalitytests, X, 3)
+        grangercausalitytests(X, 2, verbose=False)  # This should pass.
+        assert_raises(ValueError, grangercausalitytests, X, 3, verbose=False)
 
 
 
