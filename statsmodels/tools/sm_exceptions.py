@@ -15,7 +15,8 @@ raised.
 class PerfectSeparationError(Exception):
     pass
 
-
+class MissingDataError(Exception):
+    pass
 # Warning
 class ModuleUnavailableWarning(Warning):
     pass
@@ -24,6 +25,7 @@ class ModuleUnavailableWarning(Warning):
 module_unavailable_doc = """
 The module {0} is not available. Cannot run in parallel.
 """
+
 
 
 class ConvergenceWarning(UserWarning):

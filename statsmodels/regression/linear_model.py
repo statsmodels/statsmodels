@@ -52,7 +52,8 @@ from statsmodels.tools.decorators import (resettable_cache,
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
-
+import warnings
+from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 def _get_sigma(sigma, nobs):
     """
@@ -1256,7 +1257,8 @@ class RegressionResults(base.LikelihoodModelResults):
         if np.sqrt(self.scale) < 10 * eps * self.model.endog.mean():
             # don't divide if scale is zero close to numerical precision
             from warnings import warn
-            warn("All residuals are 0, cannot compute normed residuals.")
+            warn("All residuals are 0, cannot compute normed residuals.",
+                 RuntimeWarning)
             return self.wresid
         else:
             return self.wresid / np.sqrt(self.scale)
@@ -1424,7 +1426,8 @@ class RegressionResults(base.LikelihoodModelResults):
         if has_robust1 or has_robust2:
             import warnings
             warnings.warn('F test for comparison is likely invalid with ' +
-                          'robust covariance, proceeding anyway', UserWarning)
+                          'robust covariance, proceeding anyway',
+                          InvalidTestWarning)
 
         ssr_full = self.ssr
         ssr_restr = restricted.ssr
@@ -1519,9 +1522,9 @@ class RegressionResults(base.LikelihoodModelResults):
                                                                   'nonrobust')
 
         if has_robust1 or has_robust2:
-            import warnings
             warnings.warn('Likelihood Ratio test is likely invalid with ' +
-                          'robust covariance, proceeding anyway', UserWarning)
+                          'robust covariance, proceeding anyway',
+                          InvalidTestWarning)
 
         llf_full = self.llf
         llf_restr = restricted.llf

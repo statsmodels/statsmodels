@@ -51,6 +51,9 @@ import numpy as np
 from statsmodels.genmod import families
 from statsmodels.sandbox.nonparametric.smoothers import PolySmoother
 from statsmodels.genmod.generalized_linear_model import GLM
+from statsmodels.tools.sm_exceptions import IterationLimitWarning, iteration_limit_doc
+
+import warnings
 
 DEBUG = False
 
@@ -321,8 +324,7 @@ class AdditiveModel(object):
             self.results = self.next()
 
         if self.iter >= self.maxiter:
-            import warnings
-            warnings.warn('maximum number of iterations reached')
+            warnings.warn(iteration_limit_doc, IterationLimitWarning)
 
         return self.results
 
@@ -426,6 +428,6 @@ class Model(GLM, AdditiveModel):
 
         if self.iter >= self.maxiter:
             import warnings
-            warnings.warn('maximum number of iterations reached')
+            warnings.warn(iteration_limit_doc, IterationLimitWarning)
 
         return self.results

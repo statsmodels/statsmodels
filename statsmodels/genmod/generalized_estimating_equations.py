@@ -765,8 +765,8 @@ class GEE(base.Model):
             self._update_assoc(beta)
 
         if fitlack >= ctol:
-            warnings.warn("Iteration limit reached prior to "
-                          "convergence", ConvergenceWarning)
+            warnings.warn("Iteration limit reached prior to convergence",
+                          ConvergenceWarning)
 
         if beta is None:
             warnings.warn("Unable to estimate GEE parameters.",
@@ -841,8 +841,8 @@ class GEE(base.Model):
         _, score = self._beta_update()
 
         if score is None:
-            warnings.warn("Singular matrix encountered in GEE score "
-                          "test", ConvergenceWarning)
+            warnings.warn("Singular matrix encountered in GEE score test",
+                          ConvergenceWarning)
             return None, None
 
         _, ncov1, _, cmat = self._covmat()

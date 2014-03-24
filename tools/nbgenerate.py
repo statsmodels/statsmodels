@@ -33,7 +33,9 @@ try:
     from IPython.nbconvert.exporters import HTMLExporter
 except ImportError:
     from warnings import warn
-    warn("Notebook examples not built. You need IPython 1.0.")
+    from statsmodels.tools.sm_exceptions import ModuleUnavailableWarning
+    warn("Notebook examples not built. You need IPython 1.0.",
+         ModuleUnavailableWarning)
     sys.exit(0)
 
 import hash_funcs
