@@ -21,6 +21,7 @@ KDEWResults = np.genfromtxt(open(rfname, 'rb'), delimiter=",", names=True)
 np.random.seed(12345)
 Xi = mixture_rvs([.25,.75], size=200, dist=[stats.norm, stats.norm],
                 kwargs = (dict(loc=-1,scale=.5),dict(loc=1,scale=.5)))
+
 class CheckKDE(object):
 
     decimal_density = 7

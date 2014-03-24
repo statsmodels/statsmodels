@@ -14,7 +14,7 @@ except:
 
 @dec.skipif(not have_matplotlib)
 def test_violinplot_beanplot():
-    """Test violinplot and beanplot with the same dataset."""
+    # Test violinplot and beanplot with the same dataset.
     data = anes96.load_pandas()
     party_ID = np.arange(7)
     labels = ["Strong Democrat", "Weak Democrat", "Independent-Democrat",

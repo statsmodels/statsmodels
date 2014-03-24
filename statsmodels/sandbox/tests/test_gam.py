@@ -86,6 +86,7 @@ from statsmodels.genmod.families import family, links
 from statsmodels.genmod.generalized_linear_model import GLM
 from statsmodels.regression.linear_model import OLS
 
+
 class Dummy(object):
     pass
 

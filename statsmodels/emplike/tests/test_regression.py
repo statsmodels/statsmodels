@@ -5,6 +5,7 @@ from statsmodels.tools import add_constant
 from results.el_results import RegressionResults
 from statsmodels.datasets import stackloss
 
+
 class GenRes(object):
     """
     Loads data and creates class instance ot be tested

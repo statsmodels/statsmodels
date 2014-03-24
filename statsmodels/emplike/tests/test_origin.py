@@ -3,6 +3,7 @@ from statsmodels.emplike.originregress import ELOriginRegress
 from statsmodels.datasets import cancer
 from results.el_results import OriginResults
 import numpy as np
+
 class GenRes(object):
     """
     Loads data and creates class instance ot be tested.

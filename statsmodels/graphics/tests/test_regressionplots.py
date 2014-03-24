@@ -10,6 +10,7 @@ from statsmodels.graphics.regressionplots import (plot_fit, plot_ccpr,
                   plot_partregress, plot_regress_exog, abline_plot,
                   plot_partregress_grid, plot_ccpr_grid, add_lowess)
 from pandas import Series, DataFrame
+
 try:
     import matplotlib.pyplot as plt  #makes plt available for test functions
     have_matplotlib = True

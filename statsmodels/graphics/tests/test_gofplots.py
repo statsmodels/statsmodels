@@ -5,6 +5,7 @@ import statsmodels.api as sm
 from statsmodels.graphics.gofplots import qqplot, qqline, ProbPlot
 from scipy import stats
 
+
 try:
     import matplotlib.pyplot as plt
     import matplotlib

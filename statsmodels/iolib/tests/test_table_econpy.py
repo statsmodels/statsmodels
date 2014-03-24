@@ -68,7 +68,7 @@ class test_Cell(unittest.TestCase):
 
 class test_SimpleTable(unittest.TestCase):
     def test_txt_fmt1(self):
-        """Limited test of custom txt_fmt"""
+        # Limited test of custom txt_fmt
         desired = """
 *****************************
 *       * header1 * header2 *
@@ -102,7 +102,7 @@ class test_SimpleTable(unittest.TestCase):
         #print(desired)
         self.assertEqual(actual, desired)
     def test_html_fmt1(self):
-        """Limited test of custom html_fmt"""
+        # Limited test of custom html_fmt
         desired = """
 <table class="simpletable">
 <tr>
@@ -125,7 +125,7 @@ class test_SimpleTable(unittest.TestCase):
         #print len(actual), len(desired)
         self.assertEqual(actual, desired)
     def test_customlabel(self):
-        """Limited test of custom custom labeling"""
+        # Limited test of custom custom labeling
         if has_numpy:
             tbl = SimpleTable(table1data, test1header, test1stubs, txt_fmt=txt_fmt1)
             tbl[1][1].data = np.nan

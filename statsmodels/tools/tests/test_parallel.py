@@ -1,4 +1,5 @@
-from statsmodels.tools.parallel import parallel_func, ModuleUnavailableWarning
+from statsmodels.tools.parallel import parallel_func
+from statsmodels.tools.sm_exceptions import ModuleUnavailableWarning
 from pandas.util.testing import assert_produces_warning
 from numpy import arange, testing
 from math import sqrt

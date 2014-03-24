@@ -18,6 +18,7 @@ DECIMAL_3 = 3
 DECIMAL_2 = 2
 DECIMAL_1 = 1
 DECIMAL_0 = 0
+
 class CheckModelResultsMixin(object):
     '''
     res2 should be either the results from RModelWrap
@@ -508,9 +509,7 @@ def test_prefect_pred():
 
 
 def test_attribute_writable_resettable():
-    """
-    Regression test for mutables and class constructors.
-    """
+    # Regression test for mutables and class constructors.
     data = sm.datasets.longley.load()
     endog, exog = data.endog, data.exog
     glm_model = sm.GLM(endog, exog)

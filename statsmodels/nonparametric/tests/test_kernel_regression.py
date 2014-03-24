@@ -5,6 +5,7 @@ import numpy.testing.decorators as dec
 import statsmodels.api as sm
 nparam = sm.nonparametric
 
+
 class MyTest(object):
     def setUp(self):
         nobs = 60

@@ -14,6 +14,7 @@ from statsmodels.tools.tools import add_constant
 from statsmodels.regression.linear_model import OLS
 import statsmodels.sandbox.regression.gmm as gmm
 
+
 def get_griliches76_data():
     import os
     curdir = os.path.split(__file__)[0]

@@ -243,7 +243,6 @@ def test_pvalcorrection_reject():
                 msg = 'case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r' % (
                                  method, alpha, reject.sum(), pval1, pvalscorr)
                 #assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
-                #assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
                 yield assert_equal, reject, pvalscorr <= alpha, msg
 
 

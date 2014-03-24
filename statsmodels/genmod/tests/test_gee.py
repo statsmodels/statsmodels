@@ -23,6 +23,7 @@ from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
 import pandas as pd
 import statsmodels.formula.api as sm
+
 def load_data(fname, icept=True):
     """
     Load a data set from the results directory.  The data set should
