@@ -774,7 +774,8 @@ class MultiComparison(object):
     groups : array
         group labels corresponding to each data point
     group_order : list of strings, optional
-        the desired order for the group mean results to be reported in.
+        the desired order for the group mean results to be reported in. If
+        not specified, results are reported in increasing order
 
     '''
 
