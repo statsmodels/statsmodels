@@ -114,18 +114,14 @@ _no_smw = False
 
 class SolutionPath(object):
     """
-    A class for calculating the solution path for a regularized
-    regression.  The solution path is calculated using a pathwise
-    coordinate descent algorithm.
+    A reference class for calculating the solution path for a
+    regularized regression.  The reference implementation explicitly
+    minimizes a penalized loss function to estimate the parameters.
+    For good performance, override `new_point` with a model-specific
+    implementation.
 
     Parameters:
     -----------
-    func : function
-        The function that is minimized to produce parameter
-        estimates
-    penalty : function
-        The penalty function that is added (with a weight)
-        to `func` to produce a regularized estimating function.
     ndim : integer
         The dimension of the parameter
     maxvar : integer
@@ -134,19 +130,14 @@ class SolutionPath(object):
     ceps : float
         Coefficients smaller than this number in absolute value
         are treated as zero
-    xtol : float
-        Steps in the soution path are resolved to this level of
-        accuracy.
-    ftol : float
-        Convergence criterion for line searchers
-    maxitp : integer
-        The maximum number of iterations per parameter in the
-        coordinate descent.
 
     Notes:
     ------
-    The penalty function must produce zero coefficients.  The
-    best-known choice is the L1 norm of the coefficients.
+    After creating a SolutionPath object, call `initialize` then
+    `refine` to construct the path.
+
+    The default implementation requires a call to
+    `set_estimating_func` before construtcting the solution path.
 
     The returned solution path may contain some models with more than
     `maxvar` variables, but only the solution path for models with up
@@ -155,15 +146,6 @@ class SolutionPath(object):
     In some cases two variables may enter/exit the model
     simultaneously, so some model sizes may not be present in the
     solution path.
-
-    References:
-    -----------
-    Friedman, J. H., Hastie, T. and Tibshirani, R. Regularized Paths
-    for Generalized Linear Models via Coordinate Descent. Journal of
-    Statistical Software, 33(1) (2008)
-    http://www.jstatsoft.org/v33/i01/paper
-
-    http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
     """
 
     # The sorted list of penalty weights for all points on the
@@ -186,18 +168,41 @@ class SolutionPath(object):
     # solution path
     num_nonzero = []
 
-    def __init__(self, func, penalty, ndim, maxvar=5, ceps=1e-4,
-                 ftol=1e-4, xtol=0.1, maxitp=100):
-        self.func = func
-        self.penalty = penalty
+    # Maximum number of iterations per coordinate.
+    maxitp = 100
+
+    # Convergence tolerance for cyclic descent line searches
+    ftol = 1e-4
+
+    def __init__(self, ndim, maxvar=5, ceps=1e-4):
         self.ndim = ndim
         self.maxvar = maxvar
         self.ceps = ceps
-        self.ftol = ftol
-        self.xtol = xtol
-        self.maxitp = 100
 
-    def cyclic_descent(self, func, start):
+    def set_estimating_functions(self, func, penalty):
+        """
+        The default implementation of SolutionPath minimizes a
+        penalized estimating function to estimate the parameters.
+
+        Parameters:
+        -----------
+        func : real-valued function
+            A loss function that is minimized to estimate the
+            parameters.
+        penalty : real-valued function
+            A penalty function that is added to `func`.
+
+        Notes
+        -----
+        `penalty` should be a function that produces zeros in the
+        estimated parameters, such as the L1 norm of the coefficient
+        vector.
+        """
+
+        self.func = func
+        self.penalty = penalty
+
+    def coordinate_descent(self, func, start):
         """
         Minimize a function using cyclic coordinate descent.
 
@@ -212,6 +217,13 @@ class SolutionPath(object):
         --------
         params : array-like
             The final point of the algorithm
+
+        Notes:
+        ------
+        Using coordinate descent to explicitly minimize the loss
+        function will be quite slow.  In some cases (WLS, GLS) the
+        minimization along each coordinate axis can be derived
+        analytically, making it unecessary to use this function.
         """
 
         from scipy.optimize import golden
@@ -265,39 +277,56 @@ class SolutionPath(object):
             The number of nonzero variables at the point that was
             added to the solution path.
         """
-        kx = np.searchsorted(self.weights, lam)
 
-        # Indices of coefficients that we know will be zero at lam.
-        ix0 = self.ix_zero[kx-1] if kx > 0 else np.array([])
+        # The position of the weight just below the current weight.
+        kx = np.searchsorted(self.weights, lam, side='right') - 1
 
-        # Indices of coefficients that may be nonzero at lam.
-        ix1 = self.ix_nonzero[kx-1] if kx > 0 else np.arange(self.ndim)
-
-        # The penalized version of func, restricted to the coordinates
-        # that may be nonzero.
-        def func1(x):
-            z = np.zeros(self.ndim, dtype=np.float64)
-            z[ix1] = x
-            return self.func(z) + lam * self.penalty(x)
-
-        # Minimize the penalized loss function
-        start1 = self.params[kx-1] if kx > 0 else self.params[0]
-        params = self.cyclic_descent(func1, start1)
-        params1 = np.zeros(self.ndim, dtype=np.float64)
-        params1[ix1] = params
+        start = np.zeros(self.ndim, dtype=np.float64)
+        start[self.ix_nonzero[kx]] = self.params[kx]
+        fe_params = self.new_point(lam, start)
 
         # Add the new point to the solution path
-        abspa = np.abs(params1)
+        kx = np.searchsorted(self.weights, lam)
+        abspa = np.abs(fe_params)
         ix0 = np.flatnonzero(abspa < self.ceps)
         ix1 = np.flatnonzero(abspa >= self.ceps)
         self.weights.insert(kx, lam)
         self.ix_zero.insert(kx, ix0)
         self.ix_nonzero.insert(kx, ix1)
-        self.params.insert(kx, params1[ix1])
+        self.params.insert(kx, fe_params[ix1])
         self.num_nonzero.insert(kx, len(ix1))
 
         return len(ix1)
 
+
+    def new_point(self, pwt, start):
+        """
+        Estimate the parameters at one given weight for the penalty
+        function.
+
+        This is a default implementation that uses cyclic coordinate
+        descent to minimize a given estimating function.  Derived
+        classes can override this method for greater efficiency.
+
+        Parameters:
+        -----------
+        pwt : float
+            The weight of the penalty function
+        start : array-like
+            The estimated coefficients for the maximum penalty
+            weight that is smaller than `pwt` and that is already
+            on the solution path.
+
+        Returns:
+        --------
+        The estimated parameters.
+        """
+
+        func = lambda x: self.func(x) + pwt * self.penalty(x)
+
+        params = self.coordinate_descent(func, start)
+
+        return params
 
     def weights_less_complex(self, nvar):
         """
@@ -370,7 +399,7 @@ class SolutionPath(object):
 
             # Check for models that have the desired number of
             # variables
-            if nv in [len(x) for x in self.ix_zero]:
+            if nv in [len(x) for x in self.ix_nonzero]:
                 continue
 
             # Try to find a penalty weight that gives the desired
@@ -387,7 +416,6 @@ class SolutionPath(object):
                 nvar = self.extend(lam)
                 if nvar == nv:
                     break
-
 
     def refine(self, xtol=1e-4):
         """
@@ -412,13 +440,46 @@ class SolutionPath(object):
 
             def f(lam):
                 ii = np.searchsorted(self.weights, lam)
-                if abs(lam - self.weights[ii]) < self.xtol:
+                if abs(lam - self.weights[ii]) < xtol:
                     nvar = self.num_nonzero[ii]
                 else:
                     nvar = self.extend(lam)
                 return nvar - (i + 0.5)
 
             brentq(f, max(w0), min(w1), xtol=xtol)
+
+
+class MixedLM_SolutionPath(SolutionPath):
+    """
+    A subclass of SolutionPath for mixed linear models.
+
+    The following must be attached to the class instance before
+    calling `initialize` and `refine`.
+
+    cov_re: array-like
+        The random effects covariance matrix
+    sig2 : float
+        The error variance
+    parent : class
+        The parent MimxedLM class
+    pen_wt : array-like
+        Optional, weights for each coefficient in the L1 penalty
+        function (defaults to uniform weights).
+    """
+
+    cov_re = None
+    sig2 = None
+    parent = None
+    pen_wt = None
+
+    def new_point(self, lam, start):
+
+        fe_params = self.parent.shooting(start, self.cov_re,
+                                   self.sig2, lam, pen_wt=self.pen_wt,
+                                   ceps=self.ceps, ptol=self.ftol,
+                                   maxit=self.maxitp)
+
+        return fe_params
 
 
 def _smw_solve(s, A, B, BI, rhs):
@@ -634,6 +695,101 @@ class MixedLM(base.Model):
                     for k in self.group_labels]
 
 
+    def shooting(self, fe_params, cov_re, sig2, pwt, pen_wt,
+                 ceps=1e-4, ptol=1e-5, maxit=200):
+        """
+        Minimize the L1-norm penalized log-likelihood with respect
+        to the fixed effects parameters.  The dependence parameters
+        are held fixed at the given values.
+
+        Parameters:
+        -----------
+        fe_params : array-like
+            The starting fixed effects parameters
+        cov_re : 2d array-like
+            The covariance matrix of the random effects
+        sig2 : positive real scalar
+            The error variance
+        pwt : positive real scalar
+            The coefficient of the L1 penalty
+        pen_wt : array-like
+            Weights for each coefficient in the L1 penalty,
+            if None use uniform weights.
+        ceps : positive real scalar
+            Fixed effects parameters smaller than this value
+            in magnitude are treaded as being zero.
+        ptol : positive real scalar
+            Convergence occurs when the sup norm difference
+            between successive values of `fe_params` is less than
+            `ptol`.
+        maxit : integer
+            The maximum number of iterations.
+
+        Returns:
+        --------
+        The final value of the fixed effects parameter vector.
+
+        Notes:
+        ------
+        The covariance structure is not updated.
+
+        The algorithm used here is a "shooting" or cyclic coordinate
+        descent algorithm.
+
+        References:
+        -----------
+        Friedman, J. H., Hastie, T. and Tibshirani, R. Regularized
+        Paths for Generalized Linear Models via Coordinate
+        Descent. Journal of Statistical Software, 33(1) (2008)
+        http://www.jstatsoft.org/v33/i01/paper
+
+        http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
+        """
+
+        cov_re_inv = np.linalg.inv(cov_re)
+
+        if pen_wt is None:
+            pen_wt = np.ones(self.k_fe)
+
+        for itr in range(maxit):
+
+            fe_params_s = fe_params.copy()
+            for j in range(self.k_fe):
+
+                if abs(fe_params[j]) < ceps:
+                    continue
+
+                # The residuals
+                fe_params[j] = 0.
+                expval = np.dot(self.exog, fe_params)
+                resid_all = self.endog - expval
+
+                # The loss function has the form
+                # a*x^2 + b*x + pwt*|x|
+                a, b = 0., 0.
+                for k, lab in enumerate(self.group_labels):
+
+                    exog = self.exog_li[k]
+                    ex_r = self.exog_re_li[k]
+                    resid = resid_all[self.row_indices[lab]]
+
+                    x = exog[:,j]
+                    u = _smw_solve(sig2, ex_r, cov_re, cov_re_inv, x)
+                    a += np.dot(u, x)
+                    b -= 2*np.dot(u, resid)
+
+                pwt1 = pwt * pen_wt[j]
+                if b > pwt1:
+                    fe_params[j] = -(b - pwt1) / (2*a)
+                elif b < -pwt1:
+                    fe_params[j] = -(b + pwt1) / (2*a)
+
+            if np.abs(fe_params_s - fe_params).max() < ptol:
+                break
+
+        return fe_params
+
+
     def _unpack(self, params, sym=True):
         """
         Takes as input the packed parameter vector and returns a
@@ -776,19 +932,17 @@ class MixedLM(base.Model):
 
         return likeval
 
-    def fit_regularized(self, reml=True, cov_pen=0., maxvar=5,
-                        xtol=0.1):
+    def fit_regularized(self, pen_wt=None,  maxvar=5, xtol=0.1):
         """
-        Return coefficient estimates obtained using L1 regularization.
+        Return the full solution path for the fixed effects
+        coefficient estimates based on regularization.
 
         Parameters:
         -----------
-        reml : bool
-            If True, fit the model using the REML criterion, else fit
-            the model using the log likelihood.
-        cov_pen : float
-            The weight for the penalty function for the random effects
-            covariance matrix.
+        pen_wt : array-like
+            Weights for the L1 penalty of the coefficients.  The
+            penalty is pen_wt[0]*params[0] + ....  Defaults to a
+            vector of ones.
         maxvar : integer
             The maximum number of variables with nonzero coefficients
         xtol : float
@@ -798,7 +952,10 @@ class MixedLM(base.Model):
         Returns:
         --------
         A Pandas DataFrame containing the parameters estimates at each
-        value of the penalty parameter.
+        value of the penalty parameter.  The rows correspond to
+        different values of the penalty weight.  Each column (except
+        for the column containing he weights) contains the values for
+        one fixed effects coefficient.
 
         Notes:
         ------
@@ -806,27 +963,18 @@ class MixedLM(base.Model):
         obtained when estimating the full model without penalty.
         """
 
-        penalty = lambda x: np.abs(x).sum()
-
         # First fit without regularization
-        mdf = self.fit(reml=reml, cov_pen=cov_pen)
+        mdf = self.fit(reml=False)
 
-        # Get the covariance so we can call loglike directly
-        fe_params, L = self._unpack(mdf.params, sym=False)
-        cov_re = np.dot(L, L.T)
-        params_r = self._pack(fe_params, cov_re)
+        # Get the path
+        soln_path = MixedLM_SolutionPath(self.k_fe)
+        soln_path.cov_re = mdf.cov_re
+        soln_path.sig2 = mdf.sig2
+        soln_path.parent = self
+        soln_path.initialize(mdf.fe_params)
+        soln_path.refine(xtol=xtol)
 
-        def func(x):
-            params_r[0:mdf.k_fe] = x
-            # reml=False is faster and equivalent since the dependence
-            # structure is not changing
-            return -self.loglike(params_r, reml=False,
-                                 cov_pen=cov_pen)
-
-        soln_path = SolutionPath(func, penalty, self.k_fe, xtol=xtol)
-        soln_path.initialize(fe_params)
-        soln_path.refine(xtol=1)
-
+        # Create a dataframe holding the results
         rslt = []
         for i in range(len(soln_path.weights)):
             vec = [soln_path.weights[i],]
