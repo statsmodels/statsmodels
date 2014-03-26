@@ -17,7 +17,7 @@ examples, tutorials, model testing, etc.
 Using Datasets from R
 ---------------------
 
-The `Rdatasets project <http://vincentarelbundock.github.com/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. For example:
+The `Rdatasets project <http://vincentarelbundock.github.com/Rdatasets/>`__ gives access to the datasets available in R's core datasets package and many other common R packages. All of these datasets are available to statsmodels by using the :func:`get_rdataset` function. The actual data is accessible by the ``data`` attribute. For example:
 
 .. ipython:: python
 
@@ -58,7 +58,11 @@ Load a dataset:
    import statsmodels.api as sm
    data = sm.datasets.longley.load()
 
-The `Dataset` object follows the bunch pattern explained  in :ref:`proposal <dataset_proposal>`.
+The `Dataset` object follows the bunch pattern explained  in :ref:`proposal <dataset_proposal>`. The full dataset is available in the ``data`` attribute.
+
+.. ipython:: python
+
+   data.data
 
 Most datasets hold convenient representations of the data in the attributes `endog` and `exog`:
 
@@ -95,13 +99,20 @@ Loading data as pandas objects
 
 For many users it may be preferable to get the datasets as a pandas DataFrame or
 Series object. Each of the dataset modules is equipped with a ``load_pandas``
-method which returns a ``Dataset`` instance with the data as pandas objects:
+method which returns a ``Dataset`` instance with the data readily available as pandas objects:
 
 .. ipython:: python
 
    data = sm.datasets.longley.load_pandas()
    data.exog
    data.endog
+
+The full DataFrame is available in the ``data`` attribute of the Dataset object
+
+.. ipython:: python
+
+   data.data
+
 
 With pandas integration in the estimation classes, the metadata will be attached
 to model results:
