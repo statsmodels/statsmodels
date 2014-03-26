@@ -1,3 +1,4 @@
+from statsmodels.compatnp.py3k import lmap, lzip
 import numpy as np
 import pandas as pd
 from numpy.testing import dec
@@ -34,7 +35,7 @@ def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index('YEAR').T.unstack()
-    dates = map(lambda x : pd.datetools.parse('1 '+' '.join(x)),
+    dates = lmap(lambda x : pd.datetools.parse('1 '+' '.join(x)),
                                             dta.index.values)
 
     # test dates argument
@@ -61,7 +62,6 @@ def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
     dates = map('Q'.join, zip(dta.year.astype(int).apply(str),
                               dta.quarter.astype(int).apply(str)))
-
     # test dates argument
     quarter_plot(dta.unemp.values, dates)
 

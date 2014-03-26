@@ -29,6 +29,7 @@ get function drop imag if close to zero from numpy/scipy source, where?
 
 """
 
+from __future__ import print_function
 import numpy as np
 import numpy.fft as fft
 #import scipy.fftpack as fft
@@ -431,23 +432,23 @@ if __name__ == '__main__':
     # same faster:
     arcomb = np.convolve(ar, ar2, mode='same')
     marep = signal.lfilter(ma,arcomb, uni) #[len(ma):]
-    print marep[:10]
+    print(marep[:10])
     mafr = fft.fft(marep)
 
     rvs = np.random.normal(size=nobs)
     datafr = fft.fft(rvs)
     y = fft.ifft(mafr*datafr)
-    print np.corrcoef(np.c_[y[2:], y[1:-1], y[:-2]],rowvar=0)
+    print(np.corrcoef(np.c_[y[2:], y[1:-1], y[:-2]],rowvar=0))
 
     arrep = signal.lfilter([1],marep, uni)
-    print arrep[:20]  # roundtrip to ar
+    print(arrep[:20])  # roundtrip to ar
     arfr = fft.fft(arrep)
     yfr = fft.fft(y)
     x = fft.ifft(arfr*yfr).real  #imag part is e-15
     # the next two are equal, roundtrip works
-    print x[:5]
-    print rvs[:5]
-    print np.corrcoef(np.c_[x[2:], x[1:-1], x[:-2]],rowvar=0)
+    print(x[:5])
+    print(rvs[:5])
+    print(np.corrcoef(np.c_[x[2:], x[1:-1], x[:-2]],rowvar=0))
 
 
     # ARMA filter using fft with ratio of fft of ma/ar lag polynomial
@@ -462,9 +463,9 @@ if __name__ == '__main__':
     ma0fr = fft.fft(map_)
     y2 = fft.ifft(ma0fr/ar0fr*datafr)
     #the next two are (almost) equal in real part, almost zero but different in imag
-    print y2[:10]
-    print y[:10]
-    print maxabs(y, y2)  # from chfdiscrete
+    print(y2[:10])
+    print(y[:10])
+    print(maxabs(y, y2))  # from chfdiscrete
     #1.1282071239631782e-014
 
     ar = [1, -0.4]
@@ -481,44 +482,44 @@ if __name__ == '__main__':
 
     plt.figure()
     spd1, w1 = arma1.spd(2**10)
-    print spd1.shape
+    print(spd1.shape)
     _ = plt.plot(spd1)
     plt.title('spd fft complex')
 
     plt.figure()
     spd2, w2 = arma1.spdshift(2**10)
-    print spd2.shape
+    print(spd2.shape)
     _ = plt.plot(w2, spd2)
     plt.title('spd fft shift')
 
     plt.figure()
     spd3, w3 = arma1.spddirect(2**10)
-    print spd3.shape
+    print(spd3.shape)
     _ = plt.plot(w3, spd3)
     plt.title('spd fft direct')
 
     plt.figure()
     spd3b = arma1._spddirect2(2**10)
-    print spd3b.shape
+    print(spd3b.shape)
     _ = plt.plot(spd3b)
     plt.title('spd fft direct mirrored')
 
     plt.figure()
     spdr, wr = arma1.spdroots(w)
-    print spdr.shape
+    print(spdr.shape)
     plt.plot(w, spdr)
     plt.title('spd from roots')
 
     plt.figure()
     spdar1_ = spdar1(arma1.ar, w)
-    print spdar1_.shape
+    print(spdar1_.shape)
     _ = plt.plot(w, spdar1_)
     plt.title('spd ar1')
 
 
     plt.figure()
     wper, spdper = arma1.periodogram(nfreq)
-    print spdper.shape
+    print(spdper.shape)
     _ = plt.plot(w, spdper)
     plt.title('periodogram')
 
@@ -527,7 +528,7 @@ if __name__ == '__main__':
     import matplotlib.mlab as mlb
     plt.figure()
     sdm, wm = mlb.psd(x)
-    print 'sdm.shape', sdm.shape
+    print('sdm.shape', sdm.shape)
     sdm = sdm.ravel()
     plt.plot(wm, sdm)
     plt.title('matplotlib')
@@ -536,13 +537,12 @@ if __name__ == '__main__':
     #yule_AR_est(s, order, Nfreqs)
     wnt, spdnt = LD_AR_est(rvs, 10, 512)
     plt.figure()
-    print 'spdnt.shape', spdnt.shape
+    print('spdnt.shape', spdnt.shape)
     _ = plt.plot(spdnt.ravel())
-    print spdnt[:10]
+    print(spdnt[:10])
     plt.title('nitime')
 
     fig = plt.figure()
     arma1.plot4(fig)
-
 
     #plt.show()

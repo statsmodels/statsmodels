@@ -4,6 +4,7 @@ Created on Fri Sep 30 15:20:45 2011
 
 @author: josef
 """
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 from scipy import stats
 from statsmodels.sandbox.tools.mctools import StatTestMC
@@ -20,19 +21,19 @@ def lb(x):
 
 
 mc1 = StatTestMC(normalnoisesim, lb)
-mc1.run(5000, statindices=range(4))
+mc1.run(5000, statindices=lrange(4))
 
-print mc1.summary_quantiles([1,2,3], stats.chi2([2,3,4]).ppf,
+print(mc1.summary_quantiles([1,2,3], stats.chi2([2,3,4]).ppf,
                             varnames=['lag 1', 'lag 2', 'lag 3'],
-                            title='acorr_ljungbox')
-print '\n\n'
+                            title='acorr_ljungbox'))
+print('\n\n')
 
 frac = [0.01, 0.025, 0.05, 0.1, 0.975]
 crit = stats.chi2([2,3,4]).ppf(np.atleast_2d(frac).T)
-print mc1.summary_cdf([1,2,3], frac, crit,
+print(mc1.summary_cdf([1,2,3], frac, crit,
                       varnames=['lag 1', 'lag 2', 'lag 3'],
-                      title='acorr_ljungbox')
-print mc1.cdf(crit, [1,2,3])[1]
+                      title='acorr_ljungbox'))
+print(mc1.cdf(crit, [1,2,3])[1])
 
 #----------------------
 
@@ -42,24 +43,24 @@ def randwalksim(nobs=500, drift=0.0):
 def adf20(x):
     return unitroot_adf(x, 2, trendorder=0, autolag=None)
 
-print adf20(np.random.randn(100))
+print(adf20(np.random.randn(100)))
 
 mc2 = StatTestMC(randwalksim, adf20)
 mc2.run(10000, statindices=[0,1])
 frac = [0.01, 0.05, 0.1]
 #bug
 crit = np.array([-3.4996365338407074, -2.8918307730370025, -2.5829283377617176])[:,None]
-print mc2.summary_cdf([0], frac, crit,
+print(mc2.summary_cdf([0], frac, crit,
                       varnames=['adf'],
-                      title='adf')
+                      title='adf'))
 #bug
 #crit2 = np.column_stack((crit, frac))
 #print mc2.summary_cdf([0, 1], frac, crit,
 #                      varnames=['adf'],
 #                      title='adf')
 
-print mc2.quantiles([0])
-print mc2.cdf(crit, [0])
+print(mc2.quantiles([0]))
+print(mc2.cdf(crit, [0]))
 
 doplot=1
 if doplot:

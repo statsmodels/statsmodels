@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import print_function
+from statsmodels.compatnp.py3k import lzip
 import numpy as np
-import kernels
+from . import kernels
 
 
 #TODO: should this be a function?
@@ -63,8 +64,8 @@ if __name__ == "__main__":
 
     kern = kernels.Gaussian(h = h)
     kde = KDE( x, kern)
-    print kde.density(1.015469)
-    print 0.2034675
+    print(kde.density(1.015469))
+    print(0.2034675)
     Xs = np.arange(-10,10,0.1)
 
     fig = plt.figure()
@@ -75,14 +76,14 @@ if __name__ == "__main__":
 
 
     # 2-D case
-    x = zip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
+    x = lzip(kdetest.faithfulData["eruptions"], kdetest.faithfulData["waiting"])
     x = np.array(x)
     x = (x - x.mean(0))/x.std(0)
     nobs = x.shape[0]
     H = kdetest.Hpi
     kern = kernels.NdKernel( 2 )
     kde = KDE( x, kern )
-    print kde.density( np.matrix( [1,2 ])) #.T )
+    print(kde.density( np.matrix( [1,2 ]))) #.T
     plt.figure()
     plt.plot(x[:,0], x[:,1], 'o')
 

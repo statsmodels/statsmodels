@@ -6,7 +6,7 @@ Created on Fri Mar 01 00:23:07 2013
 Author: Josef Perktold
 License: BSD-3
 """
-
+from statsmodels.compatnp.py3k import lzip
 import numpy as np
 from scipy import stats, optimize
 
@@ -729,8 +729,8 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
     -----
     Yates continuity correction is not available.
     '''
-    #all_pairs = map(list, zip(*np.triu_indices(4, 1)))
-    all_pairs = zip(*np.triu_indices(4, 1))
+    #all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
+    all_pairs = lzip(*np.triu_indices(4, 1))
     pvals = [proportions_chisquare(count[list(pair)], nobs[list(pair)])[1]
                for pair in all_pairs]
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
@@ -779,7 +779,7 @@ def proportions_chisquare_pairscontrol(count, nobs, value=None,
     '''
     if (value is not None) or (not alternative in ['two-sided', '2s']):
         raise NotImplementedError
-    #all_pairs = map(list, zip(*np.triu_indices(4, 1)))
+    #all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
     all_pairs = [(0, k) for k in range(1, len(count))]
     pvals = [proportions_chisquare(count[list(pair)], nobs[list(pair)],
                                    #alternative=alternative)[1]

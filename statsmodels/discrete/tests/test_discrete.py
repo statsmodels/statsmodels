@@ -8,7 +8,7 @@ in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
 # pylint: disable-msg=E1101
-
+from .results.results_discrete import RandHIE, Anes
 import os
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
@@ -19,7 +19,7 @@ from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 from nose import SkipTest
-from results.results_discrete import Spector, DiscreteL1
+from .results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 try:
@@ -770,7 +770,6 @@ class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
 class TestPoissonNewton(CheckModelResults):
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = Poisson(data.endog, exog).fit(method='newton', disp=0)
@@ -807,7 +806,6 @@ class TestPoissonNewton(CheckModelResults):
 class TestNegativeBinomialNB2Newton(CheckModelResults):
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(method='newton', disp=0)
@@ -860,7 +858,6 @@ class TestNegativeBinomialNB2Newton(CheckModelResults):
 class TestNegativeBinomialNB1Newton(CheckModelResults):
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(
@@ -901,7 +898,6 @@ class TestNegativeBinomialNB1Newton(CheckModelResults):
 class TestNegativeBinomialNB2BFGS(CheckModelResults):
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(
@@ -956,7 +952,6 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
 class TestNegativeBinomialNB1BFGS(CheckModelResults):
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb1').fit(method="bfgs",
@@ -1003,7 +998,6 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
 
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import RandHIE
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'geometric').fit(method='bfgs', disp=0)
@@ -1162,7 +1156,7 @@ class CheckMNLogitBaseZero(CheckModelResults):
 class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import Anes
+
         data = sm.datasets.anes96.load()
         cls.data = data
         exog = data.exog
@@ -1175,7 +1169,6 @@ class TestMNLogitNewtonBaseZero(CheckMNLogitBaseZero):
 class TestMNLogitLBFGSBaseZero(CheckMNLogitBaseZero):
     @classmethod
     def setupClass(cls):
-        from results.results_discrete import Anes
         data = sm.datasets.anes96.load()
         cls.data = data
         exog = data.exog

@@ -6,7 +6,7 @@ Created on Sun Jan 29 11:16:09 2012
 Author: Josef Perktold
 License: BSD-3
 """
-
+from statsmodels.compatnp.py3k import lzip
 from collections import defaultdict
 import numpy as np
 
@@ -650,7 +650,7 @@ class OLSInfluence(object):
                       ("ext.stud.\nresidual", self.resid_studentized_external),
                       ('dffits', self.dffits[0])
                       ]
-        colnames, data = zip(*table_raw) #unzip
+        colnames, data = lzip(*table_raw) #unzip
         data = np.column_stack(data)
         self.table_data = data
         from statsmodels.iolib.table import SimpleTable, default_html_fmt
@@ -721,7 +721,7 @@ def summary_table(res, alpha=0.05):
                                   ])
 
 
-    #colnames, data = zip(*table_raw) #unzip
+    #colnames, data = lzip(*table_raw) #unzip
     data = table_sm
     ss2 = ['Obs', 'Dep Var\nPopulation', 'Predicted\nValue', 'Std Error\nMean Predict', 'Mean ci\n95% low', 'Mean ci\n95% upp', 'Predict ci\n95% low', 'Predict ci\n95% upp', 'Residual', 'Std Error\nResidual', 'Student\nResidual', "Cook's\nD"]
     colnames = ss2

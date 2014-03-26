@@ -1,9 +1,10 @@
 ''' Wrapper for R models to allow comparison to scipy models '''
 
+from statsmodels.compatnp import iterkeys
 import numpy as np
 
 import rpy
-from check_for_rpy import skip_rpy
+from .check_for_rpy import skip_rpy
 skipR = skip_rpy()
 if not skipR:
     from rpy import r
@@ -43,8 +44,8 @@ class RModel(object):
 #        self.beta0 = np.array([coeffs[c] for c in self._design_cols])
         self.nobs = len(self.results['residuals'])
         if isinstance(self.results['residuals'], dict):
-            self.resid = np.zeros((len(self.results['residuals'].keys())))
-            for i in self.results['residuals'].keys():
+            self.resid = np.zeros((len(iterkeys(self.results['residuals']))))
+            for i in iterkeys(self.results['residuals']):
                 self.resid[int(i)-1] = self.results['residuals'][i]
         else:
             self.resid = self.results['residuals']
@@ -87,7 +88,7 @@ class RModel(object):
                 for k in range(1, 1+self.nobs)]
         if isinstance(self.resid, dict):
             tmp = np.zeros(len(self.resid))
-            for i in self.resid.keys():
+            for i in iterkeys(self.resid):
                 tmp[int(i)-1] = self.resid[i]
             self.resid = tmp
         self.predict = [self.results['linear.predictors'][str(k)] \
@@ -99,7 +100,7 @@ class RModel(object):
         self.resid_deviance = self.rsum['deviance.resid']
         if isinstance(self.resid_deviance, dict):
             tmp = np.zeros(len(self.resid_deviance))
-            for i in self.resid_deviance.keys():
+            for i in iterkeys(self.resid_deviance):
                 tmp[int(i)-1] = self.resid_deviance[i]
             self.resid_deviance = tmp
         self.null_deviance = self.rsum['null.deviance']
@@ -107,8 +108,8 @@ class RModel(object):
     def getrlm(self):
         self.k2 = self.results['k2']
         if isinstance(self.results['w'], dict):
-            tmp = np.zeros((len(self.results['w'].keys())))
-            for i in self.results['w'].keys():
+            tmp = np.zeros((len(iterkeys(self.results['w']))))
+            for i in iterkeys(self.results['w']):
                 tmp[int(i)-1] = self.results['w'][i]
             self.weights = tmp
         else: self.weights = self.results['w']

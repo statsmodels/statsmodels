@@ -1,3 +1,4 @@
+from statsmodels.compatnp.py3k import lrange
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
                                                coint, acovf,
@@ -240,7 +241,7 @@ class TestGrangerCausality(object):
 
 
 def test_pandasacovf():
-    s = Series(range(1, 11))
+    s = Series(lrange(1, 11))
     assert_almost_equal(acovf(s), acovf(s.values))
 
 
@@ -288,8 +289,8 @@ def test_arma_order_select_ic():
                       [ 517.61019619,  496.99650196,  499.52656493],
                       [ 498.12580329,  499.75598491,  504.99255506],
                       [ 499.49225249,  504.96650341,  510.48779255]])
-    aic = DataFrame(aic_x , index=range(5), columns=range(3))
-    bic = DataFrame(bic_x , index=range(5), columns=range(3))
+    aic = DataFrame(aic_x , index=lrange(5), columns=lrange(3))
+    bic = DataFrame(bic_x , index=lrange(5), columns=lrange(3))
     assert_almost_equal(res.aic.values, aic.values, 5)
     assert_almost_equal(res.bic.values, bic.values, 5)
     assert_equal(res.aic_min_order, (1, 2))

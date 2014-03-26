@@ -21,7 +21,7 @@ weighted plotting_positions
 
 
 '''
-
+from __future__ import print_function
 import numpy as np
 from numpy import ma
 from scipy import stats
@@ -322,44 +322,44 @@ def edf_normal_inverse_transformed(x, alpha=3./8, beta=3./8, axis=0):
 if __name__ == '__main__':
 
     x = np.arange(5)
-    print plotting_positions(x)
+    print(plotting_positions(x))
     x = np.arange(10).reshape(-1,2)
-    print plotting_positions(x)
-    print quantiles(x, axis=0)
-    print quantiles(x, axis=None)
-    print quantiles(x, axis=1)
+    print(plotting_positions(x))
+    print(quantiles(x, axis=0))
+    print(quantiles(x, axis=None))
+    print(quantiles(x, axis=1))
     xm = ma.array(x)
     x2 = x.astype(float)
     x2[1,0] = np.nan
-    print plotting_positions(xm, axis=0)
+    print(plotting_positions(xm, axis=0))
 
     # test 0d, 1d
     for sl1 in [slice(None), 0]:
-        print (plotting_positions(xm[sl1,0]) == plotting_positions(x[sl1,0])).all(),
-        print (quantiles(xm[sl1,0]) == quantiles(x[sl1,0])).all(),
-        print (stats.mstats.mquantiles(ma.fix_invalid(x2[sl1,0])) == quantiles(x2[sl1,0], masknan=1)).all(),
+        print(((plotting_positions(xm[sl1,0]) == plotting_positions(x[sl1,0])).all(),))
+        print(((quantiles(xm[sl1,0]) == quantiles(x[sl1,0])).all(),))
+        print(((stats.mstats.mquantiles(ma.fix_invalid(x2[sl1,0])) == quantiles(x2[sl1,0], masknan=1)).all(),))
 
     #test 2d
     for ax in [0, 1, None, -1]:
-        print (plotting_positions(xm, axis=ax) == plotting_positions(x, axis=ax)).all(),
-        print (quantiles(xm, axis=ax) == quantiles(x, axis=ax)).all(),
-        print (stats.mstats.mquantiles(ma.fix_invalid(x2), axis=ax) == quantiles(x2, axis=ax, masknan=1)).all(),
+        print(((plotting_positions(xm, axis=ax) == plotting_positions(x, axis=ax)).all(),))
+        print(((quantiles(xm, axis=ax) == quantiles(x, axis=ax)).all(),))
+        print(((stats.mstats.mquantiles(ma.fix_invalid(x2), axis=ax) == quantiles(x2, axis=ax, masknan=1)).all(),))
 
     #stats version doesn't have axis
-    print (stats.mstats.plotting_positions(ma.fix_invalid(x2)) == plotting_positions(x2, axis=None, masknan=1)).all(),
+    print(((stats.mstats.plotting_positions(ma.fix_invalid(x2)) == plotting_positions(x2, axis=None, masknan=1)).all(),))
 
     #test 3d
     x3 = np.dstack((x,x)).T
     for ax in [1,2]:
-        print (plotting_positions(x3, axis=ax)[0] == plotting_positions(x.T, axis=ax-1)).all(),
+        print(((plotting_positions(x3, axis=ax)[0] == plotting_positions(x.T, axis=ax-1)).all(),))
 
     np.testing.assert_equal(plotting_positions(np.arange(10), alpha=0.35, beta=1-0.35), (1+np.arange(10)-0.35)/10)
     np.testing.assert_equal(plotting_positions(np.arange(10), alpha=0.4, beta=0.4), (1+np.arange(10)-0.4)/(10+0.2))
     np.testing.assert_equal(plotting_positions(np.arange(10)), (1+np.arange(10)-0.4)/(10+0.2))
-    print
-    print scoreatpercentile(x, [10,90])
-    print plotting_positions_w1d(x[:,0])
-    print (plotting_positions_w1d(x[:,0]) == plotting_positions(x[:,0])).all()
+    print('')
+    print(scoreatpercentile(x, [10,90]))
+    print(plotting_positions_w1d(x[:,0]))
+    print((plotting_positions_w1d(x[:,0]) == plotting_positions(x[:,0])).all())
 
 
     #weights versus replicating multiple occurencies of same x value

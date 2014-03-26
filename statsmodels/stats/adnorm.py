@@ -5,7 +5,7 @@ Created on Sun Sep 25 21:23:38 2011
 Author: Josef Perktold and Scipy developers
 License : BSD-3
 """
-
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 
@@ -50,7 +50,7 @@ def anderson_statistic(x, dist='norm', fit=True, params=(), axis=0):
             params = dist.fit(x)
             #print params
             z = dist.cdf(y, *params)
-            print z
+            print(z)
     else:
         if hasattr(dist, '__call__'):
             z = dist.cdf(y, *params)
@@ -128,8 +128,8 @@ if __name__ == '__main__':
            -1.4423,  1.2489,  0.9182, -0.2331, -0.6182,  0.183 ])
     r_res = np.array([0.58672353588821502, 0.1115380760041617])
     ad2, pval = normal_ad(x)
-    print ad2, pval
-    print r_res - [ad2, pval]
+    print(ad2, pval)
+    print(r_res - [ad2, pval])
 
-    print anderson_statistic((x-x.mean())/x.std(), dist=stats.norm, fit=0)
-    print anderson_statistic(x, dist=stats.norm, fit=True)
+    print(anderson_statistic((x-x.mean())/x.std(), dist=stats.norm, fit=0))
+    print(anderson_statistic(x, dist=stats.norm, fit=True))

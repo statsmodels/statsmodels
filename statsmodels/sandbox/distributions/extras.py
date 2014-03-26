@@ -51,7 +51,8 @@ License: BSD
 '''
 
 #note copied from distr_skewnorm_0.py
-
+from __future__ import print_function
+from statsmodels.compatnp.py3k import range
 from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
 from scipy.stats import distributions
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
@@ -231,8 +232,8 @@ def pdf_moments_st(cnt):
 
     N = len(cnt)
     if N < 2:
-        raise ValueError, "At least two moments must be given to" + \
-              "approximate the pdf."
+        raise ValueError("At least two moments must be given to "
+                         "approximate the pdf.")
 
     totp = poly1d(1)
     sig = sqrt(cnt[1])
@@ -250,9 +251,9 @@ def pdf_moments_st(cnt):
                 momdiff = cnt[m-1] - sig*sig*scipy.factorial2(m-1)
             Ck += Dvals[k][m] / sig**m * momdiff
         # Add to totp
-        raise
-        print Dvals
-        print Ck
+        raise SystemError
+        print(Dvals)
+        print(Ck)
         totp = totp +  Ck*Dvals[k]
 
     def thisfunc(x):
@@ -302,8 +303,8 @@ def pdf_mvsk(mvsk):
     """
     N = len(mvsk)
     if N < 4:
-        raise ValueError, "Four moments must be given to" + \
-              "approximate the pdf."
+        raise ValueError("Four moments must be given to "
+                         "approximate the pdf.")
 
     mu, mc2, skew, kurt = mvsk
 
@@ -350,8 +351,8 @@ def pdf_moments(cnt):
     """
     N = len(cnt)
     if N < 2:
-        raise ValueError, "At least two moments must be given to" + \
-              "approximate the pdf."
+        raise ValueError("At least two moments must be given to "
+                         "approximate the pdf.")
 
 
 
@@ -430,7 +431,7 @@ class NormExpan_gen(distributions.rv_continuous):
             cnt = args
             self.mvsk = mc2mvsk(cnt)
         else:
-            raise ValueError, "mode must be 'mvsk' or centmom"
+            raise ValueError("mode must be 'mvsk' or centmom")
 
         self.cnt = cnt
         #self.mvsk = (mu,sig,sk,kur)
@@ -747,7 +748,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         elif self.shape == 'hump':
             signpdf = -1
         else:
-            raise ValueError, 'shape can only be `u` or `hump`'
+            raise ValueError('shape can only be `u` or `hump`')
 
         return signpdf * (self.derivplus(x)*self.kls._pdf(self.funcinvplus(x),*args, **kwargs) -
                    self.derivminus(x)*self.kls._pdf(self.funcinvminus(x),*args, **kwargs))
@@ -1027,9 +1028,9 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     correl = np.zeros(n*(n-1)/2.0)  #dtype necessary?
 
     if (lower.ndim != 1) or (upper.ndim != 1):
-        raise ValueError, 'can handle only 1D bounds'
+        raise ValueError('can handle only 1D bounds')
     if len(upper) != n:
-        raise ValueError, 'bounds have different lengths'
+        raise ValueError('bounds have different lengths')
     if n==2 and corrcoef.size==1:
         correl = corrcoef
         #print 'case scalar rho', n
@@ -1043,7 +1044,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
 #            for jj in range(ii):
 #                correl[ jj + ((ii-2)*(ii-1))/2] = corrcoef[ii,jj]
     else:
-        raise ValueError, 'corrcoef has incorrect dimension'
+        raise ValueError('corrcoef has incorrect dimension')
 
     if not 'maxpts' in kwds:
         if n >2:
@@ -1067,7 +1068,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     #print kwds.items()
     error, cdfvalue, inform = scipy.stats.kde.mvn.mvndst(lower,upper,infin,correl,**kwds)
     if inform:
-        print 'something wrong', informcode[inform], error
+        print(('something wrong', informcode[inform], error))
     return cdfvalue
 
 

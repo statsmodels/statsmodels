@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 
 import pandas as pa
-import pickle
+from statsmodels.compatnp.py3k import cPickle
 
 import statsmodels.api as sm
 import statsmodels.sandbox as sb
@@ -24,9 +24,9 @@ import statsmodels.sandbox.tools as sbtools
 from statsmodels.graphics.correlation import plot_corr, plot_corr_grid
 
 try:
-    rrdm = pickle.load(file('dj30rr','rb'))
+    rrdm = cPickle.load(file('dj30rr','rb'))
 except Exception: #blanket for any unpickling error
-    print "Error with unpickling, a new pickle file can be created with findow_1"
+    print("Error with unpickling, a new pickle file can be created with findow_1")
     raise
 
 ticksym = rrdm.columns.tolist()
@@ -43,7 +43,7 @@ plt.title('Correlation Coefficients')
 
 xreda, facta, evaa, evea  = sbtools.pcasvd(rr)
 evallcs = (evaa).cumsum()
-print evallcs/evallcs[-1]
+print(evallcs/evallcs[-1])
 xred, fact, eva, eve  = sbtools.pcasvd(rr, keepdim=4)
 pcacorr = np.corrcoef(xred, rowvar=0)
 
@@ -72,8 +72,8 @@ plot_corr(residcorr, xnames=ticksym, title='Correlation Residuals',
 
 import matplotlib as mpl
 images = [c for ax in fig.axes for c in ax.get_children() if isinstance(c, mpl.image.AxesImage)]
-print images
-print ax.get_children()
+print(images)
+print(ax.get_children())
 #cax = fig.add_subplot(2,2,2)
 #[0.85, 0.1, 0.075, 0.8]
 fig. subplots_adjust(bottom=0.1, right=0.9, top=0.9)
@@ -86,7 +86,7 @@ try:
     import sklearn
 except ImportError:
     has_sklearn = False
-    print 'sklearn not available'
+    print('sklearn not available')
 
 
 def cov2corr(cov):
@@ -131,9 +131,9 @@ if has_sklearn:
                             for cj in corrli])
     diffsabs = np.array([[np.max(np.abs(ci-cj)) for ci in corrli]
                             for cj in corrli])
-    print diffssq
-    print '\nmaxabs'
-    print diffsabs
+    print(diffssq)
+    print('\nmaxabs')
+    print(diffsabs)
     fig.savefig('corrmatrix_sklearn.png', dpi=120)
 
     fig2 = plot_corr_grid(corrli+[residcorr], ncols=3,

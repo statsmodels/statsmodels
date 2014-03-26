@@ -32,6 +32,7 @@ Golan, A., Judge, G., and Miller, D.  1996.  Maximum Entropy Econometrics.
 #bias and variance. Technical Report 2003/131 School of Computer Science and Software Engineer-
 #ing, Monash University.
 
+from statsmodels.compatnp.py3k import range, lzip
 from scipy import stats
 import numpy as np
 from matplotlib import pyplot as plt
@@ -118,7 +119,7 @@ def discretize(X, method="ef", nbins=None):
         binnum = 1
         base = svec[0]
         discrete[ivec[0]] = binnum
-        for i in xrange(1,nobs):
+        for i in range(1,nobs):
             if svec[i] < base + width:
                 discrete[ivec[i]] = binnum
             else:
@@ -184,7 +185,7 @@ def shannonentropy(px, logbase=2):
 #TODO: haven't defined the px,py case?
     px = np.asarray(px)
     if not np.all(px <= 1) or not np.all(px >= 0):
-        raise ValueError, "px does not define proper distribution"
+        raise ValueError("px does not define proper distribution")
     entropy = -np.sum(np.nan_to_num(px*np.log2(px)))
     if logbase != 2:
         return logbasechange(2,logbase) * entropy
@@ -208,7 +209,7 @@ def shannoninfo(px, logbase=2):
     """
     px = np.asarray(px)
     if not np.all(px <= 1) or not np.all(px >= 0):
-        raise ValueError, "px does not define proper distribution"
+        raise ValueError("px does not define proper distribution")
     if logbase != 2:
         return - logbasechange(2,logbase) * np.log2(px)
     else:
@@ -235,9 +236,9 @@ def condentropy(px, py, pxpy=None, logbase=2):
     and w_kj = X[k,j]
     """
     if not _isproperdist(px) or not _isproperdist(py):
-        raise ValueError, "px or py is not a proper probability distribution"
+        raise ValueError("px or py is not a proper probability distribution")
     if pxpy != None and not _isproperdist(pxpy):
-        raise ValueError, "pxpy is not a proper joint distribtion"
+        raise ValueError("pxpy is not a proper joint distribtion")
     if pxpy == None:
         pxpy = np.outer(py,px)
     condent = np.sum(pxpy * np.nan_to_num(np.log2(py/pxpy)))
@@ -268,9 +269,9 @@ def mutualinfo(px,py,pxpy, logbase=2):
     shannonentropy(px) - condentropy(px,py,pxpy)
     """
     if not _isproperdist(px) or not _isproperdist(py):
-        raise ValueError, "px or py is not a proper probability distribution"
+        raise ValueError("px or py is not a proper probability distribution")
     if pxpy != None and not _isproperdist(pxpy):
-        raise ValueError, "pxpy is not a proper joint distribtion"
+        raise ValueError("pxpy is not a proper joint distribtion")
     if pxpy == None:
         pxpy = np.outer(py,px)
     return shannonentropy(px, logbase=logbase) - condentropy(px,py,pxpy,
@@ -307,9 +308,9 @@ def corrent(px,py,pxpy,logbase=2):
     corrent(px,py,pxpy) = 1 - condent(px,py,pxpy)/shannonentropy(py)
     """
     if not _isproperdist(px) or not _isproperdist(py):
-        raise ValueError, "px or py is not a proper probability distribution"
+        raise ValueError("px or py is not a proper probability distribution")
     if pxpy != None and not _isproperdist(pxpy):
-        raise ValueError, "pxpy is not a proper joint distribtion"
+        raise ValueError("pxpy is not a proper joint distribtion")
     if pxpy == None:
         pxpy = np.outer(py,px)
 
@@ -348,9 +349,9 @@ def covent(px,py,pxpy,logbase=2):
     covent(px,py,pxpy) = condent(px,py,pxpy) + condent(py,px,pxpy)
     """
     if not _isproperdist(px) or not _isproperdist(py):
-        raise ValueError, "px or py is not a proper probability distribution"
+        raise ValueError("px or py is not a proper probability distribution")
     if pxpy != None and not _isproperdist(pxpy):
-        raise ValueError, "pxpy is not a proper joint distribtion"
+        raise ValueError("pxpy is not a proper joint distribtion")
     if pxpy == None:
         pxpy = np.outer(py,px)
 
@@ -390,7 +391,7 @@ def renyientropy(px,alpha=1,logbase=2,measure='R'):
 #TODO:finish returns
 #TODO:add checks for measure
     if not _isproperdist(px):
-        raise ValueError, "px is not a proper probability distribution"
+        raise ValueError("px is not a proper probability distribution")
     alpha = float(alpha)
     if alpha == 1:
         genent = shannonentropy(px)
@@ -435,20 +436,20 @@ def gencrossentropy(px,py,pxpy,alpha=1,logbase=2, measure='T'):
 
 
 if __name__ == "__main__":
-    print "From Golan (2008) \"Information and Entropy Econometrics -- A Review \
-and Synthesis"
-    print "Table 3.1"
+    print("From Golan (2008) \"Information and Entropy Econometrics -- A Review \
+and Synthesis")
+    print("Table 3.1")
     # Examples from Golan (2008)
 
     X = [.2,.2,.2,.2,.2]
     Y = [.322,.072,.511,.091,.004]
 
     for i in X:
-        print shannoninfo(i)
+        print(shannoninfo(i))
     for i in Y:
-        print shannoninfo(i)
-    print shannonentropy(X)
-    print shannonentropy(Y)
+        print(shannoninfo(i))
+    print(shannonentropy(X))
+    print(shannonentropy(Y))
 
     p = [1e-5,1e-4,.001,.01,.1,.15,.2,.25,.3,.35,.4,.45,.5]
 
@@ -463,7 +464,7 @@ and Synthesis"
     plt.ylabel("Entropy")
     plt.xlabel("Probability")
     x = np.linspace(0,1,101)
-    plt.plot(x, map(shannonentropy, zip(x,1-x)))
+    plt.plot(x, map(shannonentropy, lzip(x,1-x)))
 #    plt.show()
 
     # define a joint probability distribution
@@ -481,10 +482,10 @@ and Synthesis"
     D_YX = logbasechange(2,np.e)*stats.entropy(px, py)
     D_XY = logbasechange(2,np.e)*stats.entropy(py, px)
     I_XY = mutualinfo(px,py,w)
-    print "Table 3.3"
-    print H_X,H_Y, H_XY, H_XgivenY, H_YgivenX, D_YX, D_XY, I_XY
+    print("Table 3.3")
+    print(H_X,H_Y, H_XY, H_XgivenY, H_YgivenX, D_YX, D_XY, I_XY)
 
-    print "discretize functions"
+    print("discretize functions")
     X=np.array([21.2,44.5,31.0,19.5,40.6,38.7,11.1,15.8,31.9,25.8,20.2,14.2,
         24.0,21.0,11.3,18.0,16.3,22.2,7.8,27.8,16.3,35.1,14.9,17.1,28.2,16.4,
         16.5,46.0,9.5,18.8,32.1,26.1,16.1,7.3,21.4,20.0,29.3,14.9,8.3,22.5,
@@ -493,29 +494,29 @@ and Synthesis"
     #CF: R's infotheo
 #TODO: compare to pyentropy quantize?
     print
-    print "Example in section 3.6 of Golan, using table 3.3"
-    print "Bounding errors using Fano's inequality"
-    print "H(P_{e}) + P_{e}log(K-1) >= H(X|Y)"
-    print "or, a weaker inequality"
-    print "P_{e} >= [H(X|Y) - 1]/log(K)"
-    print "P(x) = %s" % px
-    print "X = 3 has the highest probability, so this is the estimate Xhat"
+    print("Example in section 3.6 of Golan, using table 3.3")
+    print("Bounding errors using Fano's inequality")
+    print("H(P_{e}) + P_{e}log(K-1) >= H(X|Y)")
+    print("or, a weaker inequality")
+    print("P_{e} >= [H(X|Y) - 1]/log(K)")
+    print("P(x) = %s" % px)
+    print("X = 3 has the highest probability, so this is the estimate Xhat")
     pe = 1 - px[2]
-    print "The probability of error Pe is 1 - p(X=3) = %0.4g" % pe
+    print("The probability of error Pe is 1 - p(X=3) = %0.4g" % pe)
     H_pe = shannonentropy([pe,1-pe])
-    print "H(Pe) = %0.4g and K=3" % H_pe
-    print "H(Pe) + Pe*log(K-1) = %0.4g >= H(X|Y) = %0.4g" % \
-            (H_pe+pe*np.log2(2), H_XgivenY)
-    print "or using the weaker inequality"
-    print "Pe = %0.4g >= [H(X) - 1]/log(K) = %0.4g" % (pe, (H_X - 1)/np.log2(3))
-    print "Consider now, table 3.5, where there is additional information"
-    print "The conditional probabilities of P(X|Y=y) are "
+    print("H(Pe) = %0.4g and K=3" % H_pe)
+    print("H(Pe) + Pe*log(K-1) = %0.4g >= H(X|Y) = %0.4g" % \
+            (H_pe+pe*np.log2(2), H_XgivenY))
+    print("or using the weaker inequality")
+    print("Pe = %0.4g >= [H(X) - 1]/log(K) = %0.4g" % (pe, (H_X - 1)/np.log2(3)))
+    print("Consider now, table 3.5, where there is additional information")
+    print("The conditional probabilities of P(X|Y=y) are ")
     w2 = np.array([[0.,0.,1.],[1/3.,1/3.,1/3.],[1/6.,1/3.,1/2.]])
-    print w2
+    print(w2)
 # not a proper distribution?
-    print "The probability of error given this information is"
-    print "Pe = [H(X|Y) -1]/log(K) = %0.4g" % ((np.mean([0,shannonentropy(w2[1]),shannonentropy(w2[2])])-1)/np.log2(3))
-    print "such that more information lowers the error"
+    print("The probability of error given this information is")
+    print("Pe = [H(X|Y) -1]/log(K) = %0.4g" % ((np.mean([0,shannonentropy(w2[1]),shannonentropy(w2[2])])-1)/np.log2(3)))
+    print("such that more information lowers the error")
 
 ### Stochastic processes
     markovchain = np.array([[.553,.284,.163],[.465,.312,.223],[.420,.322,.258]])

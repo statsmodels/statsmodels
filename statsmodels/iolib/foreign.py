@@ -9,7 +9,7 @@ See also
 ---------
 numpy.lib.io
 """
-
+from statsmodels.compatnp.py3k import lzip, lmap, lrange, string_types, long, lfilter
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
@@ -287,10 +287,10 @@ class StataReader(object):
     #NOTE: the byte type seems to be reserved for categorical variables
     # with a label, but the underlying variable is -127 to 100
     # we're going to drop the label and cast to int
-    DTYPE_MAP = dict(zip(range(1,245), ['a' + str(i) for i in range(1,245)]) + \
+    DTYPE_MAP = dict(lzip(lrange(1,245), ['a' + str(i) for i in range(1,245)]) + \
                     [(251, np.int16),(252, np.int32),(253, int),
                         (254, np.float32), (255, np.float64)])
-    TYPE_MAP = range(251)+list('bhlfd')
+    TYPE_MAP = lrange(251)+list('bhlfd')
     #NOTE: technically, some of these are wrong. there are more numbers
     # that can be represented. it's the 27 ABOVE and BELOW the max listed
     # numeric data type in [U] 12.2.2 of the 11.2 manual
@@ -357,7 +357,7 @@ class StataReader(object):
         """
         Returns a list of the dataset's StataVariables objects.
         """
-        return map(_StataVariable, zip(range(self._header['nvar']),
+        return lmap(_StataVariable, lzip(lrange(self._header['nvar']),
             self._header['typlist'], self._header['varlist'],
             self._header['srtlist'],
             self._header['fmtlist'], self._header['lbllist'],
@@ -392,9 +392,9 @@ class StataReader(object):
             pass
 
         if as_dict:
-            vars = map(str, self.variables())
+            vars = lmap(str, self.variables())
             for i in range(len(self)):
-                yield dict(zip(vars, self._next()))
+                yield dict(lzip(vars, self._next()))
         else:
             for i in range(self._header['nobs']):
                 yield self._next()
@@ -500,7 +500,7 @@ class StataReader(object):
 
         # other state vars
         self._data_location = self._file.tell()
-        self._has_string_data = len(filter(lambda x: type(x) is int,
+        self._has_string_data = len(lfilter(lambda x: type(x) is int,
             self._header['typlist'])) > 0
         self._col_size()
 
@@ -511,7 +511,7 @@ class StataReader(object):
     def _col_size(self, k = None):
         """Calculate size of a data record."""
         if len(self._col_sizes) == 0:
-            self._col_sizes = map(lambda x: self._calcsize(x),
+            self._col_sizes = lmap(lambda x: self._calcsize(x),
                     self._header['typlist'])
         if k == None:
             return self._col_sizes
@@ -542,9 +542,9 @@ class StataReader(object):
                             self._file.read(self._col_size(i)))
             return data
         else:
-            return map(lambda i: self._unpack(typlist[i],
+            return lmap(lambda i: self._unpack(typlist[i],
                 self._file.read(self._col_size(i))),
-                range(self._header['nvar']))
+                lrange(self._header['nvar']))
 
 def _open_file_binary_write(fname, encoding):
     if hasattr(fname, 'write'):
@@ -720,10 +720,10 @@ class StataWriter(object):
     #NOTE: the byte type seems to be reserved for categorical variables
     # with a label, but the underlying variable is -127 to 100
     # we're going to drop the label and cast to int
-    DTYPE_MAP = dict(zip(range(1,245), ['a' + str(i) for i in range(1,245)]) + \
+    DTYPE_MAP = dict(lzip(lrange(1,245), ['a' + str(i) for i in range(1,245)]) + \
                     [(251, np.int16),(252, np.int32),(253, int),
                         (254, np.float32), (255, np.float64)])
-    TYPE_MAP = range(251)+list('bhlfd')
+    TYPE_MAP = lrange(251)+list('bhlfd')
     MISSING_VALUES = { 'b': 101,
                        'h': 32741,
                        'l' : 2147483621,
@@ -999,7 +999,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         If convert_dates is True, then Stata formatted dates will be converted
         to datetime types according to the variable's format.
     """
-    if isinstance(fname, basestring):
+    if isinstance(fname, string_types):
         fhd = StataReader(open(fname, 'rb'), missing_values=False,
                 encoding=encoding)
     elif not hasattr(fname, 'read'):
@@ -1024,7 +1024,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
     data = np.zeros((nobs,numvars))
     stata_dta = fhd.dataset()
 
-    dt = np.dtype(zip(varnames, types))
+    dt = np.dtype(lzip(varnames, types))
     data = np.zeros((nobs), dtype=dt) # init final array
 
     for rownum,line in enumerate(stata_dta):
@@ -1042,7 +1042,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         from pandas import DataFrame
         data = DataFrame.from_records(data)
         if convert_dates:
-            cols = np.where(map(lambda x : x in _date_formats, fmtlist))[0]
+            cols = np.where(lmap(lambda x : x in _date_formats, fmtlist))[0]
             for col in cols:
                 i = col
                 col = data.columns[col]
@@ -1052,7 +1052,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         #date_cols = np.where(map(lambda x : x in _date_formats,
         #                                                    fmtlist))[0]
         # make the dtype for the datetime types
-        cols = np.where(map(lambda x : x in _date_formats, fmtlist))[0]
+        cols = np.where(lmap(lambda x : x in _date_formats, fmtlist))[0]
         dtype = data.dtype.descr
         dtype = [(dt[0], object) if i in cols else dt for i,dt in
                  enumerate(dtype)]
@@ -1060,7 +1060,7 @@ def genfromdta(fname, missing_flt=-999., encoding=None, pandas=False,
         for col in cols:
             def convert(x):
                 return _stata_elapsed_date_to_datetime(x, fmtlist[col])
-            data[data.dtype.names[col]] = map(convert,
+            data[data.dtype.names[col]] = lmap(convert,
                                               data[data.dtype.names[col]])
     return data
 

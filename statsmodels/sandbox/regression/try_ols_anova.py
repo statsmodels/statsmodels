@@ -12,7 +12,7 @@ TODO:
 
 '''
 
-
+from __future__ import print_function
 import numpy as np
 #from scipy import stats
 import statsmodels.api as sm
@@ -194,13 +194,13 @@ if __name__ == '__main__':
         testdata[name] = testdatacont[name]
 
 
-    #print form2design('a',testdata)
+    #print(form2design('a',testdata)
 
-    if 0: # print only when nobs is small, e.g. nobs=10
+    if 0: # print(only when nobs is small, e.g. nobs=10
         xx, n = form2design('F:a',testdata)
-        print xx
-        print form2design('P:a*b',testdata)
-        print data2proddummy((np.c_[testdata['a'],testdata['b']]))
+        print(xx)
+        print(form2design('P:a*b',testdata))
+        print(data2proddummy((np.c_[testdata['a'],testdata['b']])))
 
         xx, names = form2design('a F:b P:c*d',testdata)
 
@@ -213,16 +213,16 @@ if __name__ == '__main__':
     # simple test version: all coefficients equal to one
     y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
     rest1 = sm.OLS(y,X).fit() #results
-    print rest1.params
-    print anova_str % anovadict(rest1)
+    print(rest1.params)
+    print(anova_str % anovadict(rest1))
 
 
     X = np.column_stack([xx[nn] for nn in dropname('ae f', names)])
     # simple test version: all coefficients equal to one
     y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
     rest1 = sm.OLS(y,X).fit()
-    print rest1.params
-    print anova_str % anovadict(rest1)
+    print(rest1.params)
+    print(anova_str % anovadict(rest1))
 
 
     # Example: from Bruce
@@ -238,14 +238,14 @@ if __name__ == '__main__':
                    ('pen', int), ('pig', int), ('age', float),
                    ('bage', float), ('y', float)])
     dta = np.genfromtxt('dftest3.data', dt_b,missing='.', usemask=True)
-    print 'missing', [dta.mask[k].sum() for k in dta.dtype.names]
+    print('missing', [dta.mask[k].sum() for k in dta.dtype.names])
     m = dta.mask.view(bool)
     droprows = m.reshape(-1,len(dta.dtype.names)).any(1)
     # get complete data as plain structured array
     # maybe doesn't work with masked arrays
     dta_use_b1 = dta[~droprows,:].data
-    print dta_use_b1.shape
-    print dta_use_b1.dtype
+    print(dta_use_b1.shape)
+    print(dta_use_b1.dtype)
 
     #Example b1: variables from Bruce's glm
     #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -257,11 +257,11 @@ if __name__ == '__main__':
     y_b1 = dta_use_b1['y']
     # estimate using OLS
     rest_b1 = sm.OLS(y_b1, X_b1).fit()
-    # print results
-    print rest_b1.params
-    print anova_str % anovadict(rest_b1)
+    # print(results)
+    print(rest_b1.params)
+    print(anova_str % anovadict(rest_b1))
     #compare with original version only in original version
-    #print anova_str % anovadict(res_b0)
+    #print(anova_str % anovadict(res_b0))
 
     # Example: use all variables except pig identifier
     #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -273,15 +273,15 @@ if __name__ == '__main__':
     X_b1a = np.column_stack([xx_b1a[nn] for nn in dropname('', names_b1a)])
     y_b1a = dta_use_b1['y']
     rest_b1a = sm.OLS(y_b1a, X_b1a).fit()
-    print rest_b1a.params
-    print anova_str % anovadict(rest_b1a)
+    print(rest_b1a.params)
+    print(anova_str % anovadict(rest_b1a))
 
     for dropn in names_b1a:
-        print '\nResults dropping', dropn
+        print(('\nResults dropping', dropn))
         X_b1a_ = np.column_stack([xx_b1a[nn] for nn in dropname(dropn, names_b1a)])
         y_b1a_ = dta_use_b1['y']
         rest_b1a_ = sm.OLS(y_b1a_, X_b1a_).fit()
-        #print rest_b1a_.params
-        print anova_str % anovadict(rest_b1a_)
+        #print(rest_b1a_.params)
+        print(anova_str % anovadict(rest_b1a_))
 
 

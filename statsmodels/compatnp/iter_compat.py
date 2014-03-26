@@ -7,7 +7,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-
+from statsmodels.compatnp.py3k import lrange
 import itertools
 
 try:
@@ -24,15 +24,15 @@ except ImportError:
     #from python 2.6 documentation
     def combinations(iterable, r):
         # combinations('ABCD', 2) --> AB AC AD BC BD CD
-        # combinations(range(4), 3) --> 012 013 023 123
+        # combinations(lrange(4), 3) --> 012 013 023 123
         pool = tuple(iterable)
         n = len(pool)
         if r > n:
             return
-        indices = range(r)
+        indices = lrange(r)
         yield tuple(pool[i] for i in indices)
         while True:
-            for i in reversed(range(r)):
+            for i in reversed(lrange(r)):
                 if indices[i] != i + n - r:
                     break
             else:

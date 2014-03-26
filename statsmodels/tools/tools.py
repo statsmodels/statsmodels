@@ -1,7 +1,7 @@
 '''
 Utility functions models code
 '''
-
+from statsmodels.compatnp.py3k import reduce, lzip, lmap
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
@@ -183,9 +183,9 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             if len(data.dtype) <= 1:
                 if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
                     tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
-                dt = zip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
+                dt = lzip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
                 # preserve array type
-                return np.array(map(tuple, tmp_dummy.tolist()),
+                return np.array(lmap(tuple, tmp_dummy.tolist()),
                         dtype=dt).view(type(data))
 
             data=nprf.drop_fields(data, col, usemask=False,

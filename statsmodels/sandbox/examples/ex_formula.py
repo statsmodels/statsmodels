@@ -3,7 +3,8 @@
 some work, some things don't
 
 '''
-
+from statsmodels.compatnp import iterkeys
+from statsmodels.compatnp.py3k import lzip
 import string
 import numpy as np
 
@@ -56,22 +57,22 @@ Traceback (most recent call last):
   File "<pyshell#21>", line 1, in <module>
     form.termcolumns('C')
   File "C:\Josef\eclipsegworkspace\statsmodels-josef-experimental\scikits\statsmodels\sandbox\formula.py", line 494, in termcolumns
-    raise ValueError, 'term not in formula'
+    raise ValueError('term not in formula')
 ValueError: term not in formula
 
 
 '''
-print form.hasterm('C')
-print form.termcolumns(formula.Term('C'))  #doesn't work with string argument
+print(form.hasterm('C'))
+print(form.termcolumns(formula.Term('C')))  #doesn't work with string argument
 
 #Example: use two columns and get contrast
 
 f2 = (form['A']+form['B'])
-print f2
-print repr(f2)
-f2.namespace.keys()   #namespace is still empty
+print(f2)
+print(repr(f2))
+iterkeys(f2.namespace)   #namespace is still empty
 f2.namespace = namespace  #associate data
-f2.namespace.keys()
+iterkeys(f2.namespace)
 f2.design().shape
 contrast.Contrast(formula.Term('A'), f2).matrix
 
@@ -120,7 +121,7 @@ np.min(np.abs(f3.design() - f2.design().prod(1)))
 f4 = formula.interactions([form['A'],form['B']])
 f4.namespace
 f4.namespace = namespace
-print f4
+print(f4)
 f4.names()
 f4.design().shape
 
@@ -216,7 +217,7 @@ KeyError: '(ff==a)'
 
 f7 = formula.Formula(fac)
 # explicit updating of namespace with
-f7.namespace.update(dict(zip(fac.names(),fac())))
+f7.namespace.update(dict(lzip(fac.names(),fac())))
 
 # contrast matrix with 2 of 3 terms
 contrast.Contrast(formula.Term('(ff==b)')+formula.Term('(ff==a)'), f7).matrix

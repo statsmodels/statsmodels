@@ -2,7 +2,7 @@ import inspect
 import functools
 
 import numpy as np
-
+from statsmodels.compatnp import get_function_name, iteritems
 
 class ResultsWrapper(object):
     """
@@ -93,11 +93,7 @@ def make_wrapper(func, how):
     formatted = inspect.formatargspec(argspec[0], varargs=argspec[1],
                                       defaults=argspec[3])
 
-    try:
-        func_name = func.im_func.func_name
-    except AttributeError:
-        #Python 3
-        func_name = func.__name__
+    func_name = get_function_name(func)
 
     wrapper.__doc__ = "%s%s\n%s" % (func_name, formatted, wrapper.__doc__)
 
@@ -105,7 +101,7 @@ def make_wrapper(func, how):
 
 
 def populate_wrapper(klass, wrapping):
-    for meth, how in klass._wrap_methods.iteritems():
+    for meth, how in iteritems(klass._wrap_methods):
         if not hasattr(wrapping, meth):
             continue
 

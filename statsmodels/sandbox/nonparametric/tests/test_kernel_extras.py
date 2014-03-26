@@ -58,6 +58,7 @@ class MyTest(object):
 
 
 class TestSemiLinear(MyTest):
+
     def test_basic(self):
         nobs = 300
         np.random.seed(1234)

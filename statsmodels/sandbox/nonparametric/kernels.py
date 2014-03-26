@@ -18,7 +18,7 @@ http://fedc.wiwi.hu-berlin.de/xplore/ebooks/html/anr/anrhtmlframe62.html
 # pylint: disable-msg=W0142
 # pylint: disable-msg=E1101
 # pylint: disable-msg=E0611
-
+from statsmodels.compatnp.py3k import lzip, lfilter, callable
 import numpy as np
 import scipy.integrate
 from scipy.misc import factorial
@@ -175,9 +175,9 @@ class CustomKernel(object):
         if self.domain is None:
             return (xs, ys)
         else:
-            filtered = filter(isInDomain, zip(xs, ys))
+            filtered = lfilter(isInDomain, lzip(xs, ys))
             if len(filtered) > 0:
-                xs, ys = zip(*filtered)
+                xs, ys = lzip(*filtered)
                 return (xs, ys)
             else:
                 return ([], [])

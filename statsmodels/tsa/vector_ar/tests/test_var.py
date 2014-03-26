@@ -1,11 +1,10 @@
 """
 Test VAR Model
 """
-from __future__ import with_statement
-
+from __future__ import with_statement, print_function
 # pylint: disable=W0612,W0231
-
-from cStringIO import StringIO
+from statsmodels.compatnp import iteritems
+from statsmodels.compatnp.py3k import StringIO, lrange
 from nose.tools import assert_raises
 import nose
 import os
@@ -107,7 +106,7 @@ class RResults(object):
 
     def __init__(self):
         #data = np.load(resultspath + 'vars_results.npz')
-        from results.results_var_data import var_results
+        from .results.results_var_data import var_results
         data = var_results.__dict__
 
         self.names = data['coefs'].dtype.names
@@ -157,7 +156,7 @@ def have_matplotlib():
     try:
         import matplotlib
         if matplotlib.__version__ < '1':
-            raise
+            raise ImportError("matplotlib not is too old.  Please update.")
         return True
     except:
         return False
@@ -301,6 +300,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
     def test_summary(self):
         summ = self.res.summary()
 
+
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)
 
@@ -348,7 +348,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             result = self.res.test_causality(name, variables, kind='f')
             assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
 
-            rng = range(self.k)
+            rng = lrange(self.k)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
             assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
@@ -558,7 +558,7 @@ def test_get_trendorder():
         'ctt' : 3
     }
 
-    for t, trendorder in results.iteritems():
+    for t, trendorder in iteritems(results):
         assert(util.get_trendorder(t) == trendorder)
 
 if __name__ == '__main__':

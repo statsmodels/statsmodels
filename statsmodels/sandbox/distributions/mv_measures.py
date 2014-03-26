@@ -62,7 +62,8 @@ def mutualinfo_kde_2sample(y, x, normed=True):
     #kde_yx = gaussian_kde(yx)(yx)
 
     mi_obs = np.log(kde_x) - np.log(kde_y)
-    if len(mi_obs) != nobs: raise
+    if len(mi_obs) != nobs:
+        raise ValueError("Wrong number of observations")
     mi = mi_obs.mean()
     if normed:
         mi_normed = np.sqrt(1. - np.exp(-2 * mi))
@@ -151,30 +152,30 @@ if __name__ == '__main__':
     if funtype == 'linear':
         y = 0 + x + sig * np.random.randn(nobs)
 
-    print 'correlation'
-    print np.corrcoef(y,x)[0, 1]
-    print 'pearsonr', stats.pearsonr(y,x)
-    print 'spearmanr', stats.spearmanr(y,x)
-    print 'kendalltau', stats.kendalltau(y,x)
+    print('correlation')
+    print(np.corrcoef(y,x)[0, 1])
+    print('pearsonr', stats.pearsonr(y,x))
+    print('spearmanr', stats.spearmanr(y,x))
+    print('kendalltau', stats.kendalltau(y,x))
 
     pxy, binsx, binsy = np.histogram2d(x,y, bins=5)
     px, binsx_ = np.histogram(x, bins=binsx)
     py, binsy_ = np.histogram(y, bins=binsy)
-    print 'mutualinfo', infotheo.mutualinfo(px*1./nobs, py*1./nobs,
-                                            1e-15+pxy*1./nobs, logbase=np.e)
+    print(('mutualinfo', infotheo.mutualinfo(px*1./nobs, py*1./nobs,
+                                            1e-15+pxy*1./nobs, logbase=np.e)))
 
-    print 'mutualinfo_kde normed', mutualinfo_kde(y,x)
-    print 'mutualinfo_kde       ', mutualinfo_kde(y,x, normed=False)
+    print(('mutualinfo_kde normed', mutualinfo_kde(y,x)))
+    print(('mutualinfo_kde       ', mutualinfo_kde(y,x, normed=False)))
     mi_normed, (pyx2, py2, px2, binsy2, binsx2), mi_obs = \
                mutualinfo_binned(y, x, 5, normed=True)
-    print 'mutualinfo_binned normed', mi_normed
-    print 'mutualinfo_binned       ', mi_obs.sum()
+    print(('mutualinfo_binned normed', mi_normed))
+    print(('mutualinfo_binned       ', mi_obs.sum()))
 
     mi_normed, (pyx2, py2, px2, binsy2, binsx2), mi_obs = \
                mutualinfo_binned(y, x, 'auto', normed=True)
-    print 'auto'
-    print 'mutualinfo_binned normed', mi_normed
-    print 'mutualinfo_binned       ', mi_obs.sum()
+    print('auto')
+    print(('mutualinfo_binned normed', mi_normed))
+    print(('mutualinfo_binned       ', mi_obs.sum()))
 
     ys = np.sort(y)
     xs = np.sort(x)
@@ -182,9 +183,9 @@ if __name__ == '__main__':
     bx = xs[((nobs-1)*np.array([0, 0.25, 0.4, 0.6, 0.75, 1])).astype(int)]
     mi_normed, (pyx2, py2, px2, binsy2, binsx2), mi_obs = \
                mutualinfo_binned(y, x, (by,bx), normed=True)
-    print 'quantiles'
-    print 'mutualinfo_binned normed', mi_normed
-    print 'mutualinfo_binned       ', mi_obs.sum()
+    print('quantiles')
+    print(('mutualinfo_binned normed', mi_normed))
+    print(('mutualinfo_binned       ', mi_obs.sum()))
 
     doplot = 1#False
     if doplot:

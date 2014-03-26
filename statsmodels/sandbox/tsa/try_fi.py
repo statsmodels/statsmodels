@@ -8,7 +8,7 @@ second part in here is ar2arma
 only examples left
 
 '''
-
+from __future__ import print_function
 import numpy as np
 #from numpy.testing import assert_array_almost_equal
 from scipy.special import gamma, gammaln
@@ -47,10 +47,10 @@ if __name__ == '__main__':
           -0.00231864])
     >>> # verified for points [[5,10,20,25]] at 4 decimals with Bhardwaj, Swanson, Journal of Eonometrics 2006
     '''
-    print lpol_fiar(0.4, n=20)
-    print lpol_fima(-0.4, n=20)
-    print np.sum((lpol_fima(-0.4, n=n)[1:] + riinv[1:])**2) #different signs
-    print np.sum((lpol_fiar(0.4, n=n)[1:] - riinv[1:])**2) #corrected signs
+    print(lpol_fiar(0.4, n=20))
+    print(lpol_fima(-0.4, n=20))
+    print(np.sum((lpol_fima(-0.4, n=n)[1:] + riinv[1:])**2)) #different signs
+    print(np.sum((lpol_fiar(0.4, n=n)[1:] - riinv[1:])**2)) #corrected signs
 
     #test is now in statsmodels.tsa.tests.test_arima_process
     from statsmodels.tsa.tests.test_arima_process import test_fi
@@ -62,19 +62,19 @@ if __name__ == '__main__':
 
     ar_desired = arma_impulse_response(ma_true, ar_true)
     ar_app, ma_app, res = ar2arma(ar_desired, 2,1, n=100, mse='ar', start=[0.1])
-    print ar_app, ma_app
+    print((ar_app, ma_app))
     ar_app, ma_app, res = ar2arma(ar_desired, 2,2, n=100, mse='ar', start=[-0.1, 0.1])
-    print ar_app, ma_app
+    print((ar_app, ma_app))
     ar_app, ma_app, res = ar2arma(ar_desired, 2,3, n=100, mse='ar')#, start = [-0.1, 0.1])
-    print ar_app, ma_app
+    print((ar_app, ma_app))
 
     slow = 1
     if slow:
         ar_desired = lpol_fiar(0.4, n=100)
         ar_app, ma_app, res = ar2arma(ar_desired, 3, 1, n=100, mse='ar')#, start = [-0.1, 0.1])
-        print ar_app, ma_app
+        print((ar_app, ma_app))
         ar_app, ma_app, res = ar2arma(ar_desired, 10, 10, n=100, mse='ar')#, start = [-0.1, 0.1])
-        print ar_app, ma_app
+        print((ar_app, ma_app))
 
 
 

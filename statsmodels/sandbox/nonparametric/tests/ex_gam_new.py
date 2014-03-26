@@ -9,7 +9,8 @@ Created on Fri Nov 04 13:45:43 2011
 
 Author: Josef Perktold
 """
-
+from __future__ import print_function
+from statsmodels.compatnp.py3k import lrange
 import time
 
 import numpy as np
@@ -38,7 +39,7 @@ x1 = np.linspace(lb, ub, nobs)
 x2 = np.sin(2*x1)
 x = np.column_stack((x1/x1.max()*1, 1.*x2))
 exog = (x[:,:,None]**np.arange(order+1)[None, None, :]).reshape(nobs, -1)
-idx = range((order+1)*2)
+idx = lrange((order+1)*2)
 del idx[order+1]
 exog_reduced = exog[:,idx]  #remove duplicate constant
 y_true = exog.sum(1) #/ 4.
@@ -49,7 +50,7 @@ y = y_true + sigma_noise * np.random.randn(nobs)
 example = 3
 
 if example == 2:
-    print "binomial"
+    print("binomial")
     f = family.Binomial()
     mu_true = f.link.inverse(z)
     #b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
@@ -59,14 +60,14 @@ if example == 2:
     toc = time.time()
     m.fit(b)
     tic = time.time()
-    print tic-toc
+    print(tic-toc)
     #for plotting
     yp = f.link.inverse(y)
     p = b
 
 
 if example == 3:
-    print "Poisson"
+    print("Poisson")
     f = family.Poisson()
     #y = y/y.max() * 3
     yp = f.link.inverse(z)
@@ -77,10 +78,10 @@ if example == 3:
     toc = time.time()
     m.fit(p)
     tic = time.time()
-    print tic-toc
+    print(tic-toc)
 
 for ss in m.smoothers:
-    print ss.params
+    print(ss.params)
 
 if example > 1:
     import matplotlib.pyplot as plt

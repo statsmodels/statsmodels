@@ -52,7 +52,7 @@ efficient
 Author: josefpktd
 License: BSD
 '''
-
+from __future__ import print_function
 import numpy as np
 from scipy import signal, optimize, linalg
 from statsmodels.base.model import LikelihoodModel
@@ -388,7 +388,7 @@ def arma_periodogram(ar, ma, worN=None, whole=0):
     sd = np.abs(h)**2/np.sqrt(2*np.pi)
     if np.sum(np.isnan(h)) > 0:
         # this happens with unit root or seasonal unit root'
-        print 'Warning: nan in frequency response h, maybe a unit root'
+        print('Warning: nan in frequency response h, maybe a unit root')
     return w, sd
 
 
@@ -530,17 +530,17 @@ def ar2arma(ar_des, p, q, n=20, mse='ar', start=None):
     def msear_err(arma, ar_des):
         ar, ma = np.r_[1, arma[:p-1]], np.r_[1, arma[p-1:]]
         ar_approx = arma_impulse_response(ma, ar,  n)
-##        print ar,ma
-##        print ar_des.shape, ar_approx.shape
-##        print ar_des
-##        print ar_approx
+##        print(ar,ma)
+##        print(ar_des.shape, ar_approx.shape)
+##        print(ar_des)
+##        print(ar_approx)
         return (ar_des - ar_approx) #((ar - ar_approx)**2).sum()
     if start is None:
         arma0 = np.r_[-0.9* np.ones(p-1), np.zeros(q-1)]
     else:
         arma0 = start
     res = optimize.leastsq(msear_err, arma0, ar_des, maxfev=5000)#, full_output=True)
-    #print res
+    #print(res)
     arma_app = np.atleast_1d(res[0])
     ar_app = np.r_[1, arma_app[:p-1]],
     ma_app = np.r_[1, arma_app[p-1:]]
@@ -954,123 +954,123 @@ if __name__ == '__main__':
     eta = 0.1 * np.random.randn(1000)
     yar1 = signal.lfilter(ar, ma, eta)
 
-    print "\nExample 0"
+    print("\nExample 0")
     arest = ARIMAProcess(yar1)
     rhohat, cov_x, infodict, mesg, ier = arest.fit((1,0,1))
-    print rhohat
-    print cov_x
+    print(rhohat)
+    print(cov_x)
 
-    print "\nExample 1"
+    print("\nExample 1")
     ar = [1.0,  -0.8]
     ma = [1.0,  0.5]
     y1 = arest.generate_sample(ar,ma,1000,0.1)
     arest = ARIMAProcess(y1)
     rhohat1, cov_x1, infodict, mesg, ier = arest.fit((1,0,1))
-    print rhohat1
-    print cov_x1
+    print(rhohat1)
+    print(cov_x1)
     err1 = arest.errfn(x=y1)
-    print np.var(err1)
+    print(np.var(err1))
     import statsmodels.api as sm
-    print sm.regression.yule_walker(y1, order=2, inv=True)
+    print(sm.regression.yule_walker(y1, order=2, inv=True))
 
-    print "\nExample 2"
+    print("\nExample 2")
     nsample = 1000
     ar = [1.0, -0.6, -0.1]
     ma = [1.0,  0.3,  0.2]
     y2 = ARIMA.generate_sample(ar,ma,nsample,0.1)
     arest2 = ARIMAProcess(y2)
     rhohat2, cov_x2, infodict, mesg, ier = arest2.fit((1,0,2))
-    print rhohat2
-    print cov_x2
+    print(rhohat2)
+    print(cov_x2)
     err2 = arest.errfn(x=y2)
-    print np.var(err2)
-    print arest2.rhoy
-    print arest2.rhoe
-    print "true"
-    print ar
-    print ma
+    print(np.var(err2))
+    print(arest2.rhoy)
+    print(arest2.rhoe)
+    print("true")
+    print(ar)
+    print(ma)
     rhohat2a, cov_x2a, infodict, mesg, ier = arest2.fit((2,0,2))
-    print rhohat2a
-    print cov_x2a
+    print(rhohat2a)
+    print(cov_x2a)
     err2a = arest.errfn(x=y2)
-    print np.var(err2a)
-    print arest2.rhoy
-    print arest2.rhoe
-    print "true"
-    print ar
-    print ma
+    print(np.var(err2a))
+    print(arest2.rhoy)
+    print(arest2.rhoe)
+    print("true")
+    print(ar)
+    print(ma)
 
-    print sm.regression.yule_walker(y2, order=2, inv=True)
+    print(sm.regression.yule_walker(y2, order=2, inv=True))
 
-    print "\nExample 20"
+    print("\nExample 20")
     nsample = 1000
     ar = [1.0]#, -0.8, -0.4]
     ma = [1.0,  0.5,  0.2]
     y3 = ARIMA.generate_sample(ar,ma,nsample,0.01)
     arest20 = ARIMAProcess(y3)
     rhohat3, cov_x3, infodict, mesg, ier = arest20.fit((2,0,0))
-    print rhohat3
-    print cov_x3
+    print(rhohat3)
+    print(cov_x3)
     err3 = arest20.errfn(x=y3)
-    print np.var(err3)
-    print np.sqrt(np.dot(err3,err3)/nsample)
-    print arest20.rhoy
-    print arest20.rhoe
-    print "true"
-    print ar
-    print ma
+    print(np.var(err3))
+    print(np.sqrt(np.dot(err3,err3)/nsample))
+    print(arest20.rhoy)
+    print(arest20.rhoe)
+    print("true")
+    print(ar)
+    print(ma)
 
     rhohat3a, cov_x3a, infodict, mesg, ier = arest20.fit((0,0,2))
-    print rhohat3a
-    print cov_x3a
+    print(rhohat3a)
+    print(cov_x3a)
     err3a = arest20.errfn(x=y3)
-    print np.var(err3a)
-    print np.sqrt(np.dot(err3a,err3a)/nsample)
-    print arest20.rhoy
-    print arest20.rhoe
-    print "true"
-    print ar
-    print ma
+    print(np.var(err3a))
+    print(np.sqrt(np.dot(err3a,err3a)/nsample))
+    print(arest20.rhoy)
+    print(arest20.rhoe)
+    print("true")
+    print(ar)
+    print(ma)
 
-    print sm.regression.yule_walker(y3, order=2, inv=True)
+    print(sm.regression.yule_walker(y3, order=2, inv=True))
 
-    print "\nExample 02"
+    print("\nExample 02")
     nsample = 1000
     ar = [1.0, -0.8, 0.4] #-0.8, -0.4]
     ma = [1.0]#,  0.8,  0.4]
     y4 = ARIMA.generate_sample(ar,ma,nsample)
     arest02 = ARIMAProcess(y4)
     rhohat4, cov_x4, infodict, mesg, ier = arest02.fit((2,0,0))
-    print rhohat4
-    print cov_x4
+    print(rhohat4)
+    print(cov_x4)
     err4 = arest02.errfn(x=y4)
-    print np.var(err4)
+    print(np.var(err4))
     sige = np.sqrt(np.dot(err4,err4)/nsample)
-    print sige
-    print sige * np.sqrt(np.diag(cov_x4))
-    print np.sqrt(np.diag(cov_x4))
-    print arest02.rhoy
-    print arest02.rhoe
-    print "true"
-    print ar
-    print ma
+    print(sige)
+    print(sige * np.sqrt(np.diag(cov_x4)))
+    print(np.sqrt(np.diag(cov_x4)))
+    print(arest02.rhoy)
+    print(arest02.rhoe)
+    print("true")
+    print(ar)
+    print(ma)
 
     rhohat4a, cov_x4a, infodict, mesg, ier = arest02.fit((0,0,2))
-    print rhohat4a
-    print cov_x4a
+    print(rhohat4a)
+    print(cov_x4a)
     err4a = arest02.errfn(x=y4)
-    print np.var(err4a)
+    print(np.var(err4a))
     sige = np.sqrt(np.dot(err4a,err4a)/nsample)
-    print sige
-    print sige * np.sqrt(np.diag(cov_x4a))
-    print np.sqrt(np.diag(cov_x4a))
-    print arest02.rhoy
-    print arest02.rhoe
-    print "true"
-    print ar
-    print ma
+    print(sige)
+    print(sige * np.sqrt(np.diag(cov_x4a)))
+    print(np.sqrt(np.diag(cov_x4a)))
+    print(arest02.rhoy)
+    print(arest02.rhoe)
+    print("true")
+    print(ar)
+    print(ma)
     import statsmodels.api as sm
-    print sm.regression.yule_walker(y4, order=2, method='mle', inv=True)
+    print(sm.regression.yule_walker(y4, order=2, method='mle', inv=True))
 
 
     import matplotlib.pyplot as plt
@@ -1080,7 +1080,7 @@ if __name__ == '__main__':
     ar1, ar2 = ([1, -0.4], [1, 0.5])
     ar2 = [1, -1]
     lagpolyproduct = np.convolve(ar1, ar2)
-    print deconvolve(lagpolyproduct, ar2, n=None)
-    print signal.deconvolve(lagpolyproduct, ar2)
-    print deconvolve(lagpolyproduct, ar2, n=10)
+    print(deconvolve(lagpolyproduct, ar2, n=None))
+    print(signal.deconvolve(lagpolyproduct, ar2))
+    print(deconvolve(lagpolyproduct, ar2, n=10))
 

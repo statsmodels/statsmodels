@@ -7,7 +7,7 @@ IRLS.
 """
 import numpy as np
 from statsmodels.compatnp.py3k import asbytes
-import glm_test_resids
+from . import glm_test_resids
 import os
 from statsmodels.api import add_constant, categorical
 

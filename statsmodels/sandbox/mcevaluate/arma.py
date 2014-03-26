@@ -33,8 +33,8 @@ def mcarma22(niter=10, nsample=1000, ar=None, ma=None, sig=0.5):
         results.append(rhohat2a)
         err2a = arest2.geterrors(rhohat2a)
         sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
-        #print 'sige2a', sige2a,
-        #print 'cov_x2a.shape', cov_x2a.shape
+        #print('sige2a', sige2a,
+        #print('cov_x2a.shape', cov_x2a.shape
         #results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
         if not cov_x2a is None:
             results_bse.append(sige2a * np.sqrt(np.diag(cov_x2a)))
@@ -46,29 +46,29 @@ def mc_summary(res, rt=None):
     if rt is None:
         rt = np.zeros(res.shape[1])
     nanrows = np.isnan(res).any(1)
-    print 'fractions of iterations with nans', nanrows.mean()
+    print('fractions of iterations with nans', nanrows.mean())
     res = res[~nanrows]
-    print 'RMSE'
-    print np.sqrt(((res-rt)**2).mean(0))
-    print 'mean bias'
-    print (res-rt).mean(0)
-    print 'median bias'
-    print np.median((res-rt),0)
-    print 'median bias percent'
-    print np.median((res-rt)/rt*100,0)
-    print 'median absolute error'
-    print np.median(np.abs(res-rt),0)
-    print 'positive error fraction'
-    print (res > rt).mean(0)
+    print('RMSE')
+    print(np.sqrt(((res-rt)**2).mean(0)))
+    print('mean bias')
+    print((res-rt).mean(0))
+    print('median bias')
+    print(np.median((res-rt),0))
+    print('median bias percent')
+    print(np.median((res-rt)/rt*100,0))
+    print('median absolute error')
+    print(np.median(np.abs(res-rt),0))
+    print('positive error fraction')
+    print((res > rt).mean(0))
 
 
 if __name__ == '__main__':
 
 #short version
 #    true, est, bse = mcarma22(niter=50)
-#    print true
-#    #print est
-#    print est.mean(0)
+#    print(true
+#    #print(est
+#    print(est.mean(0)
 
     ''' niter 50, sample size=1000, 2 runs
     [-0.55 -0.1   0.3   0.2 ]
@@ -130,18 +130,18 @@ if __name__ == '__main__':
             import time
             t0 = time.time()
             rt, res_rho, res_bse = mcarma22(niter=100, sig=sig)
-            print '\nResults for Monte Carlo'
-            print 'true'
-            print rt
-            print 'nsample =', nsample, 'sigma = ', sig
-            print 'elapsed time for Monte Carlo', time.time()-t0
+            print('\nResults for Monte Carlo')
+            print('true')
+            print(rt)
+            print('nsample =', nsample, 'sigma = ', sig)
+            print('elapsed time for Monte Carlo', time.time()-t0)
             # 20 seconds for ARMA(2,2), 1000 iterations with 1000 observations
             #sige2a = np.sqrt(np.dot(err2a,err2a)/nsample)
-            #print '\nbse of one sample'
-            #print sige2a * np.sqrt(np.diag(cov_x2a))
-            print '\nMC of rho versus true'
+            #print('\nbse of one sample'
+            #print(sige2a * np.sqrt(np.diag(cov_x2a))
+            print('\nMC of rho versus true')
             mc_summary(res_rho, rt)
-            print '\nMC of bse versus zero'  # this implies inf in percent
+            print('\nMC of bse versus zero')  # this implies inf in percent
             mc_summary(res_bse)
-            print '\nMC of bse versus std'
+            print('\nMC of bse versus std')
             mc_summary(res_bse, res_rho.std(0))

@@ -1,8 +1,9 @@
 """
 Holds common functions for l1 solvers.
 """
+from __future__ import print_function
 import numpy as np
-
+from statsmodels.compatnp import range
 
 def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     """
@@ -47,7 +48,7 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     k_params = len(params)
 
     passed_array = np.array([True] * k_params)
-    for i in xrange(k_params):
+    for i in range(k_params):
         if alpha[i] > 0:
             # If |fprime| is too big, then something went wrong
             if (abs(fprime[i]) - alpha[i]) / alpha[i] > qc_tol:
@@ -63,7 +64,7 @@ def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
             ', decreasing alpha, or switch solvers'
         if qc_verbose:
             message += _get_verbose_addon(qc_dict)
-        print message
+        print(message)
 
     return passed
 
@@ -79,7 +80,7 @@ def _get_verbose_addon(qc_dict):
     addon += '\n|%-10s|%-10s|%-10s|%-10s|' % (
         'passed', 'alpha', 'fprime', 'param')
     addon += '\n--------------------------------------------'
-    for i in xrange(len(alpha)):
+    for i in range(len(alpha)):
         addon += '\n|%-10s|%-10.3e|%-10.3e|%-10.3e|' % (
                 passed_array[i], alpha[i], fprime[i], params[i])
     return addon
@@ -133,18 +134,18 @@ def do_trim_params(params, k_params, alpha, score, passed, trim_mode,
     if trim_mode == 'off':
         trimmed = np.array([False] * k_params)
     elif trim_mode == 'auto' and not passed:
-        print "Could not trim params automatically due to failed QC "\
-            "check.  Trimming using trim_mode == 'size' will still work."
+        print("Could not trim params automatically due to failed QC "
+              "check.  Trimming using trim_mode == 'size' will still work.")
         trimmed = np.array([False] * k_params)
     elif trim_mode == 'auto' and passed:
         fprime = score(params)
-        for i in xrange(k_params):
+        for i in range(k_params):
             if alpha[i] != 0:
                 if (alpha[i] - abs(fprime[i])) / alpha[i] > auto_trim_tol:
                     params[i] = 0.0
                     trimmed[i] = True
     elif trim_mode == 'size':
-        for i in xrange(k_params):
+        for i in range(k_params):
             if alpha[i] != 0:
                 if abs(params[i]) < size_trim_tol:
                     params[i] = 0.0

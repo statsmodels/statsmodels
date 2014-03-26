@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from statsmodels.compatnp.py3k import reduce
 import sys
 from os.path import dirname
 

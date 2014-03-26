@@ -211,7 +211,7 @@ def _set_ticks_labels(ax, data, labels, positions, plot_opts):
     if labels is not None:
         if not len(labels) == len(data):
             msg = "Length of `labels` should equal length of `data`."
-            raise(ValueError, msg)
+            raise ValueError(msg)
 
         xticknames = ax.set_xticklabels(labels)
         if label_fontsize:

@@ -12,5 +12,5 @@ These families are described in
 
 #from statsmodels.family.family import Gaussian, Family, Poisson, Gamma, \
 #    InverseGaussian, Binomial, NegativeBinomial
-from family import Gaussian, Family, Poisson, Gamma, \
+from .family import Gaussian, Family, Poisson, Gamma, \
     InverseGaussian, Binomial, NegativeBinomial

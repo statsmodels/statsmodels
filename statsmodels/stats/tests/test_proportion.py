@@ -17,7 +17,7 @@ class Holder(object):
     pass
 
 def test_confint_proportion():
-    from results.results_proportion import res_binom, res_binom_methods
+    from .results.results_proportion import res_binom, res_binom_methods
     methods = {'agresti_coull' : 'agresti-coull',
                'normal' : 'asymptotic',
                'beta' : 'exact',

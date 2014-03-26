@@ -1,7 +1,7 @@
 """
 Test functions for models.tools
 """
-
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,
@@ -17,7 +17,7 @@ from statsmodels.compatnp.np_compat import np_matrix_rank
 class TestTools(TestCase):
 
     def test_add_constant_list(self):
-        x = range(1,5)
+        x = lrange(1,5)
         x = tools.add_constant(x)
         y = np.asarray([[1,1,1,1],[1,2,3,4.]]).T
         assert_equal(x, y)

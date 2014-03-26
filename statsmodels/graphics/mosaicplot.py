@@ -8,6 +8,8 @@ see the docstring of the mosaic function for more informations.
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from __future__ import division
+from statsmodels.compatnp import iteritems, iterkeys
+from statsmodels.compatnp.py3k import lrange, string_types, lzip
 
 import numpy as np
 from statsmodels.compatnp.collections import OrderedDict
@@ -122,7 +124,7 @@ def _tuplify(obj):
     """convert an object in a tuple of strings (even if it is not iterable,
     like a single integer number, but keep the string healthy)
     """
-    if np.iterable(obj) and not isinstance(obj, basestring):
+    if np.iterable(obj) and not isinstance(obj, string_types):
         res = tuple(str(o) for o in obj)
     else:
         res = (str(obj),)
@@ -184,7 +186,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     # this is the unit square that we are going to divide
     base_rect = OrderedDict([(tuple(), (0, 0, 1, 1))])
     # get the list of each possible value for each level
-    categories_levels = _categories_level(list(count_dict.keys()))
+    categories_levels = _categories_level(list(iterkeys(count_dict)))
     L = len(categories_levels)
 
     # recreate the gaps vector starting from an int
@@ -231,7 +233,7 @@ def _create_default_properties(data):
     decoration on the rectangle.  Doesn't manage more than four
     level of categories
     """
-    categories_levels = _categories_level(list(data.keys()))
+    categories_levels = _categories_level(list(iterkeys(data)))
     Nlevels = len(categories_levels)
     # first level, the hue
     L = len(categories_levels[0])
@@ -247,13 +249,13 @@ def _create_default_properties(data):
     L = len(categories_levels[3]) if Nlevels > 3 else 1
     hatch = ['', '/', '-', '|', '+'][:L + 1]
     # convert in list and merge with the levels
-    hue = list(zip(list(hue), categories_levels[0]))
-    saturation = list(zip(list(saturation),
-                     categories_levels[1] if Nlevels > 1 else ['']))
-    value = list(zip(list(value),
-                     categories_levels[2] if Nlevels > 2 else ['']))
-    hatch = list(zip(list(hatch),
-                     categories_levels[3] if Nlevels > 3 else ['']))
+    hue = lzip(list(hue), categories_levels[0])
+    saturation = lzip(list(saturation),
+                     categories_levels[1] if Nlevels > 1 else [''])
+    value = lzip(list(value),
+                     categories_levels[2] if Nlevels > 2 else [''])
+    hatch = lzip(list(hatch),
+                     categories_levels[3] if Nlevels > 3 else [''])
     # create the properties dictionary
     properties = {}
     for h, s, v, t in product(hue, saturation, value, hatch):
@@ -288,7 +290,7 @@ def _normalize_data(data, index):
         index = None
     # can it be used as a dictionary?
     try:
-        items = list(data.iteritems())
+        items = list(iteritems(data))
     except AttributeError:
         # ok, I cannot use the data as a dictionary
         # Try to convert it to a numpy array, or die trying
@@ -301,7 +303,7 @@ def _normalize_data(data, index):
         items = data.items()
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
-    categories_levels = _categories_level(list(data.keys()))
+    categories_levels = _categories_level(list(iterkeys(data)))
     # fill the void in the counting dictionary
     indexes = product(*categories_levels)
     contingency = OrderedDict([(k, data.get(k, 0)) for k in indexes])
@@ -309,9 +311,9 @@ def _normalize_data(data, index):
     # reorder the keys order according to the one specified by the user
     # or if the index is None convert it into a simple list
     # right now it doesn't do any check, but can be modified in the future
-    index = list(range(len(categories_levels))) if index is None else index
+    index = lrange(len(categories_levels)) if index is None else index
     contingency = OrderedDict()
-    for key, value in data.items():
+    for key, value in iteritems(data):
         new_key = tuple(key[i] for i in index)
         contingency[new_key] = value
     data = contingency
@@ -336,7 +338,7 @@ def _statistical_coloring(data):
     It will encounter problem if one category has all zeros
     """
     data = _normalize_data(data, None)
-    categories_levels = _categories_level(list(data.keys()))
+    categories_levels = _categories_level(list(iterkeys(data)))
     Nlevels = len(categories_levels)
     total = 1.0 * sum(v for v in data.values())
     # count the proportion of observation
@@ -347,7 +349,7 @@ def _statistical_coloring(data):
         proportion = {}
         for level in categories_levels[level_idx]:
             proportion[level] = 0.0
-            for key, value in data.items():
+            for key, value in iteritems(data):
                 if level == key[level_idx]:
                     proportion[level] += value
             proportion[level] /= total
@@ -356,7 +358,7 @@ def _statistical_coloring(data):
     # and it's standard deviation from a binomial distribution
     # under the hipothesys of independence
     expected = {}
-    for key, value in data.items():
+    for key, value in iteritems(data):
         base = 1.0
         for i, k in enumerate(key):
             base *= levels_count[i][k]
@@ -382,7 +384,7 @@ def _create_labels(rects, horizontal, ax, rotation):
     ax: the axis on which the label should be applied
     rotation: the rotation list for each side
     """
-    categories = _categories_level(list(rects.keys()))
+    categories = _categories_level(list(iterkeys(rects)))
     if len(categories) > 4:
         msg = ("maximum of 4 level supported for axes labeling..and 4"
                "is alreay a lot of level, are you sure you need them all?")
@@ -450,7 +452,7 @@ def _create_labels(rects, horizontal, ax, rotation):
             level_ticks[value] = y_lab if side % 2 else x_lab
         #now we add the labels of this level to the correct axis
         ticks_pos[level_idx](list(level_ticks.values()))
-        ticks_lab[level_idx](list(level_ticks.keys()),
+        ticks_lab[level_idx](list(iterkeys(level_ticks)),
                              rotation=rotation[level_idx])
     return labels
 

@@ -2,6 +2,7 @@
 
 '''
 
+from statsmodels.compatnp.py3k import range
 import numpy as np
 
 from statsmodels.tsa.stattools import acovf
@@ -26,9 +27,9 @@ def levinson_durbin_nitime(s, order=10, isacov=False):
     # initial points for the recursion
     phi[1,1] = sxx_m[1]/sxx_m[0]
     sig[1] = sxx_m[0] - phi[1,1]*sxx_m[1]
-    for k in xrange(2,order+1):
+    for k in range(2,order+1):
         phi[k,k] = (sxx_m[k]-np.dot(phi[1:k,k-1], sxx_m[1:k][::-1]))/sig[k-1]
-        for j in xrange(1,k):
+        for j in range(1,k):
             phi[j,k] = phi[j,k-1] - phi[k,k]*phi[k-j,k-1]
         sig[k] = sig[k-1]*(1 - phi[k,k]**2)
 

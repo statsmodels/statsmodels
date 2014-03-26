@@ -11,6 +11,8 @@ multigroup:
     more significant than outside the group.
 """
 
+from statsmodels.compatnp import iteritems
+from statsmodels.compatnp.py3k import string_types
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
@@ -147,7 +149,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
         column_list = [name for name in dataframe.columns
                       if dataframe[name].dtype != object and name not in model]
     # if it's a single string transform it in a single element list
-    if isinstance(column_list, basestring):
+    if isinstance(column_list, string_types):
         column_list = [column_list]
     if subset is not None:
         dataframe = dataframe.ix[subset]
@@ -312,7 +314,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         '_in_non': {},
         '_out_sign': {},
         '_out_non': {}}
-    for group_name, group_list in groups.iteritems():
+    for group_name, group_list in iteritems(groups):
         res = _test_group(pvals, group_name, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]

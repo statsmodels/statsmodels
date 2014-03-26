@@ -1,7 +1,9 @@
+from statsmodels.compatnp.py3k import lrange, lmap
 import sys
 import numpy as np
 from scipy import stats
 #from statsmodels.iolib.table import SimpleTable
+from statsmodels.compatnp import iterkeys
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest
 
@@ -230,7 +232,7 @@ class Describe(object):
         if 'percentiles' in stats:
             self.univariate.update(perdict)
             idx = stats.index('percentiles')
-            stats[idx:idx+1] = sorted(perdict.keys())
+            stats[idx:idx+1] = sorted(iterkeys(perdict))
 
 
 
@@ -247,7 +249,7 @@ class Describe(object):
                     #                      self.dataset.dtype.names if
                             #(self._is_dtype_like(col)=='number')]
                 else:
-                    self._columns_list = range(self.dataset.shape[1])
+                    self._columns_list = lrange(self.dataset.shape[1])
             else:
                 self._columns_list = columns
                 if self._arraytype == 'sctruct':
@@ -287,7 +289,7 @@ class Describe(object):
         if (orientation == 'varcols') or \
            (orientation == 'auto' and len(stubs) < len(header)):
             #swap rows and columns
-            data = map(lambda *row: list(row), *data)
+            data = lmap(lambda *row: list(row), *data)
             header, stubs = stubs, header
 
         part_fmt = dict(data_fmts = ["%#8.4g"]*(len(header)-1))

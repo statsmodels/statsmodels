@@ -8,9 +8,12 @@ namespace : dictionary
 
 
 """
+from statsmodels.compatnp import iterkeys
+from statsmodels.compatnp.py3k import lrange, callable
 import copy
 import types
 import numpy as np
+
 
 try:
     set
@@ -65,7 +68,7 @@ class Term(object):
         try:
             power = float(power)
         except:
-            raise ValueError, 'expecting a float'
+            raise ValueError('expecting a float')
 
         if power == int(power):
             name = '%s^%d' % (self.name, int(power))
@@ -87,7 +90,7 @@ class Term(object):
             self.termname = termname
 
         if type(self.termname) is not types.StringType:
-            raise ValueError, 'expecting a string for termname'
+            raise ValueError('expecting a string for termname')
         if func:
             self.func = func
 
@@ -187,7 +190,7 @@ class Factor(Term):
         else:
             self.keys = keys
             if len(set(keys)) != len(list(keys)):
-                raise ValueError, 'keys for ordinal Factor should be unique, in increasing order'
+                raise ValueError('keys for ordinal Factor should be unique, in increasing order')
         self._name = termname
         self.termname = termname
         self.ordinal = ordinal
@@ -243,7 +246,7 @@ class Factor(Term):
         """
         s = set(values)
         if not s.issubset(self.keys):
-            raise ValueError, 'unknown keys in values'
+            raise ValueError('unknown keys in values')
 
     def __add__(self, other):
         """
@@ -283,13 +286,13 @@ class Factor(Term):
 
         def maineffect_func(value, reference=reference):
             rvalue = []
-            keep = range(value.shape[0])
+            keep = lrange(value.shape[0])
             keep.pop(reference)
             for i in range(len(keep)):
                 rvalue.append(value[keep[i]] - value[reference])
             return np.array(rvalue)
 
-        keep = range(len(self.names()))
+        keep = lrange(len(self.names()))
         keep.pop(reference)
         __names = self.names()
         _names = ['%s-%s' % (__names[keep[i]], __names[reference]) for i in range(len(keep))]
@@ -456,7 +459,7 @@ class Formula(object):
                 allvals[interceptindex] = np.ones((1,n), np.float64)
                 allvals = np.concatenate(allvals)
             elif nrow <= 1:
-                raise ValueError, 'with only intercept in formula, keyword \'nrow\' argument needed'
+                raise ValueError('with only intercept in formula, keyword \'nrow\' argument needed')
             else:
                 allvals = I(nrow=nrow)
                 allvals.shape = (1,) + allvals.shape
@@ -480,14 +483,14 @@ class Formula(object):
             query_term = query_term.terms[0]
             return query_term.termname in self.termnames()
         else:
-            raise ValueError, 'more than one term passed to hasterm'
+            raise ValueError('more than one term passed to hasterm')
 
     def __getitem__(self, name):
         t = self.termnames()
         if name in t:
             return self.terms[t.index(name)]
         else:
-            raise KeyError, 'formula has no such term: %s' % repr(name)
+            raise KeyError('formula has no such term: %s' % repr(name))
 
     def termcolumns(self, query_term, dict=False):
         """
@@ -501,7 +504,7 @@ class Formula(object):
             for name in names:
                 value[name] = self._names.index(name)
         else:
-            raise ValueError, 'term not in formula'
+            raise ValueError('term not in formula')
         if dict:
             return value
         else:
@@ -667,7 +670,7 @@ def isnested(A, B, namespace=None):
     b = B(values=True)[0]
 
     if len(a) != len(b):
-        raise ValueError, 'A() and B() should be sequences of the same length'
+        raise ValueError('A() and B() should be sequences of the same length')
 
     nA = len(set(a))
     nB = len(set(b))
@@ -723,7 +726,7 @@ def interactions(terms, order=[1,2]):
     >>> print interactions([Term(l) for l in ['a', 'b', 'c']])
     <formula: a*b + a*c + b*c + a + b + c>
     >>>
-    >>> print interactions([Term(l) for l in ['a', 'b', 'c']], order=range(5))
+    >>> print interactions([Term(l) for l in ['a', 'b', 'c']], order=list(range(5)))
     <formula: a*b + a*b*c + a*c + b*c + a + b + c>
     >>>
 
@@ -733,7 +736,7 @@ def interactions(terms, order=[1,2]):
     values = {}
 
     if np.asarray(order).shape == ():
-        order = range(1, int(order)+1)
+        order = lrange(1, int(order)+1)
 
     # First order
 
@@ -752,7 +755,7 @@ def interactions(terms, order=[1,2]):
                     v *= ll[ii+1]
                 values[tuple(I[:,m])] = v
 
-    key = values.keys()[0]
+    key = list(iterkeys(values))[0]
     value = values[key]; del(values[key])
 
     for v in values.values():

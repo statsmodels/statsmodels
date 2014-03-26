@@ -6,6 +6,8 @@ Created on Sun Jan 06 09:50:54 2013
 Author: Josef Perktold
 """
 
+from __future__ import print_function
+
 if __name__ == '__main__':
 
     import numpy as np
@@ -16,7 +18,7 @@ if __name__ == '__main__':
 
     seed = np.random.randint(999999)
     seed = 430973
-    print seed
+    print(seed)
     np.random.seed(seed)
 
     funcs = [dgp.UnivariateFanGijbels1(),

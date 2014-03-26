@@ -86,7 +86,7 @@ class StepFunction:
     Examples
     --------
     >>> from numpy import arange
-    >>> from nipy.fixes.scipy.stats.models.utils import StepFunction
+    >>> from statsmodels.sandbox.utils_old import StepFunction
     >>>
     >>> x = arange(20)
     >>> y = arange(20)
@@ -105,9 +105,9 @@ class StepFunction:
         _y = np.asarray(y)
 
         if _x.shape != _y.shape:
-            raise ValueError, 'in StepFunction: x and y do not have the same shape'
+            raise ValueError('in StepFunction: x and y do not have the same shape')
         if len(_x.shape) != 1:
-            raise ValueError, 'in StepFunction: x and y must be 1-dimensional'
+            raise ValueError('in StepFunction: x and y must be 1-dimensional')
 
         self.x = np.hstack([[-np.inf], _x])
         self.y = np.hstack([[ival], _y])

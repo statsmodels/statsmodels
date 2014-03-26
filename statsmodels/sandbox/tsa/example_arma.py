@@ -4,7 +4,8 @@ explicit functions for autocovariance functions of ARIMA(1,1), MA(1), MA(2)
 plus 3 functions from nitime.utils
 
 '''
-
+from __future__ import print_function
+from statsmodels.compatnp.py3k import range
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 
@@ -143,16 +144,16 @@ cases = [('ma1', (ar0, ma1)),
 for c, args in cases:
 
     ar, ma = args
-    print
-    print c, ar, ma
+    print('')
+    print(c, ar, ma)
     myacovf = arma_acovf(ar, ma, nobs=10)
     myacf = arma_acf(ar, ma, nobs=10)
     if c[:2]=='ma':
         othacovf = comparefn[c](ma)
     else:
         othacovf = comparefn[c](ar, ma)
-    print myacovf[:5]
-    print othacovf[:5]
+    print(myacovf[:5])
+    print(othacovf[:5])
     #something broke again,
     #for high persistence case eg ar=0.99, nobs of IR has to be large
     #made changes to arma_acovf
@@ -170,9 +171,9 @@ def ar_generator(N=512, sigma=1.):
     v = np.random.normal(size=N, scale=sigma**0.5)
     u = np.zeros(N)
     P = len(taps)
-    for l in xrange(P):
+    for l in range(P):
         u[l] = v[l] + np.dot(u[:l][::-1], taps[:l])
-    for l in xrange(P,N):
+    for l in range(P,N):
         u[l] = v[l] + np.dot(u[l-P:l][::-1], taps)
     return u, v, taps
 
@@ -370,22 +371,22 @@ arrvs = ar_generator()
 arma = ARIMA(arrvs[0])
 res = arma.fit((4,0, 0))
 
-print res[0]
+print(res[0])
 
 acf1 = acf(arrvs[0])
 acovf1b = acovf(arrvs[0], unbiased=False)
 acf2 = autocorr(arrvs[0])
 acf2m = autocorr(arrvs[0]-arrvs[0].mean())
-print acf1[:10]
-print acovf1b[:10]
-print acf2[:10]
-print acf2m[:10]
+print(acf1[:10])
+print(acovf1b[:10])
+print(acf2[:10])
+print(acf2m[:10])
 
 
 x = arma_generate_sample([1.0, -0.8], [1.0], 500)
-print acf(x)[:20]
+print(acf(x)[:20])
 import statsmodels.api as sm
-print sm.regression.yule_walker(x, 10)
+print(sm.regression.yule_walker(x, 10))
 
 import matplotlib.pyplot as plt
 #ax = plt.axes()

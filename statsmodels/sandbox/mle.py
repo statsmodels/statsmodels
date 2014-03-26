@@ -3,7 +3,7 @@ Does not run because of missing mtx files, now included
 
 changes: JP corrections to imports so it runs, comment out print
 '''
-
+from __future__ import print_function
 import numpy as np
 from numpy import dot,  outer, random, argsort
 from scipy import io, linalg, optimize
@@ -38,19 +38,19 @@ B = speye(n,n)
 random.seed(1)
 v_0=random.rand(n)
 
-print "try fmin_bfgs"
+print("try fmin_bfgs")
 full_output = 1
 data=[]
 v,fopt, gopt, Hopt, func_calls, grad_calls, warnflag, allvecs = \
         optimize.fmin_bfgs(R,v_0,fprime=Rp,full_output=full_output,retall=1)
 if warnflag == 0:
    plt.semilogy(np.arange(0,len(data)),data)
-   print 'Rayleigh quotient BFGS',R(v)
+   print('Rayleigh quotient BFGS',R(v))
 
 
-print "fmin_bfgs OK"
+print("fmin_bfgs OK")
 
-print "try fmin_ncg"
+print("try fmin_ncg")
 
 #
 # WARNING: the program may hangs if fmin_ncg is used
@@ -61,5 +61,5 @@ v,fopt, fcalls, gcalls, hcalls, warnflag, allvecs = \
 if warnflag==0:
    plt.figure()
    plt.semilogy(np.arange(0,len(data)),data)
-   print 'Rayleigh quotient NCG',R(v)
+   print('Rayleigh quotient NCG',R(v))
 

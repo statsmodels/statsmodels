@@ -6,10 +6,12 @@ References
 Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
-from __future__ import division
+from __future__ import division, print_function
+from statsmodels.compatnp import iteritems
+from statsmodels.compatnp.py3k import range, lrange, string_types, StringIO
 
 from collections import defaultdict
-from cStringIO import StringIO
+from statsmodels.compatnp.py3k import cStringIO
 
 import numpy as np
 import numpy.linalg as npl
@@ -67,8 +69,8 @@ def ma_rep(coefs, maxn=10):
     phis[0] = np.eye(k)
 
     # recursively compute Phi matrices
-    for i in xrange(1, maxn + 1):
-        for j in xrange(1, i+1):
+    for i in range(1, maxn + 1):
+        for j in range(1, i+1):
             if j > p:
                 break
 
@@ -93,9 +95,9 @@ def is_stable(coefs, verbose=False):
     eigs = np.linalg.eigvals(A_var1)
 
     if verbose:
-        print 'Eigenvalues of VAR(1) rep'
+        print('Eigenvalues of VAR(1) rep')
         for val in np.abs(eigs):
-            print val
+            print(val)
 
     return (np.abs(eigs) <= 1).all()
 
@@ -130,11 +132,11 @@ def var_acf(coefs, sig_u, nlags=None):
     result[:p] = _var_acf(coefs, sig_u)
 
     # yule-walker equations
-    for h in xrange(p, nlags + 1):
+    for h in range(p, nlags + 1):
         # compute ACF for lag=h
         # G(h) = A_1 G(h-1) + ... + A_p G(h-p)
 
-        for j in xrange(p):
+        for j in range(p):
             result[h] += np.dot(coefs[j], result[h-j-1])
 
     return result
@@ -193,10 +195,10 @@ def forecast(y, coefs, intercept, steps):
     # forcs[0] = y[-1]
 
     # make indices easier to think about
-    for h in xrange(1, steps + 1):
+    for h in range(1, steps + 1):
         # y_t(h) = intercept + sum_1^p A_i y_t_(h-i)
         f = forcs[h - 1]
-        for i in xrange(1, p + 1):
+        for i in range(1, p + 1):
             # slightly hackish
             if h - i <= 0:
                 # e.g. when h=1, h-1 = 0, which is y[-1]
@@ -226,7 +228,7 @@ def forecast_cov(ma_coefs, sig_u, steps):
     forc_covs = np.zeros((steps, k, k))
 
     prior = np.zeros((k, k))
-    for h in xrange(steps):
+    for h in range(steps):
         # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
         phi = ma_coefs[h]
         var = chain_dot(phi, sig_u, phi.T)
@@ -431,7 +433,7 @@ class VAR(tsbase.TimeSeriesModel):
                                 % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
-                print 'Using %d based on %s criterion' %  (lags, ic)
+                print('Using %d based on %s criterion' %  (lags, ic))
         else:
             if lags is None:
                 lags = 1
@@ -510,11 +512,11 @@ class VAR(tsbase.TimeSeriesModel):
             # order
             result = self._estimate_var(p, offset=maxlags-p)
 
-            for k, v in result.info_criteria.iteritems():
+            for k, v in iteritems(result.info_criteria):
                 ics[k].append(v)
 
         selected_orders = dict((k, mat(v).argmin())
-                               for k, v in ics.iteritems())
+                               for k, v in iteritems(ics))
 
         if verbose:
             output.print_ic_table(ics, selected_orders)
@@ -706,7 +708,7 @@ class VARProcess(object):
         forc_covs = np.zeros((steps, k, k))
 
         prior = np.zeros((k, k))
-        for h in xrange(steps):
+        for h in range(steps):
             # Sigma(h) = Sigma(h-1) + Phi Sig_u Phi'
             phi = ma_coefs[h]
             var = chain_dot(phi, self.sigma_u, phi.T)
@@ -1330,7 +1332,7 @@ class VARResults(VARProcess):
         -------
         results : dict
         """
-        if isinstance(variables, (basestring, int, np.integer)):
+        if isinstance(variables, (string_types, int, np.integer)):
             variables = [variables]
 
         k, p = self.neqs, self.k_ar
@@ -1382,7 +1384,7 @@ class VARResults(VARProcess):
         if verbose:
             summ = output.causality_summary(results, variables, equation, kind)
 
-            print summ
+            print(summ)
 
         return results
 
@@ -1405,7 +1407,7 @@ class VARResults(VARProcess):
             print ('FAIL: Some autocorrelations exceed %.4f bound. '
                    'See plot' % bound)
         else:
-            print 'PASS: No autocorrelations exceed %.4f bound' % bound
+            print('PASS: No autocorrelations exceed %.4f bound' % bound)
 
         if plot:
             fig = plotting.plot_full_acorr(acorrs[1:],
@@ -1458,7 +1460,7 @@ class VARResults(VARProcess):
 
         if verbose:
             summ = output.normality_summary(results)
-            print summ
+            print(summ)
 
         return results
 
@@ -1565,7 +1567,7 @@ class FEVD(object):
         # cumulative impulse responses
         irfs = (self.orth_irfs[:periods] ** 2).cumsum(axis=0)
 
-        rng = range(self.neqs)
+        rng = lrange(self.neqs)
         mse = self.model.mse(periods)[:, rng, rng]
 
         # lag x equation x component
@@ -1580,14 +1582,14 @@ class FEVD(object):
     def summary(self):
         buf = StringIO()
 
-        rng = range(self.periods)
+        rng = lrange(self.periods)
         for i in range(self.neqs):
             ppm = output.pprint_matrix(self.decomp[i], rng, self.names)
 
-            print >> buf, 'FEVD for %s' % self.names[i]
-            print >> buf, ppm
+            buf.write('FEVD for %s\n' % self.names[i])
+            buf.write(ppm + '\n')
 
-        print buf.getvalue()
+        print(buf.getvalue())
 
     def cov(self):
         """Compute asymptotic standard errors
@@ -1648,7 +1650,7 @@ def _compute_acov(x, nlags=1):
     x = x - x.mean(0)
 
     result = []
-    for lag in xrange(nlags + 1):
+    for lag in range(nlags + 1):
         if lag > 0:
             r = np.dot(x[lag:].T, x[:-lag])
         else:

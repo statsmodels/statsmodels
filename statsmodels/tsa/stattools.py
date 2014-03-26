@@ -1,14 +1,16 @@
 """
 Statistical tools for time series analysis
 """
-
+from statsmodels.compatnp import iteritems
+from statsmodels.compatnp.py3k import (range, lrange, lmap, string_types,
+    lzip)
 import numpy as np
 from numpy.linalg import LinAlgError
 from scipy import stats
 from statsmodels.regression.linear_model import OLS, yule_walker
 from statsmodels.tools.tools import add_constant, Bunch
-from tsatools import lagmat, lagmat2ds, add_trend
-from adfvalues import mackinnonp, mackinnoncrit
+from .tsatools import lagmat, lagmat2ds, add_trend
+from .adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa.arima_model import ARMA
 from statsmodels.compatnp.scipy_compat import _next_regular
 
@@ -72,9 +74,9 @@ def _autolag(mod, endog, exog, startlag, maxlag, method, modargs=(),
         results[lag] = mod_instance.fit()
 
     if method == "aic":
-        icbest, bestlag = min((v.aic, k) for k, v in results.iteritems())
+        icbest, bestlag = min((v.aic, k) for k, v in iteritems(results))
     elif method == "bic":
-        icbest, bestlag = min((v.bic, k) for k, v in results.iteritems())
+        icbest, bestlag = min((v.bic, k) for k, v in iteritems(results))
     elif method == "t-stat":
         #stop = stats.norm.ppf(.95)
         stop = 1.6448536269514722
@@ -440,7 +442,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         varacf[1] = 1. / nobs
         varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1 - (100 - confint) / 200.) * np.sqrt(varacf)
-        confint = np.array(zip(acf - interval, acf + interval))
+        confint = np.array(lzip(acf - interval, acf + interval))
         if not qstat:
             return acf, confint
     if alpha is not None:
@@ -449,7 +451,7 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
         varacf[1] = 1. / nobs
         varacf[2:] *= 1 + 2 * np.cumsum(acf[1:-1]**2)
         interval = stats.norm.ppf(1 - alpha / 2.) * np.sqrt(varacf)
-        confint = np.array(zip(acf - interval, acf + interval))
+        confint = np.array(lzip(acf - interval, acf + interval))
         if not qstat:
             return acf, confint
     if qstat:
@@ -583,7 +585,7 @@ def pacf(x, nlags=40, method='ywunbiased', alpha=None):
     if alpha is not None:
         varacf = 1. / len(x)
         interval = stats.norm.ppf(1. - alpha / 2.) * np.sqrt(varacf)
-        confint = np.array(zip(ret - interval, ret + interval))
+        confint = np.array(lzip(ret - interval, ret + interval))
         return ret, confint
     else:
         return ret
@@ -738,10 +740,10 @@ def levinson_durbin(s, nlags=10, isacov=False):
     # initial points for the recursion
     phi[1, 1] = sxx_m[1] / sxx_m[0]
     sig[1] = sxx_m[0] - phi[1, 1] * sxx_m[1]
-    for k in xrange(2, order + 1):
+    for k in range(2, order + 1):
         phi[k, k] = (sxx_m[k] - np.dot(phi[1:k, k-1],
                                        sxx_m[1:k][::-1])) / sig[k-1]
-        for j in xrange(1, k):
+        for j in range(1, k):
             phi[j, k] = phi[j, k-1] - phi[k, k] * phi[k-j, k-1]
         sig[k] = sig[k-1] * (1 - phi[k, k]**2)
 
@@ -818,8 +820,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
     for mlg in range(1, maxlag + 1):
         result = {}
         if verbose:
-            print '\nGranger Causality'
-            print 'number of lags (no zero)', mlg
+            print('\nGranger Causality')
+            print(('number of lags (no zero)', mlg))
         mxlg = mlg
 
         # create lagmat of both time series
@@ -847,11 +849,11 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         fgc1 = ((res2down.ssr - res2djoint.ssr) /
                 res2djoint.ssr / mxlg * res2djoint.df_resid)
         if verbose:
-            print ('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
+            print(('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
                    ' df_num=%d') % (fgc1,
                                     stats.f.sf(fgc1, mxlg,
                                                res2djoint.df_resid),
-                                    res2djoint.df_resid, mxlg)
+                                    res2djoint.df_resid, mxlg))
         result['ssr_ftest'] = (fgc1,
                                stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
                                res2djoint.df_resid, mxlg)
@@ -859,15 +861,15 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # Granger Causality test using ssr (ch2 statistic)
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
         if verbose:
-            print ('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
-                   'df=%d') % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
+            print(('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
+                   'df=%d') % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
         result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         #likelihood ratio test pvalue:
         lr = -2 * (res2down.llf - res2djoint.llf)
         if verbose:
-            print ('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
-                   (lr, stats.chi2.sf(lr, mxlg), mxlg))
+            print(('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
+                   (lr, stats.chi2.sf(lr, mxlg), mxlg)))
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
@@ -876,9 +878,9 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
                                    np.zeros((mxlg, 1))))
         ftres = res2djoint.f_test(rconstr)
         if verbose:
-            print ('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
+            print(('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
                    ' df_num=%d') % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
-                                    ftres.df_num)
+                                    ftres.df_num))
         result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
                                   np.squeeze(ftres.pvalue)[()],
                                   ftres.df_denom, ftres.df_num)
@@ -957,7 +959,7 @@ def _safe_arma_fit(y, order, model_kw, trend, fit_kw, start_params=None):
         # SVD convergence failure on badly misspecified models
         return
 
-    except ValueError, error:
+    except ValueError as error:
         if start_params is not None:  # don't recurse again
             # user supplied start_params only get one chance
             return
@@ -1034,9 +1036,9 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     """
     from pandas import DataFrame
 
-    ar_range = range(0, max_ar + 1)
-    ma_range = range(0, max_ma + 1)
-    if isinstance(ic, basestring):
+    ar_range = lrange(0, max_ar + 1)
+    ma_range = lrange(0, max_ma + 1)
+    if isinstance(ic, string_types):
         ic = [ic]
     elif not isinstance(ic, (list, tuple)):
         raise ValueError("Need a list or a tuple for ic if not a string.")
@@ -1057,14 +1059,14 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
 
-    dfs = map(lambda x : DataFrame(x, columns=ma_range, index=ar_range),
+    dfs = lmap(lambda x : DataFrame(x, columns=ma_range, index=ar_range),
               results)
 
-    res = dict(zip(ic, dfs))
+    res = dict(lzip(ic, dfs))
 
     # add the minimums to the results dict
     min_res = {}
-    for i, result in res.iteritems():
+    for i, result in iteritems(res):
         mins = np.where(result.min().min() == result)
         min_res.update({i + '_min_order' : (mins[0][0], mins[1][0])})
     res.update(min_res)

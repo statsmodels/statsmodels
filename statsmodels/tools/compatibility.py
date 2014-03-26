@@ -1,6 +1,6 @@
 
 import numpy as np
-
+from statsmodels.compatnp.py3k import StringIO
 try:
     from numpy.linalg import slogdet as np_slogdet
 except:
@@ -31,6 +31,5 @@ def getZipFile():
 
             def open(self, filename):
                 fullfilename = [f for f in self.namelist() if filename in f][0]
-                import StringIO
-                return StringIO.StringIO(self.read(fullfilename))
+                return StringIO(self.read(fullfilename))
         return ZipFile

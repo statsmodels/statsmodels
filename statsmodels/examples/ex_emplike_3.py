@@ -6,6 +6,7 @@ We will be using the Stanford Heart Transplant data
 
 """
 
+from __future__ import print_function
 import statsmodels.api as sm
 import numpy as np
 
@@ -18,10 +19,10 @@ model = sm.emplike.emplikeAFT(np.log10(data.endog),
 
 # We need to fit the model to get the parameters
 fitted = model.fit()
-print fitted.params()
+print(fitted.params())
 test1 = fitted.test_beta([4],[0])  # Test that the intercept is 4
-print test1
+print(test1)
 test2 = fitted.test_beta([-.05], [1]) # Test that the slope is -.05
-print test2
+print(test2)
 ci_beta1 = fitted.ci_beta(1, .1, -.1)
-print ci_beta1
+print(ci_beta1)

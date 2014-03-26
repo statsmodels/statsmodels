@@ -9,8 +9,8 @@ import statsmodels.tsa.stattools as tsa
 import statsmodels.tsa.tsatools as tools
 from statsmodels.tsa.tsatools import vec, vech
 
-from results import savedrvs
-from results.datamlw_tls import mlacf, mlccf, mlpacf, mlywar
+from .results import savedrvs
+from .results.datamlw_tls import mlacf, mlccf, mlpacf, mlywar
 
 xo = savedrvs.rvsdata.xar2
 x100 = xo[-100:]/1000.

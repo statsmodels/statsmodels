@@ -1,3 +1,4 @@
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 import statsmodels.tsa.vector_ar.util as util
 
@@ -92,7 +93,7 @@ def plot_with_error(y, error, x=None, axes=None, value_fmt='k',
     if axes is None:
         axes = plt.gca()
 
-    x = x if x is not None else range(len(y))
+    x = x if x is not None else lrange(len(y))
     plot_action = lambda y, fmt: axes.plot(x, y, fmt)
     plot_action(y, value_fmt)
 
@@ -203,7 +204,7 @@ def irf_grid_plot(values, stderr, impcol, rescol, names, title,
 
     k = len(names)
 
-    rng = range(len(values))
+    rng = lrange(len(values))
     for (j, i, ai, aj) in to_plot:
         ax = axes[ai][aj]
 

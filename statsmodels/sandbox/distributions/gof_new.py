@@ -17,7 +17,8 @@ References
 ----------
 
 '''
-
+from __future__ import print_function
+from statsmodels.compatnp.py3k import range, lmap, string_types, callable
 import numpy as np
 
 from scipy.stats import distributions
@@ -100,7 +101,7 @@ def ks_2samp(data1, data2):
     (0.07999999999999996, 0.41126949729859719)
 
     """
-    data1, data2 = map(np.asarray, (data1, data2))
+    data1, data2 = lmap(np.asarray, (data1, data2))
     n1 = data1.shape[0]
     n2 = data2.shape[0]
     n1 = len(data1)
@@ -239,7 +240,7 @@ def kstest(rvs, cdf, args=(), N=20, alternative = 'two_sided', mode='approx',**k
     (0.131016895759829, 0.058826222555312224)
 
     """
-    if isinstance(rvs, basestring):
+    if isinstance(rvs, string_types):
         #cdf = getattr(stats, rvs).cdf
         if (not cdf) or (cdf == rvs):
             cdf = getattr(distributions, rvs).cdf
@@ -248,7 +249,7 @@ def kstest(rvs, cdf, args=(), N=20, alternative = 'two_sided', mode='approx',**k
             raise AttributeError('if rvs is string, cdf has to be the same distribution')
 
 
-    if isinstance(cdf, basestring):
+    if isinstance(cdf, string_types):
         cdf = getattr(distributions, cdf).cdf
     if callable(rvs):
         kwds = {'size':N}
@@ -390,7 +391,7 @@ class GOF(object):
 
 
     def __init__(self, rvs, cdf, args=(), N=20):
-        if isinstance(rvs, basestring):
+        if isinstance(rvs, string_types):
             #cdf = getattr(stats, rvs).cdf
             if (not cdf) or (cdf == rvs):
                 cdf = getattr(distributions, rvs).cdf
@@ -399,7 +400,7 @@ class GOF(object):
                 raise AttributeError('if rvs is string, cdf has to be the same distribution')
 
 
-        if isinstance(cdf, basestring):
+        if isinstance(cdf, string_types):
             cdf = getattr(distributions, cdf).cdf
         if callable(rvs):
             kwds = {'size':N}
@@ -461,7 +462,7 @@ class GOF(object):
 
         #one loop instead of large array
         msum = 0
-        for j in xrange(1,nobs):
+        for j in range(1,nobs):
             mj = cdfvals[j] - cdfvals[:j]
             mask = (mj > 0.5)
             mj[mask] = 1 - mj[mask]
@@ -505,17 +506,17 @@ def gof_mc(randfn, distr, nobs=100):
     from collections import defaultdict
 
     results = defaultdict(list)
-    for i in xrange(1000):
+    for i in range(1000):
         rvs = randfn(nobs)
         goft = GOF(rvs, distr)
         for ti in all_gofs:
             results[ti].append(goft.get_test(ti, 'stephens70upp')[0][1])
 
     resarr = np.array([results[ti] for ti in all_gofs])
-    print '         ', '      '.join(all_gofs)
-    print 'at 0.01:', (resarr < 0.01).mean(1)
-    print 'at 0.05:', (resarr < 0.05).mean(1)
-    print 'at 0.10:', (resarr < 0.1).mean(1)
+    print('         ', '      '.join(all_gofs))
+    print('at 0.01:', (resarr < 0.01).mean(1))
+    print('at 0.05:', (resarr < 0.05).mean(1))
+    print('at 0.10:', (resarr < 0.1).mean(1))
 
 def asquare(cdfvals, axis=0):
     '''vectorized Anderson Darling A^2, Stephens 1974'''
@@ -567,10 +568,10 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
             raise ValueError('using batching requires a value')
         n_batch = int(np.ceil(nrep/float(batch_size)))
         count = 0
-        for irep in xrange(n_batch):
+        for irep in range(n_batch):
             rvs = distr.rvs(args, **{'size':(batch_size, nobs)})
             params = distr.fit_vec(rvs, axis=1)
-            params = map(lambda x: np.expand_dims(x, 1), params)
+            params = lmap(lambda x: np.expand_dims(x, 1), params)
             cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
             stat = asquare(cdfvals, axis=1)
             count += (stat >= value).sum()
@@ -579,7 +580,7 @@ def bootstrap(distr, args=(), nobs=200, nrep=100, value=None, batch_size=None):
         #rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
         rvs = distr.rvs(args, **{'size':(nrep, nobs)})
         params = distr.fit_vec(rvs, axis=1)
-        params = map(lambda x: np.expand_dims(x, 1), params)
+        params = lmap(lambda x: np.expand_dims(x, 1), params)
         cdfvals = np.sort(distr.cdf(rvs, params), axis=1)
         stat = asquare(cdfvals, axis=1)
         if value is None:           #return all bootstrap results
@@ -609,7 +610,7 @@ def bootstrap2(value, distr, args=(), nobs=200, nrep=100):
 
 
     count = 0
-    for irep in xrange(nrep):
+    for irep in range(nrep):
         #rvs = distr.rvs(args, **kwds)  #extension to distribution kwds ?
         rvs = distr.rvs(args, **{'size':nobs})
         params = distr.fit_vec(rvs)
@@ -641,31 +642,31 @@ if __name__ == '__main__':
     from scipy import stats
     #rvs = np.random.randn(1000)
     rvs = stats.t.rvs(3, size=200)
-    print 'scipy kstest'
-    print kstest(rvs, 'norm')
+    print('scipy kstest')
+    print(kstest(rvs, 'norm'))
     goft = GOF(rvs, 'norm')
-    print goft.get_test()
+    print(goft.get_test())
 
     all_gofs = ['d', 'd_plus', 'd_minus', 'v', 'wsqu', 'usqu', 'a']
     for ti in all_gofs:
-        print ti, goft.get_test(ti, 'stephens70upp')
+        print(ti, goft.get_test(ti, 'stephens70upp'))
 
-    print '\nIs it correctly sized?'
+    print('\nIs it correctly sized?')
     from collections import defaultdict
 
     results = defaultdict(list)
     nobs = 200
-    for i in xrange(100):
+    for i in range(100):
         rvs = np.random.randn(nobs)
         goft = GOF(rvs, 'norm')
         for ti in all_gofs:
             results[ti].append(goft.get_test(ti, 'stephens70upp')[0][1])
 
     resarr = np.array([results[ti] for ti in all_gofs])
-    print '         ', '      '.join(all_gofs)
-    print 'at 0.01:', (resarr < 0.01).mean(1)
-    print 'at 0.05:', (resarr < 0.05).mean(1)
-    print 'at 0.10:', (resarr < 0.1).mean(1)
+    print('         ', '      '.join(all_gofs))
+    print('at 0.01:', (resarr < 0.01).mean(1))
+    print('at 0.05:', (resarr < 0.05).mean(1))
+    print('at 0.10:', (resarr < 0.1).mean(1))
 
     gof_mc(lambda nobs: stats.t.rvs(3, size=nobs), 'norm', nobs=200)
 
@@ -673,7 +674,7 @@ if __name__ == '__main__':
     nrep = 100
     bt = bootstrap(NewNorm(), args=(0,1), nobs=nobs, nrep=nrep, value=None)
     quantindex = np.floor(nrep * np.array([0.99, 0.95, 0.9])).astype(int)
-    print bt[quantindex]
+    print(bt[quantindex])
 
     #the bootstrap results match Stephens pretty well for nobs=100, but not so well for
     #large (1000) or small (20) nobs

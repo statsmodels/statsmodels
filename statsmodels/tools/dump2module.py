@@ -2,7 +2,8 @@
 
 Author : Josef Perktold
 '''
-
+from __future__ import print_function
+from statsmodels.compatnp import iterkeys
 import numpy as np
 
 class HoldIt(object):
@@ -121,7 +122,7 @@ class HoldIt(object):
         for d in self._what:
             self_item = getattr(data, d)
             saved_item = getattr(data, d)
-            #print d,
+            #print(d)
             #try simple equality
             correct = np.all(self.item == saved_item)
             #try allclose
@@ -135,9 +136,9 @@ class HoldIt(object):
             if not correct:
                 correlem =[np.all(data[d].item()[k] ==
                                   getattr(testsave.var_results, d).item()[k])
-                           for k in data[d].item().keys()]
+                           for k in iterkeys(data[d].item())]
                 if not correlem:
-                    #print d, "wrong"
+                    #print(d, "wrong")
                     incorrectli.append(d)
             correctli.append(d)
 
@@ -157,18 +158,18 @@ if __name__ == '__main__':
     import testsave
 
     for d in data:
-        print d,
+        print(d)
         correct = np.all(data[d] == getattr(testsave.var_results, d))
         if not correct and not data[d].dtype == np.dtype('object'):
             correct = np.allclose(data[d], getattr(testsave.var_results, d),
                               rtol=1e-16, atol=1e-16)
-            if not correct: print "inexact precision"
+            if not correct: print("inexact precision")
         if not correct:
             correlem =[np.all(data[d].item()[k] ==
                               getattr(testsave.var_results, d).item()[k])
-                       for k in data[d].item().keys()]
+                       for k in iterkeys(data[d].item())]
             if not correlem:
-                print d, "wrong"
+                print(d, "wrong")
 
-    print res_var.verify()
+    print(res_var.verify())
 

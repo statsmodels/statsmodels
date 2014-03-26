@@ -6,7 +6,7 @@ This script checks ordinal and nominal models for multinomial data.
 See the generated file "gee_categorical_simulation_check.txt" for
 results.
 """
-
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 from scipy import stats
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
@@ -14,7 +14,7 @@ from statsmodels.genmod.generalized_estimating_equations import GEE,\
     gee_ordinal_starting_values, Multinomial
 from statsmodels.genmod.families import Binomial
 from statsmodels.genmod.dependence_structures import GlobalOddsRatio
-from gee_gaussian_simulation_check import GEE_simulator
+from .gee_gaussian_simulation_check import GEE_simulator
 
 
 class ordinal_simulator(GEE_simulator):
@@ -114,7 +114,7 @@ class nominal_simulator(GEE_simulator):
             m = len(self.params)
             endog1 = []
             for k in range(gsize):
-                pdist = stats.rv_discrete(values=(range(m),
+                pdist = stats.rv_discrete(values=(lrange(m),
                                                   prob[k,:]))
                 endog1.append(pdist.rvs())
 

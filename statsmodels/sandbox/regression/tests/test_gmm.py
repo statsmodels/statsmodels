@@ -5,7 +5,8 @@ Created on Fri Oct 04 13:19:01 2013
 
 Author: Josef Perktold
 """
-
+from __future__ import print_function
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
@@ -83,8 +84,8 @@ def test_iv2sls_r():
     mod = gmm.IV2SLS(endog, exog, instrument)
     res = mod.fit()
 
-    # print res.params
-    # print res.params - params
+    # print(res.params)
+    # print(res.params - params)
 
     n, k = exog.shape
 
@@ -143,7 +144,7 @@ def test_ivgmm1_stata():
 
 
 # move constant to end for Stata
-idx = range(len(params))
+idx = lrange(len(params))
 idx = idx[1:] + idx[:1]
 exog_st = exog[:, idx]
 
@@ -230,7 +231,7 @@ class TestGMMSt1(CheckGMM):
                         wargs={'centered':False})
         self.res1 = res10
 
-        from results_gmm_griliches_iter import results
+        from .results_gmm_griliches_iter import results
         self.res2 = results
 
 class TestGMMStTwostep(CheckGMM):
@@ -253,7 +254,7 @@ class TestGMMStTwostep(CheckGMM):
                         wargs={'centered':False})
         self.res1 = res10
 
-        from results_gmm_griliches import results_twostep as results
+        from .results_gmm_griliches import results_twostep as results
         self.res2 = results
 
 
@@ -277,7 +278,7 @@ class TestGMMStTwostepNO(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res10
 
-        from results_gmm_griliches import results_twostep as results
+        from .results_gmm_griliches import results_twostep as results
         self.res2 = results
 
 
@@ -300,7 +301,7 @@ class TestGMMStOnestep(CheckGMM):
                         optim_args={'gtol':1e-6, 'disp': 0})
         self.res1 = res
 
-        from results_gmm_griliches import results_onestep as results
+        from .results_gmm_griliches import results_onestep as results
         self.res2 = results
 
     def test_bse_other(self):
@@ -336,7 +337,7 @@ class TestGMMStOnestepNO(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res
 
-        from results_gmm_griliches import results_onestep as results
+        from .results_gmm_griliches import results_onestep as results
         self.res2 = results
 
 class TestGMMStOneiter(CheckGMM):
@@ -358,7 +359,7 @@ class TestGMMStOneiter(CheckGMM):
                         optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
         self.res1 = res
 
-        from results_gmm_griliches import results_onestep as results
+        from .results_gmm_griliches import results_onestep as results
         self.res2 = results
 
 
@@ -405,7 +406,7 @@ class TestGMMStOneiterNO(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res
 
-        from results_gmm_griliches import results_onestep as results
+        from .results_gmm_griliches import results_onestep as results
         self.res2 = results
 
 
@@ -437,7 +438,7 @@ class TestGMMStOneiterNO_Linear(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res3 = res
 
-        from results_gmm_griliches import results_onestep as results
+        from .results_gmm_griliches import results_onestep as results
         self.res2 = results
 
 
@@ -470,7 +471,7 @@ class TestGMMStOneiterNO_Nonlinear(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res3 = res
 
-        from results_gmm_griliches import results_onestep as results
+        from .results_gmm_griliches import results_onestep as results
         self.res2 = results
 
 
@@ -513,7 +514,7 @@ class TestGMMStOneiterOLS_Linear(CheckGMM):
                         has_optimal_weights=True)
         self.res1 = res
 
-        #from results_gmm_griliches import results_onestep as results
+        #from .results_gmm_griliches import results_onestep as results
         #self.res2 = results
         self.res2 = res_ols
 
@@ -539,7 +540,7 @@ class TestGMMSt2(object):
                       optim_method='bfgs', optim_args={'gtol':1e-6, 'disp': 0})
         self.res1 = res
 
-        from results_ivreg2_griliches import results_gmm2s_robust as results
+        from .results_ivreg2_griliches import results_gmm2s_robust as results
         self.res2 = results
 
         # TODO: remove after testing, compare bse from 1 iteration
@@ -665,5 +666,5 @@ class TestIV2SLSSt1(CheckIV2SLS):
         res = mod.fit()
         self.res1 = res
 
-        from results_ivreg2_griliches import results_small as results
+        from .results_ivreg2_griliches import results_small as results
         self.res2 = results

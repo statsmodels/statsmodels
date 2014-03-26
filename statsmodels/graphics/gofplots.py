@@ -1,3 +1,4 @@
+from statsmodels.compatnp.py3k import lzip, string_types
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS
@@ -130,7 +131,7 @@ class ProbPlot(object):
         self.distargs = distargs
         self.fit = fit
 
-        if isinstance(dist, basestring):
+        if isinstance(dist, string_types):
             dist = getattr(stats, dist)
 
         self.fit_params = dist.fit(data)
@@ -603,7 +604,7 @@ def qqline(ax, line, x=None, y=None, dist=None, fmt='r-'):
     There is no return value. The line is plotted on the given `ax`.
     """
     if line == '45':
-        end_pts = zip(ax.get_xlim(), ax.get_ylim())
+        end_pts = lzip(ax.get_xlim(), ax.get_ylim())
         end_pts[0] = min(end_pts[0])
         end_pts[1] = max(end_pts[1])
         ax.plot(end_pts, end_pts, fmt)

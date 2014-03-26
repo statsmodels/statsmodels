@@ -28,7 +28,7 @@ Extensions
 see also VAR section in Notes.txt
 
 """
-
+from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_equal
 from scipy import signal
@@ -165,7 +165,7 @@ def varinversefilter(ar, nobs, version=1):
     '''
     nlags, nvars, nvarsex = ar.shape
     if nvars != nvarsex:
-        print 'exogenous variables not implemented not tested'
+        print('exogenous variables not implemented not tested')
     arinv = np.zeros((nobs+1, nvarsex, nvars))
     arinv[0,:,:] = ar[0]
     arinv[1:nlags,:,:] = -ar[1:]
@@ -177,9 +177,9 @@ def varinversefilter(ar, nobs, version=1):
             arinv[i,:,:] = tmp
     if version == 0:
         for i in range(nlags+1,nobs+1):
-            print ar[1:].shape, arinv[i-1:i-nlags:-1,:,:].shape
+            print(ar[1:].shape, arinv[i-1:i-nlags:-1,:,:].shape)
             #arinv[i,:,:] = np.dot(-ar[1:],arinv[i-1:i-nlags:-1,:,:])
-            #print np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1])).shape
+            #print(np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1])).shape
             #arinv[i,:,:] = np.tensordot(-ar[1:],arinv[i-1:i-nlags:-1,:,:],axes=([2],[1]))
             raise NotImplementedError('waiting for generalized ufuncs or something')
 
@@ -226,7 +226,7 @@ def vargenerate(ar, u, initvalues=None):
     nlagsm1 = nlags - 1
     nobs = u.shape[0]
     if nvars != nvarsex:
-        print 'exogenous variables not implemented not tested'
+        print('exogenous variables not implemented not tested')
     if u.shape[1] != nvars:
         raise ValueError('u needs to have nvars columns')
     if initvalues is None:
@@ -274,9 +274,9 @@ def padone(x, front=0, back=0, axis=0, fillvalue=0):
     startind[axis] = front
     endind = startind + shapearr
     myslice = [slice(startind[k], endind[k]) for k in range(len(endind))]
-    #print myslice
-    #print out.shape
-    #print out[tuple(myslice)].shape
+    #print(myslice
+    #print(out.shape
+    #print(out[tuple(myslice)].shape
     out[tuple(myslice)] = x
     return out
 
@@ -296,15 +296,15 @@ def trimone(x, front=0, back=0, axis=0):
     '''
     shape = np.array(x.shape)
     shape[axis] -= (front + back)
-    #print shape, front, back
+    #print(shape, front, back
     shapearr = np.array(x.shape)
     startind = np.zeros(x.ndim)
     startind[axis] = front
     endind = startind + shape
     myslice = [slice(startind[k], endind[k]) for k in range(len(endind))]
-    #print myslice
-    #print shape, endind
-    #print x[tuple(myslice)].shape
+    #print(myslice
+    #print(shape, endind
+    #print(x[tuple(myslice)].shape
     return x[tuple(myslice)]
 
 
@@ -680,7 +680,7 @@ if __name__ == "__main__":
     res = np.linalg.lstsq(lagmat(ar2s,1), ar2s)
     bhat = res[0].reshape(1,2,2)
     arhat = ar2full(bhat)
-    #print maxabs(arhat - a22)
+    #print(maxabs(arhat - a22)
 
 
     v = _Var(ar2s)
@@ -714,13 +714,13 @@ if __name__ == "__main__":
                      [ 0.1, -0.1]]])
 
     vp = VarmaPoly(ar23, ma22)
-    print vars(vp)
-    print vp.vstack()
-    print vp.vstack(a24)
-    print vp.hstackarma_minus1()
-    print vp.getisstationary()
-    print vp.getisinvertible()
+    print(vars(vp))
+    print(vp.vstack())
+    print(vp.vstack(a24))
+    print(vp.hstackarma_minus1())
+    print(vp.getisstationary())
+    print(vp.getisinvertible())
 
     vp2 = VarmaPoly(ar23ns)
-    print vp2.getisstationary()
-    print vp2.getisinvertible()  # no ma lags
+    print(vp2.getisstationary())
+    print(vp2.getisinvertible()) # no ma lags

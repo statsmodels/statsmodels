@@ -302,8 +302,8 @@ if __name__ == '__main__':
 
     cf_params, cf_pcov = optimize.curve_fit(func0, x, y)
     cf_bse = np.sqrt(np.diag(cf_pcov))
-    print res[0]
-    print cf_params
-    print resmy.params
-    print cf_bse
-    print resmy.bse
+    print(res[0])
+    print(cf_params)
+    print(resmy.params)
+    print(cf_bse)
+    print(resmy.bse)

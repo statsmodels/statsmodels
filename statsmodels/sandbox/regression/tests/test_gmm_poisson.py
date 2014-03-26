@@ -4,7 +4,7 @@ TestGMMMultTwostepDefault() has lower precision
 
 '''
 
-
+from statsmodels.compatnp.py3k import lmap
 import numpy as np
 from numpy.testing.decorators import skipif
 import pandas
@@ -42,7 +42,7 @@ DATA = get_data()
 def moment_exponential_add(params, exog, exp=True):
 
     if not np.isfinite(params).all():
-        print "invalid params", params
+        print("invalid params", params)
 
     # moment condition without instrument
     if exp:
@@ -64,7 +64,7 @@ def moment_exponential_mult(params, data, exp=True):
     exog = data[:,1:]
 
     if not np.isfinite(params).all():
-        print "invalid params", params
+        print("invalid params", params)
 
     # moment condition without instrument
     if exp:
@@ -72,7 +72,7 @@ def moment_exponential_mult(params, data, exp=True):
         predicted = np.clip(predicted, 0, 1e100)  # avoid inf
         resid = endog / predicted - 1
         if not np.isfinite(resid).all():
-            print "invalid resid", resid
+            print("invalid resid", resid)
 
     else:
         resid = endog - np.dot(exog, params)
@@ -138,7 +138,7 @@ class TestGMMAddOnestep(CheckGMM):
         instrument = DATA[instrument_names]
 
         asarray = lambda x: np.asarray(x, float)
-        endog, exog, instrument = map(asarray, [endog, exog, instrument])
+        endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
 
         self.bse_tol = [5e-6, 5e-7]
@@ -155,7 +155,7 @@ class TestGMMAddOnestep(CheckGMM):
                         wargs={'centered':False})
         self.res1 = res0
 
-        from results_gmm_poisson import results_addonestep as results
+        from .results_gmm_poisson import results_addonestep as results
         self.res2 = results
 
 
@@ -174,7 +174,7 @@ class TestGMMAddTwostep(CheckGMM):
         instrument = DATA[instrument_names]
 
         asarray = lambda x: np.asarray(x, float)
-        endog, exog, instrument = map(asarray, [endog, exog, instrument])
+        endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
 
         self.bse_tol = [5e-6, 5e-7]
@@ -190,7 +190,7 @@ class TestGMMAddTwostep(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res0
 
-        from results_gmm_poisson import results_addtwostep as results
+        from .results_gmm_poisson import results_addtwostep as results
         self.res2 = results
 
 
@@ -211,7 +211,7 @@ class TestGMMMultOnestep(CheckGMM):
         instrument = DATA[instrument_names]
 
         asarray = lambda x: np.asarray(x, float)
-        endog, exog, instrument = map(asarray, [endog, exog, instrument])
+        endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
         endog_ = np.zeros(len(endog))
@@ -233,7 +233,7 @@ class TestGMMMultOnestep(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res0
 
-        from results_gmm_poisson import results_multonestep as results
+        from .results_gmm_poisson import results_multonestep as results
         self.res2 = results
 
 class TestGMMMultTwostep(CheckGMM):
@@ -253,7 +253,7 @@ class TestGMMMultTwostep(CheckGMM):
         instrument = DATA[instrument_names]
 
         asarray = lambda x: np.asarray(x, float)
-        endog, exog, instrument = map(asarray, [endog, exog, instrument])
+        endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
         endog_ = np.zeros(len(endog))
@@ -273,7 +273,7 @@ class TestGMMMultTwostep(CheckGMM):
                         wargs={'centered':False}, has_optimal_weights=False)
         self.res1 = res0
 
-        from results_gmm_poisson import results_multtwostep as results
+        from .results_gmm_poisson import results_multtwostep as results
         self.res2 = results
 
 
@@ -295,7 +295,7 @@ class TestGMMMultTwostepDefault(CheckGMM):
         instrument = DATA[instrument_names]
 
         asarray = lambda x: np.asarray(x, float)
-        endog, exog, instrument = map(asarray, [endog, exog, instrument])
+        endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
         endog_ = np.zeros(len(endog))
@@ -317,7 +317,7 @@ class TestGMMMultTwostepDefault(CheckGMM):
                        )
         self.res1 = res0
 
-        from results_gmm_poisson import results_multtwostepdefault as results
+        from .results_gmm_poisson import results_multtwostepdefault as results
         self.res2 = results
 
 
@@ -338,7 +338,7 @@ class TestGMMMultTwostepCenter(CheckGMM):
         instrument = DATA[instrument_names]
 
         asarray = lambda x: np.asarray(x, float)
-        endog, exog, instrument = map(asarray, [endog, exog, instrument])
+        endog, exog, instrument = lmap(asarray, [endog, exog, instrument])
 
         # Need to add all data into exog
         endog_ = np.zeros(len(endog))
@@ -361,7 +361,7 @@ class TestGMMMultTwostepCenter(CheckGMM):
                        )
         self.res1 = res0
 
-        from results_gmm_poisson import results_multtwostepcenter as results
+        from .results_gmm_poisson import results_multtwostepcenter as results
         self.res2 = results
 
     def test_more(self):

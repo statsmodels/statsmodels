@@ -19,9 +19,9 @@ def save_pickle(obj, fname):
     fname : str
         Filename to pickle to
     """
-    import cPickle as pickle
+    from statsmodels.compatnp.py3k import cPickle
     fout = _get_file_obj(fname, 'wb')
-    pickle.dump(obj, fout, protocol=-1)
+    cPickle.dump(obj, fout, protocol=-1)
 
 
 def load_pickle(fname):
@@ -37,7 +37,7 @@ def load_pickle(fname):
     -----
     This method can be used to load *both* models and results.
     """
-    import cPickle as pickle
+    from statsmodels.compatnp.py3k import cPickle
     fin = _get_file_obj(fname, 'rb')
-    return pickle.load(fin)
+    return cPickle.load(fin)
 

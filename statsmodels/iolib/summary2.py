@@ -1,13 +1,15 @@
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 import pandas as pd
 import datetime
 import copy
 #import collections  # OrderedDict requires python >= 2.7
+from statsmodels.compatnp import iterkeys, iteritems
 from statsmodels.compatnp.collections import OrderedDict
-import StringIO
+from statsmodels.compatnp.py3k import StringIO, lzip, reduce
 import textwrap
-from table import SimpleTable
-from tableformatting import fmt_latex, fmt_txt
+from .table import SimpleTable
+from .tableformatting import fmt_latex, fmt_txt
 
 class Summary(object):
     def __init__(self):
@@ -78,9 +80,9 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        keys = [_formatter(x, float_format) for x in d.keys()]
+        keys = [_formatter(x, float_format) for x in iteritems(d)]
         vals = [_formatter(x, float_format) for x in d.values()]
-        data = np.array(zip(keys, vals))
+        data = np.array(lzip(keys, vals))
 
         if data.shape[0] % ncols != 0:
             pad = ncols - (data.shape[0] % ncols)
@@ -283,7 +285,7 @@ def summary_model(results):
     info['Prob (F-statistic):'] = lambda x: "%#6.3g" % x.f_pvalue
     info['Scale:'] = lambda x: "%#8.5g" % x.scale
     out = OrderedDict()
-    for key in info.keys():
+    for key in iteritems(info):
         try:
             out[key] = info[key](results)
         except:
@@ -462,7 +464,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
 
-    idx = pd.Series(range(summ.shape[0])) %2 == 1
+    idx = pd.Series(lrange(summ.shape[0])) %2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
 
     # add infos about the models.

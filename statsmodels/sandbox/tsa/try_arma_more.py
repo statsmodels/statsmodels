@@ -11,7 +11,7 @@ Created on Wed Oct 14 23:02:19 2009
 
 Author: josef-pktd
 """
-
+from __future__ import print_function
 import numpy as np
 from scipy import signal, ndimage
 import matplotlib.mlab as mlb
@@ -82,7 +82,7 @@ sd = np.abs(h)**2/np.sqrt(2*np.pi)
 
 if np.sum(np.isnan(h)) > 0:
     # this happens with unit root or seasonal unit root'
-    print 'Warning: nan in frequency response h'
+    print('Warning: nan in frequency response h')
     h[np.isnan(h)] = 1.
     rescale = 0
 
@@ -91,7 +91,7 @@ if np.sum(np.isnan(h)) > 0:
 #replace with signal.order_filter ?
 pm = ndimage.filters.maximum_filter(sd, footprint=np.ones(5))
 maxind = np.nonzero(pm == sd)
-print 'local maxima frequencies'
+print('local maxima frequencies')
 wmax = w[maxind]
 sdmax = sd[maxind]
 

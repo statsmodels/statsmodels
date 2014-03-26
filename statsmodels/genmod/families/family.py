@@ -8,8 +8,8 @@ The one parameter exponential family distributions used by GLM.
 import numpy as np
 from scipy import special
 from scipy.stats import ss
-import links as L
-import varfuncs as V
+from . import links as L
+from . import varfuncs as V
 FLOAT_EPS = np.finfo(float).eps
 
 class Family(object):
@@ -57,7 +57,7 @@ class Family(object):
             validlink = max([isinstance(link, _) for _ in self.links])
             if not validlink:
                 errmsg = "Invalid link for family, should be in %s. (got %s)"
-                raise ValueError(errmsg % (`self.links`, link))
+                raise ValueError(errmsg % (repr(self.links), link))
 
 
     def _getlink(self):

@@ -19,7 +19,7 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 """
 
 import numpy as np
-import families
+from . import families
 from statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
 

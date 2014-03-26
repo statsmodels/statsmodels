@@ -1,4 +1,5 @@
-from cStringIO import StringIO
+from __future__ import print_function
+from statsmodels.compatnp.py3k import cStringIO, lzip, lrange, StringIO
 import numpy as np
 
 from statsmodels.iolib import SimpleTable
@@ -74,10 +75,10 @@ class VARSummary(object):
         """
         buf = StringIO()
 
-        print >> buf, self._header_table()
-        print >> buf, self._stats_table()
-        print >> buf, self._coef_table()
-        print >> buf, self._resid_info()
+        buf.write(self._header_table() + '\n')
+        buf.write(self._stats_table() + '\n')
+        buf.write(self._coef_table() + '\n')
+        buf.write(self._resid_info() + '\n')
 
         return buf.getvalue()
 
@@ -140,7 +141,7 @@ class VARSummary(object):
 
         Xnames = self.model.exog_names
 
-        data = zip(model.params.T.ravel(),
+        data = lzip(model.params.T.ravel(),
                    model.stderr.T.ravel(),
                    model.tvalues.T.ravel(),
                    model.pvalues.T.ravel())
@@ -151,14 +152,15 @@ class VARSummary(object):
         dim = k * model.k_ar + model.k_trend
         for i in range(k):
             section = "Results for equation %s" % model.names[i]
-            print >> buf, section
+            buf.write(section + '\n')
+            #print >> buf, section
 
             table = SimpleTable(data[dim * i : dim * (i + 1)], header,
                                 Xnames, title=None, txt_fmt = self.default_fmt)
+            buf.write(str(table) + '\n')
 
-            print >> buf, str(table)
-
-            if i < k - 1: buf.write('\n')
+            if i < k - 1:
+                buf.write('\n')
 
         return buf.getvalue()
 
@@ -166,8 +168,8 @@ class VARSummary(object):
         buf = StringIO()
         names = self.model.names
 
-        print >> buf, "Correlation matrix of residuals"
-        print >> buf, pprint_matrix(self.model.resid_corr, names, names)
+        buf.write("Correlation matrix of residuals" + '\n')
+        buf.write(pprint_matrix(self.model.resid_corr, names, names) + '\n')
 
         return buf.getvalue()
 
@@ -193,10 +195,10 @@ def hypothesis_test_table(results, title, null_hyp):
                         ['Test statistic', 'Critical Value', 'p-value',
                          'df'], [''], title=None, txt_fmt=fmt)
 
-    print >> buf, title
-    print >> buf, table
+    buf.write(title + '\n')
+    buf.write(str(table) + '\n')
 
-    print >> buf, null_hyp
+    buf.write(null_hyp + '\n')
 
     buf.write("Conclusion: %s H_0" % results['conclusion'])
     buf.write(" at %.2f%% significance level" % (results['signif'] * 100))
@@ -226,12 +228,12 @@ def print_ic_table(ics, selected_orders):
                data_fmts=("%s",) * len(cols))
 
     buf = StringIO()
-    table = SimpleTable(data, cols, range(len(data)),
+    table = SimpleTable(data, cols, lrange(len(data)),
                         title='VAR Order Selection', txt_fmt=fmt)
-    print >> buf, table
-    print >> buf, '* Minimum'
+    buf.write(str(table) + '\n')
+    buf.write('* Minimum' + '\n')
 
-    print buf.getvalue()
+    print(buf.getvalue())
 
 
 def pprint_matrix(values, rlabels, clabels, col_space=None):
@@ -252,7 +254,7 @@ def pprint_matrix(values, rlabels, clabels, col_space=None):
     for j, h in enumerate(clabels):
         head += _pfixed(h, col_space[j])
 
-    print >> buf, head
+    buf.write(head + '\n')
 
     for i, rlab in enumerate(rlabels):
         line = ('%s' % rlab).ljust(row_space)
@@ -260,7 +262,7 @@ def pprint_matrix(values, rlabels, clabels, col_space=None):
         for j in range(K):
             line += _pfixed(values[i,j], col_space[j])
 
-        print >> buf, line
+        buf.write(line + '\n')
 
     return buf.getvalue()
 

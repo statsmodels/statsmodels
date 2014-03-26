@@ -21,14 +21,14 @@ This is done mainly to check that they are up to date.
 if 'y' in cont.lower():
     for run_all_f in filelist:
         try:
-            print "Executing example file", run_all_f
-            print "-----------------------" + "-"*len(run_all_f)
+            print("Executing example file", run_all_f)
+            print("-----------------------" + "-"*len(run_all_f))
             execfile(run_all_f)
         except:
             #f might be overwritten in the executed file
-            print "*********************"
-            print "ERROR in example file", run_all_f
-            print "**********************" + "*"*len(run_all_f)
+            print("*********************")
+            print("ERROR in example file", run_all_f)
+            print("**********************" + "*"*len(run_all_f))
             if stop_on_error:
                 raise
 #plt.show()

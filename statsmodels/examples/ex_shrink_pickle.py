@@ -26,23 +26,23 @@ results = model.fit()
 
 
 #print results.predict(xf)
-print results.model.predict(results.params, xf)
+print(results.model.predict(results.params, xf))
 results.summary()
 
 shrinkit = 1
 if shrinkit:
     results.remove_data()
 
-import pickle
+from statsmodels.compatnp.py3k import cPickle
 fname = 'try_shrink%d_ols.pickle' % shrinkit
 fh = open(fname, 'w')
-pickle.dump(results._results, fh)  #pickling wrapper doesn't work
+cPickle.dump(results._results, fh)  #pickling wrapper doesn't work
 fh.close()
 fh = open(fname, 'r')
-results2 = pickle.load(fh)
+results2 = cPickle.load(fh)
 fh.close()
-print results2.predict(xf)
-print results2.model.predict(results.params, xf)
+print(results2.predict(xf))
+print(results2.model.predict(results.params, xf))
 
 
 y_count = np.random.poisson(np.exp(x.sum(1)-x.mean()))
@@ -51,7 +51,7 @@ results = model.fit(method='bfgs')
 
 results.summary()
 
-print results.model.predict(results.params, xf, exposure=1, offset=0)
+print(results.model.predict(results.params, xf, exposure=1, offset=0))
 
 if shrinkit:
     results.remove_data()
@@ -62,21 +62,21 @@ else:
 import pickle
 fname = 'try_shrink%d_poisson.pickle' % shrinkit
 fh = open(fname, 'w')
-pickle.dump(results._results, fh)  #pickling wrapper doesn't work
+cPickle.dump(results._results, fh)  #pickling wrapper doesn't work
 fh.close()
 fh = open(fname, 'r')
-results3 = pickle.load(fh)
+results3 = cPickle.load(fh)
 fh.close()
-print results3.predict(xf, exposure=1, offset=0)
-print results3.model.predict(results.params, xf, exposure=1, offset=0)
+print(results3.predict(xf, exposure=1, offset=0))
+print(results3.model.predict(results.params, xf, exposure=1, offset=0))
 
 def check_pickle(obj):
     import StringIO
     fh = StringIO.StringIO()
-    pickle.dump(obj, fh)
+    cPickle.dump(obj, fh)
     plen = fh.pos
     fh.seek(0,0)
-    res = pickle.load(fh)
+    res = cPickle.load(fh)
     fh.close()
     return res, plen
 

@@ -1,3 +1,4 @@
+from statsmodels.compatnp import iterkeys
 from statsmodels.regression.linear_model import GLS
 import numpy as np
 from statsmodels.base.model import LikelihoodModelResults
@@ -296,7 +297,7 @@ exogenous variables.  Got length %s" % len(sys))
 
         # Keep the Y_j's in a container to get IVs
         instr_endog = {}
-        [instr_endog.setdefault(_,[]) for _ in indep_endog.keys()]
+        [instr_endog.setdefault(_,[]) for _ in iterkeys(indep_endog)]
 
         for eq_key in indep_endog:
             for varcol in indep_endog[eq_key]:

@@ -5,7 +5,7 @@ Created on Wed Feb 29 10:34:00 2012
 
 Author: Josef Perktold
 """
-
+from statsmodels.compatnp.py3k import lrange
 from numpy.testing import assert_
 
 from statsmodels.compatnp.iter_compat import zip_longest, combinations
@@ -31,7 +31,7 @@ def test_combinations():
                ('C', 'D')]
     assert_(actual == desired, '%r not equal %r' % (actual, desired))
 
-    actual = list(combinations(range(4), 3))
+    actual = list(combinations(lrange(4), 3))
     desired = [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)]
     assert_(actual == desired, '%r not equal %r' % (actual, desired))
 

@@ -23,8 +23,8 @@ I guess this is currently only for one sided test statistics, e.g. for
 two-sided tests basend on t or normal distribution use the absolute value.
 
 '''
-
-
+from __future__ import print_function
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 
 from statsmodels.iolib.table import SimpleTable
@@ -34,7 +34,7 @@ class StatTestMC(object):
     """class to run Monte Carlo study on a statistical test'''
 
     TODO
-    print summary, for quantiles and for histogram
+    print(summary, for quantiles and for histogram
     draft in trying out script log
 
     Parameters
@@ -85,17 +85,17 @@ class StatTestMC(object):
     def normalnoisesim(nobs=500, loc=0.0):
         return (loc+np.random.randn(nobs))
 
-    Create instance and run Monte Carlo. Using statindices=range(4) means that
+    Create instance and run Monte Carlo. Using statindices=list(range(4)) means that
     only the first for values of the return of the statistic (lb) are stored
     in the Monte Carlo results.
 
     mc1 = StatTestMC(normalnoisesim, lb)
-    mc1.run(5000, statindices=range(4))
+    mc1.run(5000, statindices=list(range(4)))
 
     Most of the other methods take an idx which indicates for which columns
     the results should be presented, e.g.
 
-    print mc1.cdf(crit, [1,2,3])[1]
+    print(mc1.cdf(crit, [1,2,3])[1]
 
 
     """
@@ -361,7 +361,7 @@ class StatTestMC(object):
         Returns
         -------
         table : instance of SimpleTable
-            use `print table` to see results
+            use `print(table` to see results
 
         '''
         idx = np.atleast_1d(idx)  #assure iterable, use list ?
@@ -375,7 +375,7 @@ class StatTestMC(object):
             mml.extend([mcq[:,i], crit[:,i]])
         #mmlar = np.column_stack(mml)
         mmlar = np.column_stack([quant] + mml)
-        #print mmlar.shape
+        #print(mmlar.shape
         if title:
             title = title +' Quantiles (critical values)'
         else:
@@ -408,7 +408,7 @@ class StatTestMC(object):
         Returns
         -------
         table : instance of SimpleTable
-            use `print table` to see results
+            use `print(table` to see results
 
 
         '''
@@ -418,13 +418,13 @@ class StatTestMC(object):
         mml=[]
         #TODO:need broadcasting in cdf
         for i in range(len(idx)):
-            #print i, mc1.cdf(crit[:,i], [idx[i]])[1].ravel()
+            #print(i, mc1.cdf(crit[:,i], [idx[i]])[1].ravel()
             mml.append(self.cdf(crit[:,i], [idx[i]])[1].ravel())
         #mml = self.cdf(crit, idx)[1]
         #mmlar = np.column_stack(mml)
-        #print mml[0].shape, np.shape(frac)
+        #print(mml[0].shape, np.shape(frac)
         mmlar = np.column_stack([frac] + mml)
-        #print mmlar.shape
+        #print(mmlar.shape
         if title:
             title = title +' Probabilites'
         else:
@@ -465,13 +465,13 @@ if __name__ == '__main__':
     def adf20(x):
         return unitroot_adf(x, 2,trendorder=0, autolag=None)
 
-#    print '\nResults with MC class'
+#    print('\nResults with MC class'
 #    mc1 = StatTestMC(randwalksim, adf20)
 #    mc1.run(1000)
-#    print mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
-#    print mc1.quantiles()
+#    print(mc1.histogram(critval=[-3.5, -3.17, -2.9 , -2.58,  0.26])
+#    print(mc1.quantiles()
 
-    print '\nLjung Box'
+    print('\nLjung Box')
     from statsmodels.sandbox.stats.diagnostic import acorr_ljungbox
 
     def lb4(x):
@@ -486,31 +486,31 @@ if __name__ == '__main__':
         s,p = acorr_ljungbox(x, lags=4)
         return np.r_[s, p]
 
-    print 'Results with MC class'
+    print('Results with MC class')
     mc1 = StatTestMC(normalnoisesim, lb)
-    mc1.run(10000, statindices=range(8))
-    print mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975])
-    print mc1.quantiles(1)
-    print mc1.quantiles(0)
-    print mc1.histogram(0)
+    mc1.run(10000, statindices=lrange(8))
+    print(mc1.histogram(1, critval=[0.01, 0.025, 0.05, 0.1, 0.975]))
+    print(mc1.quantiles(1))
+    print(mc1.quantiles(0))
+    print(mc1.histogram(0))
 
-    #print mc1.summary_quantiles([1], stats.chi2([2]).ppf, title='acorr_ljungbox')
-    print mc1.summary_quantiles([1,2,3], stats.chi2([2,3,4]).ppf,
+    #print(mc1.summary_quantiles([1], stats.chi2([2]).ppf, title='acorr_ljungbox')
+    print(mc1.summary_quantiles([1,2,3], stats.chi2([2,3,4]).ppf,
                                 varnames=['lag 1', 'lag 2', 'lag 3'],
-                                title='acorr_ljungbox')
-    print mc1.cdf(0.1026, 1)
-    print mc1.cdf(0.7278, 3)
+                                title='acorr_ljungbox'))
+    print(mc1.cdf(0.1026, 1))
+    print(mc1.cdf(0.7278, 3))
 
-    print mc1.cdf(0.7278, [1,2,3])
+    print(mc1.cdf(0.7278, [1,2,3]))
     frac = [0.01, 0.025, 0.05, 0.1, 0.975]
     crit = stats.chi2([2,4]).ppf(np.atleast_2d(frac).T)
-    print mc1.summary_cdf([1,3], frac, crit, title='acorr_ljungbox')
+    print(mc1.summary_cdf([1,3], frac, crit, title='acorr_ljungbox'))
     crit = stats.chi2([2,3,4]).ppf(np.atleast_2d(frac).T)
-    print mc1.summary_cdf([1,2,3], frac, crit,
+    print(mc1.summary_cdf([1,2,3], frac, crit,
                           varnames=['lag 1', 'lag 2', 'lag 3'],
-                          title='acorr_ljungbox')
+                          title='acorr_ljungbox'))
 
-    print mc1.cdf(crit, [1,2,3])[1].shape
+    print(mc1.cdf(crit, [1,2,3])[1].shape)
 
     #fixed broadcasting in cdf  Done 2d only
     '''

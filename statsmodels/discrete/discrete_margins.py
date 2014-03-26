@@ -1,5 +1,6 @@
 #Splitting out maringal effects to see if they can be generalized
 
+from statsmodels.compatnp.py3k import lzip, callable
 import numpy as np
 from scipy.stats import norm
 from statsmodels.tools.decorators import cache_readonly, resettable_cache
@@ -484,7 +485,7 @@ class DiscreteMargins(object):
         q = norm.ppf(1 - alpha / 2)
         lower = self.margeff - q * me_se
         upper = self.margeff + q * me_se
-        return np.asarray(zip(lower, upper))
+        return np.asarray(lzip(lower, upper))
 
     def summary(self, alpha=.05):
         """

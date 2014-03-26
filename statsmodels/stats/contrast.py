@@ -104,7 +104,7 @@ class ContrastResults(object):
         elif hasattr(self, 'fvalue'):
             # TODO: create something nicer for these casee
             return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
+                   (repr(self.fvalue), self.pvalue, self.df_denom, self.df_num)
         else:
             # generic
             return '<Wald test: statistic=%s, p-value=%s>' % \

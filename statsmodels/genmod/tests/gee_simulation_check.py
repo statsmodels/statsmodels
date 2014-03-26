@@ -5,7 +5,7 @@ Only Gaussian models are currently checked.
 
 See the generated file "gee_simulation_check.txt" for results.
 """
-
+from statsmodels.compatnp.py3k import range, lrange
 import scipy
 import numpy as np
 from itertools import product
@@ -153,7 +153,7 @@ class Nested_simulator(GEE_simulator):
 
         for i in range(self.ngroups):
 
-            iterators = [xrange(n) for n in self.nest_sizes]
+            iterators = [lrange(n) for n in self.nest_sizes]
 
             # The random effects
             variances = [np.sqrt(v)*np.random.normal(size=n)
@@ -254,8 +254,8 @@ def gendat_nested1():
 
 nrep = 100
 
-gendats = [gen_gendat_ar0(ar) for ar in 0, 0.3, 0.6]
-gendats.extend([gen_gendat_ar1(ar) for ar in 0, 0.3, 0.6])
+gendats = [gen_gendat_ar0(ar) for ar in (0, 0.3, 0.6)]
+gendats.extend([gen_gendat_ar1(ar) for ar in (0, 0.3, 0.6)])
 gendats.extend([gendat_nested0, gendat_nested1])
 
 lhs = np.array([[0., 1, 1, 0, 0],])

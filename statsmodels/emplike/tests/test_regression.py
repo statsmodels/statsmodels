@@ -2,7 +2,7 @@ from numpy.testing import assert_almost_equal
 from numpy.testing.decorators import slow
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
-from results.el_results import RegressionResults
+from .results.el_results import RegressionResults
 from statsmodels.datasets import stackloss
 
 
@@ -70,13 +70,11 @@ class TestRegressionPowell(GenRes):
                                         method='powell')
         assert_almost_equal(beta1ci, self.res2.test_ci_beta1, 4)
 
-    @slow
     def test_ci_beta2(self):
         beta2ci = self.res1.conf_int_el(2, lower_bound=.59,
                                     upper_bound=2.2, method='powell')
         assert_almost_equal(beta2ci, self.res2.test_ci_beta2, 5)
 
-    @slow
     def test_ci_beta3(self):
         beta3ci = self.res1.conf_int_el(3, lower_bound=-.39, upper_bound=.01,
                                         method='powell')
@@ -146,10 +144,12 @@ class TestRegressionNM(GenRes):
         beta1ci = self.res1.conf_int_el(1, method='nm')
         assert_almost_equal(beta1ci, self.res2.test_ci_beta1, 6)
 
+    @slow
     def test_ci_beta2(self):
         beta2ci = self.res1.conf_int_el(2, lower_bound=.59, upper_bound=2.2,  method='nm')
         assert_almost_equal(beta2ci, self.res2.test_ci_beta2, 6)
 
+    @slow
     def test_ci_beta3(self):
         beta3ci = self.res1.conf_int_el(3, method='nm')
         assert_almost_equal(beta3ci, self.res2.test_ci_beta3, 6)

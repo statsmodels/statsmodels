@@ -1,3 +1,4 @@
+from statsmodels.compatnp import iterkeys
 import numpy as np
 
 
@@ -646,7 +647,7 @@ class GlobalOddsRatio(CovStruct):
 
         # Storage for the contingency tables for each (c,c')
         tables = {}
-        for ii in cpp[0].keys():
+        for ii in iterkeys(cpp[0]):
             tables[ii] = np.zeros((2, 2), dtype=np.float64)
 
         # Get the observed crude OR
@@ -663,7 +664,7 @@ class GlobalOddsRatio(CovStruct):
             endog_00 = np.outer(1 - yvec, 1 - yvec)
 
             cpp1 = cpp[i]
-            for ky in cpp1.keys():
+            for ky in iterkeys(cpp1):
                 ix = cpp1[ky]
                 tables[ky][1, 1] += endog_11[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][1, 0] += endog_10[ix[:, 0], ix[:, 1]].sum()
@@ -739,7 +740,7 @@ class GlobalOddsRatio(CovStruct):
             emat_00 = 1 - (emat_11 + emat_10 + emat_01)
 
             cpp1 = cpp[i]
-            for ky in cpp1.keys():
+            for ky in iterkeys(cpp1):
                 ix = cpp1[ky]
                 tables[ky][1, 1] += emat_11[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][1, 0] += emat_10[ix[:, 0], ix[:, 1]].sum()

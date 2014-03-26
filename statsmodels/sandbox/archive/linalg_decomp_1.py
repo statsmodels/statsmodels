@@ -22,7 +22,8 @@ Author: josef-pktd
 Created on 2010-10-20
 '''
 
-
+from __future__ import print_function
+from statsmodels.compatnp import get_function_name
 import numpy as np
 from scipy import linalg
 
@@ -50,7 +51,7 @@ class OneTimeProperty(object):
              the value of this computation.
              """
         self.getter = func
-        self.name = func.func_name
+        self.name = get_function_name(func)
 
     def __get__(self,obj,type=None):
         """This will be called on attribute access on the class or instance. """
@@ -59,11 +60,11 @@ class OneTimeProperty(object):
             # Being called on the class, return the original function. This way,
             # introspection works on the class.
             #return func
-            print 'class access'
+            print('class access')
             return self.getter
 
         val = self.getter(obj)
-        #print "** auto_attr - loading '%s'" % self.name  # dbg
+        #print("** auto_attr - loading '%s'" % self.name  # dbg)
         setattr(obj, self.name, val)
         return val
 
@@ -280,17 +281,17 @@ if __name__ == '__main__':
     sigma = linalg.toeplitz(autocov)
 
     mat = PlainMatrixArray(sym=sigma)
-    print tiny2zero(mat.mhalf)
+    print(tiny2zero(mat.mhalf))
     mih = mat.minvhalf
-    print tiny2zero(mih) #for nicer printing
+    print(tiny2zero(mih)) #for nicer printing
 
     mat2 = PlainMatrixArray(data=x)
-    print maxabs(mat2.yt_minv_y(np.dot(x.T, x)) - mat2.m)
-    print tiny2zero(mat2.minv_y(mat2.m))
+    print(maxabs(mat2.yt_minv_y(np.dot(x.T, x)) - mat2.m))
+    print(tiny2zero(mat2.minv_y(mat2.m)))
 
     mat3 = SvdArray(data=x)
-    print mat3.meigh[0]
-    print mat2.meigh[0]
+    print(mat3.meigh[0])
+    print(mat2.meigh[0])
 
     testcompare(mat2, mat3)
 

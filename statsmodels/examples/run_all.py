@@ -7,6 +7,8 @@ manually, at least in my setup.
 uncomment plt.show() to show all plot windows
 
 '''
+from __future__ import print_function
+from statsmodels.compatnp.py3k import lrange, lzip
 import matplotlib.pyplot as plt #matplotlib is required for many examples
 
 stop_on_error = True
@@ -24,7 +26,7 @@ if use_glob:
     import glob
     filelist = glob.glob('*.py')
 
-print zip(range(len(filelist)), filelist)
+print(lzip(lrange(len(filelist)), filelist))
 
 for fname in ['run_all.py', 'example_rpy.py']:
     filelist.remove(fname)
@@ -46,20 +48,20 @@ if 'y' in cont.lower():
     has_errors = []
     for run_all_f in filelist:
         try:
-            print "\n\nExecuting example file", run_all_f
-            print "-----------------------" + "-"*len(run_all_f)
+            print("\n\nExecuting example file", run_all_f)
+            print("-----------------------" + "-"*len(run_all_f))
             execfile(run_all_f)
         except:
             #f might be overwritten in the executed file
-            print "**********************" + "*"*len(run_all_f)
-            print "ERROR in example file", run_all_f
-            print "**********************" + "*"*len(run_all_f)
+            print("**********************" + "*"*len(run_all_f))
+            print("ERROR in example file", run_all_f)
+            print("**********************" + "*"*len(run_all_f))
             has_errors.append(run_all_f)
             if stop_on_error:
                 raise
 
-print '\nModules that raised exception:'
-print has_errors
+print('\nModules that raised exception:')
+print(has_errors)
 
 #reenable show after closing windows
 plt.close('all')

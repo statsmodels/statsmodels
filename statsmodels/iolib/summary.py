@@ -1,5 +1,4 @@
-
-
+from statsmodels.compatnp.py3k import range, lrange, lmap, lzip
 import numpy as np
 from statsmodels.compatnp.iter_compat import zip_longest
 from statsmodels.iolib.table import SimpleTable
@@ -201,12 +200,12 @@ def summary(self, yname=None, xname=None, title=0, alpha=.05,
     params = self.params
     conf_int = self.conf_int(alpha)
     std_err = self.bse
-    exog_len = xrange(len(xname))
+    exog_len = lrange(len(xname))
     tstat = tstats[modeltype]
     prob_stat = prob_stats[modeltype]
 
     # Simpletable should be able to handle the formating
-    params_data = zip(["%#6.4g" % (params[i]) for i in exog_len],
+    params_data = lzip(["%#6.4g" % (params[i]) for i in exog_len],
                        ["%#6.4f" % (std_err[i]) for i in exog_len],
                        ["%#6.4f" % (tstat[i]) for i in exog_len],
                        ["%#6.4f" % (prob_stat[i]) for i in exog_len],
@@ -468,14 +467,14 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 
     params_stubs = xname
 
-    exog_idx = xrange(len(xname))
+    exog_idx = lrange(len(xname))
 
     #center confidence intervals if they are unequal lengths
 #    confint = ["(%#6.3g, %#6.3g)" % tuple(conf_int[i]) for i in \
 #                                                             exog_idx]
-    confint = ["%s %s" % tuple(map(forg, conf_int[i])) for i in \
+    confint = ["%s %s" % tuple(lmap(forg, conf_int[i])) for i in \
                                                              exog_idx]
-    len_ci = map(len, confint)
+    len_ci = lmap(len, confint)
     max_ci = max(len_ci)
     min_ci = min(len_ci)
 
@@ -483,7 +482,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
         confint = [ci.center(max_ci) for ci in confint]
 
     #explicit f/g formatting, now uses forg, f or g depending on values
-#    params_data = zip(["%#6.4g" % (params[i]) for i in exog_idx],
+#    params_data = lzip(["%#6.4g" % (params[i]) for i in exog_idx],
 #                       ["%#6.4f" % (std_err[i]) for i in exog_idx],
 #                       ["%#6.3f" % (tvalues[i]) for i in exog_idx],
 #                       ["%#6.3f" % (pvalues[i]) for i in exog_idx],
@@ -492,7 +491,7 @@ def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
 ##                                                             exog_idx]
 #                      )
 
-    params_data = zip([forg(params[i], prec=4) for i in exog_idx],
+    params_data = lzip([forg(params[i], prec=4) for i in exog_idx],
                        [forg(std_err[i]) for i in exog_idx],
                        [forg(tvalues[i]) for i in exog_idx],
                        ["%#6.3f" % (pvalues[i]) for i in exog_idx],
@@ -621,9 +620,9 @@ def summary_params_2d(result, extras=None, endog_names=None, exog_names=None,
                                 for col in getattr(result, what)]
                                 for what in extras
                                 ]
-        data = zip(res_params, *extras_list)
+        data = lzip(res_params, *extras_list)
         data = [i for j in data for i in j]  #flatten
-        stubs = zip(endog_names, *[['']*len(endog_names)]*len(extras))
+        stubs = lzip(endog_names, *[['']*len(endog_names)]*len(extras))
         stubs = [i for j in stubs for i in j] #flatten
         #return SimpleTable(data, headers=exog_names, stubs=stubs)
     else:
@@ -780,11 +779,11 @@ def summary_return(tables, return_fmt='text'):
     if return_fmt == 'text':
         strdrop = lambda x: str(x).rsplit('\n',1)[0]
         #convert to string drop last line
-        return '\n'.join(map(strdrop, tables[:-1]) + [str(tables[-1])])
+        return '\n'.join(lmap(strdrop, tables[:-1]) + [str(tables[-1])])
     elif return_fmt == 'tables':
         return tables
     elif return_fmt == 'csv':
-        return '\n'.join(map(lambda x: x.as_csv(), tables))
+        return '\n'.join(lmap(lambda x: x.as_csv(), tables))
     elif return_fmt == 'latex':
         #TODO: insert \hline after updating SimpleTable
         import copy

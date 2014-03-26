@@ -7,7 +7,7 @@ Hastie, Tibshirani, Friedman. (2009) The Elements of Statistical Learning: Data 
 
 Cleveland, W.S. (1979) "Robust Locally Weighted Regression and Smoothing Scatterplots". Journal of the American Statistical Association 74 (368): 829-836.
 """
-
+from statsmodels.compatnp.py3k import range
 import numpy as np
 from scipy.linalg import lstsq
 
@@ -113,7 +113,7 @@ def lowess(endog, exog, frac=2./3, it=3):
 
     fitted, weights = _lowess_initial_fit(x_copy, y_copy, k, n)
 
-    for i in xrange(it):
+    for i in range(it):
         _lowess_robustify_fit(x_copy, y_copy, fitted,
                               weights, k, n)
 
@@ -155,7 +155,7 @@ def _lowess_initial_fit(x_copy, y_copy, k, n):
     X = np.ones((k,2))
     fitted = np.zeros(n)
 
-    for i in xrange(n):
+    for i in range(n):
         #note: all _lowess functions are inplace, no return
         left_width = x_copy[i] - x_copy[nn_indices[0]]
         right_width = x_copy[nn_indices[1]-1] - x_copy[i]
@@ -247,7 +247,7 @@ def _lowess_robustify_fit(x_copy, y_copy, fitted, weights, k, n):
     residual_weights[too_big] = 0
 
 
-    for i in xrange(n):
+    for i in range(n):
         total_weights = weights[i,:] * np.sqrt(residual_weights[nn_indices[0]:
                                                         nn_indices[1]])
 

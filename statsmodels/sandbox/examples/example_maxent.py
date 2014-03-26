@@ -29,22 +29,22 @@ for i in range(K.shape[0]):
     model.fit(K[i])
 
     # Output the distribution
-    print "\nFitted model parameters are:\n" + str(model.params)
-    print "\nFitted distribution is:"
+    print("\nFitted model parameters are:\n" + str(model.params))
+    print("\nFitted distribution is:")
     p = model.probdist()
     for j in range(len(model.samplespace)):
         x = model.samplespace[j]
-        print "y = %-15s\tx = %-15s" %(str(K[i,1])+":",str(x) + ":") + \
-                " p(x) = "+str(p[j])
+        print("y = %-15s\tx = %-15s" %(str(K[i,1])+":",str(x) + ":") + \
+                " p(x) = "+str(p[j]))
 
     # Now show how well the constraints are satisfied:
-    print
-    print "Desired constraints:"
-    print "\tsum_{i}p_{i}= 1"
-    print "\tE[X] = %-15s" % str(K[i,1])
-    print
-    print "Actual expectations under the fitted model:"
-    print "\tsum_{i}p_{i} =", np.sum(p)
-    print "\tE[X]  = " + str(np.sum(p*np.arange(1,7)))
+    print()
+    print("Desired constraints:")
+    print("\tsum_{i}p_{i}= 1")
+    print("\tE[X] = %-15s" % str(K[i,1]))
+    print()
+    print("Actual expectations under the fitted model:")
+    print("\tsum_{i}p_{i} =", np.sum(p))
+    print("\tE[X]  = " + str(np.sum(p*np.arange(1,7))))
 
 

@@ -32,10 +32,10 @@ class ContrastResults(object):
     def __str__(self):
         if hasattr(self, 'F'):
             return '<F contrast: F=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.F`, self.df_denom, self.df_num)
+                   (repr(self.F), self.df_denom, self.df_num)
         else:
             return '<T contrast: effect=%s, sd=%s, t=%s, df_denom=%d>' % \
-                   (`self.effect`, `self.sd`, `self.t`, self.df_denom)
+                   (repr(self.effect), repr(self.sd), repr(self.t), self.df_denom)
 
 
 class Contrast(object):
@@ -72,7 +72,7 @@ class Contrast(object):
 
     def __str__(self):
         return '<contrast:%s>' % \
-               `{'term':str(self.term), 'formula':str(self.formula)}`
+               repr({'term':str(self.term), 'formula':str(self.formula)})
 
     def compute_matrix(self, *args, **kw):
         """
@@ -146,7 +146,7 @@ def contrastfromcols(L, D, pseudo=None):
     n, p = D.shape
 
     if L.shape[0] != n and L.shape[1] != p:
-        raise ValueError, 'shape of L and D mismatched'
+        raise ValueError('shape of L and D mismatched')
 
     if pseudo is None:
         pseudo = pinv(D)

@@ -22,7 +22,8 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
-
+from statsmodels.compatnp import iterkeys
+from statsmodels.compatnp.py3k import range, lrange, lzip
 import numpy as np
 from scipy import stats
 from scipy import linalg as spl
@@ -329,7 +330,7 @@ class GEE(base.Model):
         group_indices = dict((s, []) for s in group_labels)
         for i in range(len(self.endog)):
             group_indices[groups[i]].append(i)
-        for k in group_indices.keys():
+        for k in iterkeys(group_indices):
             group_indices[k] = np.asarray(group_indices[k])
         self.group_indices = group_indices
         self.group_labels = group_labels
@@ -730,7 +731,7 @@ class GEE(base.Model):
         # iteration.
         fitlack = -1.
 
-        for itr in xrange(maxiter):
+        for itr in range(maxiter):
             update, score = self._update_mean_params()
             if update is None:
                 warnings.warn("Singular matrix encountered in GEE  update",
@@ -1214,7 +1215,7 @@ class GEEResults(base.LikelihoodModelResults):
             cols = np.asarray(cols)
             lower = params[cols] - q * bse[cols]
             upper = params[cols] + q * bse[cols]
-        return np.asarray(zip(lower, upper))
+        return np.asarray(lzip(lower, upper))
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 covariance_type="robust"):
@@ -1725,7 +1726,7 @@ class GEEMargins(object):
         q = stats.norm.ppf(1 - alpha / 2)
         lower = self.margeff - q * me_se
         upper = self.margeff + q * me_se
-        return np.asarray(zip(lower, upper))
+        return np.asarray(lzip(lower, upper))
 
     def summary(self, alpha=.05):
         """

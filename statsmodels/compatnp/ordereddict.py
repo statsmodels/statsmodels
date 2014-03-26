@@ -4,7 +4,7 @@
 #Author: Raymond Hettinger
 #License: MIT License
 #http://code.activestate.com/recipes/576693/ revision 9, downloaded 2012-03-28
-
+from statsmodels.compatnp import iterkeys
 try:
     from thread import get_ident as _get_ident
 except ImportError:
@@ -165,7 +165,7 @@ class OrderedDict(dict):
             for key in other:
                 self[key] = other[key]
         elif hasattr(other, 'keys'):
-            for key in other.keys():
+            for key in iterkeys(other):
                 self[key] = other[key]
         else:
             for key, value in other:

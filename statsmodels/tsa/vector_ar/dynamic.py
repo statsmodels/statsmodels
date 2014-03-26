@@ -1,12 +1,14 @@
 # pylint: disable=W0201
 
+from statsmodels.compatnp import iteritems
+from statsmodels.compatnp.py3k import string_types
 import numpy as np
 
 from statsmodels.tools.decorators import cache_readonly
 
-import var_model as _model
-import util
-import plotting
+from . import var_model as _model
+from . import util
+from . import plotting
 
 FULL_SAMPLE = 0
 ROLLING = 1
@@ -20,7 +22,7 @@ except ImportError:
 def _get_window_type(window_type):
     if window_type in (FULL_SAMPLE, ROLLING, EXPANDING):
         return window_type
-    elif isinstance(window_type, basestring):
+    elif isinstance(window_type, string_types):
         window_type_up = window_type.upper()
 
         if window_type_up in ('FULL SAMPLE', 'FULL_SAMPLE'):
@@ -115,13 +117,13 @@ class DynamicVAR(object):
     @property
     def nobs(self):
         # Stub, do I need this?
-        data = dict((eq, r.nobs) for eq, r in self.equations.iteritems())
+        data = dict((eq, r.nobs) for eq, r in iteritems(self.equations))
         return pn.DataFrame(data)
 
     @cache_readonly
     def equations(self):
         eqs = {}
-        for col, ts in self.y.iteritems():
+        for col, ts in iteritems(self.y):
             model = pn.ols(y=ts, x=self.x, window=self._window,
                            window_type=self._window_type,
                            min_periods=self._min_periods)
@@ -136,7 +138,7 @@ class DynamicVAR(object):
         Return dynamic regression coefficients as WidePanel
         """
         data = {}
-        for eq, result in self.equations.iteritems():
+        for eq, result in iteritems(self.equations):
             data[eq] = result.beta
 
         panel = pn.WidePanel.fromDict(data)
@@ -182,7 +184,7 @@ class DynamicVAR(object):
     @cache_readonly
     def resid(self):
         data = {}
-        for eq, result in self.equations.iteritems():
+        for eq, result in iteritems(self.equations):
             data[eq] = result.resid
 
         return pn.DataFrame(data)
@@ -269,7 +271,7 @@ class DynamicVAR(object):
     @cache_readonly
     def r2(self):
         """Returns the r-squared values."""
-        data = dict((eq, r.r2) for eq, r in self.equations.iteritems())
+        data = dict((eq, r.r2) for eq, r in iteritems(self.equations))
         return pn.DataFrame(data)
 
 class DynamicPanelVAR(DynamicVAR):

@@ -1,4 +1,6 @@
 from __future__ import division
+from statsmodels.compatnp import iteritems
+from statsmodels.compatnp.py3k import range, string_types, lmap
 
 import numpy as np
 from numpy import dot, identity
@@ -33,7 +35,7 @@ def _validate(start, k_ar, dates, method):
     Checks the date and then returns an integer
     """
     from datetime import datetime
-    if isinstance(start, (basestring, datetime)):
+    if isinstance(start, (string_types, datetime)):
         start_date = start
         start = _index_date(start, dates)
     if 'mle' not in method and start < k_ar:
@@ -127,7 +129,7 @@ class AR(tsbase.TimeSeriesModel):
         Q_0 = Q_0.reshape(p, p, order='F')  # TODO: order might need to be p+k
         P = Q_0
         Z_mat = KalmanFilter.Z(p)
-        for i in xrange(end):  # iterate p-1 times to fit presample
+        for i in range(end):  # iterate p-1 times to fit presample
             v_mat = y[i] - dot(Z_mat, alpha)
             F_mat = dot(dot(Z_mat, P), Z_mat.T)
             Finv = 1./F_mat  # inv. always scalar
@@ -434,7 +436,7 @@ class AR(tsbase.TimeSeriesModel):
                                         full_output=0, trend=trend,
                                         maxiter=100, disp=0)
                 results[lag] = eval('fit.'+ic)
-            bestic, bestlag = min((res, k) for k, res in results.iteritems())
+            bestic, bestlag = min((res, k) for k, res in iteritems(results))
 
         else:  # choose by last t-stat.
             stop = 1.6448536269514722  # for t-stat, norm.ppf(.95)
@@ -891,7 +893,7 @@ if __name__ == "__main__":
 
     #NOTE: pandas only does business days for dates it looks like
     import datetime
-    dt_dates = np.asarray(map(datetime.datetime.fromordinal,
+    dt_dates = np.asarray(lmap(datetime.datetime.fromordinal,
                               ts_dr.toordinal().astype(int)))
     sunspots = pandas.TimeSeries(sunspots.endog, index=dt_dates)
 

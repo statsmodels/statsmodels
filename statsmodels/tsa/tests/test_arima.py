@@ -1,3 +1,4 @@
+from statsmodels.compatnp.py3k import lrange
 import numpy as np
 from nose.tools import nottest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
@@ -8,7 +9,7 @@ from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.base.datetools import dates_from_range
-from results import results_arma, results_arima
+from .results import results_arma, results_arima
 import os
 from statsmodels.tsa.base import datetools
 from statsmodels.tsa.arima_process import arma_generate_sample
@@ -1638,10 +1639,10 @@ def test_arima_predict_pandas_nofreq():
     assert_(predict.index.equals(data.index[3:10+1]))
 
     predict = arma.predict(start="2010-1-7", end=14)
-    assert_(predict.index.equals(pandas.Index(range(3, 15))))
+    assert_(predict.index.equals(pandas.Index(lrange(3, 15))))
 
     predict = arma.predict(start=3, end=14)
-    assert_(predict.index.equals(pandas.Index(range(3, 15))))
+    assert_(predict.index.equals(pandas.Index(lrange(3, 15))))
 
     # end can be a date if it's in the sample and on the index
     # predict dates is just a slice of the dates index then
@@ -1660,7 +1661,7 @@ def test_arima_predict_exog():
     #y = arma_generate_sample(arparams, maparams, nobs, burnin=100)
 
     ## make an exogenous trend
-    #X = np.array(range(nobs)) / 20.0
+    #X = np.array(lrange(nobs)) / 20.0
     ## add a constant
     #y += 2.5
 

@@ -17,7 +17,7 @@ With correctly specified model, convergence is fast, in 6 iterations in
 example.
 
 """
-
+from __future__ import print_function
 import numpy as np
 import numpy.linalg as L
 
@@ -481,7 +481,7 @@ class OneWayMixed(object):
                 break
         else: #if end of loop is reached without break
             self.termination = 'maxiter'
-            print 'Warning: maximum number of iterations reached'
+            print('Warning: maximum number of iterations reached')
 
         self.iterations = i
 

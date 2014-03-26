@@ -6,6 +6,7 @@ Created on Sun Jan 06 09:50:54 2013
 Author: Josef Perktold
 """
 
+from __future__ import print_function
 
 
 if __name__ == '__main__':
@@ -25,7 +26,7 @@ if __name__ == '__main__':
     #seed = 430973
     #seed = 47829
     seed = 648456 #good seed for het_scale = 0.5
-    print seed
+    print(seed)
     np.random.seed(seed)
 
     nobs, k_vars = 300, 3
@@ -59,23 +60,23 @@ if __name__ == '__main__':
         ax.legend(loc='upper left')
         res.append((model, mean, mfx))
 
-    print 'beta', model.b
-    print 'scale - est', (y - (xb_est+mean)).std()
-    print 'scale - dgp realised, true', (y - (f.y_true + x2.sum(1))).std(), \
-                                        2 * f.het_scale(1)
+    print('beta', model.b)
+    print('scale - est', (y - (xb_est+mean)).std())
+    print('scale - dgp realised, true', (y - (f.y_true + x2.sum(1))).std(), \
+                                        2 * f.het_scale(1))
     fittedvalues = xb_est + mean
     resid = np.squeeze(model.endog) - fittedvalues
-    print 'corrcoef(fittedvalues, resid)', np.corrcoef(fittedvalues, resid)[0,1]
-    print 'variance of components, var and as fraction of var(y)'
-    print 'fitted values', fittedvalues.var(), fittedvalues.var() / y.var()
-    print 'linear       ', xb_est.var(), xb_est.var() / y.var()
-    print 'nonparametric', mean.var(), mean.var() / y.var()
-    print 'residual     ', resid.var(), resid.var() / y.var()
-    print '\ncovariance decomposition fraction of var(y)'
-    print np.cov(fittedvalues, resid) / model.endog.var(ddof=1)
-    print 'sum', (np.cov(fittedvalues, resid) / model.endog.var(ddof=1)).sum()
-    print '\ncovariance decomposition, xb, m, resid as fraction of var(y)'
-    print np.cov(np.column_stack((xb_est, mean, resid)), rowvar=False) / model.endog.var(ddof=1)
+    print('corrcoef(fittedvalues, resid)', np.corrcoef(fittedvalues, resid)[0,1])
+    print('variance of components, var and as fraction of var(y)')
+    print('fitted values', fittedvalues.var(), fittedvalues.var() / y.var())
+    print('linear       ', xb_est.var(), xb_est.var() / y.var())
+    print('nonparametric', mean.var(), mean.var() / y.var())
+    print('residual     ', resid.var(), resid.var() / y.var())
+    print('\ncovariance decomposition fraction of var(y)')
+    print(np.cov(fittedvalues, resid) / model.endog.var(ddof=1))
+    print('sum', (np.cov(fittedvalues, resid) / model.endog.var(ddof=1)).sum())
+    print('\ncovariance decomposition, xb, m, resid as fraction of var(y)')
+    print(np.cov(np.column_stack((xb_est, mean, resid)), rowvar=False) / model.endog.var(ddof=1))
 
     fig.suptitle('Kernel Regression')
     fig.show()

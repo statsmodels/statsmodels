@@ -28,7 +28,7 @@ Issues
 
 
 """
-
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 from scipy.misc import factorial
@@ -125,7 +125,7 @@ class PoissonGMLE(GenericLikelihoodModel):
         '''return frozen scipy.stats distribution with mu at estimated prediction
         '''
         if not hasattr(self, result):
-            raise
+            raise ValueError
         else:
             mu = np.exp(np.dot(exog, params))
             return stats.poisson(mu, loc=0)
@@ -243,7 +243,7 @@ class PoissonZiGMLE(GenericLikelihoodModel):
         beta = params[:-1]
         gamm = 1 / (1 + np.exp(params[-1]))  #check this
         # replace with np.dot(self.exogZ, gamma)
-        #print np.shape(self.offset), self.exog.shape, beta.shape
+        #print(np.shape(self.offset), self.exog.shape, beta.shape
         XB = self.offset + np.dot(self.exog, beta)
         endog = self.endog
         nloglik = -np.log(1-gamm) + np.exp(XB) -  endog*XB + np.log(factorial(endog))
@@ -263,20 +263,20 @@ if __name__ == '__main__':
     data_exog = sm.add_constant(data_exog, prepend=False)
     xbeta = 1 + 0.1*rvs.sum(1)
     data_endog = np.random.poisson(np.exp(xbeta))
-    #print data_endog
+    #print(data_endog
 
     modp = MyPoisson(data_endog, data_exog)
     resp = modp.fit()
-    print resp.params
-    print resp.bse
+    print(resp.params)
+    print(resp.bse)
 
     from statsmodels.discretemod import Poisson
     resdp = Poisson(data_endog, data_exog).fit()
-    print '\ncompare with discretemod'
-    print 'compare params'
-    print resdp.params - resp.params
-    print 'compare bse'
-    print resdp.bse - resp.bse
+    print('\ncompare with discretemod')
+    print('compare params')
+    print(resdp.params - resp.params)
+    print('compare bse')
+    print(resdp.bse - resp.bse)
 
     gmlp = sm.GLM(data_endog, data_exog, family=sm.families.Poisson())
     resgp = gmlp.fit()
@@ -284,27 +284,27 @@ if __name__ == '__main__':
     c:\josef\eclipsegworkspace\statsmodels-josef-experimental-gsoc\scikits\statsmodels\decorators.py:105: CacheWriteWarning: The attribute 'bse' cannot be overwritten
       warnings.warn(errmsg, CacheWriteWarning)
     '''
-    print '\ncompare with GLM'
-    print 'compare params'
-    print resgp.params - resp.params
-    print 'compare bse'
-    print resgp.bse - resp.bse
+    print('\ncompare with GLM')
+    print('compare params')
+    print(resgp.params - resp.params)
+    print('compare bse')
+    print(resgp.bse - resp.bse)
 
     lam = np.exp(np.dot(data_exog, resp.params))
     '''mean of Poisson distribution'''
     predmean = stats.poisson.stats(lam,moments='m')
-    print np.max(np.abs(predmean - lam))
+    print(np.max(np.abs(predmean - lam)))
 
     fun = lambda params: np.exp(np.dot(data_exog.mean(0), params))
 
     lamcov = NonlinearDeltaCov(fun, resp.params, resdp.cov_params())
-    print lamcov.cov().shape
-    print lamcov.cov()
+    print(lamcov.cov().shape)
+    print(lamcov.cov())
 
-    print 'analytical'
+    print('analytical')
     xm = data_exog.mean(0)
-    print np.dot(np.dot(xm, resdp.cov_params()), xm.T) * \
-            np.exp(2*np.dot(data_exog.mean(0), resp.params))
+    print(np.dot(np.dot(xm, resdp.cov_params()), xm.T) * \
+            np.exp(2*np.dot(data_exog.mean(0), resp.params)))
 
     ''' cov of linear transformation of params
     >>> np.dot(np.dot(xm, resdp.cov_params()), xm.T)
@@ -315,24 +315,24 @@ if __name__ == '__main__':
     0.00038902428119179394
     '''
 
-    print lamcov.wald(1.)
-    print lamcov.wald(2.)
-    print lamcov.wald(2.6)
+    print(lamcov.wald(1.))
+    print(lamcov.wald(2.))
+    print(lamcov.wald(2.6))
 
     do_bootstrap = False
     if do_bootstrap:
         m,s,r = resp.bootstrap(method='newton')
-        print m
-        print s
-        print resp.bse
+        print(m)
+        print(s)
+        print(resp.bse)
 
 
-    print '\ncomparison maxabs, masabsrel'
-    print 'discr params', maxabs(resdp.params, resp.params), maxabsrel(resdp.params, resp.params)
-    print 'discr bse   ', maxabs(resdp.bse, resp.bse), maxabsrel(resdp.bse, resp.bse)
-    print 'discr bsejac', maxabs(resdp.bse, resp.bsejac), maxabsrel(resdp.bse, resp.bsejac)
-    print 'discr bsejhj', maxabs(resdp.bse, resp.bsejhj), maxabsrel(resdp.bse, resp.bsejhj)
-    print
-    print 'glm params  ', maxabs(resdp.params, resp.params), maxabsrel(resdp.params, resp.params)
-    print 'glm bse     ', maxabs(resdp.bse, resp.bse), maxabsrel(resdp.bse, resp.bse)
+    print('\ncomparison maxabs, masabsrel')
+    print('discr params', maxabs(resdp.params, resp.params), maxabsrel(resdp.params, resp.params))
+    print('discr bse   ', maxabs(resdp.bse, resp.bse), maxabsrel(resdp.bse, resp.bse))
+    print('discr bsejac', maxabs(resdp.bse, resp.bsejac), maxabsrel(resdp.bse, resp.bsejac))
+    print('discr bsejhj', maxabs(resdp.bse, resp.bsejhj), maxabsrel(resdp.bse, resp.bsejhj))
+    print('')
+    print('glm params  ', maxabs(resdp.params, resp.params), maxabsrel(resdp.params, resp.params))
+    print('glm bse     ', maxabs(resdp.bse, resp.bse), maxabsrel(resdp.bse, resp.bse))
 

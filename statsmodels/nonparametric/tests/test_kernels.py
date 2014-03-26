@@ -5,7 +5,7 @@ Created on Sat Dec 14 17:23:25 2013
 
 Author: Josef Perktold
 """
-
+from __future__ import print_function
 import os
 import numpy as np
 from statsmodels.sandbox.nonparametric import kernels
@@ -70,8 +70,8 @@ class CheckKernelMixin(object):
         self.se = se
         self.res_se = res_se
         se_valid = np.isfinite(res_se)
-        #if np.any(~se_valid):
-        #    print 'nan in stata result', self.__class__.__name__
+        # if np.any(~se_valid):
+        #    print('nan in stata result', self.__class__.__name__)
         assert_allclose(se[se_valid], res_se[se_valid], rtol=self.se_rtol, atol=0.2)
         # check that most values are closer
         mask = np.abs(se - res_se) > (0.2 + 0.2 * res_se)
@@ -83,17 +83,17 @@ class CheckKernelMixin(object):
 
         if DEBUG:
             # raises: RuntimeWarning: invalid value encountered in divide
-            print fitted / res_fitted - 1
-            print se / res_se - 1
+            print(fitted / res_fitted - 1)
+            print(se / res_se - 1)
         # Stata only displays ci, doesn't save it
         res_upp = res_fitted + crit * res_se
         res_low = res_fitted - crit * res_se
         self.res_fittedg = np.column_stack((res_low, res_fitted, res_upp))
         if DEBUG:
-            print fittedg[:, 2] / res_upp - 1
-            print fittedg[:, 2] - res_upp
-            print fittedg[:, 0] - res_low
-            print np.max(np.abs(fittedg[:, 2] / res_upp - 1))
+            print(fittedg[:, 2] / res_upp - 1)
+            print(fittedg[:, 2] - res_upp)
+            print(fittedg[:, 0] - res_low)
+            print(np.max(np.abs(fittedg[:, 2] / res_upp - 1)))
         assert_allclose(fittedg[se_valid, 2], res_upp[se_valid],
                         rtol=self.upp_rtol, atol=0.2)
         assert_allclose(fittedg[se_valid, 0], res_low[se_valid],

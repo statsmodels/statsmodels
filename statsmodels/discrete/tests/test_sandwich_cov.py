@@ -17,7 +17,7 @@ from numpy.testing import assert_allclose
 
 
 # get data and results as module global for now, TODO: move to class
-from results import results_count_robust_cluster as results_st
+from .results import results_count_robust_cluster as results_st
 
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 
