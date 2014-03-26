@@ -85,7 +85,7 @@
         },
         {
             "text": "Using Formulas with GLMs",
-            "target": "notebooks/generated/glm_formula.ipynb",
+            "target": "notebooks/generated/glm_formula.html",
             "img": "../_static/images/glm_formulas.png"
 
         }
