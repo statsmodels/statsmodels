@@ -23,7 +23,7 @@ if __name__ == '__main__':
     print('\n OLS leave 1 out')
     for inidx, outidx in cross_val.LeaveOneOut(len(data.endog)):
         res = sm.OLS(data.endog[inidx], data.exog[inidx,:]).fit()
-        print((data.endog[outidx], res.model.predict(res.params, data.exog[outidx,:], end=' ')))
+        print(data.endog[outidx], res.model.predict(res.params, data.exog[outidx,:], end=' '))
         print(data.endog[outidx] - res.model.predict(res.params, data.exog[outidx,:]))
 
     print('\n OLS leave 2 out')

@@ -820,7 +820,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         result = {}
         if verbose:
             print('\nGranger Causality')
-            print(('number of lags (no zero)', mlg))
+            print('number of lags (no zero)', mlg)
         mxlg = mlg
 
         # create lagmat of both time series
@@ -848,11 +848,11 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         fgc1 = ((res2down.ssr - res2djoint.ssr) /
                 res2djoint.ssr / mxlg * res2djoint.df_resid)
         if verbose:
-            print(('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
+            print('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
                    ' df_num=%d') % (fgc1,
                                     stats.f.sf(fgc1, mxlg,
                                                res2djoint.df_resid),
-                                    res2djoint.df_resid, mxlg))
+                                    res2djoint.df_resid, mxlg)
         result['ssr_ftest'] = (fgc1,
                                stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
                                res2djoint.df_resid, mxlg)
@@ -860,15 +860,15 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         # Granger Causality test using ssr (ch2 statistic)
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
         if verbose:
-            print(('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
-                   'df=%d') % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
+            print('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
+                   'df=%d') % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
         result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         #likelihood ratio test pvalue:
         lr = -2 * (res2down.llf - res2djoint.llf)
         if verbose:
-            print(('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
-                   (lr, stats.chi2.sf(lr, mxlg), mxlg)))
+            print('likelihood ratio test: chi2=%-8.4f, p=%-8.4f, df=%d' %
+                   (lr, stats.chi2.sf(lr, mxlg), mxlg))
         result['lrtest'] = (lr, stats.chi2.sf(lr, mxlg), mxlg)
 
         # F test that all lag coefficients of exog are zero
@@ -877,8 +877,8 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
                                    np.zeros((mxlg, 1))))
         ftres = res2djoint.f_test(rconstr)
         if verbose:
-            print(('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d') % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
+            print('parameter F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
+                   ' df_num=%d' % (ftres.fvalue, ftres.pvalue, ftres.df_denom,
                                     ftres.df_num))
         result['params_ftest'] = (np.squeeze(ftres.fvalue)[()],
                                   np.squeeze(ftres.pvalue)[()],

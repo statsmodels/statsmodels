@@ -19,6 +19,7 @@ try:
 
     BytesIO = StringIO
     import cPickle
+    pickle = cPickle
     import urllib2
     import urlparse
 except ImportError:
@@ -27,6 +28,7 @@ except ImportError:
 
     cStringIO = StringIO
     import pickle as cPickle
+    pickle = cPickle
     import urllib.request
     import urllib.parse
     from urllib.request import HTTPError, urlretrieve

@@ -204,7 +204,7 @@ class RU2NMNL(object):
         if type(tree) == tuple:   #assumes leaves are int for choice index
             name, subtree = tree
             print(name, datadict[name])
-            print(('subtree', subtree))
+            print('subtree', subtree)
             keys = []
             if testxb:
                 branchsum = datadict[name]
@@ -214,7 +214,7 @@ class RU2NMNL(object):
                 print(b)
                 #branchsum += branch2(b)
                 branchsum = branchsum + self.calc_prob(b, keys)
-            print(('branchsum', branchsum, keys))
+            print('branchsum', branchsum, keys)
             for k in keys:
                 self.probs[k] = self.probs[k] + ['*' + name + '-prob']
 
@@ -224,12 +224,12 @@ class RU2NMNL(object):
                                 '(%s)' % ', '.join(self.paramsind[tree])]
             if testxb:
                 leavessum = sum((datadict[bi] for bi in tree))
-                print(('final branch with', tree, ''.join(tree), leavessum)) #sum(tree)
+                print('final branch with', tree, ''.join(tree), leavessum) #sum(tree)
                 return leavessum  #sum(xb[tree])
             else:
                 return ''.join(tree) #sum(tree)
 
-        print(('working on branch', tree, branchsum))
+        print('working on branch', tree, branchsum)
         return branchsum
 
 

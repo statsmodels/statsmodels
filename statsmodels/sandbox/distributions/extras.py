@@ -1069,7 +1069,7 @@ def mvstdnormcdf(lower, upper, corrcoef, **kwds):
     #print kwds.items()
     error, cdfvalue, inform = scipy.stats.kde.mvn.mvndst(lower,upper,infin,correl,**kwds)
     if inform:
-        print(('something wrong', informcode[inform], error))
+        print('something wrong', informcode[inform], error)
     return cdfvalue
 
 

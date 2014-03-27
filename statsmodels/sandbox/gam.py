@@ -238,7 +238,7 @@ class AdditiveModel(object):
             #print 'next shape', (Y - alpha - mu + tmp).shape
             bad = np.isnan(Y - alpha - mu + tmp).any()
             if bad: #temporary assert while debugging
-                print((Y, alpha, mu, tmp))
+                print(Y, alpha, mu, tmp)
                 raise ValueError("nan encountered")
             #self.smoothers[i].smooth(Y - alpha - mu + tmp,
             self.smoothers[i].smooth(Y - mu + tmp,
@@ -271,8 +271,8 @@ class AdditiveModel(object):
         '''
         self.iter += 1 #moved here to always count, not necessary
         if DEBUG:
-            print((self.iter, self.results.Y.shape))
-            print((self.results.predict(self.exog).shape, self.weights.shape))
+            print(self.iter, self.results.Y.shape)
+            print(self.results.predict(self.exog).shape, self.weights.shape)
         curdev = (((self.results.Y - self.results.predict(self.exog))**2) * self.weights).sum()
 
         if self.iter > self.maxiter: #kill it, no max iterationoption
@@ -367,7 +367,7 @@ class Model(GLM, AdditiveModel):
             print("nanweights2")
         self.weights = weights
         if DEBUG:
-            print(('deriv isnan', np.isnan(self.family.link.deriv(_results.mu)).any()))
+            print('deriv isnan', np.isnan(self.family.link.deriv(_results.mu)).any())
 
         #Z = _results.predict(self.exog) + \
         Z = _results.predict(self.exog) + \

@@ -200,7 +200,7 @@ def ts_lls(y, params, df):
     >>> stats.t.stats(df, loc=0., scale=sigma*np.sqrt((df-2.)/df))
     (array(0.0), array(2.0))
     '''
-    print((y, params, df))
+    print(y, params, df)
     mu, sigma2 = params.T
     df = df*1.0
     #lls = gammaln((df+1)/2.) - gammaln(df/2.) - 0.5*np.log((df-2)*np.pi)
@@ -310,7 +310,7 @@ if __name__ == '__main__':
         print(dllfdbeta)
 
         print(locscale_grad(y, np.dot(x, beta), 1, norm_dlldy))
-        print((y-np.dot(x, beta)))
+        print(y-np.dot(x, beta))
 
     from scipy import stats, misc
 

@@ -432,7 +432,7 @@ class CompoundPoisson(object):
             #print nrepl,nobs,nc
             #xio = randfnc(size=(nrepl,nobs,np.max(nc))).cumsum(-1)[np.arange(nrepl)[:,None],np.arange(nobs),nc-1]
             rvs = randfnc(size=(nrepl,nobs,np.max(nc)))
-            print(('rvs.sum()', rvs.sum(), rvs.shape))
+            print('rvs.sum()', rvs.sum(), rvs.shape)
             xio = rvs.cumsum(-1)[np.arange(nrepl)[:,None],np.arange(nobs),nc-1]
             #print xio.shape
             x[:,:,io] = xio

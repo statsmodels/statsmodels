@@ -31,7 +31,7 @@ def branch(tree):
         else:
             return sum(tree)
 
-    print(('working on branch', tree, branchsum))
+    print('working on branch', tree, branchsum)
     return branchsum
 
 print(branch(tree))
@@ -62,13 +62,13 @@ def branch2(tree):
             branchsum = branchsum + branch2(b)
     else:
         leavessum = sum((data2[bi] for bi in tree))
-        print(('final branch with', tree, ''.join(tree), leavessum)) #sum(tree)
+        print('final branch with', tree, ''.join(tree), leavessum) #sum(tree)
         if testxb:
             return leavessum  #sum(xb[tree])
         else:
             return ''.join(tree) #sum(tree)
 
-    print(('working on branch', tree, branchsum))
+    print('working on branch', tree, branchsum)
     return branchsum
 
 tree = [[0,1],[[2,3],[4,5,6]],[7]]

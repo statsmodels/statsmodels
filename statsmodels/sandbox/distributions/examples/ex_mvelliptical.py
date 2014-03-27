@@ -47,8 +47,8 @@ print(n_cdf)
 print('')
 print((x<np.array(xli[0])).all(-1).mean(0))
 print((x[...,None]<xliarr).all(1).mean(0))
-print( mvn3.expect_mc(lambda x: (x<xli[0]).all(-1), size=100000))
-print( mvn3.expect_mc(lambda x: (x[...,None]<xliarr).all(1), size=100000))
+print(mvn3.expect_mc(lambda x: (x<xli[0]).all(-1), size=100000))
+print(mvn3.expect_mc(lambda x: (x[...,None]<xliarr).all(1), size=100000))
 
 #other methods
 mvn3n = mvn3.normalized()

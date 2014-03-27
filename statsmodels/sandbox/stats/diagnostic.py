@@ -1054,7 +1054,7 @@ def _recursive_olsresiduals2(olsresults, skip):
         yi = y[i]
         xxT = np.dot(xi.T, xi)  #xi is 2d 1 row
         xy = (xi*yi).ravel() # XTY is 1d  #np.dot(xi, yi)   #np.dot(xi, y)
-        print((xy.shape, XTY.shape))
+        print(xy.shape, XTY.shape)
         print(XTX)
         print(XTY)
         beta = np.linalg.solve(XTX, XTY)
@@ -1512,7 +1512,7 @@ if __name__ == '__main__':
         print(np.histogram(mcres))
         mcressort = np.sort(mcres)
         for ratio in [0.01, 0.025, 0.05, 0.1]:
-            print((ratio, mcressort[int(nrepl*ratio)]))
+            print(ratio, mcressort[int(nrepl*ratio)])
 
         print('critical values in Green table 20.5')
         print('sample size = 100')

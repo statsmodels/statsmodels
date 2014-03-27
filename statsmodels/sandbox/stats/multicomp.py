@@ -846,7 +846,7 @@ class MultiComparison(object):
             Q = pdiff / se
 
             # TODO : print(statments, fix
-            print((i,j, pdiff, se, pdiff / se, pdiff / se > 2.6310,))
+            print(i,j, pdiff, se, pdiff / se, pdiff / se > 2.6310)
             print(stats.norm.sf(Q) * 2)
             return stats.norm.sf(Q) * 2
 
@@ -1009,7 +1009,7 @@ def compare_ordered(vals, alpha):
     #v1,v2 have wrong sequence
     for i in range(4):
         for j in range(4,i, -1):
-            print((i,j))
+            print(i,j)
 
 
 
@@ -1843,9 +1843,9 @@ if __name__ == '__main__':
 
         print('\nkruskal for all pairs')
         for i,j in zip(v2[diffidx], v1[diffidx]):
-            print((i,j, stats.kruskal(xli[i], xli[j])))
+            print(i,j, stats.kruskal(xli[i], xli[j]))
             mwu, mwupval = stats.mannwhitneyu(xli[i], xli[j], use_continuity=False)
-            print((mwu, mwupval*2, mwupval*2<0.05/6., mwupval*2<0.1/6.))
+            print(mwu, mwupval*2, mwupval*2<0.05/6., mwupval*2<0.1/6.)
 
 
 
@@ -1890,7 +1890,7 @@ if __name__ == '__main__':
             #pdiff = np.abs(mrs[i] - mrs[j])
             pdiff = np.abs(meanranks[i] - meanranks[j])
             se = np.sqrt(f * np.sum(1./xnobs[[i,j]] )) #np.array([8,8]))) #Fixme groupnobs[[i,j]] ))
-            print((i,j, pdiff, se, pdiff/se, pdiff/se>2.6310))
+            print(i,j, pdiff, se, pdiff/se, pdiff/se>2.6310)
 
         multicomp = MultiComparison(*X.T)
         multicomp.kruskal()
@@ -1902,7 +1902,7 @@ if __name__ == '__main__':
             skw = stats.kruskal(x1, x2)
             mc2=MultiComparison(np.r_[x1, x2], np.r_[np.zeros(len(x1)), np.ones(len(x2))])
             newskw = mc2.kruskal()
-            print((skw, np.sqrt(skw[0]), skw[1]-newskw, (newskw/skw[1]-1)*100))
+            print(skw, np.sqrt(skw[0]), skw[1]-newskw, (newskw/skw[1]-1)*100)
 
         tablett, restt, arrtt = multicomp.allpairtest(stats.ttest_ind)
         tablemw, resmw, arrmw = multicomp.allpairtest(stats.mannwhitneyu)

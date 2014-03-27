@@ -1513,7 +1513,7 @@ if __name__ == '__main__':
     llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
                           + np.sum((y**2)/sigma2, axis)
                           +  nobs*np.log(2*np.pi))
-    print((lls, llike))
+    print(lls, llike)
     #print(np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum())
 
 

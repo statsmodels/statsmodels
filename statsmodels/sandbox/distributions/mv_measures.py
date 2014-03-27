@@ -161,21 +161,21 @@ if __name__ == '__main__':
     pxy, binsx, binsy = np.histogram2d(x,y, bins=5)
     px, binsx_ = np.histogram(x, bins=binsx)
     py, binsy_ = np.histogram(y, bins=binsy)
-    print(('mutualinfo', infotheo.mutualinfo(px*1./nobs, py*1./nobs,
-                                            1e-15+pxy*1./nobs, logbase=np.e)))
+    print('mutualinfo', infotheo.mutualinfo(px*1./nobs, py*1./nobs,
+                                            1e-15+pxy*1./nobs, logbase=np.e))
 
-    print(('mutualinfo_kde normed', mutualinfo_kde(y,x)))
-    print(('mutualinfo_kde       ', mutualinfo_kde(y,x, normed=False)))
+    print('mutualinfo_kde normed', mutualinfo_kde(y,x))
+    print('mutualinfo_kde       ', mutualinfo_kde(y,x, normed=False))
     mi_normed, (pyx2, py2, px2, binsy2, binsx2), mi_obs = \
                mutualinfo_binned(y, x, 5, normed=True)
-    print(('mutualinfo_binned normed', mi_normed))
-    print(('mutualinfo_binned       ', mi_obs.sum()))
+    print('mutualinfo_binned normed', mi_normed)
+    print('mutualinfo_binned       ', mi_obs.sum())
 
     mi_normed, (pyx2, py2, px2, binsy2, binsx2), mi_obs = \
                mutualinfo_binned(y, x, 'auto', normed=True)
     print('auto')
-    print(('mutualinfo_binned normed', mi_normed))
-    print(('mutualinfo_binned       ', mi_obs.sum()))
+    print('mutualinfo_binned normed', mi_normed)
+    print('mutualinfo_binned       ', mi_obs.sum())
 
     ys = np.sort(y)
     xs = np.sort(x)
@@ -184,8 +184,8 @@ if __name__ == '__main__':
     mi_normed, (pyx2, py2, px2, binsy2, binsx2), mi_obs = \
                mutualinfo_binned(y, x, (by,bx), normed=True)
     print('quantiles')
-    print(('mutualinfo_binned normed', mi_normed))
-    print(('mutualinfo_binned       ', mi_obs.sum()))
+    print('mutualinfo_binned normed', mi_normed)
+    print('mutualinfo_binned       ', mi_obs.sum())
 
     doplot = 1#False
     if doplot:

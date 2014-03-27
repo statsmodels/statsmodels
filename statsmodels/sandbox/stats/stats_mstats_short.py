@@ -335,23 +335,23 @@ if __name__ == '__main__':
 
     # test 0d, 1d
     for sl1 in [slice(None), 0]:
-        print(((plotting_positions(xm[sl1,0]) == plotting_positions(x[sl1,0])).all(),))
-        print(((quantiles(xm[sl1,0]) == quantiles(x[sl1,0])).all(),))
-        print(((stats.mstats.mquantiles(ma.fix_invalid(x2[sl1,0])) == quantiles(x2[sl1,0], masknan=1)).all(),))
+        print((plotting_positions(xm[sl1,0]) == plotting_positions(x[sl1,0])).all())
+        print((quantiles(xm[sl1,0]) == quantiles(x[sl1,0])).all())
+        print((stats.mstats.mquantiles(ma.fix_invalid(x2[sl1,0])) == quantiles(x2[sl1,0], masknan=1)).all())
 
     #test 2d
     for ax in [0, 1, None, -1]:
-        print(((plotting_positions(xm, axis=ax) == plotting_positions(x, axis=ax)).all(),))
-        print(((quantiles(xm, axis=ax) == quantiles(x, axis=ax)).all(),))
-        print(((stats.mstats.mquantiles(ma.fix_invalid(x2), axis=ax) == quantiles(x2, axis=ax, masknan=1)).all(),))
+        print((plotting_positions(xm, axis=ax) == plotting_positions(x, axis=ax)).all())
+        print((quantiles(xm, axis=ax) == quantiles(x, axis=ax)).all())
+        print((stats.mstats.mquantiles(ma.fix_invalid(x2), axis=ax) == quantiles(x2, axis=ax, masknan=1)).all())
 
     #stats version doesn't have axis
-    print(((stats.mstats.plotting_positions(ma.fix_invalid(x2)) == plotting_positions(x2, axis=None, masknan=1)).all(),))
+    print((stats.mstats.plotting_positions(ma.fix_invalid(x2)) == plotting_positions(x2, axis=None, masknan=1)).all())
 
     #test 3d
     x3 = np.dstack((x,x)).T
     for ax in [1,2]:
-        print(((plotting_positions(x3, axis=ax)[0] == plotting_positions(x.T, axis=ax-1)).all(),))
+        print((plotting_positions(x3, axis=ax)[0] == plotting_positions(x.T, axis=ax-1)).all())
 
     np.testing.assert_equal(plotting_positions(np.arange(10), alpha=0.35, beta=1-0.35), (1+np.arange(10)-0.35)/10)
     np.testing.assert_equal(plotting_positions(np.arange(10), alpha=0.4, beta=0.4), (1+np.arange(10)-0.4)/(10+0.2))
