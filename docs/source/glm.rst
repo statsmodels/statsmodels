@@ -29,7 +29,8 @@ Detailed examples can be found here:
 .. toctree::
    :maxdepth: 1
 
-   examples/generated/example_glm
+   examples/notebooks/generated/glm
+   examples/notebooks/generated/glm_formula
 
 Technical Documentation
 -----------------------
