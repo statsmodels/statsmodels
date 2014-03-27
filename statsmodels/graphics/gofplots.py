@@ -275,6 +275,7 @@ class ProbPlot(object):
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
+
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -287,8 +288,8 @@ class ProbPlot(object):
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
             instance. If an array-like object is provided, it will be turned
-            into a `ProbPlot` instance using default parameters. If not provided
-            (default), the theoretical quantiles are used.
+            into a `ProbPlot` instance using default parameters. If not
+            provided (default), the theoretical quantiles are used.
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
