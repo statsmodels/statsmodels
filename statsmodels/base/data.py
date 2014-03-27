@@ -2,13 +2,12 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
-
+from statsmodels.compat import reduce, iteritems, lzip, lmap
 import numpy as np
 from pandas import DataFrame, Series, TimeSeries, isnull
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
                                           cache_writable)
 import statsmodels.tools.data as data_util
-from statsmodels.compat import reduce, iteritems, lzip, lmap
 from statsmodels.tools.sm_exceptions import MissingDataError
 def _asarray_2dcolumns(x):
     if np.asarray(x).ndim > 1 and np.asarray(x).squeeze().ndim == 1:

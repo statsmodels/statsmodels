@@ -1,4 +1,5 @@
-from statsmodels.compat import lrange, lzip, lmap, string_types, callable, asstr
+from statsmodels.compat import (lrange, lzip, lmap, string_types, callable,
+                                asstr, reduce)
 import re
 import datetime
 from pandas import datetools as pandas_datetools

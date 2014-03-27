@@ -1,11 +1,10 @@
-from statsmodels.compat import lrange
+from statsmodels.compat import lrange, iterkeys, iteritems, StringIO, lzip, reduce
+from statsmodels.compat.collections import OrderedDict
 import numpy as np
 import pandas as pd
 import datetime
 import copy
 #import collections  # OrderedDict requires python >= 2.7
-from statsmodels.compat import iterkeys, iteritems, StringIO, lzip, reduce
-from statsmodels.compat.collections import OrderedDict
 import textwrap
 from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
