@@ -21,9 +21,9 @@ install:
     - sudo apt-get install $PYTHON-nose
     # Cython needs manual install under Python 3
     - if [ "${PYSUF}" == "3" ]; then
-         wget http://cython.org/release/Cython-0.17.1.tar.gz ;
-         tar xfvz Cython-0.17.1.tar.gz ;
-         cd Cython-0.17.1 ;
+         wget http://cython.org/release/Cython-0.19.2.tar.gz ;
+         tar xfvz Cython-0.19.2.tar.gz ;
+         cd Cython-0.19.2 ;
          sudo python3 setup.py install ;
          cd .. ;
       else

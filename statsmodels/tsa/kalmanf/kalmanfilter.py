@@ -646,7 +646,8 @@ class KalmanFilter(object):
                                     R_mat, T_mat)
         elif issubdtype(paramsdtype, complex):
             loglike, sigma2 =  kalman_loglike.kalman_loglike_complex(y, k,
-                                    k_ar, k_ma, k_lags, int(nobs), Z_mat,
+                                    k_ar, k_ma, k_lags, int(nobs),
+                                    Z_mat.astype(complex),
                                     R_mat, T_mat)
         else:
             raise TypeError("This dtype %s is not supported "
@@ -654,7 +655,7 @@ class KalmanFilter(object):
         if set_sigma2:
             arma_model.sigma2 = sigma2
 
-        return loglike.item() # return a scalar not a 0d array
+        return loglike
 
 
 if __name__ == "__main__":

@@ -112,7 +112,7 @@ Dependencies
 * `SciPy <http://www.scipy.org/>`__ >= 0.7
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
 * `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
-* `Cython <http://cython.org/>`__ >= 15.1, Needed if you want to build the code from github and not a source distribution.
+* `Cython <http://cython.org/>`__ >= 18, Needed if you want to build the code from github and not a source distribution.
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
