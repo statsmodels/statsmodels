@@ -4,7 +4,7 @@ Created on Sun May 09 22:23:22 2010
 Author: josef-pktd
 Licese: BSD
 """
-
+from __future__ import print_function
 import numpy as np
 
 from numpy.testing import assert_almost_equal
@@ -152,12 +152,12 @@ def test_squared_normal_chi2():
     assert_almost_equal(cdfst, cdftr, 14)
     assert_almost_equal(cdfst, sfctr, 14)
 
-#    print 'sqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.pdf(xx,loc=l, scale=s)
-#    print 'chi2    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1)
-#    print 'sqnorm  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.ppf(ppfq,loc=l, scale=s)
-#    print 'chi2    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.ppf(ppfq,1)
-#    print 'sqnorm  cdf with loc scale', squarenormalg.cdf(xx,loc=-10, scale=20)
-#    print 'chi2    cdf with loc scale', stats.chi2.cdf(xx,1,loc=-10, scale=20)
+#    print('sqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.pdf(xx,loc=l, scale=s)
+#    print('chi2    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1)
+#    print('sqnorm  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.ppf(ppfq,loc=l, scale=s)
+#    print('chi2    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.ppf(ppfq,1)
+#    print('sqnorm  cdf with loc scale', squarenormalg.cdf(xx,loc=-10, scale=20)
+#    print('chi2    cdf with loc scale', stats.chi2.cdf(xx,1,loc=-10, scale=20)
 
 
 
@@ -170,81 +170,81 @@ if __name__ == '__main__':
     xx = [0.95, 1.0, 1.1]
     nxx = [-0.95, -1.0, -1.1]
     print
-    #print invnormalg.__doc__
-    print '\nsquare of standard normal random variable is chisquare with dof=1 distributed'
-    print 'sqnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.cdf(xx,loc=l, scale=s)
-    print 'sqnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-squarenormalg.sf(xx,loc=l, scale=s)
-    print 'chi2    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.cdf(xx,1)
-    print 'sqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.pdf(xx,loc=l, scale=s)
-    print 'chi2    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1)
-    print 'sqnorm  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.ppf(ppfq,loc=l, scale=s)
-    print 'chi2    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.ppf(ppfq,1)
-    print 'sqnorm  cdf with loc scale', squarenormalg.cdf(xx,loc=-10, scale=20)
-    print 'chi2    cdf with loc scale', stats.chi2.cdf(xx,1,loc=-10, scale=20)
-#    print 'cdf for [0.5]:', squarenormalg.cdf(0.5,loc=l, scale=s)
-#    print 'chi square distribution'
-#    print 'chi2 pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1)
-#    print 'cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.cdf(xx,1)
+    #print(invnormalg.__doc__
+    print('\nsquare of standard normal random variable is chisquare with dof=1 distributed')
+    print('sqnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.cdf(xx,loc=l, scale=s))
+    print('sqnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-squarenormalg.sf(xx,loc=l, scale=s))
+    print('chi2    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.cdf(xx,1))
+    print('sqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.pdf(xx,loc=l, scale=s))
+    print('chi2    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1))
+    print('sqnorm  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squarenormalg.ppf(ppfq,loc=l, scale=s))
+    print('chi2    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.ppf(ppfq,1))
+    print('sqnorm  cdf with loc scale', squarenormalg.cdf(xx,loc=-10, scale=20))
+    print('chi2    cdf with loc scale', stats.chi2.cdf(xx,1,loc=-10, scale=20))
+#    print('cdf for [0.5]:', squarenormalg.cdf(0.5,loc=l, scale=s))
+#    print('chi square distribution')
+#    print('chi2 pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1))
+#    print('cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.cdf(xx,1))
 
-    print '\nabsolute value of standard normal random variable is foldnorm(0) and '
-    print 'halfnorm distributed:'
-    print 'absnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), absnormalg.cdf(xx,loc=l, scale=s)
-    print 'absnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-absnormalg.sf(xx,loc=l, scale=s)
-    print 'foldn    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.foldnorm.cdf(xx,1e-5)
-    print 'halfn    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.halfnorm.cdf(xx)
-    print 'absnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), absnormalg.pdf(xx,loc=l, scale=s)
-    print 'foldn    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.foldnorm.pdf(xx,1e-5)
-    print 'halfn    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.halfnorm.pdf(xx)
-    print 'absnorm  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), absnormalg.ppf(ppfq,loc=l, scale=s)
-    print 'foldn    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), stats.foldnorm.ppf(ppfq,1e-5)
-    print 'halfn    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), stats.halfnorm.ppf(ppfq)
-#    print 'cdf for [0.5]:', squarenormalg.cdf(0.5,loc=l, scale=s)
-#    print 'chi square distribution'
-#    print 'chi2 pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1)
-#    print 'cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.cdf(xx,1)
+    print('\nabsolute value of standard normal random variable is foldnorm(0) and ')
+    print('halfnorm distributed:')
+    print('absnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), absnormalg.cdf(xx,loc=l, scale=s))
+    print('absnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-absnormalg.sf(xx,loc=l, scale=s))
+    print('foldn    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.foldnorm.cdf(xx,1e-5))
+    print('halfn    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.halfnorm.cdf(xx))
+    print('absnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), absnormalg.pdf(xx,loc=l, scale=s))
+    print('foldn    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.foldnorm.pdf(xx,1e-5))
+    print('halfn    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.halfnorm.pdf(xx))
+    print('absnorm  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), absnormalg.ppf(ppfq,loc=l, scale=s))
+    print('foldn    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), stats.foldnorm.ppf(ppfq,1e-5))
+    print('halfn    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), stats.halfnorm.ppf(ppfq))
+#    print('cdf for [0.5]:', squarenormalg.cdf(0.5,loc=l, scale=s)
+#    print('chi square distribution'
+#    print('chi2 pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1)
+#    print('cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.cdf(xx,1)
 
-    print '\nnegative square of standard normal random variable is'
-    print '1-chisquare with dof=1 distributed'
-    print 'this is mainly for testing'
-    print 'the following should be outside of the support - returns nan'
-    print 'nsqnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), negsquarenormalg.cdf(xx,loc=l, scale=s)
-    print 'nsqnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-negsquarenormalg.sf(xx,loc=l, scale=s)
-    print 'nsqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), negsquarenormalg.pdf(xx,loc=l, scale=s)
+    print('\nnegative square of standard normal random variable is')
+    print('1-chisquare with dof=1 distributed')
+    print('this is mainly for testing')
+    print('the following should be outside of the support - returns nan')
+    print('nsqnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), negsquarenormalg.cdf(xx,loc=l, scale=s))
+    print('nsqnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-negsquarenormalg.sf(xx,loc=l, scale=s))
+    print('nsqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), negsquarenormalg.pdf(xx,loc=l, scale=s))
 
-    print 'nsqnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), negsquarenormalg.cdf(nxx,loc=l, scale=s)
-    print 'nsqnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), 1-negsquarenormalg.sf(nxx,loc=l, scale=s)
-    print 'chi2      sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.sf(xx,1)
-    print 'nsqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), negsquarenormalg.pdf(nxx,loc=l, scale=s)
-    print 'chi2     pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1)
-    print 'nsqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), negsquarenormalg.pdf(nxx,loc=l, scale=s)
+    print('nsqnorm  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), negsquarenormalg.cdf(nxx,loc=l, scale=s))
+    print('nsqnorm 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), 1-negsquarenormalg.sf(nxx,loc=l, scale=s))
+    print('chi2      sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.sf(xx,1))
+    print('nsqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), negsquarenormalg.pdf(nxx,loc=l, scale=s))
+    print('chi2     pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.chi2.pdf(xx,1))
+    print('nsqnorm  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(nxx), negsquarenormalg.pdf(nxx,loc=l, scale=s))
 
 
 
-    print '\nsquare of a t distributed random variable with dof=10 is'
-    print '        F with dof=1,10 distributed'
-    print 'sqt  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squaretg.cdf(xx,10)
-    print 'sqt 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-squaretg.sf(xx,10)
-    print 'f    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.f.cdf(xx,1,10)
-    print 'sqt  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squaretg.pdf(xx,10)
-    print 'f    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.f.pdf(xx,1,10)
-    print 'sqt  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), squaretg.ppf(ppfq,10)
-    print 'f    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), stats.f.ppf(ppfq,1,10)
-    print 'sqt  cdf for 100:', squaretg.cdf(100,10)
-    print 'f    cdf for 100:', stats.f.cdf(100,1,10)
-    print 'sqt  stats:', squaretg.stats(10, moments='mvsk')
-    print 'f    stats:', stats.f.stats(1,10, moments='mvsk')
+    print('\nsquare of a t distributed random variable with dof=10 is')
+    print('        F with dof=1,10 distributed')
+    print('sqt  cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squaretg.cdf(xx,10))
+    print('sqt 1-sf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), 1-squaretg.sf(xx,10))
+    print('f    cdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.f.cdf(xx,1,10))
+    print('sqt  pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), squaretg.pdf(xx,10))
+    print('f    pdf for (%3.2f, %3.2f, %3.2f):' % tuple(xx), stats.f.pdf(xx,1,10))
+    print('sqt  ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), squaretg.ppf(ppfq,10))
+    print('f    ppf for (%3.2f, %3.2f, %3.2f):' % tuple(ppfq), stats.f.ppf(ppfq,1,10))
+    print('sqt  cdf for 100:', squaretg.cdf(100,10))
+    print('f    cdf for 100:', stats.f.cdf(100,1,10))
+    print('sqt  stats:', squaretg.stats(10, moments='mvsk'))
+    print('f    stats:', stats.f.stats(1,10, moments='mvsk'))
     #Note the results differ for skew and kurtosis. I think the 3rd and 4th moment
     #    in the scipy.stats.f distribution is incorrect.
     # I corrected it now in stats.distributions.py in bzr branch
     v1=1; v2=10;
     g1 = 2*(v2+2*v1-2.)/(v2-6.)*np.sqrt(2*(v2-4.)/(v1*(v2+v1-2.)))
     g2 = 3/(2.*v2-16)*(8+g1*g1*(v2-6.))
-    print 'corrected skew, kurtosis of f(1,10) is', g1, g2
-    print squarenormalg.rvs()
-    print squarenormalg.rvs(size=(2,4))
-    print 'sqt random variables'
-    print stats.f.rvs(1,10,size=4)
-    print squaretg.rvs(10,size=4)
+    print(('corrected skew, kurtosis of f(1,10) is', g1, g2))
+    print(squarenormalg.rvs())
+    print(squarenormalg.rvs(size=(2,4)))
+    print('sqt random variables')
+    print(stats.f.rvs(1,10,size=4))
+    print(squaretg.rvs(10,size=4))
 
     #a large number check:
     np.random.seed(464239857)
@@ -276,7 +276,7 @@ if __name__ == '__main__':
     # fraction of observations in each decile
     dec = squaretg.ppf(np.linspace(0.,1,11),10)
     freq,edges = np.histogram(rvstsq, bins=dec)
-    print freq/float(len(rvstsq))
+    print(freq/float(len(rvstsq)))
 
     import matplotlib.pyplot as plt
     freq,edges,_ = plt.hist(rvstsq, bins=50, range=(0,4),normed=True)

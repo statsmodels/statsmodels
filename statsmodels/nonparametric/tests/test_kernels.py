@@ -107,7 +107,7 @@ class CheckKernelMixin(object):
         # no reference results saved to csv yet
         fitted_x = np.array([kern.smoothconf(x, y, xi) for xi in x])
         if DEBUG:
-            print (fitted_x[:, 2] - fitted_x[:, 1]) / crit
+            print(fitted_x[:, 2] - fitted_x[:, 1]) / crit
 
 class TestEpan(CheckKernelMixin):
     kern_name = 'epan2'

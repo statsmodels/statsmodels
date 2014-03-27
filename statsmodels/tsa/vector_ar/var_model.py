@@ -1403,7 +1403,7 @@ class VARResults(VARProcess):
         # TODO: this probably needs some UI work
 
         if (np.abs(acorrs) > bound).any():
-            print ('FAIL: Some autocorrelations exceed %.4f bound. '
+            print('FAIL: Some autocorrelations exceed %.4f bound. '
                    'See plot' % bound)
         else:
             print('PASS: No autocorrelations exceed %.4f bound' % bound)

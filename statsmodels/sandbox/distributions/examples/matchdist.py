@@ -15,7 +15,7 @@ TODO:
 *
 
 '''
-
+from __future__ import print_function
 from scipy import stats
 import numpy as np
 import matplotlib.mlab as mlab
@@ -29,13 +29,13 @@ def plothist(x,distfn, args, loc, scale, right=1):
     # the histogram of the data
     n, bins, patches = plt.hist(x, 25, normed=1, facecolor='green', alpha=0.75)
     maxheight = max([p.get_height() for p in patches])
-    print maxheight
+    print(maxheight)
     axlim = list(plt.axis())
-    #print axlim
+    #print(axlim)
     axlim[-1] = maxheight*1.05
     #plt.axis(tuple(axlim))
-##    print bins
-##    print 'args in plothist', args
+##    print(bins)
+##    print('args in plothist', args)
     # add a 'best fit' line
     #yt = stats.norm.pdf( bins, loc=loc, scale=scale)
     yt = distfn.pdf( bins, loc=loc, scale=scale, *args)
@@ -167,8 +167,8 @@ if __name__ == '__main__':
         rvs_pos = rvs_orig[rvs_orig>0]
         rightfactor = 1
         rvs_right = rvs_pos
-        print '='*50
-        print 'samplesize = ', n
+        print('='*50)
+        print('samplesize = ', n)
         for distname in targetdist:
             distfn = getattr(stats,distname)
             if distname in right_all:
@@ -178,8 +178,8 @@ if __name__ == '__main__':
             else:
                 rvs = rvs_orig
                 rind = 1
-            print '-'*30
-            print 'target = %s' % distname
+            print('-'*30)
+            print('target = %s' % distname)
             sm = rvs.mean()
             sstd = np.sqrt(rvs.var())
             ssupp = (rvs.min(), rvs.max())
@@ -206,17 +206,17 @@ if __name__ == '__main__':
                 par_est = tuple(distfn.fit(rvs,loc=sm,scale=sstd))
 
 
-            print 'fit', par_est
+            print('fit', par_est)
             arg_est = par_est[:-2]
             loc_est = par_est[-2]
             scale_est = par_est[-1]
             rvs_normed = (rvs-loc_est)/scale_est
             ks_stat, ks_pval = stats.kstest(rvs_normed,distname, arg_est)
-            print 'kstest', ks_stat, ks_pval
+            print('kstest', ks_stat, ks_pval)
             quant = 0.1
             crit = distfn.ppf(1-quant*float(rind), loc=loc_est, scale=scale_est,*par_est)
             tail_prob = stats.t.sf(crit,dgp_arg,scale=dgp_scale)
-            print 'crit, prob', quant, crit, tail_prob
+            print('crit, prob', quant, crit, tail_prob)
             #if distname == 'norm':
                 #plothist(rvs,loc_est,scale_est)
                 #args = tuple()
@@ -235,7 +235,7 @@ if __name__ == '__main__':
 
     res_sort.reverse()  #kstest statistic: smaller is better, pval larger is better
 
-    print 'number of distributions', len(res_sort)
+    print('number of distributions', len(res_sort))
     imagedir = 'matchresults'
     import os
     if not os.path.exists(imagedir):
@@ -252,10 +252,10 @@ if __name__ == '__main__':
             rvs = rvs_orig
             ri = ''
             rind = 1
-        print '%s ks-stat = %f, ks-pval = %f tail_prob = %f)' % \
-              (distname, ks_stat, ks_pval, tail_prob)
-    ##    print 'arg_est = %s, loc_est = %f scale_est = %f)' % \
-    ##          (repr(arg_est),loc_est,scale_est)
+        print('%s ks-stat = %f, ks-pval = %f tail_prob = %f)' % \
+              (distname, ks_stat, ks_pval, tail_prob))
+    ##    print('arg_est = %s, loc_est = %f scale_est = %f)' % \
+    ##          (repr(arg_est),loc_est,scale_est))
         plothist(rvs,distfn,arg_est,loc_est,scale_est,right = rind)
         plt.savefig(os.path.join(imagedir,'%s%s%02d_%s.png'% (prefix, ri,ii, distname)))
     ##plt.show()
