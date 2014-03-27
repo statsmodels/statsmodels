@@ -849,10 +849,10 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
                 res2djoint.ssr / mxlg * res2djoint.df_resid)
         if verbose:
             print('ssr based F test:         F=%-8.4f, p=%-8.4f, df_denom=%d,'
-                   ' df_num=%d') % (fgc1,
+                   ' df_num=%d' % (fgc1,
                                     stats.f.sf(fgc1, mxlg,
                                                res2djoint.df_resid),
-                                    res2djoint.df_resid, mxlg)
+                                    res2djoint.df_resid, mxlg))
         result['ssr_ftest'] = (fgc1,
                                stats.f.sf(fgc1, mxlg, res2djoint.df_resid),
                                res2djoint.df_resid, mxlg)
