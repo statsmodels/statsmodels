@@ -102,7 +102,7 @@ Author: Josef Perktold
 License : BSD (3-clause)
 '''
 from __future__ import print_function
-from statsmodels.compat import lzip
+from statsmodels.compat import lzip, iteritems
 import numpy as np
 from pprint import pprint
 
@@ -278,7 +278,7 @@ class RU2NMNL(object):
 
         #mapping branch and leaf names to index in parameter array
         self.parinddict = dict((k, [self.paramsidx[j] for j in v])
-                               for k,v in self.paramsind.items())
+                               for k,v in iteritems(self.paramsind))
 
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
         #for testing that individual parameters are used in the right place

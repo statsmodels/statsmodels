@@ -83,7 +83,7 @@ Potential problems for Python 3
 """
 
 from __future__ import division, with_statement
-from statsmodels.compat import lmap, lrange, zip, next
+from statsmodels.compat import lmap, lrange, zip, next, iteritems
 import logging
 
 from statsmodels.compat.iter_compat import zip_longest
@@ -329,11 +329,11 @@ class SimpleTable(list):
     def get_colwidths(self, output_format, **fmt_dict):
         """Return list, the widths of each column."""
         call_args = [output_format]
-        for k, v in sorted(fmt_dict.items()):
+        for k, v in sorted(iteritems(fmt_dict)):
             if isinstance(v, list):
                 call_args.append((k, tuple(v)))
             elif isinstance(v, dict):
-                call_args.append((k, tuple(sorted(v.items()))))
+                call_args.append((k, tuple(sorted(iteritems(v)))))
             else:
                 call_args.append((k, v))
         key = tuple(call_args)

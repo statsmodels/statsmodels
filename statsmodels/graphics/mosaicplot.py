@@ -95,7 +95,7 @@ def _reduce_dict(count_dict, partial_key):
     Given a match for the beginning of the category, it will sum each value.
     """
     L = len(partial_key)
-    count = sum(v for k, v in count_dict.items() if k[:L] == partial_key)
+    count = sum(v for k, v in iteritems(count_dict) if k[:L] == partial_key)
     return count
 
 
@@ -108,7 +108,7 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
     """
     result = OrderedDict()
     L = len(key_subset)
-    for name, (x, y, w, h) in rect_dict.items():
+    for name, (x, y, w, h) in iteritems(rect_dict):
         if key_subset == name[:L]:
             # split base on the values given
             divisions = _split_rect(x, y, w, h, values, horizontal, gap)
@@ -299,7 +299,7 @@ def _normalize_data(data, index):
             name = tuple(i for i in idx)
             temp[name] = data[idx]
         data = temp
-        items = data.items()
+        items = iteritems(data)
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
     categories_levels = _categories_level(list(iterkeys(data)))
@@ -364,9 +364,9 @@ def _statistical_coloring(data):
         expected[key] = base * total, np.sqrt(total * base * (1.0 - base))
     # now we have the standard deviation of distance from the
     # expected value for each tile. We create the colors from this
-    sigmas = dict((k, (data[k] - m) / s) for k, (m, s) in expected.items())
+    sigmas = dict((k, (data[k] - m) / s) for k, (m, s) in iteritems(expected))
     props = {}
-    for key, dev in sigmas.items():
+    for key, dev in iteritems(sigmas):
         red = 0.0 if dev < 0 else (dev / (1 + dev))
         blue = 0.0 if dev > 0 else (dev / (-1 + dev))
         green = (1.0 - red - blue) / 2.0
@@ -390,7 +390,7 @@ def _create_labels(rects, horizontal, ax, rotation):
         raise NotImplementedError(msg)
     labels = {}
     #keep it fixed as will be used a lot of times
-    items = list(rects.items())
+    items = list(iteritems(rects))
     vertical = not horizontal
 
     #get the axis ticks and labels locator to put the correct values!
@@ -617,7 +617,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     if isinstance(properties, dict):
         color_dict = properties
         properties = lambda key: color_dict.get(key, None)
-    for k, v in rects.items():
+    for k, v in iteritems(rects):
         # create each rectangle and put a label on it
         x, y, w, h = v
         conf = properties(k)

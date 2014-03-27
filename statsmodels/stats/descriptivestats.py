@@ -1,4 +1,4 @@
-from statsmodels.compat import lrange, lmap, iterkeys
+from statsmodels.compat import lrange, lmap, iterkeys, iteritems
 import sys
 import numpy as np
 from scipy import stats
@@ -238,7 +238,7 @@ class Describe(object):
         #JP: this doesn't allow a change in sequence, sequence in stats is
         #ignored
         #this is just an if condition
-        if any([aitem[1] for aitem in self.univariate.items() if aitem[0] in
+        if any([aitem[1] for aitem in iteritems(self.univariate) if aitem[0] in
                 stats]):
             if columns == 'all':
                 self._columns_list = []

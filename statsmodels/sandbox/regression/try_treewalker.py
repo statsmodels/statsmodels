@@ -6,6 +6,7 @@ should collect and aggregate likelihood contributions bottom up
 
 '''
 from __future__ import print_function
+from statsmodels.compat import iteritems
 import numpy as np
 
 tree = [[0,1],[[2,3],[4,5,6]],[7]]
@@ -122,7 +123,7 @@ paramsnames = sorted(set([i for j in paramsind.values() for i in j]))
 paramsidx = dict((name, idx) for (idx,name) in enumerate(paramsnames))
 
 #mapping branch and leaf names to index in parameter array
-inddict = dict((k,[paramsidx[j] for j in v]) for k,v in paramsind.items())
+inddict = dict((k,[paramsidx[j] for j in v]) for k,v in iteritems(paramsind))
 
 '''
 >>> paramsnames

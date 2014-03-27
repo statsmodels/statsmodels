@@ -1,7 +1,9 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compat import reduce, lzip, lmap, asstr2
+from statsmodels.compat import (reduce, lzip, lmap, asstr2, urlopen, urljoin,
+                                StringIO)
+
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
@@ -512,9 +514,6 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     """
     # lazy imports
     from statsmodels.iolib import genfromdta
-    from urllib2 import urlopen
-    from urlparse import urljoin
-    from StringIO import StringIO
 
     url = urljoin(baseurl, data+'.dta')
     dta = urlopen(url)

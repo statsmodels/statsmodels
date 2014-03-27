@@ -4,7 +4,7 @@
 #Author: Raymond Hettinger
 #License: MIT License
 #http://code.activestate.com/recipes/576693/ revision 9, downloaded 2012-03-28
-from statsmodels.compat import iterkeys
+from statsmodels.compat import iterkeys, iteritems
 try:
     from thread import get_ident as _get_ident
 except ImportError:
@@ -170,7 +170,7 @@ class OrderedDict(dict):
         else:
             for key, value in other:
                 self[key] = value
-        for key, value in kwds.items():
+        for key, value in iteritems(kwds):
             self[key] = value
 
     __update = update  # let subclasses override update without breaking __init__

@@ -1,5 +1,5 @@
 from __future__ import division
-from statsmodels.compat import iterkeys, lzip, lrange
+from statsmodels.compat import iterkeys, lzip, lrange, iteritems
 
 from numpy.testing import assert_, assert_raises, dec
 from numpy.testing import run_module_suite
@@ -169,7 +169,7 @@ def test_mosaic_very_complex():
                 ji = max(i, j)
                 ij = min(i, j)
                 temp_data = OrderedDict([((k[ij], k[ji]) + tuple(k[r] for r in m), v)
-                                            for k, v in data.items()])
+                                            for k, v in iteritems(data)])
 
                 keys = list(iterkeys(temp_data))
                 for k in keys:

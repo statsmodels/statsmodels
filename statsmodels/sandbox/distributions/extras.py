@@ -51,8 +51,9 @@ License: BSD
 '''
 
 #note copied from distr_skewnorm_0.py
+
 from __future__ import print_function
-from statsmodels.compat import range
+from statsmodels.compat import range, iteritems
 from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
 from scipy.stats import distributions
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk
@@ -495,7 +496,7 @@ from scipy.stats import distributions
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = dict((k.replace('u_','',1),v) for k,v in kwargs.items()
+    u_kwargs = dict((k.replace('u_','',1),v) for k,v in iteritems(kwargs)
                     if k.startswith('u_'))
     u_args = u_kwargs.pop('u_args',None)
     return u_args, u_kwargs

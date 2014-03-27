@@ -39,6 +39,7 @@ License: BSD
 
 '''
 from __future__ import print_function
+from statsmodels.compat import iteritems
 from scipy import integrate # for scipy 0.6.0
 
 from scipy import stats, info
@@ -47,7 +48,7 @@ import numpy as np
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = dict((k.replace('u_','',1),v) for k,v in kwargs.items()
+    u_kwargs = dict((k.replace('u_','',1),v) for k,v in iteritems(kwargs)
                     if k.startswith('u_'))
     u_args = u_kwargs.pop('u_args',None)
     return u_args, u_kwargs

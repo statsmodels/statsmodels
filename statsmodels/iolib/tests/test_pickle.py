@@ -1,5 +1,5 @@
-from statsmodels.compat import lrange
-from statsmodels.iolib.smpickle import save_pickle, load_pickle, BytesIO
+from statsmodels.compat import lrange, BytesIO
+from statsmodels.iolib.smpickle import save_pickle, load_pickle
 
 def test_pickle():
     import tempfile

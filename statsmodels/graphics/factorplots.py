@@ -2,7 +2,7 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
-from statsmodels.compat import get_function_name, iterkeys, lrange, lzip
+from statsmodels.compat import get_function_name, iterkeys, lrange, lzip, iteritems
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
@@ -202,7 +202,7 @@ def _recode(x, levels):
 
     else:
         out = np.empty(x.shape[0], dtype=np.int)
-        for level, coding in levels.items():
+        for level, coding in iteritems(levels):
             out[x == level] = coding
 
         if name:
