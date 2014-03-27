@@ -1,0 +1,101 @@
+# Travis script that uses miniconda in place of the system installed python
+# versions.  Allows substantial flexability for choosing versions of
+# required packages and is simpler to use to test up-to-date scientific Python
+# stack
+language: python
+
+matrix:
+  fast_finish: true
+  include:
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.7
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.20.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=3.3
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.17.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.6
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.17.4
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.7
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=3.3
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+  allow_failures:
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.6
+    - NUMPY_VERSION=1.7.1
+    - SCIPY_VERSION=0.12.0
+    - CYTHON_VERSION=0.17.4
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=2.7
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+  - python: 2.7
+    env:
+    - PYTHON_VERSION=3.3
+    - NUMPY_VERSION=1.8.0
+    - SCIPY_VERSION=0.13.3
+    - CYTHON_VERSION=0.20.1
+
+notifications:
+  email:
+    on_success: always
+
+# Setup anaconda
+before_install:
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
+  # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
+  - sudo rm -rf /dev/shm
+  - sudo ln -s /run/shm /dev/shm
+  # Fix for headless TravisCI
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  # Avoid noise from matplotlib
+  - mkdir $HOME/.config
+  - mkdir $HOME/.config/matplotlib
+  - SRCDIR=$PWD
+  - cp $SRCDIR/tools/matplotlibrc $HOME/.config/matplotlib/matplotlibrc
+
+# Install packages
+install:
+  - conda create --yes -n statsmodels-test python=$PYTHON_VERSION numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION Cython=$CYTHON_VERSION pip matplotlib nose dateutil pandas setuptools patsy pyyaml
+  - source activate statsmodels-test
+  - pip install coverage coveralls
+  - python setup.py install
+
+script:
+  - SRCDIR=$PWD
+  - python setup.py install
+  - mkdir -p "${SRCDIR}/travis-test"; cd "${SRCDIR}/travis-test"
+  # Show versions
+  - python -c 'import statsmodels.api as sm; sm.show_versions();'
+  # Compose a script to run testing with coverage
+  - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
+  - coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py
+
+after_success:
+  - coveralls --rcfile=${SRCDIR}/.travis_coveragerc

@@ -1,9 +1,5 @@
 
 [run]
 branch = True
-source = statsmodels
 include =
-    */statsmodels/*
-omit =
-    */results/*
-    */sandbox/*
+    /usr/local/lib/python*/*-packages/statsmodels*
