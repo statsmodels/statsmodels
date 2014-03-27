@@ -861,7 +861,7 @@ def grangercausalitytests(x, maxlag, addconst=True, verbose=True):
         fgc2 = res2down.nobs * (res2down.ssr - res2djoint.ssr) / res2djoint.ssr
         if verbose:
             print('ssr based chi2 test:   chi2=%-8.4f, p=%-8.4f, '
-                   'df=%d') % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
+                   'df=%d' % (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg))
         result['ssr_chi2test'] = (fgc2, stats.chi2.sf(fgc2, mxlg), mxlg)
 
         #likelihood ratio test pvalue:

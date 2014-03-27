@@ -10,7 +10,7 @@ Author: Josef Perktold
 results - this version
 ----------------------
 
->>> execfile('ex_kernel_regression_censored1.py')
+>>> exec(open('ex_kernel_regression_censored1.py').read())
 bw
 [ 0.3987821   0.50933458]
 [0.39878209999999997, 0.50933457999999998]

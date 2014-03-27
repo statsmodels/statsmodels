@@ -44,13 +44,13 @@ plt.show = noop
 cont = input("""Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
 (y/n) >>> """)
+has_errors = []
 if 'y' in cont.lower():
-    has_errors = []
     for run_all_f in filelist:
         try:
             print("\n\nExecuting example file", run_all_f)
             print("-----------------------" + "-"*len(run_all_f))
-            execfile(run_all_f)
+            exec(open(run_all_f).read())
         except:
             #f might be overwritten in the executed file
             print("**********************" + "*"*len(run_all_f))

@@ -507,7 +507,7 @@ class Formula(object):
         if dict:
             return value
         else:
-            return value.values()
+            return list(itervalues(value))
 
     def names(self):
         """
@@ -757,7 +757,7 @@ def interactions(terms, order=[1,2]):
     key = list(iterkeys(values))[0]
     value = values[key]; del(values[key])
 
-    for v in values.values():
+    for v in itervalues(values):
         value += v
     return value
 
