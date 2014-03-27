@@ -203,9 +203,9 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin, TestCase):
         t = self.res._results_table
         # if the group_order parameter is not used, the groups should
         # be reported in alphabetical order
-        expected_order = [('medical', 'mental'),
-                          ('medical', 'physical'),
-                          ('mental', 'physical')]
+        expected_order = [(b'medical', b'mental'),
+                          (b'medical', b'physical'),
+                          (b'mental', b'physical')]
         for i in range(1, 4):
             first_group = t[i][0].data
             second_group = t[i][1].data
@@ -218,13 +218,13 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin, TestCase):
         # if the group_order parameter is used, the groups should
         # be reported in the specified order
         mc = MultiComparison(self.endog, self.groups,
-                             group_order=['physical', 'medical', 'mental'])
+                             group_order=[b'physical', b'medical', b'mental'])
         res = mc.tukeyhsd(alpha=self.alpha)
-        print res
+        print(res)
         t = res._results_table
-        expected_order = [('physical', 'medical'),
-                          ('physical', 'mental'),
-                          ('medical', 'mental')]
+        expected_order = [(b'physical',b'medical'),
+                          (b'physical',b'mental'),
+                          (b'medical', b'mental')]
         for i in range(1, 4):
             first_group = t[i][0].data
             second_group = t[i][1].data
