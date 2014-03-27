@@ -624,7 +624,7 @@ class TestDiagnosticG(object):
         fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
         #not used yet:
         #infl_bool_r  = pandas.read_csv(fn, index_col=0,
-        #                                converters=dict(lzip(lrange(7),[conv]*7)))
+        #                                converters=dict(zip(lrange(7),[conv]*7)))
         infl_r2 = np.asarray(infl_r)
         assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
         assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
@@ -762,7 +762,7 @@ def test_influence_wrapped():
     fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
     #not used yet:
     #infl_bool_r  = pandas.read_csv(fn, index_col=0,
-    #                                converters=dict(lzip(lrange(7),[conv]*7)))
+    #                                converters=dict(zip(lrange(7),[conv]*7)))
     infl_r2 = np.asarray(infl_r)
     #TODO: finish wrapping this stuff
     assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)

@@ -5,7 +5,7 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat import lzip
+from statsmodels.compat import lzip, zip
 import numpy as np
 
 class AllPairsResults(object):

@@ -102,7 +102,7 @@ Author: Josef Perktold
 License : BSD (3-clause)
 '''
 from __future__ import print_function
-from statsmodels.compat import lzip, iteritems
+from statsmodels.compat import lzip, iteritems, itervalues, lrange, zip
 import numpy as np
 from pprint import pprint
 
@@ -266,7 +266,8 @@ class RU2NMNL(object):
         #copied over but not quite sure yet
         #unique, parameter array names,
         #sorted alphabetically, order is/should be only internal
-        self.paramsnames = (sorted(set([i for j in paramsind.values()
+
+        self.paramsnames = (sorted(set([i for j in itervalues(paramsind)
                                        for i in j])) +
                             ['tau_%s' % bname for bname in self.branches])
 
@@ -495,11 +496,11 @@ if __name__ == '__main__':
     '''
 
     #for testing only (mock that returns it's own name
-    datadict = dict(lzip(['Air', 'Train', 'Bus', 'Car'],
+    datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
                         ['Airdata', 'Traindata', 'Busdata', 'Cardata']))
 
     if testxb:
-        datadict = dict(lzip(['Air', 'Train', 'Bus', 'Car'],
+        datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
                         np.arange(4)))
 
     datadict.update({'top' :   [],
@@ -560,7 +561,8 @@ if __name__ == '__main__':
      'h': ['consth', 'p', 'h'],
      'top': []}
 
-    datadict2 = dict([i for i in lzip('abcdefgh',range(8))])
+
+    datadict2 = dict([i for i in zip('abcdefgh',lrange(8))])
     datadict2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
     '''
     >>> pprint(datadict2)
@@ -592,7 +594,8 @@ if __name__ == '__main__':
     print('\nmodru.probs')
     pprint(modru2.probs)
 
-    print('sum of probs', sum(modru2.probs.values()))
+
+    print('sum of probs', sum(list(itervalues(modru2.probs))))
     print('branchvalues')
     print(modru2.branchvalues)
     print(modru.branchvalues)

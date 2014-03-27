@@ -1,6 +1,6 @@
 """this script builds the T table and A table for the upper
    quantile stundentized range algorithm"""
-from statsmodels.compat import iterkeys, lrange, lzip, lmap
+from statsmodels.compat import iterkeys, lrange, lmap, zip
 import math
 import scipy.stats
 from scipy.optimize import leastsq
@@ -412,7 +412,7 @@ T = OrderedDict([(0.100, OrderedDict([(float(L.split()[0]),
                     lmap(float, L.split()[1:])) for L in q0999.split('\n')]))])
 
 # This dict maps r values to the correct list index
-R = OrderedDict(lzip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
+R = OrderedDict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
                      17,18,19,20,30,40,60,80,100], lrange(24)))
 
 inf = np.inf
@@ -453,7 +453,7 @@ for p in T:
         #eq. 2.4
         a0 = random(4)
         a1, success = leastsq(errfunc, a0,
-                              args=(p, np.array(iterkeys(R)),
+                              args=(p, np.array(list(iterkeys(R))),
                                     v, np.array(T[p][v])))
 
         if v == 1e38:

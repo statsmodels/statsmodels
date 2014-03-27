@@ -8,8 +8,8 @@ see the docstring of the mosaic function for more informations.
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from __future__ import division
-from statsmodels.compat import iteritems, iterkeys, lrange, string_types, lzip
-
+from statsmodels.compat import (iteritems, iterkeys, lrange, string_types, lzip,
+                                itervalues, zip)
 import numpy as np
 from statsmodels.compat.collections import OrderedDict
 from itertools import product
@@ -299,7 +299,7 @@ def _normalize_data(data, index):
             name = tuple(i for i in idx)
             temp[name] = data[idx]
         data = temp
-        items = iteritems(data)
+        items = list(iteritems(data))
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
     categories_levels = _categories_level(list(iterkeys(data)))
@@ -339,7 +339,7 @@ def _statistical_coloring(data):
     data = _normalize_data(data, None)
     categories_levels = _categories_level(list(iterkeys(data)))
     Nlevels = len(categories_levels)
-    total = 1.0 * sum(v for v in data.values())
+    total = 1.0 * sum(v for v in itervalues(data))
     # count the proportion of observation
     # for each level that has the given name
     # at each level
@@ -440,7 +440,8 @@ def _create_labels(rects, horizontal, ax, rotation):
             #mean of all these center on the area of the tile
             #this should give me the (more or less) correct position
             #of the center of the category
-            vals = list(subset.values())
+
+            vals = list(itervalues(subset))
             W = sum(w * h for (x, y, w, h) in vals)
             x_lab = sum((x + w / 2.0) * w * h / W for (x, y, w, h) in vals)
             y_lab = sum((y + h / 2.0) * w * h / W for (x, y, w, h) in vals)
@@ -450,7 +451,8 @@ def _create_labels(rects, horizontal, ax, rotation):
             side = (level_idx + vertical) % 4
             level_ticks[value] = y_lab if side % 2 else x_lab
         #now we add the labels of this level to the correct axis
-        ticks_pos[level_idx](list(level_ticks.values()))
+
+        ticks_pos[level_idx](list(itervalues(level_ticks)))
         ticks_lab[level_idx](list(iterkeys(level_ticks)),
                              rotation=rotation[level_idx])
     return labels

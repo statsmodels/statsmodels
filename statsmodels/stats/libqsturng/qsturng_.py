@@ -23,7 +23,7 @@ see:
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
 from __future__ import print_function
-from statsmodels.compat import lrange, lmap
+from statsmodels.compat import lrange, map
 import math
 import scipy.stats
 import numpy as np
@@ -787,7 +787,7 @@ def qsturng(p, r, v):
 
     """
 
-    if all(lmap(_isfloat, [p, r, v])):
+    if all(map(_isfloat, [p, r, v])):
         return _qsturng(p, r, v)
     return _vqsturng(p, r, v)
 
@@ -868,7 +868,7 @@ def psturng(q, r, v):
         Values between .5 and .9 are 1st order appoximations.
 
     """
-    if all(lmap(_isfloat, [q, r, v])):
+    if all(map(_isfloat, [q, r, v])):
         return _psturng(q, r, v)
     return _vpsturng(q, r, v)
 

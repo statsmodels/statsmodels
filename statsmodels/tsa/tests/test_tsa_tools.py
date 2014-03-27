@@ -2,6 +2,7 @@
 
 '''
 
+from statsmodels.compat import zip
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_equal
 import statsmodels.api as sm

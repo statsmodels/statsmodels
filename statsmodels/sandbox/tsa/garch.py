@@ -73,7 +73,7 @@ Created on Feb 6, 2010
 @author: "josef pktd"
 '''
 from __future__ import print_function
-from statsmodels.compat import lzip
+from statsmodels.compat import lzip, zip
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -208,7 +208,7 @@ class LikelihoodModel(Model):
             converge = not warnflag
             mlefit = LikelihoodModelResults(self, xopt)
             optres = 'xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag'
-            self.optimresults = dict(lzip(optres.split(', '),[
+            self.optimresults = dict(zip(optres.split(', '),[
                 xopt, fopt, gopt, Hopt, func_calls, grad_calls, warnflag]))
         elif method == 'ncg':
             xopt, fopt, fcalls, gcalls, hcalls, warnflag = \

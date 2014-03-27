@@ -3,7 +3,7 @@
 some work, some things don't
 
 '''
-from statsmodels.compat import iterkeys, lzip
+from statsmodels.compat import iterkeys, zip
 import string
 import numpy as np
 
@@ -69,7 +69,7 @@ print(form.termcolumns(formula.Term('C')))  #doesn't work with string argument
 f2 = (form['A']+form['B'])
 print(f2)
 print(repr(f2))
-iterkeys(f2.namespace)   #namespace is still empty
+list(iterkeys(f2.namespace))   #namespace is still empty
 f2.namespace = namespace  #associate data
 iterkeys(f2.namespace)
 f2.design().shape
@@ -216,7 +216,7 @@ KeyError: '(ff==a)'
 
 f7 = formula.Formula(fac)
 # explicit updating of namespace with
-f7.namespace.update(dict(lzip(fac.names(),fac())))
+f7.namespace.update(dict(zip(fac.names(),fac())))
 
 # contrast matrix with 2 of 3 terms
 contrast.Contrast(formula.Term('(ff==b)')+formula.Term('(ff==a)'), f7).matrix

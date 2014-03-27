@@ -24,7 +24,7 @@ License: BSD (simplified)
 '''
 
 from __future__ import print_function
-from statsmodels.compat import lzip
+from statsmodels.compat import zip
 import numpy as np
 import numpy.lib.recfunctions as recf
 
@@ -348,11 +348,11 @@ tree0 = ('top',
              ]
         )
 
-datadict = dict(lzip(['Air', 'Train', 'Bus', 'Car'],
+datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
                     [xifloat[i]for i in range(4)]))
 
 #for testing only (mock that returns it's own name
-datadict = dict(lzip(['Air', 'Train', 'Bus', 'Car'],
+datadict = dict(zip(['Air', 'Train', 'Bus', 'Car'],
                     ['Airdata', 'Traindata', 'Busdata', 'Cardata']))
 
 datadict.update({'top' :   [],

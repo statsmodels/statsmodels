@@ -5,6 +5,7 @@ Author: Josef Perktold
 '''
 
 import numpy as np
+from statsmodels.compat import zip
 import statsmodels.api as sm
 
 from statsmodels.regression.quantile_regression import QuantReg

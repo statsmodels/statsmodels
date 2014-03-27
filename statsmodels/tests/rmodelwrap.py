@@ -108,7 +108,7 @@ class RModel(object):
     def getrlm(self):
         self.k2 = self.results['k2']
         if isinstance(self.results['w'], dict):
-            tmp = np.zeros((len(iterkeys(self.results['w']))))
+            tmp = np.zeros((len(list(iterkeys(self.results['w'])))))
             for i in iterkeys(self.results['w']):
                 tmp[int(i)-1] = self.results['w'][i]
             self.weights = tmp

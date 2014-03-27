@@ -33,7 +33,7 @@ if 1 in examples:
     formula = r('y~%s-1' % '+'.join(des_cols))
     frame = r.data_frame(y=y, x=x)
     results = r.lm(formula, data=frame)
-    print(iterkeys(results))
+    print(list(iterkeys(results)))
     print(results['coefficients'])
 
 if 2 in examples:

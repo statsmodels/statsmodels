@@ -110,7 +110,7 @@ class CoxPH(model.LikelihoodModel):
                 else:
                     self.failures[s.time].append(i)
 
-        self.failure_times = iterkeys(self.failures)
+        self.failure_times = list(iterkeys(self.failures))
         self.failure_times.sort()
 
     def cache(self):

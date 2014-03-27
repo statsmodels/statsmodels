@@ -1,3 +1,4 @@
+from statsmodels.compat import zip
 import warnings
 
 def _est_regression_summary():

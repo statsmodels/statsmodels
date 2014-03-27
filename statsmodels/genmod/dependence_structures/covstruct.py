@@ -1,5 +1,4 @@
-from statsmodels.compat import iterkeys
-import numpy as np
+from statsmodels.compat import iterkeys, itervalues, zipimport numpy as np
 
 
 class CovStruct(object):
@@ -671,7 +670,7 @@ class GlobalOddsRatio(CovStruct):
                 tables[ky][0, 1] += endog_01[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][0, 0] += endog_00[ix[:, 0], ix[:, 1]].sum()
 
-        return self.pooled_odds_ratio(tables.values())
+        return self.pooled_odds_ratio(list(itervalues(tables)))
 
 
 
@@ -747,7 +746,8 @@ class GlobalOddsRatio(CovStruct):
                 tables[ky][0, 1] += emat_01[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][0, 0] += emat_00[ix[:, 0], ix[:, 1]].sum()
 
-        cor_expval = self.pooled_odds_ratio(tables.values())
+
+        cor_expval = self.pooled_odds_ratio(list(itervalues(tables)))
 
         self.dep_params[0] *= self.crude_or / cor_expval
 

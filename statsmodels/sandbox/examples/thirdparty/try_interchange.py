@@ -21,8 +21,7 @@ some brief comments
 Created on Sat Jan 30 08:33:11 2010
 Author: josef-pktd
 """
-from statsmodels.compat import lzip
-import numpy as np
+from statsmodels.compat import lrange, zipimport numpy as np
 import scikits.timeseries as ts
 
 s = ts.time_series([1,2,3,4,5],
@@ -31,8 +30,9 @@ s = ts.time_series([1,2,3,4,5],
 
 print('\nUsing la')
 import la
-dta = la.larry(s.data, label=[range(len(s.data))])
-dat = la.larry(s.dates.tolist(), label=[range(len(s.data))])
+
+dta = la.larry(s.data, label=[lrange(len(s.data))])
+dat = la.larry(s.dates.tolist(), label=[lrange(len(s.data))])
 s2 = ts.time_series(dta.group_mean(dat).x,dates=ts.date_array(dat.x,freq="M"))
 s2u = ts.remove_duplicated_dates(s2)
 print(repr(s))
@@ -43,7 +43,7 @@ print(repr(s2u))
 print('\nUsing pandas')
 import pandas
 pdta = pandas.DataFrame(s.data, np.arange(len(s.data)), [1])
-pa = pdta.groupby(dict(lzip(np.arange(len(s.data)),
+pa = pdta.groupby(dict(zip(np.arange(len(s.data)),
             s.dates.tolist()))).aggregate(np.mean)
 s3 = ts.time_series(pa.values.ravel(),
             dates=ts.date_array(pa.index.tolist(),freq="M"))

@@ -2,7 +2,7 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
-from statsmodels.compat import reduce, iteritems, lzip, lmap
+from statsmodels.compat import reduce, iteritems, lmap, zip
 import numpy as np
 from pandas import DataFrame, Series, TimeSeries, isnull
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
@@ -147,12 +147,12 @@ class ModelData(object):
             nan_mask = ~nan_mask
             drop_nans = lambda x: cls._drop_nans(x, nan_mask)
             drop_nans_2d = lambda x: cls._drop_nans_2d(x, nan_mask)
-            combined = dict(lzip(combined_names, lmap(drop_nans, combined)))
+            combined = dict(zip(combined_names, lmap(drop_nans, combined)))
             if combined_2d:
-                combined.update(dict(lzip(combined_2d_names,
+                combined.update(dict(zip(combined_2d_names,
                                           lmap(drop_nans_2d, combined_2d))))
             if none_array_names:
-                combined.update(dict(lzip(none_array_names,
+                combined.update(dict(zip(none_array_names,
                                           [None] * len(none_array_names))))
             return combined, np.where(~nan_mask)[0].tolist()
         else:

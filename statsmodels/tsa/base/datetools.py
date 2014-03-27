@@ -1,5 +1,5 @@
 from statsmodels.compat import (lrange, lzip, lmap, string_types, callable,
-                                asstr, reduce)
+                                asstr, reduce, zip, map)
 import re
 import datetime
 from pandas import datetools as pandas_datetools
@@ -122,8 +122,8 @@ _quarter_to_day = {
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 _months_with_days = lzip(lrange(1,13), _mdays)
-_month_to_day = dict(lzip(lmap(str,lrange(1,13)), _months_with_days))
-_month_to_day.update(dict(lzip(["I", "II", "III", "IV", "V", "VI",
+_month_to_day = dict(zip(map(str,lrange(1,13)), _months_with_days))
+_month_to_day.update(dict(zip(["I", "II", "III", "IV", "V", "VI",
                                "VII", "VIII", "IX", "X", "XI", "XII"],
                                _months_with_days)))
 

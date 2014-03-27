@@ -1,8 +1,8 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat import (iteritems, range, lrange, lmap, string_types,
-    lzip)
+from statsmodels.compat import (iteritems, range, lrange, string_types, lzip,
+                                zip, map)
 import numpy as np
 from numpy.linalg import LinAlgError
 from scipy import stats
@@ -1058,10 +1058,10 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
 
-    dfs = lmap(lambda x : DataFrame(x, columns=ma_range, index=ar_range),
+    dfs = map(lambda x : DataFrame(x, columns=ma_range, index=ar_range),
               results)
 
-    res = dict(lzip(ic, dfs))
+    res = dict(zip(ic, dfs))
 
     # add the minimums to the results dict
     min_res = {}

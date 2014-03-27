@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from statsmodels.compat import lzip
+from statsmodels.compat import lzip, zip
 import numpy as np
 from . import kernels
 

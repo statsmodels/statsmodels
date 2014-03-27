@@ -3,7 +3,7 @@
 # Author: Ralf Gommers
 # Based on code by Flavio Coelho and Teemu Ikonen.
 
-
+from statsmodels.compat import zip
 import numpy as np
 from scipy.stats import gaussian_kde
 

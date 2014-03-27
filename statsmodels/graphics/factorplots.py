@@ -2,7 +2,7 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
-from statsmodels.compat import get_function_name, iterkeys, lrange, lzip, iteritems
+from statsmodels.compat import get_function_name, iterkeys, lrange, zip, iteritems
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
@@ -103,7 +103,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     if isinstance(x[0], str):
         x_levels = [l for l in np.unique(x)]
         x_values = lrange(len(x_levels))
-        x = _recode(x, dict(lzip(x_levels, x_values)))
+        x = _recode(x, dict(zip(x_levels, x_values)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
     plot_data = data.groupby(['trace', 'x']).aggregate(func).reset_index()
@@ -197,7 +197,7 @@ def _recode(x, levels):
         raise ValueError('This is not a valid value for levels.'
                          ' Dict required.')
 
-    elif not (np.unique(x) == np.unique(iterkeys(levels))).all():
+    elif not (np.unique(x) == np.unique(list(iterkeys(levels)))).all():
         raise ValueError('The levels do not match the array values.')
 
     else:

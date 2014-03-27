@@ -5,6 +5,7 @@
 
 
 from __future__ import print_function
+from statsmodels.compat import zip
 from datetime import datetime
 
 import numpy as np

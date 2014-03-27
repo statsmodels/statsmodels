@@ -6,7 +6,7 @@ should collect and aggregate likelihood contributions bottom up
 
 '''
 from __future__ import print_function
-from statsmodels.compat import iteritems
+from statsmodels.compat import iteritems, itervalues, lrange, zip
 import numpy as np
 
 tree = [[0,1],[[2,3],[4,5,6]],[7]]
@@ -83,7 +83,7 @@ tree2 = ('top',
             ]
          )
 
-data2 = dict([i for i in zip('abcdefgh',range(8))])
+data2 = dict([i for i in zip('abcdefgh',lrange(8))])
 #data2.update({'top':1000, 'B1':100, 'B2':200, 'B21':300,'B22':400, 'B3':400})
 data2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
 
@@ -117,7 +117,8 @@ paramsind = {
 
 #unique, parameter array names,
 #sorted alphabetically, order is/should be only internal
-paramsnames = sorted(set([i for j in paramsind.values() for i in j]))
+
+paramsnames = sorted(set([i for j in itervalues(paramsind) for i in j]))
 
 #mapping coefficient names to indices to unique/parameter array
 paramsidx = dict((name, idx) for (idx,name) in enumerate(paramsnames))

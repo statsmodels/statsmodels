@@ -9,7 +9,7 @@ See also
 ---------
 numpy.lib.io
 """
-from statsmodels.compat import (lzip, lmap, lrange, string_types, long, lfilter,
+from statsmodels.compat import (zip, lzip, lmap, lrange, string_types, long, lfilter,
                                 asbytes, asstr)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
@@ -394,7 +394,7 @@ class StataReader(object):
         if as_dict:
             vars = lmap(str, self.variables())
             for i in range(len(self)):
-                yield dict(lzip(vars, self._next()))
+                yield dict(zip(vars, self._next()))
         else:
             for i in range(self._header['nobs']):
                 yield self._next()

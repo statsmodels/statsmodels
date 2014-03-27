@@ -6,6 +6,7 @@ Unit tests table.py.
 :see: http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/305292
 '''
 from __future__ import absolute_import
+from statsmodels.compat import zip
 import unittest
 
 try:

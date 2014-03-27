@@ -1,5 +1,5 @@
 from statsmodels.compat import (lrange, iterkeys, iteritems, StringIO, lzip,
-                                reduce, itervalues)
+                                reduce, itervalues, zip)
 from statsmodels.compat.collections import OrderedDict
 import numpy as np
 import pandas as pd
@@ -79,8 +79,10 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        keys = [_formatter(x, float_format) for x in iteritems(d)]
-        vals = [_formatter(x, float_format) for x in d.values()]
+        keys = [_formatter(x, float_format) for x in iterkeys(d)]
+
+
+        vals = [_formatter(x, float_format) for x in itervalues(d)]
         data = np.array(lzip(keys, vals))
 
         if data.shape[0] % ncols != 0:

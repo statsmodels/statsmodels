@@ -5,7 +5,7 @@ Only Gaussian models are currently checked.
 
 See the generated file "gee_simulation_check.txt" for results.
 """
-from statsmodels.compat import range, lrange
+from statsmodels.compat import range, lrange, zip
 import scipy
 import numpy as np
 from itertools import product
