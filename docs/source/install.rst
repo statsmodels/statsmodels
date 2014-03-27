@@ -112,7 +112,7 @@ Dependencies
 * `SciPy <http://www.scipy.org/>`__ >= 0.7
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
 * `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
-* `Cython <http://cython.org/>`__ >= 15.1, Needed if you want to build the code from github and not a source distribution.
+* `Cython <http://cython.org/>`__ >= 20.1, Needed if you want to build the code from github and not a source distribution. You must use Cython >= 0.20.1 if you're on Python 3.4. Earlier versions may work for Python < 3.4.
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
