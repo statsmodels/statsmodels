@@ -18,7 +18,7 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
-from statsmodels.compat import lmap
+from statsmodels.compat import lmap, lzip
 import numpy as np
 from scipy.special import gammaln
 from scipy import stats, special, optimize  # opt just for nbin
@@ -2682,7 +2682,7 @@ class MultinomialResults(DiscreteResults):
         """
         J = self.model.J
         # these are the actual, predicted indices
-        idx = zip(self.model.endog, self.predict().argmax(1))
+        idx = lzip(self.model.endog, self.predict().argmax(1))
         return np.histogram2d(self.model.endog, self.predict().argmax(1),
                               bins=J)[0]
 

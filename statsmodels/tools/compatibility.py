@@ -12,7 +12,7 @@ except:
 def getZipFile():
     '''return ZipFile class with open method for python < 2.6
 
-    for python < 2.6, the open method returns a StringIO.StringIO file_like
+    for python < 2.6, the open method returns a StringIO file_like
 
     Examples
     --------

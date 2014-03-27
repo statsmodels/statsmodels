@@ -1,6 +1,7 @@
 """
 Empirical CDF Functions
 """
+from statsmodels.compat import urlopen
 import numpy as np
 from scipy.interpolate import interp1d
 
@@ -165,8 +166,7 @@ if __name__ == "__main__":
     #TODO: Make sure everything is correctly aligned and make a plotting
     # function
     import matplotlib.pyplot as plt
-    import urllib
-    nerve_data = urllib.urlopen('http://www.statsci.org/data/general/nerve.txt')
+    nerve_data = urlopen('http://www.statsci.org/data/general/nerve.txt')
     nerve_data = np.loadtxt(nerve_data)
     x = nerve_data / 50. # was in 1/50 seconds
     cdf = ECDF(x)

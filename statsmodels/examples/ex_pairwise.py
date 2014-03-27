@@ -8,7 +8,7 @@ Author: Josef Perktold
 
 
 from __future__ import print_function
-from statsmodels.compat import BytesIO, asbytes
+from statsmodels.compat import BytesIO, asbytes, StringIO
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
@@ -190,8 +190,7 @@ if __name__ == '__main__':
     1 - 2	-4.600	-8.249	-0.951	***
     1 - 3	-0.260	-3.909	 3.389	'''
 
-    import StringIO
-    dta5 = np.recfromtxt(StringIO.StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
+    dta5 = np.recfromtxt(StringIO(ss5), names = ('pair', 'mean', 'lower', 'upper', 'sig'), delimiter='\t')
 
     sas_ = dta5[[1,3,2]]
     confint1 = res3[1][4]

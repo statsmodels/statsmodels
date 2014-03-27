@@ -560,7 +560,7 @@ if __name__ == '__main__':
      'h': ['consth', 'p', 'h'],
      'top': []}
 
-    datadict2 = dict([i for i in zip('abcdefgh',range(8))])
+    datadict2 = dict([i for i in lzip('abcdefgh',range(8))])
     datadict2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
     '''
     >>> pprint(datadict2)

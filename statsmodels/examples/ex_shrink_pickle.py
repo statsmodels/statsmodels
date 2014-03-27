@@ -5,7 +5,7 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
-
+from statsmodels.compat import StringIO
 import numpy as np
 import statsmodels.api as sm
 
@@ -71,8 +71,7 @@ print(results3.predict(xf, exposure=1, offset=0))
 print(results3.model.predict(results.params, xf, exposure=1, offset=0))
 
 def check_pickle(obj):
-    import StringIO
-    fh = StringIO.StringIO()
+    fh =StringIO()
     cPickle.dump(obj, fh)
     plen = fh.pos
     fh.seek(0,0)

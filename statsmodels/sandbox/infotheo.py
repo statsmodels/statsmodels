@@ -32,7 +32,7 @@ Golan, A., Judge, G., and Miller, D.  1996.  Maximum Entropy Econometrics.
 #bias and variance. Technical Report 2003/131 School of Computer Science and Software Engineer-
 #ing, Monash University.
 
-from statsmodels.compat import range, lzip
+from statsmodels.compat import range, lzip, lmap
 from scipy import stats
 import numpy as np
 from matplotlib import pyplot as plt
@@ -464,7 +464,7 @@ and Synthesis")
     plt.ylabel("Entropy")
     plt.xlabel("Probability")
     x = np.linspace(0,1,101)
-    plt.plot(x, map(shannonentropy, lzip(x,1-x)))
+    plt.plot(x, lmap(shannonentropy, lzip(x,1-x)))
 #    plt.show()
 
     # define a joint probability distribution

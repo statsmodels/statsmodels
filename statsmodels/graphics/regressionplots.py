@@ -374,7 +374,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
             raise ValueError("obs_labels does not match length of exog_i")
         label_kwargs.update(dict(ha="center", va="bottom"))
         ax = utils.annotate_axes(lrange(len(obs_labels)), obs_labels,
-                            zip(res_xaxis.resid, res_yaxis.resid),
+                            lzip(res_xaxis.resid, res_yaxis.resid),
                             [(0, 5)] * len(obs_labels), "x-large", ax=ax,
                             **label_kwargs)
 
@@ -779,8 +779,8 @@ def influence_plot(results, external=True, alpha=.05, criterion="cooks",
     if labels is None:
         labels = lrange(len(resids))
     ax = utils.annotate_axes(np.where(large_points)[0], labels,
-                             zip(leverage, resids),
-                             zip(-(psize/2)**.5, (psize/2)**.5), "x-large",
+                             lzip(leverage, resids),
+                             lzip(-(psize/2)**.5, (psize/2)**.5), "x-large",
                              ax)
 
     #TODO: make configurable or let people do it ex-post?

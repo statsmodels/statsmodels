@@ -6,7 +6,7 @@ Created on Fri Oct 04 13:19:01 2013
 Author: Josef Perktold
 """
 from __future__ import print_function
-from statsmodels.compat import lrange
+from statsmodels.compat import lrange, lmap
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 
@@ -53,7 +53,7 @@ def get_griliches76_data():
 yg_df, xg_df, zg_df = get_griliches76_data()
 
 endog = np.asarray(yg_df, dtype=float)  # TODO: why is yg_df float32
-exog, instrument = map(np.asarray, [xg_df, zg_df])
+exog, instrument = lmap(np.asarray, [xg_df, zg_df])
 
 assert exog.dtype == np.float64
 assert instrument.dtype == np.float64

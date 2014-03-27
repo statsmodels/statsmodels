@@ -13,6 +13,7 @@ TODO:
 '''
 
 from __future__ import print_function
+from statsmodels.compat import lmap
 import numpy as np
 #from scipy import stats
 import statsmodels.api as sm
@@ -39,7 +40,7 @@ def data2proddummy(x):
     '''
     #brute force, assumes x is 2d
     #replace with encoding if possible
-    groups = np.unique(map(tuple, x.tolist()))
+    groups = np.unique(lmap(tuple, x.tolist()))
     #includes singularity with additive factors
     return (x==groups[:,None,:]).all(-1).T.astype(int)[:,:-1]
 

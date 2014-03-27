@@ -5,6 +5,7 @@ Created on Sat Dec 17 08:39:16 2011
 
 Author: Josef Perktold
 """
+from statsmodels.compat import urlretrieve
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -18,8 +19,7 @@ try:
     pet = np.genfromtxt("test_data.txt")
     print('using local file')
 except IOError:
-    import urllib
-    urllib.urlretrieve('http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt',
+    urlretrieve('http://www.kellogg.northwestern.edu/faculty/petersen/htm/papers/se/test_data.txt',
                        'test_data.txt')
     print('downloading file')
     pet = np.genfromtxt("test_data.txt")

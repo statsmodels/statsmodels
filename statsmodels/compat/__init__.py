@@ -90,6 +90,7 @@ if PY3:
     urljoin = urllib.parse.urljoin
     urlretrieve = urllib.request.urlretrieve
     string_types = str
+    input = input
 
 else:
     bytes = str
@@ -129,6 +130,8 @@ else:
     urljoin = urlparse.urljoin
     HTTPError = urllib2.HTTPError
     string_types = basestring
+
+    input = raw_input
 
 
 def getexception():

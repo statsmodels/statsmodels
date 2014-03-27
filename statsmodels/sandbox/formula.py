@@ -8,7 +8,7 @@ namespace : dictionary
 
 
 """
-from statsmodels.compat import iterkeys, lrange, callable
+from statsmodels.compat import iterkeys, lrange, callable, string_types
 import copy
 import types
 import numpy as np
@@ -88,7 +88,7 @@ class Term(object):
         else:
             self.termname = termname
 
-        if type(self.termname) is not types.StringType:
+        if not isinstance(self.termname, string_types):
             raise ValueError('expecting a string for termname')
         if func:
             self.func = func
@@ -141,7 +141,7 @@ class Term(object):
         Return the names of the columns in design associated to the terms,
         i.e. len(self.names()) = self().shape[0].
         """
-        if type(self.name) is types.StringType:
+        if isinstance(self.name, string_types):
             return [self.name]
         else:
             return list(self.name)
@@ -387,7 +387,7 @@ class Formula(object):
         self.__namespace = namespace
         if isinstance(termlist, Formula):
             self.terms = copy.copy(list(termlist.terms))
-        elif type(termlist) is types.ListType:
+        elif isinstance(termlist, list):
             self.terms = termlist
         elif isinstance(termlist, Term):
             self.terms = [termlist]

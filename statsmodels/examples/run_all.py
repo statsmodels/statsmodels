@@ -8,7 +8,7 @@ uncomment plt.show() to show all plot windows
 
 '''
 from __future__ import print_function
-from statsmodels.compat import lrange, lzip
+from statsmodels.compat import lrange, lzip, input
 import matplotlib.pyplot as plt #matplotlib is required for many examples
 
 stop_on_error = True
@@ -41,7 +41,7 @@ def noop(*args):
     pass
 plt.show = noop
 
-cont = raw_input("""Are you sure you want to run all of the examples?
+cont = input("""Are you sure you want to run all of the examples?
 This is done mainly to check that they are up to date.
 (y/n) >>> """)
 if 'y' in cont.lower():

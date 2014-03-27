@@ -34,7 +34,7 @@ import numpy as np
 
 
 from statsmodels.base import model
-import survival
+from . import survival
 
 class Discrete(object):
 
