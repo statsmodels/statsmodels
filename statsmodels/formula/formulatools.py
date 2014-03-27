@@ -1,4 +1,4 @@
-from statsmodels.compatnp import iterkeys
+from statsmodels.compat import iterkeys
 import statsmodels.tools.data as data_util
 from patsy import dmatrices
 

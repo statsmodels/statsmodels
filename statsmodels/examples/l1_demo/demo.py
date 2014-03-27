@@ -1,5 +1,5 @@
 from __future__ import print_function
-from statsmodels.compatnp.py3k import range
+from statsmodels.compat import range
 from optparse import OptionParser
 import statsmodels.api as sm
 import scipy as sp

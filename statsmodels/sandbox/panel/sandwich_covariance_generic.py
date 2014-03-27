@@ -13,7 +13,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-from statsmodels.compatnp.py3k import range
+from statsmodels.compat import range
 import numpy as np
 
 def kernel(d1, d2, r=None, weights=None):

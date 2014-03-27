@@ -9,7 +9,7 @@ in ANOVA
 from __future__ import print_function
 import numpy as np
 #from scipy import stats
-from statsmodels.compatnp.py3k import lmap
+from statsmodels.compat import lmap
 import statsmodels.api as sm
 
 

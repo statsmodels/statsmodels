@@ -1,9 +1,8 @@
-from statsmodels.compatnp.py3k import lrange, lzip, lmap, string_types, callable
+from statsmodels.compat import lrange, lzip, lmap, string_types, callable, asstr
 import re
 import datetime
 from pandas import datetools as pandas_datetools
 import numpy as np
-from statsmodels.compatnp.py3k import asstr
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
 try:

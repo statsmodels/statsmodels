@@ -7,8 +7,7 @@ http://code.activestate.com/recipes/576611/ , downloaded 2013-03-08
 '''
 
 from __future__ import print_function
-from statsmodels.compatnp.py3k import filter
-from statsmodels.compatnp import iteritems
+from statsmodels.compat import filter, iteritems
 from operator import itemgetter
 from heapq import nlargest
 from itertools import repeat

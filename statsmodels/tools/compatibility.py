@@ -1,6 +1,6 @@
 
 import numpy as np
-from statsmodels.compatnp.py3k import StringIO
+from statsmodels.compat import StringIO
 try:
     from numpy.linalg import slogdet as np_slogdet
 except:

@@ -26,7 +26,7 @@ need testcase before trying to fix
 '''
 
 from __future__ import print_function
-from statsmodels.compatnp import iterkeys
+from statsmodels.compat import iterkeys
 import shutil
 import tempfile
 

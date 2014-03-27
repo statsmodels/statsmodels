@@ -3,8 +3,7 @@ Test VAR Model
 """
 from __future__ import with_statement, print_function
 # pylint: disable=W0612,W0231
-from statsmodels.compatnp import iteritems
-from statsmodels.compatnp.py3k import StringIO, lrange
+from statsmodels.compat import iteritems, StringIO, lrange, BytesIO
 from nose.tools import assert_raises
 import nose
 import os
@@ -17,7 +16,7 @@ import statsmodels.tsa.vector_ar.var_model as model
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
 from statsmodels.tsa.vector_ar.var_model import VAR
-from statsmodels.compatnp.py3k import BytesIO
+
 
 from numpy.testing import assert_almost_equal, assert_equal, assert_
 
@@ -441,7 +440,6 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.stderr, res3.stderr)
 
     def test_pickle(self):
-        from statsmodels.compatnp.py3k import BytesIO
         fh = BytesIO()
         #test wrapped results load save pickle
         self.res.save(fh)

@@ -2,7 +2,7 @@
 
 '''
 
-from statsmodels.compatnp.py3k import range
+from statsmodels.compat import range
 import numpy as np
 
 from statsmodels.tsa.stattools import acovf

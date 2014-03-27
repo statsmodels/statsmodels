@@ -24,7 +24,7 @@ License: BSD (simplified)
 '''
 
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lzip
+from statsmodels.compat import lzip
 import numpy as np
 import numpy.lib.recfunctions as recf
 

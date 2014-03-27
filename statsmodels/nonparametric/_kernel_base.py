@@ -2,7 +2,7 @@
 Module containing the base object for multivariate kernel density and
 regression, plus some utilities.
 """
-from statsmodels.compatnp.py3k import range, string_types
+from statsmodels.compat import range, string_types
 import copy
 
 import numpy as np

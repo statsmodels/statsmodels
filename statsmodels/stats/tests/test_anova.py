@@ -1,4 +1,4 @@
-from statsmodels.compatnp.py3k import StringIO
+from statsmodels.compat import StringIO
 
 import numpy as np
 

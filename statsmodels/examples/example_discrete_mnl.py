@@ -55,7 +55,7 @@ print(mlogit_res.summary(yname='PID', yname_list=endog_names, xname=exog_names))
 
 
 ''' #trying cPickle
-from statsmodels.compatnp.py3k import cPickle #, copy
+from statsmodels.compat import cPickle #, copy
 
 #copy.deepcopy(mlogit_res)  #raises exception: AttributeError: 'ResettableCache' object has no attribute '_resetdict'
 mnl_res = mlogit_mod.fit(method='bfgs', maxiter=100)

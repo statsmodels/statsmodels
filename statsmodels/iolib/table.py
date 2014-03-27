@@ -83,10 +83,10 @@ Potential problems for Python 3
 """
 
 from __future__ import division, with_statement
-from statsmodels.compatnp.py3k import lmap, lrange, zip, next
+from statsmodels.compat import lmap, lrange, zip, next
 import logging
 
-from statsmodels.compatnp.iter_compat import zip_longest
+from statsmodels.compat.iter_compat import zip_longest
 
 from itertools import cycle
 from collections import defaultdict

@@ -1,4 +1,4 @@
-from statsmodels.compatnp.py3k import lrange
+from statsmodels.compat import lrange
 from statsmodels.tsa.stattools import (adfuller, acf, pacf_ols, pacf_yw,
                                                pacf, grangercausalitytests,
                                                coint, acovf,

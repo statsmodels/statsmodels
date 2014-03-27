@@ -1,9 +1,8 @@
-from statsmodels.compatnp.py3k import lrange, lmap
+from statsmodels.compat import lrange, lmap, iterkeys
 import sys
 import numpy as np
 from scipy import stats
 #from statsmodels.iolib.table import SimpleTable
-from statsmodels.compatnp import iterkeys
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.tools.decorators import nottest
 

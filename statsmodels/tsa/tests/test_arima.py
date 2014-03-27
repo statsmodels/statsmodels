@@ -1,4 +1,4 @@
-from statsmodels.compatnp.py3k import lrange
+from statsmodels.compat import lrange, BytesIO
 import numpy as np
 from nose.tools import nottest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
@@ -204,7 +204,6 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
         cls.res2 = results_arma.Y_arma11()
 
     def test_pickle(self):
-        from statsmodels.compatnp.py3k import BytesIO
         fh = BytesIO()
         #test wrapped results load save pickle
         self.res1.save(fh)

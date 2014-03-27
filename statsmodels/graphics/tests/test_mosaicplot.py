@@ -1,13 +1,12 @@
 from __future__ import division
-from statsmodels.compatnp import iterkeys
-from statsmodels.compatnp.py3k import lzip, lrange
+from statsmodels.compat import iterkeys, lzip, lrange
 
 from numpy.testing import assert_, assert_raises, dec
 from numpy.testing import run_module_suite
 
 # utilities for the tests
 
-from statsmodels.compatnp.collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 from statsmodels.api import datasets
 
 import numpy as np

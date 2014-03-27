@@ -3,7 +3,7 @@ A collection of utilities to see if new ReST files need to be automatically
 generated from certain files in the project (examples, datasets).
 """
 import os
-from statsmodels.compatnp.py3k import cPickle
+from statsmodels.compat.py3k import cPickle
 
 file_path = os.path.dirname(__file__)
 

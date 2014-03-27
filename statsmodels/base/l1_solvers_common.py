@@ -3,7 +3,7 @@ Holds common functions for l1 solvers.
 """
 from __future__ import print_function
 import numpy as np
-from statsmodels.compatnp import range
+from statsmodels.compat import range
 
 def qc_results(params, alpha, score, qc_tol, qc_verbose=False):
     """

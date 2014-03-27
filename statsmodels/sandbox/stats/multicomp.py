@@ -81,7 +81,7 @@ ValueError: zero-size array to ufunc.reduce without identity
 #import xlrd
 #import xlwt
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lzip
+from statsmodels.compat import lzip, range, lrange
 import scipy.stats
 import numpy
 import numpy as np
@@ -91,7 +91,6 @@ from scipy import stats
 from statsmodels.iolib.table import SimpleTable
 from numpy.testing import assert_almost_equal, assert_equal
 #temporary circular import
-from statsmodels.compatnp.py3k import range, lrange
 from statsmodels.stats.multitest import multipletests, _ecdf as ecdf, fdrcorrection as fdrcorrection0, fdrcorrection_twostage
 from statsmodels.graphics import utils
 

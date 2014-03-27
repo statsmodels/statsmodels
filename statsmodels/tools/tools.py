@@ -1,7 +1,7 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compatnp.py3k import reduce, lzip, lmap
+from statsmodels.compat import reduce, lzip, lmap, asstr2
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
@@ -10,7 +10,6 @@ from scipy.linalg import svdvals
 from statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.compatnp.py3k import asstr2
 from statsmodels.compatnp.np_compat import np_matrix_rank
 from pandas import DataFrame
 

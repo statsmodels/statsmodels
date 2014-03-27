@@ -17,7 +17,7 @@ getquotes is from pandas\examples\finance.py
 Created on Sat Jan 30 16:30:18 2010
 Author: josef-pktd
 """
-from statsmodels.compatnp.py3k import lzip
+from statsmodels.compat import lzip
 import numpy as np
 import matplotlib.finance as fin
 import matplotlib.pyplot as plt

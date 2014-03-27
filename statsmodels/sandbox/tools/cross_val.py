@@ -13,7 +13,7 @@ changes to code by josef-pktd:
 
 """
 
-from statsmodels.compatnp.py3k import range, lrange
+from statsmodels.compat import range, lrange
 import numpy as np
 
 try:

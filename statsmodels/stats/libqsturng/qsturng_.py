@@ -23,7 +23,7 @@ see:
     http://www.stata.com/stb/stb46/dm64/sturng.pdf
 """
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lrange, lmap
+from statsmodels.compat import lrange, lmap
 import math
 import scipy.stats
 import numpy as np

@@ -6,8 +6,7 @@ Created on Fri Mar 09 16:00:27 2012
 Author: Josef Perktold
 """
 from __future__ import print_function
-from statsmodels.compatnp import iterkeys
-from statsmodels.compatnp.py3k import cPickle
+from statsmodels.compat import iterkeys, cPickle, BytesIO
 import numpy as np
 import statsmodels.api as sm
 
@@ -23,7 +22,6 @@ winoldnp = iswin & npversionless15
 
 
 def check_pickle(obj):
-    from statsmodels.compatnp.py3k import BytesIO
     fh = BytesIO()
     cPickle.dump(obj, fh)
     plen = fh.tell()
@@ -88,8 +86,6 @@ class RemoveDataPickle(object):
         assert_(self.results.remove_data.__doc__ is not None)
 
     def test_pickle_wrapper(self):
-
-        from statsmodels.compatnp.py3k import BytesIO
 
         fh = BytesIO()  # use cPickle with binary content
 

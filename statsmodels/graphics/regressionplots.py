@@ -10,7 +10,7 @@ update
 2011-10-27 : docstrings
 
 '''
-from statsmodels.compatnp.py3k import lrange, string_types, lzip
+from statsmodels.compat import lrange, string_types, lzip
 import numpy as np
 
 from statsmodels.regression.linear_model import OLS

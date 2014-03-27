@@ -9,7 +9,9 @@ differ among implementations and the results will not agree exactly.
 """
 
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lrangeimport numpy as np
+from statsmodels.compatnp.py3k import lrange
+import numpy as np
+
 import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE,\

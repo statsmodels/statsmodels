@@ -6,7 +6,7 @@ The only changes are that additional results are returned
 
 '''
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lmap
+from statsmodels.compat import lmap
 import numpy as np
 from scipy.linalg import svd as decomp_svd
 #decomp_svd

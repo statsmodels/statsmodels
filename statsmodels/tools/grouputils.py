@@ -31,10 +31,10 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 
 """
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lrange, lzip
+from statsmodels.compat import lrange, lzip
 import numpy as np
 import pandas as pd
-from statsmodels.compatnp.np_compat import npc_unique
+from statsmodels.compat.np_compat import npc_unique
 import statsmodels.tools.data as data_util
 from statsmodels.tools.decorators import cache_readonly
 from pandas.core.index import Index, MultiIndex

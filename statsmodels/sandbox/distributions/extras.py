@@ -52,7 +52,7 @@ License: BSD
 
 #note copied from distr_skewnorm_0.py
 from __future__ import print_function
-from statsmodels.compatnp.py3k import range
+from statsmodels.compat import range
 from scipy import stats, special, integrate  # integrate is for scipy 0.6.0 ???
 from scipy.stats import distributions
 from statsmodels.stats.moment_helpers import mvsk2mc, mc2mvsk

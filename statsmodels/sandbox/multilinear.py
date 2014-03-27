@@ -11,8 +11,7 @@ multigroup:
     more significant than outside the group.
 """
 
-from statsmodels.compatnp import iteritems
-from statsmodels.compatnp.py3k import string_types
+from statsmodels.compat import iteritems, string_types
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS

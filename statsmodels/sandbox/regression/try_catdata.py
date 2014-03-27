@@ -1,4 +1,4 @@
-from statsmodels.compatnp.py3k import lrange
+from statsmodels.compat import lrange
 import numpy as np
 #from numpy import linalg as npla
 from scipy import stats, optimize

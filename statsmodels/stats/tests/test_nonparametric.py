@@ -5,7 +5,7 @@ Created on Fri Jul 05 14:05:24 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compatnp.py3k import lzip
+from statsmodels.compat import lzip
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q, Runs,

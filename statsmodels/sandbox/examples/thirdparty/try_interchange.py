@@ -21,7 +21,7 @@ some brief comments
 Created on Sat Jan 30 08:33:11 2010
 Author: josef-pktd
 """
-from statsmodels.compatnp.py3k import lzip
+from statsmodels.compat import lzip
 import numpy as np
 import scikits.timeseries as ts
 

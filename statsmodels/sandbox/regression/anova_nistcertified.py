@@ -3,7 +3,7 @@
 compares my implementations, stats.f_oneway and anova using statsmodels.OLS
 '''
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lmap
+from statsmodels.compat import lmap
 import os
 import numpy as np
 from scipy import stats

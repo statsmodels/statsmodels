@@ -11,7 +11,7 @@ Author: josef-pktd
 License: Simplified BSD
 '''
 from __future__ import print_function
-from statsmodels.compatnp.py3k import range, lmap
+from statsmodels.compat import range, lmap
 import numpy as np
 from scipy import stats, optimize, integrate
 

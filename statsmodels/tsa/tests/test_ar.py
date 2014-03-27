@@ -31,7 +31,7 @@ class CheckARMixin(object):
         assert_almost_equal(self.res1.fpe, self.res2.fpe, DECIMAL_6)
 
     def test_pickle(self):
-        from statsmodels.compatnp.py3k import BytesIO
+        from statsmodels.compat import BytesIO
         fh = BytesIO()
         #test wrapped results load save pickle
         self.res1.save(fh)

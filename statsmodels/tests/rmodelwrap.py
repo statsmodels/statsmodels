@@ -1,6 +1,6 @@
 ''' Wrapper for R models to allow comparison to scipy models '''
 
-from statsmodels.compatnp import iterkeys
+from statsmodels.compat import iterkeys
 import numpy as np
 
 import rpy

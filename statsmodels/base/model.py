@@ -10,7 +10,7 @@ from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
-from statsmodels.compatnp import iterkeys, lzip, range, reduce
+from statsmodels.compat import iterkeys, lzip, range, reduce
 from statsmodels.compatnp.np_compat import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
 

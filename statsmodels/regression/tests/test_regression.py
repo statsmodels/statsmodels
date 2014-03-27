@@ -2,7 +2,7 @@
 Test functions for models.regression
 """
 # TODO: Test for LM
-from statsmodels.compatnp.py3k import long, lrange
+from statsmodels.compat import long, lrange
 import warnings
 import pandas
 import numpy as np

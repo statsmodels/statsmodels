@@ -30,7 +30,7 @@ References
 
 # TODO: make default behavior efficient=True above a certain n_obs
 
-from statsmodels.compatnp.py3k import range, string_types, next
+from statsmodels.compat import range, string_types, next
 import copy
 
 import numpy as np

@@ -1,4 +1,4 @@
-from statsmodels.compatnp import iterkeys
+from statsmodels.compat import iterkeys
 from statsmodels.regression.linear_model import GLS
 import numpy as np
 from statsmodels.base.model import LikelihoodModelResults

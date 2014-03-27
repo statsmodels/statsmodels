@@ -1,6 +1,6 @@
 
 from numpy.testing import assert_
-from statsmodels.compatnp.collections import Counter
+from statsmodels.compat.collections import Counter
 
 
 def test_counter():

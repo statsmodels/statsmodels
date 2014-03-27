@@ -1,13 +1,12 @@
 """Example: statsmodels.sandbox.sysreg
 """
 #TODO: this is going to change significantly once we have a panel data structure
-from statsmodels.compatnp.py3k import lmap
+from statsmodels.compat import lmap, asbytes
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.sandbox.sysreg import *
 
 #for Python 3 compatibility
-from statsmodels.compatnp.py3k import asbytes
 
 # Seemingly Unrelated Regressions (SUR) Model
 

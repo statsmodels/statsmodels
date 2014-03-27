@@ -17,7 +17,7 @@ The results "prove" that the regularization paths are the same.  Note that
     are NOT monotonic.  As a result, the paths don't match up perfectly.
 """
 from __future__ import print_function
-from statsmodels.compatnp.py3k import range, lrange
+from statsmodels.compat import range, lrange
 from sklearn import linear_model
 from sklearn import datasets
 import statsmodels.api as sm

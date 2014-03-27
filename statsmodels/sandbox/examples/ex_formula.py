@@ -3,8 +3,7 @@
 some work, some things don't
 
 '''
-from statsmodels.compatnp import iterkeys
-from statsmodels.compatnp.py3k import lzip
+from statsmodels.compat import iterkeys, lzip
 import string
 import numpy as np
 

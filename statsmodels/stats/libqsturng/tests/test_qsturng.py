@@ -6,8 +6,7 @@
 extensively ensure the stability and accuracy of the functions"""
 
 from __future__ import with_statement
-from statsmodels.compatnp import iterkeys
-from statsmodels.compatnp.py3k import lzip, lmap
+from statsmodels.compat import iterkeys, lzip, lmap
 
 from numpy.testing import TestCase, rand, assert_, assert_equal, \
     assert_almost_equal, assert_array_almost_equal, assert_array_equal, \

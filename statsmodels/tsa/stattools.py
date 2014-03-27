@@ -1,8 +1,7 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compatnp import iteritems
-from statsmodels.compatnp.py3k import (range, lrange, lmap, string_types,
+from statsmodels.compat import (iteritems, range, lrange, lmap, string_types,
     lzip)
 import numpy as np
 from numpy.linalg import LinAlgError

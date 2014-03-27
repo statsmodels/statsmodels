@@ -30,8 +30,7 @@ missing:
 
 """
 from __future__ import print_function
-from statsmodels.compatnp import iteritems
-from statsmodels.compatnp.py3k import lrange, lmap
+from statsmodels.compat import iteritems, lrange, lmap
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS

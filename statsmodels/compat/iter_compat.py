@@ -7,7 +7,7 @@ Author: Josef Perktold
 License: BSD-3
 
 """
-from statsmodels.compatnp.py3k import lrange
+from statsmodels.compat import lrange
 import itertools
 
 try:

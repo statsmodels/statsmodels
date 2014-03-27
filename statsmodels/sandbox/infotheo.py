@@ -32,7 +32,7 @@ Golan, A., Judge, G., and Miller, D.  1996.  Maximum Entropy Econometrics.
 #bias and variance. Technical Report 2003/131 School of Computer Science and Software Engineer-
 #ing, Monash University.
 
-from statsmodels.compatnp.py3k import range, lzip
+from statsmodels.compat import range, lzip
 from scipy import stats
 import numpy as np
 from matplotlib import pyplot as plt

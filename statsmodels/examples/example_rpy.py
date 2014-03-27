@@ -18,7 +18,7 @@ some basic models for comparisons of results to statsmodels.
 '''
 
 from __future__ import print_function
-from statsmodels.compatnp import iterkeys
+from statsmodels.compat import iterkeys
 from rpy import r
 import numpy as np
 import statsmodels.api as sm

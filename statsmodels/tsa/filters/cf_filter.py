@@ -1,4 +1,4 @@
-from statsmodels.compatnp.py3k import range
+from statsmodels.compat import range
 
 import numpy as np
 from ._utils import _maybe_get_pandas_wrapper

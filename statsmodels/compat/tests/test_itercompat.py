@@ -5,10 +5,10 @@ Created on Wed Feb 29 10:34:00 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compatnp.py3k import lrange
+from statsmodels.compat import lrange
 from numpy.testing import assert_
 
-from statsmodels.compatnp.iter_compat import zip_longest, combinations
+from statsmodels.compat.iter_compat import zip_longest, combinations
 
 def test_zip_longest():
     lili = [['a0', 'b0', 'c0', 'd0'],

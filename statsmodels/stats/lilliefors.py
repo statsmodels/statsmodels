@@ -16,7 +16,7 @@ Hubert W. Lilliefors
 Journal of the American Statistical Association, Vol. 62, No. 318. (Jun., 1967), pp. 399-402.
 
 """
-from statsmodels.compatnp.py3k import string_types
+from statsmodels.compat import string_types
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy import stats

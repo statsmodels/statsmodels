@@ -1,4 +1,4 @@
-from statsmodels.compatnp.py3k import lmap, lzip
+from statsmodels.compat import lmap, lzip
 import numpy as np
 import pandas as pd
 from numpy.testing import dec

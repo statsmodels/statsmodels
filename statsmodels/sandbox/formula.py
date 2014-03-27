@@ -8,8 +8,7 @@ namespace : dictionary
 
 
 """
-from statsmodels.compatnp import iterkeys
-from statsmodels.compatnp.py3k import lrange, callable
+from statsmodels.compat import iterkeys, lrange, callable
 import copy
 import types
 import numpy as np

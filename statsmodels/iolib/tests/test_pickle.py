@@ -1,5 +1,5 @@
-from statsmodels.compatnp.py3k import lrange
-from statsmodels.iolib.smpickle import save_pickle, load_pickle
+from statsmodels.compat import lrange
+from statsmodels.iolib.smpickle import save_pickle, load_pickle, BytesIO
 
 def test_pickle():
     import tempfile
@@ -20,7 +20,6 @@ def test_pickle():
     assert not os.path.exists(tmpdir)
 
     #test with file handle
-    from statsmodels.compatnp.py3k import BytesIO
     fh = BytesIO()
     save_pickle(a, fh)
     fh.seek(0,0)

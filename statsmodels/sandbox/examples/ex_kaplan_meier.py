@@ -1,6 +1,6 @@
 #An example for the Kaplan-Meier estimator
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lrange
+from statsmodels.compat import lrange
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np

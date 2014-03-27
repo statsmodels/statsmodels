@@ -9,14 +9,14 @@ See also
 ---------
 numpy.lib.io
 """
-from statsmodels.compatnp.py3k import lzip, lmap, lrange, string_types, long, lfilter
+from statsmodels.compat import (lzip, lmap, lrange, string_types, long, lfilter,
+                                asbytes, asstr)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error
 import datetime
 import sys
 import numpy as np
 from numpy.lib._iotools import _is_string_like, easy_dtype
-from statsmodels.compatnp.py3k import asbytes, asstr
 import statsmodels.tools.data as data_util
 from pandas import isnull
 

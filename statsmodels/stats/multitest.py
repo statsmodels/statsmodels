@@ -7,7 +7,7 @@ License: BSD-3
 '''
 
 
-from statsmodels.compatnp.collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 
 import numpy as np
 

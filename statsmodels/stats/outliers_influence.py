@@ -6,7 +6,7 @@ Created on Sun Jan 29 11:16:09 2012
 Author: Josef Perktold
 License: BSD-3
 """
-from statsmodels.compatnp.py3k import lzip
+from statsmodels.compat import lzip
 from collections import defaultdict
 import numpy as np
 

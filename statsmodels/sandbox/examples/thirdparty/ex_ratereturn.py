@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 
 import pandas as pa
-from statsmodels.compatnp.py3k import cPickle
+from statsmodels.compat import cPickle
 
 import statsmodels.api as sm
 import statsmodels.sandbox as sb

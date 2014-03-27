@@ -1,7 +1,7 @@
-from statsmodels.compatnp.py3k import range, StringIO, urlopen, HTTPError, lrange
+from statsmodels.compat import (range, StringIO, urlopen, HTTPError, lrange,
+                                cPickle)
 import sys
 import shutil
-from statsmodels.compatnp.py3k import cPickle
 from os import environ
 from os import makedirs
 from os.path import basename

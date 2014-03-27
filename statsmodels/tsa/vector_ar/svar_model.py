@@ -6,7 +6,7 @@ References
 Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 from __future__ import print_function, division
-from statsmodels.compatnp.py3k import range
+from statsmodels.compat import range
 
 import numpy as np
 import numpy.linalg as npl

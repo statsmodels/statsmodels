@@ -22,8 +22,7 @@ http://www.sph.umn.edu/faculty1/wp-content/uploads/2012/11/rr2002-013.pdf
 LA Mancl LA, TA DeRouen (2001). A covariance estimator for GEE with
 improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 """
-from statsmodels.compatnp import iterkeys
-from statsmodels.compatnp.py3k import range, lrange, lzip
+from statsmodels.compat import iterkeys, range, lrange, lzip
 import numpy as np
 from scipy import stats
 from scipy import linalg as spl

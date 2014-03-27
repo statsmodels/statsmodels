@@ -1,6 +1,6 @@
 from __future__ import print_function
 from statsmodels.tools.sm_exceptions import CacheWriteWarningfrom numpy.testing import assert_equal
-from statsmodels.compatnp import get_function_name
+from statsmodels.compat import get_function_name
 import warnings
 
 __all__ = ['resettable_cache','cache_readonly', 'cache_writable']

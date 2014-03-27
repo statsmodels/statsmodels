@@ -1,7 +1,7 @@
 """
 Miscellaneous utility code for VAR estimation
 """
-from statsmodels.compatnp.py3k import range, string_types
+from statsmodels.compat import range, string_types, asbytes
 import numpy as np
 import scipy.stats as stats
 import scipy.linalg as L
@@ -113,7 +113,6 @@ def parse_lutkepohl_data(path): # pragma: no cover
     import pandas
     import pandas.core.datetools as dt
     import re
-    from statsmodels.compatnp.py3k import asbytes
 
     regex = re.compile(asbytes('<(.*) (\w)([\d]+)>.*'))
     lines = deque(open(path, 'rb'))

@@ -8,11 +8,10 @@ see the docstring of the mosaic function for more informations.
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from __future__ import division
-from statsmodels.compatnp import iteritems, iterkeys
-from statsmodels.compatnp.py3k import lrange, string_types, lzip
+from statsmodels.compat import iteritems, iterkeys, lrange, string_types, lzip
 
 import numpy as np
-from statsmodels.compatnp.collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 from itertools import product
 
 from numpy import iterable, r_, cumsum, array

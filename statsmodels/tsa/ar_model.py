@@ -1,6 +1,5 @@
 from __future__ import division
-from statsmodels.compatnp import iteritems
-from statsmodels.compatnp.py3k import range, string_types, lmap
+from statsmodels.compat import iteritems, range, string_types, lmap
 
 import numpy as np
 from numpy import dot, identity
