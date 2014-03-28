@@ -189,8 +189,9 @@ class GEE(base.Model):
         statsmodels.family.family for more information.
     cov_struct : CovStruct class instance
         The default is Independence.  To specify an exchangeable
-        structure cov_struct = sm.covstruct.Exchangeable().  See
-        statsmodels.covstruct.covstruct for more information.
+        structure use cov_struct = Exchangeable().  See
+        statsmodels.genmod.dependence_structures.CovStruct for more
+        information.
     offset : array-like
         An offset to be included in the fit.  If provided, must be
         an array whose length is the number of rows in exog.
