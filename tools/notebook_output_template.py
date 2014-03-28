@@ -3,7 +3,7 @@ from string import Template
 notebook_template = Template("""
 .. _${name}_notebook:
 
-`Link to Notebook GitHub <https://github.com/statsmodels/statsmodels/tree/master/examples/notebooks/$name.ipynb>`_
+`Link to Notebook GitHub <https://github.com/statsmodels/statsmodels/blob/master/examples/notebooks/$name.ipynb>`_
 
 .. raw:: html
 
