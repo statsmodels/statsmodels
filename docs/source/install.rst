@@ -8,18 +8,18 @@ Installation
 Using setuptools
 ~~~~~~~~~~~~~~~~
 
-To obtain the latest released version of statsmodels using `setuptools <http://pypi.python.org/pypi/setuptools>`__::
+To obtain the latest released version of statsmodels using `setuptools <https://pypi.python.org/pypi/setuptools>`__::
 
     easy_install -U statsmodels
 
-Or follow `this link to our PyPI page <http://pypi.python.org/pypi/statsmodels>`__.
+Or follow `this link to our PyPI page <https://pypi.python.org/pypi/statsmodels>`__.
 
 Obtaining the Source
 ~~~~~~~~~~~~~~~~~~~~
 
 We do not release very often but the master branch of our source code is 
 usually fine for everyday use. You can get the latest source from our 
-`github repository <https://www.github.com/statsmodels/statsmodels>`__. Or if you have git installed::
+`github repository <https://github.com/statsmodels/statsmodels>`__. Or if you have git installed::
 
     git clone git://github.com/statsmodels/statsmodels.git
 
@@ -107,16 +107,16 @@ Replace `/x64` with `/x86` and `v7.0` with `v7.1` as needed.
 Dependencies
 ~~~~~~~~~~~~
 
-* `Python <http://www.python.org>`__ >= 2.6, including Python 3.x 
+* `Python <https://www.python.org>`__ >= 2.6, including Python 3.x 
 * `NumPy <http://www.scipy.org/>`__ >= 1.5.0
 * `SciPy <http://www.scipy.org/>`__ >= 0.7
 * `Pandas <http://pandas.pydata.org/>`__ >= 0.7.1
-* `Patsy <http://patsy.readthedocs.org>`__ >= 0.1.0
+* `Patsy <https://patsy.readthedocs.org>`__ >= 0.1.0
 * `Cython <http://cython.org/>`__ >= 20.1, Needed if you want to build the code from github and not a source distribution. You must use Cython >= 0.20.1 if you're on Python 3.4. Earlier versions may work for Python < 3.4.
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-* `Matplotlib <http://matplotlib.sourceforge.net/>`__ is needed for plotting functions and running many of the examples. 
-* `Nose <http://www.somethingaboutorange.com/mrl/projects/nose/>`__ is required to run the test suite.
+* `Matplotlib <http://matplotlib.org/>`__ is needed for plotting functions and running many of the examples. 
+* `Nose <https://nose.readthedocs.org/en/latest>`__ is required to run the test suite.
 * `IPython <http://ipython.org>`__ is required to build the docs locally.

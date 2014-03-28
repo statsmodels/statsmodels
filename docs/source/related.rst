@@ -22,7 +22,7 @@ Data Handling
 Pandas
 ^^^^^^
 
-http://pypi.python.org/pypi/pandas
+https://pypi.python.org/pypi/pandas
 
 "This project aims to provide the following
  * A set of fast NumPy-based data structures optimized for panel, time series,
@@ -51,7 +51,7 @@ class.
 Tabular
 ^^^^^^^
 
-http://pypi.python.org/pypi/tabular
+https://pypi.python.org/pypi/tabular
 
 "Tabular data container and associated convenience routines in Python
 
@@ -78,7 +78,7 @@ arrays.
 La
 ^^
 
-http://pypi.python.org/pypi/la
+https://pypi.python.org/pypi/la
 
 "Label the rows, columns, any dimension, of your NumPy arrays.
 
@@ -106,7 +106,7 @@ Data Analysis
 Pymc
 ^^^^
 
-http://pypi.python.org/pypi/pymc
+https://pypi.python.org/pypi/pymc
 
 "Bayesian estimation, particularly using Markov chain Monte Carlo (MCMC), is
 an increasingly relevant approach to statistical estimation.
@@ -126,7 +126,7 @@ far the most mature project in this group including statsmodels.
 Scikits.talkbox
 ^^^^^^^^^^^^^^^
 
-http://pypi.python.org/pypi/scikits.talkbox
+https://pypi.python.org/pypi/scikits.talkbox
 
 Talkbox is set of python modules for speech/signal processing. The goal of this
 toolbox is to be a sandbox for features which may end up in scipy at some
@@ -146,7 +146,7 @@ AR coefficients.
 
 Nitime
 ^^^^^^
-http://github.com/fperez/nitime
+https://github.com/fperez/nitime
 
 "Nitime is a library for time-series analysis of data from neuroscience experiments.
 
@@ -169,7 +169,7 @@ time series.
 KF - Kalman Filter
 ^^^^^^^^^^^^^^^^^^
 
-http://pypi.python.org/pypi/KF
+https://pypi.python.org/pypi/KF
 
 "This project was started to test different avaiable tools to track mutual
 funds and hedge fund using Capital Asset Pricing Model (CAPM thereafter)
@@ -188,6 +188,13 @@ and allows for equality and inequality constraints in the estimation.
 Includes its own time series class, and the estimation seems (?) to depend on
 it.
 
+scikit-learn
+^^^^^^^^^^^^
+Simple and efficient tools for data mining and data analysis. Accessible to 
+everybody, and reusable in various contexts. Built on NumPy, SciPy, and 
+matplotlib
+http://scikit-learn.org/stable/
+License: BSD
 
 
 Domain-specific Data Analysis
@@ -202,7 +209,7 @@ Pymvpa
 
 PyMVPA is a Python module intended to ease pattern classification analyses of
 large datasets
-http://pymvpa.org/
+http://www.pymvpa.org/
 License: MIT
 
 Nipy
@@ -242,13 +249,8 @@ Other packages
 There exists a large number of machine learning packages in python, many of
 them with a well established code base. Unfortunately, none of the packages
 with a wider coverage of algorithms has a scipy compatible license.
-A listing can be found at http://mloss.org/software/language/python/
-scikits.learn includes several machine learning algorithms and is currently
-undergoing a cleanup and enhancement http://pypi.python.org/pypi/scikits.learn/0.1 .
-
-Other packages are available that provide additional functionality,
-especially openopt which offers additional optimization routines compared to
-the ones in scipy.
-
-
+A listing can be found at http://mloss.org/software/language/python/. Other 
+packages are available that provide additional functionality, especially 
+openopt which offers additional optimization routines compared to the ones 
+in scipy.
 

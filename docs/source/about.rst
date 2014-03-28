@@ -45,13 +45,13 @@ Financial Support
 We are grateful for the financial support that we obtained for the
 development of statsmodels:
 
- Google `www.google.com <http://www.google.com/>`_ : Google Summer of Code
+ Google `www.google.com <https://www.google.com/>`_ : Google Summer of Code
  (GSOC) 2009-2013.
 
  AQR `www.aqr.com <http://www.aqr.com/>`_ : financial sponsor for the work on
  Vector Autoregressive Models (VAR) by Wes McKinney
 
 We would also like to thank our hosting providers, `github
-<http://github.com/>`_ for the public code repository, `sourceforge
+<https://github.com/>`_ for the public code repository, `sourceforge
 <http://sourceforge.net/>`_ for hosting our documentation and `python.org
-<http://python.org>`_ for making our downloads available on PyPi.
+<https://python.org>`_ for making our downloads available on PyPi.

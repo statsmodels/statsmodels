@@ -4,8 +4,8 @@ Working with the Statsmodels Code
 Github
 ------
 
-The `statsmodels` code base is hosted on `Github <https://www.github.com/statsmodels/statsmodels>`_. To
-contribute you will need to `sign up for a free Github account <https://github.com/signup/free>`_.
+The `statsmodels` code base is hosted on `Github <https://github.com/statsmodels/statsmodels>`_. To
+contribute you will need to `sign up for a free Github account <https://github.com/join>`_.
 
 Version Control and Git
 -----------------------
@@ -17,18 +17,14 @@ working on the code and allows you to easily contribute your changes to the
 codebase. It also keeps a complete history of all changes to the code, so you
 can easily undo changes or see when a change was made, by whom, and why.
 
-To install and configure Git, and to setup SSH keys, see: 
-
-+ `Linux users <http://help.github.com/linux-set-up-git/>`_
-+ `Windows users <http://help.github.com/win-set-up-git/>`_
-+ `Mac users <http://help.github.com/mac-set-up-git/>`_
+To install and configure Git, and to setup SSH keys, see `this page <https://help.github.com/articles/set-up-git>`_.
 
 To learn more about Git, you may want to visit: 
 
 + `Git documentation (book and videos) <http://git-scm.com/documentation>`_
-+ `Github help pages <http://help.github.com/>`_ 
++ `Github help pages <https://help.github.com/>`_ 
 + `NumPy documentation <http://docs.scipy.org/doc/numpy/dev/index.html>`_
-+ `Matthew Brett's Pydagogue <http://matthew-brett.github.com/pydagogue/>`_
++ `Matthew Brett's Pydagogue <http://matthew-brett.github.io/pydagogue/>`_
 
 Below, we describe the bare minimum git commands you need to contribute to
 `statsmodels`.   
@@ -166,7 +162,7 @@ this by using `compare view
    `shiny-new-feature`, respectively.
 #. From here you will see a nice overview of your changes. If anything is amiss, you can fix it.
 
-If everything looks good you are read to make a `pull request <http://help.github.com/send-pull-requests/>`__.
+If everything looks good you are read to make a `pull request <https://help.github.com/articles/using-pull-requests>`__.
 
 #. Navigate to your repository on github.
 #. Click on the `Pull Request` button.
@@ -206,7 +202,7 @@ could introduce bugs. However, if you have only a few commits, this might not
 be such a concern. One great place to start learning about rebase is
 :ref:`rebasing without tears <pydagogue:actual-rebase>`.  In particular, `heed
 the warnings
-<http://matthew-brett.github.com/pydagogue/rebase_without_tears.html#safety>`__.
+<http://matthew-brett.github.io/pydagogue/rebase_without_tears.html#safety>`__.
 Namely, **always make a new branch before doing a rebase**. This is good
 general advice for working with git. I would also add **never use rebase on
 work that has already been published**. If another developer is using your

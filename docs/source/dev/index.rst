@@ -46,7 +46,7 @@ So you want to submit a patch to `statsmodels` but aren't too familiar with gith
 Mailing List
 ~~~~~~~~~~~~
 
-Conversations about development take place on the `statsmodels mailing list <http://groups.google.com/group/pystatsmodels?hl=en>`__.
+Conversations about development take place on the `statsmodels mailing list <https://groups.google.com/group/pystatsmodels?hl=en>`__.
 
 License
 ~~~~~~~

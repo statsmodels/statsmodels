@@ -14,7 +14,7 @@ The following major new features appear in this version.
 Support for Model Formulas via Patsy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Statsmodels now supports fitting models with a formula. This functionality is provided by `patsy <http://patsy.readthedocs.org/en/latest/>`_. Patsy is now a dependency for statsmodels. Models can be individually imported from the ``statsmodels.formula.api`` namespace or you can import them all as::
+Statsmodels now supports fitting models with a formula. This functionality is provided by `patsy <https://patsy.readthedocs.org/en/latest/>`_. Patsy is now a dependency for statsmodels. Models can be individually imported from the ``statsmodels.formula.api`` namespace or you can import them all as::
 
     import statsmodels.formula.api as smf
 

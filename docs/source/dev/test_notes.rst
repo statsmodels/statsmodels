@@ -11,7 +11,7 @@ tests versus an existing statistical package, if possible.
 
 Introduction to Nose
 ~~~~~~~~~~~~~~~~~~~~
-Like many packages, statsmodels uses the `Nose testing system <http://somethingaboutorange.com/mrl/projects/nose/>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__. Nose itself is an extension of :mod:`Python's unittest <python:unittest>`. Nose will find any file, directory, function, or class name that matches the regular expression ``(?:^|[b_./-])[Tt]est``. This is mainly functions that begin with test* and classes that begin with Test*.
+Like many packages, statsmodels uses the `Nose testing system <https://nose.readthedocs.org/en/latest>`__ and the convenient extensions in `numpy.testing <http://docs.scipy.org/doc/numpy/reference/routines.testing.html>`__. Nose itself is an extension of :mod:`Python's unittest <python:unittest>`. Nose will find any file, directory, function, or class name that matches the regular expression ``(?:^|[b_./-])[Tt]est``. This is mainly functions that begin with test* and classes that begin with Test*.
 
 .. _run-tests:
 
