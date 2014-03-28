@@ -75,8 +75,8 @@ autoclass_content = 'class'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from statsmodels.version import version, full_version
-release = version
+from statsmodels.version import short_version, full_version
+release = short_version
 # The full version, including dev tag.
 version = full_version
 

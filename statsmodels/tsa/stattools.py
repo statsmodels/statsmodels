@@ -983,23 +983,23 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
     max_ar : int
         Maximum number of AR lags to use. Default 4.
     max_ma : int
-        Maximum number of MA lags to use. DEfault 2.
+        Maximum number of MA lags to use. Default 2.
     ic : str, list
         Information criteria to report. Either a single string or a list
         of different criteria is possible.
     trend : str
         The trend to use when fitting the ARMA models.
     model_kw : dict
-        Keyword arguments to be passed to the `ARMA` model
+        Keyword arguments to be passed to the ``ARMA`` model
     fit_kw : dict
-        Keyword arguments to be passed to `ARMA.fit`.
+        Keyword arguments to be passed to ``ARMA.fit``.
 
     Returns
     -------
     obj : Results object
         Each ic is an attribute with a DataFrame for the results. The AR order
         used is the row index. The ma order used is the column index. The
-        minimum orders are available as `ic`_min_order.
+        minimum orders are available as ``ic_min_order``.
 
     Examples
     --------

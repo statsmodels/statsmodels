@@ -181,11 +181,11 @@ Time Series Filters
 .. autosummary::
    :toctree: generated/
 
-   filters.bkfilter
-   filters.hpfilter
-   filters.arfilter
-   filters.cffilter
-   filters.miso_lfilter
+   filters.bk_filter.bkfilter
+   filters.hp_filter.hpfilter
+   filters.cf_filter.cffilter
+   filters.filtertools.arfilter
+   filters.filtertools.miso_lfilter
    filters.filtertools.fftconvolve3
    filters.filtertools.fftconvolveinv
 

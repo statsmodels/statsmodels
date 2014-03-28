@@ -33,21 +33,21 @@ covariates.
 
 .. code-block:: python
 
-import numpy as np
-import pandas as pd
-from statsmodels.genmod.generalized_estimating_equations import GEE
-from statsmodels.genmod.dependence_structures import Independence
-from statsmodels.genmod.families import Poisson
-
-data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
-data = pd.read_csv(data_url)
-
-fam = Poisson()
-ind = Independence()
-md1 = GEE.from_formula("y ~ age + trt + base", data, groups=data["subject"],\
-                       covstruct=ind, family=fam)
-mdf1 = md1.fit()
-print mdf1.summary()
+   import numpy as np
+   import pandas as pd
+   from statsmodels.genmod.generalized_estimating_equations import GEE
+   from statsmodels.genmod.dependence_structures import Independence
+   from statsmodels.genmod.families import Poisson
+   
+   data_url = "http://vincentarelbundock.github.io/Rdatasets/csv/MASS/epil.csv"
+   data = pd.read_csv(data_url)
+   
+   fam = Poisson()
+   ind = Independence()
+   md1 = GEE.from_formula("y ~ age + trt + base", data, groups=data["subject"],\
+                          covstruct=ind, family=fam)
+   mdf1 = md1.fit()
+   print mdf1.summary()
 
 
 The dependence structure in a GEE is treated as a nuisance parameter

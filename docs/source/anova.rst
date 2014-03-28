@@ -31,7 +31,7 @@ A more detailed example can be found here:
 .. toctree::
   :maxdepth: 1
 
-  examples/generated/example_interactions
+  examples/notebooks/generated/interactions_anova
 
 Module Reference
 ----------------
