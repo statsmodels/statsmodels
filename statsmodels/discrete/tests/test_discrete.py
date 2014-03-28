@@ -514,6 +514,19 @@ class TestSweepAlphaL1(object):
             assert_almost_equal(res2.params, self.res1.params[i], DECIMAL_4)
 
 
+class TestSolutionPath(object):
+
+    def test_path(self):
+        exog = np.random.normal(size=(100,5))
+        lpred = exog.sum(1)
+        pr = 1 / (1 + np.exp(-lpred))
+        endog = 1*(np.random.uniform(size=100) < pr)
+        md = Logit(endog, exog)
+        spa = md.solution_path()
+        spr = spa.refit(nvar=2)
+        spr.summary()
+
+
 class CheckL1Compatability(object):
     """
     Tests compatability between l1 and unregularized by setting alpha such

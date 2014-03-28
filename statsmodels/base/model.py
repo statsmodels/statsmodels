@@ -416,6 +416,58 @@ class LikelihoodModel(Model):
         mlefit.mle_settings = optim_settings
         return mlefit
 
+    def solution_path(self, maxvar=None, wt_vec=None, min_pwt=0.,
+                      ceps=1e-4, xtol=1., **fit_args):
+        """
+        Returns the solution path for the regularized fit
+        of the model.
+
+        Parameters:
+        -----------
+        maxvar : integer
+            The maximum number of variables in the model.  If
+            None, `maxvar` is the number of columns in exog (see
+            notes).
+        wt_vec : array-like
+            A vector of the same lenth as params, containing
+            penalty weights for each coefficient.
+        min_pwt : float
+            The minimum pemalty weight that is considered.
+        ceps : float
+            Coefficients smaller in magnitude than this value
+            are considered to be equal to zero.
+        xtol : float
+            The points where solutions become zero wre resolved
+            to this precision.
+
+        Returns:
+        --------
+        A SolutionPathResults object.
+
+        Notes:
+        ------
+        Some models on the solution path may have more than `maxvar`
+        variables, but only the part of the solution path containing
+        models with at most `maxvar` variables is thoroughly explored.
+        """
+
+        from solution_path import SolutionPath, SolutionPathResults
+
+        # Since we are fitting so many models, it is not helpful to
+        # have all the optimization details go to stdout.
+        if 'disp' not in fit_args:
+            fit_args['disp'] = False
+
+        spa = SolutionPath(self, maxvar, wt_vec, ceps,
+                           min_pwt, **fit_args)
+        spa.initialize()
+        spa.refine(xtol)
+
+        spr = SolutionPathResults(self, wt_vec, np.asarray(spa.weights),
+                                  spa.ix_nonzero, spa.params)
+
+        return spr
+
 
 def _fit_mle_newton(f, score, start_params, fargs, kwargs, disp=True,
                     maxiter=100, callback=None, retall=False,
