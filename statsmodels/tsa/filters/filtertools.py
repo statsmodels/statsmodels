@@ -16,6 +16,31 @@ import numpy as np
 import scipy.fftpack as fft
 from scipy import signal
 from scipy.signal.signaltools import _centered as trim_centered
+from utils import _maybe_get_pandas_wrapper
+
+
+def _pad_nans(x, head=None, tail=None):
+    if np.ndim(x) == 1:
+        if head is None and tail is None:
+            return x
+        elif head and tail:
+            return np.r_[[np.nan] * head, x, [np.nan] * tail]
+        elif tail is None:
+            return np.r_[[np.nan] * head, x]
+        elif head is None:
+            return np.r_[x, [np.nan] * tail]
+    elif np.ndim(x) == 2:
+        if head is None and tail is None:
+            return x
+        elif head and tail:
+            return np.r_[[[np.nan] * x.shape[1]] * head, x,
+                         [[np.nan] * x.shape[1]] * tail]
+        elif tail is None:
+            return np.r_[[[np.nan] * x.shape[1]] * head, x]
+        elif head is None:
+            return np.r_[x, [[np.nan] * x.shape[1]] * tail]
+    else:
+        raise ValueError("Nan-padding for ndim > 2 not implemented")
 
 #original changes and examples in sandbox.tsa.try_var_convolve
 
@@ -158,41 +183,62 @@ def recursive_filter(x, filt, init=None):
 
         y[n] = x[n] + filt[0]*y[n-1] + ... + a[n_filt-1]*y[n-n_filt]
 
-    where n_filt = len(filt). This uses scipy.signal.lfilter, which does
-    not currently handle missing values well. If you need, to handle missing
-    values, you can roll your own using pandas.rolling_apply.
+    where n_filt = len(filt).
     '''
-    x = np.asarray(x)
+    _pandas_wrapper = _maybe_get_pandas_wrapper(x)
+    x = np.asarray(x).squeeze()
+
     filt = np.asarray(filt)
     if x.ndim > 2:
         raise ValueError('x array has to be 1d or 2d')
-    if not np.all(np.isfinite(x)):
-        raise ValueError("Missing values are not handled. See Notes section"
-                         " of the docstring")
-        #TODO:
-        # have to use pandas. signal.lfilter doesn't properly handle this
+
+    if init is not None:  # integer init are treated differently in lfiltic
+        if len(init) != len(filt):
+            raise ValueError("filt must be the same length as init")
+        init = np.asarray(init, dtype=float)
 
     if filt.ndim == 1:
         if init is not None:
-            init = signal.lfiltic([1], [1, -filt], init, x)
+            zi = signal.lfiltic([1], np.r_[1, -filt], init, x)
+        else:
+            zi = None
         # case: identical ar filter (lag polynomial)
-        return signal.lfilter([1.], np.r_[1, -filt], x, init=init)
+        y = signal.lfilter([1.], np.r_[1, -filt], x, zi=zi)
+        if init is not None:
+            result = y[0]
+        else:
+            result = y
     elif filt.ndim == 2:
         nlags = filt.shape[0]
         nvar = x.shape[1]
         if min(filt.shape) == 1:
+            if init is not None:
+                zi = signal.lfiltic([1], np.r_[1, -filt], init, x)
+            else:
+                zi = None
             # case: identical ar filter (lag polynomial)
-            return signal.lfilter([1], np.r[1, -filt], x, init=init)
+            y = signal.lfilter([1], np.r_[1, -filt], x, zi=zi)
+            if init is not None:
+                result = y[0]
+            else:
+                result = y
 
         # case: independent ar
         #(a bit like recserar in gauss, but no x yet)
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
         for i in range(nvar):
+            if init is not None:
             # could also use np.convolve, but easier for swiching to fft
-            zi = signal.lfiltic([1], [1, -filt[:, i]], init[:,i], x[:,i])
-            result[:, i] = signal.lfilter([1], np.r_[1, -filt[:, i]],
-                                            x[:, i], init=init)
-        return result
+                zi = signal.lfiltic([1], np.r_[1, -filt[:, i]], init[:, i],
+                                    x[:, i])
+                result[:, i] = signal.lfilter([1], np.r_[1, -filt[:, i]],
+                                              x[:, i], zi=zi)[0]
+            else:
+                result[:, i] = signal.lfilter([1], np.r_[1, -filt[:, i]],
+                                              x[:, i])
+    if _pandas_wrapper:
+        return _pandas_wrapper(result)
+    return result
 
 
 def convolution_filter(x, filt, nsides=2):
@@ -238,10 +284,20 @@ def convolution_filter(x, filt, nsides=2):
     independently filtered with its own lag polynomial, uses loop over nvar.
 
     Filtering is done with scipy.signal.convolve, so it will be
-    reasonably fast for medium sized arrays. For large arrays fft
+    reasonably fast for medium sized data. For large data fft
     convolution would be faster.
     '''
-    x = np.asarray(x)
+    if nsides == 1:
+        trim_head = len(filt) - 1
+        trim_tail = None
+    elif nsides == 2:
+        trim_head = np.ceil(len(filt)/2.) - 1 or None
+        trim_tail = (np.ceil(len(filt)/2.) - len(filt) % 2) or None
+    else:  # pragma : no cover
+        raise ValueError("nsides must be 1 or 2")
+
+    _pandas_wrapper = _maybe_get_pandas_wrapper(x)
+    x = np.asarray(x).squeeze()
     filt = np.asarray(filt)
     if x.ndim > 2:
         raise ValueError('x array has to be 1d or 2d')
@@ -249,19 +305,19 @@ def convolution_filter(x, filt, nsides=2):
     if filt.ndim == 1:
         # case: identical ar filter (lag polynomial)
         if nsides == 2:
-            return signal.convolve(x, filt, mode='valid')
-        elif nsides == 1:
-            return signal.convolve(x, np.r_[0, filt],
-                                   mode='full')[:-len(filt)]
+            result = signal.convolve(x, filt, mode='valid')
+        elif nsides == 1:  # shift the index instead of using 0 for 0 lag
+                           # this allows correct handling of NaNs
+            result = signal.convolve(x, filt, mode='valid')
     elif filt.ndim == 2:
         nlags = filt.shape[0]
         nvar = x.shape[1]
         if min(filt.shape) == 1:
             # case: identical ar filter (lag polynomial)
             if nsides == 2:
-                return signal.convolve(x, filt, mode='valid')
+                result = signal.convolve(x, filt, mode='valid')
             elif nsides == 1:
-                return signal.convolve(x, np.r_[0, filt],
+                result = signal.convolve(x, np.r_[0, filt],
                                        mode='full')[:-len(filt)]
 
         # case: independent ar
@@ -277,7 +333,10 @@ def convolution_filter(x, filt, nsides=2):
                 result[:, i] = signal.convolve(x[:, i],
                                                np.r[0, filt[:, i]],
                                                mode='full')[:-len(filt)]
-        return result
+    result = _pad_nans(result, trim_head, trim_tail)
+    if _pandas_wrapper:
+        return _pandas_wrapper(result)
+    return result
 
 
 #copied from sandbox.tsa.garch

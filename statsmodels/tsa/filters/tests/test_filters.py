@@ -1,12 +1,13 @@
 from datetime import datetime
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
-                           assert_raises)
+                           assert_raises, assert_)
 from numpy import array, column_stack
 from statsmodels.datasets import macrodata, co2
 from statsmodels.tsa.base.datetools import dates_from_range
 from pandas import Series, Index, DataFrame, DatetimeIndex
-from statsmodels.tsa.filters.api import bkfilter, hpfilter, cffilter
+from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
+                                         convolution_filter, recursive_filter)
 from statsmodels.tsa.filters.seasonal import seasonal_decompose
 
 
@@ -754,6 +755,115 @@ class TestDecompose:
         x = self.data.astype(float).copy()
         x.ix[2] = np.nan
         assert_raises(ValueError, seasonal_decompose, x)
+
+
+class TestFilters(object):
+    @classmethod
+    def setupClass(cls):
+        # even
+        data = [-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
+                530, 489, 540, 457, 195, 176, 337, 239, 128, 102,
+                232, 429, 3, 98, 43, -141, -77, -13, 125, 361, -45, 184]
+        cls.data = DataFrame(data, DatetimeIndex(start='1/1/1951',
+                                                 periods=len(data),
+                                                 freq='Q'))
+        data[9] = np.nan
+        cls.datana = DataFrame(data, DatetimeIndex(start='1/1/1951',
+                                                  periods=len(data),
+                                                  freq='Q'))
+        from results import filter_results
+        cls.expected = filter_results
+
+
+    def test_convolution(self):
+        x = self.data.values.squeeze()
+        res = convolution_filter(x, [.75, .25])
+        expected = self.expected.conv2
+        np.testing.assert_almost_equal(res, expected)
+
+        res = convolution_filter(x, [.75, .25], nsides=1)
+        expected = self.expected.conv1
+        np.testing.assert_almost_equal(res, expected)
+
+        x = self.datana.values.squeeze()
+        res = convolution_filter(x, [.75, .25])
+        expected = self.expected.conv2_na
+        np.testing.assert_almost_equal(res, expected)
+
+        res = convolution_filter(x, [.75, .25], nsides=1)
+        expected = self.expected.conv1_na
+        np.testing.assert_almost_equal(res, expected)
+
+    def test_recursive(self):
+        x = self.data.values.squeeze()
+        res = recursive_filter(x, [.75, .25])
+        expected = self.expected.recurse
+        np.testing.assert_almost_equal(res, expected)
+
+        res = recursive_filter(x, [.75, .25], init=[150, 100])
+        expected = self.expected.recurse_init
+        np.testing.assert_almost_equal(res, expected)
+
+        x = self.datana.values.squeeze()
+        res = recursive_filter(x, [.75, .25])
+        expected = self.expected.recurse_na
+        np.testing.assert_almost_equal(res, expected)
+
+        res = recursive_filter(x, [.75, .25], init=[150, 100])
+        expected = self.expected.recurse_init_na
+        np.testing.assert_almost_equal(res, expected)
+
+        np.testing.assert_raises(ValueError, recursive_filter, x,
+                                 [.75, .25, .5], [150, 100])
+
+    def test_pandas(self):
+        start = datetime(1951, 3, 31)
+        end = datetime(1958, 12, 31)
+        x = self.data
+        res = convolution_filter(x, [.75, .25])
+        assert_(res.index[0] == start)
+        assert_(res.index[-1] == end)
+
+        res = convolution_filter(x, [.75, .25], nsides=1)
+        assert_(res.index[0] == start)
+        # with no nan-padding q1 if not
+        assert_(res.index[-1] == end)
+
+        res = recursive_filter(x, [.75, .25])
+        assert_(res.index[0] == start)
+        assert_(res.index[-1] == end)
+
+        x = self.datana
+        res = recursive_filter(x, [.75, .25])
+        assert_(res.index[0] == start)
+        assert_(res.index[-1] == end)
+
+    def test_odd_length_filter(self):
+        start = datetime(1951, 3, 31)
+        end = datetime(1958, 12, 31)
+        x = self.data
+        res = convolution_filter(x, [.75, .5, .3, .2, .1])
+        expected = self.expected.conv2_odd
+        np.testing.assert_almost_equal(res.values.squeeze(), expected)
+        np.testing.assert_(res.index[0] == start)
+        np.testing.assert_(res.index[-1] == end)
+
+        res = convolution_filter(x, [.75, .5, .3, .2, .1], nsides=1)
+        expected = self.expected.conv1_odd
+        np.testing.assert_almost_equal(res.values.squeeze(), expected)
+        np.testing.assert_(res.index[0] == start)
+        np.testing.assert_(res.index[-1] == end)
+        # with no NAs
+
+        # not a stable filter
+        res = recursive_filter(x, [.75, .5, .3, .2, .1], init=[150, 100,
+                                                               125, 135,
+                                                               145])
+        expected = self.expected.recurse_odd
+        # only have 12 characters in R and this blows up and gets big
+        np.testing.assert_almost_equal(res.values.squeeze(), expected, 4)
+        np.testing.assert_(res.index[0] == start)
+        np.testing.assert_(res.index[-1] == end)
 
 
 if __name__ == "__main__":
