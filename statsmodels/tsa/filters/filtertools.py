@@ -208,9 +208,8 @@ def convolution_filter(x, filt, nsides=2):
         Linear filter coefficients in reverse time-order.
     nsides : int, optional
         If 2, a centered moving average is computed using the filter
-        coefficients and scipy.signal.convolve. If 1, the filter
-        coefficients are for past values only, and the filtered series is
-        computed using scipy.signal.lfilter.
+        coefficients. If 1, the filter coefficients are for past values only.
+        Both methods use scipy.signal.convolve.
 
     Returns
     -------
@@ -238,13 +237,9 @@ def convolution_filter(x, filt, nsides=2):
     variables (columns of x). If filt is 2d, (nlags, nvars) each series is
     independently filtered with its own lag polynomial, uses loop over nvar.
 
-    2-sided filtering is done with scipy.signal.convolve, so it will be
+    Filtering is done with scipy.signal.convolve, so it will be
     reasonably fast for medium sized arrays. For large arrays fft
     convolution would be faster.
-
-    scipy.signal.lfilter does not currently work well with missing values.
-    If you need to compute a one-sided filter with missing values, you
-    can use pandas.rolling_apply
     '''
     x = np.asarray(x)
     filt = np.asarray(filt)
@@ -256,7 +251,8 @@ def convolution_filter(x, filt, nsides=2):
         if nsides == 2:
             return signal.convolve(x, filt, mode='valid')
         elif nsides == 1:
-            return signal.lfilter(np.r_[0, filt], [1.], x)
+            return signal.convolve(x, np.r_[0, filt],
+                                   mode='full')[:-len(filt)]
     elif filt.ndim == 2:
         nlags = filt.shape[0]
         nvar = x.shape[1]
@@ -265,7 +261,8 @@ def convolution_filter(x, filt, nsides=2):
             if nsides == 2:
                 return signal.convolve(x, filt, mode='valid')
             elif nsides == 1:
-                return signal.lfilter(np.r[0, filt], [1.], x)
+                return signal.convolve(x, np.r_[0, filt],
+                                       mode='full')[:-len(filt)]
 
         # case: independent ar
         #(a bit like recserar in gauss, but no x yet)
@@ -277,8 +274,9 @@ def convolution_filter(x, filt, nsides=2):
                                                mode='valid')
         elif nsides == 1:
             for i in range(nvar):
-                result[:, i] = signal.lfilter(np.r[0, filt[:, i]], [1.],
-                                              x[:, i])
+                result[:, i] = signal.convolve(x[:, i],
+                                               np.r[0, filt[:, i]],
+                                               mode='full')[:-len(filt)]
         return result
 
 
