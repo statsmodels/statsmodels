@@ -186,7 +186,7 @@ class GEE(base.Model):
         distribution family = sm.family.Binomial(). Each family can
         take a link instance as an argument.  See
         statsmodels.family.family for more information.
-    covstruct : CovStruct class instance
+    cov_struct : CovStruct class instance
         The default is Independence.  To specify an exchangeable
         structure covstruct = sm.covstruct.Exchangeable().  See
         statsmodels.covstruct.covstruct for more information.
@@ -240,7 +240,7 @@ class GEE(base.Model):
     cached_means = None
 
     def __init__(self, endog, exog, groups, time=None, family=None,
-                       covstruct=None, missing='none', offset=None,
+                       cov_struct=None, missing='none', offset=None,
                        dep_data=None, constraint=None):
 
         groups = np.array(groups) # in case groups is pandas
@@ -262,14 +262,14 @@ class GEE(base.Model):
                                  "family instance")
         self.family = family
 
-        # Handle the covstruct argument
-        if covstruct is None:
-            covstruct = dependence_structures.Independence()
+        # Handle the cov_struct argument
+        if cov_struct is None:
+            cov_struct = dependence_structures.Independence()
         else:
-            if not issubclass(covstruct.__class__, CovStruct):
-                raise ValueError("GEE: `covstruct` must be a genmod "
-                                 "covstruct instance")
-        self.covstruct = covstruct
+            if not issubclass(cov_struct.__class__, CovStruct):
+                raise ValueError("GEE: `cov_struct` must be a genmod "
+                                 "cov_struct instance")
+        self.cov_struct = cov_struct
 
         if offset is None:
             self.offset = np.zeros(self.exog.shape[0],
@@ -327,7 +327,7 @@ class GEE(base.Model):
 
         self.family = family
 
-        self.covstruct.initialize(self)
+        self.cov_struct.initialize(self)
 
         # Total sample size
         group_ns = [len(y) for y in self.endog_li]
@@ -449,7 +449,7 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
+            vmat, is_cor = self.cov_struct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
@@ -542,7 +542,7 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
+            vmat, is_cor = self.cov_struct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
 
@@ -583,7 +583,7 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
 
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.covstruct.covariance_matrix(expval, i)
+            vmat, is_cor = self.cov_struct.covariance_matrix(expval, i)
             if is_cor:
                 vmat *= np.outer(sdev, sdev)
             vmat *= scale
@@ -756,7 +756,7 @@ class GEE(base.Model):
             self.fit_history['params'].append(beta.copy())
             self.fit_history['score'].append(score)
             self.fit_history['dep_params'].append(
-                self.covstruct.dep_params)
+                self.cov_struct.dep_params)
 
             # Don't exit until the association parameters have been
             # updated at least once.
@@ -890,7 +890,7 @@ class GEE(base.Model):
         Update the association parameters
         """
 
-        self.covstruct.update(beta, self)
+        self.cov_struct.update(beta, self)
 
     def _derivative_exog(self, params, exog=None, transform='dydx',
             dummy_idx=None, count_idx=None):
@@ -1156,7 +1156,7 @@ class GEEResults(base.LikelihoodModelResults):
                     ('', ['Estimating Equations']),
                     ('Family:', [self.model.family.__class__.__name__]),
                     ('Dependence structure:',
-                     [self.model.covstruct.__class__.__name__]),
+                     [self.model.cov_struct.__class__.__name__]),
                     ('Date:', None),
                     ('Covariance type: ', [covariance_type,])
                    ]
