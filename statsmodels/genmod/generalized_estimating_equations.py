@@ -269,7 +269,8 @@ class GEE(base.Model):
         else:
             if not issubclass(cov_struct.__class__, CovStruct):
                 raise ValueError("GEE: `cov_struct` must be a genmod "
-                                 "covstruct instance")
+                                 "cov_struct instance")
+
         self.cov_struct = cov_struct
 
         if offset is None:
