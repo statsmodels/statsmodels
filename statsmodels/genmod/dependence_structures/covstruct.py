@@ -1,4 +1,5 @@
-from statsmodels.compat import iterkeys, itervalues, zipimport numpy as np
+from statsmodels.compat import iterkeys, itervalues, zip
+import numpy as np
 
 
 class CovStruct(object):
