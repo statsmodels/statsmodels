@@ -1,5 +1,7 @@
 :orphan:
 
+.. currentmodule:: statsmodels
+
 .. _faq:
 
 Frequently Asked Question
@@ -18,7 +20,7 @@ These are shorthand for endogenous and exogenous variables. You might be more co
 How does statsmodels handle missing data?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Missing data can be handled via the ``missing`` keyword argument. Every model takes this keyword. You can find more information in the docstring of :class:`statsmodels.base.Model`. 
+Missing data can be handled via the ``missing`` keyword argument. Every model takes this keyword. You can find more information in the docstring of :class:`statsmodels.base.Model <base.model.Model>`. 
 
 .. `Model class <http://statsmodels.sourceforge.net/devel/dev/generated/statsmodels.base.model.Model.html#statsmodels.base.model.Model>`_.
 
