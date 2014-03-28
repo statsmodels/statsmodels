@@ -11,7 +11,7 @@ class SolutionPathResults(object):
     Parameters:
     -----------
     model : object
-        The model for which the solution path is to me constructed.
+        The model for which the solution path is to be constructed.
     wt_vec : array-like
         The penalty weights for the model coefficients are
         obtained by multiplying this vector by a scalar
@@ -22,9 +22,6 @@ class SolutionPathResults(object):
     ix_nonzero : list of arrays
         The indices of the positions where the estimated coefficients
         are nonzero.
-    ix_zero : list of arrays
-        The indices of the positions where the estimated coefficients
-        are zero.
     nonzero_params : list of arrays
         The values of the nonzero estimated coefficients.
 
@@ -90,14 +87,12 @@ class SolutionPathResults(object):
             return None
         ii = min(ii)
 
-        # Drop the unwanted variables (TODO: is there a better way to
-        # do this?)
+        # We need the variable names to see which variables are still
+        # in the model
         ix = self.ix_nonzero[ii]
         if isinstance(self.model.exog, pd.DataFrame):
             new_exog = self.model.exog.iloc[:,ix]
         else:
-            # We need the variable names to see which variables
-            # are still in the model
             new_exog = pd.DataFrame(self.model.exog[:,ix])
             new_exog.columns = [self.model.exog_names[i] for i in ix]
 

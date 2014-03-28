@@ -429,7 +429,7 @@ class LikelihoodModel(Model):
             None, `maxvar` is the number of columns in exog (see
             notes).
         wt_vec : array-like
-            A vector of the same lenth as params, containing
+            A vector of the same length as params, containing
             penalty weights for each coefficient.
         min_pwt : float
             The minimum pemalty weight that is considered.
@@ -439,6 +439,8 @@ class LikelihoodModel(Model):
         xtol : float
             The points where solutions become zero wre resolved
             to this precision.
+        fit_args : additional keyword arguments
+            Arguments passed to `fit_regularized`.
 
         Returns:
         --------
