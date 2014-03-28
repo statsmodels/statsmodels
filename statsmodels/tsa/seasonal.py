@@ -107,12 +107,56 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
     else:
         resid = detrended - seasonal
 
-    results = map(_pandas_wrapper, [seasonal, trend, resid])
-    return Bunch(seasonal=results[0], trend=results[1], resid=results[2])
+    results = map(_pandas_wrapper, [seasonal, trend, resid, X])
+    return DecomposeResult(seasonal=results[0], trend=results[1],
+                           resid=results[2], observed=results[3])
+
+
+class DecomposeResult(object):
+    def __init__(self, **kwargs):
+        for key, value in kwargs.iteritems():
+            setattr(self, key, value)
+            self.nobs = len(self.observed)
+
+    def plot(self):
+        from statsmodels.graphics.utils import _import_mpl
+        plt = _import_mpl()
+        fig, axes = plt.subplots(4, 1, sharex=True)
+        if hasattr(self.observed, 'plot'):  # got pandas use it
+            self.observed.plot(ax=axes[0], legend=False)
+            axes[0].set_ylabel('Observed')
+            self.trend.plot(ax=axes[1], legend=False)
+            axes[1].set_ylabel('Trend')
+            self.seasonal.plot(ax=axes[2], legend=False)
+            axes[2].set_ylabel('Seasonal')
+            self.resid.plot(ax=axes[3], legend=False)
+            axes[3].set_ylabel('Residual')
+        else:
+            axes[0].plot(self.observed)
+            axes[0].set_ylabel('Observed')
+            axes[1].plot(self.trend)
+            axes[1].set_ylabel('Trend')
+            axes[2].plot(self.seasonal)
+            axes[2].set_ylabel('Seasonal')
+            axes[3].plot(self.resid)
+            axes[3].set_ylabel('Residual')
+            axes[3].set_xlabel('Time')
+            axes[3].set_xlim(0, self.nobs)
+
+        fig.tight_layout()
+        return fig
 
 
 if __name__ == "__main__":
     x = np.array([-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
                   530, 489, 540, 457, 195, 176, 337, 239, 128, 102,
                   232, 429, 3, 98, 43, -141, -77, -13, 125, 361, -45, 184])
-    results = seasonal_decompose(x)
+    results = seasonal_decompose(x, freq=4)
+
+    from pandas import DataFrame, DatetimeIndex
+    data = DataFrame(x, DatetimeIndex(start='1/1/1951',
+                                      periods=len(x),
+                                      freq='Q'))
+
+    res = seasonal_decompose(data)
+
