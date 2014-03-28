@@ -22,7 +22,7 @@ For a pull request to be accepted, you must meet the below requirements. This gr
 
 - **One branch. One feature.** Branches are cheap and github makes it easy to merge and delete branches with a few clicks. Avoid the temptation to lump in a bunch of unrelated changes when working on a feature, if possible. This helps us keep track of what has changed when preparing a release.
 - Commit messages should be clear and concise. This means a subject line of less than 80 characters, and, if necessary, a blank line followed by a commit message body. We have an `informal commit format standard <http://statsmodels.sourceforge.net/devel/dev/maintainer_notes.html#commit-comments>`_ that we try to adhere to. You can see what this looks like in practice by ``git log --oneline -n 10``. If your commit references or closes a specific issue, you can close it by mentioning it in the `commit message <https://help.github.com/articles/closing-issues-via-commit-messages>`_.  (*For maintainers*: These suggestions go for Merge commit comments too. These are partially the record for release notes.)
-- Code submissions must always include tests. See our `notes on testing <https://statsmodels.sourceforge.net/devel/dev/test_notes.html>`_.
+- Code submissions must always include tests. See our notes on :ref:`testing`.
 - Each function, class, method, and attribute needs to be documented using docstrings. We conform to the `numpy docstring standard <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt#docstring-standard>`_.
 - If you are adding new functionality, you need to add it to the documentation by editing (or creating) the appropriate file in ``docs/source``.
 - Make sure your documentation changes parse correctly. Change into the top-level ``docs/`` directory and type::
@@ -46,7 +46,7 @@ So you want to submit a patch to `statsmodels` but aren't too familiar with gith
 Mailing List
 ~~~~~~~~~~~~
 
-Conversations about development take place on the `statsmodels mailing list <http://groups.google.com/group/pystatsmodels?hl=en>`__.
+Conversations about development take place on the `statsmodels mailing list <https://groups.google.com/group/pystatsmodels?hl=en>`__.
 
 License
 ~~~~~~~

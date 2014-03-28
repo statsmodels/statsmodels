@@ -114,7 +114,7 @@ use::
 Handling Pull Requests
 ~~~~~~~~~~~~~~~~~~~~~~
 
-You can apply a pull request through `fetch <http://www.kernel.org/pub/software/scm/git/docs/git-fetch.html>`__ and `merge <http://www.kernel.org/pub/software/scm/git/docs/git-merge.html>`__. In your local
+You can apply a pull request through `fetch <https://www.kernel.org/pub/software/scm/git/docs/git-fetch.html>`__ and `merge <https://www.kernel.org/pub/software/scm/git/docs/git-merge.html>`__. In your local
 copy of the main repo::
 
     git checkout master

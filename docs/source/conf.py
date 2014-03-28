@@ -311,7 +311,7 @@ epub_copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, 
 intersphinx_mapping = {
         'numpy' : ('http://docs.scipy.org/doc/numpy/', None),
         'python' : ('http://docs.python.org/3.2', None),
-        'pydagogue' : ('http://matthew-brett.github.com/pydagogue/', None),
+        'pydagogue' : ('http://matthew-brett.github.io/pydagogue/', None),
         'patsy' : ('http://patsy.readthedocs.org/en/latest/', None),
         'pandas' : ('http://pandas.pydata.org/pandas-docs/dev/', None),
         }
