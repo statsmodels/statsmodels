@@ -3,10 +3,11 @@ Seasonal Decomposition by Moving Averages
 """
 import numpy as np
 from pandas.core.nanops import nanmean as pd_nanmean
-from .utils import _maybe_get_pandas_wrapper_freq
-from .filtertools import convolution_filter
+from .filters.utils import _maybe_get_pandas_wrapper_freq
+from .filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 from statsmodels.tools.tools import Bunch
+
 
 def seasonal_mean(x, freq):
     """
@@ -83,12 +84,10 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
             filt = np.array([.5] + [1] * (freq - 1) + [.5]) / freq
         else:
             filt = np.repeat(1./freq, freq)
-    drop_idx = freq // 2
+
     trend = convolution_filter(X, filt)
 
     # nan pad for conformability - convolve doesn't do it
-    nan_pad = lambda y : np.r_[[np.nan] * drop_idx, y, [np.nan] * drop_idx]
-    trend = nan_pad(trend)
     if model.startswith('m'):
         detrended = X/trend
     else:
@@ -116,4 +115,4 @@ if __name__ == "__main__":
     x = np.array([-50, 175, 149, 214, 247, 237, 225, 329, 729, 809,
                   530, 489, 540, 457, 195, 176, 337, 239, 128, 102,
                   232, 429, 3, 98, 43, -141, -77, -13, 125, 361, -45, 184])
-    results = decompose(x)
+    results = seasonal_decompose(x)
