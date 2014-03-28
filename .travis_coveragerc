@@ -1,5 +1,6 @@
 
 [run]
 branch = True
+source = statsmodels
 include =
-    /usr/local/lib/python*/*-packages/statsmodels*
+    */statsmodels/*

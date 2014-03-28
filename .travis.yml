@@ -1,10 +1,7 @@
 # Adapted from M. Brett's .yaml file for nipy:
 # https://github.com/nipy/nipy/blob/master/.travis.yml
 #
-# We pretend to be erlang because we can't use the python support in
-# travis-ci; it uses virtualenvs, they do not have numpy, scipy, matplotlib,
-# and it is impractical to build them
-language: erlang
+language: python
 notifications:
     email:
         - statsmodels-commits@googlegroups.com
@@ -54,4 +51,4 @@ script:
     - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
     - if [ "${PYSUF}" != "3" ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else $PYTHON test.py; fi
 after_success:
-    - if [ "${PYSUF}" != "3" ]; then coveralls; fi
+    - if [ "${PYSUF}" != "3" ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
