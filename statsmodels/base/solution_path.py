@@ -101,19 +101,26 @@ class SolutionPathResults(object):
 
         return model1.fit(**self.fit_args)
 
-    def plot(self):
+    def plot(self, ax=None):
         """
         Make a plot of the solution paths.
 
+        Parameters:
+        -----------
+        ax : Matplotlib axes instance
+          An axes on which to draw the graph.  If None, new figure and
+          axes objects are created.
+
         Returns:
         --------
-        fig : matplotlib figure instance
-            The figure containing the plot
-        ax : matplotlib axes instance
-            The axes containing the plot
+        fig : Figure
+            The figure given by `ax.Figure`, or a new instance.
         """
 
-        fig, ax = gutils.create_mpl_ax(ax)
+        if ax is None:
+            fig, ax = gutils.create_mpl_ax(ax)
+        else:
+            fig = ax.get_figure()
 
         for k in range(self.params_unpacked.shape[1]):
             ax.plot(self.pwts, self.params_unpacked[:,k], '-',
@@ -122,7 +129,7 @@ class SolutionPathResults(object):
         ax.set_xlabel("Penalty weight")
         ax.set_ylabel("Coefficient")
 
-        return fig, ax
+        return fig
 
 
 
