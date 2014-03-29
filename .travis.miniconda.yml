@@ -9,53 +9,25 @@ matrix:
   include:
   - python: 2.7
     env:
-    - PYTHON_VERSION=2.7
-    - NUMPY_VERSION=1.7.1
-    - SCIPY_VERSION=0.12.0
-    - CYTHON_VERSION=0.20.1
+    - PYTHON=2.6
+    - NUMPY=1.6.2
+    - SCIPY=0.11.0
+    - CYTHON=0.20.1
+    - PATSY=0.2.0
   - python: 2.7
     env:
-    - PYTHON_VERSION=3.3
-    - NUMPY_VERSION=1.7.1
-    - SCIPY_VERSION=0.12.0
-    - CYTHON_VERSION=0.17.1
+    - PYTHON=2.7
+    - NUMPY=1.7.1
+    - SCIPY=0.12.0
+    - CYTHON=0.20.1
+    - PATSY=0.2.1
   - python: 2.7
     env:
-    - PYTHON_VERSION=2.6
-    - NUMPY_VERSION=1.7.1
-    - SCIPY_VERSION=0.12.0
-    - CYTHON_VERSION=0.17.4
-  - python: 2.7
-    env:
-    - PYTHON_VERSION=2.7
-    - NUMPY_VERSION=1.8.0
-    - SCIPY_VERSION=0.13.3
-    - CYTHON_VERSION=0.20.1
-  - python: 2.7
-    env:
-    - PYTHON_VERSION=3.3
-    - NUMPY_VERSION=1.8.0
-    - SCIPY_VERSION=0.13.3
-    - CYTHON_VERSION=0.20.1
-  allow_failures:
-  - python: 2.7
-    env:
-    - PYTHON_VERSION=2.6
-    - NUMPY_VERSION=1.7.1
-    - SCIPY_VERSION=0.12.0
-    - CYTHON_VERSION=0.17.4
-  - python: 2.7
-    env:
-    - PYTHON_VERSION=2.7
-    - NUMPY_VERSION=1.8.0
-    - SCIPY_VERSION=0.13.3
-    - CYTHON_VERSION=0.20.1
-  - python: 2.7
-    env:
-    - PYTHON_VERSION=3.3
-    - NUMPY_VERSION=1.8.0
-    - SCIPY_VERSION=0.13.3
-    - CYTHON_VERSION=0.20.1
+    - PYTHON=3.3
+    - NUMPY=1.8.1
+    - SCIPY=0.13.1
+    - CYTHON=0.20.1
+    - PATSY=0.2.1
 
 notifications:
   email:
@@ -82,7 +54,7 @@ before_install:
 
 # Install packages
 install:
-  - conda create --yes -n statsmodels-test python=$PYTHON_VERSION numpy=$NUMPY_VERSION scipy=$SCIPY_VERSION Cython=$CYTHON_VERSION pip matplotlib nose dateutil pandas setuptools patsy pyyaml
+  - conda create --yes -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON pip matplotlib nose dateutil pandas setuptools pyyaml
   - source activate statsmodels-test
   - pip install coverage coveralls
   - python setup.py install
@@ -98,4 +70,5 @@ script:
   - coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py
 
 after_success:
-  - coveralls --rcfile=${SRCDIR}/.travis_coveragerc
+  # Coverage only for 2.7
+  -  if [ ${PYTHON} == "2.7" ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
