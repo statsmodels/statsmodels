@@ -172,14 +172,6 @@ class MDependent(CovStruct):
        is non zero
     dep_params: float
        The constant correlation between dependent observations.
-
-    Returns
-    -------
-    M: matrix
-        The covariance or correlation matrix of endog
-    is_cor: bool
-        True if M is a correlation matrix, False if M is a
-        covariance matrix
     """
         
     # Initialize the parent dependent variables used in the covariance_matrix function
