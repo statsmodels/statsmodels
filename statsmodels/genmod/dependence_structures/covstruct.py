@@ -152,7 +152,7 @@ class Exchangeable(CovStruct):
 class MDependent(CovStruct):
     """
     An m-dependent working dependence structure. Assumes cross correlations are all 
-    zero except for observations within the same cluster and within m time steps away 
+    zero except for observations within the same cluster and within M time units away 
     from each other, where correlation is equal to a constant. Currently uses only the 
     first column of time.
     """
@@ -163,6 +163,24 @@ class MDependent(CovStruct):
     def __init__(self, m):
         self.m = float(m)
         self.dep_params = 0.
+    
+    """        
+    Parameters
+    ----------
+    m: integer
+       The number of time periods away within a cluster less than or equal to which correlation 
+       is non zero
+    dep_params: float
+       The constant correlation between dependent observations.
+
+    Returns
+    -------
+    M: matrix
+        The covariance or correlation matrix of endog
+    is_cor: bool
+        True if M is a correlation matrix, False if M is a
+        covariance matrix
+    """
         
     # Initialize the parent dependent variables used in the covariance_matrix function
     def initialize(self, parent):
