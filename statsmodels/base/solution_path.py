@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import brentq
 import copy
 import pandas as pd
+from statsmodels.graphics import utils as gutils
 
 class SolutionPathResults(object):
     """
@@ -99,6 +100,30 @@ class SolutionPathResults(object):
         model1 = self.model.__class__(self.model.endog, new_exog)
 
         return model1.fit(**self.fit_args)
+
+    def plot(self):
+        """
+        Make a plot of the solution paths.
+
+        Returns:
+        --------
+        fig : matplotlib figure instance
+            The figure containing the plot
+        ax : matplotlib axes instance
+            The axes containing the plot
+        """
+
+        fig, ax = gutils.create_mpl_ax(ax)
+
+        for k in range(self.params_unpacked.shape[1]):
+            ax.plot(self.pwts, self.params_unpacked[:,k], '-',
+                    color='grey')
+
+        ax.set_xlabel("Penalty weight")
+        ax.set_ylabel("Coefficient")
+
+        return fig, ax
+
 
 
 class SolutionPath(object):
