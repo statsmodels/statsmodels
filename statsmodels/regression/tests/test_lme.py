@@ -6,9 +6,11 @@ from scipy.misc import derivative
 import os
 import csv
 
+
 class TestMixedLM(object):
 
     # Test analytic scores using numeric differentiation
+    # TODO: should also do this with the hessian
     def test_score(self):
 
         n = 200
@@ -51,6 +53,23 @@ class TestMixedLM(object):
 
                         assert_almost_equal(gr / ngr, np.ones(len(gr)),
                                             decimal=3)
+
+    def test_regularized(self):
+
+        exog = np.random.normal(size=(400,5))
+        groups = np.kron(np.arange(100), np.ones(4))
+        expected_endog = exog[:,0] - exog[:,2]
+        endog = expected_endog +\
+                np.kron(np.random.normal(size=100), np.ones(4)) +\
+                np.random.normal(size=400)
+        md = MixedLM(endog, exog, groups)
+        mdf = md.fit_regularized(1.)
+        mdf = md.fit()
+        mdf.summary()
+        md = MixedLM(endog, exog, groups)
+        mdf = md.fit_regularized(100*np.ones(5))
+        mdf.summary()
+
 
 
     def do1(self, reml, irf, ds_ix):
