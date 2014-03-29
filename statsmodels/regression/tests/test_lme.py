@@ -20,7 +20,7 @@ class TestMixedLM(object):
 
         for jl in 0,1:
             for reml in False,True:
-                for pen in 0,10:
+                for cov_pen in 0,10:
 
                     exog_fe = np.random.normal(size=(n*m, p))
                     exog_re = np.random.normal(size=(n*m, pr))
@@ -29,11 +29,15 @@ class TestMixedLM(object):
 
                     md = MixedLM(endog, exog_fe, groups, exog_re)
                     if jl == 0:
-                        like = lambda x: -md.loglike_L(x, reml, pen)
-                        score = lambda x: -md.score_L(x, reml, pen)
+                        like = lambda x: -md.loglike_L(x, reml=reml,
+                                                     cov_pen=cov_pen)
+                        score = lambda x: -md.score_L(x, reml=reml,
+                                                    cov_pen=cov_pen)
                     else:
-                        like = lambda x: -md.loglike(x, reml, pen)
-                        score = lambda x: -md.score(x, reml, pen)
+                        like = lambda x: -md.loglike(x, reml=reml,
+                                                  cov_pen=cov_pen)
+                        score = lambda x: -md.score(x, reml=reml,
+                                                  cov_pen=cov_pen)
 
                     for kr in range(5):
                         fe_params = np.random.normal(size=p)
@@ -63,11 +67,11 @@ class TestMixedLM(object):
                 np.kron(np.random.normal(size=100), np.ones(4)) +\
                 np.random.normal(size=400)
         md = MixedLM(endog, exog, groups)
-        mdf = md.fit_regularized(1.)
+        mdf = md.fit_regularized(alpha=1.)
         mdf = md.fit()
         mdf.summary()
         md = MixedLM(endog, exog, groups)
-        mdf = md.fit_regularized(100*np.ones(5))
+        mdf = md.fit_regularized(alpha=10*np.ones(5))
         mdf.summary()
 
 
