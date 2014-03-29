@@ -526,7 +526,6 @@ class TestSolutionPath(object):
         spr = spa.refit(nvar=2)
         spr.summary()
 
-
 class CheckL1Compatability(object):
     """
     Tests compatability between l1 and unregularized by setting alpha such
