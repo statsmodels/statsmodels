@@ -337,10 +337,11 @@ class MixedLM(base.Model):
         method : string of Penalty object
             Method for regularization.  If a string, must be 'l1'.
         alpha : array-like
-            Scalar or vector of penalty weights, used only for L1
-            regularization.  If a scalar, the same weight is applied
-            to all coefficients; if a vector, it contains a weight for
-            each coefficient.
+            Scalar or vector of penalty weights.  If a scalar, the
+            same weight is applied to all coefficients; if a vector,
+            it contains a weight for each coefficient.  If method is a
+            Penalty object, the weights are scaled by alpha.  For L1
+            regularization, the weights are used directly.
         ceps : positive real scalar
             Fixed effects parameters smaller than this value
             in magnitude are treaded as being zero.
@@ -383,10 +384,15 @@ class MixedLM(base.Model):
         if type(method) == str and (method != 'l1'):
             raise ValueError("Invalid regularization method")
 
+        if np.isscalar(alpha):
+            alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
+
         # If method is a smooth penalty just optimize directly.
         if isinstance(method, Penalty):
             fit_args = dict(fit_args)
-            fit_args.update({"fe_pen": method})
+            fe_pen = method.__class__()
+            fe_pen.wts = method.wts * alpha
+            fit_args.update({"fe_pen": fe_pen})
             return self.fit(**fit_args)
 
         # Fit the unpenalized model to get the dependence structure.
@@ -406,9 +412,6 @@ class MixedLM(base.Model):
         like = lambda x: self.loglike_L(x, reml=False,
                                         fe_pen=None,
                                         cov_pen=cov_pen)
-
-        if np.isscalar(alpha):
-            alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
 
         for itr in range(maxit):
 
