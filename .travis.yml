@@ -41,7 +41,6 @@ notifications:
 
 # Setup anaconda
 before_install:
-  #- sudo apt-get update && sudo apt-get -y install libc-bin libc-dev-bin libc6 libc6-dev
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
@@ -61,7 +60,8 @@ before_install:
 
 # Install packages
 install:
-  - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS nose dateutil setuptools pyyaml pip mkl
+  # mkl is installed due to bug in how conda handles the Python 2.6 environment
+  - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS dateutil nose pip pyyaml setuptools mkl
   - source activate statsmodels-test
   - pip install coverage coveralls
   - python setup.py install
