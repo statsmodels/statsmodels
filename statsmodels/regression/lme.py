@@ -103,6 +103,7 @@ from statsmodels.compatnp.collections import OrderedDict
 import warnings
 from statsmodels.tools.sm_exceptions import \
      ConvergenceWarning
+from statsmodels.base.penalties import Penalty
 
 # This is a global switch to use direct linear algebra calculations
 # for solving factor-structured linear systems and calculating
@@ -327,19 +328,19 @@ class MixedLM(base.Model):
     def fit_regularized(self, method='l1', alpha=0, ceps=1e-4,
                         ptol=1e-6, maxit=200, **fit_args):
         """
-        Minimize the L1-norm penalized log-likelihood with respect to
-        the fixed effects parameters.  The dependence parameters are
-        held fixed at their estimated values in the full model.
+        Minimize a model in which the fixed effects parameters are
+        penalized.  The dependence parameters are held fixed at their
+        estimated values in the unpenalized model.
 
         Parameters:
         -----------
-        method : string
-            Method for regularization.  Currently must be 'l1',
-            'l1_shooting', or 'l2'.
+        method : string of Penalty object
+            Method for regularization.  If a string, must be 'l1'.
         alpha : array-like
-            Scalar or vector of penalty weights.  If a scalar, the
-            same weight is applied to all coefficients  If a
-            vector, it contains a weight for each coefficient.
+            Scalar or vector of penalty weights, used only for L1
+            regularization.  If a scalar, the same weight is applied
+            to all coefficients; if a vector, it contains a weight for
+            each coefficient.
         ceps : positive real scalar
             Fixed effects parameters smaller than this value
             in magnitude are treaded as being zero.
@@ -349,6 +350,8 @@ class MixedLM(base.Model):
             `ptol`.
         maxit : integer
             The maximum number of iterations.
+        fit_args :
+            Additional arguments passed to fit.
 
         Returns:
         --------
@@ -359,8 +362,12 @@ class MixedLM(base.Model):
         The covariance structure is not updated as the fixed effects
         parameters are varied.
 
-        The algorithm used here is a "shooting" or cyclic coordinate
-        descent algorithm.
+        The algorithm used here for L1 regularization is a"shooting"
+        or cyclic coordinate descent algorithm.
+
+        If method is 'l1', then `fe_pen` and `cov_pen` are used to
+        obtain the covariance structure, but are ignored during the
+        L1-penalized fitting.
 
         References:
         -----------
@@ -373,25 +380,16 @@ class MixedLM(base.Model):
         """
 
         method = method.lower()
-        if method not in ('l1', 'l1_shooting', 'l2'):
+        if type(method) == str and (method != 'l1'):
             raise ValueError("Invalid regularization method")
 
-        # For l2 we just call fit.
-        if method == 'l2':
-            return self.fit(fe_l2_pen=alpha, **fit_args)
+        # If method is a smooth penalty just optimize directly.
+        if isinstance(method, Penalty):
+            fit_args = dict(fit_args)
+            fit_args.update({"fe_pen": method})
+            return self.fit(**fit_args)
 
-        # No benefit in using the reml criterion here since the
-        # dependence structure is not updated.
-        cov_pen = fit_args["cov_pen"] if "cov_pen" in fit_args else 0.
-        fe_l2_pen = fit_args["fe_l2_pen"] if "fe_l2_pen" in fit_args\
-                    else None
-        cov_pen = fit_args["cov_pen"] if "cov_pen" in fit_args\
-                    else None
-        like = lambda x: self.loglike_L(x, reml=False,
-                                        fe_l2_pen=fe_l2_pen,
-                                        cov_pen=cov_pen)
-
-        # Fit the unconstrained model to get the dependence structure.
+        # Fit the unpenalized model to get the dependence structure.
         fit_args["use_L"] = True
         mdf = self.fit(**fit_args)
         fe_params = mdf.fe_params
@@ -402,8 +400,15 @@ class MixedLM(base.Model):
         except np.linalg.LinAlgError:
             cov_re_inv = None
 
+        # No benefit in using the reml criterion here since the
+        # dependence structure is not updated.
+        cov_pen = fit_args["cov_pen"] if "cov_pen" in fit_args else None
+        like = lambda x: self.loglike_L(x, reml=False,
+                                        fe_pen=None,
+                                        cov_pen=cov_pen)
+
         if np.isscalar(alpha):
-            alpha = alpha * np.ones(len(fe_params), dtype=np.float64)
+            alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
 
         for itr in range(maxit):
 
@@ -530,7 +535,7 @@ class MixedLM(base.Model):
         ix = np.tril_indices(mat.shape[0])
         return np.concatenate((vec, mat[ix]))
 
-    def loglike(self, params, reml=True, fe_l2_pen=None,
+    def loglike(self, params, reml=True, fe_pen=None,
                 cov_pen=None):
         """
         Evaluate the profile log-likelihood of the linear mixed
@@ -545,14 +550,11 @@ class MixedLM(base.Model):
         reml : bool
             If true, return REML log likelihood, else return ML
             log likelihood
-        fe_l2_pen : float or array-like
-            Penalty weight for L2 (ridge) penalization of fixed
-            effects.  If a scalar, all coefficients are penalized by
-            the same amount; if a vector, each element gives the
-            penalty weight for one coefficient.
-        cov_pen : non-negative float
-            Weight for the penalty for non-positive semidefinite
-            covariance matrices; if None there is no penalization.
+        fe_pen : Penalty object
+            A penalty on the fixed effects
+        cov_pen : CovariancePenalty object
+            A penalty object that takes as its argments a matrix
+            and its inverse.
 
         Returns
         -------
@@ -586,15 +588,11 @@ class MixedLM(base.Model):
 
         # Handle the covariance penalty
         if cov_pen is not None:
-            cy = np.linalg.cholesky(cov_re)
-            likeval += cov_pen * 2 * np.sum(np.log(np.diag(cy)))
+            likeval -= cov_pen.func(cov_re, cov_re_inv)
 
         # Handle the fixed effects penalty
-        if fe_l2_pen is not None:
-            if np.isscalar(fe_l2_pen):
-                likeval += fe_l2_pen * np.sum(fe_params**2)
-            else:
-                likeval += np.sum(fe_l2_pen * fe_params**2)
+        if fe_pen is not None:
+            likeval -= fe_pen.func(fe_params)
 
         xvx, qf = 0., 0.
         for k, lab in enumerate(self.group_labels):
@@ -657,8 +655,7 @@ class MixedLM(base.Model):
                 yield jj,mat
                 jj += 1
 
-
-    def score(self, params, reml=True, fe_l2_pen=None,
+    def score(self, params, reml=True, fe_pen=None,
               cov_pen=None):
         """
         Calculates the score vector for the mixed effects model.
@@ -671,14 +668,11 @@ class MixedLM(base.Model):
             All model parameters in packed form
         reml : bool
             If true, return REML score, else return ML score
-        fe_l2_pen : float or array-like
-            Penalty weight for L2 (ridge) penalization of fixed
-            effects.  If a scalar, all coefficients are penalized by
-            the same amount; if a vector, each element gives the
-            penalty weight for one coefficient.
-        cov_pen : non-negative float
-            Weight for the penalty for non positive semidefinite
-            covariance matrices.  If None, there is no penalization.
+        fe_pen : Penalty object
+            A penalty on the fixed effects.
+        cov_pen : CovariancePenalty object
+            A penalty object that takes as arguments a matrix and its
+            inverse.
 
         Returns
         -------
@@ -697,14 +691,11 @@ class MixedLM(base.Model):
 
         # Handle the covariance penalty.
         if cov_pen is not None:
-            cy = cov_re_inv.copy()
-            cy = 2*cy - np.diag(np.diag(cy))
-            i,j = np.tril_indices(self.k_re)
-            score_re += cov_pen * cy[i,j]
+            score_re -= cov_pen.grad(cov_re, cov_re_inv)
 
         # Handle the fixed effects penalty.
-        if fe_l2_pen is not None:
-            score_fe += 2 * fe_l2_pen * fe_params
+        if fe_pen is not None:
+            score_fe -= fe_pen.grad(fe_params)
 
         # resid' V^{-1} resid, summed over the groups (a scalar)
         rvir = 0.
@@ -774,7 +765,7 @@ class MixedLM(base.Model):
         return np.concatenate((score_fe, score_re))
 
 
-    def loglike_L(self, params, reml=True, fe_l2_pen=None,
+    def loglike_L(self, params, reml=True, fe_pen=None,
                   cov_pen=None):
         """
         Returns the log likelihood evaluated at a given point.  The
@@ -790,9 +781,9 @@ class MixedLM(base.Model):
         reml : bool
             If true, returns the REML log likelihood, else returns
             the standard log likeihood.
-        cov_pen : non-negative float
+        cov_pen : CovariancePenalty object
             See `loglike`.
-        fe_l2_pen : float or array
+        fe_pen : Penalty object
             See `loglike`.
 
         Returns:
@@ -807,12 +798,12 @@ class MixedLM(base.Model):
 
         likeval = self.loglike(params_r, reml=reml,
                                cov_pen=cov_pen,
-                               fe_l2_pen=fe_l2_pen)
+                               fe_pen=fe_pen)
         return likeval
 
 
 
-    def score_L(self, params, reml=True, fe_l2_pen=None,
+    def score_L(self, params, reml=True, fe_pen=None,
                 cov_pen=None):
         """
         Returns the score vector valuated at a given point.  The
@@ -828,9 +819,9 @@ class MixedLM(base.Model):
         reml : bool
             If true, returns the REML log likelihood, else returns
             the standard log likeihood.
-        cov_pen : non-negative float
+        cov_pen : CovariancePenalty object
             See `score`.
-        fe_l2_pen : float or array
+        fe_pen : Penalty object
             See `score`.
 
         Returns:
@@ -843,7 +834,7 @@ class MixedLM(base.Model):
 
         params_f = self._pack(fe_params, cov_re)
         svec = self.score(params_f, reml=reml, cov_pen=cov_pen,
-                          fe_l2_pen=fe_l2_pen)
+                          fe_pen=fe_pen)
         s_fe, s_re = self._unpack(svec, sym=False)
 
         # Use the chain rule to get d/dL from d/dPsi
@@ -1192,7 +1183,7 @@ class MixedLM(base.Model):
         return params, np.max(np.abs(gro)) < gtol
 
     def fit(self, start=None, reml=True, num_sd=1,
-            num_em=0, do_cg=True, fe_l2_pen=None, cov_pen=None,
+            num_em=0, do_cg=True, fe_pen=None, cov_pen=None,
             gtol=1e-4, use_L=True, free=None, full_output=False):
         """
         Fit a linear mixed model to the data.
@@ -1225,16 +1216,10 @@ class MixedLM(base.Model):
             If True, a conjugate gradient algorithm is
             used for optimization (following any steepest
             descent or EM steps).
-        cov_pen : non-negative float
-            Coefficient of a logarithmic barrier function
-            to prevent the random effect covariance matrix from
-            becoming singular.  If None, there is no penalization.
-        fe_l2_pen : float or array
-            Penalty weights for L2 (ridge) penalization of the
-            fixed effects coefficients.  If a scalar, the same
-            penalty is applied to all coefficients; if a vector,
-            it contains a weight for each coefficient; if None,
-            there is no penalization.
+        cov_pen : CovariancePenalty object
+            A penalty for the random effects covariance matrix
+        fe_pen : Penalty object
+            A penalty on the fixed effects
         gtol : non-negtive float
             Algorithm is considered converged if the sup-norm of
             the gradient is smaller than this value.
@@ -1265,11 +1250,11 @@ class MixedLM(base.Model):
         if use_L:
             like = lambda x: -self.loglike_L(x, reml=reml,
                                              cov_pen=cov_pen,
-                                             fe_l2_pen=fe_l2_pen)
+                                             fe_pen=fe_pen)
         else:
             like = lambda x: -self.loglike(x, reml=reml,
                                            cov_pen=cov_pen,
-                                           fe_l2_pen=fe_l2_pen)
+                                           fe_pen=fe_pen)
 
         if free is not None:
             pat_slopes = free[0]
@@ -1279,20 +1264,20 @@ class MixedLM(base.Model):
             if use_L:
                 score = lambda x: -pat*self.score_L(x, reml=reml,
                                      cov_pen=cov_pen,
-                                     fe_l2_pen=fe_l2_pen)
+                                     fe_pen=fe_pen)
             else:
                 score = lambda x: -pat*self.score(x, reml=reml,
                                        cov_pen=cov_pen,
-                                       fe_l2_pen=fe_l2_pen)
+                                       fe_pen=fe_pen)
         else:
             if use_L:
                 score = lambda x: -self.score_L(x, reml=reml,
                                            cov_pen=cov_pen,
-                                           fe_l2_pen=fe_l2_pen)
+                                           fe_pen=fe_pen)
             else:
                 score = lambda x: -self.score(x, reml=reml,
                                          cov_pen=cov_pen,
-                                         fe_l2_pen=fe_l2_pen)
+                                         fe_pen=fe_pen)
 
         if full_output:
             hist = []

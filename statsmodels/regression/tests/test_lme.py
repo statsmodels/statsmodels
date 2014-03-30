@@ -3,6 +3,7 @@ from statsmodels.regression.lme import MixedLM
 from numpy.testing import assert_almost_equal
 from lme_r_results import *
 from scipy.misc import derivative
+from statsmodels.base.penalties import PSD
 import os
 import csv
 
@@ -20,7 +21,9 @@ class TestMixedLM(object):
 
         for jl in 0,1:
             for reml in False,True:
-                for cov_pen in 0,10:
+                for cov_pen_wt in 0,10:
+
+                    cov_pen = PSD(cov_pen_wt)
 
                     exog_fe = np.random.normal(size=(n*m, p))
                     exog_re = np.random.normal(size=(n*m, pr))
