@@ -10,8 +10,8 @@ matrix:
   - python: 2.7
     env:
     - PYTHON=2.6
-    - NUMPY=1.6
-    - SCIPY=0.11
+    - NUMPY="1.6.2=py26_4"
+    - SCIPY="0.11.0=np16py26_3"
     - CYTHON=0.20
     - PATSY=0.2.0
     - MATPLOTLIB=1.2
@@ -34,6 +34,15 @@ matrix:
     - PATSY=0.2
     - MATPLOTLIB=1.3
     - PANDAS=0.13
+  - python: 2.7
+    env:
+    - PYTHON=2.7
+    - NUMPY=
+    - SCIPY=
+    - CYTHON=0.20
+    - PATSY=
+    - MATPLOTLIB=
+    - PANDAS=
 
 notifications:
   email:
@@ -60,8 +69,7 @@ before_install:
 
 # Install packages
 install:
-  # mkl is installed due to bug in how conda handles the Python 2.6 environment
-  - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS dateutil nose pip pyyaml setuptools mkl
+  - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS dateutil nose pip pyyaml setuptools
   - source activate statsmodels-test
   - pip install coverage coveralls
   - python setup.py install
