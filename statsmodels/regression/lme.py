@@ -278,6 +278,17 @@ class MixedLM(base.LikelihoodModel):
         # The total number of observations, summed over all groups
         self.n_totobs = sum([len(y) for y in self.endog_li])
 
+        # Set the fixed effects parameter names
+        if self.exog_names is None:
+            self.exog_names = ["FE%d" % (k + 1) for k in
+                               range(self.exog.shape[1])]
+
+        # Set the random effect parameter names
+        if isinstance(self.exog_re, pd.DataFrame):
+            self.exog_re_names = self.exog_re.columns
+        else:
+            self.exog_re_names = ["RE%d" % (k+1) for k in
+                                  range(self.exog_re.shape[1])]
 
     def set_random(self, re_formula, data):
         """
@@ -383,17 +394,15 @@ class MixedLM(base.LikelihoodModel):
         http://statweb.stanford.edu/~tibs/stat315a/Supplements/fuse.pdf
         """
 
-        method = method.lower()
-        if type(method) == str and (method != 'l1'):
+        if type(method) == str and (method.lower() != 'l1'):
             raise ValueError("Invalid regularization method")
 
         # If method is a smooth penalty just optimize directly.
         if isinstance(method, Penalty):
             fit_args = dict(fit_args)
             # Scale the penalty weights by alpha
-            fe_pen = method.__class__()
-            fe_pen.wts = method.wts * alpha
-            fit_args.update({"fe_pen": fe_pen})
+            method.alpha = alpha
+            fit_args.update({"fe_pen": method})
             return self.fit(**fit_args)
 
         if np.isscalar(alpha):
@@ -761,7 +770,7 @@ class MixedLM(base.LikelihoodModel):
         if reml:
             fac -= self.exog.shape[1]
 
-        score_fe = fac * xtvir / rvir
+        score_fe += fac * xtvir / rvir
         score_re += 0.5 * fac * rvavr / rvir
 
         if reml:
@@ -1603,46 +1612,39 @@ class MixedLMResults(base.LikelihoodModelResults):
         info["Converged:"] = "Yes" if self.converged else "No"
         smry.add_dict(info)
 
-        if xname_fe is not None:
-            xname_fe = xname_fe
-        elif self.model.exog_names is not None:
-            xname_fe = self.model.exog_names
-        else:
-            xname_fe = []
-
-        if xname_re is not None:
-            xname_re = xname_re
-        elif self.model.exog_re_names is not None:
-            xname_re = self.model.exog_re_names
-        else:
-            xname_re = []
-
-        while len(xname_fe) < self.k_fe:
-            xname_fe.append("FE%d" % (len(xname_fe) + 1))
-
-        while len(xname_re) < self.k_re:
-            xname_re.append("RE%d" % (len(xname_re) + 1))
-
         float_fmt = "%.3f"
 
-        names = xname_fe
+        names = list(self.model.exog_names)
         sdf = np.nan * np.ones((self.k_fe + self.k_re2, 6),
                                dtype=np.float64)
+
+        # Coefficient estimates
         sdf[0:self.k_fe, 0] = self.fe_params
+
+        # Standard errors
         sdf[0:self.k_fe, 1] =\
                       np.sqrt(np.diag(self.cov_params()[0:self.k_fe]))
+
+        # Z-scores
         sdf[0:self.k_fe, 2] = sdf[0:self.k_fe, 0] / sdf[0:self.k_fe, 1]
+
+        # p-values
         sdf[0:self.k_fe, 3] = 2 * norm.cdf(-np.abs(sdf[0:self.k_fe, 2]))
+
+        # Confidence intervals
         qm = -norm.ppf(alpha / 2)
         sdf[0:self.k_fe, 4] = sdf[0:self.k_fe, 0] - qm * sdf[0:self.k_fe, 1]
         sdf[0:self.k_fe, 5] = sdf[0:self.k_fe, 0] + qm * sdf[0:self.k_fe, 1]
+
+        # Names for all pairs of random effects
         jj = self.k_fe
         for i in range(self.k_re):
             for j in range(i + 1):
                 if i == j:
-                    names.append(xname_re[i])
+                    names.append(self.model.exog_re_names[i])
                 else:
-                    names.append(xname_re[i] + " x " + xname_re[j])
+                    names.append(self.model.exog_re_names[j] + " x " +
+                                 self.model.exog_re_names[i])
                 sdf[jj, 0] = self.cov_re[i, j]
                 sdf[jj, 1] = np.sqrt(self.sig2) * self.bse[jj]
                 jj += 1

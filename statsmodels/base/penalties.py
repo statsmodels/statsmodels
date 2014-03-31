@@ -30,10 +30,16 @@ class Penalty(object):
     wts : array-like
         A vector of weights that determines the weight of the penalty
         for each parameter.
+
+
+    Notes:
+    ------
+    The class has a member called `alpha` that scales the weights.
     """
 
     def __init__(self, wts):
         self.wts = wts
+        self.alpha = 1.
 
     def func(self, params):
         """
@@ -73,11 +79,18 @@ class L2(Penalty):
     The L2 (ridge) penalty.
     """
 
+    def __init__(self, wts=None):
+        if wts is None:
+            self.wts = 1.
+        else:
+            self.wts = wts
+        self.alpha = 1.
+
     def func(self, params):
-        return np.sum(self.wts * params**2)
+        return np.sum(self.wts * self.alpha * params**2)
 
     def grad(self, params):
-        return 2 * self.wts * self.params
+        return 2 * self.wts * self.alpha * params
 
 
 class PseudoHuber(Penalty):
@@ -85,19 +98,23 @@ class PseudoHuber(Penalty):
     The pseudo-Huber penalty.
     """
 
-    def __init__(self, wts, dlt):
+    def __init__(self, dlt, wts=None):
         self.dlt = dlt
-        self.wts = wts
+        if wts is None:
+            self.wts = 1.
+        else:
+            self.wts = wts
+        self.alpha = 1.
 
     def func(self, params):
-        v = np.sqrt(1 + (self.params / self.dlt)**2)
+        v = np.sqrt(1 + (params / self.dlt)**2)
         v -= 1
         v *= self.dlt**2
-        return np.sum(self.wts * v)
+        return np.sum(self.wts * self.alpha * v)
 
     def grad(self, params):
-        v = np.sqrt(1 + (self.params / self.dlt)**2)
-        return self.dlt * self.params * self.wts / v
+        v = np.sqrt(1 + (params / self.dlt)**2)
+        return params * self.wts * self.alpha / v
 
 
 class CovariancePenalty(object):
@@ -146,7 +163,10 @@ class PSD(CovariancePenalty):
     """
 
     def func(self, mat, mat_inv):
-        cy = np.linalg.cholesky(mat)
+        try:
+            cy = np.linalg.cholesky(mat)
+        except np.linalg.LinAlgError:
+            return np.inf
         return -2 * self.wt * np.sum(np.log(np.diag(cy)))
 
     def grad(self, mat, mat_inv):
