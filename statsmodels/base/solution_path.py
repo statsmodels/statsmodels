@@ -6,8 +6,8 @@ from statsmodels.graphics import utils as gutils
 
 class SolutionPathResults(object):
     """
-    A class for returning a fitted solution path using regularized
-    regression.
+    A class representing a fitted solution path that is obtained using
+    regularized regression.
 
     Parameters:
     -----------
@@ -81,7 +81,8 @@ class SolutionPathResults(object):
 
         Returns:
         --------
-        A model results instance.
+        A model results instance, or None if no model with the
+        desired number of variables was found.
         """
 
         # Find the model that gives us the desired number of
@@ -159,6 +160,14 @@ class SolutionPath(object):
         are treated as zero
     start_pwt : float
         The smallest penalty weight that is considered.
+    no_selection: bool
+        If true, the penalty function does not produce exact
+        zero coefficients.  In this case, the method does not
+        try to find the points where the coefficients become
+        zero.
+    xtol : float
+       Try to resolve the points where coefficients become
+       zero to this level of accuracy.
     fit_params : keyword parameters
         Additional keyword parameters passed to fit_regularized.
 
@@ -194,7 +203,8 @@ class SolutionPath(object):
     num_nonzero = None
 
     def __init__(self, model, maxvar=None, wt_vec=None, ceps=1e-4,
-                 start_pwt = 0., **fit_params):
+                 start_pwt=0., no_selection=False, xtol=1.,
+                 **fit_params):
 
         self.model = model
         self.maxvar = maxvar if maxvar is not None else model.nparams
@@ -214,6 +224,12 @@ class SolutionPath(object):
         self.ix_zero = []
         self.params = []
         self.num_nonzero = []
+
+        if no_selection:
+            self.no_selection_paths()
+        else:
+            self.initialize()
+            self.refine()
 
     def weights_less_complex(self, nvar):
         """
@@ -349,16 +365,10 @@ class SolutionPath(object):
                     break
 
 
-    def refine(self, xtol=1e-4):
+    def refine(self):
         """
         Extend the solution path so that the minimal possible weight
         (within `xtol`) having each model size is included.
-
-        Parameters:
-        -----------
-        xtol : float
-            Tolerance for finding the change points in the solution
-            path.
         """
 
         for i in range(0, self.maxvar+1):
@@ -378,7 +388,7 @@ class SolutionPath(object):
                 # previous fit.
                 aw = np.asarray(self.weights)
                 ii = np.argmin(np.abs(aw - pwt))
-                if abs(pwt - self.weights[ii]) < xtol:
+                if abs(pwt - self.weights[ii]) < self.xtol:
                     nvar = self.num_nonzero[ii]
                 else:
                     params = self.fit_regularized(pwt)
@@ -391,4 +401,25 @@ class SolutionPath(object):
             if f(w0) * f(w1) > 1e-5:
                 continue
 
-            brentq(f, w0, w1, xtol=xtol)
+            brentq(f, w0, w1, xtol=self.xtol)
+
+    def no_selection_paths(self):
+        """
+        Construct the path using a smooth penalty that does not
+        produce coefficient estimates that are exactly zero.
+        """
+
+        # This will be the most complex model on the path
+        start = self.fit_regularized(self.start_pwt)
+        self.add_point(self.start_pwt, start)
+
+        # Increase the tuning parameter until all coefficients are
+        # zero
+        pwt = 1.
+        n_unpenalized = sum(pwt == 0)
+        while True:
+            params = self.fit_regularized(pwt)
+            nvar = self.add_point(pwt, params)
+            if nvar == n_unpenalized:
+                break
+            pwt *= 2.
