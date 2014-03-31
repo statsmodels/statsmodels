@@ -32,6 +32,10 @@ class SolutionPathResults(object):
     the same number of elements.  Corresponding positions in these
     lists correspond to a single regularized fit using the given
     penalty weight.
+
+    Extra parameters may not be regularized (this depends on how
+    fit_regularized is implemented in a particular model).  They will
+    still be included on the solution path.
     """
 
     def __init__(self, model, wt_vec, pwts, ix_nonzero,
@@ -311,10 +315,11 @@ class SolutionPath(object):
         # Increase the tuning parameter until all coefficients are
         # zero
         pwt = 1.
+        n_unpenalized = sum(pwt == 0)
         while True:
             params = self.fit_regularized(pwt)
             nvar = self.add_point(pwt, params)
-            if nvar == 0:
+            if nvar == n_unpenalized:
                 break
             pwt *= 2.
 
