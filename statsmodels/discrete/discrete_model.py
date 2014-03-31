@@ -117,6 +117,9 @@ class DiscreteModel(base.LikelihoodModel):
         super(DiscreteModel, self).__init__(endog, exog, **kwargs)
         self.raise_on_perfect_prediction = True
 
+        # Default, change in subclass if needed.
+        self.nparams = self.exog.shape[1]
+
     def initialize(self):
         """
         Initialize is called by
@@ -465,7 +468,7 @@ class MultinomialModel(BinaryModel):
         self.K = float(self.exog.shape[1])
         self.df_model *= (self.J-1) # for each J - 1 equation.
         self.df_resid = self.exog.shape[0] - self.df_model - (self.J-1)
-
+        self.nparams = wendog.shape[1]
 
     def predict(self, params, exog=None, linear=False):
         """
@@ -1760,7 +1763,7 @@ class NegativeBinomial(CountModel):
 
     References:
 
-    Greene, W. 2008. "Functional forms for the negtive binomial model
+    Greene, W. 2008. "Functional forms for the negative binomial model
         for count data". Economics Letters. Volume 99, Number 3, pp.585-590.
     Hilbe, J.M. 2011. "Negative binomial regression". Cambridge University
         Press.
@@ -1783,6 +1786,7 @@ class NegativeBinomial(CountModel):
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
             self.exog_names.append('alpha')
+        self.nparams = self.exog.shape[1] + 1
 
     def _initialize(self):
         if self.loglike_method == 'nb2':
