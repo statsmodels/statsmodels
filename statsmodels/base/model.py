@@ -463,7 +463,7 @@ class LikelihoodModel(Model):
         spa = SolutionPath(self, maxvar, wt_vec, ceps,
                            min_pwt, **fit_args)
         spa.initialize()
-        spa.refine(xtol)
+        spa.refine()
 
         spr = SolutionPathResults(self, wt_vec, np.asarray(spa.weights),
                                   spa.ix_nonzero, spa.params)
