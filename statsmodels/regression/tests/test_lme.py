@@ -1,9 +1,13 @@
+##!!!!
+import sys
+sys.path.insert(0, "/afs/lsa.umich.edu/user/k/s/kshedden/fork4/statsmodels")
+
 import numpy as np
 from statsmodels.regression.lme import MixedLM
 from numpy.testing import assert_almost_equal
 from lme_r_results import *
 from scipy.misc import derivative
-from statsmodels.base.penalties import PSD
+from statsmodels.base import penalties
 import os
 import csv
 
@@ -23,7 +27,7 @@ class TestMixedLM(object):
             for reml in False,True:
                 for cov_pen_wt in 0,10:
 
-                    cov_pen = PSD(cov_pen_wt)
+                    cov_pen = penalties.PSD(cov_pen_wt)
 
                     exog_fe = np.random.normal(size=(n*m, p))
                     exog_re = np.random.normal(size=(n*m, pr))
@@ -69,14 +73,31 @@ class TestMixedLM(object):
         endog = expected_endog +\
                 np.kron(np.random.normal(size=100), np.ones(4)) +\
                 np.random.normal(size=400)
-        md = MixedLM(endog, exog, groups)
-        mdf = md.fit_regularized(alpha=1.)
-        mdf = md.fit()
-        mdf.summary()
-        md = MixedLM(endog, exog, groups)
-        mdf = md.fit_regularized(alpha=10*np.ones(5))
-        mdf.summary()
 
+        # L1 regularization
+        md = MixedLM(endog, exog, groups)
+        mdf1 = md.fit_regularized(alpha=1.)
+        mdf1.summary()
+
+        # L1 regularization
+        md = MixedLM(endog, exog, groups)
+        mdf2 = md.fit_regularized(alpha=10*np.ones(5))
+        mdf2.summary()
+
+        # L2 regularization
+        pen = penalties.L2()
+        mdf3 = md.fit_regularized(method=pen, alpha=0.)
+        mdf3.summary()
+
+        # L2 regularization
+        pen = penalties.L2()
+        mdf4 = md.fit_regularized(method=pen, alpha=100.)
+        mdf4.summary()
+
+        # Pseudo-Huber regularization
+        pen = penalties.PseudoHuber(0.3)
+        mdf4 = md.fit_regularized(method=pen, alpha=1.)
+        mdf4.summary()
 
 
     def do1(self, reml, irf, ds_ix):
