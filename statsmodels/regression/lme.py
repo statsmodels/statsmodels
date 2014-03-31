@@ -256,6 +256,9 @@ class MixedLM(base.LikelihoodModel):
             # Number of covariance parameters
             self.k_re2 = self.k_re * (self.k_re + 1) // 2
 
+        # Override the default value
+        self.nparams = self.k_fe + self.k_re
+
         # Convert the data to the internal representation, which is a
         # list of arrays, corresponding to the groups.
         group_labels = list(set(groups))
