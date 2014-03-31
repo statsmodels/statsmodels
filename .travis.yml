@@ -16,6 +16,7 @@ matrix:
     - PATSY=0.2.0
     - MATPLOTLIB=1.2
     - PANDAS=0.12
+    - CVXOPT=
   - python: 2.7
     env:
     - PYTHON=2.7
@@ -25,6 +26,7 @@ matrix:
     - PATSY=0.2
     - MATPLOTLIB=1.3
     - PANDAS=0.12
+    - CVXOPT=cvxopt
   - python: 2.7
     env:
     - PYTHON=3.3
@@ -34,6 +36,7 @@ matrix:
     - PATSY=0.2
     - MATPLOTLIB=1.3
     - PANDAS=0.13
+    - CVXOPT=
   - python: 2.7
     env:
     - PYTHON=2.7
@@ -43,6 +46,7 @@ matrix:
     - PATSY=
     - MATPLOTLIB=
     - PANDAS=
+    - CVXOPT=
 
 notifications:
   email:
@@ -69,7 +73,7 @@ before_install:
 
 # Install packages
 install:
-  - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS dateutil nose pip pyyaml setuptools
+  - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS $CVXOPT dateutil nose pip pyyaml setuptools
   - source activate statsmodels-test
   - pip install coverage coveralls
   - python setup.py install
