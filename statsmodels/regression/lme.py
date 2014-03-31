@@ -188,7 +188,7 @@ def _smw_logdet(s, A, B, BI, B_logdet):
     return B_logdet + ld + ld1
 
 
-class MixedLM(base.Model):
+class MixedLM(base.LikelihoodModel):
     """
     An object specifying a linear mixed effects model.  Use the `fit`
     method to fit the model and obtain a results object.
@@ -325,8 +325,8 @@ class MixedLM(base.Model):
                     for k in self.group_labels]
 
 
-    def fit_regularized(self, method='l1', alpha=0, ceps=1e-4,
-                        ptol=1e-6, maxit=200, **fit_args):
+    def fit_regularized(self, start_params=None, method='l1', alpha=0,
+                        ceps=1e-4, ptol=1e-6, maxit=200, **fit_args):
         """
         Minimize a model in which the fixed effects parameters are
         penalized.  The dependence parameters are held fixed at their
@@ -1187,7 +1187,8 @@ class MixedLM(base.Model):
 
     def fit(self, start=None, reml=True, num_sd=1,
             num_em=0, do_cg=True, fe_pen=None, cov_pen=None,
-            gtol=1e-4, use_L=True, free=None, full_output=False):
+            gtol=1e-4, use_L=True, free=None, full_output=False,
+            **kwargs):
         """
         Fit a linear mixed model to the data.
 
@@ -1344,10 +1345,10 @@ class MixedLM(base.Model):
 
             # Gradient iterations
             try:
-                rslt = fmin_bfgs(like, params_prof, score,
-                                 full_output=True,
-                                 disp=False,
-                                 retall=hist is not None)
+                fit_args = dict(kwargs)
+                fit_args["retall"] = hist is not None
+                fit_args["full_output"] = True
+                rslt = fmin_bfgs(like, params_prof, score, **fit_args)
             # scipy.optimize routines have trouble staying in the
             # feasible region
             except np.linalg.LinAlgError:
