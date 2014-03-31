@@ -45,10 +45,10 @@ class SolutionPathResults(object):
 
         self.num_nonzero = np.asarray([len(x) for x in ix_nonzero])
 
-        ndim = model.exog.shape[1]
         ix_zero = []
         for ix in ix_nonzero:
-            ii = np.asarray([i for i in range(ndim) if i not in ix])
+            ii = np.asarray([i for i in range(model.nparams)
+                             if i not in ix])
             ix_zero.append(ii)
         self.ix_zero = ix_zero
 
@@ -56,7 +56,7 @@ class SolutionPathResults(object):
 
     def _unpack(self):
 
-        d = self.model.exog.shape[1]
+        d = self.model.nparams
         params_unpacked = []
         for i in range(len(self.pwts)):
             x = np.zeros(d, dtype=np.float64)
@@ -193,18 +193,14 @@ class SolutionPath(object):
                  start_pwt = 0., **fit_params):
 
         self.model = model
-        self.ndim = model.exog.shape[1]
-        if maxvar is not None:
-            self.maxvar = maxvar
-        else:
-            self.maxvar = self.ndim
+        self.maxvar = maxvar if maxvar is not None else model.nparams
         self.ceps = ceps
         self.start_pwt = start_pwt
 
         if wt_vec is not None:
-            assert(len(wt_vec) == self.ndim)
+            assert(len(wt_vec) == model.nparams)
         else:
-            wt_vec = np.ones(self.ndim, dtype=np.float64)
+            wt_vec = np.ones(model.nparams, dtype=np.float64)
         self.wt_vec = wt_vec
 
         self.fit_params = fit_params
