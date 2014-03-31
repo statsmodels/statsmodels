@@ -387,16 +387,17 @@ class MixedLM(base.LikelihoodModel):
         if type(method) == str and (method != 'l1'):
             raise ValueError("Invalid regularization method")
 
-        if np.isscalar(alpha):
-            alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
-
         # If method is a smooth penalty just optimize directly.
         if isinstance(method, Penalty):
             fit_args = dict(fit_args)
+            # Scale the penalty weights by alpha
             fe_pen = method.__class__()
             fe_pen.wts = method.wts * alpha
             fit_args.update({"fe_pen": fe_pen})
             return self.fit(**fit_args)
+
+        if np.isscalar(alpha):
+            alpha = alpha * np.ones(self.k_fe, dtype=np.float64)
 
         # Fit the unpenalized model to get the dependence structure.
         fit_args["use_L"] = True
