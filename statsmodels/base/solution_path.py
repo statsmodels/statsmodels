@@ -331,7 +331,7 @@ class SolutionPath(object):
         # Increase the tuning parameter until all coefficients are
         # zero
         pwt = 1.
-        n_unpenalized = sum(pwt == 0)
+        n_unpenalized = sum(self.wt_vec == 0)
         while True:
             params = self.fit_regularized(pwt)
             nvar = self.add_point(pwt, params)
