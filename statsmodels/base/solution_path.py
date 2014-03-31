@@ -285,7 +285,7 @@ class SolutionPath(object):
         if len(self.weights) > 0:
             wa = np.asarray(self.weights)
             ii = np.argmin(np.abs(wa - pwt))
-            start_params = np.zeros(self.model.exog.shape[1],
+            start_params = np.zeros(self.model.nparams,
                                     dtype=np.float64)
             start_params[self.ix_nonzero[ii]] = self.params[ii]
         else:
