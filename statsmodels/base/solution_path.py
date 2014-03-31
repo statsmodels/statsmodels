@@ -209,6 +209,7 @@ class SolutionPath(object):
         self.model = model
         self.maxvar = maxvar if maxvar is not None else model.nparams
         self.ceps = ceps
+        self.xtol = xtol
         self.start_pwt = start_pwt
 
         if wt_vec is not None:
