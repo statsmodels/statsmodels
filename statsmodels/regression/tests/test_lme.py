@@ -32,16 +32,14 @@ class TestMixedLM(object):
                     groups = np.kron(range(n), np.ones(m))
 
                     md = MixedLM(endog, exog_fe, groups, exog_re)
+                    md.reml = reml
+                    md.cov_pen = cov_pen
                     if jl == 0:
-                        like = lambda x: -md.loglike_L(x, reml=reml,
-                                                     cov_pen=cov_pen)
-                        score = lambda x: -md.score_L(x, reml=reml,
-                                                    cov_pen=cov_pen)
+                        like = lambda x: -md.loglike_L(x)
+                        score = lambda x: -md.score_L(x)
                     else:
-                        like = lambda x: -md.loglike(x, reml=reml,
-                                                  cov_pen=cov_pen)
-                        score = lambda x: -md.score(x, reml=reml,
-                                                  cov_pen=cov_pen)
+                        like = lambda x: -md.loglike(x)
+                        score = lambda x: -md.score(x)
 
                     for kr in range(5):
                         fe_params = np.random.normal(size=p)
@@ -185,10 +183,11 @@ class TestMixedLM(object):
         # Fit the model
         md = MixedLM(endog, exog_fe, groups, exog_re)
         if not irf: # Free random effects covariance
-            mdf = md.fit(reml=reml)
+            mdf = md.fit(gtol=1e-8, reml=reml)
         else: # Independent random effects
-            mdf = md.fit(reml=reml, free=(np.ones(exog_fe.shape[1]),
-                                          np.eye(exog_re.shape[1])))
+            mdf = md.fit(reml=reml, gtol=1e-8,
+                         free=(np.ones(exog_fe.shape[1]),
+                               np.eye(exog_re.shape[1])))
 
         assert_almost_equal(mdf.fe_params, coef, decimal=4)
         assert_almost_equal(mdf.cov_re, cov_re_r, decimal=4)
