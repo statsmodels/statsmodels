@@ -23,7 +23,7 @@ winoldnp = iswin & npversionless15
 
 def check_pickle(obj):
     fh = BytesIO()
-    cPickle.dump(obj, fh)
+    cPickle.dump(obj, fh, protocol=cPickle.HIGHEST_PROTOCOL)
     plen = fh.tell()
     fh.seek(0, 0)
     res = cPickle.load(fh)
