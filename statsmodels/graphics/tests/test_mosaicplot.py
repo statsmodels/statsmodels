@@ -147,9 +147,6 @@ def test_mosaic_very_complex():
                     ['healty', 'ill'], ['work', 'unemployed'])
     keys = list(product(*key_base))
     data = OrderedDict(zip(keys, lrange(1, 1 + len(keys))))
-    print('Shit!!!!!!!')
-    print(data)
-    print('Shit!!!!!!!')
     props = {}
     props[('male', 'old')] = {'color': 'r'}
     props[('female',)] = {'color': 'pink'}
@@ -176,8 +173,6 @@ def test_mosaic_very_complex():
                     value = _reduce_dict(temp_data, k[:2])
                     temp_data[k[:2]] = value
                     del temp_data[k]
-                print('shit!!'*50)
-                print(temp_data)
                 mosaic(temp_data, ax=axes[i, j], axes_label=False,
                        properties=props, gap=0.05, horizontal=i > j)
     pylab.suptitle('old males should look bright red,  (plot 4 of 4)')

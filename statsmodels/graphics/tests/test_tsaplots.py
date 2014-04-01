@@ -60,14 +60,14 @@ def test_plot_month():
 @dec.skipif(not have_matplotlib)
 def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
-    dates = map('Q'.join, zip(dta.year.astype(int).apply(str),
+    dates = lmap('Q'.join, zip(dta.year.astype(int).apply(str),
                               dta.quarter.astype(int).apply(str)))
     # test dates argument
     quarter_plot(dta.unemp.values, dates)
 
     # test with a DatetimeIndex with no freq
     parser = pd.datetools.parse_time_string
-    dta.set_index(pd.DatetimeIndex(x[0] for x in map(parser, dates)),
+    dta.set_index(pd.DatetimeIndex((x[0] for x in map(parser, dates))),
                   inplace=True)
     quarter_plot(dta.unemp)
 
