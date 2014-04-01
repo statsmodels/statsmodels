@@ -34,7 +34,7 @@ from __future__ import print_function
 from statsmodels.compat import lrange, lzip
 import numpy as np
 import pandas as pd
-from statsmodels.compat.np_compat import npc_unique
+from statsmodels.compat.numpy import npc_unique
 import statsmodels.tools.data as data_util
 from statsmodels.tools.decorators import cache_readonly
 from pandas.core.index import Index, MultiIndex
