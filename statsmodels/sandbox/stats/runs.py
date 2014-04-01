@@ -18,9 +18,12 @@ TODO
 * add one-sided tests where possible or where it makes sense
 
 '''
+
 from __future__ import print_function
 import numpy as np
 from scipy import stats
+from scipy.misc import comb
+
 
 class Runs(object):
     '''class for runs in a binary sequence
@@ -243,10 +246,6 @@ def runstest_2samp(x, y=None, groups=None, correction=True):
         xindicator = groups[xargsort]
         return Runs(xindicator).runs_test(correction=correction)
 
-try:
-    from scipy import comb  # pylint: disable=E0611
-except ImportError:
-    from scipy.misc import comb
 
 class TotalRunsProb(object):
     '''class for the probability distribution of total runs

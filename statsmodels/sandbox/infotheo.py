@@ -36,14 +36,11 @@ from statsmodels.compat import range, lzip, lmap
 from scipy import stats
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy.misc import logsumexp as sp_logsumexp
 
 #TODO: change these to use maxentutils so that over/underflow is handled
 #with the logsumexp.
 
-try:
-    from scipy.maxentropy import logsumexp as sp_logsumexp
-except:
-    from scipy.misc import logsumexp as sp_logsumexp
 
 def logsumexp(a, axis=None):
     """

@@ -15,23 +15,7 @@ changes to code by josef-pktd:
 
 from statsmodels.compat import range, lrange
 import numpy as np
-
-try:
-    from itertools import combinations
-except: # Using Python < 2.6
-    def combinations(seq, r=None):
-        """Generator returning combinations of items from sequence <seq>
-        taken <r> at a time. Order is not significant. If <r> is not given,
-        the entire sequence is returned.
-        """
-        if r == None:
-            r = len(seq)
-        if r <= 0:
-            yield []
-        else:
-            for i in range(len(seq)):
-                for cc in combinations(seq[i+1:], r-1):
-                    yield [seq[i]]+cc
+from itertools import combinations
 
 
 ################################################################################

@@ -192,12 +192,7 @@ def _test_group(pvalues, group_name, group, exact=True):
     The test is performed on the pvalues set (ad a pandas series) over
     the group specified via a fisher exact test.
     """
-    from scipy.stats import fisher_exact
-    try:
-        from scipy.stats import chi2_contingency
-    except ImportError:
-        def chi2_contingency(*args, **kwds):
-            raise ValueError('exact=False is not available with old scipy')
+    from scipy.stats import fisher_exact, chi2_contingency
 
     totals = 1.0 * len(pvalues)
     total_significant = 1.0 * np.sum(pvalues)

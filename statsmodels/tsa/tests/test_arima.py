@@ -38,15 +38,11 @@ cpi_predict_dates = dates_from_range('2009Q3', '2015Q4')
 sun_dates = dates_from_range('1700', '2008')
 sun_predict_dates = dates_from_range('2008', '2033')
 
-try:
-    from pandas import DatetimeIndex  # pylint: disable-msg=E0611
-    cpi_dates = DatetimeIndex(cpi_dates, freq='infer')
-    sun_dates = DatetimeIndex(sun_dates, freq='infer')
-    cpi_predict_dates = DatetimeIndex(cpi_predict_dates, freq='infer')
-    sun_predict_dates = DatetimeIndex(sun_predict_dates, freq='infer')
-except ImportError:
-    pass
-
+from pandas import DatetimeIndex  # pylint: disable-msg=E0611
+cpi_dates = DatetimeIndex(cpi_dates, freq='infer')
+sun_dates = DatetimeIndex(sun_dates, freq='infer')
+cpi_predict_dates = DatetimeIndex(cpi_predict_dates, freq='infer')
+sun_predict_dates = DatetimeIndex(sun_predict_dates, freq='infer')
 
 
 def test_compare_arma():
@@ -220,8 +216,7 @@ class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
         cls.res2 = results_arma.Y_arma14()
 
 #NOTE: Ok
-#can't use class decorators in 2.5....
-#@dec.slow
+@dec.slow
 class Test_Y_ARMA41_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
@@ -268,7 +263,6 @@ class Test_Y_ARMA11_Const(CheckArmaResultsMixin, CheckForecastMixin):
                 confint) = cls.res1.forecast(10)
         cls.res2 = results_arma.Y_arma11c()
 
-#NOTE: OK
 class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
     @classmethod
     def setupClass(cls):
@@ -276,8 +270,7 @@ class Test_Y_ARMA14_Const(CheckArmaResultsMixin):
         cls.res1 = ARMA(endog, order=(1,4)).fit(trend="c", disp=-1)
         cls.res2 = results_arma.Y_arma14c()
 
-#NOTE: Ok
-#@dec.slow
+@dec.slow
 class Test_Y_ARMA41_Const(CheckArmaResultsMixin, CheckForecastMixin):
     @classmethod
     def setupClass(cls):
@@ -475,7 +468,7 @@ def test_reset_trend():
     res2 = mod.fit(trend="nc", disp=-1)
     assert_equal(len(res1.params), len(res2.params)+1)
 
-#@dec.slow
+@dec.slow
 def test_start_params_bug():
     data = np.array([1368., 1187, 1090, 1439, 2362, 2783, 2869, 2512, 1804,
     1544, 1028, 869, 1737, 2055, 1947, 1618, 1196, 867, 997, 1862, 2525,
@@ -1604,11 +1597,6 @@ def test_arima_predict_q2():
 
 def test_arima_predict_pandas_nofreq():
     # this is issue 712
-    try:
-        from pandas.tseries.api import infer_freq  # pylint: disable-msg=E0611, F0401
-    except ImportError:
-        import nose
-        raise nose.SkipTest
     from pandas import DataFrame
     dates = ["2010-01-04", "2010-01-05", "2010-01-06", "2010-01-07",
              "2010-01-08", "2010-01-11", "2010-01-12", "2010-01-11",

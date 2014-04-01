@@ -10,12 +10,7 @@ from statsmodels.compat import range
 
 import numpy as np
 import numpy.linalg as npl
-
-try:
-    from numpy.linalg import slogdet as np_slogdet
-except:
-    def np_slogdet(x):
-        return 1, np.log(np.linalg.det(x))
+from numpy.linalg import slogdet
 
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly
@@ -304,7 +299,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         W = np.dot(npl.inv(B),A)
         trc_in = np.dot(np.dot(W.T,W),sigma_u)
-        sign, b_logdet = np_slogdet(B**2) #numpy 1.4 compat
+        sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
         likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \

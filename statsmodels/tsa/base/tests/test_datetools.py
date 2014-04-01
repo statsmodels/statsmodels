@@ -3,6 +3,7 @@ import numpy.testing as npt
 from statsmodels.tsa.base.datetools import (_date_from_idx,
                 _idx_from_dates, date_parser, date_range_str, dates_from_str,
                 dates_from_range, _infer_freq, _freq_to_pandas)
+from pandas import DatetimeIndex, PeriodIndex
 
 def test_date_from_idx():
     d1 = datetime(2008, 12, 31)
@@ -107,46 +108,24 @@ def test_dates_from_range():
     dt_range = dates_from_range("1959m3", length=len(results))
 
 
-try:
-    from pandas import DatetimeIndex
-    _pandas_08x = True
-except ImportError as err:
-    _pandas_08x = False
-    d1 = datetime(2008, 12, 31)
-    d2 = datetime(2012, 9, 30)
+
 
 def test_infer_freq():
     d1 = datetime(2008, 12, 31)
     d2 = datetime(2012, 9, 30)
 
-    if _pandas_08x:
-        b = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['B']).values
-        d = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['D']).values
-        w = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['W']).values
-        m = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['M']).values
-        a = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['A']).values
-        q = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['Q']).values
-        assert _infer_freq(w) == 'W-SUN'
-        assert _infer_freq(a) == 'A-DEC'
-        assert _infer_freq(q) == 'Q-DEC'
-        assert _infer_freq(w[:3]) == 'W-SUN'
-        assert _infer_freq(a[:3]) == 'A-DEC'
-        assert _infer_freq(q[:3]) == 'Q-DEC'
-    else:
-        from pandas import DateRange
-
-        b = DateRange(d1, d2, offset=_freq_to_pandas['B']).values
-        d = DateRange(d1, d2, offset=_freq_to_pandas['D']).values
-        w = DateRange(d1, d2, offset=_freq_to_pandas['W']).values
-        m = DateRange(d1, d2, offset=_freq_to_pandas['M']).values
-        a = DateRange(d1, d2, offset=_freq_to_pandas['A']).values
-        q = DateRange(d1, d2, offset=_freq_to_pandas['Q']).values
-        assert _infer_freq(w) == 'W'
-        assert _infer_freq(a) == 'A'
-        assert _infer_freq(q) == 'Q'
-        assert _infer_freq(w[:3]) == 'W'
-        assert _infer_freq(a[:3]) == 'A'
-        assert _infer_freq(q[:3]) == 'Q'
+    b = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['B']).values
+    d = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['D']).values
+    w = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['W']).values
+    m = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['M']).values
+    a = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['A']).values
+    q = DatetimeIndex(start=d1, end=d2, freq=_freq_to_pandas['Q']).values
+    assert _infer_freq(w) == 'W-SUN'
+    assert _infer_freq(a) == 'A-DEC'
+    assert _infer_freq(q) == 'Q-DEC'
+    assert _infer_freq(w[:3]) == 'W-SUN'
+    assert _infer_freq(a[:3]) == 'A-DEC'
+    assert _infer_freq(q[:3]) == 'Q-DEC'
 
     assert _infer_freq(b[2:5]) == 'B'
     assert _infer_freq(b[:3]) == 'D'
@@ -157,8 +136,5 @@ def test_infer_freq():
     assert _infer_freq(m[:3]) == 'M'
 
 def test_period_index():
-    # tests 1285
-    if _pandas_08x:
-        from pandas import PeriodIndex
-        dates = PeriodIndex(start="1/1/1990", periods=20, freq="M")
-        npt.assert_(_infer_freq(dates) == "M")
+    dates = PeriodIndex(start="1/1/1990", periods=20, freq="M")
+    npt.assert_(_infer_freq(dates) == "M")

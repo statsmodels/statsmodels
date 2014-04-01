@@ -54,7 +54,7 @@ def make_lag_names(names, lag_order, trendorder=1):
 
     """
     lag_names = []
-    if isinstance(names, string_types): # python 3?
+    if isinstance(names, string_types):     
         names = [names]
 
     # take care of lagged endogenous names
@@ -151,18 +151,14 @@ def parse_lutkepohl_data(path): # pragma: no cover
     start_date = offset.rollforward(datetime(year, 1, 1)) + inc
 
     offset = offsets[freq]
-    try:
-        from pandas import DatetimeIndex   # pylint: disable=E0611
-        date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
-    except ImportError:
-        from pandas import DateRange
-        date_range = DateRange(start_date, offset=offset, periods=n)
+    from pandas import DatetimeIndex   # pylint: disable=E0611
+    date_range = DatetimeIndex(start=start_date, freq=offset, periods=n)
 
     return data, date_range
 
 def get_logdet(m):
-    from statsmodels.tools.compatibility import np_slogdet
-    logdet = np_slogdet(m)
+    from numpy.linalg import slogdet
+    logdet = slogdet(m)
 
     if logdet[0] == -1: # pragma: no cover
         raise ValueError("Matrix is not positive definite")

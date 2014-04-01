@@ -14,12 +14,7 @@ import numpy as np
 
 __all__ = ["PanelModel"]
 
-try:
-    from pandas import LongPanel, __version__
-    __version__ >= .1
-except:
-    raise ImportError("While in the sandbox this code depends on the pandas \
-package.  http://code.google.com/p/pandas/")
+from pandas import LongPanel, __version__
 
 
 def group(X):
@@ -335,11 +330,7 @@ class DynamicPanel(PanelModel):
     pass
 
 if __name__ == "__main__":
-    try:
-        import pandas
-        pandas.version >= .1
-    except:
-        raise ImportError("pandas >= .10 not installed")
+    import pandas
     from pandas import LongPanel
     import statsmodels.api as sm
     import numpy.lib.recfunctions as nprf

@@ -251,11 +251,9 @@ def test_ar_dates():
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
     predict_dates = sm.tsa.datetools.dates_from_range('2005', '2015')
-    try:
-        from pandas import DatetimeIndex  # pylint: disable-msg=E0611
-        predict_dates = DatetimeIndex(predict_dates, freq='infer')
-    except ImportError:
-        pass
+    from pandas import DatetimeIndex  # pylint: disable-msg=E0611
+    predict_dates = DatetimeIndex(predict_dates, freq='infer')
+
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
 

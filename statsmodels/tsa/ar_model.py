@@ -3,7 +3,7 @@ from statsmodels.compat import iteritems, range, string_types, lmap
 
 import numpy as np
 from numpy import dot, identity
-from numpy.linalg import inv
+from numpy.linalg import inv, slogdet
 from scipy.stats import norm, ss as sumofsq
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.tsatools import (lagmat, add_trend,
@@ -12,7 +12,6 @@ import statsmodels.tsa.base.tsa_model as tsbase
 import statsmodels.base.model as base
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly, cache_writable)
-from statsmodels.tools.compatibility import np_slogdet
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 from statsmodels.tsa.kalmanf.kalmanfilter import KalmanFilter
 import statsmodels.base.wrapper as wrap
@@ -309,7 +308,7 @@ class AR(tsbase.TimeSeriesModel):
         # concentrating the likelihood means that sigma2 is given by
         sigma2 = 1./nobs * (diffpVpinv + ssr)
         self.sigma2 = sigma2
-        logdet = np_slogdet(Vpinv)[1]  # TODO: add check for singularity
+        logdet = slogdet(Vpinv)[1]  # TODO: add check for singularity
         loglike = -1/2. * (nobs * (np.log(2 * np.pi) + np.log(sigma2)) -
                            logdet + diffpVpinv / sigma2 + ssr / sigma2)
         return loglike

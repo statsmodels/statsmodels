@@ -23,6 +23,8 @@ from statsmodels.datasets import macrodata
 
 import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
+import json
+
 #import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
@@ -588,11 +590,6 @@ class TestDiagnosticG(object):
         #this test is slow
         infl = oi.OLSInfluence(res)
 
-        try:
-            import json
-        except ImportError:
-            raise SkipTest
-
         fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
         lsdiag = json.load(fp)
 
@@ -733,10 +730,6 @@ def test_influence_wrapped():
     assert_(isinstance(df, DataFrame))
 
     #this test is slow
-    try:
-        import json
-    except ImportError:
-        raise SkipTest
     fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
     lsdiag = json.load(fp)
 

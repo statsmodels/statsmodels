@@ -9,15 +9,10 @@ Compatibility tools for various data structure inputs
 
 
 import numpy as np
+import pandas as pd
 
 def _check_period_index(x, freq="M"):
-    try:
-        from pandas import PeriodIndex, DatetimeIndex
-    except ImportError: # not sure min. version
-        PeriodIndex = DatetimeIndex # HACK
-    from statsmodels.tools.data import _is_using_pandas
-    if not _is_using_pandas(x, None):
-        raise ValueError("x must be a pandas object")
+    from pandas import PeriodIndex, DatetimeIndex
     if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
         raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
 
@@ -27,36 +22,10 @@ def _check_period_index(x, freq="M"):
         raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
                                                                 freq))
 
-def have_pandas():
-    try:
-        import pandas
-        return True
-    except ImportError:
-        return False
-    except Exception:
-        return False
-
-def have_patsy():
-    try:
-        import patsy
-        return True
-    except ImportError:
-        return False
-    except Exception:
-        return False
-
 def is_data_frame(obj):
-    if not have_pandas():
-        return False
-
-    import pandas as pn
-
-    return isinstance(obj, pn.DataFrame)
+    return isinstance(obj, pd.DataFrame)
 
 def is_design_matrix(obj):
-    if not have_patsy():
-        return False
-
     from patsy import DesignMatrix
     return isinstance(obj, DesignMatrix)
 
@@ -123,10 +92,7 @@ def _is_using_ndarray(endog, exog):
             (isinstance(exog, np.ndarray) or exog is None))
 
 def _is_using_pandas(endog, exog):
-    if not have_pandas():
-        return False
-    from pandas import Series, DataFrame, WidePanel
-    klasses = (Series, DataFrame, WidePanel)
+    klasses = (pd.Series, pd.DataFrame, pd.WidePanel)
     return (isinstance(endog, klasses) or isinstance(exog, klasses))
 
 def _is_array_like(endog, exog):
