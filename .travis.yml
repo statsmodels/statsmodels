@@ -19,7 +19,7 @@ matrix:
     - CVXOPT=
   - python: 2.7
     env:
-    - PYTHON=2.7
+    - PYTHON=2.7.6
     - NUMPY=1.7
     - SCIPY=0.12
     - CYTHON=0.20
@@ -39,7 +39,7 @@ matrix:
     - CVXOPT=
   - python: 2.7
     env:
-    - PYTHON=
+    - PYTHON=2.7
     - NUMPY=
     - SCIPY=
     - CYTHON=0.20
@@ -86,8 +86,8 @@ script:
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # Compose a script to run testing with coverage
   - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
-  - if [ -n ${PYTHON} ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
+  - if [ ${PYTHON} == "2.7.6" ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
 
 after_success:
   # Coverage only for 2.7
-  - if [ -n ${PYTHON} ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${PYTHON} == "2.7.6" ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
