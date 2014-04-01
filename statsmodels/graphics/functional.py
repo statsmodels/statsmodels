@@ -1,7 +1,6 @@
 """Module for functional boxplots."""
 
-from statsmodels.compat.iter_compat import combinations
-
+from statsmodels.compat import combinations
 import numpy as np
 from scipy import stats
 from scipy.misc import factorial

@@ -8,7 +8,7 @@ Author: Josef Perktold
 from statsmodels.compat import lrange
 from numpy.testing import assert_
 
-from statsmodels.compat.iter_compat import zip_longest, combinations
+from statsmodels.compat import zip_longest, combinations
 
 def test_zip_longest():
     lili = [['a0', 'b0', 'c0', 'd0'],
