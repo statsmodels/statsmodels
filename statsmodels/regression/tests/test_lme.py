@@ -1,8 +1,5 @@
-##!!!!
-import sys
-sys.path.insert(0, "/afs/lsa.umich.edu/user/k/s/kshedden/fork4/statsmodels")
-
 import numpy as np
+import pandas as pd
 from statsmodels.regression.lme import MixedLM
 from numpy.testing import assert_almost_equal
 from lme_r_results import *
@@ -64,6 +61,41 @@ class TestMixedLM(object):
 
                         assert_almost_equal(gr / ngr, np.ones(len(gr)),
                                             decimal=3)
+
+
+    def test_default_re(self):
+
+        exog = np.random.normal(size=(300,4))
+        groups = np.kron(np.arange(100), [1,1,1])
+        g_errors = np.kron(np.random.normal(size=100), [1,1,1])
+        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        mdf1 = MixedLM(endog, exog, groups).fit()
+        mdf2 = MixedLM(endog, exog, groups, np.ones(300)).fit()
+        assert_almost_equal(mdf1.params, mdf2.params, decimal=8)
+
+    def test_formulas(self):
+
+        exog = np.random.normal(size=(300,4))
+        exog_re = np.random.normal(size=300)
+        groups = np.kron(np.arange(100), [1,1,1])
+        g_errors = exog_re * np.kron(np.random.normal(size=100),
+                                     [1,1,1])
+        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+
+        mdf1 = MixedLM(endog, exog, groups, exog_re).fit()
+
+        df = pd.DataFrame({"endog": endog})
+        for k in range(exog.shape[1]):
+            df["exog%d" % k] = exog[:,k]
+        df["exog_re"] = exog_re
+        md2 = MixedLM.from_formula(
+            "endog ~ 0 + exog0 + exog1 + exog2 + exog3",
+            groups=groups, data=df)
+        md2.set_random("0 + exog_re", data=df)
+        mdf2 = md2.fit()
+
+        assert_almost_equal(mdf1.params, mdf2.params)
+
 
     def test_regularized(self):
 

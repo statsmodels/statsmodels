@@ -8,6 +8,7 @@ Y = X*beta + Z*gamma + epsilon
 
 where
 
+* n_i is the number of observations in group i
 * Y is a n_i dimensional response vector
 * X is a n_i x k_fe dimensional matrix of fixed effects
   coefficients
@@ -51,7 +52,7 @@ Notation:
   as Psi) and `sig2` is the (scalar) error variance.  For a single
   group, the marginal covariance matrix of endog given exog is sig2*I
   + Z * cov_re * Z', where Z is the design matrix for the random
-  effects.
+  effects in one group.
 
 Notes:
 
@@ -98,11 +99,9 @@ from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
 from scipy.stats.distributions import norm
 import pandas as pd
 import patsy
-#import collections  # OrderedDict requires python >= 2.7
 from statsmodels.compatnp.collections import OrderedDict
 import warnings
-from statsmodels.tools.sm_exceptions import \
-     ConvergenceWarning
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base.penalties import Penalty
 
 # This is a global switch to use direct linear algebra calculations
@@ -125,7 +124,7 @@ def _smw_solve(s, A, B, BI, rhs):
     B : square symmetric ndarray
         See above for usage
     BI : square symmetric ndarray
-        The inverse of `B`
+        The inverse of `B`.  Can be None if B is singular
     rhs : ndarray
         See above for usage
 
@@ -168,7 +167,7 @@ def _smw_logdet(s, A, B, BI, B_logdet):
     B : square symmetric ndarray
         See above for usage
     BI : square symmetric ndarray
-        The inverse of `B`.
+        The inverse of `B`; can be None if B is singular.
     B_logdet : real
         The log determinant of B
     """
@@ -224,27 +223,26 @@ class MixedLM(base.LikelihoodModel):
 
         # If there is one covariate, it may be passed in as a column
         # vector, convert these to 2d arrays.
+        # TODO: Can this be moved up the class hierarchy?
         if exog is not None and exog.ndim == 1:
             exog = exog[:,None]
         if exog_re is not None and exog_re.ndim == 1:
             exog_re = exog_re[:,None]
 
-        self.exog_re_names = None
-        if exog_re is None:
-            # Default random effects structure (random intercepts).
-            exog_re = np.ones((len(endog), 1), dtype=np.float64)
-        else:
-            try:
-                self.exog_re_names = exog_re.columns
-            except:
-                pass
-            self.exog_re_orig = exog_re
-            self.exog_re = np.asarray(exog_re)
-
         # Calling super creates self.endog, etc. as ndarrays and the
         # original exog, endog, etc. are self.data.endog, etc.
         super(MixedLM, self).__init__(endog, exog, groups=groups,
                                   exog_re=exog_re, missing=missing)
+
+        if exog_re is None:
+            # Default random effects structure (random intercepts).
+            self.exog_re = np.ones((len(endog), 1), dtype=np.float64)
+            self.data.exog_re = self.exog_re
+        else:
+            # Process exog_re the same way that exog is handled
+            # upstream
+            self.data.exog_re = exog_re
+            self.exog_re = np.asarray(exog_re)
 
         # Model dimensions
         self.k_fe = exog.shape[1] # Number of fixed effects parameters
@@ -255,6 +253,10 @@ class MixedLM(base.LikelihoodModel):
 
             # Number of covariance parameters
             self.k_re2 = self.k_re * (self.k_re + 1) // 2
+
+        else:
+            self.k_re = 1 # Default (random intercepts model)
+            self.k_re2 = 1
 
         # Override the default value
         self.nparams = self.k_fe + self.k_re
@@ -308,8 +310,8 @@ class MixedLM(base.LikelihoodModel):
         -----
         If the random effects structure is not set either by providing
         `exog_re` to the MixedLM constructor, or by calling
-        `set_random`, then the default is a structure with random
-        intercepts for the groups.
+        `set_random`, then the default is to have a random intercepts
+        for each group.
 
         This does not automatically drop missing values, so if
         `missing` is set to "drop" in the model construction, the
