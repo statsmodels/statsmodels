@@ -1212,7 +1212,7 @@ class GEEResults(base.LikelihoodModelResults):
 
         return smry
 
-    def dependence_plot_time_diff(self, ax=None, jitter=0.01,
+    def dependence_plot_isotropic(self, ax=None, jitter=0.01,
                                   xpoints=10):
         """
         Create a plot of the pairwise products of within-group
