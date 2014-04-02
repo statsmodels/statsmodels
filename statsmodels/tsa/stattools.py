@@ -341,7 +341,9 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     elif unbiased:
         xi = np.arange(1, n + 1)
         d = np.hstack((xi, xi[:-1][::-1]))
-    else: #biased and (no missing or 'drop' or 'none')
+    elif deal_with_masked: #biased and NaNs given and ('drop' or 'conservative')
+        d = notmask_int.sum() * np.ones(2*n-1)
+    else: #biased and no NaNs or missing=='none' 
         d = n * np.ones(2 * n - 1)
 
     if fft:
@@ -448,21 +450,6 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
     but the autocorrelation is not an unbiased estimtor.
     '''
     nobs = len(x) # should this shrink for missing='drop' and NaNs in x?
-#    d = nobs  # changes if unbiased
-#    if not fft:
-#        avf = acovf(x, unbiased=unbiased, demean=True, missing=missing)
-#        #acf = np.take(avf/avf[0], range(1,nlags+1))
-#        acf = avf[:nlags + 1] / avf[0]
-#    else:
-#        #JP: move to acovf
-#        x0 = x - x.mean()
-#        Frf = np.fft.fft(x0, n=nobs * 2)  # zero-pad for separability
-#        if unbiased:
-#            d = nobs - np.arange(nobs)
-#        acf = np.fft.ifft(Frf * np.conjugate(Frf))[:nobs] / d
-#        acf /= acf[0]
-#        #acf = np.take(np.real(acf), range(1,nlags+1))
-#        acf = np.real(acf[:nlags + 1])   # keep lag 0
     avf = acovf(x, unbiased=unbiased, demean=True, fft=fft, missing=missing)
     acf = avf[:nlags+1] / avf[0]
     if not (confint or qstat or alpha):
@@ -1112,41 +1099,6 @@ def has_missing(data):
     Returns True if 'data' contains missing entries, otherwise False
     """
     return np.isnan(np.sum(data))
-
-def missing_handler(data, missing):
-    """
-    Pre-processes missing data
-    
-    Parameters
-    ----
-    data : 1d numpy array
-        The data array, possibly containing NaNs
-    missing : str 
-        A string in ['none', 'drop', 'raise'] specifying how the NaNs
-        are to be treated. If 'none', no changes are made to the
-        data. If 'drop', the NaN entries are removed. If 'raise', NaNs
-        in the data will give rise to an error of type
-        MissingDataError.
-
-    Returns
-    -------
-    1d numpy array
-
-    """
-    missing = missing.lower()
-    if missing not in ['none', 'drop', 'raise']:
-        raise ValueError("missing option %s not understood" % missing)
-    if missing == 'none':
-        return data
-    contains_missing = np.isnan(np.sum(data))
-    if not contains_missing: 
-        return data
-    if missing == 'raise':
-        raise MissingDataError("NaNs were encountered in the data")
-    elif missing == 'drop':
-        return data[~np.isnan(data)]
-
-
 
 if __name__ == "__main__":
     import statsmodels.api as sm
