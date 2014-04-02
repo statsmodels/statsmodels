@@ -201,7 +201,7 @@ class RU2NMNL(object):
         branchsum = self.branchsum
 
 
-        if type(tree) == tuple:   #assumes leaves are int for choice index
+        if isinstance(tree, tuple):   #assumes leaves are int for choice index
             name, subtree = tree
             print(name, datadict[name])
             print('subtree', subtree)

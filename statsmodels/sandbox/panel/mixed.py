@@ -520,7 +520,7 @@ class OneWayMixedResults(LikelihoodModelResults):
     def mean_random(self, idx='lastexog'):
         if idx == 'lastexog':
             meanr = self.params[-self.model.k_exog_re:]
-        elif type(idx) == list:
+        elif isinstance(idx, list):
             if not len(idx) == self.model.k_exog_re:
                 raise ValueError('length of idx different from k_exog_re')
             else:

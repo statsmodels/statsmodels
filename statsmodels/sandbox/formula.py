@@ -119,7 +119,7 @@ class Term(object):
         Formula(self) * Formula(other)
         """
 
-        if type(other) is Term and other.name is 'intercept':
+        if isinstance(other, Term) and other.name is 'intercept':
             f = Formula(self, namespace=self.namespace)
         elif self.name is 'intercept':
             f = Formula(other, namespace=other.namespace)
@@ -251,7 +251,7 @@ class Factor(Term):
 
         """
 
-        if type(other) is Term and other.name is 'intercept':
+        if isinstance(other, Term) and other.name is 'intercept':
             return Formula(self, namespace=self.namespace)
         else:
             return Term.__add__(self, other)
@@ -464,7 +464,7 @@ class Formula(object):
         """
 
         if not isinstance(query_term, Formula):
-            if type(query_term) == type("name"):
+            if isinstance(query_term, string_types):
                 try:
                     query = self[query_term]
                     return query.termname in self.termnames()
@@ -554,8 +554,7 @@ class Formula(object):
         for i in range(I):
             for j in range(J):
                 termname = '%s*%s' % (str(selftermnames[i]), str(othertermnames[j]))
-                pieces = termname.split('*')
-                pieces.sort()
+                pieces = sorted(termname.split('*'))
                 termname = '*'.join(pieces)
                 termnames.append(termname)
 
@@ -577,8 +576,7 @@ class Formula(object):
                     for r in range(d1):
                         for s in range(d2):
                             name = '%s*%s' % (str(selfnames[r]), str(othernames[s]))
-                            pieces = name.split('*')
-                            pieces.sort()
+                            pieces = sorted(name.split('*'))
                             name = '*'.join(pieces)
                             names.append(name)
 
@@ -617,8 +615,7 @@ class Formula(object):
 
         other = Formula(other)
         terms = self.terms + other.terms
-        pieces = [(term.name, term) for term in terms]
-        pieces.sort()
+        pieces = sorted([(term.name, term) for term in terms])
         terms = [piece[1] for piece in pieces]
         f = Formula(terms)
         if _namespace_equal(self.namespace, other.namespace):

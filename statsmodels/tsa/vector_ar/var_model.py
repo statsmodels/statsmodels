@@ -1292,7 +1292,7 @@ class VARResults(VARProcess):
         if len(order) != len(self.params[0,:]):
             raise ValueError("Reorder specification length should match number of endogenous variables")
        #This convert order to list of integers if given as strings
-        if type(order[0]) is str:
+        if isinstance(order[0], string_types):
             order_new = []
             for i, nam in enumerate(order):
                 order_new.append(self.names.index(order[i]))

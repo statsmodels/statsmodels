@@ -10,7 +10,7 @@ from statsmodels.sandbox.survival2 import KaplanMeier
 dta = sm.datasets.strikes.load()
 print('basic data')
 print('\n')
-dta = dta.values()[-1]
+dta = list(dta.values()[-1])
 print(dta[lrange(5),:])
 print('\n')
 

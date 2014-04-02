@@ -18,7 +18,7 @@ f0 = ['a','b','c']*4
 f = ['a']*4 + ['b']*3 + ['c']*4
 fac = formula.Factor('ff', f)
 fac.namespace = {'ff':f}
-fac.values()
+list(fac.values())
 [f for f in dir(fac) if f[0] != '_']
 
 #create dummy variable

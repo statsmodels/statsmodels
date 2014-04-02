@@ -157,7 +157,7 @@ def getbranches(tree):
         list of all branch names
 
     '''
-    if type(tree) == tuple:
+    if isinstance(tree, tuple):
         name, subtree = tree
         a = [name]
         for st in subtree:
@@ -182,7 +182,7 @@ def getnodes(tree):
         list of all leaves names
 
     '''
-    if type(tree) == tuple:
+    if isinstance(tree, tuple):
         name, subtree = tree
         ab = [name]
         al = []
@@ -333,7 +333,7 @@ class RU2NMNL(object):
         branchsum = self.branchsum
 
 
-        if type(tree) == tuple:   #assumes leaves are int for choice index
+        if isinstance(tree, tuple):   #assumes leaves are int for choice index
 
             name, subtree = tree
             self.branchleaves[name] = []  #register branch in dictionary
@@ -401,7 +401,7 @@ class RU2NMNL(object):
                 if DEBUG:
                     print('repr(b)', repr(b), bidx)
                 #if len(b) == 1: #TODO: skip leaves, check this
-                if not type(b) == tuple: # isinstance(b, str):
+                if not isinstance(b,  tuple): # isinstance(b, str):
                     #TODO: replace this with a check for branch (tuple) instead
                     #this implies name is a bottom branch,
                     #possible to add special things here

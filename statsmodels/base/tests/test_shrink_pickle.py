@@ -93,7 +93,7 @@ class RemoveDataPickle(object):
         self.results._results.save(fh)
         fh.seek(0, 0)
         res_unpickled = self.results._results.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.results._results))
+        assert_(isinstance(res_unpickled, type(self.results._results)))
 
         # test wrapped results load save
         fh.seek(0, 0)
@@ -102,7 +102,7 @@ class RemoveDataPickle(object):
         res_unpickled = self.results.__class__.load(fh)
         fh.close()
         # print type(res_unpickled)
-        assert_(type(res_unpickled) is type(self.results))
+        assert_(isinstance(res_unpickled, type(self.results)))
 
         before = sorted(iterkeys(self.results.__dict__))
         after = sorted(iterkeys(res_unpickled.__dict__))

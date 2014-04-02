@@ -1,11 +1,10 @@
 from statsmodels.compat import (lrange, iterkeys, iteritems, StringIO, lzip,
-                                reduce, itervalues, zip)
+                                reduce, itervalues, zip, string_types)
 from statsmodels.compat.collections import OrderedDict
 import numpy as np
 import pandas as pd
 import datetime
 import copy
-#import collections  # OrderedDict requires python >= 2.7
 import textwrap
 from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
@@ -105,7 +104,7 @@ class Summary(object):
         provided but a results instance is provided, statsmodels attempts
         to construct a useful title automatically.
         '''
-        if type(title) == str:
+        if isinstance(title, string_types):
             self.title = title
         else:
             try:
@@ -438,7 +437,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         not specified will be appended to the end of the list.
     '''
 
-    if type(results) != list:
+    if not isinstance(results, list):
         results = [results]
 
     cols = [_col_params(x, stars=stars, float_format=float_format) for x in results]

@@ -421,7 +421,7 @@ def fdrcorrection_twostage(pvals, alpha=0.05, method='bky', iter=False,
         return rej, pvalscorr * fact, ntests - r1, alpha_stages
     ri_old = r1
 
-    while 1:
+    while True:
         ntests0 = 1.0 * ntests - ri_old
         alpha_star = alpha_prime * ntests / ntests0
         alpha_stages.append(alpha_star)

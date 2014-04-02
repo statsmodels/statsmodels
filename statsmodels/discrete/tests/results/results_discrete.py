@@ -10,7 +10,7 @@ import numpy as np
 
 cur_dir = os.path.abspath(os.path.dirname(__file__))
 
-class Anes():
+class Anes(object):
     def __init__(self):
         """
         Results are from Stata 11 (checked vs R nnet package).
@@ -368,7 +368,7 @@ class DiscreteL1(object):
         self.bic = 3174.6431733460686
 
 
-class Spector():
+class Spector(object):
     """
     Results are from Stata 11
     """
@@ -716,7 +716,7 @@ class Spector():
         self.pred_table = np.array([[18, 3], [3, 8]])
 
 
-class RandHIE():
+class RandHIE(object):
     """
     Results obtained from Stata 11
     """

@@ -172,7 +172,7 @@ class _StataMissingValue(object):
 
     def __init__(self, offset, value):
         self._value = value
-        if type(value) is int or type(value) is long:
+        if isinstance(value, (int, long)):
             self._str = value-offset is 1 and \
                     '.' or ('.' + chr(value-offset+96))
         else:
@@ -417,7 +417,7 @@ class StataReader(object):
 
         k is zero-indexed.  Prefer using R.data() for performance.
         """
-        if not (type(k) is int or type(k) is long) or k < 0 or k > len(self)-1:
+        if not (isinstance(k, (int, long))) or k < 0 or k > len(self)-1:
             raise IndexError(k)
         loc = self._data_location + sum(self._col_size()) * k
         if self._file.tell() != loc:
@@ -500,12 +500,12 @@ class StataReader(object):
 
         # other state vars
         self._data_location = self._file.tell()
-        self._has_string_data = len(lfilter(lambda x: type(x) is int,
+        self._has_string_data = len(lfilter(lambda x: isinstance(x, int),
             self._header['typlist'])) > 0
         self._col_size()
 
     def _calcsize(self, fmt):
-        return type(fmt) is int and fmt or \
+        return isinstance(fmt, int) and fmt or \
                 calcsize(self._header['byteorder']+fmt)
 
     def _col_size(self, k = None):
@@ -534,7 +534,7 @@ class StataReader(object):
         if self._has_string_data:
             data = [None]*self._header['nvar']
             for i in range(len(data)):
-                if type(typlist[i]) is int:
+                if isinstance(typlist[i], int):
                     data[i] = self._null_terminate(self._file.read(typlist[i]),
                                 self._encoding)
                 else:
@@ -1183,11 +1183,11 @@ def savetxt(fname, X, names=None, fmt='%.18e', delimiter=' '):
 
     # `fmt` can be a string with multiple insertion points or a list of formats.
     # E.g. '%10.5f\t%10d' or ('%10.5f', '$10d')
-    if type(fmt) in (list, tuple):
+    if isinstance(fmt, (list, tuple)):
         if len(fmt) != ncol:
             raise AttributeError('fmt has wrong shape.  %s' % str(fmt))
         format = delimiter.join(fmt)
-    elif type(fmt) is str:
+    elif isinstance(fmt, string_types):
         if fmt.count('%') == 1:
             fmt = [fmt, ]*ncol
             format = delimiter.join(fmt)

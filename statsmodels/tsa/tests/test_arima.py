@@ -205,7 +205,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
         self.res1.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res1.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.res1))
+        assert_(isinstance(res_unpickled,  type(self.res1)))
 
 #NOTE: Ok
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):

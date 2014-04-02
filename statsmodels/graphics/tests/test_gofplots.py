@@ -146,7 +146,7 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         self.base_setup()
 
 
-class TestTopLevel:
+class TestTopLevel(object):
     def setup(self):
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)

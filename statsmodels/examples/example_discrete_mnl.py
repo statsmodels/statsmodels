@@ -2,6 +2,7 @@
 """
 
 from __future__ import print_function
+from statsmodels.compat import lrange
 import numpy as np
 import statsmodels.api as sm
 
@@ -22,7 +23,7 @@ mlogit_res = mlogit_mod.fit(method='bfgs', maxiter=100)
 from statsmodels.iolib.summary import (
                         summary_params_2d, summary_params_2dflat)
 
-exog_names = [anes_data.exog_name[i] for i in [0, 2]+range(5,8)] + ['const']
+exog_names = [anes_data.exog_name[i] for i in [0, 2]+lrange(5,8)] + ['const']
 endog_names = [anes_data.endog_name+'_%d' % i for i in np.unique(mlogit_res.model.endog)[1:]]
 print('\n\nMultinomial')
 print(summary_params_2d(mlogit_res, extras=['bse','tvalues'],

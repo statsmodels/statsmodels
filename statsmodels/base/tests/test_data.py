@@ -56,6 +56,8 @@ class TestArrays(object):
     def test_labels(self):
         #HACK: because numpy master after NA stuff assert_equal fails on
         # pandas indices
+        print self.data.row_labels
+        print self.row_labels
         np.testing.assert_(np.all(self.data.row_labels == self.row_labels))
 
 

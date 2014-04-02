@@ -19,7 +19,7 @@ def branch(tree):
     '''walking a tree bottom-up
     '''
 
-    if not type(tree[0]) == int:   #assumes leaves are int for choice index
+    if not isinstance(tree[0], int):   #assumes leaves are int for choice index
         branchsum = 0
         for b in tree:
             branchsum += branch(b)
@@ -49,7 +49,7 @@ def branch2(tree):
     '''
 
 
-    if type(tree) == tuple:   #assumes leaves are int for choice index
+    if isinstance(tree,  tuple):   #assumes leaves are int for choice index
         name, subtree = tree
         print(name, data2[name])
         print('subtree', subtree)

@@ -1058,8 +1058,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
             for i, criteria in enumerate(ic):
                 results[i, ar, ma] = getattr(mod, criteria)
 
-    dfs = map(lambda x : DataFrame(x, columns=ma_range, index=ar_range),
-              results)
+    dfs = [DataFrame(res, columns=ma_range, index=ar_range) for res in results]
 
     res = dict(zip(ic, dfs))
 

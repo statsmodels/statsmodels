@@ -77,7 +77,7 @@ def fullrank(X, r=None):
         value.append(V[:,order[i]])
     return np.asarray(np.transpose(value)).astype(np.float64)
 
-class StepFunction:
+class StepFunction(object):
     """
     A basic step function: values at the ends are handled in the simplest
     way possible: everything to the left of x[0] is set to ival; everything

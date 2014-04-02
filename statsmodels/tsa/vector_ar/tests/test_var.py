@@ -445,7 +445,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         self.res.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res.__class__.load(fh)
-        assert_(type(res_unpickled) is type(self.res))
+        assert_(isinstance(res_unpickled, type(self.res)))
 
 
 class E1_Results(object):
