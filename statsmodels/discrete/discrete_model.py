@@ -1919,7 +1919,10 @@ class NegativeBinomial(CountModel):
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1).sum()*da1
 
         #multiply above by constant outside sum to reduce rounding error
-        return np.r_[dparams.sum(0), dalpha]
+        if self._transparams:
+            return np.r_[dparams.sum(0), dalpha*alpha]
+        else:
+            return np.r_[dparams.sum(0), dalpha]
 
     def _score_nb1(self, params):
         return self._score_nbin(params, Q=1)
