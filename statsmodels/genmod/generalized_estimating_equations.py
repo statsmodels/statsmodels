@@ -26,8 +26,8 @@ improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 import numpy as np
 from scipy import stats
 from scipy import linalg as spl
-from statsmodels.tools.decorators import cache_readonly, \
-    resettable_cache
+from statsmodels.tools.decorators import (cache_readonly,
+    resettable_cache)
 import statsmodels.base.model as base
 from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
@@ -46,7 +46,7 @@ def block_diag(dblocks, format=None):
     n = len(dblocks)
     blocks = []
     for i in range(n):
-        b = [None,]*n
+        b = [None,] * n
         b[i] = dblocks[i]
         blocks.append(b)
 
@@ -1204,6 +1204,82 @@ class GEEResults(base.LikelihoodModelResults):
                              xname=xna, title="")
 
         return smry
+
+    def dependence_plot_time_diff(self, ax=None, jitter=0.01,
+                                  xpoints=10):
+        """
+        Create a plot of the pairwise products of within-group
+        residuals against the corresponding time differences.  This
+        plot can be used to assess the possible form of an isotropic
+        covariance structure.
+
+        Arguments:
+        ----------
+        ax : Matplotlib axes instance
+            An axes on which to draw the graph.  If None, new
+            figure and axes objects are created
+        jitter : float
+            Amount by which to jitter the time differences on
+            the horizontal axis
+        xpoints : scalar or array-like
+            If scalar, the number of points equally spaced points on
+            the time difference axis used to define bins for
+            calculating local means.  If an array, the specific points
+            that define the bins.
+        """
+
+        from statsmodels.graphics import utils as gutils
+
+        resid = self.model.cluster_list(self.resid)
+        time = self.model.cluster_list(self.model.time)
+
+        # All within-group pairwise time distances (xdt) and the
+        # corresponding products of scaled residuals (xre).
+        xre, xdt = [], []
+        for re, ti in zip(resid, time):
+            ix = np.tril_indices(re.shape[0], 0)
+            re = re[ix[0]] * re[ix[1]] / self.scale**2
+            xre.append(re)
+            dists = np.sqrt(((ti[ix[0],:] - ti[ix[1],:])**2).sum(1))
+            xdt.append(dists)
+
+        xre = np.concatenate(xre)
+        xdt = np.concatenate(xdt)
+
+        if ax is None:
+            fig, ax = gutils.create_mpl_ax(ax)
+        else:
+            fig = ax.get_figure()
+
+        # Convert to a correlation
+        ii = np.flatnonzero(xdt == 0)
+        v0 = np.mean(xre[ii])
+        xre /= v0
+
+        # Jitter
+        xdtj = xdt + jitter * np.random.uniform(-1, 1, size=len(xdt))
+
+        # Use the simple average to smooth, since fancier smoothers
+        # that trim and downweight outliers give biased results (we
+        # need the actual mean of a skewed distribution).
+        if np.isscalar(xpoints):
+            xpoints = np.linspace(0, max(xdt), xpoints)
+        dg = np.digitize(xdt, xpoints)
+        dgu = np.unique(dg)
+        hist = np.asarray([np.sum(dg==k) for k in dgu])
+        ii = np.flatnonzero(hist >= 50)
+        dgu = dgu[ii]
+        dgy = np.asarray([np.mean(xre[dg==k]) for k in dgu])
+        dgx = np.asarray([np.mean(xdt[dg==k]) for k in dgu])
+
+        ax.plot(xdtj, xre, 'o', color='grey')
+        ax.plot(dgx, dgy, '-', color='orange', lw=5)
+        ax.set_xlabel("Time difference")
+        ax.set_ylabel("Product of scaled residuals")
+        ax.set_ylim(0, 1.5)
+
+        return fig
+
 
 
 def gee_setup_ordinal(data, endog_col):
