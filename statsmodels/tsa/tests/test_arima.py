@@ -16,7 +16,8 @@ import os
 from statsmodels.tsa.arima_process import arma_generate_sample
 from statsmodels.datasets.macrodata import load as load_macrodata
 from statsmodels.datasets.macrodata import load_pandas as load_macrodata_pandas
-import pandas
+import pandas as pd
+from pandas import PeriodIndex, DatetimeIndex, DataFrame
 
 try:
     import matplotlib.pyplot as plt
@@ -33,16 +34,10 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 y_arma = np.genfromtxt(open(current_path + '/results/y_arma_data.csv', "rb"),
         delimiter=",", skip_header=1, dtype=float)
 
-cpi_dates = dates_from_range('1959Q1', '2009Q3')
-cpi_predict_dates = dates_from_range('2009Q3', '2015Q4')
-sun_dates = dates_from_range('1700', '2008')
-sun_predict_dates = dates_from_range('2008', '2033')
-
-from pandas import DatetimeIndex  # pylint: disable-msg=E0611
-cpi_dates = DatetimeIndex(cpi_dates, freq='infer')
-sun_dates = DatetimeIndex(sun_dates, freq='infer')
-cpi_predict_dates = DatetimeIndex(cpi_predict_dates, freq='infer')
-sun_predict_dates = DatetimeIndex(sun_predict_dates, freq='infer')
+cpi_dates = PeriodIndex(start='1959q1', end='2009q3', freq='Q')
+sun_dates = PeriodIndex(start='1700', end='2008', freq='A')
+cpi_predict_dates = PeriodIndex(start='2009q3', end='2015q4', freq='Q')
+sun_predict_dates = PeriodIndex(start='2008', end='2033', freq='A')
 
 
 def test_compare_arma():
@@ -1557,11 +1552,10 @@ def test_arima_predict_mle_diffs():
 
 
 def test_arima_wrapper():
-
     cpi = load_macrodata_pandas().data['cpi']
-    cpi.index = pandas.Index(cpi_dates)
+    cpi.index = pd.Index(cpi_dates)
     res = ARIMA(cpi, (4,1,1), freq='Q').fit(disp=-1)
-    assert_equal(res.params.index, pandas.Index(['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
+    assert_equal(res.params.index, pd.Index(['const', 'ar.L1.D.cpi', 'ar.L2.D.cpi',
                                     'ar.L3.D.cpi', 'ar.L4.D.cpi',
                                     'ma.L1.D.cpi']))
     assert_equal(res.model.endog_names, 'D.cpi')
@@ -1592,7 +1586,7 @@ def test_arima_predict_bug():
     #predict_start_date wasn't getting set on start = None
     from statsmodels.datasets import sunspots
     dta = sunspots.load_pandas().data.SUNACTIVITY
-    dta.index = pandas.Index(dates_from_range('1700', '2008'))
+    dta.index = pd.Index(dates_from_range('1700', '2008'))
     arma_mod20 = ARMA(dta, (2,0)).fit(disp=-1)
     arma_mod20.predict(None, None)
 
@@ -1621,13 +1615,12 @@ def test_arima_predict_q2():
 
 def test_arima_predict_pandas_nofreq():
     # this is issue 712
-    from pandas import DataFrame
     dates = ["2010-01-04", "2010-01-05", "2010-01-06", "2010-01-07",
              "2010-01-08", "2010-01-11", "2010-01-12", "2010-01-11",
              "2010-01-12", "2010-01-13", "2010-01-17"]
     close = [626.75, 623.99, 608.26, 594.1, 602.02, 601.11, 590.48, 587.09,
              589.85, 580.0,587.62]
-    data = DataFrame(close, index=DatetimeIndex(dates), columns=["close"])
+    data = pd.DataFrame(close, index=DatetimeIndex(dates), columns=["close"])
 
     #TODO: fix this names bug for non-string names names
     arma = ARMA(data, order=(1,0)).fit(disp=-1)
@@ -1650,10 +1643,10 @@ def test_arima_predict_pandas_nofreq():
     assert_(predict.index.equals(data.index[3:10+1]))
 
     predict = arma.predict(start="2010-1-7", end=14)
-    assert_(predict.index.equals(pandas.Index(lrange(3, 15))))
+    assert_(predict.index.equals(pd.Index(lrange(3, 15))))
 
     predict = arma.predict(start=3, end=14)
-    assert_(predict.index.equals(pandas.Index(lrange(3, 15))))
+    assert_(predict.index.equals(pd.Index(lrange(3, 15))))
 
     # end can be a date if it's in the sample and on the index
     # predict dates is just a slice of the dates index then
@@ -1988,9 +1981,9 @@ class TestARMA00(TestCase):
 def test_arima_dates_startatend():
     # bug
     np.random.seed(18)
-    x = pandas.Series(np.random.random(36),
-                          index=pandas.DatetimeIndex(start='1/1/1990',
-                                                     periods=36, freq='M'))
+    x = pd.Series(np.random.random(36),
+                  index=pd.DatetimeIndex(start='1/1/1990',
+                                         periods=36, freq='M'))
     res = ARIMA(x, (1, 0, 0)).fit(disp=0)
     pred = res.predict(start=len(x), end=len(x))
     assert_(pred.index[0] == x.index.shift(1)[-1])

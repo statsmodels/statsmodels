@@ -6,6 +6,7 @@ from statsmodels.tsa.base import datetools
 from numpy import arange, asarray
 from pandas import Index, to_datetime
 from pandas import datetools as pandas_datetools
+from pandas import DatetimeIndex, Index, Period, PeriodIndex
 import datetime
 
 _freq_to_pandas = datetools._freq_to_pandas
@@ -58,14 +59,13 @@ class TimeSeriesModel(base.LikelihoodModel):
                     freq = datetools._infer_freq(dates)
                 except:
                     raise ValueError("Frequency inference failed. Use `freq` "
-                            "keyword.")
-            dates = Index(dates)
+                                     "keyword.")
+
+            if isinstance(dates[0], datetime.datetime):
+                dates = DatetimeIndex(dates)
+            else: # preserve PeriodIndex
+                dates = PeriodIndex(dates)
         self.data.dates = dates
-        if freq:
-            try: #NOTE: Can drop this once we move to pandas >= 0.8.x
-                _freq_to_pandas[freq]
-            except:
-                raise ValueError("freq %s not understood" % freq)
         self.data.freq = freq
 
     def _get_exog_names(self):
@@ -80,23 +80,17 @@ class TimeSeriesModel(base.LikelihoodModel):
     exog_names = property(_get_exog_names, _set_exog_names)
 
     def _get_dates_loc(self, dates, date):
-        if hasattr(dates, 'indexMap'): # 0.7.x
-            date = dates.indexMap[date]
-        else:
-            date = dates.get_loc(date)
-            try: # pandas 0.8.0 returns a boolean array
-                len(date)
-                from numpy import where
-                date = where(date)[0].item()
-            except TypeError: # this is expected behavior
-                pass
+        date = dates.get_loc(date)
         return date
 
     def _str_to_date(self, date):
         """
         Takes a string and returns a datetime object
         """
-        return datetools.date_parser(date)
+        if isinstance(self.data.dates, PeriodIndex):
+            return Period(date)
+        else:
+            return datetools.date_parser(date)
 
     def _set_predict_start_date(self, start):
         dates = self.data.dates
@@ -192,8 +186,7 @@ class TimeSeriesModel(base.LikelihoodModel):
                     #TODO: what error to catch here to make sure dates is
                     #on the index?
                     try:
-                        self.data.predict_end = self._get_dates_loc(dates,
-                                                end)
+                        self.data.predict_end = self._get_dates_loc(dates, end)
                     except KeyError:
                         raise
                 else:
@@ -234,13 +227,10 @@ class TimeSeriesModel(base.LikelihoodModel):
 
         if freq is not None:
             pandas_freq = _freq_to_pandas[freq]
-            try:
-                from pandas import DatetimeIndex
-                dates = DatetimeIndex(start=dtstart, end=dtend,
-                                        freq=pandas_freq)
-            except ImportError as err:
-                from pandas import DateRange
-                dates = DateRange(dtstart, dtend, offset = pandas_freq).values
+            # preserve PeriodIndex or DatetimeIndex
+            dates = self.data.dates.__class__(start=dtstart,
+                                              end=dtend,
+                                              freq=pandas_freq)
         # handle
         elif freq is None and (isinstance(dtstart, (int, long)) and
                                isinstance(dtend, (int, long))):
@@ -273,7 +263,6 @@ wrap.populate_wrapper(TimeSeriesResultsWrapper,
 
 if __name__ == "__main__":
     import statsmodels.api as sm
-    import datetime
     import pandas
 
     data = sm.datasets.macrodata.load()
@@ -285,6 +274,3 @@ if __name__ == "__main__":
 
     df = pandas.DataFrame(data.data[['realgdp','realinv','realcons']], index=dates)
     ex_mod = TimeSeriesModel(df)
-    #ts_series = pandas.Series()
-
-
