@@ -15,21 +15,27 @@ python make.py clean
 python make.py html
 """
 
-import glob
 import os
 import shutil
 import sys
-import sphinx
+import subprocess
+import base64
 
 os.environ['PYTHONPATH'] = '..'
 
 SPHINX_BUILD = 'sphinxbuild'
 
 
-# def upload():
-#     'push a copy to the site'
-#     os.system('cd build/html; rsync -avz . pandas@pandas.pydata.org'
-#               ':/usr/share/nginx/pandas/pandas-docs/vbench/ -essh')
+def upload():
+    sf_account = 'jseabold,statsmodels@web.sourceforge.net'
+    retcode = subprocess.call(['rsync', '-avPrzh', '--inplace', '-e ssh',
+                               'build/html/',
+                               sf_account + ':htdocs/vbench/'],
+                               stderr=sys.stderr, stdout=sys.stdout)
+
+    if retcode != 0:
+        msg = "Could not upload vbench result"
+        raise Exception(msg)
 
 
 def clean():
@@ -69,7 +75,7 @@ def auto_update():
     try:
         clean()
         html()
-        # upload()
+        upload()
         sendmail()
     except (Exception, SystemExit) as inst:
         msg += str(inst) + '\n'
@@ -77,23 +83,25 @@ def auto_update():
 
 
 def sendmail(err_msg=None):
-    from_name, to_name = _get_config()
-
     if err_msg is None:
-        msgstr = 'Daily vbench uploaded successfully'
-        subject = "VB: daily update successful"
+        msgstr = 'vbench uploaded successfully'
+        subject = "VB: update successful"
     else:
         msgstr = err_msg
-        subject = "VB: daily update failed"
+        subject = "VB: update failed"
+
+    server_str, port, login, pwd = _get_credentials()
 
     import smtplib
     from email.MIMEText import MIMEText
     msg = MIMEText(msgstr)
     msg['Subject'] = subject
-    msg['From'] = from_name
-    msg['To'] = to_name
+    msg['From'] = login
+    msg['To'] = login
 
-    server_str, port, login, pwd = _get_credentials()
+    to_email = [login]
+            #('josef.pktd' + 'AT' + 'gmail' + '.com').replace('AT', '@')]
+
     server = smtplib.SMTP(server_str, port)
     server.ehlo()
     server.starttls()
@@ -101,7 +109,7 @@ def sendmail(err_msg=None):
 
     server.login(login, pwd)
     try:
-        server.sendmail(from_name, to_name, msg.as_string())
+        server.sendmail(login, to_email, msg.as_string())
     finally:
         server.close()
 
@@ -121,30 +129,20 @@ def _get_dir(subdir=None):
 
 
 def _get_credentials():
-    tmp_dir = _get_dir()
-    cred = '%s/credentials' % tmp_dir
-    with open(cred, 'r') as fh:
-        server, port, un, domain = fh.read().split(',')
-    port = int(port)
-    login = un + '@' + domain + '.com'
+    # my security holes
+    with open('/home/skipper/statsmodels/gmail.txt') as f:
+        pwd = f.readline().strip()
+    pwd = base64.b64decode(pwd)
+    email_name = 'statsmodels.dev' + 'AT' + 'gmail' + '.com'
+    email_name = email_name.replace('AT', '@')
 
-    import base64
-    with open('%s/cron_email_pwd' % tmp_dir, 'r') as fh:
-        pwd = base64.b64decode(fh.read())
+    return 'smtp.gmail.com', 587, email_name, pwd
 
-    return server, port, login, pwd
-
-
-def _get_config():
-    tmp_dir = _get_dir()
-    with open('%s/addresses' % tmp_dir, 'r') as fh:
-        from_name, to_name = fh.read().split(',')
-    return from_name, to_name
 
 funcd = {
     'html': html,
     'clean': clean,
-    # 'upload': upload,
+    'upload': upload,
     'auto_update': auto_update,
     'all': all,
 }
