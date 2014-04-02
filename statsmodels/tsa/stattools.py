@@ -348,7 +348,9 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     elif unbiased:
         xi = np.arange(1, n + 1)
         d = np.hstack((xi, xi[:-1][::-1]))
-    else: #biased and (no missing or 'drop' or 'none')
+    elif deal_with_masked: #biased and NaNs given and ('drop' or 'conservative')
+        d = notmask_int.sum() * np.ones(2*n-1)
+    else: #biased and no NaNs or missing=='none' 
         d = n * np.ones(2 * n - 1)
 
     if fft:
@@ -1246,69 +1248,3 @@ def _sigma_est_kpss(resids, nobs, lags):
         resids_prod = np.dot(resids[i:], resids[:nobs - i])
         s_hat += 2 * resids_prod * (1. - (i / (lags + 1.)))
     return s_hat / nobs
-
-
-
-if __name__ == "__main__":
-    import statsmodels.api as sm
-    data = sm.datasets.macrodata.load().data
-    x = data['realgdp']
-# adf is tested now.
-    adf = adfuller(x, 4, autolag=None)
-    adfbic = adfuller(x, autolag="bic")
-    adfaic = adfuller(x, autolag="aic")
-    adftstat = adfuller(x, autolag="t-stat")
-
-# acf is tested now
-#    acf1, ci1, Q, pvalue = acf(x, nlags=40, confint=95, qstat=True)
-#    acf2, ci2, Q2, pvalue2 = acf(x, nlags=40, confint=95, fft=True, qstat=True)
-#    acf3, ci3, Q3, pvalue3 = acf(x, nlags=40, confint=95, qstat=True,
-#                                 unbiased=True)
-#    acf4, ci4, Q4, pvalue4 = acf(x, nlags=40, confint=95, fft=True, qstat=True,
-#                                 unbiased=True)
-
-# pacf is tested now
-#    pacf1 = pacorr(x)
-#    pacfols = pacf_ols(x, nlags=40)
-#    pacfyw = pacf_yw(x, nlags=40, method="mle")
-    y = np.random.normal(size=(100, 2))
-    grangercausalitytests(y, 2)
-
-# tests for missing data
-    xn = x.copy()
-    xn[0] = np.nan
-    lags = 3
-#    print x
-#    print xn
-#    print missing_handler(xn, 'drop')
-#    print missing_handler(xn, 'raise')
-    print 'acovf tests, ignore missing'
-    print acovf(x[1:])[:lags]
-    print acovf(x[1:], unbiased=True)[:lags]
-    print acovf(xn)[:lags]
-    print acovf(xn, unbiased=True)[:lags]
-    print acovf(xn, unbiased=True, demean=False)[:lags]
-    print acovf(xn, unbiased=True, demean=False, fft=True)[:lags]
-    print 'acovf tests with missing, biased:'
-#    print acovf(xn, missing='raise')[:lags]
-    print acovf(xn, missing='conservative')[:lags]
-    print acovf(xn, missing='drop')[:lags]
-    print 'acovf tests with missing, unbiased:'
-#    print acovf(xn, unbiased=True, missing='raise')[:lags]
-    print acovf(xn, unbiased=True, missing='conservative')[:lags]
-    print acovf(xn, unbiased=True, missing='drop')[:lags]
-    print 'acovf tests with missing, unbiased nodemean:'
-    print acovf(xn, unbiased=True, demean=False, missing='conservative')[:lags]
-    print acovf(xn, unbiased=True, demean=False, missing='drop')[:lags]
-    print 'acovf test with missing, unbiased nodemean fft:'
-    print acovf(xn, unbiased=True, demean=False, fft=True, missing='conservative')[:lags]
-    print acovf(xn, unbiased=True, demean=False, fft=True, missing='drop')[:lags]
-    print 'acf tests:'
-    print acf(xn)[:lags]
-    print acf(xn, missing='conservative')[:lags]
-    print acf(xn, missing='drop')[:lags]
-#    print acf(xn, missing='raise')[:lags]
-    print acf(xn, missing='drop', fft=True)[:lags]
-#    print pacf(xn)
-#    print pacf(xn, missing='drop')
-#    print pacf(xn, missing='raise')
