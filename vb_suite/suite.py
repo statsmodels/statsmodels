@@ -104,26 +104,26 @@ def generate_rst_files(benchmarks):
 
     with open(os.path.join(RST_BASE, 'index.rst'), 'w') as f:
         print("""
-  Performance Benchmarks
-  ======================
+Performance Benchmarks
+======================
 
-  These historical benchmark graphs were produced with `vbench
-  <http://github.com/pydata/vbench>`__.
+These historical benchmark graphs were produced with `vbench
+<http://github.com/pydata/vbench>`__.
 
-  The ``statsmodels_vb_common`` setup script can be found here_
+The ``statsmodels_vb_common`` setup script can be found here_
 
-  .. _here: https://github.com/statsmodels/statsmodels/tree/master/vb_suite
+.. _here: https://github.com/statsmodels/statsmodels/tree/master/vb_suite
 
-  Produced on a machine with
+Produced on a machine with
 
-    TODO: Build info here.
+  TODO: Build info here.
 
-  .. toctree::
-      :hidden:
-      :maxdepth: 3
+.. toctree::
+   :hidden:
+   :maxdepth: 3
   """, file=f)
         for modname, mod_bmks in sorted(by_module.items()):
-            print('    vb_{}'.format(modname), file=f)
+            print('   vb_{}'.format(modname), file=f)
             modpath = os.path.join(RST_BASE, 'vb_%s.rst' % modname)
             with open(modpath, 'w') as mh:
                 header = '{0}\n{1}\n\n'.format(modname, '=' * len(modname))
