@@ -10,7 +10,128 @@ def safe_version(module, attr='__version__'):
     except AttributeError:
         return "Cannot detect version"
 
-def show_versions():
+
+def _show_versions_only():
+    print("\nINSTALLED VERSIONS")
+    print("------------------")
+    print("Python: %d.%d.%d.%s.%s" % sys.version_info[:])
+    try:
+        import os
+        (sysname, nodename, release, version, machine) = os.uname()
+        print("OS: %s %s %s %s" % (sysname, release, version,machine))
+        print("byteorder: %s" % sys.byteorder)
+        print("LC_ALL: %s" % os.environ.get('LC_ALL',"None"))
+        print("LANG: %s" % os.environ.get('LANG',"None"))
+    except:
+        pass
+
+    try:
+        import statsmodels
+        from statsmodels import version
+        has_sm = True
+    except ImportError:
+        has_sm = False
+
+    print('\nStatsmodels\n===========\n')
+    if has_sm:
+        print('Installed: %s' % safe_version(version, 'full_version'))
+    else:
+        print('Not installed')
+
+    print("\nRequired Dependencies\n=====================\n")
+    try:
+        import Cython
+        print("cython: %s" % safe_version(Cython))
+    except ImportError:
+        print("cython: Not installed")
+
+    try:
+        import numpy
+        print("numpy: %s" % safe_version(numpy, ['version', 'version']))
+    except ImportError:
+        print("numpy: Not installed")
+
+    try:
+        import scipy
+        print("scipy: %s" % safe_version(scipy, ['version', 'version']))
+    except ImportError:
+        print("scipy: Not installed")
+
+    try:
+        import pandas
+        print("pandas: %s" % safe_version(pandas, ['version', 'version']))
+    except ImportError:
+        print("pandas: Not installed")
+
+    try:
+        import dateutil
+        print("    dateutil: %s" % safe_version(dateutil))
+    except ImportError:
+        print("    dateutil: not installed")
+
+    try:
+        import patsy
+        print("patsy: %s" % safe_version(patsy))
+    except ImportError:
+        print("patsy: Not installed")
+
+    print("\nOptional Dependencies\n=====================\n")
+
+    try:
+        import matplotlib as mpl
+        print("matplotlib: %s" % safe_version(mpl))
+    except ImportError:
+        print("matplotlib: Not installed")
+
+    try:
+        from cvxopt import info
+        print("cvxopt: %s" % safe_version(info, 'version'))
+    except ImportError:
+        print("cvxopt: Not installed")
+
+    print("\nDeveloper Tools\n================\n")
+
+    try:
+        import IPython
+        print("IPython: %s" % safe_version(IPython))
+    except ImportError:
+        print("IPython: Not installed")
+    try:
+        import jinja2
+        print("    jinja2: %s" % safe_version(jinja2))
+    except ImportError:
+        print("    jinja2: Not installed")
+
+    try:
+        import sphinx
+        print("sphinx: %s" % safe_version(sphinx))
+    except ImportError:
+        print("sphinx: Not installed")
+
+    try:
+        import pygments
+        print("    pygments: %s" % safe_version(pygments))
+    except ImportError:
+        print("    pygments: Not installed")
+
+    try:
+        import nose
+        print("nose: %s" % safe_version(nose))
+    except ImportError:
+        print("nose: Not installed")
+
+    try:
+        import virtualenv
+        print("virtualenv: %s" % safe_version(virtualenv))
+    except ImportError:
+        print("virtualenv: Not installed")
+
+    print("\n")
+
+
+def show_versions(show_dirs=True):
+    if not show_dirs:
+        _show_versions_only()
     print("\nINSTALLED VERSIONS")
     print("------------------")
     print("Python: %d.%d.%d.%s.%s" % sys.version_info[:])
