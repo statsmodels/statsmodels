@@ -7,9 +7,10 @@ from numpy.linalg import pinv
 cimport cython
 cimport numpy as cnp
 
-from cpython cimport PyCObject_AsVoidPtr
-
 cnp.import_array()
+
+# included in Cython numpy headers
+from numpy cimport PyArray_ZEROS
 
 ctypedef float64_t DOUBLE
 ctypedef complex128_t dcomplex
@@ -19,16 +20,17 @@ cdef int FORTRAN = 1
 cdef extern from "math.h":
     double log(double x)
 
-from blas_lapack cimport dgemm_t, zgemm_t, ddot_t, dgemv_t, zgemv_t, zdotu_t
-# included in Cython numpy headers
-from numpy cimport PyArray_ZEROS
+cdef extern from "capsule.h":
+    void* SMCapsule_AsVoidPtr(object ptr)
 
-cdef dgemm_t *dgemm = <dgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemm', dtype=float64)._cpointer)
-cdef zgemm_t *zgemm = <zgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemm', dtype=complex128)._cpointer)
-cdef ddot_t *ddot = <ddot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('dot', dtype=float64)._cpointer)
-cdef dgemv_t *dgemv = <dgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemv', dtype=float64)._cpointer)
-cdef zdotu_t *zdotu = <zdotu_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('dotu', dtype=complex128)._cpointer)
-cdef zgemv_t *zgemv = <zgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemv', dtype=complex128)._cpointer)
+from blas_lapack cimport dgemm_t, zgemm_t, ddot_t, dgemv_t, zgemv_t, zdotu_t
+
+cdef dgemm_t *dgemm = <dgemm_t*>SMCapsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemm', dtype=float64)._cpointer)
+cdef zgemm_t *zgemm = <zgemm_t*>SMCapsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemm', dtype=complex128)._cpointer)
+cdef ddot_t *ddot = <ddot_t*>SMCapsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('dot', dtype=float64)._cpointer)
+cdef dgemv_t *dgemv = <dgemv_t*>SMCapsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemv', dtype=float64)._cpointer)
+cdef zdotu_t *zdotu = <zdotu_t*>SMCapsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('dotu', dtype=complex128)._cpointer)
+cdef zgemv_t *zgemv = <zgemv_t*>SMCapsule_AsVoidPtr(scipy.linalg.blas.get_blas_funcs('gemv', dtype=complex128)._cpointer)
 
 
 @cython.boundscheck(False)
