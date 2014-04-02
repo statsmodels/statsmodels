@@ -1,9 +1,11 @@
 import numpy as np
-from pandas import Series
+from pandas import Series, DatetimeIndex
 from pandas import date_range
+from pandas.util import testing as ptesting
 from statsmodels.tsa.base.tsa_model import TimeSeriesModel
 import numpy.testing as npt
 from statsmodels.tools.testing import assert_equal
+
 
 def test_pandas_nodates_index():
     from statsmodels.datasets import sunspots
@@ -37,8 +39,6 @@ def test_predict_freq():
 
 def test_keyerror_start_date():
     x = np.arange(1,36.)
-
-    from pandas import date_range
 
     # there's a bug in pandas up to 0.10.2 for YearBegin
     #dates = date_range("1972-4-1", "2007-4-1", freq="AS-APR")
