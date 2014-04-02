@@ -1,7 +1,7 @@
 """
 Test VAR Model
 """
-from __future__ import with_statement, print_function
+from __future__ import print_function
 # pylint: disable=W0612,W0231
 from statsmodels.compat import iteritems, StringIO, lrange, BytesIO
 from nose.tools import assert_raises

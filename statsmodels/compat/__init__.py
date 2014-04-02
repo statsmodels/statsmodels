@@ -35,7 +35,6 @@ except ImportError:
 
 if PY3:
     import io
-    string_types = basestring
     bytes = bytes
     str = str
     asunicode = str
