@@ -4,49 +4,45 @@
 # stack
 language: python
 
+env:
+  # Default values for common packages, override as needed
+  global:
+    - CYTHON=0.20
+    - PATSY=0.2
+    - PANDAS=0.12
+    - MATPLOTLIB=1.3
+    - CVXOPT=
+    - COVERAGE=false
+
 matrix:
-  fast_finish: false
+  fast_finish: true
   include:
   - python: 2.7
     env:
     - PYTHON=2.6
     - NUMPY="1.6.2=py26_4"
     - SCIPY="0.11.0=np16py26_3"
-    - CYTHON=0.20
-    - PATSY=0.2.0
     - MATPLOTLIB=1.2
-    - PANDAS=0.12
-    - CVXOPT=
   - python: 2.7
     env:
     - PYTHON=2.7
     - NUMPY=1.7
     - SCIPY=0.12
-    - CYTHON=0.20
-    - PATSY=0.2
-    - MATPLOTLIB=1.3
-    - PANDAS=0.12
     - CVXOPT=cvxopt
+    - COVERAGE=true
   - python: 2.7
     env:
     - PYTHON=3.3
     - NUMPY=1.8
     - SCIPY=0.13
-    - CYTHON=0.20
-    - PATSY=0.2
-    - MATPLOTLIB=1.3
     - PANDAS=0.13
-    - CVXOPT=
   - python: 2.7
     env:
     - PYTHON=2.7
     - NUMPY=
     - SCIPY=
-    - CYTHON=0.20
-    - PATSY=
     - MATPLOTLIB=
     - PANDAS=
-    - CVXOPT=
 
 notifications:
   email:
@@ -68,14 +64,14 @@ before_install:
   - SRCDIR=$PWD
   - cp $SRCDIR/tools/matplotlibrc $HOME/.config/matplotlib/matplotlibrc
   # Location for older version of matplotlib
-  - mkdir $HOME/.matplotlib
-  - cp $SRCDIR/tools/matplotlibrc $HOME/.matplotlib/matplotlibrc
+  - if [ ${MATPLOTLIB} = "1.2" ]; then mkdir $HOME/.matplotlib; fi
+  - if [ ${MATPLOTLIB} = "1.2" ]; then cp ${SRCDIR}/tools/matplotlibrc $HOME/.matplotlib/matplotlibrc; fi
 
 # Install packages
 install:
   - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS $CVXOPT dateutil nose pip pyyaml setuptools
   - source activate statsmodels-test
-  - pip install coverage coveralls
+  - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
   - python setup.py install
 
 script:
@@ -86,8 +82,8 @@ script:
   - python -c 'import statsmodels.api as sm; sm.show_versions();'
   # Compose a script to run testing with coverage
   - echo 'import statsmodels as sm; a=sm.test(); import sys; sys.exit((len(a.failures)+len(a.errors))>0)' > test.py
-  - if [ ${PYTHON} == "2.7" ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
+  - if [ ${COVERAGE} = true ]; then coverage run --rcfile=${SRCDIR}/.travis_coveragerc test.py; else python test.py; fi
 
 after_success:
   # Coverage only for 2.7
-  - if [ ${PYTHON} == "2.7" ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
+  - if [ ${COVERAGE} = true ]; then coveralls --rcfile=${SRCDIR}/.travis_coveragerc; fi
