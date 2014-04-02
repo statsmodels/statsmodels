@@ -114,12 +114,17 @@ The ``statsmodels_vb_common`` setup script can be found here_
 
 .. _here: https://github.com/statsmodels/statsmodels/tree/master/vb_suite
 
-Produced on a machine with
+Produced on a machine with:
 
-  TODO: Build info here.
+  * Intel Core 2 Quad Q9550 2.83 Ghz Processor
+  * Kubuntu Linux 13.10
+  * Python 2.7.5+
+  * NumPy 1.8.0.dev-8e0a542 (with ATLAS 3.9.76)
+  * SciPy 0.14.0-dev-1b7c11c
+  * Pandas 0.13.1-311-g63f46c1
+  * Patsy 0.1.0
 
 .. toctree::
-   :hidden:
    :maxdepth: 3
   """, file=f)
         for modname, mod_bmks in sorted(by_module.items()):
