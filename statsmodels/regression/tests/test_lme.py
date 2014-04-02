@@ -183,9 +183,9 @@ class TestMixedLM(object):
         # Fit the model
         md = MixedLM(endog, exog_fe, groups, exog_re)
         if not irf: # Free random effects covariance
-            mdf = md.fit(gtol=1e-8, reml=reml)
+            mdf = md.fit(gtol=1e-7, reml=reml)
         else: # Independent random effects
-            mdf = md.fit(reml=reml, gtol=1e-8,
+            mdf = md.fit(reml=reml, gtol=1e-7,
                          free=(np.ones(exog_fe.shape[1]),
                                np.eye(exog_re.shape[1])))
 

@@ -505,6 +505,17 @@ class MixedLM(base.LikelihoodModel):
         return results
 
 
+    def hessian(self, params):
+        """
+        Hessian of log-likelihood evaluated at `params`.  Note that
+        this uses either `cov_re` or its square root (L) depending on
+        the value of `use_L`.  `hessian_full` is an analytic
+        implementation of the Hessian with respect to cov_re.
+        """
+        from statsmodels.tools.numdiff import approx_hess
+        return approx_hess(params, self.loglike)
+
+
     def _unpack(self, params, sym=True):
         """
         Takes as input the packed parameter vector and returns a
@@ -892,13 +903,13 @@ class MixedLM(base.LikelihoodModel):
 
         return gr
 
-    def hessian(self, params):
+    def hessian_full(self, params):
         """
         Calculates the Hessian matrix for the mixed effects model.
         Specifically, this is the Hessian matrix for the profile
         likelihood in which the scale parameter sig2 has been profiled
         out.  The parameters are passed in packed form, with only the
-        lower triangle of the covariance (not its square root) passed.
+        lower triangle of the covariance passed.
 
         Parameters
         ----------
@@ -1000,6 +1011,7 @@ class MixedLM(base.LikelihoodModel):
         hess[self.k_fe:, self.k_fe:] = hess_re
 
         return hess
+
 
     def Estep(self, fe_params, cov_re, sig2):
         """
@@ -1344,6 +1356,9 @@ class MixedLM(base.LikelihoodModel):
             if np.max(np.abs(score(params_prof))) < gtol:
                 success = True
 
+        # Try up to 10 times to make the optimization work, using
+        # additional steepest descent steps to improve the starting
+        # values.  Usually only one cycle is used.
         for cycle in range(10):
 
             # Steepest descent iterations
@@ -1357,13 +1372,13 @@ class MixedLM(base.LikelihoodModel):
             try:
                 fit_args = dict(kwargs)
                 fit_args["retall"] = hist is not None
-                # Need to use bfgs for now since our Hessian is
-                # parameterized differently from score and loglike
+                # Only bfgs seems to work for some reason.
                 fit_args["method"] = "bfgs"
                 rslt = super(MixedLM, self).fit(start_params=params_prof, **fit_args)
             except np.linalg.LinAlgError:
                 continue
 
+            # The optimization succeeded
             params_prof = rslt.params
             success = True
             if hist is not None:
@@ -1383,9 +1398,9 @@ class MixedLM(base.LikelihoodModel):
 
         if not success:
             if rslt is None:
-                msg = "Gradient optimization failed, try increasing num_sd or cov_pen."
+                msg = "Gradient optimization failed, try increasing num_sd."
             else:
-                msg = "Gradient sup norm=%.3f, try increasing num_sd or cov_pen." %\
+                msg = "Gradient sup norm=%.3f, try increasing num_sd." %\
                       np.max(np.abs(rslt[2]))
             warnings.warn(msg, ConvergenceWarning)
 
@@ -1393,11 +1408,12 @@ class MixedLM(base.LikelihoodModel):
             msg = "The MLE may be on the boundary of the parameter space."
             warnings.warn(msg, ConvergenceWarning)
 
-        # Compute the Hessian at the MLE.  Note that the hessian
-        # function expects the random effects covariance matrix (not
-        # its square root).
+        # Compute the Hessian at the MLE.  Note that this is the
+        # hessian with respet to the random effects covariance matrix
+        # (not its square root).  It is used for obtaining standard
+        # errors, not for optimization.
         params_hess = self._pack(fe_params, cov_re_unscaled)
-        hess = self.hessian(params_hess)
+        hess = self.hessian_full(params_hess)
         if free is not None:
             ii = np.flatnonzero(self.score_pat)
             hess1 = hess[ii,:][:,ii]
