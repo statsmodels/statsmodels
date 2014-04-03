@@ -79,14 +79,6 @@ class ArmaFft(ArmaProcess):
         self.mapoly = np.polynomial.Polynomial(ma)
         self.nar = len(ar)  #1d only currently
         self.nma = len(ma)
-        if self.nar > 1:
-            self.arroots = self.arpoly.roots()
-        else:
-            self.arroots = np.array([])
-        if self.nma > 1:
-            self.maroots = self.mapoly.roots()
-        else:
-            self.maroots = np.array([])
 
     def padarr(self, arr, maxlag, atend=True):
         '''pad 1d array with zeros at end to have length maxlag
