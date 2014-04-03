@@ -24,9 +24,11 @@ from models import _hbspline     #removed because this was segfaulting
 
 # Issue warning regarding heavy development status of this module
 import warnings
-_msg = "The bspline code is technology preview and requires significant work\
-on the public API and documentation. The API will likely change in the future"
-warnings.warn(_msg, UserWarning)
+_msg = """
+The bspline code is technology preview and requires significant work
+on the public API and documentation. The API will likely change in the future
+"""
+warnings.warn(_msg, FutureWarning)
 
 
 def _band2array(a, lower=0, symmetric=False, hermitian=False):

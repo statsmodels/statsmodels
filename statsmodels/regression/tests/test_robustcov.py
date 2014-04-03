@@ -15,10 +15,10 @@ from statsmodels.regression.linear_model import OLS, WLS
 import statsmodels.stats.sandwich_covariance as sw
 from statsmodels.tools.tools import add_constant
 from statsmodels.datasets import macrodata
+from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 from .results import results_macro_ols_robust as res
 from .results import results_grunfeld_ols_robust_cluster as res2
-
 #test_hac_simple():
 
 class CheckOLSRobust(object):
@@ -230,7 +230,7 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         r_pval =  .0307306938402991
         r_chi2 =  4.667944083588736
         r_df =  1
-        assert_warns(UserWarning, res1.compare_lr_test, res_ols2)
+        assert_warns(InvalidTestWarning, res1.compare_lr_test, res_ols2)
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -239,7 +239,7 @@ class TestOLSRobust2SmallNew(TestOLSRobust1, CheckOLSRobustNewMixin):
         assert_allclose(pval, r_pval, rtol=1e-11)
         assert_equal(df, r_df)
 
-        assert_warns(UserWarning, res1.compare_f_test, res_ols2)
+        assert_warns(InvalidTestWarning, res1.compare_f_test, res_ols2)
         #fva, pval, df = res1.compare_f_test(res_ols2)
 
 

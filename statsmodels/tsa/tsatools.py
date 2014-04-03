@@ -132,8 +132,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             ins_idx = len(names) + 1
         else: # insert is an int
             if insert > len(names):
-                raise Warning("insert > number of variables, inserting at the"+
-                              " last position")
+                import warnings
+                warnings.warn("insert > number of variables, inserting at the"
+                              " last position",
+                              UserWarning)
             ins_idx = insert
 
         first_names = list(names[:ins_idx])
@@ -181,8 +183,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
                 insert = x.shape[1] + insert + 1
             if insert > x.shape[1]:
                 insert = x.shape[1]
-                raise Warning("insert > number of variables, inserting at the"+
-                              " last position")
+                import warnings
+                warnings.warn("insert > number of variables, inserting at the"
+                              " last position",
+                              UserWarning)
             ins_idx = insert
 
         ndlags = lagmat(contemp, lags, trim='Both')

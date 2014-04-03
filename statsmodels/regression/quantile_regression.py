@@ -27,7 +27,8 @@ from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
                                                  RegressionResultsWrapper)
-
+from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
+                                             IterationLimitWarning)
 
 class QuantReg(RegressionModel):
     '''Quantile Regression
@@ -183,10 +184,11 @@ class QuantReg(RegressionModel):
                     if np.all(beta == history['params'][-ii]):
                         cycle = True
                         break
-                warnings.warn("Convergence cycle detected")
+                warnings.warn("Convergence cycle detected", ConvergenceWarning)
 
         if n_iter == max_iter:
-            warnings.warn("Maximum number of iterations (1000) reached.")
+            warnings.warn("Maximum number of iterations (1000) reached.",
+                          IterationLimitWarning)
 
         e = endog - np.dot(exog, beta)
         # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:

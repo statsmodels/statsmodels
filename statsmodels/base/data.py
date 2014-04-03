@@ -8,6 +8,7 @@ from pandas import DataFrame, Series, TimeSeries, isnull
 from statsmodels.tools.decorators import (resettable_cache,
                 cache_readonly, cache_writable)
 import statsmodels.tools.data as data_util
+from statsmodels.tools.sm_exceptions import MissingDataError
 
 try:
     reduce
@@ -15,9 +16,6 @@ try:
 except NameError:
     #python 3.2
     from functools import reduce
-
-class MissingDataError(Exception):
-    pass
 
 def _asarray_2dcolumns(x):
     if np.asarray(x).ndim > 1 and np.asarray(x).squeeze().ndim == 1:
