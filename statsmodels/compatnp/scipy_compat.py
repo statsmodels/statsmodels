@@ -1,3 +1,12 @@
+def _bit_length_26(x):
+    if x == 0:
+        return 0
+    elif x == 1:
+        return 1
+    else:
+        return len(bin(x)) - 2
+
+
 def _next_regular(target):
     """
     Find the next regular number greater than or equal to target.
@@ -27,7 +36,7 @@ def _next_regular(target):
                 p2 = 2 ** ((quotient - 1).bit_length())
             except AttributeError:
                 # Fallback for Python <2.7
-                p2 = 2 ** (len(bin(quotient - 2)) - 2)
+                p2 = 2 ** _bit_length_26(quotient - 1)
 
             N = p2 * p35
             if N == target:
