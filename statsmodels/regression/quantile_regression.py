@@ -22,7 +22,8 @@ import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import norm
-from statsmodels.tools.tools import chain_dot, rank
+from statsmodels.tools.tools import chain_dot
+from statsmodels.compatnp.np_compat import np_matrix_rank
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
@@ -137,7 +138,7 @@ class QuantReg(RegressionModel):
         endog = self.endog
         exog = self.exog
         nobs = self.nobs
-        exog_rank = rank(self.exog)
+        exog_rank = np_matrix_rank(self.exog)
         self.rank = exog_rank
         self.df_model = float(self.rank - self.k_constant)
         self.df_resid = self.nobs - self.rank
