@@ -11,19 +11,18 @@ Created on Wed Oct 30 14:01:27 2013
 Author: Josef Perktold
 """
 
-import pickle
 import numpy as np
 import statsmodels.api as sm
+from statsmodels.compatnp.np_compat import NumpyVersion
 
 from numpy.testing import assert_, assert_allclose
-from numpy.testing.decorators import knownfailureif
 
 from nose import SkipTest
 import platform
 
 
 iswin = platform.system() == 'Windows'
-npversionless15 = np.__version__ < '1.5'
+npversionless15 = NumpyVersion(np.__version__) < '1.5.0'
 winoldnp = iswin & npversionless15
 
 

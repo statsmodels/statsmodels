@@ -15,9 +15,9 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression import gmm
 
 from numpy.testing import assert_allclose, assert_equal
-from statsmodels.sandbox.regression.tests import results_gmm_poisson as results
+from statsmodels.compatnp.np_compat import NumpyVersion
 
-SCIPY_GT_12 =scipy.version.short_version > '0.12.0'
+SCIPY_GT_12 = NumpyVersion(scipy.version.short_version) > '0.12.0'
 
 def get_data():
     import os
