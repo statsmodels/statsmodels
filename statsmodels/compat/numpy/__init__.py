@@ -53,7 +53,7 @@ try:
     from scipy.lib.version import NumpyVersion
 except ImportError:
     import re
-    from statsmodels.compatnp.py3k import string_types
+    from statsmodels.compat import string_types
 
     class NumpyVersion():
         """Parse and compare numpy version strings.

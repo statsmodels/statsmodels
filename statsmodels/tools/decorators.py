@@ -1,5 +1,6 @@
 from __future__ import print_function
-from statsmodels.tools.sm_exceptions import CacheWriteWarningfrom numpy.testing import assert_equal
+from statsmodels.tools.sm_exceptions import CacheWriteWarning
+from numpy.testing import assert_equal
 from statsmodels.compat import get_function_name
 import warnings
 
