@@ -16,30 +16,28 @@ class CovStruct(object):
     dep_params = None
 
 
-    def initialize(self, parent):
+    def initialize(self, model):
         """
         Called by GEE, used by implementations that need additional
         setup prior to running `fit`.
 
         Parameters
         ----------
-        parent : GEE class
+        model : GEE class
             A reference to the parent GEE class instance.
         """
-        pass
+        self.model = model
 
 
-    def update(self, beta, parent):
+    def update(self, params):
         """
         Updates the association parameter values based on the current
         regression coefficients.
 
         Parameters
         ----------
-        beta : array-like
+        params : array-like
             Working values for the regression parameters.
-        parent : GEE class reference
-            A reference to the parent GEE class instance.
         """
         raise NotImplementedError
 
@@ -84,7 +82,7 @@ class Independence(CovStruct):
     dep_params = np.r_[[]]
 
     # Nothing to update
-    def update(self, beta, parent):
+    def update(self, params):
         return
 
 
@@ -106,20 +104,19 @@ class Exchangeable(CovStruct):
     dep_params = 0
 
 
-    def update(self, beta, parent):
+    def update(self, params):
 
-        endog = parent.endog_li
+        endog = self.model.endog_li
 
-        num_clust = len(endog)
-        nobs = parent.nobs
-        dim = len(beta)
+        nobs = self.model.nobs
+        dim = len(params)
 
-        varfunc = parent.family.variance
+        varfunc = self.model.family.variance
 
-        cached_means = parent.cached_means
+        cached_means = self.model.cached_means
 
         residsq_sum, scale, nterm = 0, 0, 0
-        for i in range(num_clust):
+        for i in range(self.model.num_group):
 
             if len(endog[i]) == 0:
                 continue
@@ -222,9 +219,7 @@ class Nested(CovStruct):
     # components
     vcomp_coeff = None
 
-
-
-    def initialize(self, parent):
+    def initialize(self, model):
         """
         Called on the first call to update
 
@@ -238,23 +233,24 @@ class Nested(CovStruct):
         with the corresponding element of QY.
         """
 
+        super(Nested, self).initialize(model)
+
         # A bit of processing of the nest data
-        id_matrix = np.asarray(parent.dep_data)
+        id_matrix = np.asarray(self.model.dep_data)
         if id_matrix.ndim == 1:
             id_matrix = id_matrix[:,None]
         self.id_matrix = id_matrix
 
-        endog = parent.endog_li
-        num_clust = len(endog)
+        endog = self.model.endog_li
         designx, ilabels = [], []
 
         # The number of layers of nesting
         n_nest = self.id_matrix.shape[1]
 
-        for i in range(num_clust):
+        for i in range(self.model.num_group):
             ngrp = len(endog[i])
-            glab = parent.group_labels[i]
-            rix = parent.group_indices[glab]
+            glab = self.model.group_labels[i]
+            rix = self.model.group_indices[glab]
 
             # Determine the number of common variance components
             # shared by each pair of observations.
@@ -286,25 +282,24 @@ class Nested(CovStruct):
         self.designx_v = svd[2].T
 
 
-    def update(self, beta, parent):
+    def update(self, params):
 
-        endog = parent.endog_li
-        offset = parent.offset_li
+        endog = self.model.endog_li
+        offset = self.model.offset_li
 
-        num_clust = len(endog)
-        nobs = parent.nobs
-        dim = len(beta)
+        nobs = self.model.nobs
+        dim = len(params)
 
         if self.designx is None:
-            self._compute_design(parent)
+            self._compute_design(self.model)
 
-        cached_means = parent.cached_means
+        cached_means = self.model.cached_means
 
-        varfunc = parent.family.variance
+        varfunc = self.model.family.variance
 
         dvmat = []
         scale = 0.
-        for i in range(num_clust):
+        for i in range(self.model.num_group):
 
             # Needed?
             if len(endog[i]) == 0:
@@ -413,23 +408,21 @@ class Autoregressive(CovStruct):
             self.dist_func = dist_func
 
 
-    def update(self, beta, parent):
+    def update(self, params):
 
-        if parent.time is None:
+        if self.model.time is None:
             raise ValueError("GEE: time must be provided to GEE if "
                              "using AR dependence structure")
 
-        endog = parent.endog_li
-        time = parent.time_li
-
-        num_clust = len(endog)
+        endog = self.model.endog_li
+        time = self.model.time_li
 
         # Only need to compute this once
         if self.designx is not None:
             designx = self.designx
         else:
             designx = []
-            for i in range(num_clust):
+            for i in range(self.model.num_group):
 
                 ngrp = len(endog[i])
                 if ngrp == 0:
@@ -444,11 +437,11 @@ class Autoregressive(CovStruct):
             designx = np.array(designx)
             self.designx = designx
 
-        scale = parent.estimate_scale()
+        scale = self.model.estimate_scale()
 
-        varfunc = parent.family.variance
+        varfunc = self.model.family.variance
 
-        cached_means = parent.cached_means
+        cached_means = self.model.cached_means
 
         # Weights
         var = (1 - self.dep_params**(2 * designx)) /\
@@ -457,7 +450,7 @@ class Autoregressive(CovStruct):
         wts /= wts.sum()
 
         residmat = []
-        for i in range(num_clust):
+        for i in range(self.model.num_group):
 
             if len(endog[i]) == 0:
                 continue
@@ -531,21 +524,22 @@ class GlobalOddsRatio(CovStruct):
     Ordinal Measurements". Journal of the American Statistical
     Association Vol. 91, Issue 435 (1996).
 
-    Generalized Estimating Equations for Ordinal Data: A Note on
-    Working Correlation Structures Thomas Lumley Biometrics Vol. 52,
+    Thomas Lumley. Generalized Estimating Equations for Ordinal Data:
+    A Note on Working Correlation Structures. Biometrics Vol. 52,
     No. 1 (Mar., 1996), pp. 354-361
     http://www.jstor.org/stable/2533173
 
     Notes:
     ------
-    'ibd' is a list whose i^th element ibd[i] is a sequence of tuples
-    (a,b), where endog[i][a:b] is the subvector of indicators derived
-    from the same ordinal value.
+    The following data structures are calculated in the class:
 
-    `cpp` is a dictionary where cpp{group} is a map from cut-point
-    pairs (c,c') to the indices of between-subject pairs derived from
-    the given cut points.
+    'ibd' is a list whose i^th element ibd[i] is a sequence of integer
+    pairs (a,b), where endog_li[i][a:b] is the subvector of binary
+    indicators derived from the same ordinal value.
 
+    `cpp` is a dictionary where cpp[group] is a map from cut-point
+    pairs (c,c') to the indices of all between-subject pairs derived
+    from the given cut points.
     """
 
     # The current estimate of the odds ratio
@@ -560,18 +554,23 @@ class GlobalOddsRatio(CovStruct):
     # See docstring
     cpp = None
 
-
-    def __init__(self, nlevel, endog_type):
+    def __init__(self, endog_type):
         super(GlobalOddsRatio, self).__init__()
-        self.nlevel = nlevel
-        self.ncut = nlevel - 1
         self.endog_type = endog_type
 
+    def initialize(self, model):
 
-    def initialize(self, parent):
+        # Delay processing until model.setup_ordinal has been called.
+        if model.ordinal == False and model.nominal == False:
+            return
+
+        super(GlobalOddsRatio, self).initialize(model)
+
+        self.nlevel = len(model.endog_values)
+        self.ncut = self.nlevel - 1
 
         ibd = []
-        for v in parent.endog_li:
+        for v in model.endog_li:
             jj = np.arange(0, len(v) + 1, self.ncut)
             ibd1 = np.hstack((jj[0:-1][:, None], jj[1:][:, None]))
             ibd1 = [(jj[k], jj[k + 1]) for k in range(len(jj) - 1)]
@@ -579,7 +578,7 @@ class GlobalOddsRatio(CovStruct):
         self.ibd = ibd
 
         cpp = []
-        for v in parent.endog_li:
+        for v in model.endog_li:
             m = len(v) / self.ncut
             jj = np.kron(np.ones(m), np.arange(self.ncut))
             j1 = np.outer(jj, np.ones(len(jj)))
@@ -594,7 +593,7 @@ class GlobalOddsRatio(CovStruct):
         self.cpp = cpp
 
         # Initialize the dependence parameters
-        self.crude_or = self.observed_crude_oddsratio(parent)
+        self.crude_or = self.observed_crude_oddsratio()
         self.dep_params[0] = self.crude_or
 
 
@@ -633,7 +632,7 @@ class GlobalOddsRatio(CovStruct):
         return vmat, False
 
 
-    def observed_crude_oddsratio(self, parent):
+    def observed_crude_oddsratio(self):
         """The crude odds ratio is obtained by pooling all data
         corresponding to a given pair of cut points (c,c'), then
         forming the inverse variance weighted average of these odds
@@ -643,7 +642,7 @@ class GlobalOddsRatio(CovStruct):
         """
 
         cpp = self.cpp
-        endog = parent.endog_li
+        endog = self.model.endog_li
 
         # Storage for the contingency tables for each (c,c')
         tables = {}
@@ -679,22 +678,22 @@ class GlobalOddsRatio(CovStruct):
         """
         Returns a matrix V such that V[i,j] is the joint probability
         that endog[i] = 1 and endog[j] = 1, based on the marginal
-        probabilities of endog and the odds ratio cor.
+        probabilities of endog and the odds ratio `current_or`.
         """
 
-        cor = self.dep_params[0]
+        current_or = self.dep_params[0]
         ibd = self.ibd[index]
 
         # The between-observation joint probabilities
-        if cor == 1.0:
+        if current_or == 1.0:
             vmat = np.outer(endog_expval, endog_expval)
         else:
             psum = endog_expval[:, None] + endog_expval[None, :]
             pprod = endog_expval[:, None] * endog_expval[None, :]
-            pfac = np.sqrt((1 + psum * (cor-1))**2 +
-                           4 * cor * (1 - cor) * pprod)
-            vmat = 1 +  psum * (cor - 1) - pfac
-            vmat /= 2 * (cor - 1)
+            pfac = np.sqrt((1 + psum * (current_or - 1))**2 +
+                           4 * current_or * (1 - current_or) * pprod)
+            vmat = 1 +  psum * (current_or - 1) - pfac
+            vmat /= 2 * (current_or - 1)
 
         # Fix E[YY'] for elements that belong to same observation
         for bdl in ibd:
@@ -710,15 +709,13 @@ class GlobalOddsRatio(CovStruct):
         return vmat
 
 
-    def update(self, beta, parent):
+    def update(self, params):
         """Update the global odds ratio based on the current value of
-        beta."""
+        params."""
 
-        endog = parent.endog_li
+        endog = self.model.endog_li
         cpp = self.cpp
-        cached_means = parent.cached_means
-
-        num_clust = len(endog)
+        cached_means = self.model.cached_means
 
         # This will happen if all the clusters have only
         # one observation
@@ -729,7 +726,7 @@ class GlobalOddsRatio(CovStruct):
         for ii in cpp[0]:
             tables[ii] = np.zeros((2, 2), dtype=np.float64)
 
-        for i in range(num_clust):
+        for i in range(self.model.num_group):
 
             if len(endog[i]) == 0:
                 continue

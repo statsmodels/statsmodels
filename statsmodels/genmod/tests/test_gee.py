@@ -12,8 +12,7 @@ import numpy as np
 import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
-    gee_setup_ordinal,gee_ordinal_starting_values, GEEMargins,\
-    gee_setup_nominal, Multinomial
+    GEEMargins, Multinomial
 from statsmodels.genmod.families import Gaussian,Binomial,Poisson
 from statsmodels.genmod.dependence_structures import Exchangeable,\
     Independence,GlobalOddsRatio,Autoregressive,Nested
@@ -399,26 +398,14 @@ class TestGEE(object):
 
         family = Binomial()
 
-        endog_orig, exog_orig, groups = load_data("gee_ordinal_1.csv",
-                                                  icept=False)
+        endog, exog, groups = load_data("gee_ordinal_1.csv",
+                                        icept=False)
 
-        data = np.concatenate((endog_orig[:,None], exog_orig,
-                               groups[:,None]), axis=1)
+        v = GlobalOddsRatio("ordinal")
 
-        # Recode as cumulative indicators
-        endog, exog, intercepts, nlevel = gee_setup_ordinal(data, 0)
-
-        exog1 = np.concatenate((intercepts, exog), axis=1)
-        groups = exog1[:,-1]
-        exog1 = exog1[:,0:-1]
-
-        v = GlobalOddsRatio(nlevel, "ordinal")
-
-        beta = gee_ordinal_starting_values(endog_orig,
-                                           exog_orig.shape[1])
-
-        md = GEE(endog, exog1, groups, None, family, v)
-        mdf = md.fit(start_params = beta)
+        md = GEE(endog, exog, groups, None, family, v)
+        md.setup_ordinal()
+        mdf = md.fit()
 
         cf = np.r_[1.09238131, 0.02148193, -0.39879146, -0.01855666,
                    0.02983409, 1.18123172,  0.01845318, -1.10233886]
@@ -433,21 +420,13 @@ class TestGEE(object):
 
         family = Multinomial(3)
 
-        endog_orig, exog_orig, groups = load_data("gee_nominal_1.csv",
-                                                  icept=False)
-
-        data = np.concatenate((endog_orig[:,None], exog_orig,
-                               groups[:,None]), axis=1)
-
-        # Recode as indicators
-        endog, exog, exog_ne, nlevel = gee_setup_nominal(data, 0,
-                                                         [3,])
-
-        groups = exog_ne[:,0]
+        endog, exog, groups = load_data("gee_nominal_1.csv",
+                                        icept=False)
 
         # Test with independence correlation
         v = Independence()
         md = GEE(endog, exog, groups, None, family, v)
+        md.setup_nominal()
         mdf1 = md.fit()
 
         # From statsmodels.GEE (not an independent test)
@@ -457,8 +436,9 @@ class TestGEE(object):
         assert_almost_equal(mdf1.standard_errors(), se1, decimal=5)
 
         # Test with global odds ratio dependence
-        v = GlobalOddsRatio(nlevel, "nominal")
+        v = GlobalOddsRatio("nominal")
         md = GEE(endog, exog, groups, None, family, v)
+        md.setup_nominal()
         mdf2 = md.fit(start_params=mdf1.params)
 
         # From statsmodels.GEE (not an independent test)
@@ -466,44 +446,6 @@ class TestGEE(object):
         se2 = np.r_[0.09646057,  0.07405713,  0.1324629 ,  0.09025019]
         assert_almost_equal(mdf2.params, cf2, decimal=5)
         assert_almost_equal(mdf2.standard_errors(), se2, decimal=5)
-
-
-    def test_ordinal_pandas(self):
-
-        family = Binomial()
-
-        endog_orig, exog_orig, groups = load_data("gee_ordinal_1.csv",
-                                                 icept=False)
-
-        data = np.concatenate((endog_orig[:,None], exog_orig,
-                               groups[:,None]), axis=1)
-        data = pd.DataFrame(data)
-        data.columns = ["endog", "x1", "x2", "x3", "x4", "x5",
-                        "group"]
-
-        # Recode as cumulative indicators
-        endog, exog, intercepts, nlevel = \
-            gee_setup_ordinal(data, "endog")
-
-        exog1 = np.concatenate((intercepts, exog), axis=1)
-        groups = exog1[:,-1]
-        exog1 = exog1[:,0:-1]
-
-        v = GlobalOddsRatio(nlevel, "ordinal")
-
-        beta = gee_ordinal_starting_values(endog_orig,
-                                           exog_orig.shape[1])
-
-        md = GEE(endog, exog1, groups, None, family, v)
-        mdf = md.fit(start_params = beta)
-
-        cf = np.r_[1.09238131, 0.02148193, -0.39879146, -0.01855666,
-                   0.02983409, 1.18123172, 0.01845318, -1.10233886]
-        se = np.r_[0.10878752, 0.10326078, 0.11171241, 0.05488705,
-                   0.05995019, 0.0916574, 0.05951445, 0.08539281]
-
-        assert_almost_equal(mdf.params, cf, decimal=2)
-        assert_almost_equal(mdf.bse, se, decimal=2)
 
 
 
