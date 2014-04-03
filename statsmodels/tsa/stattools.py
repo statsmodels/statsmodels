@@ -419,8 +419,8 @@ def acf(x, unbiased=False, nlags=40, confint=None, qstat=False, fft=False,
     else:
         #JP: move to acovf
         x0 = x - x.mean()
-        # ensure that we always use a power of 2 for zero-padding, this way
-        # we'll ensure O(n log n) runtime of the fft.
+        # ensure that we always use a power of 2 or 3 for zero-padding,
+        # this way we'll ensure O(n log n) runtime of the fft.
         n = _next_regular(2 * nobs + 1)
         Frf = np.fft.fft(x0, n=n)  # zero-pad for separability
         if unbiased:
