@@ -386,9 +386,7 @@ class TestSeriesSeries(TestDataFrames):
         np.testing.assert_equal(self.data.exog, self.exog.values[:,None])
 
 def test_alignment():
-    """
-    Fix Issue #206
-    """
+    #Fix Issue #206
     from statsmodels.regression.linear_model import OLS
     from statsmodels.datasets.macrodata import load_pandas
 

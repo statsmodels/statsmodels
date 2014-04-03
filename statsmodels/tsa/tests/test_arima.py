@@ -13,6 +13,7 @@ import os
 from statsmodels.tsa.base import datetools
 from statsmodels.tsa.arima_process import arma_generate_sample
 import pandas
+from pandas.util.testing import assert_produces_warning
 try:
     from statsmodels.tsa.kalmanf import kalman_loglike
     fast_kalman = 1
@@ -1749,7 +1750,7 @@ def test_arimax():
 
     # 2 exog
     X = dta
-    res = ARIMA(y, (2, 1, 1), X).fit(disp=-1, solver="nm", maxiter=1000,
+    res = ARIMA(y, (2, 1, 1), X).fit(disp=False, solver="nm", maxiter=1000,
                 ftol=1e-12, xtol=1e-12)
 
     # from gretl
@@ -1766,7 +1767,7 @@ def test_arimax():
     assert_almost_equal(res.model.loglike(np.array(params)), stata_llf, 6)
 
     X = dta.diff()
-    res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
+    res = ARIMA(y, (2, 1, 1), X).fit(disp=False)
 
     # gretl won't estimate this - looks like maybe a bug on their part,
     # but we can just fine, we're close to Stata's answer
@@ -1891,7 +1892,8 @@ def test_small_data():
     # in start params regression.
     res = mod.fit(trend="nc", disp=0, start_params=[.1,.1,.1,.1])
     mod = ARIMA(y, (1, 0, 2))
-    res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
+    with assert_produces_warning(Warning):
+        res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
 
 
 class TestARMA00(TestCase):

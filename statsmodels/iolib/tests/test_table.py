@@ -11,7 +11,7 @@ html_fmt1 = default_html_fmt.copy()
 
 class TestSimpleTable(unittest.TestCase):
     def test_SimpleTable_1(self):
-        """Basic test, test_SimpleTable_1"""
+        # Basic test, test_SimpleTable_1
         desired = '''
 =====================
       header1 header2
@@ -29,7 +29,7 @@ stub2 1.95038 2.65765
         self.assertEqual(desired, str(actual))
 
     def test_SimpleTable_2(self):
-        """ Test SimpleTable.extend_right()"""
+        #  Test SimpleTable.extend_right()
         desired = '''
 =============================================================
            header s1 header d1            header s2 header d2
@@ -51,7 +51,7 @@ stub R2 C1  90.30312  90.73999 stub R2 C2  40.95038  40.65765
         self.assertEqual(desired, str(actual))
 
     def test_SimpleTable_3(self):
-        """ Test SimpleTable.extend() as in extend down"""
+        # Test SimpleTable.extend() as in extend down
         desired = '''
 ==============================
            header s1 header d1
@@ -77,8 +77,7 @@ stub R2 C2  40.95038  40.65765
         self.assertEqual(desired, str(actual))
 
     def test_SimpleTable_4(self):
-        """Basic test, test_SimpleTable_4
-        test uses custom txt_fmt"""
+        # Basic test, test_SimpleTable_4 test uses custom txt_fmt
         txt_fmt1 = dict(data_fmts = ['%3.2f', '%d'],
                         empty_cell = ' ',
                         colwidths = 1,
@@ -108,7 +107,7 @@ stub R2 C2  40.95038  40.65765
         tbl = SimpleTable(table1data, test1header, test1stubs,txt_fmt=txt_fmt1,
                           ltx_fmt=ltx_fmt1, html_fmt=html_fmt1)
         def test_txt_fmt1(self):
-            """Limited test of custom txt_fmt"""
+            # Limited test of custom txt_fmt
             desired = """
 *****************************
 *       * header1 * header2 *
@@ -122,7 +121,7 @@ stub R2 C2  40.95038  40.65765
             #print(desired)
             self.assertEqual(actual, desired)
             def test_ltx_fmt1(self):
-                """Limited test of custom ltx_fmt"""
+                # Limited test of custom ltx_fmt
                 desired = r"""
 \begin{tabular}{lcc}
 \toprule
@@ -138,7 +137,7 @@ stub R2 C2  40.95038  40.65765
             #print(desired)
             self.assertEqual(actual, desired)
         def test_html_fmt1(self):
-            """Limited test of custom html_fmt"""
+            # Limited test of custom html_fmt
             desired = """
 <table class="simpletable">
 <tr>

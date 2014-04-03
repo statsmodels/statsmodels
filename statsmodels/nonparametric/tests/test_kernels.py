@@ -70,8 +70,8 @@ class CheckKernelMixin(object):
         self.se = se
         self.res_se = res_se
         se_valid = np.isfinite(res_se)
-        if np.any(~se_valid):
-            print 'nan in stata result', self.__class__.__name__
+        #if np.any(~se_valid):
+        #    print 'nan in stata result', self.__class__.__name__
         assert_allclose(se[se_valid], res_se[se_valid], rtol=self.se_rtol, atol=0.2)
         # check that most values are closer
         mask = np.abs(se - res_se) > (0.2 + 0.2 * res_se)
