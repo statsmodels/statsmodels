@@ -23,7 +23,7 @@ import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import norm
 from statsmodels.tools.tools import chain_dot
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,

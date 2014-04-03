@@ -10,7 +10,7 @@ from numpy.testing import (assert_almost_equal, assert_approx_equal,
                             assert_raises, assert_equal, assert_allclose)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.regression.linear_model import OLS, WLS, GLS, yule_walker
 from statsmodels.datasets import longley
 from scipy.stats import t as student_t

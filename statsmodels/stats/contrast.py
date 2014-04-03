@@ -3,7 +3,7 @@ from scipy.stats import f as fdist
 from scipy.stats import t as student_t
 from scipy import stats
 from statsmodels.tools.tools import clean0, fullrank
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 
 #TODO: should this be public if it's just a container?

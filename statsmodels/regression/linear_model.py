@@ -46,7 +46,7 @@ from scipy.stats.stats import ss
 from scipy import optimize
 from scipy.stats import chi2
 
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,

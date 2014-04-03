@@ -1,6 +1,6 @@
 from __future__ import print_function
 import numpy as np
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 
 def add_indep(x, varnames, dtype=None):
