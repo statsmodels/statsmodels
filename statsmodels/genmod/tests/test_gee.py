@@ -8,10 +8,6 @@ correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
 
-##!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-import sys
-sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
-
 import numpy as np
 import os
 from numpy.testing import assert_almost_equal
@@ -91,7 +87,7 @@ class TestGEE(object):
         fam = Poisson()
         ind = Independence()
         md1 = GEE.from_formula("y ~ age + trt + base", data,
-                               groups=data["subject"], covstruct=ind,
+                               groups=data["subject"], cov_struct=ind,
                                family=fam)
         mdf1 = md1.fit()
 
@@ -149,11 +145,11 @@ class TestGEE(object):
         va = Autoregressive()
 
 
-        md1 = GEE(endog, exog, group, family=family, covstruct=va)
+        md1 = GEE(endog, exog, group, family=family, cov_struct=va)
         mdf1 = md1.fit()
 
         md2 = GEE(endog, exog, group, time=T, family=family,
-                  covstruct=va)
+                  cov_struct=va)
         mdf2 = md2.fit()
 
         assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
@@ -244,7 +240,7 @@ class TestGEE(object):
         for j,v in enumerate((vi,ve)):
              md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
                                    groups=D.loc[:,"Id"],
-                                   family=family, covstruct=v)
+                                   family=family, cov_struct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=6)
              assert_almost_equal(mdf.standard_errors(), se[j],
@@ -334,7 +330,7 @@ class TestGEE(object):
         for j,v in enumerate((vi,ve)):
             md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
                                   groups=D.loc[:,"Id"],
-                                  family=family, covstruct=v)
+                                  family=family, cov_struct=v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
             assert_almost_equal(mdf.standard_errors(), se[j],
@@ -579,7 +575,7 @@ class TestGEE(object):
         for j,v in enumerate((vi,ve)):
              md = GEE.from_formula("Y ~ X1 + X2 + X3 + X4 + X5", D,
                                    None, groups=D.loc[:,"Id"],
-                                   family=family, covstruct=v)
+                                   family=family, cov_struct=v)
              mdf = md.fit()
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors(), se[j],
@@ -607,7 +603,7 @@ class TestGEE(object):
 
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
                               groups=groups, family=family,
-                              covstruct=vs)
+                              cov_struct=vs)
         mdf = md.fit()
 
         ols = sm.ols("Y ~ X1 + X2 + X3", data=D).fit()
@@ -636,7 +632,7 @@ class TestGEE(object):
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
-                               family=family, covstruct=vs).fit()
+                               family=family, cov_struct=vs).fit()
 
         sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
 
@@ -657,7 +653,7 @@ class TestGEE(object):
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
-                               family=family, covstruct=vs).fit()
+                               family=family, cov_struct=vs).fit()
 
         sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
 
