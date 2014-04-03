@@ -242,8 +242,8 @@ def test_pvalcorrection_reject():
                 #print 'reject.sum', v[1], reject.sum()
                 msg = 'case %s %3.2f rejected:%d\npval_raw=%r\npvalscorr=%r' % (
                                  method, alpha, reject.sum(), pval1, pvalscorr)
-                #assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
-                yield assert_equal, reject, pvalscorr <= alpha, msg
+                assert_equal(reject, pvalscorr <= alpha, err_msg=msg)
+                #yield assert_equal, reject, pvalscorr <= alpha  #, msg
 
 
 def test_hommel():
