@@ -403,13 +403,14 @@ class SimpleTable(list):
         formatted_rows.extend( row.as_string('html', **fmt) for row in self )
         formatted_rows.append('</table>')
         return '\n'.join(formatted_rows)
-    def as_latex_tabular(self, **fmt_dict):
+    def as_latex_tabular(self, center=True, **fmt_dict):
         '''Return string, the table as a LaTeX tabular environment.
         Note: will require the booktabs package.'''
         #fetch the text format, override with fmt_dict
         fmt = self._get_fmt('latex', **fmt_dict)
 
-        formatted_rows = ["\\begin{center}"]
+        if center:
+            formatted_rows = ["\\begin{center}"]
 
         table_dec_above = fmt['table_dec_above'] or ''
         table_dec_below = fmt['table_dec_below'] or ''
@@ -442,7 +443,8 @@ class SimpleTable(list):
         if self.title:
             title = r'%%\caption{%s}' % self.title
             formatted_rows.append(title)
-        formatted_rows.append( "\\end{center}" )
+        if center:
+            formatted_rows.append( "\\end{center}" )
         return '\n'.join(formatted_rows)
         """
         if fmt_dict['strip_backslash']:
