@@ -72,13 +72,12 @@ def test_plot_quarter():
     quarter_plot(dta.unemp)
 
     # w freq
-    dta.set_index(pd.DatetimeIndex((x[0] for x in map(parser, dates)),
-                                   freq='QS-Oct'),
-                  inplace=True)
+    # see pandas #6631
+    dta.index = pd.DatetimeIndex((x[0] for x in map(parser, dates)),
+                                   freq='QS-Oct')
     quarter_plot(dta.unemp)
 
     # w PeriodIndex
-    dta.set_index(pd.PeriodIndex((x[0] for x in map(parser, dates)),
-                                   freq='Q'),
-                  inplace=True)
+    dta.index = pd.PeriodIndex((x[0] for x in map(parser, dates)),
+                                   freq='Q')
     quarter_plot(dta.unemp)
