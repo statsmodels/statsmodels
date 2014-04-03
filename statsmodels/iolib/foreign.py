@@ -50,7 +50,7 @@ def _datetime_to_stata_elapsed(date, fmt):
                 delta.microseconds/1000)
     elif fmt in ["%tC", "tC"]:
         from warnings import warn
-        warn("Stata Internal Format tC not supported.")
+        warn("Stata Internal Format tC not supported.", UserWarning)
         return date
     elif fmt in ["%td", "td"]:
         return (date- stata_epoch).days
@@ -120,7 +120,8 @@ def _stata_elapsed_date_to_datetime(date, fmt):
         return stata_epoch + relativedelta(microseconds=date*1000)
     elif fmt in ["%tC", "tC"]:
         from warnings import warn
-        warn("Encountered %tC format. Leaving in Stata Internal Format.")
+        warn("Encountered %tC format. Leaving in Stata Internal Format.",
+             UserWarning)
         return date
     elif fmt in ["%td", "td"]:
         return stata_epoch + datetime.timedelta(int(date))

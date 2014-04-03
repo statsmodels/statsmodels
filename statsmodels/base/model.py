@@ -407,7 +407,7 @@ class LikelihoodModel(Model):
                 from warnings import warn
                 warndoc = ('Inverting hessian failed, no bse or '
                            'cov_params available')
-                warn(warndoc, Warning)
+                warn(warndoc, RuntimeWarning)
                 Hinv = None
 
         #TODO: add Hessian approximation and change the above if needed

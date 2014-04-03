@@ -24,11 +24,11 @@ class Pca(object):
         """
         p X N matrix input
         """
-        from warnings import warn
         A = np.array(data).T
         n,p = A.shape
         self.n,self.p = n,p
         if p > n:
+            from warnings import warn
             warn('p > n - intentional?', RuntimeWarning)
         self.A = A
         self._origA=A.copy()

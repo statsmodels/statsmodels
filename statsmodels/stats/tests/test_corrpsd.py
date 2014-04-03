@@ -10,6 +10,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
                  corr_nearest, corr_clipped, cov_nearest)
+import warnings
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays
@@ -129,7 +130,6 @@ class CheckCorrPSDMixin(object):
     def test_cov_nearest(self):
         x = self.x
         res_r = self.res
-        import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             y = cov_nearest(x, method='nearest', threshold=1e-7)

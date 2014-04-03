@@ -32,8 +32,9 @@ import statsmodels.base.model as base
 from statsmodels.genmod import families
 from statsmodels.genmod import dependence_structures
 from statsmodels.genmod.dependence_structures import CovStruct
-
-
+from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
+                                             IterationLimitWarning)
+import warnings
 # Workaround for block_diag, not available until scipy version
 # 0.11. When the statsmodels scipy dependency moves to version 0.11,
 # we can remove this function and use:
@@ -526,9 +527,6 @@ class GEE(base.Model):
         varfunc = self.family.variance
         cached_means = self.cached_means
 
-        import warnings
-        from statsmodels.tools.sm_exceptions import ConvergenceWarning
-
         # Calculate the naive (model-based) and robust (sandwich)
         # covariances.
         bmat, cmat = 0, 0
@@ -736,9 +734,6 @@ class GEE(base.Model):
 
         self.update_cached_means(beta)
 
-        import warnings
-        from statsmodels.tools.sm_exceptions import ConvergenceWarning
-
         # Define here in case singularity encountered on first
         # iteration.
         fitlack = -1.
@@ -746,8 +741,8 @@ class GEE(base.Model):
         for itr in xrange(maxiter):
             update, score = self._beta_update()
             if update is None:
-                warnings.warn("Singular matrix encountered in GEE "
-                              "update", ConvergenceWarning)
+                warnings.warn("Singular matrix encountered in GEE  update",
+                              ConvergenceWarning)
                 break
             beta += update
             self.update_cached_means(beta)
@@ -766,7 +761,7 @@ class GEE(base.Model):
 
         if fitlack >= ctol:
             warnings.warn("Iteration limit reached prior to convergence",
-                          ConvergenceWarning)
+                          IterationLimitWarning)
 
         if beta is None:
             warnings.warn("Unable to estimate GEE parameters.",
@@ -823,9 +818,6 @@ class GEE(base.Model):
             The input covariance matrix bcov, expanded to the
             coordinate system of the full model
         """
-
-        import warnings
-        from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
         # The number of variables in the full model
         red_p = len(beta)
