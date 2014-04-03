@@ -147,7 +147,7 @@ def violinplot(data, ax=None, labels=None, positions=None, side='both',
     return fig
 
 
-def _single_violin(ax, pos, pos_data, width, side, plot_opts):
+def _single_violin(ax, pos, pos_data, width, side, plot_opts, vertical=True):
     """"""
 
     def _violin_range(pos_data, plot_opts):
@@ -187,11 +187,14 @@ def _single_violin(ax, pos, pos_data, width, side, plot_opts):
         raise ValueError(msg)
 
     # Draw the violin.
-    ax.fill_betweenx(xvals, envelope_l, envelope_r,
-                     facecolor=plot_opts.get('violin_fc', 'y'),
-                     edgecolor=plot_opts.get('violin_ec', 'k'),
-                     lw=plot_opts.get('violin_lw', 1),
-                     alpha=plot_opts.get('violin_alpha', 0.5))
+    # allow for horizontal violinplots
+    fill = ax.fill_betweenx if vertical else ax.fill_between
+
+    fill(xvals, envelope_l, envelope_r,
+         facecolor=plot_opts.get('violin_fc', 'y'),
+         edgecolor=plot_opts.get('violin_ec', 'k'),
+         lw=plot_opts.get('violin_lw', 1),
+         alpha=plot_opts.get('violin_alpha', 0.5))
 
     return xvals, violin
 
