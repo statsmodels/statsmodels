@@ -2,7 +2,8 @@
 # TODO: Test robust kurtosis
 import numpy as np
 import pandas as pd
-from numpy.testing import (assert_almost_equal, assert_array_equal, assert_raises, TestCase)from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
+from numpy.testing import (assert_almost_equal, assert_raises, TestCase)
+from statsmodels.stats.stattools import (omni_normtest, jarque_bera,
                                          durbin_watson, _medcouple_1d, medcouple,
                                          robust_kurtosis, robust_skewness)
 from statsmodels.stats.adnorm import normal_ad
