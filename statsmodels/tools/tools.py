@@ -11,6 +11,7 @@ from statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
 from statsmodels.tools.data import _is_using_pandas
 from statsmodels.compatnp.py3k import asstr2
+from statsmodels.compatnp.np_compat import np_matrix_rank
 from pandas import DataFrame
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -340,7 +341,7 @@ def isestimable(C, D):
     if C.shape[1] != D.shape[1]:
         raise ValueError('Contrast should have %d columns' % D.shape[1])
     new = np.vstack([C, D])
-    if rank(new) != rank(D):
+    if np_matrix_rank(new) != np_matrix_rank(D):
         return False
     return True
 
@@ -399,6 +400,9 @@ def rank(X, cond=1.0e-12):
     Return the rank of a matrix X based on its generalized inverse,
     not the SVD.
     """
+    from warnings import warn
+    warn("rank is deprecated and will be removed in 0.7."
+         " Use np.linalg.matrix_rank instead.", FutureWarning)
     X = np.asarray(X)
     if len(X.shape) == 2:
         D = svdvals(X)
@@ -416,7 +420,7 @@ def fullrank(X, r=None):
     """
 
     if r is None:
-        r = rank(X)
+        r = np_matrix_rank(X)
 
     V, D, U = L.svd(X, full_matrices=0)
     order = np.argsort(D)

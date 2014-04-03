@@ -33,6 +33,7 @@ from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:
@@ -123,8 +124,10 @@ class DiscreteModel(base.LikelihoodModel):
         statsmodels.model.LikelihoodModel.__init__
         and should contain any preprocessing that needs to be done for a model.
         """
-        self.df_model = float(tools.rank(self.exog) - 1)  # assumes constant
-        self.df_resid = float(self.exog.shape[0] - tools.rank(self.exog))
+        # assumes constant
+        self.df_model = float(np_matrix_rank(self.exog) - 1)
+        self.df_resid = (float(self.exog.shape[0] -
+                         np_matrix_rank(self.exog)))
 
     def cdf(self, X):
         """
