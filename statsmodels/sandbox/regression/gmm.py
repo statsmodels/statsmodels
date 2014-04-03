@@ -59,7 +59,7 @@ from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 DEBUG = 0
 

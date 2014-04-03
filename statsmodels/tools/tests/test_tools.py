@@ -11,7 +11,7 @@ from nose.tools import (assert_true, assert_false, assert_raises)
 from statsmodels.datasets import longley
 from statsmodels.tools import tools
 from statsmodels.tools.tools import pinv_extended
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 
 class TestTools(TestCase):

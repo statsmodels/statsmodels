@@ -34,7 +34,7 @@ from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:

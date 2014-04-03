@@ -3,7 +3,7 @@ from statsmodels.regression.linear_model import GLS
 import numpy as np
 from statsmodels.base.model import LikelihoodModelResults
 from scipy import sparse
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 #http://www.irisa.fr/aladin/wg-statlin/WORKSHOPS/RENNES02/SLIDES/Foschi.pdf
 

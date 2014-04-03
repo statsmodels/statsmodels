@@ -20,7 +20,7 @@ from statsmodels.tsa.vector_ar.var_model import VARProcess, \
 
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 mat = np.array
 

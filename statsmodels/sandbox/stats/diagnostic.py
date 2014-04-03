@@ -37,7 +37,7 @@ from statsmodels.regression.linear_model import OLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tsa.stattools import acf, adfuller
 from statsmodels.tsa.tsatools import lagmat
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 #get the old signature back so the examples work
 def unitroot_adf(x, maxlag=None, trendorder=0, autolag='AIC', store=False):

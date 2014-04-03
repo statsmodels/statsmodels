@@ -12,7 +12,7 @@ from scipy.linalg import svdvals
 from statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from pandas import DataFrame
 
 def _make_dictnames(tmp_arr, offset=0):

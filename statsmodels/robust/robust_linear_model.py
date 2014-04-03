@@ -24,7 +24,7 @@ import statsmodels.robust.norms as norms
 import statsmodels.robust.scale as scale
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 __all__ = ['RLM']
 

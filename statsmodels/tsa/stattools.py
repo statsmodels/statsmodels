@@ -11,7 +11,7 @@ from statsmodels.tools.tools import add_constant, Bunch
 from .tsatools import lagmat, lagmat2ds, add_trend
 from .adfvalues import mackinnonp, mackinnoncrit
 from statsmodels.tsa.arima_model import ARMA
-from statsmodels.compatnp.scipy_compat import _next_regular
+from statsmodels.compat.scipy import _next_regular
 
 __all__ = ['acovf', 'acf', 'pacf', 'pacf_yw', 'pacf_ols', 'ccovf', 'ccf',
            'periodogram', 'q_stat', 'coint', 'arma_order_select_ic',

@@ -1,5 +1,5 @@
 from numpy.testing import assert_equal
-from statsmodels.compatnp.scipy_compat import _next_regular
+from statsmodels.compat.scipy import _next_regular
 
 
 def test_next_regular():
