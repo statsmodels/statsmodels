@@ -11,7 +11,7 @@ env:
     - PATSY=0.2
     - PANDAS=0.12
     - MATPLOTLIB=1.3
-    - CVXOPT=
+    - OPTIONAL=
     - COVERAGE=false
 
 matrix:
@@ -28,7 +28,7 @@ matrix:
     - PYTHON=2.7
     - NUMPY=1.7
     - SCIPY=0.12
-    - CVXOPT=cvxopt
+    - OPTIONAL=cvxopt
     - COVERAGE=true
   - python: 2.7
     env:
@@ -66,10 +66,18 @@ before_install:
   # Location for older version of matplotlib
   - if [ ${MATPLOTLIB} = "1.2" ]; then mkdir $HOME/.matplotlib; fi
   - if [ ${MATPLOTLIB} = "1.2" ]; then cp ${SRCDIR}/tools/matplotlibrc $HOME/.matplotlib/matplotlibrc; fi
+  # Build package list to avoid empty package=versions; only needed for versioned pacakges
+  - PKGS="python=${PYTHON}"
+  - PKGS="${PKGS} numpy"; if [ ${NUMPY} ]; then PKGS="${PKGS}=${NUMPY}"; fi
+  - PKGS="${PKGS} scipy"; if [ ${SCIPY} ]; then PKGS="${PKGS}=${SCIPY}"; fi
+  - PKGS="${PKGS} patsy"; if [ ${PATSY} ]; then PKGS="${PKGS}=${PATSY}"; fi
+  - PKGS="${PKGS} pandas"; if [ ${PANDAS} ]; then PKGS="${PKGS}=${PANDAS}"; fi
+  - PKGS="${PKGS} Cython"; if [ ${CYTHON} ]; then PKGS="${PKGS}=${CYTHON}"; fi
+  - PKGS="${PKGS} matplotlib"; if [ ${MATPLOTLIB} ]; then PKGS="${PKGS}=${MATPLOTLIB}"; fi
 
 # Install packages
 install:
-  - conda create --yes --quiet -n statsmodels-test python=$PYTHON numpy=$NUMPY scipy=$SCIPY patsy=$PATSY Cython=$CYTHON matplotlib=$MATPLOTLIB pandas=$PANDAS $CVXOPT dateutil nose pip pyyaml setuptools
+  - conda create --yes --quiet -n statsmodels-test ${PKGS} ${OPTIONAL} dateutil nose pip pyyaml setuptools
   - source activate statsmodels-test
   - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
   - python setup.py install
