@@ -304,7 +304,7 @@ else:
             flag = np.concatenate(([True], ar[1:] != ar[:-1]))
             return ar[flag]
 
-if np.__version__ >= '1.7.1':
+if NumpyVersion(np.__version__) >= '1.7.1':
     np_matrix_rank = np.linalg.matrix_rank
 else:
     def np_matrix_rank(M, tol=None):
