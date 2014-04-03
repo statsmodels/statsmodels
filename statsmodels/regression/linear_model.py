@@ -44,8 +44,8 @@ from scipy.stats.stats import ss
 from scipy import optimize
 from scipy.stats import chi2
 
-from statsmodels.tools.tools import (add_constant, rank,
-                                     recipr, chain_dot, pinv_extended)
+from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
                                           cache_writable)
@@ -110,7 +110,7 @@ class RegressionModel(base.LikelihoodModel):
         """
         if self._df_model is None:
             if self.rank is None:
-                self.rank = rank(self.exog)
+                self.rank = np_matrix_rank(self.exog)
             self._df_model = float(self.rank - self.k_constant)
         return self._df_model
 
@@ -127,7 +127,7 @@ class RegressionModel(base.LikelihoodModel):
 
         if self._df_resid is None:
             if self.rank is None:
-                self.rank = rank(self.exog)
+                self.rank = np_matrix_rank(self.exog)
             self._df_resid = self.nobs - self.rank
         return self._df_resid
 
@@ -151,7 +151,7 @@ class RegressionModel(base.LikelihoodModel):
             return True
         # Compute rank of augmented matrix
         augmented_exog = add_constant(self.exog)
-        return rank(augmented_exog)==rank(self.exog)
+        return np_matrix_rank(augmented_exog) == np_matrix_rank(self.exog)
 
     def whiten(self, X):
         raise NotImplementedError("Subclasses should implement.")
@@ -194,7 +194,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache these singular values for use later.
                 self.wexog_singular_values = singular_values
-                self.rank = rank(np.diag(singular_values))
+                self.rank = np_matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
@@ -209,7 +209,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache singular values from R.
                 self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = rank(R)
+                self.rank = np_matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
 

@@ -1,7 +1,5 @@
-
-
 import numpy as np
-from statsmodels.tools.tools import rank as smrank
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 
 def add_indep(x, varnames, dtype=None):
@@ -31,7 +29,7 @@ def add_indep(x, varnames, dtype=None):
     for (xi, ni) in zip(x, varnames):
         #print xi.shape, xout.shape
         xout[:,count] = xi
-        rank_new = smrank(xout)
+        rank_new = np_matrix_rank(xout)
         #print rank_new
         if  rank_new > rank_old:
             varnames_new.append(ni)
