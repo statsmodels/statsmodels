@@ -138,7 +138,7 @@ class Model(object):
         raise NotImplementedError
 
 
-class LikelihoodModel(Model, Optimizer):
+class LikelihoodModel(Model):
     """
     Likelihood model is a subclass of Model.
     """
@@ -361,13 +361,16 @@ class LikelihoodModel(Model, Optimizer):
             hess = lambda params: self.hessian(params) / nobs
             #TODO: why are score and hess positive?
 
-        xopt, retvals, optim_settings = self._fit(f, score, start_params,
-                                                  fargs, kwargs, hessian=hess,
-                                                  method=method,
-                                                  disp=disp, maxiter=maxiter,
-                                                  callback=callback,
-                                                  retall=retall,
-                                                  full_output=full_output)
+        optimizer = Optimizer()
+        xopt, retvals, optim_settings = optimizer._fit(f, score, start_params,
+                                                       fargs, kwargs,
+                                                       hessian=hess,
+                                                       method=method,
+                                                       disp=disp,
+                                                       maxiter=maxiter,
+                                                       callback=callback,
+                                                       retall=retall,
+                                                       full_output=full_output)
 
         #NOTE: this is for fit_regularized and should be generalized
         cov_params_func = kwargs.setdefault('cov_params_func', None)
