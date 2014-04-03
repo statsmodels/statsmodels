@@ -726,7 +726,9 @@ def _fit_mle_basinhopping(f, score, start_params, fargs, kwargs, disp=True,
     minimizer_kwargs = kwargs.get('minimizer', {})
     minimizer_kwargs['args'] = fargs
     minimizer_kwargs['jac'] = score
-    minimizer_kwargs['hess'] = hess
+    method = minimizer_kwargs.get('method', None)
+    if method and method != 'L-BFGS-B':  # l_bfgs_b doesn't take a hessian
+        minimizer_kwargs['hess'] = hess
 
     res = optimize.basinhopping(f, start_params,
                                 minimizer_kwargs=minimizer_kwargs,

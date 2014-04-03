@@ -21,7 +21,6 @@ import statsmodels.api as sm
 from nose import SkipTest
 from results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
-from pandas.util.testing import assert_produces_warning
 
 try:
     import cvxopt
@@ -390,9 +389,8 @@ class TestProbitBasinhopping(CheckBinaryResults):
         res2.probit()
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
-        with assert_produces_warning(RuntimeWarning):
-            cls.res1 = fit(method="basinhopping", disp=0, niter=5,
-                           minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
+        cls.res1 = fit(method="basinhopping", disp=0, niter=5,
+                        minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
 
 class CheckLikelihoodModelL1(object):
     """
