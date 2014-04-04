@@ -216,7 +216,7 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin):
         mc = MultiComparison(self.endog, self.groups,
                              group_order=[b'physical', b'medical', b'mental'])
         res = mc.tukeyhsd(alpha=self.alpha)
-        print(res)
+        #print(res)
         t = res._results_table
         expected_order = [(b'physical',b'medical'),
                           (b'physical',b'mental'),
