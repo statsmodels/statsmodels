@@ -6,7 +6,7 @@ TestGMMMultTwostepDefault() has lower precision
 
 
 import numpy as np
-from numpy.testing.decorators import knownfailureif
+from numpy.testing.decorators import skipif
 import pandas
 import scipy
 from scipy import stats
@@ -91,7 +91,7 @@ class CheckGMM(object):
     q_tol = [5e-6, 1e-9]
     j_tol = [5e-5, 1e-9]
 
-    @knownfailureif(SCIPY_GT_12,"Known failure with SciPy > 0.12")
+    @skipif(SCIPY_GT_12,"Known failure with SciPy > 0.12")
     def test_basic(self):
         res1, res2 = self.res1, self.res2
         # test both absolute and relative difference
@@ -103,7 +103,7 @@ class CheckGMM(object):
         assert_allclose(res1.bse, res2.bse, rtol=rtol, atol=0)
         assert_allclose(res1.bse, res2.bse, rtol=0, atol=atol)
 
-    @knownfailureif(SCIPY_GT_12,"Known failure with SciPy > 0.12")
+    @skipif(SCIPY_GT_12,"Known failure with SciPy > 0.12")
     def test_other(self):
         res1, res2 = self.res1, self.res2
         rtol,  atol = self.q_tol
