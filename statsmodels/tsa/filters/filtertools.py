@@ -163,7 +163,7 @@ def recursive_filter(x, filt, init=None):
     Parameters
     ----------
     x : array-like
-        Time-series data.
+        Time-series data. Should be 1d or n x 1.
     filt : array-like
         AR lag polynomial. See Notes
     init : array-like
@@ -187,55 +187,28 @@ def recursive_filter(x, filt, init=None):
     '''
     _pandas_wrapper = _maybe_get_pandas_wrapper(x)
     x = np.asarray(x).squeeze()
+    filt = np.asarray(filt).squeeze()
 
-    filt = np.asarray(filt)
-    if x.ndim > 2:
-        raise ValueError('x array has to be 1d or 2d')
+    if x.ndim > 1 or filt.ndim > 1:
+        raise ValueError('x and filt have to be 1d')
 
     if init is not None:  # integer init are treated differently in lfiltic
         if len(init) != len(filt):
             raise ValueError("filt must be the same length as init")
         init = np.asarray(init, dtype=float)
 
-    if filt.ndim == 1:
-        if init is not None:
-            zi = signal.lfiltic([1], np.r_[1, -filt], init, x)
-        else:
-            zi = None
-        # case: identical ar filter (lag polynomial)
-        y = signal.lfilter([1.], np.r_[1, -filt], x, zi=zi)
-        if init is not None:
-            result = y[0]
-        else:
-            result = y
-    elif filt.ndim == 2:
-        nlags = filt.shape[0]
-        nvar = x.shape[1]
-        if min(filt.shape) == 1:
-            if init is not None:
-                zi = signal.lfiltic([1], np.r_[1, -filt], init, x)
-            else:
-                zi = None
-            # case: identical ar filter (lag polynomial)
-            y = signal.lfilter([1], np.r_[1, -filt], x, zi=zi)
-            if init is not None:
-                result = y[0]
-            else:
-                result = y
+    if init is not None:
+        zi = signal.lfiltic([1], np.r_[1, -filt], init, x)
+    else:
+        zi = None
 
-        # case: independent ar
-        #(a bit like recserar in gauss, but no x yet)
-        result = np.zeros((x.shape[0] - nlags + 1, nvar))
-        for i in range(nvar):
-            if init is not None:
-            # could also use np.convolve, but easier for swiching to fft
-                zi = signal.lfiltic([1], np.r_[1, -filt[:, i]], init[:, i],
-                                    x[:, i])
-                result[:, i] = signal.lfilter([1], np.r_[1, -filt[:, i]],
-                                              x[:, i], zi=zi)[0]
-            else:
-                result[:, i] = signal.lfilter([1], np.r_[1, -filt[:, i]],
-                                              x[:, i])
+    y = signal.lfilter([1.], np.r_[1, -filt], x, zi=zi)
+
+    if init is not None:
+        result = y[0]
+    else:
+        result = y
+
     if _pandas_wrapper:
         return _pandas_wrapper(result)
     return result
