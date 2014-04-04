@@ -18,11 +18,11 @@ def seasonal_mean(x, freq):
     return np.array([pd_nanmean(x[i::freq]) for i in range(freq)])
 
 
-def seasonal_decompose(X, model="additive", filt=None, freq=None):
+def seasonal_decompose(x, model="additive", filt=None, freq=None):
     """
     Parameters
     ----------
-    X : array-like
+    x : array-like
         Time series
     model : str {"additive", "multiplicative"}
         Type of seasonal component. Abbreviations are accepted.
@@ -30,7 +30,7 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
         The filter coefficients for filtering out the seasonal component.
         The default is a symmetric moving average.
     freq : int, optional
-        Frequency of the series. Must be used if X is not a pandas
+        Frequency of the series. Must be used if x is not a pandas
         object with a timeseries index.
 
     Returns
@@ -55,14 +55,14 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
     --------
     statsmodels.tsa.filters.convolution_filter
     """
-    _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(X)
-    X = np.asanyarray(X).squeeze()
-    nobs = len(X)
+    _pandas_wrapper, pfreq = _maybe_get_pandas_wrapper_freq(x)
+    x = np.asanyarray(x).squeeze()
+    nobs = len(x)
 
-    if not np.all(np.isfinite(X)):
+    if not np.all(np.isfinite(x)):
         raise ValueError("This function does not handle missing values")
     if model.startswith('m'):
-        if np.any(X <= 0):
+        if np.any(x <= 0):
             raise ValueError("Multiplicative seasonality is not appropriate "
                              "for zero and negative values")
 
@@ -75,7 +75,7 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
             freq = pfreq
 
     elif freq is None:
-        raise ValueError("You must specify a freq or X must be a "
+        raise ValueError("You must specify a freq or x must be a "
                          "pandas object with a timeseries index")
 
 
@@ -85,13 +85,13 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
         else:
             filt = np.repeat(1./freq, freq)
 
-    trend = convolution_filter(X, filt)
+    trend = convolution_filter(x, filt)
 
     # nan pad for conformability - convolve doesn't do it
     if model.startswith('m'):
-        detrended = X/trend
+        detrended = x/trend
     else:
-        detrended = X - trend
+        detrended = x - trend
 
     period_averages = seasonal_mean(detrended, freq)
 
@@ -103,11 +103,11 @@ def seasonal_decompose(X, model="additive", filt=None, freq=None):
     seasonal = np.tile(period_averages, nobs // freq + 1)[:nobs]
 
     if model.startswith('m'):
-        resid = X / seasonal / trend
+        resid = x / seasonal / trend
     else:
         resid = detrended - seasonal
 
-    results = map(_pandas_wrapper, [seasonal, trend, resid, X])
+    results = map(_pandas_wrapper, [seasonal, trend, resid, x])
     return DecomposeResult(seasonal=results[0], trend=results[1],
                            resid=results[2], observed=results[3])
 
