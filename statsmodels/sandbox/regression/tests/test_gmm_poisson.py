@@ -17,7 +17,6 @@ from statsmodels.sandbox.regression import gmm
 from numpy.testing import assert_allclose, assert_equal
 from statsmodels.compatnp.np_compat import NumpyVersion
 
-SCIPY_GT_12 = NumpyVersion(scipy.version.short_version) > '0.12.0'
 
 def get_data():
     import os
@@ -48,9 +47,9 @@ def moment_exponential_add(params, exog, exp=True):
     # moment condition without instrument
     if exp:
         predicted = np.exp(np.dot(exog, params))
-        if not np.isfinite(predicted).all():
-            print "invalid predicted", predicted
-            raise RuntimeError('invalid predicted')
+        #if not np.isfinite(predicted).all():
+            #print "invalid predicted", predicted
+            #raise RuntimeError('invalid predicted')
         predicted = np.clip(predicted, 0, 1e100)  # try to avoid inf
     else:
         predicted = np.dot(exog, params)
@@ -91,7 +90,6 @@ class CheckGMM(object):
     q_tol = [5e-6, 1e-9]
     j_tol = [5e-5, 1e-9]
 
-    @skipif(SCIPY_GT_12,"Known failure with SciPy > 0.12")
     def test_basic(self):
         res1, res2 = self.res1, self.res2
         # test both absolute and relative difference
@@ -103,7 +101,6 @@ class CheckGMM(object):
         assert_allclose(res1.bse, res2.bse, rtol=rtol, atol=0)
         assert_allclose(res1.bse, res2.bse, rtol=0, atol=atol)
 
-    @skipif(SCIPY_GT_12,"Known failure with SciPy > 0.12")
     def test_other(self):
         res1, res2 = self.res1, self.res2
         rtol,  atol = self.q_tol
@@ -148,7 +145,7 @@ class TestGMMAddOnestep(CheckGMM):
         q_tol = [0.04, 0]
         # compare to Stata default options, iterative GMM
         # with const at end
-        start = OLS(endog, exog).fit().params
+        start = OLS(np.log(endog+1), exog).fit().params
         nobs, k_instr = instrument.shape
         w0inv = np.dot(instrument.T, instrument) / nobs
 
@@ -183,7 +180,7 @@ class TestGMMAddTwostep(CheckGMM):
         self.bse_tol = [5e-6, 5e-7]
         # compare to Stata default options, iterative GMM
         # with const at end
-        start = OLS(endog, exog).fit().params
+        start = OLS(np.log(endog+1), exog).fit().params
         nobs, k_instr = instrument.shape
         w0inv = np.dot(instrument.T, instrument) / nobs
 
