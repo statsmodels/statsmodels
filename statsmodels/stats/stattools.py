@@ -26,7 +26,7 @@ def durbin_watson(resids, axis=0):
     """
     resids = np.asarray(resids)
     diff_resids = np.diff(resids, 1, axis=axis)
-    dw = np.sum(diff_resids ** 2, axis=axis) / np.sum(resids ** 2, axis=axis)
+    dw = np.sum(diff_resids**2, axis=axis) / np.sum(resids**2, axis=axis)
     return dw
 
 
@@ -88,7 +88,7 @@ def jarque_bera(resids, axis=0):
 
     # Calculate the Jarque-Bera test for normality
     n = resids.shape[axis]
-    jb = (n / 6.) * (skew ** 2 + (1 / 4.) * (kurtosis - 3) ** 2)
+    jb = (n / 6.) * (skew**2 + (1 / 4.) * (kurtosis - 3)**2)
     jb_pv = stats.chi2.sf(jb, 2)
 
     return jb, jb_pv, skew, kurtosis
@@ -160,7 +160,7 @@ def robust_skewness(y, axis=0):
     mu_b = np.reshape(mu, shape)
     q2_b = np.reshape(q2, shape)
 
-    sigma = np.mean(((y - mu_b) ** 2), axis)
+    sigma = np.mean(((y - mu_b)**2), axis)
 
     sk1 = stats.skew(y, axis=axis)
     sk2 = (q1 + q3 - 2.0 * q2) / (q3 - q1)
