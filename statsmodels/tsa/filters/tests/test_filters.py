@@ -3,9 +3,9 @@ import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_raises, assert_)
 from numpy import array, column_stack
-from statsmodels.datasets import macrodata, co2
+from statsmodels.datasets import macrodata
 from statsmodels.tsa.base.datetools import dates_from_range
-from pandas import Series, Index, DataFrame, DatetimeIndex
+from pandas import Index, DataFrame, DatetimeIndex, concat
 from statsmodels.tsa.filters.api import (bkfilter, hpfilter, cffilter,
                                          convolution_filter, recursive_filter)
 
@@ -636,6 +636,27 @@ class TestFilters(object):
         expected = self.expected.conv1_na
         np.testing.assert_almost_equal(res, expected)
 
+    def test_convolution2d(self):
+        x = self.data.values
+        res = convolution_filter(x, [[.75], [.25]])
+        expected = self.expected.conv2
+        np.testing.assert_almost_equal(res, expected[:, None])
+        res = convolution_filter(np.c_[x, x], [[.75, .75], [.25, .25]])
+        np.testing.assert_almost_equal(res, np.c_[expected, expected])
+
+        res = convolution_filter(x, [[.75], [.25]], nsides=1)
+        expected = self.expected.conv1
+        np.testing.assert_almost_equal(res, expected[:, None])
+
+        x = self.datana.values
+        res = convolution_filter(x, [[.75], [.25]])
+        expected = self.expected.conv2_na
+        np.testing.assert_almost_equal(res, expected[:, None])
+
+        res = convolution_filter(x, [[.75], [.25]], nsides=1)
+        expected = self.expected.conv1_na
+        np.testing.assert_almost_equal(res, expected[:, None])
+
     def test_recursive(self):
         x = self.data.values.squeeze()
         res = recursive_filter(x, [.75, .25])
@@ -677,6 +698,14 @@ class TestFilters(object):
 
         x = self.datana
         res = recursive_filter(x, [.75, .25])
+        assert_(res.index[0] == start)
+        assert_(res.index[-1] == end)
+
+    def test_pandas2d(self):
+        start = datetime(1951, 3, 31)
+        end = datetime(1958, 12, 31)
+        x = concat((self.data[0], self.data[0]), axis=1)
+        res = convolution_filter(x, [[.75, .75], [.25, .25]])
         assert_(res.index[0] == start)
         assert_(res.index[-1] == end)
 
