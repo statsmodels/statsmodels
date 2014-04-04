@@ -181,7 +181,7 @@ def recursive_filter(x, filt, init=None):
 
     Computes the recursive filter ::
 
-        y[n] = x[n] + filt[0]*y[n-1] + ... + a[n_filt-1]*y[n-n_filt]
+        y[n] = filt[0]*y[n-1] + ... + a[n_filt-1]*y[n-n_filt] + x[n]
 
     where n_filt = len(filt).
     '''
@@ -235,7 +235,8 @@ def convolution_filter(x, filt, nsides=2):
     -------
     y : ndarray, 2d
         Filtered array, number of columns determined by x and filt. If a
-        pandas object is given, a pandas object is returned.
+        pandas object is given, a pandas object is returned. The index of
+        the return is the exact same as the time period in `x'
 
     Notes
     -----
@@ -251,7 +252,7 @@ def convolution_filter(x, filt, nsides=2):
                + ... + x[n + n_filt/2]
 
     where n_filt is len(filt). If n_filt is even, then more of the filter
-    is back in time than forward.
+    is forward in time than backward.
 
     If filt is 1d or (nlags,1) one lag polynomial is applied to all
     variables (columns of x). If filt is 2d, (nlags, nvars) each series is
