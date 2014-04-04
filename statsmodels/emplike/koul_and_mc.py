@@ -1,3 +1,4 @@
+from statsmodels.compat import range
 import statsmodels.api as sm
 import numpy as np
 

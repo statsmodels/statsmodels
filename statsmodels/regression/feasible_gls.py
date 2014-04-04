@@ -8,7 +8,7 @@ License: BSD-3
 
 """
 
-
+from statsmodels.compat import range
 import numpy as np
 import statsmodels.base.model as base
 from statsmodels.regression.linear_model import OLS, GLS, WLS, RegressionResults

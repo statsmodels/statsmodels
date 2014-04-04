@@ -2,8 +2,7 @@
 Utility functions models code
 '''
 from statsmodels.compat import (reduce, lzip, lmap, asstr2, urlopen, urljoin,
-                                StringIO)
-
+                                StringIO, range)
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L

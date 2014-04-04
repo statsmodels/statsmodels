@@ -1,3 +1,4 @@
+from statsmodels.compat import range
 import numpy as np
 
 def _make_index(prob,size):

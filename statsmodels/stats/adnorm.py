@@ -6,6 +6,7 @@ Author: Josef Perktold and Scipy developers
 License : BSD-3
 """
 from __future__ import print_function
+from statsmodels.compat import range
 import numpy as np
 from scipy import stats
 

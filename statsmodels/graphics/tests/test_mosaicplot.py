@@ -1,5 +1,5 @@
 from __future__ import division
-from statsmodels.compat import iterkeys, zip, lrange, iteritems
+from statsmodels.compat import iterkeys, zip, lrange, iteritems, range
 
 from numpy.testing import assert_, assert_raises, dec
 from numpy.testing import run_module_suite

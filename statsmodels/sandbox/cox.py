@@ -24,9 +24,8 @@ feels very slow
 need testcase before trying to fix
 
 '''
-
 from __future__ import print_function
-from statsmodels.compat import iterkeys
+from statsmodels.compat import iterkeys, range
 import shutil
 import tempfile
 

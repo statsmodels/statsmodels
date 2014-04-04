@@ -7,6 +7,7 @@ Created on Tue May 22 20:27:57 2012
 Author: Josef Perktold
 """
 
+from statsmodels.compat import range
 import numpy as np
 from numpy.testing import assert_almost_equal
 

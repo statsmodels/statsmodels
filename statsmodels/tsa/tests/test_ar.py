@@ -2,6 +2,7 @@
 Test AR Model
 """
 import statsmodels.api as sm
+from statsmodels.compat import range
 from statsmodels.tsa.ar_model import AR
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)

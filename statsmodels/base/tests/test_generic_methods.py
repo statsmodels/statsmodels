@@ -10,7 +10,7 @@ Created on Wed Oct 30 14:01:27 2013
 
 Author: Josef Perktold
 """
-
+from statsmodels.compat import range
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.compat.scipy import NumpyVersion

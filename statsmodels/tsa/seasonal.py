@@ -1,12 +1,12 @@
 """
 Seasonal Decomposition by Moving Averages
 """
+from statsmodels.compat import lmap, range
 import numpy as np
 from pandas.core.nanops import nanmean as pd_nanmean
 from .filters._utils import _maybe_get_pandas_wrapper_freq
 from .filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
-from statsmodels.tools.tools import Bunch
 
 
 def seasonal_mean(x, freq):
@@ -107,7 +107,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
     else:
         resid = detrended - seasonal
 
-    results = map(_pandas_wrapper, [seasonal, trend, resid, x])
+    results = lmap(_pandas_wrapper, [seasonal, trend, resid, x])
     return DecomposeResult(seasonal=results[0], trend=results[1],
                            resid=results[2], observed=results[3])
 

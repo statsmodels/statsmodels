@@ -1,7 +1,7 @@
 """
 Test functions for models.tools
 """
-from statsmodels.compat import lrange
+from statsmodels.compat import lrange, range
 import numpy as np
 from numpy.random import standard_normal
 from numpy.testing import (assert_equal, assert_array_equal,

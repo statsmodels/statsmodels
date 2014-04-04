@@ -9,7 +9,7 @@ see the docstring of the mosaic function for more informations.
 
 from __future__ import division
 from statsmodels.compat import (iteritems, iterkeys, lrange, string_types, lzip,
-                                itervalues, zip)
+                                itervalues, zip, range)
 import numpy as np
 from statsmodels.compat.collections import OrderedDict
 from itertools import product

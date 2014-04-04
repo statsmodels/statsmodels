@@ -614,7 +614,7 @@ class TestFilters(object):
         cls.datana = DataFrame(data, DatetimeIndex(start='1/1/1951',
                                                   periods=len(data),
                                                   freq='Q'))
-        from results import filter_results
+        from .results import filter_results
         cls.expected = filter_results
 
     def test_convolution(self):
