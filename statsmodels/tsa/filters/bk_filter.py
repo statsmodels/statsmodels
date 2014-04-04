@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import numpy as np
 from scipy.signal import fftconvolve
-from .utils import _maybe_get_pandas_wrapper
+from ._utils import _maybe_get_pandas_wrapper
 
 def bkfilter(X, low=6, high=32, K=12):
     """

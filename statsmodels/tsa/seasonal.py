@@ -3,7 +3,7 @@ Seasonal Decomposition by Moving Averages
 """
 import numpy as np
 from pandas.core.nanops import nanmean as pd_nanmean
-from .filters.utils import _maybe_get_pandas_wrapper_freq
+from .filters._utils import _maybe_get_pandas_wrapper_freq
 from .filters.filtertools import convolution_filter
 from statsmodels.tsa.tsatools import freq_to_period
 from statsmodels.tools.tools import Bunch

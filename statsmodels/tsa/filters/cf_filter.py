@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import numpy as np
-from .utils import _maybe_get_pandas_wrapper
+from ._utils import _maybe_get_pandas_wrapper
 
 # the data is sampled quarterly, so cut-off frequency of 18
 

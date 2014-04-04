@@ -16,7 +16,7 @@ import numpy as np
 import scipy.fftpack as fft
 from scipy import signal
 from scipy.signal.signaltools import _centered as trim_centered
-from utils import _maybe_get_pandas_wrapper
+from ._utils import _maybe_get_pandas_wrapper
 
 
 def _pad_nans(x, head=None, tail=None):
