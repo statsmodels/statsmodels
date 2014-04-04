@@ -116,7 +116,7 @@ class DecomposeResult(object):
     def __init__(self, **kwargs):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
-            self.nobs = len(self.observed)
+        self.nobs = len(self.observed)
 
     def plot(self):
         from statsmodels.graphics.utils import _import_mpl
