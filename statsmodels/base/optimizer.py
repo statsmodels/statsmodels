@@ -2,6 +2,7 @@
 Functions that are general enough to use for any model fitting. The idea is
 to untie these from LikelihoodModel so that they may be re-used generally.
 """
+from __future__ import print_function
 import distutils.version
 
 from scipy import __version__ as scipy_version
@@ -246,16 +247,16 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
     if iterations == maxiter:
         warnflag = 1
         if disp:
-            print ("Warning: Maximum number of iterations has been "
+            print("Warning: Maximum number of iterations has been "
                    "exceeded.")
-            print "         Current function value: %f" % fval
-            print "         Iterations: %d" % iterations
+            print("         Current function value: %f" % fval)
+            print("         Iterations: %d" % iterations)
     else:
         warnflag = 0
         if disp:
-            print "Optimization terminated successfully."
-            print "         Current function value: %f" % fval
-            print "         Iterations %d" % iterations
+            print("Optimization terminated successfully.")
+            print("         Current function value: %f" % fval)
+            print("         Iterations %d" % iterations)
     if full_output:
         (xopt, fopt, niter,
          gopt, hopt) = (newparams, f(newparams, *fargs),

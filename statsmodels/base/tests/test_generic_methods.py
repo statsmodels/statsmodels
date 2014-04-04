@@ -13,7 +13,7 @@ Author: Josef Perktold
 
 import numpy as np
 import statsmodels.api as sm
-from statsmodels.compatnp.np_compat import NumpyVersion
+from statsmodels.compat.scipy import NumpyVersion
 
 from numpy.testing import assert_, assert_allclose
 
