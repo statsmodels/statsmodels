@@ -3,6 +3,7 @@ from __future__ import division, print_function, absolute_import
 import warnings
 
 import numpy as np
+from numpy.polynomial.hermite_e import HermiteE
 from numpy.testing import (TestCase, run_module_suite, assert_equal,
         assert_raises, assert_allclose)
 import numpy.testing as npt
@@ -13,7 +14,6 @@ import scipy.stats as stats
 
 from statsmodels.distributions.edgeworth import (_faa_di_bruno_partitions,
         cumulant_from_moments, ExpandedNormal)
-from statsmodels.distributions._hermite import HermiteE
 
 class TestFaaDiBruno(TestCase):
     def test_neg_arg(self):

@@ -3,7 +3,7 @@ from __future__ import division, print_function, absolute_import
 import warnings
 
 import numpy as np
-from ._hermite import HermiteE
+from numpy.polynomial.hermite_e import HermiteE
 from scipy.misc import factorial
 from scipy.stats import rv_continuous
 import scipy.special as special
