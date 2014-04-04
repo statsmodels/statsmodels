@@ -8,8 +8,7 @@ Author: Josef Perktold
 
 from statsmodels.compatnp.py3k import BytesIO, asbytes
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
-from unittest import TestCase
+from numpy.testing import assert_almost_equal, assert_equal, assert_
 
 from statsmodels.stats.libqsturng import qsturng
 
@@ -179,7 +178,7 @@ class CheckTuckeyHSDMixin(object):
         assert_almost_equal(res.confint, self.res.confint, decimal=14)
 
 
-class TestTuckeyHSD2(CheckTuckeyHSDMixin, TestCase):
+class TestTuckeyHSD2(CheckTuckeyHSDMixin):
 
     @classmethod
     def setup_class(self):
@@ -209,10 +208,7 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin, TestCase):
         for i in range(1, 4):
             first_group = t[i][0].data
             second_group = t[i][1].data
-            self.assertTupleEqual(
-                (first_group, second_group),
-                expected_order[i - 1]
-            )
+            assert_((first_group, second_group) == expected_order[i - 1])
 
     def test_table_names_custom_group_order(self):
         # if the group_order parameter is used, the groups should
@@ -220,7 +216,7 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin, TestCase):
         mc = MultiComparison(self.endog, self.groups,
                              group_order=[b'physical', b'medical', b'mental'])
         res = mc.tukeyhsd(alpha=self.alpha)
-        print(res)
+        #print(res)
         t = res._results_table
         expected_order = [(b'physical',b'medical'),
                           (b'physical',b'mental'),
@@ -228,11 +224,7 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin, TestCase):
         for i in range(1, 4):
             first_group = t[i][0].data
             second_group = t[i][1].data
-            self.assertTupleEqual(
-                (first_group, second_group),
-                expected_order[i - 1]
-            )
-
+            assert_((first_group, second_group) == expected_order[i - 1])
 
 
 class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
