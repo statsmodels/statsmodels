@@ -179,6 +179,11 @@ class TestStattools(TestCase):
         cls.expected_kurtosis = np.array([kr1, kr2, kr3, kr4])
         cls.kurtosis_constants = np.array([3.0,1.2330951154852172,2.5852271228708048,2.9058469516701639])
 
+    def test_medcouple_no_axis(self):
+        x = np.reshape(np.arange(100.0), (50, 2))
+        mc = medcouple(x, axis=None)
+        assert_almost_equal(mc, medcouple(x.ravel()))
+
     def test_medcouple_1d(self):
         x = np.reshape(np.arange(100.0),(50,2))
         assert_raises(ValueError, _medcouple_1d, x)
@@ -227,6 +232,12 @@ class TestStattools(TestCase):
         sk = robust_skewness(x)
         assert_almost_equal(np.array(sk), np.zeros(4))
 
+    def test_robust_skewness_1d_2d(self):
+        x = np.random.randn(21)
+        y = x[:, None]
+        sk_x = robust_skewness(x)
+        sk_y = robust_skewness(y, axis=None)
+        assert_almost_equal(np.array(sk_x), np.array(sk_y))
 
     def test_robust_skewness_symmetric(self):
         x = np.random.standard_normal(100)
@@ -244,10 +255,15 @@ class TestStattools(TestCase):
         for sk in sk_3d:
             assert_almost_equal(sk, result)
 
+    def test_robust_kurtosis_1d_2d(self):
+        x = np.random.randn(100)
+        y = x[:, None]
+        kr_x = np.array(robust_kurtosis(x))
+        kr_y = np.array(robust_kurtosis(y, axis=None))
+        assert_almost_equal(kr_x, kr_y)
+
     def test_robust_kurtosis(self):
         x = self.kurtosis_x
-        print np.array(robust_kurtosis(x))
-        print self.expected_kurtosis
         assert_almost_equal(np.array(robust_kurtosis(x)), self.expected_kurtosis)
 
     def test_robust_kurtosis_3d(self):
