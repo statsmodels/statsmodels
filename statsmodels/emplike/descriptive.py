@@ -18,7 +18,7 @@ Owen, A. (2001). "Empirical Likelihood." Chapman and Hall
 import numpy as np
 from scipy import optimize
 from scipy.stats import chi2, skew, kurtosis
-from statsmodels.base.model import _fit_mle_newton
+from statsmodels.base.optimizer import _fit_newton
 import itertools
 from statsmodels.graphics import utils
 
@@ -91,7 +91,7 @@ class _OptFuncts(object):
 
         Notes
         -----
-        This function is only a placeholder for the _fit_mle_Newton.
+        This function is only a placeholder for the _fit_Newton.
         The function value is not used in optimization and the optimal value
         is disregarded when computing the log likelihood ratio.
         """
@@ -166,7 +166,7 @@ class _OptFuncts(object):
     def _modif_newton(self,  eta, est_vect, weights):
         """
         Modified Newton's method for maximizing the log 'star' equation.  This
-        function calls _fit_mle_newton to find the optimal values of eta.
+        function calls _fit_newton to find the optimal values of eta.
 
         Parameters
         ----------
@@ -190,7 +190,7 @@ class _OptFuncts(object):
         hess = lambda x0: - self._hess(x0, est_vect, weights, nobs)
         kwds = {'tol': 1e-8}
         eta = eta.squeeze()
-        res = _fit_mle_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, \
+        res = _fit_newton(f, grad, eta, (), kwds, hess=hess, maxiter=50, \
                               disp=0)
         return res[0]
 

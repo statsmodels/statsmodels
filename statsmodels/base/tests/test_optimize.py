@@ -1,15 +1,15 @@
 from numpy.testing import assert_
-from statsmodels.base.model import (_fit_mle_newton, _fit_mle_nm,
-                                    _fit_mle_bfgs, _fit_mle_cg,
-                                    _fit_mle_ncg, _fit_mle_powell)
+from statsmodels.base.optimizer import (_fit_newton, _fit_nm,
+                                        _fit_bfgs, _fit_cg,
+                                        _fit_ncg, _fit_powell)
 
 fit_funcs = {
-    'newton': _fit_mle_newton,
-    'nm': _fit_mle_nm,  # Nelder-Mead
-    'bfgs': _fit_mle_bfgs,
-    'cg': _fit_mle_cg,
-    'ncg': _fit_mle_ncg,
-    'powell': _fit_mle_powell
+    'newton': _fit_newton,
+    'nm': _fit_nm,  # Nelder-Mead
+    'bfgs': _fit_bfgs,
+    'cg': _fit_cg,
+    'ncg': _fit_ncg,
+    'powell': _fit_powell
             }
 
 
