@@ -617,7 +617,6 @@ class TestFilters(object):
         from results import filter_results
         cls.expected = filter_results
 
-
     def test_convolution(self):
         x = self.data.values.squeeze()
         res = convolution_filter(x, [.75, .25])
@@ -662,7 +661,7 @@ class TestFilters(object):
     def test_pandas(self):
         start = datetime(1951, 3, 31)
         end = datetime(1958, 12, 31)
-        x = self.data
+        x = self.data[0]
         res = convolution_filter(x, [.75, .25])
         assert_(res.index[0] == start)
         assert_(res.index[-1] == end)
@@ -684,7 +683,7 @@ class TestFilters(object):
     def test_odd_length_filter(self):
         start = datetime(1951, 3, 31)
         end = datetime(1958, 12, 31)
-        x = self.data
+        x = self.data[0]
         res = convolution_filter(x, [.75, .5, .3, .2, .1])
         expected = self.expected.conv2_odd
         np.testing.assert_almost_equal(res.values.squeeze(), expected)

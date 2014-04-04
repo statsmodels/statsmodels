@@ -251,7 +251,8 @@ def convolution_filter(x, filt, nsides=2):
     x : array_like
         data array, 1d or 2d, if 2d then observations in rows
     filt : array_like
-        Linear filter coefficients in reverse time-order.
+        Linear filter coefficients in reverse time-order. Must have the
+        same number of dimensions as x.
     nsides : int, optional
         If 2, a centered moving average is computed using the filter
         coefficients. If 1, the filter coefficients are for past values only.
@@ -297,7 +298,7 @@ def convolution_filter(x, filt, nsides=2):
         raise ValueError("nsides must be 1 or 2")
 
     _pandas_wrapper = _maybe_get_pandas_wrapper(x)
-    x = np.asarray(x).squeeze()
+    x = np.asarray(x)
     filt = np.asarray(filt)
     if x.ndim > 2:
         raise ValueError('x array has to be 1d or 2d')
@@ -310,6 +311,8 @@ def convolution_filter(x, filt, nsides=2):
                            # this allows correct handling of NaNs
             result = signal.convolve(x, filt, mode='valid')
     elif filt.ndim == 2:
+        if x.ndim == 1:
+            x = x[:, None]
         nlags = filt.shape[0]
         nvar = x.shape[1]
         if min(filt.shape) == 1:
@@ -318,7 +321,7 @@ def convolution_filter(x, filt, nsides=2):
                 result = signal.convolve(x, filt, mode='valid')
             elif nsides == 1:
                 result = signal.convolve(x, np.r_[0, filt],
-                                       mode='full')[:-len(filt)]
+                                         mode='full')[:-len(filt)]
 
         # case: independent ar
         #(a bit like recserar in gauss, but no x yet)
