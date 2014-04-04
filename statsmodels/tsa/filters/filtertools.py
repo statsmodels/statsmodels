@@ -256,11 +256,14 @@ def convolution_filter(x, filt, nsides=2):
     If filt is 1d or (nlags,1) one lag polynomial is applied to all
     variables (columns of x). If filt is 2d, (nlags, nvars) each series is
     independently filtered with its own lag polynomial, uses loop over nvar.
+    This is different than the usual 2d vs 2d convolution.
 
-    Filtering is done with scipy.signal.convolve, so it will be
-    reasonably fast for medium sized data. For large data fft
-    convolution would be faster.
+    Filtering is done with scipy.signal.convolve, so it will be reasonably
+    fast for medium sized data. For large data fft convolution would be
+    faster.
     '''
+    # for nsides shift the index instead of using 0 for 0 lag this
+    # allows correct handling of NaNs
     if nsides == 1:
         trim_head = len(filt) - 1
         trim_tail = None
@@ -276,28 +279,11 @@ def convolution_filter(x, filt, nsides=2):
     if x.ndim > 2:
         raise ValueError('x array has to be 1d or 2d')
 
-    if filt.ndim == 1:
-        # case: identical ar filter (lag polynomial)
-        if nsides == 2:
-            result = signal.convolve(x, filt, mode='valid')
-        elif nsides == 1:  # shift the index instead of using 0 for 0 lag
-                           # this allows correct handling of NaNs
-            result = signal.convolve(x, filt, mode='valid')
+    if filt.ndim == 1 or min(filt.shape) == 1:
+        result = signal.convolve(x, filt, mode='valid')
     elif filt.ndim == 2:
-        if x.ndim == 1:
-            x = x[:, None]
         nlags = filt.shape[0]
         nvar = x.shape[1]
-        if min(filt.shape) == 1:
-            # case: identical ar filter (lag polynomial)
-            if nsides == 2:
-                result = signal.convolve(x, filt, mode='valid')
-            elif nsides == 1:
-                result = signal.convolve(x, np.r_[0, filt],
-                                         mode='full')[:-len(filt)]
-
-        # case: independent ar
-        #(a bit like recserar in gauss, but no x yet)
         result = np.zeros((x.shape[0] - nlags + 1, nvar))
         if nsides == 2:
             for i in range(nvar):
@@ -306,9 +292,8 @@ def convolution_filter(x, filt, nsides=2):
                                                mode='valid')
         elif nsides == 1:
             for i in range(nvar):
-                result[:, i] = signal.convolve(x[:, i],
-                                               np.r[0, filt[:, i]],
-                                               mode='full')[:-len(filt)]
+                result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
+                                               mode='valid')
     result = _pad_nans(result, trim_head, trim_tail)
     if _pandas_wrapper:
         return _pandas_wrapper(result)
