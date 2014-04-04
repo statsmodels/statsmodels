@@ -225,8 +225,9 @@ def convolution_filter(x, filt, nsides=2):
     x : array_like
         data array, 1d or 2d, if 2d then observations in rows
     filt : array_like
-        Linear filter coefficients in reverse time-order. Must have the
-        same number of dimensions as x.
+        Linear filter coefficients in reverse time-order. Should have the
+        same number of dimensions as x though if 1d and `x' is 2d will be
+        coerced to 2d.
     nsides : int, optional
         If 2, a centered moving average is computed using the filter
         coefficients. If 1, the filter coefficients are for past values only.
@@ -278,6 +279,8 @@ def convolution_filter(x, filt, nsides=2):
     _pandas_wrapper = _maybe_get_pandas_wrapper(x)
     x = np.asarray(x)
     filt = np.asarray(filt)
+    if x.ndim > 1 and filt.ndim == 1:
+        filt = filt[:, None]
     if x.ndim > 2:
         raise ValueError('x array has to be 1d or 2d')
 
