@@ -82,6 +82,25 @@ Adding functionality to look at seasonality in plots. Two new functions are :fun
     dta.index = pd.DatetimeIndex(dates, freq='M')
     fig = sm.tsa.graphics.month_plot(dta)
 
+.. currentmodule:: statsmodels.tsa
+
+Seasonal Decomposition
+----------------------
+
+We added a naive seasonal decomposition tool in the same vein as R's ``decompose``. This function can be found as :func:`sm.tsa.seasonal_decompose <tsa.seasonal.seasonal_decompose>`.
+
+
+.. code-block:: python
+
+    import statsmodels.api as sm
+
+    dta = sm.datasets.co2.load_pandas().data
+    # deal with missing values. see issue 
+    dta.co2.interpolate(inplace=True)
+
+    res = sm.tsa.seasonal_decompose(dta.co2)
+    res.plot()
+
 
 Other important new features
 ----------------------------
@@ -99,10 +118,13 @@ Major Bugs fixed
 * With a link to its github issue.
 * Use the syntax ``:ghissue:`###```.
 
+.. currentmodule:: statsmodels.tsa
+
 Backwards incompatible changes and deprecations
 -----------------------------------------------
 
 * RegressionResults.norm_resid is now a readonly property, rather than a function.
+* The function ``statsmodels.tsa.filters.arfilter`` has been removed. This did not compute a recursive AR filter but was instead a convolution filter. Two new functions have been added with clearer names :func:`sm.tsa.filters.recursive_filter <tsa.filters.filtertools.recursive_filter>` and :func:`sm.tsa.filters.convolution_filter <tsa.filters.filtertools.convolution_filter>`.
 
 Development summary and credits
 -------------------------------

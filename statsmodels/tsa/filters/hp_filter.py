@@ -4,7 +4,7 @@ from scipy import sparse
 from scipy.sparse import dia_matrix, eye as speye
 from scipy.sparse.linalg import spsolve
 import numpy as np
-from .utils import _maybe_get_pandas_wrapper
+from ._utils import _maybe_get_pandas_wrapper
 
 def hpfilter(X, lamb=1600):
     """
