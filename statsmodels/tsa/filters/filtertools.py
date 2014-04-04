@@ -156,7 +156,7 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
 
 #original changes and examples in sandbox.tsa.try_var_convolve
 #examples and tests are there
-def recursive_filter(x, filt, init=None):
+def recursive_filter(x, ar_coeff, init=None):
     '''
     Autoregressive, or recursive, filtering.
 
@@ -164,8 +164,8 @@ def recursive_filter(x, filt, init=None):
     ----------
     x : array-like
         Time-series data. Should be 1d or n x 1.
-    filt : array-like
-        AR lag polynomial. See Notes
+    ar_coeff : array-like
+        AR coefficients in reverse time order. See Notes
     init : array-like
         Initial values of the time-series prior to the first value of y.
         The default is zero.
@@ -173,7 +173,7 @@ def recursive_filter(x, filt, init=None):
     Returns
     -------
     y : array
-        Filtered array, number of columns determined by x and filt. If a
+        Filtered array, number of columns determined by x and ar_coeff. If a
         pandas object is given, a pandas object is returned.
 
     Notes
@@ -181,28 +181,29 @@ def recursive_filter(x, filt, init=None):
 
     Computes the recursive filter ::
 
-        y[n] = filt[0]*y[n-1] + ... + a[n_filt-1]*y[n-n_filt] + x[n]
+        y[n] = ar_coeff[0] * y[n-1] + ...
+                + ar_coeff[n_coeff - 1] * y[n - n_coeff] + x[n]
 
-    where n_filt = len(filt).
+    where n_coeff = len(n_coeff).
     '''
     _pandas_wrapper = _maybe_get_pandas_wrapper(x)
     x = np.asarray(x).squeeze()
-    filt = np.asarray(filt).squeeze()
+    ar_coeff = np.asarray(ar_coeff).squeeze()
 
-    if x.ndim > 1 or filt.ndim > 1:
-        raise ValueError('x and filt have to be 1d')
+    if x.ndim > 1 or ar_coeff.ndim > 1:
+        raise ValueError('x and ar_coeff have to be 1d')
 
     if init is not None:  # integer init are treated differently in lfiltic
-        if len(init) != len(filt):
-            raise ValueError("filt must be the same length as init")
+        if len(init) != len(ar_coeff):
+            raise ValueError("ar_coeff must be the same length as init")
         init = np.asarray(init, dtype=float)
 
     if init is not None:
-        zi = signal.lfiltic([1], np.r_[1, -filt], init, x)
+        zi = signal.lfiltic([1], np.r_[1, -ar_coeff], init, x)
     else:
         zi = None
 
-    y = signal.lfilter([1.], np.r_[1, -filt], x, zi=zi)
+    y = signal.lfilter([1.], np.r_[1, -ar_coeff], x, zi=zi)
 
     if init is not None:
         result = y[0]
