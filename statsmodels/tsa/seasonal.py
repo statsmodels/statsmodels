@@ -89,7 +89,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
 
     # nan pad for conformability - convolve doesn't do it
     if model.startswith('m'):
-        detrended = x/trend
+        detrended = x / trend
     else:
         detrended = x - trend
 
