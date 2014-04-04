@@ -48,9 +48,9 @@ def moment_exponential_add(params, exog, exp=True):
     # moment condition without instrument
     if exp:
         predicted = np.exp(np.dot(exog, params))
-        if not np.isfinite(predicted).all():
-            print "invalid predicted", predicted
-            raise RuntimeError('invalid predicted')
+        #if not np.isfinite(predicted).all():
+            #print "invalid predicted", predicted
+            #raise RuntimeError('invalid predicted')
         predicted = np.clip(predicted, 0, 1e100)  # try to avoid inf
     else:
         predicted = np.dot(exog, params)
@@ -148,7 +148,7 @@ class TestGMMAddOnestep(CheckGMM):
         q_tol = [0.04, 0]
         # compare to Stata default options, iterative GMM
         # with const at end
-        start = OLS(endog, exog).fit().params
+        start = OLS(np.log(endog+1), exog).fit().params
         nobs, k_instr = instrument.shape
         w0inv = np.dot(instrument.T, instrument) / nobs
 
@@ -183,7 +183,7 @@ class TestGMMAddTwostep(CheckGMM):
         self.bse_tol = [5e-6, 5e-7]
         # compare to Stata default options, iterative GMM
         # with const at end
-        start = OLS(endog, exog).fit().params
+        start = OLS(np.log(endog+1), exog).fit().params
         nobs, k_instr = instrument.shape
         w0inv = np.dot(instrument.T, instrument) / nobs
 
