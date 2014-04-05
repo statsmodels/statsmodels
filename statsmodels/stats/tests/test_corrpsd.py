@@ -1,19 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Tests for finding a positive semi-definite correlation of covariance matrix
+"""Tests for finding a positive semi-definite correlation or covariance matrix
 
 Created on Mon May 27 12:07:02 2013
 
 Author: Josef Perktold
 """
 
-
 import numpy as np
 import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
     corr_nearest, corr_clipped, cov_nearest,
-    _project_correlation_factors, corr_nearest_factor, spgopt, nmls,
-    corr_thresholded, cov_nearest_eye_factor)
+    _project_correlation_factors, corr_nearest_factor, spg_optim,
+    nmono_linesearch, corr_thresholded, cov_nearest_eye_factor)
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays
@@ -273,7 +272,7 @@ class Test_Factor(object):
 
 
     # Test on a quadratic function.
-    def test_spgopt(self):
+    def test_spg_optim(self):
 
         dm = 100
 
@@ -291,7 +290,7 @@ class Test_Factor(object):
             return x
 
         x = np.random.normal(size=dm)
-        rslt = spgopt(obj, grad, x, project)
+        rslt = spg_optim(obj, grad, x, project)
         xnew = rslt["X"]
         assert(obj(xnew) < 1e-4)
 
