@@ -7,7 +7,7 @@ Created on Tue May 22 20:27:57 2012
 Author: Josef Perktold
 """
 
-from statsmodels.compat import range
+from statsmodels.compat import range, lmap
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -59,7 +59,7 @@ def test_panel_robust_cov():
     assert_almost_equal(cov_clu, res_stata.cov_clu_stata, decimal=4)
 
     #cluster robust standard errors, non-int groups
-    cov_clu = sw.cov_cluster(res, map(str, firm_id))
+    cov_clu = sw.cov_cluster(res, lmap(str, firm_id))
     assert_almost_equal(cov_clu, res_stata.cov_clu_stata, decimal=4)
 
     #Driscoll and Kraay panel robust standard errors

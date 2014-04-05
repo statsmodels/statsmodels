@@ -1,7 +1,7 @@
 """
 Seasonal Decomposition by Moving Averages
 """
-from statsmodels.compat import lmap, range
+from statsmodels.compat import lmap, range, iteritems
 import numpy as np
 from pandas.core.nanops import nanmean as pd_nanmean
 from .filters._utils import _maybe_get_pandas_wrapper_freq
@@ -114,7 +114,7 @@ def seasonal_decompose(x, model="additive", filt=None, freq=None):
 
 class DecomposeResult(object):
     def __init__(self, **kwargs):
-        for key, value in kwargs.iteritems():
+        for key, value in iteritems(kwargs):
             setattr(self, key, value)
         self.nobs = len(self.observed)
 

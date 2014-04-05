@@ -428,7 +428,7 @@ def group_sums(x, group):
     #TODO: remove this, already copied to tools/grouputils
     '''
 
-    #TODO: transpose return in grou_sum, need test coverage first
+    #TODO: transpose return in group_sum, need test coverage first
     return np.array([np.bincount(group, weights=x[:, col])
                             for col in range(x.shape[1])])
 
