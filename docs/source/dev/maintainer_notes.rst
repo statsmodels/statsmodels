@@ -184,3 +184,9 @@ Prefix commit messages in the master branch of the main shared repository with t
     REL: Release related commit
     TST: Change to a test, adding a test. Only used if not directly related to a bug.
     REF: Refactoring changes
+
+
+vbench
+------
+
+See :ref:`vbench` notes for working with the `statsmodels vbench suite <http://statsmodels.sourceforge.net/vbench>`_. The github repository is available `here <https://github.com/statsmodels/vbench>`_.
