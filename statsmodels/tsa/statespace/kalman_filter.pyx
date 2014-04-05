@@ -10,7 +10,6 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
-from cpython cimport PyCObject_AsVoidPtr
 import scipy
 __import__('scipy.linalg.blas')
 __import__('scipy.linalg.lapack')
@@ -22,45 +21,48 @@ cdef extern from "complex.h":
     complex cabs(complex x)
     np.complex64_t cabsf(np.complex64_t x)
 
+cdef extern from "capsule.h":
+    void *Capsule_AsVoidPtr(object ptr)
+
 from blas_lapack cimport *
 
-#cdef ssymm_t *ssymm = <ssymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ssymm._cpointer)
-cdef sgemm_t *sgemm = <sgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sgemm._cpointer)
-cdef sgemv_t *sgemv = <sgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sgemv._cpointer)
-cdef scopy_t *scopy = <scopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.scopy._cpointer)
-cdef saxpy_t *saxpy = <saxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.saxpy._cpointer)
-cdef sdot_t *sdot = <sdot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.sdot._cpointer)
-cdef sgetrf_t *sgetrf = <sgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.sgetrf._cpointer)
-cdef sgetri_t *sgetri = <sgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.sgetri._cpointer)
-cdef spotrf_t *spotrf = <spotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.spotrf._cpointer)
+#cdef ssymm_t *ssymm = <ssymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.ssymm._cpointer)
+cdef sgemm_t *sgemm = <sgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.sgemm._cpointer)
+cdef sgemv_t *sgemv = <sgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.sgemv._cpointer)
+cdef scopy_t *scopy = <scopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.scopy._cpointer)
+cdef saxpy_t *saxpy = <saxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.saxpy._cpointer)
+cdef sdot_t *sdot = <sdot_t*>Capsule_AsVoidPtr(scipy.linalg.blas.sdot._cpointer)
+cdef sgetrf_t *sgetrf = <sgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.sgetrf._cpointer)
+cdef sgetri_t *sgetri = <sgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.sgetri._cpointer)
+cdef spotrf_t *spotrf = <spotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.spotrf._cpointer)
 
-#cdef dsymm_t *dsymm = <dsymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dsymm._cpointer)
-cdef dgemm_t *dgemm = <dgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dgemm._cpointer)
-cdef dgemv_t *dgemv = <dgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dgemv._cpointer)
-cdef dcopy_t *dcopy = <dcopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.dcopy._cpointer)
-cdef daxpy_t *daxpy = <daxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.daxpy._cpointer)
-cdef ddot_t *ddot = <ddot_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ddot._cpointer)
-cdef dgetrf_t *dgetrf = <dgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dgetrf._cpointer)
-cdef dgetri_t *dgetri = <dgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dgetri._cpointer)
-cdef dpotrf_t *dpotrf = <dpotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.dpotrf._cpointer)
+#cdef dsymm_t *dsymm = <dsymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dsymm._cpointer)
+cdef dgemm_t *dgemm = <dgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dgemm._cpointer)
+cdef dgemv_t *dgemv = <dgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dgemv._cpointer)
+cdef dcopy_t *dcopy = <dcopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.dcopy._cpointer)
+cdef daxpy_t *daxpy = <daxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.daxpy._cpointer)
+cdef ddot_t *ddot = <ddot_t*>Capsule_AsVoidPtr(scipy.linalg.blas.ddot._cpointer)
+cdef dgetrf_t *dgetrf = <dgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.dgetrf._cpointer)
+cdef dgetri_t *dgetri = <dgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.dgetri._cpointer)
+cdef dpotrf_t *dpotrf = <dpotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.dpotrf._cpointer)
 
-#cdef csymm_t *csymm = <csymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.csymm._cpointer)
-cdef cgemm_t *cgemm = <cgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.cgemm._cpointer)
-cdef cgemv_t *cgemv = <cgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.cgemv._cpointer)
-cdef ccopy_t *ccopy = <ccopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.ccopy._cpointer)
-cdef caxpy_t *caxpy = <caxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.caxpy._cpointer)
-cdef cgetrf_t *cgetrf = <cgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cgetrf._cpointer)
-cdef cgetri_t *cgetri = <cgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cgetri._cpointer)
-cdef cpotrf_t *cpotrf = <cpotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.cpotrf._cpointer)
+#cdef csymm_t *csymm = <csymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.csymm._cpointer)
+cdef cgemm_t *cgemm = <cgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.cgemm._cpointer)
+cdef cgemv_t *cgemv = <cgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.cgemv._cpointer)
+cdef ccopy_t *ccopy = <ccopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.ccopy._cpointer)
+cdef caxpy_t *caxpy = <caxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.caxpy._cpointer)
+cdef cgetrf_t *cgetrf = <cgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.cgetrf._cpointer)
+cdef cgetri_t *cgetri = <cgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.cgetri._cpointer)
+cdef cpotrf_t *cpotrf = <cpotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.cpotrf._cpointer)
 
-#cdef zsymm_t *zsymm = <zsymm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zsymm._cpointer)
-cdef zgemm_t *zgemm = <zgemm_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zgemm._cpointer)
-cdef zgemv_t *zgemv = <zgemv_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zgemv._cpointer)
-cdef zcopy_t *zcopy = <zcopy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zcopy._cpointer)
-cdef zaxpy_t *zaxpy = <zaxpy_t*>PyCObject_AsVoidPtr(scipy.linalg.blas.zaxpy._cpointer)
-cdef zgetrf_t *zgetrf = <zgetrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zgetrf._cpointer)
-cdef zgetri_t *zgetri = <zgetri_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zgetri._cpointer)
-cdef zpotrf_t *zpotrf = <zpotrf_t*>PyCObject_AsVoidPtr(scipy.linalg.lapack.zpotrf._cpointer)
+#cdef zsymm_t *zsymm = <zsymm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zsymm._cpointer)
+cdef zgemm_t *zgemm = <zgemm_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zgemm._cpointer)
+cdef zgemv_t *zgemv = <zgemv_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zgemv._cpointer)
+cdef zcopy_t *zcopy = <zcopy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zcopy._cpointer)
+cdef zaxpy_t *zaxpy = <zaxpy_t*>Capsule_AsVoidPtr(scipy.linalg.blas.zaxpy._cpointer)
+cdef zgetrf_t *zgetrf = <zgetrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.zgetrf._cpointer)
+cdef zgetri_t *zgetri = <zgetri_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.zgetri._cpointer)
+cdef zpotrf_t *zpotrf = <zpotrf_t*>Capsule_AsVoidPtr(scipy.linalg.lapack.zpotrf._cpointer)
 
 # Kalman Filter: Single Precision
 @cython.boundscheck(False)
@@ -127,7 +129,7 @@ cpdef skalman_filter(np.float32_t [::1,:]   y,  # nxT+1    (data: endogenous, ob
     PHT = np.empty((k,n), np.float32, order="F")
     f_inv = np.empty((n,n,T+1), np.float32, order="F")
     Q = np.zeros((k,k), np.float32, order="F")
-    
+
     # Get Q = G Q^* G'
     sgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
     sgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
@@ -321,7 +323,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
     PHT = np.empty((k,n), float, order="F")
     f_inv = np.empty((n,n,T+1), float, order="F")
     Q = np.zeros((k,k), float, order="F")
-    
+
     # Get Q = G Q^* G'
     dgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
     dgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
@@ -387,12 +389,12 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
             #PHT = np.dot(P_tt1[t], H[:,:,H_idx].T) # kxn
             #print np.dot(P_tt1[:,:,t], H[:,:,H_idx].T) # taking .T here crashes the program for some reason
             dgemm("N", "T", &k, &n, &k, &alpha, &P_tt1[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &PHT[0,0], &k)
-    
+
             #f_tt1[t] = np.dot(H[:,:,H_idx], PHT) + R
             #f_tt1[::1,:,t] = R[::1,:]
             dcopy(&n2, &R[0,0], &inc, &f_tt1[0,0,t], &inc)
             dgemm("N", "N", &n, &n, &k, &alpha, &H[0,0,H_idx], &n, &PHT[0,0], &k, &alpha, &f_tt1[0,0,t], &n)
-    
+
             #f_inv = np.linalg.inv(f_tt1[t])
             #f_inv[::1,:] = f_tt1[::1,:,t]
             if n == 1:
@@ -437,7 +439,7 @@ cpdef dkalman_filter(double [::1,:]   y,  # nxT+1    (data: endogenous, observed
             dcopy(&k2, &P_tt1[0,0,t], &inc, &P_tt[0,0,t], &inc)
             dgemm("N", "N", &k, &k, &n, &alpha, &gain[0,0,t], &k, &H[0,0,H_idx], &n, &beta, &tmp[0,0], &ldwork)
             dgemm("N", "N", &k, &k, &k, &gamma, &tmp[0,0], &ldwork, &P_tt1[0,0,t], &k, &alpha, &P_tt[0,0,t], &k)
-        
+
         # Check if we have converged (by finding the determinant of P
         if not converged and not time_varying_H:
             dcopy(&k2, &P_tt[0,0,t], &inc, &tmp[0,0], &inc)
@@ -510,7 +512,7 @@ cpdef ckalman_filter(
     PHT = np.empty((k,n), np.complex64, order="F")
     f_inv = np.empty((n,n), np.complex64, order="F")
     Q = np.zeros((k,k), np.complex64, order="F")
-    
+
     # Get Q = G Q^* G'
     cgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
     cgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
@@ -705,7 +707,7 @@ cpdef zkalman_filter(
     PHT = np.empty((k,n), complex, order="F")
     f_inv = np.empty((n,n,T+1), complex, order="F")
     Q = np.zeros((k,k), complex, order="F")
-    
+
     # Get Q = G Q^* G'
     zgemm("N", "N", &k, &g, &g, &alpha, &G[0,0], &k, &Q_star[0,0], &g, &beta, &work[0,0], &ldwork)
     zgemm("N", "T", &k, &g, &g, &alpha, &work[0,0], &ldwork, &G[0,0], &k, &beta, &Q[0,0], &k)
