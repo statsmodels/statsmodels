@@ -218,14 +218,11 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     else:
         return cov_
 
-def nmls(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
-         gam=1e-4, maxit=100):
+def nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
+                     gam=1e-4, maxit=100):
     """
     Implements the non-monotone line search of Grippo et al. (1986),
-    as described in Birgin, Martinez and Raydan (2013).  The basic
-    idea is to take a big step in the direction of the gradient, even
-    if the function value is not decreased (but there is a maximum
-    allowed increase in terms of the recent history of the iterates).
+    as described in Birgin, Martinez and Raydan (2013).
 
     Parameters
     ----------
@@ -263,6 +260,13 @@ def nmls(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
     g : Array_like
         The gradient at the final step
 
+    Notes
+    -----
+    The basic idea is to take a big step in the direction of the
+    gradient, even if the function value is not decreased (but there
+    is a maximum allowed increase in terms of the recent history of
+    the iterates).
+
     References
     ----------
     Grippo L, Lampariello F, Lucidi S (1986). A Nonmonotone Line
@@ -299,14 +303,12 @@ def nmls(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
     return None, None, None, None
 
 
-def spgopt(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
-           maxit_nmls=200, lam_min=1e-30, lam_max=1e30, sig1=0.1,
-           sig2=0.9, gam=1e-4):
+def spg_optim(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
+              maxit_nmls=200, lam_min=1e-30, lam_max=1e30, sig1=0.1,
+              sig2=0.9, gam=1e-4):
     """
     Implements the spectral projected gradient method for minimizing a
-    differentiable function on a convex domain.  This can be an
-    effective heuristic algorithm for problems where no gauranteed
-    algorithm for computing a global minimizer is known.
+    differentiable function on a convex domain.
 
     Parameters
     ----------
@@ -329,6 +331,9 @@ def spgopt(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
 
     Notes
     -----
+    This can be an effective heuristic algorithm for problems where no
+    gauranteed algorithm for computing a global minimizer is known.
+
     There are a number of tuning parameters, but these generally
     should not be changed except for maxit (positive integer) and
     ctol (small positive real).  See the Birgin et al reference for
@@ -364,11 +369,14 @@ def spgopt(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
         d -= X
 
         # Carry out the nonmonotone line search
-        alpha, X1, fval, gval1 = nmls(func, grad, X, d, obj_hist,
-                                      M=M, sig1=sig1, sig2=sig2,
-                                      gam=gam, maxit=maxit_nmls)
+        alpha, X1, fval, gval1 = nmono_linesearch(func, grad, X, d,
+                                                  obj_hist, M=M,
+                                                  sig1=sig1,
+                                                  sig2=sig2,
+                                                  gam=gam,
+                                                  maxit=maxit_nmls)
         if alpha is None:
-            return {"Converged": False, "X": X, "Message": "Failed in nmls"}
+            return {"Converged": False, "X": X, "Message": "Failed in nmono_linesearch"}
 
         obj_hist.append(fval)
         s = X1 - X
@@ -384,14 +392,15 @@ def spgopt(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
         X = X1
         gval = gval1
 
-    return {"Converged": False, "X": X, "Message": "spgopt did not converge"}
+    return {"Converged": False, "X": X, "Message": "spg_optim did not converge"}
 
 
 def _project_correlation_factors(X):
     """
-    This projection takes an arbitrary matrix and projects it into the
-    domain of matrices whose rows square-sum to at most 1.  It does
-    this by rescaling the rows whose norm exceeds 1 to have unit norm.
+    Project a matrix into the domain of matrices whose row-wise sums
+    of squares are less than or equal to 1.
+
+    The input matrix is modified in-place.
     """
     nm = np.sqrt((X*X).sum(1))
     ii = np.flatnonzero(nm > 1)
@@ -403,11 +412,7 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
                         lam_max=1e30, maxit=1000):
     """
     Attempts to find the nearest correlation matrix with factor
-    structure to a given square matrix.  A correlation matrix has
-    factor structure if it can be written in the form I + XX' -
-    diag(XX'), where X is n x k with linearly independent columns, and
-    with each row having sum of squares at most equal to 1.  The
-    approximation is made in terms of the Frobenius norm.
+    structure to a given square matrix, see notes below for details.
 
     Parameters
     ----------
@@ -428,8 +433,24 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
         C = np.dot(X, X.T); np.fill_diagonal(C, 1).  rslt also has
         fields describing how the optimization terminated
 
+    Example
+    -------
+    Hard thresholding a correlation matrix may result in a matrix that
+    is not positive semidefinite.  We can approximate a hard
+    thresholded correlation matrix with a PSD matrix as follows, where
+    `cmat` is the input correlation matrix.
+
+    >>> cmat = cmat * (np.abs(cmat) >= 0.3)
+    >>> rslt = corr_nearest_factor(cmat, 3)
+
     Notes
     -----
+    A correlation matrix has factor structure if it can be written in
+    the form I + XX' - diag(XX'), where X is n x k with linearly
+    independent columns, and with each row having sum of squares at
+    most equal to 1.  The approximation is made in terms of the
+    Frobenius norm.
+
     This routine is useful when one has an approximate correlation
     matrix that is not SPD, and there is need to estimate the inverse,
     square root, or inverse square root of the population correlation
@@ -511,7 +532,7 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
                 ir += bs
             return fval
 
-    rslt = spgopt(func, grad, X, _project_correlation_factors)
+    rslt = spg_optim(func, grad, X, _project_correlation_factors)
     rslt["corr"] = rslt["X"]
     del rslt["X"]
     return rslt
@@ -519,9 +540,8 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
 
 def cov_nearest_eye_factor(mat, rank):
     """
-    This function returns a matrix X having `rank` linearly
-    independent columns, and a constant k such that k*I + XX' is the
-    best Frobenius norm approximation of `mat` with this structure.
+    Approximate a matrix with a factor-structured matrix of the form
+    k*I + XX'.
 
     Parameters
     ----------
@@ -543,7 +563,7 @@ def cov_nearest_eye_factor(mat, rank):
     that is not SPD, and the ultimate goal is to estimate the inverse,
     square root, or inverse square root of the true correlation
     matrix. The factor structure allows these tasks to be performed
-    without ever constructing n x n matrices.
+    without constructing any n x n matrices.
 
     The calculations use the fact that if k is known, then X can be
     determined from the eigen-decomposition of mat - k*I, which can in
@@ -557,6 +577,15 @@ def cov_nearest_eye_factor(mat, rank):
 
     The one-dimensional search for the optimal value of k is not
     convex, so a local minimum could be obtained.
+
+    Example
+    -------
+    Hard thresholding a covariance matrix may result in a matrix that
+    is not positive semidefinite.  We can approximate a hard
+    thresholded covariance matrix with a PSD matrix as follows:
+
+    >>> cmat = cmat * (np.abs(cmat) >= 0.3)
+    >>> rslt = cov_nearest_eye_factor(cmat, 3)
     """
 
     m,n = mat.shape
@@ -587,10 +616,8 @@ def cov_nearest_eye_factor(mat, rank):
 
 def corr_thresholded(mat, minabs, max_elt=1e7):
     """
-    Returns a sparse matrix containing the thresholded row-wise
-    correlation matrix of `mat`.  The calculations are done in a way
-    that limits the memory usage, so `mat` can have a large number of
-    rows (e.g. 100,000).
+    Construct a sparse matrix containing the thresholded row-wise
+    correlation matrix of `mat`.
 
     Parameters
     ----------
@@ -617,6 +644,15 @@ def corr_thresholded(mat, minabs, max_elt=1e7):
 
     The thresholded matrix is returned in COO format, which can easily
     be converted to other sparse formats.
+
+    Example
+    -------
+    Here X is a tall data matrix (e.g. with 100,000 rows and 50
+    columns).  The row-wise correlation matrix of X is calculated
+    and stored in sparse form, with all entries smaller than 0.3
+    treated as 0.
+
+    >>> cmat = corr_thresholded(X, 0.3)
     """
 
     n,ncol = mat.shape
