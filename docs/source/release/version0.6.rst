@@ -23,6 +23,11 @@ Change blurb and example code.
 Other important new features
 ----------------------------
 
+* New functions added to correlation tools: `corr_nearest_factor`
+  finds the closest factor-structured correlation matrix to a given
+  square matrix in the Frobenius norm; `corr_thresholded` efficiently
+  constructs a hard-thresholded correlation matrix using sparse matrix
+  operations.
 * Other new changes can go
 * In a
 * Bullet list
