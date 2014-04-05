@@ -1892,7 +1892,9 @@ def test_small_data():
     # in start params regression.
     res = mod.fit(trend="nc", disp=0, start_params=[.1,.1,.1,.1])
     mod = ARIMA(y, (1, 0, 2))
-    with assert_produces_warning(Warning):
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
         res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
 
 
