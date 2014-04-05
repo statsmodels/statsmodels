@@ -1045,7 +1045,7 @@ def arma_order_select_ic(y, max_ar=4, max_ma=2, ic='bic', trend='c',
 
     for ar in ar_range:
         for ma in ma_range:
-            if ar == 0 and ma == 0:
+            if ar == 0 and ma == 0 and trend == 'nc':
                 results[:, ar, ma] = np.nan
                 continue
 
