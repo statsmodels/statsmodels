@@ -89,6 +89,16 @@ def dotplot(points, intervals=None, lines=None, sections=None,
     `points`, `intervals`, `lines`, `sections`, `styles` must all have
     the same length whenever present.
 
+    Examples
+    --------
+    This is a simple dotplot with one point per line:
+    >>> dotplot(points=point_values)
+
+    This dotplot has labels on the lines (if elements in
+    `label_values` are repeated, the correponding points appear on the
+    same line):
+    >>> dotplot(points=point_values, lines=label_values)
+
     References
     ----------
       * Cleveland, William S. (1993). "Visualizing Data". Hobart
