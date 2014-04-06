@@ -18,7 +18,7 @@ Loading modules and functions
 
 .. code:: python
 
-    import statsmodels.formula.api as sm
+    import statsmodels.formula.api as smf
     import numpy as np
     import pandas
 
@@ -31,7 +31,7 @@ accept ``formula`` and ``df`` arguments, whereas upper case ones take
 which describes the model in terms of a ``patsy`` formula. ``df`` takes
 a `pandas <http://pandas.pydata.org/>`_ data frame.
 
-``dir(sm)`` will print a list of available models.
+``dir(smf)`` will print a list of available models.
 
 Formula-compatible models have the following generic call signature:
 ``(formula, data, subset=None, *args, **kwargs)``
@@ -63,7 +63,7 @@ Fit the model:
 
 .. code:: python
 
-    mod = sm.ols(formula='Lottery ~ Literacy + Wealth + Region', data=df)
+    mod = smf.ols(formula='Lottery ~ Literacy + Wealth + Region', data=df)
     res = mod.fit()
     print res.summary()
 
@@ -111,7 +111,7 @@ operator:
 
 .. code:: python
 
-    res = sm.ols(formula='Lottery ~ Literacy + Wealth + C(Region)', data=df).fit()
+    res = smf.ols(formula='Lottery ~ Literacy + Wealth + C(Region)', data=df).fit()
     print res.params
 
 .. parsed-literal::
@@ -144,7 +144,7 @@ can remove the intercept from a model by:
 
 .. code:: python
 
-    res = sm.ols(formula='Lottery ~ Literacy + Wealth + C(Region) -1 ', data=df).fit()
+    res = smf.ols(formula='Lottery ~ Literacy + Wealth + C(Region) -1 ', data=df).fit()
     print res.params
 
 .. parsed-literal::
@@ -167,8 +167,8 @@ multiplied together:
 
 .. code:: python
 
-    res1 = sm.ols(formula='Lottery ~ Literacy : Wealth - 1', data=df).fit()
-    res2 = sm.ols(formula='Lottery ~ Literacy * Wealth - 1', data=df).fit()
+    res1 = smf.ols(formula='Lottery ~ Literacy : Wealth - 1', data=df).fit()
+    res2 = smf.ols(formula='Lottery ~ Literacy * Wealth - 1', data=df).fit()
     print res1.params, '\n'
     print res2.params
 
@@ -192,7 +192,7 @@ You can apply vectorized functions to the variables in your model:
 
 .. code:: python
 
-    res = sm.ols(formula='Lottery ~ np.log(Literacy)', data=df).fit()
+    res = smf.ols(formula='Lottery ~ np.log(Literacy)', data=df).fit()
     print res.params
 
 .. parsed-literal::
@@ -207,7 +207,7 @@ Define a custom function:
 
     def log_plus_1(x):
         return np.log(x) + 1.
-    res = sm.ols(formula='Lottery ~ log_plus_1(Literacy)', data=df).fit()
+    res = smf.ols(formula='Lottery ~ log_plus_1(Literacy)', data=df).fit()
     print res.params
 
 .. parsed-literal::
@@ -277,7 +277,7 @@ To generate pandas data frames:
 
 .. code:: python
 
-    print sm.OLS(y, X).fit().summary()
+    print smf.OLS(y, X).fit().summary()
 
 .. parsed-literal::
 

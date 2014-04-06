@@ -185,7 +185,7 @@ individual outliers and might not be able to identify groups of outliers.
         ### Example for using Huber's T norm with the default
         ### median absolute deviation scaling
 
-        data = sm.datasets.stackloss.Load()
+        data = sm.datasets.stackloss.load()
         data.exog = sm.add_constant(data.exog)
         huber_t = sm.RLM(data.endog, data.exog, M=sm.robust.norms.HuberT())
         hub_results = huber_t.fit()

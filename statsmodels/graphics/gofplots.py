@@ -187,7 +187,7 @@ class ProbPlot(object):
     def sample_percentiles(self):
         quantiles = \
             (self.sorted_data - self.fit_params[-2])/self.fit_params[-1]
-        return self.dist.cdf(qntls)
+        return self.dist.cdf(quantiles)
 
     def ppplot(self, xlabel=None, ylabel=None, line=None, other=None,
                ax=None, **plotkwargs):
@@ -210,8 +210,7 @@ class ProbPlot(object):
             - 'r' - A regression line is fit
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
-            - If True a reference line is drawn on the graph. The default is to
-              fit a line via OLS regression.
+
         other : `ProbPlot` instance, array-like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
@@ -276,6 +275,7 @@ class ProbPlot(object):
             other values are used depending on the status of the kwarg `other`.
         line : str {'45', 's', 'r', q'} or None, optional
             Options for the reference line to which the data is compared:
+
             - '45' - 45-degree line
             - 's' - standardized line, the expected order statistics are scaled
               by the standard deviation of the given sample and have the mean
@@ -283,14 +283,13 @@ class ProbPlot(object):
             - 'r' - A regression line is fit
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
-            - If True a reference line is drawn on the graph. The default is to
-              fit a line via OLS regression.
+
         other : `ProbPlot` instance, array-like, or None, optional
             If provided, the sample quantiles of this `ProbPlot` instance are
             plotted against the sample quantiles of the `other` `ProbPlot`
             instance. If an array-like object is provided, it will be turned
-            into a `ProbPlot` instance using default parameters. If not provided
-            (default), the theoretical quantiles are used.
+            into a `ProbPlot` instance using default parameters. If not
+            provided (default), the theoretical quantiles are used.
         ax : Matplotlib AxesSubplot instance, optional
             If given, this subplot is used to plot in instead of a new figure
             being created.
@@ -357,8 +356,7 @@ class ProbPlot(object):
             - 'r' - A regression line is fit
             - 'q' - A line is fit through the quartiles.
             - None - by default no reference line is added to the plot.
-            - If True a reference line is drawn on the graph. The default is to
-              fit a line via OLS regression.
+
         exceed : boolean, optional
 
              - If False (default) the raw sample quantiles are plotted against
@@ -405,7 +403,7 @@ class ProbPlot(object):
         return fig
 
 def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
-           line=False, ax=None):
+           line=None, ax=None):
     """
     Q-Q plot of the quantiles of x versus the quantiles/ppf of a distribution.
 
@@ -446,8 +444,6 @@ def qqplot(data, dist=stats.norm, distargs=(), a=0, loc=0, scale=1, fit=False,
         - 'r' - A regression line is fit
         - 'q' - A line is fit through the quartiles.
         - None - by default no reference line is added to the plot.
-        - If True a reference line is drawn on the graph. The default is to
-          fit a line via OLS regression.
 
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
@@ -532,8 +528,6 @@ def qqplot_2samples(data1, data2, xlabel=None, ylabel=None, line=None, ax=None):
         - 'r' - A regression line is fit
         - 'q' - A line is fit through the quartiles.
         - None - by default no reference line is added to the plot.
-        - If True a reference line is drawn on the graph. The default is to
-          fit a line via OLS regression.
 
     ax : Matplotlib AxesSubplot instance, optional
         If given, this subplot is used to plot in instead of a new figure being
@@ -704,7 +698,7 @@ def _fmt_probplot_axis(ax, dist, nobs):
                        verticalalignment='center')
     ax.set_xlim([axis_qntls.min(), axis_qntls.max()])
 
-def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
+def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo', **kwargs):
     """
     Boiler plate plotting function for the `ppplot`, `qqplot`, and
     `probplot` methods of the `ProbPlot` class
@@ -722,6 +716,8 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
         created.
     fmt : str, optional
         matplotlib-compatible formatting string for the data markers
+    kwargs : keywords
+        These are passed to matplotlib.plot
 
     Returns
     -------
@@ -731,7 +727,7 @@ def _do_plot(x, y, dist=None, line=False, ax=None, fmt='bo'):
     """
     fig, ax = utils.create_mpl_ax(ax)
     ax.set_xmargin(0.02)
-    ax.plot(x, y, fmt)
+    ax.plot(x, y, fmt, **kwargs)
     if line:
         if line not in ['r','q','45','s']:
             msg = "%s option for line not understood" % line

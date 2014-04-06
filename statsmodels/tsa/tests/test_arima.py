@@ -1,16 +1,19 @@
 import numpy as np
+from nose.tools import nottest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
-                           assert_raises, dec)
+                           assert_raises, dec, TestCase)
 import statsmodels.sandbox.tsa.fftarma as fa
 from statsmodels.tsa.descriptivestats import TsaDescriptive
 from statsmodels.tsa.arma_mle import Arma
 from statsmodels.tsa.arima_model import ARMA, ARIMA
+from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.base.datetools import dates_from_range
 from results import results_arma, results_arima
 import os
 from statsmodels.tsa.base import datetools
 from statsmodels.tsa.arima_process import arma_generate_sample
 import pandas
+from pandas.util.testing import assert_produces_warning
 try:
     from statsmodels.tsa.kalmanf import kalman_loglike
     fast_kalman = 1
@@ -1747,7 +1750,7 @@ def test_arimax():
 
     # 2 exog
     X = dta
-    res = ARIMA(y, (2, 1, 1), X).fit(disp=-1, solver="nm", maxiter=1000,
+    res = ARIMA(y, (2, 1, 1), X).fit(disp=False, solver="nm", maxiter=1000,
                 ftol=1e-12, xtol=1e-12)
 
     # from gretl
@@ -1764,7 +1767,7 @@ def test_arimax():
     assert_almost_equal(res.model.loglike(np.array(params)), stata_llf, 6)
 
     X = dta.diff()
-    res = ARIMA(y, (2, 1, 1), X).fit(disp=-1)
+    res = ARIMA(y, (2, 1, 1), X).fit(disp=False)
 
     # gretl won't estimate this - looks like maybe a bug on their part,
     # but we can just fine, we're close to Stata's answer
@@ -1889,13 +1892,95 @@ def test_small_data():
     # in start params regression.
     res = mod.fit(trend="nc", disp=0, start_params=[.1,.1,.1,.1])
     mod = ARIMA(y, (1, 0, 2))
-    res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
+    with assert_produces_warning(Warning):
+        res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
 
-def test_arima00():
-    y = np.random.random(10)
-    assert_raises(ValueError, ARMA, y, (0,0))
-    assert_raises(ValueError, ARIMA, y, (0,1,0))
-    assert_raises(ValueError, ARIMA, y, (0,0,0))
+
+class TestARMA00(TestCase):
+
+    @classmethod
+    def setup_class(cls):
+        from statsmodels.datasets.sunspots import load
+
+        sunspots = load().data['SUNACTIVITY']
+        cls.y = y = sunspots
+        cls.arma_00_model = ARMA(y, order=(0, 0))
+        cls.arma_00_res = cls.arma_00_model.fit(disp=-1)
+
+    def test_parameters(self):
+        params = self.arma_00_res.params
+        assert_almost_equal(self.y.mean(), params)
+
+    def test_predictions(self):
+        predictions = self.arma_00_res.predict()
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+
+    @nottest
+    def test_information_criteria(self):
+        # This test is invalid since the ICs differ due to df_model differences
+        # between OLS and ARIMA
+        res = self.arma_00_res
+        y = self.y
+        ols_res = OLS(y, np.ones_like(y)).fit(disp=-1)
+        ols_ic = np.array([ols_res.aic, ols_res.bic])
+        arma_ic = np.array([res.aic, res.bic])
+        assert_almost_equal(ols_ic, arma_ic, DECIMAL_4)
+
+    def test_arma_00_nc(self):
+        arma_00 = ARMA(self.y, order=(0, 0))
+        assert_raises(ValueError, arma_00.fit, trend='nc', disp=-1)
+
+    def test_css(self):
+        arma = ARMA(self.y, order=(0, 0))
+        fit = arma.fit(method='css', disp=-1)
+        predictions = fit.predict()
+        assert_almost_equal(self.y.mean() * np.ones_like(predictions), predictions)
+
+    def test_arima(self):
+        yi = np.cumsum(self.y)
+        arima = ARIMA(yi, order=(0, 1, 0))
+        fit = arima.fit(disp=-1)
+        assert_almost_equal(np.diff(yi).mean(), fit.params, DECIMAL_4)
+
+    def test_arma_ols(self):
+        y = self.y
+        y_lead = y[1:]
+        y_lag = y[:-1]
+        T = y_lag.shape[0]
+        X = np.hstack((np.ones((T,1)), y_lag[:,None]))
+        ols_res = OLS(y_lead, X).fit()
+        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='c', disp=-1)
+        assert_almost_equal(ols_res.params, arma_res.params)
+
+    def test_arma_exog_no_constant(self):
+        y = self.y
+        y_lead = y[1:]
+        y_lag = y[:-1]
+        X = y_lag[:,None]
+        ols_res = OLS(y_lead, X).fit()
+        arma_res = ARMA(y_lead,order=(0,0),exog=y_lag).fit(trend='nc', disp=-1)
+        assert_almost_equal(ols_res.params, arma_res.params)
+        pass
+
+
+def test_arima_dates_startatend():
+    # bug
+    np.random.seed(18)
+    x = pandas.TimeSeries(np.random.random(36),
+                          index=pandas.DatetimeIndex(start='1/1/1990',
+                                                     periods=36, freq='M'))
+    res = ARIMA(x, (1, 0, 0)).fit(disp=0)
+    pred = res.predict(start=len(x), end=len(x))
+    assert_(pred.index[0] == x.index.shift(1)[-1])
+    fc = res.forecast()[0]
+    assert_almost_equal(pred.values[0], fc)
+
+def test_arma_missing():
+    from statsmodels.base.data import MissingDataError
+    # bug 1343
+    y = np.random.random(40)
+    y[-1] = np.nan
+    assert_raises(MissingDataError, ARMA, y, (1, 0), missing='raise')
 
 if __name__ == "__main__":
     import nose

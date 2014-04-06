@@ -1,0 +1,51 @@
+{#
+    Overwrites what is displayed on the examples landing page.
+#}
+{%- extends "layout.html" %}
+{% block body %}
+
+
+{% if pagename == 'examples/index' %}
+<div class="examples-page">
+    <h1>Statsmodels Examples</h1>
+    <div class="padleft">
+This page provides a series of examples, tutorials and recipes to help you get started with statsmodels. Each of the examples shown here is made available as an IPython Notebook and as a plain python script on the <a href="https://github.com/statsmodels/statsmodels/tree/master/examples">statsmodels github repository</a>.<br /><br />
+
+If you are not comfortable with git, we also encourage users to submit their own examples, tutorials or cool statsmodels tricks to the <a href="https://github.com/statsmodels/statsmodels/wiki/Examples">Examples wiki page</a>.
+</div>
+
+
+    <h2 style="padding-left:-30px;">Topics</h2>
+    <div class="padleft">
+    {% for section in examples %}
+    <ul class="toclist">
+        <li><a href="#{{section.id}}">{{section.header}}</a></li>
+    </ul>
+    {% endfor %}
+
+    </div> <!-- end padleft -->
+
+    {% for section in examples %}
+    <h2 id="{{ section.id }}">{{ section.header }}</h2>
+
+    <div class="marketing">
+      <ul class="thumbnails example-sites">
+        {% for link in section.links %}
+        <li class="span4">
+        <p class="marketing-byline">{{link.text}}</p>
+        <a class="thumbnail" href="{{link.target}}" target="_blank">
+            <img src="{{link.img}}" >
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+  </div>
+    {% endfor %}
+</div>
+{% else %}
+
+  {{ body }}
+
+{% endif %}
+
+{% endblock %}

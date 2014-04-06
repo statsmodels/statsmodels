@@ -16,6 +16,31 @@ import numpy as np
 import scipy.fftpack as fft
 from scipy import signal
 from scipy.signal.signaltools import _centered as trim_centered
+from ._utils import _maybe_get_pandas_wrapper
+
+
+def _pad_nans(x, head=None, tail=None):
+    if np.ndim(x) == 1:
+        if head is None and tail is None:
+            return x
+        elif head and tail:
+            return np.r_[[np.nan] * head, x, [np.nan] * tail]
+        elif tail is None:
+            return np.r_[[np.nan] * head, x]
+        elif head is None:
+            return np.r_[x, [np.nan] * tail]
+    elif np.ndim(x) == 2:
+        if head is None and tail is None:
+            return x
+        elif head and tail:
+            return np.r_[[[np.nan] * x.shape[1]] * head, x,
+                         [[np.nan] * x.shape[1]] * tail]
+        elif tail is None:
+            return np.r_[[[np.nan] * x.shape[1]] * head, x]
+        elif head is None:
+            return np.r_[x, [[np.nan] * x.shape[1]] * tail]
+    else:
+        raise ValueError("Nan-padding for ndim > 2 not implemented")
 
 #original changes and examples in sandbox.tsa.try_var_convolve
 
@@ -131,101 +156,153 @@ def fftconvolve3(in1, in2=None, in3=None, mode="full"):
 
 #original changes and examples in sandbox.tsa.try_var_convolve
 #examples and tests are there
-def arfilter(x, a):
-    '''apply an autoregressive filter to a series x
+def recursive_filter(x, ar_coeff, init=None):
+    '''
+    Autoregressive, or recursive, filtering.
 
-    x can be 2d, a can be 1d, 2d, or 3d
+    Parameters
+    ----------
+    x : array-like
+        Time-series data. Should be 1d or n x 1.
+    ar_coeff : array-like
+        AR coefficients in reverse time order. See Notes
+    init : array-like
+        Initial values of the time-series prior to the first value of y.
+        The default is zero.
+
+    Returns
+    -------
+    y : array
+        Filtered array, number of columns determined by x and ar_coeff. If a
+        pandas object is given, a pandas object is returned.
+
+    Notes
+    -----
+
+    Computes the recursive filter ::
+
+        y[n] = ar_coeff[0] * y[n-1] + ...
+                + ar_coeff[n_coeff - 1] * y[n - n_coeff] + x[n]
+
+    where n_coeff = len(n_coeff).
+    '''
+    _pandas_wrapper = _maybe_get_pandas_wrapper(x)
+    x = np.asarray(x).squeeze()
+    ar_coeff = np.asarray(ar_coeff).squeeze()
+
+    if x.ndim > 1 or ar_coeff.ndim > 1:
+        raise ValueError('x and ar_coeff have to be 1d')
+
+    if init is not None:  # integer init are treated differently in lfiltic
+        if len(init) != len(ar_coeff):
+            raise ValueError("ar_coeff must be the same length as init")
+        init = np.asarray(init, dtype=float)
+
+    if init is not None:
+        zi = signal.lfiltic([1], np.r_[1, -ar_coeff], init, x)
+    else:
+        zi = None
+
+    y = signal.lfilter([1.], np.r_[1, -ar_coeff], x, zi=zi)
+
+    if init is not None:
+        result = y[0]
+    else:
+        result = y
+
+    if _pandas_wrapper:
+        return _pandas_wrapper(result)
+    return result
+
+
+def convolution_filter(x, filt, nsides=2):
+    '''
+    Linear filtering via convolution. Centered and backward displaced moving
+    weighted average.
 
     Parameters
     ----------
     x : array_like
         data array, 1d or 2d, if 2d then observations in rows
-    a : array_like
-        autoregressive filter coefficients, ar lag polynomial
-        see Notes
+    filt : array_like
+        Linear filter coefficients in reverse time-order. Should have the
+        same number of dimensions as x though if 1d and `x' is 2d will be
+        coerced to 2d.
+    nsides : int, optional
+        If 2, a centered moving average is computed using the filter
+        coefficients. If 1, the filter coefficients are for past values only.
+        Both methods use scipy.signal.convolve.
 
     Returns
     -------
     y : ndarray, 2d
-        filtered array, number of columns determined by x and a
+        Filtered array, number of columns determined by x and filt. If a
+        pandas object is given, a pandas object is returned. The index of
+        the return is the exact same as the time period in `x'
 
     Notes
     -----
+    In nsides == 1, x is filtered ::
 
-    In general form this uses the linear filter ::
+        y[n] = filt[0]*x[n-1] + ... + filt[n_filt-1]*x[n-n_filt]
 
-        y = a(L)x
+    where n_filt is len(filt).
 
-    where
-    x : nobs, nvars
-    a : nlags, nvars, npoly
+    If nsides == 2, x is filtered around lag 0 ::
 
-    Depending on the shape and dimension of a this uses different
-    Lag polynomial arrays
+        y[n] = filt[0]*x[n - n_filt/2] + ... + filt[n_filt / 2] * x[n]
+               + ... + x[n + n_filt/2]
 
-    case 1 : a is 1d or (nlags,1)
-        one lag polynomial is applied to all variables (columns of x)
-    case 2 : a is 2d, (nlags, nvars)
-        each series is independently filtered with its own
-        lag polynomial, uses loop over nvar
-    case 3 : a is 3d, (nlags, nvars, npoly)
-        the ith column of the output array is given by the linear filter
-        defined by the 2d array a[:,:,i], i.e. ::
+    where n_filt is len(filt). If n_filt is even, then more of the filter
+    is forward in time than backward.
 
-            y[:,i] = a(.,.,i)(L) * x
-            y[t,i] = sum_p sum_j a(p,j,i)*x(t-p,j)
-                     for p = 0,...nlags-1, j = 0,...nvars-1,
-                     for all t >= nlags
+    If filt is 1d or (nlags,1) one lag polynomial is applied to all
+    variables (columns of x). If filt is 2d, (nlags, nvars) each series is
+    independently filtered with its own lag polynomial, uses loop over nvar.
+    This is different than the usual 2d vs 2d convolution.
 
-    All filtering is done with scipy.signal.convolve, so it will be reasonably
-    fast for medium sized arrays. For large arrays fft convolution would be
+    Filtering is done with scipy.signal.convolve, so it will be reasonably
+    fast for medium sized data. For large data fft convolution would be
     faster.
-
-    Note: maybe convert to axis=1, Not
-
-    TODO:
-        initial conditions,
-        make sure tests for 3d case are done, I don't remember how much I
-        tested the 3d case
-
     '''
+    # for nsides shift the index instead of using 0 for 0 lag this
+    # allows correct handling of NaNs
+    if nsides == 1:
+        trim_head = len(filt) - 1
+        trim_tail = None
+    elif nsides == 2:
+        trim_head = np.ceil(len(filt)/2.) - 1 or None
+        trim_tail = (np.ceil(len(filt)/2.) - len(filt) % 2) or None
+    else:  # pragma : no cover
+        raise ValueError("nsides must be 1 or 2")
+
+    _pandas_wrapper = _maybe_get_pandas_wrapper(x)
     x = np.asarray(x)
-    a = np.asarray(a)
-    if x.ndim == 1:
-        x = x[:,None]
+    filt = np.asarray(filt)
+    if x.ndim > 1 and filt.ndim == 1:
+        filt = filt[:, None]
     if x.ndim > 2:
         raise ValueError('x array has to be 1d or 2d')
-    nvar = x.shape[1]
-    nlags = a.shape[0]
-    ntrim = nlags//2
-    # for x is 2d with ncols >1
 
-    if a.ndim == 1:
-        # case: identical ar filter (lag polynomial)
-        return signal.convolve(x, a[:,None], mode='valid')
-        # alternative:
-        #return signal.lfilter(a,[1],x.astype(float),axis=0)
-    elif a.ndim == 2:
-        if min(a.shape) == 1:
-            # case: identical ar filter (lag polynomial)
-            return signal.convolve(x, a, mode='valid')
-
-        # case: independent ar
-        #(a bit like recserar in gauss, but no x yet)
-        result = np.zeros((x.shape[0]-nlags+1, nvar))
-        for i in range(nvar):
-            # could also use np.convolve, but easier for swiching to fft
-            result[:,i] = signal.convolve(x[:,i], a[:,i], mode='valid')
-        return result
-
-    elif a.ndim == 3:
-        # case: vector autoregressive with lag matrices
-#        #not necessary:
-#        if np.any(a.shape[1:] != nvar):
-#            raise ValueError('if 3d shape of a has to be (nobs,nvar,nvar)')
-        yf = signal.convolve(x[:,:,None], a)
-        yvalid = yf[ntrim:-ntrim, yf.shape[1]//2,:]
-        return yvalid
+    if filt.ndim == 1 or min(filt.shape) == 1:
+        result = signal.convolve(x, filt, mode='valid')
+    elif filt.ndim == 2:
+        nlags = filt.shape[0]
+        nvar = x.shape[1]
+        result = np.zeros((x.shape[0] - nlags + 1, nvar))
+        if nsides == 2:
+            for i in range(nvar):
+                # could also use np.convolve, but easier for swiching to fft
+                result[:, i] = signal.convolve(x[:, i], filt[:, i],
+                                               mode='valid')
+        elif nsides == 1:
+            for i in range(nvar):
+                result[:, i] = signal.convolve(x[:, i], np.r_[0, filt[:, i]],
+                                               mode='valid')
+    result = _pad_nans(result, trim_head, trim_tail)
+    if _pandas_wrapper:
+        return _pandas_wrapper(result)
+    return result
 
 
 #copied from sandbox.tsa.garch

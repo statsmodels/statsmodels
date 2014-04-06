@@ -1,5 +1,5 @@
 open \
-  /home/skipper/statsmodels/statsmodels-git/scikits/statsmodels/tsa/tests/results/y_arma_data.csv
+  /home/skipper/statsmodels/statsmodels/statsmodels/tsa/tests/results/y_arma_data.csv
 setobs 12 1980:01 --time-series
 dataset addobs 10
 

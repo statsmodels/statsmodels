@@ -15,7 +15,7 @@ except:
 @dec.skipif(not have_matplotlib)
 def test_plot_corr():
     hie_data = randhie.load_pandas()
-    corr_matrix = np.corrcoef(hie_data.data.T)
+    corr_matrix = np.corrcoef(hie_data.data.values.T)
 
     fig = plot_corr(corr_matrix, xnames=hie_data.names)
     plt.close(fig)
@@ -30,7 +30,7 @@ def test_plot_corr():
 @dec.skipif(not have_matplotlib)
 def test_plot_corr_grid():
     hie_data = randhie.load_pandas()
-    corr_matrix = np.corrcoef(hie_data.data.T)
+    corr_matrix = np.corrcoef(hie_data.data.values.T)
 
     fig = plot_corr_grid([corr_matrix] * 2, xnames=hie_data.names)
     plt.close(fig)

@@ -196,6 +196,13 @@ def test_add_lag_drop_noinsert():
     lag_data = sm.tsa.add_lag(data, 'realgdp', 3, insert=False, drop=True)
     assert_equal(lag_data.view((float,len(lag_data.dtype.names))), results)
 
+def test_freq_to_period():
+    from pandas.tseries.frequencies import to_offset
+    freqs = ['A', 'AS-MAR', 'Q', 'QS', 'QS-APR', 'W', 'W-MON', 'B']
+    expected = [1, 1, 4, 4, 4, 52, 52, 52]
+    for i, j in zip(freqs, expected):
+        assert_equal(tools.freq_to_period(i), j)
+        assert_equal(tools.freq_to_period(to_offset(i)), j)
 
 if __name__ == '__main__':
     #running them directly

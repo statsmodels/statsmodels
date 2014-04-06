@@ -35,9 +35,9 @@ Detailed examples can be found here:
 .. toctree::
    :maxdepth: 1
 
-   examples/generated/example_ols
-   examples/generated/example_wls
-   examples/generated/example_gls
+   examples/notebooks/generated/ols
+   examples/notebooks/generated/wls
+   examples/notebooks/generated/gls
 
 Technical Documentation
 -----------------------

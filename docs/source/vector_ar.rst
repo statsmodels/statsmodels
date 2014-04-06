@@ -24,7 +24,7 @@ and their lagged values is the *vector autoregression process*:
 where :math:`A_i` is a :math:`K \times K` coefficient matrix.
 
 We follow in large part the methods and notation of `Lutkepohl (2005)
-<http://www.springer.com/economics/econometrics/book/978-3-540-26239-8>`__,
+<http://www.springer.com/economics/econometrics/book/978-3-540-40172-8?otherVersion=978-3-540-26239-8>`__,
 which we will not develop here.
 
 Model fitting
@@ -211,7 +211,7 @@ to specify the "initial value" for the forecast:
 ::
 
     >>> lag_order = results.k_ar
-    >>> results.forecast(data.values[-lagorder:], 5)
+    >>> results.forecast(data.values[-lag_order:], 5)
     array([[ 0.00616044,  0.00500006,  0.00916198],
            [ 0.00427559,  0.00344836, -0.00238478],
            [ 0.00416634,  0.0070728 , -0.01193629],
@@ -375,7 +375,7 @@ Dynamic Vector Autoregressions
 
 .. note::
 
-    To use this functionality, `pandas <http://pypi.python.org/pypi/pandas>`__
+    To use this functionality, `pandas <https://pypi.python.org/pypi/pandas>`__
     must be installed. See the `pandas documentation
     <http://pandas.pydata.org>`__ for more information on the below data
     structures.

@@ -44,15 +44,16 @@ from scipy.stats.stats import ss
 from scipy import optimize
 from scipy.stats import chi2
 
-from statsmodels.tools.tools import (add_constant, rank,
-                                     recipr, chain_dot, pinv_extended)
+from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
                                           cache_writable)
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
 from statsmodels.emplike.elregress import _ELRegOpts
-
+import warnings
+from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
 def _get_sigma(sigma, nobs):
     """
@@ -109,7 +110,7 @@ class RegressionModel(base.LikelihoodModel):
         """
         if self._df_model is None:
             if self.rank is None:
-                self.rank = rank(self.exog)
+                self.rank = np_matrix_rank(self.exog)
             self._df_model = float(self.rank - self.k_constant)
         return self._df_model
 
@@ -126,7 +127,7 @@ class RegressionModel(base.LikelihoodModel):
 
         if self._df_resid is None:
             if self.rank is None:
-                self.rank = rank(self.exog)
+                self.rank = np_matrix_rank(self.exog)
             self._df_resid = self.nobs - self.rank
         return self._df_resid
 
@@ -150,7 +151,7 @@ class RegressionModel(base.LikelihoodModel):
             return True
         # Compute rank of augmented matrix
         augmented_exog = add_constant(self.exog)
-        return rank(augmented_exog)==rank(self.exog)
+        return np_matrix_rank(augmented_exog) == np_matrix_rank(self.exog)
 
     def whiten(self, X):
         raise NotImplementedError("Subclasses should implement.")
@@ -193,7 +194,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache these singular values for use later.
                 self.wexog_singular_values = singular_values
-                self.rank = rank(np.diag(singular_values))
+                self.rank = np_matrix_rank(np.diag(singular_values))
 
             beta = np.dot(self.pinv_wexog, self.wendog)
 
@@ -208,7 +209,7 @@ class RegressionModel(base.LikelihoodModel):
 
                 # Cache singular values from R.
                 self.wexog_singular_values = np.linalg.svd(R, 0, 0)
-                self.rank = rank(R)
+                self.rank = np_matrix_rank(R)
             else:
                 Q, R = self.exog_Q, self.exog_R
 
@@ -1256,7 +1257,8 @@ class RegressionResults(base.LikelihoodModelResults):
         if np.sqrt(self.scale) < 10 * eps * self.model.endog.mean():
             # don't divide if scale is zero close to numerical precision
             from warnings import warn
-            warn("All residuals are 0, cannot compute normed residuals.")
+            warn("All residuals are 0, cannot compute normed residuals.",
+                 RuntimeWarning)
             return self.wresid
         else:
             return self.wresid / np.sqrt(self.scale)
@@ -1424,7 +1426,8 @@ class RegressionResults(base.LikelihoodModelResults):
         if has_robust1 or has_robust2:
             import warnings
             warnings.warn('F test for comparison is likely invalid with ' +
-                          'robust covariance, proceeding anyway', UserWarning)
+                          'robust covariance, proceeding anyway',
+                          InvalidTestWarning)
 
         ssr_full = self.ssr
         ssr_restr = restricted.ssr
@@ -1519,9 +1522,9 @@ class RegressionResults(base.LikelihoodModelResults):
                                                                   'nonrobust')
 
         if has_robust1 or has_robust2:
-            import warnings
             warnings.warn('Likelihood Ratio test is likely invalid with ' +
-                          'robust covariance, proceeding anyway', UserWarning)
+                          'robust covariance, proceeding anyway',
+                          InvalidTestWarning)
 
         llf_full = self.llf
         llf_restr = restricted.llf

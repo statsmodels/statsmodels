@@ -22,12 +22,14 @@ import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import norm
-from statsmodels.tools.tools import chain_dot, rank
+from statsmodels.tools.tools import chain_dot
+from statsmodels.compatnp.np_compat import np_matrix_rank
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,
                                                  RegressionResultsWrapper)
-
+from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
+                                             IterationLimitWarning)
 
 class QuantReg(RegressionModel):
     '''Quantile Regression
@@ -136,7 +138,7 @@ class QuantReg(RegressionModel):
         endog = self.endog
         exog = self.exog
         nobs = self.nobs
-        exog_rank = rank(self.exog)
+        exog_rank = np_matrix_rank(self.exog)
         self.rank = exog_rank
         self.df_model = float(self.rank - self.k_constant)
         self.df_resid = self.nobs - self.rank
@@ -183,10 +185,11 @@ class QuantReg(RegressionModel):
                     if np.all(beta == history['params'][-ii]):
                         cycle = True
                         break
-                warnings.warn("Convergence cycle detected")
+                warnings.warn("Convergence cycle detected", ConvergenceWarning)
 
         if n_iter == max_iter:
-            warnings.warn("Maximum number of iterations (1000) reached.")
+            warnings.warn("Maximum number of iterations (1000) reached.",
+                          IterationLimitWarning)
 
         e = endog - np.dot(exog, beta)
         # Greene (2008, p.407) writes that Stata 6 uses this bandwidth:

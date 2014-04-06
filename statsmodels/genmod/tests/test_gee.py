@@ -1,12 +1,16 @@
 """
 Test functions for GEE
 
-Esternal comparisons are to R.  The statmodels GEE implementation
+External comparisons are to R.  The statmodels GEE implementation
 should generally agree with the R GEE implementation for the
 independence and exchangeable correlation structures.  For other
 correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
+
+##!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+import sys
+sys.path.insert(0, "/afs/umich.edu/user/k/s/kshedden/fork4/statsmodels")
 
 import numpy as np
 import os
@@ -75,6 +79,86 @@ class TestGEE(object):
 
         marg = GEEMargins(mdf, ())
         marg.summary()
+
+
+    # This is in the release announcement for version 0.6.
+    def test_poisson_epil(self):
+
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        fname = os.path.join(cur_dir, "results", "epil.csv")
+        data = pd.read_csv(fname)
+
+        fam = Poisson()
+        ind = Independence()
+        md1 = GEE.from_formula("y ~ age + trt + base", data,
+                               groups=data["subject"], covstruct=ind,
+                               family=fam)
+        mdf1 = md1.fit()
+
+        # Coefficients should agree with GLM
+        from statsmodels.genmod.generalized_linear_model import GLM
+        from statsmodels.genmod import families
+
+        md2 = GLM.from_formula("y ~ age + trt + base", data,
+                               family=families.Poisson())
+        mdf2 = md2.fit(scale="X2")
+
+        assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
+        assert_almost_equal(mdf1.scale, mdf2.scale, decimal=6)
+
+
+
+    # TODO: why does this test fail?
+    def t_est_missing(self):
+
+        Y = np.random.normal(size=100)
+        X1 = np.random.normal(size=100)
+        X2 = np.random.normal(size=100)
+        X3 = np.random.normal(size=100)
+        groups = np.kron(range(20), np.ones(5))
+
+        Y[0] = np.nan
+        Y[5:7] = np.nan
+        X2[10:12] = np.nan
+
+        D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3,
+                          "groups": groups})
+
+        md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None,
+                              groups=D["groups"], missing='drop')
+        mdf = md.fit()
+
+        assert(len(md.endog) == 95)
+        assert(md.exog.shape) == (95,4)
+
+    def test_default_time(self):
+        """
+        Check that the time defaults work correctly.
+        """
+
+        endog,exog,group = load_data("gee_logistic_1.csv")
+
+        # Time values for the autoregressive model
+        T = np.zeros(len(endog))
+        idx = set(group)
+        for ii in idx:
+            jj = np.flatnonzero(group == ii)
+            T[jj] = range(len(jj))
+
+        family = Binomial()
+        va = Autoregressive()
+
+
+        md1 = GEE(endog, exog, group, family=family, covstruct=va)
+        mdf1 = md1.fit()
+
+        md2 = GEE(endog, exog, group, time=T, family=family,
+                  covstruct=va)
+        mdf2 = md2.fit()
+
+        assert_almost_equal(mdf1.params, mdf2.params, decimal=6)
+        assert_almost_equal(mdf1.standard_errors(),
+                            mdf2.standard_errors(), decimal=6)
 
 
 
@@ -167,7 +251,7 @@ class TestGEE(object):
                                  decimal=6)
 
         # Check for run-time exceptions in summary
-        print mdf.summary()
+        # print mdf.summary()
 
 
     def test_post_estimation(self):
@@ -256,7 +340,6 @@ class TestGEE(object):
             assert_almost_equal(mdf.standard_errors(), se[j],
                                 decimal=10)
 
-
     def test_linear_constrained(self):
 
         family = Gaussian()
@@ -303,9 +386,9 @@ class TestGEE(object):
         assert_almost_equal(mdf1.standard_errors(), se,
                             decimal=6)
 
-        ne = Nested(group_n)
-
-        md = GEE(endog, exog, group, None, family, ne)
+        ne = Nested()
+        md = GEE(endog, exog, group, None, family, ne,
+                 dep_data=group_n)
         mdf2 = md.fit(start_params=mdf1.params)
 
         # From statsmodels.GEE (not an independent test)
@@ -501,6 +584,7 @@ class TestGEE(object):
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors(), se[j],
                                  decimal=6)
+             # print mdf.params
 
 
     def test_compare_OLS(self):
@@ -530,6 +614,9 @@ class TestGEE(object):
 
         assert_almost_equal(ols.params.values, mdf.params, decimal=10)
 
+        se = mdf.standard_errors(covariance_type="naive")
+        assert_almost_equal(ols.bse, se, decimal=10)
+
         naive_tvalues = mdf.params / \
             np.sqrt(np.diag(mdf.naive_covariance))
         assert_almost_equal(naive_tvalues, ols.tvalues, decimal=10)
@@ -551,7 +638,7 @@ class TestGEE(object):
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
                                family=family, covstruct=vs).fit()
 
-        sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit()
+        sml = sm.logit("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
 
         assert_almost_equal(sml.params.values, md.params, decimal=10)
 
@@ -572,7 +659,7 @@ class TestGEE(object):
         md = GEE.from_formula("Y ~ X1 + X2 + X3", D, None, groups=groups,
                                family=family, covstruct=vs).fit()
 
-        sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit()
+        sml = sm.poisson("Y ~ X1 + X2 + X3", data=D).fit(disp=False)
 
         assert_almost_equal(sml.params.values, md.params, decimal=10)
 

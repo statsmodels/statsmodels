@@ -130,7 +130,7 @@ class HoldIt(object):
                                   rtol=1e-16, atol=1e-16)
                 if not correct:
                     import warnings
-                    warnings.warm("inexact precision in "+d)
+                    warnings.warn("inexact precision in "+d, RuntimeWarning)
             #try iterating, if object array
             if not correct:
                 correlem =[np.all(data[d].item()[k] ==

@@ -18,6 +18,7 @@ from numpy.testing import (assert_almost_equal, assert_allclose, assert_raises,
 
 
 import statsmodels.stats.power as smp
+import warnings
 #from .test_weightstats import CheckPowerMixin
 from statsmodels.stats.tests.test_weightstats import Holder
 
@@ -741,7 +742,6 @@ def test_power_solver_warn():
         # this converges with scipy 0.11  ???
         # nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1, alternative='larger')
 
-        import warnings
         with warnings.catch_warnings():  # python >= 2.6
             warnings.simplefilter("ignore")
             val = nip.solve_power(0.1, nobs1=None, alpha=0.01, power=pow_, ratio=1,

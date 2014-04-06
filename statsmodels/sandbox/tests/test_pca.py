@@ -29,7 +29,7 @@ def check_pca_svd(pcares, pcasvdres):
     xred_svd, factors_svd, evals_svd, evecs_svd = pcasvdres
     assert_array_almost_equal(evals_svd, evals, 14)
     msign = (evecs/evecs_svd)[0]
-    assert_array_almost_equal(msign*evecs_svd, evecs, 14)
+    assert_array_almost_equal(msign*evecs_svd, evecs, 13)
     assert_array_almost_equal(msign*factors_svd, factors, 13)
     assert_array_almost_equal(xred_svd, xreduced, 13)
 

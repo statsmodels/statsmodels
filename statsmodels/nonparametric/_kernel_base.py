@@ -365,7 +365,7 @@ class EstimatorSettings(object):
         ``joblib.Parallel``.  Default is -1, meaning ``n_cores - 1``, with
         ``n_cores`` the number of available CPU cores.
         See the `joblib documentation
-        <http://packages.python.org/joblib/parallel.html>`_ for more details.
+        <https://pythonhosted.org/joblib/parallel.html>`_ for more details.
 
     Examples
     --------

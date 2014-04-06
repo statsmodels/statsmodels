@@ -2,7 +2,7 @@ from __future__ import absolute_import
 
 import numpy as np
 from scipy.signal import fftconvolve
-from .utils import _maybe_get_pandas_wrapper
+from ._utils import _maybe_get_pandas_wrapper
 
 def bkfilter(X, low=6, high=32, K=12):
     """
@@ -50,15 +50,26 @@ def bkfilter(X, low=6, high=32, K=12):
     Examples
     --------
     >>> import statsmodels.api as sm
-    >>> dta = sm.datasets.macrodata.load()
-    >>> X = dta.data['realinv']
-    >>> Y = sm.tsa.filters.bkfilter(X, 6, 24, 12)
+    >>> import pandas as pd
+    >>> dta = sm.datasets.macrodata.load_pandas().data
+    >>> dates = sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3')
+    >>> index = pd.DatetimeIndex(dates)
+    >>> dta.set_index(index, inplace=True)
+
+    >>> cycles = sm.tsa.filters.bkfilter(dta[['realinv']], 6, 24, 12)
+
+    >>> import matplotlib.pyplot as plt
+    >>> fig, ax = plt.subplots()
+    >>> cycles.plot(ax=ax, style=['r--', 'b-'])
+    >>> plt.show()
+
+    .. plot:: plots/bkf_plot.py
     """
     #TODO: change the docstring to ..math::?
     #TODO: allow windowing functions to correct for Gibb's Phenomenon?
     # adjust bweights (symmetrically) by below before demeaning
     # Lancosz Sigma Factors np.sinc(2*j/(2.*K+1))
-    _pandas_wrapper = _maybe_get_pandas_wrapper(X, K)
+    _pandas_wrapper = _maybe_get_pandas_wrapper(X, K, K)
     X = np.asarray(X)
     omega_1 = 2.*np.pi/high # convert from freq. to periodicity
     omega_2 = 2.*np.pi/low

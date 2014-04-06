@@ -30,7 +30,8 @@ Detailed examples can be found here:
 .. toctree::
     :maxdepth: 1
 
-    examples/generated/example_rlm
+    examples/notebooks/generated/robust_models_0
+    examples/notebooks/generated/robust_models_1
 
 Technical Documentation
 -----------------------

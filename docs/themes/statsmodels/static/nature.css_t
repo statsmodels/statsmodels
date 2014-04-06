@@ -266,3 +266,26 @@ div.viewcode-block:target {
     border-top: 1px solid #ac9;
     border-bottom: 1px solid #ac9;
 }
+
+/* For docstrings */
+
+.field-name {
+    white-space: nowrap;
+}
+
+.field-body {
+    margin-top: 2px;
+    margin-bottom: 2px;
+    max-width: 600px;
+}
+
+/* For notebooks */
+div.input_area>div.highlight>pre {
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+}
+
+div.output_area pre {
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+}

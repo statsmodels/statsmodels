@@ -22,13 +22,15 @@ patsy >= 0.1.0
     patsy.readthedocs.org
 
 
-cython >= 0.15.1
+cython >= 0.20.1
 
     http://cython.org/
 
     Cython is required if you are building the source from github. However,
     if you have are building from source distribution archive then the 
-    generated C files are included and Cython is not necessary.
+    generated C files are included and Cython is not necessary. If you are 
+    building for Python 3.4, then you must use Cython >= 0.20.1. Earlier 
+    versions may be ok for Python < 3.4.
 
 Optional Dependencies
 ---------------------
@@ -52,6 +54,9 @@ nose >= 1.0.0
 
     Nose is needed to run the tests.
 
+IPython >= 1.0
+
+    Needed to build the docs.
 
 Easy Install
 ------------

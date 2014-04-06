@@ -274,8 +274,9 @@ class Power(object):
 
         if not success == 1:
             import warnings
-            from statsmodels.tools.sm_exceptions import ConvergenceWarning
-            warnings.warn('finding solution failed', ConvergenceWarning)
+            from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
+                convergence_doc)
+            warnings.warn(convergence_doc, ConvergenceWarning)
 
         #attach fit_res, for reading only, should be needed only for debugging
         fit_res.insert(0, success)

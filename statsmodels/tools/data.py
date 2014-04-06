@@ -10,6 +10,23 @@ Compatibility tools for various data structure inputs
 
 import numpy as np
 
+def _check_period_index(x, freq="M"):
+    try:
+        from pandas import PeriodIndex, DatetimeIndex
+    except ImportError: # not sure min. version
+        PeriodIndex = DatetimeIndex # HACK
+    from statsmodels.tools.data import _is_using_pandas
+    if not _is_using_pandas(x, None):
+        raise ValueError("x must be a pandas object")
+    if not isinstance(x.index, (DatetimeIndex, PeriodIndex)):
+        raise ValueError("The index must be a DatetimeIndex or PeriodIndex")
+
+    from statsmodels.tsa.base.datetools import _infer_freq
+    inferred_freq = _infer_freq(x.index)
+    if not inferred_freq.startswith(freq):
+        raise ValueError("Expected frequency {}. Got {}".format(inferred_freq,
+                                                                freq))
+
 def have_pandas():
     try:
         import pandas

@@ -28,7 +28,7 @@
 # You can also deploy your own backend outside of matplotlib by
 # referring to the module name (which must be in the PYTHONPATH) as
 # 'module://my_backend'
-backend      : Qt4Agg
+backend      : Agg
 
 # if you are runing pyplot inside a GUI and your backend choice
 # conflicts, we will automatically try and find a compatible one for
@@ -118,7 +118,7 @@ font.family         : monospace
 #font.sans-serif     : Bitstream Vera Sans, Lucida Grande, Verdana, Geneva, Lucid, Arial, Helvetica, Avant Garde, sans-serif
 #font.cursive        : Apple Chancery, Textile, Zapf Chancery, Sand, cursive
 #font.fantasy        : Comic Sans MS, Chicago, Charcoal, Impact, Western, fantasy
-font.monospace      : Andale Mono, Nimbus Mono L, Courier New, Courier, Fixed, Terminal, monospace
+font.monospace       : Andale Mono, Nimbus Mono L, Courier New, Courier, Fixed, Terminal, Bitstream Vera Sans Mono, Ubuntu Mono, monospace
 ### TEXT
 # text properties used by text.Text.  See
 # http://matplotlib.sourceforge.net/api/artist_api.html#module-matplotlib.text for more

@@ -2,7 +2,8 @@ import numpy as np
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
 from scipy import stats
-from statsmodels.tools.tools import clean0, rank, fullrank
+from statsmodels.tools.tools import clean0, fullrank
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 
 #TODO: should this be public if it's just a container?
@@ -285,7 +286,7 @@ def contrastfromcols(L, D, pseudo=None):
     if len(Lp.shape) == 1:
         Lp.shape = (n, 1)
 
-    if rank(Lp) != Lp.shape[1]:
+    if np_matrix_rank(Lp) != Lp.shape[1]:
         Lp = fullrank(Lp)
         C = np.dot(pseudo, Lp).T
 
