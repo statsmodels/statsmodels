@@ -10,14 +10,11 @@ import numpy as np
 import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
-<<<<<<< HEAD
     corr_nearest, corr_clipped, cov_nearest,
     _project_correlation_factors, corr_nearest_factor, _spg_optim,
     corr_thresholded, cov_nearest_factor_homog, FactoredPSDMatrix)
-=======
-                 corr_nearest, corr_clipped, cov_nearest)
 import warnings
->>>>>>> upstream/master
+
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays
