@@ -291,20 +291,51 @@ class Test_Factor(object):
 
         x = np.random.normal(size=dm)
         rslt = _spg_optim(obj, grad, x, project)
-        xnew = rslt.X
+        xnew = rslt.params
         assert(obj(xnew) < 1e-4)
 
     def test_decorrelate(self):
 
-        dg = np.linspace(1, 2, 30)
-        root = np.random.normal(size=(30, 4))
-        mat = np.diag(dg) + np.dot(root, root.T)
-        rmat = np.linalg.cholesky(mat)
+        d = 30
+        dg = np.linspace(1, 2, d)
+        root = np.random.normal(size=(d, 4))
         fac = FactoredPSDMatrix(dg, root)
+        mat = fac.to_matrix()
+        rmat = np.linalg.cholesky(mat)
         dcr = fac.decorrelate(rmat)
         idm = np.dot(dcr, dcr.T)
-        assert_almost_equal(idm, np.eye(30))
+        assert_almost_equal(idm, np.eye(d))
 
+        rhs = np.random.normal(size=(d, 5))
+        mat2 = np.dot(rhs.T, np.linalg.solve(mat, rhs))
+        mat3 = fac.decorrelate(rhs)
+        mat3 = np.dot(mat3.T, mat3)
+        assert_almost_equal(mat2, mat3)
+
+    def test_logdet(self):
+
+        d = 30
+        dg = np.linspace(1, 2, d)
+        root = np.random.normal(size=(d, 4))
+        fac = FactoredPSDMatrix(dg, root)
+        mat = fac.to_matrix()
+
+        _, ld = np.linalg.slogdet(mat)
+        ld2 = fac.logdet()
+
+        assert_almost_equal(ld, ld2)
+
+    def test_solve(self):
+
+        d = 30
+        dg = np.linspace(1, 2, d)
+        root = np.random.normal(size=(d, 2))
+        fac = FactoredPSDMatrix(dg, root)
+        rhs = np.random.normal(size=(d, 5))
+        sr1 = fac.solve(rhs)
+        mat = fac.to_matrix()
+        sr2 = np.linalg.solve(mat, rhs)
+        assert_almost_equal(sr1, sr2)
 
     def test_cov_nearest_factor_homog(self):
 
