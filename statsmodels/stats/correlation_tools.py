@@ -324,8 +324,8 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
     Returns
     -------
     rslt : Bunch
-        rslt.X is the final iterate, other fields describe convergence
-        status.
+        rslt.params is the final iterate, other fields describe
+        convergence status.
 
     Notes
     -----
@@ -539,8 +539,8 @@ class FactoredPSDMatrix:
 def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
                         lam_max=1e30, maxiter=1000):
     """
-    Attempt to find the nearest correlation matrix with factor
-    structure to a given square matrix.
+    Find the nearest correlation matrix with factor structure to a
+    given square matrix.
 
     Parameters
     ----------
