@@ -497,7 +497,7 @@ class FactoredPSDMatrix:
     def solve(self, rhs):
         """
         Solve a linear system of equations with factor-structured
-        coefficients..
+        coefficients.
 
         Parameters
         ----------
