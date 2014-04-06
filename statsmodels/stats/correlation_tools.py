@@ -349,39 +349,39 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
 
     lam = min(10*lam_min, lam_max)
 
-    X = start
-    gval = grad(X)
+    params = start.copy()
+    gval = grad(params)
 
-    obj_hist = [func(X),]
+    obj_hist = [func(params),]
 
     for itr in range(int(maxiter)):
 
         # Check convergence
-        df = X - gval
+        df = params - gval
         project(df)
-        df -= X
+        df -= params
         if np.max(np.abs(df)) < ctol:
-            return Bunch(**{"Converged": True, "X": X,
+            return Bunch(**{"Converged": True, "params": params,
                             "Message": "Converged successfully"})
 
         # The line search direction
-        d = X - lam*gval
+        d = params - lam*gval
         project(d)
-        d -= X
+        d -= params
 
         # Carry out the nonmonotone line search
-        alpha, X1, fval, gval1 = _nmono_linesearch(func, grad, X, d,
+        alpha, params1, fval, gval1 = _nmono_linesearch(func, grad, params, d,
                                                  obj_hist, M=M,
                                                  sig1=sig1,
                                                  sig2=sig2,
                                                  gam=gam,
                                                  maxiter=maxiter_nmls)
         if alpha is None:
-            return Bunch(**{"Converged": False, "X": X, "Message":
+            return Bunch(**{"Converged": False, "params": params, "Message":
                             "Failed in nmono_linesearch"})
 
         obj_hist.append(fval)
-        s = X1 - X
+        s = params1 - params
         y = gval1 - gval
 
         sy = (s*y).sum()
@@ -391,10 +391,10 @@ def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
             ss = (s*s).sum()
             lam = max(lam_min, min(ss/sy, lam_max))
 
-        X = X1
+        params = params1
         gval = gval1
 
-    return Bunch(**{"Converged": False, "X": X,
+    return Bunch(**{"Converged": False, "params": params,
                     "Message": "spg_optim did not converge"})
 
 
@@ -450,9 +450,11 @@ class FactoredPSDMatrix:
         self.factor = u
         self.scales = s**2
 
+
     def to_matrix(self):
         """
-        Returns the factor-structured matrix as a full (square).
+        Returns the PSD matrix represented by this instance as a full
+        (square) matrix.
         """
         return np.diag(self.diag) + np.dot(self.root, self.root.T)
 
@@ -487,13 +489,54 @@ class FactoredPSDMatrix:
 
         # Decorrelate in the general case.
         rhs = rhs / np.sqrt(self.diag)[:, None]
-        rhs1 = rhs.copy()
-        rhs1 = np.dot(self.factor.T, rhs1)
+        rhs1 = np.dot(self.factor.T, rhs)
         rhs1 *= qval[:, None]
         rhs1 = np.dot(self.factor, rhs1)
         rhs += rhs1
 
         return rhs
+
+    def solve(self, rhs):
+        """
+        Solve a linear system of equations with factor-structured
+        coefficients..
+
+        Parameters
+        ----------
+        rhs : array-like
+            A 2 dimensional array with the same number of rows as the
+            PSD matrix represented by the class instance.
+
+        Returns
+        -------
+        C^{-1} * rhs, where C is the covariance matrix represented
+        by this class instance.
+
+        Notes
+        -----
+        This function exploits the factor structure for efficiency.
+        """
+
+        qval = -self.scales / (1 + self.scales)
+        dr = np.sqrt(self.diag)
+        rhs = rhs / dr[:, None]
+        mat = qval[:, None] * np.dot(self.factor.T, rhs)
+        rhs = rhs + np.dot(self.factor, mat)
+        return rhs / dr[:, None]
+
+    def logdet(self):
+        """
+        Returns the logarithm of the determinant of a
+        factor-structured matrix.
+        """
+
+        logdet = np.sum(np.log(self.diag))
+        logdet += np.sum(np.log(self.scales))
+        logdet += np.sum(np.log(1 + 1 / self.scales))
+
+        return logdet
+
+
 
 def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
                         lam_max=1e30, maxiter=1000):
@@ -630,11 +673,11 @@ def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
             return fval
 
     rslt = _spg_optim(func, grad, X, _project_correlation_factors)
-    root = rslt.X
+    root = rslt.params
     diag = 1 - (root**2).sum(1)
     soln = FactoredPSDMatrix(diag, root)
     rslt.corr = soln
-    del rslt.X
+    del rslt.params
     return rslt
 
 
