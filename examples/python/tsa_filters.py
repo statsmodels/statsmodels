@@ -1,6 +1,7 @@
 
 ## Time Series Filters
 
+from __future__ import print_function
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -11,7 +12,7 @@ dta = sm.datasets.macrodata.load_pandas().data
 
 
 index = pd.Index(sm.tsa.datetools.dates_from_range('1959Q1', '2009Q3'))
-print index
+print(index)
 
 
 dta.index = index
@@ -19,10 +20,10 @@ del dta['year']
 del dta['quarter']
 
 
-print sm.datasets.macrodata.NOTE
+print(sm.datasets.macrodata.NOTE)
 
 
-print dta.head(10)
+print(dta.head(10))
 
 
 fig = plt.figure(figsize=(12,8))
@@ -111,14 +112,14 @@ bk_cycles.plot(ax=ax, style=['r--', 'b-']);
 
 # The CF filter is appropriate for series that may follow a random walk.
 
-print sm.tsa.stattools.adfuller(dta['unemp'])[:3]
+print(sm.tsa.stattools.adfuller(dta['unemp'])[:3])
 
 
-print sm.tsa.stattools.adfuller(dta['infl'])[:3]
+print(sm.tsa.stattools.adfuller(dta['infl'])[:3])
 
 
 cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl","unemp"]])
-print cf_cycles.head(10)
+print(cf_cycles.head(10))
 
 
 fig = plt.figure(figsize=(14,10))

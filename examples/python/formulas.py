@@ -6,7 +6,7 @@
 # * [Patsy formula language description](http://patsy.readthedocs.org/)
 #
 # ## Loading modules and functions
-
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 
@@ -35,7 +35,7 @@ sm.OLS.from_formula
 
 # All of the lower case models accept ``formula`` and ``data`` arguments, whereas upper case ones take ``endog`` and ``exog`` design matrices. ``formula`` accepts a string which describes the model in terms of a ``patsy`` formula. ``data`` takes a [pandas](http://pandas.pydata.org/) data frame or any other data structure that defines a ``__getitem__`` for variable names like a structured array or a dictionary of variables.
 #
-# ``dir(sm.formula)`` will print a list of available models.
+# ``dir(sm.formula)`` will print(a list of available models.
 #
 # Formula-compatible models have the following generic call signature: ``(formula, data, subset=None, *args, **kwargs)``
 
@@ -55,7 +55,7 @@ df.head()
 
 mod = ols(formula='Lottery ~ Literacy + Wealth + Region', data=df)
 res = mod.fit()
-print res.summary()
+print(res.summary())
 
 
 # ## Categorical variables
@@ -65,7 +65,7 @@ print res.summary()
 # If *Region* had been an integer variable that we wanted to treat explicitly as categorical, we could have done so by using the ``C()`` operator:
 
 res = ols(formula='Lottery ~ Literacy + Wealth + C(Region)', data=df).fit()
-print res.params
+print(res.params)
 
 
 # Patsy's mode advanced features for categorical variables are discussed in: [Patsy: Contrast Coding Systems for categorical variables](contrasts.html)
@@ -79,7 +79,7 @@ print res.params
 # The "-" sign can be used to remove columns/variables. For instance, we can remove the intercept from a model by:
 
 res = ols(formula='Lottery ~ Literacy + Wealth + C(Region) -1 ', data=df).fit()
-print res.params
+print(res.params)
 
 
 # ### Multiplicative interactions
@@ -88,8 +88,8 @@ print res.params
 
 res1 = ols(formula='Lottery ~ Literacy : Wealth - 1', data=df).fit()
 res2 = ols(formula='Lottery ~ Literacy * Wealth - 1', data=df).fit()
-print res1.params, '\n'
-print res2.params
+print(res1.params, '\n')
+print(res2.params)
 
 
 # Many other things are possible with operators. Please consult the [patsy docs](https://patsy.readthedocs.org/en/latest/formulas.html) to learn more.
@@ -99,7 +99,7 @@ print res2.params
 # You can apply vectorized functions to the variables in your model:
 
 res = sm.ols(formula='Lottery ~ np.log(Literacy)', data=df).fit()
-print res.params
+print(res.params)
 
 
 # Define a custom function:
@@ -107,7 +107,7 @@ print res.params
 def log_plus_1(x):
     return np.log(x) + 1.
 res = sm.ols(formula='Lottery ~ log_plus_1(Literacy)', data=df).fit()
-print res.params
+print(res.params)
 
 
 # Any function that is in the calling namespace is available to the formula.
@@ -122,17 +122,17 @@ print res.params
 import patsy
 f = 'Lottery ~ Literacy * Wealth'
 y,X = patsy.dmatrices(f, df, return_type='dataframe')
-print y[:5]
-print X[:5]
+print(y[:5])
+print(X[:5])
 
 
 # To generate pandas data frames:
 
 f = 'Lottery ~ Literacy * Wealth'
 y,X = patsy.dmatrices(f, df, return_type='dataframe')
-print y[:5]
-print X[:5]
+print(y[:5])
+print(X[:5])
 
 
-print sm.OLS(y, X).fit().summary()
+print(sm.OLS(y, X).fit().summary())
 

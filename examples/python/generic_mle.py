@@ -9,7 +9,7 @@
 # The `GenericLikelihoodModel` class eases the process by providing tools such as automatic numeric differentiation and a unified interface to ``scipy`` optimization functions. Using ``statsmodels``, users can fit new MLE models simply by "plugging-in" a log-likelihood function. 
 
 # ## Example 1: Probit model
-
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 import statsmodels.api as sm
@@ -21,8 +21,8 @@ from statsmodels.base.model import GenericLikelihoodModel
 data = sm.datasets.spector.load_pandas()
 exog = data.exog
 endog = data.endog
-print sm.datasets.spector.NOTE
-print data.exog.head()
+print(sm.datasets.spector.NOTE)
+print(data.exog.head())
 
 
 # Them, we add a constant to the matrix of regressors:
@@ -40,10 +40,10 @@ class MyProbit(GenericLikelihoodModel):
         return stats.norm.logcdf(q*np.dot(exog, params)).sum()
 
 
-# Estimate the model and print a summary:
+# Estimate the model and print(a summary:
 
 sm_probit_manual = MyProbit(endog, exog).fit()
-print sm_probit_manual.summary()
+print(sm_probit_manual.summary())
 
 
 # Compare your Probit implementation to ``statsmodels``' "canned" implementation:
@@ -51,12 +51,12 @@ print sm_probit_manual.summary()
 sm_probit_canned = sm.Probit(endog, exog).fit()
 
 
-print sm_probit_canned.params
-print sm_probit_manual.params
+print(sm_probit_canned.params)
+print(sm_probit_manual.params)
 
 
-print sm_probit_canned.cov_params()
-print sm_probit_manual.cov_params()
+print(sm_probit_canned.cov_params())
+print(sm_probit_manual.cov_params())
 
 
 # Notice that the ``GenericMaximumLikelihood`` class provides automatic differentiation, so we didn't have to provide Hessian or Score functions in order to calculate the covariance estimates.
@@ -135,7 +135,7 @@ class NBin(GenericLikelihoodModel):
 # The [Medpar](http://vincentarelbundock.github.com/Rdatasets/doc/COUNT/medpar.html)
 # dataset is hosted in CSV format at the [Rdatasets repository](http://vincentarelbundock.github.com/Rdatasets). We use the ``read_csv``
 # function from the [Pandas library](http://pandas.pydata.org) to load the data
-# in memory. We then print the first few columns: 
+# in memory. We then print(the first few columns: 
 # 
 
 import statsmodels.api as sm
@@ -165,17 +165,17 @@ res = mod.fit()
 
 #  Extract parameter estimates, standard errors, p-values, AIC, etc.:
 
-print 'Parameters: ', res.params
-print 'Standard errors: ', res.bse
-print 'P-values: ', res.pvalues
-print 'AIC: ', res.aic
+print('Parameters: ', res.params)
+print('Standard errors: ', res.bse)
+print('P-values: ', res.pvalues)
+print('AIC: ', res.aic)
 
 
 # As usual, you can obtain a full list of available information by typing
 # ``dir(res)``.
 # We can also look at the summary of the estimation results.
 
-print res.summary()
+print(res.summary())
 
 
 # ### Testing
@@ -183,13 +183,13 @@ print res.summary()
 # We can check the results by using the statsmodels implementation of the Negative Binomial model, which uses the analytic score function and Hessian.
 
 res_nbin = sm.NegativeBinomial(y, X).fit(disp=0)
-print res_nbin.summary()
+print(res_nbin.summary())
 
 
-print res_nbin.params
+print(res_nbin.params)
 
 
-print res_nbin.bse
+print(res_nbin.bse)
 
 
 # Or we could compare them to results obtained using the MASS implementation for R:

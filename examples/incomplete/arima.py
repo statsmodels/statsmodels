@@ -1,3 +1,4 @@
+from __future__ import print_function
 from statsmodels.datasets.macrodata import load_pandas
 from statsmodels.tsa.base.datetools import dates_from_range
 from statsmodels.tsa.arima_model import ARIMA
@@ -13,7 +14,7 @@ dates = dates_from_range('1959q1', '2009q3')
 cpi.index = dates
 
 res = ARIMA(cpi, (1, 1, 1), freq='Q').fit()
-print res.summary()
+print(res.summary())
 
 # we can look at the series
 cpi.diff().plot()

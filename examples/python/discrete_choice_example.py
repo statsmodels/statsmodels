@@ -4,7 +4,7 @@
 ### Fair's Affair data
 
 # A survey of women only was conducted in 1974 by *Redbook* asking about extramarital affairs.
-
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -12,20 +12,20 @@ import statsmodels.api as sm
 from statsmodels.formula.api import logit, probit, poisson, ols
 
 
-print sm.datasets.fair.SOURCE
+print(sm.datasets.fair.SOURCE)
 
 
-print sm.datasets.fair.NOTE
+print(sm.datasets.fair.NOTE)
 
 
 dta = sm.datasets.fair.load_pandas().data
 
 
 dta['affair'] = (dta['affairs'] > 0).astype(float)
-print dta.head(10)
+print(dta.head(10))
 
 
-print dta.describe()
+print(dta.describe())
 
 
 affair_mod = logit("affair ~ occupation + educ + occupation_husb" 
@@ -33,7 +33,7 @@ affair_mod = logit("affair ~ occupation + educ + occupation_husb"
                    " + religious", dta).fit()
 
 
-print affair_mod.summary()
+print(affair_mod.summary())
 
 
 # How well are we predicting?
@@ -44,11 +44,11 @@ affair_mod.pred_table()
 # The coefficients of the discrete choice model do not tell us much. What we're after is marginal effects.
 
 mfx = affair_mod.get_margeff()
-print mfx.summary()
+print(mfx.summary())
 
 
 respondent1000 = dta.ix[1000]
-print respondent1000
+print(respondent1000)
 
 
 resp = dict(zip(range(1,9), respondent1000[["occupation", "educ", 
@@ -56,11 +56,11 @@ resp = dict(zip(range(1,9), respondent1000[["occupation", "educ",
                                             "age", "yrs_married", "children", 
                                             "religious"]].tolist()))
 resp.update({0 : 1})
-print resp
+print(resp)
 
 
 mfx = affair_mod.get_margeff(atexog=resp)
-print mfx.summary()
+print(mfx.summary())
 
 
 affair_mod.predict(respondent1000)
@@ -96,23 +96,23 @@ ax.legend();
 
 #### Genarlized Linear Model Example
 
-print sm.datasets.star98.SOURCE
+print(sm.datasets.star98.SOURCE)
 
 
-print sm.datasets.star98.DESCRLONG
+print(sm.datasets.star98.DESCRLONG)
 
 
-print sm.datasets.star98.NOTE
+print(sm.datasets.star98.NOTE)
 
 
 dta = sm.datasets.star98.load_pandas().data
-print dta.columns
+print(dta.columns)
 
 
-print dta[['NABOVE', 'NBELOW', 'LOWINC', 'PERASIAN', 'PERBLACK', 'PERHISP', 'PERMINTE']].head(10)
+print(dta[['NABOVE', 'NBELOW', 'LOWINC', 'PERASIAN', 'PERBLACK', 'PERHISP', 'PERMINTE']].head(10))
 
 
-print dta[['AVYRSEXP', 'AVSALK', 'PERSPENK', 'PTRATIO', 'PCTAF', 'PCTCHRT', 'PCTYRRND']].head(10)
+print(dta[['AVYRSEXP', 'AVSALK', 'PERSPENK', 'PTRATIO', 'PCTAF', 'PCTCHRT', 'PCTYRRND']].head(10))
 
 
 formula = 'NABOVE + NBELOW ~ LOWINC + PERASIAN + PERBLACK + PERHISP + PCTCHRT '
@@ -134,7 +134,7 @@ from statsmodels.formula.api import glm
 glm_mod = glm(formula, dta, family=sm.families.Binomial()).fit()
 
 
-print glm_mod.summary()
+print(glm_mod.summary())
 
 
 # The number of trials 
@@ -152,16 +152,16 @@ exog = glm_mod.model.data.orig_exog # get the dataframe
 
 
 means25 = exog.mean()
-print means25
+print(means25)
 
 
 means25['LOWINC'] = exog['LOWINC'].quantile(.25)
-print means25
+print(means25)
 
 
 means75 = exog.mean()
 means75['LOWINC'] = exog['LOWINC'].quantile(.75)
-print means75
+print(means75)
 
 
 resp25 = glm_mod.predict(means25)
@@ -171,7 +171,7 @@ diff = resp75 - resp25
 
 # The interquartile first difference for the percentage of low income households in a school district is:
 
-print "%2.4f%%" % (diff[0]*100)
+print("%2.4f%%" % (diff[0]*100))
 
 
 nobs = glm_mod.nobs

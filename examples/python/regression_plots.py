@@ -1,6 +1,8 @@
 
 ## Regression Plots
 
+from __future__ import print_function
+from statsmodels.compat import lzip
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -23,7 +25,7 @@ prestige.head()
 prestige_model = ols("prestige ~ income + education", data=prestige).fit()
 
 
-print prestige_model.summary()
+print(prestige_model.summary())
 
 
 #### Influence plots
@@ -85,7 +87,7 @@ fig = sm.graphics.plot_partregress("prestige", "income", ["education"], data=pre
 
 subset = ~prestige.index.isin(["conductor", "RR.engineer", "minister"])
 prestige_model2 = ols("prestige ~ income + education", data=prestige, subset=subset).fit()
-print prestige_model2.summary()
+print(prestige_model2.summary())
 
 
 # For a quick check of all the regressors, you can use plot_partregress_grid. These plots will not label the <br />
@@ -156,7 +158,7 @@ dta = sm.datasets.statecrime.load_pandas().data
 
 
 crime_model = ols("murder ~ urban + poverty + hs_grad + single", data=dta).fit()
-print crime_model.summary()
+print(crime_model.summary())
 
 
 #### Partial Regression Plots
@@ -192,11 +194,11 @@ from statsmodels.formula.api import rlm
 
 rob_crime_model = rlm("murder ~ urban + poverty + hs_grad + single", data=dta,
                       M=sm.robust.norms.TukeyBiweight(3)).fit(conv="weights")
-print rob_crime_model.summary()
+print(rob_crime_model.summary())
 
 
 #rob_crime_model = rlm("murder ~ pctmetro + poverty + pcths + single", data=dta, M=sm.robust.norms.TukeyBiweight()).fit(conv="weights")
-#print rob_crime_model.summary()
+#print(rob_crime_model.summary())
 
 
 # There aren't yet an influence diagnostics as part of RLM, but we can recreate them. (This depends on the status of [issue #888](https://github.com/statsmodels/statsmodels/issues/808))
@@ -218,7 +220,7 @@ from statsmodels.graphics import utils
 fig, ax = plt.subplots(figsize=(12,8))
 ax.plot(resid2[idx], hat_matrix_diag, 'o')
 ax = utils.annotate_axes(range(nobs), labels=rob_crime_model.model.data.row_labels[idx],
-                    points=zip(resid2[idx], hat_matrix_diag), offset_points=[(-5,5)]*nobs,
+                    points=lzip(resid2[idx], hat_matrix_diag), offset_points=[(-5,5)]*nobs,
                     size="large", ax=ax)
 ax.set_xlabel("resid2")
 ax.set_ylabel("leverage")

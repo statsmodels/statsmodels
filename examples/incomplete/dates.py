@@ -25,7 +25,7 @@ pandas_ar_res = ar_model.fit(maxlag=9, method='mle', disp=-1)
 
 # Let's do some out-of-sample prediction
 pred = pandas_ar_res.predict(start='2005', end='2015')
-print pred
+print(pred)
 
 # Using explicit dates
 # --------------------
@@ -33,12 +33,12 @@ print pred
 ar_model = sm.tsa.AR(data.endog, dates=dates, freq='A')
 ar_res = ar_model.fit(maxlag=9, method='mle', disp=-1)
 pred = ar_res.predict(start='2005', end='2015')
-print pred
+print(pred)
 
 # This just returns a regular array, but since the model has date information
 # attached, you can get the prediction dates in a roundabout way.
 
-print ar_res.data.predict_dates
+print(ar_res.data.predict_dates)
 
 # This attribute only exists if predict has been called. It holds the dates
 # associated with the last call to predict.
