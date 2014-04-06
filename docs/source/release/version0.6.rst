@@ -105,6 +105,8 @@ We added a naive seasonal decomposition tool in the same vein as R's ``decompose
 Other important new features
 ----------------------------
 
+* The Kalman filter Cython code underlying AR(I)MA estimation has been substantially optimized. You can expect speed-ups of one to two orders of magnitude.
+
 * Added :func:`sm.tsa.arma_order_select_ic`. A convenience function to quickly get the information criteria for use in tentative order selection of ARMA processes.
 
 * Plotting functions for timeseries is now imported under the ``sm.tsa.graphics`` namespace in addition to ``sm.graphics.tsa``.
