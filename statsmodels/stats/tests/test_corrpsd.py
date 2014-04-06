@@ -11,8 +11,8 @@ import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
     corr_nearest, corr_clipped, cov_nearest,
-    _project_correlation_factors, corr_nearest_factor, spg_optim,
-    nmono_linesearch, corr_thresholded, cov_nearest_eye_factor)
+    _project_correlation_factors, corr_nearest_factor, _spg_optim,
+    corr_thresholded, cov_nearest_factor_homog, FactoredPSDMatrix)
 
 import warnings
 
@@ -227,14 +227,14 @@ class Test_Factor(object):
             for j in range(dm):
                 X[:,j] = np.sin(x*(j+1))
             _project_correlation_factors(X)
+            X *= 0.7
             mat = np.dot(X, X.T)
-            np.fill_diagonal(mat, 1)
+            np.fill_diagonal(mat, 1.)
 
             # Try to recover the structure
             rslt = corr_nearest_factor(mat, dm)
-            X1 = rslt["corr"]
-            mat1 = np.dot(X1, X1.T)
-            np.fill_diagonal(mat1, 1)
+            C = rslt.corr
+            mat1 = C.to_matrix()
 
             assert(np.abs(mat - mat1).max() < 1e-3)
 
@@ -254,6 +254,7 @@ class Test_Factor(object):
 
             # Get the correlation matrix
             _project_correlation_factors(X)
+            X *= 0.7
             mat = np.dot(X, X.T)
             np.fill_diagonal(mat, 1)
 
@@ -261,15 +262,14 @@ class Test_Factor(object):
             mat *= (np.abs(mat) >= 0.4)
             smat = sparse.csr_matrix(mat)
 
-            fac_dense = corr_nearest_factor(smat, dm)["corr"]
-            mat_dense = np.dot(fac_dense, fac_dense.T)
-            np.fill_diagonal(mat_dense, 1)
+            fac_dense = corr_nearest_factor(smat, dm).corr
+            mat_dense = fac_dense.to_matrix()
 
-            fac_sparse = corr_nearest_factor(smat, dm)["corr"]
-            mat_sparse = np.dot(fac_sparse, fac_sparse.T)
-            np.fill_diagonal(mat_sparse, 1)
+            fac_sparse = corr_nearest_factor(smat, dm).corr
+            mat_sparse = fac_sparse.to_matrix()
 
-            assert_allclose(mat_dense, mat_sparse, rtol=0.25, atol=1e-3)
+            assert_allclose(mat_dense, mat_sparse, rtol=0.25,
+                            atol=1e-3)
 
 
     # Test on a quadratic function.
@@ -291,12 +291,23 @@ class Test_Factor(object):
             return x
 
         x = np.random.normal(size=dm)
-        rslt = spg_optim(obj, grad, x, project)
-        xnew = rslt["X"]
+        rslt = _spg_optim(obj, grad, x, project)
+        xnew = rslt.X
         assert(obj(xnew) < 1e-4)
 
+    def test_decorrelate(self):
 
-    def test_cov_nearest_eye_factor(self):
+        dg = np.linspace(1, 2, 30)
+        root = np.random.normal(size=(30, 4))
+        mat = np.diag(dg) + np.dot(root, root.T)
+        rmat = np.linalg.cholesky(mat)
+        fac = FactoredPSDMatrix(dg, root)
+        dcr = fac.decorrelate(rmat)
+        idm = np.dot(dcr, dcr.T)
+        assert_almost_equal(idm, np.eye(30))
+
+
+    def test_cov_nearest_factor_homog(self):
 
         d = 100
 
@@ -311,14 +322,14 @@ class Test_Factor(object):
             np.fill_diagonal(mat, np.diag(mat) + 3.1)
 
             # Try to recover the structure
-            k,f = cov_nearest_eye_factor(mat, dm)
-            mat1 = np.dot(f, f.T) + k*np.eye(d)
+            rslt = cov_nearest_factor_homog(mat, dm)
+            mat1 = rslt.to_matrix()
 
             assert(np.abs(mat - mat1).max() < 1e-4)
 
 
     # Check that dense and sparse inputs give the same result
-    def test_cov_nearest_eye_factor_sparse(self):
+    def test_cov_nearest_factor_homog_sparse(self):
 
         d = 100
 
@@ -333,13 +344,13 @@ class Test_Factor(object):
             np.fill_diagonal(mat, np.diag(mat) + 3.1)
 
             # Fit to dense
-            k,f = cov_nearest_eye_factor(mat, dm)
-            mat1 = np.dot(f, f.T) + k*np.eye(d)
+            rslt = cov_nearest_factor_homog(mat, dm)
+            mat1 = rslt.to_matrix()
 
             # Fit to sparse
             smat = sparse.csr_matrix(mat)
-            k,f = cov_nearest_eye_factor(smat, dm)
-            mat2 = np.dot(f, f.T) + k*np.eye(d)
+            rslt = cov_nearest_factor_homog(smat, dm)
+            mat2 = rslt.to_matrix()
 
             assert_allclose(mat1, mat2, rtol=0.25, atol=1e-3)
 

@@ -218,8 +218,8 @@ def cov_nearest(cov, method='clipped', threshold=1e-15, n_fact=100,
     else:
         return cov_
 
-def nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
-                     gam=1e-4, maxit=100):
+def _nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1,
+                      sig2=0.9, gam=1e-4, maxiter=100):
     """
     Implements the non-monotone line search of Grippo et al. (1986),
     as described in Birgin, Martinez and Raydan (2013).
@@ -245,7 +245,7 @@ def nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
         Tuning parameter, see references for details.
     gam : real
         Tuning parameter, see references for details.
-    maxit : positive integer
+    maxiter : positive integer
         The maximum number of iterations; returns Nones if convergence
         does not occur by this point
 
@@ -282,7 +282,7 @@ def nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
     last_obval = obj(x)
     obj_max = max(obj_hist[-M:])
 
-    for iter in range(maxit):
+    for iter in range(maxiter):
 
         obval = obj(x + alpha*d)
         g = grad(x)
@@ -303,9 +303,9 @@ def nmono_linesearch(obj, grad, x, d, obj_hist, M=10, sig1=0.1, sig2=0.9,
     return None, None, None, None
 
 
-def spg_optim(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
-              maxit_nmls=200, lam_min=1e-30, lam_max=1e30, sig1=0.1,
-              sig2=0.9, gam=1e-4):
+def _spg_optim(func, grad, start, project, maxiter=1e4, M=10,
+               ctol=1e-3, maxiter_nmls=200, lam_min=1e-30,
+               lam_max=1e30, sig1=0.1, sig2=0.9, gam=1e-4):
     """
     Implements the spectral projected gradient method for minimizing a
     differentiable function on a convex domain.
@@ -318,16 +318,16 @@ def spg_optim(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
         The gradient of the objective function
     start : array_like
         The starting point
-    project : array_like
+    project : function
         In-place projection of the argument to the domain
         of func.
     ... See notes regarding additional arguments
 
     Returns
     -------
-    rslt : dict
-        rslt['X'] is the final iterate, other fields describe
-        convergence status.
+    rslt : Bunch
+        rslt.X is the final iterate, other fields describe convergence
+        status.
 
     Notes
     -----
@@ -335,8 +335,8 @@ def spg_optim(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
     gauranteed algorithm for computing a global minimizer is known.
 
     There are a number of tuning parameters, but these generally
-    should not be changed except for maxit (positive integer) and
-    ctol (small positive real).  See the Birgin et al reference for
+    should not be changed except for `maxiter` (positive integer) and
+    `ctol` (small positive real).  See the Birgin et al reference for
     more information about the tuning parameters.
 
     Reference
@@ -354,14 +354,15 @@ def spg_optim(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
 
     obj_hist = [func(X),]
 
-    for itr in range(int(maxit)):
+    for itr in range(int(maxiter)):
 
         # Check convergence
         df = X - gval
         project(df)
         df -= X
         if np.max(np.abs(df)) < ctol:
-            return {"Converged": True, "X": X, "Message": "Converged successfully"}
+            return Bunch(**{"Converged": True, "X": X,
+                            "Message": "Converged successfully"})
 
         # The line search direction
         d = X - lam*gval
@@ -369,14 +370,15 @@ def spg_optim(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
         d -= X
 
         # Carry out the nonmonotone line search
-        alpha, X1, fval, gval1 = nmono_linesearch(func, grad, X, d,
-                                                  obj_hist, M=M,
-                                                  sig1=sig1,
-                                                  sig2=sig2,
-                                                  gam=gam,
-                                                  maxit=maxit_nmls)
+        alpha, X1, fval, gval1 = _nmono_linesearch(func, grad, X, d,
+                                                 obj_hist, M=M,
+                                                 sig1=sig1,
+                                                 sig2=sig2,
+                                                 gam=gam,
+                                                 maxiter=maxiter_nmls)
         if alpha is None:
-            return {"Converged": False, "X": X, "Message": "Failed in nmono_linesearch"}
+            return Bunch(**{"Converged": False, "X": X, "Message":
+                            "Failed in nmono_linesearch"})
 
         obj_hist.append(fval)
         s = X1 - X
@@ -392,7 +394,8 @@ def spg_optim(func, grad, start, project, maxit=1e4, M=10, ctol=1e-3,
         X = X1
         gval = gval1
 
-    return {"Converged": False, "X": X, "Message": "spg_optim did not converge"}
+    return Bunch(**{"Converged": False, "X": X,
+                    "Message": "spg_optim did not converge"})
 
 
 def _project_correlation_factors(X):
@@ -405,43 +408,126 @@ def _project_correlation_factors(X):
     nm = np.sqrt((X*X).sum(1))
     ii = np.flatnonzero(nm > 1)
     if len(ii) > 0:
-        X[ii,:] /= nm[ii][:,None]
+        X[ii,:] /= nm[ii][:, None]
 
 
-def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
-                        lam_max=1e30, maxit=1000):
+#TODO does this belong in a tools module somewhere?
+class Bunch(object):
+
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+
+
+class FactoredPSDMatrix:
     """
-    Attempts to find the nearest correlation matrix with factor
-    structure to a given square matrix, see notes below for details.
+    Representation of a positive semidefinite matrix in factored form.
+
+    The representation is constructed based on a vector `diag` and
+    rectangular matrix `root`, such that the PSD matrix represented by
+    the class instance is Diag + root * root', where Diag is the
+    square diagonal matrix with `diag` on its main diagonal.
 
     Parameters
     ----------
-    mat : square array
+    diag : 1d array-like
+        See above
+    root : 2d array-like
+        See above
+
+    Notes
+    -----
+    The matrix is represented internally in the form Diag^{1/2}(I +
+    factor * scales * factor')Diag^{1/2}, where `Diag` and `scales`
+    are diagonal matrices, and `factor` is an orthogonal matrix.
+    """
+
+    def __init__(self, diag, root):
+        self.diag = diag
+        self.root = root
+        root = root / np.sqrt(diag)[:, None]
+        u, s, vt = np.linalg.svd(root, 0)
+        self.factor = u
+        self.scales = s**2
+
+    def to_matrix(self):
+        """
+        Returns the factor-structured matrix as a full (square).
+        """
+        return np.diag(self.diag) + np.dot(self.root, self.root.T)
+
+
+    def decorrelate(self, rhs):
+        """
+        Decorrelate the columns of `rhs`.
+
+        Parameters
+        ----------
+        rhs : array-like
+            A 2 dimensional array with the same number of rows as the
+            PSD matrix represented by the class instance.
+
+        Returns
+        -------
+        C^{-1/2} * rhs, where C is the covariance matrix represented
+        by this class instance.
+
+        Notes
+        -----
+        The returned matrix has the identity matrix as its row-wise
+        population covariance matrix.
+
+        This function exploits the factor structure for efficiency.
+        """
+
+        # I + factor * qval * factor' is the inverse square root of
+        # the covariance matrix in the homogeneous case where diag =
+        # 1.
+        qval = -1 + 1 / np.sqrt(1 + self.scales)
+
+        # Decorrelate in the general case.
+        rhs = rhs / np.sqrt(self.diag)[:, None]
+        rhs1 = rhs.copy()
+        rhs1 = np.dot(self.factor.T, rhs1)
+        rhs1 *= qval[:, None]
+        rhs1 = np.dot(self.factor, rhs1)
+        rhs += rhs1
+
+        return rhs
+
+def corr_nearest_factor(corr, rank, ctol=1e-6, lam_min=1e-30,
+                        lam_max=1e30, maxiter=1000):
+    """
+    Attempt to find the nearest correlation matrix with factor
+    structure to a given square matrix.
+
+    Parameters
+    ----------
+    corr : square array
         The target matrix (to which the nearest correlation matrix is
-        sought).
+        sought).  Must be square, but need not be positive
+        semidefinite.
     rank : positive integer
         The rank of the factor structure of the solution, i.e., the
         number of linearly independent columns of X.
     ctol : positive real
         Convergence criterion.
+    lam_min : float
+        Tuning parameter for spectral projected gradient optimization
+        (smallest allowed step in the search direction).
+    lam_max : float
+        Tuning parameter for spectral projected gradient optimization
+        (largest allowed step in the search direction).
+    maxiter : integer
+        Maximum number of iterations in spectral projected gradient
+        optimization.
 
     Returns
     -------
-    rslt : dict
-        rslt["corr"] is the matrix X defining the estimated low rank
-        structure.  To obtain the fitted correlation matrix use
-        C = np.dot(X, X.T); np.fill_diagonal(C, 1).  rslt also has
-        fields describing how the optimization terminated
-
-    Example
-    -------
-    Hard thresholding a correlation matrix may result in a matrix that
-    is not positive semidefinite.  We can approximate a hard
-    thresholded correlation matrix with a PSD matrix as follows, where
-    `cmat` is the input correlation matrix.
-
-    >>> cmat = cmat * (np.abs(cmat) >= 0.3)
-    >>> rslt = corr_nearest_factor(cmat, 3)
+    rslt : Bunch
+        rslt.corr is a FactoredPSDMatrix defining the estimated
+        correlation structure.  Other fields of `rslt` contain
+        returned values from spg_optim.
 
     Notes
     -----
@@ -452,22 +538,23 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
     Frobenius norm.
 
     This routine is useful when one has an approximate correlation
-    matrix that is not SPD, and there is need to estimate the inverse,
-    square root, or inverse square root of the population correlation
-    matrix.  The factor structure allows these tasks to be done
-    without constructing any n x n matrices.
+    matrix that is not positive semidefinite, and there is need to
+    estimate the inverse, square root, or inverse square root of the
+    population correlation matrix.  The factor structure allows these
+    tasks to be done without constructing any n x n matrices.
 
-    This is a non-convex problem with no known guaranteed globally
+    This is a non-convex problem with no known gauranteed globally
     convergent algorithm for computing the solution.  Borsdof, Higham
     and Raydan (2010) compared several methods for this problem and
     found the spectral projected gradient (SPG) method (used here) to
     perform best.
 
-    The input matrix `mat` can be a dense numpy array or any scipy
+    The input matrix `corr` can be a dense numpy array or any scipy
     sparse matrix.  The latter is useful if the input matrix is
     obtained by thresholding a very large sample correlation matrix.
-    If `mat` is sparse, the calculations are optimized to save memory,
-    so no working matrix with more than 10^6 elements is constructed.
+    If `corr` is sparse, the calculations are optimized to save
+    memory, so no working matrix with more than 10^6 elements is
+    constructed.
 
     References
     ----------
@@ -475,45 +562,55 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
     correlation matrix with factor structure. SIAM J Matrix Anal
     Appl, 31:5, 2603-2622.
     http://eprints.ma.man.ac.uk/1523/01/covered/MIMS_ep2009_87.pdf
+
+    Examples
+    --------
+    Hard thresholding a correlation matrix may result in a matrix that
+    is not positive semidefinite.  We can approximate a hard
+    thresholded correlation matrix with a PSD matrix as follows, where
+    `corr` is the input correlation matrix.
+
+    >>> corr = corr * (np.abs(corr) >= 0.3)
+    >>> rslt = corr_nearest_factor(corr, 3)
     """
 
-    p,_ = mat.shape
+    p, _ = corr.shape
 
     # Starting values (following the PCA method in BHR).
-    u,s,vt = svds(mat, rank)
+    u,s,vt = svds(corr, rank)
     X = u * np.sqrt(s)
     nm = np.sqrt((X**2).sum(1))
     ii = np.flatnonzero(nm > 1e-5)
-    X[ii,:] /= nm[ii][:,None]
+    X[ii,:] /= nm[ii][:, None]
 
     # Zero the diagonal
-    mat1 = mat.copy()
-    if type(mat1) == np.ndarray:
-        np.fill_diagonal(mat1, 0)
-    elif sparse.issparse(mat1):
-        mat1.setdiag(np.zeros(mat1.shape[0]))
-        mat1.eliminate_zeros()
-        mat1.sort_indices()
+    corr1 = corr.copy()
+    if type(corr1) == np.ndarray:
+        np.fill_diagonal(corr1, 0)
+    elif sparse.issparse(corr1):
+        corr1.setdiag(np.zeros(corr1.shape[0]))
+        corr1.eliminate_zeros()
+        corr1.sort_indices()
     else:
         raise ValueError("Matrix type not supported")
 
     # The gradient, from lemma 4.1 of BHR.
     def grad(X):
         gr = np.dot(X, np.dot(X.T, X))
-        if type(mat1) == np.ndarray:
-            gr -= np.dot(mat1, X)
+        if type(corr1) == np.ndarray:
+            gr -= np.dot(corr1, X)
         else:
-            gr -= mat1.dot(X)
-        gr -= (X*X).sum(1)[:,None] * X
+            gr -= corr1.dot(X)
+        gr -= (X*X).sum(1)[:, None] * X
         return 4*gr
 
     # The objective function (sum of squared deviations between fitted
     # and observed arrays).
     def func(X):
-        if type(mat1) == np.ndarray:
+        if type(corr1) == np.ndarray:
             M = np.dot(X, X.T)
             np.fill_diagonal(M, 0)
-            M -= mat1
+            M -= corr1
             fval = (M*M).sum()
             return fval
         else:
@@ -524,82 +621,83 @@ def corr_nearest_factor(mat, rank, ctol=1e-6, lam_min=1e-30,
             ir = 0
             while ir < X.shape[0]:
                 ir2 = min(ir+bs, X.shape[0])
-                u = np.dot(X[ir:ir2,:], X.T)
+                u = np.dot(X[ir:ir2, :], X.T)
                 ii = np.arange(u.shape[0])
-                u[ii,ir+ii] = 0
-                u -= np.asarray(mat1[ir:ir2,:].todense())
+                u[ii, ir+ii] = 0
+                u -= np.asarray(corr1[ir:ir2, :].todense())
                 fval += (u*u).sum()
                 ir += bs
             return fval
 
-    rslt = spg_optim(func, grad, X, _project_correlation_factors)
-    rslt["corr"] = rslt["X"]
-    del rslt["X"]
+    rslt = _spg_optim(func, grad, X, _project_correlation_factors)
+    root = rslt.X
+    diag = 1 - (root**2).sum(1)
+    soln = FactoredPSDMatrix(diag, root)
+    rslt.corr = soln
+    del rslt.X
     return rslt
 
 
-def cov_nearest_eye_factor(mat, rank):
+def cov_nearest_factor_homog(cov, rank):
     """
-    Approximate a matrix with a factor-structured matrix of the form
-    k*I + XX'.
+    Approximate an arbitrary square matrix with a factor-structured
+    matrix of the form k*I + XX'.
 
     Parameters
     ----------
-    mat : array-like
-        The input array, must be square
+    cov : array-like
+        The input array, must be square but need not be positive
+        semidefinite
     rank : positive integer
         The rank of the fitted factor structure
 
     Returns
     -------
-    k : positive real
-        The value of k in the fitted structure k*I + XX'
-    X : array_like
-        The value of X in the fitted structure k*I + XX'
+    A FactoredPSDMatrix instance containing the fitted matrix
 
     Notes
     -----
-    This routine is useful if one has an estimated correlation matrix
+    This routine is useful if one has an estimated covariance matrix
     that is not SPD, and the ultimate goal is to estimate the inverse,
-    square root, or inverse square root of the true correlation
+    square root, or inverse square root of the true covariance
     matrix. The factor structure allows these tasks to be performed
     without constructing any n x n matrices.
 
     The calculations use the fact that if k is known, then X can be
-    determined from the eigen-decomposition of mat - k*I, which can in
-    turn be easily obtained form the eigen-decomposition of mat.  Thus
-    the problem can be reduced to a 1-dimensional search for k that
-    does not require repeated eigen-decompositions.
+    determined from the eigen-decomposition of cov - k*I, which can
+    in turn be easily obtained form the eigen-decomposition of `cov`.
+    Thus the problem can be reduced to a 1-dimensional search for k
+    that does not require repeated eigen-decompositions.
 
-    If the input matrix is sparse, then mat - k*I is also sparse, so
+    If the input matrix is sparse, then cov - k*I is also sparse, so
     the eigen-decomposition can be done effciciently using sparse
     routines.
 
     The one-dimensional search for the optimal value of k is not
     convex, so a local minimum could be obtained.
 
-    Example
-    -------
+    Examples
+    --------
     Hard thresholding a covariance matrix may result in a matrix that
     is not positive semidefinite.  We can approximate a hard
     thresholded covariance matrix with a PSD matrix as follows:
 
-    >>> cmat = cmat * (np.abs(cmat) >= 0.3)
-    >>> rslt = cov_nearest_eye_factor(cmat, 3)
+    >>> cov = cov * (np.abs(cov) >= 0.3)
+    >>> rslt = cov_nearest_factor_homog(cov, 3)
     """
 
-    m,n = mat.shape
+    m, n = cov.shape
 
-    Q,Lambda,_ = svds(mat, rank)
+    Q, Lambda, _ = svds(cov, rank)
 
-    if sparse.issparse(mat):
-        QSQ = np.dot(Q.T, mat.dot(Q))
-        ts = mat.diagonal().sum()
-        tss = mat.dot(mat).diagonal().sum()
+    if sparse.issparse(cov):
+        QSQ = np.dot(Q.T, cov.dot(Q))
+        ts = cov.diagonal().sum()
+        tss = cov.dot(cov).diagonal().sum()
     else:
-        QSQ = np.dot(Q.T, np.dot(mat, Q))
-        ts = np.trace(mat)
-        tss = np.trace(np.dot(mat, mat))
+        QSQ = np.dot(Q.T, np.dot(cov, Q))
+        ts = np.trace(cov)
+        tss = np.trace(np.dot(cov, cov))
 
     def fun(k):
         Lambda_t = Lambda - k
@@ -612,21 +710,23 @@ def cov_nearest_eye_factor(mat, rank):
     Lambda_opt = Lambda - k_opt
     fac_opt = Q * np.sqrt(Lambda_opt)
 
-    return k_opt, fac_opt
+    diag = k_opt * np.ones(m, dtype=np.float64) #- (fac_opt**2).sum(1)
+    return FactoredPSDMatrix(diag, fac_opt)
 
-def corr_thresholded(mat, minabs, max_elt=1e7):
+def corr_thresholded(data, minabs=None, max_elt=1e7):
     """
     Construct a sparse matrix containing the thresholded row-wise
-    correlation matrix of `mat`.
+    correlation matrix from a data array.
 
     Parameters
     ----------
-    mat : array_like
+    data : array_like
         The data from which the row-wise thresholded correlation
         matrix is to be computed.
     minabs : non-negative real
         The threshold value; correlation coefficients smaller in
-        magnitude than minabs are set to zero.
+        magnitude than minabs are set to zero.  If None, defaults
+        to 1 / sqrt(n), see Notes for more information.
 
     Returns
     -------
@@ -635,8 +735,15 @@ def corr_thresholded(mat, minabs, max_elt=1e7):
 
     Notes
     -----
-    This is an alternative to C = np.corrcoef(mat); C *= (np.abs(C) >=
-    absmin), suitable for very tall data matrices.
+    This is an alternative to C = np.corrcoef(data); C *= (np.abs(C)
+    >= absmin), suitable for very tall data matrices.
+
+    If the data are jointly Gaussian, the marginal sampling
+    distributions of the elements of the sample correlation matrix are
+    approximately Gaussian with standard deviation 1 / sqrt(n).  The
+    default value of `minabs` is thus equal to 1 standard error, which
+    will set to zero approximately 68% of the estimated correlation
+    coefficients for which the population value is zero.
 
     No intermediate matrix with more than `max_elt` values will be
     constructed.  However memory use could still be high if a large
@@ -645,8 +752,8 @@ def corr_thresholded(mat, minabs, max_elt=1e7):
     The thresholded matrix is returned in COO format, which can easily
     be converted to other sparse formats.
 
-    Example
-    -------
+    Examples
+    --------
     Here X is a tall data matrix (e.g. with 100,000 rows and 50
     columns).  The row-wise correlation matrix of X is calculated
     and stored in sparse form, with all entries smaller than 0.3
@@ -655,38 +762,41 @@ def corr_thresholded(mat, minabs, max_elt=1e7):
     >>> cmat = corr_thresholded(X, 0.3)
     """
 
-    n,ncol = mat.shape
+    nrow, ncol = data.shape
+
+    if minabs is None:
+        minabs = 1. / float(ncol)
 
     # Row-standardize the data
-    mat = mat.copy()
-    mat -= mat.mean(1)[:,None]
-    sd = mat.std(1, ddof=1)
+    data = data.copy()
+    data -= data.mean(1)[:, None]
+    sd = data.std(1, ddof=1)
     ii = np.flatnonzero(sd > 1e-5)
-    mat[ii,:] /= sd[ii][:,None]
+    data[ii, :] /= sd[ii][:, None]
     ii = np.flatnonzero(sd <= 1e-5)
-    mat[ii,:] = 0
+    data[ii, :] = 0
 
     # Number of rows to process in one pass
-    bs = int(np.floor(max_elt/n))
+    bs = int(np.floor(max_elt / nrow))
 
-    ipos_all, jpos_all, data = [], [], []
+    ipos_all, jpos_all, cor_values = [], [], []
 
     ir = 0
-    while ir < n:
-        ir2 = min(mat.shape[0], ir + bs)
-        cm = np.dot(mat[ir:ir2,:], mat.T) / (ncol - 1)
+    while ir < nrow:
+        ir2 = min(data.shape[0], ir + bs)
+        cm = np.dot(data[ir:ir2,:], data.T) / (ncol - 1)
         cma = np.abs(cm)
         ipos, jpos = np.nonzero(cma >= minabs)
         ipos_all.append(ipos + ir)
         jpos_all.append(jpos)
-        data.append(cm[ipos, jpos])
+        cor_values.append(cm[ipos, jpos])
         ir += bs
 
     ipos = np.concatenate(ipos_all)
     jpos = np.concatenate(jpos_all)
-    data = np.concatenate(data)
+    cor_values = np.concatenate(cor_values)
 
-    cmat = sparse.coo_matrix((data, (ipos, jpos)), (n,n))
+    cmat = sparse.coo_matrix((cor_values, (ipos, jpos)), (nrow, nrow))
 
     return cmat
 
