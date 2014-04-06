@@ -1,5 +1,5 @@
 import numpy as np
-from statsmodels.graphics.dotplots import dotplot
+from statsmodels.graphics.dotplots import dot_plot
 import pandas as pd
 from numpy.testing import dec
 
@@ -35,7 +35,7 @@ def test_all():
     plt.clf()
     points = range(20)
     ax = plt.axes()
-    fig = dotplot(points, ax=ax)
+    fig = dot_plot(points, ax=ax)
     ax.set_title("Basic horizontal dotplot")
     close_or_save(pdf, fig)
 
@@ -43,7 +43,7 @@ def test_all():
     plt.clf()
     points = range(20)
     ax = plt.axes()
-    fig = dotplot(points, ax=ax, horizontal=False)
+    fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Basic vertical dotplot")
     close_or_save(pdf, fig)
 
@@ -51,7 +51,7 @@ def test_all():
     plt.figure(figsize=(4,12))
     ax = plt.axes()
     vals = np.arange(40)
-    fig = dotplot(points, ax=ax)
+    fig = dot_plot(points, ax=ax)
     ax.set_title("Tall and skinny dotplot")
     ax.set_xlabel("x axis label")
     close_or_save(pdf, fig)
@@ -60,7 +60,7 @@ def test_all():
     plt.figure(figsize=(12,4))
     ax = plt.axes()
     vals = np.arange(40)
-    fig = dotplot(points, ax=ax, horizontal=False)
+    fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Short and wide dotplot")
     ax.set_ylabel("y axis label")
     close_or_save(pdf, fig)
@@ -69,7 +69,7 @@ def test_all():
     plt.figure(figsize=(4,12))
     ax = plt.axes()
     points = np.arange(40)
-    fig = dotplot(points, ax=ax, striped=True)
+    fig = dot_plot(points, ax=ax, striped=True)
     ax.set_title("Tall and skinny striped dotplot")
     ax.set_xlim(-10, 50)
     close_or_save(pdf, fig)
@@ -78,7 +78,7 @@ def test_all():
     plt.figure(figsize=(12,4))
     ax = plt.axes()
     points = np.arange(40)
-    fig = dotplot(points, ax=ax, striped=True, horizontal=False)
+    fig = dot_plot(points, ax=ax, striped=True, horizontal=False)
     ax.set_title("Short and wide striped dotplot")
     ax.set_ylim(-10, 50)
     close_or_save(pdf, fig)
@@ -87,7 +87,7 @@ def test_all():
     plt.figure()
     ax = plt.axes()
     points = np.arange(4)
-    fig = dotplot(points, ax=ax)
+    fig = dot_plot(points, ax=ax)
     ax.set_title("Basic horizontal dotplot with few lines")
     close_or_save(pdf, fig)
 
@@ -95,7 +95,7 @@ def test_all():
     plt.figure()
     ax = plt.axes()
     points = np.arange(4)
-    fig = dotplot(points, ax=ax, horizontal=False)
+    fig = dot_plot(points, ax=ax, horizontal=False)
     ax.set_title("Basic vertical dotplot with few lines")
     close_or_save(pdf, fig)
 
@@ -103,7 +103,7 @@ def test_all():
     plt.figure()
     ax = plt.axes()
     points = np.arange(20)
-    fig = dotplot(points, ax=ax)
+    fig = dot_plot(points, ax=ax)
     ax.set_xlim(-10, 30)
     ax.set_title("Dotplot with adjusted horizontal range")
     close_or_save(pdf, fig)
@@ -113,7 +113,7 @@ def test_all():
     ax = plt.axes()
     lines = ["ABCDEFGH"[np.random.randint(0, 8)] for k in range(20)]
     points = np.random.normal(size=20)
-    fig = dotplot(points, lines=lines, ax=ax)
+    fig = dot_plot(points, lines=lines, ax=ax)
     ax.set_title("Dotplot with user-supplied labels in the left margin")
     close_or_save(pdf, fig)
 
@@ -123,7 +123,7 @@ def test_all():
     points = np.random.normal(size=20)
     lines = ["ABCDEFGH"[np.random.randint(0, 8)] + "::" + str(k+1)
              for k in range(20)]
-    fig = dotplot(points, lines=lines, ax=ax, split_names="::")
+    fig = dot_plot(points, lines=lines, ax=ax, split_names="::")
     ax.set_title("Dotplot with user-supplied labels in both margins")
     close_or_save(pdf, fig)
 
@@ -133,7 +133,7 @@ def test_all():
     points = np.random.normal(size=20)
     lines = ["ABCDEFGH"[np.random.randint(0, 8)] + "::" + str(k+1)
              for k in range(20)]
-    fig = dotplot(points, lines=lines, ax=ax, split_names="::",
+    fig = dot_plot(points, lines=lines, ax=ax, split_names="::",
             horizontal=False)
     txt = ax.set_title("Vertical dotplot with user-supplied labels in both margins")
     txt.set_position((0.5, 1.06))
@@ -147,7 +147,7 @@ def test_all():
     styles = np.kron(np.ones(5), range(4)).astype(np.int32)
     marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
                         "ms": 7, "alpha": 0.6} for k in range(4)}
-    fig = dotplot(points, lines=lines, styles=styles, ax=ax,
+    fig = dot_plot(points, lines=lines, styles=styles, ax=ax,
             marker_props=marker_props)
     ax.set_title("Dotplot with custom colors and symbols")
     close_or_save(pdf, fig)
@@ -156,7 +156,7 @@ def test_all():
     plt.clf()
     ax = plt.axes()
     points = range(20)
-    fig = dotplot(points, intervals=np.ones(20), ax=ax)
+    fig = dot_plot(points, intervals=np.ones(20), ax=ax)
     ax.set_title("Dotplot with symmetric intervals")
     close_or_save(pdf, fig)
 
@@ -165,7 +165,7 @@ def test_all():
     ax = plt.axes()
     points = pd.Series(range(20))
     intervals = pd.Series(np.ones(20))
-    fig = dotplot(points, intervals=intervals, ax=ax)
+    fig = dot_plot(points, intervals=intervals, ax=ax)
     ax.set_title("Dotplot with symmetric intervals (Pandas inputs)")
     close_or_save(pdf, fig)
 
@@ -174,7 +174,7 @@ def test_all():
     ax = plt.axes()
     points = np.arange(20)
     intervals = [(1, 3) for i in range(20)]
-    fig = dotplot(points, intervals=intervals, ax=ax)
+    fig = dot_plot(points, intervals=intervals, ax=ax)
     ax.set_title("Dotplot with nonsymmetric intervals")
     close_or_save(pdf, fig)
 
@@ -183,7 +183,7 @@ def test_all():
     ax = plt.axes()
     points = np.arange(20)
     intervals = [(1, 3) for i in range(20)]
-    fig = dotplot(points, intervals=intervals, ax=ax, horizontal=False)
+    fig = dot_plot(points, intervals=intervals, ax=ax, horizontal=False)
     ax.set_title("Vertical dotplot with nonsymmetric intervals")
     close_or_save(pdf, fig)
 
@@ -194,7 +194,7 @@ def test_all():
     intervals = [(1, 3) for x in range(20)]
     line_props = {0: {"color": "lightgrey",
                       "solid_capstyle": "round"}}
-    fig = dotplot(points, intervals=intervals, line_props=line_props, ax=ax)
+    fig = dot_plot(points, intervals=intervals, line_props=line_props, ax=ax)
     ax.set_title("Dotplot with custom line properties")
     close_or_save(pdf, fig)
 
@@ -206,7 +206,7 @@ def test_all():
     intervals = [(1,3) for k in range(40)]
     styles = np.kron(np.ones(20), (0,1)).astype(np.int32)
     styles = [["Cat", "Dog"][i] for i in styles]
-    fig = dotplot(points, intervals=intervals, lines=lines, styles=styles,
+    fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True)
     handles, labels = ax.get_legend_handles_labels()
     leg = plt.figlegend(handles, labels, "center right", numpoints=1,
@@ -218,7 +218,7 @@ def test_all():
     # Dotplot with two points per line and a legend
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
-    fig = dotplot(points, intervals=intervals, lines=lines,
+    fig = dot_plot(points, intervals=intervals, lines=lines,
                   styles=styles, ax=ax, stacked=True,
                   styles_order=["Dog", "Cat"])
     handles, labels = ax.get_legend_handles_labels()
@@ -236,7 +236,7 @@ def test_all():
     intervals = [(1,3) for k in range(40)]
     styles = np.kron(np.ones(20), (0,1)).astype(np.int32)
     styles = [["Cat", "Dog"][i] for i in styles]
-    fig = dotplot(points, intervals=intervals, lines=lines, styles=styles,
+    fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True, horizontal=False)
     handles, labels = ax.get_legend_handles_labels()
     leg = plt.figlegend(handles, labels, "center right", numpoints=1,
@@ -249,7 +249,7 @@ def test_all():
     plt.clf()
     ax = plt.axes([0.1, 0.1, 0.75, 0.8])
     styles_order = ["Dog", "Cat"]
-    fig = dotplot(points, intervals=intervals, lines=lines,
+    fig = dot_plot(points, intervals=intervals, lines=lines,
                   styles=styles, ax=ax, stacked=True,
                   horizontal=False, styles_order=styles_order)
     handles, labels = ax.get_legend_handles_labels()
@@ -269,7 +269,7 @@ def test_all():
     intervals = [(1,3) for k in range(40)]
     styles = np.kron(np.ones(20), (0,1)).astype(np.int32)
     styles = [["Cat", "Dog"][i] for i in styles]
-    fig = dotplot(points, intervals=intervals, lines=lines, styles=styles,
+    fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True, striped=True, horizontal=False)
     handles, labels = ax.get_legend_handles_labels()
     leg = plt.figlegend(handles, labels, "center right", numpoints=1,
@@ -291,7 +291,7 @@ def test_all():
                     "Dog": {"color": "purple"}}
     line_props = {"Cat": {"color": "orange"},
                   "Dog": {"color": "purple"}}
-    fig = dotplot(points, intervals=intervals, lines=lines, styles=styles,
+    fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True, marker_props=marker_props,
             line_props=line_props)
     handles, labels = ax.get_legend_handles_labels()
@@ -313,7 +313,7 @@ def test_all():
                     "Dog": {"color": "purple"}}
     line_props = {"Cat": {"color": "orange"},
                   "Dog": {"color": "purple"}}
-    fig = dotplot(points, intervals=intervals, lines=lines, styles=styles,
+    fig = dot_plot(points, intervals=intervals, lines=lines, styles=styles,
             ax=ax, stacked=True, marker_props=marker_props,
             line_props=line_props, horizontal=False)
     handles, labels = ax.get_legend_handles_labels()
@@ -331,7 +331,7 @@ def test_all():
     styles = np.kron(np.ones(15), (0,1)).astype(np.int32)
     sections = np.kron((0,1,2), np.ones(10)).astype(np.int32)
     sections = [["Axx", "Byy", "Czz"][k] for k in sections]
-    fig = dotplot(points, lines=lines, styles=styles, sections=sections, ax=ax)
+    fig = dot_plot(points, lines=lines, styles=styles, sections=sections, ax=ax)
     ax.set_title("Dotplot with sections")
     close_or_save(pdf, fig)
 
@@ -343,7 +343,7 @@ def test_all():
     styles = np.kron(np.ones(15), (0,1)).astype(np.int32)
     sections = np.kron((0,1,2), np.ones(10)).astype(np.int32)
     sections = [["Axx", "Byy", "Czz"][k] for k in sections]
-    fig = dotplot(points, lines=lines, styles=styles,
+    fig = dot_plot(points, lines=lines, styles=styles,
                   sections=sections, ax=ax, horizontal=False)
     txt = ax.set_title("Vertical dotplot with sections")
     txt.set_position((0.5, 1.08))
@@ -357,7 +357,7 @@ def test_all():
     styles = np.kron(np.ones(15), (0,1)).astype(np.int32)
     sections = np.kron((0,1,2), np.ones(10)).astype(np.int32)
     sections = [["Axx", "Byy", "Czz"][k] for k in sections]
-    fig = dotplot(points, lines=lines, styles=styles, sections=sections, ax=ax,
+    fig = dot_plot(points, lines=lines, styles=styles, sections=sections, ax=ax,
             section_order=["Byy", "Axx", "Czz"])
     ax.set_title("Dotplot with sections in specified order")
     close_or_save(pdf, fig)
@@ -368,7 +368,7 @@ def test_all():
     points = np.arange(4)
     lines = ["A", "B", "C", "D"]
     line_order = ["B", "C", "A", "D"]
-    fig = dotplot(points, lines=lines, line_order=line_order, ax=ax)
+    fig = dot_plot(points, lines=lines, line_order=line_order, ax=ax)
     ax.set_title("Dotplot with reordered lines")
     close_or_save(pdf, fig)
 
@@ -384,7 +384,7 @@ def test_all():
         ii += 1
     styles = np.kron(np.ones(20), (0,1)).astype(np.int32)
     styles = [["Cat", "Dog"][i] for i in styles]
-    fig = dotplot(points, lines=lines, styles=styles,
+    fig = dot_plot(points, lines=lines, styles=styles,
             ax=ax, stacked=True)
     handles, labels = ax.get_legend_handles_labels()
     leg = plt.figlegend(handles, labels, "center right", numpoints=1,
@@ -393,4 +393,5 @@ def test_all():
     ax.set_title("Dotplot with different numbers of points per line")
     close_or_save(pdf, fig)
 
-    pdf.close()
+    if pdf_output:
+        pdf.close()

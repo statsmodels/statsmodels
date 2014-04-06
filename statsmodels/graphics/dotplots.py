@@ -1,20 +1,12 @@
 import numpy as np
 import utils
 
-try:
-    import matplotlib.transforms as transforms
-    if matplotlib.__version__ < '1':
-        raise
-    have_matplotlib = True
-except:
-    have_matplotlib = False
 
-
-def dotplot(points, intervals=None, lines=None, sections=None,
-            styles=None, marker_props=None, line_props=None,
-            ax=None, split_names=None, section_order=None,
-            line_order=None, stacked=False, styles_order=None,
-            striped=False, horizontal=True):
+def dot_plot(points, intervals=None, lines=None, sections=None,
+             styles=None, marker_props=None, line_props=None,
+             split_names=None, section_order=None, line_order=None,
+             stacked=False, styles_order=None, striped=False,
+             horizontal=True, ax=None):
     """
     Produce a dotplot similar in style to those in Cleveland's
     "Visualizing Data" book.  These are also known as "forest plots".
@@ -51,9 +43,6 @@ def dotplot(points, intervals=None, lines=None, sections=None,
         arguments to `plot` when plotting interval lines.  Useful
         keyword arguments are "color", "linestyle", "solid_capstyle",
         and "linewidth".
-    ax : matplotlib.axes
-        The axes on which the dotplot is drawn.  If None, a new axes
-        is created.
     split_names : string
         If not None, this is used to split the values of `lines` into
         substrings that are drawn in the left and right margins,
@@ -78,6 +67,9 @@ def dotplot(points, intervals=None, lines=None, sections=None,
     horizontal : boolean
         If True (default), the lines are drawn horizontally, otherwise
         they are drawn vertically.
+    ax : matplotlib.axes
+        The axes on which the dotplot is drawn.  If None, a new axes
+        is created.
 
     Returns
     -------
@@ -107,6 +99,8 @@ def dotplot(points, intervals=None, lines=None, sections=None,
         for Labeled Quantitative Values." The Political Methodologist
         14(1): 6-14.
     """
+
+    import matplotlib.transforms as transforms
 
     fig, ax = utils.create_mpl_ax(ax)
 
