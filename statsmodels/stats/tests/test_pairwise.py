@@ -8,7 +8,7 @@ Author: Josef Perktold
 
 from statsmodels.compatnp.py3k import BytesIO, asbytes
 import numpy as np
-from numpy.testing import assert_almost_equal, assert_equal
+from numpy.testing import assert_almost_equal, assert_equal, assert_
 
 from statsmodels.stats.libqsturng import qsturng
 
@@ -198,9 +198,36 @@ class TestTuckeyHSD2(CheckTuckeyHSDMixin):
         pvals = tukeyhsd2s[:, 3]
         self.reject2 = pvals < 0.05
 
+    def test_table_names_default_group_order(self):
+        t = self.res._results_table
+        # if the group_order parameter is not used, the groups should
+        # be reported in alphabetical order
+        expected_order = [(b'medical', b'mental'),
+                          (b'medical', b'physical'),
+                          (b'mental', b'physical')]
+        for i in range(1, 4):
+            first_group = t[i][0].data
+            second_group = t[i][1].data
+            assert_((first_group, second_group) == expected_order[i - 1])
+
+    def test_table_names_custom_group_order(self):
+        # if the group_order parameter is used, the groups should
+        # be reported in the specified order
+        mc = MultiComparison(self.endog, self.groups,
+                             group_order=[b'physical', b'medical', b'mental'])
+        res = mc.tukeyhsd(alpha=self.alpha)
+        #print(res)
+        t = res._results_table
+        expected_order = [(b'physical',b'medical'),
+                          (b'physical',b'mental'),
+                          (b'medical', b'mental')]
+        for i in range(1, 4):
+            first_group = t[i][0].data
+            second_group = t[i][1].data
+            assert_((first_group, second_group) == expected_order[i - 1])
+
 
 class TestTuckeyHSD2s(CheckTuckeyHSDMixin):
-
     @classmethod
     def setup_class(self):
         #unbalanced case

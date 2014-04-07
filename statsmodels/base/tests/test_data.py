@@ -386,9 +386,7 @@ class TestSeriesSeries(TestDataFrames):
         np.testing.assert_equal(self.data.exog, self.exog.values[:,None])
 
 def test_alignment():
-    """
-    Fix Issue #206
-    """
+    #Fix Issue #206
     from statsmodels.regression.linear_model import OLS
     from statsmodels.datasets.macrodata import load_pandas
 
@@ -642,6 +640,67 @@ class TestConstant(object):
         data = sm_data.handle_data(self.data.endog.values, exog.values)
         np.testing.assert_equal(data.k_constant, 0)
         np.testing.assert_equal(data.const_idx, None)
+
+
+class TestHandleMissing(object):
+
+    def test_pandas(self):
+        df = ptesting.makeDataFrame()
+        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        y, X = df[df.columns[0]], df[df.columns[1:]]
+        data, _ = sm_data.handle_missing(y, X, missing='drop')
+
+        df = df.dropna()
+        y_exp, X_exp = df[df.columns[0]], df[df.columns[1:]]
+        ptesting.assert_frame_equal(data['exog'], X_exp)
+        ptesting.assert_series_equal(data['endog'], y_exp)
+
+    def test_arrays(self):
+        arr = np.random.randn(20, 4)
+        arr[[2, 5, 10], [2, 3, 1]] = np.nan
+        y, X = arr[:,0], arr[:,1:]
+        data, _ = sm_data.handle_missing(y, X, missing='drop')
+
+        bools_mask = np.ones(20, dtype=bool)
+        bools_mask[[2, 5, 10]] = False
+        y_exp = arr[bools_mask, 0]
+        X_exp = arr[bools_mask, 1:]
+        np.testing.assert_array_equal(data['endog'], y_exp)
+        np.testing.assert_array_equal(data['exog'], X_exp)
+
+    def test_pandas_array(self):
+        df = ptesting.makeDataFrame()
+        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        y, X = df[df.columns[0]], df[df.columns[1:]].values
+        data, _ = sm_data.handle_missing(y, X, missing='drop')
+
+        df = df.dropna()
+        y_exp, X_exp = df[df.columns[0]], df[df.columns[1:]].values
+        np.testing.assert_array_equal(data['exog'], X_exp)
+        ptesting.assert_series_equal(data['endog'], y_exp)
+
+    def test_array_pandas(self):
+        df = ptesting.makeDataFrame()
+        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        y, X = df[df.columns[0]].values, df[df.columns[1:]]
+        data, _ = sm_data.handle_missing(y, X, missing='drop')
+
+        df = df.dropna()
+        y_exp, X_exp = df[df.columns[0]].values, df[df.columns[1:]]
+        ptesting.assert_frame_equal(data['exog'], X_exp)
+        np.testing.assert_array_equal(data['endog'], y_exp)
+
+    def test_noop(self):
+        df = ptesting.makeDataFrame()
+        df.values[[2, 5, 10], [2, 3, 1]] = np.nan
+        y, X = df[df.columns[0]], df[df.columns[1:]]
+        data, _ = sm_data.handle_missing(y, X, missing='none')
+
+        y_exp, X_exp = df[df.columns[0]], df[df.columns[1:]]
+        ptesting.assert_frame_equal(data['exog'], X_exp)
+        ptesting.assert_series_equal(data['endog'], y_exp)
+
+
 
 if __name__ == "__main__":
     import nose

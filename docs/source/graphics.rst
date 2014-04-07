@@ -69,6 +69,8 @@ Time Series Plots
 
    tsaplots.plot_acf
    tsaplots.plot_pacf
+   tsaplots.month_plot
+   tsaplots.quarter_plot
 
 Other Plots
 -----------

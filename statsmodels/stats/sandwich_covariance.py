@@ -525,10 +525,15 @@ def cov_cluster(results, group, use_correction=True):
     #TODO: currently used version of groupsums requires 2d resid
     xu, hessian_inv = _get_sandwich_arrays(results)
 
+    if not hasattr(group, 'dtype') or group.dtype != np.dtype('int'):
+        clusters, group = np.unique(group, return_inverse=True)
+    else:
+        clusters = np.unique(group)
+
     scale = S_crosssection(xu, group)
 
     nobs, k_params = xu.shape
-    n_groups = len(np.unique(group)) #replace with stored group attributes if available
+    n_groups = len(clusters) #replace with stored group attributes if available
 
     cov_c = _HCCM2(hessian_inv, scale)
 

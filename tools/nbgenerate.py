@@ -6,8 +6,7 @@ output.
 
 # prefer HTML over rST for now until nbconvert changes drop
 OUTPUT = "html"
-SOURCE_DIR = ("/home/skipper/statsmodels/statsmodels-skipper/examples/"
-              "notebooks")
+SOURCE_DIR = "/home/skipper/statsmodels/statsmodels/examples/notebooks"
 
 import os
 import io
@@ -34,7 +33,9 @@ try:
     from IPython.nbconvert.exporters import HTMLExporter
 except ImportError:
     from warnings import warn
-    warn("Notebook examples not built. You need IPython 1.0.")
+    from statsmodels.tools.sm_exceptions import ModuleUnavailableWarning
+    warn("Notebook examples not built. You need IPython 1.0.",
+         ModuleUnavailableWarning)
     sys.exit(0)
 
 import hash_funcs
@@ -150,6 +151,7 @@ class NotebookRunner:
         iopub = self.iopub
         cells = 0
         errors = 0
+        cell_errors = 0
         exec_count = 1
 
         #TODO: What are the worksheets? -ss
@@ -162,6 +164,8 @@ class NotebookRunner:
                 try:
                     # attaches the output to cell inplace
                     outs = self.run_cell(shell, iopub, cell, exec_count)
+                    if outs and outs[-1]['output_type'] == 'pyerr':
+                        cell_errors += 1
                     exec_count += 1
                 except Exception as e:
                     print "failed to run cell:", repr(e)
@@ -175,7 +179,11 @@ class NotebookRunner:
         if errors:
             print "    %3i cells raised exceptions" % errors
         else:
-            print "    there were no errors"
+            print "    there were no errors in run_cell"
+        if cell_errors:
+            print "    %3i cells have exceptions in their output" % cell_errors
+        else:
+            print "    all code executed in the notebook as expected"
 
     def __del__(self):
         self.kc.stop_channels()

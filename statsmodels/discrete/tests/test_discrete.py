@@ -21,6 +21,7 @@ import statsmodels.api as sm
 from nose import SkipTest
 from results.results_discrete import Spector, DiscreteL1
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
+
 try:
     import cvxopt
     has_cvxopt = True
@@ -389,7 +390,7 @@ class TestProbitBasinhopping(CheckBinaryResults):
         cls.res2 = res2
         fit = Probit(data.endog, data.exog).fit
         cls.res1 = fit(method="basinhopping", disp=0, niter=5,
-                       minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
+                        minimizer={'method' : 'L-BFGS-B', 'tol' : 1e-8})
 
 class CheckLikelihoodModelL1(object):
     """
@@ -759,22 +760,12 @@ class TestLogitNewton(CheckBinaryResults, CheckMargEff):
 class TestLogitBFGS(CheckBinaryResults, CheckMargEff):
     @classmethod
     def setupClass(cls):
-        #import scipy
-        #major, minor, micro = scipy.__version__.split('.')[:3]
-        #if int(minor) < 9:
-        #    raise SkipTest
-        #Skip this unconditionally for release 0.3.0
-        #since there are still problems with scipy 0.9.0 on some machines
-        #Ralf on mailing list 2011-03-26
-        raise SkipTest
-
         data = sm.datasets.spector.load()
         data.exog = sm.add_constant(data.exog, prepend=False)
         res2 = Spector()
         res2.logit()
         cls.res2 = res2
-        cls.res1 = Logit(data.endog, data.exog).fit(method="bfgs",
-            disp=0)
+        cls.res1 = Logit(data.endog, data.exog).fit(method="bfgs", disp=0)
 
 class TestPoissonNewton(CheckModelResults):
     @classmethod

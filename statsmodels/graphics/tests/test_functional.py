@@ -52,7 +52,7 @@ def test_banddepth_MBD():
 
 @dec.skipif(not have_matplotlib)
 def test_fboxplot_rainbowplot():
-    """Test fboxplot and rainbowplot together, is much faster."""
+    # Test fboxplot and rainbowplot together, is much faster.
     def harmfunc(t):
         """Test function, combination of a few harmonic terms."""
         # Constant, 0 with p=0.9, 1 with p=1 - for creating outliers

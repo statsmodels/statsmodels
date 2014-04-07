@@ -11,6 +11,7 @@ from numpy.testing import assert_almost_equal, assert_equal, assert_array_less
 
 from statsmodels.stats.proportion import proportion_confint
 import statsmodels.stats.proportion as smprop
+import warnings
 
 class Holder(object):
     pass
@@ -302,7 +303,6 @@ def test_power_ztost_prop():
                          discrete=True, dist='binom')[0]
     assert_almost_equal(power, 0.8204, decimal=4) # PASS example
 
-    import warnings
     with warnings.catch_warnings():  # python >= 2.6
         warnings.simplefilter("ignore")
         power = smprop.power_ztost_prop(0.4, 0.6, np.arange(20, 210, 20),

@@ -1,6 +1,9 @@
 import numpy as np
 import numpy.lib.recfunctions as nprf
 from statsmodels.tools.tools import add_constant
+from pandas.tseries import offsets
+from pandas.tseries.frequencies import to_offset
+
 
 def add_trend(X, trend="c", prepend=False):
     """
@@ -129,8 +132,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
             ins_idx = len(names) + 1
         else: # insert is an int
             if insert > len(names):
-                raise Warning("insert > number of variables, inserting at the"+
-                              " last position")
+                import warnings
+                warnings.warn("insert > number of variables, inserting at the"
+                              " last position",
+                              UserWarning)
             ins_idx = insert
 
         first_names = list(names[:ins_idx])
@@ -178,8 +183,10 @@ def add_lag(x, col=None, lags=1, drop=False, insert=True):
                 insert = x.shape[1] + insert + 1
             if insert > x.shape[1]:
                 insert = x.shape[1]
-                raise Warning("insert > number of variables, inserting at the"+
-                              " last position")
+                import warnings
+                warnings.warn("insert > number of variables, inserting at the"
+                              " last position",
+                              UserWarning)
             ins_idx = insert
 
         ndlags = lagmat(contemp, lags, trim='Both')
@@ -569,6 +576,42 @@ def unintegrate(x, levels):
         return _unintegrate(np.cumsum(np.r_[x0, x]), levels)
     x0 = levels[0]
     return np.cumsum(np.r_[x0, x])
+
+
+def freq_to_period(freq):
+    """
+    Convert a pandas frequency to a periodicity
+
+    Parameters
+    ----------
+    freq : str or offset
+        Frequency to convert
+
+    Returns
+    -------
+    period : int
+        Periodicity of freq
+
+    Notes
+    -----
+    Annual maps to 1, quarterly maps to 4, monthly to 12, weekly to 52.
+    """
+    if not isinstance(freq, offsets.DateOffset):
+        freq = to_offset(freq)  # go ahead and standardize
+    freq = freq.rule_code.upper()
+
+    if freq == 'A' or freq.startswith(('A-', 'AS-')):
+        return 1
+    elif freq == 'Q' or freq.startswith(('Q-', 'QS-')):
+        return 4
+    elif freq == 'M' or freq.startswith(('M-', 'MS')):
+        return 12
+    elif freq == 'B' or freq == 'W' or freq.startswith('W-'):
+        return 52
+    else:  # pragma : no cover
+        raise ValueError("freq {} not understood. Please report if you "
+                         "think this in error.".format(freq))
+
 
 __all__ = ['lagmat', 'lagmat2ds','add_trend', 'duplication_matrix',
            'elimination_matrix', 'commutation_matrix',

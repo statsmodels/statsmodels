@@ -222,7 +222,7 @@ class CheckFEVD(object):
         close_plots()
 
     def test_fevd_repr(self):
-        print self.fevd
+        self.fevd
 
     def test_fevd_summary(self):
         self.fevd.summary()
@@ -300,7 +300,6 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_summary(self):
         summ = self.res.summary()
-        print summ
 
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)

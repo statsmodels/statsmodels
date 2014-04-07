@@ -7,6 +7,7 @@
 {% extends "basic/layout.html" %}
 {% block extrahead %}
 <link rel="stylesheet" href="../../_static/facebox.css" type="text/css" />
+<link rel="stylesheet" href="../_static/examples.css" type="text/css" />
 <script type="text/javascript" src="{{pathto('_static/scripts.js', 1) }}">
 </script>
 <script type="text/javascript" src="{{pathto('_static/facebox.js', 1) }}">
@@ -27,6 +28,7 @@
 <li><a href="https://github.com/statsmodels/statsmodels/issues">Bugs</a></li> &nbsp;|&nbsp;
 <li><a href="{{ pathto('dev/index') }}">Develop</a></li> &nbsp;|&nbsp;
 <li><a href="{{ pathto('examples/index') }}">Examples</a></li> &nbsp;|&nbsp;
+<li><a href="{{ pathto('faq') }}">FAQ</a></li> &nbsp;|&nbsp;
 {% endblock %}
 
 {# Render the Header with Banner #}

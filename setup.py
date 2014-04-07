@@ -118,7 +118,7 @@ def check_dependency_versions(min_versions):
         except ImportError:
             raise ImportError("statsmodels requires scipy")
     try:
-        from pandas.version import version as pversion
+        from pandas.version import short_version as pversion
     except ImportError:
         raise ImportError("statsmodels requires pandas")
     try:
@@ -137,10 +137,7 @@ def check_dependency_versions(min_versions):
         raise ImportError("Scipy version is %s. Requires >= %s" %
                 (spversion, min_versions['scipy']))
     try:
-        #NOTE: not sure how robust this regex is but it at least allows
-        # double digit version numbering
-        pversion = re.match("\d*\.\d*\.\d*", pversion).group()
-        assert StrictVersion(pversion) >= min_versions['pandas']
+        assert StrictVersion(strip_rc(pversion)) >= min_versions['pandas']
     except AssertionError:
         raise ImportError("Pandas version is %s. Requires >= %s" %
                 (pversion, min_versions['pandas']))
@@ -382,7 +379,8 @@ else:
 common_include = []
 
 # some linux distros require it
-libraries = ['m'] if 'win32' not in sys.platform else []
+#NOTE: we are not currently using this but add it to Extension, if needed.
+# libraries = ['m'] if 'win32' not in sys.platform else []
 
 ext_data = dict(
         kalman_loglike = {"pyxfile" : "tsa/kalmanf/kalman_loglike",
@@ -445,9 +443,10 @@ def get_data_files():
                                                                   "*.dta"]})
     # add all the tests and results files
     for r, ds, fs in os.walk(pjoin(curdir, "statsmodels")):
-        if r.endswith('results') and 'sandbox' not in r:
-            data_files.update({relpath(r, start=curdir).replace(sep, ".") : ["*.csv",
-                                                               "*.txt"]})
+        r_ = relpath(r, start=curdir)
+        if r_.endswith('results') and 'sandbox' not in r_:
+            data_files.update({r_.replace(sep, ".") : ["*.csv",
+                                                       "*.txt"]})
 
     return data_files
 
@@ -465,8 +464,11 @@ if __name__ == "__main__":
         # 3.3 needs numpy 1.7+
         min_versions.update({"numpy" : "1.7.0b2"})
 
-    check_dependency_versions(min_versions)
-    write_version_py()
+    if not (len(sys.argv) >= 2 and ('--help' in sys.argv[1:] or
+            sys.argv[1] in ('--help-commands', 'egg_info', '--version',
+                            'clean'))):
+        check_dependency_versions(min_versions)
+        write_version_py()
 
     # this adds *.csv and *.dta files in datasets folders
     # and *.csv and *.txt files in test/results folders

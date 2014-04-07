@@ -5,7 +5,7 @@ __docformat__ = 'restructuredtext'
 COPYRIGHT   = """This data is public domain."""
 TITLE       = __doc__
 SOURCE      = """
-http://www.ngdc.noaa.gov/stp/SOLAR/ftpsunspotnumber.html
+http://www.ngdc.noaa.gov/stp/solar/solarda3.html
 
 The original dataset contains monthly data on sunspot activity in the file
 ./src/sunspots_yearly.dat.  There is also sunspots_monthly.dat.

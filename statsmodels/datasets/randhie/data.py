@@ -8,7 +8,7 @@ SOURCE      = """
 The data was collected by the RAND corporation as part of the Health
 Insurance Experiment (HIE).
 
-http://www.rand.org/health/projects/hie/
+http://www.rand.org/health/projects/hie.html
 
 This data was used in::
 

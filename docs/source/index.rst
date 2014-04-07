@@ -64,12 +64,12 @@ Basic Documentation
 .. toctree::
     :maxdepth: 3
 
-    introduction
     release/index
     gettingstarted
     example_formulas
     install
     related
+    about
 
 Information about the structure and development of
 statsmodels:

@@ -23,11 +23,11 @@ def read_ch(fname):
 
 class test_qsturng(TestCase):
     def test_scalar(self):
-        "scalar input -> scalar output"
+        # scalar input -> scalar output
         assert_almost_equal(4.43645545899562, qsturng(.9,5,6), 5)
 
     def test_vector(self):
-        "vector input -> vector output"
+        # vector input -> vector output
         assert_array_almost_equal(np.array([3.98832389,
                                             4.56835318,
                                             6.26400894]),

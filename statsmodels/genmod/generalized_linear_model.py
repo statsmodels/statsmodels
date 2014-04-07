@@ -20,13 +20,13 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 
 import numpy as np
 import families
-from statsmodels.tools.tools import rank
 from statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
 
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
@@ -210,8 +210,8 @@ class GLM(base.LikelihoodModel):
         self.normalized_cov_params = np.dot(self.pinv_wexog,
                                         np.transpose(self.pinv_wexog))
 
-        self.df_model = rank(self.exog)-1
-        self.df_resid = self.exog.shape[0] - rank(self.exog)
+        self.df_model = np_matrix_rank(self.exog)-1
+        self.df_resid = self.exog.shape[0] - np_matrix_rank(self.exog)
 
     def _check_inputs(self, family, offset, exposure, endog):
         if family is None:

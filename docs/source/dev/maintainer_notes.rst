@@ -114,7 +114,7 @@ use::
 Handling Pull Requests
 ~~~~~~~~~~~~~~~~~~~~~~
 
-You can apply a pull request through `fetch <http://www.kernel.org/pub/software/scm/git/docs/git-fetch.html>`__ and `merge <http://www.kernel.org/pub/software/scm/git/docs/git-merge.html>`__. In your local
+You can apply a pull request through `fetch <https://www.kernel.org/pub/software/scm/git/docs/git-fetch.html>`__ and `merge <https://www.kernel.org/pub/software/scm/git/docs/git-merge.html>`__. In your local
 copy of the main repo::
 
     git checkout master
@@ -157,7 +157,7 @@ Releasing
 
     git checkout -b maintenance/0.3.x
 
-   Any bug fixes and maintenance commits for this minor release go into this branch and are merged back into master. If we have another micro release, then we make the tag and do this release in this branch and then merge the changes back into master so the tag is reachable. Check that the version number is still ok after the merge, fixing any conflicts here. 
+   Any bug fixes and maintenance commits intended for the next micro release should be made against master as usual, but tagged with the milestone for the micro release it is intended for. Then merge into master as usual. When ready to do the backports, use the file ``tools/backport_pr.py`` to identify which PRs need to be backported and to apply them to the maintenance branch. The tag for the release should be made in the maintenance branch.
 
 #. Upload the source distribution to PyPI::
 
@@ -184,3 +184,9 @@ Prefix commit messages in the master branch of the main shared repository with t
     REL: Release related commit
     TST: Change to a test, adding a test. Only used if not directly related to a bug.
     REF: Refactoring changes
+
+
+vbench
+------
+
+See :ref:`vbench` notes for working with the `statsmodels vbench suite <http://statsmodels.sourceforge.net/vbench>`_. The github repository is available `here <https://github.com/statsmodels/vbench>`_.

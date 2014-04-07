@@ -3,11 +3,13 @@ import numpy as np
 
 class CovStruct(object):
     """
-    The base class for correlation and covariance structures of cluster data.
+    The base class for correlation and covariance structures of
+    cluster data.
 
-    Each implementation of this class takes the residuals from a regression
-    model that has been fitted to clustered data, and uses them to estimate the
-    within-cluster variance and dependence structure of the model errors.
+    Each implementation of this class takes the residuals from a
+    regression model that has been fitted to clustered data, and uses
+    them to estimate the within-cluster variance and dependence
+    structure of the random errors in the model.
     """
 
     # Parameters describing the dependency structure
@@ -116,7 +118,7 @@ class Exchangeable(CovStruct):
 
         cached_means = parent.cached_means
 
-        residsq_sum, scale_inv, nterm = 0, 0, 0
+        residsq_sum, scale, nterm = 0, 0, 0
         for i in range(num_clust):
 
             if len(endog[i]) == 0:
@@ -129,19 +131,19 @@ class Exchangeable(CovStruct):
 
             ngrp = len(resid)
             residsq = np.outer(resid, resid)
-            scale_inv += np.diag(residsq).sum()
+            scale += np.diag(residsq).sum()
             residsq = np.tril(residsq, -1)
             residsq_sum += residsq.sum()
             nterm += 0.5 * ngrp * (ngrp - 1)
 
-        scale_inv /= (nobs - dim)
-        self.dep_params = residsq_sum / (scale_inv * (nterm - dim))
+        scale /= (nobs - dim)
+        self.dep_params = residsq_sum / (scale * (nterm - dim))
 
 
     def covariance_matrix(self, expval, index):
         dim = len(expval)
-        return self.dep_params * np.ones((dim, dim), dtype=np.float64) +\
-                                (1 - self.dep_params) * np.eye(dim), True
+        dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
+        return  dp + (1 - self.dep_params) * np.eye(dim), True
 
     def summary(self):
         return ("The correlation between two observations in the " +
@@ -153,11 +155,51 @@ class Exchangeable(CovStruct):
 class Nested(CovStruct):
     """A nested working dependence structure.
 
-    The variance components are estimated using least squares
-    regression of the products y*y', for outcomes y and y' in the same
-    cluster, on a vector of indicators defining which variance
-    components are shared by y and y'.
+    A working dependence structure that captures a nested hierarchy of
+    groups, each level of which contributes to the random error term
+    of the model.
 
+    When using this working covariance structure, `dep_data` of the
+    GEE instance should contain a n_obs x k matrix of 0/1 indicators,
+    corresponding to the k subgroups nested under the top-level
+    `groups` of the GEE instance.  These subgroups should be nested
+    from left to right, so that two observations with the same value
+    for column j of `dep_data` should also have the same value for all
+    columns j' < j (this only applies to observations in the same
+    top-level cluster given by the `groups` argument to GEE).
+
+    Example
+    -------
+    Suppose our data are student test scores, and the students are in
+    classrooms, nested in schools, nested in school districts.  The
+    school district is the highest level of grouping, so the school
+    district id would be provided to GEE as `groups`, and the school
+    and classroom id's would be provided to the Nested class as the
+    `dep_data` argument, e.g.
+
+        0 0  # School 0, classroom 0, student 0
+        0 0  # School 0, classroom 0, student 1
+        0 1  # School 0, classroom 1, student 0
+        0 1  # School 0, classroom 1, student 1
+        1 0  # School 1, classroom 0, student 0
+        1 0  # School 1, classroom 0, student 1
+        1 1  # School 1, classroom 1, student 0
+        1 1  # School 1, classroom 1, student 1
+
+    Labels lower in the hierarchy are recycled, so that student 0 in
+    classroom 0 is different fro student 0 in classroom 1, etc.
+
+    Notes
+    -----
+    The calculations for this dependence structure involve all pairs
+    of observations within a group (that is, within the top level
+    `group` structure passed to GEE).  Large group sizes will result
+    in slow iterations.
+
+    The variance components are estimated using least squares
+    regression of the products r*r', for standardized residuals r and
+    r' in the same group, on a vector of indicators defining which
+    variance components are shared by r and r'.
     """
 
     # The regression design matrix for estimating the variance
@@ -173,61 +215,16 @@ class Nested(CovStruct):
     designx_s = None
     designx_v = None
 
-    # The inverse of the scale parameter
-    scale_inv = None
+    # The scale parameter
+    scale = None
 
     # The regression coefficients for estimating the variance
     # components
     vcomp_coeff = None
 
 
-    def __init__(self, id_matrix):
-        """
-        A working dependence structure that captures a nested sequence
-        of clusters.
 
-        Parameters
-        ----------
-        id_matrix : array-like
-           An n_obs x k matrix of cluster indicators, corresponding to
-           clusters nested under the top-level clusters provided to
-           GEE.  These clusters should be nested from left to right,
-           so that two observations with the same value for column j
-           of Id should also have the same value for cluster j' < j of
-           Id (this only applies to observations in the same top-level
-           cluster).
-
-        Notes
-        -----
-        Suppose our data are student test scores, and the students are
-        in classrooms, nested in schools, nested in school districts.
-        The school district id would be provided to GEE as the
-        top-level cluster, and the school and classroom id's would be
-        provided to the Nested class s the `id_matrix` argument, for
-        example:
-
-        0 0  School 0, classroom 0
-        0 0  School 0, classroom 0
-        0 1  School 0, classroom 1
-        0 1  School 0, classroom 1
-        1 0  School 1, classroom 0
-        1 0  School 1, classroom 0
-        1 1  School 1, classroom 1
-        1 1  School 1, classroom 1
-        """
-
-        # A bit of processing of the Id argument
-        if type(id_matrix) != np.ndarray:
-            id_matrix = np.array(id_matrix)
-        if len(id_matrix.shape) == 1:
-            id_matrix = id_matrix[:, None]
-        self.id_matrix = id_matrix
-
-        # To be defined on the first call to update
-        self.designx = None
-
-
-    def _compute_design(self, parent):
+    def initialize(self, parent):
         """
         Called on the first call to update
 
@@ -241,30 +238,46 @@ class Nested(CovStruct):
         with the corresponding element of QY.
         """
 
+        # A bit of processing of the nest data
+        id_matrix = np.asarray(parent.dep_data)
+        if id_matrix.ndim == 1:
+            id_matrix = id_matrix[:,None]
+        self.id_matrix = id_matrix
+
         endog = parent.endog_li
         num_clust = len(endog)
         designx, ilabels = [], []
+
+        # The number of layers of nesting
         n_nest = self.id_matrix.shape[1]
+
         for i in range(num_clust):
             ngrp = len(endog[i])
-            rix = parent.row_indices[i]
+            glab = parent.group_labels[i]
+            rix = parent.group_indices[glab]
 
+            # Determine the number of common variance components
+            # shared by each pair of observations.
+            ix1, ix2 = np.tril_indices(ngrp, -1)
+            ncm = (self.id_matrix[rix[ix1], :] ==
+                   self.id_matrix[rix[ix2], :]).sum(1)
+
+            # This is used to construct the working correlation
+            # matrix.
             ilabel = np.zeros((ngrp, ngrp), dtype=np.int32)
-            for j1 in range(ngrp):
-                for j2 in range(j1):
-
-                    # Number of common nests.
-                    ncm = np.sum(self.id_matrix[rix[j1], :] ==
-                                 self.id_matrix[rix[j2], :])
-
-                    dsx = np.zeros(n_nest+1, dtype=np.float64)
-                    dsx[0] = 1
-                    dsx[1:ncm+1] = 1
-                    designx.append(dsx)
-                    ilabel[j1, j2] = ncm + 1
-                    ilabel[j2, j1] = ncm + 1
+            ilabel[[ix1, ix2]] = ncm + 1
+            ilabel[[ix2, ix1]] = ncm + 1
             ilabels.append(ilabel)
-        self.designx = np.array(designx)
+
+            # This is used to estimate the variance components.
+            dsx = np.zeros((len(ix1), n_nest+1), dtype=np.float64)
+            dsx[:,0] = 1
+            for k in np.unique(ncm):
+                ii = np.flatnonzero(ncm == k)
+                dsx[ii, 1:k+1] = 1
+            designx.append(dsx)
+
+        self.designx = np.concatenate(designx, axis=0)
         self.ilabels = ilabels
 
         svd = np.linalg.svd(self.designx, 0)
@@ -290,9 +303,10 @@ class Nested(CovStruct):
         varfunc = parent.family.variance
 
         dvmat = []
-        scale_inv = 0.
+        scale = 0.
         for i in range(num_clust):
 
+            # Needed?
             if len(endog[i]) == 0:
                 continue
 
@@ -301,15 +315,13 @@ class Nested(CovStruct):
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - offset[i] - expval) / sdev
 
-            ngrp = len(resid)
-            for j1 in range(ngrp):
-                for j2 in range(j1):
-                    dvmat.append(resid[j1] * resid[j2])
+            ix1, ix2 = np.tril_indices(len(resid), -1)
+            dvmat.append(resid[ix1] * resid[ix2])
 
-            scale_inv += np.sum(resid**2)
+            scale += np.sum(resid**2)
 
-        dvmat = np.array(dvmat)
-        scale_inv /= (nobs - dim)
+        dvmat = np.concatenate(dvmat)
+        scale /= (nobs - dim)
 
         # Use least squares regression to estimate the variance
         # components
@@ -317,7 +329,7 @@ class Nested(CovStruct):
                                 dvmat) / self.designx_s)
 
         self.vcomp_coeff = np.clip(vcomp_coeff, 0, np.inf)
-        self.scale_inv = scale_inv
+        self.scale = scale
 
         self.dep_params = self.vcomp_coeff.copy()
 
@@ -327,23 +339,27 @@ class Nested(CovStruct):
         dim = len(expval)
 
         # First iteration
-        if self.designx is None:
+        if self.dep_params is None:
             return np.eye(dim, dtype=np.float64), True
 
         ilabel = self.ilabels[index]
 
-        c = np.r_[self.scale_inv, np.cumsum(self.vcomp_coeff)]
+        c = np.r_[self.scale, np.cumsum(self.vcomp_coeff)]
         vmat = c[ilabel]
-        vmat /= self.scale_inv
+        vmat /= self.scale
         return vmat, True
 
 
     def summary(self):
+        """
+        Returns a summary string describing the state of the
+        dependence structure.
+        """
 
         msg = "Variance estimates\n------------------\n"
         for k in range(len(self.vcomp_coeff)):
             msg += "Component %d: %.3f\n" % (k+1, self.vcomp_coeff[k])
-        msg += "Residual: %.3f\n" % (self.scale_inv -
+        msg += "Residual: %.3f\n" % (self.scale -
                                      np.sum(self.vcomp_coeff))
         return msg
 
@@ -493,7 +509,8 @@ class Autoregressive(CovStruct):
         if self.dep_params == 0:
             return np.eye(ngrp, dtype=np.float64), True
         idx = np.arange(ngrp)
-        return self.dep_params**np.abs(idx[:, None] - idx[None, :]), True
+        cmat = self.dep_params**np.abs(idx[:, None] - idx[None, :])
+        return cmat, True
 
 
     def summary(self):
@@ -505,7 +522,8 @@ class Autoregressive(CovStruct):
 
 class GlobalOddsRatio(CovStruct):
     """
-    Estimate the global odds ratio for a GEE with ordinal or nominal data.
+    Estimate the global odds ratio for a GEE with ordinal or nominal
+    data.
 
     References
     ----------

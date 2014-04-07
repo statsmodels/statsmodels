@@ -36,7 +36,7 @@ from scipy import optimize
 from scipy.stats import chi2
 from descriptive import _OptFuncts
 import warnings
-
+from statsmodels.tools.sm_exceptions import IterationLimitWarning
 
 class OptAFT(_OptFuncts):
     """
@@ -150,7 +150,8 @@ class OptAFT(_OptFuncts):
         llikemax = np.sum(np.log(wtd_km[uncensored])) + \
           np.sum(np.log(survivalmax[censored]))
         if iters == maxiter:
-            warnings.warn('The EM reached the maximum number of iterations')
+            warnings.warn('The EM reached the maximum number of iterations',
+                          IterationLimitWarning)
         return -2 * (llike - llikemax)
 
     def _ci_limits_beta(self, b0, param_num=None):

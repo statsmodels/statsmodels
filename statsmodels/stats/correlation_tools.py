@@ -7,6 +7,8 @@ Author: Josef Perktold
 License: BSD-3
 """
 
+from statsmodels.tools.sm_exceptions import (IterationLimitWarning,
+    iteration_limit_doc)
 import numpy as np
 import scipy.sparse as sparse
 from scipy.sparse.linalg import svds
@@ -82,7 +84,7 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
         x_new[diag_idx, diag_idx] = 1
     else:
         import warnings
-        warnings.warn('maximum iteration reached')
+        warnings.warn(iteration_limit_doc, IterationLimitWarning)
 
     return x_new
 

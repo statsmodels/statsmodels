@@ -20,6 +20,18 @@ except ImportError:
                        'A' : pandas_datetools.yearEnd,
                        'Q' : pandas_datetools.quarterEnd}
 
+try:
+    from pandas import Period
+except ImportError:  # not sure when this was added in pandas
+    Period = datetime.datetime  # HACK
+
+
+def _is_datetime_index(dates):
+    if isinstance(dates[0], (datetime.datetime, Period)):
+        return True  # TimeStamp is a datetime subclass
+    else:
+        return False
+
 def _index_date(date, dates):
     """
     Gets the index number of a date in a date index.

@@ -774,7 +774,8 @@ class MultiComparison(object):
     groups : array
         group labels corresponding to each data point
     group_order : list of strings, optional
-        the desired order for the group mean results to be reported in.
+        the desired order for the group mean results to be reported in. If
+        not specified, results are reported in increasing order
 
     '''
 
@@ -888,23 +889,23 @@ class MultiComparison(object):
 
         i1, i2 = self.pairindices
         if pvals_corrected is None:
-            resarr = np.array(zip(i1, i2,
+            resarr = np.array(zip(self.groupsunique[i1], self.groupsunique[i2],
                                   np.round(res[:,0],4),
                                   np.round(res[:,1],4),
                                   reject),
-                       dtype=[('group1', int),
-                              ('group2', int),
+                       dtype=[('group1', object),
+                              ('group2', object),
                               ('stat',float),
                               ('pval',float),
                               ('reject', np.bool8)])
         else:
-            resarr = np.array(zip(i1, i2,
+            resarr = np.array(zip(self.groupsunique[i1], self.groupsunique[i2],
                                   np.round(res[:,0],4),
                                   np.round(res[:,1],4),
                                   np.round(pvals_corrected,4),
                                   reject),
-                       dtype=[('group1', int),
-                              ('group2', int),
+                       dtype=[('group1', object),
+                              ('group2', object),
                               ('stat',float),
                               ('pval',float),
                               ('pval_corr',float),
@@ -946,13 +947,13 @@ class MultiComparison(object):
         #6:df_total, 7:reject2
         res = tukeyhsd(gmeans, gnobs, var_, df=None, alpha=alpha, q_crit=None)
 
-        resarr = np.array(zip(res[0][0], res[0][1],
+        resarr = np.array(zip(self.groupsunique[res[0][0]], self.groupsunique[res[0][1]],
                                   np.round(res[2],4),
                                   np.round(res[4][:, 0],4),
                                   np.round(res[4][:, 1],4),
                                   res[1]),
-                       dtype=[('group1', int),
-                              ('group2', int),
+                       dtype=[('group1', object),
+                              ('group2', object),
                               ('meandiff',float),
                               ('lower',float),
                               ('upper',float),

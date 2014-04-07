@@ -33,6 +33,7 @@ from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
+from statsmodels.compatnp.np_compat import np_matrix_rank
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:
@@ -123,8 +124,10 @@ class DiscreteModel(base.LikelihoodModel):
         statsmodels.model.LikelihoodModel.__init__
         and should contain any preprocessing that needs to be done for a model.
         """
-        self.df_model = float(tools.rank(self.exog) - 1)  # assumes constant
-        self.df_resid = float(self.exog.shape[0] - tools.rank(self.exog))
+        # assumes constant
+        self.df_model = float(np_matrix_rank(self.exog) - 1)
+        self.df_resid = (float(self.exog.shape[0] -
+                         np_matrix_rank(self.exog)))
 
     def cdf(self, X):
         """
@@ -1919,7 +1922,10 @@ class NegativeBinomial(CountModel):
                         - np.log(a1+mu) - (a1+y)/(a1+mu) + 1).sum()*da1
 
         #multiply above by constant outside sum to reduce rounding error
-        return np.r_[dparams.sum(0), dalpha]
+        if self._transparams:
+            return np.r_[dparams.sum(0), dalpha*alpha]
+        else:
+            return np.r_[dparams.sum(0), dalpha]
 
     def _score_nb1(self, params):
         return self._score_nbin(params, Q=1)

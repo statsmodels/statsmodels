@@ -175,5 +175,5 @@ class TestPoissonZi(CompareMixin):
         mod1 = PoissonOffsetGMLE(mod.endog, mod.exog, offset=mod.offset)
         from numpy.testing import assert_warns
         mod1.data.xnames = mod1.data.xnames * 2
-        assert_warns(UserWarning, mod1.fit)
+        assert_warns(UserWarning, mod1.fit, disp=0)
 

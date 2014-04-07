@@ -32,8 +32,8 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.inheritance_diagram',
               'matplotlib.sphinxext.plot_directive',
               'matplotlib.sphinxext.only_directives',
-              'ipython_console_highlighting',
-              'ipython_directive',
+              'IPython.sphinxext.ipython_console_highlighting',
+              'IPython.sphinxext.ipython_directive',
               'numpy_ext.numpydoc',
               'github' # for GitHub links
               ]
@@ -75,8 +75,8 @@ autoclass_content = 'class'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from statsmodels.version import version, full_version
-release = version
+from statsmodels.version import short_version, full_version
+release = short_version
 # The full version, including dev tag.
 version = full_version
 
@@ -311,7 +311,7 @@ epub_copyright = u'2009-2013, Josef Perktold, Skipper Seabold, Jonathan Taylor, 
 intersphinx_mapping = {
         'numpy' : ('http://docs.scipy.org/doc/numpy/', None),
         'python' : ('http://docs.python.org/3.2', None),
-        'pydagogue' : ('http://matthew-brett.github.com/pydagogue/', None),
+        'pydagogue' : ('http://matthew-brett.github.io/pydagogue/', None),
         'patsy' : ('http://patsy.readthedocs.org/en/latest/', None),
         'pandas' : ('http://pandas.pydata.org/pandas-docs/dev/', None),
         }
@@ -321,3 +321,8 @@ plot_basedir = join(dirname(dirname(os.path.abspath(__file__))), 'source')
 
 # ghissue config
 github_project_url = "https://github.com/statsmodels/statsmodels"
+
+# for the examples landing page
+import json
+example_context = json.load(open('examples/landing.json'))
+html_context = {'examples': example_context }

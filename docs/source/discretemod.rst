@@ -31,7 +31,8 @@ Detailed examples can be found here:
 .. toctree::
     :maxdepth: 2
 
-    examples/generated/example_discrete
+    examples/notebooks/generated/discrete_choice_overview
+    examples/notebooks/generated/discrete_choice_example
 
 Technical Documentation
 -----------------------
