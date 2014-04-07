@@ -513,7 +513,7 @@ class MixedLM(base.LikelihoodModel):
         implementation of the Hessian with respect to cov_re.
         """
         from statsmodels.tools.numdiff import approx_hess
-        return approx_hess(params, self.loglike)
+        return approx_hess_ce(params, self.loglike)
 
 
     def _unpack(self, params, sym=True):
