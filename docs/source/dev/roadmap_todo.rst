@@ -4,7 +4,7 @@ Get Involved
 Where to Start?
 ---------------
 
-Use grep or download a tool like `grin <pypi.python.org/pypi/grin>`__ to search the code for TODO notes::
+Use grep or download a tool like `grin <https://pypi.python.org/pypi/grin>`__ to search the code for TODO notes::
 
     grin -i -I "*.py*" todo
 
@@ -23,12 +23,7 @@ We currently have a large amount code in the :ref:`sandbox`. The medium term goa
 Contribute an Example
 ---------------------
 
-Link to examples documentation. Examples and technical documentation.
-
-Contribute to the Gallery
--------------------------
-
-Link to the Gallery.
+Contribute an :ref:`example <examples>`, add some technical documentation, or contribute a statistics tutorial.
 
 Roadmap to 0.6
 ==============
