@@ -35,7 +35,7 @@
     "id":"plotting",
     "links":[
     {
-        "text": "Regression Diagnostics",
+        "text": "Regression Plots",
         "target": "notebooks/generated/regression_plots.html",
         "img": "../_static/images/regression_plots.png"
     },
