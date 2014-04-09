@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Tests for findind a positive semi-definite correlation of covariance matrix
+"""Tests for finding a positive semi-definite correlation or covariance matrix
 
 Created on Mon May 27 12:07:02 2013
 
@@ -7,10 +7,14 @@ Author: Josef Perktold
 """
 
 import numpy as np
+import scipy.sparse as sparse
 from numpy.testing import assert_almost_equal, assert_allclose
 from statsmodels.stats.correlation_tools import (
-                 corr_nearest, corr_clipped, cov_nearest)
+    corr_nearest, corr_clipped, cov_nearest,
+    _project_correlation_factors, corr_nearest_factor, _spg_optim,
+    corr_thresholded, cov_nearest_factor_homog, FactoredPSDMatrix)
 import warnings
+
 
 def norm_f(x, y):
     '''Frobenious norm (squared sum) of difference between two arrays
@@ -208,3 +212,191 @@ def test_corrpsd_threshold():
         #print 'evals', evals, threshold
         #print evals[0] / threshold - 1
         assert_allclose(evals[0], threshold, rtol=0.25, atol=1e-15)
+
+class Test_Factor(object):
+
+    def test_corr_nearest_factor(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Construct a test matrix with exact factor structure
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+            _project_correlation_factors(X)
+            X *= 0.7
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, 1.)
+
+            # Try to recover the structure
+            rslt = corr_nearest_factor(mat, dm)
+            C = rslt.corr
+            mat1 = C.to_matrix()
+
+            assert(np.abs(mat - mat1).max() < 1e-3)
+
+
+    # Test that we get the same result if the input is dense or sparse
+    def test_corr_nearest_factor_sparse(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Generate a test matrix of factors
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+
+            # Get the correlation matrix
+            _project_correlation_factors(X)
+            X *= 0.7
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, 1)
+
+            # Threshold it
+            mat *= (np.abs(mat) >= 0.4)
+            smat = sparse.csr_matrix(mat)
+
+            fac_dense = corr_nearest_factor(smat, dm).corr
+            mat_dense = fac_dense.to_matrix()
+
+            fac_sparse = corr_nearest_factor(smat, dm).corr
+            mat_sparse = fac_sparse.to_matrix()
+
+            assert_allclose(mat_dense, mat_sparse, rtol=0.25,
+                            atol=1e-3)
+
+
+    # Test on a quadratic function.
+    def test_spg_optim(self):
+
+        dm = 100
+
+        ind = np.arange(dm)
+        indmat = np.abs(ind[:,None] - ind[None,:])
+        M = 0.8**indmat
+
+        def obj(x):
+            return np.dot(x, np.dot(M, x))
+
+        def grad(x):
+            return 2*np.dot(M, x)
+
+        def project(x):
+            return x
+
+        x = np.random.normal(size=dm)
+        rslt = _spg_optim(obj, grad, x, project)
+        xnew = rslt.params
+        assert(obj(xnew) < 1e-4)
+
+    def test_decorrelate(self):
+
+        d = 30
+        dg = np.linspace(1, 2, d)
+        root = np.random.normal(size=(d, 4))
+        fac = FactoredPSDMatrix(dg, root)
+        mat = fac.to_matrix()
+        rmat = np.linalg.cholesky(mat)
+        dcr = fac.decorrelate(rmat)
+        idm = np.dot(dcr, dcr.T)
+        assert_almost_equal(idm, np.eye(d))
+
+        rhs = np.random.normal(size=(d, 5))
+        mat2 = np.dot(rhs.T, np.linalg.solve(mat, rhs))
+        mat3 = fac.decorrelate(rhs)
+        mat3 = np.dot(mat3.T, mat3)
+        assert_almost_equal(mat2, mat3)
+
+    def test_logdet(self):
+
+        d = 30
+        dg = np.linspace(1, 2, d)
+        root = np.random.normal(size=(d, 4))
+        fac = FactoredPSDMatrix(dg, root)
+        mat = fac.to_matrix()
+
+        _, ld = np.linalg.slogdet(mat)
+        ld2 = fac.logdet()
+
+        assert_almost_equal(ld, ld2)
+
+    def test_solve(self):
+
+        d = 30
+        dg = np.linspace(1, 2, d)
+        root = np.random.normal(size=(d, 2))
+        fac = FactoredPSDMatrix(dg, root)
+        rhs = np.random.normal(size=(d, 5))
+        sr1 = fac.solve(rhs)
+        mat = fac.to_matrix()
+        sr2 = np.linalg.solve(mat, rhs)
+        assert_almost_equal(sr1, sr2)
+
+    def test_cov_nearest_factor_homog(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Construct a test matrix with exact factor structure
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, np.diag(mat) + 3.1)
+
+            # Try to recover the structure
+            rslt = cov_nearest_factor_homog(mat, dm)
+            mat1 = rslt.to_matrix()
+
+            assert(np.abs(mat - mat1).max() < 1e-4)
+
+
+    # Check that dense and sparse inputs give the same result
+    def test_cov_nearest_factor_homog_sparse(self):
+
+        d = 100
+
+        for dm in 1,2:
+
+            # Construct a test matrix with exact factor structure
+            X = np.zeros((d,dm), dtype=np.float64)
+            x = np.linspace(0, 2*np.pi, d)
+            for j in range(dm):
+                X[:,j] = np.sin(x*(j+1))
+            mat = np.dot(X, X.T)
+            np.fill_diagonal(mat, np.diag(mat) + 3.1)
+
+            # Fit to dense
+            rslt = cov_nearest_factor_homog(mat, dm)
+            mat1 = rslt.to_matrix()
+
+            # Fit to sparse
+            smat = sparse.csr_matrix(mat)
+            rslt = cov_nearest_factor_homog(smat, dm)
+            mat2 = rslt.to_matrix()
+
+            assert_allclose(mat1, mat2, rtol=0.25, atol=1e-3)
+
+    def test_corr_thresholded(self):
+
+        import datetime
+
+        t1 = datetime.datetime.now()
+        X = np.random.normal(size=(2000,10))
+        tcor = corr_thresholded(X, 0.2, max_elt=4e6)
+        t2 = datetime.datetime.now()
+        ss = (t2-t1).seconds
+
+        fcor = np.corrcoef(X)
+        fcor *= (np.abs(fcor) >= 0.2)
+
+        assert_allclose(tcor.todense(), fcor, rtol=0.25, atol=1e-3)
+

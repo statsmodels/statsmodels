@@ -108,6 +108,16 @@ We added a naive seasonal decomposition tool in the same vein as R's ``decompose
 Other important new features
 ----------------------------
 
+<<<<<<< HEAD
+* New functions added to correlation tools: `corr_nearest_factor`
+  finds the closest factor-structured correlation matrix to a given
+  square matrix in the Frobenius norm; `corr_thresholded` efficiently
+  constructs a hard-thresholded correlation matrix using sparse matrix
+  operations.
+* Other new changes can go
+* In a
+* Bullet list
+=======
 * The Kalman filter Cython code underlying AR(I)MA estimation has been substantially optimized. You can expect speed-ups of one to two orders of magnitude.
 
 * Added :func:`sm.tsa.arma_order_select_ic`. A convenience function to quickly get the information criteria for use in tentative order selection of ARMA processes.
@@ -117,6 +127,7 @@ Other important new features
 * **New datasets**: Added new :ref:`datasets <datasets>` for examples. ``sm.datasets.co2`` is a univariate time-series dataset of weekly co2 readings. It exhibits a trend and seasonality and has missing values.
 
 * Added robust skewness and kurtosis estimators in :func:`sm.stats.stattools.robust_skewness` and :func:`sm.stats.stattools.robust_kurtosis`, respectively.  An alternative robust measure of skewness has been added in :func:`sm.stats.stattools.medcouple`.
+>>>>>>> master
 
 Major Bugs fixed
 ----------------
