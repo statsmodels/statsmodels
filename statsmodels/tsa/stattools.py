@@ -330,6 +330,8 @@ def acovf(x, unbiased=False, demean=True, fft=False, missing='none'):
     if demean and deal_with_masked:
         # whether 'drop' or 'conservative':
         xo = x - x.sum()/notmask_int.sum()
+        if missing=='conservative':
+            xo[~notmask_bool] = 0
     elif demean:
         xo = x - x.mean()
     else:
