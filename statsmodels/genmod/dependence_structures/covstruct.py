@@ -139,7 +139,6 @@ class Exchangeable(CovStruct):
         scale /= (nobs - dim)
         self.dep_params = residsq_sum / (scale * (nterm - dim))
 
-
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
@@ -150,6 +149,81 @@ class Exchangeable(CovStruct):
                 "same cluster is %.3f" % self.dep_params)
 
 
+class MDependent(CovStruct):
+    """
+    An m-dependent working dependence structure. Assumes cross correlations are all 
+    zero except for observations within the same cluster and within M time units away 
+    from each other, where correlation is equal to a constant. Currently uses only the 
+    first column of time.
+    """
+    
+    #User inputs m, the number of time periods away less than or equal to which correlation 
+    #is non zero. Initialize constant correlation to 0.
+    
+    def __init__(self, m):
+        self.m = float(m)
+        self.dep_params = 0.
+    
+    """        
+    Parameters
+    ----------
+    m: integer
+       The number of time periods away within a cluster less than or equal to which correlation 
+       is non zero
+    dep_params: float
+       The constant correlation between dependent observations.
+    """
+        
+    # Initialize the parent dependent variables used in the covariance_matrix function
+    def initialize(self, parent):
+        self.time = parent.time_li
+        self.varfunc = parent.family.variance
+    
+    #Get residuals and update correlation parameter
+    def update(self, beta, parent):		
+        mprod = []
+        endog = parent.endog_li
+        num_clust = len(endog)
+        nobs = parent.nobs
+        dim = len(beta)
+        cached_means = parent.cached_means
+        scale = 0.
+        nterm = 0
+        for i in range(num_clust):
+        
+            if len(endog[i]) == 0:
+                continue
+            
+            expval, _ = cached_means[i]
+            sdev = np.sqrt(self.varfunc(expval))
+            resid = (endog[i] - expval) / sdev
+            scale += np.sum(resid**2)
+            resid_op = np.outer(resid, resid)
+            time_od = np.abs(self.time[i][:,0] - self.time[i][:,0:1]) 
+            #TODO: extend to handle the case where time has more than one column
+            np.fill_diagonal(time_od, np.nan)
+            ix,jx = np.nonzero(time_od <= self.m)
+            mprod.append(resid_op[ix,jx])
+            nterm +=len(ix)
+        
+        scale /= (nobs - dim)
+        
+        mprod = np.concatenate(mprod)
+        self.dep_params = np.sum(mprod) / (scale * (nterm - 2*dim)) 
+        
+    #Construct the correlation matrix
+    def covariance_matrix(self, expval, index):
+        p = len(expval)
+        mat = np.eye(p)
+        time_od = np.abs(self.time[index][:,0] - self.time[index][:,0:1])
+        np.fill_diagonal(time_od, np.nan)
+        ix,jx = np.nonzero(time_od <= self.m)
+        mat[ix,jx] = self.dep_params
+        return mat, True
+
+    def summary(self):
+        return ("The correlation between observations <= m time steps away in the " +
+                "same cluster is %.3f" % self.dep_params)
 
 
 class Nested(CovStruct):
@@ -559,8 +633,7 @@ class GlobalOddsRatio(CovStruct):
 
     # See docstring
     cpp = None
-
-
+        
     def __init__(self, nlevel, endog_type):
         super(GlobalOddsRatio, self).__init__()
         self.nlevel = nlevel
