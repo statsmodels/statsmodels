@@ -75,14 +75,19 @@ def wls_prediction_std(res, exog=None, weights=None, alpha=0.05):
     if exog is None:
         exog = res.model.exog
         predicted = res.fittedvalues
+        if weights is None:
+            weights = res.model.weights
     else:
         exog = np.atleast_2d(exog)
         if covb.shape[1] != exog.shape[1]:
             raise ValueError('wrong shape of exog')
         predicted = res.model.predict(res.params, exog)
-
-    if weights is None:
-        weights = res.model.weights
+        if weights is None:
+            weights = 1.
+        else:
+            weights = np.asarray(weights)
+            if len(weights) > 1 and len(weights) != exog.shape[0]:
+                raise ValueError('weights and exog do not have matching shape')
 
 
     # full covariance:
