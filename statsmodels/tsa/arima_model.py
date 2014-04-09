@@ -1315,8 +1315,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
     def bse(self):
         params = self.params
         hess = self.model.hessian(params)
-        if len(params) == 1:  # can't take an inverse
-            return np.sqrt(-1./hess)
+        if len(params) == 1:  # can't take an inverse, ensure 1d
+            return np.sqrt(-1./hess[0])
         return np.sqrt(np.diag(-inv(hess)))
 
     def cov_params(self):  # add scale argument?
@@ -1516,19 +1516,22 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             stubs = arstubs
             roots = self.arroots
             freq = self.arfreq
-        modulus = np.abs(roots)
-        data = np.column_stack((roots.real, roots.imag, modulus, freq))
-        roots_table = SimpleTable(data,
-                                  headers=['           Real',
-                                           '         Imaginary',
-                                           '         Modulus',
-                                           '        Frequency'],
-                                  title="Roots",
-                                  stubs=stubs,
-                                  data_fmts=["%17.4f", "%+17.4fj", "%17.4f",
-                                             "%17.4f"])
+        else:  # 0,0 model
+            stubs = []
+        if len(stubs):  # not 0, 0
+            modulus = np.abs(roots)
+            data = np.column_stack((roots.real, roots.imag, modulus, freq))
+            roots_table = SimpleTable(data,
+                                      headers=['           Real',
+                                               '         Imaginary',
+                                               '         Modulus',
+                                               '        Frequency'],
+                                      title="Roots",
+                                      stubs=stubs,
+                                      data_fmts=["%17.4f", "%+17.4fj",
+                                                 "%17.4f", "%17.4f"])
 
-        smry.tables.append(roots_table)
+            smry.tables.append(roots_table)
         return smry
 
     def summary2(self, title=None, alpha=.05, float_format="%.4f"):
@@ -1589,11 +1592,15 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
             stubs = arstubs
             roots = self.arroots
             freq = self.arfreq
-        modulus = np.abs(roots)
-        data = np.column_stack((roots.real, roots.imag, modulus, freq))
-        data = DataFrame(data)
-        data.columns = ['Real', 'Imaginary', 'Modulus', 'Frequency']
-        data.index = stubs
+        else:  # 0, 0 order
+            stubs = []
+
+        if len(stubs):
+            modulus = np.abs(roots)
+            data = np.column_stack((roots.real, roots.imag, modulus, freq))
+            data = DataFrame(data)
+            data.columns = ['Real', 'Imaginary', 'Modulus', 'Frequency']
+            data.index = stubs
 
         # Summary
         from statsmodels.iolib import summary2
@@ -1612,7 +1619,8 @@ class ARMAResults(tsbase.TimeSeriesModelResults):
         params = summary2.summary_params(self)
         smry.add_dict(model_info)
         smry.add_df(params, float_format=float_format)
-        smry.add_df(data, float_format="%17.4f")
+        if len(stubs):
+            smry.add_df(data, float_format="%17.4f")
         smry.add_title(results=self, title=title)
 
         return smry
