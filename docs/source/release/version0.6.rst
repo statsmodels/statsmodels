@@ -44,10 +44,10 @@ covariates.
    
    fam = Poisson()
    ind = Independence()
-   md1 = GEE.from_formula("y ~ age + trt + base", data, groups=data["subject"],\
+   md = GEE.from_formula("y ~ age + trt + base", data, groups=data["subject"],
                           covstruct=ind, family=fam)
-   mdf1 = md1.fit()
-   print mdf1.summary()
+   mdf = md.fit()
+   print mdf.summary()
 
 
 The dependence structure in a GEE is treated as a nuisance parameter
@@ -58,8 +58,11 @@ nested, and a global odds ratio for working with categorical data).
 Since the GEE estimates are not maximum likelihood estimates,
 alternative approaches to some common inference procedures have been
 developed.  The statsmodels GEE implementation currently provides
-standard errors and allows score tests for arbitrary parameter
-contrasts.
+standard errors, Wald tests, score tests for arbitrary parameter
+contrasts, and estimates and tests for marginal effects.  Several
+forms of standard errors are provided, including robust standard
+errors that are approximately correct even if the working dependence
+structure is misspecified.
 
 
 
