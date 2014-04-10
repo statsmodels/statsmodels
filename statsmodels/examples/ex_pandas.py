@@ -4,6 +4,8 @@
 """
 
 
+from __future__ import print_function
+from statsmodels.compat.python import zip
 from datetime import datetime
 
 import numpy as np
@@ -22,22 +24,22 @@ Y = Series(data.endog)
 #Example: OLS
 model = sm.OLS(Y, X)
 results = model.fit()
-print results.summary()
+print(results.summary())
 
-print results.params
-print results.cov_params()
+print(results.params)
+print(results.cov_params())
 
 infl = results.get_influence()
-print infl.summary_table()
+print(infl.summary_table())
 
 #raise
 
 #Example RLM
 huber_t = sm.RLM(Y, X, M=sm.robust.norms.HuberT())
 hub_results = huber_t.fit()
-print hub_results.params
-print hub_results.bcov_scaled
-print hub_results.summary()
+print(hub_results.params)
+print(hub_results.bcov_scaled)
+print(hub_results.summary())
 
 
 import matplotlib.pyplot as plt
@@ -88,11 +90,11 @@ plot_acf_multiple(log_difference.values)
 #Example TSA VAR
 
 model = tsa.VAR(log_difference, freq='D')
-print model.select_order()
+print(model.select_order())
 
 res = model.fit(2)
-print res.summary()
-print res.is_stable()
+print(res.summary())
+print(res.is_stable())
 
 irf = res.irf(20)
 irf.plot()
@@ -101,7 +103,7 @@ fevd = res.fevd()
 fevd.plot()
 
 #print res.test_whiteness()
-print res.test_causality('m1', 'realgdp')
+print(res.test_causality('m1', 'realgdp'))
 #print res.test_normality() # exception
 '''
 Traceback (most recent call last):

@@ -23,6 +23,8 @@ from statsmodels.datasets import macrodata
 
 import statsmodels.stats.sandwich_covariance as sw
 import statsmodels.stats.diagnostic as smsdia
+import json
+
 #import statsmodels.sandbox.stats.diagnostic as smsdia
 import statsmodels.stats.outliers_influence as oi
 
@@ -588,11 +590,6 @@ class TestDiagnosticG(object):
         #this test is slow
         infl = oi.OLSInfluence(res)
 
-        try:
-            import json
-        except ImportError:
-            raise SkipTest
-
         fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
         lsdiag = json.load(fp)
 
@@ -624,7 +621,7 @@ class TestDiagnosticG(object):
         fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
         #not used yet:
         #infl_bool_r  = pandas.read_csv(fn, index_col=0,
-        #                                converters=dict(zip(range(7),[conv]*7)))
+        #                                converters=dict(zip(lrange(7),[conv]*7)))
         infl_r2 = np.asarray(infl_r)
         assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)
         assert_almost_equal(infl.cov_ratio, infl_r2[:,4], decimal=14)
@@ -733,10 +730,6 @@ def test_influence_wrapped():
     assert_(isinstance(df, DataFrame))
 
     #this test is slow
-    try:
-        import json
-    except ImportError:
-        raise SkipTest
     fp = open(os.path.join(cur_dir,"results/influence_lsdiag_R.json"))
     lsdiag = json.load(fp)
 
@@ -762,7 +755,7 @@ def test_influence_wrapped():
     fn = os.path.join(cur_dir,"results/influence_measures_bool_R.csv")
     #not used yet:
     #infl_bool_r  = pandas.read_csv(fn, index_col=0,
-    #                                converters=dict(zip(range(7),[conv]*7)))
+    #                                converters=dict(zip(lrange(7),[conv]*7)))
     infl_r2 = np.asarray(infl_r)
     #TODO: finish wrapping this stuff
     assert_almost_equal(infl.dfbetas, infl_r2[:,:3], decimal=13)

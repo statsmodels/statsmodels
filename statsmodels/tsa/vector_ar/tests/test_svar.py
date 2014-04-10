@@ -5,7 +5,7 @@ Test SVAR estimation
 import statsmodels.api as sm
 from statsmodels.tsa.vector_ar.svar_model import SVAR
 from numpy.testing import assert_almost_equal, assert_equal
-from results import results_svar
+from .results import results_svar
 import numpy as np
 import numpy.testing as npt
 

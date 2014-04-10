@@ -101,7 +101,7 @@ for inference with clustered errors,” The Review of Economics and
 Statistics 90, no. 3 (2008): 414–427.
 
 """
-
+from statsmodels.compat.python import range
 import numpy as np
 
 from statsmodels.tools.grouputils import Group
@@ -428,8 +428,8 @@ def group_sums(x, group):
     #TODO: remove this, already copied to tools/grouputils
     '''
 
-    #TODO: transpose return in grou_sum, need test coverage first
-    return np.array([np.bincount(group, weights=x[:,col])
+    #TODO: transpose return in group_sum, need test coverage first
+    return np.array([np.bincount(group, weights=x[:, col])
                             for col in range(x.shape[1])])
 
 

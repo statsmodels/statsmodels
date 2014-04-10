@@ -13,6 +13,7 @@ PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
 R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
+from statsmodels.compat.python import string_types
 import numpy as np
 import scipy.stats as stats
 
@@ -23,7 +24,7 @@ import statsmodels.robust.norms as norms
 import statsmodels.robust.scale as scale
 import statsmodels.base.model as base
 import statsmodels.base.wrapper as wrap
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 __all__ = ['RLM']
 
@@ -255,7 +256,7 @@ class RLM(base.LikelihoodModel):
                 % conv)
         self.scale_est = scale_est
         if (isinstance(scale_est,
-                       basestring) and scale_est.lower() == "stand_mad"):
+                       string_types) and scale_est.lower() == "stand_mad"):
             from warnings import warn
             warn("stand_mad is deprecated and will be removed in 0.7.0",
                  FutureWarning)

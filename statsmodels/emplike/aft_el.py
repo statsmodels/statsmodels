@@ -34,7 +34,7 @@ from statsmodels.tools import add_constant
 #from elregress import ElReg
 from scipy import optimize
 from scipy.stats import chi2
-from descriptive import _OptFuncts
+from .descriptive import _OptFuncts
 import warnings
 from statsmodels.tools.sm_exceptions import IterationLimitWarning
 

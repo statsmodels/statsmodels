@@ -4,13 +4,13 @@ not written as a test, prints results, renamed to prevent nose from running it
 
 
 '''
-
+from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats
 #from statsmodels.stats.moment_helpers import mnc2mvsk
 from statsmodels.sandbox.distributions.sppatch import expect_v2
 
-from distparams import distcont, distdiscrete#, distslow
+from .distparams import distcont, distdiscrete#, distslow
 
 
 specialcases = {'ncf':{'ub':1000} # diverges if it's too large, checked for mean
@@ -75,7 +75,7 @@ def check_cont_basic():
         mask = np.isfinite(st)
         if mask.sum() < 4:
             distnonfinite.append(distname)
-        print distname
+        print(distname)
         #print 'stats ', m,v,s,k
         expect = distfn.expect
         expect = lambda *args, **kwds : expect_v2(distfn, *args, **kwds)
@@ -92,7 +92,7 @@ def check_cont_basic():
         try:
             me, ve, se, ke = mnc2mvsk((mnc1, mnc2, mnc3, mnc4))
         except:
-            print 'exception', mnc1, mnc2, mnc3, mnc4, st
+            print('exception', mnc1, mnc2, mnc3, mnc4, st)
             me, ve, se, ke = [np.nan]*4
             if mask.size > 0:
                 distex.append(distname)
@@ -102,7 +102,7 @@ def check_cont_basic():
         em = np.array([me, ve, se, ke])
 
         diff = st[mask] - em[mask]
-        print diff, mnc1_lc - (1 + 2*mnc1)
+        print(diff, mnc1_lc - (1 + 2*mnc1))
         if np.size(diff)>0 and np.max(np.abs(diff)) > 1e-3:
             distlow.append(distname)
         else:
@@ -136,24 +136,24 @@ def nct_kurt_bug():
 if __name__ == '__main__':
 
     check_cont_basic()
-    #print [(k, v[0]) for k,v in res.items() if np.abs(v[0]-1)>1e-3]
-    #print [(k, v[2][0], 1+2*v[2][0]) for k,v in res.items() if np.abs(v[-1]-(1+2*v[2][0]))>1e-3]
-    mean_ = [(k, v[1][0], v[2][0]) for k,v in res.items()
+    #print [(k, v[0]) for k,v in iteritems(res) if np.abs(v[0]-1)>1e-3]
+    #print [(k, v[2][0], 1+2*v[2][0]) for k,v in iteritems(res) if np.abs(v[-1]-(1+2*v[2][0]))>1e-3]
+    mean_ = [(k, v[1][0], v[2][0]) for k,v in iteritems(res)
              if np.abs(v[1][0] - v[2][0])>1e-6 and np.isfinite(v[1][0])]
-    var_ = [(k, v[1][1], v[2][1]) for k,v in res.items()
+    var_ = [(k, v[1][1], v[2][1]) for k,v in iteritems(res)
             if np.abs(v[1][1] - v[2][1])>1e-2 and np.isfinite(v[1][1])]
-    skew = [(k, v[1][2], v[2][2]) for k,v in res.items()
+    skew = [(k, v[1][2], v[2][2]) for k,v in iteritems(res)
             if np.abs(v[1][2] - v[2][2])>1e-2 and np.isfinite(v[1][1])]
-    kurt = [(k, v[1][3], v[2][3]) for k,v in res.items()
+    kurt = [(k, v[1][3], v[2][3]) for k,v in iteritems(res)
             if np.abs(v[1][3] - v[2][3])>1e-2 and np.isfinite(v[1][1])]
 
     from statsmodels.iolib import SimpleTable
     if len(mean_) > 0:
-        print '\nMean difference at least 1e-6'
-        print SimpleTable(mean_, headers=['distname', 'diststats', 'expect'])
-    print '\nVariance difference at least 1e-2'
-    print SimpleTable(var_, headers=['distname', 'diststats', 'expect'])
-    print '\nSkew difference at least 1e-2'
-    print SimpleTable(skew, headers=['distname', 'diststats', 'expect'])
-    print '\nKurtosis difference at least 1e-2'
-    print SimpleTable(kurt, headers=['distname', 'diststats', 'expect'])
+        print('\nMean difference at least 1e-6')
+        print(SimpleTable(mean_, headers=['distname', 'diststats', 'expect']))
+    print('\nVariance difference at least 1e-2')
+    print(SimpleTable(var_, headers=['distname', 'diststats', 'expect']))
+    print('\nSkew difference at least 1e-2')
+    print(SimpleTable(skew, headers=['distname', 'diststats', 'expect']))
+    print('\nKurtosis difference at least 1e-2')
+    print(SimpleTable(kurt, headers=['distname', 'diststats', 'expect']))

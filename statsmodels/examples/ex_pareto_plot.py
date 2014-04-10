@@ -6,6 +6,7 @@ Author: josef-pktd
 """
 
 
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -29,6 +30,6 @@ rs = r[rsind]
 rsf = nobs-rsind.argsort()
 plt.figure()
 plt.loglog(rs, nobs-np.arange(nobs), '-o')
-print stats.linregress(np.log(rs), np.log(nobs-np.arange(nobs)))
+print(stats.linregress(np.log(rs), np.log(nobs-np.arange(nobs))))
 
 plt.show()

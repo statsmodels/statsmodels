@@ -10,7 +10,7 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib
     if matplotlib.__version__ < '1':
-        raise
+        raise ImportError("matplotlib is too old. Please upgrade.")
     have_matplotlib = True
 except:
     have_matplotlib = False
@@ -146,7 +146,7 @@ class TestProbPlotRandomNormalLocScale(BaseProbplotMixin):
         self.base_setup()
 
 
-class TestTopLevel:
+class TestTopLevel(object):
     def setup(self):
         self.data = sm.datasets.longley.load()
         self.data.exog = sm.add_constant(self.data.exog, prepend=False)

@@ -1,6 +1,7 @@
 
 ## Ordinary Least Squares
 
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
@@ -36,13 +37,13 @@ y = np.dot(X, beta) + e
 
 model = sm.OLS(y, X)
 results = model.fit()
-print results.summary()
+print(results.summary())
 
 
 # Quantities of interest can be extracted directly from the fitted model. Type ``dir(results)`` for a full list. Here are some examples:  
 
-print 'Parameters: ', results.params
-print 'R2: ', results.rsquared
+print('Parameters: ', results.params)
+print('R2: ', results.rsquared)
 
 
 # ## OLS non-linear curve but linear in parameters
@@ -62,14 +63,14 @@ y = y_true + sig * np.random.normal(size=nsample)
 # Fit and summary:
 
 res = sm.OLS(y, X).fit()
-print res.summary()
+print(res.summary())
 
 
 # Extract other quantities of interest:
 
-print 'Parameters: ', res.params
-print 'Standard errors: ', res.bse
-print 'Predicted values: ', res.predict()
+print('Parameters: ', res.params)
+print('Standard errors: ', res.bse)
+print('Predicted values: ', res.predict())
 
 
 # Draw a plot to compare the true relationship to OLS predictions. Confidence intervals around the predictions are built using the ``wls_prediction_std`` command.
@@ -110,16 +111,16 @@ y = y_true + e
 
 # Inspect the data:
 
-print X[:5,:]
-print y[:5]
-print groups
-print dummy[:5,:]
+print(X[:5,:])
+print(y[:5])
+print(groups)
+print(dummy[:5,:])
 
 
 # Fit and summary:
 
 res2 = sm.OLS(y, X).fit()
-print res.summary()
+print(res.summary())
 
 
 # Draw a plot to compare the true relationship to OLS predictions:
@@ -143,13 +144,13 @@ ax.legend(loc="best")
 # We want to test the hypothesis that both coefficients on the dummy variables are equal to zero, that is, $R \times \beta = 0$. An F test leads us to strongly reject the null hypothesis of identical constant in the 3 groups:
 
 R = [[0, 1, 0, 0], [0, 0, 1, 0]]
-print np.array(R)
-print res2.f_test(R)
+print(np.array(R))
+print(res2.f_test(R))
 
 
 # You can also use formula-like syntax to test hypotheses
 
-print res2.f_test("x2 = x3 = 0")
+print(res2.f_test("x2 = x3 = 0"))
 
 
 # ### Small group effects
@@ -163,10 +164,10 @@ y = y_true + np.random.normal(size=nsample)
 res3 = sm.OLS(y, X).fit()
 
 
-print res3.f_test(R)
+print(res3.f_test(R))
 
 
-print res3.f_test("x2 = x3 = 0")
+print(res3.f_test("x2 = x3 = 0"))
 
 
 # ### Multicollinearity
@@ -183,7 +184,7 @@ X = sm.add_constant(X)
 
 ols_model = sm.OLS(y, X)
 ols_results = ols_model.fit()
-print ols_results.summary()
+print(ols_results.summary())
 
 
 # #### Condition number
@@ -201,7 +202,7 @@ norm_xtx = np.dot(norm_x.T,norm_x)
 
 eigs = np.linalg.eigvals(norm_xtx)
 condition_number = np.sqrt(eigs.max() / eigs.min())
-print condition_number
+print(condition_number)
 
 
 # #### Dropping an observation
@@ -209,7 +210,7 @@ print condition_number
 # Greene also points out that dropping a single observation can have a dramatic effect on the coefficient estimates: 
 
 ols_results2 = sm.OLS(y.ix[:14], X.ix[:14]).fit()
-print "Percentage change %4.2f%%\n"*7 % tuple([i for i in (ols_results2.params - ols_results.params)/ols_results.params*100])
+print("Percentage change %4.2f%%\n"*7 % tuple([i for i in (ols_results2.params - ols_results.params)/ols_results.params*100]))
 
 
 # We can also look at formal statistics for this such as the DFBETAS -- a standardized measure of how much each coefficient changes when that observation is left out.
@@ -222,5 +223,5 @@ infl = ols_results.get_influence()
 2./len(X)**.5
 
 
-print infl.summary_frame().filter(regex="dfb")
+print(infl.summary_frame().filter(regex="dfb"))
 

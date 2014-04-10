@@ -1,5 +1,7 @@
+from __future__ import print_function
 from statsmodels.tools.sm_exceptions import CacheWriteWarning
 from numpy.testing import assert_equal
+from statsmodels.compat.python import get_function_name
 import warnings
 
 __all__ = ['resettable_cache','cache_readonly', 'cache_writable']
@@ -27,7 +29,7 @@ class ResettableCache(dict):
     >>> cache = resettable_cache(a=0, b=1, c=2, reset=reset)
     >>> assert_equal(cache, dict(a=0, b=1, c=2))
 
-    >>> print "Try resetting a"
+    >>> print("Try resetting a")
     >>> cache['a'] = 1
     >>> assert_equal(cache, dict(a=1, b=None, c=None))
     >>> cache['c'] = 2
@@ -35,7 +37,7 @@ class ResettableCache(dict):
     >>> cache['b'] = 0
     >>> assert_equal(cache, dict(a=1, b=0, c=None))
 
-    >>> print "Try deleting b"
+    >>> print("Try deleting b")
     >>> del(cache['a'])
     >>> assert_equal(cache, {})
     """
@@ -57,11 +59,11 @@ class ResettableCache(dict):
             del(self[mustreset])
 
 #    def __getstate__(self):
-#        print 'pickling wrapper', self.__dict__
+#        print('pickling wrapper', self.__dict__)
 #        return self.__dict__
 #
 #    def __setstate__(self, dict_):
-#        print 'unpickling wrapper', dict_
+#        print('unpickling wrapper', dict_)
 #        self.__dict__.update(dict_)
 
 resettable_cache = ResettableCache
@@ -86,12 +88,12 @@ class CachedAttribute(object):
         # Get the name of the attribute to set and cache
         name = self.name
         _cachedval = _cache.get(name, None)
-#        print "[_cachedval=%s]" % _cachedval
+#        print("[_cachedval=%s]" % _cachedval)
         if _cachedval is None:
             # Call the "fget" function
             _cachedval = self.fget(obj)
             # Set the attribute in obj
-#            print "Setting %s in cache to %s" % (name, _cachedval)
+#            print("Setting %s in cache to %s" % (name, _cachedval))
             try:
                 _cache[name] = _cachedval
             except KeyError:
@@ -104,7 +106,7 @@ class CachedAttribute(object):
                 except AttributeError:
                     pass
 #        else:
-#            print "Reading %s from cache (%s)" % (name, _cachedval)
+#            print("Reading %s from cache (%s)" % (name, _cachedval))
         return _cachedval
 
     def __set__(self, obj, value):
@@ -170,7 +172,7 @@ class OneTimeProperty(object):
              the value of this computation.
              """
         self.getter = func
-        self.name = func.func_name
+        self.name = get_function_name(func)
 
     def __get__(self,obj,type=None):
         """This will be called on attribute access on the class or instance. """
@@ -179,11 +181,11 @@ class OneTimeProperty(object):
             # Being called on the class, return the original function. This way,
             # introspection works on the class.
             #return func
-            #print 'class access'
+            #print('class access')
             return self.getter
 
         val = self.getter(obj)
-        #print "** auto_attr - loading '%s'" % self.name  # dbg
+        #print("** auto_attr - loading '%s'" % self.name  # dbg)
         setattr(obj, self.name, val)
         return val
 
@@ -202,7 +204,7 @@ if __name__ == "__main__":
     cache = resettable_cache(a=0, b=1, c=2, reset=reset)
     assert_equal(cache, dict(a=0, b=1, c=2))
     #
-    print "Try resetting a"
+    print("Try resetting a")
     cache['a'] = 1
     assert_equal(cache, dict(a=1, b=None, c=None))
     cache['c'] = 2
@@ -210,7 +212,7 @@ if __name__ == "__main__":
     cache['b'] = 0
     assert_equal(cache, dict(a=1, b=0, c=None))
     #
-    print "Try deleting b"
+    print("Try deleting b")
     del(cache['a'])
     assert_equal(cache, {})
 ### ---------------------------------------------------------------------------
@@ -240,21 +242,21 @@ if __name__ == "__main__":
             return self.e + 1
 
     ex = Example()
-    print "(attrs  : %s)" % str(ex.__dict__)
-    print "(cached : %s)" % str(ex._cache)
-    print "Try a   :", ex.a
-    print "Try accessing/setting a readonly attribute"
+    print("(attrs  : %s)" % str(ex.__dict__))
+    print("(cached : %s)" % str(ex._cache))
+    print("Try a   :", ex.a)
+    print("Try accessing/setting a readonly attribute")
     assert_equal(ex.__dict__, dict(a=0, _cache={}))
-    print "Try b #1:", ex.b
+    print("Try b #1:", ex.b)
     b = ex.b
     assert_equal(b, 1)
     assert_equal(ex.__dict__, dict(a=0, _cache=dict(b=1,)))
 #   assert_equal(ex.__dict__, dict(a=0, b=1, _cache=dict(b=1)))
     ex.b = -1
-    print "Try dict", ex.__dict__
+    print("Try dict", ex.__dict__)
     assert_equal(ex._cache, dict(b=1,))
     #
-    print "Try accessing/resetting a cachewritable attribute"
+    print("Try accessing/resetting a cachewritable attribute")
     c = ex.c
     assert_equal(c, 2)
     assert_equal(ex._cache, dict(b=1, c=2))

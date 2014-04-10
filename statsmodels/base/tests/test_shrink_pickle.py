@@ -5,8 +5,8 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
-
-import pickle
+from __future__ import print_function
+from statsmodels.compat.python import iterkeys, cPickle, BytesIO
 import numpy as np
 import statsmodels.api as sm
 
@@ -22,12 +22,11 @@ winoldnp = iswin & npversionless15
 
 
 def check_pickle(obj):
-    from statsmodels.compatnp.py3k import BytesIO
     fh = BytesIO()
-    pickle.dump(obj, fh)
+    cPickle.dump(obj, fh, protocol=cPickle.HIGHEST_PROTOCOL)
     plen = fh.tell()
     fh.seek(0, 0)
-    res = pickle.load(fh)
+    res = cPickle.load(fh)
     fh.close()
     return res, plen
 
@@ -88,8 +87,6 @@ class RemoveDataPickle(object):
 
     def test_pickle_wrapper(self):
 
-        from statsmodels.compatnp.py3k import BytesIO
-
         fh = BytesIO()  # use cPickle with binary content
 
         # test unwrapped results load save pickle
@@ -107,20 +104,20 @@ class RemoveDataPickle(object):
         # print type(res_unpickled)
         assert_(type(res_unpickled) is type(self.results))
 
-        before = sorted(self.results.__dict__.keys())
-        after = sorted(res_unpickled.__dict__.keys())
+        before = sorted(iterkeys(self.results.__dict__))
+        after = sorted(iterkeys(res_unpickled.__dict__))
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(self.results._results.__dict__.keys())
-        after = sorted(res_unpickled._results.__dict__.keys())
+        before = sorted(iterkeys(self.results._results.__dict__))
+        after = sorted(iterkeys(res_unpickled._results.__dict__))
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(self.results.model.__dict__.keys())
-        after = sorted(res_unpickled.model.__dict__.keys())
+        before = sorted(iterkeys(self.results.model.__dict__))
+        after = sorted(iterkeys(res_unpickled.model.__dict__))
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
-        before = sorted(self.results._cache.keys())
-        after = sorted(res_unpickled._cache.keys())
+        before = sorted(iterkeys(self.results._cache))
+        after = sorted(iterkeys(res_unpickled._cache))
         assert_(before == after, msg='not equal %r and %r' % (before, after))
 
 
@@ -209,7 +206,7 @@ if __name__ == '__main__':
                 TestRemoveDataPickleNegativeBinomial,
                 TestRemoveDataPickleLogit, TestRemoveDataPickleRLM,
                 TestRemoveDataPickleGLM]:
-        print cls
+        print(cls)
         cls.setup_class()
         tt = cls()
         tt.setup()

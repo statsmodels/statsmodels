@@ -6,9 +6,10 @@ This script checks Poisson models.
 See the generated file "gee_poisson_simulation_check.txt" for results.
 """
 
+from __future__ import print_function
 import numpy as np
 from statsmodels.genmod.families import Poisson
-from gee_gaussian_simulation_check import GEE_simulator
+from .gee_gaussian_simulation_check import GEE_simulator
 from statsmodels.genmod.generalized_estimating_equations import GEE
 from statsmodels.genmod.dependence_structures import Exchangeable,Independence
 
@@ -209,7 +210,7 @@ if __name__ == "__main__":
             md = GEE(da.endog, da.exog, da.group, da.time, ga, va)
             mdf = md.fit(start_params = mdf.params)
             if mdf is None or (not mdf.converged):
-                print "Failed to converge"
+                print("Failed to converge")
                 continue
 
             scale_inv = 1. / md.estimate_scale()
@@ -224,7 +225,7 @@ if __name__ == "__main__":
                      constraint=(lhs, rhs))
             mdf = md.fit()
             if mdf is None or (not mdf.converged):
-                print "Failed to converge"
+                print("Failed to converge")
                 continue
 
             score = md.score_test_results

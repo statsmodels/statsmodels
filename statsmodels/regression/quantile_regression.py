@@ -17,13 +17,14 @@ code written by James P. Lesage in Applied Econometrics Using MATLAB(1999).PP.
 Prinoth (christian at prinoth dot name).
 '''
 
+from statsmodels.compat.python import range
 import numpy as np
 import warnings
 import scipy.stats as stats
 from scipy.linalg import pinv
 from scipy.stats import norm
 from statsmodels.tools.tools import chain_dot
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.decorators import cache_readonly
 from statsmodels.regression.linear_model import (RegressionModel,
                                                  RegressionResults,

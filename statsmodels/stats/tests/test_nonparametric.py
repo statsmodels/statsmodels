@@ -5,7 +5,7 @@ Created on Fri Jul 05 14:05:24 2013
 
 Author: Josef Perktold
 """
-
+from statsmodels.compat.python import lzip, range
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal
 from statsmodels.sandbox.stats.runs import (mcnemar, cochrans_q, Runs,
@@ -82,16 +82,16 @@ def test_mcnemar_vectorized():
     ttk = np.random.randint(5,15, size=(2,2,3))
     mcnemar(ttk)
     res = mcnemar(ttk, exact=False)
-    res1 = zip(*[mcnemar(ttk[:,:,i], exact=False) for i in range(3)])
+    res1 = lzip(*[mcnemar(ttk[:,:,i], exact=False) for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
     res = mcnemar(ttk, exact=False, correction=False)
-    res1 = zip(*[mcnemar(ttk[:,:,i], exact=False, correction=False)
+    res1 = lzip(*[mcnemar(ttk[:,:,i], exact=False, correction=False)
                                                           for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
     res = mcnemar(ttk, exact=True)
-    res1 = zip(*[mcnemar(ttk[:,:,i], exact=True) for i in range(3)])
+    res1 = lzip(*[mcnemar(ttk[:,:,i], exact=True) for i in range(3)])
     assert_allclose(res, res1, rtol=1e-13)
 
 

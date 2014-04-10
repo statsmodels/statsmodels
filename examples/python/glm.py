@@ -1,6 +1,6 @@
 
 ## Generalized Linear Models
-
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 from scipy import stats
@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 #  from Jeff Gill (2000) Generalized linear models: A unified approach. Codebook
 #  information can be obtained by typing: 
 
-print sm.datasets.star98.NOTE
+print(sm.datasets.star98.NOTE)
 
 
 # Load the data and add a constant to the exogenous (independent) variables:
@@ -26,27 +26,27 @@ data.exog = sm.add_constant(data.exog, prepend=False)
 
 #  The dependent variable is N by 2 (Success: NABOVE, Failure: NBELOW): 
 
-print data.endog[:5,:]
+print(data.endog[:5,:])
 
 
 #  The independent variables include all the other variables described above, as
 #  well as the interaction terms:
 
-print data.exog[:2,:]
+print(data.exog[:2,:])
 
 
 # ### Fit and summary
 
 glm_binom = sm.GLM(data.endog, data.exog, family=sm.families.Binomial())
 res = glm_binom.fit()
-print res.summary()
+print(res.summary())
 
 
 # ### Quantities of interest
 
-print 'Total number of trials:',  data.endog[0].sum()
-print 'Parameters: ', res.params
-print 'T-values: ', res.tvalues
+print('Total number of trials:',  data.endog[0].sum())
+print('Parameters: ', res.params)
+print('T-values: ', res.tvalues)
 
 
 # First differences: We hold all explanatory variables constant at their means and manipulate the percentage of low income households to assess its impact on the response variables: 
@@ -63,7 +63,7 @@ diff = resp_75 - resp_25
 
 # The interquartile first difference for the percentage of low income households in a school district is:
 
-print "%2.4f%%" % (diff*100)
+print("%2.4f%%" % (diff*100))
 
 
 # ### Plots
@@ -129,22 +129,22 @@ graphics.gofplots.qqplot(resid, line='r')
 #  Star98 dataset. Statsmodels datasets ships with other useful information. For
 #  example: 
 
-print sm.datasets.scotland.DESCRLONG
+print(sm.datasets.scotland.DESCRLONG)
 
 
 #  Load the data and add a constant to the exogenous variables:
 
 data2 = sm.datasets.scotland.load()
 data2.exog = sm.add_constant(data2.exog, prepend=False)
-print data2.exog[:5,:]
-print data2.endog[:5]
+print(data2.exog[:5,:])
+print(data2.endog[:5])
 
 
 # ### Fit and summary
 
 glm_gamma = sm.GLM(data2.endog, data2.exog, family=sm.families.Gamma())
 glm_results = glm_gamma.fit()
-print glm_results.summary()
+print(glm_results.summary())
 
 
 # ## GLM: Gaussian distribution with a noncanonical link
@@ -163,5 +163,5 @@ lny = np.exp(-(.03*x + .0001*x**2 - 1.0)) + .001 * np.random.rand(nobs2)
 
 gauss_log = sm.GLM(lny, X, family=sm.families.Gaussian(sm.families.links.log))
 gauss_log_results = gauss_log.fit()
-print gauss_log_results.summary()
+print(gauss_log_results.summary())
 

@@ -5,7 +5,7 @@ Created on Mon Apr 22 14:03:21 2013
 
 Author: Josef Perktold
 """
-
+from statsmodels.compat.python import lzip, zip
 import numpy as np
 
 class AllPairsResults(object):
@@ -80,7 +80,7 @@ class AllPairsResults(object):
         k = self.n_levels
         pvals_mat = np.zeros((k, k))
         # if we don't assume we have all pairs
-        pvals_mat[zip(*self.all_pairs)] = self.pval_corrected()
+        pvals_mat[lzip(*self.all_pairs)] = self.pval_corrected()
         #pvals_mat[np.triu_indices(k, 1)] = self.pval_corrected()
         return pvals_mat
 

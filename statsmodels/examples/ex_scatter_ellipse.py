@@ -6,7 +6,7 @@ License: BSD-3
 '''
 
 
-
+from statsmodels.compat.python import lrange
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -23,7 +23,7 @@ r = np.random.uniform(-0.99, 0.99, size=(nvars, nvars))
 r = (r + r.T) / 2.
 assert np.allclose(r, r.T)
 mcorr = r
-mcorr[range(nvars), range(nvars)] = 1
+mcorr[lrange(nvars), lrange(nvars)] = 1
 #dcorr = np.array([[1, 0.5, 0.1],[0.5, 1, -0.2], [0.1, -0.2, 1]])
 mstd = np.arange(1.,nvars+1)/nvars
 mcov = mcorr * np.outer(mstd, mstd)
@@ -34,11 +34,11 @@ nobs = 100
 data = np.random.multivariate_normal(mmean, mcov, size=nobs)
 dmean = data.mean(0)
 dcov = np.cov(data, rowvar=0)
-print dmean
-print dcov
+print(dmean)
+print(dcov)
 dcorr = np.corrcoef(data, rowvar=0)
 dcorr[np.triu_indices(nvars)] = 0
-print dcorr
+print(dcorr)
 
 #default
 #fig = scatter_ellipse(data, level=[0.5, 0.75, 0.95])

@@ -46,8 +46,8 @@ class MaxDist(stats.rv_continuous):
 
 maxdistr = MaxDist(stats.norm, 10)
 
-print maxdistr.rvs(size=10)
-print maxdistr.stats(moments = 'mvsk')
+print(maxdistr.rvs(size=10))
+print(maxdistr.stats(moments = 'mvsk'))
 
 '''
 >>> print maxdistr.stats(moments = 'mvsk')

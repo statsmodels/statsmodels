@@ -3,10 +3,12 @@
 
 # This example file shows how to use a few of the ``statsmodels`` regression diagnostic tests in a real-life context. You can learn about more tests and find out more information abou the tests here on the [Regression Diagnostics page.](http://statsmodels.sourceforge.net/stable/diagnostic.html) 
 # 
-# Note that most of the tests described here only return a tuple of numbers, without any annotation. A full description of outputs is always included in the docstring and in the online ``statsmodels`` documentation. For presentation purposes, we use the ``zip(name,test)`` construct to pretty-print short descriptions in the examples below.
+# Note that most of the tests described here only return a tuple of numbers, without any annotation. A full description of outputs is always included in the docstring and in the online ``statsmodels`` documentation. For presentation purposes, we use the ``zip(name,test)`` construct to pretty-print(short descriptions in the examples below.
 
 # ## Estimate a regression model
 
+from __future__ import print_function
+from statsmodels.compat import lzip
 import statsmodels
 import numpy as np
 import pandas as pd
@@ -30,14 +32,14 @@ print(results.summary())
 
 name = ['Jarque-Bera', 'Chi^2 two-tail prob.', 'Skew', 'Kurtosis']
 test = sms.jarque_bera(results.resid)
-zip(name, test)
+lzip(name, test)
 
 
 # Omni test:
 
 name = ['Chi^2', 'Two-tail probability']
 test = sms.omni_normtest(results.resid)
-zip(name, test)
+lzip(name, test)
 
 
 # ## Influence tests
@@ -73,14 +75,14 @@ np.linalg.cond(results.model.exog)
 name = ['Lagrange multiplier statistic', 'p-value', 
         'f-value', 'f p-value']
 test = sms.het_breushpagan(results.resid, results.model.exog)
-zip(name, test)
+lzip(name, test)
 
 
 # Goldfeld-Quandt test
 
 name = ['F statistic', 'p-value']
 test = sms.het_goldfeldquandt(results.resid, results.model.exog)
-zip(name, test)
+lzip(name, test)
 
 
 # ## Linearity
@@ -89,5 +91,5 @@ zip(name, test)
 
 name = ['t value', 'p value']
 test = sms.linear_harvey_collier(results)
-zip(name, test)
+lzip(name, test)
 

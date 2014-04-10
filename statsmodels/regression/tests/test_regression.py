@@ -2,7 +2,7 @@
 Test functions for models.regression
 """
 # TODO: Test for LM
-
+from statsmodels.compat.python import long, lrange
 import warnings
 import pandas
 import numpy as np
@@ -10,7 +10,7 @@ from numpy.testing import (assert_almost_equal, assert_approx_equal,
                             assert_raises, assert_equal, assert_allclose)
 from scipy.linalg import toeplitz
 from statsmodels.tools.tools import add_constant, categorical
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.regression.linear_model import OLS, WLS, GLS, yule_walker
 from statsmodels.datasets import longley
 from scipy.stats import t as student_t
@@ -148,7 +148,7 @@ class CheckRegressionResults(object):
 class TestOLS(CheckRegressionResults):
     @classmethod
     def setupClass(cls):
-        from results.results_regression import Longley
+        from .results.results_regression import Longley
         data = longley.load()
         data.exog = add_constant(data.exog, prepend=False)
         res1 = OLS(data.endog, data.exog).fit()
@@ -249,7 +249,7 @@ class TestOLS(CheckRegressionResults):
 class TestRTO(CheckRegressionResults):
     @classmethod
     def setupClass(cls):
-        from results.results_regression import LongleyRTO
+        from .results.results_regression import LongleyRTO
         data = longley.load()
         res1 = OLS(data.endog, data.exog).fit()
         res2 = LongleyRTO()
@@ -423,7 +423,7 @@ class TestGLS(object):
     """
     @classmethod
     def setupClass(cls):
-        from results.results_regression import LongleyGls
+        from .results.results_regression import LongleyGls
 
         data = longley.load()
         exog = add_constant(np.column_stack((data.exog[:,1],
@@ -675,7 +675,7 @@ class TestNonFit(object):
 
     def test_df_resid(self):
         df_resid = self.endog.shape[0] - self.exog.shape[1]
-        assert_equal(self.ols_model.df_resid, 9L)
+        assert_equal(self.ols_model.df_resid, long(9))
 
 class TestWLS_CornerCases(object):
     @classmethod
@@ -694,7 +694,7 @@ class TestWLSExogWeights(CheckRegressionResults):
     #Test WLS with Greene's credit card data
     #reg avgexp age income incomesq ownrent [aw=1/incomesq]
     def __init__(self):
-        from results.results_regression import CCardWLS
+        from .results.results_regression import CCardWLS
         from statsmodels.datasets.ccard import load
         dta = load()
 
@@ -720,9 +720,9 @@ def test_wls_example():
     #example from the docstring, there was a note about a bug, should
     #be fixed now
     Y = [1,3,4,5,2,3,4]
-    X = range(1,8)
+    X = lrange(1,8)
     X = add_constant(X, prepend=False)
-    wls_model = WLS(Y,X, weights=range(1,8)).fit()
+    wls_model = WLS(Y,X, weights=lrange(1,8)).fit()
     #taken from R lm.summary
     assert_almost_equal(wls_model.fvalue, 0.127337843215, 6)
     assert_almost_equal(wls_model.scale, 2.44608530786**2, 6)

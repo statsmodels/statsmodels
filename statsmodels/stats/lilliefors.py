@@ -16,7 +16,7 @@ Hubert W. Lilliefors
 Journal of the American Statistical Association, Vol. 62, No. 318. (Jun., 1967), pp. 399-402.
 
 """
-
+from statsmodels.compat.python import string_types
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy import stats
@@ -68,7 +68,7 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
     """
     nobs = float(len(x))
 
-    if isinstance(cdf, basestring):
+    if isinstance(cdf, string_types):
         cdf = getattr(stats.distributions, cdf).cdf
     elif hasattr(cdf, 'cdf'):
         cdf = getattr(cdf, 'cdf')
@@ -95,7 +95,7 @@ def ksstat(x, cdf, alternative='two_sided', args=()):
 
 def get_lilliefors_table():
     #function just to keep things together
-    from tabledist import TableDist
+    from .tabledist import TableDist
     #for this test alpha is sf probability, i.e. right tail probability
 
     alpha = np.array([ 0.2  ,  0.15 ,  0.1  ,  0.05 ,  0.01 ,  0.001])[::-1]

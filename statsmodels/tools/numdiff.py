@@ -3,7 +3,8 @@
 Author : josef-pkt
 License : BSD
 """
-
+from __future__ import print_function
+from statsmodels.compat.python import range
 #These are simple forward differentiation, so that we have them available
 #without dependencies.
 #
@@ -368,12 +369,12 @@ if __name__ == '__main__': #pragma : no cover
         return np.dot(x, beta).sum(0)
 
     def fun1(beta, y, x):
-        #print beta.shape, x.shape
+        #print(beta.shape, x.shape)
         xb = np.dot(x, beta)
         return (y-xb)**2 #(xb-xb.mean(0))**2
 
     def fun2(beta, y, x):
-        #print beta.shape, x.shape
+        #print(beta.shape, x.shape)
         return fun1(beta, y, x).sum(0)
 
     nobs = 200
@@ -392,43 +393,43 @@ if __name__ == '__main__': #pragma : no cover
     args = (y,x)
     from scipy import optimize
     xfmin = optimize.fmin(fun2, (0,0,0), args)
-    print approx_fprime((1,2,3),fun,epsilon,x)
+    print(approx_fprime((1,2,3),fun,epsilon,x))
     jac = approx_fprime(xk,fun1,epsilon,args)
     jacmin = approx_fprime(xk,fun1,-epsilon,args)
-    #print jac
-    print jac.sum(0)
-    print '\nnp.dot(jac.T, jac)'
-    print np.dot(jac.T, jac)
-    print '\n2*np.dot(x.T, x)'
-    print 2*np.dot(x.T, x)
+    #print(jac)
+    print(jac.sum(0))
+    print('\nnp.dot(jac.T, jac)')
+    print(np.dot(jac.T, jac))
+    print('\n2*np.dot(x.T, x)')
+    print(2*np.dot(x.T, x))
     jac2 = (jac+jacmin)/2.
-    print np.dot(jac2.T, jac2)
+    print(np.dot(jac2.T, jac2))
 
     #he = approx_hess(xk,fun2,epsilon,*args)
-    print approx_hess_old(xk,fun2,1e-3,args)
+    print(approx_hess_old(xk,fun2,1e-3,args))
     he = approx_hess_old(xk,fun2,None,args)
-    print 'hessfd'
-    print he
-    print 'epsilon =', None
-    print he[0] - 2*np.dot(x.T, x)
+    print('hessfd')
+    print(he)
+    print('epsilon =', None)
+    print(he[0] - 2*np.dot(x.T, x))
 
     for eps in [1e-3,1e-4,1e-5,1e-6]:
-        print 'eps =', eps
-        print approx_hess_old(xk,fun2,eps,args)[0] - 2*np.dot(x.T, x)
+        print('eps =', eps)
+        print(approx_hess_old(xk,fun2,eps,args)[0] - 2*np.dot(x.T, x))
 
     hcs2 = approx_hess_cs(xk,fun2,args=args)
-    print 'hcs2'
-    print hcs2 - 2*np.dot(x.T, x)
+    print('hcs2')
+    print(hcs2 - 2*np.dot(x.T, x))
 
     hfd3 = approx_hess(xk,fun2,args=args)
-    print 'hfd3'
-    print hfd3 - 2*np.dot(x.T, x)
+    print('hfd3')
+    print(hfd3 - 2*np.dot(x.T, x))
 
     import numdifftools as nd
     hnd = nd.Hessian(lambda a: fun2(a, y, x))
     hessnd = hnd(xk)
-    print 'numdiff'
-    print hessnd - 2*np.dot(x.T, x)
+    print('numdiff')
+    print(hessnd - 2*np.dot(x.T, x))
     #assert_almost_equal(hessnd, he[0])
     gnd = nd.Gradient(lambda a: fun2(a, y, x))
     gradnd = gnd(xk)

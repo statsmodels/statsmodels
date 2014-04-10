@@ -6,10 +6,11 @@ http://code.activestate.com/recipes/576611/ , downloaded 2013-03-08
 
 '''
 
-
+from __future__ import print_function
+from .python import filter, iteritems
 from operator import itemgetter
 from heapq import nlargest
-from itertools import repeat, ifilter
+from itertools import repeat
 
 class Counter(dict):
     '''Dict subclass for counting hashable objects.  Sometimes called a bag
@@ -46,8 +47,8 @@ class Counter(dict):
 
         '''
         if n is None:
-            return sorted(self.iteritems(), key=itemgetter(1), reverse=True)
-        return nlargest(n, self.iteritems(), key=itemgetter(1))
+            return sorted(iteritems(self), key=itemgetter(1), reverse=True)
+        return nlargest(n, iteritems(self), key=itemgetter(1))
 
     def elements(self):
         '''Iterator over elements repeating each as many times as its count.
@@ -60,7 +61,7 @@ class Counter(dict):
         elements() will ignore it.
 
         '''
-        for elem, count in self.iteritems():
+        for elem, count in iteritems(self):
             for _ in repeat(None, count):
                 yield elem
 
@@ -88,7 +89,7 @@ class Counter(dict):
             if hasattr(iterable, 'iteritems'):
                 if self:
                     self_get = self.get
-                    for elem, count in iterable.iteritems():
+                    for elem, count in iteritems(iterable):
                         self[elem] = self_get(elem, 0) + count
                 else:
                     dict.update(self, iterable) # fast path when counter is empty
@@ -186,7 +187,7 @@ class Counter(dict):
         result = Counter()
         if len(self) < len(other):
             self, other = other, self
-        for elem in ifilter(self.__contains__, other):
+        for elem in filter(self.__contains__, other):
             newcount = _min(self[elem], other[elem])
             if newcount > 0:
                 result[elem] = newcount
@@ -195,4 +196,4 @@ class Counter(dict):
 
 if __name__ == '__main__':
     import doctest
-    print doctest.testmod()
+    print(doctest.testmod())

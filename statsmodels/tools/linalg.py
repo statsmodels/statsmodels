@@ -5,7 +5,8 @@ changes:
 The only changes are that additional results are returned
 
 '''
-
+from __future__ import print_function
+from statsmodels.compat.python import lmap, range
 import numpy as np
 from scipy.linalg import svd as decomp_svd
 #decomp_svd
@@ -58,7 +59,7 @@ def lstsq(a, b, cond=None, overwrite_a=0, overwrite_b=0):
     Raises LinAlgError if computation does not converge
 
     """
-    a1, b1 = map(asarray_chkfinite,(a,b))
+    a1, b1 = lmap(asarray_chkfinite,(a,b))
     if len(a1.shape) != 2:
         raise ValueError('expected matrix')
     m,n = a1.shape
@@ -202,8 +203,8 @@ if __name__ == '__main__':
     pinv2(a0)
     x = pinv(a0)
     x2=scipy.linalg.pinv(a0)
-    print np.max(np.abs(x-x2))
+    print(np.max(np.abs(x-x2)))
     x = pinv2(a0)
     x2 = scipy.linalg.pinv2(a0)
-    print np.max(np.abs(x-x2))
+    print(np.max(np.abs(x-x2)))
 

@@ -5,6 +5,8 @@
 #
 # Download and format data:
 
+from __future__ import print_function
+from statsmodels.compat import urlopen
 import numpy as np
 np.set_printoptions(precision=4, suppress=True)
 import statsmodels.api as sm
@@ -17,7 +19,6 @@ from statsmodels.stats.anova import anova_lm
 try:
     salary_table = pd.read_csv('salary.table')
 except:  # recent pandas can read URL without urlopen
-    from urllib2 import urlopen
     url = 'http://stats191.stanford.edu/data/salary.table'
     fh = urlopen(url)
     salary_table = pd.read_table(fh)
@@ -47,7 +48,7 @@ plt.ylabel('Salary');
 
 formula = 'S ~ C(E) + C(M) + X'
 lm = ols(formula, salary_table).fit()
-print lm.summary()
+print(lm.summary())
 
 
 # Have a look at the created design matrix:
@@ -68,7 +69,7 @@ lm.model.data.frame[:5]
 # Influence statistics
 
 infl = lm.get_influence()
-print infl.summary_table()
+print(infl.summary_table())
 
 
 # or get a dataframe
@@ -89,14 +90,14 @@ for values, group in factor_groups:
     x = [group_num] * len(group)
     plt.scatter(x, resid[group.index], marker=symbols[j], color=colors[i-1],
             s=144, edgecolors='black')
-plt.xlabel('Group');
-plt.ylabel('Residuals');
+plt.xlabel('Group')
+plt.ylabel('Residuals')
 
 
 # Now we will test some interactions using anova or f_test
 
 interX_lm = ols("S ~ C(E) * X + C(M)", salary_table).fit()
-print interX_lm.summary()
+print(interX_lm.summary())
 
 
 # Do an ANOVA check
@@ -104,13 +105,13 @@ print interX_lm.summary()
 from statsmodels.stats.api import anova_lm
 
 table1 = anova_lm(lm, interX_lm)
-print table1
+print(table1)
 
 interM_lm = ols("S ~ X + C(E)*C(M)", data=salary_table).fit()
-print interM_lm.summary()
+print(interM_lm.summary())
 
 table2 = anova_lm(lm, interM_lm)
-print table2
+print(table2)
 
 
 # The design matrix as a DataFrame
@@ -139,30 +140,30 @@ plt.ylabel('standardized resids');
 # Looks like one observation is an outlier.
 
 drop_idx = abs(resid).argmax()
-print drop_idx  # zero-based index
+print(drop_idx)  # zero-based index
 idx = salary_table.index.drop(drop_idx)
 
 lm32 = ols('S ~ C(E) + X + C(M)', data=salary_table, subset=idx).fit()
 
-print lm32.summary()
-print '\n'
+print(lm32.summary())
+print('\n')
 
 interX_lm32 = ols('S ~ C(E) * X + C(M)', data=salary_table, subset=idx).fit()
 
-print interX_lm32.summary()
-print '\n'
+print(interX_lm32.summary())
+print('\n')
 
 
 table3 = anova_lm(lm32, interX_lm32)
-print table3
-print '\n'
+print(table3)
+print('\n')
 
 
 interM_lm32 = ols('S ~ X + C(E) * C(M)', data=salary_table, subset=idx).fit()
 
 table4 = anova_lm(lm32, interM_lm32)
-print table4
-print '\n'
+print(table4)
+print('\n')
 
 
 #  Replot the residuals
@@ -230,7 +231,7 @@ plt.xlabel('TEST');
 plt.ylabel('JPERF');
 
 min_lm = ols('JPERF ~ TEST', data=minority_table).fit()
-print min_lm.summary()
+print(min_lm.summary())
 
 plt.figure(figsize=(6,6));
 for factor, group in factor_group:
@@ -244,7 +245,7 @@ abline_plot(model_results = min_lm, ax=plt.gca());
 min_lm2 = ols('JPERF ~ TEST + TEST:ETHN',
         data=minority_table).fit()
 
-print min_lm2.summary()
+print(min_lm2.summary())
 
 plt.figure(figsize=(6,6));
 for factor, group in factor_group:
@@ -259,7 +260,7 @@ abline_plot(intercept = min_lm2.params['Intercept'],
 
 
 min_lm3 = ols('JPERF ~ TEST + ETHN', data = minority_table).fit()
-print min_lm3.summary()
+print(min_lm3.summary())
 
 plt.figure(figsize=(6,6));
 for factor, group in factor_group:
@@ -273,7 +274,7 @@ abline_plot(intercept = min_lm3.params['Intercept'] + min_lm3.params['ETHN'],
 
 
 min_lm4 = ols('JPERF ~ TEST * ETHN', data = minority_table).fit()
-print min_lm4.summary()
+print(min_lm4.summary())
 
 plt.figure(figsize=(6,6));
 for factor, group in factor_group:
@@ -289,19 +290,19 @@ abline_plot(intercept = min_lm4.params['Intercept'] + min_lm4.params['ETHN'],
 
 # is there any effect of ETHN on slope or intercept?
 table5 = anova_lm(min_lm, min_lm4)
-print table5
+print(table5)
 
 # is there any effect of ETHN on intercept
 table6 = anova_lm(min_lm, min_lm3)
-print table6
+print(table6)
 
 # is there any effect of ETHN on slope
 table7 = anova_lm(min_lm, min_lm2)
-print table7
+print(table7)
 
 # is it just the slope or both?
 table8 = anova_lm(min_lm2, min_lm4)
-print table8
+print(table8)
 
 
 # ## One-way ANOVA
@@ -318,11 +319,11 @@ rehab_table.boxplot('Time', 'Fitness', ax=plt.gca())
 
 rehab_lm = ols('Time ~ C(Fitness)', data=rehab_table).fit()
 table9 = anova_lm(rehab_lm)
-print table9
+print(table9)
 
-print rehab_lm.model.data.orig_exog
+print(rehab_lm.model.data.orig_exog)
 
-print rehab_lm.summary()
+print(rehab_lm.summary())
 
 
 # ## Two-way ANOVA
@@ -353,14 +354,14 @@ kidney_lm = ols('np.log(Days+1) ~ C(Duration) * C(Weight)', data=kt).fit()
 
 table10 = anova_lm(kidney_lm)
 
-print anova_lm(ols('np.log(Days+1) ~ C(Duration) + C(Weight)',
-                data=kt).fit(), kidney_lm)
-print anova_lm(ols('np.log(Days+1) ~ C(Duration)', data=kt).fit(),
+print(anova_lm(ols('np.log(Days+1) ~ C(Duration) + C(Weight)',
+                data=kt).fit(), kidney_lm))
+print(anova_lm(ols('np.log(Days+1) ~ C(Duration)', data=kt).fit(),
                ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)',
-                   data=kt).fit())
-print anova_lm(ols('np.log(Days+1) ~ C(Weight)', data=kt).fit(),
+                   data=kt).fit()))
+print(anova_lm(ols('np.log(Days+1) ~ C(Weight)', data=kt).fit(),
                ols('np.log(Days+1) ~ C(Duration) + C(Weight, Sum)',
-                   data=kt).fit())
+                   data=kt).fit()))
 
 
 # ## Sum of squares
@@ -376,15 +377,15 @@ print anova_lm(ols('np.log(Days+1) ~ C(Weight)', data=kt).fit(),
 sum_lm = ols('np.log(Days+1) ~ C(Duration, Sum) * C(Weight, Sum)',
             data=kt).fit()
 
-print anova_lm(sum_lm)
-print anova_lm(sum_lm, typ=2)
-print anova_lm(sum_lm, typ=3)
+print(anova_lm(sum_lm))
+print(anova_lm(sum_lm, typ=2))
+print(anova_lm(sum_lm, typ=3))
 
 nosum_lm = ols('np.log(Days+1) ~ C(Duration, Treatment) * C(Weight, Treatment)',
             data=kt).fit()
-print anova_lm(nosum_lm)
-print anova_lm(nosum_lm, typ=2)
-print anova_lm(nosum_lm, typ=3)
+print(anova_lm(nosum_lm))
+print(anova_lm(nosum_lm, typ=2))
+print(anova_lm(nosum_lm, typ=3))
 
 
 

@@ -1,8 +1,7 @@
 #
 # models - Statistical Models
 #
-from __future__ import with_statement
-
+from __future__ import print_function
 __docformat__ = 'restructuredtext'
 
 #from version import __version__

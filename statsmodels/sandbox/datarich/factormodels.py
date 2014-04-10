@@ -6,7 +6,7 @@ Author: josef-pktd
 License: BSD (3-clause)
 """
 
-
+from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 import statsmodels.api as sm
@@ -184,10 +184,10 @@ if __name__ == '__main__':
         y0 = ytrue + 0.1*np.random.normal(size=ytrue.shape)
 
         mod = FactorModelUnivariate(y0, x0)
-        print mod.summary_find_nfact()
-        print "with cross validation - slower"
+        print(mod.summary_find_nfact())
+        print("with cross validation - slower")
         mod.fit_find_nfact(maxfact=None, skip_crossval=False, cv_iter=None)
-        print mod.summary_find_nfact()
+        print(mod.summary_find_nfact())
 
 
 

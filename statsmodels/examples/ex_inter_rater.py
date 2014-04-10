@@ -6,6 +6,7 @@ Created on Mon Dec 10 08:54:02 2012
 Author: Josef Perktold
 """
 
+from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -31,23 +32,23 @@ kappa_wp = 0.210
 table1 = table0[:, 1:-1]
 
 
-print fleiss_kappa(table1)
+print(fleiss_kappa(table1))
 table4 = np.array([[20,5], [10, 15]])
-print 'res', cohens_kappa(table4), 0.4 #wikipedia
+print('res', cohens_kappa(table4), 0.4) #wikipedia
 
 table5 = np.array([[45, 15], [25, 15]])
-print 'res', cohens_kappa(table5), 0.1304 #wikipedia
+print('res', cohens_kappa(table5), 0.1304) #wikipedia
 
 table6 = np.array([[25, 35], [5, 35]])
-print 'res', cohens_kappa(table6), 0.2593  #wikipedia
-print 'res', cohens_kappa(table6, weights=np.arange(2)), 0.2593  #wikipedia
+print('res', cohens_kappa(table6), 0.2593)  #wikipedia
+print('res', cohens_kappa(table6, weights=np.arange(2)), 0.2593)  #wikipedia
 t7 = np.array([[16, 18, 28],
                [10, 27, 13],
                [28, 20, 24]])
-print cohens_kappa(t7, weights=[0, 1, 2])
+print(cohens_kappa(t7, weights=[0, 1, 2]))
 
 table8 = np.array([[25, 35], [5, 35]])
-print 'res', cohens_kappa(table8)
+print('res', cohens_kappa(table8))
 
 #SAS example from http://www.john-uebersax.com/stat/saskappa.htm
 '''
@@ -60,8 +61,8 @@ t9 = [[0,  0,  0],
       [5, 16,  3],
       [8, 12, 28]]
 res9 = cohens_kappa(t9)
-print 'res', res9
-print 'res', cohens_kappa(t9, weights=[0, 1, 2])
+print('res', res9)
+print('res', cohens_kappa(t9, weights=[0, 1, 2]))
 
 
 #check max kappa, constructed by hand, same marginals
@@ -69,14 +70,14 @@ table6a = np.array([[30, 30], [0, 40]])
 res = cohens_kappa(table6a)
 assert res.kappa == res.kappa_max
 #print np.divide(*cohens_kappa(table6)[:2])
-print res.kappa / res.kappa_max
+print(res.kappa / res.kappa_max)
 
 
 table10 = [[0, 4, 1],
            [0, 8, 0],
            [0, 1, 5]]
 res10 = cohens_kappa(table10)
-print 'res10', res10
+print('res10', res10)
 
 
 '''SAS result for table10

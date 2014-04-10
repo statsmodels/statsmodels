@@ -4,9 +4,11 @@ inference for descriptive statistics.  If matplotlib is installed
 it also generates plots.
 
 """
+
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
-print 'Welcome to El'
+print('Welcome to El')
 np.random.seed(634)  # No significance of the seed.
 # Let's first generate some univariate data.
 univariate = np.random.standard_normal(30)
@@ -21,8 +23,8 @@ eldescriptive = sm.emplike.DescStat(univariate)
 eldescriptive_mean = eldescriptive.endog.mean()  #.42
 
 #Let's conduct a hypothesis test to see if the mean is 0
-print 'Hypothesis test results for the mean:'
-print  eldescriptive.test_mean(0)
+print('Hypothesis test results for the mean:')
+print(eldescriptive.test_mean(0))
 
 
 # The first value is is  -2 *log-likelihood ratio, which is distributed
@@ -32,31 +34,31 @@ print  eldescriptive.test_mean(0)
 eldescriptive_var = eldescriptive.endog.var()  # 1.01
 
 #Let's test if the variance is 1:
-print 'Hypothesis test results for the variance:'
-print eldescriptive.test_var(1)
+print('Hypothesis test results for the variance:')
+print(eldescriptive.test_var(1))
 
 # Let's test if Skewness and Kurtosis are 0
-print 'Hypothesis test results for Skewness:'
-print eldescriptive.test_skew(0)
-print 'Hypothesis test results for the Kurtosis:'
-print eldescriptive.test_kurt(0)
+print('Hypothesis test results for Skewness:')
+print(eldescriptive.test_skew(0))
+print('Hypothesis test results for the Kurtosis:')
+print(eldescriptive.test_kurt(0))
 # Note that the skewness and Kurtosis take longer.  This is because
 # we have to optimize over the nuisance parameters (mean, variance).
 
 # We can also test for the joint skewness and kurtoses
-print ' Joint Skewness-Kurtosis test'
+print(' Joint Skewness-Kurtosis test')
 eldescriptive.test_joint_skew_kurt(0, 0)
 
 
 # Let's try and get some confidence intervals
-print 'Confidence interval for the mean'
-print eldescriptive.ci_mean()
-print 'Confidence interval for the variance'
-print eldescriptive.ci_var()
-print 'Confidence interval for skewness'
-print eldescriptive.ci_skew()
-print 'Confidence interval for kurtosis'
-print eldescriptive.ci_kurt()
+print('Confidence interval for the mean')
+print(eldescriptive.ci_mean())
+print('Confidence interval for the variance')
+print(eldescriptive.ci_var())
+print('Confidence interval for skewness')
+print(eldescriptive.ci_skew())
+print('Confidence interval for kurtosis')
+print(eldescriptive.ci_kurt())
 
 
 # if matplotlib is installed, we can get a contour plot for the mean
@@ -75,17 +77,17 @@ mv_elmodel = sm.emplike.DescStat(mv_data)
 # mv mean contour and ci_corr and test_corr.
 
 # Let's test the hypthesis that x1 has a mean of 2 and x2 has a mean of 7
-print 'Multivaraite mean hypothesis test'
-print mv_elmodel.mv_test_mean(np.array([2, 7]))
+print('Multivaraite mean hypothesis test')
+print(mv_elmodel.mv_test_mean(np.array([2, 7])))
 
 # Now let's get the confidence interval for correlation
-print 'Correlation Coefficient CI'
-print mv_elmodel.ci_corr()
+print('Correlation Coefficient CI')
+print(mv_elmodel.ci_corr())
 # Note how this took much longer than previous functions.  That is
 # because the function is optimizing over 4 nuisance parameters.
 # We can also do a hypothesis test for correlation
-print 'Hypothesis test for correlation'
-print mv_elmodel.test_corr(.7)
+print('Hypothesis test for correlation')
+print(mv_elmodel.test_corr(.7))
 
 # Finally, let's create a contour plot for the means of the data
 means_contour = mv_elmodel.mv_mean_contour(1, 3, 6,9, .15,.15, plot_dta=1)

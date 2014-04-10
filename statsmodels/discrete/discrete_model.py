@@ -18,6 +18,7 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
+from statsmodels.compat.python import lmap, lzip, range
 import numpy as np
 from scipy.special import gammaln
 from scipy import stats, special, optimize  # opt just for nbin
@@ -33,7 +34,7 @@ from statsmodels.tools.numdiff import (approx_fprime, approx_hess,
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 from statsmodels.base.l1_slsqp import fit_l1_slsqp
 try:
@@ -558,7 +559,7 @@ class MultinomialModel(BinaryModel):
 
         eXB = np.exp(np.dot(exog, params))
         sum_eXB = (1 + eXB.sum(1))[:,None]
-        J, K = map(int, [self.J, self.K])
+        J, K = lmap(int, [self.J, self.K])
         repeat_eXB = np.repeat(eXB, J, axis=1)
         X = np.tile(exog, J-1)
         # this is the derivative wrt the base level
@@ -2681,7 +2682,7 @@ class MultinomialResults(DiscreteResults):
         """
         J = self.model.J
         # these are the actual, predicted indices
-        idx = zip(self.model.endog, self.predict().argmax(1))
+        idx = lzip(self.model.endog, self.predict().argmax(1))
         return np.histogram2d(self.model.endog, self.predict().argmax(1),
                               bins=J)[0]
 

@@ -1,5 +1,6 @@
+from __future__ import print_function
 import numpy as np
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 
 def add_indep(x, varnames, dtype=None):
@@ -17,7 +18,7 @@ def add_indep(x, varnames, dtype=None):
 
     nvars_orig = len(x)
     nobs = len(x[0])
-    #print 'nobs, nvars_orig', nobs, nvars_orig
+    #print('nobs, nvars_orig', nobs, nvars_orig)
     if not dtype:
         dtype = np.asarray(x[0]).dtype
     xout = np.zeros((nobs, nvars_orig), dtype=dtype)
@@ -27,10 +28,10 @@ def add_indep(x, varnames, dtype=None):
     varnames_dropped = []
     keepindx = []
     for (xi, ni) in zip(x, varnames):
-        #print xi.shape, xout.shape
+        #print(xi.shape, xout.shape)
         xout[:,count] = xi
         rank_new = np_matrix_rank(xout)
-        #print rank_new
+        #print(rank_new)
         if  rank_new > rank_old:
             varnames_new.append(ni)
             rank_old = rank_new
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     varnames = ['const'] + ['var1_%d' %i for i in np.arange(3)] \
                          + ['var2_%d' %i for i in np.arange(2)]
     xo,vo = add_indep(x, varnames)
-    print xo.shape
+    print(xo.shape)
 
 
 

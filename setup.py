@@ -42,22 +42,19 @@ except ImportError:
 
 setuptools_kwargs = {}
 if sys.version_info[0] >= 3:
-    setuptools_kwargs = {'use_2to3': True,
-                         'zip_safe': False,
-                         #'use_2to3_exclude_fixers': [],
-                         }
+    setuptools_kwargs = {'zip_safe': False}
+
     if not _have_setuptools:
         sys.exit("need setuptools/distribute for Py3k"
                  "\n$ pip install distribute")
-
 else:
     setuptools_kwargs = {
         'install_requires': [],
         'zip_safe': False,
     }
 
-    if not _have_setuptools:
-        setuptools_kwargs = {}
+if not _have_setuptools:
+    setuptools_kwargs = {}
 
 curdir = os.path.abspath(os.path.dirname(__file__))
 README = open(pjoin(curdir, "README.txt")).read()

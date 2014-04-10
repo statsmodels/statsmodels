@@ -1,26 +1,24 @@
 # pylint: disable=W0201
 
+from statsmodels.compat.python import iteritems, string_types, range
 import numpy as np
-
 from statsmodels.tools.decorators import cache_readonly
+import pandas as pd
 
-import var_model as _model
-import util
-import plotting
+from . import var_model as _model
+from . import util
+from . import plotting
 
 FULL_SAMPLE = 0
 ROLLING = 1
 EXPANDING = 2
 
-try:
-    import pandas as pn
-except ImportError:
-    pass
+
 
 def _get_window_type(window_type):
     if window_type in (FULL_SAMPLE, ROLLING, EXPANDING):
         return window_type
-    elif isinstance(window_type, basestring):
+    elif isinstance(window_type, string_types):
         window_type_up = window_type.upper()
 
         if window_type_up in ('FULL SAMPLE', 'FULL_SAMPLE'):
@@ -31,12 +29,6 @@ def _get_window_type(window_type):
             return EXPANDING
 
     raise Exception('Unrecognized window type: %s' % window_type)
-
-def require_pandas():
-    try:
-        import pandas as pn
-    except ImportError:
-        raise ImportError('pandas is required to use this code (for now)')
 
 class DynamicVAR(object):
     """
@@ -66,8 +58,6 @@ class DynamicVAR(object):
     """
     def __init__(self, data, lag_order=1, window=None, window_type='expanding',
                  trend='c', min_periods=None):
-        require_pandas()
-
         self.lag_order = lag_order
 
         self.names = list(data.columns)
@@ -115,14 +105,14 @@ class DynamicVAR(object):
     @property
     def nobs(self):
         # Stub, do I need this?
-        data = dict((eq, r.nobs) for eq, r in self.equations.iteritems())
-        return pn.DataFrame(data)
+        data = dict((eq, r.nobs) for eq, r in iteritems(self.equations))
+        return pd.DataFrame(data)
 
     @cache_readonly
     def equations(self):
         eqs = {}
-        for col, ts in self.y.iteritems():
-            model = pn.ols(y=ts, x=self.x, window=self._window,
+        for col, ts in iteritems(self.y):
+            model = pd.ols(y=ts, x=self.x, window=self._window,
                            window_type=self._window_type,
                            min_periods=self._min_periods)
 
@@ -136,10 +126,10 @@ class DynamicVAR(object):
         Return dynamic regression coefficients as WidePanel
         """
         data = {}
-        for eq, result in self.equations.iteritems():
+        for eq, result in iteritems(self.equations):
             data[eq] = result.beta
 
-        panel = pn.WidePanel.fromDict(data)
+        panel = pd.WidePanel.fromDict(data)
 
         # Coefficient names become items
         return panel.swapaxes('items', 'minor')
@@ -182,10 +172,10 @@ class DynamicVAR(object):
     @cache_readonly
     def resid(self):
         data = {}
-        for eq, result in self.equations.iteritems():
+        for eq, result in iteritems(self.equations):
             data[eq] = result.resid
 
-        return pn.DataFrame(data)
+        return pd.DataFrame(data)
 
     def forecast(self, steps=1):
         """
@@ -222,7 +212,7 @@ class DynamicVAR(object):
 
             output[i] = forcs[-1]
 
-        return pn.DataFrame(output, index=forc_index, columns=self.names)
+        return pd.DataFrame(output, index=forc_index, columns=self.names)
 
     def plot_forecast(self, steps=1, figsize=(10, 10)):
         """
@@ -269,8 +259,8 @@ class DynamicVAR(object):
     @cache_readonly
     def r2(self):
         """Returns the r-squared values."""
-        data = dict((eq, r.r2) for eq, r in self.equations.iteritems())
-        return pn.DataFrame(data)
+        data = dict((eq, r.r2) for eq, r in iteritems(self.equations))
+        return pd.DataFrame(data)
 
 class DynamicPanelVAR(DynamicVAR):
     """
@@ -350,7 +340,7 @@ def _make_lag_matrix(x, lags):
         data.update(lag._series)
         columns.extend(lag.columns)
 
-    return pn.DataFrame(data, columns=columns)
+    return pd.DataFrame(data, columns=columns)
 
 class Equation(object):
     """

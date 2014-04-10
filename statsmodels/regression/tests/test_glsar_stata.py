@@ -46,7 +46,7 @@ class TestGLSARCorc(CheckStataResultsPMixin):
         mod1 = GLSAR(g_inv, exogg, 1)
         self.res = mod1.iterative_fit(5)
 
-        from results.macro_gr_corc_stata import results
+        from .results.macro_gr_corc_stata import results
         self.results = results
 
     def test_rho(self):

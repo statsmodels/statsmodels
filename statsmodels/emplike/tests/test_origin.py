@@ -1,7 +1,7 @@
 from numpy.testing import assert_almost_equal
 from statsmodels.emplike.originregress import ELOriginRegress
 from statsmodels.datasets import cancer
-from results.el_results import OriginResults
+from .results.el_results import OriginResults
 import numpy as np
 
 class GenRes(object):

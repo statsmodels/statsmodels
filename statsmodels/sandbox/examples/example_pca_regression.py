@@ -38,17 +38,17 @@ ytrue = np.dot(f0,[1., 1., 1.])
 y0 = ytrue + 0.1*np.random.normal(size=ytrue.shape)
 
 xred, fact, eva, eve  = pca(x0, keepdim=0)
-print eve
-print fact[:5]
-print f0[:5]
+print(eve)
+print(fact[:5])
+print(f0[:5])
 
 import statsmodels.api as sm
 
 res = sm.OLS(y0, sm.add_constant(x0, prepend=False)).fit()
-print 'OLS on original data'
-print res.params
-print res.aic
-print res.rsquared
+print('OLS on original data')
+print(res.params)
+print(res.aic)
+print(res.rsquared)
 
 #print 'OLS on Factors'
 #for k in range(x0.shape[1]):
@@ -63,7 +63,7 @@ print res.rsquared
 #    print 'R2    ', res.rsquared
 #    print 'R2 adj', res.rsquared_adj
 
-print 'OLS on Factors'
+print('OLS on Factors')
 results = []
 xred, fact, eva, eve  = pca(x0, keepdim=0, normalize=1)
 for k in range(0, x0.shape[1]+1):
@@ -86,10 +86,10 @@ for k in range(0, x0.shape[1]+1):
     results.append([k, res.aic, res.bic, res.rsquared_adj, prederr2])
 
 results = np.array(results)
-print results
-print 'best result for k, by AIC, BIC, R2_adj, L1O'
-print np.r_[(np.argmin(results[:,1:3],0), np.argmax(results[:,3],0),
-             np.argmin(results[:,-1],0))]
+print(results)
+print('best result for k, by AIC, BIC, R2_adj, L1O')
+print(np.r_[(np.argmin(results[:,1:3],0), np.argmax(results[:,3],0),
+             np.argmin(results[:,-1],0))])
 
 from statsmodels.iolib.table import (SimpleTable, default_txt_fmt,
                         default_latex_fmt, default_html_fmt)
@@ -99,13 +99,13 @@ numformat = ['%6d'] + ['%10.3f']*4 #'%10.4f'
 txt_fmt1 = dict(data_fmts = numformat)
 tabl = SimpleTable(results, headers, None, txt_fmt=txt_fmt1)
 
-print "PCA regression on simulated data,"
-print "DGP: 2 factors and 4 explanatory variables"
-print tabl
-print "Notes: k is number of components of PCA,"
-print "       constant is added additionally"
-print "       k=0 means regression on constant only"
-print "       L1O: sum of squared prediction errors for leave-one-out"
+print("PCA regression on simulated data,")
+print("DGP: 2 factors and 4 explanatory variables")
+print(tabl)
+print("Notes: k is number of components of PCA,")
+print("       constant is added additionally")
+print("       k=0 means regression on constant only")
+print("       L1O: sum of squared prediction errors for leave-one-out")
 
 
 

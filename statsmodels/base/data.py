@@ -2,21 +2,13 @@
 Base tools for handling various kinds of data structures, attaching metadata to
 results, and doing data cleaning
 """
-
+from statsmodels.compat.python import reduce, iteritems, lmap, zip, range
 import numpy as np
 from pandas import DataFrame, Series, TimeSeries, isnull
-from statsmodels.tools.decorators import (resettable_cache,
-                cache_readonly, cache_writable)
+from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
+                                          cache_writable)
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import MissingDataError
-
-try:
-    reduce
-    pass
-except NameError:
-    #python 3.2
-    from functools import reduce
-
 def _asarray_2dcolumns(x):
     if np.asarray(x).ndim > 1 and np.asarray(x).squeeze().ndim == 1:
         return
@@ -124,7 +116,7 @@ class ModelData(object):
         combined_2d = ()
         combined_2d_names = []
         if len(kwargs):
-            for key, value_array in kwargs.iteritems():
+            for key, value_array in iteritems(kwargs):
                 if value_array is None or value_array.ndim == 0:
                     none_array_names += [key]
                     continue
@@ -146,23 +138,22 @@ class ModelData(object):
 
         nan_mask = _nan_rows(*combined)
         if combined_2d:
-            nan_mask = _nan_rows(*(nan_mask[:,None],) + combined_2d)
+            nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
         if missing == 'raise' and np.any(nan_mask):
             raise MissingDataError("NaNs were encountered in the data")
 
         elif missing == 'drop':
             nan_mask = ~nan_mask
-            drop_nans = lambda x : cls._drop_nans(x, nan_mask)
-            drop_nans_2d = lambda x : cls._drop_nans_2d(x, nan_mask)
-            combined = dict(zip(combined_names, map(drop_nans, combined)))
+            drop_nans = lambda x: cls._drop_nans(x, nan_mask)
+            drop_nans_2d = lambda x: cls._drop_nans_2d(x, nan_mask)
+            combined = dict(zip(combined_names, lmap(drop_nans, combined)))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names,
-                                         map(drop_nans_2d, combined_2d))))
+                                          lmap(drop_nans_2d, combined_2d))))
             if none_array_names:
                 combined.update(dict(zip(none_array_names,
-                                         [None]*len(none_array_names)
-                                         )))
+                                          [None] * len(none_array_names))))
             return combined, np.where(~nan_mask)[0].tolist()
         else:
             raise ValueError("missing option %s not understood" % missing)

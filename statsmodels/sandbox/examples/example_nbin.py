@@ -229,10 +229,10 @@ def _score_nbp(y, X, beta, thet, Q):
     return sc
 
 #### Tests ####
+from statsmodels.compat.python import urlopen
 from numpy.testing import assert_almost_equal
 import pandas
 import patsy
-from urllib2 import urlopen
 medpar = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/medpar.csv'))
 mdvis = pandas.read_csv(urlopen('http://vincentarelbundock.github.com/Rdatasets/csv/COUNT/mdvis.csv'))
 

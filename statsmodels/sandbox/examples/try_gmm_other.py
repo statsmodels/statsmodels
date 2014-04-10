@@ -30,7 +30,7 @@ if __name__ == '__main__':
             return endog, exog, None
 
         def sample_iv(exog):
-            print 'using iv example'
+            print('using iv example')
             X = exog.copy()
             e = sige * np.random.normal(size=nobs)
             endog = np.dot(X, beta) + e
@@ -83,30 +83,30 @@ if __name__ == '__main__':
         modols = OLS(endog, exog)
         resols = modols.fit()
 
-        print '\nIV case'
-        print 'params'
-        print 'IV2SLS', resls.params
-        print 'GMMIV ', resgmmiv # .params
-        print 'GMM   ', res.params
-        print 'diff  ', res.params - resls.params
-        print 'OLS   ', resols.params
-        print 'GMMOLS', resgmmols.params
+        print('\nIV case')
+        print('params')
+        print('IV2SLS', resls.params)
+        print('GMMIV ', resgmmiv) # .params
+        print('GMM   ', res.params)
+        print('diff  ', res.params - resls.params)
+        print('OLS   ', resols.params)
+        print('GMMOLS', resgmmols.params)
 
-        print '\nbse'
-        print 'IV2SLS', resls.bse
-        print 'GMM   ', res.bse   #bse currently only attached to model not results
-        print 'diff  ', res.bse - resls.bse
-        print '%-diff', resls.bse / res.bse * 100 - 100
-        print 'OLS   ', resols.bse
-        print 'GMMOLS', resgmmols.bse
+        print('\nbse')
+        print('IV2SLS', resls.bse)
+        print('GMM   ', res.bse)   #bse currently only attached to model not results
+        print('diff  ', res.bse - resls.bse)
+        print('%-diff', resls.bse / res.bse * 100 - 100)
+        print('OLS   ', resols.bse)
+        print('GMMOLS', resgmmols.bse)
         #print 'GMMiv', modgmmiv.bse
 
-        print "Hausman's specification test"
-        print resls.spec_hausman()
-        print spec_hausman(resols.params, res.params, resols.cov_params(),
-                           res.cov_params())
-        print spec_hausman(resgmmols.params, res.params, resgmmols.cov_params(),
-                           res.cov_params())
+        print("Hausman's specification test")
+        print(resls.spec_hausman())
+        print(spec_hausman(resols.params, res.params, resols.cov_params(),
+                           res.cov_params()))
+        print(spec_hausman(resgmmols.params, res.params, resgmmols.cov_params(),
+                           res.cov_params()))
 
 
     if 'distquant' in examples:
@@ -124,19 +124,19 @@ if __name__ == '__main__':
         #apply to this case
         #resgp = moddist.fit() #now with 'cov': LinAlgError: Singular matrix
         pit1, wit1 = moddist.fititer([1.5,0,1.5], maxiter=1)
-        print pit1
+        print(pit1)
         p1 = moddist.fitgmm([1.5,0,1.5])
-        print p1
+        print(p1)
         moddist2 = gmm.DistQuantilesGMM(gparrvs, None, None, distfn=stats.genpareto,
                                     pquant=np.linspace(0.01,0.99,10))
         pit1a, wit1a = moddist2.fititer([1.5,0,1.5], maxiter=1)
-        print pit1a
+        print(pit1a)
         p1a = moddist2.fitgmm([1.5,0,1.5])
-        print p1a
+        print(p1a)
         #Note: pit1a and p1a are the same and almost the same (1e-5) as
         #      fitquantilesgmm version (functions instead of class)
         res1b = moddist2.fitonce([1.5,0,1.5])
-        print res1b.params
-        print res1b.bse  #they look much too large
-        print np.sqrt(np.diag(res1b._cov_params))
+        print(res1b.params)
+        print(res1b.bse)  #they look much too large
+        print(np.sqrt(np.diag(res1b._cov_params)))
 

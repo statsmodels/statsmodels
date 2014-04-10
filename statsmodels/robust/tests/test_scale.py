@@ -59,7 +59,7 @@ class TestMad(object):
         n = scale.mad(self.X, center=0)
         assert_equal(n.shape, (10,))
 
-class TestMadAxes():
+class TestMadAxes(object):
     def __init__(self):
         np.random.seed(54321)
         self.X = standard_normal((40,10,30))
@@ -80,7 +80,7 @@ class TestMadAxes():
         m = scale.mad(self.X, axis=-1)
         assert_equal(m.shape, (40,10))
 
-class TestHuber():
+class TestHuber(object):
     def __init__(self):
         np.random.seed(54321)
         self.X = standard_normal((40,10))

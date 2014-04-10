@@ -8,9 +8,10 @@ see the docstring of the mosaic function for more informations.
 # Author: Enrico Giampieri - 21 Jan 2013
 
 from __future__ import division
-
+from statsmodels.compat.python import (iteritems, iterkeys, lrange, string_types, lzip,
+                                itervalues, zip, range)
 import numpy as np
-from statsmodels.compatnp.collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 from itertools import product
 
 from numpy import iterable, r_, cumsum, array
@@ -94,7 +95,7 @@ def _reduce_dict(count_dict, partial_key):
     Given a match for the beginning of the category, it will sum each value.
     """
     L = len(partial_key)
-    count = sum(v for k, v in count_dict.items() if k[:L] == partial_key)
+    count = sum(v for k, v in iteritems(count_dict) if k[:L] == partial_key)
     return count
 
 
@@ -107,7 +108,7 @@ def _key_splitting(rect_dict, keys, values, key_subset, horizontal, gap):
     """
     result = OrderedDict()
     L = len(key_subset)
-    for name, (x, y, w, h) in rect_dict.items():
+    for name, (x, y, w, h) in iteritems(rect_dict):
         if key_subset == name[:L]:
             # split base on the values given
             divisions = _split_rect(x, y, w, h, values, horizontal, gap)
@@ -122,7 +123,7 @@ def _tuplify(obj):
     """convert an object in a tuple of strings (even if it is not iterable,
     like a single integer number, but keep the string healthy)
     """
-    if np.iterable(obj) and not isinstance(obj, basestring):
+    if np.iterable(obj) and not isinstance(obj, string_types):
         res = tuple(str(o) for o in obj)
     else:
         res = (str(obj),)
@@ -184,7 +185,7 @@ def _hierarchical_split(count_dict, horizontal=True, gap=0.05):
     # this is the unit square that we are going to divide
     base_rect = OrderedDict([(tuple(), (0, 0, 1, 1))])
     # get the list of each possible value for each level
-    categories_levels = _categories_level(list(count_dict.keys()))
+    categories_levels = _categories_level(list(iterkeys(count_dict)))
     L = len(categories_levels)
 
     # recreate the gaps vector starting from an int
@@ -231,7 +232,7 @@ def _create_default_properties(data):
     decoration on the rectangle.  Doesn't manage more than four
     level of categories
     """
-    categories_levels = _categories_level(list(data.keys()))
+    categories_levels = _categories_level(list(iterkeys(data)))
     Nlevels = len(categories_levels)
     # first level, the hue
     L = len(categories_levels[0])
@@ -247,13 +248,13 @@ def _create_default_properties(data):
     L = len(categories_levels[3]) if Nlevels > 3 else 1
     hatch = ['', '/', '-', '|', '+'][:L + 1]
     # convert in list and merge with the levels
-    hue = list(zip(list(hue), categories_levels[0]))
-    saturation = list(zip(list(saturation),
-                     categories_levels[1] if Nlevels > 1 else ['']))
-    value = list(zip(list(value),
-                     categories_levels[2] if Nlevels > 2 else ['']))
-    hatch = list(zip(list(hatch),
-                     categories_levels[3] if Nlevels > 3 else ['']))
+    hue = lzip(list(hue), categories_levels[0])
+    saturation = lzip(list(saturation),
+                     categories_levels[1] if Nlevels > 1 else [''])
+    value = lzip(list(value),
+                     categories_levels[2] if Nlevels > 2 else [''])
+    hatch = lzip(list(hatch),
+                     categories_levels[3] if Nlevels > 3 else [''])
     # create the properties dictionary
     properties = {}
     for h, s, v, t in product(hue, saturation, value, hatch):
@@ -288,7 +289,7 @@ def _normalize_data(data, index):
         index = None
     # can it be used as a dictionary?
     try:
-        items = list(data.iteritems())
+        items = list(iteritems(data))
     except AttributeError:
         # ok, I cannot use the data as a dictionary
         # Try to convert it to a numpy array, or die trying
@@ -298,10 +299,10 @@ def _normalize_data(data, index):
             name = tuple(i for i in idx)
             temp[name] = data[idx]
         data = temp
-        items = data.items()
+        items = list(iteritems(data))
     # make all the keys a tuple, even if simple numbers
     data = OrderedDict([_tuplify(k), v] for k, v in items)
-    categories_levels = _categories_level(list(data.keys()))
+    categories_levels = _categories_level(list(iterkeys(data)))
     # fill the void in the counting dictionary
     indexes = product(*categories_levels)
     contingency = OrderedDict([(k, data.get(k, 0)) for k in indexes])
@@ -309,9 +310,9 @@ def _normalize_data(data, index):
     # reorder the keys order according to the one specified by the user
     # or if the index is None convert it into a simple list
     # right now it doesn't do any check, but can be modified in the future
-    index = list(range(len(categories_levels))) if index is None else index
+    index = lrange(len(categories_levels)) if index is None else index
     contingency = OrderedDict()
-    for key, value in data.items():
+    for key, value in iteritems(data):
         new_key = tuple(key[i] for i in index)
         contingency[new_key] = value
     data = contingency
@@ -336,9 +337,9 @@ def _statistical_coloring(data):
     It will encounter problem if one category has all zeros
     """
     data = _normalize_data(data, None)
-    categories_levels = _categories_level(list(data.keys()))
+    categories_levels = _categories_level(list(iterkeys(data)))
     Nlevels = len(categories_levels)
-    total = 1.0 * sum(v for v in data.values())
+    total = 1.0 * sum(v for v in itervalues(data))
     # count the proportion of observation
     # for each level that has the given name
     # at each level
@@ -347,7 +348,7 @@ def _statistical_coloring(data):
         proportion = {}
         for level in categories_levels[level_idx]:
             proportion[level] = 0.0
-            for key, value in data.items():
+            for key, value in iteritems(data):
                 if level == key[level_idx]:
                     proportion[level] += value
             proportion[level] /= total
@@ -356,16 +357,16 @@ def _statistical_coloring(data):
     # and it's standard deviation from a binomial distribution
     # under the hipothesys of independence
     expected = {}
-    for key, value in data.items():
+    for key, value in iteritems(data):
         base = 1.0
         for i, k in enumerate(key):
             base *= levels_count[i][k]
         expected[key] = base * total, np.sqrt(total * base * (1.0 - base))
     # now we have the standard deviation of distance from the
     # expected value for each tile. We create the colors from this
-    sigmas = dict((k, (data[k] - m) / s) for k, (m, s) in expected.items())
+    sigmas = dict((k, (data[k] - m) / s) for k, (m, s) in iteritems(expected))
     props = {}
-    for key, dev in sigmas.items():
+    for key, dev in iteritems(sigmas):
         red = 0.0 if dev < 0 else (dev / (1 + dev))
         blue = 0.0 if dev > 0 else (dev / (-1 + dev))
         green = (1.0 - red - blue) / 2.0
@@ -382,14 +383,14 @@ def _create_labels(rects, horizontal, ax, rotation):
     ax: the axis on which the label should be applied
     rotation: the rotation list for each side
     """
-    categories = _categories_level(list(rects.keys()))
+    categories = _categories_level(list(iterkeys(rects)))
     if len(categories) > 4:
         msg = ("maximum of 4 level supported for axes labeling..and 4"
                "is alreay a lot of level, are you sure you need them all?")
         raise NotImplementedError(msg)
     labels = {}
     #keep it fixed as will be used a lot of times
-    items = list(rects.items())
+    items = list(iteritems(rects))
     vertical = not horizontal
 
     #get the axis ticks and labels locator to put the correct values!
@@ -439,7 +440,8 @@ def _create_labels(rects, horizontal, ax, rotation):
             #mean of all these center on the area of the tile
             #this should give me the (more or less) correct position
             #of the center of the category
-            vals = list(subset.values())
+
+            vals = list(itervalues(subset))
             W = sum(w * h for (x, y, w, h) in vals)
             x_lab = sum((x + w / 2.0) * w * h / W for (x, y, w, h) in vals)
             y_lab = sum((y + h / 2.0) * w * h / W for (x, y, w, h) in vals)
@@ -449,8 +451,9 @@ def _create_labels(rects, horizontal, ax, rotation):
             side = (level_idx + vertical) % 4
             level_ticks[value] = y_lab if side % 2 else x_lab
         #now we add the labels of this level to the correct axis
-        ticks_pos[level_idx](list(level_ticks.values()))
-        ticks_lab[level_idx](list(level_ticks.keys()),
+
+        ticks_pos[level_idx](list(itervalues(level_ticks)))
+        ticks_lab[level_idx](list(iterkeys(level_ticks)),
                              rotation=rotation[level_idx])
     return labels
 
@@ -616,7 +619,7 @@ def mosaic(data, index=None, ax=None, horizontal=True, gap=0.005,
     if isinstance(properties, dict):
         color_dict = properties
         properties = lambda key: color_dict.get(key, None)
-    for k, v in rects.items():
+    for k, v in iteritems(rects):
         # create each rectangle and put a label on it
         x, y, w, h = v
         conf = properties(k)

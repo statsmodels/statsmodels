@@ -1,3 +1,4 @@
+from statsmodels.compat.python import iterkeys
 import statsmodels.tools.data as data_util
 from patsy import dmatrices
 
@@ -32,7 +33,7 @@ def handle_formula_data(Y, X, formula, depth=0):
         Should preserve the input type of Y,X. Could be None.
     """
     # half ass attempt to handle other formula objects
-    if isinstance(formula, tuple(formula_handler.keys())):
+    if isinstance(formula, tuple(iterkeys(formula_handler))):
         return formula_handler[type(formula)]
 
     if X is not None:

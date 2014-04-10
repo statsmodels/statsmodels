@@ -325,7 +325,7 @@ class RegressionResults(object):
 
         self.test_ci_beta3 = (-0.3804313225443794, 0.006934528877337928)
 
-class ANOVAResults():
+class ANOVAResults(object):
     """
     Results for ANOVA
     """

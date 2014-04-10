@@ -72,7 +72,8 @@ see notes_references.txt
 Created on Feb 6, 2010
 @author: "josef pktd"
 '''
-
+from __future__ import print_function
+from statsmodels.compat.python import lzip, zip
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -109,7 +110,7 @@ def normloglike(x, mu=0, sigma2=1, returnlls=False, axis=0):
         return LL, lls
     else:
         #Compute the log likelihood
-        #print np.sum(np.log(sigma2),axis)
+        #print(np.sum(np.log(sigma2),axis))
         LL  =  -0.5 * (np.sum(np.log(sigma2),axis) + np.sum((x**2)/sigma2, axis)  +  nobs*np.log(2*np.pi))
         return LL
 
@@ -262,7 +263,7 @@ class TSMLEModel(LikelihoodModel):
         Score vector for Arma model
         """
         #return None
-        #print params
+        #print(params
         jac = ndt.Jacobian(self.loglike, stepMax=1e-4)
         return jac(params)[-1]
 
@@ -467,7 +468,7 @@ class GarchX(TSMLEModel):
 ##        h = signal.lfilter(ma, ar, etax, zi=zi)[0]
 ##
         h = miso_lfilter(ar, ma, etax, useic=self._icetax)[0]
-        #print 'h.shape', h.shape
+        #print('h.shape', h.shape
         hneg = h<0
         if hneg.any():
             #h[hneg] = 1e-6
@@ -562,15 +563,15 @@ class Garch(TSMLEModel):
         etax[:,0] = 1
         etax[:,1:] = (eta**2)[:,None]
         etax[eta>0,2] = 0
-        #print 'etax.shape', etax.shape
+        #print('etax.shape', etax.shape
         h = miso_lfilter(ar, ma, etax, useic=np.atleast_1d(etax[:,1].mean()))[0]
-        #print 'h.shape', h.shape
+        #print('h.shape', h.shape
         hneg = h<0
         if hneg.any():
             #h[hneg] = 1e-6
             h = np.abs(h)
 
-            #print 'Warning negative variance found'
+            #print('Warning negative variance found'
 
         #check timing, starting time for h and eta, do they match
         #err = np.sqrt(h[:len(eta)])*eta #np.random.standard_t(8, size=len(h))
@@ -606,7 +607,7 @@ class Garch(TSMLEModel):
         self.params_converted = params
         self.errorsest, self.h, self.etax = errorsest, h, etax
         #h = h[:-1] #correct this in geterrors
-        #print 'shapes errorsest, h, etax', errorsest.shape, h.shape, etax.shape
+        #print('shapes errorsest, h, etax', errorsest.shape, h.shape, etax.shape
         sigma2 = np.maximum(h, 1e-6)
         axis = 0
         nobs = len(errorsest)
@@ -881,7 +882,7 @@ class Arma(LikelihoodModel):
         Score vector for Arma model
         """
         #return None
-        #print params
+        #print(params
         jac = ndt.Jacobian(self.loglike, stepMax=1e-4)
         return jac(params)[-1]
 
@@ -998,7 +999,7 @@ def generate_gjrgarch(nobs, ar, ma, mu=1., scale=0.1, varinnovation=None):
     #h = np.abs(h)
     #h = np.exp(h)
     #err = np.sqrt(h)*np.random.randn(nobs)
-    print 'h.shape', h.shape
+    print('h.shape', h.shape)
     err = np.sqrt(h[:len(eta)])*eta #np.random.standard_t(8, size=len(h))
     return err, h, etax
 
@@ -1189,7 +1190,7 @@ def test_gjrgarch():
 
 
 '''
->>> print signal.correlate(x3, np.array([[-2.0,3,1],[0.0,0.0,0]])[::-1,:],mode='full')[:-1, (x3.shape[1]+1)//2]
+>>> print(signal.correlate(x3, np.array([[-2.0,3,1],[0.0,0.0,0]])[::-1,:],mode='full')[:-1, (x3.shape[1]+1)//2]
 [ -1.   7.  15.  23.  31.  39.  47.  55.  63.  71.]
 >>> (x3*np.array([-2,3,1])).sum(1)
 array([ -1.,   7.,  15.,  23.,  31.,  39.,  47.,  55.,  63.,  71.])
@@ -1216,7 +1217,7 @@ if __name__ == '__main__':
     examples = ['garch']
     if 'arma' in examples:
         arest = tsa.arima.ARIMA()
-        print "\nExample 1"
+        print("\nExample 1")
         ar = [1.0, -0.8]
         ma = [1.0,  0.5]
         y1 = arest.generate_sample(ar,ma,1000,0.1)
@@ -1226,46 +1227,46 @@ if __name__ == '__main__':
         arma1.nar = 1
         arma1.nma = 1
         arma1res = arma1.fit(method='fmin')
-        print arma1res.params
+        print(arma1res.params)
 
         #Warning need new instance otherwise results carry over
         arma2 = Arma(y1)
         res2 = arma2.fit(method='bfgs')
-        print res2.params
-        print res2.model.hessian(res2.params)
-        print ndt.Hessian(arma1.loglike, stepMax=1e-2)(res2.params)
+        print(res2.params)
+        print(res2.model.hessian(res2.params))
+        print(ndt.Hessian(arma1.loglike, stepMax=1e-2)(res2.params))
         resls = arest.fit(y1,1,1)
-        print resls[0]
-        print resls[1]
+        print(resls[0])
+        print(resls[1])
 
 
 
-        print '\nparameter estimate'
-        print 'parameter of DGP ar(1), ma(1), sigma_error'
-        print [-0.8, 0.5, 0.1]
-        print 'mle with fmin'
-        print arma1res.params
-        print 'mle with bfgs'
-        print res2.params
-        print 'cond. least squares uses optim.leastsq ?'
+        print('\nparameter estimate')
+        print('parameter of DGP ar(1), ma(1), sigma_error')
+        print([-0.8, 0.5, 0.1])
+        print('mle with fmin')
+        print(arma1res.params)
+        print('mle with bfgs')
+        print(res2.params)
+        print('cond. least squares uses optim.leastsq ?')
         errls = arest.error_estimate
-        print resls[0], np.sqrt(np.dot(errls,errls)/errls.shape[0])
+        print(resls[0], np.sqrt(np.dot(errls,errls)/errls.shape[0]))
 
         err = arma1.geterrors(res2.params)
-        print 'cond least squares parameter cov'
-        #print np.dot(err,err)/err.shape[0] * resls[1]
+        print('cond least squares parameter cov')
+        #print(np.dot(err,err)/err.shape[0] * resls[1])
         #errls = arest.error_estimate
-        print np.dot(errls,errls)/errls.shape[0] * resls[1]
-    #    print 'fmin hessian'
-    #    print arma1res.model.optimresults['Hopt'][:2,:2]
-        print 'bfgs hessian'
-        print res2.model.optimresults['Hopt'][:2,:2]
-        print 'numdifftools inverse hessian'
-        print -np.linalg.inv(ndt.Hessian(arma1.loglike, stepMax=1e-2)(res2.params))[:2,:2]
+        print(np.dot(errls,errls)/errls.shape[0] * resls[1])
+    #    print('fmin hessian')
+    #    print(arma1res.model.optimresults['Hopt'][:2,:2])
+        print('bfgs hessian')
+        print(res2.model.optimresults['Hopt'][:2,:2])
+        print('numdifftools inverse hessian')
+        print(-np.linalg.inv(ndt.Hessian(arma1.loglike, stepMax=1e-2)(res2.params))[:2,:2])
 
         arma3 = Arma(y1**2)
         res3 = arma3.fit(method='bfgs')
-        print res3.params
+        print(res3.params)
 
     nobs = 1000
 
@@ -1281,7 +1282,7 @@ if __name__ == '__main__':
 
         seed = 3842774 #91234  #8837708
         seed = np.random.randint(9999999)
-        print 'seed', seed
+        print('seed', seed)
         np.random.seed(seed)
         ar1 = -0.9
         err,h = generate_garch(nobs, [1.0, ar1], [1.0,  0.50], mu=0.0,scale=0.1)
@@ -1336,7 +1337,7 @@ if __name__ == '__main__':
 
     #plt.show()
     seed = np.random.randint(9999999)  # 9188410
-    print 'seed', seed
+    print('seed', seed)
 
     x = np.arange(20).reshape(10,2)
     x3 = np.column_stack((np.ones((x.shape[0],1)),x))
@@ -1361,12 +1362,12 @@ if __name__ == '__main__':
     ggmod.nma = 1
     ggmod._start_params = np.array([-0.6, 0.1, 0.2, 0.0])
     ggres = ggmod.fit(start_params=np.array([-0.6, 0.1, 0.2, 0.0]), maxiter=1000)
-    print 'ggres.params', ggres.params
+    print('ggres.params', ggres.params)
     garchplot(ggmod.errorsest, ggmod.h)
     #plt.show()
 
-    print 'Garch11'
-    print optimize.fmin(lambda params: -loglike_GARCH11(params, errgjr4-errgjr4.mean())[0], [0.93, 0.9, 0.2])
+    print('Garch11')
+    print(optimize.fmin(lambda params: -loglike_GARCH11(params, errgjr4-errgjr4.mean())[0], [0.93, 0.9, 0.2]))
 
     ggmod0 = Garch0(errgjr4-errgjr4.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
     ggmod0.nar = 1
@@ -1374,7 +1375,7 @@ if __name__ == '__main__':
     start_params = np.array([-0.6, 0.2, 0.1])
     ggmod0._start_params = start_params #np.array([-0.6, 0.1, 0.2, 0.0])
     ggres0 = ggmod0.fit(start_params=start_params, maxiter=2000)
-    print 'ggres0.params', ggres0.params
+    print('ggres0.params', ggres0.params)
 
     ggmod0 = Garch0(errgjr4-errgjr4.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
     ggmod0.nar = 1
@@ -1382,7 +1383,7 @@ if __name__ == '__main__':
     start_params = np.array([-0.6, 0.2, 0.1])
     ggmod0._start_params = start_params #np.array([-0.6, 0.1, 0.2, 0.0])
     ggres0 = ggmod0.fit(start_params=start_params, method='bfgs', maxiter=2000)
-    print 'ggres0.params', ggres0.params
+    print('ggres0.params', ggres0.params)
 
 
     if 'rpy' in examples:
@@ -1390,16 +1391,16 @@ if __name__ == '__main__':
         f = r.formula('~garch(1, 1)')
         #fit = r.garchFit(f, data = errgjr4)
         x = r.garchSim( n = 500)
-        print 'R acf', tsa.acf(np.power(x,2))[:15]
+        print('R acf', tsa.acf(np.power(x,2))[:15])
         arma3 = Arma(np.power(x,2))
         arma3res = arma3.fit(start_params=[-0.2,0.1,0.5],maxiter=5000)
-        print arma3res.params
+        print(arma3res.params)
         arma3b = Arma(np.power(x,2))
         arma3bres = arma3b.fit(start_params=[-0.2,0.1,0.5],maxiter=5000, method='bfgs')
-        print arma3bres.params
+        print(arma3bres.params)
 
     llf = loglike_GARCH11([0.93, 0.9, 0.2], errgjr4)
-    print llf[0]
+    print(llf[0])
 
     erro,ho, etaxo = generate_gjrgarch(20, ar, ma, mu=0.04, scale=0.01,
                       varinnovation = np.ones(20))
@@ -1512,8 +1513,8 @@ if __name__ == '__main__':
     llike  =  -0.5 * (np.sum(np.log(sigma2),axis)
                           + np.sum((y**2)/sigma2, axis)
                           +  nobs*np.log(2*np.pi))
-    print lls, llike
-    #print np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum()
+    print(lls, llike)
+    #print(np.log(stats.norm.pdf(y,scale=np.sqrt(ht))).sum())
 
 
 
@@ -1547,5 +1548,5 @@ if __name__ == '__main__':
     # The below don't work yet
     #armodel.fit(method='newton', penalty=True)
     #armodel.fit(method='broyden', penalty=True)
-    print "Unconditional MLE for AR(1) y_t = .9*y_t-1 +.01 * err"
-    print armodel.params
+    print("Unconditional MLE for AR(1) y_t = .9*y_t-1 +.01 * err")
+    print(armodel.params)

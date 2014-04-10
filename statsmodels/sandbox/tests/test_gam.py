@@ -74,7 +74,7 @@ example: Gamma looks good in average bias and average RMSE (RMISE)
 
 
 """
-
+from statsmodels.compat.python import get_class, lrange
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 
@@ -143,7 +143,7 @@ class BaseAM(object):
         x2 = np.sin(2*x1)
         x = np.column_stack((x1/x1.max()*1, 1.*x2))
         exog = (x[:,:,None]**np.arange(order+1)[None, None, :]).reshape(nobs, -1)
-        idx = range((order+1)*2)
+        idx = lrange((order+1)*2)
         del idx[order+1]
         exog_reduced = exog[:,idx]  #remove duplicate constant
         y_true = exog.sum(1) #/ 4.
@@ -205,7 +205,7 @@ class BaseGAM(BaseAM, CheckGAM):
 
         np.random.seed(8765993)
         #y_obs = np.asarray([stats.poisson.rvs(p) for p in mu], float)
-        if issubclass(self.rvs.im_class, stats.rv_discrete):
+        if issubclass(get_class(self.rvs), stats.rv_discrete):
             # Discrete distributions don't take `scale`.
             y_obs = self.rvs(mu_true, size=nobs)
         else:

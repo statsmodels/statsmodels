@@ -17,7 +17,7 @@ getquotes is from pandas\examples\finance.py
 Created on Sat Jan 30 16:30:18 2010
 Author: josef-pktd
 """
-
+from statsmodels.compat.python import lzip
 import numpy as np
 import matplotlib.finance as fin
 import matplotlib.pyplot as plt
@@ -28,7 +28,7 @@ import pandas as pa
 
 def getquotes(symbol, start, end):
     quotes = fin.quotes_historical_yahoo(symbol, start, end)
-    dates, open, close, high, low, volume = zip(*quotes)
+    dates, open, close, high, low, volume = lzip(*quotes)
 
     data = {
         'open' : open,
@@ -56,7 +56,7 @@ for sy in mysym:
 
 # combine into WidePanel
 pawp = pa.WidePanel.fromDict(dmall)
-print pawp.values.shape
+print(pawp.values.shape)
 
 # select closing prices
 paclose = pawp.getMinorXS('close')

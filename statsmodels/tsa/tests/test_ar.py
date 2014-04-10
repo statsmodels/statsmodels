@@ -2,10 +2,11 @@
 Test AR Model
 """
 import statsmodels.api as sm
+from statsmodels.compat.python import range
 from statsmodels.tsa.ar_model import AR
 from numpy.testing import (assert_almost_equal, assert_equal, assert_allclose,
                            assert_)
-from results import results_ar
+from .results import results_ar
 import numpy as np
 import numpy.testing as npt
 from pandas import Series, Index
@@ -31,7 +32,7 @@ class CheckARMixin(object):
         assert_almost_equal(self.res1.fpe, self.res2.fpe, DECIMAL_6)
 
     def test_pickle(self):
-        from statsmodels.compatnp.py3k import BytesIO
+        from statsmodels.compat.python import BytesIO
         fh = BytesIO()
         #test wrapped results load save pickle
         self.res1.save(fh)
@@ -251,11 +252,9 @@ def test_ar_dates():
     ar_model = sm.tsa.AR(endog, freq='A').fit(maxlag=9, method='mle', disp=-1)
     pred = ar_model.predict(start='2005', end='2015')
     predict_dates = sm.tsa.datetools.dates_from_range('2005', '2015')
-    try:
-        from pandas import DatetimeIndex  # pylint: disable-msg=E0611
-        predict_dates = DatetimeIndex(predict_dates, freq='infer')
-    except ImportError:
-        pass
+    from pandas import DatetimeIndex  # pylint: disable-msg=E0611
+    predict_dates = DatetimeIndex(predict_dates, freq='infer')
+
     assert_equal(ar_model.data.predict_dates, predict_dates)
     assert_equal(pred.index, predict_dates)
 

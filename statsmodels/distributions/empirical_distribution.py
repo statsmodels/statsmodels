@@ -61,16 +61,16 @@ class StepFunction(object):
     >>> y = np.arange(20)
     >>> f = StepFunction(x, y)
     >>>
-    >>> print f(3.2)
+    >>> print(f(3.2))
     3.0
-    >>> print f([[3.2,4.5],[24,-3.1]])
+    >>> print(f([[3.2,4.5],[24,-3.1]]))
     [[  3.   4.]
      [ 19.   0.]]
     >>> f2 = StepFunction(x, y, side='right')
     >>>
-    >>> print f(3.0)
+    >>> print(f(3.0))
     2.0
-    >>> print f2(3.0)
+    >>> print(f2(3.0))
     3.0
     """
 
@@ -164,9 +164,9 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
 if __name__ == "__main__":
     #TODO: Make sure everything is correctly aligned and make a plotting
     # function
+    from statsmodels.compat.python import urlopen
     import matplotlib.pyplot as plt
-    import urllib
-    nerve_data = urllib.urlopen('http://www.statsci.org/data/general/nerve.txt')
+    nerve_data = urlopen('http://www.statsci.org/data/general/nerve.txt')
     nerve_data = np.loadtxt(nerve_data)
     x = nerve_data / 50. # was in 1/50 seconds
     cdf = ECDF(x)

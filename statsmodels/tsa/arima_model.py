@@ -5,6 +5,7 @@
 #       packages such as gretl and X12-ARIMA
 
 from __future__ import absolute_import
+from statsmodels.compat.python import string_types, range
 # for 2to3 with extensions
 
 from datetime import datetime
@@ -301,7 +302,7 @@ def _arma_predict_in_sample(start, end, endog, resid, k_ar, method):
 
 
 def _validate(start, k_ar, k_diff, dates, method):
-    if isinstance(start, (basestring, datetime)):
+    if isinstance(start, (string_types, datetime)):
         start = _index_date(start, dates)
         start -= k_diff
     if 'mle' not in method and start < k_ar - k_diff:
@@ -1056,7 +1057,7 @@ class ARIMA(ARMA):
     def predict(self, params, start=None, end=None, exog=None, typ='linear',
                 dynamic=False):
         # go ahead and convert to an index for easier checking
-        if isinstance(start, (basestring, datetime)):
+        if isinstance(start, (string_types, datetime)):
             start = _index_date(start, self.data.dates)
         if typ == 'linear':
             if not dynamic or (start != self.k_ar + self.k_diff and

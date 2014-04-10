@@ -1,3 +1,5 @@
+from __future__ import print_function
+from statsmodels.compat.python import range
 from optparse import OptionParser
 import statsmodels.api as sm
 import scipy as sp
@@ -155,7 +157,7 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
         Load exog/endog/true_params arrays from disk.
     """
     if mode != 'mnlogit':
-        print "Setting num_targets to 2 since mode != 'mnlogit'"
+        print("Setting num_targets to 2 since mode != 'mnlogit'")
         num_targets = 2
     models = {
             'logit': sm.Logit, 'mnlogit': sm.MNLogit, 'probit': sm.Probit}
@@ -187,7 +189,7 @@ def run_demo(mode, base_alpha=0.01, N=500, get_l1_slsqp_results=False,
     summary_str = get_summary_str(results, true_params, get_l1_slsqp_results,
             get_l1_cvxopt_results, print_summaries)
 
-    print summary_str
+    print(summary_str)
 
 
 def run_solvers(model, true_params, alpha, get_l1_slsqp_results,
@@ -297,7 +299,7 @@ def get_logit_endog(true_params, exog, noise_level):
     ### Create the endog
     cdf = class_probabilities.cumsum(axis=1)
     endog = sp.zeros(N)
-    for i in xrange(N):
+    for i in range(N):
         endog[i] = sp.searchsorted(cdf[i, :], sp.rand())
 
     return endog
@@ -317,7 +319,7 @@ def get_probit_endog(true_params, exog, noise_level):
     ### Create the endog
     cdf = stats.norm._cdf(-Xdotparams)
     endog = sp.zeros(N)
-    for i in xrange(N):
+    for i in range(N):
         endog[i] = sp.searchsorted(cdf[i, :], sp.rand())
 
     return endog
@@ -342,7 +344,7 @@ def get_exog(N, num_nonconst_covariates, cor_length):
     else:
         cov_matrix = sp.zeros((num_nonconst_covariates, num_nonconst_covariates))
         j = sp.arange(num_nonconst_covariates)
-        for i in xrange(num_nonconst_covariates):
+        for i in range(num_nonconst_covariates):
             cov_matrix[i,:] = sp.exp(-sp.fabs(i-j) / cor_length)
         chol = linalg.cholesky(cov_matrix)  # cov_matrix = sp.dot(chol.T, chol)
         exog = sp.dot(uncorrelated_exog, chol)

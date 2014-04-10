@@ -1,6 +1,6 @@
+from statsmodels.compat.python import range
 import warnings
 from statsmodels.tools.parallel import parallel_func
-from statsmodels.tools.sm_exceptions import ModuleUnavailableWarning
 from numpy import arange, testing
 from math import sqrt
 

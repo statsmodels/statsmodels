@@ -65,5 +65,5 @@ nn = len(nanstring)
 nanrep = ' ' * (nn - 1)
 nanrep = nanrep[:nn // 2] + '-' + nanrep[nn // 2:]
 
-print 'Longley data - sensitivity to dropping an explanatory variable'
-print str(tabl).replace(nanstring, nanrep)
+print('Longley data - sensitivity to dropping an explanatory variable')
+print(str(tabl).replace(nanstring, nanrep))

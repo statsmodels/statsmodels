@@ -37,7 +37,8 @@ enhancements:
 
 
 '''
-
+from __future__ import print_function
+from statsmodels.compat.python import zip
 from scipy import stats, integrate
 import numpy as np
 
@@ -454,10 +455,10 @@ if __name__ == '__main__':
         from scipy import integrate
         fint = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
         #f_hat -= fint/2.
-        print 'f_hat.min()', f_hat.min()
+        print('f_hat.min()', f_hat.min())
         f_hat = (f_hat - f_hat.min()) #/ f_hat.max() - f_hat.min
         fint2 = integrate.trapz(f_hat, grid)# dx=(grid.max() - grid.min())/len(grid))
-        print 'fint2', fint, fint2
+        print('fint2', fint, fint2)
         f_hat /= fint2
 
         # note that this uses a *huge* grid by default
@@ -474,10 +475,10 @@ if __name__ == '__main__':
 
         for i,p in enumerate(polys[:5]):
             for j,p2 in enumerate(polys[:5]):
-                print i,j,integrate.quad(lambda x: p(x)*p2(x), -1,1)[0]
+                print(i,j,integrate.quad(lambda x: p(x)*p2(x), -1,1)[0])
 
         for p in polys:
-            print integrate.quad(lambda x: p(x)**2, -1,1)
+            print(integrate.quad(lambda x: p(x)**2, -1,1))
 
 
     #examples using the new class
@@ -486,9 +487,9 @@ if __name__ == '__main__':
         dop = DensityOrthoPoly().fit(obs_dist, ChebyTPoly, order=20)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
-        #print 'np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
+        #print('np.max(np.abs(xf - f_hat0))', np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
-        print 'dop F integral', dopint
+        print('dop F integral', dopint)
         mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
                    kwargs=mix_kwds)
 
@@ -507,9 +508,9 @@ if __name__ == '__main__':
         dop = dop.fit(obs_dist, F2Poly, order=30)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
-        #print np.max(np.abs(xf - f_hat0))
+        #print(np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
-        print 'dop F integral', dopint
+        print('dop F integral', dopint)
         mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
                    kwargs=mix_kwds)
 
@@ -523,7 +524,7 @@ if __name__ == '__main__':
             #plt.show()
 
         #check orthonormality:
-        print np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5)))
+        print(np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5))))
 
     if "hermite" in examples:
         dop = DensityOrthoPoly()
@@ -531,9 +532,9 @@ if __name__ == '__main__':
         dop = dop.fit(obs_dist, HPoly, order=20)
         grid = np.linspace(obs_dist.min(), obs_dist.max())
         xf = dop(grid)
-        #print np.max(np.abs(xf - f_hat0))
+        #print(np.max(np.abs(xf - f_hat0))
         dopint = integrate.quad(dop, *dop.limits)[0]
-        print 'dop F integral', dopint
+        print('dop F integral', dopint)
 
         mpdf = mix.pdf(grid, [1/3.,2/3.], dist=[stats.norm, stats.norm],
                    kwargs=mix_kwds)
@@ -548,22 +549,22 @@ if __name__ == '__main__':
             plt.show()
 
         #check orthonormality:
-        print np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5)))
+        print(np.max(np.abs(inner_cont(dop.polys[:5], 0, 1)[0] -np.eye(5))))
 
 
     #check orthonormality
 
     hpolys = [HPoly(i) for i in range(5)]
     inn = inner_cont(hpolys, -6, 6)[0]
-    print np.max(np.abs(inn - np.eye(5)))
-    print (inn*100000).astype(int)
+    print(np.max(np.abs(inn - np.eye(5))))
+    print((inn*100000).astype(int))
 
     from scipy.special import hermite, chebyt
     htpolys = [hermite(i) for i in range(5)]
     innt = inner_cont(htpolys, -10, 10)[0]
-    print (innt*100000).astype(int)
+    print((innt*100000).astype(int))
 
     polysc = [chebyt(i) for i in range(4)]
     r, e = inner_cont(polysc, -1, 1, weight=lambda x: (1-x*x)**(-1/2.))
-    print np.max(np.abs(r - np.diag(np.diag(r))))
+    print(np.max(np.abs(r - np.diag(np.diag(r)))))
 

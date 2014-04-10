@@ -38,7 +38,8 @@ Author: josef-pktd
 License: BSD
 
 '''
-
+from __future__ import print_function
+from statsmodels.compat.python import iteritems
 from scipy import integrate # for scipy 0.6.0
 
 from scipy import stats, info
@@ -47,7 +48,7 @@ import numpy as np
 
 def get_u_argskwargs(**kwargs):
     #Todo: What's this? wrong spacing, used in Transf_gen TransfTwo_gen
-    u_kwargs = dict((k.replace('u_','',1),v) for k,v in kwargs.items()
+    u_kwargs = dict((k.replace('u_','',1),v) for k,v in iteritems(kwargs)
                     if k.startswith('u_'))
     u_args = u_kwargs.pop('u_args',None)
     return u_args, u_kwargs
@@ -57,15 +58,15 @@ class Transf_gen(distributions.rv_continuous):
 
     '''
     def __init__(self, kls, func, funcinv, *args, **kwargs):
-        #print args
-        #print kwargs
+        #print(args
+        #print(kwargs
 
         self.func = func
         self.funcinv = funcinv
         #explicit for self.__dict__.update(kwargs)
         #need to set numargs because inspection does not work
         self.numargs = kwargs.pop('numargs', 0)
-        #print self.numargs
+        #print(self.numargs
         name = kwargs.pop('name','transfdist')
         longname = kwargs.pop('longname','Non-linear transformed distribution')
         extradoc = kwargs.pop('extradoc',None)
@@ -86,7 +87,7 @@ class Transf_gen(distributions.rv_continuous):
                                         extradoc = extradoc)
 
     def _cdf(self,x,*args, **kwargs):
-        #print args
+        #print(args
         if not self.decr:
             return self.kls._cdf(self.funcinv(x),*args, **kwargs)
             #note scipy _cdf only take *args not *kwargs
@@ -143,8 +144,8 @@ class ExpTransf_gen(distributions.rv_continuous):
 
     '''
     def __init__(self, kls, *args, **kwargs):
-        #print args
-        #print kwargs
+        #print(args
+        #print(kwargs
         #explicit for self.__dict__.update(kwargs)
         if 'numargs' in kwargs:
             self.numargs = kwargs['numargs']
@@ -161,7 +162,7 @@ class ExpTransf_gen(distributions.rv_continuous):
         super(ExpTransf_gen,self).__init__(a=a, name=name)
         self.kls = kls
     def _cdf(self,x,*args):
-        #print args
+        #print(args
         return self.kls._cdf(np.log(x),*args)
     def _ppf(self, q, *args):
         return np.exp(self.kls._ppf(q,*args))
@@ -192,49 +193,49 @@ class LogTransf_gen(distributions.rv_continuous):
         self.kls = kls
 
     def _cdf(self,x, *args):
-        #print args
+        #print(args
         return self.kls._cdf(np.exp(x),*args)
     def _ppf(self, q, *args):
         return np.log(self.kls._ppf(q,*args))
 
 def examples_transf():
     ##lognormal = ExpTransf(a=0.0, xa=-10.0, name = 'Log transformed normal')
-    ##print lognormal.cdf(1)
-    ##print stats.lognorm.cdf(1,1)
-    ##print lognormal.stats()
-    ##print stats.lognorm.stats(1)
-    ##print lognormal.rvs(size=10)
+    ##print(lognormal.cdf(1)
+    ##print(stats.lognorm.cdf(1,1)
+    ##print(lognormal.stats()
+    ##print(stats.lognorm.stats(1)
+    ##print(lognormal.rvs(size=10)
 
-    print 'Results for lognormal'
+    print('Results for lognormal')
     lognormalg = ExpTransf_gen(stats.norm, a=0, name = 'Log transformed normal general')
-    print lognormalg.cdf(1)
-    print stats.lognorm.cdf(1,1)
-    print lognormalg.stats()
-    print stats.lognorm.stats(1)
-    print lognormalg.rvs(size=5)
+    print(lognormalg.cdf(1))
+    print(stats.lognorm.cdf(1,1))
+    print(lognormalg.stats())
+    print(stats.lognorm.stats(1))
+    print(lognormalg.rvs(size=5))
 
-    ##print 'Results for loggamma'
+    ##print('Results for loggamma'
     ##loggammag = ExpTransf_gen(stats.gamma)
-    ##print loggammag._cdf(1,10)
-    ##print stats.loggamma.cdf(1,10)
+    ##print(loggammag._cdf(1,10)
+    ##print(stats.loggamma.cdf(1,10)
 
-    print 'Results for expgamma'
+    print('Results for expgamma')
     loggammaexpg = LogTransf_gen(stats.gamma)
-    print loggammaexpg._cdf(1,10)
-    print stats.loggamma.cdf(1,10)
-    print loggammaexpg._cdf(2,15)
-    print stats.loggamma.cdf(2,15)
+    print(loggammaexpg._cdf(1,10))
+    print(stats.loggamma.cdf(1,10))
+    print(loggammaexpg._cdf(2,15))
+    print(stats.loggamma.cdf(2,15))
 
 
     # this requires change in scipy.stats.distribution
-    #print loggammaexpg.cdf(1,10)
+    #print(loggammaexpg.cdf(1,10)
 
-    print 'Results for loglaplace'
+    print('Results for loglaplace')
     loglaplaceg = LogTransf_gen(stats.laplace)
-    print loglaplaceg._cdf(2,10)
-    print stats.loglaplace.cdf(2,10)
+    print(loglaplaceg._cdf(2,10))
+    print(stats.loglaplace.cdf(2,10))
     loglaplaceexpg = ExpTransf_gen(stats.laplace)
-    print loglaplaceexpg._cdf(2,10)
+    print(loglaplaceexpg._cdf(2,10))
 
 
 
@@ -296,8 +297,8 @@ class TransfTwo_gen(distributions.rv_continuous):
     #a class for non-linear non-monotonic transformation of a continuous random variable
     def __init__(self, kls, func, funcinvplus, funcinvminus, derivplus,
                  derivminus, *args, **kwargs):
-        #print args
-        #print kwargs
+        #print(args
+        #print(kwargs
 
         self.func = func
         self.funcinvplus = funcinvplus
@@ -307,7 +308,7 @@ class TransfTwo_gen(distributions.rv_continuous):
         #explicit for self.__dict__.update(kwargs)
         #need to set numargs because inspection does not work
         self.numargs = kwargs.pop('numargs', 0)
-        #print self.numargs
+        #print(self.numargs
         name = kwargs.pop('name','transfdist')
         longname = kwargs.pop('longname','Non-linear transformed distribution')
         extradoc = kwargs.pop('extradoc',None)
@@ -333,20 +334,20 @@ class TransfTwo_gen(distributions.rv_continuous):
         return self.func(self.kls._rvs(*args))
 
     def _pdf(self,x,*args, **kwargs):
-        #print args
+        #print(args
         if self.shape == 'u':
             signpdf = 1
         elif self.shape == 'hump':
             signpdf = -1
         else:
-            raise ValueError, 'shape can only be `u` or `hump`'
+            raise ValueError('shape can only be `u` or `hump`')
 
         return signpdf * (self.derivplus(x)*self.kls._pdf(self.funcinvplus(x),*args, **kwargs) -
                    self.derivminus(x)*self.kls._pdf(self.funcinvminus(x),*args, **kwargs))
             #note scipy _cdf only take *args not *kwargs
 
     def _cdf(self,x,*args, **kwargs):
-        #print args
+        #print(args
         if self.shape == 'u':
             return self.kls._cdf(self.funcinvplus(x),*args, **kwargs) - \
                    self.kls._cdf(self.funcinvminus(x),*args, **kwargs)
@@ -355,7 +356,7 @@ class TransfTwo_gen(distributions.rv_continuous):
             return 1.0 - self._sf(x,*args, **kwargs)
 
     def _sf(self,x,*args, **kwargs):
-        #print args
+        #print(args
         if self.shape == 'hump':
             return self.kls._cdf(self.funcinvplus(x),*args, **kwargs) - \
                    self.kls._cdf(self.funcinvminus(x),*args, **kwargs)

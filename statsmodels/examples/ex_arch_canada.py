@@ -6,6 +6,7 @@ Created on Sat Dec 24 07:31:47 2011
 Author: Josef Perktold
 """
 
+from __future__ import print_function
 import numpy as np
 import statsmodels.sandbox.stats.diagnostic as dia
 
@@ -98,7 +99,7 @@ canada_raw = '''\
 canada = np.array(canada_raw.split(), float).reshape(-1,4)
 k=2;
 resarch2 = dia.acorr_lm((canada[:,k]-canada[:,k].mean())**2, maxlag=2, autolag=None, store=1)
-print resarch2
+print(resarch2)
 resarch5 = dia.acorr_lm(canada[:,k]**2, maxlag=12, autolag=None, store=1)
 
 ss = '''\
@@ -107,8 +108,8 @@ ss = '''\
 Chi-squared = %(chi)-8.4f df = %(df)-4d p-value = %(pval)8.4g
 '''
 resarch = resarch5
-print
-print ss % dict(chi=resarch[2], df=resarch[-1].resols.df_model, pval=resarch[3])
+print()
+print(ss % dict(chi=resarch[2], df=resarch[-1].resols.df_model, pval=resarch[3]))
 
 
 #R:FinTS: ArchTest(as.vector(Canada[,3]), lag=5)

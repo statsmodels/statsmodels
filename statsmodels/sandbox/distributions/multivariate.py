@@ -14,11 +14,12 @@ Reference:
 Genz and Bretz for formula
 
 '''
+from __future__ import print_function
 import numpy as np
 from scipy import integrate, stats, special
 from scipy.stats import chi,chi2
 
-from extras import mvnormcdf, mvstdnormcdf, mvnormcdf
+from .extras import mvnormcdf, mvstdnormcdf, mvnormcdf
 
 from numpy import exp as np_exp
 from numpy import log as np_log
@@ -133,25 +134,25 @@ if __name__ == '__main__':
     b[:] = 3
     df = 10.
     sqrt_df = np.sqrt(df)
-    print mvstdnormcdf(a, b, corr, abseps=1e-6)
+    print(mvstdnormcdf(a, b, corr, abseps=1e-6))
 
     #print integrate.quad(funbgh, 0, np.inf, args=(a,b,R,df))
-    print (stats.t.cdf(b[0], df) - stats.t.cdf(a[0], df))**3
+    print((stats.t.cdf(b[0], df) - stats.t.cdf(a[0], df))**3)
 
     s = 1
-    print mvstdnormcdf(s*a/sqrt_df, s*b/sqrt_df, R)
+    print(mvstdnormcdf(s*a/sqrt_df, s*b/sqrt_df, R))
 
 
     df=4
-    print mvstdtprob(a, b, R, df)
+    print(mvstdtprob(a, b, R, df))
 
     S = np.array([[1.,.5],[.5,1.]])
-    print multivariate_t_rvs([10.,20.], S, 2, 5)
+    print(multivariate_t_rvs([10.,20.], S, 2, 5))
 
     nobs = 10000
     rvst = multivariate_t_rvs([10.,20.], S, 2, nobs)
-    print np.sum((rvst<[10.,20.]).all(1),0) * 1. / nobs
-    print mvstdtprob(-np.inf*np.ones(2), np.zeros(2), R[:2,:2], 2)
+    print(np.sum((rvst<[10.,20.]).all(1),0) * 1. / nobs)
+    print(mvstdtprob(-np.inf*np.ones(2), np.zeros(2), R[:2,:2], 2))
 
 
     '''

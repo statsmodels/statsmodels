@@ -7,6 +7,7 @@ polynomial regression with systematic deviations above
 '''
 
 import numpy as np
+from statsmodels.compat.python import zip
 from scipy import stats
 import statsmodels.api as sm
 

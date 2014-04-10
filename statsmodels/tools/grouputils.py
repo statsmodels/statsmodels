@@ -30,10 +30,11 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 
 
 """
-
+from __future__ import print_function
+from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 import pandas as pd
-from statsmodels.compatnp.np_compat import npc_unique
+from statsmodels.compat.numpy import npc_unique
 import statsmodels.tools.data as data_util
 from statsmodels.tools.decorators import cache_readonly
 from pandas.core.index import Index, MultiIndex
@@ -49,7 +50,7 @@ def combine_indices(groups, prefix='', sep='.', return_labels=False):
         groups = np.asarray(groups)
 
     dt = groups.dtype
-    #print dt
+    #print(dt)
 
     is2d = (groups.ndim == 2)  # need to store
 
@@ -225,7 +226,7 @@ class Group(object):
         '''
         uni = self.uni
         if drop_idx is not None:
-            idx = range(len(uni))
+            idx = lrange(len(uni))
             del idx[drop_idx]
             uni = uni[idx]
 
@@ -257,7 +258,7 @@ class GroupSorted(Group):
         super(self.__class__, self).__init__(group, name=name)
 
         idx = (np.nonzero(np.diff(group))[0]+1).tolist()
-        self.groupidx = groupidx = zip([0]+idx, idx+[len(group)])
+        self.groupidx = groupidx = lzip([0]+idx, idx+[len(group)])
 
         ngroups = len(groupidx)
 
@@ -414,7 +415,7 @@ class Grouping(object):
         if not index:
             index = self.index
         if is_sorted:
-            test = pd.DataFrame(range(len(index)), index=index)
+            test = pd.DataFrame(lrange(len(index)), index=index)
             test_sorted = test.sort()
             if not test.index.equals(test_sorted.index):
                 raise Exception('Data is not be sorted')
@@ -606,21 +607,21 @@ if __name__ == '__main__':
     from scipy import sparse
 
     g = np.array([0, 0, 1, 2, 1, 1, 2, 0])
-    u = range(3)
+    u = lrange(3)
     indptr = np.arange(len(g)+1)
     data = np.ones(len(g), dtype=np.int8)
     a = sparse.csr_matrix((data, g, indptr))
-    print a.todense()
-    print np.all(a.todense() == (g[:, None] == np.arange(3)).astype(int))
+    print(a.todense())
+    print(np.all(a.todense() == (g[:, None] == np.arange(3)).astype(int)))
 
     x = np.arange(len(g)*3).reshape(len(g), 3, order='F')
 
-    print 'group means'
-    print x.T * a
-    print np.dot(x.T, g[:, None] == np.arange(3))
-    print np.array([np.bincount(g, weights=x[:, col]) for col in range(3)])
+    print('group means')
+    print(x.T * a)
+    print(np.dot(x.T, g[:, None] == np.arange(3)))
+    print(np.array([np.bincount(g, weights=x[:, col]) for col in range(3)]))
     for cat in u:
-        print x[g == cat].sum(0)
+        print(x[g == cat].sum(0))
     for cat in u:
         x[g == cat].sum(0)
 
@@ -635,14 +636,14 @@ if __name__ == '__main__':
                             [0, 0, 0, 0, 0, 1, 0, 1, 0]])
 
     #------------- groupsums
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2), g,
-                     use_bincount=False).T
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 0], g)
-    print group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 1], g)
+    print(group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2), g,
+                     use_bincount=False).T)
+    print(group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 0], g))
+    print(group_sums(np.arange(len(g)*3*2).reshape(len(g), 3, 2)[:, :, 1], g))
 
     #------------- examples class
     x = np.arange(len(g)*3).reshape(len(g), 3, order='F')
     mygroup = Group(g)
-    print mygroup.group_int
-    print mygroup.group_sums(x)
-    print mygroup.labels()
+    print(mygroup.group_int)
+    print(mygroup.group_sums(x))
+    print(mygroup.labels())

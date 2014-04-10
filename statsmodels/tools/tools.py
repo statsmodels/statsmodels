@@ -1,7 +1,8 @@
 '''
 Utility functions models code
 '''
-
+from statsmodels.compat.python import (reduce, lzip, lmap, asstr2, urlopen, urljoin,
+                                StringIO, range)
 import numpy as np
 import numpy.lib.recfunctions as nprf
 import numpy.linalg as L
@@ -10,8 +11,7 @@ from scipy.linalg import svdvals
 from statsmodels.distributions import (ECDF, monotone_fn_inverter,
                                                StepFunction)
 from statsmodels.tools.data import _is_using_pandas
-from statsmodels.compatnp.py3k import asstr2
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from pandas import DataFrame
 
 def _make_dictnames(tmp_arr, offset=0):
@@ -183,9 +183,9 @@ def categorical(data, col=None, dictnames=False, drop=False, ):
             if len(data.dtype) <= 1:
                 if tmp_dummy.shape[0] < tmp_dummy.shape[1]:
                     tmp_dummy = np.squeeze(tmp_dummy).swapaxes(1,0)
-                dt = zip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
+                dt = lzip(tmp_arr, [tmp_dummy.dtype.str]*len(tmp_arr))
                 # preserve array type
-                return np.array(map(tuple, tmp_dummy.tolist()),
+                return np.array(lmap(tuple, tmp_dummy.tolist()),
                         dtype=dt).view(type(data))
 
             data=nprf.drop_fields(data, col, usemask=False,
@@ -513,9 +513,6 @@ def webuse(data, baseurl='http://www.stata-press.com/data/r11/', as_df=True):
     """
     # lazy imports
     from statsmodels.iolib import genfromdta
-    from urllib2 import urlopen
-    from urlparse import urljoin
-    from StringIO import StringIO
 
     url = urljoin(baseurl, data+'.dta')
     dta = urlopen(url)

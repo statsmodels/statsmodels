@@ -48,8 +48,8 @@ License: BSD (3-clause)
 '''
 
 
-
-
+from __future__ import print_function
+from statsmodels.compat.python import lrange
 import numpy as np
 from scipy import optimize, stats
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
@@ -59,7 +59,7 @@ from statsmodels.regression.linear_model import (OLS, RegressionResults,
                                                  RegressionResultsWrapper)
 import statsmodels.stats.sandwich_covariance as smcov
 from statsmodels.tools.decorators import (resettable_cache, cache_readonly)
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 DEBUG = 0
 
@@ -184,7 +184,7 @@ class IV2SLS(LikelihoodModel):
         #JP: this doesn't look correct for GLMAR
         #SS: it needs its own predict method
         if self._results is None and params is None:
-            raise ValueError, "If the model has not been fit, then you must specify the params argument."
+            raise ValueError("If the model has not been fit, then you must specify the params argument.")
         if self._results is not None:
             return np.dot(exog, self._results.params)
         else:
@@ -214,7 +214,7 @@ class IVRegressionResults(RegressionResults):
     def fvalue(self):
         k_vars = len(self.params)
         restriction = np.eye(k_vars)
-        idx_noconstant = range(k_vars)
+        idx_noconstant = lrange(k_vars)
         del idx_noconstant[self.model.data.const_idx]
         fval = self.f_test(restriction[idx_noconstant]).fvalue # without constant
         return fval
@@ -745,7 +745,7 @@ class GMM(Model):
             raise ValueError('optimizer method not available')
 
         if DEBUG:
-            print np.linalg.det(weights)
+            print(np.linalg.det(weights))
 
         #TODO: add other optimization options and results
         return optimizer(self.gmmobjective, start, args=(weights,),
@@ -958,7 +958,7 @@ class GMM(Model):
         nobs, k_moms = moms.shape
         # TODO: wargs are tuple or dict ?
         if DEBUG:
-            print ' momcov wargs', wargs
+            print(' momcov wargs', wargs)
 
         centered = not ('centered' in wargs and not wargs['centered'])
         if not centered:
@@ -981,7 +981,7 @@ class GMM(Model):
                     w /= (nobs - self.k_params)
                 else:
                     if DEBUG:
-                        print ' momcov ddof', wargs['ddof']
+                        print(' momcov ddof', wargs['ddof'])
                     w /= (nobs - wargs['ddof'])
             else:
                 # default: divide by nobs
@@ -1031,7 +1031,7 @@ class GMM(Model):
                 else:
                     # assume ddof is a number
                     if DEBUG:
-                        print ' momcov ddof', wargs['ddof']
+                        print(' momcov ddof', wargs['ddof'])
                     w /= (nobs - wargs['ddof'])
             else:
                 # default: divide by nobs

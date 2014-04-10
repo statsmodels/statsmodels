@@ -1,11 +1,9 @@
 """
 Test VAR Model
 """
-from __future__ import with_statement
-
+from __future__ import print_function
 # pylint: disable=W0612,W0231
-
-from cStringIO import StringIO
+from statsmodels.compat.python import iteritems, StringIO, lrange, BytesIO, range
 from nose.tools import assert_raises
 import nose
 import os
@@ -18,7 +16,7 @@ import statsmodels.tsa.vector_ar.var_model as model
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tools.data as data_util
 from statsmodels.tsa.vector_ar.var_model import VAR
-from statsmodels.compatnp.py3k import BytesIO
+
 
 from numpy.testing import assert_almost_equal, assert_equal, assert_
 
@@ -107,7 +105,7 @@ class RResults(object):
 
     def __init__(self):
         #data = np.load(resultspath + 'vars_results.npz')
-        from results.results_var_data import var_results
+        from .results.results_var_data import var_results
         data = var_results.__dict__
 
         self.names = data['coefs'].dtype.names
@@ -157,7 +155,7 @@ def have_matplotlib():
     try:
         import matplotlib
         if matplotlib.__version__ < '1':
-            raise
+            raise ImportError("matplotlib not is too old.  Please update.")
         return True
     except:
         return False
@@ -266,7 +264,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_equal(model2.names, self.ref.names)
 
     def test_get_eq_index(self):
-        assert(isinstance(self.res.names, list))
+        assert(type(self.res.names) is list)
 
         for i, name in enumerate(self.names):
             idx = self.res.get_eq_index(i)
@@ -300,6 +298,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
 
     def test_summary(self):
         summ = self.res.summary()
+
 
     def test_detsig(self):
         assert_almost_equal(self.res.detomega, self.ref.detomega)
@@ -348,7 +347,7 @@ class TestVARResults(CheckIRF, CheckFEVD):
             result = self.res.test_causality(name, variables, kind='f')
             assert_almost_equal(result['pvalue'], causedby[i], DECIMAL_4)
 
-            rng = range(self.k)
+            rng = lrange(self.k)
             rng.remove(i)
             result2 = self.res.test_causality(i, rng, kind='f')
             assert_almost_equal(result['pvalue'], result2['pvalue'], DECIMAL_12)
@@ -441,7 +440,6 @@ class TestVARResults(CheckIRF, CheckFEVD):
         assert_almost_equal(res2.stderr, res3.stderr)
 
     def test_pickle(self):
-        from statsmodels.compatnp.py3k import BytesIO
         fh = BytesIO()
         #test wrapped results load save pickle
         self.res.save(fh)
@@ -558,7 +556,7 @@ def test_get_trendorder():
         'ctt' : 3
     }
 
-    for t, trendorder in results.iteritems():
+    for t, trendorder in iteritems(results):
         assert(util.get_trendorder(t) == trendorder)
 
 if __name__ == '__main__':

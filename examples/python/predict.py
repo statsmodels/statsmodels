@@ -1,6 +1,7 @@
 
 ## Prediction (out of sample)
 
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 
@@ -21,13 +22,13 @@ y = y_true + sig * np.random.normal(size=nsample)
 
 olsmod = sm.OLS(y, X)
 olsres = olsmod.fit()
-print olsres.summary()
+print(olsres.summary())
 
 
 # ## In-sample prediction
 
 ypred = olsres.predict(X)
-print ypred
+print(ypred)
 
 
 # ## Create a new sample of explanatory variables Xnew, predict and plot
@@ -36,7 +37,7 @@ x1n = np.linspace(20.5,25, 10)
 Xnew = np.column_stack((x1n, np.sin(x1n), (x1n-5)**2))
 Xnew = sm.add_constant(Xnew)
 ynewpred =  olsres.predict(Xnew) # predict out of sample
-print ynewpred
+print(ynewpred)
 
 
 # ## Plot comparison

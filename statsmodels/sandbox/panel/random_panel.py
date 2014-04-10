@@ -16,7 +16,7 @@ Notes
 """
 
 import numpy as np
-import correlation_structures as cs
+from . import correlation_structures as cs
 
 
 class PanelSample(object):

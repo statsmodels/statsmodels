@@ -5,7 +5,7 @@ toeplitz structure is not exploited, need cholesky or inv for toeplitz
 Author: josef-pktd
 '''
 
-
+from __future__ import print_function
 import numpy as np
 #from scipy import special #, stats
 from scipy import linalg
@@ -72,8 +72,8 @@ def mvn_loglike_chol(x, sigma):
     logdetsigma = np.log(np.linalg.det(sigma))
     nobs = len(x)
     from scipy import stats
-    print 'scipy.stats'
-    print np.log(stats.norm.pdf(x_whitened)).sum()
+    print('scipy.stats')
+    print(np.log(stats.norm.pdf(x_whitened)).sum())
 
     llf = - np.dot(x_whitened.T, x_whitened)
     llf -= nobs * np.log(2 * np.pi)
@@ -158,12 +158,12 @@ class MLEGLS(GenericLikelihoodModel):
         '''
         ar = np.r_[[1], -params[:self.nar]]
         ma = np.r_[[1], params[-self.nma:]]
-        #print 'ar', ar
-        #print 'ma', ma
-        #print 'nobs', nobs
+        #print('ar', ar
+        #print('ma', ma
+        #print('nobs', nobs
         autocov = arma_acovf(ar, ma, nobs=nobs)
-        #print 'arma_acovf(%r, %r, nobs=%d)' % (ar, ma, nobs)
-        #print autocov.shape
+        #print('arma_acovf(%r, %r, nobs=%d)' % (ar, ma, nobs)
+        #print(autocov.shape
         #something is strange  fixed in aram_acovf
         autocov = autocov[:nobs]
         sigma = toeplitz(autocov)
@@ -200,12 +200,12 @@ if __name__ == '__main__':
     mod.nar, mod.nma = 2, 2   #needs to be added, no init method
     mod.nobs = len(y)
     res = mod.fit(start_params=[0.1, -0.8, 0.2, 0.1, 1.])
-    print 'DGP', ar, ma
-    print res.params
+    print('DGP', ar, ma)
+    print(res.params)
     from statsmodels.regression import yule_walker
-    print yule_walker(y, 2)
+    print(yule_walker(y, 2))
     #resi = mod.fit_invertible(start_params=[0.1,0,0.2,0, 0.5])
-    #print resi.params
+    #print(resi.params
 
     arpoly, mapoly = getpoly(mod, res.params[:-1])
 
@@ -217,7 +217,7 @@ if __name__ == '__main__':
 ##    mods.nar, mods.nma = 13, 1   #needs to be added, no init method
 ##    mods.nobs = len(ys)
 ##    ress = mods.fit(start_params=np.r_[0.4, np.zeros(12), [0.2, 5.]],maxiter=200)
-##    print ress.params
+##    print(ress.params
 ##    #from statsmodels.sandbox.tsa import arima as tsaa
 ##    #tsaa
 ##    import matplotlib.pyplot as plt
@@ -225,11 +225,11 @@ if __name__ == '__main__':
 ##    #plt.show()
 
     sigma = mod._params2cov(res.params[:-1], nobs) * res.params[-1]**2
-    print mvn_loglike(y, sigma)
+    print(mvn_loglike(y, sigma))
     llo = mvn_nloglike_obs(y, sigma)
-    print llo.sum(), llo.shape
-    print mvn_loglike_chol(y, sigma)
-    print mvn_loglike_sum(y, sigma)
+    print(llo.sum(), llo.shape)
+    print(mvn_loglike_chol(y, sigma))
+    print(mvn_loglike_sum(y, sigma))
 
 
 

@@ -8,14 +8,11 @@ namespace : dictionary
 
 
 """
+from statsmodels.compat.python import (iterkeys, lrange, callable, string_types,
+                                itervalues, range)
 import copy
 import types
 import numpy as np
-
-try:
-    set
-except NameError:
-    from sets import Set as set
 
 __docformat__ = 'restructuredtext'
 
@@ -65,7 +62,7 @@ class Term(object):
         try:
             power = float(power)
         except:
-            raise ValueError, 'expecting a float'
+            raise ValueError('expecting a float')
 
         if power == int(power):
             name = '%s^%d' % (self.name, int(power))
@@ -86,8 +83,8 @@ class Term(object):
         else:
             self.termname = termname
 
-        if type(self.termname) is not types.StringType:
-            raise ValueError, 'expecting a string for termname'
+        if not isinstance(self.termname, string_types):
+            raise ValueError('expecting a string for termname')
         if func:
             self.func = func
 
@@ -123,7 +120,7 @@ class Term(object):
         Formula(self) * Formula(other)
         """
 
-        if type(other) is Term and other.name is 'intercept':
+        if isinstance(other, Term) and other.name is 'intercept':
             f = Formula(self, namespace=self.namespace)
         elif self.name is 'intercept':
             f = Formula(other, namespace=other.namespace)
@@ -139,7 +136,7 @@ class Term(object):
         Return the names of the columns in design associated to the terms,
         i.e. len(self.names()) = self().shape[0].
         """
-        if type(self.name) is types.StringType:
+        if isinstance(self.name, string_types):
             return [self.name]
         else:
             return list(self.name)
@@ -187,7 +184,7 @@ class Factor(Term):
         else:
             self.keys = keys
             if len(set(keys)) != len(list(keys)):
-                raise ValueError, 'keys for ordinal Factor should be unique, in increasing order'
+                raise ValueError('keys for ordinal Factor should be unique, in increasing order')
         self._name = termname
         self.termname = termname
         self.ordinal = ordinal
@@ -243,7 +240,7 @@ class Factor(Term):
         """
         s = set(values)
         if not s.issubset(self.keys):
-            raise ValueError, 'unknown keys in values'
+            raise ValueError('unknown keys in values')
 
     def __add__(self, other):
         """
@@ -255,7 +252,7 @@ class Factor(Term):
 
         """
 
-        if type(other) is Term and other.name is 'intercept':
+        if isinstance(other, Term) and other.name is 'intercept':
             return Formula(self, namespace=self.namespace)
         else:
             return Term.__add__(self, other)
@@ -283,13 +280,13 @@ class Factor(Term):
 
         def maineffect_func(value, reference=reference):
             rvalue = []
-            keep = range(value.shape[0])
+            keep = lrange(value.shape[0])
             keep.pop(reference)
             for i in range(len(keep)):
                 rvalue.append(value[keep[i]] - value[reference])
             return np.array(rvalue)
 
-        keep = range(len(self.names()))
+        keep = lrange(len(self.names()))
         keep.pop(reference)
         __names = self.names()
         _names = ['%s-%s' % (__names[keep[i]], __names[reference]) for i in range(len(keep))]
@@ -385,7 +382,7 @@ class Formula(object):
         self.__namespace = namespace
         if isinstance(termlist, Formula):
             self.terms = copy.copy(list(termlist.terms))
-        elif type(termlist) is types.ListType:
+        elif isinstance(termlist, list):
             self.terms = termlist
         elif isinstance(termlist, Term):
             self.terms = [termlist]
@@ -456,7 +453,7 @@ class Formula(object):
                 allvals[interceptindex] = np.ones((1,n), np.float64)
                 allvals = np.concatenate(allvals)
             elif nrow <= 1:
-                raise ValueError, 'with only intercept in formula, keyword \'nrow\' argument needed'
+                raise ValueError('with only intercept in formula, keyword \'nrow\' argument needed')
             else:
                 allvals = I(nrow=nrow)
                 allvals.shape = (1,) + allvals.shape
@@ -468,7 +465,7 @@ class Formula(object):
         """
 
         if not isinstance(query_term, Formula):
-            if type(query_term) == type("name"):
+            if isinstance(query_term, string_types):
                 try:
                     query = self[query_term]
                     return query.termname in self.termnames()
@@ -480,14 +477,14 @@ class Formula(object):
             query_term = query_term.terms[0]
             return query_term.termname in self.termnames()
         else:
-            raise ValueError, 'more than one term passed to hasterm'
+            raise ValueError('more than one term passed to hasterm')
 
     def __getitem__(self, name):
         t = self.termnames()
         if name in t:
             return self.terms[t.index(name)]
         else:
-            raise KeyError, 'formula has no such term: %s' % repr(name)
+            raise KeyError('formula has no such term: %s' % repr(name))
 
     def termcolumns(self, query_term, dict=False):
         """
@@ -501,11 +498,11 @@ class Formula(object):
             for name in names:
                 value[name] = self._names.index(name)
         else:
-            raise ValueError, 'term not in formula'
+            raise ValueError('term not in formula')
         if dict:
             return value
         else:
-            return value.values()
+            return list(itervalues(value))
 
     def names(self):
         """
@@ -558,8 +555,7 @@ class Formula(object):
         for i in range(I):
             for j in range(J):
                 termname = '%s*%s' % (str(selftermnames[i]), str(othertermnames[j]))
-                pieces = termname.split('*')
-                pieces.sort()
+                pieces = sorted(termname.split('*'))
                 termname = '*'.join(pieces)
                 termnames.append(termname)
 
@@ -581,8 +577,7 @@ class Formula(object):
                     for r in range(d1):
                         for s in range(d2):
                             name = '%s*%s' % (str(selfnames[r]), str(othernames[s]))
-                            pieces = name.split('*')
-                            pieces.sort()
+                            pieces = sorted(name.split('*'))
                             name = '*'.join(pieces)
                             names.append(name)
 
@@ -621,8 +616,7 @@ class Formula(object):
 
         other = Formula(other)
         terms = self.terms + other.terms
-        pieces = [(term.name, term) for term in terms]
-        pieces.sort()
+        pieces = sorted([(term.name, term) for term in terms])
         terms = [piece[1] for piece in pieces]
         f = Formula(terms)
         if _namespace_equal(self.namespace, other.namespace):
@@ -667,7 +661,7 @@ def isnested(A, B, namespace=None):
     b = B(values=True)[0]
 
     if len(a) != len(b):
-        raise ValueError, 'A() and B() should be sequences of the same length'
+        raise ValueError('A() and B() should be sequences of the same length')
 
     nA = len(set(a))
     nB = len(set(b))
@@ -723,7 +717,7 @@ def interactions(terms, order=[1,2]):
     >>> print interactions([Term(l) for l in ['a', 'b', 'c']])
     <formula: a*b + a*c + b*c + a + b + c>
     >>>
-    >>> print interactions([Term(l) for l in ['a', 'b', 'c']], order=range(5))
+    >>> print interactions([Term(l) for l in ['a', 'b', 'c']], order=list(range(5)))
     <formula: a*b + a*b*c + a*c + b*c + a + b + c>
     >>>
 
@@ -733,7 +727,7 @@ def interactions(terms, order=[1,2]):
     values = {}
 
     if np.asarray(order).shape == ():
-        order = range(1, int(order)+1)
+        order = lrange(1, int(order)+1)
 
     # First order
 
@@ -752,10 +746,10 @@ def interactions(terms, order=[1,2]):
                     v *= ll[ii+1]
                 values[tuple(I[:,m])] = v
 
-    key = values.keys()[0]
+    key = list(iterkeys(values))[0]
     value = values[key]; del(values[key])
 
-    for v in values.values():
+    for v in itervalues(values):
         value += v
     return value
 

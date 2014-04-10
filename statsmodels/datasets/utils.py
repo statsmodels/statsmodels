@@ -1,6 +1,7 @@
+from statsmodels.compat.python import (range, StringIO, urlopen, HTTPError, lrange,
+                                cPickle)
 import sys
 import shutil
-import pickle
 from os import environ
 from os import makedirs
 from os.path import basename
@@ -8,9 +9,9 @@ from os.path import expanduser
 from os.path import exists
 from os.path import expanduser
 from os.path import join
-from StringIO import StringIO
+
 import time
-from urllib2 import urlopen, HTTPError
+
 
 import numpy as np
 from numpy import genfromtxt, array
@@ -53,7 +54,7 @@ def process_recarray(data, endog_idx=0, exog_idx=None, stack=True, dtype=None):
             endog = data[endog_name]
 
     if exog_idx is None:
-        exog_name = [names[i] for i in xrange(len(names))
+        exog_name = [names[i] for i in range(len(names))
                  if i not in endog_idx]
     else:
         exog_name = [names[i] for i in exog_idx]
@@ -113,7 +114,7 @@ def _maybe_reset_index(data):
     real index. Strip this for a zero-based index
     """
     from pandas import Index
-    if data.index.equals(Index(range(1,len(data)+1))):
+    if data.index.equals(Index(lrange(1,len(data)+1))):
         data = data.reset_index(drop=True)
     return data
 
@@ -132,10 +133,10 @@ def _cache_it(data, cache_path):
         # for some reason encode("zip") won't work for me in Python 3?
         import zlib
         # use protocol 2 so can open with python 2.x if cached in 3.x
-        open(cache_path, "wb").write(zlib.compress(pickle.dumps(data,
+        open(cache_path, "wb").write(zlib.compress(cPickle.dumps(data,
                                                                 protocol=2)))
     else:
-        open(cache_path, "wb").write(pickle.dumps(data).encode("zip"))
+        open(cache_path, "wb").write(cPickle.dumps(data).encode("zip"))
 
 def _open_cache(cache_path):
     if sys.version_info[0] >= 3:
@@ -144,10 +145,10 @@ def _open_cache(cache_path):
         import zlib
         data = zlib.decompress(open(cache_path, 'rb').read())
         # return as bytes object encoded in utf-8 for cross-compat of cached
-        data = pickle.loads(data).encode('utf-8')
+        data = cPickle.loads(data).encode('utf-8')
     else:
         data = open(cache_path, 'rb').read().decode('zip')
-        data = pickle.loads(data)
+        data = cPickle.loads(data)
     return data
 
 def _urlopen_cached(url, cache):
@@ -178,7 +179,7 @@ def _get_data(base_url, dataname, cache, extension="csv"):
     url = base_url + (dataname + ".%s") % extension
     try:
         data, from_cache = _urlopen_cached(url, cache)
-    except HTTPError, err:
+    except HTTPError as err:
         if '404' in str(err):
             raise ValueError("Dataset %s was not found." % dataname)
         else:

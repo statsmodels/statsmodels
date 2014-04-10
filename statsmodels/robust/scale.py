@@ -8,10 +8,10 @@ PJ Huber.  'Robust Statistics' John Wiley and Sons, Inc., New York, 1981.
 R Venables, B Ripley. 'Modern Applied Statistics in S'
     Springer, New York, 2002.
 """
-
+from statsmodels.compat.python import callable, range
 import numpy as np
 from scipy.stats import norm as Gaussian
-import norms
+from . import norms
 from statsmodels.tools import tools
 
 def mad(a, c=Gaussian.ppf(3/4.), axis=0, center=np.median):

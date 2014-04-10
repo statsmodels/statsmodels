@@ -61,7 +61,7 @@ def print_results(res):
     #res.fitjoint()  #not really necessary, because called by ftest_summary
     ft = res.ftest_summary()
     #print ft[0]  #skip because table is nicer
-    print '\nTable of F-tests for overall or pairwise equality of coefficients'
+    print('\nTable of F-tests for overall or pairwise equality of coefficients')
 ##    print 'hypothesis F-statistic         p-value  df_denom df_num  reject'
 ##    for row in ft[1]:
 ##        print row,
@@ -70,37 +70,37 @@ def print_results(res):
 ##        else:
 ##            print ''
     from statsmodels.iolib import SimpleTable
-    print SimpleTable([(['%r'%(row[0],)]
+    print(SimpleTable([(['%r'%(row[0],)]
                         + list(row[1])
                         + ['*']*(row[1][1]>0.5).item() ) for row in ft[1]],
                       headers=['pair', 'F-statistic','p-value','df_denom',
-                               'df_num'])
+                               'df_num']))
 
-    print 'Notes: p-values are not corrected for many tests'
-    print '       (no Bonferroni correction)'
-    print '       * : reject at 5% uncorrected confidence level'
-    print 'Null hypothesis: all or pairwise coefficient are the same'
-    print 'Alternative hypothesis: all coefficients are different'
+    print('Notes: p-values are not corrected for many tests')
+    print('       (no Bonferroni correction)')
+    print('       * : reject at 5% uncorrected confidence level')
+    print('Null hypothesis: all or pairwise coefficient are the same')
+    print('Alternative hypothesis: all coefficients are different')
 
-    print '\nComparison with stats.f_oneway'
-    print stats.f_oneway(*[y[groupind==gr] for gr in res.unique])
-    print '\nLikelihood Ratio Test'
-    print 'likelihood ratio    p-value       df'
-    print res.lr_test()
-    print 'Null model: pooled all coefficients are the same across groups,'
-    print 'Alternative model: all coefficients are allowed to be different'
-    print 'not verified but looks close to f-test result'
+    print('\nComparison with stats.f_oneway')
+    print(stats.f_oneway(*[y[groupind==gr] for gr in res.unique]))
+    print('\nLikelihood Ratio Test')
+    print('likelihood ratio    p-value       df')
+    print(res.lr_test())
+    print('Null model: pooled all coefficients are the same across groups,')
+    print('Alternative model: all coefficients are allowed to be different')
+    print('not verified but looks close to f-test result')
 
-    print '\nOls parameters by group from individual, separate ols regressions'
+    print('\nOls parameters by group from individual, separate ols regressions')
     for group in sorted(res.olsbygroup):
         r = res.olsbygroup[group]
-        print group, r.params
+        print(group, r.params)
 
-    print '\nCheck for heteroscedasticity, '
-    print 'variance and standard deviation for individual regressions'
-    print ' '*12, ' '.join('group %-10s' %(gr) for gr in res.unique)
-    print 'variance    ', res.sigmabygroup
-    print 'standard dev', np.sqrt(res.sigmabygroup)
+    print('\nCheck for heteroscedasticity, ')
+    print('variance and standard deviation for individual regressions')
+    print(' '*12, ' '.join('group %-10s' %(gr) for gr in res.unique))
+    print('variance    ', res.sigmabygroup)
+    print('standard dev', np.sqrt(res.sigmabygroup))
 
 #now added to class
 def print_results2(res):
@@ -173,24 +173,24 @@ standard dev', np.sqrt(res.sigmabygroup)
 #get results for example
 #-----------------------
 
-print '\nTest for equality of coefficients for all exogenous variables'
-print   '-------------------------------------------------------------'
+print('\nTest for equality of coefficients for all exogenous variables')
+print('-------------------------------------------------------------')
 res = OneWayLS(y,x, groups=groupind.astype(int))
 print_results(res)
 
-print '\n\nOne way ANOVA, constant is the only regressor'
-print   '---------------------------------------------'
+print('\n\nOne way ANOVA, constant is the only regressor')
+print('---------------------------------------------')
 
-print 'this is the same as scipy.stats.f_oneway'
+print('this is the same as scipy.stats.f_oneway')
 res = OneWayLS(y,np.ones(len(y)), groups=groupind)
 print_results(res)
 
 
-print '\n\nOne way ANOVA, constant is the only regressor with het is true'
-print   '--------------------------------------------------------------'
+print('\n\nOne way ANOVA, constant is the only regressor with het is true')
+print('--------------------------------------------------------------')
 
-print 'this is the similar to scipy.stats.f_oneway,'
-print 'but variance is not assumed to be the same across groups'
+print('this is the similar to scipy.stats.f_oneway,')
+print('but variance is not assumed to be the same across groups')
 res = OneWayLS(y,np.ones(len(y)), groups=groupind.astype(str), het=True)
 print_results(res)
-print res.print_summary() #(res)
+print(res.print_summary()) #(res)

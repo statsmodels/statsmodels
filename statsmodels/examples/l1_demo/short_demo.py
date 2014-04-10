@@ -17,6 +17,8 @@ The standard l1 solver is fmin_slsqp and is included with scipy.  It
 The l1_cvxopt_cp solver is part of CVXOPT and this package needs to be
     installed separately.  It works well even for larger data sizes.
 """
+from __future__ import print_function
+from statsmodels.compat.python import range
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -47,12 +49,12 @@ logit_l1_cvxopt_res = logit_mod.fit_regularized(
         method='l1_cvxopt_cp', alpha=alpha)
 
 ## Print results
-print "============ Results for Logit ================="
-print "ML results"
-print logit_res.summary()
-print "l1 results"
-print logit_l1_res.summary()
-print logit_l1_cvxopt_res.summary()
+print("============ Results for Logit =================")
+print("ML results")
+print(logit_res.summary())
+print("l1 results")
+print(logit_l1_res.summary())
+print(logit_l1_cvxopt_res.summary())
 
 ### Multinomial Logit Example using American National Election Studies Data
 anes_data = sm.datasets.anes96.load()
@@ -67,18 +69,18 @@ alpha = 10 * np.ones((mlogit_mod.J - 1, mlogit_mod.K))
 # Don't regularize the constant
 alpha[-1,:] = 0
 mlogit_l1_res = mlogit_mod.fit_regularized(method='l1', alpha=alpha)
-print mlogit_l1_res.params
+print(mlogit_l1_res.params)
 
 #mlogit_l1_res = mlogit_mod.fit_regularized(
 #        method='l1_cvxopt_cp', alpha=alpha, abstol=1e-10, trim_tol=1e-6)
 #print mlogit_l1_res.params
 
 ## Print results
-print "============ Results for MNLogit ================="
-print "ML results"
-print mlogit_res.summary()
-print "l1 results"
-print mlogit_l1_res.summary()
+print("============ Results for MNLogit =================")
+print("ML results")
+print(mlogit_res.summary())
+print("l1 results")
+print(mlogit_l1_res.summary())
 #
 #
 #### Logit example with many params, sweeping alpha
@@ -109,7 +111,7 @@ plt.figure(1);plt.clf();plt.grid()
 plt.title('Regularization Path');
 plt.xlabel('alpha');
 plt.ylabel('Parameter value');
-for i in xrange(K):
+for i in range(K):
     plt.plot(alphas, coeff[:,i], label='X'+str(i), lw=3)
 plt.legend(loc='best')
 plt.show()

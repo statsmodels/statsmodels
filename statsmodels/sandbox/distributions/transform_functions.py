@@ -7,7 +7,7 @@ Created on Sat Apr 16 16:06:11 2011
 Author: Josef Perktold
 License : BSD
 """
-
+from __future__ import print_function
 import numpy as np
 
 
@@ -184,8 +184,8 @@ if __name__ == '__main__':
     absf.inverseminus(5) == -5
 
     chainf = ChainFunc(AffineFunc(1,2), BoxCoxNonzeroFunc(2))
-    print chainf.func(3.)
+    print(chainf.func(3.))
     chainf2 = ChainFunc(BoxCoxNonzeroFunc(2), AffineFunc(1,2))
-    print chainf.func(3.)
+    print(chainf.func(3.))
 
 

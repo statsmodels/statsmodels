@@ -6,6 +6,7 @@ Created on Sun Mar 27 14:36:40 2011
 
 """
 
+from __future__ import print_function
 import numpy as np
 import statsmodels.api as sm
 RLM = sm.RLM
@@ -33,12 +34,12 @@ h3 = RLM(data.endog, data.exog,\
 from statsmodels.robust.tests.results.results_rlm import Huber
 res2 = Huber()
 
-print "res2.h1"
-print res2.h1
-print "results.bcov_scaled"
-print results.bcov_scaled
-print "res2.h1 - results.bcov_scaled"
-print res2.h1 - results.bcov_scaled
+print("res2.h1")
+print(res2.h1)
+print("results.bcov_scaled")
+print(results.bcov_scaled)
+print("res2.h1 - results.bcov_scaled")
+print(res2.h1 - results.bcov_scaled)
 
 from numpy.testing import assert_almost_equal
 assert_almost_equal(res2.h1, results.bcov_scaled, 4)

@@ -87,7 +87,7 @@ added Maximum Product-of-Spacings 2010-05-12
 
 '''
 
-
+from __future__ import print_function
 import numpy as np
 from scipy import stats, optimize, special
 
@@ -423,8 +423,8 @@ def fit_mps(dist, data, x0=None):
     if x0 is None:
         x0 = getstartparams(dist, xsorted)
     args = (xsorted, dist)
-    print x0
-    #print args
+    print(x0)
+    #print(args)
     return optimize.fmin(logmps, x0, args=args)
 
 
@@ -434,29 +434,29 @@ if __name__ == '__main__':
     #Example: gamma - distribution
     #-----------------------------
 
-    print '\n\nExample: gamma Distribution'
-    print     '---------------------------'
+    print('\n\nExample: gamma Distribution')
+    print(    '---------------------------')
 
     alpha = 2
     xq = [0.5, 4]
     pq = [0.1, 0.9]
-    print stats.gamma.ppf(pq, alpha)
+    print(stats.gamma.ppf(pq, alpha))
     xq = stats.gamma.ppf(pq, alpha)
-    print np.diff((stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1]))
+    print(np.diff((stats.gamma.ppf(pq, np.linspace(0.01,4,10)[:,None])*xq[::-1])))
     #optimize.bisect(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])))
-    print optimize.fsolve(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])), 3.)
+    print(optimize.fsolve(lambda alpha: np.diff((stats.gamma.ppf(pq, alpha)*xq[::-1])), 3.))
 
     distfn = stats.gamma
     mcond = gammamomentcond(distfn, [5.,10], mom2=stats.gamma.stats(alpha, 0.,1.), quantile=None)
-    print optimize.fsolve(mcond, [1.,2.])
+    print(optimize.fsolve(mcond, [1.,2.]))
     mom2 = stats.gamma.stats(alpha, 0.,1.)
-    print optimize.fsolve(lambda params:gammamomentcond2(distfn, params, mom2), [1.,2.])
+    print(optimize.fsolve(lambda params:gammamomentcond2(distfn, params, mom2), [1.,2.]))
 
     grvs = stats.gamma.rvs(alpha, 0.,2., size=1000)
     mom2 = np.array([grvs.mean(), grvs.var()])
     alphaestq = optimize.fsolve(lambda params:gammamomentcond2(distfn, params, mom2), [1.,3.])
-    print alphaestq
-    print 'scale = ', xq/stats.gamma.ppf(pq, alphaestq)
+    print(alphaestq)
+    print('scale = ', xq/stats.gamma.ppf(pq, alphaestq))
 
 
     #Example beta - distribution
@@ -464,8 +464,8 @@ if __name__ == '__main__':
 
     #Warning: this example had cut-and-paste errors
 
-    print '\n\nExample: beta Distribution'
-    print     '--------------------------'
+    print('\n\nExample: beta Distribution')
+    print(    '--------------------------')
 
     #monkey patching :
 ##    if hasattr(stats.beta, '_fitstart'):
@@ -477,21 +477,21 @@ if __name__ == '__main__':
     pq = np.array([0.01, 0.05,0.1,0.4,0.6,0.9,0.95,0.99])
     #rvsb = stats.beta.rvs(0.5,0.15,size=200)
     rvsb = stats.beta.rvs(10,15,size=2000)
-    print 'true params', 10, 15, 0, 1
-    print stats.beta.fit(rvsb)
+    print('true params', 10, 15, 0, 1)
+    print(stats.beta.fit(rvsb))
     xqsb = [stats.scoreatpercentile(rvsb, p) for p in pq*100]
     mom2s = np.array([rvsb.mean(), rvsb.var()])
     betaparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(stats.beta, params, mom2s,(pq,xqsb), shape=None)**2),
                                            [10,10, 0., 1.], maxiter=2000)
-    print 'betaparest_gmmquantile',  betaparest_gmmquantile
+    print('betaparest_gmmquantile',  betaparest_gmmquantile)
     #result sensitive to initial condition
 
 
     #Example t - distribution
     #------------------------
 
-    print '\n\nExample: t Distribution'
-    print     '-----------------------'
+    print('\n\nExample: t Distribution')
+    print(    '-----------------------')
 
     nobs = 1000
     distfn = stats.t
@@ -502,10 +502,10 @@ if __name__ == '__main__':
     mom2th = distfn.stats(*paramsdgp)
     mom2s = np.array([trvs.mean(), trvs.var()])
     tparest_gmm3quantilefsolve = optimize.fsolve(lambda params:momentcondunbound(distfn,params, mom2s,(pq,xqs)), [10,1.,2.])
-    print 'tparest_gmm3quantilefsolve', tparest_gmm3quantilefsolve
+    print('tparest_gmm3quantilefsolve', tparest_gmm3quantilefsolve)
     tparest_gmm3quantile = optimize.fmin(lambda params:np.sum(momentcondunbound(distfn,params, mom2s,(pq,xqs))**2), [10,1.,2.])
-    print 'tparest_gmm3quantile', tparest_gmm3quantile
-    print distfn.fit(trvs)
+    print('tparest_gmm3quantile', tparest_gmm3quantile)
+    print(distfn.fit(trvs))
 
     ##
 
@@ -516,11 +516,11 @@ if __name__ == '__main__':
     ##xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
     ##mom2th = distfn.stats(*paramsdgp)
     ##mom2s = np.array([trvs.mean(), trvs.var()])
-    print optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,shape=5), [1.,2.])
-    print optimize.fmin(lambda params:np.sum(momentcondunboundls(distfn, params, mom2s,shape=5)**2), [1.,2.])
-    print distfn.fit(trvs)
+    print(optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,shape=5), [1.,2.]))
+    print(optimize.fmin(lambda params:np.sum(momentcondunboundls(distfn, params, mom2s,shape=5)**2), [1.,2.]))
+    print(distfn.fit(trvs))
     #loc, scale, based on quantiles
-    print optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,(pq,xqs),shape=5), [1.,2.])
+    print(optimize.fsolve(lambda params:momentcondunboundls(distfn, params, mom2s,(pq,xqs),shape=5), [1.,2.]))
 
     ##
 
@@ -528,9 +528,9 @@ if __name__ == '__main__':
     #paramsdgp = (5, 0, 1)
     xqs = [stats.scoreatpercentile(trvs, p) for p in pq*100]
     tparest_gmmquantile = optimize.fmin(lambda params:np.sum(momentcondquant(distfn, params, mom2s,(pq,xqs), shape=None)**2), [10, 1.,2.])
-    print 'tparest_gmmquantile', tparest_gmmquantile
+    print('tparest_gmmquantile', tparest_gmmquantile)
     tparest_gmmquantile2 = fitquantilesgmm(distfn, trvs, start=[10, 1.,2.], pquant=None, frozen=None)
-    print 'tparest_gmmquantile2', tparest_gmmquantile2
+    print('tparest_gmmquantile2', tparest_gmmquantile2)
 
 
     ##
@@ -539,11 +539,11 @@ if __name__ == '__main__':
     #use trvs from before
     bt = stats.t.ppf(np.linspace(0,1,21),5)
     ft,bt = np.histogram(trvs,bins=bt)
-    print 'fitbinned t-distribution'
+    print('fitbinned t-distribution')
     tparest_mlebinew = fitbinned(stats.t, ft, bt, [10, 0, 1])
     tparest_gmmbinewidentity = fitbinnedgmm(stats.t, ft, bt, [10, 0, 1])
     tparest_gmmbinewoptimal = fitbinnedgmm(stats.t, ft, bt, [10, 0, 1], weightsoptimal=False)
-    print paramsdgp
+    print(paramsdgp)
 
     #Note: this can be used for chisquare test and then has correct asymptotic
     #   distribution for a distribution with estimated parameters, find ref again
@@ -558,21 +558,21 @@ if __name__ == '__main__':
     tparest_mle = stats.t.fit(trvs)
 
     np.set_printoptions(precision=6)
-    print 'sample size', nobs
-    print 'true (df, loc, scale)      ', paramsdgp
-    print 'parest_mle                 ', tparest_mle
+    print('sample size', nobs)
+    print('true (df, loc, scale)      ', paramsdgp)
+    print('parest_mle                 ', tparest_mle)
     print
-    print 'tparest_mlebinel           ', tparest_mlebinel
-    print 'tparest_gmmbinelidentity   ', tparest_gmmbinelidentity
-    print 'tparest_gmmbineloptimal    ', tparest_gmmbineloptimal
+    print('tparest_mlebinel           ', tparest_mlebinel)
+    print('tparest_gmmbinelidentity   ', tparest_gmmbinelidentity)
+    print('tparest_gmmbineloptimal    ', tparest_gmmbineloptimal)
     print
-    print 'tparest_mlebinew           ', tparest_mlebinew
-    print 'tparest_gmmbinewidentity   ', tparest_gmmbinewidentity
-    print 'tparest_gmmbinewoptimal    ', tparest_gmmbinewoptimal
+    print('tparest_mlebinew           ', tparest_mlebinew)
+    print('tparest_gmmbinewidentity   ', tparest_gmmbinewidentity)
+    print('tparest_gmmbinewoptimal    ', tparest_gmmbinewoptimal)
     print
-    print 'tparest_gmmquantileidentity', tparest_gmmquantile
-    print 'tparest_gmm3quantilefsolve ', tparest_gmm3quantilefsolve
-    print 'tparest_gmm3quantile       ', tparest_gmm3quantile
+    print('tparest_gmmquantileidentity', tparest_gmmquantile)
+    print('tparest_gmm3quantilefsolve ', tparest_gmm3quantilefsolve)
+    print('tparest_gmm3quantile       ', tparest_gmm3quantile)
 
     ''' example results:
     standard error for df estimate looks large
@@ -606,22 +606,22 @@ if __name__ == '__main__':
     #tough problem for MLE according to JKB
     #but not sure for which parameters
 
-    print '\n\nExample: Lognormal Distribution'
-    print     '-------------------------------'
+    print('\n\nExample: Lognormal Distribution')
+    print(    '-------------------------------')
 
     sh = np.exp(10)
     sh = 0.01
-    print sh
+    print(sh)
     x = stats.lognorm.rvs(sh,loc=100, scale=10,size=200)
 
-    print x.min()
-    print stats.lognorm.fit(x,  1.,loc=x.min()-1,scale=1)
+    print(x.min())
+    print(stats.lognorm.fit(x,  1.,loc=x.min()-1,scale=1))
 
     xsorted = np.sort(x)
 
     x0 = [1., x.min()-1, 1]
     args = (xsorted, stats.lognorm)
-    print optimize.fmin(logmps,x0,args=args)
+    print(optimize.fmin(logmps,x0,args=args))
 
 
     #Example: Lomax, Pareto, Generalized Pareto Distributions
@@ -633,10 +633,10 @@ if __name__ == '__main__':
 
     # current results:
     # doesn't look very good yet sensitivity to starting values
-    # Pareto and Generalized Pareto look like a tough estimation problemprint '\n\nExample: Lognormal Distribution'
+    # Pareto and Generalized Pareto look like a tough estimation problemprint('\n\nExample: Lognormal Distribution'
 
-    print '\n\nExample: Lomax, Pareto, Generalized Pareto Distributions'
-    print     '--------------------------------------------------------'
+    print('\n\nExample: Lomax, Pareto, Generalized Pareto Distributions')
+    print(    '--------------------------------------------------------')
 
 
 
@@ -646,28 +646,28 @@ if __name__ == '__main__':
     p2rvssorted = np.sort(p2rvs)
     argsp = (p2rvssorted, stats.pareto)
     x0p = [1., p2rvs.min()-5, 1]
-    print optimize.fmin(logmps,x0p,args=argsp)
-    print stats.pareto.fit(p2rvs, 0.5, loc=-20, scale=0.5)
-    print 'gpdparest_ mle', stats.genpareto.fit(p2rvs)
+    print(optimize.fmin(logmps,x0p,args=argsp))
+    print(stats.pareto.fit(p2rvs, 0.5, loc=-20, scale=0.5))
+    print('gpdparest_ mle', stats.genpareto.fit(p2rvs))
     parsgpd = fit_mps(stats.genpareto, p2rvs)
-    print 'gpdparest_ mps', parsgpd
+    print('gpdparest_ mps', parsgpd)
     argsgpd = (p2rvssorted, stats.genpareto)
     options = dict(stepFix=1e-7)
     #hess_ndt(fun, pars, argsgdp, options)
     #the results for the following look strange, maybe refactoring error
     he, h = hess_ndt(logmps, parsgpd, argsgpd, options)
-    print np.linalg.eigh(he)[0]
+    print(np.linalg.eigh(he)[0])
     f = lambda params: logmps(params, *argsgpd)
-    print f(parsgpd)
+    print(f(parsgpd))
     #add binned
     fp2, bp2 = np.histogram(p2rvs, bins=50)
     'fitbinned t-distribution'
     gpdparest_mlebinel = fitbinned(stats.genpareto, fp2, bp2, x0p)
     gpdparest_gmmbinelidentity = fitbinnedgmm(stats.genpareto, fp2, bp2, x0p)
-    print 'gpdparest_mlebinel', gpdparest_mlebinel
-    print 'gpdparest_gmmbinelidentity', gpdparest_gmmbinelidentity
+    print('gpdparest_mlebinel', gpdparest_mlebinel)
+    print('gpdparest_gmmbinelidentity', gpdparest_gmmbinelidentity)
     gpdparest_gmmquantile2 = fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=None, frozen=None)
-    print 'gpdparest_gmmquantile2', gpdparest_gmmquantile2
+    print('gpdparest_gmmquantile2', gpdparest_gmmquantile2)
     #something wrong : something hard coded ?
     '''
     >>> fitquantilesgmm(stats.genpareto, p2rvs, start=x0p, pquant=np.linspace(0.5,0.95,10), frozen=None)
@@ -686,9 +686,9 @@ if __name__ == '__main__':
         cdfdiff = distfn.cdf(xq, *params) - pq
     ValueError: shape mismatch: objects cannot be broadcast to a single shape
     '''
-    print fitquantilesgmm(stats.genpareto, p2rvs, start=x0p,
-                          pquant=np.linspace(0.01,0.99,10), frozen=None)
+    print(fitquantilesgmm(stats.genpareto, p2rvs, start=x0p,
+                          pquant=np.linspace(0.01,0.99,10), frozen=None))
     fp2, bp2 = np.histogram(p2rvs,
                     bins=stats.genpareto(2).ppf(np.linspace(0,0.99,10)))
-    print 'fitbinnedgmm equal weight bins',
-    print fitbinnedgmm(stats.genpareto, fp2, bp2, x0p)
+    print('fitbinnedgmm equal weight bins')
+    print(fitbinnedgmm(stats.genpareto, fp2, bp2, x0p))

@@ -2,8 +2,8 @@
 
 Author: josef-pktd
 '''
-
-
+from __future__ import print_function
+from statsmodels.compat.python import range, lmap
 import numpy as np
 
 def prob_bv_rectangle(lower, upper, cdf):
@@ -38,12 +38,12 @@ def prob_mv_grid(bins, cdf, axis=-1):
 
     '''
     if not isinstance(bins, np.ndarray):
-        bins = map(np.asarray, bins)
+        bins = lmap(np.asarray, bins)
         n_dim = len(bins)
         bins_ = []
         #broadcast if binedges are 1d
-        if all(map(np.ndim, bins) == np.ones(n_dim)):
-            for d in xrange(n_dim):
+        if all(lmap(np.ndim, bins) == np.ones(n_dim)):
+            for d in range(n_dim):
                 sl = [None]*n_dim
                 sl[d] = slice(None)
                 bins_.append(bins[d][sl])
@@ -51,10 +51,10 @@ def prob_mv_grid(bins, cdf, axis=-1):
         n_dim = bins.shape[0]
         bins_ = bins
 
-    print len(bins)
+    print(len(bins))
     cdf_values = cdf(bins_)
     probs = cdf_values.copy()
-    for d in xrange(n_dim):
+    for d in range(n_dim):
         probs = np.diff(probs, axis=d)
 
     return probs

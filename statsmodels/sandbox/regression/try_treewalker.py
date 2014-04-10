@@ -5,7 +5,8 @@ sum is standing for likelihood calculations
 should collect and aggregate likelihood contributions bottom up
 
 '''
-
+from __future__ import print_function
+from statsmodels.compat.python import iteritems, itervalues, lrange, zip
 import numpy as np
 
 tree = [[0,1],[[2,3],[4,5,6]],[7]]
@@ -18,22 +19,22 @@ def branch(tree):
     '''walking a tree bottom-up
     '''
 
-    if not type(tree[0]) == int:   #assumes leaves are int for choice index
+    if not isinstance(tree[0], int):   #assumes leaves are int for choice index
         branchsum = 0
         for b in tree:
             branchsum += branch(b)
     else:
-        print tree
-        print 'final branch with', tree, sum(tree)
+        print(tree)
+        print('final branch with', tree, sum(tree))
         if testxb:
             return sum(xb[tree])
         else:
             return sum(tree)
 
-    print 'working on branch', tree, branchsum
+    print('working on branch', tree, branchsum)
     return branchsum
 
-print branch(tree)
+print(branch(tree))
 
 
 
@@ -48,10 +49,10 @@ def branch2(tree):
     '''
 
 
-    if type(tree) == tuple:   #assumes leaves are int for choice index
+    if isinstance(tree,  tuple):   #assumes leaves are int for choice index
         name, subtree = tree
-        print name, data2[name]
-        print 'subtree', subtree
+        print(name, data2[name])
+        print('subtree', subtree)
         if testxb:
             branchsum = data2[name]
         else:
@@ -61,13 +62,13 @@ def branch2(tree):
             branchsum = branchsum + branch2(b)
     else:
         leavessum = sum((data2[bi] for bi in tree))
-        print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
+        print('final branch with', tree, ''.join(tree), leavessum) #sum(tree)
         if testxb:
             return leavessum  #sum(xb[tree])
         else:
             return ''.join(tree) #sum(tree)
 
-    print 'working on branch', tree, branchsum
+    print('working on branch', tree, branchsum)
     return branchsum
 
 tree = [[0,1],[[2,3],[4,5,6]],[7]]
@@ -82,7 +83,7 @@ tree2 = ('top',
             ]
          )
 
-data2 = dict([i for i in zip('abcdefgh',range(8))])
+data2 = dict([i for i in zip('abcdefgh',lrange(8))])
 #data2.update({'top':1000, 'B1':100, 'B2':200, 'B21':300,'B22':400, 'B3':400})
 data2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
 
@@ -90,8 +91,8 @@ data2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
 #{'a': 0, 'c': 2, 'b': 1, 'e': 4, 'd': 3, 'g': 6, 'f': 5, 'h': 7,
 #'top': 1000, 'B22': 22, 'B21': 21, 'B1': 100, 'B2': 200, 'B3': 300}
 
-print '\n tree with dictionary data'
-print branch2(tree2)  # results look correct for testxb=0 and 1
+print('\n tree with dictionary data')
+print(branch2(tree2))  # results look correct for testxb=0 and 1
 
 
 #parameters/coefficients map coefficient names to indices, list of indices into
@@ -116,13 +117,14 @@ paramsind = {
 
 #unique, parameter array names,
 #sorted alphabetically, order is/should be only internal
-paramsnames = sorted(set([i for j in paramsind.values() for i in j]))
+
+paramsnames = sorted(set([i for j in itervalues(paramsind) for i in j]))
 
 #mapping coefficient names to indices to unique/parameter array
 paramsidx = dict((name, idx) for (idx,name) in enumerate(paramsnames))
 
 #mapping branch and leaf names to index in parameter array
-inddict = dict((k,[paramsidx[j] for j in v]) for k,v in paramsind.items())
+inddict = dict((k,[paramsidx[j] for j in v]) for k,v in iteritems(paramsind))
 
 '''
 >>> paramsnames

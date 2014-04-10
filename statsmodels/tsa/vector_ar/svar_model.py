@@ -5,17 +5,12 @@ References
 ----------
 Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
-
-from __future__ import division
+from __future__ import print_function, division
+from statsmodels.compat.python import range
 
 import numpy as np
 import numpy.linalg as npl
-
-try:
-    from numpy.linalg import slogdet as np_slogdet
-except:
-    def np_slogdet(x):
-        return 1, np.log(np.linalg.det(x))
+from numpy.linalg import slogdet
 
 from statsmodels.tools.numdiff import (approx_hess, approx_fprime)
 from statsmodels.tools.decorators import cache_readonly
@@ -25,7 +20,7 @@ from statsmodels.tsa.vector_ar.var_model import VARProcess, \
 
 import statsmodels.tsa.vector_ar.util as util
 import statsmodels.tsa.base.tsa_model as tsbase
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 mat = np.array
 
@@ -183,7 +178,7 @@ class SVAR(tsbase.TimeSeriesModel):
                                 % (ic, sorted(selections)))
             lags = selections[ic]
             if verbose:
-                print 'Using %d based on %s criterion' %  (lags, ic)
+                print('Using %d based on %s criterion' %  (lags, ic))
         else:
             if lags is None:
                 lags = 1
@@ -304,7 +299,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         W = np.dot(npl.inv(B),A)
         trc_in = np.dot(np.dot(W.T,W),sigma_u)
-        sign, b_logdet = np_slogdet(B**2) #numpy 1.4 compat
+        sign, b_logdet = slogdet(B**2) #numpy 1.4 compat
         b_slogdet = sign * b_logdet
 
         likl = -nobs/2. * (neqs * np.log(2 * np.pi) - \
@@ -377,7 +372,7 @@ class SVAR(tsbase.TimeSeriesModel):
             self.check_order(J)
             self.check_rank(J)
         else: #TODO: change to a warning?
-            print "Order/rank conditions have not been checked"
+            print("Order/rank conditions have not been checked")
 
         retvals = super(SVAR, self).fit(start_params=start_params,
                     method=solver, maxiter=maxiter,
@@ -407,7 +402,7 @@ class SVAR(tsbase.TimeSeriesModel):
 
         D_nT=np.zeros([(1.0/2)*(neqs)*(neqs+1),neqs**2])
 
-        for j in xrange(neqs):
+        for j in range(neqs):
             i=j
             while j <= i < neqs:
                 u=np.zeros([(1.0/2)*neqs*(neqs+1),1])
@@ -429,13 +424,13 @@ class SVAR(tsbase.TimeSeriesModel):
         j_d = 0
         if len(A_solve[A_mask]) is not 0:
             A_vec = np.ravel(A_mask, order='F')
-            for k in xrange(neqs**2):
+            for k in range(neqs**2):
                 if A_vec[k] == True:
                     S_B[k,j] = -1
                     j += 1
         if len(B_solve[B_mask]) is not 0:
             B_vec = np.ravel(B_mask, order='F')
-            for k in xrange(neqs**2):
+            for k in range(neqs**2):
                 if B_vec[k] == True:
                     S_D[k,j_d] = 1
                     j_d +=1

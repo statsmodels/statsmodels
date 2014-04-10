@@ -8,6 +8,7 @@ TODO: check everywhere initialization of signal.lfilter
 
 """
 
+from statsmodels.compat.python import range
 import numpy as np
 from scipy import signal, optimize
 from statsmodels.base.model import (LikelihoodModel,
@@ -353,7 +354,7 @@ class Arma(GenericLikelihoodModel):  #switch to generic mle
         '''another try for h-step ahead forecasting
         '''
 
-        from arima_process import arma2ma, ArmaProcess
+        from .arima_process import arma2ma, ArmaProcess
         p,q = self.nar, self.nma
         k=0
         ar = self.params[k:k+p]

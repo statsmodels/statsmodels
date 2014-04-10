@@ -1,3 +1,4 @@
+from statsmodels.compat.python import lmap, lzip, map
 import numpy as np
 import pandas as pd
 from numpy.testing import dec
@@ -34,7 +35,7 @@ def test_plot_month():
     dta = sm.datasets.elnino.load_pandas().data
     dta['YEAR'] = dta.YEAR.astype(int).apply(str)
     dta = dta.set_index('YEAR').T.unstack()
-    dates = map(lambda x : pd.datetools.parse('1 '+' '.join(x)),
+    dates = lmap(lambda x : pd.datetools.parse('1 '+' '.join(x)),
                                             dta.index.values)
 
     # test dates argument
@@ -59,15 +60,14 @@ def test_plot_month():
 @dec.skipif(not have_matplotlib)
 def test_plot_quarter():
     dta = sm.datasets.macrodata.load_pandas().data
-    dates = map('Q'.join, zip(dta.year.astype(int).apply(str),
+    dates = lmap('Q'.join, zip(dta.year.astype(int).apply(str),
                               dta.quarter.astype(int).apply(str)))
-
     # test dates argument
     quarter_plot(dta.unemp.values, dates)
 
     # test with a DatetimeIndex with no freq
     parser = pd.datetools.parse_time_string
-    dta.set_index(pd.DatetimeIndex(x[0] for x in map(parser, dates)),
+    dta.set_index(pd.DatetimeIndex((x[0] for x in map(parser, dates))),
                   inplace=True)
     quarter_plot(dta.unemp)
 

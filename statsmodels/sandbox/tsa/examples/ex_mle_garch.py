@@ -61,7 +61,7 @@ todo: add code and verify, check for longer lagpolys
 
 """
 
-
+from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -86,7 +86,7 @@ if 'garch' in examples:
 
     seed = 3842774 #91234  #8837708
     seed = np.random.randint(9999999)
-    print 'seed', seed
+    print('seed', seed)
     np.random.seed(seed)
     ar1 = -0.9
     err,h = generate_garch(nobs, [1.0, ar1], [1.0,  0.50], mu=0.0,scale=0.1)
@@ -141,7 +141,7 @@ if 'garch' in examples:
 
 #plt.show()
 seed = np.random.randint(9999999)  # 9188410
-print 'seed', seed
+print('seed', seed)
 
 x = np.arange(20).reshape(10,2)
 x3 = np.column_stack((np.ones((x.shape[0],1)),x))
@@ -166,7 +166,7 @@ ggmod.nar = 1
 ggmod.nma = 1
 ggmod._start_params = np.array([-0.6, 0.1, 0.2, 0.0])
 ggres = ggmod.fit(start_params=np.array([-0.6, 0.1, 0.2, 0.0]), maxiter=1000)
-print 'ggres.params', ggres.params
+print('ggres.params', ggres.params)
 garchplot(ggmod.errorsest, ggmod.h, title='Garch estimated')
 
 ggmod0 = Garch0(errgjr4-errgjr4.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
@@ -175,7 +175,7 @@ ggmod.nma = 1
 start_params = np.array([-0.6, 0.2, 0.1])
 ggmod0._start_params = start_params #np.array([-0.6, 0.1, 0.2, 0.0])
 ggres0 = ggmod0.fit(start_params=start_params, maxiter=2000)
-print 'ggres0.params', ggres0.params
+print('ggres0.params', ggres0.params)
 
 ggmod0 = Garch0(errgjr4-errgjr4.mean())#hgjr4[:nobs])#-hgjr4.mean()) #errgjr4)
 ggmod0.nar = 1
@@ -183,13 +183,13 @@ ggmod.nma = 1
 start_params = np.array([-0.6, 0.2, 0.1])
 ggmod0._start_params = start_params #np.array([-0.6, 0.1, 0.2, 0.0])
 ggres0 = ggmod0.fit(start_params=start_params, method='bfgs', maxiter=2000)
-print 'ggres0.params', ggres0.params
+print('ggres0.params', ggres0.params)
 
 
 g11res = optimize.fmin(lambda params: -loglike_GARCH11(params, errgjr4-errgjr4.mean())[0], [0.93, 0.9, 0.2])
-print g11res
+print(g11res)
 llf = loglike_GARCH11(g11res, errgjr4-errgjr4.mean())
-print llf[0]
+print(llf[0])
 
 if 'rpyfit' in examples:
     from rpy import r
@@ -202,13 +202,13 @@ if 'rpysim' in examples:
     f = r.formula('~garch(1, 1)')
     #fit = r.garchFit(f, data = errgjr4)
     x = r.garchSim( n = 500)
-    print 'R acf', tsa.acf(np.power(x,2))[:15]
+    print('R acf', tsa.acf(np.power(x,2))[:15])
     arma3 = Arma(np.power(x,2))
     arma3res = arma3.fit(start_params=[-0.2,0.1,0.5],maxiter=5000)
-    print arma3res.params
+    print(arma3res.params)
     arma3b = Arma(np.power(x,2))
     arma3bres = arma3b.fit(start_params=[-0.2,0.1,0.5],maxiter=5000, method='bfgs')
-    print arma3bres.params
+    print(arma3bres.params)
 
     xr = r.garchSim( n = 100)
 
@@ -218,16 +218,16 @@ if 'rpysim' in examples:
     ggmod.nma = 1
     ggmod._start_params = np.array([-0.6, 0.1, 0.2, 0.0])
     ggres = ggmod.fit(start_params=np.array([-0.6, 0.1, 0.2, 0.0]), maxiter=1000)
-    print 'ggres.params', ggres.params
+    print('ggres.params', ggres.params)
 
     g11res = optimize.fmin(lambda params: -loglike_GARCH11(params, x-x.mean())[0], [0.6, 0.6, 0.2])
-    print g11res
+    print(g11res)
     llf = loglike_GARCH11(g11res, x-x.mean())
-    print llf[0]
+    print(llf[0])
 
     garchplot(ggmod.errorsest, ggmod.h, title='Garch estimated')
     fit = r.garchFit(f, data = x-x.mean(), include_mean=False, trace=False)
-    print r.summary(fit)
+    print(r.summary(fit))
 
 '''based on R default simulation
 model = list(omega = 1e-06, alpha = 0.1, beta = 0.8)
@@ -239,15 +239,15 @@ Optimization terminated successfully.
          Current function value: -448.861335
          Iterations: 385
          Function evaluations: 690
->>> print 'ggres.params', ggres.params
+>>> print('ggres.params', ggres.params
 ggres.params [ -7.75090330e-01   1.57714749e-01  -9.60223930e-02   8.76021411e-07]
 rearranged
 8.76021411e-07 1.57714749e-01(-9.60223930e-02) 7.75090330e-01
 
->>> print g11res
+>>> print(g11res
 [  2.97459808e-06   7.83128600e-01   2.41110860e-01]
 >>> llf = loglike_GARCH11(g11res, x-x.mean())
->>> print llf[0]
+>>> print(llf[0]
 442.603541936
 
 Log Likelihood:

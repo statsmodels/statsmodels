@@ -11,6 +11,7 @@ Note: uncomment plt.show() to display graphs
 example = 2 #3  # 1,2 or 3
 
 import numpy as np
+from statsmodels.compat.python import zip
 import numpy.random as R
 import matplotlib.pyplot as plt
 
@@ -45,10 +46,10 @@ z = standardize(z) + 1 # 0.1
 z = f1(x1) + f2(x2)
 #z = demean(z)
 z -= np.median(z)
-print'z.std()', z.std()
+print('z.std()', z.std())
 #z = standardize(z) + 0.2
 # with standardize I get better values, but I don't know what the true params are
-print z.mean(), z.min(), z.max()
+print(z.mean(), z.min(), z.max())
 
 #y += z  #noise
 y = z
@@ -57,17 +58,17 @@ d = np.array([x1,x2]).T
 
 
 if example == 1:
-    print "normal"
+    print("normal")
     m = AdditiveModel(d)
     m.fit(y)
     x = np.linspace(-2,2,50)
 
-    print m
+    print(m)
 
 import scipy.stats, time
 
 if example == 2:
-    print "binomial"
+    print("binomial")
     mod_name = 'Binomial'
     f = families.Binomial()
     #b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
@@ -77,14 +78,14 @@ if example == 2:
     toc = time.time()
     m.fit(b)
     tic = time.time()
-    print tic-toc
+    print(tic-toc)
     #for plotting
     yp = f.link.inverse(y)
     p = b
 
 
 if example == 3:
-    print "Poisson"
+    print("Poisson")
     f = families.Poisson()
     #y = y/y.max() * 3
     yp = f.link.inverse(z)
@@ -95,7 +96,7 @@ if example == 3:
     toc = time.time()
     m.fit(p)
     tic = time.time()
-    print tic-toc
+    print(tic-toc)
 
 if example > 1:
     y_pred = m.results.mu# + m.results.alpha#m.results.predict(d)

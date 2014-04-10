@@ -22,7 +22,7 @@ res0 = multiOLS('GNP + 1', df)
 
 #This select only a certain subset of the columns
 res = multiOLS('GNP + 0', df, ['GNPDEFL', 'TOTEMP', 'POP'])
-print res.to_string()
+print(res.to_string())
 
 
 url = "http://vincentarelbundock.github.com/"
@@ -41,4 +41,4 @@ groups['wealth'] = ['Commerce', 'Lottery', 'Instruction', 'Literacy']
 
 #do the analysis of the significance
 res3 = multigroup(pvals < 0.05, groups)
-print res3
+print(res3)

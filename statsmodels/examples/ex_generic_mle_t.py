@@ -6,6 +6,7 @@ Author: josef-pktd
 """
 
 
+from __future__ import print_function
 import numpy as np
 
 from scipy import stats, special
@@ -88,14 +89,14 @@ modp.start_value = np.ones(data_exog.shape[1]+2)
 modp.start_value[-2] = 10
 modp.start_params = modp.start_value
 resp = modp.fit(start_params = modp.start_value)
-print resp.params
-print resp.bse
+print(resp.params)
+print(resp.bse)
 
 from statsmodels.tools.numdiff import approx_fprime, approx_hess
 
 hb=-approx_hess(modp.start_value, modp.loglike, epsilon=-1e-4)
 tmp = modp.loglike(modp.start_value)
-print tmp.shape
+print(tmp.shape)
 
 
 '''

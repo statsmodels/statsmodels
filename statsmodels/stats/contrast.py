@@ -1,9 +1,10 @@
+from statsmodels.compat.python import range
 import numpy as np
 from scipy.stats import f as fdist
 from scipy.stats import t as student_t
 from scipy import stats
 from statsmodels.tools.tools import clean0, fullrank
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 
 #TODO: should this be public if it's just a container?
@@ -104,7 +105,7 @@ class ContrastResults(object):
         elif hasattr(self, 'fvalue'):
             # TODO: create something nicer for these casee
             return '<F test: F=%s, p=%s, df_denom=%d, df_num=%d>' % \
-                   (`self.fvalue`, self.pvalue, self.df_denom, self.df_num)
+                   (repr(self.fvalue), self.pvalue, self.df_denom, self.df_num)
         else:
             # generic
             return '<Wald test: statistic=%s, p-value=%s>' % \

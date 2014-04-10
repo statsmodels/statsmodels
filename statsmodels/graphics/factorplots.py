@@ -2,10 +2,11 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
+from statsmodels.compat.python import get_function_name, iterkeys, lrange, zip, iteritems
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow
-import utils
+import statsmodels.graphics.utils as utils
 
 
 def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
@@ -91,7 +92,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     fig, ax = utils.create_mpl_ax(ax)
 
     response_name = ylabel or getattr(response, 'name', 'response')
-    ylabel = '%s of %s' % (func.func_name, response_name)
+    ylabel = '%s of %s' % (get_function_name(func), response_name)
     xlabel = xlabel or getattr(x, 'name', 'X')
     legendtitle = legendtitle or getattr(trace, 'name', 'Trace')
 
@@ -101,7 +102,7 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     x_values = x_levels = None
     if isinstance(x[0], str):
         x_levels = [l for l in np.unique(x)]
-        x_values = xrange(len(x_levels))
+        x_values = lrange(len(x_levels))
         x = _recode(x, dict(zip(x_levels, x_values)))
 
     data = DataFrame(dict(x=x, trace=trace, response=response))
@@ -114,21 +115,21 @@ def interaction_plot(x, trace, response, func=np.mean, ax=None, plottype='b',
     if linestyles:
         try:
             assert len(linestyles) == n_trace
-        except AssertionError, err:
+        except AssertionError as err:
             raise ValueError("Must be a linestyle for each trace level")
     else:  # set a default
         linestyles = ['-'] * n_trace
     if markers:
         try:
             assert len(markers) == n_trace
-        except AssertionError, err:
+        except AssertionError as err:
             raise ValueError("Must be a linestyle for each trace level")
     else:  # set a default
         markers = ['.'] * n_trace
     if colors:
         try:
             assert len(colors) == n_trace
-        except AssertionError, err:
+        except AssertionError as err:
             raise ValueError("Must be a linestyle for each trace level")
     else:  # set a default
         #TODO: how to get n_trace different colors?
@@ -196,12 +197,12 @@ def _recode(x, levels):
         raise ValueError('This is not a valid value for levels.'
                          ' Dict required.')
 
-    elif not (np.unique(x) == np.unique(levels.keys())).all():
+    elif not (np.unique(x) == np.unique(list(iterkeys(levels)))).all():
         raise ValueError('The levels do not match the array values.')
 
     else:
         out = np.empty(x.shape[0], dtype=np.int)
-        for level, coding in levels.items():
+        for level, coding in iteritems(levels):
             out[x == level] = coding
 
         if name:

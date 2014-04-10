@@ -24,7 +24,8 @@ Harvey uses Durbin and Koopman notation.
 # http://www.federalreserve.gov/pubs/oss/oss4/aimindex.html
 # Harvey notes that the square root filter will keep P_t pos. def. but
 # is not strictly needed outside of the engineering (long series)
-
+from __future__ import print_function
+from statsmodels.compat.python import lzip, lmap, callable, range
 import numpy as np
 from numpy import dot, identity, kron, log, zeros, pi, exp, eye, issubdtype, ones
 from numpy.linalg import inv, pinv
@@ -357,7 +358,7 @@ class StateSpaceModel(object):
             H = H(params)
         elif H == None:
             H = 0
-        print callable(Q)
+        print(callable(Q))
         if Q != None and callable(Q):
             Q = Q(params)
         elif Q == None:
@@ -789,7 +790,7 @@ if __name__ == "__main__":
     lowerbounds = np.array([-.999, .001, .001])
     xi10 = xihistory[:,0]
     ntrain = 1
-    bounds = zip(lowerbounds,upperbounds) # if you use fmin_l_bfgs_b
+    bounds = lzip(lowerbounds,upperbounds) # if you use fmin_l_bfgs_b
 #    results = optimize.fmin_bfgs(updatematrices, params,
 #        args=(y,xi10,ntrain,penalty,upperbounds,lowerbounds),
 #        gtol = 1e-8, epsilon=1e-10)
@@ -852,7 +853,7 @@ if __name__ == "__main__":
 
 # p. 162 univariate structural time series example
     seatbelt = dk.open('Seatbelt.dat').readlines()
-    seatbelt = [map(float,_.split()) for _ in seatbelt[2:]]
+    seatbelt = [lmap(float,_.split()) for _ in seatbelt[2:]]
     sb_ssm = StateSpaceModel(seatbelt)
     s = 12 # monthly data
 # s p.

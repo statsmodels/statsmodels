@@ -35,25 +35,25 @@ if 'ex1' in examples:
 #                      corr_args=([1, -0.95],))
     dgp = PanelSample(nobs, k_vars, n_groups, corr_structure=cs.corr_arma,
                       corr_args=([1], [1., -0.9],), seed=377769)
-    print 'seed', dgp.seed
+    print('seed', dgp.seed)
     y = dgp.generate_panel()
     noise = y - dgp.y_true
-    print np.corrcoef(y.reshape(-1,n_groups, order='F'))
-    print np.corrcoef(noise.reshape(-1,n_groups, order='F'))
+    print(np.corrcoef(y.reshape(-1,n_groups, order='F')))
+    print(np.corrcoef(noise.reshape(-1,n_groups, order='F')))
 
     mod = ShortPanelGLS2(y, dgp.exog, dgp.groups)
     res = mod.fit()
-    print res.params
-    print res.bse
+    print(res.params)
+    print(res.bse)
     #Now what?
     #res.resid is of transformed model
     #np.corrcoef(res.resid.reshape(-1,n_groups, order='F'))
     y_pred = np.dot(mod.exog, res.params)
     resid = y - y_pred
-    print np.corrcoef(resid.reshape(-1,n_groups, order='F'))
-    print resid.std()
+    print(np.corrcoef(resid.reshape(-1,n_groups, order='F')))
+    print(resid.std())
     err = y_pred - dgp.y_true
-    print err.std()
+    print(err.std())
     #OLS standard errors are too small
     mod.res_pooled.params
     mod.res_pooled.bse
@@ -61,26 +61,26 @@ if 'ex1' in examples:
     mod.res_pooled.HC1_se
     #compare with cluster robust se
 
-    print sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int)))
+    print(sw.se_cov(sw.cov_cluster(mod.res_pooled, dgp.groups.astype(int))))
     #not bad, pretty close to panel estimator
     #and with Newey-West Hac
-    print sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 4, mod.group.groupidx))
+    print(sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 4, mod.group.groupidx)))
     #too small, assuming no bugs,
     #see Peterson assuming it refers to same kind of model
-    print dgp.cov
+    print(dgp.cov)
 
     mod2 = ShortPanelGLS(y, dgp.exog, dgp.groups)
     res2 = mod2.fit_iterative(2)
-    print res2.params
-    print res2.bse
+    print(res2.params)
+    print(res2.bse)
     #both implementations produce the same results:
     from numpy.testing import assert_almost_equal
     assert_almost_equal(res.params, res2.params, decimal=12)
     assert_almost_equal(res.bse, res2.bse, decimal=13)
     mod5 = ShortPanelGLS(y, dgp.exog, dgp.groups)
     res5 = mod5.fit_iterative(5)
-    print res5.params
-    print res5.bse
+    print(res5.params)
+    print(res5.bse)
     #fitting once is the same as OLS
     #note: I need to create new instance, otherwise it continuous fitting
     mod1 = ShortPanelGLS(y, dgp.exog, dgp.groups)
@@ -138,7 +138,7 @@ if 'ex1' in examples:
     se = se.append(pa.DataFrame(clbse[None,:], index=['OLSclu']))
     pnwse = sw.se_cov(sw.cov_nw_panel(mod.res_pooled, 4, mod.group.groupidx))
     se = se.append(pa.DataFrame(pnwse[None,:], index=['OLSpnw']))
-    print se
+    print(se)
     #list(se.index)
     from statsmodels.iolib.table import SimpleTable
     headers = [str(i) for i in se.columns]
@@ -146,6 +146,6 @@ if 'ex1' in examples:
 #    print SimpleTable(np.round(np.asarray(se), 4),
 #                      headers=headers,
 #                      stubs=stubs)
-    print SimpleTable(np.asarray(se), headers=headers, stubs=stubs,
+    print(SimpleTable(np.asarray(se), headers=headers, stubs=stubs,
                       txt_fmt=dict(data_fmts=['%10.4f']),
-                      title='Standard Errors')
+                      title='Standard Errors'))

@@ -5,6 +5,7 @@ Created on Fri Dec 16 12:52:13 2011
 Author: Josef Perktold
 """
 
+from statsmodels.compat.python import urlretrieve
 import numpy as np
 from numpy.testing import assert_almost_equal
 
@@ -12,15 +13,15 @@ import statsmodels.api as sm
 import statsmodels.stats.sandwich_covariance as sw
 
 #http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta
+
 import statsmodels.iolib.foreign as dta
 
 try:
     srs = dta.genfromdta("srs.dta")
-    print 'using local file'
+    print('using local file')
 except IOError:
-    import urllib
-    urllib.urlretrieve('http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta', 'srs.dta')
-    print 'downloading file'
+    urlretrieve('http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/srs.dta', 'srs.dta')
+    print('downloading file')
     srs = dta.genfromdta("srs.dta")
 #    from statsmodels.tools.tools import webuse
 #    srs = webuse('srs', 'http://www.ats.ucla.edu/stat/stata/seminars/svy_stata_intro/')
@@ -46,14 +47,14 @@ group = group[mask]
 #run OLS
 
 res_srs = sm.OLS(y, xx).fit()
-print 'params    ', res_srs.params
-print 'bse_OLS   ', res_srs.bse
+print('params    ', res_srs.params)
+print('bse_OLS   ', res_srs.bse)
 
 #get cluster robust standard errors and compare with STATA
 
 cov_cr = sw.cov_cluster(res_srs, group.astype(int))
 bse_cr = sw.se_cov(cov_cr)
-print 'bse_rob   ', bse_cr
+print('bse_rob   ', bse_cr)
 
 res_stata = np.rec.array(
      [ ('growth', '|', -0.1027121, 0.22917029999999999, -0.45000000000000001, 0.65500000000000003, -0.55483519999999997, 0.34941109999999997),
@@ -64,9 +65,9 @@ res_stata = np.rec.array(
              ('bse', 'float'), ('tvalues', 'float'), ('pvalues', 'float'),
              ('cilow', 'float'), ('ciupp', 'float')])
 
-print 'diff Stata', bse_cr - res_stata.bse
+print('diff Stata', bse_cr - res_stata.bse)
 assert_almost_equal(bse_cr, res_stata.bse, decimal=6)
 
 #We see that in this case the robust standard errors of the parameter estimates
 #are larger than those of OLS by 8 to 35 %
-print 'reldiff to OLS', bse_cr/res_srs.bse - 1
+print('reldiff to OLS', bse_cr/res_srs.bse - 1)

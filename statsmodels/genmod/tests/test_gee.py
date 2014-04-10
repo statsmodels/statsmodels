@@ -8,7 +8,10 @@ correlation structures, the details of the correlation estimation
 differ among implementations and the results will not agree exactly.
 """
 
+from __future__ import print_function
+from statsmodels.compat import lrange
 import numpy as np
+
 import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import GEE,\
@@ -110,7 +113,7 @@ class TestGEE(object):
         X1 = np.random.normal(size=100)
         X2 = np.random.normal(size=100)
         X3 = np.random.normal(size=100)
-        groups = np.kron(range(20), np.ones(5))
+        groups = np.kron(lrange(20), np.ones(5))
 
         Y[0] = np.nan
         Y[5:7] = np.nan
@@ -138,7 +141,7 @@ class TestGEE(object):
         idx = set(group)
         for ii in idx:
             jj = np.flatnonzero(group == ii)
-            T[jj] = range(len(jj))
+            T[jj] = lrange(len(jj))
 
         family = Binomial()
         va = Autoregressive()
@@ -201,7 +204,7 @@ class TestGEE(object):
         idx = set(group)
         for ii in idx:
             jj = np.flatnonzero(group == ii)
-            T[jj] = range(len(jj))
+            T[jj] = lrange(len(jj))
 
         family = Binomial()
         ve = Exchangeable()
@@ -246,7 +249,7 @@ class TestGEE(object):
                                  decimal=6)
 
         # Check for run-time exceptions in summary
-        # print mdf.summary()
+        # print(mdf.summary())
 
 
     def test_post_estimation(self):
@@ -522,7 +525,7 @@ class TestGEE(object):
              assert_almost_equal(mdf.params, cf[j], decimal=5)
              assert_almost_equal(mdf.standard_errors(), se[j],
                                  decimal=6)
-             # print mdf.params
+             # print(mdf.params)
 
 
     def test_compare_OLS(self):
@@ -539,7 +542,7 @@ class TestGEE(object):
         X1 = np.random.normal(size=100)
         X2 = np.random.normal(size=100)
         X3 = np.random.normal(size=100)
-        groups = np.kron(range(20), np.ones(5))
+        groups = np.kron(lrange(20), np.ones(5))
 
         D = pd.DataFrame({"Y": Y, "X1": X1, "X2": X2, "X3": X3})
 

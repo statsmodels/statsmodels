@@ -6,6 +6,8 @@ Created on Sun Apr 21 07:59:26 2013
 Author: Josef Perktold
 """
 
+from __future__ import print_function
+from statsmodels.compat.python import lmap
 import numpy as np
 import statsmodels.stats.proportion as sms
 import statsmodels.stats.weightstats as smw
@@ -26,7 +28,7 @@ ss = '''\
 2 brown medium 53  2 brown dark   54  2 brown black  13'''
 
 dta0 = np.array(ss.split()).reshape(-1,4)
-dta = np.array(map(tuple, dta0.tolist()), dtype=[('Region', int), ('Eyes', 'S6'), ('Hair', 'S6'), ('Count', int)])
+dta = np.array(lmap(tuple, dta0.tolist()), dtype=[('Region', int), ('Eyes', 'S6'), ('Hair', 'S6'), ('Count', int)])
 
 xfair = np.repeat([1,0], [228, 762-228])
 

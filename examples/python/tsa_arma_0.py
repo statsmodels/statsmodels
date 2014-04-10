@@ -1,6 +1,7 @@
 
 ## Autoregressive Moving Average (ARMA): Sunspots data
 
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 import pandas as pd
@@ -14,7 +15,7 @@ from statsmodels.graphics.api import qqplot
 
 ### Sunpots Data
 
-print sm.datasets.sunspots.NOTE
+print(sm.datasets.sunspots.NOTE)
 
 
 dta = sm.datasets.sunspots.load_pandas().data
@@ -35,19 +36,19 @@ fig = sm.graphics.tsa.plot_pacf(dta, lags=40, ax=ax2)
 
 
 arma_mod20 = sm.tsa.ARMA(dta, (2,0)).fit()
-print arma_mod20.params
+print(arma_mod20.params)
 
 
 arma_mod30 = sm.tsa.ARMA(dta, (3,0)).fit()
 
 
-print arma_mod20.aic, arma_mod20.bic, arma_mod20.hqic
+print(arma_mod20.aic, arma_mod20.bic, arma_mod20.hqic)
 
 
-print arma_mod30.params
+print(arma_mod30.params)
 
 
-print arma_mod30.aic, arma_mod30.bic, arma_mod30.hqic
+print(arma_mod30.aic, arma_mod30.bic, arma_mod30.hqic)
 
 
 # * Does our model obey the theory?
@@ -81,7 +82,7 @@ fig = sm.graphics.tsa.plot_pacf(resid, lags=40, ax=ax2)
 r,q,p = sm.tsa.acf(resid.values.squeeze(), qstat=True)
 data = np.c_[range(1,41), r[1:], q, p]
 table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
-print table.set_index('lag')
+print(table.set_index('lag'))
 
 
 # * This indicates a lack of fit.
@@ -89,13 +90,13 @@ print table.set_index('lag')
 # * In-sample dynamic prediction. How good does our model do?
 
 predict_sunspots = arma_mod30.predict('1990', '2012', dynamic=True)
-print predict_sunspots
+print(predict_sunspots)
 
 
 ax = dta.ix['1950':].plot(figsize=(12,8))
-ax = predict_sunspots.plot(ax=ax, style='r--', label='Dynamic Prediction');
-ax.legend();
-ax.axis((-20.0, 38.0, -4.0, 200.0));
+ax = predict_sunspots.plot(ax=ax, style='r--', label='Dynamic Prediction')
+ax.legend()
+ax.axis((-20.0, 38.0, -4.0, 200.0))
 
 
 def mean_forecast_err(y, yhat):
@@ -160,7 +161,7 @@ resid = arma11.resid
 r,q,p = sm.tsa.acf(resid, qstat=True)
 data = np.c_[range(1,41), r[1:], q, p]
 table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
-print table.set_index('lag')
+print(table.set_index('lag'))
 
 
 arma41 = sm.tsa.ARMA(arma_rvs, (4,1)).fit()
@@ -168,7 +169,7 @@ resid = arma41.resid
 r,q,p = sm.tsa.acf(resid, qstat=True)
 data = np.c_[range(1,41), r[1:], q, p]
 table = pd.DataFrame(data, columns=['lag', "AC", "Q", "Prob(>Q)"])
-print table.set_index('lag')
+print(table.set_index('lag'))
 
 
 #### Exercise: How good of in-sample prediction can you do for another series, say, CPI
@@ -182,11 +183,11 @@ cpi = macrodta["cpi"]
 
 fig = plt.figure(figsize=(12,8))
 ax = fig.add_subplot(111)
-ax = cpi.plot(ax=ax);
-ax.legend();
+ax = cpi.plot(ax=ax)
+ax.legend()
 
 
 # P-value of the unit-root test, resoundly rejects the null of no unit-root.
 
-print sm.tsa.adfuller(cpi)[1]
+print(sm.tsa.adfuller(cpi)[1])
 

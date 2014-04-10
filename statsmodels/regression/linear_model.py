@@ -33,6 +33,8 @@ R. Davidson and J.G. MacKinnon.  "Econometric Theory and Methods," Oxford,
 W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
+from __future__ import print_function
+from statsmodels.compat.python import lrange, lzip, range
 __docformat__ = 'restructuredtext en'
 
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']
@@ -44,7 +46,7 @@ from scipy.stats.stats import ss
 from scipy import optimize
 from scipy.stats import chi2
 
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.tools.tools import add_constant, chain_dot, pinv_extended
 from statsmodels.tools.decorators import (resettable_cache,
                                           cache_readonly,
@@ -325,7 +327,7 @@ class GLS(RegressionModel):
 
     >>> gls_model = sm.GLS(data.endog, data.exog, sigma=sigma)
     >>> gls_results = gls_model.fit()
-    >>> print gls_results.summary()
+    >>> print(gls_results.summary()))
 
     """ % {'params' : base._model_params_doc,
            'extra_params' : base._missing_param_doc + base._extra_param_doc}
@@ -444,15 +446,15 @@ class WLS(RegressionModel):
     >>> Y = [1,3,4,5,2,3,4]
     >>> X = range(1,8)
     >>> X = sm.add_constant(X)
-    >>> wls_model = sm.WLS(Y,X, weights=range(1,8))
+    >>> wls_model = sm.WLS(Y,X, weights=list(range(1,8)))
     >>> results = wls_model.fit()
     >>> results.params
     array([ 2.91666667,  0.0952381 ])
     >>> results.tvalues
     array([ 2.0652652 ,  0.35684428])
-    >>> print results.t_test([1, 0])
+    >>> print(results.t_test([1, 0]))
     <T test: effect=array([ 2.91666667]), sd=array([[ 1.41224801]]), t=array([[ 2.0652652]]), p=array([[ 0.04690139]]), df_denom=5>
-    >>> print results.f_test([0, 1])
+    >>> print(results.f_test([0, 1]))
     <F test: F=array([[ 0.12733784]]), p=[[ 0.73577409]], df_denom=5, df_num=1>
 
     Notes
@@ -494,7 +496,7 @@ class WLS(RegressionModel):
         -------
         sqrt(weights)*X
         """
-        #print self.weights.var()
+        #print(self.weights.var()))
         X = np.asarray(X)
         if X.ndim == 1:
             return X * np.sqrt(self.weights)
@@ -562,9 +564,9 @@ class OLS(WLS):
     array([ 2.14285714,  0.25      ])
     >>> results.tvalues
     array([ 1.87867287,  0.98019606])
-    >>> print results.t_test([1, 0])
+    >>> print(results.t_test([1, 0])))
     <T test: effect=array([ 2.14285714]), sd=array([[ 1.14062282]]), t=array([[ 1.87867287]]), p=array([[ 0.05953974]]), df_denom=5>
-    >>> print results.f_test(np.identity(2))
+    >>> print(results.f_test(np.identity(2)))
     <F test: F=array([[ 19.46078431]]), p=[[ 0.00437251]], df_denom=5, df_num=2>
 
     Notes
@@ -621,7 +623,7 @@ class GLSAR(GLS):
     >>> model = sm.GLSAR(Y, X, rho=2)
     >>> for i in range(6):
     ...     results = model.fit()
-    ...     print "AR coefficients:", model.rho
+    ...     print("AR coefficients: {0}".format(model.rho))
     ...     rho, sigma = sm.regression.yule_walker(results.resid,
     ...                                            order=model.order)
     ...     model = sm.GLSAR(Y, X, rho)
@@ -636,9 +638,9 @@ class GLSAR(GLS):
     array([-0.66661205,  1.60850853])
     >>> results.tvalues
     array([ -2.10304127,  21.8047269 ])
-    >>> print results.t_test([1, 0])
+    >>> print(results.t_test([1, 0]))
     <T test: effect=array([-0.66661205]), sd=array([[ 0.31697526]]), t=array([[-2.10304127]]), p=array([[ 0.06309969]]), df_denom=3>
-    >>> print results.f_test(np.identity(2))
+    >>> print(results.f_test(np.identity(2)))
     <F test: F=array([[ 1815.23061844]]), p=[[ 0.00002372]], df_denom=3, df_num=2>
 
     Or, equivalently
@@ -1003,7 +1005,7 @@ class RegressionResults(base.LikelihoodModelResults):
             cols = np.asarray(cols)
             lower = params[cols] - q * bse[cols]
             upper = params[cols] + q * bse[cols]
-        return np.asarray(zip(lower, upper))
+        return np.asarray(lzip(lower, upper))
 
 
     @cache_readonly
@@ -1095,7 +1097,7 @@ class RegressionResults(base.LikelihoodModelResults):
             # TODO: Restats as LM test by projecting orthogonalizing to constant?
             if self.model.data.k_constant == 1:
                 # assume const_idx exists
-                idx = range(k_params)
+                idx = lrange(k_params)
                 idx.pop(const_idx)
                 mat = mat[idx]  # remove constant
             ft = self.f_test(mat)
@@ -1367,7 +1369,7 @@ class RegressionResults(base.LikelihoodModelResults):
         elif cov_type in ('HC0', 'HC1', 'HC2', 'HC3'):
             Sinv = inv(np.dot(scores.T,scores) / n)
         elif cov_type == 'HAC':
-            print "HAC"
+            print("HAC")
             maxlags = self.cov_kwds['maxlags']
             use_correction = self.cov_kwds['use_correction']
             Sinv = inv(sw.S_hac_simple(scores, maxlags) / n)
@@ -1727,7 +1729,7 @@ class RegressionResults(base.LikelihoodModelResults):
             res.cov_kwds['weights_func'] = weights_func
             # TODO: clumsy time index in cov_nw_panel
             tt = (np.nonzero(np.diff(time) < 0)[0] + 1).tolist()
-            groupidx = zip([0] + tt, tt + [len(time)])
+            groupidx = lzip([0] + tt, tt + [len(time)])
             self.n_groups = n_groups = len(groupidx)
             res.cov_params_default = sw.cov_nw_panel(self, maxlags, groupidx,
                                                 weights_func=weights_func,
@@ -1943,7 +1945,7 @@ class RegressionResults(base.LikelihoodModelResults):
                                                  omni_normtest,
                                                  durbin_watson)
 
-        from statsmodels.compatnp.collections import OrderedDict
+        from statsmodels.compat.collections import OrderedDict
         jb, jbpv, skew, kurtosis = jarque_bera(self.wresid)
         omni, omnipv = omni_normtest(self.wresid)
         dw = durbin_watson(self.wresid)

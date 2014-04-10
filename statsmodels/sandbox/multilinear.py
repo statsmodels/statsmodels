@@ -11,6 +11,7 @@ multigroup:
     more significant than outside the group.
 """
 
+from statsmodels.compat.python import iteritems, string_types
 from patsy import dmatrix
 import pandas as pd
 from statsmodels.api import OLS
@@ -147,7 +148,7 @@ def multiOLS(model, dataframe, column_list=None, method='fdr_bh',
         column_list = [name for name in dataframe.columns
                       if dataframe[name].dtype != object and name not in model]
     # if it's a single string transform it in a single element list
-    if isinstance(column_list, basestring):
+    if isinstance(column_list, string_types):
         column_list = [column_list]
     if subset is not None:
         dataframe = dataframe.ix[subset]
@@ -191,12 +192,7 @@ def _test_group(pvalues, group_name, group, exact=True):
     The test is performed on the pvalues set (ad a pandas series) over
     the group specified via a fisher exact test.
     """
-    from scipy.stats import fisher_exact
-    try:
-        from scipy.stats import chi2_contingency
-    except ImportError:
-        def chi2_contingency(*args, **kwds):
-            raise ValueError('exact=False is not available with old scipy')
+    from scipy.stats import fisher_exact, chi2_contingency
 
     totals = 1.0 * len(pvalues)
     total_significant = 1.0 * np.sum(pvalues)
@@ -312,7 +308,7 @@ def multigroup(pvals, groups, exact=True, keep_all=True, alpha=0.05):
         '_in_non': {},
         '_out_sign': {},
         '_out_non': {}}
-    for group_name, group_list in groups.iteritems():
+    for group_name, group_list in iteritems(groups):
         res = _test_group(pvals, group_name, group_list, exact)
         results['pvals'][group_name] = res[0]
         results['increase'][group_name] = res[1]

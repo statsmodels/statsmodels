@@ -1,7 +1,7 @@
 """
 Robust statistical models
 """
-import norms
+from . import norms
 from .scale import mad, stand_mad, Huber, HuberScale, hubers_scale
 
 from statsmodels import NoseWrapper as Tester

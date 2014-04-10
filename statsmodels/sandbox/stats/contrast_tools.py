@@ -22,7 +22,8 @@ Idea for second part
 
 
 
-
+from __future__ import print_function
+from statsmodels.compat.python import zip
 import numpy as np
 
 #next 3 functions copied from multicomp.py
@@ -291,7 +292,7 @@ def dummy_limits(d):
     start1, col1 = np.nonzero(np.diff(d,axis=0)==1)
     end1, col1_ = np.nonzero(np.diff(d,axis=0)==-1)
     cc = np.arange(nvars)
-    #print cc, np.r_[[0], col1], np.r_[col1_, [nvars-1]]
+    #print(cc, np.r_[[0], col1], np.r_[col1_, [nvars-1]]
     if ((not (np.r_[[0], col1] == cc).all())
             or (not (np.r_[col1_, [nvars-1]] == cc).all())):
         raise ValueError('dummy variable is not sorted')
@@ -634,7 +635,7 @@ if __name__ == '__main__':
     v1name = ['a0', 'a1', 'a2']
     v2name = ['b0', 'b1']
     res_cp = contrast_product(v1name, v2name)
-    print res_cp
+    print(res_cp)
 
     y = np.arange(12)
     x1 = np.arange(12)//4
@@ -659,7 +660,7 @@ if __name__ == '__main__':
 
     #Note: full parameterization of dummies is orthogonal
     #np.eye(6)*10 in "large" example
-    print (np.dot(dd_full.T, dd_full) == np.diag(dd_full.sum(0))).all()
+    print((np.dot(dd_full.T, dd_full) == np.diag(dd_full.sum(0))).all())
 
     #check that transforms work
     #generate 3 data sets with the 3 different parameterizations
@@ -685,28 +686,28 @@ if __name__ == '__main__':
 
     tr_of = np.linalg.lstsq(dd_dropf, dd_full)[0]
     tr_fo = np.linalg.lstsq(dd_full, dd_dropf)[0]
-    print np.dot(tr_fo, params_df_df) - params_df_f
-    print np.dot(tr_of, params_f_f) - params_f_df
+    print(np.dot(tr_fo, params_df_df) - params_df_f)
+    print(np.dot(tr_of, params_f_f) - params_f_df)
 
     transf_f_df = DummyTransform(dd_full, dd_dropf)
-    print np.max(np.abs((dd_full - transf_f_df.inv_dot_right(dd_dropf))))
-    print np.max(np.abs((dd_dropf - transf_f_df.dot_right(dd_full))))
-    print np.max(np.abs((params_df_df
-                         - transf_f_df.inv_dot_left(params_df_f))))
+    print(np.max(np.abs((dd_full - transf_f_df.inv_dot_right(dd_dropf)))))
+    print(np.max(np.abs((dd_dropf - transf_f_df.dot_right(dd_full)))))
+    print(np.max(np.abs((params_df_df
+                         - transf_f_df.inv_dot_left(params_df_f)))))
     np.max(np.abs((params_f_df
                          - transf_f_df.inv_dot_left(params_f_f))))
 
     prodlab, C1, C1lab, C2, C2lab,_ = contrast_product(v1name, v2name)
 
-    print '\ntvalues for no effect of factor 1'
-    print 'each test is conditional on a level of factor 2'
-    print C1lab
-    print resols_dropf_full.t_test(C1).tvalue
+    print('\ntvalues for no effect of factor 1')
+    print('each test is conditional on a level of factor 2')
+    print(C1lab)
+    print(resols_dropf_full.t_test(C1).tvalue)
 
-    print '\ntvalues for no effect of factor 2'
-    print 'each test is conditional on a level of factor 1'
-    print C2lab
-    print resols_dropf_full.t_test(C2).tvalue
+    print('\ntvalues for no effect of factor 2')
+    print('each test is conditional on a level of factor 1')
+    print(C2lab)
+    print(resols_dropf_full.t_test(C2).tvalue)
 
     #covariance matrix of restrictions C2, note: orthogonal
     resols_dropf_full.cov_params(C2)
@@ -715,17 +716,17 @@ if __name__ == '__main__':
     R_noint = np.hstack((np.zeros((2,4)), np.eye(2)))
     inter_direct = resols_full_dropf.tvalues[-2:]
     inter_transf = resols_full_full.t_test(transf_f_df.inv_dot_right(R_noint)).tvalue
-    print np.max(np.abs((inter_direct - inter_transf)))
+    print(np.max(np.abs((inter_direct - inter_transf))))
 
     #now with class version
     tw = TwoWay(ydata_dropf, x1, x2)
-    print tw.ttest_interaction().tvalue
-    print tw.ttest_interaction().pvalue
-    print tw.ftest_interaction().fvalue
-    print tw.ftest_interaction().pvalue
-    print tw.ttest_conditional_effect(1)[0].tvalue
-    print tw.ttest_conditional_effect(2)[0].tvalue
-    print tw.summary_coeff()
+    print(tw.ttest_interaction().tvalue)
+    print(tw.ttest_interaction().pvalue)
+    print(tw.ftest_interaction().fvalue)
+    print(tw.ftest_interaction().pvalue)
+    print(tw.ttest_conditional_effect(1)[0].tvalue)
+    print(tw.ttest_conditional_effect(2)[0].tvalue)
+    print(tw.summary_coeff())
 
 
 

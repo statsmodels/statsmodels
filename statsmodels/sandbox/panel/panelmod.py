@@ -6,19 +6,15 @@ References
 
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
-
+from __future__ import print_function
+from statsmodels.compat.python import range, reduce
 from statsmodels.tools.tools import categorical
 from statsmodels.regression.linear_model import GLS, WLS
 import numpy as np
 
 __all__ = ["PanelModel"]
 
-try:
-    from pandas import LongPanel, __version__
-    __version__ >= .1
-except:
-    raise ImportError("While in the sandbox this code depends on the pandas \
-package.  http://code.google.com/p/pandas/")
+from pandas import LongPanel, __version__
 
 
 def group(X):
@@ -34,7 +30,7 @@ def group(X):
     """
     uniq_dict = {}
     group = np.zeros(len(X))
-    for i in xrange(len(X)):
+    for i in range(len(X)):
         if not X[i] in uniq_dict:
             uniq_dict.update({X[i] : len(uniq_dict)})
         group[i] = uniq_dict[X[i]]
@@ -334,11 +330,7 @@ class DynamicPanel(PanelModel):
     pass
 
 if __name__ == "__main__":
-    try:
-        import pandas
-        pandas.version >= .1
-    except:
-        raise ImportError("pandas >= .10 not installed")
+    import pandas
     from pandas import LongPanel
     import statsmodels.api as sm
     import numpy.lib.recfunctions as nprf
@@ -406,18 +398,18 @@ if __name__ == "__main__":
     # omega is the error variance-covariance matrix for the stacked
     # observations
     omega = np.dot(dummyall, dummyall.T) + sigma* np.eye(nobs)
-    print omega
-    print np.linalg.cholesky(omega)
+    print(omega)
+    print(np.linalg.cholesky(omega))
     ev, evec = np.linalg.eigh(omega)  #eig doesn't work
     omegainv = np.dot(evec, (1/ev * evec).T)
     omegainv2 = np.linalg.inv(omega)
     omegacomp = np.dot(evec, (ev * evec).T)
-    print np.max(np.abs(omegacomp - omega))
+    print(np.max(np.abs(omegacomp - omega)))
     #check
-    #print np.dot(omegainv,omega)
-    print np.max(np.abs(np.dot(omegainv,omega) - np.eye(nobs)))
+    #print(np.dot(omegainv,omega)
+    print(np.max(np.abs(np.dot(omegainv,omega) - np.eye(nobs))))
     omegainvhalf = evec/np.sqrt(ev)  #not sure whether ev shouldn't be column
-    print np.max(np.abs(np.dot(omegainvhalf,omegainvhalf.T) - omegainv))
+    print(np.max(np.abs(np.dot(omegainvhalf,omegainvhalf.T) - omegainv)))
 
     # now we can use omegainvhalf in GLS (instead of the cholesky)
 
@@ -431,9 +423,9 @@ if __name__ == "__main__":
     sigmas2 = np.array([sigmagr, sigmape, sigma])
     groups2 = np.column_stack((groups, periods))
     omega_, omegainv_, omegainvhalf_ = repanel_cov(groups2, sigmas2)
-    print np.max(np.abs(omega_ - omega))
-    print np.max(np.abs(omegainv_ - omegainv))
-    print np.max(np.abs(omegainvhalf_ - omegainvhalf))
+    print(np.max(np.abs(omega_ - omega)))
+    print(np.max(np.abs(omegainv_ - omegainv)))
+    print(np.max(np.abs(omegainvhalf_ - omegainvhalf)))
 
     # notation Baltagi (3rd) section 9.4.1 (Fixed Effects Model)
     Pgr = reduce(np.dot,[dummygr,
@@ -441,4 +433,4 @@ if __name__ == "__main__":
     Qgr = np.eye(nobs) - Pgr
     # within group effect: np.dot(Qgr, groups)
     # but this is not memory efficient, compared to groupstats
-    print np.max(np.abs(np.dot(Qgr, groups)))
+    print(np.max(np.abs(np.dot(Qgr, groups))))

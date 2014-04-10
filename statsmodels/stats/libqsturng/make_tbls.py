@@ -1,12 +1,12 @@
 """this script builds the T table and A table for the upper
    quantile stundentized range algorithm"""
-
+from statsmodels.compat.python import iterkeys, lrange, lmap, zip
 import math
 import scipy.stats
 from scipy.optimize import leastsq
 
 import numpy as np
-from statsmodels.compatnp.collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 from numpy.random import random
 
 # The values for p in [.5, .75, .9, .95, .975, .99, .995, .999]
@@ -387,33 +387,33 @@ q0999 = """\
 #                 [alpha keys]        [v keys]
 #                   [table values as lists of floats]
 T = OrderedDict([(0.100, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0100.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0100.split('\n')])),
                  (0.500, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0500.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0500.split('\n')])),
                  (0.675, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0675.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0675.split('\n')])),
                  (0.750, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0750.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0750.split('\n')])),
                  (0.800, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0800.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0800.split('\n')])),
                  (0.850, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0850.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0850.split('\n')])),
                  (0.900, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0900.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0900.split('\n')])),
                  (0.950, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0950.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0950.split('\n')])),
                  (0.975, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0975.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0975.split('\n')])),
                  (0.990, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0990.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0990.split('\n')])),
                  (0.995, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0995.split('\n')])),
+                    lmap(float, L.split()[1:])) for L in q0995.split('\n')])),
                  (0.999, OrderedDict([(float(L.split()[0]),
-                    map(float, L.split()[1:])) for L in q0999.split('\n')]))])
+                    lmap(float, L.split()[1:])) for L in q0999.split('\n')]))])
 
 # This dict maps r values to the correct list index
 R = OrderedDict(zip([2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,
-                     17,18,19,20,30,40,60,80,100], range(24)))
+                     17,18,19,20,30,40,60,80,100], lrange(24)))
 
 inf = np.inf
 # we will need a tinv function
@@ -453,7 +453,7 @@ for p in T:
         #eq. 2.4
         a0 = random(4)
         a1, success = leastsq(errfunc, a0,
-                              args=(p, np.array(R.keys()),
+                              args=(p, np.array(list(iterkeys(R))),
                                     v, np.array(T[p][v])))
 
         if v == 1e38:

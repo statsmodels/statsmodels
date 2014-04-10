@@ -1,29 +1,18 @@
+from statsmodels.compat.python import (lrange, lzip, lmap, string_types, callable,
+                                asstr, reduce, zip, map)
 import re
 import datetime
+from pandas import Period
+from pandas.tseries.frequencies import to_offset
 from pandas import datetools as pandas_datetools
 import numpy as np
-from statsmodels.compatnp.py3k import asstr
 
 #NOTE: All of these frequencies assume end of period (except wrt time)
-try:
-    from pandas.tseries.frequencies import to_offset
-    class _freq_to_pandas_class(object):
-        # being lazy, don't want to replace dictionary below
-        def __getitem__(self, key):
-            return to_offset(key)
-    _freq_to_pandas = _freq_to_pandas_class()
-except ImportError:
-    _freq_to_pandas = {'B' : pandas_datetools.BDay(1),
-                       'D' : pandas_datetools.day,
-                       'W' : pandas_datetools.Week(weekday=6),
-                       'M' : pandas_datetools.monthEnd,
-                       'A' : pandas_datetools.yearEnd,
-                       'Q' : pandas_datetools.quarterEnd}
-
-try:
-    from pandas import Period
-except ImportError:  # not sure when this was added in pandas
-    Period = datetime.datetime  # HACK
+class _freq_to_pandas_class(object):
+    # being lazy, don't want to replace dictionary below
+    def __getitem__(self, key):
+        return to_offset(key)
+_freq_to_pandas = _freq_to_pandas_class()
 
 
 def _is_datetime_index(dates):
@@ -44,7 +33,7 @@ def _index_date(date, dates):
     If there dates are not of a fixed-frequency and date is not on the
     existing dates, then a ValueError is raised.
     """
-    if isinstance(date, basestring):
+    if isinstance(date, string_types):
         date = date_parser(date)
     try:
         if hasattr(dates, 'indexMap'): # 0.7.x
@@ -56,7 +45,7 @@ def _index_date(date, dates):
                 return np.where(date)[0].item()
             except TypeError: # expected behavior
                 return date
-    except KeyError, err:
+    except KeyError as err:
         freq = _infer_freq(dates)
         if freq is None:
             #TODO: try to intelligently roll forward onto a date in the
@@ -100,13 +89,9 @@ def _idx_from_dates(d1, d2, freq):
     Does not check the start date to see whether it is on the offest but
     assumes that it is.
     """
-    try: # pandas 0.8.x
-        from pandas import DatetimeIndex
-        return len(DatetimeIndex(start=d1, end=d2,
-                                 freq = _freq_to_pandas[freq])) - 1
-    except ImportError, err:
-        from pandas import DateRange
-        return len(DateRange(d1, d2, offset = _freq_to_pandas[freq])) - 1
+    from pandas import DatetimeIndex
+    return len(DatetimeIndex(start=d1, end=d2,
+                             freq = _freq_to_pandas[freq])) - 1
 
 _quarter_to_day = {
         "1" : (3, 31),
@@ -120,8 +105,8 @@ _quarter_to_day = {
         }
 
 _mdays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
-_months_with_days = zip(range(1,13), _mdays)
-_month_to_day = dict(zip(map(str,range(1,13)), _months_with_days))
+_months_with_days = lzip(lrange(1,13), _mdays)
+_month_to_day = dict(zip(map(str,lrange(1,13)), _months_with_days))
 _month_to_day.update(dict(zip(["I", "II", "III", "IV", "V", "VI",
                                "VII", "VIII", "IX", "X", "XI", "XII"],
                                _months_with_days)))
@@ -226,15 +211,15 @@ def date_range_str(start, end=None, length=None):
         split = 'a'
     else:
         raise ValueError("Date %s not understood" % start)
-    yr1, offset1 = map(int, start.replace(":","").split(split))
+    yr1, offset1 = lmap(int, start.replace(":","").split(split))
     if end is not None:
         end = end.lower()
-        yr2, offset2 = map(int, end.replace(":","").split(split))
+        yr2, offset2 = lmap(int, end.replace(":","").split(split))
         length = (yr2 - yr1) * annual_freq + offset2
     elif length:
         yr2 = yr1 + length // annual_freq
         offset2 = length % annual_freq + (offset1 - 1)
-    years = np.repeat(range(yr1+1, yr2), annual_freq).tolist()
+    years = np.repeat(lrange(yr1+1, yr2), annual_freq).tolist()
     years = np.r_[[str(yr1)]*(annual_freq+1-offset1), years] # tack on first year
     years = np.r_[years, [str(yr2)]*offset2] # tack on last year
     if split != 'a':
@@ -263,7 +248,7 @@ def dates_from_str(dates):
     date_list : array
         A list of datetime types.
     """
-    return map(date_parser, dates)
+    return lmap(date_parser, dates)
 
 def dates_from_range(start, end=None, length=None):
     """

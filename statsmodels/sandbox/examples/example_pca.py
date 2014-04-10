@@ -9,9 +9,9 @@ z=x*3.1+2.1*y+np.random.randn(1000)/2
 
 #create the Pca object - requires a p x N array as the input
 p=Pca((x,y,z))
-print 'energies:',p.getEnergies()
-print 'vecs:',p.getEigenvectors()
-print 'projected data',p.project(vals=np.ones((3,10)))
+print('energies:',p.getEnergies())
+print('vecs:',p.getEigenvectors())
+print('projected data',p.project(vals=np.ones((3,10))))
 
 
 #p.plot2d() #requires matplotlib

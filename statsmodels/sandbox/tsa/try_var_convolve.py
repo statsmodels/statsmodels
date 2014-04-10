@@ -13,7 +13,7 @@ update 2010-10-22
 what the results are.
 Runs now without raising exception
 """
-
+from __future__ import print_function
 import numpy as np
 from numpy.testing import assert_equal
 from scipy import signal
@@ -39,9 +39,9 @@ yvalid = yf[ntrim:-ntrim,yf.shape[1]//2,:]
 #same result with fftconvolve
 #signal.fftconvolve(x[:,:,None],a3f).shape
 #signal.fftconvolve(x[:,:,None],a3f)[:,1,:]
-print trim_centered(y, x.shape)
+print(trim_centered(y, x.shape))
 # this raises an exception:
-#print trim_centered(yf, (x.shape).shape)
+#print(trim_centered(yf, (x.shape).shape)
 assert_equal(yvalid[:,0], y0.ravel())
 assert_equal(yvalid[:,1], y1.ravel())
 
@@ -139,9 +139,9 @@ def arfilter_old(x, a):
 
 a3f = np.ones((2,3,3))
 y0ar = arfilter(x,a3f[:,:,0])
-print y0ar, x[1:] + x[:-1]
+print(y0ar, x[1:] + x[:-1])
 yres = arfilter(x,a3f[:,:,:2])
-print np.all(yres == (x[1:,:].sum(1) + x[:-1].sum(1))[:,None])
+print(np.all(yres == (x[1:,:].sum(1) + x[:-1].sum(1))[:,None]))
 
 # don't do these imports, here just for copied fftconvolve
 from scipy.fftpack import fft, ifft, ifftshift, fft2, ifft2, fftn, \
@@ -215,27 +215,27 @@ errar1 = np.zeros(501)
 for i in range(1,500):
     errar1[i] = rvs[i] - 0.8*rvs[i-1]
 
-#print ar1[-10:]
-#print ar1fft[-11:-1]
-#print ar1lf[-10:]
-#print ar1[:10]
-#print ar1fft[1:11]
-#print ar1lf[:10]
-#print ar1[100:110]
-#print ar1fft[100:110]
-#print ar1lf[100:110]
+#print(ar1[-10:])
+#print(ar1fft[-11:-1])
+#print(ar1lf[-10:])
+#print(ar1[:10])
+#print(ar1fft[1:11])
+#print(ar1lf[:10])
+#print(ar1[100:110])
+#print(ar1fft[100:110])
+#print(ar1lf[100:110])
 #
 #arloop - lfilter - fftp (padded)  are the same
-print '\n compare: \nerrloop - arloop - fft - lfilter - fftp (padded)'
-#print np.column_stack((ar1[1:31],ar1fft[:30], ar1lf[:30]))
-print np.column_stack((errar1[1:31], ar1[1:31],ar1fft[:30], ar1lf[:30],
-                       ar1fftp[100:130]))
+print('\n compare: \nerrloop - arloop - fft - lfilter - fftp (padded)')
+#print(np.column_stack((ar1[1:31],ar1fft[:30], ar1lf[:30]))
+print(np.column_stack((errar1[1:31], ar1[1:31],ar1fft[:30], ar1lf[:30],
+                       ar1fftp[100:130])))
 
 def maxabs(x,y):
     return np.max(np.abs(x-y))
 
-print maxabs(ar1[1:], ar1lf)  #0
-print maxabs(ar1[1:], ar1fftp[100:-1]) # around 1e-15
+print(maxabs(ar1[1:], ar1lf))  #0
+print(maxabs(ar1[1:], ar1fftp[100:-1])) # around 1e-15
 
 rvs3 = np.random.randn(500,3)
 a3n = np.array([[1,1,1],[-0.8,0.5,0.1]])
@@ -356,5 +356,5 @@ import numpy as np
 nbins = 12
 binProb = np.zeros(nbins) + 1.0/nbins
 binSumProb = np.add.accumulate(binProb)
-print binSumProb
-print stats.gamma.ppf(binSumProb,0.6379,loc=1.6,scale=39.555)
+print(binSumProb)
+print(stats.gamma.ppf(binSumProb,0.6379,loc=1.6,scale=39.555))

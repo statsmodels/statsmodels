@@ -1,13 +1,13 @@
+from statsmodels.compat.python import (lrange, iterkeys, iteritems, StringIO, lzip,
+                                reduce, itervalues, zip, string_types, range)
+from statsmodels.compat.collections import OrderedDict
 import numpy as np
 import pandas as pd
 import datetime
 import copy
-#import collections  # OrderedDict requires python >= 2.7
-from statsmodels.compatnp.collections import OrderedDict
-import StringIO
 import textwrap
-from table import SimpleTable
-from tableformatting import fmt_latex, fmt_txt
+from .table import SimpleTable
+from .tableformatting import fmt_latex, fmt_txt
 
 class Summary(object):
     def __init__(self):
@@ -78,9 +78,11 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        keys = [_formatter(x, float_format) for x in d.keys()]
-        vals = [_formatter(x, float_format) for x in d.values()]
-        data = np.array(zip(keys, vals))
+        keys = [_formatter(x, float_format) for x in iterkeys(d)]
+
+
+        vals = [_formatter(x, float_format) for x in itervalues(d)]
+        data = np.array(lzip(keys, vals))
 
         if data.shape[0] % ncols != 0:
             pad = ncols - (data.shape[0] % ncols)
@@ -102,7 +104,7 @@ class Summary(object):
         provided but a results instance is provided, statsmodels attempts
         to construct a useful title automatically.
         '''
-        if type(title) == str:
+        if isinstance(title, string_types):
             self.title = title
         else:
             try:
@@ -283,7 +285,7 @@ def summary_model(results):
     info['Prob (F-statistic):'] = lambda x: "%#6.3g" % x.f_pvalue
     info['Scale:'] = lambda x: "%#8.5g" % x.scale
     out = OrderedDict()
-    for key in info.keys():
+    for key in iteritems(info):
         try:
             out[key] = info[key](results)
         except:
@@ -435,7 +437,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         not specified will be appended to the end of the list.
     '''
 
-    if type(results) != list:
+    if not isinstance(results, list):
         results = [results]
 
     cols = [_col_params(x, stars=stars, float_format=float_format) for x in results]
@@ -462,7 +464,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
 
-    idx = pd.Series(range(summ.shape[0])) %2 == 1
+    idx = pd.Series(lrange(summ.shape[0])) %2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
 
     # add infos about the models.

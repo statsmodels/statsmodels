@@ -101,7 +101,8 @@ still todo:
 Author: Josef Perktold
 License : BSD (3-clause)
 '''
-
+from __future__ import print_function
+from statsmodels.compat.python import lzip, iteritems, itervalues, lrange, zip
 import numpy as np
 from pprint import pprint
 
@@ -156,7 +157,7 @@ def getbranches(tree):
         list of all branch names
 
     '''
-    if type(tree) == tuple:
+    if isinstance(tree, tuple):
         name, subtree = tree
         a = [name]
         for st in subtree:
@@ -181,7 +182,7 @@ def getnodes(tree):
         list of all leaves names
 
     '''
-    if type(tree) == tuple:
+    if isinstance(tree, tuple):
         name, subtree = tree
         ab = [name]
         al = []
@@ -265,7 +266,8 @@ class RU2NMNL(object):
         #copied over but not quite sure yet
         #unique, parameter array names,
         #sorted alphabetically, order is/should be only internal
-        self.paramsnames = (sorted(set([i for j in paramsind.values()
+
+        self.paramsnames = (sorted(set([i for j in itervalues(paramsind)
                                        for i in j])) +
                             ['tau_%s' % bname for bname in self.branches])
 
@@ -277,7 +279,7 @@ class RU2NMNL(object):
 
         #mapping branch and leaf names to index in parameter array
         self.parinddict = dict((k, [self.paramsidx[j] for j in v])
-                               for k,v in self.paramsind.items())
+                               for k,v in iteritems(self.paramsind))
 
         self.recursionparams = 1. + np.arange(len(self.paramsnames))
         #for testing that individual parameters are used in the right place
@@ -331,16 +333,16 @@ class RU2NMNL(object):
         branchsum = self.branchsum
 
 
-        if type(tree) == tuple:   #assumes leaves are int for choice index
+        if isinstance(tree, tuple):   #assumes leaves are int for choice index
 
             name, subtree = tree
             self.branchleaves[name] = []  #register branch in dictionary
 
             tau = self.recursionparams[self.paramsidx['tau_'+name]]
             if DEBUG:
-                print '----------- starting next branch-----------'
-                print name, datadict[name], 'tau=', tau
-                print 'subtree', subtree
+                print('----------- starting next branch-----------')
+                print(name, datadict[name], 'tau=', tau)
+                print('subtree', subtree)
             branchvalue = []
             if testxb == 2:
                 branchsum = 0
@@ -350,7 +352,7 @@ class RU2NMNL(object):
                 branchsum = name
             for b in subtree:
                 if DEBUG:
-                    print b
+                    print(b)
                 bv = self.calc_prob(b, name)
                 bv = np.exp(bv/tau)  #this shouldn't be here, when adding branch data
                 branchvalue.append(bv)
@@ -358,13 +360,13 @@ class RU2NMNL(object):
             self.branchvalues[name] = branchvalue #keep track what was returned
 
             if DEBUG:
-                print '----------- returning to branch-----------',
-                print name
-                print 'branchsum in branch', name, branchsum
+                print('----------- returning to branch-----------')
+                print(name)
+                print('branchsum in branch', name, branchsum)
 
             if parent:
                 if DEBUG:
-                    print 'parent', parent
+                    print('parent', parent)
                 self.branchleaves[parent].extend(self.branchleaves[name])
             if 0:  #not name == 'top':  # not used anymore !!! ???
             #if not name == 'top':
@@ -388,8 +390,8 @@ class RU2NMNL(object):
 ##                            np.exp(-self.datadict[name] *
 ##                             np.sum(self.recursionparams[self.parinddict[name]]))
                         if DEBUG:
-                            print 'self.datadict[name], self.probs[k]',
-                            print self.datadict[name], self.probs[k]
+                            print('self.datadict[name], self.probs[k]')
+                            print(self.datadict[name], self.probs[k])
                     #if not name == 'top':
                     #    self.probs[k] = self.probs[k] * np.exp( iv)
 
@@ -397,9 +399,9 @@ class RU2NMNL(object):
             self.bprobs[name] = []
             for bidx, b in enumerate(subtree):
                 if DEBUG:
-                    print 'repr(b)', repr(b), bidx
+                    print('repr(b)', repr(b), bidx)
                 #if len(b) == 1: #TODO: skip leaves, check this
-                if not type(b) == tuple: # isinstance(b, str):
+                if not isinstance(b,  tuple): # isinstance(b, str):
                     #TODO: replace this with a check for branch (tuple) instead
                     #this implies name is a bottom branch,
                     #possible to add special things here
@@ -407,7 +409,7 @@ class RU2NMNL(object):
                     #TODO: need tau possibly here
                     self.probs[b] = self.probs[b] / branchsum
                     if DEBUG:
-                        print '*********** branchsum at bottom branch', branchsum
+                        print('*********** branchsum at bottom branch', branchsum)
                     #self.bprobs[name].append(self.probs[b])
                 else:
                     bname = b[0]
@@ -419,13 +421,13 @@ class RU2NMNL(object):
                     for k in self.branchleaves[bname]:
 
                         if DEBUG:
-                            print 'branchprob', bname, k, bprob, branchsum
+                            print('branchprob', bname, k, bprob, branchsum)
                         #temporary hack with maximum to avoid zeros
                         self.probs[k] = self.probs[k] * np.maximum(bprob, 1e-4)
 
 
             if DEBUG:
-                print 'working on branch', tree, branchsum
+                print('working on branch', tree, branchsum)
             if testxb<2:
                 return branchsum
             else: #this is the relevant part
@@ -446,7 +448,7 @@ class RU2NMNL(object):
         else:
             tau = self.recursionparams[self.paramsidx['tau_'+parent]]
             if DEBUG:
-                print 'parent', parent
+                print('parent', parent)
             self.branchleaves[parent].append(tree) # register leave with parent
             self.probstxt[tree] = [tree + '-prob' +
                                 '(%s)' % ', '.join(self.paramsind[tree])]
@@ -463,7 +465,7 @@ class RU2NMNL(object):
             elif testxb == 1:
                 leavessum = np.array(datadict[tree]) # sum((datadict[bi] for bi in datadict[tree]))
                 if DEBUG:
-                    print 'final branch with', tree, ''.join(tree), leavessum #sum(tree)
+                    print('final branch with', tree, ''.join(tree), leavessum) #sum(tree)
                 return leavessum  #sum(xb[tree])
             elif testxb == 0:
                 return ''.join(tree) #sum(tree)
@@ -479,7 +481,7 @@ if __name__ == '__main__':
     ##############  Example similar to Greene
 
     #get pickled data
-    #endog3, xifloat3 = pickle.load(open('xifloat2.pickle','rb'))
+    #endog3, xifloat3 = cPickle.load(open('xifloat2.pickle','rb'))
 
 
     tree0 = ('top',
@@ -518,13 +520,13 @@ if __name__ == '__main__':
     modru.recursionparams[-1] = 2
     modru.recursionparams[1] = 1
 
-    print 'Example 1'
-    print '---------\n'
-    print modru.calc_prob(modru.tree)
+    print('Example 1')
+    print('---------\n')
+    print(modru.calc_prob(modru.tree))
 
-    print 'Tree'
+    print('Tree')
     pprint(modru.tree)
-    print '\nmodru.probs'
+    print('\nmodru.probs')
     pprint(modru.probs)
 
 
@@ -559,7 +561,8 @@ if __name__ == '__main__':
      'h': ['consth', 'p', 'h'],
      'top': []}
 
-    datadict2 = dict([i for i in zip('abcdefgh',range(8))])
+
+    datadict2 = dict([i for i in zip('abcdefgh',lrange(8))])
     datadict2.update({'top':1000, 'B1':100, 'B2':200, 'B21':21,'B22':22, 'B3':300})
     '''
     >>> pprint(datadict2)
@@ -583,24 +586,25 @@ if __name__ == '__main__':
     modru2 = RU2NMNL(endog, datadict2, tree2, paramsind2)
     modru2.recursionparams[-3] = 2
     modru2.recursionparams[3] = 1
-    print '\n\nExample 2'
-    print '---------\n'
-    print modru2.calc_prob(modru2.tree)
-    print 'Tree'
+    print('\n\nExample 2')
+    print('---------\n')
+    print(modru2.calc_prob(modru2.tree))
+    print('Tree')
     pprint(modru2.tree)
-    print '\nmodru.probs'
+    print('\nmodru.probs')
     pprint(modru2.probs)
 
-    print 'sum of probs', sum(modru2.probs.values())
-    print 'branchvalues'
-    print modru2.branchvalues
-    print modru.branchvalues
 
-    print 'branch probabilities'
-    print modru.bprobs
+    print('sum of probs', sum(list(itervalues(modru2.probs))))
+    print('branchvalues')
+    print(modru2.branchvalues)
+    print(modru.branchvalues)
 
-    print 'degenerate branches'
-    print modru.branches_degenerate
+    print('branch probabilities')
+    print(modru.bprobs)
+
+    print('degenerate branches')
+    print(modru.branches_degenerate)
 
     '''
     >>> modru.bprobs
@@ -610,7 +614,7 @@ if __name__ == '__main__':
     '''
 
     params1 = np.array([ 0.,  1.,  0.,  0.,  0.,  0.,  1.,  1.,  2.])
-    print modru.get_probs(params1)
+    print(modru.get_probs(params1))
     params2 = np.array([ 0.,  0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,
                          0.,  0.,  0.,  0.,  0.,  1.,  1.,  1.,  2.,  1.,  1.])
-    print modru2.get_probs(params2) #raises IndexError
+    print(modru2.get_probs(params2)) #raises IndexError

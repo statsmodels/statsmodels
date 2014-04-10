@@ -33,12 +33,12 @@ d = np.array([x1,x2]).T
 
 
 if example == 1:
-    print "normal"
+    print("normal")
     m = AdditiveModel(d)
     m.fit(y)
     x = np.linspace(-2,2,50)
 
-    print m
+    print(m)
 
     y_pred = m.results.predict(d)
     plt.figure()
@@ -51,7 +51,7 @@ if example == 1:
 import scipy.stats, time
 
 if example == 2:
-    print "binomial"
+    print("binomial")
     f = family.Binomial()
     b = np.asarray([scipy.stats.bernoulli.rvs(p) for p in f.link.inverse(y)])
     b.shape = y.shape
@@ -59,11 +59,11 @@ if example == 2:
     toc = time.time()
     m.fit(b)
     tic = time.time()
-    print tic-toc
+    print(tic-toc)
 
 
 if example == 3:
-    print "Poisson"
+    print("Poisson")
     f = family.Poisson()
     y = y/y.max() * 3
     yp = f.link.inverse(y)
@@ -73,7 +73,7 @@ if example == 3:
     toc = time.time()
     m.fit(p)
     tic = time.time()
-    print tic-toc
+    print(tic-toc)
 
 
 plt.figure()

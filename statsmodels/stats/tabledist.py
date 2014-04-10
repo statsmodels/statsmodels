@@ -15,7 +15,8 @@ check: instead of bound checking I could use the fill-value of the interpolators
 
 
 """
-
+from __future__ import print_function
+from statsmodels.compat.python import range
 import numpy as np
 from scipy.interpolate import interp1d, interp2d, Rbf
 from statsmodels.tools.decorators import cache_readonly
@@ -287,33 +288,33 @@ if __name__ == '__main__':
 
 
     lf = TableDist(alpha, size, crit_lf)
-    print lf.prob(0.166, 20), 'should be:', 0.15
-    print
-    print lf.crit2(0.15, 20), 'should be:', 0.166, 'interp2d bad'
-    print lf.crit(0.15, 20), 'should be:', 0.166, 'two 1d'
-    print lf.crit3(0.15, 20), 'should be:', 0.166, 'Rbf'
-    print
-    print lf.crit2(0.17, 20), 'should be in:', (.159, .166), 'interp2d bad'
-    print lf.crit(0.17, 20), 'should be in:', (.159, .166), 'two 1d'
-    print lf.crit3(0.17, 20), 'should be in:', (.159, .166), 'Rbf'
-    print
-    print lf.crit2(0.19, 20), 'should be in:', (.159, .166), 'interp2d bad'
-    print lf.crit(0.19, 20), 'should be in:', (.159, .166), 'two 1d'
-    print lf.crit3(0.19, 20), 'should be in:', (.159, .166), 'Rbf'
-    print
-    print lf.crit2(0.199, 20), 'should be in:', (.159, .166), 'interp2d bad'
-    print lf.crit(0.199, 20), 'should be in:', (.159, .166), 'two 1d'
-    print lf.crit3(0.199, 20), 'should be in:', (.159, .166), 'Rbf'
+    print(lf.prob(0.166, 20), 'should be:', 0.15)
+    print('')
+    print(lf.crit2(0.15, 20), 'should be:', 0.166, 'interp2d bad')
+    print(lf.crit(0.15, 20), 'should be:', 0.166, 'two 1d')
+    print(lf.crit3(0.15, 20), 'should be:', 0.166, 'Rbf')
+    print('')
+    print(lf.crit2(0.17, 20), 'should be in:', (.159, .166), 'interp2d bad')
+    print(lf.crit(0.17, 20), 'should be in:', (.159, .166), 'two 1d')
+    print(lf.crit3(0.17, 20), 'should be in:', (.159, .166), 'Rbf')
+    print('')
+    print(lf.crit2(0.19, 20), 'should be in:', (.159, .166), 'interp2d bad')
+    print(lf.crit(0.19, 20), 'should be in:', (.159, .166), 'two 1d')
+    print(lf.crit3(0.19, 20), 'should be in:', (.159, .166), 'Rbf')
+    print('')
+    print(lf.crit2(0.199, 20), 'should be in:', (.159, .166), 'interp2d bad')
+    print(lf.crit(0.199, 20), 'should be in:', (.159, .166), 'two 1d')
+    print(lf.crit3(0.199, 20), 'should be in:', (.159, .166), 'Rbf')
     #testing
-    print np.max(np.abs(np.array([lf.prob(c, size[i]) for i in range(len(size)) for c in crit_lf[i]]).reshape(-1,lf.n_alpha) - lf.alpha))
+    print(np.max(np.abs(np.array([lf.prob(c, size[i]) for i in range(len(size)) for c in crit_lf[i]]).reshape(-1,lf.n_alpha) - lf.alpha)))
     #1.6653345369377348e-16
-    print np.max(np.abs(np.array([lf.crit(c, size[i]) for i in range(len(size)) for c in lf.alpha]).reshape(-1,lf.n_alpha) - crit_lf))
-    #6.9388939039072284e-18
-    print np.max(np.abs(np.array([lf.crit3(c, size[i]) for i in range(len(size)) for c in lf.alpha]).reshape(-1,lf.n_alpha) - crit_lf))
-    #4.0615705243496336e-12
-    print (np.array([lf.crit3(c, size[i]) for i in range(len(size)) for c in lf.alpha[:-1]*1.1]).reshape(-1,lf.n_alpha-1) < crit_lf[:,:-1]).all()
-    print (np.array([lf.crit3(c, size[i]) for i in range(len(size)) for c in lf.alpha[:-1]*1.1]).reshape(-1,lf.n_alpha-1) > crit_lf[:,1:]).all()
-    print (np.array([lf.prob(c*0.9, size[i]) for i in range(len(size)) for c in crit_lf[i,:-1]]).reshape(-1,lf.n_alpha-1) > lf.alpha[:-1]).all()
-    print (np.array([lf.prob(c*1.1, size[i]) for i in range(len(size)) for c in crit_lf[i,1:]]).reshape(-1,lf.n_alpha-1) < lf.alpha[1:]).all()
+    print(np.max(np.abs(np.array([lf.crit(c, size[i]) for i in range(len(size)) for c in lf.alpha]).reshape(-1,lf.n_alpha) - crit_lf)))
+    #6.9388939039072284e-18)
+    print(np.max(np.abs(np.array([lf.crit3(c, size[i]) for i in range(len(size)) for c in lf.alpha]).reshape(-1,lf.n_alpha) - crit_lf)))
+    #4.0615705243496336e-12)
+    print((np.array([lf.crit3(c, size[i]) for i in range(len(size)) for c in lf.alpha[:-1]*1.1]).reshape(-1,lf.n_alpha-1) < crit_lf[:,:-1]).all())
+    print((np.array([lf.crit3(c, size[i]) for i in range(len(size)) for c in lf.alpha[:-1]*1.1]).reshape(-1,lf.n_alpha-1) > crit_lf[:,1:]).all())
+    print((np.array([lf.prob(c*0.9, size[i]) for i in range(len(size)) for c in crit_lf[i,:-1]]).reshape(-1,lf.n_alpha-1) > lf.alpha[:-1]).all())
+    print((np.array([lf.prob(c*1.1, size[i]) for i in range(len(size)) for c in crit_lf[i,1:]]).reshape(-1,lf.n_alpha-1) < lf.alpha[1:]).all())
     #start at size_idx=2 because of non-monotonicity of lf_crit
-    print (np.array([lf.prob(c, size[i]*0.9) for i in range(2,len(size)) for c in crit_lf[i,:-1]]).reshape(-1,lf.n_alpha-1) > lf.alpha[:-1]).all()
+    print((np.array([lf.prob(c, size[i]*0.9) for i in range(2,len(size)) for c in crit_lf[i,:-1]]).reshape(-1,lf.n_alpha-1) > lf.alpha[:-1]).all())

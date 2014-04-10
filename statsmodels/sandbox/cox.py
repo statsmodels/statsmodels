@@ -24,8 +24,8 @@ feels very slow
 need testcase before trying to fix
 
 '''
-
-
+from __future__ import print_function
+from statsmodels.compat.python import iterkeys, range
 import shutil
 import tempfile
 
@@ -33,7 +33,7 @@ import numpy as np
 
 
 from statsmodels.base import model
-import survival
+from . import survival
 
 class Discrete(object):
 
@@ -99,7 +99,7 @@ class CoxPH(model.LikelihoodModel):
         self.initialize(self.subjects)
 
     def initialize(self, subjects):
-        print 'called initialize'
+        print('called initialize')
         self.failures = {}
         for i in range(len(subjects)):
             s = subjects[i]
@@ -109,7 +109,7 @@ class CoxPH(model.LikelihoodModel):
                 else:
                     self.failures[s.time].append(i)
 
-        self.failure_times = self.failures.keys()
+        self.failure_times = list(iterkeys(self.failures))
         self.failure_times.sort()
 
     def cache(self):
@@ -120,7 +120,7 @@ class CoxPH(model.LikelihoodModel):
         self.risk = {}
         first = True
 
-        for t in self.failures.keys():
+        for t in iterkeys(self.failures):
             if self.time_dependent:
                 d = np.array([s(self.formula, time=t)
                              for s in self.subjects]).astype(float)[:,None]
@@ -145,13 +145,13 @@ class CoxPH(model.LikelihoodModel):
         try:
             shutil.rmtree(self.cachedir, ignore_errors=True)
         except AttributeError:
-            print "AttributeError: 'CoxPH' object has no attribute 'cachedir'"
+            print("AttributeError: 'CoxPH' object has no attribute 'cachedir'")
             pass
 
     def loglike(self, b, ties='breslow'):
 
         logL = 0
-        for t in self.failures.keys():
+        for t in iterkeys(self.failures):
             fail = self.failures[t]
             d = len(fail)
             risk = self.risk[t]
@@ -177,7 +177,7 @@ implemented')
     def score(self, b, ties='breslow'):
 
         score = 0
-        for t in self.failures.keys():
+        for t in iterkeys(self.failures):
             fail = self.failures[t]
             d = len(fail)
             risk = self.risk[t]
@@ -208,7 +208,7 @@ implemented')
 
         info = 0 #np.zeros((len(b),len(b))) #0
         score = 0
-        for t in self.failures.keys():
+        for t in iterkeys(self.failures):
             fail = self.failures[t]
             d = len(fail)
             risk = self.risk[t]
@@ -261,8 +261,8 @@ if __name__ == '__main__':
 
     #res = c.newton([0.4])  #doesn't work anymore
     res=c.fit([0.4],method="bfgs")
-    print res.params
-    print dir(c)
+    print(res.params)
+    print(dir(c))
     #print c.fit(Y)
     #c.information(res.params)  #raises exception
 

@@ -5,6 +5,7 @@
 # 
 # To begin, we load the ``Star98`` dataset and we construct a formula and pre-process the data:
 
+from __future__ import print_function
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 star98 = sm.datasets.star98.load_pandas().data
@@ -34,6 +35,6 @@ mod2.summary()
 
 # As expected, the coefficient for ``double_it(LOWINC)`` in the second model is half the size of the ``LOWINC`` coefficient from the first model:
 
-print mod1.params[1]
-print mod2.params[1] * 2
+print(mod1.params[1])
+print(mod2.params[1] * 2)
 

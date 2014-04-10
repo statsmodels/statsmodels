@@ -19,7 +19,7 @@ A: josef-pktd
 
 '''
 
-
+from __future__ import print_function
 import numpy as np
 from scipy import special
 from scipy.special import gammaln
@@ -106,7 +106,7 @@ def normgrad(y, x, params):
     sigma2 = params[-1]*np.ones((len(y),1))
     dmudbeta = mean_grad(x, beta)
     mu = np.dot(x, beta)
-    #print beta, sigma2
+    #print(beta, sigma2)
     params2 = np.column_stack((mu,sigma2))
     dllsdms = norm_lls_grad(y,params2)
     grad = np.column_stack((dllsdms[:,:1]*dmudbeta, dllsdms[:,:1]))
@@ -200,7 +200,7 @@ def ts_lls(y, params, df):
     >>> stats.t.stats(df, loc=0., scale=sigma*np.sqrt((df-2.)/df))
     (array(0.0), array(2.0))
     '''
-    print y, params, df
+    print(y, params, df)
     mu, sigma2 = params.T
     df = df*1.0
     #lls = gammaln((df+1)/2.) - gammaln(df/2.) - 0.5*np.log((df-2)*np.pi)
@@ -304,13 +304,13 @@ if __name__ == '__main__':
         y = np.dot(x,beta) + sig*rvs[:,0]
 
         params = [1,1,1]
-        print normgrad(y, x, params)
+        print(normgrad(y, x, params))
 
         dllfdbeta = (y-np.dot(x, beta))[:,None]*x   #for sigma = 1
-        print dllfdbeta
+        print(dllfdbeta)
 
-        print locscale_grad(y, np.dot(x, beta), 1, norm_dlldy)
-        print (y-np.dot(x, beta))
+        print(locscale_grad(y, np.dot(x, beta), 1, norm_dlldy))
+        print(y-np.dot(x, beta))
 
     from scipy import stats, misc
 
@@ -329,44 +329,44 @@ if __name__ == '__main__':
         return np.log(stats.norm.pdf(y, loc=loc, scale=scale))
 
     if verbose:
-        print '\ngradient of t'
-        print misc.derivative(llt, 1, dx=1e-6, n=1, args=(0,1,10), order=3)
-        print 't ', locscale_grad(1, 0, 1, tstd_dlldy, 10)
-        print 'ts', locscale_grad(1, 0, 1, ts_dlldy, 10)
-        print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,1,20), order=3),
-        print 'ts', locscale_grad(1.5, 0, 1, ts_dlldy, 20)
-        print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,2,20), order=3),
-        print 'ts', locscale_grad(1.5, 0, 2, ts_dlldy, 20)
-        print misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(1,2,20), order=3),
-        print 'ts', locscale_grad(1.5, 1, 2, ts_dlldy, 20)
-        print misc.derivative(lltloc, 1, dx=1e-10, n=1, args=(1.5,2,20), order=3),
-        print misc.derivative(lltscale, 2, dx=1e-10, n=1, args=(1.5,1,20), order=3)
+        print('\ngradient of t')
+        print(misc.derivative(llt, 1, dx=1e-6, n=1, args=(0,1,10), order=3))
+        print('t ', locscale_grad(1, 0, 1, tstd_dlldy, 10))
+        print('ts', locscale_grad(1, 0, 1, ts_dlldy, 10))
+        print(misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,1,20), order=3),)
+        print('ts', locscale_grad(1.5, 0, 1, ts_dlldy, 20))
+        print(misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(0,2,20), order=3),)
+        print('ts', locscale_grad(1.5, 0, 2, ts_dlldy, 20))
+        print(misc.derivative(llt, 1.5, dx=1e-10, n=1, args=(1,2,20), order=3),)
+        print('ts', locscale_grad(1.5, 1, 2, ts_dlldy, 20))
+        print(misc.derivative(lltloc, 1, dx=1e-10, n=1, args=(1.5,2,20), order=3),)
+        print(misc.derivative(lltscale, 2, dx=1e-10, n=1, args=(1.5,1,20), order=3))
         y,loc,scale,df = 1.5, 1, 2, 20
-        print 'ts', locscale_grad(y,loc,scale, ts_dlldy, 20)
-        print misc.derivative(lltloc, loc, dx=1e-10, n=1, args=(y,scale,df), order=3),
-        print misc.derivative(lltscale, scale, dx=1e-10, n=1, args=(y,loc,df), order=3)
+        print('ts', locscale_grad(y,loc,scale, ts_dlldy, 20))
+        print(misc.derivative(lltloc, loc, dx=1e-10, n=1, args=(y,scale,df), order=3),)
+        print(misc.derivative(lltscale, scale, dx=1e-10, n=1, args=(y,loc,df), order=3))
 
-        print '\ngradient of norm'
-        print misc.derivative(llnorm, 1, dx=1e-6, n=1, args=(0,1), order=3)
-        print locscale_grad(1, 0, 1, norm_dlldy)
+        print('\ngradient of norm')
+        print(misc.derivative(llnorm, 1, dx=1e-6, n=1, args=(0,1), order=3))
+        print(locscale_grad(1, 0, 1, norm_dlldy))
         y,loc,scale = 1.5, 1, 2
-        print 'ts', locscale_grad(y,loc,scale, norm_dlldy)
-        print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
-        print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
+        print('ts', locscale_grad(y,loc,scale, norm_dlldy))
+        print(misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),)
+        print(misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3))
         y,loc,scale = 1.5, 0, 1
-        print 'ts', locscale_grad(y,loc,scale, norm_dlldy)
-        print misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),
-        print misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3)
-        #print 'still something wrong with handling of scale and variance'
+        print('ts', locscale_grad(y,loc,scale, norm_dlldy))
+        print(misc.derivative(llnormloc, loc, dx=1e-10, n=1, args=(y,scale), order=3),)
+        print(misc.derivative(llnormscale, scale, dx=1e-10, n=1, args=(y,loc), order=3))
+        #print('still something wrong with handling of scale and variance'
         #looks ok now
-        print '\nloglike of t'
-        print tstd_lls(1, np.array([0,1]), 100), llt(1,0,1,100), 'differently standardized'
-        print tstd_lls(1, np.array([0,1]), 10), llt(1,0,1,10), 'differently standardized'
-        print ts_lls(1, np.array([0,1]), 10), llt(1,0,1,10)
-        print tstd_lls(1, np.array([0,1.*10./8.]), 10), llt(1.,0,1.,10)
-        print ts_lls(1, np.array([0,1]), 100), llt(1,0,1,100)
+        print('\nloglike of t')
+        print(tstd_lls(1, np.array([0,1]), 100), llt(1,0,1,100), 'differently standardized')
+        print(tstd_lls(1, np.array([0,1]), 10), llt(1,0,1,10), 'differently standardized')
+        print(ts_lls(1, np.array([0,1]), 10), llt(1,0,1,10))
+        print(tstd_lls(1, np.array([0,1.*10./8.]), 10), llt(1.,0,1.,10))
+        print(ts_lls(1, np.array([0,1]), 100), llt(1,0,1,100))
 
-        print tstd_lls(1, np.array([0,1]), 10), llt(1,0,1.*np.sqrt(8/10.),10)
+        print(tstd_lls(1, np.array([0,1]), 10), llt(1,0,1.*np.sqrt(8/10.),10))
 
 
     from numpy.testing import assert_almost_equal

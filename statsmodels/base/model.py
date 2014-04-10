@@ -1,3 +1,5 @@
+from __future__ import print_function
+from statsmodels.compat.python import iterkeys, lzip, range, reduce
 import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data
@@ -7,7 +9,7 @@ from statsmodels.tools.decorators import resettable_cache, cache_readonly
 import statsmodels.base.wrapper as wrap
 from statsmodels.tools.numdiff import approx_fprime
 from statsmodels.formula import handle_formula_data
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 from statsmodels.base.optimizer import Optimizer
 
 
@@ -989,14 +991,14 @@ class LikelihoodModelResults(Results):
         >>> results = sm.OLS(data.endog, data.exog).fit()
         >>> r = np.zeros_like(results.params)
         >>> r[5:] = [1,-1]
-        >>> print r
+        >>> print(r)
         [ 0.  0.  0.  0.  0.  1. -1.]
 
         r tests that the coefficients on the 5th and 6th independent
         variable are the same.
 
         >>>T_Test = results.t_test(r)
-        >>>print T_test
+        >>>print(T_test)
         <T contrast: effect=-1829.2025687192481, sd=455.39079425193762,
         t=-4.0167754636411717, p=0.0015163772380899498, df_denom=9>
         >>> T_test.effect
@@ -1015,7 +1017,7 @@ class LikelihoodModelResults(Results):
         >>> results = ols(formula, dta).fit()
         >>> hypotheses = 'GNPDEFL = GNP, UNEMP = 2, YEAR/1829 = 1'
         >>> t_test = results.t_test(hypotheses)
-        >>> print t_test
+        >>> print(t_test)
 
         See also
         ---------
@@ -1116,7 +1118,7 @@ class LikelihoodModelResults(Results):
         This tests that each coefficient is jointly statistically
         significantly different from zero.
 
-        >>> print results.f_test(A)
+        >>> print(results.f_test(A))
         <F contrast: F=330.28533923463488, p=4.98403052872e-10,
          df_denom=9, df_num=6>
 
@@ -1133,7 +1135,7 @@ class LikelihoodModelResults(Results):
         equal and jointly that the coefficient on the 5th and 6th regressors
         are equal.
 
-        >>> print results.f_test(B)
+        >>> print(results.f_test(B))
         <F contrast: F=9.740461873303655, p=0.00560528853174, df_denom=9,
          df_num=2>
 
@@ -1146,7 +1148,7 @@ class LikelihoodModelResults(Results):
         >>> results = ols(formula, dta).fit()
         >>> hypotheses = '(GNPDEFL = GNP), (UNEMP = 2), (YEAR/1829 = 1)'
         >>> f_test = results.f_test(hypotheses)
-        >>> print f_test
+        >>> print(f_test)
 
         See also
         --------
@@ -1338,7 +1340,7 @@ class LikelihoodModelResults(Results):
             cols = np.asarray(cols)
             lower = self.params[cols] - q * bse[cols]
             upper = self.params[cols] + q * bse[cols]
-        return np.asarray(zip(lower, upper))
+        return np.asarray(lzip(lower, upper))
 
     def save(self, fname, remove_data=False):
         '''
@@ -1414,17 +1416,17 @@ class LikelihoodModelResults(Results):
             try:
                 obj_ = reduce(getattr, [obj] + p)
 
-                #print repr(obj), repr(att)
-                #print hasattr(obj_, att_)
+                #print(repr(obj), repr(att))
+                #print(hasattr(obj_, att_))
                 if hasattr(obj_, att_):
-                    #print 'removing3', att_
+                    #print('removing3', att_)
                     setattr(obj_, att_, None)
             except AttributeError:
                 pass
 
         model_attr = ['model.' + i for i in self.model._data_attr]
         for att in self._data_attr + model_attr:
-            #print 'removing', att
+            #print('removing', att)
             wipe(self, att)
 
         data_in_cache = getattr(self, 'data_in_cache', [])
@@ -1535,7 +1537,7 @@ class ResultMixin(object):
         return np.sqrt(np.diag(self.covjac))
 
     def bootstrap(self, nrep=100, method='nm', disp=0, store=1):
-        '''simple bootstrap to get mean and variance of estimator
+        """simple bootstrap to get mean and variance of estimator
 
         see notes
 
@@ -1568,11 +1570,11 @@ class ResultMixin(object):
 
         This will be moved to apply only to models with independently
         distributed observations.
-        '''
+        """
         results = []
-        print self.model.__class__
+        print(self.model.__class__)
         hascloneattr = True if hasattr(self, 'cloneattr') else False
-        for i in xrange(nrep):
+        for i in range(nrep):
             rvsind = np.random.randint(self.nobs - 1, size=self.nobs)
             #this needs to set startparam and get other defining attributes
             #need a clone method on model

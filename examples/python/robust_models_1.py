@@ -1,6 +1,7 @@
 
 ## M-Estimators for Robust Linear Modeling
 
+from __future__ import print_function
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -147,7 +148,7 @@ x.std()
 stats.norm.ppf(.75)
 
 
-print x
+print(x)
 
 
 sm.robust.scale.stand_mad(x)
@@ -170,18 +171,18 @@ ax = fig.add_subplot(111)
 ax.plot(kde.support, kde.density);
 
 
-print fat_tails.mean(), fat_tails.std()
+print(fat_tails.mean(), fat_tails.std())
 
 
-print stats.norm.fit(fat_tails)
+print(stats.norm.fit(fat_tails))
 
 
-print stats.t.fit(fat_tails, f0=6)
+print(stats.t.fit(fat_tails, f0=6))
 
 
 huber = sm.robust.scale.Huber()
 loc, scale = huber(fat_tails)
-print loc, scale
+print(loc, scale)
 
 
 sm.robust.stand_mad(fat_tails)
@@ -202,7 +203,7 @@ from statsmodels.formula.api import ols, rlm
 prestige = sm.datasets.get_rdataset("Duncan", "car", cache=True).data
 
 
-print prestige.head(10)
+print(prestige.head(10))
 
 
 fig = plt.figure(figsize=(12,12))
@@ -216,35 +217,35 @@ ax2.scatter(prestige.education, prestige.prestige);
 
 
 ols_model = ols('prestige ~ income + education', prestige).fit()
-print ols_model.summary()
+print(ols_model.summary())
 
 
 infl = ols_model.get_influence()
 student = infl.summary_frame()['student_resid']
-print student
+print(student)
 
 
-print student.ix[np.abs(student) > 2]
+print(student.ix[np.abs(student) > 2])
 
 
-print infl.summary_frame().ix['minister']
+print(infl.summary_frame().ix['minister'])
 
 
 sidak = ols_model.outlier_test('sidak')
 sidak.sort('unadj_p', inplace=True)
-print sidak
+print(sidak)
 
 
 fdr = ols_model.outlier_test('fdr_bh')
 fdr.sort('unadj_p', inplace=True)
-print fdr
+print(fdr)
 
 
 rlm_model = rlm('prestige ~ income + education', prestige).fit()
-print rlm_model.summary()
+print(rlm_model.summary())
 
 
-print rlm_model.weights
+print(rlm_model.weights)
 
 
 #### Hertzprung Russell data for Star Cluster CYG 0B1 - Leverage Points
@@ -299,12 +300,12 @@ hat_diag.ix[hat_diag > h_bar]
 
 sidak2 = ols_model.outlier_test('sidak')
 sidak2.sort('unadj_p', inplace=True)
-print sidak2
+print(sidak2)
 
 
 fdr2 = ols_model.outlier_test('fdr_bh')
 fdr2.sort('unadj_p', inplace=True)
-print fdr2
+print(fdr2)
 
 
 # * Let's delete that line
@@ -337,7 +338,7 @@ get_ipython().magic(u'Rpull params')
 get_ipython().magic(u'R print(mod)')
 
 
-print params
+print(params)
 
 
 abline_plot(intercept=params[0], slope=params[1], ax=ax, color='green')

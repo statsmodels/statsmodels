@@ -48,7 +48,7 @@ finance applications ? option pricing, interest rate models
 
 
 '''
-
+from __future__ import print_function
 import numpy as np
 from scipy import stats, signal
 import matplotlib.pyplot as plt
@@ -432,7 +432,7 @@ class CompoundPoisson(object):
             #print nrepl,nobs,nc
             #xio = randfnc(size=(nrepl,nobs,np.max(nc))).cumsum(-1)[np.arange(nrepl)[:,None],np.arange(nobs),nc-1]
             rvs = randfnc(size=(nrepl,nobs,np.max(nc)))
-            print 'rvs.sum()', rvs.sum(), rvs.shape
+            print('rvs.sum()', rvs.sum(), rvs.shape)
             xio = rvs.cumsum(-1)[np.arange(nrepl)[:,None],np.arange(nobs),nc-1]
             #print xio.shape
             x[:,:,io] = xio
@@ -492,7 +492,7 @@ if __name__ == '__main__':
             plt.title('Brownian Motion - exp')
         #plt.show()
         averr = np.linalg.norm(us[1] - np.exp(9*us[2]/8.), np.inf)
-        print averr
+        print(averr)
         #print us[1][:10]
         #print np.exp(9.*us[2][:10]/8.)
 
@@ -527,7 +527,7 @@ if __name__ == '__main__':
         oue = ou.exact(1, 1, np.random.normal(size=(5,10)))
         ou.exact(0, np.linspace(0,10,10/0.1), 0)
         ou.exactprocess(0,10)
-        print ou.exactprocess(0,10, ddt=0.1,nrepl=10).mean(0)
+        print(ou.exactprocess(0,10, ddt=0.1,nrepl=10).mean(0))
         #the following looks good, approaches mu
         oues = ou.exactprocess(0,100, ddt=0.1,nrepl=100)
         if doplot:
@@ -541,19 +541,19 @@ if __name__ == '__main__':
 
         so = SchwartzOne(xzero=0, mu=1, kappa=0.5, sigma=0.1)
         sos = so.exactprocess(0,50, ddt=0.1,nrepl=100)
-        print sos.mean(0)
-        print np.log(sos.mean(0))
+        print(sos.mean(0))
+        print(np.log(sos.mean(0)))
         doplot = 1
         if doplot:
             plt.figure()
             tmp = plt.plot(sos.T)
             tmp = plt.plot(sos.mean(0), linewidth=2)
             plt.title('Schwartz One')
-        print so.fitls(sos[0,:],dt=0.1)
+        print(so.fitls(sos[0,:],dt=0.1))
         sos2 = so.exactprocess(0,500, ddt=0.1,nrepl=5)
-        print 'true: mu=1, kappa=0.5, sigma=0.1'
+        print('true: mu=1, kappa=0.5, sigma=0.1')
         for i in range(5):
-            print so.fitls(sos2[i],dt=0.1)
+            print(so.fitls(sos2[i],dt=0.1))
 
 
 
@@ -578,12 +578,12 @@ if __name__ == '__main__':
     # ^^^^^^^^^^^^^^^^
     cp = CompoundPoisson([1,1], [np.random.normal,np.random.normal])
     cps = cp.simulate(nobs=20000,nrepl=3)
-    print cps[0].sum(-1).sum(-1)
-    print cps[0].sum()
-    print cps[0].mean(-1).mean(-1)
-    print cps[0].mean()
-    print cps[1].size
-    print cps[1].sum()
+    print(cps[0].sum(-1).sum(-1))
+    print(cps[0].sum())
+    print(cps[0].mean(-1).mean(-1))
+    print(cps[0].mean())
+    print(cps[1].size)
+    print(cps[1].sum())
     #Note Y = sum^{N} X is compound poisson of iid x, then
     #E(Y) = E(N)*E(X)   eg. eq. (6.37) page 385 in http://ee.stanford.edu/~gray/sp.html
 

@@ -6,9 +6,10 @@ in ANOVA
 
 '''
 
-
+from __future__ import print_function
 import numpy as np
 #from scipy import stats
+from statsmodels.compat.python import lmap
 import statsmodels.api as sm
 
 
@@ -23,9 +24,9 @@ dta_use = np.ma.column_stack[[dta[col] for col in 'y sex age'.split()]]
 
 
 dta = np.genfromtxt('dftest3.data')
-print dta.shape
+print(dta.shape)
 mask = np.isnan(dta)
-print "rows with missing values", mask.any(1).sum()
+print("rows with missing values", mask.any(1).sum())
 vars = dict((v[0], (idx, v[1])) for idx, v in enumerate((
                 ('breed', int), ('sex', int), ('litter', int),
                ('pen', int), ('pig', int), ('age', float),
@@ -35,7 +36,7 @@ datavarnames = 'y sex age'.split()
 #possible to avoid temporary array ?
 dta_use = dta[:, [vars[col][0] for col in datavarnames]]
 keeprows = ~np.isnan(dta_use).any(1)
-print 'number of complete observations', keeprows.sum()
+print('number of complete observations', keeprows.sum())
 dta_used = dta_use[keeprows,:]
 
 varsused = dict((k, [dta_used[:,idx], idx, vars[k][1]]) for idx, k in enumerate(datavarnames))
@@ -66,7 +67,7 @@ def data2proddummy(x):
     '''
     #brute force, assumes x is 2d
     #replace with encoding if possible
-    groups = np.unique(map(tuple, x.tolist()))
+    groups = np.unique(lmap(tuple, x.tolist()))
     #includes singularity with additive factors
     return (x==groups[:,None,:]).all(-1).T.astype(int)[:,:-1]
 
@@ -104,8 +105,8 @@ for k in products:
 X_b0 = np.c_[sexdummy, dta_used[:,2], np.ones((dta_used.shape[0],1))]
 y_b0 = dta_used[:,0]
 res_b0 = sm.OLS(y_b0, X_b0).results
-print res_b0.params
-print res_b0.ssr
+print(res_b0.params)
+print(res_b0.ssr)
 
 anova_str0 = '''
 ANOVA statistics (model sum of squares excludes constant)
@@ -127,7 +128,7 @@ CTotal    %(nobs)i    %(uncentered_tss)f     %(mse_total)f
 R squared  %(rsquared)f
 '''
 
-#print anova_str % dict([('df_model', res.df_model)])
+#print(anova_str % dict([('df_model', res.df_model)])
 #anovares = ['df_model' , 'df_resid'
 
 def anovadict(res):
@@ -147,24 +148,24 @@ def anovadict(res):
     return ad
 
 
-print anova_str0 % anovadict(res_b0)
+print(anova_str0 % anovadict(res_b0))
 #the following leaves the constant in, not with NIST regression
 #but something fishy with res.ess negative in examples
-print anova_str % anovadict(res_b0)
+print(anova_str % anovadict(res_b0))
 
-print 'using sex only'
+print('using sex only')
 X2 = np.c_[sexdummy, np.ones((dta_used.shape[0],1))]
 res2 = sm.OLS(y_b0, X2).results
-print res2.params
-print res2.ssr
-print anova_str % anovadict(res2)
+print(res2.params)
+print(res2.ssr)
+print(anova_str % anovadict(res2))
 
-print 'using age only'
+print('using age only')
 X3 = np.c_[ dta_used[:,2], np.ones((dta_used.shape[0],1))]
 res3 = sm.OLS(y_b0, X3).results
-print res3.params
-print res3.ssr
-print anova_str % anovadict(res3)
+print(res3.params)
+print(res3.ssr)
+print(anova_str % anovadict(res3))
 
 
 def form2design(ss, data):
@@ -225,7 +226,7 @@ def form2design(ss, data):
             vars[''.join(v)] = data2groupcont(data[v[0]], data[v[1]])
             names.append(''.join(v))
         else:
-            raise ValueError, 'unknown expression in formula'
+            raise ValueError('unknown expression in formula')
     return vars, names
 
 nobs = 1000
@@ -241,13 +242,13 @@ for name in testdatacont.dtype.names:
     testdata[name] = testdatacont[name]
 
 
-#print form2design('a',testdata)
+#print(form2design('a',testdata))
 
 if 0:
     xx, n = form2design('F:a',testdata)
-    print xx
-    print form2design('P:a*b',testdata)
-    print data2proddummy((np.c_[testdata['a'],testdata['b']]))
+    print(xx)
+    print(form2design('P:a*b',testdata))
+    print(data2proddummy((np.c_[testdata['a'],testdata['b']])))
 
     xx, names = form2design('a F:b P:c*d',testdata)
 
@@ -260,8 +261,8 @@ X = np.column_stack([xx[nn] for nn in names])
 # simple test version: all coefficients equal to one
 y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
 rest1 = sm.OLS(y,X).results
-print rest1.params
-print anova_str % anovadict(rest1)
+print(rest1.params)
+print(anova_str % anovadict(rest1))
 
 def dropname(ss, li):
     '''drop names from a list of strings,
@@ -277,8 +278,8 @@ X = np.column_stack([xx[nn] for nn in dropname('ae f', names)])
 # simple test version: all coefficients equal to one
 y = X.sum(1) + 0.01*np.random.normal(size=(nobs))
 rest1 = sm.OLS(y,X).results
-print rest1.params
-print anova_str % anovadict(rest1)
+print(rest1.params)
+print(anova_str % anovadict(rest1))
 
 
 # Example: from Bruce
@@ -286,14 +287,14 @@ print anova_str % anovadict(rest1)
 
 # read data set and drop rows with missing data
 dta = np.genfromtxt('dftest3.data', dt_b,missing='.', usemask=True)
-print 'missing', [dta.mask[k].sum() for k in dta.dtype.names]
+print('missing', [dta.mask[k].sum() for k in dta.dtype.names])
 m = dta.mask.view(bool)
 droprows = m.reshape(-1,len(dta.dtype.names)).any(1)
 # get complete data as plain structured array
 # maybe doesn't work with masked arrays
 dta_use_b1 = dta[~droprows,:].data
-print dta_use_b1.shape
-print dta_use_b1.dtype
+print(dta_use_b1.shape)
+print(dta_use_b1.dtype)
 
 #Example b1: variables from Bruce's glm
 
@@ -304,11 +305,11 @@ X_b1 = np.column_stack([xx_b1[nn] for nn in dropname('', names_b1)])
 y_b1 = dta_use_b1['y']
 # estimate using OLS
 rest_b1 = sm.OLS(y_b1, X_b1).results
-# print results
-print rest_b1.params
-print anova_str % anovadict(rest_b1)
+# print(results)
+print(rest_b1.params)
+print(anova_str % anovadict(rest_b1))
 #compare with original version only in original version
-print anova_str % anovadict(res_b0)
+print(anova_str % anovadict(res_b0))
 
 # Example: use all variables except pig identifier
 
@@ -319,15 +320,15 @@ xx_b1a, names_b1a = form2design('I F:breed F:sex F:litter F:pen age bage', dta_u
 X_b1a = np.column_stack([xx_b1a[nn] for nn in dropname('', names_b1a)])
 y_b1a = dta_use_b1['y']
 rest_b1a = sm.OLS(y_b1a, X_b1a).results
-print rest_b1a.params
-print anova_str % anovadict(rest_b1a)
+print(rest_b1a.params)
+print(anova_str % anovadict(rest_b1a))
 
 for dropn in names_b1a:
-    print '\nResults dropping', dropn
+    print('\nResults dropping', dropn)
     X_b1a_ = np.column_stack([xx_b1a[nn] for nn in dropname(dropn, names_b1a)])
     y_b1a_ = dta_use_b1['y']
     rest_b1a_ = sm.OLS(y_b1a_, X_b1a_).results
-    #print rest_b1a_.params
-    print anova_str % anovadict(rest_b1a_)
+    #print(rest_b1a_.params
+    print(anova_str % anovadict(rest_b1a_))
 
 

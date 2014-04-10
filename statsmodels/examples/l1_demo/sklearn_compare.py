@@ -16,6 +16,8 @@ The results "prove" that the regularization paths are the same.  Note that
     finding the reparameterization is non-trivial since the coefficient paths
     are NOT monotonic.  As a result, the paths don't match up perfectly.
 """
+from __future__ import print_function
+from statsmodels.compat.python import range, lrange
 from sklearn import linear_model
 from sklearn import datasets
 import statsmodels.api as sm
@@ -91,11 +93,11 @@ colors = ['b', 'r', 'k', 'g', 'm', 'c', 'y']
 for coeff, name in [(sm_coeff, 'sm'), (sk_coeff, 'sk')]:
     if name == 'sk':
         ltype = 'x'  # linetype
-        t = range(N)  # The 'time' parameter
+        t = lrange(N)  # The 'time' parameter
     else:
         ltype = 'o'
         t = s
-    for i in xrange(K):
+    for i in range(K):
         plt.plot(t, coeff[:,i], ltype+colors[i], label=name+'-X'+str(i))
 plt.legend(loc='best')
 plt.show()

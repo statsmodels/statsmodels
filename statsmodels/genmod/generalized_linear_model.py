@@ -19,14 +19,14 @@ McCullagh, P. and Nelder, J.A.  1989.  "Generalized Linear Models." 2nd ed.
 """
 
 import numpy as np
-import families
+from . import families
 from statsmodels.tools.decorators import (cache_readonly,
         resettable_cache)
 
 import statsmodels.base.model as base
 import statsmodels.regression.linear_model as lm
 import statsmodels.base.wrapper as wrap
-from statsmodels.compatnp.np_compat import np_matrix_rank
+from statsmodels.compat.numpy import np_matrix_rank
 
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 

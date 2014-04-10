@@ -5,7 +5,7 @@
 @dec.slow are empirical (test within error limits) and intended to more
 extensively ensure the stability and accuracy of the functions"""
 
-from __future__ import with_statement
+from statsmodels.compat.python import iterkeys, lzip, lmap
 
 from numpy.testing import TestCase, rand, assert_, assert_equal, \
     assert_almost_equal, assert_array_almost_equal, assert_array_equal, \
@@ -18,8 +18,8 @@ from statsmodels.stats.libqsturng import qsturng, psturng,p_keys,v_keys
 def read_ch(fname):
     with open(fname) as f:
         lines = f.readlines()
-    ps,rs,vs,qs = zip(*[L.split(',') for L in lines])
-    return map(float, ps), map(float, rs),map(float, vs), map(float, qs)
+    ps,rs,vs,qs = lzip(*[L.split(',') for L in lines])
+    return lmap(float, ps), lmap(float, rs),lmap(float, vs), lmap(float, qs)
 
 class test_qsturng(TestCase):
     def test_scalar(self):
@@ -81,7 +81,7 @@ class test_qsturng(TestCase):
         ps, rs, vs, qs = [], [], [], []
         for p in T:
             for v in T[p]:
-                for r in R.keys():
+                for r in iterkeys(R):
                     ps.append(p)
                     vs.append(v)
                     rs.append(r)
