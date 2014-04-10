@@ -9,7 +9,7 @@ differ among implementations and the results will not agree exactly.
 """
 
 from __future__ import print_function
-from statsmodels.compatnp.py3k import lrange
+from statsmodels.compat import lrange
 import numpy as np
 
 import os

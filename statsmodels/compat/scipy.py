@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import numpy as np
 
 
@@ -14,7 +15,7 @@ try:
     from scipy.lib._version import NumpyVersion
 except ImportError:
     import re
-    from ..python import string_types
+    from .python import string_types
 
     class NumpyVersion():
         """Parse and compare numpy version strings.

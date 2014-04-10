@@ -45,7 +45,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 """
-from statsmodels.compat.scipy import NumpyVersion
+from __future__ import absolute_import
+from .scipy import NumpyVersion
 import numpy as np
 
 if NumpyVersion(np.__version__) < '1.6.2':
