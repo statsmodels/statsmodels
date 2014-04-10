@@ -81,7 +81,7 @@ def test_mosaic_simple():
     # the cartesian product of all the categories is
     # the complete set of categories
     keys = list(product(*key_set))
-    data = OrderedDict(zip(keys, lrange(1, 1 + len(keys))))
+    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
     # which colours should I use for the various categories?
     # put it into a dict
     props = {}
@@ -146,7 +146,7 @@ def test_mosaic_very_complex():
     key_base = (['male', 'female'], ['old', 'young'],
                     ['healty', 'ill'], ['work', 'unemployed'])
     keys = list(product(*key_base))
-    data = OrderedDict(zip(keys, lrange(1, 1 + len(keys))))
+    data = OrderedDict(zip(keys, range(1, 1 + len(keys))))
     props = {}
     props[('male', 'old')] = {'color': 'r'}
     props[('female',)] = {'color': 'pink'}
@@ -154,7 +154,7 @@ def test_mosaic_very_complex():
     fig, axes = pylab.subplots(L, L)
     for i in range(L):
         for j in range(L):
-            m = set(lrange(L)).difference(set((i, j)))
+            m = set(range(L)).difference(set((i, j)))
             if i == j:
                 axes[i, i].text(0.5, 0.5, key_name[i],
                                 ha='center', va='center')

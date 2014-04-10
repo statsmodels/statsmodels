@@ -1,20 +1,20 @@
-import statsmodels.iolib as iolib
-import statsmodels.datasets as datasets
-import statsmodels.tools as tools
+from . import iolib
+from . import datasets
+from . import tools
 from .tools.tools import add_constant, categorical
-import statsmodels.regression as regression
+from . import regression
 from .regression.linear_model import OLS, GLS, WLS, GLSAR
 from .regression.quantile_regression import QuantReg
 from .genmod.generalized_linear_model import GLM
 from .genmod.generalized_estimating_equations import GEE
 from .genmod import families
-import statsmodels.robust as robust
+from . import robust
 from .robust.robust_linear_model import RLM
 from .discrete.discrete_model import (Poisson, Logit, Probit,
                                       MNLogit, NegativeBinomial)
 from .tsa import api as tsa
 from .nonparametric import api as nonparametric
-import statsmodels.distributions as distributions
+from . import distributions
 from .__init__ import test
 from . import version
 from .info import __doc__

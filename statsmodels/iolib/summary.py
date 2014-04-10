@@ -782,7 +782,7 @@ def summary_return(tables, return_fmt='text'):
     elif return_fmt == 'tables':
         return tables
     elif return_fmt == 'csv':
-        return '\n'.join(lmap(lambda x: x.as_csv(), tables))
+        return '\n'.join(map(lambda x: x.as_csv(), tables))
     elif return_fmt == 'latex':
         #TODO: insert \hline after updating SimpleTable
         import copy

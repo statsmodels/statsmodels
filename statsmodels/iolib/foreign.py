@@ -357,7 +357,7 @@ class StataReader(object):
         """
         Returns a list of the dataset's StataVariables objects.
         """
-        return lmap(_StataVariable, lzip(lrange(self._header['nvar']),
+        return lmap(_StataVariable, zip(lrange(self._header['nvar']),
             self._header['typlist'], self._header['varlist'],
             self._header['srtlist'],
             self._header['fmtlist'], self._header['lbllist'],

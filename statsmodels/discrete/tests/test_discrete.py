@@ -9,7 +9,6 @@ tests.
 """
 # pylint: disable-msg=E1101
 from statsmodels.compat import range
-from .results.results_discrete import RandHIE, Anes
 import os
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
@@ -20,7 +19,7 @@ from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
 from statsmodels.discrete.discrete_margins import _iscount, _isdummy
 import statsmodels.api as sm
 from nose import SkipTest
-from .results.results_discrete import Spector, DiscreteL1
+from .results.results_discrete import Spector, DiscreteL1, RandHIE, Anes
 from statsmodels.tools.sm_exceptions import PerfectSeparationError
 
 try:

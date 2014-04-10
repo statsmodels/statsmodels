@@ -205,7 +205,7 @@ class Test_Y_ARMA11_NoConst(CheckArmaResultsMixin, CheckForecastMixin):
         self.res1.save(fh)
         fh.seek(0,0)
         res_unpickled = self.res1.__class__.load(fh)
-        assert_(isinstance(res_unpickled,  type(self.res1)))
+        assert_(type(res_unpickled) is type(self.res1))
 
 #NOTE: Ok
 class Test_Y_ARMA14_NoConst(CheckArmaResultsMixin):
@@ -1705,7 +1705,7 @@ def test_arima_no_diff():
     ma = [1, .25, .9]
     y = arma_generate_sample(ar, ma, 100)
     mod = ARIMA(y, (3, 0, 2))
-    assert_(isinstance(mod, ARMA))
+    assert_(type(mod) is ARMA)
     res = mod.fit(disp=-1)
     # smoke test just to be sure
     res.predict()

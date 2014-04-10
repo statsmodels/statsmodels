@@ -8,7 +8,7 @@ uncomment plt.show() to show all plot windows
 
 '''
 from __future__ import print_function
-from statsmodels.compat import lrange, lzip, input
+from statsmodels.compat import lzip, input
 import matplotlib.pyplot as plt #matplotlib is required for many examples
 
 stop_on_error = True
@@ -26,7 +26,7 @@ if use_glob:
     import glob
     filelist = glob.glob('*.py')
 
-print(lzip(lrange(len(filelist)), filelist))
+print(lzip(range(len(filelist)), filelist))
 
 for fname in ['run_all.py', 'example_rpy.py']:
     filelist.remove(fname)

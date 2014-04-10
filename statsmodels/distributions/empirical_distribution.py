@@ -1,7 +1,6 @@
 """
 Empirical CDF Functions
 """
-from statsmodels.compat import urlopen
 import numpy as np
 from scipy.interpolate import interp1d
 
@@ -165,6 +164,7 @@ def monotone_fn_inverter(fn, x, vectorized=True, **keywords):
 if __name__ == "__main__":
     #TODO: Make sure everything is correctly aligned and make a plotting
     # function
+    from statsmodels.compat import urlopen
     import matplotlib.pyplot as plt
     nerve_data = urlopen('http://www.statsci.org/data/general/nerve.txt')
     nerve_data = np.loadtxt(nerve_data)
