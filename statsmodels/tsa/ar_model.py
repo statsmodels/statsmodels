@@ -1,5 +1,5 @@
 from __future__ import division
-from statsmodels.compat import iteritems, range, string_types, lmap
+from statsmodels.compat.python import iteritems, range, string_types, lmap
 
 import numpy as np
 from numpy import dot, identity

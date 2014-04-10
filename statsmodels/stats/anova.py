@@ -1,4 +1,4 @@
-from statsmodels.compat import lrange, lmap
+from statsmodels.compat.python import lrange, lmap
 import numpy as np
 from scipy import stats
 from pandas import DataFrame, Index

@@ -24,7 +24,7 @@ two-sided tests basend on t or normal distribution use the absolute value.
 
 '''
 from __future__ import print_function
-from statsmodels.compat import lrange
+from statsmodels.compat.python import lrange
 import numpy as np
 
 from statsmodels.iolib.table import SimpleTable

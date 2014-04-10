@@ -11,7 +11,7 @@ TODO: update script to use sharex, sharey, and visible=False
 '''
 
 
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 from scipy import stats
 

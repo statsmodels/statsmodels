@@ -1,7 +1,7 @@
 """
 Statistical tools for time series analysis
 """
-from statsmodels.compat import (iteritems, range, lrange, string_types, lzip,
+from statsmodels.compat.python import (iteritems, range, lrange, string_types, lzip,
                                 zip, map)
 import numpy as np
 from numpy.linalg import LinAlgError

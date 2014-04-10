@@ -5,7 +5,7 @@ Created on Fri Mar 09 16:00:27 2012
 
 Author: Josef Perktold
 """
-from statsmodels.compat import StringIO
+from statsmodels.compat.python import StringIO
 import numpy as np
 import statsmodels.api as sm
 
@@ -33,7 +33,7 @@ shrinkit = 1
 if shrinkit:
     results.remove_data()
 
-from statsmodels.compat import cPickle
+from statsmodels.compat.python import cPickle
 fname = 'try_shrink%d_ols.pickle' % shrinkit
 fh = open(fname, 'w')
 cPickle.dump(results._results, fh)  #pickling wrapper doesn't work

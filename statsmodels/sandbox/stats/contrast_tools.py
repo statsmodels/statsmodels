@@ -23,7 +23,7 @@ Idea for second part
 
 
 from __future__ import print_function
-from statsmodels.compat import zip
+from statsmodels.compat.python import zip
 import numpy as np
 
 #next 3 functions copied from multicomp.py

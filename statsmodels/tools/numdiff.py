@@ -4,7 +4,7 @@ Author : josef-pkt
 License : BSD
 """
 from __future__ import print_function
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 #These are simple forward differentiation, so that we have them available
 #without dependencies.
 #

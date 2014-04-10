@@ -7,7 +7,7 @@ manually, at least in my setup.
 uncomment plt.show() to show all plot windows
 
 '''
-from statsmodels.compat import input
+from statsmodels.compat.python import input
 stop_on_error = True
 
 

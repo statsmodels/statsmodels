@@ -8,7 +8,7 @@ namespace : dictionary
 
 
 """
-from statsmodels.compat import (iterkeys, lrange, callable, string_types,
+from statsmodels.compat.python import (iterkeys, lrange, callable, string_types,
                                 itervalues, range)
 import copy
 import types

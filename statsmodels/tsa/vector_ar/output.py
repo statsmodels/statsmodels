@@ -1,5 +1,5 @@
 from __future__ import print_function
-from statsmodels.compat import cStringIO, lzip, lrange, StringIO, range
+from statsmodels.compat.python import cStringIO, lzip, lrange, StringIO, range
 import numpy as np
 
 from statsmodels.iolib import SimpleTable

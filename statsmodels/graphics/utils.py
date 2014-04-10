@@ -1,5 +1,5 @@
 """Helper functions for graphics with Matplotlib."""
-from statsmodels.compat import lrange, range
+from statsmodels.compat.python import lrange, range
 
 __all__ = ['create_mpl_ax', 'create_mpl_fig']
 

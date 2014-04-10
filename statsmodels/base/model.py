@@ -1,5 +1,5 @@
 from __future__ import print_function
-from statsmodels.compat import iterkeys, lzip, range, reduce
+from statsmodels.compat.python import iterkeys, lzip, range, reduce
 import numpy as np
 from scipy import stats
 from statsmodels.base.data import handle_data

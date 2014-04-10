@@ -6,7 +6,7 @@ This script checks ordinal and nominal models for multinomial data.
 See the generated file "gee_categorical_simulation_check.txt" for
 results.
 """
-from statsmodels.compat import lrange
+from statsmodels.compat.python import lrange
 import numpy as np
 from scipy import stats
 from statsmodels.genmod.generalized_estimating_equations import GEE,\

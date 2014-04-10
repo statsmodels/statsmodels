@@ -1,5 +1,5 @@
 #### Convenience Functions to be moved to kerneltools ####
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 
 def forrt(X,m=None):

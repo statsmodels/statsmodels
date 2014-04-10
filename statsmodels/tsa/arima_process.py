@@ -53,7 +53,7 @@ Author: josefpktd
 License: BSD
 '''
 from __future__ import print_function
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 from scipy import signal, optimize, linalg
 from statsmodels.base.model import LikelihoodModel

@@ -1,4 +1,4 @@
-from statsmodels.compat import range, lrange, lmap, lzip, zip_longest
+from statsmodels.compat.python import range, lrange, lmap, lzip, zip_longest
 import numpy as np
 from statsmodels.iolib.table import SimpleTable
 from statsmodels.iolib.tableformatting import (gen_fmt, fmt_2,

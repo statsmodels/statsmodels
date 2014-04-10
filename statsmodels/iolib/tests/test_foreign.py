@@ -10,7 +10,7 @@ import numpy as np
 from pandas import DataFrame, isnull
 import pandas.util.testing as ptesting
 
-from statsmodels.compat import BytesIO, asbytes
+from statsmodels.compat.python import BytesIO, asbytes
 import statsmodels.api as sm
 from statsmodels.iolib.foreign import (StataWriter, genfromdta,
             _datetime_to_stata_elapsed, _stata_elapsed_date_to_datetime)

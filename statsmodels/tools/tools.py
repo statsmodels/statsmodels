@@ -1,7 +1,7 @@
 '''
 Utility functions models code
 '''
-from statsmodels.compat import (reduce, lzip, lmap, asstr2, urlopen, urljoin,
+from statsmodels.compat.python import (reduce, lzip, lmap, asstr2, urlopen, urljoin,
                                 StringIO, range)
 import numpy as np
 import numpy.lib.recfunctions as nprf

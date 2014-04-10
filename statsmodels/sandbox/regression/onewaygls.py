@@ -52,7 +52,7 @@ Created on Sat Mar 27 01:48:01 2010
 Author: josef-pktd
 """
 import numpy as np
-from statsmodels.compat import zip
+from statsmodels.compat.python import zip
 from scipy import stats
 from statsmodels.regression.linear_model import OLS, WLS
 

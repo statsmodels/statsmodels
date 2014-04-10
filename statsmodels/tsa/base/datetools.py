@@ -1,4 +1,4 @@
-from statsmodels.compat import (lrange, lzip, lmap, string_types, callable,
+from statsmodels.compat.python import (lrange, lzip, lmap, string_types, callable,
                                 asstr, reduce, zip, map)
 import re
 import datetime

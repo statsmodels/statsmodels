@@ -13,7 +13,7 @@ changes to code by josef-pktd:
 
 """
 
-from statsmodels.compat import range, lrange
+from statsmodels.compat.python import range, lrange
 import numpy as np
 from itertools import combinations
 

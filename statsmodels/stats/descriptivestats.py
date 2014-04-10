@@ -1,4 +1,4 @@
-from statsmodels.compat import lrange, lmap, iterkeys, iteritems
+from statsmodels.compat.python import lrange, lmap, iterkeys, iteritems
 import sys
 import numpy as np
 from scipy import stats

@@ -1,7 +1,7 @@
 """
 Seasonal Decomposition by Moving Averages
 """
-from statsmodels.compat import lmap, range, iteritems
+from statsmodels.compat.python import lmap, range, iteritems
 import numpy as np
 from pandas.core.nanops import nanmean as pd_nanmean
 from .filters._utils import _maybe_get_pandas_wrapper_freq

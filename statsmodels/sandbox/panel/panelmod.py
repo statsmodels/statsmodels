@@ -7,7 +7,7 @@ References
 Baltagi, Badi H. `Econometric Analysis of Panel Data.` 4th ed. Wiley, 2008.
 """
 from __future__ import print_function
-from statsmodels.compat import range, reduce
+from statsmodels.compat.python import range, reduce
 from statsmodels.tools.tools import categorical
 from statsmodels.regression.linear_model import GLS, WLS
 import numpy as np

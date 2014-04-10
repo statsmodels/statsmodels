@@ -38,7 +38,7 @@ enhancements:
 
 '''
 from __future__ import print_function
-from statsmodels.compat import zip
+from statsmodels.compat.python import zip
 from scipy import stats, integrate
 import numpy as np
 

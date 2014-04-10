@@ -73,7 +73,7 @@ Created on Feb 6, 2010
 @author: "josef pktd"
 '''
 from __future__ import print_function
-from statsmodels.compat import lzip, zip
+from statsmodels.compat.python import lzip, zip
 import numpy as np
 from numpy.testing import assert_almost_equal
 

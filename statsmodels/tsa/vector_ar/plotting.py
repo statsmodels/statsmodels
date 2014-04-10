@@ -1,4 +1,4 @@
-from statsmodels.compat import lrange, range
+from statsmodels.compat.python import lrange, range
 import numpy as np
 import statsmodels.tsa.vector_ar.util as util
 

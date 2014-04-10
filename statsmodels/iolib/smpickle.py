@@ -1,5 +1,5 @@
 '''Helper files for pickling'''
-from statsmodels.compat import cPickle
+from statsmodels.compat.python import cPickle
 
 def _get_file_obj(fname, mode):
     """

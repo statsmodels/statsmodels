@@ -12,7 +12,7 @@ http://en.wikipedia.org/wiki/Kernel_%28statistics%29
 Silverman, B.W.  Density Estimation for Statistics and Data Analysis.
 """
 from __future__ import absolute_import, print_function
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 # for 2to3 with extensions
 import warnings
 

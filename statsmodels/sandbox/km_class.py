@@ -1,5 +1,5 @@
 #a class for the Kaplan-Meier estimator
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 from math import sqrt
 import matplotlib.pyplot as plt

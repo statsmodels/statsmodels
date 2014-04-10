@@ -3,7 +3,7 @@
 Author : Josef Perktold
 '''
 from __future__ import print_function
-from statsmodels.compat import iterkeys
+from statsmodels.compat.python import iterkeys
 import numpy as np
 
 class HoldIt(object):

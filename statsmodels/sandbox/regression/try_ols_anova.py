@@ -13,7 +13,7 @@ TODO:
 '''
 
 from __future__ import print_function
-from statsmodels.compat import lmap
+from statsmodels.compat.python import lmap
 import numpy as np
 #from scipy import stats
 import statsmodels.api as sm

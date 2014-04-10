@@ -1,6 +1,6 @@
 #Copyright (c) 2008 Erik Tollerud (etolleru@uci.edu)
 
-from statsmodels.compat import zip
+from statsmodels.compat.python import zip
 import numpy as np
 from math import pi
 

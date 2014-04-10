@@ -10,7 +10,7 @@ General References
 Owen, A. B. (2001). Empirical Likelihood. Chapman and Hall.
 """
 
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 from .descriptive import _OptFuncts
 from scipy import optimize

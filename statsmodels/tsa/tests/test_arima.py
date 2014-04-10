@@ -1,4 +1,4 @@
-from statsmodels.compat import lrange, BytesIO
+from statsmodels.compat.python import lrange, BytesIO
 import numpy as np
 from nose.tools import nottest
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,

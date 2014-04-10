@@ -9,7 +9,7 @@ See also
 ---------
 numpy.lib.io
 """
-from statsmodels.compat import (zip, lzip, lmap, lrange, string_types, long, lfilter,
+from statsmodels.compat.python import (zip, lzip, lmap, lrange, string_types, long, lfilter,
                                 asbytes, asstr, range)
 from struct import unpack, calcsize, pack
 from struct import error as struct_error

@@ -1,4 +1,4 @@
-from statsmodels.compat import lzip, string_types
+from statsmodels.compat.python import lzip, string_types
 import numpy as np
 from scipy import stats
 from statsmodels.regression.linear_model import OLS

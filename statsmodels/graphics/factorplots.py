@@ -2,7 +2,7 @@
 """
 Authors:    Josef Perktold, Skipper Seabold, Denis A. Engemann
 """
-from statsmodels.compat import get_function_name, iterkeys, lrange, zip, iteritems
+from statsmodels.compat.python import get_function_name, iterkeys, lrange, zip, iteritems
 import numpy as np
 
 from statsmodels.graphics.plottools import rainbow

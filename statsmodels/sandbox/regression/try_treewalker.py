@@ -6,7 +6,7 @@ should collect and aggregate likelihood contributions bottom up
 
 '''
 from __future__ import print_function
-from statsmodels.compat import iteritems, itervalues, lrange, zip
+from statsmodels.compat.python import iteritems, itervalues, lrange, zip
 import numpy as np
 
 tree = [[0,1],[[2,3],[4,5,6]],[7]]

@@ -81,7 +81,7 @@ ValueError: zero-size array to ufunc.reduce without identity
 #import xlrd
 #import xlwt
 from __future__ import print_function
-from statsmodels.compat import lzip, range, lrange, zip
+from statsmodels.compat.python import lzip, range, lrange, zip
 import scipy.stats
 import numpy
 import numpy as np

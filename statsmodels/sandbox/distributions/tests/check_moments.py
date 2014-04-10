@@ -4,7 +4,7 @@ not written as a test, prints results, renamed to prevent nose from running it
 
 
 '''
-from statsmodels.compat import iteritems
+from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats
 #from statsmodels.stats.moment_helpers import mnc2mvsk

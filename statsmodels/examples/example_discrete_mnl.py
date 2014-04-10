@@ -2,7 +2,7 @@
 """
 
 from __future__ import print_function
-from statsmodels.compat import lrange
+from statsmodels.compat.python import lrange
 import numpy as np
 import statsmodels.api as sm
 
@@ -56,7 +56,7 @@ print(mlogit_res.summary(yname='PID', yname_list=endog_names, xname=exog_names))
 
 
 ''' #trying cPickle
-from statsmodels.compat import cPickle #, copy
+from statsmodels.compat.python import cPickle #, copy
 
 #copy.deepcopy(mlogit_res)  #raises exception: AttributeError: 'ResettableCache' object has no attribute '_resetdict'
 mnl_res = mlogit_mod.fit(method='bfgs', maxiter=100)

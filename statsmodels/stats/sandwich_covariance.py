@@ -101,7 +101,7 @@ for inference with clustered errors,” The Review of Economics and
 Statistics 90, no. 3 (2008): 414–427.
 
 """
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 
 from statsmodels.tools.grouputils import Group

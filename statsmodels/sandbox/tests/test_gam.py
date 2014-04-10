@@ -74,7 +74,7 @@ example: Gamma looks good in average bias and average RMSE (RMISE)
 
 
 """
-from statsmodels.compat import get_class, lrange
+from statsmodels.compat.python import get_class, lrange
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal
 

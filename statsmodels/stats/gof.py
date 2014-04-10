@@ -17,7 +17,7 @@ changes
 2013-02-25 : add chisquare_power, effectsize and "value"
 
 '''
-from statsmodels.compat import range, lrange
+from statsmodels.compat.python import range, lrange
 import numpy as np
 from scipy import stats
 

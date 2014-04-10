@@ -7,7 +7,7 @@ Lutkepohl (2005) New Introduction to Multiple Time Series Analysis
 """
 
 from __future__ import division, print_function
-from statsmodels.compat import (range, lrange, string_types, StringIO, iteritems,
+from statsmodels.compat.python import (range, lrange, string_types, StringIO, iteritems,
                                 cStringIO)
 
 from collections import defaultdict

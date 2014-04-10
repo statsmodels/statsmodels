@@ -229,7 +229,7 @@ def _score_nbp(y, X, beta, thet, Q):
     return sc
 
 #### Tests ####
-from statsmodels.compat import urlopen
+from statsmodels.compat.python import urlopen
 from numpy.testing import assert_almost_equal
 import pandas
 import patsy

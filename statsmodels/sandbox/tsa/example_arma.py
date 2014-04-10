@@ -5,7 +5,7 @@ plus 3 functions from nitime.utils
 
 '''
 from __future__ import print_function
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 from numpy.testing import assert_array_almost_equal
 

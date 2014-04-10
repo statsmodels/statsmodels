@@ -6,7 +6,7 @@ Created on Fri Oct 04 13:19:01 2013
 Author: Josef Perktold
 """
 from __future__ import print_function
-from statsmodels.compat import lrange, lmap
+from statsmodels.compat.python import lrange, lmap
 import numpy as np
 from numpy.testing import assert_allclose, assert_almost_equal, assert_equal
 

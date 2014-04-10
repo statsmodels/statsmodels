@@ -1,4 +1,4 @@
-from statsmodels.compat import (lrange, iterkeys, iteritems, StringIO, lzip,
+from statsmodels.compat.python import (lrange, iterkeys, iteritems, StringIO, lzip,
                                 reduce, itervalues, zip, string_types, range)
 from statsmodels.compat.collections import OrderedDict
 import numpy as np

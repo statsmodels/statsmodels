@@ -1,4 +1,4 @@
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 
 #TODO: add plots to weighting functions for online docs.

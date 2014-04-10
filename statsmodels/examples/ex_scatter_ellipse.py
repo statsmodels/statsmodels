@@ -6,7 +6,7 @@ License: BSD-3
 '''
 
 
-from statsmodels.compat import lrange
+from statsmodels.compat.python import lrange
 import numpy as np
 import matplotlib.pyplot as plt
 

@@ -31,7 +31,7 @@ refactoring
 
 """
 from __future__ import print_function
-from statsmodels.compat import iteritems
+from statsmodels.compat.python import iteritems
 import numpy as np
 from scipy import stats, optimize
 from statsmodels.tools.rootfinding import brentq_expanding

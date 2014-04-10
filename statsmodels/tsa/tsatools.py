@@ -1,4 +1,4 @@
-from statsmodels.compat import range, lrange, lzip
+from statsmodels.compat.python import range, lrange, lzip
 import numpy as np
 import numpy.lib.recfunctions as nprf
 from statsmodels.tools.tools import add_constant

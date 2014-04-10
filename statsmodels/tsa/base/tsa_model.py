@@ -1,4 +1,4 @@
-from statsmodels.compat import lrange
+from statsmodels.compat.python import lrange
 import statsmodels.base.model as base
 from statsmodels.base import data
 import statsmodels.base.wrapper as wrap

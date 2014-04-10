@@ -8,7 +8,7 @@ in the Stata *.dta -> *.csv output, NOT the estimator for the Poisson
 tests.
 """
 # pylint: disable-msg=E1101
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import os
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,

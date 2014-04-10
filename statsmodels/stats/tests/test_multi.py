@@ -12,7 +12,7 @@ are tested against R:multtest
     consistency only
 
 '''
-from statsmodels.compat import iteritems
+from statsmodels.compat.python import iteritems
 import numpy as np
 from numpy.testing import (assert_almost_equal, assert_equal, assert_,
                           assert_allclose)

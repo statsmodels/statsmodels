@@ -7,7 +7,7 @@ Author: Josef Perktold
 """
 
 from __future__ import print_function
-from statsmodels.compat import iteritems
+from statsmodels.compat.python import iteritems
 import numpy as np
 from numpy.testing import assert_almost_equal
 from statsmodels.datasets import macrodata

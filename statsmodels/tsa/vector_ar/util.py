@@ -1,7 +1,7 @@
 """
 Miscellaneous utility code for VAR estimation
 """
-from statsmodels.compat import range, string_types, asbytes
+from statsmodels.compat.python import range, string_types, asbytes
 import numpy as np
 import scipy.stats as stats
 import scipy.linalg as L

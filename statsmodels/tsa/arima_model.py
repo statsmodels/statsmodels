@@ -5,7 +5,7 @@
 #       packages such as gretl and X12-ARIMA
 
 from __future__ import absolute_import
-from statsmodels.compat import string_types, range
+from statsmodels.compat.python import string_types, range
 # for 2to3 with extensions
 
 from datetime import datetime

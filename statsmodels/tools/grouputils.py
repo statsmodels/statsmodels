@@ -31,7 +31,7 @@ need more efficient loop if groups are sorted -> see GroupSorted.group_iter
 
 """
 from __future__ import print_function
-from statsmodels.compat import lrange, lzip, range
+from statsmodels.compat.python import lrange, lzip, range
 import numpy as np
 import pandas as pd
 from statsmodels.compat.numpy import npc_unique

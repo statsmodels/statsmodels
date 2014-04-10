@@ -10,7 +10,7 @@ Created on Fri Nov 04 13:45:43 2011
 Author: Josef Perktold
 """
 from __future__ import print_function
-from statsmodels.compat import lrange, zip
+from statsmodels.compat.python import lrange, zip
 import time
 
 import numpy as np

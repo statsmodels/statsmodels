@@ -18,7 +18,7 @@ W. Greene. `Econometric Analysis`. Prentice Hall, 5th. edition. 2003.
 
 __all__ = ["Poisson", "Logit", "Probit", "MNLogit", "NegativeBinomial"]
 
-from statsmodels.compat import lmap, lzip, range
+from statsmodels.compat.python import lmap, lzip, range
 import numpy as np
 from scipy.special import gammaln
 from scipy import stats, special, optimize  # opt just for nbin

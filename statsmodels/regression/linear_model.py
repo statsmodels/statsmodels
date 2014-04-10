@@ -34,7 +34,7 @@ W. Green.  "Econometric Analysis," 5th ed., Pearson, 2003.
 """
 
 from __future__ import print_function
-from statsmodels.compat import lrange, lzip, range
+from statsmodels.compat.python import lrange, lzip, range
 __docformat__ = 'restructuredtext en'
 
 __all__ = ['GLS', 'WLS', 'OLS', 'GLSAR']

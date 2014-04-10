@@ -1,6 +1,6 @@
 
 import numpy as np
-from statsmodels.compat import StringIO
+from statsmodels.compat.python import StringIO
 from numpy.linalg import slogdet
 
 

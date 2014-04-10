@@ -4,7 +4,7 @@
 Created on Wed May 30 21:39:46 2012
 Author: Josef Perktold
 """
-from statsmodels.compat import iteritems
+from statsmodels.compat.python import iteritems
 import numpy as np
 from numpy.testing import assert_equal, assert_almost_equal
 import statsmodels.tsa.stattools as tsast

@@ -5,7 +5,7 @@ Created on Thu Feb 28 13:24:59 2013
 
 Author: Josef Perktold
 """
-from statsmodels.compat import itervalues
+from statsmodels.compat.python import itervalues
 
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal

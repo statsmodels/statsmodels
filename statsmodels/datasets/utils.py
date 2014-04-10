@@ -1,4 +1,4 @@
-from statsmodels.compat import (range, StringIO, urlopen, HTTPError, lrange,
+from statsmodels.compat.python import (range, StringIO, urlopen, HTTPError, lrange,
                                 cPickle)
 import sys
 import shutil

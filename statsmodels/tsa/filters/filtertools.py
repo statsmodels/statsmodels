@@ -12,7 +12,7 @@ Author: Josef-pktd
 #not original copied from various experimental scripts
 #version control history is there
 
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 import scipy.fftpack as fft
 from scipy import signal

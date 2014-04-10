@@ -1,4 +1,4 @@
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker

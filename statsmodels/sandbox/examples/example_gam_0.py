@@ -11,7 +11,7 @@ Note: uncomment plt.show() to display graphs
 example = 2 #3  # 1,2 or 3
 
 import numpy as np
-from statsmodels.compat import zip
+from statsmodels.compat.python import zip
 import numpy.random as R
 import matplotlib.pyplot as plt
 

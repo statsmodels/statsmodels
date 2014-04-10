@@ -8,7 +8,7 @@ Compatibility tools for various data structure inputs
 # good: if ndarray check passes then loading pandas is not triggered,
 
 
-from statsmodels.compat import range
+from statsmodels.compat.python import range
 import numpy as np
 import pandas as pd
 

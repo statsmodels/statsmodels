@@ -1,4 +1,4 @@
-from statsmodels.compat import iterkeys, itervalues, zip, range
+from statsmodels.compat.python import iterkeys, itervalues, zip, range
 import numpy as np
 
 

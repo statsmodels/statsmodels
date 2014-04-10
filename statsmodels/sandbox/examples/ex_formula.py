@@ -3,7 +3,7 @@
 some work, some things don't
 
 '''
-from statsmodels.compat import iterkeys, zip
+from statsmodels.compat.python import iterkeys, zip
 import string
 import numpy as np
 

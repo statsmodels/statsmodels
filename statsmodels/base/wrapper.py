@@ -2,7 +2,7 @@ import inspect
 import functools
 
 import numpy as np
-from statsmodels.compat import get_function_name, iteritems
+from statsmodels.compat.python import get_function_name, iteritems
 
 class ResultsWrapper(object):
     """

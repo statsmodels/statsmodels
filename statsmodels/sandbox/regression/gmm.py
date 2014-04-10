@@ -49,7 +49,7 @@ License: BSD (3-clause)
 
 
 from __future__ import print_function
-from statsmodels.compat import lrange
+from statsmodels.compat.python import lrange
 import numpy as np
 from scipy import optimize, stats
 from statsmodels.tools.numdiff import approx_fprime, approx_hess

@@ -13,7 +13,7 @@ PJ Huber.  1973,  'The 1972 Wald Memorial Lectures: Robust Regression:
 R Venables, B Ripley. 'Modern Applied Statistics in S'  Springer, New York,
     2002.
 """
-from statsmodels.compat import string_types
+from statsmodels.compat.python import string_types
 import numpy as np
 import scipy.stats as stats
 

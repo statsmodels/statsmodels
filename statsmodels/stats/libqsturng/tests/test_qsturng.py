@@ -5,7 +5,7 @@
 @dec.slow are empirical (test within error limits) and intended to more
 extensively ensure the stability and accuracy of the functions"""
 
-from statsmodels.compat import iterkeys, lzip, lmap
+from statsmodels.compat.python import iterkeys, lzip, lmap
 
 from numpy.testing import TestCase, rand, assert_, assert_equal, \
     assert_almost_equal, assert_array_almost_equal, assert_array_equal, \

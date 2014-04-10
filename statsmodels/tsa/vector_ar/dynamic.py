@@ -1,6 +1,6 @@
 # pylint: disable=W0201
 
-from statsmodels.compat import iteritems, string_types, range
+from statsmodels.compat.python import iteritems, string_types, range
 import numpy as np
 from statsmodels.tools.decorators import cache_readonly
 import pandas as pd

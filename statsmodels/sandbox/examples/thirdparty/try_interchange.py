@@ -21,7 +21,7 @@ some brief comments
 Created on Sat Jan 30 08:33:11 2010
 Author: josef-pktd
 """
-from statsmodels.compat import lrange, zip
+from statsmodels.compat.python import lrange, zip
 import numpy as np
 import scikits.timeseries as ts
 

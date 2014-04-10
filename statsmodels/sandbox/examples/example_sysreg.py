@@ -1,7 +1,7 @@
 """Example: statsmodels.sandbox.sysreg
 """
 #TODO: this is going to change significantly once we have a panel data structure
-from statsmodels.compat import lmap, asbytes
+from statsmodels.compat.python import lmap, asbytes
 import numpy as np
 import statsmodels.api as sm
 from statsmodels.sandbox.sysreg import *
