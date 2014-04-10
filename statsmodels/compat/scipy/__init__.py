@@ -14,7 +14,7 @@ try:
     from scipy.lib._version import NumpyVersion
 except ImportError:
     import re
-    from statsmodels.compat import string_types
+    from ..python import string_types
 
     class NumpyVersion():
         """Parse and compare numpy version strings.

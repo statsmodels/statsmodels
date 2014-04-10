@@ -1,6 +1,6 @@
 from statsmodels.compat import iteritems
-from numpy.testing import assert_
 from statsmodels.compat.collections import Counter
+from numpy.testing import assert_
 
 
 def test_counter():

@@ -4,7 +4,7 @@
 #Author: Raymond Hettinger
 #License: MIT License
 #http://code.activestate.com/recipes/576693/ revision 9, downloaded 2012-03-28
-from statsmodels.compat import iterkeys, iteritems
+from .python import iterkeys, iteritems
 try:
     from thread import get_ident as _get_ident
 except ImportError:
