@@ -176,9 +176,9 @@ plot of partial regression for a set of regressors by:
 
 .. ipython:: python
 
-    from statsmodels.graphics.regressionplots import plot_partregress
     @savefig gettingstarted_0.png
-    plot_partregress(res)
+    sm.graphics.plot_partregress('Lottery', 'Wealth', ['Region', 'Literacy'],
+                                 data=df, obs_labels=False)
 
 More
 ----

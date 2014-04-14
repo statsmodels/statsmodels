@@ -227,7 +227,7 @@ def convolution_filter(x, filt, nsides=2):
         data array, 1d or 2d, if 2d then observations in rows
     filt : array_like
         Linear filter coefficients in reverse time-order. Should have the
-        same number of dimensions as x though if 1d and `x' is 2d will be
+        same number of dimensions as x though if 1d and ``x`` is 2d will be
         coerced to 2d.
     nsides : int, optional
         If 2, a centered moving average is computed using the filter
@@ -239,7 +239,7 @@ def convolution_filter(x, filt, nsides=2):
     y : ndarray, 2d
         Filtered array, number of columns determined by x and filt. If a
         pandas object is given, a pandas object is returned. The index of
-        the return is the exact same as the time period in `x'
+        the return is the exact same as the time period in ``x``
 
     Notes
     -----
