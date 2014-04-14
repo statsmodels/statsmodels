@@ -184,8 +184,8 @@ Time Series Filters
    filters.bk_filter.bkfilter
    filters.hp_filter.hpfilter
    filters.cf_filter.cffilter
-   filters.convolution_filter
-   filters.recursive_filter
+   filters.filtertools.convolution_filter
+   filters.filtertools.recursive_filter
    filters.filtertools.miso_lfilter
    filters.filtertools.fftconvolve3
    filters.filtertools.fftconvolveinv
