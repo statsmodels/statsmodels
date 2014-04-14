@@ -1,5 +1,6 @@
-.. _vbench:
+:orphan:
 
+.. _vbench:
 vbench
 ======
 
