@@ -2,11 +2,67 @@ import numpy as np
 import pandas as pd
 from statsmodels.regression.lme import MixedLM
 from numpy.testing import assert_almost_equal
-from lme_r_results import *
+import lme_r_results
 from scipy.misc import derivative
 from statsmodels.base import penalties
 import os
 import csv
+
+
+class R_Results(object):
+    """
+    A class for holding various results obtained from fitting one data
+    set using lmer in R.
+
+    Parameters
+    ----------
+    meth : string
+        Either "ml" or "reml".
+    irfs : string
+        Either "irf", for independent random effects, or "drf" for
+        dependent random effects.
+    ds_ix : integer
+        The number of the data set
+    """
+
+    def __init__(self, meth, irfs, ds_ix):
+
+        bname = "_%s_%s_%d" % (meth, irfs, ds_ix)
+
+        self.coef = getattr(lme_r_results, "coef" + bname)
+        self.vcov_r = getattr(lme_r_results, "vcov" + bname)
+        self.cov_re_r = getattr(lme_r_results, "cov_re" + bname)
+        self.sig2_r = getattr(lme_r_results, "sig2" + bname)
+        self.loglike = getattr(lme_r_results, "loglike" + bname)
+
+        if hasattr(lme_r_results, "ranef_mean" + bname):
+            self.ranef_postmean = getattr(lme_r_results, "ranef_mean"
+                                          + bname)
+            self.ranef_condvar = getattr(lme_r_results,
+                                         "ranef_condvar" + bname)
+            self.ranef_condvar = np.atleast_2d(self.ranef_condvar)
+
+        # Load the data file
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+        rdir = os.path.join(cur_dir, 'results')
+        fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
+        fid = open(fname)
+        rdr = csv.reader(fid)
+        header = rdr.next()
+        data = [[float(x) for x in line] for line in rdr]
+        data = np.asarray(data)
+
+        # Split into exog, endog, etc.
+        self.endog = data[:,header.index("endog")]
+        self.groups = data[:,header.index("groups")]
+        ii = [i for i,x in enumerate(header) if
+              x.startswith("exog_fe")]
+        self.exog_fe = data[:,ii]
+        ii = [i for i,x in enumerate(header) if
+              x.startswith("exog_re")]
+        self.exog_re = data[:,ii]
+
+
 
 
 class TestMixedLM(object):
@@ -26,6 +82,7 @@ class TestMixedLM(object):
 
                     cov_pen = penalties.PSD(cov_pen_wt)
 
+                    np.random.seed(355890504)
                     exog_fe = np.random.normal(size=(n*m, p))
                     exog_re = np.random.normal(size=(n*m, pr))
                     endog = exog_fe.sum(1) + np.random.normal(size=n*m)
@@ -63,6 +120,7 @@ class TestMixedLM(object):
 
     def test_default_re(self):
 
+        np.random.seed(323590805)
         exog = np.random.normal(size=(300,4))
         groups = np.kron(np.arange(100), [1,1,1])
         g_errors = np.kron(np.random.normal(size=100), [1,1,1])
@@ -73,6 +131,7 @@ class TestMixedLM(object):
 
     def test_formulas(self):
 
+        np.random.seed(24109403)
         exog = np.random.normal(size=(300,4))
         exog_re = np.random.normal(size=300)
         groups = np.kron(np.arange(100), [1,1,1])
@@ -97,6 +156,7 @@ class TestMixedLM(object):
 
     def test_regularized(self):
 
+        np.random.seed(3453908)
         exog = np.random.normal(size=(400,5))
         groups = np.kron(np.arange(100), np.ones(4))
         expected_endog = exog[:,0] - exog[:,2]
@@ -138,72 +198,43 @@ class TestMixedLM(object):
             return
 
         irfs = "irf" if irf else "drf"
-
         meth = "reml" if reml else "ml"
 
-        coef = globals()["coef_%s_%s_%d" % (meth, irfs, ds_ix)]
-        vcov_r = globals()["vcov_%s_%s_%d" % (meth, irfs, ds_ix)]
-        cov_re_r = globals()["cov_re_%s_%s_%d" % (meth, irfs, ds_ix)]
-        sig2_r = globals()["sig2_%s_%s_%d" % (meth, irfs, ds_ix)]
-        loglike = globals()["loglike_%s_%s_%d" % (meth, irfs, ds_ix)]
-
-        if not irf:
-            ranef_postmean = globals()["ranef_mean_%s_%s_%d" %
-                                       (meth, irfs, ds_ix)]
-            ranef_condvar = globals()["ranef_condvar_%s_%s_%d" %
-                                      (meth, irfs, ds_ix)]
-            ranef_condvar = np.atleast_2d(ranef_condvar)
+        rslt = R_Results(meth, irfs, ds_ix)
 
         # Variance component MLE ~ 0 may require manual tweaking of
         # algorithm parameters, so exclude from tests for now.
-        if np.min(np.diag(cov_re_r)) < 0.01:
+        if np.min(np.diag(rslt.cov_re_r)) < 0.01:
             print "Skipping %d since solution is on boundary." % ds_ix
             return
 
-        # Load the data file
-        cur_dir = os.path.dirname(os.path.abspath(__file__))
-        rdir = os.path.join(cur_dir, 'results')
-        fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
-        fid = open(fname)
-        rdr = csv.reader(fid)
-        header = rdr.next()
-        data = [[float(x) for x in line] for line in rdr]
-        data = np.asarray(data)
-
-        # Split into exog, endog, etc.
-        endog = data[:,header.index("endog")]
-        groups = data[:,header.index("groups")]
-        ii = [i for i,x in enumerate(header) if
-              x.startswith("exog_fe")]
-        exog_fe = data[:,ii]
-        ii = [i for i,x in enumerate(header) if
-              x.startswith("exog_re")]
-        exog_re = data[:,ii]
-
         # Fit the model
-        md = MixedLM(endog, exog_fe, groups, exog_re)
+        md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
+                     rslt.exog_re)
         if not irf: # Free random effects covariance
             mdf = md.fit(gtol=1e-7, reml=reml)
         else: # Independent random effects
+            k_fe = rslt.exog_fe.shape[1]
+            k_re = rslt.exog_re.shape[1]
             mdf = md.fit(reml=reml, gtol=1e-7,
-                         free=(np.ones(exog_fe.shape[1]),
-                               np.eye(exog_re.shape[1])))
+                         free=(np.ones(k_fe), np.eye(k_re)))
 
-        assert_almost_equal(mdf.fe_params, coef, decimal=4)
-        assert_almost_equal(mdf.cov_re, cov_re_r, decimal=4)
-        assert_almost_equal(mdf.sig2, sig2_r, decimal=4)
+        assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
+        assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
+        assert_almost_equal(mdf.sig2, rslt.sig2_r, decimal=4)
 
-        pf = exog_fe.shape[1]
-        assert_almost_equal(vcov_r, mdf.cov_params()[0:pf,0:pf],
+        pf = rslt.exog_fe.shape[1]
+        assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:pf,0:pf],
                             decimal=3)
 
-        assert_almost_equal(mdf.likeval, loglike[0], decimal=2)
+        assert_almost_equal(mdf.likeval, rslt.loglike[0], decimal=2)
 
         # Not supported in R
         if not irf:
-            assert_almost_equal(mdf.ranef()[0], ranef_postmean,
+            assert_almost_equal(mdf.ranef()[0], rslt.ranef_postmean,
                                 decimal=3)
-            assert_almost_equal(mdf.ranef_cov()[0], ranef_condvar,
+            assert_almost_equal(mdf.ranef_cov()[0],
+                                rslt.ranef_condvar,
                                 decimal=3)
 
     # Run all the tests against R

@@ -512,8 +512,8 @@ class MixedLM(base.LikelihoodModel):
         the value of `use_L`.  `hessian_full` is an analytic
         implementation of the Hessian with respect to cov_re.
         """
-        from statsmodels.tools.numdiff import approx_hess
-        return approx_hess_ce(params, self.loglike)
+        from statsmodels.tools.numdiff import approx_hess_cs
+        return approx_hess_cs(params, self.loglike)
 
 
     def _unpack(self, params, sym=True):
