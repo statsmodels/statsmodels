@@ -35,6 +35,15 @@ cython >= 0.20.1
 Optional Dependencies
 ---------------------
 
+X-12-ARIMA or X-13ARIMA-SEATS
+
+    http://www.census.gov/srd/www/x13as/
+
+    If available, time-series analysis can be conducted using either 
+    X-12-ARIMA or the newer X-13ARIMA-SEATS. You should place the 
+    appropriate executable on your PATH or set the X12PATH or X13PATH 
+    environmental variable to take advantage.
+
 matplotlib >= 1.1
 
     http://matplotlib.sf.net/
@@ -57,6 +66,7 @@ nose >= 1.0.0
 IPython >= 1.0
 
     Needed to build the docs.
+
 
 Easy Install
 ------------
