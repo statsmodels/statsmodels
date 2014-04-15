@@ -1,6 +1,11 @@
 """
 Run x12/x13-arima specs in a subprocess from Python and curry results back
 into python.
+
+Notes
+-----
+Many of the functions are called x12. However, they are also intended to work
+for x13. If this is not the case, it's a bug.
 """
 
 import os
@@ -17,6 +22,8 @@ from statsmodels.tools.sm_exceptions import (X12NotFoundError, X12Error,
 
 __all__ = ["select_arima_order"]
 
+_binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a')
+
 class _freq_to_period:
     def __getitem__(self, key):
         if key.startswith('M'):
@@ -32,30 +39,36 @@ _log_to_x12 = {True : 'log', False : 'none', None : 'auto'}
 _bool_to_yes_no = lambda x : 'yes' if x else 'no'
 
 
-def _find_x12(x12path=None):
-    if x12path is None:
-        x12path = os.getenv("X12PATH", "")
-
-    elif x12path.endswith(('x12a', 'x13a')):  # remove binary from path
+def _find_x12(x12path=None, prefer_x13=True):
+    """
+    If x12path is not given, then either x13as[.exe] or x12a[.exe] must
+    be found on the PATH. Otherwise, the environmental variable X12PATH or
+    X13PATH must be defined. If prefer_x13 is True, only X13PATH is searched
+    for. If it is false, only X12PATH is searched for.
+    """
+    if x12path is not None and x12path.endswith(_binary_names):
+        # remove binary from path if given
         x12path = os.path.dirname(x12path)
 
-    try:
-        subprocess.check_call(os.path.join(x12path, "x12a"),
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-        return os.path.join(x12path, "x12a")
-    except OSError, err:
+    global _binary_names
+    if not prefer_x13:  # search for x12 first
+        _binary_names = _binary_names[::-1]
+        if x12path is None:
+            x12path = os.getenv("X12PATH", "")
+    elif x12path is None:
+        x12path = os.getenv("X13PATH", "")
+
+    for binary in _binary_names:
+        x12 = os.path.join(x12path, binary)
         try:
-            subprocess.check_call(os.path.join(x12path, "x13a"),
-                                  stdout=subprocess.PIPE,
+            subprocess.check_call(x12, stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE)
-            return os.path.join(x12path, "x13a")
-        except OSError, err:
-            if err.errno == os.errno.ENOENT:
-                return False
-                #raise X12NotFoundError("Neither x12a nor x13a found "
-                #                       "on PATH")
-    return False
+            return x12
+        except OSError:
+            pass
+
+    else:
+        return False
 
 
 def _check_x12(x12path=None):
