@@ -287,11 +287,10 @@ def pandas_to_series_spec(x):
     return series_spec
 
 
-def x13_arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
-                       maxorder=(2, 1), maxdiff=(2, 1), diff=None,
-                       trading=False, retspec=False, speconly=False,
-                       start=None, freq=None, print_stdout=False,
-                       prefer_x13=True):
+def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
+                       log=None, outlier=True, trading=False, retspec=False,
+                       speconly=False, start=None, freq=None,
+                       print_stdout=False, x12path=None, prefer_x13=True):
     """
     Perform x13-arima analysis for monthly or quarterly data.
 
@@ -302,17 +301,6 @@ def x13_arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
         DatetimeIndex or PeriodIndex. However, you can pass an array-like
         object. If your object does not have a dates index then ``start`` and
         ``freq`` are not optional.
-    x12path : str or None
-        The path to x12 or x13 binary. If None, the program will attempt
-        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
-        depending on the value of prefer_x13.
-    X : array-like
-        Exogenous variables.
-    log : bool or None
-        If None, it is automatically determined whether to log the series or not.
-        If False, logs are not taken. If True, logs are taken.
-    outlier : bool
-        Whether or not outliers are tested for and corrected, if detected.
     maxorder : tuple
         The maximum order of the regular and seasonal ARMA polynomials to
         examine during the model identification. The order for the regular
@@ -329,6 +317,13 @@ def x13_arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
         differencing. Regular differencing may be 0, 1, or 2. Seasonal
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
+    X : array-like
+        Exogenous variables.
+    log : bool or None
+        If None, it is automatically determined whether to log the series or
+        not. If False, logs are not taken. If True, logs are taken.
+    outlier : bool
+        Whether or not outliers are tested for and corrected, if detected.
     trading : bool
         Whether or not trading day effects are tested for.
     retspec : bool
@@ -346,6 +341,10 @@ def x13_arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
     print_stdout : bool
         The stdout from X12/X13 is suppressed. To print it out, set this
         to True. Default is False.
+    x12path : str or None
+        The path to x12 or x13 binary. If None, the program will attempt
+        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
+        depending on the value of prefer_x13.
     prefer_x13 : bool
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
@@ -444,10 +443,10 @@ def x13_arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
         return results, seasadj, trend, irregular, stdout, spec
 
 
-def x13_select_arima_order(y, x12path=None, X=None, log=None, outlier=True,
-                           trading=False, maxorder=(2, 1), maxdiff=(2, 1),
-                           diff=None, print_stdout=False,
-                           start=None, freq=None, prefer_x13=True):
+def x13_select_arima_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
+                           X=None, log=None, outlier=True, trading=False,
+                           start=None, freq=None, print_stdout=False,
+                           x12path=None, prefer_x13=True):
     """
     Perform automatic seaonal ARIMA order identification using x12/x13 ARIMA.
 
@@ -458,19 +457,6 @@ def x13_select_arima_order(y, x12path=None, X=None, log=None, outlier=True,
         DatetimeIndex or PeriodIndex. However, you can pass an array-like
         object. If your object does not have a dates index then ``start`` and
         ``freq`` are not optional.
-    x12path : str or None
-        The path to x12 or x13 binary. If None, the program will attempt
-        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
-        depending on the value of prefer_x13.
-    X : array-like
-        Exogenous variables.
-    log : bool or None
-        If None, it is automatically determined whether to log the series or not.
-        If False, logs are not taken. If True, logs are taken.
-    outlier : bool
-        Whether or not outliers are tested for and corrected, if detected.
-    trading : bool
-        Whether or not trading day effects are tested for.
     maxorder : tuple
         The maximum order of the regular and seasonal ARMA polynomials to
         examine during the model identification. The order for the regular
@@ -487,12 +473,28 @@ def x13_select_arima_order(y, x12path=None, X=None, log=None, outlier=True,
         differencing. Regular differencing may be 0, 1, or 2. Seasonal
         differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
         ``diff`` is ignored.
+    X : array-like
+        Exogenous variables.
+    log : bool or None
+        If None, it is automatically determined whether to log the series or not.
+        If False, logs are not taken. If True, logs are taken.
+    outlier : bool
+        Whether or not outliers are tested for and corrected, if detected.
+    trading : bool
+        Whether or not trading day effects are tested for.
     start : str, datetime
         Must be given if ``y`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
     freq : str
         Must be givein if ``y`` does not have date information in its index.
         Anything accapted by pandas.DatetimeIndex for the freq value.
+    print_stdout : bool
+        The stdout from X12/X13 is suppressed. To print it out, set this
+        to True. Default is False.
+    x12path : str or None
+        The path to x12 or x13 binary. If None, the program will attempt
+        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
+        depending on the value of prefer_x13.
     prefer_x13 : bool
         If True, will look for x13as first and will fallback to the X13PATH
         environmental variable. If False, will look for x12a first and will
