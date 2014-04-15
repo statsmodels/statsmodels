@@ -20,7 +20,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (X12NotFoundError, X12Error,
                                              IOWarning)
 
-__all__ = ["x13_select_arima_order", "x13_arima_analysis"]
+__all__ = ["x13_arima_select_order", "x13_arima_analysis"]
 
 _binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a')
 
@@ -449,7 +449,7 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
     return res
 
 
-def x13_select_arima_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
+def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                            X=None, log=None, outlier=True, trading=False,
                            start=None, freq=None, print_stdout=False,
                            x12path=None, prefer_x13=True):
