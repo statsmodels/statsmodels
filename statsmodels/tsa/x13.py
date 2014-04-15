@@ -20,7 +20,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (X12NotFoundError, X12Error,
                                              IOWarning)
 
-__all__ = ["select_arima_order", "x13arima_analysis"]
+__all__ = ["x13_select_arima_order", "x13_arima_analysis"]
 
 _binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a')
 
@@ -287,11 +287,11 @@ def pandas_to_series_spec(x):
     return series_spec
 
 
-def x13arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
-                      maxorder=(2, 1), maxdiff=(2, 1), diff=None,
-                      trading=False, retspec=False, speconly=False,
-                      start=None, freq=None, print_stdout=False,
-                      prefer_x13=True):
+def x13_arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
+                       maxorder=(2, 1), maxdiff=(2, 1), diff=None,
+                       trading=False, retspec=False, speconly=False,
+                       start=None, freq=None, print_stdout=False,
+                       prefer_x13=True):
     """
     Perform x13-arima analysis for monthly or quarterly data.
 
@@ -444,10 +444,10 @@ def x13arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
         return results, seasadj, trend, irregular, stdout, spec
 
 
-def select_arima_order(y, x12path=None, X=None, log=None, outlier=True,
-                       trading=False, maxorder=(2, 1), maxdiff=(2, 1),
-                       diff=None, print_stdout=False,
-                       start=None, freq=None, prefer_x13=True):
+def x13_select_arima_order(y, x12path=None, X=None, log=None, outlier=True,
+                           trading=False, maxorder=(2, 1), maxdiff=(2, 1),
+                           diff=None, print_stdout=False,
+                           start=None, freq=None, prefer_x13=True):
     """
     Perform automatic seaonal ARIMA order identification using x12/x13 ARIMA.
 
@@ -526,10 +526,10 @@ def select_arima_order(y, x12path=None, X=None, log=None, outlier=True,
      seasadj,
      trend,
      irregular,
-     stdout) = x13arima_analysis(y, x12path=x12path, X=X, log=log,
-                                 outlier=outlier, trading=trading,
-                                 maxorder=maxorder, maxdiff=maxdiff, diff=diff,
-                                 start=start, freq=freq, prefer_x13=prefer_x13)
+     stdout) = x13_arima_analysis(y, x12path=x12path, X=X, log=log,
+                                  outlier=outlier, trading=trading,
+                                  maxorder=maxorder, maxdiff=maxdiff, diff=diff,
+                                  start=start, freq=freq, prefer_x13=prefer_x13)
     model = re.search("(?<=Final automatic model choice : ).*", results)
     order = model.group()
     if re.search("Mean is not significant", results):
@@ -561,13 +561,13 @@ if __name__ == "__main__":
     xpath = "/home/skipper/src/x12arima/x12a"
 
     try:
-        results = x13arima_analysis(xpath, ts)
+        results = x13_arima_analysis(xpath, ts)
     except:
         print "Caught exception"
 
-    results = x13arima_analysis(xpath, ts, log=False)
+    results = x13_arima_analysis(xpath, ts, log=False)
 
     #seas_y = pd.read_csv("usmelec.csv")
     #seas_y = pd.TimeSeries(seas_y["usmelec"].values,
     #                       index=pd.DatetimeIndex(seas_y["date"], freq="MS"))
-    #results = x13arima_analysis(xpath, seas_y)
+    #results = x13_arima_analysis(xpath, seas_y)

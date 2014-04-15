@@ -2,7 +2,7 @@ from nose import SkipTest
 from numpy.testing import assert_
 
 from statsmodels.tsa.base.datetools import dates_from_range
-from statsmodels.tsa.x12 import _find_x12, select_arima_order
+from statsmodels.tsa.x13 import _find_x12, x13_select_arima_order
 
 x13path = _find_x12()
 
@@ -31,23 +31,23 @@ class TestX13(object):
 
         cls.monthly_start_data = dta.resample('MS')
 
-    def test_select_arima_order(self):
-        res = select_arima_order(self.monthly_data)
+    def test_x13_select_arima_order(self):
+        res = x13_select_arima_order(self.monthly_data)
         assert_(isinstance(res.order, tuple))
         assert_(isinstance(res.sorder, tuple))
-        res = select_arima_order(self.monthly_start_data)
+        res = x13_select_arima_order(self.monthly_start_data)
         assert_(isinstance(res.order, tuple))
         assert_(isinstance(res.sorder, tuple))
-        res = select_arima_order(self.monthly_data.co2)
+        res = x13_select_arima_order(self.monthly_data.co2)
         assert_(isinstance(res.order, tuple))
         assert_(isinstance(res.sorder, tuple))
-        res = select_arima_order(self.monthly_start_data.co2)
+        res = x13_select_arima_order(self.monthly_start_data.co2)
         assert_(isinstance(res.order, tuple))
         assert_(isinstance(res.sorder, tuple))
 
-        res = select_arima_order(self.quarterly_data[['realgdp']])
+        res = x13_select_arima_order(self.quarterly_data[['realgdp']])
         assert_(isinstance(res.order, tuple))
         assert_(isinstance(res.sorder, tuple))
-        res = select_arima_order(self.quarterly_data.realgdp)
+        res = x13_select_arima_order(self.quarterly_data.realgdp)
         assert_(isinstance(res.order, tuple))
         assert_(isinstance(res.sorder, tuple))
