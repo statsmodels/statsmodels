@@ -20,7 +20,7 @@ from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (X12NotFoundError, X12Error,
                                              IOWarning)
 
-__all__ = ["select_arima_order"]
+__all__ = ["select_arima_order", "x13arima_analysis"]
 
 _binary_names = ('x13as.exe', 'x13as', 'x12a.exe', 'x12a')
 
@@ -46,11 +46,11 @@ def _find_x12(x12path=None, prefer_x13=True):
     X13PATH must be defined. If prefer_x13 is True, only X13PATH is searched
     for. If it is false, only X12PATH is searched for.
     """
+    global _binary_names
     if x12path is not None and x12path.endswith(_binary_names):
         # remove binary from path if given
         x12path = os.path.dirname(x12path)
 
-    global _binary_names
     if not prefer_x13:  # search for x12 first
         _binary_names = _binary_names[::-1]
         if x12path is None:
@@ -177,7 +177,6 @@ def _open_and_read(fname):
     return fout
 
 
-
 class Spec(object):
     @property
     def spec_name(self):
@@ -253,6 +252,12 @@ class SeriesSpec(Spec):
 def pandas_to_series_spec(x):
     #from statsmodels.tools.data import _check_period_index
     #_check_period_index(x)
+    if hasattr(x, 'columns'):  # convert to series
+        if len(x.columns) > 1:
+            raise ValueError("Does not handle DataFrame with more than one "
+                             "column")
+        x = x[x.columns[0]]
+
     data = "({})".format("\n".join(map(str, x.values.tolist())))
 
     # get periodicity
@@ -273,17 +278,103 @@ def pandas_to_series_spec(x):
                          " Please report or send a pull request if you want "
                          "this extended.")
 
-    name = x.name or "Unnamed Series"
+    if hasattr(x, 'name'):
+        name = x.name or "Unnamed Series"
+    else:
+        name = 'Unnamed Series'
     series_spec = SeriesSpec(data=data, name=name, period=period,
                              title=name, start="{}.{}".format(year, stperiod))
     return series_spec
 
 
-def x13arima_analysis(x12path, y, X=None, log=None, outlier=True,
-                      trading=False, retspec=False, speconly=False,
+def x13arima_analysis(y, x12path=None, X=None, log=None, outlier=True,
                       maxorder=(2, 1), maxdiff=(2, 1), diff=None,
-                      print_stdout=False,
-                      start=None, freq=None):
+                      trading=False, retspec=False, speconly=False,
+                      start=None, freq=None, print_stdout=False,
+                      prefer_x13=True):
+    """
+    Perform x13-arima analysis for monthly or quarterly data.
+
+    Parameters
+    ----------
+    y : array-like, pandas.Series
+        The series to model. It is best to use a pandas object with a
+        DatetimeIndex or PeriodIndex. However, you can pass an array-like
+        object. If your object does not have a dates index then ``start`` and
+        ``freq`` are not optional.
+    x12path : str or None
+        The path to x12 or x13 binary. If None, the program will attempt
+        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
+        depending on the value of prefer_x13.
+    X : array-like
+        Exogenous variables.
+    log : bool or None
+        If None, it is automatically determined whether to log the series or not.
+        If False, logs are not taken. If True, logs are taken.
+    outlier : bool
+        Whether or not outliers are tested for and corrected, if detected.
+    maxorder : tuple
+        The maximum order of the regular and seasonal ARMA polynomials to
+        examine during the model identification. The order for the regular
+        polynomial must be greater than zero and no larger than 4. The
+        order for the seaonal polynomial may be 1 or 2.
+    maxdiff : tuple
+        The maximum orders for regular and seasonal differencing in the
+        automatic differencing procedure. Acceptable inputs for regular
+        differencing are 1 and 2. The maximum order for seasonal differencing
+        is 1. If ``diff`` is specified then ``maxdiff`` should be None.
+        Otherwise, ``diff`` will be ignored. See also ``diff``.
+    diff : tuple
+        Fixes the orders of differencing for the regular and seasonal
+        differencing. Regular differencing may be 0, 1, or 2. Seasonal
+        differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
+        ``diff`` is ignored.
+    trading : bool
+        Whether or not trading day effects are tested for.
+    retspec : bool
+        Whether to return the created specification file. Can be useful for
+        debugging.
+    speconly : bool
+        Whether to create the specification file and then return it without
+        performing the analysis. Can be useful for debugging.
+    start : str, datetime
+        Must be given if ``y`` does not have date information in its index.
+        Anything accepted by pandas.DatetimeIndex for the start value.
+    freq : str
+        Must be givein if ``y`` does not have date information in its index.
+        Anything accapted by pandas.DatetimeIndex for the freq value.
+    print_stdout : bool
+        The stdout from X12/X13 is suppressed. To print it out, set this
+        to True. Default is False.
+    prefer_x13 : bool
+        If True, will look for x13as first and will fallback to the X13PATH
+        environmental variable. If False, will look for x12a first and will
+        fallback to the X12PATH environmental variable. If x12path points
+        to the path for the X12/X13 binary, it does nothing.
+
+
+    Returns
+    -------
+    results : str
+        The full output from the X12/X13 run.
+    seasadj : pandas.Series
+        The final seasonally adjusted ``y``
+    trend : pandas.Series
+        The trend-cycle component of ``y``
+    irregular : pandas.Series
+        The final irregular component of ``y``
+    stdout : str
+        The captured stdout produced by x12/x13.
+    spec : str, optional
+        Returned if ``retspec`` is True. The only thing returned if ``speconly``
+        is True.
+
+    Notes
+    -----
+    This works by creating a specification file, writing it to a temporary
+    directory, invoking X12/X13 in a subprocess, and reading the output back
+    in.
+    """
     x12path = _check_x12(x12path)
 
     if not isinstance(y, (pd.DataFrame, pd.Series)):
@@ -294,8 +385,7 @@ def x13arima_analysis(x12path, y, X=None, log=None, outlier=True,
                                                 freq=freq))
     spec_obj = pandas_to_series_spec(y)
     spec = spec_obj.create_spec()
-    if log is not None:
-        spec += "transform{{function={}}}\n".format(_log_to_x12[log])
+    spec += "transform{{function={}}}\n".format(_log_to_x12[log])
     if outlier:
         spec += "outlier{}\n"
     options = _make_automdl_options(maxorder, maxdiff, diff)
@@ -357,15 +447,89 @@ def x13arima_analysis(x12path, y, X=None, log=None, outlier=True,
 def select_arima_order(y, x12path=None, X=None, log=None, outlier=True,
                        trading=False, maxorder=(2, 1), maxdiff=(2, 1),
                        diff=None, print_stdout=False,
-                       start=None, freq=None):
+                       start=None, freq=None, prefer_x13=True):
+    """
+    Perform automatic seaonal ARIMA order identification using x12/x13 ARIMA.
+
+    Parameters
+    ----------
+    y : array-like, pandas.Series
+        The series to model. It is best to use a pandas object with a
+        DatetimeIndex or PeriodIndex. However, you can pass an array-like
+        object. If your object does not have a dates index then ``start`` and
+        ``freq`` are not optional.
+    x12path : str or None
+        The path to x12 or x13 binary. If None, the program will attempt
+        to find x13as or x12a on the PATH or by looking at X13PATH or X12PATH
+        depending on the value of prefer_x13.
+    X : array-like
+        Exogenous variables.
+    log : bool or None
+        If None, it is automatically determined whether to log the series or not.
+        If False, logs are not taken. If True, logs are taken.
+    outlier : bool
+        Whether or not outliers are tested for and corrected, if detected.
+    trading : bool
+        Whether or not trading day effects are tested for.
+    maxorder : tuple
+        The maximum order of the regular and seasonal ARMA polynomials to
+        examine during the model identification. The order for the regular
+        polynomial must be greater than zero and no larger than 4. The
+        order for the seaonal polynomial may be 1 or 2.
+    maxdiff : tuple
+        The maximum orders for regular and seasonal differencing in the
+        automatic differencing procedure. Acceptable inputs for regular
+        differencing are 1 and 2. The maximum order for seasonal differencing
+        is 1. If ``diff`` is specified then ``maxdiff`` should be None.
+        Otherwise, ``diff`` will be ignored. See also ``diff``.
+    diff : tuple
+        Fixes the orders of differencing for the regular and seasonal
+        differencing. Regular differencing may be 0, 1, or 2. Seasonal
+        differencing may be 0 or 1. ``maxdiff`` must be None, otherwise
+        ``diff`` is ignored.
+    start : str, datetime
+        Must be given if ``y`` does not have date information in its index.
+        Anything accepted by pandas.DatetimeIndex for the start value.
+    freq : str
+        Must be givein if ``y`` does not have date information in its index.
+        Anything accapted by pandas.DatetimeIndex for the freq value.
+    prefer_x13 : bool
+        If True, will look for x13as first and will fallback to the X13PATH
+        environmental variable. If False, will look for x12a first and will
+        fallback to the X12PATH environmental variable. If x12path points
+        to the path for the X12/X13 binary, it does nothing.
+
+    Returns
+    -------
+    results : Bunch
+        A bunch object that has the following attributes:
+
+        - order : tuple
+          The regular order
+        - sorder : tuple
+          The seasonal order
+        - include_mean : bool
+          Whether to include a mean or not
+        - results : str
+          The full results from the X12/X13 analysis
+        - stdout : str
+          The captured stdout from the X12/X13 analysis
+
+
+    Notes
+    -----
+    This works by creating a specification file, writing it to a temporary
+    directory, invoking X12/X13 in a subprocess, and reading the output back
+    in.
+    """
     (results,
      seasadj,
      trend,
      irregular,
-     stdout) = x13arima_analysis(x12path, y, X=X, log=log, outlier=outlier,
-                                 trading=trading, maxorder=maxorder,
-                                 maxdiff=maxdiff, diff=diff, start=start,
-                                 freq=freq)
+     stdout) = x13arima_analysis(y, x12path=x12path, X=X, log=log,
+                                 outlier=outlier, trading=trading,
+                                 maxorder=maxorder, maxdiff=maxdiff, diff=diff,
+                                 start=start, freq=freq, prefer_x13=prefer_x13)
     model = re.search("(?<=Final automatic model choice : ).*", results)
     order = model.group()
     if re.search("Mean is not significant", results):
