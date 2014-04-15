@@ -354,19 +354,22 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
 
     Returns
     -------
-    results : str
-        The full output from the X12/X13 run.
-    seasadj : pandas.Series
-        The final seasonally adjusted ``y``
-    trend : pandas.Series
-        The trend-cycle component of ``y``
-    irregular : pandas.Series
-        The final irregular component of ``y``
-    stdout : str
-        The captured stdout produced by x12/x13.
-    spec : str, optional
-        Returned if ``retspec`` is True. The only thing returned if ``speconly``
-        is True.
+    res : Bunch
+        A bunch object with the following attributes:
+
+        - results : str
+          The full output from the X12/X13 run.
+        - seasadj : pandas.Series
+          The final seasonally adjusted ``y``
+        - trend : pandas.Series
+          The trend-cycle component of ``y``
+        - irregular : pandas.Series
+          The final irregular component of ``y``
+        - stdout : str
+          The captured stdout produced by x12/x13.
+        - spec : str, optional
+          Returned if ``retspec`` is True. The only thing returned if
+          ``speconly`` is True.
 
     Notes
     -----
@@ -438,9 +441,12 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
     #NOTE: there isn't likely anything in stdout that's not in results
     #      so may be safe to just suppress and remove it
     if not retspec:
-        return results, seasadj, trend, irregular, stdout
+        res = Bunch(results=results, seasadj=seasadj, trend=trend,
+                    irregular=irregular, stdout=stdout)
     else:
-        return results, seasadj, trend, irregular, stdout, spec
+        res = Bunch(results=results, seasadj=seasadj, trend=trend,
+                    irregular=irregular, stdout=stdout, spec=spec)
+    return res
 
 
 def x13_select_arima_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
@@ -517,32 +523,27 @@ def x13_select_arima_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         - stdout : str
           The captured stdout from the X12/X13 analysis
 
-
     Notes
     -----
     This works by creating a specification file, writing it to a temporary
     directory, invoking X12/X13 in a subprocess, and reading the output back
     in.
     """
-    (results,
-     seasadj,
-     trend,
-     irregular,
-     stdout) = x13_arima_analysis(y, x12path=x12path, X=X, log=log,
-                                  outlier=outlier, trading=trading,
-                                  maxorder=maxorder, maxdiff=maxdiff, diff=diff,
-                                  start=start, freq=freq, prefer_x13=prefer_x13)
-    model = re.search("(?<=Final automatic model choice : ).*", results)
+    results = x13_arima_analysis(y, x12path=x12path, X=X, log=log,
+                                 outlier=outlier, trading=trading,
+                                 maxorder=maxorder, maxdiff=maxdiff, diff=diff,
+                                 start=start, freq=freq, prefer_x13=prefer_x13)
+    model = re.search("(?<=Final automatic model choice : ).*", results.results)
     order = model.group()
-    if re.search("Mean is not significant", results):
+    if re.search("Mean is not significant", results.results):
         include_mean = False
-    elif re.search("Constant", results):
+    elif re.search("Constant", results.results):
         include_mean = True
     else:
         include_mean = False
     order, sorder = _clean_order(order)
     res = Bunch(order=order, sorder=sorder, include_mean=include_mean,
-                results=results, stdout=stdout)
+                results=results.results, stdout=results.stdout)
     return res
 
 
