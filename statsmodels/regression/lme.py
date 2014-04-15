@@ -207,7 +207,7 @@ class MixedLM(base.LikelihoodModel):
         covariance structure (the "random effects" covariates).  If
         None, defaults to a random intercept for each of the groups.
         May also be set from a formula using a call to `set_random`.
-    use_L : bool
+    use_sqrt : bool
         If True, optimization is carried out using the lower
         triangle of the square root of the random effects
         covariance matrix, otherwise it is carried out using the
@@ -220,16 +220,16 @@ class MixedLM(base.LikelihoodModel):
     The covariates in `exog` and `exog_re` may (but need not)
     partially or wholly overlap.
 
-    `use_L` should almost always be set to True.  The main use case
-    for use_L=False is when complicated patterns of fixed values in
+    `use_sqrt` should almost always be set to True.  The main use case
+    for use_sqrt=False is when complicated patterns of fixed values in
     the covariance structure are set (using the `free` argument to
     `fit`) that cannot be expressed in terms of the Cholesky factor L.
     """
 
     def __init__(self, endog, exog, groups, exog_re=None,
-                 use_L=True, missing='none'):
+                 use_sqrt=True, missing='none'):
 
-        self.use_L = use_L
+        self.use_sqrt = use_sqrt
 
         # Some defaults
         self.reml = True
@@ -343,6 +343,8 @@ class MixedLM(base.LikelihoodModel):
         self.exog_re_li = self.group_list(self.exog_re)
         self.k_re = self.exog_re.shape[1]
         self.k_re2 = self.k_re * (self.k_re + 1) // 2
+        self.nparams = self.k_fe + self.k_re2
+
 
     def group_list(self, array):
         """
@@ -509,7 +511,7 @@ class MixedLM(base.LikelihoodModel):
         """
         Hessian of log-likelihood evaluated at `params`.  Note that
         this uses either `cov_re` or its square root (L) depending on
-        the value of `use_L`.  `hessian_full` is an analytic
+        the value of `use_sqrt`.  `hessian_full` is an analytic
         implementation of the Hessian with respect to cov_re.
         """
         from statsmodels.tools.numdiff import approx_hess_cs
@@ -541,6 +543,10 @@ class MixedLM(base.LikelihoodModel):
 
         fe_params = params[0:self.k_fe]
         re_params = params[self.k_fe:]
+
+#        if params.dtype == np.complex128:
+#            print "EEEEEEEEEEEEEEEEEEEEEEEEE"
+#            return None
 
         # Unpack the covariance matrix of the random effects
         cov_re = np.zeros((self.k_re, self.k_re), dtype=np.float64)
@@ -680,8 +686,8 @@ class MixedLM(base.LikelihoodModel):
             The log-likelihood value at `params`.
         """
 
-        if self.use_L:
-            return self.loglike_L(params)
+        if self.use_sqrt:
+            return self.loglike_sqrt(params)
         else:
             return self.loglike_full(params)
 
@@ -829,12 +835,14 @@ class MixedLM(base.LikelihoodModel):
             The score vector, calculated at `params`.
         """
 
-        if self.use_L:
-            return self.score_pat * self.score_L(params)
+        if self.use_sqrt:
+            scr = self.score_pat * self.score_sqrt(params)
         else:
-            return self.score_pat * self.score_full(params)
+            scr = self.score_pat * self.score_full(params)
 
-    def loglike_L(self, params):
+        return scr
+
+    def loglike_sqrt(self, params):
         """
         Returns the log likelihood evaluated at a given point, for the
         parameterization in which the random effects covariance matrix
@@ -864,7 +872,7 @@ class MixedLM(base.LikelihoodModel):
 
 
 
-    def score_L(self, params):
+    def score_sqrt(self, params):
         """
         Returns the score vector evaluated at a given point, using a
         parameterization in which the random effects covariance matrix
@@ -1208,6 +1216,9 @@ class MixedLM(base.LikelihoodModel):
 
         fval = func(params)
 
+        if max_iter == False:
+            return params, False
+
         for itr in range(max_iter):
 
             gro = score(params)
@@ -1249,7 +1260,7 @@ class MixedLM(base.LikelihoodModel):
             `start["cov_re"]` is provided, then `start["sig2"]` must
             also be provided (this is the error variance).
             Alternatively, the random effects may be specified as
-            `start["cov_re_L_unscaled"]`, which is the packed lower
+            `start["cov_re_sqrt_unscaled"]`, which is the packed lower
             triangle of the covariance matrix in the
             profile parameterization (in this case sig2 is not used).
         reml : bool
@@ -1275,8 +1286,8 @@ class MixedLM(base.LikelihoodModel):
             0/1 indicator arrays.  The first element of `free`
             corresponds to the regression slopes and the second
             element of `free` corresponds to the random effects
-            covariance matrix (if `use_L` is False) or it square root
-            (if `use_L` is True).  A 1 in either array indicates that
+            covariance matrix (if `use_sqrt` is False) or it square root
+            (if `use_sqrt` is True).  A 1 in either array indicates that
             the corresponding parameter is estimated, a 0 indicates
             that it is fixed at its starting value.  One use case if
             to set free[1] to the identity matrix to estimate a model
@@ -1293,17 +1304,11 @@ class MixedLM(base.LikelihoodModel):
         self.cov_pen = cov_pen
         self.fe_pen = fe_pen
 
+        self._set_score_pattern(free)
+
         # Needed for steepest descent
         neg_like = lambda x: -self.loglike(x)
         neg_score = lambda x: -self.score(x)
-
-        if free is not None:
-            pat_slopes = free[0]
-            ix = np.tril_indices(self.k_re)
-            pat_cov_re = free[1][ix]
-            self.score_pat = np.concatenate((pat_slopes, pat_cov_re))
-        else:
-            self.score_pat = np.ones(self.nparams)
 
         if full_output:
             hist = []
@@ -1318,20 +1323,20 @@ class MixedLM(base.LikelihoodModel):
             fe_params = start["fe"]
         else:
             fe_params = np.zeros(self.exog.shape[1], dtype=np.float64)
-        if "cov_re_L_unscaled" in start:
-            if self.use_L:
-                re_params = start["cov_re_L_unscaled"]
+        if "cov_re_sqrt_unscaled" in start:
+            if self.use_sqrt:
+                re_params = start["cov_re_sqrt_unscaled"]
             else:
-                vec = start["cov_re_L_unscaled"]
+                vec = start["cov_re_sqrt_unscaled"]
                 mat = np.zeros((self.k_re, self.k_re), dtype=np.float64)
                 mat[ix] = vec
                 mat = np.dot(mat, mat.T)
                 re_params = mat[ix]
         elif "cov_re" in start:
             cov_re_unscaled = start["cov_re"] / start["sig2"]
-            if self.use_L:
-                cov_re_L_unscaled = np.linalg.cholesky(cov_re_unscaled)
-                re_params = cov_re_L_unscaled[ix]
+            if self.use_sqrt:
+                cov_re_sqrt_unscaled = np.linalg.cholesky(cov_re_unscaled)
+                re_params = cov_re_sqrt_unscaled[ix]
             else:
                 re_params = cov_re_unscaled[ix]
         else:
@@ -1343,18 +1348,17 @@ class MixedLM(base.LikelihoodModel):
         # EM iterations
         if num_em > 0:
             sig2 = 1.
+            cov_re = np.eye(self.k_re)
             fe_params, cov_re, sig2 = self.EM(fe_params, cov_re, sig2,
                                              num_em, hist)
 
             # Gradient algorithms use a different parameterization
             # that profiles out sigma^2.
-            if self.use_L:
+            if self.use_sqrt:
                 params_prof = self._pack(fe_params, cov_re / sig2)
             else:
                 cov_re_rt = np.linalg.cholesky(cov_re / sig2)
                 params_prof = self._pack(fe_params, cov_re_rt)
-            if np.max(np.abs(score(params_prof))) < gtol:
-                success = True
 
         # Try up to 10 times to make the optimization work, using
         # additional steepest descent steps to improve the starting
@@ -1369,40 +1373,37 @@ class MixedLM(base.LikelihoodModel):
                 break
 
             # Gradient iterations
-            try:
-                fit_args = dict(kwargs)
-                fit_args["retall"] = hist is not None
-                # Only bfgs seems to work for some reason.
-                fit_args["method"] = "bfgs"
-                rslt = super(MixedLM, self).fit(start_params=params_prof, **fit_args)
-            except np.linalg.LinAlgError:
-                continue
+            if do_cg:
+                try:
+                    fit_args = dict(kwargs)
+                    fit_args["retall"] = hist is not None
+                    # Only bfgs seems to work for some reason.
+                    fit_args["method"] = "bfgs"
+                    rslt = super(MixedLM, self).fit(start_params=params_prof, **fit_args)
+                except np.linalg.LinAlgError:
+                    continue
 
-            # The optimization succeeded
-            params_prof = rslt.params
-            success = True
-            if hist is not None:
-                hist.append(rslt.allvecs)
-            break
+                # The optimization succeeded
+                params_prof = rslt.params
+                success = True
+                if hist is not None:
+                    hist.append(rslt.allvecs)
+                break
+
+        if not success:
+            msg = "Gradient optimization failed."
+            warnings.warn(msg, ConvergenceWarning)
 
         # Convert to the final parameterization (i.e. undo the square
         # root transform of the covariance matrix, and the profiling
         # over the error variance).
         fe_params, cov_re_ltri = self._unpack(params_prof, sym=False)
-        if self.use_L:
+        if self.use_sqrt:
             cov_re_unscaled = np.dot(cov_re_ltri, cov_re_ltri.T)
         else:
             cov_re_unscaled = cov_re_ltri
         sig2 = self.get_sig2(fe_params, cov_re_unscaled)
         cov_re = sig2 * cov_re_unscaled
-
-        if not success:
-            if rslt is None:
-                msg = "Gradient optimization failed, try increasing num_sd."
-            else:
-                msg = "Gradient sup norm=%.3f, try increasing num_sd." %\
-                      np.max(np.abs(rslt[2]))
-            warnings.warn(msg, ConvergenceWarning)
 
         if np.min(np.abs(np.diag(cov_re))) < 0.01:
             msg = "The MLE may be on the boundary of the parameter space."
@@ -1440,6 +1441,15 @@ class MixedLM(base.LikelihoodModel):
 
         return results
 
+    def _set_score_pattern(self, free):
+        # TODO: could the pattern be set by a formula?
+        if free is not None:
+            pat_slopes = free[0]
+            ix = np.tril_indices(self.k_re)
+            pat_cov_re = free[1][ix]
+            self.score_pat = np.concatenate((pat_slopes, pat_cov_re))
+        else:
+            self.score_pat = np.ones(self.nparams)
 
 
 
@@ -1743,7 +1753,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         likev = []
         for x in rvalues:
             re_params[0] = x
-            start["cov_re_L_unscaled"] = re_params
+            start["cov_re_sqrt_unscaled"] = re_params
             md1 = model.fit(start=start,
                             free=(free_slopes, free_cov_re),
                             reml=self.reml, cov_pen=self.cov_pen)
