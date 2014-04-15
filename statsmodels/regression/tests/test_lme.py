@@ -92,8 +92,8 @@ class TestMixedLM(object):
                     md.reml = reml
                     md.cov_pen = cov_pen
                     if jl == 0:
-                        like = lambda x: -md.loglike_L(x)
-                        score = lambda x: -md.score_L(x)
+                        like = lambda x: -md.loglike_sqrt(x)
+                        score = lambda x: -md.score_sqrt(x)
                     else:
                         like = lambda x: -md.loglike(x)
                         score = lambda x: -md.score(x)
@@ -128,6 +128,16 @@ class TestMixedLM(object):
         mdf1 = MixedLM(endog, exog, groups).fit()
         mdf2 = MixedLM(endog, exog, groups, np.ones(300)).fit()
         assert_almost_equal(mdf1.params, mdf2.params, decimal=8)
+
+
+    def test_EM(self):
+
+        np.random.seed(323590805)
+        exog = np.random.normal(size=(300,4))
+        groups = np.kron(np.arange(100), [1,1,1])
+        g_errors = np.kron(np.random.normal(size=100), [1,1,1])
+        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        mdf1 = MixedLM(endog, exog, groups).fit()
 
     def test_formulas(self):
 
