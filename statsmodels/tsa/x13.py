@@ -18,8 +18,9 @@ import pandas as pd
 
 from statsmodels.compat.python import iteritems
 from statsmodels.tools.tools import Bunch
-from statsmodels.tools.sm_exceptions import (X12NotFoundError, X12Error,
-                                             IOWarning)
+from statsmodels.tools.sm_exceptions import (X13NotFoundError,
+                                             IOWarning, X13Error,
+                                             X13Warning)
 
 __all__ = ["x13_arima_select_order", "x13_arima_analysis"]
 
@@ -79,9 +80,9 @@ def _find_x12(x12path=None, prefer_x13=True):
 def _check_x12(x12path=None):
     x12path = _find_x12(x12path)
     if not x12path:
-        raise X12NotFoundError("x12a and x13a not found on path. Give the "
-                               "path, put them on the path, or set the "
-                               "X12PATH environmental variable.")
+        raise X13NotFoundError("x12a and x13as not found on path. Give the "
+                               "path, put them on PATH, or set the "
+                               "X12PATH or X13PATH environmental variable.")
     return x12path
 
 
@@ -159,9 +160,9 @@ def _make_regression_options(trading, X):
 def _check_errors(errors):
     errors = errors[errors.find("spc:")+4:].strip()
     if errors and 'ERROR' in errors:
-        raise ValueError(errors)
+        raise X13Error(errors)
     elif errors and 'WARNING' in errors:
-        warn(errors, UserWarning)
+        warn(errors, X13Warning)
 
 
 def _convert_out_to_series(x, dates, name):
@@ -424,7 +425,7 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
         seasadj = _open_and_read(ftempout.name + '.d11')
         trend = _open_and_read(ftempout.name + '.d12')
         irregular = _open_and_read(ftempout.name + '.d13')
-    except X12Error, err:
+    except X13Error, err:
         raise err
     finally:
         try:  # sometimes this gives a permission denied error?

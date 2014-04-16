@@ -19,15 +19,19 @@ class MissingDataError(Exception):
     pass
 
 
-class X12NotFoundError(Exception):
+class X13NotFoundError(Exception):
     pass
 
 
-class X12Error(Exception):
+class X13Error(Exception):
     pass
 
 
 # Warning
+
+class X13Warning(Warning):
+    pass
+
 
 class IOWarning(RuntimeWarning):
     pass
