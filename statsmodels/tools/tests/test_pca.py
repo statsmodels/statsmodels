@@ -37,13 +37,13 @@ xf = data.xo/1000.
 
 
 def test_pca_princomp():
-    pcares = pca(xf)
+    pcares = pca(xf, corr=False)
     check_pca_princomp(pcares, princomp1)
-    pcares = pca(xf[:20, :])
+    pcares = pca(xf[:20, :], corr=False)
     check_pca_princomp(pcares, princomp2)
-    pcares = pca(xf[:20, :] - xf[:20, :].mean(0))
+    pcares = pca(xf[:20, :] - xf[:20, :].mean(0), corr=False)
     check_pca_princomp(pcares, princomp3)
-    pcares = pca(xf[:20, :] - xf[:20, :].mean(0), demean=0)
+    pcares = pca(xf[:20, :] - xf[:20, :].mean(0), demean=0, corr=False)
     check_pca_princomp(pcares, princomp3)
 
 
