@@ -16,6 +16,7 @@ from warnings import warn
 
 import pandas as pd
 
+from statsmodels.compat.python import iteritems
 from statsmodels.tools.tools import Bunch
 from statsmodels.tools.sm_exceptions import (X12NotFoundError, X12Error,
                                              IOWarning)
@@ -441,11 +442,14 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
     #NOTE: there isn't likely anything in stdout that's not in results
     #      so may be safe to just suppress and remove it
     if not retspec:
-        res = Bunch(results=results, seasadj=seasadj, trend=trend,
-                    irregular=irregular, stdout=stdout)
+        res = X13ArimaAnalysisResult(observed=y, results=results,
+                                     seasadj=seasadj, trend=trend,
+                                     irregular=irregular, stdout=stdout)
     else:
-        res = Bunch(results=results, seasadj=seasadj, trend=trend,
-                    irregular=irregular, stdout=stdout, spec=spec)
+        res = X13ArimaAnalysisResult(observed=y, results=results,
+                                     seasadj=seasadj, trend=trend,
+                                     irregular=irregular, stdout=stdout,
+                                     spec=spec)
     return res
 
 
@@ -545,6 +549,28 @@ def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     res = Bunch(order=order, sorder=sorder, include_mean=include_mean,
                 results=results.results, stdout=results.stdout)
     return res
+
+
+class X13ArimaAnalysisResult(object):
+    def __init__(self, **kwargs):
+        for key, value in iteritems(kwargs):
+            setattr(self, key, value)
+
+    def plot(self):
+        from statsmodels.graphics.utils import _import_mpl
+        plt = _import_mpl()
+        fig, axes = plt.subplots(4, 1, sharex=True)
+        self.observed.plot(ax=axes[0], legend=False)
+        axes[0].set_ylabel('Observed')
+        self.seasadj.plot(ax=axes[1], legend=False)
+        axes[1].set_ylabel('Seas. Adjusted')
+        self.trend.plot(ax=axes[2], legend=False)
+        axes[2].set_ylabel('Trend')
+        self.irregular.plot(ax=axes[3], legend=False)
+        axes[3].set_ylabel('Irregular')
+
+        fig.tight_layout()
+        return fig
 
 
 if __name__ == "__main__":
