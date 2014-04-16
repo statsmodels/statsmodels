@@ -10,6 +10,7 @@ TODO : add class for better reuse of results
 
 import numpy as np
 
+
 class PCA(object):
     """
     Principal Components Analysis
@@ -34,7 +35,8 @@ class PCA(object):
     Attributes
     ----------
     """
-    def __init__(self, X, on='corr', norm=0, demean=False, method='eig', ddof=1):
+    def __init__(self, X, on='corr', norm=0, demean=False, method='eig',
+                 ddof=1):
         if method == 'eig':
             proj, fact, evals, evecs = pca(X, 0, norm, demean, on, ddof)
         elif method == 'svd':
@@ -49,6 +51,7 @@ class PCA(object):
         self.factors = fact
         self.components = evals
         self.loadings = evecs
+
 
 def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     '''principal components with eigenvector decomposition
@@ -104,17 +107,17 @@ def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     evals, evecs = np.linalg.eig(Y)
     indices = np.argsort(evals)
     indices = indices[::-1]
-    evecs = evecs[:,indices]
+    evecs = evecs[:, indices]
     evals = evals[indices]
 
     if keepdim > 0 and keepdim < Y.shape[1]:
-        evecs = evecs[:,:keepdim]
+        evecs = evecs[:, :keepdim]
         evals = evals[:keepdim]
 
     if normalize:
         #for i in range(shape(evecs)[1]):
         #    evecs[:,i] / linalg.norm(evecs[:,i]) * sqrt(evals[i])
-        evecs = evecs/np.sqrt(evals) #np.sqrt(np.dot(evecs.T, evecs) * evals)
+        evecs = evecs/np.sqrt(evals)  # np.sqrt(np.dot(evecs.T, evecs) * evals)
 
     # get factor matrix
     #x = np.dot(evecs.T, x.T)
@@ -124,7 +127,6 @@ def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     #print x.shape, factors.shape, evecs.shape, m.shape
     xreduced = np.dot(factors, evecs.T) + m
     return xreduced, factors, evals, evecs
-
 
 
 def pcasvd(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
@@ -179,8 +181,8 @@ def pcasvd(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
         m = np.zeros(x.shape[1])
     x -= m
 
-    if on == 'corr': # center and standardize
-        if not demean: # do it anyway
+    if on == 'corr':  # center and standardize
+        if not demean:  # do it anyway
             m = x.mean(0)
             Y = x - m
         else:
@@ -189,11 +191,10 @@ def pcasvd(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     elif on == 'cov':
         Y = x
 
-
     U, s, v = np.linalg.svd(Y)
-    factors = np.dot(U.T, Y).T #princomps
+    factors = np.dot(U.T, Y).T  # princomps
     if keepdim:
-        xreduced = np.dot(factors[:,:keepdim], U[:,:keepdim].T) + m
+        xreduced = np.dot(factors[:, :keepdim], U[:, :keepdim].T) + m
     else:
         xreduced = data
         keepdim = nvars
@@ -203,7 +204,8 @@ def pcasvd(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     # no idea why denominator for s is with minus 1
     evals = s**2/(x.shape[0]-ddof)
     #print keepdim
-    return xreduced, factors[:,:keepdim], evals[:keepdim], U[:,:keepdim] #, v
+    return xreduced, factors[:, :keepdim], evals[:keepdim], U[:, :keepdim]
+    # , v
 
 
 __all__ = ['pca', 'pcasvd', 'PCA']
