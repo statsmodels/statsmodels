@@ -410,7 +410,7 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
         p.wait()
         stdout = p.stdout.read()
         if print_stdout:
-            print p.stdout.read()
+            print(p.stdout.read())
         # check for errors
         errors = _open_and_read(ftempout.name + '.err')
         _check_errors(errors)
@@ -592,7 +592,7 @@ if __name__ == "__main__":
     try:
         results = x13_arima_analysis(xpath, ts)
     except:
-        print "Caught exception"
+        print("Caught exception")
 
     results = x13_arima_analysis(xpath, ts, log=False)
 
