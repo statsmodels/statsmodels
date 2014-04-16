@@ -39,22 +39,23 @@ xf = data.xo/1000.
 def test_pca_princomp():
     pcares = pca(xf)
     check_pca_princomp(pcares, princomp1)
-    pcares = pca(xf[:20,:])
+    pcares = pca(xf[:20, :])
     check_pca_princomp(pcares, princomp2)
-    pcares = pca(xf[:20,:]-xf[:20,:].mean(0))
+    pcares = pca(xf[:20, :] - xf[:20, :].mean(0))
     check_pca_princomp(pcares, princomp3)
-    pcares = pca(xf[:20,:]-xf[:20,:].mean(0), demean=0)
+    pcares = pca(xf[:20, :] - xf[:20, :].mean(0), demean=0)
     check_pca_princomp(pcares, princomp3)
 
 
 def test_pca_svd():
     xreduced, factors, evals, evecs  = pca(xf)
-    factors_wconst = np.c_[factors, np.ones((factors.shape[0],1))]
+    xred_svd, factors_svd, evals_svd, evecs_svd = pcasvd(xf)
+
+    factors_wconst = np.c_[factors, np.ones((factors.shape[0], 1))]
     beta = np.dot(np.linalg.pinv(factors_wconst), xf)
     #np.dot(np.linalg.pinv(factors_wconst),x2/1000.).T[:,:4] - evecs
-    assert_array_almost_equal(beta.T[:,:4], evecs, 14)
+    assert_array_almost_equal(beta.T[:, :4], evecs, 14)
 
-    xred_svd, factors_svd, evals_svd, evecs_svd = pcasvd(xf, keepdim=0)
     assert_array_almost_equal(evals_svd, evals, 14)
     msign = (evecs/evecs_svd)[0]
     assert_array_almost_equal(msign*evecs_svd, evecs, 13)
