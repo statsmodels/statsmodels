@@ -126,7 +126,11 @@ def pca(data, keepdim=None, normalize=False, demean=True, corr=True,
     else:
         evals, evecs = _pca_eig(x, corr)
 
-    if keepdim > 0 and keepdim < x.shape[1]:
+    if keepdim is not None:
+        if keepdim == 0:
+            raise ValueError("keepdim of 0 not supported")
+        elif keepdim > x.shape[1]:
+            raise ValueError("keepdim is larger than the number of variables")
         evecs = evecs[:, :keepdim]
         evals = evals[:keepdim]
 
