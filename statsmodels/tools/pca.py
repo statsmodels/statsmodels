@@ -19,33 +19,31 @@ class PCA(object):
     ----------
     X : array-like
         2d array-like variable with variables in columns
-    on : str {'corr', 'cov'}, optonal
-        Perform PCA on correlation ('corr') or covariance ('cov')
+    corr : bool
+        If True, perform PCA on the correlation matrix. If False, use the
+        covariance matrix.
     norm : bool, optional
         False - Principal components are normed to 1
         True - Principal components are normed to the associated eigenvalues
-    method : str {'eig', 'svd'}, optional
-        'eig' - compute the eigenvalues and eigenvectors directly
-        'svd' - compute via the singular value decomposition
-    ddof : int
-        The degrees of freedom correction for the correlation or covariance
-        calculation. Result is normalized by (N - ddof) where N is the number
-        of observations.
+    use_svd : bool
+        If True, compute via the singular value decomposition ``np.linalg.svd``
+        If False, compute via the eigenvalues and eigenvectors directly
+        using ``np.linalg.eig``.
 
     Attributes
     ----------
     """
-    def __init__(self, X, on='corr', norm=0, demean=False, method='eig',
-                 ddof=1):
-        if method == 'eig':
-            proj, fact, evals, evecs = pca(X, 0, norm, demean, on, ddof)
-        elif method == 'svd':
-            if on == 'corr':
+    def __init__(self, X, corr=True, normalize=False, demean=False,
+                 use_svd=True):
+        if not use_svd:
+            proj, fact, evals, evecs = pca(X, 0, normalize, demean, corr)
+        else:
+            if corr:
                 ddof = 0
             else:
                 ddof = 1
             demean = True
-            proj, fact, evals, evecs = pcasvd(X, 0, norm, demean, on, ddof)
+            proj, fact, evals, evecs = pcasvd(X, 0, normalize, demean, corr)
 
         self.projections = proj
         self.factors = fact
@@ -53,9 +51,9 @@ class PCA(object):
         self.loadings = evecs
 
 
-def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
-    '''principal components with eigenvector decomposition
-    similar to princomp in matlab
+def pca(data, keepdim=0, normalize=False, demean=True, corr=True):
+    """
+    Principal components with eigenvector decomposition
 
     Parameters
     ----------
@@ -64,12 +62,13 @@ def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     keepdim : integer
         number of eigenvectors to keep
         if keepdim is zero, then all eigenvectors are included
-    normalize : boolean
-        if true, then eigenvectors are normalized by sqrt of eigenvalues
+    normalize : bool
+        If True, then eigenvectors are normalized by sqrt of eigenvalues
     demean : boolean
         if true, then the column mean is subtracted from the data
-    on : str {'corr', 'cov'}, optonal
-        Perform PCA on correlation ('corr') or covariance ('cov')
+    cov : bool
+        If True, perform PCA on covariance matrix. If False, perform PCA
+        on correlation.
 
     Returns
     -------
@@ -88,9 +87,8 @@ def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     See Also
     --------
     pcasvd : principal component analysis using svd
-
-    '''
-    x = np.asarray(data)
+    """
+    x = np.array(data, copy=True)
     #make copy so original doesn't change, maybe not necessary anymore
     if demean:
         m = x.mean(0)
@@ -98,10 +96,10 @@ def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
         m = np.zeros(x.shape[1])
     x -= m
 
-    if on == 'corr':
-        Y = np.corrcoef(x, rowvar=0, ddof=ddof)
-    elif on == 'cov':
-        Y = np.cov(x, rowvar=0, ddof=ddof)
+    if corr:
+        Y = np.corrcoef(x, rowvar=0, ddof=1)
+    else:
+        Y = np.cov(x, rowvar=0, ddof=1)
 
     # Compute eigenvalues and sort into descending order
     evals, evecs = np.linalg.eig(Y)
@@ -129,8 +127,9 @@ def pca(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     return xreduced, factors, evals, evecs
 
 
-def pcasvd(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
-    '''principal components with svd
+def pcasvd(data, keepdim=0, normalize=0, demean=True, corr=True):
+    """
+    Principal components computed by SVD
 
     Parameters
     ----------
@@ -169,43 +168,36 @@ def pcasvd(data, keepdim=0, normalize=0, demean=True, on='cov', ddof=1):
     Notes
     -----
     This doesn't have yet the normalize option of pca.
-
-    '''
-    nobs, nvars = data.shape
+    """
+    x = np.array(data, copy=True)
+    nobs, nvars = x.shape
     #print nobs, nvars, keepdim
-    x = np.array(data)
-    #make copy so original doesn't change
     if demean:
         m = x.mean(0)
     else:
         m = np.zeros(x.shape[1])
     x -= m
 
-    if on == 'corr':  # center and standardize
-        if not demean:  # do it anyway
-            m = x.mean(0)
-            Y = x - m
-        else:
-            Y = x
-        Y /= np.std(x, 0)
-    elif on == 'cov':
+    if corr:
+        # standardize
+        Y = x/np.std(x, 0)
+        ddof = 0
+    else:
         Y = x
+        ddof = 1
 
     U, s, v = np.linalg.svd(Y)
-    factors = np.dot(U.T, Y).T  # princomps
-    if keepdim:
-        xreduced = np.dot(factors[:, :keepdim], U[:, :keepdim].T) + m
-    else:
-        xreduced = data
-        keepdim = nvars
-        "print reassigning keepdim to max", keepdim
+    evecs = v.T
+    evals = s**2/(x.shape[0] - ddof)
 
-    # s = evals, U = evecs
-    # no idea why denominator for s is with minus 1
-    evals = s**2/(x.shape[0]-ddof)
-    #print keepdim
-    return xreduced, factors[:, :keepdim], evals[:keepdim], U[:, :keepdim]
-    # , v
+    if keepdim:
+        evals = evals[:keepdim]
+        evecs = evecs[:, :keepdim]
+
+    factors = np.dot(x, evecs)  # princomps
+    xreduced = np.dot(factors, evecs.T) + m
+
+    return xreduced, factors, evals, evecs
 
 
 __all__ = ['pca', 'pcasvd', 'PCA']
