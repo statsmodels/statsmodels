@@ -56,8 +56,12 @@ def _find_x12(x12path=None, prefer_x13=True):
         _binary_names = _binary_names[::-1]
         if x12path is None:
             x12path = os.getenv("X12PATH", "")
+        if not x12path:
+            x12path = os.getenv("X13PATH", "")
     elif x12path is None:
         x12path = os.getenv("X13PATH", "")
+        if not x12path:
+            x12path = os.getenv("X12PATH", "")
 
     for binary in _binary_names:
         x12 = os.path.join(x12path, binary)
