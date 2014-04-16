@@ -9,9 +9,7 @@ TODO:
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-from statsmodels.sandbox import tools
-from statsmodels.sandbox.tools import pca, pcasvd
-from statsmodels.tsa.arima_process import arma_impulse_response
+from statsmodels.tools.pca import pca, pcasvd
 
 from .datamlw import *
 
@@ -24,6 +22,7 @@ def check_pca_princomp(pcares, princomp):
     assert_array_almost_equal(msign*factors, princomp.factors, 13)
     assert_array_almost_equal(evals, princomp.values.ravel(), 13)
 
+
 def check_pca_svd(pcares, pcasvdres):
     xreduced, factors, evals, evecs  = pcares
     xred_svd, factors_svd, evals_svd, evecs_svd = pcasvdres
@@ -35,6 +34,7 @@ def check_pca_svd(pcares, pcasvdres):
 
 
 xf = data.xo/1000.
+
 
 def test_pca_princomp():
     pcares = pca(xf)
