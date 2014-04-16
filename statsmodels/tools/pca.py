@@ -22,9 +22,11 @@ class PCA(object):
     corr : bool
         If True, perform PCA on the correlation matrix. If False, use the
         covariance matrix.
-    norm : bool, optional
+    normalize : bool, optional
         False - Principal components are normed to 1
         True - Principal components are normed to the associated eigenvalues
+    demean : bool, optional
+        Whether or not to demean X.
     use_svd : bool
         If True, compute via the singular value decomposition ``np.linalg.svd``
         If False, compute via the eigenvalues and eigenvectors directly
@@ -35,67 +37,17 @@ class PCA(object):
     """
     def __init__(self, X, corr=True, normalize=False, demean=False,
                  use_svd=True):
-        if not use_svd:
-            proj, fact, evals, evecs = pca(X, 0, normalize, demean, corr)
-        else:
-            if corr:
-                ddof = 0
-            else:
-                ddof = 1
-            demean = True
-            proj, fact, evals, evecs = pcasvd(X, 0, normalize, demean, corr)
+
+        (proj, factors,
+         evals, evecs) = pca(X, None, normalize, demean, corr, use_svd)
 
         self.projections = proj
-        self.factors = fact
+        self.factors = factors
         self.components = evals
         self.loadings = evecs
 
 
-def pca(data, keepdim=0, normalize=False, demean=True, corr=True):
-    """
-    Principal components with eigenvector decomposition
-
-    Parameters
-    ----------
-    data : ndarray, 2d
-        data with observations by rows and variables in columns
-    keepdim : integer
-        number of eigenvectors to keep
-        if keepdim is zero, then all eigenvectors are included
-    normalize : bool
-        If True, then eigenvectors are normalized by sqrt of eigenvalues
-    demean : boolean
-        if true, then the column mean is subtracted from the data
-    cov : bool
-        If True, perform PCA on covariance matrix. If False, perform PCA
-        on correlation.
-
-    Returns
-    -------
-    xreduced : ndarray, 2d, (nobs, nvars)
-        projection of the data x on the kept eigenvectors
-    factors : ndarray, 2d, (nobs, nfactors)
-        factor matrix, given by np.dot(x, evecs)
-    evals : ndarray, 2d, (nobs, nfactors)
-        eigenvalues
-    evecs : ndarray, 2d, (nobs, nfactors)
-        eigenvectors, normalized if normalize is true
-
-    Notes
-    -----
-
-    See Also
-    --------
-    pcasvd : principal component analysis using svd
-    """
-    x = np.array(data, copy=True)
-    #make copy so original doesn't change, maybe not necessary anymore
-    if demean:
-        m = x.mean(0)
-    else:
-        m = np.zeros(x.shape[1])
-    x -= m
-
+def _pca_eig(x, corr):
     if corr:
         Y = np.corrcoef(x, rowvar=0, ddof=1)
     else:
@@ -108,76 +60,10 @@ def pca(data, keepdim=0, normalize=False, demean=True, corr=True):
     evecs = evecs[:, indices]
     evals = evals[indices]
 
-    if keepdim > 0 and keepdim < Y.shape[1]:
-        evecs = evecs[:, :keepdim]
-        evals = evals[:keepdim]
-
-    if normalize:
-        #for i in range(shape(evecs)[1]):
-        #    evecs[:,i] / linalg.norm(evecs[:,i]) * sqrt(evals[i])
-        evecs = evecs/np.sqrt(evals)  # np.sqrt(np.dot(evecs.T, evecs) * evals)
-
-    # get factor matrix
-    #x = np.dot(evecs.T, x.T)
-    factors = np.dot(x, evecs)
-    # get original data from reduced number of components
-    #xreduced = np.dot(evecs.T, factors) + m
-    #print x.shape, factors.shape, evecs.shape, m.shape
-    xreduced = np.dot(factors, evecs.T) + m
-    return xreduced, factors, evals, evecs
+    return evals, evecs
 
 
-def pcasvd(data, keepdim=0, normalize=0, demean=True, corr=True):
-    """
-    Principal components computed by SVD
-
-    Parameters
-    ----------
-    data : ndarray, 2d
-        data with observations by rows and variables in columns
-    keepdim : integer
-        number of eigenvectors to keep
-        if keepdim is zero, then all eigenvectors are included
-    demean : boolean
-        if true, then the column mean is subtracted from the data
-    on : str {'corr', 'cov'}, optonal
-        Perform PCA on correlation ('corr') or covariance ('cov'). Note
-        that if on == 'corr', the data is standardized and `demean` is
-        ignored.
-    ddof : int
-        The degrees of freedom correction for the correlation or covariance
-        calculation. Result is normalized by (N - ddof) where N is the number
-        of observations.
-
-
-    Returns
-    -------
-    xreduced : ndarray, 2d, (nobs, nvars)
-        projection of the data x on the kept eigenvectors
-    factors : ndarray, 2d, (nobs, nfactors)
-        factor matrix, given by np.dot(x, evecs)
-    evals : ndarray, 2d, (nobs, nfactors)
-        eigenvalues
-    evecs : ndarray, 2d, (nobs, nfactors)
-        eigenvectors, normalized if normalize is true
-
-    See Also
-    -------
-    pca : principal component analysis using eigenvector decomposition
-
-    Notes
-    -----
-    This doesn't have yet the normalize option of pca.
-    """
-    x = np.array(data, copy=True)
-    nobs, nvars = x.shape
-    #print nobs, nvars, keepdim
-    if demean:
-        m = x.mean(0)
-    else:
-        m = np.zeros(x.shape[1])
-    x -= m
-
+def _pca_svd(x, corr):
     if corr:
         # standardize
         Y = x/np.std(x, 0)
@@ -190,14 +76,70 @@ def pcasvd(data, keepdim=0, normalize=0, demean=True, corr=True):
     evecs = v.T
     evals = s**2/(x.shape[0] - ddof)
 
-    if keepdim:
-        evals = evals[:keepdim]
+    return evals, evecs
+
+
+def pca(data, keepdim=None, normalize=False, demean=True, corr=True,
+        use_svd=True):
+    """
+    Function for principal components analysis
+
+    Parameters
+    ----------
+    data : ndarray, 2d
+        data with observations by rows and variables in columns
+    keepdim : integer
+        Number of eigenvectors to keep. If keepdim is None, then all
+        eigenvectors are included
+    normalize : bool
+        If True, then eigenvectors are normalized by sqrt of eigenvalues
+    demean : boolean
+        If true, then the column mean is subtracted from the data.
+    corr : bool
+        If True, perform PCA on correlation matrix. If False, perform PCA
+        on covariance matrix.
+    use_svd : bool
+        If True, uses np.linalg.svd. If False, uses np.linalg.eig.
+
+    Returns
+    -------
+    xreduced : ndarray, 2d, (nobs, nvars)
+        projection of the data x on the kept eigenvectors
+    factors : ndarray, 2d, (nobs, nfactors)
+        factor matrix, given by np.dot(x, evecs)
+    evals : ndarray, 2d, (nobs, nfactors)
+        eigenvalues
+    evecs : ndarray, 2d, (nobs, nfactors)
+        eigenvectors, normalized if normalize is true
+
+    """
+    x = np.array(data, copy=True)
+    #make copy so original doesn't change, maybe not necessary anymore
+    if demean:
+        m = x.mean(0)
+    else:
+        m = np.zeros(x.shape[1])
+    x -= m
+
+    if use_svd:
+        evals, evecs = _pca_svd(x, corr)
+    else:
+        evals, evecs = _pca_eig(x, corr)
+
+    if keepdim > 0 and keepdim < x.shape[1]:
         evecs = evecs[:, :keepdim]
+        evals = evals[:keepdim]
 
-    factors = np.dot(x, evecs)  # princomps
+    if normalize:
+        #for i in range(shape(evecs)[1]):
+        #    evecs[:,i] / linalg.norm(evecs[:,i]) * sqrt(evals[i])
+        evecs = evecs/np.sqrt(evals)  # np.sqrt(np.dot(evecs.T, evecs) * evals)
+
+    # get factor matrix
+    factors = np.dot(x, evecs)
+    # get original data from reduced number of components
     xreduced = np.dot(factors, evecs.T) + m
-
     return xreduced, factors, evals, evecs
 
 
-__all__ = ['pca', 'pcasvd', 'PCA']
+__all__ = ['pca', 'PCA']

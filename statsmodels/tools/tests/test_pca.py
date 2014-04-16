@@ -9,7 +9,7 @@ TODO:
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-from statsmodels.tools.pca import pca, pcasvd
+from statsmodels.tools.pca import pca
 
 from .datamlw import *
 
@@ -48,8 +48,8 @@ def test_pca_princomp():
 
 
 def test_pca_svd():
-    xreduced, factors, evals, evecs  = pca(xf)
-    xred_svd, factors_svd, evals_svd, evecs_svd = pcasvd(xf)
+    xreduced, factors, evals, evecs  = pca(xf, use_svd=False)
+    xred_svd, factors_svd, evals_svd, evecs_svd = pca(xf)
 
     factors_wconst = np.c_[factors, np.ones((factors.shape[0], 1))]
     beta = np.dot(np.linalg.pinv(factors_wconst), xf)
@@ -62,8 +62,8 @@ def test_pca_svd():
     assert_array_almost_equal(msign*factors_svd, factors, 12)
     assert_array_almost_equal(xred_svd, xreduced, 13)
 
-    pcares = pca(xf, keepdim=2)
-    pcasvdres = pcasvd(xf, keepdim=2)
+    pcares = pca(xf, keepdim=2, use_svd=False)
+    pcasvdres = pca(xf, keepdim=2)
     check_pca_svd(pcares, pcasvdres)
 
 #print np.dot(factors[:,:3], evecs.T[:3,:])[:5]
