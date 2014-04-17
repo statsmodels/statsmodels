@@ -163,6 +163,14 @@ class TestMixedLM(object):
 
         assert_almost_equal(mdf1.params, mdf2.params)
 
+        # Check that it runs when the dimension of the random effects
+        # changes following set_random.
+        md2 = MixedLM.from_formula(
+            "endog ~ 0 + exog0 + exog1 + exog2 + exog3",
+            groups=groups, data=df)
+        md2.set_random("exog_re", data=df)
+        mdf2 = md2.fit()
+
 
     def test_regularized(self):
 
