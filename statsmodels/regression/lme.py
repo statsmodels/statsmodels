@@ -102,7 +102,7 @@ import patsy
 from statsmodels.compatnp.collections import OrderedDict
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
-from statsmodels.base.penalties import Penalty
+from statsmodels.base._penalties import Penalty
 
 # This is a global switch to use direct linear algebra calculations
 # for solving factor-structured linear systems and calculating
@@ -543,10 +543,6 @@ class MixedLM(base.LikelihoodModel):
 
         fe_params = params[0:self.k_fe]
         re_params = params[self.k_fe:]
-
-#        if params.dtype == np.complex128:
-#            print "EEEEEEEEEEEEEEEEEEEEEEEEE"
-#            return None
 
         # Unpack the covariance matrix of the random effects
         cov_re = np.zeros((self.k_re, self.k_re), dtype=np.float64)
@@ -1086,7 +1082,7 @@ class MixedLM(base.LikelihoodModel):
         return m1x, m1y, m2, m2xx
 
 
-    def EM(self, fe_params, cov_re, sig2, num_em=10,
+    def EM(self, fe_params, cov_re, sig2, niter_em=10,
            hist=None):
         """
         Run the EM algorithm from a given starting point.  This is for
@@ -1119,7 +1115,7 @@ class MixedLM(base.LikelihoodModel):
             xytot += np.dot(x.T, y)
 
         pp = []
-        for itr in range(num_em):
+        for itr in range(niter_em):
 
             m1x, m1y, m2, m2xx = self.Estep(fe_params, cov_re, sig2)
 
@@ -1243,8 +1239,8 @@ class MixedLM(base.LikelihoodModel):
 
         return params, np.max(np.abs(gro)) < gtol
 
-    def fit(self, start=None, reml=True, num_sd=1,
-            num_em=0, do_cg=True, fe_pen=None, cov_pen=None,
+    def fit(self, start=None, reml=True, niter_sd=1,
+            niter_em=0, do_cg=True, fe_pen=None, cov_pen=None,
             free=None, full_output=False, **kwargs):
         """
         Fit a linear mixed model to the data.
@@ -1266,9 +1262,9 @@ class MixedLM(base.LikelihoodModel):
         reml : bool
             If true, fit according to the REML likelihood, else
             fit the standard likelihood using ML.
-        num_sd : integer
+        niter_sd : integer
             The number of steepest descent iterations
-        num_em : non-negative integer
+        niter_em : non-negative integer
             The number of EM steps.  The EM steps always
             preceed steepest descent and conjugate gradient
             optimization.  The EM algorithm implemented here
@@ -1346,11 +1342,11 @@ class MixedLM(base.LikelihoodModel):
         success = False
 
         # EM iterations
-        if num_em > 0:
+        if niter_em > 0:
             sig2 = 1.
             cov_re = np.eye(self.k_re)
             fe_params, cov_re, sig2 = self.EM(fe_params, cov_re, sig2,
-                                             num_em, hist)
+                                             niter_em, hist)
 
             # Gradient algorithms use a different parameterization
             # that profiles out sigma^2.
@@ -1368,7 +1364,7 @@ class MixedLM(base.LikelihoodModel):
             # Steepest descent iterations
             params_prof, success = self._steepest_descent(neg_like,
                                   params_prof, neg_score,
-                                  max_iter=num_sd)
+                                  max_iter=niter_sd)
             if success:
                 break
 
@@ -1677,7 +1673,7 @@ class MixedLMResults(base.LikelihoodModelResults):
             sdf[col] = [float_fmt % x if np.isfinite(x) else ""
                         for x in sdf[col]]
 
-        smry.add_df(sdf, align='l')
+        smry.add_df(sdf, align='r')
 
         return smry
 
