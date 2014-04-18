@@ -137,7 +137,15 @@ def _make_var_names(X):
         var_names = X.columns
     else:
         raise ValueError("X is not a Series or DataFrame or is unnamed.")
-    return " ".join(var_names)
+    try:
+        var_names = " ".join(var_names)
+    except TypeError:  # cannot have names that are numbers, pandas default
+        from statsmodels.base.data import _make_exog_names
+        if X.ndim == 1:
+            var_names = "x1"
+        else:
+            var_names = " ".join(_make_exog_names(X))
+    return var_names
 
 
 def _make_regression_options(trading, X):
