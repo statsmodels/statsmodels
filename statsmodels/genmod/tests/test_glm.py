@@ -541,6 +541,15 @@ class Test_start_params(CheckModelResultsMixin):
         self.res2 = Longley()
 
 
+def test_glm_start_params():
+    # see 1604
+    y2 = np.array('0 1 0 0 0 1'.split(), int)
+    wt = np.array([50,1,50,1,5,10])
+    y2 = np.repeat(y2, wt)
+    x2 = np.repeat([0,0,0.001,100,-1,-1], wt)
+    mod = sm.GLM(y2, sm.add_constant(x2), family=sm.families.Binomial())
+    res = mod.fit(start_params=[-4, -5])
+    np.testing.assert_almost_equal(res.params, [-4.60305022, -5.29634545], 6)
 
 if __name__=="__main__":
     #run_module_suite()
