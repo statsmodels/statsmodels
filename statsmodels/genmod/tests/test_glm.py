@@ -519,6 +519,29 @@ def test_attribute_writable_resettable():
     glm_model2 = sm.GLM(endog, exog)
     assert_equal(glm_model2.family.link.power, 1.0)
 
+
+class Test_start_params(CheckModelResultsMixin):
+    def __init__(self):
+        '''
+        Test Gaussian family with canonical identity link
+        '''
+        # Test Precisions
+        self.decimal_resids = DECIMAL_3
+        self.decimal_params = DECIMAL_2
+        self.decimal_bic = DECIMAL_0
+        self.decimal_bse = DECIMAL_3
+
+        from statsmodels.datasets.longley import load
+        self.data = load()
+        self.data.exog = add_constant(self.data.exog, prepend=False)
+        params = sm.OLS(self.data.endog, self.data.exog).fit().params
+        self.res1 = GLM(self.data.endog, self.data.exog,
+                        family=sm.families.Gaussian()).fit(start_params=params)
+        from .results.results_glm import Longley
+        self.res2 = Longley()
+
+
+
 if __name__=="__main__":
     #run_module_suite()
     #taken from Fernando Perez:
