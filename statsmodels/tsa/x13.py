@@ -445,8 +445,6 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
         seasadj = _open_and_read(ftempout.name + '.d11')
         trend = _open_and_read(ftempout.name + '.d12')
         irregular = _open_and_read(ftempout.name + '.d13')
-    except X13Error, err:
-        raise err
     finally:
         try:  # sometimes this gives a permission denied error?
               # not sure why. no process should have these open
