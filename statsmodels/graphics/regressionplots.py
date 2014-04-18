@@ -327,7 +327,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         endog = dmatrix(endog + "-1", data)
 
     if isinstance(exog_others, string_types):
-        RHS = dmatrix(RHS, data)
+        RHS = dmatrix(exog_others, data)
     elif isinstance(exog_others, list):
         RHS = "+".join(exog_others)
         RHS = dmatrix(RHS, data)
@@ -335,7 +335,6 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         RHS = exog_others
 
     if isinstance(exog_i, string_types):
-        varname = exog_i
         exog_i = dmatrix(exog_i + "-1", data)
 
     # all arrays or pandas-like
@@ -379,7 +378,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
                             **label_kwargs)
 
     if ret_coords:
-        return fig, (res_axis.resid, res_yaxis.resid)
+        return fig, (res_xaxis.resid, res_yaxis.resid)
     else:
         return fig
 
