@@ -165,6 +165,14 @@ def _make_regression_options(trading, X):
     return reg_spec
 
 
+def _make_forecast_options(forecast_years):
+    if forecast_years is None:
+        return ""
+    forecast_spec = "forecast{\n"
+    forecast_spec += "maxlead = ({0})\n}}\n".format(forecast_years)
+    return forecast_spec
+
+
 def _check_errors(errors):
     errors = errors[errors.find("spc:")+4:].strip()
     if errors and 'ERROR' in errors:
@@ -302,7 +310,8 @@ def pandas_to_series_spec(x):
 
 
 def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
-                       log=None, outlier=True, trading=False, retspec=False,
+                       log=None, outlier=True, trading=False,
+                       forecast_years=None, retspec=False,
                        speconly=False, start=None, freq=None,
                        print_stdout=False, x12path=None, prefer_x13=True):
     """
@@ -340,6 +349,8 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
         Whether or not outliers are tested for and corrected, if detected.
     trading : bool
         Whether or not trading day effects are tested for.
+    forecast_years : int
+        Number of forecasts produced. The default is one year.
     retspec : bool
         Whether to return the created specification file. Can be useful for
         debugging.
@@ -407,6 +418,7 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
     options = _make_automdl_options(maxorder, maxdiff, diff)
     spec += "automdl{{{0}}}\n".format(options)
     spec += _make_regression_options(trading, X)
+    spec += _make_forecast_options(forecast_years)
     spec += "x11{ save=(d11 d12 d13) }"
     if speconly:
         return spec
@@ -468,6 +480,7 @@ def x13_arima_analysis(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None, X=None,
 
 def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
                            X=None, log=None, outlier=True, trading=False,
+                           forecast_years=None,
                            start=None, freq=None, print_stdout=False,
                            x12path=None, prefer_x13=True):
     """
@@ -505,6 +518,8 @@ def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
         Whether or not outliers are tested for and corrected, if detected.
     trading : bool
         Whether or not trading day effects are tested for.
+    forecast_years : int
+        Number of forecasts produced. The default is one year.
     start : str, datetime
         Must be given if ``y`` does not have date information in its index.
         Anything accepted by pandas.DatetimeIndex for the start value.
@@ -548,9 +563,11 @@ def x13_arima_select_order(y, maxorder=(2, 1), maxdiff=(2, 1), diff=None,
     """
     results = x13_arima_analysis(y, x12path=x12path, X=X, log=log,
                                  outlier=outlier, trading=trading,
+                                 forecast_years=forecast_years,
                                  maxorder=maxorder, maxdiff=maxdiff, diff=diff,
                                  start=start, freq=freq, prefer_x13=prefer_x13)
-    model = re.search("(?<=Final automatic model choice : ).*", results.results)
+    model = re.search("(?<=Final automatic model choice : ).*",
+                      results.results)
     order = model.group()
     if re.search("Mean is not significant", results.results):
         include_mean = False
