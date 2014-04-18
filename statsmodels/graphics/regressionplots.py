@@ -12,6 +12,7 @@ update
 '''
 from statsmodels.compat.python import lrange, string_types, lzip, range
 import numpy as np
+from patsy import dmatrix
 
 from statsmodels.regression.linear_model import OLS
 from statsmodels.sandbox.regression.predstd import wls_prediction_std
@@ -30,6 +31,7 @@ __all__ = ['plot_fit', 'plot_regress_exog', 'plot_partregress', 'plot_ccpr',
 def _high_leverage(results):
     #TODO: replace 1 with k_constant
     return 2. * (results.df_model + 1)/results.nobs
+
 
 def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     """
@@ -55,8 +57,9 @@ def add_lowess(ax, lines_idx=0, frac=.2, **lowess_kwargs):
     y0 = ax.get_lines()[lines_idx]._y
     x0 = ax.get_lines()[lines_idx]._x
     lres = lowess(y0, x0, frac=frac, **lowess_kwargs)
-    ax.plot(lres[:,0], lres[:,1], 'r', lw=1.5)
+    ax.plot(lres[:, 0], lres[:, 1], 'r', lw=1.5)
     return ax.figure
+
 
 def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     """Plot fit against one regressor.
@@ -92,7 +95,6 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
 
     >>> import statsmodels.api as sm
     >>> import matplotlib.pyplot as plt
-    >>> import numpy as np
 
     >>> data = sm.datasets.statecrime.load_pandas().data
     >>> murder = data['murder']
@@ -138,7 +140,7 @@ def plot_fit(results, exog_idx, y_true=None, ax=None, **kwargs):
     ax.plot(x1, results.fittedvalues[x1_argsort], 'D', color='r',
             label='fitted', **kwargs)
     ax.vlines(x1, iv_l[x1_argsort], iv_u[x1_argsort], linewidth=1, color='k',
-            alpha=.7)
+              alpha=.7)
     #ax.fill_between(x1, iv_l[x1_argsort], iv_u[x1_argsort], alpha=0.1,
     #                    color='k')
     ax.set_title(title)
@@ -178,39 +180,40 @@ def plot_regress_exog(results, exog_idx, fig=None):
 
     #maybe add option for wendog, wexog
     y_name = results.model.endog_names
-    x1 = results.model.exog[:,exog_idx]
+    x1 = results.model.exog[:, exog_idx]
     prstd, iv_l, iv_u = wls_prediction_std(results)
 
-    ax = fig.add_subplot(2,2,1)
+    ax = fig.add_subplot(2, 2, 1)
     ax.plot(x1, results.model.endog, 'o', color='b', alpha=0.9, label=y_name)
     ax.plot(x1, results.fittedvalues, 'D', color='r', label='fitted',
-                alpha=.5)
+            alpha=.5)
     ax.vlines(x1, iv_l, iv_u, linewidth=1, color='k', alpha=.7)
     ax.set_title('Y and Fitted vs. X', fontsize='large')
     ax.set_xlabel(exog_name)
     ax.set_ylabel(y_name)
     ax.legend(loc='best')
 
-    ax = fig.add_subplot(2,2,2)
+    ax = fig.add_subplot(2, 2, 2)
     ax.plot(x1, results.resid, 'o')
     ax.axhline(y=0, color='black')
     ax.set_title('Residuals versus %s' % exog_name, fontsize='large')
     ax.set_xlabel(exog_name)
     ax.set_ylabel("resid")
 
-    ax = fig.add_subplot(2,2,3)
+    ax = fig.add_subplot(2, 2, 3)
     exog_noti = np.ones(results.model.exog.shape[1], bool)
     exog_noti[exog_idx] = False
     exog_others = results.model.exog[:, exog_noti]
     from pandas import Series
     fig = plot_partregress(results.model.data.orig_endog,
-            Series(x1, name=exog_name, index=results.model.data.row_labels),
-            exog_others, obs_labels=False, ax=ax)
+                           Series(x1, name=exog_name,
+                                  index=results.model.data.row_labels),
+                           exog_others, obs_labels=False, ax=ax)
     ax.set_title('Partial regression plot', fontsize='large')
     #ax.set_ylabel("Fitted values")
     #ax.set_xlabel(exog_name)
 
-    ax = fig.add_subplot(2,2,4)
+    ax = fig.add_subplot(2, 2, 4)
     fig = plot_ccpr(results, exog_idx, ax=ax)
     ax.set_title('CCPR Plot', fontsize='large')
     #ax.set_xlabel(exog_name)
@@ -317,11 +320,6 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     #obs_labels yet, so this will need to be tweaked a bit for this case
     fig, ax = utils.create_mpl_ax(ax)
 
-    if (isinstance(endog, string_types) or isinstance(exog_others,
-                                                   (string_types, list)) or
-        isinstance(exog_i, string_types)):
-        from patsy import dmatrix
-
     # strings, use patsy to transform to data
     if isinstance(endog, string_types):
         endog = dmatrix(endog + "-1", data)
@@ -345,7 +343,7 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
     fitted_line = OLS(res_yaxis.resid, res_xaxis.resid).fit()
     fig = abline_plot(0, fitted_line.params[0], color='k', ax=ax)
     x_axis_endog_name = res_xaxis.model.endog_names
-    if x_axis_endog_name == 'y': # for no names regression will just get a y
+    if x_axis_endog_name == 'y':  # for no names regression will just get a y
         x_axis_endog_name = 'x'  # this is misleading, so use x
     ax.set_xlabel("e(%s | X)" % x_axis_endog_name)
     ax.set_ylabel("e(%s | X)" % res_yaxis.model.endog_names)
@@ -368,14 +366,14 @@ def plot_partregress(endog, exog_i, exog_others, data=None,
         if obs_labels is None:
             obs_labels = lrange(len(exog_i))
 
-    if obs_labels is not False: # could be array-like
+    if obs_labels is not False:  # could be array-like
         if len(obs_labels) != len(exog_i):
             raise ValueError("obs_labels does not match length of exog_i")
         label_kwargs.update(dict(ha="center", va="bottom"))
         ax = utils.annotate_axes(lrange(len(obs_labels)), obs_labels,
-                            lzip(res_xaxis.resid, res_yaxis.resid),
-                            [(0, 5)] * len(obs_labels), "x-large", ax=ax,
-                            **label_kwargs)
+                                 lzip(res_xaxis.resid, res_yaxis.resid),
+                                 [(0, 5)] * len(obs_labels), "x-large", ax=ax,
+                                 **label_kwargs)
 
     if ret_coords:
         return fig, (res_xaxis.resid, res_yaxis.resid)
@@ -448,7 +446,7 @@ def plot_partregress_grid(results, exog_idx=None, grid=None, fig=None):
 
     # for indexing purposes
     other_names = np.array(results.model.exog_names)
-    for i,idx in enumerate(exog_idx):
+    for i, idx in enumerate(exog_idx):
         others = lrange(k_vars)
         others.pop(idx)
         exog_others = pandas.DataFrame(exog[:, others],
@@ -590,7 +588,7 @@ def plot_ccpr_grid(results, exog_idx=None, grid=None, fig=None):
 
     seen_constant = 0
     for i, idx in enumerate(exog_idx):
-        if results.model.exog[:,idx].var() == 0:
+        if results.model.exog[:, idx].var() == 0:
             seen_constant = 1
             continue
 
@@ -647,19 +645,18 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     >>> import matplotlib.pyplot as plt
     >>> plt.show()
     """
-    if ax is not None: # get axis limits first thing, don't change these
+    if ax is not None:  # get axis limits first thing, don't change these
         x = ax.get_xlim()
-        y = ax.get_ylim()
     else:
         x = None
 
-    fig,ax = utils.create_mpl_ax(ax)
+    fig, ax = utils.create_mpl_ax(ax)
 
     if model_results:
         intercept, slope = model_results.params
         if x is None:
-            x = [model_results.model.exog[:,1].min(),
-                 model_results.model.exog[:,1].max()]
+            x = [model_results.model.exog[:, 1].min(),
+                 model_results.model.exog[:, 1].max()]
     else:
         if not (intercept is not None and slope is not None):
             raise ValueError("specify slope and intercepty or model_results")
@@ -679,10 +676,10 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
 
             children = ax.get_children()
             abline = [children[i] for i in range(len(children))
-                       if isinstance(children[i], ABLine2D)][0]
+                      if isinstance(children[i], ABLine2D)][0]
             x = ax.get_xlim()
             y = [x[0]*slope+intercept, x[1]*slope+intercept]
-            abline.set_data(x,y)
+            abline.set_data(x, y)
             ax.figure.canvas.draw()
     #TODO: how to intercept something like a margins call and adjust?
 
@@ -690,7 +687,6 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
     ax.add_line(line)
     ax.callbacks.connect('xlim_changed', line.update_datalim)
     ax.callbacks.connect('ylim_changed', line.update_datalim)
-
 
     if horiz:
         ax.hline(horiz)
@@ -700,7 +696,7 @@ def abline_plot(intercept=None, slope=None, horiz=None, vert=None,
 
 
 def influence_plot(results, external=True, alpha=.05, criterion="cooks",
-                    size=48, plot_alpha=.75, ax=None, **kwargs):
+                   size=48, plot_alpha=.75, ax=None, **kwargs):
     """
     Plot of influence in regression. Plots studentized resids vs. leverage.
 
@@ -812,7 +808,7 @@ def plot_leverage_resid2(results, alpha=.05, label_kwargs={}, ax=None,
     fig : matplotlib Figure
         A matplotlib figure instance.
     """
-    from scipy.stats import zscore, norm, t
+    from scipy.stats import zscore, norm
     fig, ax = utils.create_mpl_ax(ax)
 
     infl = results.get_influence()
