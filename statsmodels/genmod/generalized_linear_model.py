@@ -338,7 +338,8 @@ class GLM(base.LikelihoodModel):
             return self.family.fitted(np.dot(exog, params) + exposure + \
                                                              offset)
 
-    def fit(self, maxiter=100, method='IRLS', tol=1e-8, scale=None):
+    def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
+            scale=None):
         '''
         Fits a generalized linear model for a given family.
 
@@ -358,6 +359,11 @@ class GLM(base.LikelihoodModel):
             `dev` is the deviance divided by df_resid
         tol : float
             Convergence tolerance.  Default is 1e-8.
+        start_params : array-like, optional
+            Initial guess of the solution for the loglikelihood maximization.
+            The default is family-specific and is given by the
+            ``family.starting_mu(endog)``. If start_params is given then the
+            initial mean will be calculated as ``np.dot(exog, start_params)``.
         '''
         endog = self.endog
         if endog.ndim > 1 and endog.shape[1] == 2:
@@ -383,8 +389,11 @@ class GLM(base.LikelihoodModel):
             offset = 0
         #TODO: would there ever be both and exposure and an offset?
 
-        mu = self.family.starting_mu(self.endog)
         wlsexog = self.exog
+        if start_params is None:
+            mu = self.family.starting_mu(self.endog)
+        else:
+            mu = self.family.fitted(np.dot(wlsexog, start_params))
         eta = self.family.predict(mu)
         dev = self.family.deviance(self.endog, mu)
         if np.isnan(dev):
@@ -395,7 +404,7 @@ class GLM(base.LikelihoodModel):
 
         # first guess on the deviance is assumed to be scaled by 1.
         # params are none to start, so they line up with the deviance
-        history = dict(params = [None, None], deviance=[np.inf,dev])
+        history = dict(params=[None, start_params], deviance=[np.inf, dev])
         iteration = 0
         converged = 0
         criterion = history['deviance']
