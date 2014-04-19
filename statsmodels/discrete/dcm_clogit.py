@@ -13,14 +13,15 @@ Train, K. `Discrete Choice Methods with Simulation`.
 --------------------
 """
 
+import time
+from statsmodels.compat.collections import OrderedDict
+
 import numpy as np
 import pandas as pd
-import statsmodels.api as sm
-import time
-from collections import OrderedDict
-from statsmodels.discrete.dcm_base import (DiscreteChoiceModel,
-                                           DiscreteChoiceModelResults)
+
 from statsmodels.tools.decorators import cache_readonly
+from .discrete_model import Logit
+from .dcm_base import (DiscreteChoiceModel, DiscreteChoiceModelResults)
 
 
 ### Public Model Classes ####
@@ -299,7 +300,7 @@ class CLogit(DiscreteChoiceModel):
 
         if start_params is None:
 
-            Logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
+            Logit_res = Logit(self.endog, self.exog_matrix).fit(disp=0)
             start_params = Logit_res.params.values
 
         else:
