@@ -125,7 +125,7 @@ if __name__ == "__main__":
 
     x = halton(2, 500)
     #plot(x(1 , :) , x(2 , :) , '+')
-    print x[:5]
+    print(x[:5])
     xr = np.random.rand(500, 2)
 
     import matplotlib.pyplot as plt

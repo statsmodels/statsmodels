@@ -59,6 +59,11 @@ from .discrete_model import Logit
 from .halton_sequence import halton
 from .dcm_base import (DiscreteChoiceModel, DiscreteChoiceModelResults)
 
+# TODO remove these, copied from __main__ example
+NORMAL = ['gc']
+draws = 50
+
+DEBUG = False
 
 ### Public Model Classes ####
 
@@ -171,8 +176,8 @@ class MXLogit(DiscreteChoiceModel):
                     self.n_ramdon.append(jj)
 
         if DEBUG:
-            print self.values_ramdon
-            print self.n_ramdon
+            print(self.values_ramdon)
+            print(self.n_ramdon)
 
         ms_params = []
 
@@ -189,9 +194,9 @@ class MXLogit(DiscreteChoiceModel):
                               enumerate(self.paramsnames))
 
         if DEBUG:
-            print self.paramsnames
-            print self.paramsidx
-            print self.nparams
+            print(self.paramsnames)
+            print(self.paramsidx)
+            print(self.nparams)
 
         # TODO : implement test
         # from math import sqrt
@@ -247,25 +252,25 @@ class MXLogit(DiscreteChoiceModel):
         """
         """
         if DEBUG:
-            print "___working in average"
+            print("___working in average")
         prob_average = []
 
         self.drawndistri(params)
 
         for jj in range(self.dv.shape[0]):
                 if DEBUG:
-                    print self.values_ramdon
-                    print self.dv[jj]
+                    print(self.values_ramdon)
+                    print(self.dv[jj])
 
                 params[self.values_ramdon] = self.dv[jj]  # numpy.ndarray
 
                 if DEBUG:
-                    print params
+                    print(params)
                 xb = self.xbetas(params)
                 prob_average.append(self.cdf(xb))
 
         if DEBUG:
-            print "___returning to average"
+            print("___returning to average")
 
         return sum(prob_average) / self.draws
 
@@ -303,8 +308,8 @@ class MXLogit(DiscreteChoiceModel):
         if not.
         """
         if DEBUG:
-            print "___working in loglike"
-            print params
+            print("___working in loglike")
+            print(params)
 
         for name in self.n_ramdon:
             std = params[self.paramsidx['sd_' + name]]
@@ -314,7 +319,7 @@ class MXLogit(DiscreteChoiceModel):
         loglike = (self.endog_bychoices *
                     np.log(self.cdf_average(params))).sum(1)
         if DEBUG:
-            print "___returning to loglike"
+            print("___returning to loglike")
 
         return loglike.sum()
 
@@ -346,7 +351,7 @@ class MXLogit(DiscreteChoiceModel):
         if start_params is None:
 
             if DEBUG:
-                print "__working on start params"
+                print("__working on start params")
 
             Logit_res = Logit(self.endog, self.exog_matrix).fit(disp=0)
 
@@ -364,7 +369,7 @@ class MXLogit(DiscreteChoiceModel):
             start_params = np.r_[Logit_res.params, func_params]
 
             if DEBUG:
-                print "start_params", start_params
+                print("start_params", start_params)
 
             self.satpar = start_params
 
@@ -372,7 +377,7 @@ class MXLogit(DiscreteChoiceModel):
             start_params = np.asarray(start_params)
 
         if DEBUG:
-            print "___working on fit"
+            print("___working on fit")
 
         model_fit = super(MXLogit, self).fit(disp = disp,
                                             start_params = start_params,
@@ -382,8 +387,8 @@ class MXLogit(DiscreteChoiceModel):
         self.params = model_fit.params
 
         if DEBUG:
-            print self.params
-            print "___returning to fit"
+            print(self.params)
+            print("___returning to fit")
 
         end_time = time.time()
         self.elapsed_time = end_time - start_time
