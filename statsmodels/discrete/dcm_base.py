@@ -20,13 +20,16 @@ Train, K. `Discrete Choice Methods with Simulation`.
     Cambridge University Press. 2003
 """
 
+from statsmodels.compat.collections import OrderedDict
+from statsmodels.compat import range
+
 import numpy as np
+from scipy import stats
 import pandas as pd
-import statsmodels.api as sm
+
 from statsmodels.base.model import (LikelihoodModel,
                                     LikelihoodModelResults, ResultMixin)
-from statsmodels.compat.collections import OrderedDict
-from scipy import stats
+
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
 
@@ -84,7 +87,7 @@ class DiscreteChoiceModel(LikelihoodModel):
         # Exog_bychoices
         exog_bychoices = []
         exog_bychoices_names = []
-        choice_index = np.array(self.V.keys() * int(self.nobs))
+        choice_index = np.array(list(self.V.keys()) * int(self.nobs))
 
         for key in iter(self.V):
             (exog_bychoices.append(self.exog_data[self.V[key]]
@@ -106,15 +109,15 @@ class DiscreteChoiceModel(LikelihoodModel):
                                for ii in range(len(zi) - 1)]  # index of betas
         self.beta_ind = beta_ind
 
-        beta_ind_str = ([map(str, beta_ind[ii]) for ii in range(self.J)])
-        beta_ind_J = ([map(str, beta_ind[ii]) for ii in range(self.J)])
+        beta_ind_str = ([list(map(str, beta_ind[ii])) for ii in range(self.J)])
+        beta_ind_J = ([list(map(str, beta_ind[ii])) for ii in range(self.J)])
 
         for ii in range(self.J):
             for jj, item in enumerate(beta_ind[ii]):
                 if item in np.arange(self.ncommon):
                     beta_ind_J[ii][jj] = ''
                 else:
-                    beta_ind_J[ii][jj] = ' (' + self.V.keys()[ii] + ')'
+                    beta_ind_J[ii][jj] = ' (' + list(self.V.keys())[ii] + ')'
 
         self.betas = OrderedDict()
 
@@ -132,7 +135,7 @@ class DiscreteChoiceModel(LikelihoodModel):
         for ii in range(self.J):
             pieces.append(pd.DataFrame(exog_bychoices[ii], columns=self.betas[ii]))
 
-        self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = self.V.keys(),
+        self.exog_matrix_all = (pd.concat(pieces, axis = 0, keys = list(self.V.keys()),
                                      names = ['choice', 'nobs'])
                            .fillna(value = 0).sortlevel(1).reset_index())
 
@@ -267,7 +270,7 @@ class DiscreteChoiceModelResults(LikelihoodModelResults, ResultMixin):
 if __name__ == "__main__":
 
     # Example for text preprocessing data for discrete choice models
-
+    import statsmodels.api as sm
     # Loading data as pandas object
     data = sm.datasets.modechoice.load_pandas()
     data.endog[:5]

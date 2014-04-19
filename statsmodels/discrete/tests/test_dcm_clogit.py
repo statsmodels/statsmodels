@@ -14,7 +14,7 @@ from statsmodels.discrete.tests.results.results_dcm_clogit \
     import Travelmodechoice
 
 import numpy as np
-from collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 from numpy.testing import assert_almost_equal
 
 DECIMAL_4 = 4
