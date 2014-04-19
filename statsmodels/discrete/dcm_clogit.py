@@ -565,8 +565,8 @@ class ClogitMargeff(CLogit):
 if __name__ == "__main__":
 
     DEBUG = 0
-    print 'Example:'
-
+    print('Example:')
+    import statsmodels.api as sm
     # Loading data as pandas object
     data = sm.datasets.modechoice.load_pandas()
     data.endog[:5]
@@ -594,7 +594,7 @@ if __name__ == "__main__":
     clogit_res = clogit_mod.fit(disp=1)
 
     # Summarize model
-    print clogit_mod.summary()
+    print(clogit_mod.summary())
 
     # Marginal Effects
     # clogit_margeff = ClogitMargeff(clogit_mod)
