@@ -108,8 +108,8 @@ class CheckGrouping(object):
                                             level=0)
         expected = self.data.reset_index().groupby(names[0]).mean()[
                                                     self.data.columns]
-        np.testing.assert_array_equal(transformed_slices,
-                                      expected.values)
+        np.testing.assert_allclose(transformed_slices, expected.values,
+                                   rtol=1e-12, atol=1e-25)
 
         if len(names) > 1:
             transformed_slices = self.grouping.transform_slices(
@@ -119,8 +119,8 @@ class CheckGrouping(object):
             expected = self.data.reset_index().groupby(names[1]
                                                        ).mean()[
                                                         self.data.columns]
-            np.testing.assert_array_equal(transformed_slices,
-                                          expected.values)
+            np.testing.assert_allclose(transformed_slices, expected.values,
+                                       rtol=1e-12, atol=1e-25)
 
     def test_dummies_groups(self):
         # smoke test, calls dummy_sparse under the hood
