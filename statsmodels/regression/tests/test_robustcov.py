@@ -49,7 +49,7 @@ class CheckOLSRobust(object):
             assert_allclose(tt.pvalue, res2.pvalues, rtol=5 * rtol)
         else:
             pval = stats.norm.sf(np.abs(tt.tvalue)) * 2
-            assert_allclose(pval, res2.pvalues, rtol=5 * rtol)
+            assert_allclose(pval, res2.pvalues, rtol=5 * rtol, atol=1e-25)
 
         ft = res1.f_test(mat[:-1], cov_p=self.cov_robust)
         if self.small:

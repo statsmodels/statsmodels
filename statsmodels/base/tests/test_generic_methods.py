@@ -74,12 +74,12 @@ class CheckGenericMixin(object):
         # check default use_t
         pvals = [res.wald_test(np.eye(k_vars)[k], use_f=use_t).pvalue
                                                    for k in range(k_vars)]
-        assert_allclose(pvals, res.pvalues, rtol=5e-10)
+        assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
         # sutomatic use_f based on results class use_t
         pvals = [res.wald_test(np.eye(k_vars)[k]).pvalue
                                                    for k in range(k_vars)]
-        assert_allclose(pvals, res.pvalues, rtol=5e-10)
+        assert_allclose(pvals, res.pvalues, rtol=5e-10, atol=1e-25)
 
 
 
