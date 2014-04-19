@@ -25,7 +25,7 @@ import pandas as pd
 import statsmodels.api as sm
 from statsmodels.base.model import (LikelihoodModel,
                                     LikelihoodModelResults, ResultMixin)
-from collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
 from scipy import stats
 from statsmodels.tools.decorators import (resettable_cache,
         cache_readonly)
@@ -292,4 +292,4 @@ if __name__ == "__main__":
     # dir(base_mod)
 #    print base_mod.endog_bychoices
 #    print base_mod.exog_bychoices
-    print base_mod.paramsnames
+    print(base_mod.paramsnames)

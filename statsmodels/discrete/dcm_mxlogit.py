@@ -48,15 +48,17 @@ TODO
 
 """
 
-import numpy as np
-import statsmodels.api as sm
 import time
-from collections import OrderedDict
-from scipy import stats
-from statsmodels.discrete.halton_sequence import halton
 import re
-from statsmodels.discrete.dcm_base import (DiscreteChoiceModel,
-                                           DiscreteChoiceModelResults)
+from statsmodels.compat.collections import OrderedDict
+
+import numpy as np
+from scipy import stats
+
+from .discrete_model import Logit
+from .halton_sequence import halton
+from .dcm_base import (DiscreteChoiceModel, DiscreteChoiceModelResults)
+
 
 ### Public Model Classes ####
 
@@ -346,7 +348,7 @@ class MXLogit(DiscreteChoiceModel):
             if DEBUG:
                 print "__working on start params"
 
-            Logit_res = sm.Logit(self.endog, self.exog_matrix).fit(disp=0)
+            Logit_res = Logit(self.endog, self.exog_matrix).fit(disp=0)
 
             # Initial values of:
             # means -> coeficients from conditional logit
@@ -489,8 +491,8 @@ if __name__ == "__main__":
 
     DEBUG = 0
 
-    print 'Example:'
-
+    print('Example:')
+    import statsmodels.api as sm
     # Loading data as pandas object
     data = sm.datasets.modechoice.load_pandas()
     data.endog[:5]
@@ -538,4 +540,4 @@ if __name__ == "__main__":
 
     # Summarize model
     # TODO means and standard errors for mixed logit parameters
-    print mxlogit_mod.summary()
+    print(mxlogit_mod.summary())
