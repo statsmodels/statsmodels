@@ -229,10 +229,10 @@ class DiscreteChoiceModelResults(LikelihoodModelResults, ResultMixin):
         V_null = OrderedDict()
 
         for ii in range(len(V.keys())):
-            if V.keys()[ii] == model.ref_level:
-                V_null[V.keys()[ii]] = []
+            if list(V.keys())[ii] == model.ref_level:
+                V_null[list(V.keys())[ii]] = []
             else:
-                V_null[V.keys()[ii]] = [model.name_intercept]
+                V_null[list(V.keys())[ii]] = [model.name_intercept]
 
         # TODO: work for mixed logit
         null_mod = model.__class__(endog_data = model.endog_data,
