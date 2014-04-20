@@ -1834,7 +1834,7 @@ class NegativeBinomial(CountModel):
 
     def _ll_nbin(self, params, alpha, Q=0):
         endog = self.endog
-        mu = np.exp(np.dot(self.exog, params))
+        mu = self.predict(params)
         size = 1/alpha * mu**Q
         prob = size/(size+mu)
         coeff = (gammaln(size+endog) - gammaln(endog+1) -
@@ -1900,7 +1900,7 @@ class NegativeBinomial(CountModel):
     def _score_geom(self, params):
         exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog, params))[:,None]
+        mu = self.predict(params)[:,None]
         dparams = exog * (y-mu)/(mu+1)
         return dparams.sum(0)
 
@@ -1915,7 +1915,7 @@ class NegativeBinomial(CountModel):
         params = params[:-1]
         exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog, params))[:,None]
+        mu = self.predict(params)[:,None]
         a1 = 1/alpha * mu**Q
         if Q: # nb1
             dparams = exog*mu/alpha*(np.log(1/(alpha + 1)) +
@@ -1947,7 +1947,7 @@ class NegativeBinomial(CountModel):
     def _hessian_geom(self, params):
         exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog, params))[:,None]
+        mu = self.predict(params)[:,None]
 
         # for dl/dparams dparams
         dim = exog.shape[1]
@@ -1976,7 +1976,7 @@ class NegativeBinomial(CountModel):
         params = params[:-1]
         exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog, params))[:,None]
+        mu = self.predict(params)[:,None]
 
         a1 = mu/alpha
 
@@ -2043,7 +2043,7 @@ class NegativeBinomial(CountModel):
 
         exog = self.exog
         y = self.endog[:,None]
-        mu = np.exp(np.dot(exog, params))[:,None]
+        mu = self.predict(params)[:,None]
 
         # for dl/dparams dparams
         dim = exog.shape[1]
