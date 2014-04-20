@@ -31,6 +31,7 @@ endog = data['accident']
 exog_data = data['yr_con op_75_79'.split()]
 exog = add_constant(exog_data, prepend=False)
 group = np.asarray(data['ship'], int)
+exposure = np.asarray(data['service'])
 
 
 # TODO get the test methods from regression/tests
@@ -69,6 +70,13 @@ class CheckCountRobustMixin(object):
         cls.corr_fact = np.sqrt(corr_fact)
 
 
+    def test_oth(self):
+        res1 = self.res1
+        res2 = self.res2
+        assert_allclose(res1._results.llf, res2.ll, 1e-4)
+        assert_allclose(res1._results.llnull, res2.ll_0, 1e-4)
+
+
 class TestPoissonClu(CheckCountRobustMixin):
 
     @classmethod
@@ -79,12 +87,33 @@ class TestPoissonClu(CheckCountRobustMixin):
         cls.get_robust_clu()
 
 
+class TestPoissonCluExposure(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_poisson_exposure_clu #nonrobust
+        mod = smd.Poisson(endog, exog, exposure=exposure)
+        cls.res1 = mod.fit(disp=False)
+        cls.get_robust_clu()
+
+
 class TestNegbinClu(CheckCountRobustMixin):
 
     @classmethod
     def setup_class(cls):
         cls.res2 = results_st.results_negbin_clu
         mod = smd.NegativeBinomial(endog, exog)
+        cls.res1 = mod.fit(disp=False)
+        cls.get_robust_clu()
+
+
+# TODO: check what's going on with the params
+class T_estNegbinCluExposure(CheckCountRobustMixin):
+
+    @classmethod
+    def setup_class(cls):
+        cls.res2 = results_st.results_negbin_exposure_clu #nonrobust
+        mod = smd.NegativeBinomial(endog, exog, exposure=exposure)
         cls.res1 = mod.fit(disp=False)
         cls.get_robust_clu()
 
