@@ -70,6 +70,15 @@ class Model(object):
             self._init_keys.append('hasconst')
 
 
+    def _get_init_kwds(self):
+        """return dictionary with extra keys used in model.__init__
+        """
+        kwds = dict(((key, getattr(self, key, None))
+                         for key in self._init_keys))
+
+        return kwds
+
+
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
         data = handle_data(endog, exog, missing, hasconst, **kwargs)
         # kwargs arrays could have changed, easier to just attach here

@@ -657,6 +657,16 @@ class CountModel(DiscreteModel):
                 raise ValueError("exposure is not the same length as endog")
         self.exposure = exposure
 
+
+    def _get_init_kwds(self):
+        # this is a temporary fixup because exposure has been transformed
+        # see #1609
+        kwds = super(CountModel, self)._get_init_kwds()
+        if 'exposure' in kwds and kwds['exposure'] is not None:
+            kwds['exposure'] = np.exp(kwds['exposure'])
+        return kwds
+
+
     #TODO: are these two methods only for Poisson? or also Negative Binomial?
     def predict(self, params, exog=None, exposure=None, offset=None,
                 linear=False):
@@ -2140,17 +2150,9 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llnull(self):
-        # TODO make this generally available see #1093
-        if self.model._init_keys:
-            kwds = dict(((key, getattr(self.model, key, None))
-                         for key in self.model._init_keys))
 
-            #TODO: workaround for #1609, find "generic" solution
-            if 'exposure' in kwds and kwds['exposure'] is not None:
-                kwds['exposure'] = np.exp(kwds['exposure'])
-        else:
-            kwds = {}
         model = self.model
+        kwds = model._get_init_kwds()
         #TODO: what parameters to pass to fit?
         mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
         res_null = mod_null.fit(disp=0)
