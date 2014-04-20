@@ -730,7 +730,7 @@ def proportions_chisquare_allpairs(count, nobs, multitest_method='hs'):
     Yates continuity correction is not available.
     '''
     #all_pairs = lmap(list, lzip(*np.triu_indices(4, 1)))
-    all_pairs = lzip(*np.triu_indices(4, 1))
+    all_pairs = lzip(*np.triu_indices(len(count), 1))
     pvals = [proportions_chisquare(count[list(pair)], nobs[list(pair)])[1]
                for pair in all_pairs]
     return AllPairsResults(pvals, all_pairs, multitest_method=multitest_method)
