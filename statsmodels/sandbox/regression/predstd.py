@@ -86,7 +86,7 @@ def wls_prediction_std(res, exog=None, weights=None, alpha=0.05):
             weights = 1.
         else:
             weights = np.asarray(weights)
-            if len(weights) > 1 and len(weights) != exog.shape[0]:
+            if weights.size > 1 and len(weights) != exog.shape[0]:
                 raise ValueError('weights and exog do not have matching shape')
 
 
