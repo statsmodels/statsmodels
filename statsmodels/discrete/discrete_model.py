@@ -1787,6 +1787,9 @@ class NegativeBinomial(CountModel):
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
             self.exog_names.append('alpha')
+        # store keys for extras if we need to recreate model instance
+        # we need to append keys that don't go to super
+        self._init_keys.append('loglike_method')
 
     def _initialize(self):
         if self.loglike_method == 'nb2':
@@ -2137,10 +2140,21 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llnull(self):
+        # TODO make this generally available see #1093
+        if self.model._init_keys:
+            kwds = dict(((key, getattr(self.model, key, None))
+                         for key in self.model._init_keys))
+
+            #TODO: workaround for #1609, find "generic" solution
+            if 'exposure' in kwds and kwds['exposure'] is not None:
+                kwds['exposure'] = np.exp(kwds['exposure'])
+        else:
+            kwds = {}
         model = self.model
         #TODO: what parameters to pass to fit?
-        null = model.__class__(model.endog, np.ones(self.nobs)).fit(disp=0)
-        return null.llf
+        mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
+        res_null = mod_null.fit(disp=0)
+        return res_null.llf
 
     @cache_readonly
     def fittedvalues(self):
