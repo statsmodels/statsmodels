@@ -667,7 +667,6 @@ class CountModel(DiscreteModel):
         return kwds
 
 
-    #TODO: are these two methods only for Poisson? or also Negative Binomial?
     def predict(self, params, exog=None, exposure=None, offset=None,
                 linear=False):
         """
