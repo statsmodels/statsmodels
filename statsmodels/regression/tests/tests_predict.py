@@ -35,7 +35,6 @@ def test_predict_se():
     predvar = res3.mse_resid * w + (x2 * np.dot(covb, x2.T).T).sum(1)
     predstd = np.sqrt(predvar)
 
-
     prstd, iv_l, iv_u = wls_prediction_std(res3)
     np.testing.assert_almost_equal(predstd, prstd, 15)
 
@@ -44,8 +43,24 @@ def test_predict_se():
     np.testing.assert_equal( prstd[-1], prstd)
     prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-1,:], weights=3.)
     np.testing.assert_equal( prstd[-1], prstd)
+
+    prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-2:,:], weights=3.)
+    np.testing.assert_equal( prstd[-2:], prstd)
+
+    prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-2:,:], weights=[3, 3])
+    np.testing.assert_equal( prstd[-2:], prstd)
+
+    prstd, iv_l, iv_u = wls_prediction_std(res3, x2[:3,:])
+    np.testing.assert_equal( prstd[:3], prstd)
+
     #use wrong size for exog
     #prstd, iv_l, iv_u = wls_prediction_std(res3, x2[-1,0], weights=3.)
-    np.testing.assert_raises(ValueError, wls_prediction_std, res3, x2[-1,0], 
+    np.testing.assert_raises(ValueError, wls_prediction_std, res3, x2[-1,0],
                              weights=3.)
 
+    # check some weight values
+    sew1 = wls_prediction_std(res3, x2[-3:,:])[0]**2
+    for wv in np.linspace(0.5, 3, 5):
+
+        sew = wls_prediction_std(res3, x2[-3:,:], weights=1. / wv)[0]**2
+        np.testing.assert_allclose(sew, sew1 + res3.scale * (wv - 1))
