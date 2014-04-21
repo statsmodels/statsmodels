@@ -12,7 +12,7 @@ from statsmodels.compat.python import range
 import os
 import numpy as np
 from numpy.testing import (assert_, assert_raises, assert_almost_equal,
-                           assert_equal, assert_array_equal)
+                           assert_equal, assert_array_equal, assert_allclose)
 
 from statsmodels.discrete.discrete_model import (Logit, Probit, MNLogit,
                                                  Poisson, NegativeBinomial)
@@ -53,7 +53,7 @@ class CheckModelResults(object):
         assert_almost_equal(self.res1.params, self.res2.params, DECIMAL_4)
 
     def test_conf_int(self):
-        assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_4)
+        assert_allclose(self.res1.conf_int(), self.res2.conf_int, rtol=8e-5)
 
     def test_zstat(self):
         assert_almost_equal(self.res1.tvalues, self.res2.z, DECIMAL_4)

@@ -63,6 +63,21 @@ class Model(object):
         self._data_attr = []
         self._data_attr.extend(['exog', 'endog', 'data.exog', 'data.endog',
                                 'data.orig_endog', 'data.orig_exog'])
+        # store keys for extras if we need to recreate model instance
+        # we don't need 'missing', maybe we need 'hasconst'
+        self._init_keys = list(kwargs.keys())
+        if hasconst is not None:
+            self._init_keys.append('hasconst')
+
+
+    def _get_init_kwds(self):
+        """return dictionary with extra keys used in model.__init__
+        """
+        kwds = dict(((key, getattr(self, key, None))
+                         for key in self._init_keys))
+
+        return kwds
+
 
     def _handle_data(self, endog, exog, missing, hasconst, **kwargs):
         data = handle_data(endog, exog, missing, hasconst, **kwargs)

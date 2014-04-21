@@ -942,9 +942,9 @@ class RandHIE(object):
         self.df_model = 9.0
         self.df_resid = 20180.0
         self.llf = -43540.58000589021
-        self.llnull = -44199.27443567125
-        self.llr = 1317.3888595620811
-        self.llr_pvalue = 5.4288002863296022e-278
+        self.llnull = -44586.650971362695 # old value -44199.27443567125
+        self.llr = 2092.1425097129977 # old value 1317.3888595620811
+        self.llr_pvalue = 0 # old value 5.4288002863296022e-278
         self.fittedvalues = [ 0.89348994,  0.89348994,  0.89348994,
                 0.89348994,  0.89348994, 0.9365745 ,  0.9365745 ,  0.9365745 ,
                 0.9365745 ,  0.9365745 ]

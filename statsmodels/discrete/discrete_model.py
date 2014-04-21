@@ -657,6 +657,16 @@ class CountModel(DiscreteModel):
                 raise ValueError("exposure is not the same length as endog")
         self.exposure = exposure
 
+
+    def _get_init_kwds(self):
+        # this is a temporary fixup because exposure has been transformed
+        # see #1609
+        kwds = super(CountModel, self)._get_init_kwds()
+        if 'exposure' in kwds and kwds['exposure'] is not None:
+            kwds['exposure'] = np.exp(kwds['exposure'])
+        return kwds
+
+
     #TODO: are these two methods only for Poisson? or also Negative Binomial?
     def predict(self, params, exog=None, exposure=None, offset=None,
                 linear=False):
@@ -1787,6 +1797,9 @@ class NegativeBinomial(CountModel):
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
             self.exog_names.append('alpha')
+        # store keys for extras if we need to recreate model instance
+        # we need to append keys that don't go to super
+        self._init_keys.append('loglike_method')
 
     def _initialize(self):
         if self.loglike_method == 'nb2':
@@ -2137,10 +2150,13 @@ class DiscreteResults(base.LikelihoodModelResults):
 
     @cache_readonly
     def llnull(self):
+
         model = self.model
+        kwds = model._get_init_kwds()
         #TODO: what parameters to pass to fit?
-        null = model.__class__(model.endog, np.ones(self.nobs)).fit(disp=0)
-        return null.llf
+        mod_null = model.__class__(model.endog, np.ones(self.nobs), **kwds)
+        res_null = mod_null.fit(disp=0)
+        return res_null.llf
 
     @cache_readonly
     def fittedvalues(self):
