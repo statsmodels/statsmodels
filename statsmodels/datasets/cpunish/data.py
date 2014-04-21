@@ -24,23 +24,22 @@ whether the state is in the South, and (an estimate of) the proportion
 of the population with a college degree of some kind.
 """
 
-NOTE        = """
-Number of Observations - 17
+NOTE        = """::
 
-Number of Variables - 7
+    Number of Observations - 17
+    Number of Variables - 7
+    Variable name definitions::
 
-Variable name definitions::
+        EXECUTIONS - Executions in 1996
+        INCOME - Median per capita income in 1996 dollars
+        PERPOVERTY - Percent of the population classified as living in poverty
+        PERBLACK - Percent of black citizens in the population
+        VC100k96 - Rate of violent crimes per 100,00 residents for 1996
+        SOUTH - SOUTH == 1 indicates a state in the South
+        DEGREE - An esimate of the proportion of the state population with a
+            college degree of some kind
 
-    EXECUTIONS - Executions in 1996
-    INCOME - Median per capita income in 1996 dollars
-    PERPOVERTY - Percent of the population classified as living in poverty
-    PERBLACK - Percent of black citizens in the population
-    VC100k96 - Rate of violent crimes per 100,00 residents for 1996
-    SOUTH - SOUTH == 1 indicates a state in the South
-    DEGREE - An esimate of the proportion of the state population with a
-        college degree of some kind
-
-State names are included in the data file, though not returned by load.
+    State names are included in the data file, though not returned by load.
 """
 
 from numpy import recfromtxt, column_stack, array

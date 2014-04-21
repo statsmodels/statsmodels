@@ -22,20 +22,21 @@ DESCRLONG   = """The Longley dataset contains various US macroeconomic
 variables that are known to be highly collinear.  It has been used to appraise
 the accuracy of least squares routines."""
 
-NOTE        = """
-Number of Observations - 16
+NOTE        = """::
 
-Number of Variables - 6
+    Number of Observations - 16
 
-Variable name definitions::
+    Number of Variables - 6
 
-        TOTEMP - Total Employment
-        GNPDEFL - GNP deflator
-        GNP - GNP
-        UNEMP - Number of unemployed
-        ARMED - Size of armed forces
-        POP - Population
-        YEAR - Year (1947 - 1962)
+    Variable name definitions::
+
+            TOTEMP - Total Employment
+            GNPDEFL - GNP deflator
+            GNP - GNP
+            UNEMP - Number of unemployed
+            ARMED - Size of armed forces
+            POP - Population
+            YEAR - Year (1947 - 1962)
 """
 
 from numpy import recfromtxt, array, column_stack

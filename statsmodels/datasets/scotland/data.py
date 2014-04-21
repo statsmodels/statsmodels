@@ -27,26 +27,28 @@ The original source files and variable information are included in
 /scotland/src/
 """
 
-NOTE        = """
-Number of Observations - 32 (1 for each Scottish district)
+NOTE        = """::
 
-Number of Variables - 8
+    Number of Observations - 32 (1 for each Scottish district)
 
-Variable name definitions::
+    Number of Variables - 8
 
-    YES    - Proportion voting yes to granting taxation powers to the Scottish
-             parliament.
-    COUTAX - Amount of council tax collected in pounds steling as of April '97
-    UNEMPF - Female percentage of total unemployment benefits claims as of
-             January 1998
-    MOR    - The standardized mortality rate (UK is 100)
-    ACT    - Labor force participation (Short for active)
-    GDP    - GDP per county
-    AGE    - Percentage of children aged 5 to 15 in the county
-    COUTAX_FEMALEUNEMP - Interaction between COUTAX and UNEMPF
+    Variable name definitions::
 
-Council district names are included in the data file, though are not returned
-by load.
+        YES    - Proportion voting yes to granting taxation powers to the
+                 Scottish parliament.
+        COUTAX - Amount of council tax collected in pounds steling as of
+                 April '97
+        UNEMPF - Female percentage of total unemployment benefits claims as of
+                January 1998
+        MOR    - The standardized mortality rate (UK is 100)
+        ACT    - Labor force participation (Short for active)
+        GDP    - GDP per county
+        AGE    - Percentage of children aged 5 to 15 in the county
+        COUTAX_FEMALEUNEMP - Interaction between COUTAX and UNEMPF
+
+    Council district names are included in the data file, though are not
+    returned by load.
 """
 
 import numpy as np

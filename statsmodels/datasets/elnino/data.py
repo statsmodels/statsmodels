@@ -21,16 +21,16 @@ and 90-80 degrees West, from 1950 to 2010.  This dataset was obtained from
 NOAA.
 """
 
-NOTE = """
-Number of Observations - 61 x 12
+NOTE = """::
 
-Number of Variables - 1
+    Number of Observations - 61 x 12
 
-Variable name definitions::
+    Number of Variables - 1
 
-    TEMPERATURE - average sea surface temperature in degrees Celcius
-                  (12 columns, one per month).
+    Variable name definitions::
 
+        TEMPERATURE - average sea surface temperature in degrees Celcius
+                      (12 columns, one per month).
 """
 
 

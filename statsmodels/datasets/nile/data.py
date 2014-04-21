@@ -17,13 +17,14 @@ the Nile as measured at Ashwan for 100 years from 1871-1970."""
 DESCRLONG   = DESCRSHORT + " There is an apparent changepoint near 1898."
 
 #suggested notes
-NOTE        = """
-Number of observations: 100
-Number of variables: 2
-Variable name definitions:
+NOTE        = """::
 
-    year - the year of the observations
-    volumne - the discharge at Aswan in 10^8, m^3
+    Number of observations: 100
+    Number of variables: 2
+    Variable name definitions:
+
+        year - the year of the observations
+        volumne - the discharge at Aswan in 10^8, m^3
 """
 
 from numpy import recfromtxt, array

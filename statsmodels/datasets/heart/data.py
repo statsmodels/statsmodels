@@ -12,20 +12,19 @@ SOURCE      = """ Miller, R. (1976). Least squares regression with censored dara
 
 DESCRSHORT  = """Survival times after receiving a heart transplant"""
 
-DESCRLONG   = """This data contains the survival time after receiving a heart transplant, the age of the patient and whether or not the survival time was censored.  
+DESCRLONG   = """This data contains the survival time after receiving a heart transplant, the age of the patient and whether or not the survival time was censored.
 """
 
-NOTE = """
-Number of Observations - 69
+NOTE = """::
 
-Number of Variables - 3
+    Number of Observations - 69
 
-Variable name definitions::
-    death - Days after surgery until death
-    age - age at the time of surgery
-    censored - indicates if an observation is censored.  1 is uncensored
+    Number of Variables - 3
 
-
+    Variable name definitions::
+        death - Days after surgery until death
+        age - age at the time of surgery
+        censored - indicates if an observation is censored.  1 is uncensored
 """
 
 import numpy as np

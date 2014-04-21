@@ -17,18 +17,19 @@ system of instruction (PSI) program"""
 
 DESCRLONG   = DESCRSHORT
 
-NOTE        = """
-Number of Observations - 32
+NOTE        = """::
 
-Number of Variables - 4
+    Number of Observations - 32
 
-Variable name definitions::
+    Number of Variables - 4
 
-    Grade - binary variable indicating whether or not a student's grade
-            improved.  1 indicates an improvement.
-    TUCE  - Test score on economics test
-    PSI   - participation in program
-    GPA   - Student's grade point average
+    Variable name definitions::
+
+        Grade - binary variable indicating whether or not a student's grade
+                improved.  1 indicates an improvement.
+        TUCE  - Test score on economics test
+        PSI   - participation in program
+        GPA   - Student's grade point average
 """
 
 import numpy as np
