@@ -107,8 +107,7 @@ class TestNegbinClu(CheckCountRobustMixin):
         cls.get_robust_clu()
 
 
-# TODO: check what's going on with the params
-class T_estNegbinCluExposure(CheckCountRobustMixin):
+class TestNegbinCluExposure(CheckCountRobustMixin):
 
     @classmethod
     def setup_class(cls):
