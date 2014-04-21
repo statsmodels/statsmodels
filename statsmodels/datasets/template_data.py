@@ -18,9 +18,11 @@ DESCRLONG   = """A longer description of the dataset."""
 
 #suggested notes
 NOTE        = """
-Number of observations:
-Number of variables:
-Variable name definitions:
+::
+
+    Number of observations:
+    Number of variables:
+    Variable name definitions:
 
 Any other useful information that does not fit into the above categories.
 """
