@@ -2192,6 +2192,38 @@ class NegativeBinomial(CountModel):
         else:
             return mlefit
 
+
+    def fit_regularized(self, start_params=None, method='l1',
+            maxiter='defined_by_method', full_output=1, disp=1, callback=None,
+            alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
+            qc_tol=0.03, **kwargs):
+
+        self._transparams = False
+        if start_params == None:
+            # Use poisson fit as first guess.
+            start_params = Poisson(self.endog, self.exog).fit(disp=0).params
+            if self.loglike_method.startswith('nb'):
+                start_params = np.append(start_params, 0.1)
+
+        if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
+                                                     alpha != 0):
+            alpha = alpha * np.ones(len(start_params))
+            alpha[-1] = 0
+
+        cntfit = super(CountModel, self).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=disp, callback=callback,
+                alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
+        if method in ['l1', 'l1_cvxopt_cp']:
+            discretefit = L1NegativeBinomialAncillaryResults(self, cntfit)
+        else:
+            raise Exception(
+                    "argument method == %s, which is not handled" % method)
+        #return discretefit
+        return L1NegativeBinomialAncillaryResultsWrapper(discretefit)
+
+
 ### Results Class ###
 
 class DiscreteResults(base.LikelihoodModelResults):
@@ -2545,6 +2577,10 @@ class PoissonResults(CountResults):
         return stats.poisson.pmf(counts, mu)
 
 class L1PoissonResults(L1CountResults, PoissonResults):
+    pass
+
+class L1NegativeBinomialAncillaryResults(L1CountResults,
+                                         NegativeBinomialAncillaryResults):
     pass
 
 class OrderedResults(DiscreteResults):
@@ -2933,6 +2969,11 @@ class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
     #                            lm.RegressionResultsWrapper._wrap_methods,
     #                            _methods)
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
+
+class L1NegativeBinomialAncillaryResultsWrapper(lm.RegressionResultsWrapper):
+    pass
+wrap.populate_wrapper(L1NegativeBinomialAncillaryResultsWrapper,
+                      L1NegativeBinomialAncillaryResults)
 
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {"resid_dev" : "rows",
