@@ -24,15 +24,16 @@ used by Kennan. The data here is data for the months of June only to avoid
 seasonal issues."""
 
 #suggested notes
-NOTE        = """
-Number of observations - 62
+NOTE        = """::
 
-Number of variables - 2
+    Number of observations - 62
 
-Variable name definitions::
+    Number of variables - 2
 
-            duration - duration of the strike in days
-            iprod - unanticipated industrial production
+    Variable name definitions::
+
+                duration - duration of the strike in days
+                iprod - unanticipated industrial production
 """
 
 from numpy import recfromtxt, column_stack, array

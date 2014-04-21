@@ -16,14 +16,15 @@ Geophysical Data Center."""
 
 DESCRLONG   = DESCRSHORT
 
-NOTE        = """
-Number of Observations - 309 (Annual 1700 - 2008)
-Number of Variables - 1
-Variable name definitions::
+NOTE        = """::
 
-    SUNACTIVITY - Number of sunspots for each year
+    Number of Observations - 309 (Annual 1700 - 2008)
+    Number of Variables - 1
+    Variable name definitions::
 
-The data file contains a 'YEAR' variable that is not returned by load.
+        SUNACTIVITY - Number of sunspots for each year
+
+    The data file contains a 'YEAR' variable that is not returned by load.
 """
 
 from numpy import recfromtxt, column_stack, array

@@ -24,42 +24,44 @@ over the national median value on the mathematics exam.
 The data used in this example is only a subset of the original source.
 """
 
-NOTE        = """
-Number of Observations - 303 (counties in California).
+NOTE        = """::
 
-Number of Variables - 13 and 8 interaction terms.
+    Number of Observations - 303 (counties in California).
 
-Definition of variables names::
+    Number of Variables - 13 and 8 interaction terms.
 
-    NABOVE   - Total number of students above the national median for the math
-               section.
-    NBELOW   - Total number of students below the national median for the math
-               section.
-    LOWINC   - Percentage of low income students
-    PERASIAN - Percentage of Asian student
-    PERBLACK - Percentage of black students
-    PERHISP  - Percentage of Hispanic students
-    PERMINTE - Percentage of minority teachers
-    AVYRSEXP - Sum of teachers' years in educational service divided by the
-               number of teachers.
-    AVSALK   - Total salary budget including benefits divided by the number of
-               full-time teachers (in thousands)
-    PERSPENK - Per-pupil spending (in thousands)
-    PTRATIO  - Pupil-teacher ratio.
-    PCTAF    - Percentage of students taking UC/CSU prep courses
-    PCTCHRT  - Percentage of charter schools
-    PCTYRRND - Percentage of year-round schools
+    Definition of variables names::
 
-    The below variables are interaction terms of the variables defined above.
+        NABOVE   - Total number of students above the national median for the
+                   math section.
+        NBELOW   - Total number of students below the national median for the
+                   math section.
+        LOWINC   - Percentage of low income students
+        PERASIAN - Percentage of Asian student
+        PERBLACK - Percentage of black students
+        PERHISP  - Percentage of Hispanic students
+        PERMINTE - Percentage of minority teachers
+        AVYRSEXP - Sum of teachers' years in educational service divided by the
+                number of teachers.
+        AVSALK   - Total salary budget including benefits divided by the number
+                   of full-time teachers (in thousands)
+        PERSPENK - Per-pupil spending (in thousands)
+        PTRATIO  - Pupil-teacher ratio.
+        PCTAF    - Percentage of students taking UC/CSU prep courses
+        PCTCHRT  - Percentage of charter schools
+        PCTYRRND - Percentage of year-round schools
 
-    PERMINTE_AVYRSEXP
-    PEMINTE_AVSAL
-    AVYRSEXP_AVSAL
-    PERSPEN_PTRATIO
-    PERSPEN_PCTAF
-    PTRATIO_PCTAF
-    PERMINTE_AVTRSEXP_AVSAL
-    PERSPEN_PTRATIO_PCTAF
+        The below variables are interaction terms of the variables defined
+        above.
+
+        PERMINTE_AVYRSEXP
+        PEMINTE_AVSAL
+        AVYRSEXP_AVSAL
+        PERSPEN_PTRATIO
+        PERSPEN_PCTAF
+        PTRATIO_PCTAF
+        PERMINTE_AVTRSEXP_AVSAL
+        PERSPEN_PTRATIO_PCTAF
 """
 
 from numpy import recfromtxt, column_stack, array

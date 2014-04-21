@@ -28,24 +28,29 @@ of the more popular mode, car. The level of service data was derived from highwa
 and transport networks in Sydney, Melbourne, non-metropolitan N.S.W. and Victoria,
 including the Australian Capital Territory."""
 
-NOTE = """Number of observations: 840 Observations On 4 Modes for 210 Individuals.
-Number of variables: 8
-Variable name definitions:
-individual = 1 to 210
-mode =
-1 - air
-2 - train
-3 - bus
-4 - car
-choice =
-0 - no
-1 - yes
-ttme = terminal waiting time for plane, train and bus (minutes); 0 for car.
-invc = in vehicle cost for all stages (dollars).
-invt = travel time (in-vehicle time) for all stages (minutes).
-gc = generalized cost measure:invc+(invt*value of travel time savings)(dollars).
-hinc = household income ($’000s).
-psize = traveling group size in mode chosen (number)."""
+NOTE = """::
+
+    Number of observations: 840 Observations On 4 Modes for 210 Individuals.
+    Number of variables: 8
+    Variable name definitions::
+
+        individual = 1 to 210
+        mode =
+            1 - air
+            2 - train
+            3 - bus
+            4 - car
+        choice =
+            0 - no
+            1 - yes
+        ttme = terminal waiting time for plane, train and bus (minutes); 0
+               for car.
+        invc = in vehicle cost for all stages (dollars).
+        invt = travel time (in-vehicle time) for all stages (minutes).
+        gc = generalized cost measure:invc+(invt*value of travel time savings)
+            (dollars).
+        hinc = household income ($1000s).
+        psize = traveling group size in mode chosen (number)."""
 
 import numpy as np
 from statsmodels.datasets import utils as du

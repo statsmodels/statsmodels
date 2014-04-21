@@ -22,12 +22,13 @@ DESCRSHORT  = """Engel food expenditure data."""
 DESCRLONG   = """Data on income and food expenditure for 235 working class households in 1857 Belgium."""
 
 #suggested notes
-NOTE        = """
-Number of observations: 235
-Number of variables: 2
-Variable name definitions:
-    income - annual household income (Belgian francs)
-    foodexp - annual household food expenditure (Belgian francs)
+NOTE        = """::
+
+    Number of observations: 235
+    Number of variables: 2
+    Variable name definitions:
+        income - annual household income (Belgian francs)
+        foodexp - annual household food expenditure (Belgian francs)
 """
 
 import numpy as np

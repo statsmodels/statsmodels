@@ -1,29 +1,33 @@
-"""Name of dataset."""
+"""Nile River Flows."""
 
 __docformat__ = 'restructuredtext'
 
-COPYRIGHT   = """E.g., This is public domain."""
-TITLE       = """Title of the dataset"""
+COPYRIGHT   = """This is public domain."""
+TITLE       = """Nile River flows at Ashwan 1871-1970"""
 SOURCE      = """
-This section should provide a link to the original dataset if possible and
-attribution and correspondance information for the dataset's original author
-if so desired.
+This data is first analyzed in:
+
+    Cobb, G. W. 1978. "The Problem of the Nile: Conditional Solution to a
+        Changepoint Problem." *Biometrika*. 65.2, 243-51.
 """
 
-DESCRSHORT  = """A short description."""
+DESCRSHORT  = """This dataset contains measurements on the annual flow of
+the Nile as measured at Ashwan for 100 years from 1871-1970."""
 
-DESCRLONG   = """A longer description of the dataset."""
+DESCRLONG   = DESCRSHORT + " There is an apparent changepoint near 1898."
 
 #suggested notes
-NOTE        = """
-Number of observations:
-Number of variables:
-Variable name definitions:
+NOTE        = """::
 
-Any other useful information that does not fit into the above categories.
+    Number of observations: 100
+    Number of variables: 2
+    Variable name definitions:
+
+        year - the year of the observations
+        volumne - the discharge at Aswan in 10^8, m^3
 """
 
-from numpy import recfromtxt, column_stack, array
+from numpy import recfromtxt, array
 from pandas import Series, DataFrame
 
 from statsmodels.datasets.utils import Dataset

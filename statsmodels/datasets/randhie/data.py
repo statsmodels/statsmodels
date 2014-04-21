@@ -26,22 +26,23 @@ DESCRSHORT  = """The RAND Co. Health Insurance Experiment Data"""
 
 DESCRLONG   = """"""
 
-NOTE        = """
-Number of observations - 20,190
-Number of variables - 10
-Variable name definitions::
+NOTE        = """::
 
-    mdvis   - Number of outpatient visits to an MD
-    lncoins - ln(coinsurance + 1), 0 <= coninsurance <= 100
-    idp     - 1 if individual deductible plan, 0 otherwise
-    lpi     - ln(max(1, annual participation incentive payment))
-    fmde    - 0 if idp = 1; ln(max(1, MDE/(0.01 coinsurance))) otherwise
-    physlm  - 1 if the person has a physical limitation
-    disea   - number of chronic diseases
-    hlthg   - 1 if self-rated health is good
-    hlthf   - 1 if self-rated health is fair
-    hlthp   - 1 if self-rated health is poor
-    (Omitted category is excellent self-rated health)
+    Number of observations - 20,190
+    Number of variables - 10
+    Variable name definitions::
+
+        mdvis   - Number of outpatient visits to an MD
+        lncoins - ln(coinsurance + 1), 0 <= coninsurance <= 100
+        idp     - 1 if individual deductible plan, 0 otherwise
+        lpi     - ln(max(1, annual participation incentive payment))
+        fmde    - 0 if idp = 1; ln(max(1, MDE/(0.01 coinsurance))) otherwise
+        physlm  - 1 if the person has a physical limitation
+        disea   - number of chronic diseases
+        hlthg   - 1 if self-rated health is good
+        hlthf   - 1 if self-rated health is fair
+        hlthp   - 1 if self-rated health is poor
+        (Omitted category is excellent self-rated health)
 """
 
 from numpy import recfromtxt, column_stack, array

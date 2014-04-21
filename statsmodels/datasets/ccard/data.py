@@ -18,10 +18,12 @@ DESCRLONG   = """More information on this data can be found on the
 homepage for Greene's `Econometric Analysis`. See source.
 """
 
-NOTE        = """
-Number of observations - 72
-Number of variables - 5
-Variable name definitions - See Source for more information on the variables.
+NOTE        = """::
+
+    Number of observations - 72
+    Number of variables - 5
+    Variable name definitions - See Source for more information on the
+                                variables.
 """
 
 from numpy import recfromtxt, column_stack, array

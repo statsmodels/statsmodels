@@ -19,22 +19,24 @@ DESCRSHORT  = """Grunfeld (1950) Investment Data for 11 U.S. Firms."""
 
 DESCRLONG   = DESCRSHORT
 
-NOTE        = """Number of observations - 220 (20 years for 11 firms)
+NOTE        = """::
 
-Number of variables - 5
+    Number of observations - 220 (20 years for 11 firms)
 
-Variables name definitions::
+    Number of variables - 5
 
-    invest  - Gross investment in 1947 dollars
-    value   - Market value as of Dec. 31 in 1947 dollars
-    capital - Stock of plant and equipment in 1947 dollars
-    firm    - General Motors, US Steel, General Electric, Chrysler,
-              Atlantic Refining, IBM, Union Oil, Westinghouse, Goodyear,
-              Diamond Match, American Steel
-    year    - 1935 - 1954
+    Variables name definitions::
 
-Note that raw_data has firm expanded to dummy variables, since it is a
-string categorical variable.
+        invest  - Gross investment in 1947 dollars
+        value   - Market value as of Dec. 31 in 1947 dollars
+        capital - Stock of plant and equipment in 1947 dollars
+        firm    - General Motors, US Steel, General Electric, Chrysler,
+                Atlantic Refining, IBM, Union Oil, Westinghouse, Goodyear,
+                Diamond Match, American Steel
+        year    - 1935 - 1954
+
+    Note that raw_data has firm expanded to dummy variables, since it is a
+    string categorical variable.
 """
 
 from numpy import recfromtxt, column_stack, array
