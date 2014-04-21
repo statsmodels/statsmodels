@@ -82,6 +82,17 @@ class CheckProportionMixin(object):
         assert_almost_equal(pptd.pvals_raw, ppt.pvals_raw[:len(self.nobs) - 1],
                             decimal=13)
 
+
+    def test_number_pairs_1493(self):
+        ppt = smprop.proportions_chisquare_allpairs(self.n_success[:3],
+                                                    self.nobs[:3],
+                                                    multitest_method=None)
+
+        assert_equal(len(ppt.pvals_raw), 3)
+        idx = [0, 1, 3]
+        assert_almost_equal(ppt.pvals_raw, self.res_ppt_pvals_raw[idx])
+
+
 class TestProportion(CheckProportionMixin):
     def setup(self):
         self.n_success = np.array([ 73,  90, 114,  75])
