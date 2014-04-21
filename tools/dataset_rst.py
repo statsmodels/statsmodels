@@ -13,7 +13,6 @@ from string import Template
 
 datasets = dict(inspect.getmembers(sm.datasets, inspect.ismodule))
 datasets.pop('utils')
-datasets.pop('nile') #TODO: fix docstring in nile
 
 doc_template = Template(u"""$TITLE
 $title_
