@@ -555,7 +555,7 @@ class CheckL1Compatability(object):
             DECIMAL_1)
 
     def test_df(self):
-        extra = len(self.res_reg.params) == (self.res_reg.model.exog.shape[1] + 1)
+        extra = getattr(self, 'k_extra', 0)
         assert_equal(self.res_unreg.df_model + extra, self.res_reg.df_model)
         assert_equal(self.res_unreg.df_resid - extra, self.res_reg.df_resid)
 
@@ -563,7 +563,7 @@ class CheckL1Compatability(object):
         m = self.m
         kvars = self.kvars
         # handle extra parameter of NegativeBinomial
-        extra = len(self.res_reg.params) == (self.res_reg.model.exog.shape[1] + 1)
+        extra = getattr(self, 'k_extra', 0)
         t_unreg = self.res_unreg.t_test(np.eye(len(self.res_unreg.params)))
         t_reg = self.res_reg.t_test(np.eye(kvars + extra))
         assert_almost_equal(t_unreg.effect[:m], t_reg.effect[:m], DECIMAL_3)
@@ -576,7 +576,7 @@ class CheckL1Compatability(object):
         m = self.m
         kvars = self.kvars
         # handle extra parameter of NegativeBinomial
-        extra = len(self.res_reg.params) == (self.res_reg.model.exog.shape[1] + 1)
+        extra = getattr(self, 'k_extra', 0)
         f_unreg = self.res_unreg.f_test(np.eye(len(self.res_unreg.params))[:m])
         f_reg = self.res_reg.f_test(np.eye(kvars + extra)[:m])
         assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_2)
@@ -627,6 +627,7 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         cls.res_reg = mod_reg.fit_regularized(
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
+        cls.k_extra = 1  # 1 extra parameter in nb2
 
 
 class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
