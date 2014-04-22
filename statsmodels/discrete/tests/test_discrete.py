@@ -597,8 +597,8 @@ class TestPoissonL1Compatability(CheckL1Compatability):
         rand_exog = sm.add_constant(rand_exog, prepend=True)
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
-        cls.res_unreg = sm.Poisson(
-            rand_data.endog, exog_no_PSI).fit(method="newton", disp=False)
+        mod_unreg = sm.Poisson(rand_data.endog, exog_no_PSI)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
         alpha[:cls.m] = 0
@@ -617,8 +617,8 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         rand_exog = sm.add_constant(rand_exog, prepend=True)
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
-        cls.res_unreg = sm.NegativeBinomial(
-            rand_data.endog, exog_no_PSI).fit(method="newton", disp=False)
+        mod_unreg = sm.NegativeBinomial(rand_data.endog, exog_no_PSI)
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
         # Do a regularized fit with alpha, effectively dropping the last column
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
@@ -639,10 +639,10 @@ class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
         rand_exog = sm.add_constant(rand_exog, prepend=True)
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
-        cls.res_unreg = sm.NegativeBinomial(
-            rand_data.endog, exog_no_PSI, loglike_method='geometric').fit(
-                                              method="newton", disp=False)
-        # Do a regularized fit with alpha, effectively dropping the last column
+        mod_unreg = sm.NegativeBinomial(rand_data.endog, exog_no_PSI,
+                                         loglike_method='geometric')
+        cls.res_unreg = mod_unreg.fit(method="newton", disp=False)
+        # Do a regularized fit with alpha, effectively dropping the last columns
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
         alpha[:cls.m] = 0
         mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog,
@@ -651,6 +651,7 @@ class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
 
+        assert_equal(mod_reg.loglike_method, 'geometric')
 
 
 class TestLogitL1Compatability(CheckL1Compatability):

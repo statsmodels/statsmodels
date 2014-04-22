@@ -2220,7 +2220,7 @@ class NegativeBinomial(CountModel):
         else:
             raise Exception(
                     "argument method == %s, which is not handled" % method)
-        #return discretefit
+
         return L1NegativeBinomialResultsWrapper(discretefit)
 
 
@@ -2577,8 +2577,7 @@ class PoissonResults(CountResults):
 class L1PoissonResults(L1CountResults, PoissonResults):
     pass
 
-class L1NegativeBinomialResults(L1CountResults,
-                                         NegativeBinomialResults):
+class L1NegativeBinomialResults(L1CountResults, NegativeBinomialResults):
     pass
 
 class OrderedResults(DiscreteResults):
