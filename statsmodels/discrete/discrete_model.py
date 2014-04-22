@@ -223,6 +223,9 @@ class DiscreteModel(base.LikelihoodModel):
 
         Notes
         -----
+        Extra parameters are not penalized if alpha is given as a scalar.
+        An example is the shape parameter in NegativeBinomial `nb1` and `nb2`.
+
         Optional arguments for the solvers (available in Results.mle_settings)::
 
             'l1'
@@ -2210,6 +2213,7 @@ class NegativeBinomial(CountModel):
 
         if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
                                                      alpha != 0):
+            # don't penalize alpha if alpha is scalar
             alpha = alpha * np.ones(len(start_params))
             alpha[-1] = 0
 
