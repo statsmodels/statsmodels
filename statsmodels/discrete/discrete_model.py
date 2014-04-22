@@ -2187,8 +2187,8 @@ class NegativeBinomial(CountModel):
             if method not in ["newton", "ncg"]:
                 mlefit._results.params[-1] = np.exp(mlefit._results.params[-1])
 
-            nbinfit = NegativeBinomialAncillaryResults(self, mlefit._results)
-            return NegativeBinomialAncillaryResultsWrapper(nbinfit)
+            nbinfit = NegativeBinomialResults(self, mlefit._results)
+            return NegativeBinomialResultsWrapper(nbinfit)
         else:
             return mlefit
 
@@ -2216,12 +2216,12 @@ class NegativeBinomial(CountModel):
                 alpha=alpha, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
                 size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs)
         if method in ['l1', 'l1_cvxopt_cp']:
-            discretefit = L1NegativeBinomialAncillaryResults(self, cntfit)
+            discretefit = L1NegativeBinomialResults(self, cntfit)
         else:
             raise Exception(
                     "argument method == %s, which is not handled" % method)
         #return discretefit
-        return L1NegativeBinomialAncillaryResultsWrapper(discretefit)
+        return L1NegativeBinomialResultsWrapper(discretefit)
 
 
 ### Results Class ###
@@ -2502,12 +2502,10 @@ class CountResults(DiscreteResults):
         """
         return self.model.endog - self.predict()
 
-class NegativeBinomialAncillaryResults(CountResults):
+class NegativeBinomialResults(CountResults):
     __doc__ = _discrete_results_docs % {
         "one_line_description" : "A results class for NegativeBinomial 1 and 2",
                     "extra_attr" : ""}
-    def __init__(self, model, mlefit):
-        super(NegativeBinomialAncillaryResults, self).__init__(model, mlefit)
 
     @cache_readonly
     def lnalpha(self):
@@ -2579,8 +2577,8 @@ class PoissonResults(CountResults):
 class L1PoissonResults(L1CountResults, PoissonResults):
     pass
 
-class L1NegativeBinomialAncillaryResults(L1CountResults,
-                                         NegativeBinomialAncillaryResults):
+class L1NegativeBinomialResults(L1CountResults,
+                                         NegativeBinomialResults):
     pass
 
 class OrderedResults(DiscreteResults):
@@ -2942,10 +2940,10 @@ class CountResultsWrapper(lm.RegressionResultsWrapper):
     pass
 wrap.populate_wrapper(CountResultsWrapper, CountResults)
 
-class NegativeBinomialAncillaryResultsWrapper(lm.RegressionResultsWrapper):
+class NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(NegativeBinomialAncillaryResultsWrapper,
-                      NegativeBinomialAncillaryResults)
+wrap.populate_wrapper(NegativeBinomialResultsWrapper,
+                      NegativeBinomialResults)
 
 class PoissonResultsWrapper(lm.RegressionResultsWrapper):
     pass
@@ -2970,10 +2968,10 @@ class L1PoissonResultsWrapper(lm.RegressionResultsWrapper):
     #                            _methods)
 wrap.populate_wrapper(L1PoissonResultsWrapper, L1PoissonResults)
 
-class L1NegativeBinomialAncillaryResultsWrapper(lm.RegressionResultsWrapper):
+class L1NegativeBinomialResultsWrapper(lm.RegressionResultsWrapper):
     pass
-wrap.populate_wrapper(L1NegativeBinomialAncillaryResultsWrapper,
-                      L1NegativeBinomialAncillaryResults)
+wrap.populate_wrapper(L1NegativeBinomialResultsWrapper,
+                      L1NegativeBinomialResults)
 
 class BinaryResultsWrapper(lm.RegressionResultsWrapper):
     _attrs = {"resid_dev" : "rows",
