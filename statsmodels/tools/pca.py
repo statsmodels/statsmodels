@@ -9,7 +9,7 @@ TODO : add class for better reuse of results
 """
 
 import numpy as np
-
+from statsmodels.graphics.utils import create_mpl_ax
 
 class PCA(object):
     """
@@ -46,6 +46,35 @@ class PCA(object):
         self.components = evals
         self.loadings = evecs
 
+    def plot_scree(self, n_components=10, ax=None, fontsize=14, **kwargs):
+        """
+        Plot the first n_components
+
+        Parameters
+        ----------
+        n_components : int or None
+            The number of components to plot. If None, plots them all.
+        ax : matplotlib.Axes or None, optional
+            An existing matplotlib axes to plot on
+        fontsize : int
+            The size of the axes labels
+        kwargs : keywords, optional
+            These are passed on to the axes plot method.
+
+        Returns
+        -------
+        fig : matplotlib.Figure instance
+            The figure containing the plot
+        """
+        #TODO: allow proportion of explained variance in addition to eigenvalue
+        if n_components is None:
+            n_components = len(self.components)
+        fig, ax = create_mpl_ax(ax)
+        ax.plot(self.components[:n_components], **kwargs)
+        ax.set_xlabel("Component Number", size=fontsize)
+        ax.set_ylabel("Eigenvalue", size=fontsize)
+        fig.tight_layout()
+        return fig
 
 def _pca_eig(x, corr):
     if corr:
