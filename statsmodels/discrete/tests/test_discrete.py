@@ -578,7 +578,7 @@ class CheckL1Compatability(object):
         extra = getattr(self, 'k_extra', 0)
         f_unreg = self.res_unreg.f_test(np.eye(len(self.res_unreg.params))[:m])
         f_reg = self.res_reg.f_test(np.eye(kvars + extra)[:m])
-        assert_almost_equal(f_unreg.fvalue, f_reg.fvalue, DECIMAL_2)
+        assert_allclose(f_unreg.fvalue, f_reg.fvalue, rtol=3e-5, atol=1e-3)
         assert_almost_equal(f_unreg.pvalue, f_reg.pvalue, DECIMAL_3)
 
     def test_bad_r_matrix(self):
@@ -622,8 +622,11 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
         alpha[:cls.m] = 0
         alpha[-1] = 0  # don't penalize alpha
+        start_params = np.zeros(len(alpha))
+        start_params[0] = rand_data.endog.mean()
+        start_params[-1] = 0.5
         mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog)
-        cls.res_reg = mod_reg.fit_regularized(
+        cls.res_reg = mod_reg.fit_regularized(start_params=start_params,
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
         cls.k_extra = 1  # 1 extra parameter in nb2
