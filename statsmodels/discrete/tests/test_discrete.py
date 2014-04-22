@@ -1076,11 +1076,13 @@ class TestNegativeBinomialGeometricBFGS(CheckModelResults):
         res2.negativebinomial_geometric_bfgs()
         cls.res2 = res2
 
+    # the following are regression tests, could be inherited instead
+
     def test_aic(self):
-        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_1)
+        assert_almost_equal(self.res1.aic, self.res2.aic, DECIMAL_3)
 
     def test_bic(self):
-        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_1)
+        assert_almost_equal(self.res1.bic, self.res2.bic, DECIMAL_3)
 
     def test_conf_int(self):
         assert_almost_equal(self.res1.conf_int(), self.res2.conf_int, DECIMAL_3)

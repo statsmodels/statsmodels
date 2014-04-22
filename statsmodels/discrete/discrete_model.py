@@ -2521,13 +2521,15 @@ class NegativeBinomialResults(CountResults):
     @cache_readonly
     def aic(self):
         # + 1 because we estimate alpha
-        return -2*(self.llf - (self.df_model + self.k_constant + 1))
+        k_extra = getattr(self.model, 'k_extra', 0)
+        return -2*(self.llf - (self.df_model + self.k_constant + k_extra))
 
     @cache_readonly
     def bic(self):
         # + 1 because we estimate alpha
+        k_extra = getattr(self.model, 'k_extra', 0)
         return -2*self.llf + np.log(self.nobs)*(self.df_model +
-                                                self.k_constant + 1)
+                                                self.k_constant + k_extra)
 
 class L1CountResults(DiscreteResults):
     __doc__ = _discrete_results_docs % {"one_line_description" :
