@@ -555,9 +555,8 @@ class CheckL1Compatability(object):
             DECIMAL_1)
 
     def test_df(self):
-        extra = getattr(self, 'k_extra', 0)
-        assert_equal(self.res_unreg.df_model + extra, self.res_reg.df_model)
-        assert_equal(self.res_unreg.df_resid - extra, self.res_reg.df_resid)
+        assert_equal(self.res_unreg.df_model, self.res_reg.df_model)
+        assert_equal(self.res_unreg.df_resid, self.res_reg.df_resid)
 
     def test_t_test(self):
         m = self.m

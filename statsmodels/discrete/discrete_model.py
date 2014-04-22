@@ -1878,6 +1878,9 @@ class NegativeBinomial(CountModel):
         self._initialize()
         if loglike_method in ['nb2', 'nb1']:
             self.exog_names.append('alpha')
+            self.k_extra = 1
+        else:
+            self.k_extra = 0
         # store keys for extras if we need to recreate model instance
         # we need to append keys that don't go to super
         self._init_keys.append('loglike_method')
@@ -2538,9 +2541,14 @@ class L1CountResults(DiscreteResults):
         # entry in params has been set zero'd out.
         self.trimmed = cntfit.mle_retvals['trimmed']
         self.nnz_params = (self.trimmed == False).sum()
-        #update degrees of freedom
+        # update degrees of freedom
         self.model.df_model = self.nnz_params - 1
         self.model.df_resid = float(self.model.endog.shape[0] - self.nnz_params)
+        # adjust for extra parameter in NegativeBinomial nb1 and nb2
+        # extra parameter is not included in df_model
+        k_extra = getattr(self.model, 'k_extra', 0)
+        self.model.df_model -= k_extra
+        self.model.df_resid += k_extra
         self.df_model = self.model.df_model
         self.df_resid = self.model.df_resid
 
