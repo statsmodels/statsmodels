@@ -569,7 +569,7 @@ class CheckL1Compatability(object):
         assert_almost_equal(t_unreg.effect[:m], t_reg.effect[:m], DECIMAL_3)
         assert_almost_equal(t_unreg.sd[:m], t_reg.sd[:m], DECIMAL_3)
         assert_almost_equal(np.nan, t_reg.sd[m])
-        assert_almost_equal(t_unreg.tvalue[:m], t_reg.tvalue[:m], DECIMAL_3)
+        assert_allclose(t_unreg.tvalue[:m], t_reg.tvalue[:m], atol=3e-3)
         assert_almost_equal(np.nan, t_reg.tvalue[m])
 
     def test_f_test(self):
@@ -640,16 +640,17 @@ class TestNegativeBinomialGeoL1Compatability(CheckL1Compatability):
         # Drop some columns and do an unregularized fit
         exog_no_PSI = rand_exog[:, :cls.m]
         cls.res_unreg = sm.NegativeBinomial(
-            rand_data.endog, exog_no_PSI).fit(loglike_method='geometric',
+            rand_data.endog, exog_no_PSI, loglike_method='geometric').fit(
                                               method="newton", disp=False)
         # Do a regularized fit with alpha, effectively dropping the last column
-        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars + 1)
+        alpha = 10 * len(rand_data.endog) * np.ones(cls.kvars)
         alpha[:cls.m] = 0
-        alpha[-1] = 0  # don't penalize alpha
-        mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog)
-        cls.res_reg = mod_reg.fit_regularized(loglike_method='geometric',
+        mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog,
+                                      loglike_method='geometric')
+        cls.res_reg = mod_reg.fit_regularized(
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
+
 
 
 class TestLogitL1Compatability(CheckL1Compatability):
