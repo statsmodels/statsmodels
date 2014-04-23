@@ -247,6 +247,19 @@ class TestKDEMultivariate(MyTest):
         dens = nparam.KDEMultivariate(data=[Y, C1], var_type='cc', bw='cv_ml')
         npt.assert_allclose(dens.bw, dens_efficient.bw, atol=0.1, rtol = 0.2)
 
+    def test_efficient_user_specified_bw(self):
+        nobs = 400
+        np.random.seed(12345)
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        bw_user=[0.23, 434697.22]
+        
+        dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
+            bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
+                                                          randomize=False,
+                                                          n_sub=100))
+        npt.assert_equal(dens.bw, bw_user)
+
 
 class TestKDEMultivariateConditional(MyTest):
     @dec.slow
@@ -360,6 +373,19 @@ class TestKDEMultivariateConditional(MyTest):
         #bw = dens.bw
         bw_expected = np.array([0.73387, 0.43715])
         npt.assert_allclose(dens_efficient.bw, bw_expected, atol=0, rtol=1e-3)
+
+    def test_efficient_user_specified_bw(self):
+        nobs = 400
+        np.random.seed(12345)
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        bw_user=[0.23, 434697.22]
+        
+        dens = nparam.KDEMultivariate(data=[C1, C2], var_type='cc',
+            bw=bw_user, defaults=nparam.EstimatorSettings(efficient=True,
+                                                          randomize=False,
+                                                          n_sub=100))
+        npt.assert_equal(dens.bw, bw_user)
 
 if __name__ == "__main__":
     import nose
