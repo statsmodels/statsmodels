@@ -44,6 +44,21 @@ insufficiently tested.
    tools.recipr0
    tools.unsqueeze
 
+.. currentmodule:: statsmodels.tools
+
+.. _pca:
+
+Principal Component Analysis
+""""""""""""""""""""""""""""
+
+
+.. autosummary::
+   :toctree: generated/
+
+   pca.PCA
+   pca.pca
+
+
 .. _numdiff:
 
 Numerical Differentiation
