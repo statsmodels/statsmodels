@@ -55,8 +55,8 @@ Principal Component Analysis
 .. autosummary::
    :toctree: generated/
 
-   pca.PCA
-   pca.pca
+   principal_components.PCA
+   principal_components.pca
 
 
 .. _numdiff:

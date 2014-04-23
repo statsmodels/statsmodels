@@ -9,7 +9,7 @@ TODO:
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-from statsmodels.tools.pca import pca
+from statsmodels.tools.principal_components import pca
 
 from .datamlw import *
 
