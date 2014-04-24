@@ -632,7 +632,7 @@ class TestNegativeBinomialL1Compatability(CheckL1Compatability):
         start_params[-1] = cls.res_unreg.params[-1]
 
         mod_reg = sm.NegativeBinomial(rand_data.endog, rand_exog)
-        cls.res_reg = mod_reg.fit_regularized(start_params=start_params,
+        cls.res_reg = mod_reg.fit_regularized(#start_params=start_params,
             method='l1', alpha=alpha, disp=False, acc=1e-10, maxiter=2000,
             trim_mode='auto')
         cls.k_extra = 1  # 1 extra parameter in nb2

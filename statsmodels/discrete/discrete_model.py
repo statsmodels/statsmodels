@@ -2204,18 +2204,25 @@ class NegativeBinomial(CountModel):
             alpha=0, trim_mode='auto', auto_trim_tol=0.01, size_trim_tol=1e-4,
             qc_tol=0.03, **kwargs):
 
-        self._transparams = False
-        if start_params == None:
-            # Use poisson fit as first guess.
-            start_params = Poisson(self.endog, self.exog).fit(disp=0).params
-            if self.loglike_method.startswith('nb'):
-                start_params = np.append(start_params, 0.1)
-
         if self.loglike_method.startswith('nb') and (np.size(alpha) == 1 and
                                                      alpha != 0):
             # don't penalize alpha if alpha is scalar
             alpha = alpha * np.ones(len(start_params))
             alpha[-1] = 0
+
+        # alpha for regularized poisson to get starting values
+        alpha_p = alpha[:-1] if self.k_extra else alpha
+
+        self._transparams = False
+        if start_params == None:
+            # Use poisson fit as first guess.
+            start_params = Poisson(self.endog, self.exog).fit_regularized(
+                start_params=start_params, method=method, maxiter=maxiter,
+                full_output=full_output, disp=0, callback=callback,
+                alpha=alpha_p, trim_mode=trim_mode, auto_trim_tol=auto_trim_tol,
+                size_trim_tol=size_trim_tol, qc_tol=qc_tol, **kwargs).params
+            if self.loglike_method.startswith('nb'):
+                start_params = np.append(start_params, 0.1)
 
         cntfit = super(CountModel, self).fit_regularized(
                 start_params=start_params, method=method, maxiter=maxiter,
