@@ -1,7 +1,7 @@
 """
-
 Test functions for models.GLM
 """
+
 import os
 import numpy as np
 from numpy.testing import assert_almost_equal, assert_equal, assert_raises
@@ -494,6 +494,19 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
                     exposure=self.exposure, missing='drop')
         assert_equal(mod.exposure.shape[0], 13)
 
+    def test_offset_exposure(self):
+        # exposure=x and offset=log(x) should have the same effect
+        np.random.seed(38230482384)
+        endog = np.random.randint(0, 10, 100)
+        exog = np.random.normal(size=(100,3))
+        exposure = np.random.uniform(1, 2, 100)
+        offset = np.random.uniform(1, 2, 100)
+        mod1 = GLM(endog, exog, family=sm.families.Poisson(),
+                   offset=offset, exposure=exposure).fit()
+        offset2 = offset + np.log(exposure)
+        mod2 = GLM(endog, exog, family=sm.families.Poisson(),
+                   offset=offset2).fit()
+        assert_almost_equal(mod1.params, mod2.params)
 
 def test_prefect_pred():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
@@ -509,7 +522,9 @@ def test_prefect_pred():
 
 
 def test_attribute_writable_resettable():
-    # Regression test for mutables and class constructors.
+    """
+    Regression test for mutables and class constructors.
+    """
     data = sm.datasets.longley.load()
     endog, exog = data.endog, data.exog
     glm_model = sm.GLM(endog, exog)
