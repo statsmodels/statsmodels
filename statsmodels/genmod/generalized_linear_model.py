@@ -51,7 +51,7 @@ class GLM(base.LikelihoodModel):
         supplied, each observation is expected to be [success, failure].
     exog : array-like
         A nobs x k array where `nobs` is the number of observations and `k`
-        is the number of regressors. An interecept is not included by default
+        is the number of regressors. An intercept is not included by default
         and should be added by the user. See `statsmodels.tools.add_constant`.
     family : family class instance
         The default is Gaussian.  To specify the binomial distribution
