@@ -435,7 +435,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     regressor_order : list of strings
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
-    drop_ommitted : bool
+    drop_omitted : bool
         Includes regressors that are not specified in regressor_order. If False,
         regressors not specified will be appended to end of the list. If True,
         only regressors in regressors_list will be included.
