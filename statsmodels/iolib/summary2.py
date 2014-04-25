@@ -468,8 +468,8 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
         
-    if drop_omitted:
-        summ = summ.loc[regressor_order]
+        if drop_omitted:
+            summ = summ.loc[regressor_order]
 
     idx = pd.Series(lrange(summ.shape[0])) %2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
