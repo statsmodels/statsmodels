@@ -45,8 +45,11 @@ class PCA(object):
         self.factors = factors
         self.components = evals
         self.loadings = evecs
+        self.explained_variance = evals / evals.sum()
+        self.cumulative_variance = np.cumsum(self.explained_variance)
 
-    def plot_scree(self, n_components=10, ax=None, fontsize=14, **kwargs):
+    def plot_scree(self, n_components=10, variance=False, ax=None, fontsize=14,
+                   **kwargs):
         """
         Plot the first n_components
 
@@ -54,6 +57,9 @@ class PCA(object):
         ----------
         n_components : int or None
             The number of components to plot. If None, plots them all.
+        variance : bool
+            If True, plots the explained and cumulative variance. If False,
+            plots the eigenvalues on the left-hand side.
         ax : matplotlib.Axes or None, optional
             An existing matplotlib axes to plot on
         fontsize : int
@@ -70,9 +76,19 @@ class PCA(object):
         if n_components is None:
             n_components = len(self.components)
         fig, ax = create_mpl_ax(ax)
-        ax.plot(self.components[:n_components], **kwargs)
+        if variance:
+            ax.plot(self.explained_variance[:n_components],
+                    label='Explained Variance',
+                    **kwargs)
+            ax.plot(self.cumulative_variance[:n_components],
+                    label='Cumulative Variance',
+                    **kwargs)
+            ax.legend(loc='best')
+            ax.set_ylim(0, 1.05)
+        else:
+            ax.plot(self.components[:n_components], **kwargs)
+            ax.set_ylabel("Eigenvalue", size=fontsize)
         ax.set_xlabel("Component Number", size=fontsize)
-        ax.set_ylabel("Eigenvalue", size=fontsize)
         fig.tight_layout()
         return fig
 
