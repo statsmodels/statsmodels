@@ -411,7 +411,7 @@ def _make_unique(list_of_names):
 
 
 def summary_col(results, float_format='%.4f', model_names=[], stars=False,
-        info_dict=None, regressor_order=[],drop_ommitted=False):
+        info_dict=None, regressor_order=[],drop_omitted=False):
     '''Summarize multiple results instances side-by-side (coefs and SEs)
 
     Parameters
@@ -469,7 +469,7 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ.index = [x[:-4] for x in summ.index]
         
     if drop_omitted:
-        summ = summ.loc[regressors]
+        summ = summ.loc[regressor_order]
 
     idx = pd.Series(lrange(summ.shape[0])) %2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
