@@ -264,6 +264,17 @@ class KDEUnivariate(object):
         _checkisfit(self)
         return self.kernel.density(self.endog, point)
 
+    def plot_density(self, ax=None):
+        from statsmodels.graphics.utils import create_mpl_ax
+        fig, ax = create_mpl_ax(ax)
+        ax.plot(self.support, self.density)
+        ax.set_title('Kernel Density Estimate')
+        kernel = self.kernel.__class__.__name__
+        ax.set_xlabel('Kernel = {0}; Bandwidth = {1:.4f}'.format(kernel,
+                                                                 self.bw))
+        ax.set_ylabel('Density')
+        return fig
+
 
 class KDE(KDEUnivariate):
     def __init__(self, endog):
@@ -460,7 +471,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     X = np.asarray(X)
     X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
                                                 # will affect underlying data?
-    
+
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
 
