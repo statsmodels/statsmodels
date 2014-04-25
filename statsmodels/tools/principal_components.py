@@ -10,6 +10,8 @@ TODO : add class for better reuse of results
 
 import numpy as np
 from statsmodels.graphics.utils import create_mpl_ax
+from statsmodels.base.data import handle_data, PandasData
+from pandas import DataFrame, Series
 
 class PCA(object):
     """
@@ -31,22 +33,44 @@ class PCA(object):
         If True, compute via the singular value decomposition ``np.linalg.svd``
         If False, compute via the eigenvalues and eigenvectors directly
         using ``np.linalg.eig``.
+    missing : str
+        Available options are 'none', 'drop', and 'raise'. If 'none', no nan
+        checking is done. If 'drop', any observations with nans are dropped.
+        If 'raise', an error is raised. Default is 'none.'
+
 
     Attributes
     ----------
     """
     def __init__(self, X, corr=True, normalize=False, demean=False,
-                 use_svd=True):
+                 use_svd=True, missing='none'):
+        # double memory usage in one fell swoop
+        data = handle_data(X, None, missing=missing, hasconst=False)
+        self.data = data
 
         (proj, factors,
-         evals, evecs) = pca(X, None, normalize, demean, corr, use_svd)
+         evals, evecs) = pca(data.endog, None, normalize, demean, corr,
+                             use_svd)
 
-        self.projections = proj
-        self.factors = factors
-        self.components = evals
-        self.loadings = evecs
-        self.explained_variance = evals / evals.sum()
-        self.cumulative_variance = np.cumsum(self.explained_variance)
+        if isinstance(data, PandasData):
+            component_names = ['PC{0}'.format(i) for i in
+                               range(self.data.endog.shape[1])]
+            self.projections = proj
+            self.factors = DataFrame(factors, index=data.row_labels,
+                                     columns=data.ynames)
+            self.components = Series(evals, index=data.ynames)
+            self.loadings = DataFrame(evecs, index=data.ynames,
+                                      columns=component_names)
+            self.explained_variance = Series(evals / evals.sum(),
+                                             index=component_names)
+            self.cumulative_variane = self.explained_variance.cumsum()
+        else:
+            self.projections = proj
+            self.factors = factors
+            self.components = evals
+            self.loadings = evecs
+            self.explained_variance = evals / evals.sum()
+            self.cumulative_variance = np.cumsum(self.explained_variance)
 
     def plot_scree(self, n_components=10, variance=False, ax=None, fontsize=14,
                    **kwargs):
@@ -91,6 +115,7 @@ class PCA(object):
         ax.set_xlabel("Component Number", size=fontsize)
         fig.tight_layout()
         return fig
+
 
 def _pca_eig(x, corr):
     if corr:
