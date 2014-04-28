@@ -479,6 +479,8 @@ class GEE(base.Model):
 
             rslt = self.cov_struct.covariance_matrix_solve(expval, i,
                                                 sdev, (dmat, resid))
+            if rslt is None:
+                return None, None
             vinv_d, vinv_resid = tuple(rslt)
 
             bmat += np.dot(dmat.T, vinv_d)
@@ -555,6 +557,8 @@ class GEE(base.Model):
 
             rslt = self.cov_struct.covariance_matrix_solve(expval, i,
                                                 sdev, (dmat, resid))
+            if rslt is None:
+                return None, None, None, None
             vinv_d, vinv_resid = tuple(rslt)
 
             bmat += np.dot(dmat.T, vinv_d)
@@ -578,16 +582,22 @@ class GEE(base.Model):
             dmat = self.mean_deriv(exog[i], lpr)
             sdev = np.sqrt(varfunc(expval))
 
-            vinv_d, = self.cov_struct.covariance_matrix_solve(expval,
-                                    i, sdev, (dmat,))
+            rslt = self.cov_struct.covariance_matrix_solve(expval,
+                                                  i, sdev, (dmat,))
+            if rslt is None:
+                return None, None, None, None
+            vinv_d = rslt[0]
             vinv_d /= scale
 
             hmat = np.dot(vinv_d, naive_covariance)
             hmat = np.dot(hmat, dmat.T).T
 
             aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
-            srt, = self.cov_struct.covariance_matrix_solve(expval, i,
-                                                sdev, (aresid,))
+            rslt = self.cov_struct.covariance_matrix_solve(expval, i,
+                                                     sdev, (aresid,))
+            if rslt is None:
+                return None, NOne, None, None
+            srt = rslt[0]
             srt = np.dot(dmat.T, srt) / scale
             bcm += np.outer(srt, srt)
 
@@ -660,6 +670,7 @@ class GEE(base.Model):
 
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
+            params_niter=1, first_dep_update=0,
             covariance_type='robust'):
         """
         Fits a GEE model.
@@ -674,12 +685,31 @@ class GEE(base.Model):
         start_params : array-like
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
+        params_niter : integer
+            The number of Gauss-Seidel updates of the mean structure
+            parameters that take place prior to each update of the
+            dependence structure.
+        first_dep_update : integer
+            No dependence structure updates occur before this
+            iteration number.
         covariance_type : string
             One of "robust", "naive", or "bias_reduced".
 
         Returns
         -------
         An instance of the GEEResults class
+
+        Notes
+        -----
+        If convergence difficulties occur, increase the values of
+        `first_dep_update` and/or `params_niter`.  Setting
+        `first_dep_update` to a greater value (e.g. ~10-20) causes the
+        algorithm to move close to the GLM solution before attempting
+        to identify the dependence structure.
+
+        For the Gaussian family, there is no benefit to setting
+        `params_niter` to a value greater than 1, since the mean
+        structure parameters converge in one step.
         """
 
         self.fit_history = {'params': [],
@@ -695,7 +725,8 @@ class GEE(base.Model):
 
         # Define here in case singularity encountered on first
         # iteration.
-        fitlack = -1.
+        del_params = -1.
+        num_assoc_updates = 0
 
         for itr in range(maxiter):
             update, score = self._update_mean_params()
@@ -705,7 +736,10 @@ class GEE(base.Model):
                 break
             mean_params += update
             self.update_cached_means(mean_params)
-            fitlack = np.sqrt(np.sum(score**2))
+
+            # L2 norm of the change in mean structure parameters at
+            # this iteration.
+            del_params = np.sqrt(np.sum(score**2))
 
             self.fit_history['params'].append(mean_params.copy())
             self.fit_history['score'].append(score)
@@ -714,13 +748,15 @@ class GEE(base.Model):
 
             # Don't exit until the association parameters have been
             # updated at least once.
-            if fitlack < ctol and itr > 0:
+            if del_params < ctol and num_assoc_updates > 0:
                 break
 
-            if self._do_cov_update:
+            if self._do_cov_update and (itr % params_niter) == 0\
+                   and itr >= first_dep_update:
                 self._update_assoc(mean_params)
+                num_assoc_updates += 1
 
-        if fitlack >= ctol:
+        if del_params >= ctol:
             warnings.warn("Iteration limit reached prior to convergence",
                           IterationLimitWarning)
 
@@ -731,8 +767,8 @@ class GEE(base.Model):
 
         bcov, ncov, bc_cov, _ = self._covmat()
         if bcov is None:
-            warnings.warn("Unable to determine covariance structure "
-                          "for GEE estimates", ConvergenceWarning)
+            warnings.warn("Estimated covariance structure for GEE "
+                          "estimates is singular", ConvergenceWarning)
             return None
 
         if self.constraint is not None:
@@ -753,8 +789,8 @@ class GEE(base.Model):
         results.fit_history = self.fit_history
         results.naive_covariance = ncov
         results.robust_covariance_bc = bc_cov
-        results.score_norm = fitlack
-        results.converged = (fitlack < ctol)
+        results.score_norm = del_params
+        results.converged = (del_params < ctol)
         results.cov_struct = self.cov_struct
 
         return results

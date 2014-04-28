@@ -5,17 +5,24 @@ from scipy import linalg as spl
 
 class CovStruct(object):
     """
-    The base class for correlation and covariance structures of
-    cluster data.
+    A base class for correlation and covariance structures of grouped
+    data.
 
     Each implementation of this class takes the residuals from a
-    regression model that has been fitted to clustered data, and uses
-    them to estimate the within-cluster variance and dependence
-    structure of the random errors in the model.
+    regression model that has been fitted to grouped data, and uses
+    them to estimate the within-group dependence structure of the
+    random errors in the model.
+
+    The state of the covariance structure is represented through the
+    value of the class variable `dep_params`.  The default state of a
+    newly-created instance should correspond to the identity
+    correlation matrix.
     """
 
-    # Parameters describing the dependency structure
-    dep_params = None
+    def __init__(self):
+
+        # Parameters describing the dependency structure
+        self.dep_params = None
 
     def initialize(self, model):
         """
@@ -125,8 +132,6 @@ class Independence(CovStruct):
     An independence working dependence structure.
     """
 
-    dep_params = np.r_[[]]
-
     # Nothing to update
     def update(self, params):
         return
@@ -154,8 +159,12 @@ class Exchangeable(CovStruct):
     An exchangeable working dependence structure.
     """
 
-    # The correlation between any two values in the same cluster
-    dep_params = 0
+    def __init__(self):
+
+        super(Exchangeable, self).__init__()
+
+        # The correlation between any two values in the same cluster
+        self.dep_params = 0.
 
     def update(self, params):
 
@@ -268,25 +277,6 @@ class Nested(CovStruct):
     variance components are shared by r and r'.
     """
 
-    # The regression design matrix for estimating the variance
-    # components
-    designx = None
-
-    # Matrices containing labels that indicate which covariance
-    # parameters are constrained to be equal
-    ilabels = None
-
-    # The SVD of designx
-    designx_u = None
-    designx_s = None
-    designx_v = None
-
-    # The scale parameter
-    scale = None
-
-    # The regression coefficients for estimating the variance
-    # components
-    vcomp_coeff = None
 
     def initialize(self, model):
         """
@@ -460,28 +450,22 @@ class Autoregressive(CovStruct):
     in medicine. Vol 7, 59-71, 1988.
     """
 
-    # The autoregression parameter
-    dep_params = 0
-
-    designx = None
-
-    # The function for determining distances based on time
-    dist_func = None
-
-
     def __init__(self, dist_func=None):
 
+        super(Autoregressive, self).__init__()
+
+        # The function for determining distances based on time
         if dist_func is None:
             self.dist_func = lambda x, y: np.abs(x - y).sum()
         else:
             self.dist_func = dist_func
 
+        self.designx = None
+
+        # The autocorrelation parameter
+        self.dep_params = 0.
 
     def update(self, params):
-
-        if self.model.time is None:
-            raise ValueError("GEE: time must be provided to GEE if "
-                             "using AR dependence structure")
 
         endog = self.model.endog_li
         time = self.model.time_li
@@ -507,25 +491,19 @@ class Autoregressive(CovStruct):
             self.designx = designx
 
         scale = self.model.estimate_scale()
-
         varfunc = self.model.family.variance
-
         cached_means = self.model.cached_means
 
         # Weights
-        var = (1 - self.dep_params**(2 * designx)) /\
-            (1 - self.dep_params**2)
+        var = 1 - self.dep_params**(2*designx)
+        var /= 1 - self.dep_params**2
         wts = 1 / var
         wts /= wts.sum()
 
         residmat = []
         for i in range(self.model.num_group):
 
-            if len(endog[i]) == 0:
-                continue
-
             expval, _ = cached_means[i]
-
             sdev = np.sqrt(scale * varfunc(expval))
             resid = (endog[i] - expval) / sdev
 
@@ -564,7 +542,6 @@ class Autoregressive(CovStruct):
 
         from scipy.optimize import brent
         self.dep_params = brent(fitfunc, brack=[b_lft, b_ctr, b_rgt])
-
 
     def covariance_matrix(self, endog_expval, index):
         ngrp = len(endog_expval)
@@ -665,21 +642,10 @@ class GlobalOddsRatio(CovStruct):
     from the given cut points.
     """
 
-    # The current estimate of the odds ratio
-    dep_params = [None,]
-
-    # The current estimate of the crude odds ratio
-    crude_or = None
-
-    # See docstring
-    ibd = None
-
-    # See docstring
-    cpp = None
-
     def __init__(self, endog_type):
         super(GlobalOddsRatio, self).__init__()
         self.endog_type = endog_type
+        self.dep_params = 0.
 
     def initialize(self, model):
 
@@ -717,7 +683,7 @@ class GlobalOddsRatio(CovStruct):
 
         # Initialize the dependence parameters
         self.crude_or = self.observed_crude_oddsratio()
-        self.dep_params[0] = self.crude_or
+        self.dep_params = self.crude_or
 
 
     def pooled_odds_ratio(self, tables):
@@ -797,7 +763,7 @@ class GlobalOddsRatio(CovStruct):
         probabilities of endog and the odds ratio `current_or`.
         """
 
-        current_or = self.dep_params[0]
+        current_or = self.dep_params
         ibd = self.ibd[index]
 
         # The between-observation joint probabilities
@@ -863,8 +829,8 @@ class GlobalOddsRatio(CovStruct):
 
         cor_expval = self.pooled_odds_ratio(list(itervalues(tables)))
 
-        self.dep_params[0] *= self.crude_or / cor_expval
+        self.dep_params *= self.crude_or / cor_expval
 
     def summary(self):
 
-        return "Global odds ratio: %.3f\n" % self.dep_params[0]
+        return "Global odds ratio: %.3f\n" % self.dep_params

@@ -360,7 +360,7 @@ class TestGEE(object):
               [0.0440369906460754,0.0480069787567662,
                0.049519758758187,0.0479760443027526]]
 
-        for j,v in enumerate((vi,ve)):
+        for j,v in enumerate((vi, ve)):
             md = GEE(endog, exog, group, None, family, v)
             mdf = md.fit()
             assert_almost_equal(mdf.params, cf[j], decimal=10)
