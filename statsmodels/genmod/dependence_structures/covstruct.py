@@ -1,5 +1,6 @@
 from statsmodels.compat.python import iterkeys, itervalues, zip, range
 import numpy as np
+from scipy import linalg as spl
 
 
 class CovStruct(object):
@@ -16,7 +17,6 @@ class CovStruct(object):
     # Parameters describing the dependency structure
     dep_params = None
 
-
     def initialize(self, model):
         """
         Called by GEE, used by implementations that need additional
@@ -29,7 +29,6 @@ class CovStruct(object):
         """
         self.model = model
 
-
     def update(self, params):
         """
         Updates the association parameter values based on the current
@@ -41,7 +40,6 @@ class CovStruct(object):
             Working values for the regression parameters.
         """
         raise NotImplementedError
-
 
     def covariance_matrix(self, endog_expval, index):
         """Returns the working covariance or correlation matrix for a
@@ -66,6 +64,53 @@ class CovStruct(object):
         """
         raise NotImplementedError
 
+    def covariance_matrix_solve(self, expval, i, sdev, rhs):
+        """
+        Solves the matrix equation `covmat * soln = rhs` and returns
+        `soln`, where `covmat` is the covariance matrix represented by
+        this class.
+
+        Parameters
+        ----------
+        expval: array-like
+           The expected values of endog for the cluster for which the
+           covariance or correlation matrix will be returned
+        index: integer
+           The index of the cluster for which the covariance or
+           correlation matrix will be returned
+        rhs : list/tuple of array-like
+            A set of right-hand sides; each defines a matrix equation
+            to be solved.
+
+        Returns
+        -------
+        soln : list/tuple of array-like
+            The solutions to the matrix equations.
+
+        Notes
+        -----
+        Returns None if the solver fails.
+
+        Multiple systems with the same LHS are solved for different
+        RHS's; the LHS is only factorized once to save time.
+
+        This is a default implementation, it can be reimplemented in
+        subclasses to optimize the linear algebra according to the
+        covariance matrix structure.
+        """
+
+        vmat, is_cor = self.covariance_matrix(expval, i)
+
+        if is_cor:
+            vmat *= np.outer(sdev, sdev)
+
+        try:
+            vco = spl.cho_factor(vmat)
+        except np.linalg.LinAlgError:
+            return None
+
+        soln = [spl.cho_solve(vco, x) for x in rhs]
+        return soln
 
     def summary(self):
         """
@@ -86,11 +131,19 @@ class Independence(CovStruct):
     def update(self, params):
         return
 
-
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         return np.eye(dim, dtype=np.float64), True
 
+    def covariance_matrix_solve(self, expval, i, sdev, rhs):
+        v = sdev**2
+        rslt = []
+        for x in rhs:
+            if x.ndim == 1:
+                rslt.append(x / v)
+            else:
+                rslt.append(x / v[:, None])
+        return rslt
 
     def summary(self):
         return "Observations within a cluster are independent."
@@ -103,7 +156,6 @@ class Exchangeable(CovStruct):
 
     # The correlation between any two values in the same cluster
     dep_params = 0
-
 
     def update(self, params):
 
@@ -119,11 +171,7 @@ class Exchangeable(CovStruct):
         residsq_sum, scale, nterm = 0, 0, 0
         for i in range(self.model.num_group):
 
-            if len(endog[i]) == 0:
-                continue
-
             expval, _ = cached_means[i]
-
             sdev = np.sqrt(varfunc(expval))
             resid = (endog[i] - expval) / sdev
 
@@ -137,16 +185,36 @@ class Exchangeable(CovStruct):
         scale /= (nobs - dim)
         self.dep_params = residsq_sum / (scale * (nterm - dim))
 
-
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
         return  dp + (1 - self.dep_params) * np.eye(dim), True
 
+    def covariance_matrix_solve(self, expval, i, sdev, rhs):
+
+        k = len(expval)
+        c = self.dep_params / (1 - self.dep_params)
+        c /= 1 + self.dep_params * (k - 1)
+
+        rslt = []
+        for x in rhs:
+            if x.ndim == 1:
+                x1 = x / sdev
+                y = x1 / (1 - self.dep_params)
+                y -= c * sum(x1)
+                y /= sdev
+            else:
+                x1 = x / sdev[:, None]
+                y = x1 / (1 - self.dep_params)
+                y -= c * x1.sum(0)
+                y /= sdev[:, None]
+            rslt.append(y)
+
+        return rslt
+
     def summary(self):
         return ("The correlation between two observations in the " +
                 "same cluster is %.3f" % self.dep_params)
-
 
 
 
@@ -506,12 +574,66 @@ class Autoregressive(CovStruct):
         cmat = self.dep_params**np.abs(idx[:, None] - idx[None, :])
         return cmat, True
 
+    def covariance_matrix_solve(self, expval, i, sdev, rhs):
+
+        k = len(expval)
+        soln = []
+
+        if k == 1:
+            return [x / sdev**2 for x in rhs]
+
+        if k == 2:
+            mat = np.array([[1, -self.dep_params], [-self.dep_params, 1]])
+            mat /= (1 - self.dep_params**2)
+            for x in rhs:
+                if x.ndim == 1:
+                    x1 = x / sdev
+                else:
+                    x1 = x / sdev[:, None]
+                x1 = np.dot(mat, x1)
+                if x.ndim == 1:
+                    x1 /= sdev
+                else:
+                    x1 /= sdev[:, None]
+                soln.append(x1)
+            return soln
+
+        # General case: c0, c1, c2 define the inverse.  c0 is on the
+        # diagonal, except for the first and last position.  c1 is on
+        # the first and last position of the diagonal.  c2 is on the
+        # sub/super diagonal.
+        c0 = (1 + self.dep_params**2) / (1 - self.dep_params**2)
+        c1 = 1 / (1 - self.dep_params**2)
+        c2 = self.dep_params / (self.dep_params**2 - 1)
+        soln = []
+        for x in rhs:
+            flatten = False
+            if x.ndim == 1:
+                x = x[:, None]
+                flatten = True
+            x1 = x / sdev[:, None]
+
+            z0 = np.zeros((1, x.shape[1]))
+            rhs1 = np.concatenate((x[1:,:], z0), axis=0)
+            rhs2 = np.concatenate((z0, x[0:-1,:]), axis=0)
+
+            y = c0*x + c2*rhs1 + c2*rhs2
+            y[0, :] = c1*x[0, :] + c2*x[1, :]
+            y[-1, :] = c1*x[-1, :] + c2*x[-2, :]
+
+            y /= sdev[:, None]
+
+            if flatten:
+                y = y[:,0]
+
+            soln.append(y)
+
+        return soln
 
     def summary(self):
 
         return ("Autoregressive(1) dependence parameter: %.3f\n" %
                 self.dep_params)
-
 
 
 class GlobalOddsRatio(CovStruct):
@@ -625,13 +747,11 @@ class GlobalOddsRatio(CovStruct):
 
         return np.exp(log_pooled_or)
 
-
     def covariance_matrix(self, expected_value, index):
 
         vmat = self.get_eyy(expected_value, index)
         vmat -= np.outer(expected_value, expected_value)
         return vmat, False
-
 
     def observed_crude_oddsratio(self):
         """The crude odds ratio is obtained by pooling all data
@@ -653,9 +773,6 @@ class GlobalOddsRatio(CovStruct):
         # Get the observed crude OR
         for i in range(len(endog)):
 
-            if len(endog[i]) == 0:
-                continue
-
             # The observed joint values for the current cluster
             yvec = endog[i]
             endog_11 = np.outer(yvec, yvec)
@@ -672,8 +789,6 @@ class GlobalOddsRatio(CovStruct):
                 tables[ky][0, 0] += endog_00[ix[:, 0], ix[:, 1]].sum()
 
         return self.pooled_odds_ratio(list(itervalues(tables)))
-
-
 
     def get_eyy(self, endog_expval, index):
         """
@@ -708,7 +823,6 @@ class GlobalOddsRatio(CovStruct):
                 vmat[bdl[0]:bdl[1], bdl[0]:bdl[1]] = np.diag(evy)
 
         return vmat
-
 
     def update(self, params):
         """Update the global odds ratio based on the current value of
@@ -747,11 +861,9 @@ class GlobalOddsRatio(CovStruct):
                 tables[ky][0, 1] += emat_01[ix[:, 0], ix[:, 1]].sum()
                 tables[ky][0, 0] += emat_00[ix[:, 0], ix[:, 1]].sum()
 
-
         cor_expval = self.pooled_odds_ratio(list(itervalues(tables)))
 
         self.dep_params[0] *= self.crude_or / cor_expval
-
 
     def summary(self):
 
