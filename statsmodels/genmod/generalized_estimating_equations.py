@@ -596,7 +596,7 @@ class GEE(base.Model):
             rslt = self.cov_struct.covariance_matrix_solve(expval, i,
                                                      sdev, (aresid,))
             if rslt is None:
-                return None, NOne, None, None
+                return None, None, None, None
             srt = rslt[0]
             srt = np.dot(dmat.T, srt) / scale
             bcm += np.outer(srt, srt)
