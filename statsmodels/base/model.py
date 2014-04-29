@@ -206,7 +206,7 @@ class LikelihoodModel(Model):
 
     def fit(self, start_params=None, method='newton', maxiter=100,
             full_output=True, disp=True, fargs=(), callback=None,
-            retall=False, skip_hessian=False, check_convergence=True, **kwargs):
+            retall=False, skip_hessian=False, warn_convergence=True, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -255,7 +255,7 @@ class LikelihoodModel(Model):
             after the optimization. If True, then the hessian will not be
             calculated. However, it will be available in methods that use the
             hessian in the optimization (currently only with `"newton"`).
-        check_convergence : bool, optional
+        warn_convergence : bool, optional
             If True, checks the model for the converged flag. If the
             converged flag is False, a ConvergenceWarning is issued.
 
@@ -433,7 +433,7 @@ class LikelihoodModel(Model):
         #TODO: hardcode scale?
         if isinstance(retvals, dict):
             mlefit.mle_retvals = retvals
-            if check_convergence and not retvals['converged']:
+            if warn_convergence and not retvals['converged']:
                 from warnings import warn
                 from statsmodels.tools.sm_exceptions import ConvergenceWarning
                 warn("Maximum Likelihood optimization failed to converge. "
