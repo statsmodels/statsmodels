@@ -723,15 +723,13 @@ class GEE(base.Model):
 
         self.update_cached_means(mean_params)
 
-        # Define here in case singularity encountered on first
-        # iteration.
         del_params = -1.
         num_assoc_updates = 0
-
         for itr in range(maxiter):
+
             update, score = self._update_mean_params()
             if update is None:
-                warnings.warn("Singular matrix encountered in GEE  update",
+                warnings.warn("Singular matrix encountered in GEE update",
                               ConvergenceWarning)
                 break
             mean_params += update
@@ -752,7 +750,7 @@ class GEE(base.Model):
                 break
 
             if self._do_cov_update and (itr % params_niter) == 0\
-                   and itr >= first_dep_update:
+                   and (itr >= first_dep_update):
                 self._update_assoc(mean_params)
                 num_assoc_updates += 1
 
@@ -782,7 +780,7 @@ class GEE(base.Model):
 
         # The superclass constructor will multiply the covariance
         # matrix argument bcov by scale, which we don't want, so we
-        # divide bvov by the scale parameter here
+        # divide bcov by the scale parameter here
         results = GEEResults(self, mean_params, bcov / scale, scale)
 
         results.covariance_type = covariance_type
