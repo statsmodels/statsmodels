@@ -1305,8 +1305,10 @@ def test_poisson_newton():
     x = sm.add_constant(x, prepend=True)
     y_count = np.random.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
-    res = mod.fit(start_params=-np.ones(4), method='newton', disp=0,
-                  maxiter=1000)
+    from pandas.util.testing import assert_produces_warning
+    # this is not thread-safe
+    with assert_produces_warning():
+        res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
     assert_(not res.mle_retvals['converged'])
 
 def test_issue_339():
