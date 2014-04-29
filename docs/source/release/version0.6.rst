@@ -189,6 +189,7 @@ Other important new features
   as "forest plots", but can be used in many other settings as well.
   Most tables that appear in research papers can be represented
   graphically as a dotplot.
+* Statsmodels has added custom warnings to ``statsmodels.tools.sm_exceptions``. By default all of these warnings will be raised whenever appropriate. Use ``warnings.simplefilter`` to turn them off, if desired.
 
 
 Major Bugs fixed
