@@ -430,6 +430,11 @@ class LikelihoodModel(Model):
         #TODO: hardcode scale?
         if isinstance(retvals, dict):
             mlefit.mle_retvals = retvals
+            if not retvals['converged']:
+                from warnings import warn
+                from statsmodels.tools.sm_exceptions import ConvergenceWarning
+                warn("Maximum Likelihood optimization failed to converge. "
+                     "Check mle_retvals", ConvergenceWarning)
 
         mlefit.mle_settings = optim_settings
         return mlefit
