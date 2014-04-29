@@ -205,8 +205,8 @@ class LikelihoodModel(Model):
         raise NotImplementedError
 
     def fit(self, start_params=None, method='newton', maxiter=100,
-            full_output=True, disp=True, fargs=(), callback=None,
-            retall=False, skip_hessian=False, warn_convergence=True, **kwargs):
+            full_output=True, disp=True, fargs=(), callback=None, retall=False,
+            skip_hessian=False, **kwargs):
         """
         Fit method for likelihood based models
 
@@ -255,9 +255,13 @@ class LikelihoodModel(Model):
             after the optimization. If True, then the hessian will not be
             calculated. However, it will be available in methods that use the
             hessian in the optimization (currently only with `"newton"`).
-        warn_convergence : bool, optional
-            If True, checks the model for the converged flag. If the
-            converged flag is False, a ConvergenceWarning is issued.
+        kwargs : keywords
+            All kwargs are passed to the chosen solver with one exception. The
+            following keyword controls what happens after the fit::
+
+            warn_convergence : bool, optional
+                If True, checks the model for the converged flag. If the
+                converged flag is False, a ConvergenceWarning is issued.
 
         Notes
         -----
@@ -387,6 +391,7 @@ class LikelihoodModel(Model):
             hess = lambda params: self.hessian(params) / nobs
             #TODO: why are score and hess positive?
 
+        warn_convergence = kwargs.pop('warn_convergence', True)
         optimizer = Optimizer()
         xopt, retvals, optim_settings = optimizer._fit(f, score, start_params,
                                                        fargs, kwargs,
