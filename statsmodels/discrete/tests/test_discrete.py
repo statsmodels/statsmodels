@@ -1279,7 +1279,11 @@ def test_perfect_prediction():
     assert_raises(PerfectSeparationError, mod.fit, maxiter=1000)
     #turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
-    mod.fit(disp=False, maxiter=1000)  # should not raise
+    # this will raise if you set maxiter high enough with a singular matrix
+    from pandas.util.testing import assert_produces_warning
+    # this is not thread-safe
+    with assert_produces_warning():
+        mod.fit(disp=False, maxiter=50)  # should not raise but does warn
 
 def test_poisson_predict():
     #GH: 175, make sure poisson predict works without offset and exposure
