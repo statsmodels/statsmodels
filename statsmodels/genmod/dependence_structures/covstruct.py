@@ -71,20 +71,22 @@ class CovStruct(object):
         """
         raise NotImplementedError
 
-    def covariance_matrix_solve(self, expval, i, sdev, rhs):
+    def covariance_matrix_solve(self, expval, index, stdev, rhs):
         """
-        Solves the matrix equation `covmat * soln = rhs` and returns
-        `soln`, where `covmat` is the covariance matrix represented by
-        this class.
+        Solves matrix equations of the form `covmat * soln = rhs` and
+        returns the values of `soln`, where `covmat` is the covariance
+        matrix represented by this class.
 
         Parameters
         ----------
         expval: array-like
-           The expected values of endog for the cluster for which the
-           covariance or correlation matrix will be returned
+           The expected value of endog for each observed value in the
+           group.
         index: integer
-           The index of the cluster for which the covariance or
-           correlation matrix will be returned
+           The group index.
+        stdev : array-like
+            The standard deviation of endog for each observation in
+            the group.
         rhs : list/tuple of array-like
             A set of right-hand sides; each defines a matrix equation
             to be solved.
@@ -98,18 +100,24 @@ class CovStruct(object):
         -----
         Returns None if the solver fails.
 
-        Multiple systems with the same LHS are solved for different
-        RHS's; the LHS is only factorized once to save time.
+        Some dependence structures do not use `expval` and/or `index`
+        to determine the correlation matrix.  Some families
+        (e.g. binomial) do not use the `stdev` parameter when forming
+        the covariance matrix.
+
+        Systems of linear equations with the covariance matrix as the
+        left hand side (LHS) are solved for different right hand sides
+        (RHS); the LHS is only factorized once to save time.
 
         This is a default implementation, it can be reimplemented in
         subclasses to optimize the linear algebra according to the
-        covariance matrix structure.
+        struture of the covariance matrix.
         """
 
-        vmat, is_cor = self.covariance_matrix(expval, i)
+        vmat, is_cor = self.covariance_matrix(expval, index)
 
         if is_cor:
-            vmat *= np.outer(sdev, sdev)
+            vmat *= np.outer(stdev, stdev)
 
         try:
             vco = spl.cho_factor(vmat)
@@ -140,8 +148,8 @@ class Independence(CovStruct):
         dim = len(expval)
         return np.eye(dim, dtype=np.float64), True
 
-    def covariance_matrix_solve(self, expval, i, sdev, rhs):
-        v = sdev**2
+    def covariance_matrix_solve(self, expval, i, stdev, rhs):
+        v = stdev**2
         rslt = []
         for x in rhs:
             if x.ndim == 1:
@@ -181,8 +189,8 @@ class Exchangeable(CovStruct):
         for i in range(self.model.num_group):
 
             expval, _ = cached_means[i]
-            sdev = np.sqrt(varfunc(expval))
-            resid = (endog[i] - expval) / sdev
+            stdev = np.sqrt(varfunc(expval))
+            resid = (endog[i] - expval) / stdev
 
             ngrp = len(resid)
             residsq = np.outer(resid, resid)
@@ -199,7 +207,7 @@ class Exchangeable(CovStruct):
         dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
         return  dp + (1 - self.dep_params) * np.eye(dim), True
 
-    def covariance_matrix_solve(self, expval, i, sdev, rhs):
+    def covariance_matrix_solve(self, expval, i, stdev, rhs):
 
         k = len(expval)
         c = self.dep_params / (1 - self.dep_params)
@@ -208,15 +216,15 @@ class Exchangeable(CovStruct):
         rslt = []
         for x in rhs:
             if x.ndim == 1:
-                x1 = x / sdev
+                x1 = x / stdev
                 y = x1 / (1 - self.dep_params)
                 y -= c * sum(x1)
-                y /= sdev
+                y /= stdev
             else:
-                x1 = x / sdev[:, None]
+                x1 = x / stdev[:, None]
                 y = x1 / (1 - self.dep_params)
                 y -= c * x1.sum(0)
-                y /= sdev[:, None]
+                y /= stdev[:, None]
             rslt.append(y)
 
         return rslt
@@ -366,8 +374,8 @@ class Nested(CovStruct):
 
             expval, _ = cached_means[i]
 
-            sdev = np.sqrt(varfunc(expval))
-            resid = (endog[i] - offset[i] - expval) / sdev
+            stdev = np.sqrt(varfunc(expval))
+            resid = (endog[i] - offset[i] - expval) / stdev
 
             ix1, ix2 = np.tril_indices(len(resid), -1)
             dvmat.append(resid[ix1] * resid[ix2])
@@ -421,27 +429,28 @@ class Nested(CovStruct):
 
 class Autoregressive(CovStruct):
     """
-    An autoregressive working dependence structure.  The dependence is
-    defined in terms of the `time` component of the parent GEE class.
-    Time represents a potentially multidimensional index from which
-    distances between pairs of obsercations can be determined.  The
-    correlation between two observations in the same cluster is
-    dep_params**distance, where `dep_params` is the autocorrelation
-    parameter to be estimated, and distance is the distance between
-    the two observations, calculated from their corresponding time
-    values.  `time` is stored as an n_obs x k matrix, where `k`
-    represents the number of dimensions in the time index.
+    An autoregressive working dependence structure.
+
+    The dependence is defined in terms of the `time` component of the
+    parent GEE class.  Time represents a potentially multidimensional
+    index from which distances between pairs of observations can be
+    determined.  The correlation between two observations in the same
+    cluster is dep_params^distance, where `dep_params` is the
+    autocorrelation parameter to be estimated, and `distance` is the
+    distance between the two observations, calculated from their
+    corresponding time values.  `time` is stored as an n_obs x k
+    matrix, where `k` represents the number of dimensions in the time
+    index.
 
     The autocorrelation parameter is estimated using weighted
     nonlinear least squares, regressing each value within a cluster on
-    each preceeding value within the same cluster.
+    each preceeding value in the same cluster.
 
     Parameters
     ----------
     dist_func: function from R^k x R^k to R^+, optional
-       A function that takes the time vector for two observations and
-       computed the distance between the two observations based on the
-       time vector.
+       A function that computes the distance between the two
+       observations based on their `time` values.
 
     Reference
     ---------
@@ -504,8 +513,8 @@ class Autoregressive(CovStruct):
         for i in range(self.model.num_group):
 
             expval, _ = cached_means[i]
-            sdev = np.sqrt(scale * varfunc(expval))
-            resid = (endog[i] - expval) / sdev
+            stdev = np.sqrt(scale * varfunc(expval))
+            resid = (endog[i] - expval) / stdev
 
             ngrp = len(resid)
             for j1 in range(ngrp):
@@ -551,34 +560,37 @@ class Autoregressive(CovStruct):
         cmat = self.dep_params**np.abs(idx[:, None] - idx[None, :])
         return cmat, True
 
-    def covariance_matrix_solve(self, expval, i, sdev, rhs):
+    def covariance_matrix_solve(self, expval, i, stdev, rhs):
+        # The inverse of an AR(1) covariance matrix is tri-diagonal.
 
         k = len(expval)
         soln = []
 
+        # LHS has 1 column
         if k == 1:
-            return [x / sdev**2 for x in rhs]
+            return [x / stdev**2 for x in rhs]
 
+        # LHS has 2 columns
         if k == 2:
             mat = np.array([[1, -self.dep_params], [-self.dep_params, 1]])
             mat /= (1 - self.dep_params**2)
             for x in rhs:
                 if x.ndim == 1:
-                    x1 = x / sdev
+                    x1 = x / stdev
                 else:
-                    x1 = x / sdev[:, None]
+                    x1 = x / stdev[:, None]
                 x1 = np.dot(mat, x1)
                 if x.ndim == 1:
-                    x1 /= sdev
+                    x1 /= stdev
                 else:
-                    x1 /= sdev[:, None]
+                    x1 /= stdev[:, None]
                 soln.append(x1)
             return soln
 
-        # General case: c0, c1, c2 define the inverse.  c0 is on the
-        # diagonal, except for the first and last position.  c1 is on
-        # the first and last position of the diagonal.  c2 is on the
-        # sub/super diagonal.
+        # LHS has >= 3 columns: values c0, c1, c2 defined below give
+        # the inverse.  c0 is on the diagonal, except for the first
+        # and last position.  c1 is on the first and last position of
+        # the diagonal.  c2 is on the sub/super diagonal.
         c0 = (1 + self.dep_params**2) / (1 - self.dep_params**2)
         c1 = 1 / (1 - self.dep_params**2)
         c2 = self.dep_params / (self.dep_params**2 - 1)
@@ -588,7 +600,7 @@ class Autoregressive(CovStruct):
             if x.ndim == 1:
                 x = x[:, None]
                 flatten = True
-            x1 = x / sdev[:, None]
+            x1 = x / stdev[:, None]
 
             z0 = np.zeros((1, x.shape[1]))
             rhs1 = np.concatenate((x[1:,:], z0), axis=0)
@@ -598,10 +610,10 @@ class Autoregressive(CovStruct):
             y[0, :] = c1*x[0, :] + c2*x[1, :]
             y[-1, :] = c1*x[-1, :] + c2*x[-2, :]
 
-            y /= sdev[:, None]
+            y /= stdev[:, None]
 
             if flatten:
-                y = y[:,0]
+                y = np.squeeze(y)
 
             soln.append(y)
 
