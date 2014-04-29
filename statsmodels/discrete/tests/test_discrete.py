@@ -672,6 +672,7 @@ class TestLogitL1Compatability(CheckL1Compatability):
         exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = Logit(data.endog, exog_no_PSI).fit(disp=0, tol=1e-15)
 
+
 class TestMNLogitL1Compatability(CheckL1Compatability):
     @classmethod
     def setupClass(cls):
@@ -686,7 +687,7 @@ class TestMNLogitL1Compatability(CheckL1Compatability):
         # Actually drop the last columnand do an unregularized fit
         exog_no_PSI = data.exog[:, :cls.m]
         cls.res_unreg = MNLogit(data.endog, exog_no_PSI).fit(
-            disp=0, tol=1e-15)
+            disp=0, tol=1e-15, method='bfgs', maxiter=1000)
 
     def test_t_test(self):
         m = self.m
@@ -784,7 +785,9 @@ class TestL1AlphaZeroMNLogit(CompareL1):
         cls.res1 = MNLogit(data.endog, data.exog).fit_regularized(
                 method="l1", alpha=0, disp=0, acc=1e-15, maxiter=1000,
                 trim_mode='auto', auto_trim_tol=0.01)
-        cls.res2 = MNLogit(data.endog, data.exog).fit(disp=0, tol=1e-15)
+        cls.res2 = MNLogit(data.endog, data.exog).fit(disp=0, tol=1e-15,
+                                                      method='bfgs',
+                                                      maxiter=1000)
 
 
 class TestLogitNewton(CheckBinaryResults, CheckMargEff):
@@ -974,7 +977,8 @@ class TestNegativeBinomialNB2BFGS(CheckModelResults):
         data = sm.datasets.randhie.load()
         exog = sm.add_constant(data.exog, prepend=False)
         cls.res1 = NegativeBinomial(data.endog, exog, 'nb2').fit(
-                                                method='bfgs', disp=0)
+                                                method='bfgs', disp=0,
+                                                maxiter=1000)
         res2 = RandHIE()
         res2.negativebinomial_nb2_bfgs()
         cls.res2 = res2
@@ -1272,10 +1276,10 @@ def test_perfect_prediction():
     y = y[y != 2]
     X = sm.add_constant(X, prepend=True)
     mod = Logit(y,X)
-    assert_raises(PerfectSeparationError, mod.fit)
+    assert_raises(PerfectSeparationError, mod.fit, maxiter=1000)
     #turn off raise PerfectSeparationError
     mod.raise_on_perfect_prediction = False
-    mod.fit(disp=False)  #should not raise
+    mod.fit(disp=False, maxiter=1000)  # should not raise
 
 def test_poisson_predict():
     #GH: 175, make sure poisson predict works without offset and exposure
@@ -1301,7 +1305,8 @@ def test_poisson_newton():
     x = sm.add_constant(x, prepend=True)
     y_count = np.random.poisson(np.exp(x.sum(1)))
     mod = sm.Poisson(y_count, x)
-    res = mod.fit(start_params=-np.ones(4), method='newton', disp=0)
+    res = mod.fit(start_params=-np.ones(4), method='newton', disp=0,
+                  maxiter=1000)
     assert_(not res.mle_retvals['converged'])
 
 def test_issue_339():
