@@ -172,9 +172,10 @@ class DiscreteModel(base.LikelihoodModel):
     fit.__doc__ += base.LikelihoodModel.fit.__doc__
 
     def fit_regularized(self, start_params=None, method='l1',
-            maxiter='defined_by_method', full_output=1, disp=True,
-            callback=None, alpha=0, trim_mode='auto', auto_trim_tol=0.01,
-            size_trim_tol=1e-4, qc_tol=0.03, qc_verbose=False, **kwargs):
+                        maxiter='defined_by_method', full_output=1, disp=True,
+                        callback=None, alpha=0, trim_mode='auto',
+                        auto_trim_tol=0.01, size_trim_tol=1e-4, qc_tol=0.03,
+                        qc_verbose=False, **kwargs):
         """
         Fit the model using a regularized maximum likelihood.
         The regularization method AND the solver used is determined by the
@@ -272,8 +273,8 @@ class DiscreteModel(base.LikelihoodModel):
         if method in ['l1', 'l1_cvxopt_cp']:
             cov_params_func = self.cov_params_func_l1
         else:
-            raise Exception(
-                    "argument method == %s, which is not handled" % method)
+            raise Exception("argument method == %s, which is not handled"
+                            % method)
 
         ### Bundle up extra kwargs for the dictionary kwargs.  These are
         ### passed through super(...).fit() as kwargs and unpacked at
@@ -306,8 +307,8 @@ class DiscreteModel(base.LikelihoodModel):
             from statsmodels.base.l1_cvxopt import fit_l1_cvxopt_cp
             extra_fit_funcs['l1_cvxopt_cp'] = fit_l1_cvxopt_cp
         elif method.lower() == 'l1_cvxopt_cp':
-            message = """Attempt to use l1_cvxopt_cp failed since cvxopt
-            could not be imported"""
+            message = ("Attempt to use l1_cvxopt_cp failed since cvxopt "
+                        "could not be imported")
 
         if callback is None:
             callback = self._check_perfect_pred
