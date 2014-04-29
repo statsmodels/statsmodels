@@ -4,6 +4,14 @@ __docformat__ = 'restructuredtext'
 from numpy import errstate
 from numpy.testing import Tester
 
+from warnings import simplefilter
+from .tools.sm_exceptions import (ConvergenceWarning, CacheWriteWarning,
+                                  IterationLimitWarning, InvalidTestWarning)
+
+
+simplefilter("always", (ConvergenceWarning, CacheWriteWarning,
+                        IterationLimitWarning, InvalidTestWarning))
+
 
 class NoseWrapper(Tester):
     '''
@@ -48,7 +56,6 @@ class NoseWrapper(Tester):
         argv, plugins = self.prepare_test_args(label, verbose, extra_argv,
                                                doctests, coverage)
         from numpy.testing.noseclasses import NumpyTestProgram
-        from warnings import simplefilter
         with errstate(**kwargs):
             simplefilter('ignore', category=DeprecationWarning)
             t = NumpyTestProgram(argv=argv, exit=False, plugins=plugins)
