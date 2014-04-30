@@ -303,10 +303,18 @@ if __name__ == '__main__':
     res = mod.fit(res_bic)
 
     print(res_bic)
-    for lambd in np.linspace(0, 80, 21):
+    params_l = []
+    gcv_l = []
+    aicc_l = []
+    for lambd in np.linspace(0, 200, 21):
         res_l = mod.fit(lambd)
         #print(lambd, res_l.params[-2:], res_l.bic, res_l.bic + 1./lambd, res.df_model
-        print((lambd, res_l.params[-2:], res_l.bic, res.df_model, np.trace(res.normalized_cov_params)))
+        #print((lambd, res_l.params[-2:], res_l.bic, res.df_model, np.trace(res.normalized_cov_params)))
+        params_l.append(res_l.params)
+        gcv_l.append(res_l.gcv())
+        aicc_l.append(res_l.aicc())
+
+    params_l = np.array(params_l)
 
 
     import matplotlib.pyplot as plt
@@ -324,6 +332,13 @@ if __name__ == '__main__':
     plt.plot(res.fittedvalues, '-', label='theil')
     plt.legend()
     plt.title('Polynomial fitting: fitted values')
+
+    plt.figure()
+    plt.plot(gcv_l - gcv_l[0], label='gcv')
+    plt.plot(aicc_l - aicc_l[0], label='aicc')
+    plt.title('')
+    plt.xlabel('strength of prior')
+    plt.legend()
     #plt.show()
 
     if 3 in examples:
@@ -354,8 +369,13 @@ if __name__ == '__main__':
         print(res.params)
 
         params_l = []
+        gcv_l = []
+        aicc_l = []
         for lambd in np.linspace(0, 20, 21):
-            params_l.append(mod.fit(5.*lambd).params)
+            resi = mod.fit(5.*lambd)
+            params_l.append(resi.params)
+            gcv_l.append(resi.gcv())
+            aicc_l.append(resi.aicc())
 
         params_l = np.array(params_l)
 
@@ -367,5 +387,11 @@ if __name__ == '__main__':
         plt.plot(params_l[:,k_vars:])
         plt.title('Panel Data with random intercept: shrinkage to being equal')
         plt.xlabel('strength of prior')
+        plt.figure()
+        plt.plot(gcv_l, label='gcv')
+        plt.plot(aicc_l, label='aicc')
+        plt.title('Panel Data with random intercept: shrinkage to being equal')
+        plt.xlabel('strength of prior')
+        plt.legend()
 
         #plt.show()
