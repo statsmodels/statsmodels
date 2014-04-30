@@ -121,6 +121,13 @@ class TheilGLS(GLS):
 
 class TheilRegressionResults(RegressionResults):
 
+    def __init__(self, *args, **kwds):
+        super(TheilRegressionResults, self).__init__(*args, **kwds)
+
+        # overwrite df_model and df_resid
+        self.df_model = self.hatmatrix_trace()
+        self.df_resid = self.model.endog.shape[0] - self.df_model
+
     #cache
     def hatmatrix_diag(self):
         '''
@@ -151,10 +158,10 @@ class TheilRegressionResults(RegressionResults):
     def hatmatrix_trace(self):
         return self.hatmatrix_diag().sum()
 
-    #this doesn't update df_resid
-    @property   #needs to be property or attribute (no call)
-    def df_model(self):
-        return self.hatmatrix_trace()
+##    #this doesn't update df_resid
+##    @property   #needs to be property or attribute (no call)
+##    def df_model(self):
+##        return self.hatmatrix_trace()
 
     #Note: mse_resid uses df_resid not nobs-k_vars, which might differ if df_model, tr(H), is used
     #in paper for gcv ess/nobs is used instead of mse_resid
