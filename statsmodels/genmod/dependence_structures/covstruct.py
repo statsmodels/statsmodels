@@ -148,7 +148,7 @@ class Independence(CovStruct):
         dim = len(expval)
         return np.eye(dim, dtype=np.float64), True
 
-    def covariance_matrix_solve(self, expval, i, stdev, rhs):
+    def covariance_matrix_solve(self, expval, index, stdev, rhs):
         v = stdev**2
         rslt = []
         for x in rhs:
@@ -157,6 +157,10 @@ class Independence(CovStruct):
             else:
                 rslt.append(x / v[:, None])
         return rslt
+
+    update.__doc__ = CovStruct.update.__doc__
+    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
+    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
 
     def summary(self):
         return "Observations within a cluster are independent."
@@ -205,38 +209,42 @@ class Exchangeable(CovStruct):
     def covariance_matrix(self, expval, index):
         dim = len(expval)
         dp = self.dep_params * np.ones((dim, dim), dtype=np.float64)
-        return  dp + (1 - self.dep_params) * np.eye(dim), True
+        return  dp + (1. - self.dep_params) * np.eye(dim), True
 
-    def covariance_matrix_solve(self, expval, i, stdev, rhs):
+    def covariance_matrix_solve(self, expval, index, stdev, rhs):
 
         k = len(expval)
-        c = self.dep_params / (1 - self.dep_params)
-        c /= 1 + self.dep_params * (k - 1)
+        c = self.dep_params / (1. - self.dep_params)
+        c /= 1. + self.dep_params * (k - 1)
 
         rslt = []
         for x in rhs:
             if x.ndim == 1:
                 x1 = x / stdev
-                y = x1 / (1 - self.dep_params)
+                y = x1 / (1. - self.dep_params)
                 y -= c * sum(x1)
                 y /= stdev
             else:
                 x1 = x / stdev[:, None]
-                y = x1 / (1 - self.dep_params)
+                y = x1 / (1. - self.dep_params)
                 y -= c * x1.sum(0)
                 y /= stdev[:, None]
             rslt.append(y)
 
         return rslt
 
+    update.__doc__ = CovStruct.update.__doc__
+    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
+    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
+
     def summary(self):
         return ("The correlation between two observations in the " +
                 "same cluster is %.3f" % self.dep_params)
 
 
-
 class Nested(CovStruct):
-    """A nested working dependence structure.
+    """
+    A nested working dependence structure.
 
     A working dependence structure that captures a nested hierarchy of
     groups, each level of which contributes to the random error term
@@ -284,7 +292,6 @@ class Nested(CovStruct):
     r' in the same group, on a vector of indicators defining which
     variance components are shared by r and r'.
     """
-
 
     def initialize(self, model):
         """
@@ -348,7 +355,6 @@ class Nested(CovStruct):
         self.designx_s = svd[1]
         self.designx_v = svd[2].T
 
-
     def update(self, params):
 
         endog = self.model.endog_li
@@ -367,10 +373,6 @@ class Nested(CovStruct):
         dvmat = []
         scale = 0.
         for i in range(self.model.num_group):
-
-            # Needed?
-            if len(endog[i]) == 0:
-                continue
 
             expval, _ = cached_means[i]
 
@@ -395,7 +397,6 @@ class Nested(CovStruct):
 
         self.dep_params = self.vcomp_coeff.copy()
 
-
     def covariance_matrix(self, expval, index):
 
         dim = len(expval)
@@ -411,6 +412,8 @@ class Nested(CovStruct):
         vmat /= self.scale
         return vmat, True
 
+    update.__doc__ = CovStruct.update.__doc__
+    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
 
     def summary(self):
         """
@@ -504,9 +507,9 @@ class Autoregressive(CovStruct):
         cached_means = self.model.cached_means
 
         # Weights
-        var = 1 - self.dep_params**(2*designx)
-        var /= 1 - self.dep_params**2
-        wts = 1 / var
+        var = 1. - self.dep_params**(2*designx)
+        var /= 1. - self.dep_params**2
+        wts = 1. / var
         wts /= wts.sum()
 
         residmat = []
@@ -543,9 +546,9 @@ class Autoregressive(CovStruct):
         # Right bracket point
         b_rgt, f_rgt = 0.75, fitfunc(0.75)
         while f_rgt < f_ctr:
-            b_rgt = b_rgt + (1 - b_rgt) / 2
+            b_rgt = b_rgt + (1. - b_rgt) / 2
             f_rgt = fitfunc(b_rgt)
-            if b_rgt > 1 - 1e-6:
+            if b_rgt > 1. - 1e-6:
                 raise ValueError(
                     "Autoregressive: unable to find right bracket")
 
@@ -560,7 +563,7 @@ class Autoregressive(CovStruct):
         cmat = self.dep_params**np.abs(idx[:, None] - idx[None, :])
         return cmat, True
 
-    def covariance_matrix_solve(self, expval, i, stdev, rhs):
+    def covariance_matrix_solve(self, expval, index, stdev, rhs):
         # The inverse of an AR(1) covariance matrix is tri-diagonal.
 
         k = len(expval)
@@ -573,7 +576,7 @@ class Autoregressive(CovStruct):
         # LHS has 2 columns
         if k == 2:
             mat = np.array([[1, -self.dep_params], [-self.dep_params, 1]])
-            mat /= (1 - self.dep_params**2)
+            mat /= (1. - self.dep_params**2)
             for x in rhs:
                 if x.ndim == 1:
                     x1 = x / stdev
@@ -591,9 +594,9 @@ class Autoregressive(CovStruct):
         # the inverse.  c0 is on the diagonal, except for the first
         # and last position.  c1 is on the first and last position of
         # the diagonal.  c2 is on the sub/super diagonal.
-        c0 = (1 + self.dep_params**2) / (1 - self.dep_params**2)
-        c1 = 1 / (1 - self.dep_params**2)
-        c2 = self.dep_params / (self.dep_params**2 - 1)
+        c0 = (1. + self.dep_params**2) / (1. - self.dep_params**2)
+        c1 = 1. / (1. - self.dep_params**2)
+        c2 = -self.dep_params / (1. - self.dep_params**2)
         soln = []
         for x in rhs:
             flatten = False
@@ -618,6 +621,10 @@ class Autoregressive(CovStruct):
             soln.append(y)
 
         return soln
+
+    update.__doc__ = CovStruct.update.__doc__
+    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
+    covariance_matrix_solve.__doc__ = CovStruct.covariance_matrix_solve.__doc__
 
     def summary(self):
 
@@ -687,7 +694,7 @@ class GlobalOddsRatio(CovStruct):
             cpp1 = {}
             for k1 in range(self.ncut):
                 for k2 in range(k1+1):
-                    v1, v2 = np.nonzero((j1==k1) & (j2==k2))
+                    v1, v2 = np.nonzero((j1 == k1) & (j2 == k2))
                     cpp1[(k2, k1)] = \
                         np.hstack((v2[:, None], v1[:, None]))
             cpp.append(cpp1)
@@ -754,9 +761,9 @@ class GlobalOddsRatio(CovStruct):
             # The observed joint values for the current cluster
             yvec = endog[i]
             endog_11 = np.outer(yvec, yvec)
-            endog_10 = np.outer(yvec, 1 - yvec)
-            endog_01 = np.outer(1 - yvec, yvec)
-            endog_00 = np.outer(1 - yvec, 1 - yvec)
+            endog_10 = np.outer(yvec, 1. - yvec)
+            endog_01 = np.outer(1. - yvec, yvec)
+            endog_00 = np.outer(1. - yvec, 1. - yvec)
 
             cpp1 = cpp[i]
             for ky in iterkeys(cpp1):
@@ -784,10 +791,10 @@ class GlobalOddsRatio(CovStruct):
         else:
             psum = endog_expval[:, None] + endog_expval[None, :]
             pprod = endog_expval[:, None] * endog_expval[None, :]
-            pfac = np.sqrt((1 + psum * (current_or - 1))**2 +
-                           4 * current_or * (1 - current_or) * pprod)
-            vmat = 1 +  psum * (current_or - 1) - pfac
-            vmat /= 2 * (current_or - 1)
+            pfac = np.sqrt((1. + psum * (current_or - 1.))**2 +
+                           4 * current_or * (1. - current_or) * pprod)
+            vmat = 1. +  psum * (current_or - 1.) - pfac
+            vmat /= 2. * (current_or - 1)
 
         # Fix E[YY'] for elements that belong to same observation
         for bdl in ibd:
@@ -821,15 +828,12 @@ class GlobalOddsRatio(CovStruct):
 
         for i in range(self.model.num_group):
 
-            if len(endog[i]) == 0:
-                continue
-
             endog_expval, _ = cached_means[i]
 
             emat_11 = self.get_eyy(endog_expval, i)
             emat_10 = endog_expval[:, None] - emat_11
             emat_01 = -emat_11 + endog_expval
-            emat_00 = 1 - (emat_11 + emat_10 + emat_01)
+            emat_00 = 1. - (emat_11 + emat_10 + emat_01)
 
             cpp1 = cpp[i]
             for ky in iterkeys(cpp1):
@@ -842,6 +846,9 @@ class GlobalOddsRatio(CovStruct):
         cor_expval = self.pooled_odds_ratio(list(itervalues(tables)))
 
         self.dep_params *= self.crude_or / cor_expval
+
+    update.__doc__ = CovStruct.update.__doc__
+    covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
 
     def summary(self):
 
