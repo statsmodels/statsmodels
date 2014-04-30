@@ -10,6 +10,7 @@ from .genmod.generalized_estimating_equations import GEE
 from .genmod import families
 from . import robust
 from .robust.robust_linear_model import RLM
+from .discrete import api as discrete
 from .discrete.discrete_model import (Poisson, Logit, Probit,
                                       MNLogit, NegativeBinomial)
 from .tsa import api as tsa
