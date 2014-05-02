@@ -24,19 +24,19 @@ from statsmodels.sandbox.nonparametric.kernel_extras import SingleIndexModel
 class CheckNonParametricRegressionResults(object):
 
     def test_mean_values(self):
-        assert_almost_equal(self.model.fit()[0], self.res.mean, 4)
+        assert_allclose(self.model.fit()[0], self.res.mean, atol=1e-2)
 
     def test_mfx_values(self):
-        assert_almost_equal(self.model.fit()[1][:,0], self.res.mfx, 4)
+        assert_allclose(self.model.fit()[1][:,0], self.res.mfx, atol=1e-2)
 
     def test_bw_values(self):
-        assert_almost_equal(self.model.bw, self.res.bw, 4)
+        assert_allclose(self.model.bw, self.res.bw, atol=1e-2)
 
     def test_b_values(self):
-        assert_almost_equal(self.model.b, self.res.b, 4)
+        assert_allclose(self.model.b, self.res.b, atol=1e-2)
 
     def test_rsquared_values(self):
-        assert_almost_equal(self.model.r_squared(), self.res.r_squared, 4)
+        assert_allclose(self.model.r_squared(), self.res.r_squared, atol=1e-2)
 
 
 
@@ -44,6 +44,9 @@ class TestSemiLinear(CheckNonParametricRegressionResults):
 
     @classmethod
     def setupClass(cls):
+        # Need to set seed because fitting routine uses a random starting value.
+        seed = 430973
+        np.random.seed(seed)
         data = sm.datasets.wage1.load_pandas()
         data.endog = data.data['lwage'].values
         data.exog_linear = data.data[['female','married','educ','tenure']].values

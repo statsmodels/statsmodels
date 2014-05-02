@@ -403,8 +403,7 @@ class SemiLinear(KernelReg):
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
-        # proposed change to add back in linear effects
-        #mean = mean + np.dot(exog_predict, self.b)
+        mean = mean + np.dot(exog_predict, self.b) # add parametric component
         return mean, mfx
 
     def __repr__(self):
