@@ -5,13 +5,12 @@ __docformat__ = 'csv'
 COPYRIGHT   = """????"""
 TITLE       = __doc__
 SOURCE      = """
-Avaliable from the R 'MASS' package. See http://www.stats.ox.ac.uk/pub/MASS4/Software.html.
-
+Hosmer, D.W. and Lemeshow, S. (1989) Applied Logistic Regression. New York: Wiley
 """
 
 DESCRSHORT  = """Birth weight data."""
 
-DESCRLONG   = DESCRSHORT
+DESCRLONG   = """Data on risk factors associated with low birth rate."""
 
 NOTE        = """ """
 

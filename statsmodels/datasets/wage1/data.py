@@ -2,11 +2,11 @@
 
 __docformat__ = 'csv'
 
-COPYRIGHT   = """????"""
+COPYRIGHT   = """public domain"""
 TITLE       = __doc__
 SOURCE      = """
-Avaliable directly in R, data("wage1").
-
+M. Blackburn and D. Neumark (1992), "Unobserved Ability, Efficiency Wages, and
+Interindustry Wage Differentials," Quarterly Journal of Economics 107, 1421-1436.
 """
 
 DESCRSHORT  = """Wage data."""
