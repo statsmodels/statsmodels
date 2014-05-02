@@ -25,9 +25,8 @@ class Wage1(object):
     def semilinear(self):
         self.b = np.array([ 0.29242066, -0.0326882 ,  0.07931917,  0.01637568])
         self.bw = np.array([ 3.95951858])
-        self.mean = np.load(filepath + '/wage_semi_linear_mean.npy')
-        self.mfx = np.load(filepath + '/wage_semi_linear_mfx.npy')
-        self.mfx = np.load('results/wage_semi_linear_mfx.npy')
+        self.mean = np.loadtxt(filepath + '/wage_semi_linear_mean.csv')
+        self.mfx = np.loadtxt(filepath + '/wage_semi_linear_mfx.csv')
         self.r_squared = 0.013285480891524235
 
 class BirthWt(object):
@@ -45,8 +44,8 @@ class BirthWt(object):
        -1173334.6503826 ,  -770838.63996199,   329940.04038314,
           85409.76410862])
         self.bw = np.array([  4.46624513e-06])
-        self.mean = np.load(filepath + '/bw_single_factor_mean.npy')
-        self.mfx = np.load(filepath + '/bw_single_factor_mfx.npy')
+        self.mean = np.loadtxt(filepath + '/bw_single_factor_mean.csv')
+        self.mfx = np.loadtxt(filepath + '/bw_single_factor_mfx.csv')
         self.r_squared = 0.99999999999829958
 
 

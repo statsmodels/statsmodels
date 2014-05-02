@@ -359,6 +359,7 @@ class SemiLinear(KernelReg):
         ----------
         See p.254 in [1]
         """
+
         params = np.asarray(params)
         b = params[0 : self.k_linear]
         bw = params[self.k_linear:]
@@ -402,7 +403,8 @@ class SemiLinear(KernelReg):
             mean[i] = mean_mfx[0]
             mfx_c = np.squeeze(mean_mfx[1])
             mfx[i, :] = mfx_c
-
+        # proposed change to add back in linear effects
+        #mean = mean + np.dot(exog_predict, self.b)
         return mean, mfx
 
     def __repr__(self):
