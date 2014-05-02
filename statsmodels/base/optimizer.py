@@ -9,6 +9,34 @@ from scipy import __version__ as scipy_version
 import numpy as np
 from scipy import optimize
 
+
+def _default_generator(items, keys):
+    for item in items:
+        if isinstance(item, basestring):
+            yield item, 100, (), {}
+        elif len(item) == 1:
+            yield item[keys[0]], 100, (), {}
+        elif len(item) == 2:
+            yield item[keys[0]], item[keys[1]], (), {}
+        elif len(item) == 3:
+            yield item[keys[0]], item[keys[1]], item[keys[2]], {}
+        elif len(item) == 4:
+            yield item[keys[0]], item[keys[1]], item[keys[2]], item[keys[3]]
+        else:
+            raise ValueError("Elements in solver list should be tuples of "
+                             "at most length 4. See docstring for fit.")
+
+
+def _available_methods(extra_fit_funcs={}):
+    #NOTE: if you add to this also add to fit_funcs dict below
+    #      should generalize that too. should fix when you generalize
+    #      fit_regularize
+    methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
+               'basinhopping']
+    methods += extra_fit_funcs.keys()
+    return methods
+
+
 def _check_method(method, methods):
     if method not in methods:
         message = "Unknown fit method %s" % method
@@ -16,6 +44,50 @@ def _check_method(method, methods):
 
 
 class Optimizer(object):
+
+    def _fit_sequence(self, solvers, objective, gradient, start_params, fargs,
+                      kwargs, hessian=None, full_output=True, disp=True,
+                      callback=None, retall=False):
+        """
+        Solvers should be specified as a list of tuples or dicts. The tuples
+        contain at most 4 elements. The only one that is required is a
+        solver name.::
+
+            method : str
+                The name of the available solvers.
+            maxiter : int, optional
+                The maximum number of iterations to use that solver for.
+            args : tuple, optional
+                The arguments to pass to the solver
+            kwargs : dict, optional
+                The kwargs to pass to the solvers.
+
+        If a sequence of dicts is given for solvers. 'solver' is the only
+        required key. 'maxiter', 'args', and 'kwargs' are optional keys.
+        """
+        retvals = []
+        xopts = [start_params]
+        optim_settings = []
+        if isinstance(solvers[0], dict):  # assumes all dicts
+            keys = ('method', 'maxiter', 'args', 'kwargs')
+        else:
+            keys = [0, 1, 2, 3]
+
+        for (method, maxiter,
+                args, kwargs) in _default_generator(solvers, keys):
+            (xopt, retval,
+             optim_setting) = self._fit(objective, gradient,
+                                        start_params=xopts[-1], fargs=fargs,
+                                        kwargs=kwargs, hessian=hessian,
+                                        method=method, maxiter=maxiter,
+                                        full_output=True, disp=True,
+                                        callback=callback, retall=retall,
+                                        **kwargs)
+
+            retvals.append(retval)
+            xopts.append(xopt)
+            optim_settings.append(optim_setting)
+        return xopts, retvals, optim_settings
 
     def _fit(self, objective, gradient, start_params, fargs, kwargs,
              hessian=None, method='newton', maxiter=100, full_output=True,
@@ -155,9 +227,7 @@ class Optimizer(object):
         # Extract kwargs specific to fit_regularized calling fit
         extra_fit_funcs = kwargs.setdefault('extra_fit_funcs', dict())
 
-        methods = ['newton', 'nm', 'bfgs', 'lbfgs', 'powell', 'cg', 'ncg',
-                'basinhopping']
-        methods += extra_fit_funcs.keys()
+        methods = _available_methods(extra_fit_funcs)
         method = method.lower()
         _check_method(method, methods)
 
@@ -179,9 +249,9 @@ class Optimizer(object):
 
         func = fit_funcs[method]
         xopt, retvals = func(objective, gradient, start_params, fargs, kwargs,
-                            disp=disp, maxiter=maxiter, callback=callback,
-                            retall=retall, full_output=full_output,
-                            hess=hessian)
+                             disp=disp, maxiter=maxiter, callback=callback,
+                             retall=retall, full_output=full_output,
+                             hess=hessian)
 
         # this is stupid TODO: just change this to something sane
         # no reason to copy scipy here
@@ -234,10 +304,10 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
         history = [oldparams, newparams]
     while (iterations < maxiter and np.any(np.abs(newparams -
             oldparams) > tol)):
-        H = hess(newparams)
+        H = -hess(newparams)
         oldparams = newparams
         newparams = oldparams - np.dot(np.linalg.inv(H),
-                score(oldparams))
+                -score(oldparams))
         if retall:
             history.append(newparams)
         if callback is not None:
@@ -260,8 +330,8 @@ def _fit_newton(f, score, start_params, fargs, kwargs, disp=True,
     if full_output:
         (xopt, fopt, niter,
          gopt, hopt) = (newparams, f(newparams, *fargs),
-                        iterations, score(newparams),
-                        hess(newparams))
+                        iterations, -score(newparams),
+                        -hess(newparams))
         converged = not warnflag
         retvals = {'fopt': fopt, 'iterations': niter, 'score': gopt,
                    'Hessian': hopt, 'warnflag': warnflag,

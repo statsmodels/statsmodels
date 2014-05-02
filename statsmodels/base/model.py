@@ -203,6 +203,106 @@ class LikelihoodModel(Model):
         """
         raise NotImplementedError
 
+    def fit_sequence(self, solvers, start_params=None, full_output=True,
+                     disp=True, fargs=(), callback=None,
+                     retall=False, **kwargs):
+        """
+        Fit the likelihood using a sequence of solvers
+
+        Parameters
+        ----------
+        solvers : list of tuples or dicts
+            Solver should be specified as a list of tuples or dicts. The
+            tuples contain at most 4 elements. The only one that is required
+            is a method name.::
+
+                method : str
+                    The name of the available solvers.
+                maxiter : int, optional
+                    The maximum number of iterations to use that solver for.
+                args : tuple, optional
+                    The arguments to pass to the solver
+                kwargs : dict, optional
+                    The kwargs to pass to the solvers.
+
+            If a sequence of dicts is given for solvers. 'solver' is the only
+            required key. 'maxiter', 'args', and 'kwargs' are optional keys.
+
+        Notes
+        -----
+        The rest of the documentation is the same as the fit method.
+        """
+        Hinv = None  # JP error if full_output=0, Hinv not defined
+
+        #TODO: why is this here?
+        if start_params is None:
+            if hasattr(self, 'start_params'):
+                start_params = self.start_params
+            elif self.exog is not None:
+                # fails for shape (K,)?
+                start_params = [0] * self.exog.shape[1]
+            else:
+                raise ValueError("If exog is None, then start_params should "
+                                 "be specified")
+
+
+        nobs = self.endog.shape[0]
+        f = lambda params, *args: -self.loglike(params, *args) / nobs
+        score = lambda params: -self.score(params) / nobs
+        try:
+            hess = lambda params: -self.hessian(params) / nobs
+        except:
+            hess = None
+
+        #if method == 'newton':
+        #    score = lambda params: self.score(params) / nobs
+        #    hess = lambda params: self.hessian(params) / nobs
+        #    #TODO: why are score and hess positive?
+
+        if isinstance(solvers[0], dict):
+            key0 = 'method'
+        else:
+            key0 = 0
+
+        optimizer = Optimizer()
+        #TODO: catch maximum number of iterations warnings
+        (xopt, retvals,
+         optim_settings) = optimizer._fit_sequence(solvers, f, score,
+                                                   start_params, fargs, kwargs,
+                                                   hessian=hess, disp=disp,
+                                                   callback=callback,
+                                                   retall=retall,
+                                                   full_output=full_output)
+
+        #NOTE: this is for fit_regularized and should be generalized
+        cov_params_func = kwargs.setdefault('cov_params_func', None)
+        if not full_output: # xopt should be None and retvals is argmin
+            xopt = retvals[-1]
+        elif cov_params_func:
+            Hinv = cov_params_func(self, xopt[-1], retvals[-1])
+        elif solvers[-1][key0] == 'newton' and full_output:
+            Hinv = np.linalg.inv(-retvals[-1]['Hessian']) / nobs
+        else:
+            try:
+                Hinv = np.linalg.inv(-1 * self.hessian(xopt[-1]))
+            except:
+                #might want custom warning ResultsWarning? NumericalWarning?
+                from warnings import warn
+                warndoc = ('Inverting hessian failed, no bse or '
+                           'cov_params available')
+                warn(warndoc, RuntimeWarning)
+                Hinv = None
+
+        #TODO: add Hessian approximation and change the above if needed
+        mlefit = LikelihoodModelResults(self, xopt, Hinv, scale=1.)
+
+        #TODO: hardcode scale?
+        if isinstance(retvals[-1], dict):
+            mlefit.mle_retvals = retvals
+
+        mlefit.mle_settings = optim_settings
+        return mlefit
+
     def fit(self, start_params=None, method='newton', maxiter=100,
             full_output=True, disp=True, fargs=(), callback=None,
             retall=False, **kwargs):
@@ -372,11 +472,6 @@ class LikelihoodModel(Model):
             hess = lambda params: -self.hessian(params) / nobs
         except:
             hess = None
-
-        if method == 'newton':
-            score = lambda params: self.score(params) / nobs
-            hess = lambda params: self.hessian(params) / nobs
-            #TODO: why are score and hess positive?
 
         optimizer = Optimizer()
         xopt, retvals, optim_settings = optimizer._fit(f, score, start_params,
