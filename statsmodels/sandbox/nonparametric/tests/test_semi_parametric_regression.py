@@ -20,6 +20,13 @@ from numpy.testing import (assert_, assert_raises, assert_almost_equal,
 from statsmodels.sandbox.nonparametric.kernel_extras import SemiLinear
 from statsmodels.sandbox.nonparametric.kernel_extras import SingleIndexModel
 
+class CheckNonParametricRegressionKnown(object):
+
+    def test_parametric_parameters_locallinear(self):
+        assert_allclose(self.model.params, self.expected_params, rtol=0.1)
+
+    def test_nonparametric_fit_locallinear(self):
+        assert_allclose(self.model.fittedy, self.expected_fittedy, rtol=0.1)
 
 class CheckNonParametricRegressionResults(object):
 
@@ -38,9 +45,66 @@ class CheckNonParametricRegressionResults(object):
     def test_rsquared_values(self):
         assert_allclose(self.model.r_squared(), self.res.r_squared, atol=1e-2)
 
+# Note that this has local linear hard coded currently - although docmentation suggets
+# that is is local cosntant.
+# class TestSemiLinearContinuousRegressionKnown(CheckNonParametricRegressionKnown):
+
+#     @classmethod
+#     def setupClass(cls):     
+#         seed = 430973
+#         np.random.seed(seed)
+#         np_vars = 3
+#         p_vars = 2
+#         nobs, ntest = 300, 50
+#         x_np = np.random.uniform(-2, 2, size=(nobs, np_vars))
+#         x_p = np.random.uniform(-2, 2, size=(nobs, p_vars))
+#         fparams = np.array([1,-2, 5])
+#         xb = x_np.sum(1) / 3
+#         fx = np.dot(np.column_stack((xb**2,xb,np.ones(len(xb)))),fparams.T)
+#         y = fx + x_p.sum(1)   
+#         cls.model = SemiLinear(y, x_p, x_np, 'ccc', p_vars)
+        
+#         # Set known parameters
+#         cls.model.params = cls.model.b
+#         cls.expected_params = np.array([1,1])
+
+#         # Generate new poitns for testing
+#         x_np_test = np.random.uniform(-2, 2, size=(ntest, np_vars))
+#         x_p_test = np.random.uniform(-2, 2, size=(ntest, p_vars))
+#         xb = x_np_test.sum(1) / 3
+#         fx = np.dot(np.column_stack((xb**2,xb,np.ones(len(xb)))),fparams.T)
+#         cls.expected_fittedy = fx + x_p_test.sum(1)   
+#         cls.model.fittedy = cls.model.fit(x_p_test,x_np_test)
 
 
-class TestSemiLinear(CheckNonParametricRegressionResults):
+# Note that this has local linear hard coded currently - although docmentation suggets
+# that is is local cosntant.
+class TestSingleIndexContinousRegressionKnown(CheckNonParametricRegressionKnown):
+
+    @classmethod
+    def setupClass(cls):     
+        seed = 430973
+        np.random.seed(seed)
+        np_vars = 2
+        nobs, ntest = 1000, 10
+        beta = np.array([1.0,2.0])
+        x_np = np.random.uniform(-2, 2, size=(nobs, np_vars))
+        fparams = np.array([1,-2, 1])
+        xb = np.dot(x_np,beta)
+        y = np.dot(np.column_stack((xb**2,xb,np.ones(len(xb)))),fparams.T) 
+        cls.model = SingleIndexModel(y, x_np, var_type='cc')
+
+        # Set known parameters
+        cls.model.params = cls.model.b/np.linalg.norm(cls.model.b)
+        cls.expected_params = beta/np.linalg.norm(beta)
+
+        # Generate new poitns for testing
+        x_np_test = np.random.uniform(-2, 2, size=(ntest, np_vars))
+        xb = np.dot(x_np_test,beta)
+        cls.expected_fittedy = np.dot(np.column_stack((xb**2,xb,np.ones(len(xb)))),fparams.T) 
+        cls.model.fittedy = cls.model.fit(x_np_test)[0]
+
+class TestSemiLinearRegressionResults(CheckNonParametricRegressionResults):
 
     @classmethod
     def setupClass(cls):
@@ -56,7 +120,7 @@ class TestSemiLinear(CheckNonParametricRegressionResults):
         cls.res = Wage1()
         cls.res.semilinear()
 
-class TestSingleIndexModel(CheckNonParametricRegressionResults):
+class TestSingleIndexModelRegressionResults(CheckNonParametricRegressionResults):
 
     @classmethod
     def setupClass(cls):
