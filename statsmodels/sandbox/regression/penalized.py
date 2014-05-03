@@ -69,7 +69,7 @@ class TheilGLS(GLS):
         super(self.__class__, self).__init__(endog, exog, sigma=sigma)
 
 
-    def fit(self, lambd=1.):
+    def fit(self, lambd=1., cov_type='sandwich'):
         #this does duplicate transformation, but I need resid not wresid
         res_gls = GLS(self.endog, self.exog, sigma=self.sigma).fit()
         self.res_gls = res_gls
@@ -83,7 +83,8 @@ class TheilGLS(GLS):
         #why are sigma2_e * lambd multiplied, not ratio?
         #larger lambd -> stronger prior  (it's not the variance)
         #print('lambd inside fit', lambd
-        xpx = np.dot(x.T, x) + \
+        xx = np.dot(x.T, x)
+        xpx = xx + \
               sigma2_e * lambd * np.dot(r_matrix.T, np.dot(sigma_prior_inv, r_matrix))
         xpy = np.dot(x.T, y) + \
               sigma2_e * lambd * np.dot(r_matrix.T, np.dot(sigma_prior_inv, q_matrix))
@@ -92,7 +93,11 @@ class TheilGLS(GLS):
         xpxi = np.linalg.pinv(xpx)
         params = np.dot(xpxi, xpy)    #or solve
         params = np.squeeze(params)
-        self.normalized_cov_params = xpxi    #why attach it to self, i.e. model?
+        # normalized_cov_params should have sandwich form xpxi @ xx @ xpxi
+        if cov_type == 'sandwich':
+            self.normalized_cov_params = xpxi.dot(xx).dot(xpxi)
+        elif cov_type == 'simplified':
+            self.normalized_cov_params = xpxi    #why attach it to self, i.e. model?
 
         lfit = TheilRegressionResults(self, params,
                        normalized_cov_params=xpxi)
@@ -150,6 +155,7 @@ class TheilRegressionResults(RegressionResults):
 
         might be wrong for WLS and GLS case
         '''
+        # TODO is this still correct with sandwich normalized_cov_params, I guess not
         xpxi = self.model.normalized_cov_params
         #something fishy with self.normalized_cov_params in result, doesn't update
         #print(self.model.wexog.shape, np.dot(xpxi, self.model.wexog.T).shape
