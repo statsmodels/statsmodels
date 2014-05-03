@@ -36,6 +36,7 @@ problem with definition of df_model, it has 1 subtracted for constant
 from __future__ import print_function
 from statsmodels.compat.python import lrange
 import numpy as np
+from statsmodels.tools.decorators import (cache_readonly)
 import statsmodels.base.model as base
 from statsmodels.regression.linear_model import OLS, GLS, RegressionResults
 
@@ -66,7 +67,7 @@ class TheilGLS(GLS):
 
         self.sigma_prior = sigma_prior
         self.sigma_prior_inv = np.linalg.pinv(sigma_prior) #or inv
-        super(self.__class__, self).__init__(endog, exog, sigma=sigma)
+        super(TheilGLS, self).__init__(endog, exog, sigma=sigma)
 
 
     def fit(self, lambd=1., cov_type='sandwich'):
@@ -82,6 +83,7 @@ class TheilGLS(GLS):
         y = self.wendog[:,None]
         #why are sigma2_e * lambd multiplied, not ratio?
         #larger lambd -> stronger prior  (it's not the variance)
+        # Bayesian: lambd is precision = 1/sigma2_prior
         #print('lambd inside fit', lambd
         xx = np.dot(x.T, x)
         xpx = xx + \
@@ -105,24 +107,25 @@ class TheilGLS(GLS):
         lfit.penalization_factor = lambd
         return lfit
 
-    def fit_minic(self):
+    def fit_minic(self, method='aicc'):
         #this doesn't make sense, since number of parameters stays unchanged
+        # information criteria changes if we use df_model based on trace(hat_matrix)
         #need leave-one-out, gcv; or some penalization for weak priors
         #added extra penalization for lambd
-        def get_bic(lambd):
-            #return self.fit(lambd).bic #+lambd #+ 1./lambd  #added 1/lambd for checking
-            #return self.fit(lambd).gcv()
-            #return self.fit(lambd).cv()
-            return self.fit(lambd).aicc()
+        def get_ic(lambd):
+            # this can be optimized more
+            # for pure Ridge we can keep the eigenvector decomposition
+            return getattr(self.fit(lambd), method)
 
         from scipy import optimize
-        lambd = optimize.fmin(get_bic, 1.)
+        lambd = optimize.fmin(get_ic, 1.)
         return lambd
 
 #TODO:
 #I need the hatmatrix in the model if I want to do iterative fitting, e.g. GCV
 #move to model or use it from a results instance inside the model,
 #    each call to fit returns results instance
+# note: we need to recalculate hatmatrix for each lambda, so keep in results is fine
 
 class TheilRegressionResults(RegressionResults):
 
@@ -134,12 +137,13 @@ class TheilRegressionResults(RegressionResults):
         self.df_resid = self.model.endog.shape[0] - self.df_model
 
     #cache
+    @cache_readonly
     def hatmatrix_diag(self):
         '''
 
         diag(X' xpxi X)
 
-        where xpxi = (X'X + lambd * sigma_prior)^{-1}
+        where xpxi = (X'X + sigma2_e * lambd * sigma_prior)^{-1}
 
         Notes
         -----
@@ -161,8 +165,9 @@ class TheilRegressionResults(RegressionResults):
         #print(self.model.wexog.shape, np.dot(xpxi, self.model.wexog.T).shape
         return (self.model.wexog * np.dot(xpxi, self.model.wexog.T).T).sum(1)
 
+    #@cache_readonly
     def hatmatrix_trace(self):
-        return self.hatmatrix_diag().sum()
+        return self.hatmatrix_diag.sum()
 
 ##    #this doesn't update df_resid
 ##    @property   #needs to be property or attribute (no call)
@@ -171,12 +176,15 @@ class TheilRegressionResults(RegressionResults):
 
     #Note: mse_resid uses df_resid not nobs-k_vars, which might differ if df_model, tr(H), is used
     #in paper for gcv ess/nobs is used instead of mse_resid
+    @cache_readonly
     def gcv(self):
         return self.mse_resid / (1. - self.hatmatrix_trace() / self.nobs)**2
 
+    @cache_readonly
     def cv(self):
         return ((self.resid / (1. - self.hatmatrix_diag()))**2).sum() / self.nobs
 
+    @cache_readonly
     def aicc(self):
         aic = np.log(self.mse_resid) + 1
         aic += 2 * (1. + self.hatmatrix_trace()) / (self.nobs - self.hatmatrix_trace() -2)
@@ -317,8 +325,8 @@ if __name__ == '__main__':
         #print(lambd, res_l.params[-2:], res_l.bic, res_l.bic + 1./lambd, res.df_model
         #print((lambd, res_l.params[-2:], res_l.bic, res.df_model, np.trace(res.normalized_cov_params)))
         params_l.append(res_l.params)
-        gcv_l.append(res_l.gcv())
-        aicc_l.append(res_l.aicc())
+        gcv_l.append(res_l.gcv)
+        aicc_l.append(res_l.aicc)
 
     params_l = np.array(params_l)
 
