@@ -41,7 +41,6 @@ class CheckNonParametricRegressionResults(object):
         assert_allclose(self.model.bw, self.res.bw, atol=1e-2)
 
     def test_b_values(self):
-        print 'I made it here'
         assert_allclose(self.model.b, self.res.b, atol=1e-2)
 
     def test_rsquared_values(self):
@@ -136,8 +135,6 @@ class TestSingleIndexModelRegressionResults(CheckNonParametricRegressionResults)
         cls.res = BirthWt()
         cls.res.singleindexmodel()
 
-        # Disable unstable test
-        cls.test_b_values = None
         
 
 
