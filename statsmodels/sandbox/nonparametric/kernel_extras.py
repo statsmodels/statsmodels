@@ -396,7 +396,7 @@ class SemiLinear(KernelReg):
         N_data_predict = np.shape(exog_nonparametric_predict)[0]
         mean = np.empty((N_data_predict,))
         mfx = np.empty((N_data_predict, self.K))
-        Y = self.endog - np.dot(exog, self.b)[:,None] ## BUG - if exog_predict is not the model exog
+        Y = self.endog - np.dot(self.exog, self.b)[:,None] ## BUG - if exog_predict is not the model exog
         for i in range(N_data_predict):
             mean_mfx = self.func(self.bw, Y, self.exog_nonparametric,
                                  data_predict=exog_nonparametric_predict[i, :])
