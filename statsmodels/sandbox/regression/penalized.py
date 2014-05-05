@@ -133,8 +133,8 @@ class TheilRegressionResults(RegressionResults):
         super(TheilRegressionResults, self).__init__(*args, **kwds)
 
         # overwrite df_model and df_resid
-        self.df_model = self.hatmatrix_trace()
-        self.df_resid = self.model.endog.shape[0] - self.df_model
+        self.df_model = self.hatmatrix_trace() - 1 #assume constant
+        self.df_resid = self.model.endog.shape[0] - self.df_model - 1
 
     #cache
     @cache_readonly
@@ -259,7 +259,7 @@ if __name__ == '__main__':
     import numpy as np
     import statsmodels.api as sm
 
-    examples = [2]
+    examples = [3]
 
     np.random.seed(765367)
     np.random.seed(97653679)
@@ -388,8 +388,8 @@ if __name__ == '__main__':
         for lambd in np.linspace(0, 20, 21):
             resi = mod.fit(5.*lambd)
             params_l.append(resi.params)
-            gcv_l.append(resi.gcv())
-            aicc_l.append(resi.aicc())
+            gcv_l.append(resi.gcv)
+            aicc_l.append(resi.aicc)
 
         params_l = np.array(params_l)
 
