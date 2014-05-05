@@ -1,3 +1,4 @@
+import numpy as np
 from numpy.testing import assert_
 from statsmodels.base.optimizer import (_fit_newton, _fit_nm,
                                         _fit_bfgs, _fit_cg,
@@ -20,7 +21,7 @@ def dummy_score(x):
     return 2*x
 
 def dummy_hess(x):
-    return [[2]]
+    return np.array([[2]])
 
 def test_full_output_false():
     # just a smoke test
