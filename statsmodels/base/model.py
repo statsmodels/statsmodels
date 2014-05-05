@@ -656,7 +656,7 @@ class Results(object):
         self.model = model
         if hasattr(model, 'k_constant'):
             self.k_constant = model.k_constant
-
+            
     def predict(self, exog=None, transform=True, *args, **kwargs):
         """
         Call self.model.predict with self.params as the first argument.
@@ -1403,6 +1403,9 @@ class LikelihoodModelResults(Results):
 
         from statsmodels.iolib.smpickle import load_pickle
         return load_pickle(fname)
+    
+    def get_distribution(self, exog = None, scale = None):
+        raise NotImplementedError
 
     def remove_data(self):
         '''remove data arrays, all nobs arrays from result and model
