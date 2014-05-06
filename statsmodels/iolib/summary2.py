@@ -1,13 +1,14 @@
-from statsmodels.compat.python import (lrange, iterkeys, iteritems, StringIO, lzip,
-                                reduce, itervalues, zip, string_types, range)
+from statsmodels.compat.python import (lrange, iterkeys, iteritems, lzip,
+                                       reduce, itervalues, zip, string_types,
+                                       range)
 from statsmodels.compat.collections import OrderedDict
 import numpy as np
 import pandas as pd
 import datetime
-import copy
 import textwrap
 from .table import SimpleTable
 from .tableformatting import fmt_latex, fmt_txt
+
 
 class Summary(object):
     def __init__(self):
@@ -43,8 +44,8 @@ class Summary(object):
             Data alignment (l/c/r)
         '''
 
-        settings = {'index':index, 'header':header,
-                    'float_format':float_format, 'align':align}
+        settings = {'index': index, 'header': header,
+                    'float_format': float_format, 'align': align}
         self.tables.append(df)
         self.settings.append(settings)
 
@@ -62,7 +63,7 @@ class Summary(object):
 
         table = pd.DataFrame(array)
         self.add_df(table, index=False, header=False,
-                float_format=float_format, align=align)
+                    float_format=float_format, align=align)
 
     def add_dict(self, d, ncols=2, align='l', float_format="%.4f"):
         '''Add the contents of a Dict to summary table
@@ -79,17 +80,15 @@ class Summary(object):
         '''
 
         keys = [_formatter(x, float_format) for x in iterkeys(d)]
-
-
         vals = [_formatter(x, float_format) for x in itervalues(d)]
         data = np.array(lzip(keys, vals))
 
         if data.shape[0] % ncols != 0:
             pad = ncols - (data.shape[0] % ncols)
-            data = np.vstack([data, np.array(pad * [['','']])])
+            data = np.vstack([data, np.array(pad * [['', '']])])
 
         data = np.split(data, ncols)
-        data = reduce(lambda x,y: np.hstack([x,y]), data)
+        data = reduce(lambda x, y: np.hstack([x, y]), data)
         self.add_array(data, align=align)
 
     def add_text(self, string):
@@ -116,7 +115,7 @@ class Summary(object):
                 self.title = ''
 
     def add_base(self, results, alpha=0.05, float_format="%.4f", title=None,
-            xname=None, yname=None):
+                 xname=None, yname=None):
         '''Try to construct a basic summary instance.
 
         Parameters
@@ -136,9 +135,9 @@ class Summary(object):
 
         param = summary_params(results, alpha=alpha)
         info = summary_model(results)
-        if xname != None:
+        if xname is not None:
             param.index = xname
-        if yname != None:
+        if yname is not None:
             info['Dependent Variable:'] = yname
         self.add_dict(info, align='l')
         self.add_df(param, float_format=float_format)
@@ -156,6 +155,7 @@ class Summary(object):
         pad_col, pad_index, widest = _measure_tables(tables, settings)
 
         rule_equal = widest * '='
+        #TODO: this isn't used anywhere?
         rule_dash = widest * '-'
 
         simple_tables = _simple_tables(tables, settings, pad_col, pad_index)
@@ -167,7 +167,7 @@ class Summary(object):
         tab.append(rule_equal)
         tab = '\n'.join(tab)
 
-        if title != None:
+        if title is not None:
             title = title
             if len(title) < widest:
                 title = ' ' * int(widest/2 - len(title)/2) + title
@@ -188,6 +188,7 @@ class Summary(object):
 
         tables = self.tables
         settings = self.settings
+        #TODO: this isn't used anywhere
         title = self.title
 
         simple_tables = _simple_tables(tables, settings)
@@ -202,7 +203,7 @@ class Summary(object):
         tables = self.tables
         settings = self.settings
         title = self.title
-        if title != None:
+        if title is not None:
             title = '\\caption{' + title + '} \\\\'
         else:
             title = '\\caption{}'
@@ -214,6 +215,7 @@ class Summary(object):
         out = '\\begin{table}', title, tab, '\\end{table}'
         out = '\n'.join(out)
         return out
+
 
 def _measure_tables(tables, settings):
     '''Compare width of ascii tables in a list and calculate padding values.
@@ -242,18 +244,19 @@ def _measure_tables(tables, settings):
 
 # Useful stuff
 _model_types = {'OLS' : 'Ordinary least squares',
-               'GLS' : 'Generalized least squares',
-               'GLSAR' : 'Generalized least squares with AR(p)',
-               'WLS' : 'Weigthed least squares',
-               'RLM' : 'Robust linear model',
-               'NBin': 'Negative binomial model',
-               'GLM' : 'Generalized linear model'
-               }
+                'GLS' : 'Generalized least squares',
+                'GLSAR' : 'Generalized least squares with AR(p)',
+                'WLS' : 'Weigthed least squares',
+                'RLM' : 'Robust linear model',
+                'NBin': 'Negative binomial model',
+                'GLM' : 'Generalized linear model'
+                }
+
 
 def summary_model(results):
     '''Create a dict with information about the model
     '''
-    def time_now(**kwrds):
+    def time_now(*args, **kwds):
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d %H:%M')
     info = OrderedDict()
@@ -261,7 +264,7 @@ def summary_model(results):
     info['Model Family:'] = lambda x: x.family.__class.__name__
     info['Link Function:'] = lambda x: x.family.link.__class__.__name__
     info['Dependent Variable:'] = lambda x: x.model.endog_names
-    info['Date:'] = time_now()
+    info['Date:'] = time_now
     info['No. Observations:'] = lambda x: "%#6d" % x.nobs
     info['Df Model:'] = lambda x: "%#6d" % x.df_model
     info['Df Residuals:'] = lambda x: "%#6d" % x.df_resid
@@ -285,12 +288,14 @@ def summary_model(results):
     info['Prob (F-statistic):'] = lambda x: "%#6.3g" % x.f_pvalue
     info['Scale:'] = lambda x: "%#8.5g" % x.scale
     out = OrderedDict()
-    for key in iteritems(info):
+    for key, func in iteritems(info):
         try:
-            out[key] = info[key](results)
-        except:
+            out[key] = func(results)
+        # NOTE: some models don't have loglike defined (RLM), so that's NIE
+        except (AttributeError, KeyError, NotImplementedError):
             pass
     return out
+
 
 def summary_params(results, yname=None, xname=None, alpha=.05, use_t=True,
                    skip_header=False, float_format="%.4f"):
@@ -360,27 +365,28 @@ def _col_params(result, float_format='%.4f', stars=True):
     for col in res.columns[:2]:
         res[col] = res[col].apply(lambda x: float_format % x)
     # Std.Errors in parentheses
-    res.ix[:,1] = '(' + res.ix[:,1] + ')'
+    res.ix[:, 1] = '(' + res.ix[:, 1] + ')'
     # Significance stars
     if stars:
-        idx = res.ix[:,3] < .1
-        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
-        idx = res.ix[:,3] < .05
-        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
-        idx = res.ix[:,3] < .01
-        res.ix[:,0][idx] = res.ix[:,0][idx] + '*'
+        idx = res.ix[:, 3] < .1
+        res.ix[:, 0][idx] = res.ix[:, 0][idx] + '*'
+        idx = res.ix[:, 3] < .05
+        res.ix[:, 0][idx] = res.ix[:, 0][idx] + '*'
+        idx = res.ix[:, 3] < .01
+        res.ix[:, 0][idx] = res.ix[:, 0][idx] + '*'
     # Stack Coefs and Std.Errors
-    res = res.ix[:,:2]
+    res = res.ix[:, :2]
     res = res.stack()
     res = pd.DataFrame(res)
     res.columns = [str(result.model.endog_names)]
     return res
 
+
 def _col_info(result, info_dict=None):
     '''Stack model info in a column
     '''
 
-    if info_dict == None:
+    if info_dict is None:
         info_dict = {}
     out = []
     index = []
@@ -393,7 +399,7 @@ def _col_info(result, info_dict=None):
         except:
             out.append('')
         index.append(i)
-    out = pd.DataFrame({str(result.model.endog_names):out}, index=index)
+    out = pd.DataFrame({str(result.model.endog_names): out}, index=index)
     return out
 
 
@@ -406,13 +412,14 @@ def _make_unique(list_of_names):
     header = []
     for _name in list_of_names:
         name_counter[_name] += "I"
-        header.append(_name+" " +name_counter[_name])
+        header.append(_name+" " + name_counter[_name])
     return header
 
 
 def summary_col(results, float_format='%.4f', model_names=[], stars=False,
-        info_dict=None, regressor_order=[]):
-    '''Summarize multiple results instances side-by-side (coefs and SEs)
+                info_dict=None, regressor_order=[]):
+    """
+    Summarize multiple results instances side-by-side (coefs and SEs)
 
     Parameters
     ----------
@@ -426,21 +433,23 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         print significance stars
     info_dict : dict
         dict of lambda functions to be applied to results instances to retrieve
-        model info. To use specific information for different models, add a (nested)
-        info_dict with model name as the key.
-        Example: `info_dict = {"N":..., "R2": ..., "OLS":{"R2":...}}` would only show
-        `R2` for OLS regression models, but additionally `N` for all other results.
-        Default : None (use the info_dict specified in result.default_model_infos, if
-        this property exists)
+        model info. To use specific information for different models, add a
+        (nested) info_dict with model name as the key.
+        Example: `info_dict = {"N":..., "R2": ..., "OLS":{"R2":...}}` would
+        only show `R2` for OLS regression models, but additionally `N` for
+        all other results.
+        Default : None (use the info_dict specified in
+        result.default_model_infos, if this property exists)
     regressor_order : list of strings
         list of names of the regressors in the desired order. All regressors
         not specified will be appended to the end of the list.
-    '''
+    """
 
     if not isinstance(results, list):
         results = [results]
 
-    cols = [_col_params(x, stars=stars, float_format=float_format) for x in results]
+    cols = [_col_params(x, stars=stars, float_format=float_format) for x in
+            results]
 
     # Unique column names (pandas has problems merging otherwise)
     if model_names:
@@ -450,7 +459,8 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
     for i in range(len(cols)):
         cols[i].columns = [colnames[i]]
 
-    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
+    merg = lambda x, y: x.merge(y, how='outer', right_index=True,
+                                left_index=True)
     summ = reduce(merg, cols)
 
     if regressor_order:
@@ -464,20 +474,23 @@ def summary_col(results, float_format='%.4f', model_names=[], stars=False,
         summ = summ.reindex(f(order))
         summ.index = [x[:-4] for x in summ.index]
 
-    idx = pd.Series(lrange(summ.shape[0])) %2 == 1
+    idx = pd.Series(lrange(summ.shape[0])) % 2 == 1
     summ.index = np.where(idx, '', summ.index.get_level_values(0))
 
     # add infos about the models.
     if info_dict:
-        cols = [_col_info(x, info_dict.get(x.model.__class__.__name__, info_dict)) for x in results]
+        cols = [_col_info(x, info_dict.get(x.model.__class__.__name__,
+                                           info_dict)) for x in results]
     else:
-        cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in results]
+        cols = [_col_info(x, getattr(x, "default_model_infos", None)) for x in
+                results]
     # use unique column names, otherwise the merge will not succeed
     for df , name in zip(cols, _make_unique([df.columns[0] for df in cols])):
         df.columns = [name]
-    merg = lambda x,y: x.merge(y, how='outer', right_index=True, left_index=True)
+    merg = lambda x, y: x.merge(y, how='outer', right_index=True,
+                                left_index=True)
     info = reduce(merg, cols)
-    dat = pd.DataFrame(np.vstack([summ,info])) # pd.concat better, but error
+    dat = pd.DataFrame(np.vstack([summ, info]))  # pd.concat better, but error
     dat.columns = summ.columns
     dat.index = pd.Index(summ.index.tolist() + info.index.tolist())
     summ = dat
@@ -501,9 +514,9 @@ def _formatter(element, float_format='%.4f'):
     return out.strip()
 
 
-def _df_to_simpletable(df, align='r', float_format="%.4f", header=True, index=True,
-        table_dec_above='-', table_dec_below=None, header_dec_below='-',
-        pad_col=0, pad_index=0):
+def _df_to_simpletable(df, align='r', float_format="%.4f", header=True,
+                       index=True, table_dec_above='-', table_dec_below=None,
+                       header_dec_below='-', pad_col=0, pad_index=0):
     dat = df.copy()
     dat = dat.applymap(lambda x: _formatter(x, float_format))
     if header:
@@ -513,10 +526,10 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True, index=Tr
     if index:
         stubs = [str(x) + int(pad_index) * ' ' for x in dat.index.tolist()]
     else:
-        dat.ix[:,0] = [str(x) + int(pad_index) * ' ' for x in dat.ix[:,0]]
+        dat.ix[:, 0] = [str(x) + int(pad_index) * ' ' for x in dat.ix[:, 0]]
         stubs = None
     st = SimpleTable(np.array(dat), headers=headers, stubs=stubs,
-            ltx_fmt=fmt_latex, txt_fmt=fmt_txt)
+                     ltx_fmt=fmt_latex, txt_fmt=fmt_txt)
     st.output_formats['latex']['data_aligns'] = align
     st.output_formats['txt']['data_aligns'] = align
     st.output_formats['txt']['table_dec_above'] = table_dec_above
@@ -529,15 +542,17 @@ def _df_to_simpletable(df, align='r', float_format="%.4f", header=True, index=Tr
 def _simple_tables(tables, settings, pad_col=None, pad_index=None):
     simple_tables = []
     float_format = '%.4f'
-    if pad_col == None:
+    if pad_col is None:
         pad_col = [0] * len(tables)
-    if pad_index == None:
+    if pad_index is None:
         pad_index = [0] * len(tables)
-    for i,v in enumerate(tables):
+    for i, v in enumerate(tables):
         index = settings[i]['index']
         header = settings[i]['header']
         align = settings[i]['align']
         simple_tables.append(_df_to_simpletable(v, align=align,
-            float_format=float_format, header=header, index=index,
-            pad_col=pad_col[i], pad_index=pad_index[i]))
+                                                float_format=float_format,
+                                                header=header, index=index,
+                                                pad_col=pad_col[i],
+                                                pad_index=pad_index[i]))
     return simple_tables
