@@ -250,12 +250,13 @@ _model_types = {'OLS' : 'Ordinary least squares',
                 'RLM' : 'Robust linear model',
                 'NBin': 'Negative binomial model',
                 'GLM' : 'Generalized linear model'
-               }
+                }
+
 
 def summary_model(results):
     '''Create a dict with information about the model
     '''
-    def time_now(**kwrds):
+    def time_now(*args, **kwds):
         now = datetime.datetime.now()
         return now.strftime('%Y-%m-%d %H:%M')
     info = OrderedDict()
@@ -263,7 +264,7 @@ def summary_model(results):
     info['Model Family:'] = lambda x: x.family.__class.__name__
     info['Link Function:'] = lambda x: x.family.link.__class__.__name__
     info['Dependent Variable:'] = lambda x: x.model.endog_names
-    info['Date:'] = time_now()
+    info['Date:'] = time_now
     info['No. Observations:'] = lambda x: "%#6d" % x.nobs
     info['Df Model:'] = lambda x: "%#6d" % x.df_model
     info['Df Residuals:'] = lambda x: "%#6d" % x.df_resid
@@ -287,10 +288,11 @@ def summary_model(results):
     info['Prob (F-statistic):'] = lambda x: "%#6.3g" % x.f_pvalue
     info['Scale:'] = lambda x: "%#8.5g" % x.scale
     out = OrderedDict()
-    for key in iteritems(info):
+    for key, func in iteritems(info):
         try:
-            out[key] = info[key](results)
-        except:
+            out[key] = func(results)
+        # NOTE: some models don't have loglike defined (RLM), so that's NIE
+        except (AttributeError, KeyError, NotImplementedError):
             pass
     return out
 
