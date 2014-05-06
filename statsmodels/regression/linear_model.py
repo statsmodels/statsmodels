@@ -1007,7 +1007,19 @@ class RegressionResults(base.LikelihoodModelResults):
             upper = params[cols] + q * bse[cols]
         return np.asarray(lzip(lower, upper))
 
-
+    def get_distribution(self, exog, scale = None):
+        u = np.random.chisquare(self.df_resid)
+        if scale == None:
+            sigstar = self.mse_resid*self.df_resid/u
+        else:
+            sigstar = scale/u
+        z = np.random.normal(0,1,self.df_model+1)
+        bstar = self.params + sigstar*z*np.linalg.cholesky(np.linalg.inv(np.dot(self.model.exog,self.model.exog)))
+        exog = exog
+        missingno = len(exog)
+        missingy = self.model.predict(bstar,exog) + sigstar*np.random.normal(0,1,missingno)
+        return missingy
+        
     @cache_readonly
     def nobs(self):
         return float(self.model.wexog.shape[0])
