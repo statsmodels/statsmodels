@@ -182,13 +182,37 @@ class TheilRegressionResults(RegressionResults):
 
     @cache_readonly
     def cv(self):
-        return ((self.resid / (1. - self.hatmatrix_diag()))**2).sum() / self.nobs
+        return ((self.resid / (1. - self.hatmatrix_diag))**2).sum() / self.nobs
 
     @cache_readonly
     def aicc(self):
         aic = np.log(self.mse_resid) + 1
         aic += 2 * (1. + self.hatmatrix_trace()) / (self.nobs - self.hatmatrix_trace() -2)
         return aic
+
+
+    def test_compatibility(self):
+        # TODO: should we store the OLS results ?  not needed so far, but maybe cache
+        #params_ols = np.linalg.pinv(self.model.exog).dot(self.model.endog)
+        #res = self.wald_test(self.model.r_matrix, q_matrix=self.model.q_matrix, use_f=False)
+        #from scratch
+        res_ols = OLS(self.model.endog, self.model.exog).fit()
+        r_mat = self.model.r_matrix
+        r_diff = self.model.q_matrix - r_mat.dot(res_ols.params)[:,None]
+        ols_cov_r = res_ols.cov_params(r_matrix=r_mat)
+        statistic = r_diff.T.dot(np.linalg.solve(ols_cov_r + self.model.sigma_prior, r_diff))
+        from scipy import stats
+        df = np.linalg.matrix_rank(self.model.sigma_prior)   # same as r_mat.shape[0]
+        pvalue = stats.chi2.sf(statistic, df)
+        # TODO: return results class
+        return statistic, pvalue, df
+
+
+    def share_data(self):
+        # I'm guessing the simplification, needs tests
+        #return hatmatrix_trace / self.exog.shape[1]
+        # maybe it should be
+        return (self.df_model + 1) / self.model.exog.shape[1]  # + 1 is for constant
 
 
 #contrast/restriction matrices, temporary location
