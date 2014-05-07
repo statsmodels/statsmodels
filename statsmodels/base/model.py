@@ -417,7 +417,7 @@ class LikelihoodModel(Model):
         return mlefit
 
     def solution_path(self, maxvar=None, wt_vec=None, min_pwt=0.,
-                      ceps=1e-4, xtol=1., **fit_args):
+                      param_threshold=1e-4, xtol=1., **fit_args):
         """
         Returns the solution path for the regularized fit
         of the model.
@@ -432,13 +432,13 @@ class LikelihoodModel(Model):
             A vector of the same length as params, containing
             penalty weights for each coefficient.
         min_pwt : float
-            The minimum pemalty weight that is considered.
-        ceps : float
+            The minimum penalty weight that is considered.
+        param_threshold : float
             Coefficients smaller in magnitude than this value
             are considered to be equal to zero.
         xtol : float
-            The points where solutions become zero wre resolved
-            to this precision.
+            The penalty weight where each parameter becomes zero is
+            calculated to this level of precision.
         fit_args : additional keyword arguments
             Arguments passed to `fit_regularized`.
 
@@ -460,7 +460,7 @@ class LikelihoodModel(Model):
         if 'disp' not in fit_args:
             fit_args['disp'] = False
 
-        spa = SolutionPath(self, maxvar, wt_vec, ceps,
+        spa = SolutionPath(self, maxvar, wt_vec, param_threshold,
                            min_pwt, **fit_args)
         spa.initialize()
         spa.refine()

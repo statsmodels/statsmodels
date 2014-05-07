@@ -155,7 +155,7 @@ class SolutionPath(object):
     wt_vec : array-like
         The penalty weights (per-parameter) are proportional to
         the values in this vector.
-    ceps : float
+    param_threshold : float
         Coefficients smaller than this number in absolute value
         are treated as zero
     start_pwt : float
@@ -182,38 +182,19 @@ class SolutionPath(object):
     solution path.
     """
 
-    # The sorted list of penalty weights for all points on the
-    # solution path.
-    weights = None
-
-    # The indices of zero coefficients for each point on the solution
-    # path.
-    ix_zero = None
-
-    # The indices of nonzero coefficients for each point on the
-    # solution path.
-    ix_nonzero = None
-
-    # The values of the nonzero coefficients for each point on the
-    # solution path.
-    params = None
-
-    # The number of nonzero coefficients for each point on the
-    # solution path
-    num_nonzero = None
-
-    def __init__(self, model, maxvar=None, wt_vec=None, ceps=1e-4,
+    def __init__(self, model, maxvar=None, wt_vec=None, param_threshold=1e-4,
                  start_pwt=0., no_selection=False, xtol=1.,
                  **fit_params):
 
         self.model = model
         self.maxvar = maxvar if maxvar is not None else model.nparams
-        self.ceps = ceps
+        self.param_threshold = param_threshold
         self.xtol = xtol
         self.start_pwt = start_pwt
 
         if wt_vec is not None:
-            assert(len(wt_vec) == model.nparams)
+            if len(wt_vec) != model.nparams:
+                raise ValueError("len(wt_vec) must equal the number of parameters")
         else:
             wt_vec = np.ones(model.nparams, dtype=np.float64)
         self.wt_vec = wt_vec
@@ -259,30 +240,34 @@ class SolutionPath(object):
         ii = np.flatnonzero(np.asarray(self.num_nonzero) == nvar)
         return np.asarray(self.weights)[ii]
 
-    def add_point(self, pwt, params):
+    def add_point(self, pen_wt, params):
         """
         Add one point to the solution path.
 
         Parameters:
         -----------
-        pwt : float
+        pen_wt : float
             The penalty coefficient
         params : array-like
             The model coefficients
+
+        Returns:
+        --------
+        The number of nonzero coefficients in the added point.
         """
 
         paramsa = np.abs(params)
-        ix0 = np.flatnonzero(paramsa <= self.ceps)
-        ix1 = np.flatnonzero(paramsa > self.ceps)
-        ii = np.searchsorted(self.weights, pwt)
-        self.weights.insert(ii, pwt)
+        ix0 = np.flatnonzero(paramsa <= self.param_threshold)
+        ix1 = np.flatnonzero(paramsa > self.param_threshold)
+        ii = np.searchsorted(self.weights, pen_wt)
+        self.weights.insert(ii, pen_wt)
         self.ix_zero.insert(ii, ix0)
         self.ix_nonzero.insert(ii, ix1)
         self.params.insert(ii, params[ix1])
         self.num_nonzero.insert(ii, len(ix1))
         return len(ix1)
 
-    def fit_regularized(self, pwt):
+    def fit_regularized(self, pen_wt):
         """
         Call the model's fit regularized using a given level of
         penalty weighting.  Also, attempt a 'warm start' using
@@ -291,7 +276,7 @@ class SolutionPath(object):
 
         Parameters:
         -----------
-        pwt : float
+        pen_wt : float
             The multiplier of the penalty weight vector
 
         Returns:
@@ -301,14 +286,14 @@ class SolutionPath(object):
 
         if len(self.weights) > 0:
             wa = np.asarray(self.weights)
-            ii = np.argmin(np.abs(wa - pwt))
+            ii = np.argmin(np.abs(wa - pen_wt))
             start_params = np.zeros(self.model.nparams,
                                     dtype=np.float64)
             start_params[self.ix_nonzero[ii]] = self.params[ii]
         else:
             start_params = None
 
-        mdf = self.model.fit_regularized(alpha=pwt*self.wt_vec,
+        mdf = self.model.fit_regularized(alpha=pen_wt*self.wt_vec,
                 start_params=start_params, **self.fit_params)
 
         return mdf.params
@@ -331,14 +316,17 @@ class SolutionPath(object):
 
         # Increase the tuning parameter until all coefficients are
         # zero
-        pwt = 1.
+        pen_wt = 1.
         n_unpenalized = sum(self.wt_vec == 0)
-        while True:
-            params = self.fit_regularized(pwt)
-            nvar = self.add_point(pwt, params)
+        while pen_wt < 1e10:
+            params = self.fit_regularized(pen_wt)
+            nvar = self.add_point(pen_wt, params)
             if nvar == n_unpenalized:
                 break
-            pwt *= 2.
+            pen_wt *= 2.
+        if pen_wt >= 1e10:
+            ix = np.flatnonzero(np.abs(params) > self.param_threshold)
+            raise RuntimeError("Unable to shrink coefficients %s to zero." % str(ix))
 
         # Fill in the gaps; nv is the number of variables with nonzero
         # coefficients
@@ -359,9 +347,9 @@ class SolutionPath(object):
                 if w2 - w0 < 1e-4:
                     break
 
-                pwt = (w0 + w2) / 2.
-                params = self.fit_regularized(pwt)
-                nvar = self.add_point(pwt, params)
+                pen_wt = (w0 + w2) / 2.
+                params = self.fit_regularized(pen_wt)
+                nvar = self.add_point(pen_wt, params)
                 if nvar == nv:
                     break
 
@@ -384,16 +372,16 @@ class SolutionPath(object):
             if max(w0) > min(w1):
                 continue
 
-            def f(pwt):
+            def f(pen_wt):
                 # Don't fit again if the weight is within xtol of a
                 # previous fit.
                 aw = np.asarray(self.weights)
-                ii = np.argmin(np.abs(aw - pwt))
-                if abs(pwt - self.weights[ii]) < self.xtol:
+                ii = np.argmin(np.abs(aw - pen_wt))
+                if abs(pen_wt - self.weights[ii]) < self.xtol:
                     nvar = self.num_nonzero[ii]
                 else:
-                    params = self.fit_regularized(pwt)
-                    nvar = self.add_point(pwt, params)
+                    params = self.fit_regularized(pen_wt)
+                    nvar = self.add_point(pen_wt, params)
                 return nvar - (i + 0.5)
 
             # Non-monotonicity
@@ -416,11 +404,14 @@ class SolutionPath(object):
 
         # Increase the tuning parameter until all coefficients are
         # zero
-        pwt = 1.
-        n_unpenalized = sum(pwt == 0)
-        while True:
-            params = self.fit_regularized(pwt)
-            nvar = self.add_point(pwt, params)
+        pen_wt = 1.
+        n_unpenalized = sum(pen_wt == 0)
+        while pen_wt < 1e10:
+            params = self.fit_regularized(pen_wt)
+            nvar = self.add_point(pen_wt, params)
             if nvar == n_unpenalized:
                 break
-            pwt *= 2.
+            pen_wt *= 2.
+        if pen_wt >= 1e10:
+            ix = np.flatnonzero(np.abs(params) > self.param_threshold)
+            raise RuntimeError("Unable to shrink coefficients %s sufficiently close to zero." % str(ix))
