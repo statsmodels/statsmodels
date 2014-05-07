@@ -1007,18 +1007,39 @@ class RegressionResults(base.LikelihoodModelResults):
             upper = params[cols] + q * bse[cols]
         return np.asarray(lzip(lower, upper))
 
-    def get_distribution(self, exog, scale = None):
-        u = np.random.chisquare(self.df_resid)
-        if scale == None:
-            sigstar = self.mse_resid*self.df_resid/u
+    def get_distribution(self, exog=None, scale = None):
+        
+        if exog == None:
+            if scale == None:
+                mean = self.predict(exog=self.model.exog)
+                rv = np.random.normal(mean, self.scale)
+                return rv
+            else:
+                mean = self.predict(exog=self.model.exog)
+                rv = np.random.normal(mean, scale)
+                return rv
         else:
-            sigstar = scale/u
-        z = np.random.normal(0,1,self.df_model+1)
-        bstar = self.params + sigstar*z*np.linalg.cholesky(np.linalg.inv(np.dot(self.model.exog,self.model.exog)))
-        exog = exog
-        missingno = len(exog)
-        missingy = self.model.predict(bstar,exog) + sigstar*np.random.normal(0,1,missingno)
-        return missingy
+            if scale == None:
+                mean = self.predict(exog=exog)
+                rv = np.random.normal(mean, self.scale)
+                return rv
+            else:
+                mean = self.predict(exog=exog)
+                rv = np.random.normal(mean, scale)
+                return rv            
+                
+#    def get_distribution(self, exog, scale = None):
+#        u = np.random.chisquare(self.df_resid)
+#        if scale == None:
+#            sigstar = self.mse_resid*self.df_resid/u
+#        else:
+#            sigstar = scale/u
+#        z = np.random.normal(0,1,self.df_model+1)
+#        bstar = self.params + sigstar*z*np.linalg.cholesky(np.linalg.inv(np.dot(self.model.exog,self.model.exog)))
+#        exog = exog
+#        missingno = len(exog)
+#        missingy = self.model.predict(bstar,exog) + sigstar*np.random.normal(0,1,missingno)
+#        return missingy
         
     @cache_readonly
     def nobs(self):
