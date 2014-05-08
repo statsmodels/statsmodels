@@ -1009,7 +1009,7 @@ class RegressionResults(base.LikelihoodModelResults):
 
     def get_distribution(self, exog=None, scale = None):
         
-        if exog == None:
+        if exog is None:
             if scale == None:
                 mean = self.predict(exog=self.model.exog)
                 rv = np.random.normal(mean, self.scale)
