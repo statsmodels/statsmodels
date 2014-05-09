@@ -50,11 +50,63 @@ def atleast_2dcols(x):
 
 
 class TheilGLS(GLS):
-    '''GLS with probabilistic restrictions
+    '''GLS with stochastic restrictions
 
-    essentially Bayes with informative prior
+    TheilGLS estimates the following linear model
 
-    note: I'm making up the GLS part, might work only for OLS
+    .. math:: y = X \beta + u
+
+    using additional information given by a stochastic constraint
+
+    .. math:: q = R \beta + v
+
+    :math:`E(u) = 0`, :math:`cov(u) = \Sigma`
+    :math:`cov(u, v) = \Sigma_p`, with full rank.
+
+    u and v are assumed to be independent of each other.
+    If :math:`E(v) = 0`, then the estimator is unbiased.
+
+    Note: The explanatory variables are not rescaled, the parameter estimates
+    not scale equivariant and fitted values are not scale invariant since
+    scaling changes the relative penalization weights (for given \Sigma_p).
+
+    Note: GLS is not tested yet, only Sigma is identity is tested
+
+    Notes
+    -----
+
+    The parameter estimates solves the moment equation:
+
+    .. math:: (X' \\Sigma X + \\lambda R' \\sigma^2 \\Simga_p^{-1} R) b = X' \\Sigma y + \\lambda R' \\Simga_p^{-1} q
+
+    :math:`\\lambda` is the penalization parameter similar to Ridge regression.
+
+    If lambda is zero, then the parameter estimate is the same as OLS. If
+    lambda goes to infinity, then the restriction is imposed with equality.
+
+    R does not have to be square. The number of rows of R can be smaller
+    than the number of parameters. In this case not all linear combination
+    of parameters are penalized.
+
+    The stochastic constraint can be interpreted in several different ways:
+
+     - The prior information represents parameter estimates from independent
+       prior samples.
+     - We can consider it just as linear restrictions that we do not want
+       to impose without uncertainty.
+     - With a full rank square restriction matrix R, the parameter estimate
+       is the same as a Bayesian posterior mean for the case of an informative
+       normal prior, normal likelihood and known error variance \sigma.
+
+
+    References
+    ----------
+    Theil Goldberger
+
+    Baum, Christopher slides for tgmixed in Stata
+
+    (I don't remember what I used when I first wrote the code.)
+
 
     '''
 
@@ -71,6 +123,42 @@ class TheilGLS(GLS):
 
 
     def fit(self, lambd=1., cov_type='sandwich'):
+        """Estimate parameters and return results instance
+
+        Paramters
+        ---------
+        lambd : float
+            penalization factor for the restriction, default is 1.
+        cov_type : string, 'data-prior' or 'sandwich'
+            'data-prior' assumes that the stochastic restriction reflects a
+            previous sample. The covariance matrix of the parameter estimate
+            is in this case the same form as the one of GLS.
+            The covariance matrix for cov_type='sandwich' treats the stochastic
+            restriction (R and q) as fixed and has a sandwich form analogously
+            to M-estimators.
+
+
+        Notes
+        -----
+        cov_params for cov_type data-prior, is calculated as
+
+        .. math:: \\sigma^2 A^{-1}
+
+        cov_params for cov_type sandwich, is calculated as
+
+        .. math:: \\sigma^2 A^{-1} (X'X) A^{-1}
+
+        where :math:`A = X' \\Sigma X + \\lambda \\sigma^2 R' \\Simga_p^{-1} R`
+
+        :math:`\\sigma^2` is an estimate of the error variance.
+        :math:`\\sigma^2` inside A is replaced by the estimate from the initial
+        GLS estimate. :math:`\\sigma^2` in cov_params is obtained from the
+        residuals of the final estimate.
+
+        The sandwich form of the covariance estimator is not robust to
+        misspecified heteroscedasticity or autocorrelation.
+
+        """
         #this does duplicate transformation, but I need resid not wresid
         res_gls = GLS(self.endog, self.exog, sigma=self.sigma).fit()
         self.res_gls = res_gls
@@ -92,14 +180,16 @@ class TheilGLS(GLS):
               sigma2_e * lambd * np.dot(r_matrix.T, np.dot(sigma_prior_inv, q_matrix))
         #xpy = xpy[:,None]
 
-        xpxi = np.linalg.pinv(xpx)
+        xpxi = np.linalg.pinv(xpx, rcond=1e-15**2)  #to match pinv(x) in OLS case
         params = np.dot(xpxi, xpy)    #or solve
         params = np.squeeze(params)
         # normalized_cov_params should have sandwich form xpxi @ xx @ xpxi
         if cov_type == 'sandwich':
             self.normalized_cov_params = xpxi.dot(xx).dot(xpxi)
-        elif cov_type == 'simplified':
+        elif cov_type == 'data-prior':
             self.normalized_cov_params = xpxi    #why attach it to self, i.e. model?
+        else:
+            raise ValueError("cov_type has to be 'sandwich' or 'data-prior'")
 
         lfit = TheilRegressionResults(self, params,
                        normalized_cov_params=xpxi)
@@ -107,7 +197,35 @@ class TheilGLS(GLS):
         lfit.penalization_factor = lambd
         return lfit
 
-    def fit_minic(self, method='aicc'):
+    def fit_minic(self, method='aicc', start_params=1., optim_args=None):
+        """find penalization factor that minimizes gcv or an information criterion
+
+        Parameters
+        ----------
+        method : string
+            the name of an attribute of the results class. Currently the following
+            are available aic, aicc, bic, gc and gcv.
+        start_params : float
+            starting values for the minimization to find the penalization factor
+            `lambd`. Not since there can be local minima, it is best to try
+            different starting values.
+        optim_args : None or dict
+            optimization keyword arguments used with `scipy.optimize.fmin`
+
+        Returns
+        -------
+        min_lambd : float
+            The penalization factor at which the target criterion is (locally)
+            minimized.
+
+        Notes
+        -----
+        This uses `scipy.optimize.fmin` as optimizer.
+
+        """
+        if optim_args is None:
+            optim_args = {}
+
         #this doesn't make sense, since number of parameters stays unchanged
         # information criteria changes if we use df_model based on trace(hat_matrix)
         #need leave-one-out, gcv; or some penalization for weak priors
@@ -118,7 +236,7 @@ class TheilGLS(GLS):
             return getattr(self.fit(lambd), method)
 
         from scipy import optimize
-        lambd = optimize.fmin(get_ic, 1.)
+        lambd = optimize.fmin(get_ic, start_params, **optim_args)
         return lambd
 
 #TODO:

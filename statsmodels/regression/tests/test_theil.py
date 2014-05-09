@@ -18,7 +18,6 @@ from statsmodels.tools.sm_exceptions import InvalidTestWarning
 from statsmodels.sandbox.regression.penalized import TheilGLS
 
 
-
 class TestTheilTextile(object):
 
     @classmethod
@@ -61,7 +60,7 @@ class TestTheilTextile(object):
 
         cov_r = np.array([[0.15**2, -0.01], [-0.01, 0.15**2]])
         mod = TheilGLS(endog, exog, r_matrix, q_matrix=r_mean, sigma_prior=cov_r)
-        cls.res1 = mod.fit(cov_type='simplified')
+        cls.res1 = mod.fit(cov_type='data-prior')
         from .results import results_theil_textile as resmodule
         cls.res2 = resmodule.results_theil_textile
 
@@ -98,6 +97,13 @@ class TestTheilTextile(object):
 
         frac = self.res1.share_data()
         assert_allclose(frac, self.res2.frac_sample, rtol=2e-6)
+
+
+    def test_no_penalization(self):
+        res_ols = OLS(self.res1.model.endog, self.res1.model.exog).fit()
+        res_theil = self.res1.model.fit(lambd=0, cov_type='data-prior')
+        assert_allclose(res_theil.params, res_ols.params, rtol=1e-11)
+        assert_allclose(res_theil.bse, res_ols.bse, rtol=1e-11)
 
 
     def test_smoke(self):
