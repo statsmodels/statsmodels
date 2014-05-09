@@ -98,7 +98,6 @@ class TheilGLS(GLS):
        is the same as a Bayesian posterior mean for the case of an informative
        normal prior, normal likelihood and known error variance \sigma.
 
-
     References
     ----------
     Theil Goldberger
@@ -107,19 +106,77 @@ class TheilGLS(GLS):
 
     (I don't remember what I used when I first wrote the code.)
 
+    Parameters
+    ----------
+    endog : array_like, 1-D
+        dependent or endogenous variable
+    exog : array_like, 1D or 2D
+        array of explanatory or exogenous variables
+    r_matrix : None or array_like, 2D
+        array of linear restrictions for stochastic constraint.
+        default is identity matrix that does not penalize constant, if constant
+        is detected to be in `exog`.
+    q_matrix : None or array_like
+        mean of the linear restrictions. If None, the it is set to zeros.
+    sigma_prior : None or array_like
+        A fully specified sigma_prior is a square matrix with the same number
+        of rows and columns as there are constraints (number of rows of r_matrix).
+        If sigma_prior is None, a scalar or one-dimensional, then a diagonal matrix
+        is created.
+    sigma : None or array_like
+        Sigma is the covariance matrix of the error term that is used in the same
+        way as in GLS.
 
     '''
 
 
-    def __init__(self, endog, exog, r_matrix, q_matrix=None, sigma_prior=None, sigma=None):
-        self.r_matrix = np.asarray(r_matrix)
-        self.q_matrix = atleast_2dcols(q_matrix)
-        if np.size(sigma_prior) == 1:
-            sigma_prior = sigma_prior * np.eye(self.r_matrix.shape[0]) #no numerical shortcuts
+    def __init__(self, endog, exog, r_matrix=None, q_matrix=None,
+                 sigma_prior=None, sigma=None):
+        super(TheilGLS, self).__init__(endog, exog, sigma=sigma)
+
+        if r_matrix is not None:
+            r_matrix = np.asarray(r_matrix)
+        else:
+            try:
+                const_idx = self.data.const_idx
+            except AttributeError:
+                const_idx = None
+
+            k_exog = exog.shape[1]
+            r_matrix = np.eye(k_exog)
+            if const_idx is not None:
+                keep_idx = range(k_exog)
+                del keep_idx[const_idx]
+                r_matrix = r_matrix[keep_idx]  # delete row for constant
+
+        k_constraints, k_exog = r_matrix.shape
+        self.r_matrix = r_matrix
+        if k_exog != self.exog.shape[1]:
+            raise ValueError('r_matrix needs to have the same number of columns'
+                             'as exog')
+
+        if q_matrix is not None:
+            self.q_matrix = atleast_2dcols(q_matrix)
+            if self.q_matrix.shape != (k_constraints, 1):
+                raise ValueError('q_matrix has wrong shape')
+        else:
+            self.q_matrix = np.zeros(k_constraints)
+
+        if sigma_prior is not None:
+            sigma_prior = np.asarray(sigma_prior)
+            if np.size(sigma_prior) == 1:
+                sigma_prior = np.diag(sigma_prior * np.ones(k_constraints))
+                #no numerical shortcuts are used for this case
+            elif sigma_prior.ndim == 1:
+                sigma_prior = np.diag(sigma_prior)
+        else:
+            sigma_prior = np.eye(k_constraints)
+
+        if sigma_prior.shape != (k_constraints, k_constraints):
+            raise ValueError('sigma_prior has wrong shape')
 
         self.sigma_prior = sigma_prior
         self.sigma_prior_inv = np.linalg.pinv(sigma_prior) #or inv
-        super(TheilGLS, self).__init__(endog, exog, sigma=sigma)
 
 
     def fit(self, lambd=1., cov_type='sandwich'):
@@ -310,6 +367,9 @@ class TheilRegressionResults(RegressionResults):
 
 
     def test_compatibility(self):
+        """Hypothesis test for the compatibility of prior mean with data
+
+        """
         # TODO: should we store the OLS results ?  not needed so far, but maybe cache
         #params_ols = np.linalg.pinv(self.model.exog).dot(self.model.endog)
         #res = self.wald_test(self.model.r_matrix, q_matrix=self.model.q_matrix, use_f=False)
@@ -327,10 +387,23 @@ class TheilRegressionResults(RegressionResults):
 
 
     def share_data(self):
-        # I'm guessing the simplification, needs tests
-        #return hatmatrix_trace / self.exog.shape[1]
-        # maybe it should be
-        return (self.df_model + 1) / self.model.exog.shape[1]  # + 1 is for constant
+        """a measure for the fraction of the data in the estimation result
+
+        The share of the prior information is `1 - share_data`.
+
+        Returns
+        -------
+        share : float between 0 and 1
+            share of data defined as the ration between effective degrees of
+            freedom of the model and the number (TODO should be rank) of the
+            explanatory variables.
+
+        """
+
+        # this is hatmatrix_trace / self.exog.shape[1]
+        # This needs to use rank of exog and not shape[1],
+        # since singular exog is allowed
+        return (self.df_model + 1) / self.model.rank  # + 1 is for constant
 
 
 #contrast/restriction matrices, temporary location
