@@ -1010,24 +1010,14 @@ class RegressionResults(base.LikelihoodModelResults):
     def get_distribution(self, exog=None, scale = None):
         
         if exog is None:
-            if scale == None:
-                mean = self.predict(exog=self.model.exog)
-                rv = np.random.normal(mean, self.scale)
-                return rv
-            else:
-                mean = self.predict(exog=self.model.exog)
-                rv = np.random.normal(mean, scale)
-                return rv
-        else:
-            if scale == None:
-                mean = self.predict(exog=exog)
-                rv = np.random.normal(mean, self.scale)
-                return rv
-            else:
-                mean = self.predict(exog=exog)
-                rv = np.random.normal(mean, scale)
-                return rv            
-                
+            exog = self.model.exog
+            
+        if scale is None:
+            scale = self.scale
+        
+        mean = self.predict(exog=exog)
+        return np.random.normal(mean,scale)
+                        
 #    def get_distribution(self, exog, scale = None):
 #        u = np.random.chisquare(self.df_resid)
 #        if scale == None:

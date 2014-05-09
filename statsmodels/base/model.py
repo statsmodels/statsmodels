@@ -876,6 +876,9 @@ class LikelihoodModelResults(Results):
     def pvalues(self):
         return stats.norm.sf(np.abs(self.tvalues)) * 2
 
+    def get_distribution(self, exog=None, scale=None):
+        raise NotImplementedError
+    
     def cov_params(self, r_matrix=None, column=None, scale=None, cov_p=None,
             other=None):
         """

@@ -13,12 +13,13 @@ from statsmodels.sandbox.mice import mice
 #print statsmodels.__file__
 
 #data = pd.DataFrame.from_csv('missingdata.csv')
-data = pd.read_csv('missingdata.csv')
+data = pd.read_csv('C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
 #data = np.genfromtxt('missingdata.csv',delimiter = ',')
 data.columns = ['x2','x3']
 impdata = mice.ImputedData(data)
 print(impdata.values)
 impdata.meanFillDataFrame()
+print(impdata.values)
 print(impdata.data)
 #print(impdata.data.fillna(impdata.data.mean()))
 m1 = mice.Imputer(impdata,"x2~x3","OLS")
