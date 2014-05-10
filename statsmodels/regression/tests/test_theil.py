@@ -11,7 +11,7 @@ from scipy import stats
 
 from numpy.testing import assert_allclose, assert_equal, assert_warns
 
-from statsmodels.regression.linear_model import OLS, WLS
+from statsmodels.regression.linear_model import OLS, WLS, GLS
 from statsmodels.tools.tools import add_constant
 from statsmodels.tools.sm_exceptions import InvalidTestWarning
 
@@ -112,22 +112,25 @@ class TestTheilTextile(object):
 
 class CheckEquivalenceMixin(object):
 
+    tol = {'default': (1e-4, 1e-20)}
+
 
     @classmethod
     def get_sample(cls):
         np.random.seed(987456)
         nobs, k_vars = 200, 5
-        beta = [1, 1, 1, 0, 0]
+        beta = 0.5 * np.array([0.1, 1, 1, 0, 0])
         x = np.random.randn(nobs, k_vars)
         x[:, 0] = 1
-        y = np.dot(x, beta) + np.random.randn(nobs)
+        y = np.dot(x, beta) + 2 * np.random.randn(nobs)
         return y, x
 
 
 
     def test_attributes(self):
 
-        attributes_fit = ['params', 'rsquared', 'df_resid',
+        attributes_fit = ['params', 'rsquared', 'df_resid', 'df_model',
+                          'llf', 'aic', 'bic'
                           #'fittedvalues', 'resid'
                           ]
         attributes_inference = ['bse', 'tvalues', 'pvalues']
@@ -142,14 +145,18 @@ class CheckEquivalenceMixin(object):
             r2 = getattr(self.res2, att)
             if not np.size(r1) == 1:
                 r1 = r1[:len(r2)]
+
+            # check if we have overwritten tolerance
+            rtol, atol = self.tol.get(att, self.tol['default'])
             message = 'attribute: ' + att #+ '\n%r\n\%r' % (r1, r2)
-            assert_allclose(r1, r2, rtol=1e-4, atol=1e-20, err_msg=message)
+            assert_allclose(r1, r2, rtol=rtol, atol=atol, err_msg=message)
 
         # models are not close enough for some attributes at high precision
         assert_allclose(self.res1.fittedvalues, self.res1.fittedvalues,
                         rtol=1e-3, atol=1e-4)
         assert_allclose(self.res1.resid, self.res1.resid,
                         rtol=1e-3, atol=1e-4)
+
 
 class TestTheil1(CheckEquivalenceMixin):
     # penalize last two parameters to zero
@@ -172,6 +179,7 @@ class TestTheil2(CheckEquivalenceMixin):
         cls.res1 = mod1.fit(0)
         cls.res2 = OLS(y, x).fit()
 
+
 class TestTheil3(CheckEquivalenceMixin):
     # perfect multicollinearity = same as OLS in terms of fit
     # inference: bse, ... is different
@@ -187,3 +195,60 @@ class TestTheil3(CheckEquivalenceMixin):
         cls.res1 = mod1.fit(0.001, cov_type='data-prior')
         cls.res2 = OLS(y, x).fit()
 
+
+class TestTheilGLS(CheckEquivalenceMixin):
+    # penalize last two parameters to zero
+
+    @classmethod
+    def setup_class(cls):
+        y, x = cls.get_sample()
+        nobs = len(y)
+        weights = (np.arange(nobs) < (nobs // 2)) + 0.5
+        mod1 = TheilGLS(y, x, sigma=weights, sigma_prior=[0, 0, 1., 1.])
+        cls.res1 = mod1.fit(200000)
+        cls.res2 = GLS(y, x[:, :3], sigma=weights).fit()
+
+
+class TestTheilLinRestriction(CheckEquivalenceMixin):
+    # impose linear restriction with small uncertainty - close to OLS
+
+    @classmethod
+    def setup_class(cls):
+        y, x = cls.get_sample()
+        #merge var1 and var2
+        x2 = x[:, :2].copy()
+        x2[:, 1] += x[:, 2]
+        #mod1 = TheilGLS(y, x, r_matrix =[[0, 1, -1, 0, 0]])
+        mod1 = TheilGLS(y, x[:, :3], r_matrix =[[0, 1, -1]])
+        cls.res1 = mod1.fit(200000)
+        cls.res2 = OLS(y, x2).fit()
+
+        # adjust precision, careful: cls.tol is mutable
+        tol = {'pvalues': (1e-4, 2e-7),
+               'tvalues': (5e-4, 0)}
+        tol.update(cls.tol)
+        cls.tol = tol
+
+class TestTheilLinRestrictionApprox(CheckEquivalenceMixin):
+    # impose linear restriction with some uncertainty
+
+    @classmethod
+    def setup_class(cls):
+        y, x = cls.get_sample()
+        #merge var1 and var2
+        x2 = x[:, :2].copy()
+        x2[:, 1] += x[:, 2]
+        #mod1 = TheilGLS(y, x, r_matrix =[[0, 1, -1, 0, 0]])
+        mod1 = TheilGLS(y, x[:, :3], r_matrix =[[0, 1, -1]])
+        cls.res1 = mod1.fit(100)
+        cls.res2 = OLS(y, x2).fit()
+
+        # adjust precision, careful: cls.tol is mutable
+        import copy
+        tol = copy.copy(cls.tol)
+        tol2 = {'default': (0.15,  0),
+                'params':  (0.05, 0),
+                'pvalues': (0.02, 0.001),
+                }
+        tol.update(tol2)
+        cls.tol = tol
