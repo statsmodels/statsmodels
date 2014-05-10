@@ -48,3 +48,5 @@ help
 
 # Project specific
 statsmodels/version.py
+cythonize.dat
+statsmodels.egg-info/
