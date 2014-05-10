@@ -1,12 +1,14 @@
+#import cython
 import pandas as pd
 import numpy as np
 import sys
 sys.path.insert(0,"C:/Users/Frank/Documents/GitHub/statsmodels/")
-
+#import statsmodels.api as sm
 from statsmodels.regression import linear_model
-#import statsmodels as sm
+
 
 class ImputedData:
+
     def __init__(self, data):
         self.data = pd.DataFrame(data)
         self.values = {}
@@ -23,7 +25,7 @@ class ImputedData:
            v = self.values[k][1]
            self.data[k][ix] = v
        return self.data
-    
+
     def to_array(self, copy=False):
         return np.asarray(self.to_data_frame(copy))
 
@@ -31,18 +33,19 @@ class ImputedData:
         self.data = self.data.fillna(self.data.mean())
         for c in self.data.columns:
             self.values[c][1] = self.data[c].mean()
-            
+
     def update_value(self, c, value):
         self.values[c][1] = np.asarray(value)
-        
+
 # Class defining imputation for one variable.
 class Imputer:
-    def __init__(self, data, formula, model_class, init_args={}, fit_args={}):        
+
+    def __init__(self, data, formula, model_class, init_args={}, fit_args={}):
         self.data = data
         self.formula = formula
         self.model_class = model_class
         self.init_args = init_args
-        self.fit_args = fit_args        
+        self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
         temp = str(self.formula.split("~")[1].strip())
         self.numexog = len(temp.split("+"))
@@ -64,36 +67,56 @@ class Imputer:
         mdf.params = params
         ix = self.data.values[self.endog_name][0]
         exog = self.data.data[self.exog_name].ix[ix]
-        new_endog = mdf.get_distribution(exog=exog, scale=scale_per)  
+        new_endog = mdf.get_distribution(exog=exog, scale=scale_per)
         self.data.update_value(self.endog_name,new_endog)
-        self.data.to_data_frame()       
+        self.data.to_data_frame()
 
-# Manage a collection of imputers for variables in a  common dataframe.  
-#This class does imputation and stores the imputed data sets, it does not fit 
+# Manage a collection of imputers for variables in a  common dataframe.
+#This class does imputation and stores the imputed data sets, it does not fit
 #the analysis model.
 class ImputerChain:
 
     def __init__(self, imputer_list):
         self.imputer_list = imputer_list
-        self.imputer_list[0].data.mean_fill()        
+        self.imputer_list[0].data.mean_fill()
 
     # Impute each variable once, initialize missing values to column means
     def cycle(self):
         for im in self.imputer_list:
-            im.impute_asymptotic_bayes() 
-        self.data = im.data.to_data_frame()
+            im.impute_asymptotic_bayes()
+#            if im is self.imputer_list[len(self.imputer_list)-1]:
+#                self.data = im.data.to_data_frame()
 
     # Impute data sets and save them to disk
     def generate_data(self, num, skip, base_name):
         for k in range(num):
             for j in range(skip):
                 self.cycle()
-            fname = "%s_%d.csv" % (base_name, k)            
-            self.data.to_csv(fname,index=False)
+            fname = "%s_%d.csv" % (base_name, k)
+            self.imputer_list[0].data.data.to_csv(fname,index=False)
 
-class ImputerCombine
+class ImputerCombine:
+
+    def __init__(self, imputed_data, analysis_formula, analysis_class,
+                 init_args={}, fit_args={}):
+#        self.data = []
+#        for i in imputed_data:
+#            pd.read_csv(str(i))
+        self.analysis_formula = analysis_formula
+        self.analysis_class = analysis_class
+        self.init_args = init_args
+        self.fit_args = fit_args
+        self.endog_name = str(self.analysis_formula.split("~")[0].strip())
+        temp = str(self.formula.split("~")[1].strip())
+        self.numexog = len(temp.split("+"))
+        self.exog_name = []
+        for i in range(0,self.numexog):
+            self.exog_name.append(temp.split("+")[i].strip())
+
+    #def fit(self, :
 
 class AnalysisChain:
+
     def __init__(self, imputer_list, analysis_formula,
                       analysis_class, init_args, fit_args):
         self.imputer_list = imputer_list
@@ -118,5 +141,5 @@ class AnalysisChain:
                 mdf = md.fit(**self.fit_args)
                 params.append(mdf.params)
                 standard_errors.append(mdf.bse)
-  
+
          ## apply the combining rule and return a results class

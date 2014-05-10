@@ -52,14 +52,14 @@ for i in range(len(f0.x2)):
     f0both.append(i in mvalb)
     f0a.append(i in s1)
     f0b.append(i in s2)
-    
+
 colors = np.where(f0c,'r','k')
 
 plt.scatter(f0.x2, f0.x3, s=120, c=colors)
 
 f0['subset'] = np.select([f0a, f0b, f0c],
-                         ['x2','x3', 'nm'])
-for color, label in zip('bgr', ['x2', 'x3', 'nm']):
+                         ['x2 missing','x3 missing', 'not missing'])
+for color, label in zip('bgr',  ['x2 missing','x3 missing', 'not missing']):
     subset = f0[f0.subset == label]
     plt.scatter(subset.x2, subset.x3, s=120, c=color, label=str(label))
 #plt.legend()
