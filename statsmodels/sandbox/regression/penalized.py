@@ -34,7 +34,7 @@ problem with definition of df_model, it has 1 subtracted for constant
 
 """
 from __future__ import print_function
-from statsmodels.compat.python import lrange
+from statsmodels.compat.python import range, lrange
 import numpy as np
 from statsmodels.tools.decorators import (cache_readonly)
 import statsmodels.base.model as base
@@ -145,7 +145,7 @@ class TheilGLS(GLS):
             k_exog = exog.shape[1]
             r_matrix = np.eye(k_exog)
             if const_idx is not None:
-                keep_idx = range(k_exog)
+                keep_idx = lrange(k_exog)
                 del keep_idx[const_idx]
                 r_matrix = r_matrix[keep_idx]  # delete row for constant
 
