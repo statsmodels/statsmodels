@@ -273,25 +273,6 @@ class CleanCommand(Command):
                 pass
 
 
-class CheckSDist(sdist):
-    """Custom sdist that ensures Cython has compiled all pyx files to c."""
-
-    _pyxfiles = ['statsmodels/nonparametric/linbin.pyx',
-                 'statsmodels/nonparametric/_smoothers_lowess.pyx',
-                 'statsmodels/tsa/kalmanf/kalman_loglike.pyx']
-
-    def initialize_options(self):
-        sdist.initialize_options(self)
-
-    def run(self):
-        for pyxfile in self._pyxfiles:
-            cfile = pyxfile[:-3] + 'c'
-            msg = "C-source file '%s' not found." % (cfile) +\
-                " Run 'setup.py cython' before sdist."
-            assert os.path.isfile(cfile), msg
-        sdist.run(self)
-
-
 class CheckingBuildExt(build_ext):
     """Subclass build_ext to get clearer report if Cython is necessary."""
 
@@ -325,15 +306,10 @@ class DummyBuildSrc(Command):
 
 
 cmdclass = {'clean': CleanCommand,
-            'build': build,
-            'sdist': CheckSDist}
+            'build': build}
 
 cmdclass["build_src"] = DummyBuildSrc
 cmdclass["build_ext"] = CheckingBuildExt
-
-
-def srcpath(name=None, subdir='src'):
-    return pjoin('statsmodels', subdir, name + '.c')
 
 
 # some linux distros require it
@@ -341,15 +317,14 @@ def srcpath(name=None, subdir='src'):
 # libraries = ['m'] if 'win32' not in sys.platform else []
 
 ext_data = dict(
-        kalman_loglike = {"pyxfile" : "tsa/kalmanf/kalman_loglike",
-                  "depends" : [],
-                  "include" : ["tsa/kalmanf/capsule.h"],
+        kalman_loglike = {"name" : "statsmodels/tsa/kalmanf/kalman_loglike.c",
+                  "depends" : ["statsmodels/tsa/kalmanf/capsule.h"],
                   "sources" : []},
 
-        linbin = {"pyxfile" : "nonparametric/linbin",
+        linbin = {"name" : "statsmodels/nonparametric/linbin.c",
                  "depends" : [],
                  "sources" : []},
-        _smoothers_lowess = {"pyxfile" : "nonparametric/_smoothers_lowess",
+        _smoothers_lowess = {"name" : "statsmodels/nonparametric/_smoothers_lowess.c",
                  "depends" : [],
                  "sources" : []}
         )
@@ -357,17 +332,15 @@ ext_data = dict(
 
 extensions = []
 for name, data in ext_data.items():
-    sources = [srcpath(data['pyxfile'], subdir='')]
-    destdir = ".".join(os.path.dirname(data["pyxfile"]).split("/"))
+    sources = [data['name']]
+    destdir = ".".join(os.path.dirname(data["name"]).split("/"))
 
     sources.extend(data.get('sources', []))
 
-    include = data.get('include', [])
-
-    obj = Extension('statsmodels.%s.%s' % (destdir, name),
+    obj = Extension('%s.%s' % (destdir, name),
                     sources=sources,
                     depends=data.get('depends', []),
-                    include_dirs=include)
+                    include_dirs=data.get('include', []))
 
     extensions.append(obj)
 
