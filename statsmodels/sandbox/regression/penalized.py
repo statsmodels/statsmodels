@@ -157,10 +157,10 @@ class TheilGLS(GLS):
 
         if q_matrix is not None:
             self.q_matrix = atleast_2dcols(q_matrix)
-            if self.q_matrix.shape != (k_constraints, 1):
-                raise ValueError('q_matrix has wrong shape')
         else:
-            self.q_matrix = np.zeros(k_constraints)
+            self.q_matrix = np.zeros(k_constraints)[:, None]
+        if self.q_matrix.shape != (k_constraints, 1):
+                raise ValueError('q_matrix has wrong shape')
 
         if sigma_prior is not None:
             sigma_prior = np.asarray(sigma_prior)

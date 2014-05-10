@@ -108,3 +108,82 @@ class TestTheilTextile(object):
 
     def test_smoke(self):
         self.res1.summary()
+
+
+class CheckEquivalenceMixin(object):
+
+
+    @classmethod
+    def get_sample(cls):
+        np.random.seed(987456)
+        nobs, k_vars = 200, 5
+        beta = [1, 1, 1, 0, 0]
+        x = np.random.randn(nobs, k_vars)
+        x[:, 0] = 1
+        y = np.dot(x, beta) + np.random.randn(nobs)
+        return y, x
+
+
+
+    def test_attributes(self):
+
+        attributes_fit = ['params', 'rsquared', 'df_resid',
+                          #'fittedvalues', 'resid'
+                          ]
+        attributes_inference = ['bse', 'tvalues', 'pvalues']
+        import copy
+        attributes = copy.copy(attributes_fit)
+
+        if not getattr(self, 'skip_inference', False):
+            attributes.extend(attributes_inference)
+
+        for att in attributes:
+            r1 = getattr(self.res1, att)
+            r2 = getattr(self.res2, att)
+            if not np.size(r1) == 1:
+                r1 = r1[:len(r2)]
+            message = 'attribute: ' + att #+ '\n%r\n\%r' % (r1, r2)
+            assert_allclose(r1, r2, rtol=1e-4, atol=1e-20, err_msg=message)
+
+        # models are not close enough for some attributes at high precision
+        assert_allclose(self.res1.fittedvalues, self.res1.fittedvalues,
+                        rtol=1e-3, atol=1e-4)
+        assert_allclose(self.res1.resid, self.res1.resid,
+                        rtol=1e-3, atol=1e-4)
+
+class TestTheil1(CheckEquivalenceMixin):
+    # penalize last two parameters to zero
+
+    @classmethod
+    def setup_class(cls):
+        y, x = cls.get_sample()
+        mod1 = TheilGLS(y, x, sigma_prior=[0, 0, 1., 1.])
+        cls.res1 = mod1.fit(200000)
+        cls.res2 = OLS(y, x[:, :3]).fit()
+
+
+class TestTheil2(CheckEquivalenceMixin):
+    # no penalization = same as OLS
+
+    @classmethod
+    def setup_class(cls):
+        y, x = cls.get_sample()
+        mod1 = TheilGLS(y, x, sigma_prior=[0, 0, 1., 1.])
+        cls.res1 = mod1.fit(0)
+        cls.res2 = OLS(y, x).fit()
+
+class TestTheil3(CheckEquivalenceMixin):
+    # perfect multicollinearity = same as OLS in terms of fit
+    # inference: bse, ... is different
+
+    @classmethod
+    def setup_class(cls):
+        cls.skip_inference = True
+        y, x = cls.get_sample()
+        xd = np.column_stack((x, x))
+        #sp = np.zeros(5), np.ones(5)
+        r_matrix = np.eye(5, 10, 5)
+        mod1 = TheilGLS(y, xd, r_matrix=r_matrix) #sigma_prior=[0, 0, 1., 1.])
+        cls.res1 = mod1.fit(0.001, cov_type='data-prior')
+        cls.res2 = OLS(y, x).fit()
+
