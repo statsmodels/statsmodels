@@ -1,13 +1,12 @@
-global-include *.csv *.py *.txt
-#scikits*.*
+global-include *.csv *.py *.txt *.pyx *.pxd *.pxi *.c *.h
 include MANIFEST.in
 
-#exclude docs/build/htmlhelp*
 recursive-exclude build *
 recursive-exclude dist *
 recursive-exclude tools *
 include tools/examples_rst.py
 include tools/hash_funcs.py
+include tools/cythonize.py
 
 graft statsmodels/datasets
 graft statsmodels/tests
@@ -20,13 +19,10 @@ exclude docs/source/generated/*
 recursive-include docs/sphinxext *
 recursive-include docs/themes *
 recursive-exclude docs/build *
-#recursive-include docs/build/html *
 recursive-exclude docs/build/htmlhelp *
 include statsmodels/statsmodelsdoc.chm
 include docs/make.bat
 include docs/Makefile
-#include docs mak*
-#include docs GLM*
 
 recursive-include examples *
 
@@ -44,5 +40,9 @@ include statsmodels/stats/libqsturng/CH.r
 include statsmodels/stats/libqsturng/LICENSE.txt
 include statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt
 
+# Cached Cython signatures
+include cythonize.dat
 
-global-exclude *~ *.swp  *.pyc *.bak *.pyx
+prune */__pycache__
+
+global-exclude *~ *.swp  *.pyc *.pyo *.bak
