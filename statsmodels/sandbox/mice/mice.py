@@ -12,12 +12,14 @@ class ImputedData:
     def __init__(self, data):
         self.data = pd.DataFrame(data)
         self.values = {}
+        self.mean = {}
         for c in self.data.columns:
             temp = np.flatnonzero(pd.isnull(self.data[c]))
             self.values[c] = []
             self.values[c].append([])
             self.values[c].append([])
             self.values[c][0] = temp
+            self.mean[c] = self.data[c].mean()
 
     def to_data_frame(self, copy=False):
        for k in self.values.keys():
@@ -30,10 +32,15 @@ class ImputedData:
         return np.asarray(self.to_data_frame(copy))
 
     def mean_fill(self):
-        self.data = self.data.fillna(self.data.mean())
         for c in self.data.columns:
-            self.values[c][1] = self.data[c].mean()
-
+            self.values[c][1] = self.mean[c]
+        self.to_data_frame()
+        
+        # for c in self.data.columns:
+            # for i in range(len(self.values[c]) - 1)
+                # self.data[c][i] = self.mean[c]
+        # self.data = self.data.fillna(self.data.mean())
+        
     def update_value(self, c, value):
         self.values[c][1] = np.asarray(value)
 
@@ -47,16 +54,17 @@ class Imputer:
         self.init_args = init_args
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
-        temp = str(self.formula.split("~")[1].strip())
-        self.numexog = len(temp.split("+"))
-        self.exog_name = []
-        for i in range(0,self.numexog):
-            self.exog_name.append(temp.split("+")[i].strip())
+#        temp = str(self.formula.split("~")[1].strip())
+#        self.numexog = len(temp.split("+"))
+#        self.exog_name = []
+#        for i in range(0,self.numexog):
+#            self.exog_name.append(temp.split("+")[i].strip())
 
     # Impute the dependent variable once
     def impute_asymptotic_bayes(self):
         md = linear_model.OLS.from_formula(self.formula, self.data.data, **self.init_args)
         mdf = md.fit(**self.fit_args)
+        self.exog_name = md.exog_names[1:]
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
@@ -79,6 +87,8 @@ class ImputerChain:
     def __init__(self, imputer_list):
         self.imputer_list = imputer_list
         self.imputer_list[0].data.mean_fill()
+        self.values = []
+        self.implength = len(imputer_list)
 
     # Impute each variable once, initialize missing values to column means
     def cycle(self):
@@ -90,14 +100,20 @@ class ImputerChain:
     # Impute data sets and save them to disk
     def generate_data(self, num, skip, base_name):
         for k in range(num):
+            self.imputer_list[0].data.mean_fill()
+
             for j in range(skip):
                 self.cycle()
             fname = "%s_%d.csv" % (base_name, k)
             self.imputer_list[0].data.data.to_csv(fname,index=False)
+            temp = self.imputer_list[self.implength - 1].data.values.copy
+            self.values.append(temp)
+            self.imputer_list[0].data.mean_fill()
 
+            
 class ImputerCombine:
 
-    def __init__(self, imputed_data, analysis_formula, analysis_class,
+    def __init__(self, imputer_chain, analysis_formula, analysis_class,
                  init_args={}, fit_args={}):
 #        self.data = []
 #        for i in imputed_data:
@@ -112,6 +128,7 @@ class ImputerCombine:
         self.exog_name = []
         for i in range(0,self.numexog):
             self.exog_name.append(temp.split("+")[i].strip())
+        
 
     #def fit(self, :
 
