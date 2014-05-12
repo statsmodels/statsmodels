@@ -1,8 +1,10 @@
 #import cython
+import glob
 import pandas as pd
 import numpy as np
 import sys
 sys.path.insert(0,"C:/Users/Frank/Documents/GitHub/statsmodels/")
+import copy
 #import statsmodels.api as sm
 from statsmodels.regression import linear_model
 
@@ -105,31 +107,49 @@ class ImputerChain:
             for j in range(skip):
                 self.cycle()
             fname = "%s_%d.csv" % (base_name, k)
-            self.imputer_list[0].data.data.to_csv(fname,index=False)
-            temp = self.imputer_list[self.implength - 1].data.values.copy
-            self.values.append(temp)
+            self.imputer_list[0].data.data.to_csv(fname, index=False)
+            #temp = self.imputer_list[self.implength - 1].data.values.copy
+            self.values.append(copy.deepcopy(self.imputer_list[self.implength - 1].data.values))
             self.imputer_list[0].data.mean_fill()
 
             
 class ImputerCombine:
 
-    def __init__(self, imputer_chain, analysis_formula, analysis_class,
+    def __init__(self, imputer_chain, analysis_formula, analysis_class, iternum, cnum,
                  init_args={}, fit_args={}):
 #        self.data = []
 #        for i in imputed_data:
 #            pd.read_csv(str(i))
-        self.analysis_formula = analysis_formula
+        imputer_chain.generate_data(iternum, cnum,'ftest')             
+        self.formula = analysis_formula
         self.analysis_class = analysis_class
         self.init_args = init_args
         self.fit_args = fit_args
-        self.endog_name = str(self.analysis_formula.split("~")[0].strip())
-        temp = str(self.formula.split("~")[1].strip())
-        self.numexog = len(temp.split("+"))
-        self.exog_name = []
-        for i in range(0,self.numexog):
-            self.exog_name.append(temp.split("+")[i].strip())
+#        self.endog_name = str(self.formula.split("~")[0].strip())
+#        temp = str(self.formula.split("~")[1].strip())
+#        self.numexog = len(temp.split("+"))
+#        self.exog_name = []
+#        for i in range(0,self.numexog):
+#            self.exog_name.append(temp.split("+")[i].strip())
+        self.iternum = iternum
+        self.fname = glob.glob("*.csv")
+        self.params_lst = []
+        self.std_list = []
+                
         
-
+#        , skip, base_name
+    def combine(self):
+        for name in self.fname:
+            dat = pd.read_csv(name)
+            md = linear_model.OLS.from_formula(self.formula, dat, **self.init_args)
+            mdf = md.fit(**self.fit_args)
+            self.params_lst.append(mdf.params)
+            self.std_list.append(mdf.bse)
+        self.params = np.mean(self.params_lst, axis = 0)
+        within_g = np.mean(self.std_list, axis = 0)
+        between_g = np.std(self.params_lst, axis = 0)
+        self.std = within_g + (1 + 1/self.iternum) * between_g
+        
     #def fit(self, :
 
 class AnalysisChain:
