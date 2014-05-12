@@ -10,7 +10,10 @@ from statsmodels.regression import linear_model
 
 
 class ImputedData:
-
+    """
+    Initialize a data object with missing data information and functionality 
+    to insert values in missing data slots.
+    """
     def __init__(self, data):
         self.data = pd.DataFrame(data)
         self.values = {}
@@ -37,18 +40,14 @@ class ImputedData:
         for c in self.data.columns:
             self.values[c][1] = self.mean[c]
         self.to_data_frame()
-        
-        # for c in self.data.columns:
-            # for i in range(len(self.values[c]) - 1)
-                # self.data[c][i] = self.mean[c]
-        # self.data = self.data.fillna(self.data.mean())
-        
+
     def update_value(self, c, value):
         self.values[c][1] = np.asarray(value)
 
-# Class defining imputation for one variable.
 class Imputer:
-
+    """
+    Initializes object that imputes values for a single variable using a given formula
+    """
     def __init__(self, data, formula, model_class, init_args={}, fit_args={}):
         self.data = data
         self.formula = formula
@@ -56,16 +55,12 @@ class Imputer:
         self.init_args = init_args
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
-#        temp = str(self.formula.split("~")[1].strip())
-#        self.numexog = len(temp.split("+"))
-#        self.exog_name = []
-#        for i in range(0,self.numexog):
-#            self.exog_name.append(temp.split("+")[i].strip())
 
     # Impute the dependent variable once
     def impute_asymptotic_bayes(self):
         md = linear_model.OLS.from_formula(self.formula, self.data.data, **self.init_args)
         mdf = md.fit(**self.fit_args)
+
         self.exog_name = md.exog_names[1:]
         params = mdf.params.copy()
         covmat = mdf.cov_params()
@@ -74,18 +69,18 @@ class Imputer:
         scale_per = mdf.mse_resid * mdf.df_resid/u
         p = len(params)
         params += np.dot(covmat_sqrt, np.random.normal(0,scale_per,p))
-        mdf.params = params
         ix = self.data.values[self.endog_name][0]
         exog = self.data.data[self.exog_name].ix[ix]
-        new_endog = mdf.get_distribution(exog=exog, scale=scale_per)
+        new_endog = md.get_distribution(params=params, exog=exog, scale=scale_per).rvs()
         self.data.update_value(self.endog_name,new_endog)
         self.data.to_data_frame()
 
-# Manage a collection of imputers for variables in a  common dataframe.
-#This class does imputation and stores the imputed data sets, it does not fit
-#the analysis model.
 class ImputerChain:
-
+    """
+    Manage a collection of imputers for variables in a common dataframe. 
+    This class does imputation and stores the imputed data sets, it does not fit
+    the analysis model.
+    """
     def __init__(self, imputer_list):
         self.imputer_list = imputer_list
         self.imputer_list[0].data.mean_fill()
@@ -96,8 +91,6 @@ class ImputerChain:
     def cycle(self):
         for im in self.imputer_list:
             im.impute_asymptotic_bayes()
-#            if im is self.imputer_list[len(self.imputer_list)-1]:
-#                self.data = im.data.to_data_frame()
 
     # Impute data sets and save them to disk
     def generate_data(self, num, skip, base_name):
@@ -108,36 +101,26 @@ class ImputerChain:
                 self.cycle()
             fname = "%s_%d.csv" % (base_name, k)
             self.imputer_list[0].data.data.to_csv(fname, index=False)
-            #temp = self.imputer_list[self.implength - 1].data.values.copy
             self.values.append(copy.deepcopy(self.imputer_list[self.implength - 1].data.values))
             self.imputer_list[0].data.mean_fill()
 
-            
-class ImputerCombine:
 
+class ImputerCombine:
+    """
+    Fits the analysis model to each imputed dataset and combines the results using Rubin's rule.
+    """
     def __init__(self, imputer_chain, analysis_formula, analysis_class, iternum, cnum,
                  init_args={}, fit_args={}):
-#        self.data = []
-#        for i in imputed_data:
-#            pd.read_csv(str(i))
-        imputer_chain.generate_data(iternum, cnum,'ftest')             
+        imputer_chain.generate_data(iternum, cnum,'ftest')
         self.formula = analysis_formula
         self.analysis_class = analysis_class
         self.init_args = init_args
         self.fit_args = fit_args
-#        self.endog_name = str(self.formula.split("~")[0].strip())
-#        temp = str(self.formula.split("~")[1].strip())
-#        self.numexog = len(temp.split("+"))
-#        self.exog_name = []
-#        for i in range(0,self.numexog):
-#            self.exog_name.append(temp.split("+")[i].strip())
         self.iternum = iternum
         self.fname = glob.glob("*.csv")
         self.params_lst = []
         self.std_list = []
-                
-        
-#        , skip, base_name
+
     def combine(self):
         for name in self.fname:
             dat = pd.read_csv(name)
@@ -150,12 +133,11 @@ class ImputerCombine:
         between_g = np.std(self.params_lst, axis = 0)
         self.std = within_g + (1 + 1/self.iternum) * between_g
         
-    #def fit(self, :
-
+#not implemented yet
 class AnalysisChain:
-
-    def __init__(self, imputer_list, analysis_formula,
-                      analysis_class, init_args, fit_args):
+    
+    def __init__(self, imputer_list, analysis_formula, analysis_class, iternum, cnum,
+                 init_args={}, fit_args={}):
         self.imputer_list = imputer_list
         self.analysis_formula = analysis_formula
         self.analysis_class = analysis_class

@@ -257,6 +257,37 @@ class RegressionModel(base.LikelihoodModel):
             exog = self.exog
         return np.dot(exog, params)
 
+    def get_distribution(self, params, exog=None, scale = None):
+        """
+        Return a scipy.stats.distributions object that simulates data from the model.
+
+        Parameters
+        --------
+        params : array-like
+            The model parameters.
+        scale : scalar
+            The scale parameter, defaults to self.scale.
+        exog : array-like
+            The array of covariates, defaults to self.exog.
+        
+        Returns
+        --------
+        A scipy.stats.distributions object at given covariate, scale, and parameter values.
+        
+        Notes
+        -----
+        If the model has not yet been fit, params is not optional.
+        """
+        if exog is None:
+            exog = self.model.exog
+
+        if scale is None:
+            scale = self.scale
+        exog.insert(0, 'Intercept', 1)
+        mean = self.predict(params=params, exog=exog)
+        return stats.norm(loc=mean, scale=scale)
+        #np.random.normal(mean,scale)
+
 class GLS(RegressionModel):
     __doc__ = """
     Generalized least squares model with a general covariance structure.
@@ -604,6 +635,7 @@ class OLS(WLS):
         OLS model whitener does nothing: returns Y.
         """
         return Y
+
 
 class GLSAR(GLS):
     __doc__ = """
@@ -1007,17 +1039,8 @@ class RegressionResults(base.LikelihoodModelResults):
             upper = params[cols] + q * bse[cols]
         return np.asarray(lzip(lower, upper))
 
-    def get_distribution(self, exog=None, scale = None):
-        
-        if exog is None:
-            exog = self.model.exog
-            
-        if scale is None:
-            scale = self.scale
-        
-        mean = self.predict(exog=exog)
-        return np.random.normal(mean,scale)
-                        
+
+
 #    def get_distribution(self, exog, scale = None):
 #        u = np.random.chisquare(self.df_resid)
 #        if scale == None:
@@ -1030,7 +1053,7 @@ class RegressionResults(base.LikelihoodModelResults):
 #        missingno = len(exog)
 #        missingy = self.model.predict(bstar,exog) + sigstar*np.random.normal(0,1,missingno)
 #        return missingy
-        
+
     @cache_readonly
     def nobs(self):
         return float(self.model.wexog.shape[0])

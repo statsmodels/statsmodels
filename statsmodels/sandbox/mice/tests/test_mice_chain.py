@@ -15,15 +15,15 @@ Created on Wed May 07 15:10:00 2014
 import sys
 import pandas as pd
 import numpy as np
-#sys.path.insert(0,"C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/")
-sys.path.insert(0,"C:/Users/Frank/statsmodels/statsmodels/")
+sys.path.insert(0,"C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/")
+#sys.path.insert(0,"C:/Users/Frank/statsmodels/statsmodels/")
 from statsmodels.sandbox.mice import mice
 import matplotlib.pyplot as plt
 #print statsmodels.__file__
 
 #data = pd.DataFrame.from_csv('missingdata.csv')
-#data = pd.read_csv('C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
-data = pd.read_csv('C:/Users/Frank/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
+data = pd.read_csv('C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
+#data = pd.read_csv('C:/Users/Frank/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
 #data = np.genfromtxt('missingdata.csv',delimiter = ',')
 data.columns = ['x2','x3']
 impdata = mice.ImputedData(data)
@@ -35,7 +35,7 @@ m2 = mice.Imputer(impdata,"x3~x2","OLS")
 
 impchain = mice.ImputerChain([m1,m2])
 
-impcomb = mice.ImputerCombine(impchain, "x2~x3", "OLS", 5, 5)
+impcomb = mice.ImputerCombine(impchain, "x2~x3", "OLS", 3, 10)
 impcomb.combine()
 
 #impchain.generate_data(3,5,'ftest')
