@@ -2,7 +2,6 @@ import numpy as np
 from scipy.stats import scoreatpercentile as sap
 from statsmodels.sandbox.nonparametric import kernels
 
-
 #from scipy.stats import norm
 
 def _select_sigma(X):
@@ -91,7 +90,7 @@ def bw_silverman(x, kernel=None):
 def bw_normal_reference(x, kernel=kernels.Gaussian):
     """
     Plug-in bandwidth with kernel specific constant based on normal reference.
-    
+
     This bandwidth minimizes the mean integrated square error if the true
     distribution is the normal. This choice is an appropriate bandwidth for
     single peaked distributions that are similar to the normal distribution.
@@ -101,7 +100,7 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
     x : array-like
         Array for which to get the bandwidth
     kernel : CustomKernel object
-        Used to calcualate the constant for the plug-in bandwidth.
+        Used to calculate the constant for the plug-in bandwidth.
 
     Returns
     -------
@@ -116,7 +115,7 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
        IQR = np.subtract.reduce(np.percentile(x, [75,25]))
        C = constant from Hansen (2009)
 
-    When using a gaussian kernel this is equivalent to the 'scott' bandwidth up
+    When using a Gaussian kernel this is equivalent to the 'scott' bandwidth up
     to two decimal places. This is the accuracy to which the 'scott' constant is
     specified.
 
@@ -140,7 +139,7 @@ def bw_normal_reference(x, kernel=kernels.Gaussian):
 bandwidth_funcs = {
     "scott": bw_scott,
     "silverman": bw_silverman,
-    "normal_reference": bw_normal_reference
+    "normal_reference": bw_normal_reference,
 }
 
 
@@ -155,8 +154,8 @@ def select_bandwidth(x, bw, kernel):
     x : array-like
         Array for which to get the bandwidth
     bw : string
-        name of bandwidth selection rule, currently "scott" and "silverman"
-        are supported
+        name of bandwidth selection rule, currently supported are:
+        %s
     kernel : not used yet
 
     Returns
@@ -166,7 +165,7 @@ def select_bandwidth(x, bw, kernel):
 
     """
     bw = bw.lower()
-    if bw not in ["scott","silverman","normal_reference"]:
+    if bw not in bandwidth_funcs:
         raise ValueError("Bandwidth %s not understood" % bw)
 #TODO: uncomment checks when we have non-rule of thumb bandwidths for diff. kernels
 #    if kernel == "gauss":
@@ -174,3 +173,5 @@ def select_bandwidth(x, bw, kernel):
 #    else:
 #        raise ValueError("Only Gaussian Kernels are currently supported")
 
+# Interpolate docstring to plugin supported bandwidths
+select_bandwidth.__doc__ %=  (", ".join(sorted(bandwidth_funcs.keys())),)
