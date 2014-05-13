@@ -19,25 +19,38 @@ sys.path.insert(0,"C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/")
 #sys.path.insert(0,"C:/Users/Frank/statsmodels/statsmodels/")
 from statsmodels.sandbox.mice import mice
 import matplotlib.pyplot as plt
+import statsmodels.api as sm
 #print statsmodels.__file__
 
 #data = pd.DataFrame.from_csv('missingdata.csv')
 data = pd.read_csv('C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
 #data = pd.read_csv('C:/Users/Frank/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
 #data = np.genfromtxt('missingdata.csv',delimiter = ',')
-data.columns = ['x2','x3']
+data.columns = ['x1','x2','x3']
 impdata = mice.ImputedData(data)
 
 #print(impdata.data.fillna(impdata.data.mean()))
-m1 = mice.Imputer(impdata,"x2~x3","OLS")
+m1 = mice.Imputer(impdata,"x2~ x1 + x3",sm.OLS)
 
-m2 = mice.Imputer(impdata,"x3~x2","OLS")
+m2 = mice.Imputer(impdata,"x3~ x1 + x2",sm.OLS)
 
-impchain = mice.ImputerChain([m1,m2])
+m3 = mice.Imputer(impdata,"x1~ x2 + x3",sm.Logit)
 
-impcomb = mice.ImputerCombine(impchain, "x2~x3", "OLS", 3, 10)
-impcomb.combine()
 
+impfull = mice.AnalysisChain([m1,m2,m3], "x1~ x2 + x3", sm.Logit)
+
+(p,s) = impfull.run_chain(10,5)
+
+impchain = mice.ImputerChain([m1,m2,m3])
+
+#test = sm.Logit(data['x1'],data['x2'],'drop')
+
+impcomb = mice.ImputerCombine(impchain, "x1~ x2 + x3", sm.Logit, 10, 5)
+(p1,s1) = impcomb.combine()
+print(p)
+print(p1)
+print(s)
+print(s1)
 #impchain.generate_data(3,5,'ftest')
 #
 #

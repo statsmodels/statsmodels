@@ -269,11 +269,11 @@ class RegressionModel(base.LikelihoodModel):
             The scale parameter, defaults to self.scale.
         exog : array-like
             The array of covariates, defaults to self.exog.
-        
+
         Returns
         --------
         A scipy.stats.distributions object at given covariate, scale, and parameter values.
-        
+
         Notes
         -----
         If the model has not yet been fit, params is not optional.
@@ -286,7 +286,6 @@ class RegressionModel(base.LikelihoodModel):
         exog.insert(0, 'Intercept', 1)
         mean = self.predict(params=params, exog=exog)
         return stats.norm(loc=mean, scale=scale)
-        #np.random.normal(mean,scale)
 
 class GLS(RegressionModel):
     __doc__ = """
