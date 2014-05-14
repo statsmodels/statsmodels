@@ -54,6 +54,7 @@ class Imputer:
         u = np.random.chisquare(mdf.df_resid)
         #later check if model is likelihood, if there is scale, etc instead of this
         try:
+            mdf.mse_resid
             scale_per = mdf.df_resid/u
         except:
             scale_per = 1
