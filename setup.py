@@ -403,17 +403,16 @@ if __name__ == "__main__":
     package_data["statsmodels.tsa.vector_ar.tests.results"].append("*.npz")
     # data files that don't follow the tests/results pattern. should fix.
     package_data.update({"statsmodels.stats.tests" : ["*.txt"]})
-    # the next two are in the sdist, but I don't manage to get them installed
-    package_data.update({"statsmodels.stats.libqstrung" :
+
+    package_data.update({"statsmodels.stats.libqsturng" :
                          ["*.r", "*.txt", "*.dat"]})
-    package_data.update({"statsmodels.stats.libqstrung.tests" :
+    package_data.update({"statsmodels.stats.libqsturng.tests" :
                          ["*.csv", "*.dat"]})
     package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
     package_data.update({"statsmodels.tsa.vector_ar.data" : ["*.dat"]})
     # temporary, until moved:
     package_data.update({"statsmodels.sandbox.regression.tests" :
                          ["*.dta", "*.csv"]})
-    # Why are we installing this stuff?
 
     #TODO: deal with this. Not sure if it ever worked for bdists
     #('docs/build/htmlhelp/statsmodelsdoc.chm',
