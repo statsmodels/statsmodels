@@ -26,20 +26,6 @@ include docs/Makefile
 
 recursive-include examples *
 
-#missed files:  .npz, .npy
-include statsmodels/tsa/vector_ar/tests/results/vars_results.npz
-include statsmodels/iolib/tests/results/*
-include statsmodels/stats/tests/results/influence_lsdiag_R.json
-include statsmodels/sandbox/panel/test_data.txt
-include statsmodels/sandbox/regression/tests/*
-include statsmodels/stats/tests/results/influence_measures_R.csv
-include statsmodels/stats/libqsturng/tests/results/*
-include statsmodels/stats/libqsturng/tests/bootleg.dat
-include statsmodels/stats/libqsturng/tests/bootleg.csv
-include statsmodels/stats/libqsturng/CH.r
-include statsmodels/stats/libqsturng/LICENSE.txt
-include statsmodels/regression/tests/results/leverage_influence_ols_nostars.txt
-
 # Cached Cython signatures
 include cythonize.dat
 
