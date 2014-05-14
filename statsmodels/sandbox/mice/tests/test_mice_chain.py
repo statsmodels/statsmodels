@@ -37,15 +37,15 @@ m2 = mice.Imputer(impdata,"x3~ x1 + x2",sm.OLS)
 m3 = mice.Imputer(impdata,"x1~ x2 + x3",sm.Logit)
 
 
-impfull = mice.AnalysisChain([m1,m2,m3], "x1~ x2 + x3", sm.Logit)
+#impfull = mice.AnalysisChain([m1,m2,m3], "x1~ x2 + x3", sm.Logit)
+#
+#(p,s) = impfull.run_chain(20,10)
 
-(p,s) = impfull.run_chain(10,5)
-
-impchain = mice.ImputerChain([m1,m2,m3])
+impchain = mice.ImputerChain([m1,m2,m3],20,10)
 
 #test = sm.Logit(data['x1'],data['x2'],'drop')
 
-impcomb = mice.ImputerCombine(impchain, "x1~ x2 + x3", sm.Logit, 10, 5)
+impcomb = mice.MICE(impchain, "x1~ x2 + x3", sm.Logit)
 (p1,s1) = impcomb.combine()
 print(p)
 print(p1)
