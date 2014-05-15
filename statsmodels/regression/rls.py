@@ -143,7 +143,7 @@ class RLS(GLS):
 
 if __name__=="__main__":
     import statsmodels.api as sm
-    dta = np.genfromtxt('./rlsdata.txt', names=True)
+    dta = np.genfromtxt('tests/rlsdata.txt', names=True)
     design = np.column_stack((dta['Y'],dta['Y']**2,dta[['NE','NC','W','S']].view(float).reshape(dta.shape[0],-1)))
     design = sm.add_constant(design, prepend=True)
     rls_mod = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
