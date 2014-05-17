@@ -68,7 +68,7 @@ class Imputer:
         elif self.scale == "perturb_boot":
             pass
         p = len(params)
-        params += np.dot(covmat_sqrt, np.random.normal(0, scale_per, p))
+        params += np.dot(covmat_sqrt, np.random.normal(0, scale_per * mdf.scale, p))
         #change to md.exog so that transformations are handled
         #PROBLEM: How to apply md.exog's transformations to the exogs for the missing endog?
         #Idea: fit another model with all obs but costly? look into how formula is applied in statsmodels
@@ -102,7 +102,7 @@ class Imputer:
         elif self.scale == "perturb_boot":
             pass
         p = len(params)
-        params += np.dot(covmat_sqrt, np.random.normal(0, scale_per, p))
+        params += np.dot(covmat_sqrt, np.random.normal(0, mdf.scale * scale_per, p))
         #change to md.exog so that transformations are handled
         #PROBLEM: How to apply md.exog's transformations to the exogs for the missing endog?
         #Idea: fit another model with all obs but costly? look into how formula is applied in statsmodels
