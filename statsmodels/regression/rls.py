@@ -149,3 +149,13 @@ if __name__=="__main__":
     rls_mod = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
     rls_fit = rls_mod.fit()
     print(rls_fit.params)
+
+    # with standardizing the polynomial variable to avoid an ill conditioned X'X
+    scale_y = dta['Y'].std()
+    mean_y = dta['Y'].mean()
+    ys = (dta['Y']-mean_y)/scale_y
+    design = np.column_stack((ys, ys**2,dta[['NE','NC','W','S']].view(float).reshape(dta.shape[0],-1)))
+    design = sm.add_constant(design, prepend=True)
+    rls_mod2 = RLS(dta['G'],design, constr=[0,0,0,1,1,1,1])
+    res_rls2 = rls_mod2.fit()
+    print(res_rls2.params)
