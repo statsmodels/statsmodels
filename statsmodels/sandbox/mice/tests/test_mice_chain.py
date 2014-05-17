@@ -21,7 +21,6 @@ from statsmodels.sandbox.mice import mice
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 #print statsmodels.__file__
-
 #data = pd.DataFrame.from_csv('missingdata.csv')
 data = pd.read_csv('C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
 #data = pd.read_csv('C:/Users/Frank/statsmodels/statsmodels/sandbox/mice/tests/results/missingdata.csv')
@@ -39,7 +38,7 @@ m3 = mice.Imputer(impdata,"x1 ~ x2 + x3",sm.Logit)
 
 impfull = mice.AnalysisChain([m1,m2,m3], "x1 ~ x2 + x3", sm.Logit)
 #
-(p,s) = impfull.run_chain(25,10)
+p1,s1 = impfull.run_chain(25,10)
 
 impdata = mice.ImputedData(data)
 
@@ -49,11 +48,15 @@ impchain = mice.ImputerChain([m1,m2,m3],25,10)
 
 impcomb = mice.MICE(impchain, "x1 ~ x2 + x3", sm.Logit)
 
-(p1,s1) = impcomb.combine()
-print(p)
-print(p1)
-print(s)
-print(s1)
+p2,s2 = impcomb.combine()
+
+#p1.summary()
+#p2.summary()
+
+print p1
+print p2
+print s1
+print s2
 #impchain.generate_data(3,5,'ftest')
 #
 #

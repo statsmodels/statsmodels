@@ -83,8 +83,47 @@ class Imputer:
         self.data.store_changes(self.endog_name)
 
     def impute_pmm(self):
-        pass
+        ix = self.data.values[self.endog_name][1]
+        io = self.data.values[self.endog_name][0]
+        md = self.model_class.from_formula(self.formula, self.data.data.ix[io], **self.init_args)
+        mdf = md.fit(**self.fit_args)
+        exog_name = md.exog_names[1:]
+        params = mdf.params.copy()
+        covmat = mdf.cov_params()
+        covmat_sqrt = np.linalg.cholesky(covmat)
+        if self.scale == "fix":
+            if self.scale_value is None:
+                scale_per = 1
+            else:
+                scale_per = self.scale_value
+        elif self.scale == "perturb_chi2":
+            u = np.random.chisquare(mdf.df_resid)
+            scale_per = scale_per = mdf.df_resid/u
+        elif self.scale == "perturb_boot":
+            pass
+        p = len(params)
+        params += np.dot(covmat_sqrt, np.random.normal(0, scale_per, p))
+        #change to md.exog so that transformations are handled
+        #PROBLEM: How to apply md.exog's transformations to the exogs for the missing endog?
+        #Idea: fit another model with all obs but costly? look into how formula is applied in statsmodels
+#        exog = pd.DataFrame(md.exog)
+#        c = ['Intercept']
+#        c.extend(exog_name)
+#        exog.columns = c
+        exog = self.data.data[exog_name]
+        exog.insert(0, 'Intercept', 1)
+        endog_all = md.predict(params,exog)
+        endog_matched = []
+        for mval in endog_all[ix]:
+            dist = abs(endog_all - mval)
+            dist = sorted(range(len(dist)), key=lambda k: dist[k])
+            endog_matched.append(self.data.data[self.endog_name].ix[dist[len(ix)]])
+        new_endog = endog_matched
+        self.data.values[self.endog_name][2] = new_endog
+        self.data.store_changes(self.endog_name)
 
+    def impute_bootstrap(self):
+        pass
 
 class ImputerChain:
     """
@@ -158,6 +197,8 @@ class MICE:
         between_g = np.std(params_list, axis=0)
         std = within_g + (1 + 1/self.iternum) * between_g
         #TODO: return results class
+        final = self.analysis_class.from_formula(self.formula, self.imputer_chain.imputer_list[0].data.data, params=params, bse=std)
+        #This doesn't work yet, fit modifies everything based on the data
         return params, std
 
 class AnalysisChain:
@@ -178,7 +219,7 @@ class AnalysisChain:
 
     def cycle(self):
         for im in self.imputer_list:
-            im.impute_asymptotic_bayes()
+            im.impute_pmm()
 
     def run_chain(self, num, skip):
         params_list = []
@@ -195,4 +236,9 @@ class AnalysisChain:
         between_g = np.std(params_list, axis=0)
         std = within_g + (1 + 1/num) * between_g
         #TODO: return results class
+        #This doesn't work yet, fit modifies everything based on the data
+#        final = self.analysis_class.from_formula(self.analysis_formula, self.imputer_list[0].data.data, params=params, bse=std)
+#        finalf = final.fit()
+#        finalf.params = params
+#        finalf.bse = std
         return params, std
