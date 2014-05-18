@@ -191,15 +191,15 @@ class MICE:
             md = self.analysis_class.from_formula(self.formula, data, **self.init_args)
             mdf = md.fit(**self.fit_args)
             params_list.append(mdf.params)
-            std_list.append(mdf.bse)
+            std_list.append(np.array(mdf.cov_params()))
         params = np.mean(params_list, axis=0)
         within_g = np.mean(std_list, axis=0)
         between_g = np.std(params_list, axis=0)
-        std = within_g + (1 + 1/self.iternum) * between_g
+        cov_params = within_g + np.diag((1 + 1/self.iternum) * between_g)
         #TODO: return results class
-        final = self.analysis_class.from_formula(self.formula, self.imputer_chain.imputer_list[0].data.data, params=params, bse=std)
+        final = mdf.__class__(self,params,cov_params) #OMG DIFFERENT BETWEEN MLE AND REGRESSION
         #This doesn't work yet, fit modifies everything based on the data
-        return params, std
+        return final
 
 class AnalysisChain:
     """
@@ -219,7 +219,7 @@ class AnalysisChain:
 
     def cycle(self):
         for im in self.imputer_list:
-            im.impute_pmm()
+            im.impute_asymptotic_bayes()
 
     def run_chain(self, num, skip):
         params_list = []
@@ -230,15 +230,16 @@ class AnalysisChain:
             md = self.analysis_class.from_formula(self.analysis_formula, self.imputer_list[0].data.data, **self.init_args)
             mdf = md.fit(**self.fit_args)
             params_list.append(mdf.params)
-            std_list.append(mdf.bse)
+            std_list.append(np.array(mdf.cov_params()))
         params = np.mean(params_list, axis=0)
         within_g = np.mean(std_list, axis=0)
         between_g = np.std(params_list, axis=0)
-        std = within_g + (1 + 1/num) * between_g
+        cov_params = within_g + np.diag((1 + 1/num) * between_g)
         #TODO: return results class
         #This doesn't work yet, fit modifies everything based on the data
 #        final = self.analysis_class.from_formula(self.analysis_formula, self.imputer_list[0].data.data, params=params, bse=std)
 #        finalf = final.fit()
 #        finalf.params = params
 #        finalf.bse = std
-        return params, std
+        final = mdf.__class__(self,params=params,cov_params=cov_params)
+        return final
