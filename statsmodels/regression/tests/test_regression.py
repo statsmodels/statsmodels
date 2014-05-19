@@ -974,6 +974,31 @@ def test_summary():
 \\end{center}"""
     assert_equal(table, expected)
 
+class TestRegularizedFit(object):
+
+    def test_regularized(self):
+
+        import os,csv
+        import glmnet_r_results
+        cur_dir = os.path.dirname(os.path.abspath(__file__))
+
+        tests = [x for x in dir(glmnet_r_results) if x.startswith("rslt_")]
+
+        for test in tests:
+            vec = getattr(glmnet_r_results, test)
+            fname = "lasso_data_%02d.csv" % vec[0]
+            L1_wt = float(vec[1])
+            lam = float(vec[2])
+            params = vec[3:].astype(np.float64)
+
+            data = np.loadtxt(os.path.join(cur_dir, "results", fname),
+                              delimiter=",")
+            endog = data[:,0]
+            exog = data[:,1:]
+
+            md = OLS(endog, exog)
+            mdf = md.fit_regularized(L1_wt=L1_wt, alpha=lam)
+            assert_almost_equal(mdf.params, params, decimal=3)
 
 
 if __name__=="__main__":

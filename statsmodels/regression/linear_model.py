@@ -232,6 +232,123 @@ class RegressionModel(base.LikelihoodModel):
                        normalized_cov_params=self.normalized_cov_params)
         return RegressionResultsWrapper(lfit)
 
+    def fit_regularized(self, method="coord_descent", maxiter=1000,
+                        alpha=0., L1_wt=1., start_params=None,
+                        cnvrg_tol=1e-8, zero_tol=1e-8, **kwargs):
+        """
+        Return a regularized fit to a linear regression model.
+
+        Parameters
+        ----------
+        method : string
+            Only the coordinate descent algorithm is implemented.
+        maxiter : integer
+            The maximum number of iteration cycles (an iteration cycle
+            involves running coordinate descent on all variables).
+        alpha : scalar or array-like
+            The penalty weight.  If a scalar, the same penalty weight
+            applies to all variables in the model.  If a vector, it
+            must have the same length as `params`, and contains a
+            penalty weight for each coefficient.
+        L1_wt : scalar
+            The fraction of the penalty given to the L1 penalty term.
+            Must be between 0 and 1 (inclusive).  If 0, the fit is
+            ridge regression.  If 1, the fit is the lasso.
+        start_params : array-like
+            Starting values for `params`.
+        cnvrg_tol : scalar
+            If `params` changes by less than this amount (in sup-norm)
+            in once iteration cycle, the algorithm terminates with
+            convergence.
+        zero_tol : scalar
+            Any estimated coefficient smaller than this value is
+            replaced with zero.
+
+        Returns
+        -------
+        A RegressionResults object, of the same type returned by
+        `fit`.
+
+        Notes
+        -----
+        The approach closely follows that implemented in the glmnet
+        package in R.  The penalty is the "elastic net" penalty, which
+        is a convex combination of L1 and L2 penalties.
+
+        The function that is minimized is:
+
+        0.5*RSS/n + alpha*((1-L1_wt)*|params|_2^2/2 + L1_wt*|params|_1)
+
+        where RSS is the usual regression sum of squares, n is the
+        sample size, and |*|_1 and |*|_2 are the L1 and L2 norms.
+
+        Post-estimation results are based on the same data used to
+        select variables, hence may be subject to overfitting biases.
+
+        References
+        ----------
+        Friedman, Hastie, Tibshirani (2008).  Regularization paths for
+        generalized linear models via coordinate descent.  Journal of
+        Statistical Software 33(1), 1-22 Feb 2010.
+        """
+
+        k_exog = self.wexog.shape[1]
+
+        if np.isscalar(alpha):
+            alpha = alpha * np.ones(k_exog, dtype=np.float64)
+
+        # Below we work with RSS + penalty, so we need to rescale.
+        alpha *= 2 * self.wexog.shape[0]
+
+        if start_params is None:
+            params = np.zeros(k_exog, dtype=np.float64)
+        else:
+            params = start_params.copy()
+
+        converged = False
+
+        # Shooting algorithm
+        for itr in range(maxiter):
+
+            params_save = params.copy()
+            for k in range(self.wexog.shape[1]):
+
+                par = params.copy()
+                par[k] = 0.
+                wendog_adj = self.wendog - np.dot(self.wexog, par)
+                xyprod = 2*np.dot(self.wexog[:,k], wendog_adj)
+                xxprod = 2*np.sum(self.wexog[:,k]**2)
+                den = xxprod + alpha[k] * (1 - L1_wt)
+                a = alpha[k] * L1_wt
+                if a >= np.abs(xyprod):
+                    params[k] = 0.
+                elif xyprod > 0:
+                    params[k] = (xyprod - a) / den
+                else:
+                    params[k] = (xyprod + a) / den
+
+            # Check for convergence
+            pchange = np.max(np.abs(params - params_save))
+            if pchange < cnvrg_tol:
+                converged = True
+                break
+
+        # Set approximate zero coefficients to be exactly zero
+        params *= np.abs(params) >= zero_tol
+
+        # Fit the reduced model to get standard errors and other
+        # post-estimation results.
+        ii = np.flatnonzero(params)
+        model = self.__class__(self.wendog, self.wexog[:,ii])
+        rslt = model.fit()
+        cov = np.zeros((k_exog, k_exog), dtype=np.float64)
+        cov[ii,:][:,ii] = rslt.normalized_cov_params
+
+        lfit = RegressionResults(self, params,
+                                 normalized_cov_params=rslt.normalized_cov_params)
+        lfit.converged = converged
+        return RegressionResultsWrapper(lfit)
+
     def predict(self, params, exog=None):
         """
         Return linear predicted values from a design matrix.
