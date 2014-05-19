@@ -978,8 +978,7 @@ class TestRegularizedFit(object):
 
     def test_regularized(self):
 
-        import os,csv
-        import glmnet_r_results
+        import os, glmnet_r_results
         cur_dir = os.path.dirname(os.path.abspath(__file__))
 
         tests = [x for x in dir(glmnet_r_results) if x.startswith("rslt_")]
