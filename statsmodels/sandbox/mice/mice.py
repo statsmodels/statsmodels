@@ -1,11 +1,9 @@
-#import cython
-#import glob
+import random
 import operator
 import pandas as pd
 import numpy as np
 import sys
 sys.path.insert(0, "C:/Users/Frank/Documents/GitHub/statsmodels/")
-#import copy
 
 class ImputedData:
     """
@@ -14,21 +12,21 @@ class ImputedData:
     """
     def __init__(self, data):
         self.data = pd.DataFrame(data)
-        self.values = {}
-        self.mean = {}
+        self.columns = {}
         for c in self.data.columns:
-            null = pd.isnull(self.data[c])
-            ix_miss = np.flatnonzero(null)
-            ix_obs = np.flatnonzero(~null)
-            if len(ix_obs) == 0:
-                raise ValueError("Variable has no observed values")
-            val = np.zeros(len(ix_miss), dtype=self.data.dtypes)
-            self.values[c] = [ix_obs, ix_miss, val]
+            self.columns[c] = MissingDataInfo(self.data[c])
+        self.data = self.data.fillna(self.data.mean())
 
-    def store_changes(self, col):
-        ix = self.values[col][1]
-        v = self.values[col][2]
-        self.data[col][ix] = v
+    def store_changes(self, col=None):
+        if col==None:
+            for c in self.columns.keys():
+                ix = self.columns[c].ix_miss
+                v = self.values[c].values
+                self.data[c].iloc[ix] = v
+        else:
+            ix = self.columns[col].ix_miss
+            v = self.columns[col].values
+            self.data[col].iloc[ix] = v
 
 class Imputer:
     """
@@ -43,17 +41,15 @@ class Imputer:
         self.init_args = init_args
         self.fit_args = fit_args
         self.endog_name = str(self.formula.split("~")[0].strip())
-        self.missingno = len(self.data.values[self.endog_name][1])
+        self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
         self.scale = scale
         self.scale_value = scale_value
 
     # Impute the dependent variable once
     def impute_asymptotic_bayes(self):
-        ix = self.data.values[self.endog_name][1]
-        io = self.data.values[self.endog_name][0]
-        md = self.model_class.from_formula(self.formula, self.data.data.ix[io], **self.init_args)
+        io = self.data.columns[self.endog_name].ix_obs
+        md = self.model_class.from_formula(self.formula, self.data.data.iloc[io,:], **self.init_args)
         mdf = md.fit(**self.fit_args)
-        exog_name = md.exog_names[1:]
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
@@ -69,25 +65,18 @@ class Imputer:
             pass
         p = len(params)
         params += np.dot(covmat_sqrt, np.random.normal(0, scale_per * mdf.scale, p))
-        #change to md.exog so that transformations are handled
-        #PROBLEM: How to apply md.exog's transformations to the exogs for the missing endog?
-        #Idea: fit another model with all obs but costly? look into how formula is applied in statsmodels
-#        exog = pd.DataFrame(md.exog)
-#        c = ['Intercept']
-#        c.extend(exog_name)
-#        exog.columns = c
-        exog = self.data.data[exog_name].ix[ix]
+        imiss = self.data.columns[self.endog_name].ix_miss
+        exog_name = md.exog_names[1:]
+        exog = self.data.data[exog_name].iloc[imiss,:]
         endog_obj = md.get_distribution(params=params, exog=exog, scale=scale_per * mdf.scale)
         new_endog = endog_obj.rvs()
-        self.data.values[self.endog_name][2] = new_endog
+        self.data.columns[self.endog_name].values = new_endog
         self.data.store_changes(self.endog_name)
 
-    def impute_pmm(self):
-        ix = self.data.values[self.endog_name][1]
-        io = self.data.values[self.endog_name][0]
-        md = self.model_class.from_formula(self.formula, self.data.data.ix[io], **self.init_args)
+    def impute_pmm(self, k0=1):
+        io = self.data.columns[self.endog_name].ix_obs
+        md = self.model_class.from_formula(self.formula, self.data.data.iloc[io,:], **self.init_args)
         mdf = md.fit(**self.fit_args)
-        exog_name = md.exog_names[1:]
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
@@ -103,23 +92,21 @@ class Imputer:
             pass
         p = len(params)
         params += np.dot(covmat_sqrt, np.random.normal(0, mdf.scale * scale_per, p))
-        #change to md.exog so that transformations are handled
-        #PROBLEM: How to apply md.exog's transformations to the exogs for the missing endog?
-        #Idea: fit another model with all obs but costly? look into how formula is applied in statsmodels
-#        exog = pd.DataFrame(md.exog)
-#        c = ['Intercept']
-#        c.extend(exog_name)
-#        exog.columns = c
+        exog_name = md.exog_names[1:]
         exog = self.data.data[exog_name]
         exog.insert(0, 'Intercept', 1)
         endog_all = md.predict(params,exog)
         endog_matched = []
-        for mval in endog_all[ix]:
+        imiss = self.data.columns[self.endog_name].ix_miss
+        for mval in endog_all[imiss]:
             dist = abs(endog_all - mval)
             dist = sorted(range(len(dist)), key=lambda k: dist[k])
-            endog_matched.append(self.data.data[self.endog_name].ix[dist[len(ix)]])
+            endog_matched.append(random.choice(np.array(self.data.data[self.endog_name][dist[len(imiss):len(imiss) + k0]])))
+#            else:
+#                endog_matched.append(self.data.data[self.endog_name][dist[len(imiss):len(imiss) + k0]])
+
         new_endog = endog_matched
-        self.data.values[self.endog_name][2] = new_endog
+        self.data.columns[self.endog_name].values = new_endog
         self.data.store_changes(self.endog_name)
 
     def impute_bootstrap(self):
@@ -134,13 +121,11 @@ class ImputerChain:
     Note: All imputers must refer to the same data object
     """
     def __init__(self, imputer_list, iternum, skipnum):
-        #PROBLEM: Scope means that using self.data = imputer_list[0].data.data will only change data within the class.
-        #The version of data imputer modifies is outisde the class.
+        #The version of "data" that imputer modifies is outside the class.
         self.imputer_list = imputer_list
         #Impute variable with least missing observations first
-        self.imputer_list.sort(key=operator.attrgetter('missingno'))
+        self.imputer_list.sort(key=operator.attrgetter('num_missing'))
         #All imputers must refer to the same data object
-        self.imputer_list[0].data.data = self.imputer_list[0].data.data.fillna(self.imputer_list[0].data.data.mean())
         self.inum = iternum
         self.snum = skipnum
         self.c = 0
@@ -191,19 +176,14 @@ class MICE:
             md = self.analysis_class.from_formula(self.formula, data, **self.init_args)
             mdf = md.fit(**self.fit_args)
             params_list.append(mdf.params)
-            cov_list.append(np.array(mdf.cov_params()))
+            cov_list.append(np.array(mdf.normalized_cov_params))
         params = np.mean(params_list, axis=0)
         within_g = np.mean(cov_list, axis=0)
-        #between_g = np.std(params_list, axis=0)
         between_g = np.cov(np.array(params_list).T, bias=1)
-        cov_params = within_g + (1 + 1/self.iternum) * between_g       
-        #cov_params = within_g + np.diag((1 + 1/self.iternum) * between_g)
-        #TODO: return results class
-        mdf._results.__dict__['params'] = params
-        mdf._results.__dict__['cov_params'] = cov_params
-        
-        #final = mdf.__class__(self,params,cov_params) #DIFFERENT BETWEEN MLE AND REGRESSION
-        #This doesn't work yet, fit modifies everything based on the data
+        cov_params = within_g + (1 + 1/self.iternum) * between_g
+        #TODO: return results class, stuffed into mdf for now
+        mdf._results.params = params
+        mdf._results.normalized_cov_params = cov_params
         return mdf
 
 class AnalysisChain:
@@ -215,16 +195,15 @@ class AnalysisChain:
                  init_args={}, fit_args={}):
         self.imputer_list = imputer_list
         #impute variable with least missing observations first
-        self.imputer_list.sort(key=operator.attrgetter('missingno'))
+        self.imputer_list.sort(key=operator.attrgetter('num_missing'))
         self.analysis_formula = analysis_formula
         self.analysis_class = analysis_class
         self.init_args = init_args
         self.fit_args = fit_args
-        self.imputer_list[0].data.data = self.imputer_list[0].data.data.fillna(self.imputer_list[0].data.data.mean())
 
     def cycle(self):
         for im in self.imputer_list:
-            im.impute_asymptotic_bayes()
+            im.impute_pmm(5)
 
     def run_chain(self, num, skip):
         params_list = []
@@ -235,17 +214,22 @@ class AnalysisChain:
             md = self.analysis_class.from_formula(self.analysis_formula, self.imputer_list[0].data.data, **self.init_args)
             mdf = md.fit(**self.fit_args)
             params_list.append(mdf.params)
-            cov_list.append(np.array(mdf.cov_params()))
+            cov_list.append(np.array(mdf.normalized_cov_params))
         params = np.mean(params_list, axis=0)
         within_g = np.mean(cov_list, axis=0)
-        #between_g = np.std(params_list, axis=0)
         between_g = np.cov(np.array(params_list).T, bias=1)
-        cov_params = within_g + (1 + 1/num) * between_g       
-        #cov_params = within_g + np.diag((1 + 1/self.iternum) * between_g)
-        #TODO: return results class
-        mdf._results.__dict__['params'] = params
-        mdf._results.__dict__['cov_params'] = cov_params
-        
-        #final = mdf.__class__(self,params,cov_params) #DIFFERENT BETWEEN MLE AND REGRESSION
-        #This doesn't work yet, fit modifies everything based on the data
+        cov_params = within_g + (1 + 1/num) * between_g
+        #TODO: return results class, stuffed into mdf for now
+        mdf._results.params = params
+        mdf._results.normalized_cov_params = cov_params
         return mdf
+
+class MissingDataInfo:
+
+    def __init__(self, data):
+        null = pd.isnull(data)
+        self.ix_miss = np.flatnonzero(null)
+        self.ix_obs = np.flatnonzero(~null)
+        if len(self.ix_obs) == 0:
+            raise ValueError("Variable to be imputed has no observed values")
+        self.values = np.zeros(len(self.ix_miss), dtype=data.dtype)
