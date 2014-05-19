@@ -186,20 +186,25 @@ class MICE:
 
     def combine(self):
         params_list = []
-        std_list = []
+        cov_list = []
         for data in self.imputer_chain:
             md = self.analysis_class.from_formula(self.formula, data, **self.init_args)
             mdf = md.fit(**self.fit_args)
             params_list.append(mdf.params)
-            std_list.append(np.array(mdf.cov_params()))
+            cov_list.append(np.array(mdf.cov_params()))
         params = np.mean(params_list, axis=0)
-        within_g = np.mean(std_list, axis=0)
-        between_g = np.std(params_list, axis=0)
-        cov_params = within_g + np.diag((1 + 1/self.iternum) * between_g)
+        within_g = np.mean(cov_list, axis=0)
+        #between_g = np.std(params_list, axis=0)
+        between_g = np.cov(np.array(params_list).T, bias=1)
+        cov_params = within_g + (1 + 1/self.iternum) * between_g       
+        #cov_params = within_g + np.diag((1 + 1/self.iternum) * between_g)
         #TODO: return results class
-        final = mdf.__class__(self,params,cov_params) #OMG DIFFERENT BETWEEN MLE AND REGRESSION
+        mdf._results.__dict__['params'] = params
+        mdf._results.__dict__['cov_params'] = cov_params
+        
+        #final = mdf.__class__(self,params,cov_params) #DIFFERENT BETWEEN MLE AND REGRESSION
         #This doesn't work yet, fit modifies everything based on the data
-        return final
+        return mdf
 
 class AnalysisChain:
     """
@@ -223,23 +228,24 @@ class AnalysisChain:
 
     def run_chain(self, num, skip):
         params_list = []
-        std_list = []
+        cov_list = []
         for k in range(num):
             for j in range(skip):
                 self.cycle()
             md = self.analysis_class.from_formula(self.analysis_formula, self.imputer_list[0].data.data, **self.init_args)
             mdf = md.fit(**self.fit_args)
             params_list.append(mdf.params)
-            std_list.append(np.array(mdf.cov_params()))
+            cov_list.append(np.array(mdf.cov_params()))
         params = np.mean(params_list, axis=0)
-        within_g = np.mean(std_list, axis=0)
-        between_g = np.std(params_list, axis=0)
-        cov_params = within_g + np.diag((1 + 1/num) * between_g)
+        within_g = np.mean(cov_list, axis=0)
+        #between_g = np.std(params_list, axis=0)
+        between_g = np.cov(np.array(params_list).T, bias=1)
+        cov_params = within_g + (1 + 1/num) * between_g       
+        #cov_params = within_g + np.diag((1 + 1/self.iternum) * between_g)
         #TODO: return results class
+        mdf._results.__dict__['params'] = params
+        mdf._results.__dict__['cov_params'] = cov_params
+        
+        #final = mdf.__class__(self,params,cov_params) #DIFFERENT BETWEEN MLE AND REGRESSION
         #This doesn't work yet, fit modifies everything based on the data
-#        final = self.analysis_class.from_formula(self.analysis_formula, self.imputer_list[0].data.data, params=params, bse=std)
-#        finalf = final.fit()
-#        finalf.params = params
-#        finalf.bse = std
-        final = mdf.__class__(self,params=params,cov_params=cov_params)
-        return final
+        return mdf

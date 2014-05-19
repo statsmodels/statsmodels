@@ -15,7 +15,7 @@ Created on Wed May 07 15:10:00 2014
 import sys
 import pandas as pd
 import numpy as np
-sys.path.insert(0,"C:/Users/Frank/Documents/GitHub/statsmodels/statsmodels/")
+sys.path.insert(0,"C:\Users\Frank\Documents\GitHub\statsmodels\statsmodels")
 #sys.path.insert(0,"C:/Users/Frank/statsmodels/statsmodels/")
 from statsmodels.sandbox.mice import mice
 import matplotlib.pyplot as plt
@@ -40,18 +40,18 @@ m3 = mice.Imputer(impdata,"x1 ~ x2 + x3",sm.Logit)
 
 impdata = mice.ImputedData(data)
 
-impchain = mice.ImputerChain([m1,m2,m3],2,3)
+impchain = mice.ImputerChain([m1,m2,m3],20,10)
 
 #test = sm.Logit(data['x1'],data['x2'],'drop')
 
 impcomb = mice.MICE(impchain, "x1 ~ x2 + x3", sm.Logit)
 
-p2,s2 = impcomb.combine()
+p1 = impcomb.combine()
 
 
 impfull = mice.AnalysisChain([m1,m2,m3], "x1 ~ x2 + x3", sm.Logit)
 #
-p1,s1 = impfull.run_chain(2,3)
+p2 = impfull.run_chain(20,10)
 #p1.summary()
 #p2.summary()
 
