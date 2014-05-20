@@ -17,6 +17,7 @@ from statsmodels.compat.python import range
 import warnings
 
 import numpy as np
+import scipy as sp
 from scipy import integrate, stats
 from statsmodels.sandbox.nonparametric import kernels
 from statsmodels.tools.decorators import (cache_readonly,
@@ -421,6 +422,8 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         clip : tuple
         Observations in X that are outside of the range given by clip are
         dropped. The number of observations in X is then shortened.
+    clip : 2-tuple 
+        Limits for the range of data. Data outside range is thrown away.
     cut : float
         Defines the length of the grid past the lowest and highest values of X
         so that the kernel goes to zero. The end points are
@@ -437,33 +440,24 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Notes
     -----
-    Only the default kernel is implemented. Weights aren't implemented yet.
-    This follows Silverman (1982) with changes suggested by Jones and Lotwick
-    (1984). However, the discretization step is replaced by linear binning
-    of Fan and Marron (1994). This should be extended to accept the parts
-    that are dependent only on the data to speed things up for
-    cross-validation.
+    Genereic kernel is now supported as long as it has finite support or 
+    defines a cut off for effective support. This is based on the algorithm
+    outline in Wand and Jones (1995)
 
     References
     ---------- ::
-
-    Fan, J. and J.S. Marron. (1994) `Fast implementations of nonparametric
-        curve estimators`. Journal of Computational and Graphical Statistics.
-        3.1, 35-56.
-    Jones, M.C. and H.W. Lotwick. (1984) `Remark AS R50: A Remark on Algorithm
-        AS 176. Kernal Density Estimation Using the Fast Fourier Transform`.
-        Journal of the Royal Statistical Society. Series C. 33.1, 120-2.
-    Silverman, B.W. (1982) `Algorithm AS 176. Kernel density estimation using
-        the Fast Fourier Transform. Journal of the Royal Statistical Society.
-        Series C. 31.2, 93-9.
+    Wand, M. P. and Jones, M. C. (1995). Kernel Smoothing. Chapman and Hall,
+     London.
     """
+    # Not convinced this is neccessary
     X = np.asarray(X)
-    X = X[np.logical_and(X>clip[0], X<clip[1])] # won't work for two columns.
-                                                # will affect underlying data?
+    X = X[np.logical_and(X>clip[0], X<clip[1])]
     
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
 
+    # This kernel selection should be moved outside of this function.
+    # bw should be reuiqred as as float to this function.
     try:
         bw = float(bw)
     except:
@@ -472,45 +466,37 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     nobs = float(len(X)) # after trim
 
-    # 1 Make grid and discretize the data
+    # step 1 Make grid and discretize the data
     if gridsize == None:
-        gridsize = np.max((nobs,512.))
-    gridsize = 2**np.ceil(np.log2(gridsize)) # round to next power of 2
+        # not convinced this is correct
+        gridsize = np.max((nobs, 512.))
+    # round to next power of 2
+    gridsize = 2**np.ceil(np.log2(gridsize))
 
     a = np.min(X)-cut*bw
     b = np.max(X)+cut*bw
-    grid,delta = np.linspace(a,b,gridsize,retstep=True)
+    grid, delta = np.linspace(a, b, gridsize, retstep=True)
     RANGE = b-a
 
-#TODO: Fix this?
-# This is the Silverman binning function, but I believe it's buggy (SS)
-# weighting according to Silverman
-#    count = counts(X,grid)
-#    binned = np.zeros_like(grid)    #xi_{k} in Silverman
-#    j = 0
-#    for k in range(int(gridsize-1)):
-#        if count[k]>0: # there are points of X in the grid here
-#            Xingrid = X[j:j+count[k]] # get all these points
-#            # get weights at grid[k],grid[k+1]
-#            binned[k] += np.sum(grid[k+1]-Xingrid)
-#            binned[k+1] += np.sum(Xingrid-grid[k])
-#            j += count[k]
-#    binned /= (nobs)*delta**2 # normalize binned to sum to 1/delta
+    # Calculate the scaled bin counts with linear-binning
+    binned = fast_linbin(X,a,b,gridsize)
 
-#NOTE: THE ABOVE IS WRONG, JUST TRY WITH LINEAR BINNING
-    binned = fast_linbin(X,a,b,gridsize)/(delta*nobs)
+    # step 2 compute weights
+    M = gridsize
+    tau = 20 # is this reasonble? - NEED TO FIGURE THIS OUT
+    L = min(np.floor(tau*bw*(M-1)/RANGE), M-1)
+    l = np.arange(0,L+1)
+    kappa = 1.0/nobs * kern((b-a)*l/bw/(M-1))
+    
+    # step 3 create padded arrays for fourier transform
+    P = 2**np.ceil(np.log2(gridsize+L))
+    c = list(binned*delta*nobs)+list(np.zeros(P-M))
+    k = list(kappa)+list(np.zeros(P-2*L-1))+list(kappa)[::-1][:-1]
 
-    # step 2 compute FFT of the weights, using Munro (1976) FFT convention
-    y = forrt(binned)
+    # step 4 convolve using fourier transform
+    z2 = sp.fft(np.array(c))*sp.fft(np.array(k))
+    f = np.abs(sp.ifft(z2)[:M])
 
-    # step 3 and 4 for optimal bw compute zstar and the density estimate f
-    # don't have to redo the above if just changing bw, ie., for cross val
-
-#NOTE: silverman_transform is the closed form solution of the FFT of the
-#gaussian kernel. Not yet sure how to generalize it.
-    zstar = silverman_transform(bw, gridsize, RANGE)*y # 3.49 in Silverman
-                                                   # 3.50 w Gaussian kernel
-    f = revrt(zstar)
     if retgrid:
         return f, grid, bw
     else:

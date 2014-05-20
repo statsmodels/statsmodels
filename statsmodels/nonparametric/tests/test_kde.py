@@ -52,6 +52,7 @@ class TestKDEGauss(CheckKDE):
         res1.fit(kernel="gau", fft=False, bw="silverman")
         cls.res1 = res1
         cls.res_density = KDEResults["gau_d"]
+        cls.hello = 1
 
     def test_evaluate(self):
         #kde_vals = self.res1.evaluate(self.res1.support)
