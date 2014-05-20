@@ -601,10 +601,24 @@ class PHregResults(base.LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
+        from statsmodels.compatnp.collections import OrderedDict
         smry = summary2.Summary()
-        float_format = "%.3f"
-        smry.add_base(results=self, alpha=alpha,
-                      float_format=float_format,
-                      xname=xname, yname=yname, title=title)
+        float_format = "%8.3f"
+
+        info = OrderedDict()
+        info["Model:"] = "PH Reg"
+        if yname is None:
+            yname = self.model.endog_names
+        info["Dependent variable:"] = yname
+        info["Ties:"] = self.model.ties.capitalize()
+        info["Sample size:"] = str(len(self.model.endog))
+        info["Num. events:"] = str(int(sum(self.model.status)))
+        smry.add_dict(info, align='l', float_format=float_format)
+
+        param = summary2.summary_params(self, alpha=alpha)
+        if xname != None:
+            param.index = xname
+        smry.add_df(param, float_format=float_format)
+        smry.add_title(title=title, results=self)
 
         return smry

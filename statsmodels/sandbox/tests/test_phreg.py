@@ -110,7 +110,6 @@ class TestPHreg(object):
         exog[10:15,:] = np.nan
 
         md = PHreg(time, exog, status, missing='drop')
-
         assert(len(md.endog) == 185)
         assert(len(md.status) == 185)
         assert(all(md.exog.shape == np.r_[185,4]))
