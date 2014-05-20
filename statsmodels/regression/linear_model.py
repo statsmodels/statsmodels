@@ -238,7 +238,7 @@ class RegressionModel(base.LikelihoodModel):
 
         Parameters
         ----------
-        params : array-like, optional after fit has been called
+        params : array-like
             Parameters of a linear model
         exog : array-like, optional.
             Design / exogenous data. Model exog is used if None.
