@@ -24,10 +24,10 @@ from statsmodels.sandbox.nonparametric.kernel_extras import SingleIndexModel
 
 
 def _check_mean_values(obj):
-    assert_almost_equal(obj.model.fit()[0], obj.res.mean, 4)
+    assert_almost_equal(obj.fit[0], obj.res.mean, 4)
 
 def _check_mfx_values(obj):
-    assert_almost_equal(obj.model.fit()[1][:,0], obj.res.mfx, 4)
+    assert_almost_equal(obj.fit[1][:,0], obj.res.mfx, 4)
 
 def _check_bw_values(obj):
     assert_almost_equal(obj.model.bw, obj.res.bw, 4)
@@ -58,6 +58,7 @@ class TestSemiLinear(object):
         data = self.data
         self.model = SemiLinear(data.endog, data.exog_linear, data.exog_np,
                                  'c', 4)
+        self.fit = self.model.fit()
         self.res = Wage1()
         self.res.semilinear()
 
@@ -79,6 +80,7 @@ class TestSingleIndexModel(object):
         data = self.data
         self.model = SingleIndexModel(endog=data.endog, exog=data.exog,
                                       var_type='uuuuuuc')
+        self.fit = self.model.fit()
         self.res = BirthWt()
         self.res.singleindexmodel()
 
