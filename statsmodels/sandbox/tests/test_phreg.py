@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, "/afs/umich/edu/user/k/s/kshedden/fork4/statsmodels")
-
 import os
 import numpy as np
 from statsmodels.sandbox.phreg import PHreg
