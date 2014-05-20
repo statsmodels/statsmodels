@@ -145,7 +145,8 @@ class GLM(base.LikelihoodModel):
         data is already an array and it is changed, then `endog` changes
         as well.
     exposure : array-like
-        Include ln(exposure) in model with coefficient constrained to 1.
+        Include ln(exposure) in model with coefficient constrained to 1. Can
+        only be used if the link is the logarithm function.
     exog : array
         See above.  Note that endog is a reference to the data so that if
         data is already an array and it is changed, then `endog` changes
@@ -215,9 +216,14 @@ class GLM(base.LikelihoodModel):
         self.df_resid = self.exog.shape[0] - np_matrix_rank(self.exog)
 
     def _check_inputs(self, family, offset, exposure, endog):
+
+        # Default family is Gaussian
         if family is None:
             family = families.Gaussian()
         self.family = family
+
+        if exposure is not None and not isinstance(self.family.link, families.links.Log):
+            raise ValueError("exposure can only be used with the log link function")
 
         if offset is not None:
             offset = np.asarray(offset)
@@ -226,9 +232,10 @@ class GLM(base.LikelihoodModel):
         self.offset = offset
 
         if exposure is not None:
-            exposure = np.log(exposure)
+            exposure = np.asarray(exposure)
             if exposure.shape[0] != endog.shape[0]:
                 raise ValueError("exposure is not the same length as endog")
+            exposure = np.log(exposure)
         self.exposure = exposure
 
     def score(self, params):
@@ -333,11 +340,12 @@ class GLM(base.LikelihoodModel):
         exposure = getattr(self, 'exposure', 0)
         if exog is None:
             exog = self.exog
+
+        linpred = np.dot(exog, params) + offset + exposure
         if linear:
-            return np.dot(exog, params) + offset + exposure
+            return linpred
         else:
-            return self.family.fitted(np.dot(exog, params) + exposure +
-                                      offset)
+            return self.family.fitted(linpred)
 
     def fit(self, start_params=None, maxiter=100, method='IRLS', tol=1e-8,
             scale=None):
@@ -381,13 +389,13 @@ class GLM(base.LikelihoodModel):
         # preprocessing
             self.endog = self.family.initialize(self.endog)
 
+        # Construct a combined offset/exposure term.  Note that
+        # exposure has already been logged if present.
+        offset = 0.
         if hasattr(self, 'offset'):
-            offset = self.offset
-        elif hasattr(self, 'exposure'):
-            offset = self.exposure
-        else:
-            offset = 0
-        #TODO: would there ever be both and exposure and an offset?
+            offset = self.offset.copy()
+        if hasattr(self, 'exposure'):
+            offset += self.exposure
 
         wlsexog = self.exog
         if start_params is None:
@@ -573,12 +581,13 @@ class GLMResults(base.LikelihoodModelResults):
         endog = self._endog
         model = self.model
         exog = np.ones((len(endog), 1))
+        kwargs = {}
         if hasattr(model, 'offset'):
-            return GLM(endog, exog, offset=model.offset,
-                       family=self.family).fit().mu
-        elif hasattr(model, 'exposure'):
-            return GLM(endog, exog, exposure=model.exposure,
-                       family=self.family).fit().mu
+            kwargs['offset'] = model.offset
+        if hasattr(model, 'exposure'):
+            kwargs['exposure'] = model.exposure
+        if len(kwargs) > 0:
+            return GLM(endog, exog, family=self.family, **kwargs).fit().mu
         else:
             wls_model = lm.WLS(endog, exog, weights=self._data_weights)
             return wls_model.fit().fittedvalues
