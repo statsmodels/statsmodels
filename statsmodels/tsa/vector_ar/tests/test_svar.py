@@ -48,3 +48,15 @@ class TestSVAR(object):
         assert_allclose(self._reformat(res1.params), res2.b_var, atol=1e-12)
         bse_st = np.sqrt(np.diag(res2.V_var))
         assert_allclose(self._reformat(res1.bse), bse_st, atol=1e-12)
+
+
+    def test_llf_ic(self):
+        res1 = self.res1
+        res2 = self.res2
+        assert_allclose(res1.llf, res2.ll_var, atol=1e-12)
+        # different definition, missing constant term ?
+        corr_const = -8.51363119922803
+        assert_allclose(res1.fpe, res2.fpe_var, atol=1e-12)
+        assert_allclose(res1.aic - corr_const, res2.aic_var, atol=1e-12)
+        assert_allclose(res1.bic - corr_const, res2.sbic_var, atol=1e-12)
+        assert_allclose(res1.hqic - corr_const, res2.hqic_var, atol=1e-12)
