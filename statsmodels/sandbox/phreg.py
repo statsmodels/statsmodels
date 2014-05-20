@@ -601,7 +601,7 @@ class PHregResults(base.LikelihoodModelResults):
         """
 
         from statsmodels.iolib import summary2
-        from statsmodels.compatnp.collections import OrderedDict
+        from statsmodels.compat.collections import OrderedDict
         smry = summary2.Summary()
         float_format = "%8.3f"
 
