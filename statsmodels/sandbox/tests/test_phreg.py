@@ -51,14 +51,14 @@ class TestPHreg(object):
         strata = np.kron(range(5), np.ones(n/5))
 
         # No stratification or entry times
-        phrb = PHreg(time, status, exog, ties=ties).fit(**args)
+        phrb = PHreg(time, exog, status, ties=ties).fit(**args)
         coef = globals()["coef_%d_%d_%s" % (n, p, ties[0:3])]
         se = globals()["se_%d_%d_%s" % (n, p, ties[0:3])]
         assert_almost_equal(phrb.params, coef, decimal=4)
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Entry times but no stratification
-        phrb = PHreg(time, status, exog, entry=entry,
+        phrb = PHreg(time, exog, status, entry=entry,
                      ties=ties).fit(**args)
         coef = globals()["coef_%d_%d_et_%s" % (n, p, ties[0:3])]
         se = globals()["se_%d_%d_et_%s" % (n, p, ties[0:3])]
@@ -66,7 +66,7 @@ class TestPHreg(object):
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification but no entry times
-        phrb = PHreg(time, status, exog, strata=strata,
+        phrb = PHreg(time, exog, status, strata=strata,
                       ties=ties).fit(**args)
         coef = globals()["coef_%d_%d_st_%s" % (n, p, ties[0:3])]
         se = globals()["se_%d_%d_st_%s" % (n, p, ties[0:3])]
@@ -74,7 +74,7 @@ class TestPHreg(object):
         assert_almost_equal(phrb.bse, se, decimal=4)
 
         # Stratification and entry times
-        phrb = PHreg(time, status, exog, entry=entry,
+        phrb = PHreg(time, exog, status, entry=entry,
                      strata=strata, ties=ties).fit(**args)
         coef = globals()["coef_%d_%d_et_st_%s" % (n, p, ties[0:3])]
         se = globals()["se_%d_%d_et_st_%s" % (n, p, ties[0:3])]

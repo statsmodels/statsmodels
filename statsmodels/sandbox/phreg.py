@@ -2,8 +2,8 @@ import numpy as np
 from scipy import sparse
 from statsmodels.base import model
 import statsmodels.base.model as base
-from statsmodels.tools.decorators import cache_readonly, \
-    resettable_cache
+from statsmodels.tools.decorators import (cache_readonly,
+      resettable_cache)
 
 
 class PH_SurvivalTime(object):
@@ -169,24 +169,23 @@ class PH_SurvivalTime(object):
 class PHreg(model.LikelihoodModel):
     """Cox proportional hazards regression model."""
 
-    def __init__(self, time, status, exog, entry=None, strata=None,
-                 ties='breslow'):
+    def __init__(self, endog, exog, status=None, entry=None,
+                 strata=None, ties='breslow'):
         """
         Fit the Cox proportional hazards regression model for right
-        censored data.  The data may be left truncated, and strata may
-        be provided.  Either Breslow's method of Efron's method may be
-        used to handle tied times.
+        censored data.
 
         Arguments
-        ----------
-        time : array-like
+        ---------
+        endog : array-like
             The observed times
+        exog : 2D array-like
+            The covariates or exogeneous variables
         status : array-like
             The censoring status values; status=1 indicates that an
             event occured (e.g. failure or death), status=0 indicates
-            that the observation was right censored
-        exog : 2D array-like
-            The covariates or exogeneous variables
+            that the observation was right censored. If None, defaults
+            to no censoring.
         entry : array-like
             The entry times, if left truncation occurs
         strata : array-like
@@ -196,11 +195,11 @@ class PHreg(model.LikelihoodModel):
             The method used to handle tied times.
         """
 
-        # time becomes self.endog
-        super(PHreg, self).__init__(time, exog, status=status,
-                                    entry=entry, strata=strata)
+        if status is None:
+            status = np.ones(len(endog))
 
-        n = len(time)
+        super(PHreg, self).__init__(endog, exog, status=status,
+                                    entry=entry, strata=strata)
 
         self.surv = PH_SurvivalTime(self.endog, self.status,
                                     self.exog, self.strata,
