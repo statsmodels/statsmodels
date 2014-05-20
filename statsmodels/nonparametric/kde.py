@@ -455,6 +455,9 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
+    # Need support, so if Gaussian set to [-4,4] - based on values in 'ksmooth'
+    if kenrel == 'gau':
+        kern.domain = [-4, 4]
 
     # This kernel selection should be moved outside of this function.
     # bw should be reuiqred as as float to this function.
@@ -483,7 +486,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     # step 2 compute weights
     M = gridsize
-    tau = 20 # is this reasonble? - NEED TO FIGURE THIS OUT
+    tau = kern.support[1] # assumes support is symmetric.
     L = min(np.floor(tau*bw*(M-1)/RANGE), M-1)
     l = np.arange(0,L+1)
     kappa = 1.0/nobs * kern((b-a)*l/bw/(M-1))
@@ -494,8 +497,8 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     k = list(kappa)+list(np.zeros(P-2*L-1))+list(kappa)[::-1][:-1]
 
     # step 4 convolve using fourier transform
-    z2 = sp.fft(np.array(c))*sp.fft(np.array(k))
-    f = np.abs(sp.ifft(z2)[:M])
+    z2 = np.fft.rfft(np.array(c))*np.fft.rfft(np.array(k))
+    f = np.fft.irfft(z2)[:M]
 
     if retgrid:
         return f, grid, bw
