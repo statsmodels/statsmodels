@@ -204,6 +204,15 @@ class PHreg(model.LikelihoodModel):
                                     entry=entry, strata=strata,
                                     missing=missing)
 
+        # endog and exog are automatically converted, but these are
+        # not
+        if self.status is not None:
+            self.status = np.asarray(self.status)
+        if self.entry is not None:
+            self.entry = np.asarray(self.entry)
+        if self.strata is not None:
+            self.strata = np.asarray(self.strata)
+
         self.surv = PH_SurvivalTime(self.endog, self.status,
                                     self.exog, self.strata,
                                     self.entry)
