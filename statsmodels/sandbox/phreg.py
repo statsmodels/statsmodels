@@ -170,7 +170,7 @@ class PHreg(model.LikelihoodModel):
     """Cox proportional hazards regression model."""
 
     def __init__(self, endog, exog, status=None, entry=None,
-                 strata=None, ties='breslow'):
+                 strata=None, ties='breslow', missing='drop'):
         """
         Fit the Cox proportional hazards regression model for right
         censored data.
@@ -193,13 +193,16 @@ class PHreg(model.LikelihoodModel):
             in a single stratum.
         ties : string
             The method used to handle tied times.
+        missing : string
+            The method used to handle missing data
         """
 
         if status is None:
             status = np.ones(len(endog))
 
         super(PHreg, self).__init__(endog, exog, status=status,
-                                    entry=entry, strata=strata)
+                                    entry=entry, strata=strata,
+                                    missing=missing)
 
         self.surv = PH_SurvivalTime(self.endog, self.status,
                                     self.exog, self.strata,

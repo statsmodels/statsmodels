@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "/afs/umich/edu/user/k/s/kshedden/fork4/statsmodels")
+
 import os
 import numpy as np
 from statsmodels.sandbox.phreg import PHreg
@@ -97,6 +100,23 @@ class TestPHreg(object):
                     for strata_f in False,True:
                         yield self.do1, fname, ties, entry_f, \
                             strata_f
+
+
+    def test_missing(self):
+
+        time = 50 * np.random.uniform(size=200)
+        status = np.random.randint(0, 2, 200).astype(np.float64)
+        exog = np.random.normal(size=(200,4))
+
+        time[0:5] = np.nan
+        status[5:10] = np.nan
+        exog[10:15,:] = np.nan
+
+        md = PHreg(time, exog, status, missing='drop')
+
+        assert(len(md.endog) == 185)
+        assert(len(md.status) == 185)
+        assert(all(md.exog.shape == np.r_[185,4]))
 
 
 
