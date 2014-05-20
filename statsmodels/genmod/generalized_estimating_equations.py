@@ -25,7 +25,6 @@ improved small-sample properties.  Biometrics. 2001 Mar;57(1):126-34.
 from statsmodels.compat.python import iterkeys, range, lrange, lzip, zip
 import numpy as np
 from scipy import stats
-from scipy import linalg as spl
 import pandas as pd
 
 from statsmodels.tools.decorators import (cache_readonly,
@@ -171,9 +170,9 @@ class GEE(base.Model):
     __doc__ = """
     Generalized Estimating Equations Models
 
-    GEE estimates Generalized Linear Models when the data has a
-    cluster structure and the observations are possibly correlated
-    within but not across clusters
+    GEE estimates Generalized Linear Models when the data have a
+    grouped structure, and the observations are possibly correlated
+    within groups but not between groups.
 
     Parameters
     ----------
@@ -185,7 +184,7 @@ class GEE(base.Model):
         intercept is not included by default and should be added
         by the user. See `statsmodels.tools.add_constant`.
     groups : array-like
-        A 1d array of length `nobs` containing the cluster labels.
+        A 1d array of length `nobs` containing the group labels.
     time : array-like
         A 2d array of time (or other index) values, used by some
         dependence structures to define similarity relationships among
@@ -396,6 +395,12 @@ class GEE(base.Model):
 
             self.mean_deriv_exog = mean_deriv_exog
 
+        # Skip the covariance updates if all groups have a single
+        # observation (reduces to fitting a GLM).
+        self._do_cov_update = True
+        if max([len(x) for x in self.endog_li]) == 1:
+            self._do_cov_update = False
+
     def cluster_list(self, array):
         """
         Returns `array` split into subarrays corresponding to the
@@ -467,28 +472,18 @@ class GEE(base.Model):
         bmat, score = 0, 0
         for i in range(self.num_group):
 
-            if len(endog[i]) == 0:
-                continue
-
             expval, lpr = cached_means[i]
-
-            dmat = self.mean_deriv(exog[i], lpr)
-
-            sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.cov_struct.covariance_matrix(expval, i)
-            if is_cor:
-                vmat *= np.outer(sdev, sdev)
-
-            try:
-                vco = spl.cho_factor(vmat)
-            except np.linalg.LinAlgError:
-                return None, None
-
-            vinv_d = spl.cho_solve(vco, dmat)
-            bmat += np.dot(dmat.T, vinv_d)
-
             resid = endog[i] - expval
-            vinv_resid = spl.cho_solve(vco, resid)
+            dmat = self.mean_deriv(exog[i], lpr)
+            sdev = np.sqrt(varfunc(expval))
+
+            rslt = self.cov_struct.covariance_matrix_solve(expval, i,
+                                                sdev, (dmat, resid))
+            if rslt is None:
+                return None, None
+            vinv_d, vinv_resid = tuple(rslt)
+
+            bmat += np.dot(dmat.T, vinv_d)
             score += np.dot(dmat.T, vinv_resid)
 
         update = np.linalg.solve(bmat, score)
@@ -498,7 +493,7 @@ class GEE(base.Model):
     def update_cached_means(self, mean_params):
         """
         cached_means should always contain the most recent calculation
-        of the cluster-wise mean vectors.  This function should be
+        of the group-wise mean vectors.  This function should be
         called every time the regression parameters are changed, to
         keep the cached means up to date.
         """
@@ -555,32 +550,18 @@ class GEE(base.Model):
         bmat, cmat = 0, 0
         for i in range(self.num_group):
 
-            if len(endog[i]) == 0:
-                continue
-
             expval, lpr = cached_means[i]
-
+            resid = endog[i] - expval
             dmat = self.mean_deriv(exog[i], lpr)
-
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.cov_struct.covariance_matrix(expval, i)
-            if is_cor:
-                vmat *= np.outer(sdev, sdev)
 
-            try:
-                vco = spl.cho_factor(vmat)
-            except np.linalg.LinAlgError:
-                warnings.warn("Singular matrix encountered in GEE "
-                              "covariance estimation",
-                              ConvergenceWarning)
+            rslt = self.cov_struct.covariance_matrix_solve(expval, i,
+                                                sdev, (dmat, resid))
+            if rslt is None:
                 return None, None, None, None
-
-            vinv_d = spl.cho_solve(vco, dmat)
+            vinv_d, vinv_resid = tuple(rslt)
 
             bmat += np.dot(dmat.T, vinv_d)
-
-            resid = endog[i] - expval
-            vinv_resid = spl.cho_solve(vco, resid)
             dvinv_resid = np.dot(dmat.T, vinv_resid)
             cmat += np.outer(dvinv_resid, dvinv_resid)
 
@@ -596,38 +577,35 @@ class GEE(base.Model):
         bcm = 0
         for i in range(self.num_group):
 
-            if len(endog[i]) == 0:
-                continue
-
             expval, lpr = cached_means[i]
-
+            resid = endog[i] - expval
             dmat = self.mean_deriv(exog[i], lpr)
-
             sdev = np.sqrt(varfunc(expval))
-            vmat, is_cor = self.cov_struct.covariance_matrix(expval, i)
-            if is_cor:
-                vmat *= np.outer(sdev, sdev)
-            vmat *= scale
 
-            try:
-                vco = spl.cho_factor(vmat)
-            except np.linalg.LinAlgError:
-                return None, None
+            rslt = self.cov_struct.covariance_matrix_solve(expval,
+                                                  i, sdev, (dmat,))
+            if rslt is None:
+                return None, None, None, None
+            vinv_d = rslt[0]
+            vinv_d /= scale
 
-            vinv_d = spl.cho_solve(vco, dmat)
             hmat = np.dot(vinv_d, naive_covariance)
             hmat = np.dot(hmat, dmat.T).T
 
-            resid = endog[i] - expval
             aresid = np.linalg.solve(np.eye(len(resid)) - hmat, resid)
-            srt = np.dot(dmat.T, spl.cho_solve(vco, aresid))
+            rslt = self.cov_struct.covariance_matrix_solve(expval, i,
+                                                     sdev, (aresid,))
+            if rslt is None:
+                return None, None, None, None
+            srt = rslt[0]
+            srt = np.dot(dmat.T, srt) / scale
             bcm += np.outer(srt, srt)
 
         robust_covariance_bc = np.dot(naive_covariance,
                                       np.dot(bcm, naive_covariance))
 
-        return robust_covariance, naive_covariance, \
-            robust_covariance_bc, cmat
+        return (robust_covariance, naive_covariance,
+            robust_covariance_bc, cmat)
 
     def predict(self, params, exog=None, offset=None, linear=False):
         """
@@ -692,6 +670,7 @@ class GEE(base.Model):
 
 
     def fit(self, maxiter=60, ctol=1e-6, start_params=None,
+            params_niter=1, first_dep_update=0,
             covariance_type='robust'):
         """
         Fits a GEE model.
@@ -706,12 +685,31 @@ class GEE(base.Model):
         start_params : array-like
             A vector of starting values for the regression
             coefficients.  If None, a default is chosen.
+        params_niter : integer
+            The number of Gauss-Seidel updates of the mean structure
+            parameters that take place prior to each update of the
+            dependence structure.
+        first_dep_update : integer
+            No dependence structure updates occur before this
+            iteration number.
         covariance_type : string
             One of "robust", "naive", or "bias_reduced".
 
         Returns
         -------
         An instance of the GEEResults class
+
+        Notes
+        -----
+        If convergence difficulties occur, increase the values of
+        `first_dep_update` and/or `params_niter`.  Setting
+        `first_dep_update` to a greater value (e.g. ~10-20) causes the
+        algorithm to move close to the GLM solution before attempting
+        to identify the dependence structure.
+
+        For the Gaussian family, there is no benefit to setting
+        `params_niter` to a value greater than 1, since the mean
+        structure parameters converge in one step.
         """
 
         self.fit_history = {'params': [],
@@ -725,19 +723,21 @@ class GEE(base.Model):
 
         self.update_cached_means(mean_params)
 
-        # Define here in case singularity encountered on first
-        # iteration.
-        fitlack = -1.
-
+        del_params = -1.
+        num_assoc_updates = 0
         for itr in range(maxiter):
+
             update, score = self._update_mean_params()
             if update is None:
-                warnings.warn("Singular matrix encountered in GEE  update",
+                warnings.warn("Singular matrix encountered in GEE update",
                               ConvergenceWarning)
                 break
             mean_params += update
             self.update_cached_means(mean_params)
-            fitlack = np.sqrt(np.sum(score**2))
+
+            # L2 norm of the change in mean structure parameters at
+            # this iteration.
+            del_params = np.sqrt(np.sum(score**2))
 
             self.fit_history['params'].append(mean_params.copy())
             self.fit_history['score'].append(score)
@@ -746,11 +746,15 @@ class GEE(base.Model):
 
             # Don't exit until the association parameters have been
             # updated at least once.
-            if fitlack < ctol and itr > 0:
+            if del_params < ctol and num_assoc_updates > 0:
                 break
-            self._update_assoc(mean_params)
 
-        if fitlack >= ctol:
+            if self._do_cov_update and (itr % params_niter) == 0\
+                   and (itr >= first_dep_update):
+                self._update_assoc(mean_params)
+                num_assoc_updates += 1
+
+        if del_params >= ctol:
             warnings.warn("Iteration limit reached prior to convergence",
                           IterationLimitWarning)
 
@@ -761,8 +765,8 @@ class GEE(base.Model):
 
         bcov, ncov, bc_cov, _ = self._covmat()
         if bcov is None:
-            warnings.warn("Unable to determine covariance structure "
-                          "for GEE estimates", ConvergenceWarning)
+            warnings.warn("Estimated covariance structure for GEE "
+                          "estimates is singular", ConvergenceWarning)
             return None
 
         if self.constraint is not None:
@@ -776,15 +780,15 @@ class GEE(base.Model):
 
         # The superclass constructor will multiply the covariance
         # matrix argument bcov by scale, which we don't want, so we
-        # divide bvov by the scale parameter here
+        # divide bcov by the scale parameter here
         results = GEEResults(self, mean_params, bcov / scale, scale)
 
         results.covariance_type = covariance_type
         results.fit_history = self.fit_history
         results.naive_covariance = ncov
         results.robust_covariance_bc = bc_cov
-        results.score_norm = fitlack
-        results.converged = (fitlack < ctol)
+        results.score_norm = del_params
+        results.converged = (del_params < ctol)
         results.cov_struct = self.cov_struct
 
         return results
