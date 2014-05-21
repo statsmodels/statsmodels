@@ -317,7 +317,8 @@ class GLM(base.LikelihoodModel):
             raise ValueError("Scale %s with type %s not understood" %
                              (self.scaletype, type(self.scaletype)))
 
-    def predict(self, params, exog=None, linear=False):
+    def predict(self, params, exog=None, exposure=None, offset=None,
+                linear=False):
         """
         Return predicted values for a design matrix
 
@@ -327,6 +328,11 @@ class GLM(base.LikelihoodModel):
             Parameters / coefficients of a GLM.
         exog : array-like, optional
             Design / exogenous data. Is exog is None, model exog is used.
+        exposure : array-like, optional
+            Exposure time values, only can be used with the log link
+            function.  See notes for details.
+        offset : array-like, optional
+            Offset values.  See notes for details.
         linear : bool
             If True, returns the linear predicted values.  If False,
             returns the value of the inverse of the model's link function at
@@ -335,9 +341,36 @@ class GLM(base.LikelihoodModel):
         Returns
         -------
         An array of fitted values
+
+        Notes
+        -----
+        Any `exposure` and `offset` provided here take precedence over
+        the `exposure` and `offset` used in the model fit.  If `exog`
+        is passed as an argument here, then any `exposure` and
+        `offset` values in the fit will be ignored.
+
+        Exposure values must be strictly positive.
         """
-        offset = getattr(self, 'offset', 0)
-        exposure = getattr(self, 'exposure', 0)
+
+        # Use fit offset if appropriate
+        if offset is None and exog is None and hasattr(self, 'offset'):
+            offset = getattr(self, 'offset')
+        elif offset is None:
+            offset = 0.
+
+        if exposure is not None and not isinstance(self.family.link,
+                                                   families.links.Log):
+            raise ValueError("exposure can only be used with the log link function")
+
+        # Use fit exposure if appropriate
+        if exposure is None and exog is None and hasattr(self, 'exposure'):
+            # Already logged
+            exposure = getattr(self, 'exposure')
+        elif exposure is None:
+            exposure = 0.
+        else:
+            exposure = np.log(exposure)
+
         if exog is None:
             exog = self.exog
 
