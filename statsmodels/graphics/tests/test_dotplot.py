@@ -145,8 +145,11 @@ def test_all():
     points = np.random.normal(size=20)
     lines = np.kron(range(5), np.ones(4)).astype(np.int32)
     styles = np.kron(np.ones(5), range(4)).astype(np.int32)
-    marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
-                        "ms": 7, "alpha": 0.6} for k in range(4)}
+    #marker_props = {k: {"color": "rgbc"[k], "marker": "osvp"[k],
+    #                    "ms": 7, "alpha": 0.6} for k in range(4)}
+    # python 2.6 compat, can be removed later
+    marker_props = dict((k, {"color": "rgbc"[k], "marker": "osvp"[k],
+                        "ms": 7, "alpha": 0.6}) for k in range(4))
     fig = dot_plot(points, lines=lines, styles=styles, ax=ax,
             marker_props=marker_props)
     ax.set_title("Dotplot with custom colors and symbols")
@@ -253,7 +256,7 @@ def test_all():
                   styles=styles, ax=ax, stacked=True,
                   horizontal=False, styles_order=styles_order)
     handles, labels = ax.get_legend_handles_labels()
-    lh = {x:y for x,y in zip(labels, handles)}
+    lh = dict(zip(labels, handles))
     handles = [lh[l] for l in styles_order]
     leg = plt.figlegend(handles, styles_order, "center right", numpoints=1,
                         handletextpad=0.0001)
