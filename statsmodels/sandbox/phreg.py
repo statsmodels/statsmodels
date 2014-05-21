@@ -141,7 +141,8 @@ class PH_SurvivalTime(object):
             nuft = len(uft)
 
             # Indices of cases that fail at each unique failure time
-            uft_map = {x:i for i,x in enumerate(uft)}
+            #uft_map = {x:i for i,x in enumerate(uft)} # requires >=2.7
+            uft_map = dict([(x, i) for i,x in enumerate(uft)]) # 2.6
             uft_ix = [[] for k in range(nuft)]
             for ix,ti in zip(ift,ft):
                 uft_ix[uft_map[ti]].append(ix)

@@ -4,7 +4,7 @@ from statsmodels.sandbox.phreg import PHreg
 from numpy.testing import assert_almost_equal
 
 # All the R results
-import survival_r_results
+import .survival_r_results
 
 """
 Tests of phreg against R coxph.
