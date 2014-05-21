@@ -508,6 +508,45 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
                    offset=offset2).fit()
         assert_almost_equal(mod1.params, mod2.params)
 
+    def test_predict(self):
+        np.random.seed(38230482384)
+        endog = np.random.randint(0, 10, 100)
+        exog = np.random.normal(size=(100,3))
+        exposure = np.random.uniform(1, 2, 100)
+        mod1 = GLM(endog, exog, family=sm.families.Poisson(),
+                   exposure=exposure).fit()
+        exog1 = np.random.normal(size=(10,3))
+        exposure1 = np.random.uniform(1, 2, 10)
+
+        # Doubling exposure time should double expected response
+        pred1 = mod1.predict(exog=exog1, exposure=exposure1)
+        pred2 = mod1.predict(exog=exog1, exposure=2*exposure1)
+        assert_almost_equal(pred2, 2*pred1)
+
+        # Check exposure defaults
+        pred3 = mod1.predict()
+        pred4 = mod1.predict(exposure=exposure)
+        pred5 = mod1.predict(exog=exog, exposure=exposure)
+        assert_almost_equal(pred3, pred4)
+        assert_almost_equal(pred4, pred5)
+
+        # Check offset defaults
+        offset = np.random.uniform(1, 2, 100)
+        mod2 = GLM(endog, exog, offset=offset, family=sm.families.Poisson()).fit()
+        pred1 = mod2.predict()
+        pred2 = mod2.predict(offset=offset)
+        pred3 = mod2.predict(exog=exog, offset=offset)
+        assert_almost_equal(pred1, pred2)
+        assert_almost_equal(pred2, pred3)
+
+        # Check that offset shifts the linear predictor
+        mod3 = GLM(endog, exog, family=sm.families.Poisson()).fit()
+        offset = np.random.uniform(1, 2, 10)
+        pred1 = mod3.predict(exog=exog1, offset=offset, linear=True)
+        pred2 = mod3.predict(exog=exog1, offset=2*offset, linear=True)
+        assert_almost_equal(pred2, pred1+offset)
+
+
 def test_prefect_pred():
     cur_dir = os.path.dirname(os.path.abspath(__file__))
     iris = np.genfromtxt(os.path.join(cur_dir, 'results', 'iris.csv'),
