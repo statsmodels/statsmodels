@@ -56,20 +56,21 @@ class PH_SurvivalTime(object):
             len(entry)
         nv = [n1, n2, n3, n4]
         if max(nv) != min(nv):
-            raise ValueError("PHreg: time, status, strata, and " +
+            raise ValueError("endog, status, strata, and " +
                              "entry must all have the same length")
         if min(time) < 0:
-            raise ValueError("PHreg: time must be non-negative")
+            raise ValueError("endog must be non-negative")
         if min(entry) < 0:
-            raise ValueError("PHreg: entry time must be non-negative")
+            raise ValueError("entry time must be non-negative")
         if np.any(entry > time):
-            raise ValueError("PHreg: entry times may not occur " +
+            raise ValueError("entry times may not occur " +
                              "after event or censoring times")
 
         # Get the row indices for the cases in each stratum
         if strata is not None:
             stu = np.unique(strata)
-            sth = {x: [] for x in stu}
+            #sth = {x: [] for x in stu} # needs >=2.7
+            sth = dict([(x, []) for x in stu])
             for i,k in enumerate(strata):
                 sth[k].append(i)
             stratum_rows = [sth[k] for k in stu]
@@ -178,14 +179,14 @@ class PHreg(model.LikelihoodModel):
         Arguments
         ---------
         endog : array-like
-            The observed times
+            The observed times (event or censoring)
         exog : 2D array-like
             The covariates or exogeneous variables
         status : array-like
             The censoring status values; status=1 indicates that an
             event occured (e.g. failure or death), status=0 indicates
             that the observation was right censored. If None, defaults
-            to no censoring.
+            to status=1 for all cases.
         entry : array-like
             The entry times, if left truncation occurs
         strata : array-like
