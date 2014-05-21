@@ -172,6 +172,7 @@ class CustomKernel(object):
             u = (xy[0]-x)/self.h
             return u >= self.domain[0] and u <= self.domain[1]
 
+
         if self.domain is None:
             return (xs, ys)
         else:

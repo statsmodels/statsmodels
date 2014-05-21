@@ -132,6 +132,75 @@ class TestKDEGaussFFT(CheckKDE):
         rfname2 = os.path.join(curdir,'results','results_kde_fft.csv')
         cls.res_density = np.genfromtxt(open(rfname2, 'rb'))
 
+class CheckKDEFFTWeights(object):
+
+    @classmethod
+    def setupClass(cls):
+        cls.x = x = KDEWResults['x']
+        weights = KDEWResults['weights']
+        cls.kde_fft = KDE(x)
+        cls.kde_nofft = KDE(x)
+        cls.kde_fft_weights = KDE(x)
+        cls.kde_nofft_weights = KDE(x)
+        cls.kde_nofft_weights.fit(kernel=cls.kernel_name, weights=weights,
+                                  fft=False, bw="scott")
+        cls.kde_fft_weights.fit(kernel=cls.kernel_name, weights=weights,
+                                fft=True, bw="scott")
+        cls.kde_nofft.fit(kernel=cls.kernel_name, weights=None,
+                          fft=False, bw="scott")
+        cls.kde_fft.fit(kernel=cls.kernel_name, weights=None,
+                        fft=True, bw="scott")
+
+        cls.fft_grid = cls.kde_fft.support
+
+    def test_noweights_density(self):
+        dens_nofft = [self.kde_nofft.evaluate(xi) for xi in self.fft_grid]
+        dens_nofft = np.squeeze(dens_nofft)
+        dens_fft = self.kde_fft.density
+        npt.assert_almost_equal(dens_nofft, dens_fft, 2)
+
+    def test_weights_density(self):
+        dens_nofft = [self.kde_nofft_weights.evaluate(xi) for xi in self.fft_grid]
+        dens_nofft = np.squeeze(dens_nofft)
+        dens_fft = self.kde_fft_weights.density
+        npt.assert_almost_equal(dens_nofft, dens_fft, 2)
+
+
+class TestKDEFFTWeightsGauss(CheckKDEFFTWeights):
+
+    kernel_name = "gau"
+    res_kernel_name = "x_gau_wd"
+
+
+class TestKDEFFTWeightsEpa(CheckKDEFFTWeights):
+
+    kernel_name = "epa"
+    res_kernel_name = "x_epan2_wd"
+
+
+class TestKDEFFTWeightsTri(CheckKDEFFTWeights):
+
+    kernel_name = "tri"
+    res_kernel_name = "x_" + kernel_name + "_wd"
+
+
+class TestKDEFFTWeightsBiw(CheckKDEFFTWeights):
+
+    kernel_name = "biw"
+    res_kernel_name = "x_bi_wd"
+
+
+class TestKDEFFTWeightsCos(CheckKDEFFTWeights):
+
+    kernel_name = "cos"
+    res_kernel_name = "x_cos_wd"
+
+
+class TestKDEFFTWeightsCos2(CheckKDEFFTWeights):
+
+    kernel_name = "cos2"
+    res_kernel_name = "x_cos_wd"
+
 class CheckKDEWeights(object):
 
     @classmethod
@@ -139,6 +208,7 @@ class CheckKDEWeights(object):
         cls.x = x = KDEWResults['x']
         weights = KDEWResults['weights']
         res1 = KDE(x)
+        res2 = KDE(x)
         # default kernel was scott when reference values computed
         res1.fit(kernel=cls.kernel_name, weights=weights, fft=False, bw="scott")
         cls.res1 = res1

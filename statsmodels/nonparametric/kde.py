@@ -24,7 +24,7 @@ from statsmodels.tools.decorators import (cache_readonly,
                                                     resettable_cache)
 from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform, counts)
-from .linbin import fast_linbin
+from .linbin import fast_linbin, fast_linbin_weights
 
 #### Kernels Switch for estimators ####
 
@@ -136,12 +136,12 @@ class KDEUnivariate(object):
         endog = self.endog
 
         if fft:
-            if kernel != "gau":
-                msg = "Only gaussian kernel is available for fft"
-                raise NotImplementedError(msg)
-            if weights is not None:
-                msg = "Weights are not implemented for fft"
-                raise NotImplementedError(msg)
+            # if kernel != "gau":
+            #     msg = "Only gaussian kernel is available for fft"
+            #     raise NotImplementedError(msg)
+            # if weights is not None:
+            #     msg = "Weights are not implemented for fft"
+            #     raise NotImplementedError(msg)
             density, grid, bw = kdensityfft(endog, kernel=kernel, bw=bw,
                     adjust=adjust, weights=weights, gridsize=gridsize,
                     clip=clip, cut=cut)
@@ -190,7 +190,7 @@ class KDEUnivariate(object):
     def cumhazard(self):
         """
         Returns the hazard function evaluated at the support.
-
+`
         Notes
         -----
         Will not work if fit has not been called.
@@ -388,7 +388,7 @@ def kdensity(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None
         return dens, bw
 
 def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=None,
-                adjust=1, clip=(-np.inf,np.inf), cut=3, retgrid=True):
+                adjust=1, clip=(-np.inf, np.inf), cut=3, retgrid=True):
     """
     Rosenblatt-Parzen univariate kernel density estimator
 
@@ -422,7 +422,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
         clip : tuple
         Observations in X that are outside of the range given by clip are
         dropped. The number of observations in X is then shortened.
-    clip : 2-tuple 
+    clip : 2-tuple
         Limits for the range of data. Data outside range is thrown away.
     cut : float
         Defines the length of the grid past the lowest and highest values of X
@@ -440,7 +440,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Notes
     -----
-    Genereic kernel is now supported as long as it has finite support or 
+    Genereic kernel is now supported as long as it has finite support or
     defines a cut off for effective support. This is based on the algorithm
     outline in Wand and Jones (1995)
 
@@ -451,12 +451,13 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     """
     # Not convinced this is neccessary
     X = np.asarray(X)
-    X = X[np.logical_and(X>clip[0], X<clip[1])]
+    clip = np.logical_and(X > clip[0], X < clip[1])
+    X = X[clip]
     
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
     # Need support, so if Gaussian set to [-4,4] - based on values in 'ksmooth'
-    if kenrel == 'gau':
+    if kernel == 'gau':
         kern.domain = [-4, 4]
 
     # This kernel selection should be moved outside of this function.
@@ -464,41 +465,57 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     try:
         bw = float(bw)
     except:
-        bw = bandwidths.select_bandwidth(X, bw, kern) # will cross-val fit this pattern?
+        # will cross-val fit this pattern?
+        bw = bandwidths.select_bandwidth(X, bw, kern)
     bw *= adjust
 
-    nobs = float(len(X)) # after trim
+    nobs = float(len(X))  # after trim
 
     # step 1 Make grid and discretize the data
-    if gridsize == None:
+    if gridsize is None:
         # not convinced this is correct
         gridsize = np.max((nobs, 512.))
     # round to next power of 2
-    gridsize = 2**np.ceil(np.log2(gridsize))
+    gridsize = 2 ** np.ceil(np.log2(gridsize))
 
-    a = np.min(X)-cut*bw
-    b = np.max(X)+cut*bw
+    a = np.min(X) - cut * bw
+    b = np.max(X) + cut * bw
     grid, delta = np.linspace(a, b, gridsize, retstep=True)
-    RANGE = b-a
+    RANGE = b - a
 
     # Calculate the scaled bin counts with linear-binning
-    binned = fast_linbin(X,a,b,gridsize)
+    
+    if weights is None:
+        binned = fast_linbin(X, a, b, gridsize)
+    # handle weighted observations
+    else:
+        # ensure weights is a numpy array
+        weights = np.asarray(weights)
+        weights = weights[clip]
+        if len(weights) != len(X):
+            msg = "The length of the weights must be the same as the given X."
+            raise ValueError(msg)
+        q = weights.mean()
+        weights = weights / q
+        #weights = np.ones(nobs)
+        binned = fast_linbin_weights(X, weights, a, b, gridsize)
 
     # step 2 compute weights
     M = gridsize
-    tau = kern.support[1] # assumes support is symmetric.
-    L = min(np.floor(tau*bw*(M-1)/RANGE), M-1)
-    l = np.arange(0,L+1)
-    kappa = 1.0/nobs * kern((b-a)*l/bw/(M-1))
+    tau = kern.domain[1]  # assumes support is symmetric.
+    L = min(np.floor(tau * bw * (M - 1) / RANGE), M - 1)
+    l = np.arange(0, L + 1)
+    kappa = kern((b - a) * l / (bw * (M - 1)))
+    kappa = 1.0 / (nobs * bw) * kappa
     
     # step 3 create padded arrays for fourier transform
-    P = 2**np.ceil(np.log2(gridsize+L))
-    c = list(binned*delta*nobs)+list(np.zeros(P-M))
-    k = list(kappa)+list(np.zeros(P-2*L-1))+list(kappa)[::-1][:-1]
+    P = 2 ** np.ceil(np.log2(gridsize + L))
+    c = list(binned) + list(np.zeros(P - M))
+    k = list(kappa) + list(np.zeros(P - 2 * L - 1)) + list(kappa)[::-1][:-1]
 
     # step 4 convolve using fourier transform
-    z2 = np.fft.rfft(np.array(c))*np.fft.rfft(np.array(k))
-    f = np.fft.irfft(z2)[:M]
+    z = np.fft.rfft(np.array(c)) * np.fft.rfft(np.array(k))
+    f = np.fft.irfft(z)[:M]
 
     if retgrid:
         return f, grid, bw
