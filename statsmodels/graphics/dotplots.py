@@ -84,12 +84,12 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     Examples
     --------
     This is a simple dotplot with one point per line:
-    >>> dotplot(points=point_values)
+    >>> dot_plot(points=point_values)
 
     This dotplot has labels on the lines (if elements in
     `label_values` are repeated, the correponding points appear on the
     same line):
-    >>> dotplot(points=point_values, lines=label_values)
+    >>> dot_plot(points=point_values, lines=label_values)
 
     References
     ----------
@@ -178,7 +178,7 @@ def dot_plot(points, intervals=None, lines=None, sections=None,
     # The positions of the lowest and highest guideline in axes
     # coordinates (for horizontal dotplots), or the leftmost and
     # rightmost guidelines (for vertical dotplots).
-    bottom,top = 0,1
+    bottom, top = 0, 1
 
     if horizontal:
         # x coordinate is data, y coordinate is axes
