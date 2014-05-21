@@ -190,7 +190,7 @@ class KDEUnivariate(object):
     def cumhazard(self):
         """
         Returns the hazard function evaluated at the support.
-`
+
         Notes
         -----
         Will not work if fit has not been called.
@@ -440,7 +440,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     Notes
     -----
-    Genereic kernel is now supported as long as it has finite support or
+    Generic kernel is now supported as long as it has finite support or
     defines a cut off for effective support. This is based on the algorithm
     outline in Wand and Jones (1995)
 
@@ -451,17 +451,14 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     """
     # Not convinced this is neccessary
     X = np.asarray(X)
-    clip = np.logical_and(X > clip[0], X < clip[1])
-    X = X[clip]
+    keep_mask = np.logical_and(X > clip[0], X < clip[1])
+    X = X[keep_mask]
     
     # Get kernel object corresponding to selection
     kern = kernel_switch[kernel]()
-    # Need support, so if Gaussian set to [-4,4] - based on values in 'ksmooth'
-    if kernel == 'gau':
-        kern.domain = [-4, 4]
 
     # This kernel selection should be moved outside of this function.
-    # bw should be reuiqred as as float to this function.
+    # bw should be required as as float to this function.
     try:
         bw = float(bw)
     except:
@@ -491,7 +488,7 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     else:
         # ensure weights is a numpy array
         weights = np.asarray(weights)
-        weights = weights[clip]
+        weights = weights[keep_mask]
         if len(weights) != len(X):
             msg = "The length of the weights must be the same as the given X."
             raise ValueError(msg)
@@ -502,16 +499,19 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
 
     # step 2 compute weights
     M = gridsize
-    tau = kern.domain[1]  # assumes support is symmetric.
-    L = min(np.floor(tau * bw * (M - 1) / RANGE), M - 1)
+    if kern.domain is None:
+        L = M - 1
+    else:
+        tau = kern.domain[1]  # assumes support is symmetric.
+        L = min(np.floor(tau * bw * (M - 1) / RANGE), M - 1)
     l = np.arange(0, L + 1)
     kappa = kern((b - a) * l / (bw * (M - 1)))
     kappa = 1.0 / (nobs * bw) * kappa
     
     # step 3 create padded arrays for fourier transform
     P = 2 ** np.ceil(np.log2(gridsize + L))
-    c = list(binned) + list(np.zeros(P - M))
-    k = list(kappa) + list(np.zeros(P - 2 * L - 1)) + list(kappa)[::-1][:-1]
+    c = np.concatenate([binned, np.zeros(P - M)])
+    k = np.concatenate([kappa, np.zeros(P - 2 * L - 1), kappa[::-1][:-1]])
 
     # step 4 convolve using fourier transform
     z = np.fft.rfft(np.array(c)) * np.fft.rfft(np.array(k))
