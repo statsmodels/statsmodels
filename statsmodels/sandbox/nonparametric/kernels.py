@@ -205,7 +205,8 @@ class CustomKernel(object):
                 w = 1. / (h * n) * np.sum(self((xs-x)/h), axis=0)
             return w
         else:
-            return np.nan
+            # Why return np.nan? Changing to zero.
+            return 0
 
     def density_var(self, density, nobs):
         """approximate pointwise variance for kernel density
