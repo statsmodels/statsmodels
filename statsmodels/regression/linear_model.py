@@ -313,9 +313,8 @@ class RegressionModel(base.LikelihoodModel):
             params_save = params.copy()
             for k in range(self.wexog.shape[1]):
 
-                par = params.copy()
-                par[k] = 0.
-                wendog_adj = self.wendog - np.dot(self.wexog, par)
+                params[k] = 0.
+                wendog_adj = self.wendog - np.dot(self.wexog, params)
                 xyprod = 2*np.dot(self.wexog[:,k], wendog_adj)
                 xxprod = 2*np.sum(self.wexog[:,k]**2)
                 den = xxprod + alpha[k] * (1 - L1_wt)
