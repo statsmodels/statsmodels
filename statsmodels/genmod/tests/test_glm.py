@@ -496,7 +496,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
 
     def test_offset_exposure(self):
         # exposure=x and offset=log(x) should have the same effect
-        np.random.seed(38230482384)
+        np.random.seed(382304)
         endog = np.random.randint(0, 10, 100)
         exog = np.random.normal(size=(100,3))
         exposure = np.random.uniform(1, 2, 100)
@@ -509,7 +509,7 @@ class TestGlmPoissonOffset(CheckModelResultsMixin):
         assert_almost_equal(mod1.params, mod2.params)
 
     def test_predict(self):
-        np.random.seed(38230482384)
+        np.random.seed(382304)
         endog = np.random.randint(0, 10, 100)
         exog = np.random.normal(size=(100,3))
         exposure = np.random.uniform(1, 2, 100)
