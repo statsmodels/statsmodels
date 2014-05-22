@@ -156,13 +156,13 @@ class CheckKDEFFTWeights(object):
         dens_nofft = [self.kde_nofft.evaluate(xi) for xi in self.fft_grid]
         dens_nofft = np.squeeze(dens_nofft)
         dens_fft = self.kde_fft.density
-        npt.assert_almost_equal(dens_nofft, dens_fft, 2)
+        npt.assert_almost_equal(dens_nofft, dens_fft, 3)
 
     def test_weights_density(self):
         dens_nofft = [self.kde_nofft_weights.evaluate(xi) for xi in self.fft_grid]
         dens_nofft = np.squeeze(dens_nofft)
         dens_fft = self.kde_fft_weights.density
-        npt.assert_almost_equal(dens_nofft, dens_fft, 2)
+        npt.assert_almost_equal(dens_nofft, dens_fft, 3)
 
 
 class TestKDEFFTWeightsGauss(CheckKDEFFTWeights):
