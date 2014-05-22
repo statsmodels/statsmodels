@@ -306,6 +306,7 @@ class RegressionModel(base.LikelihoodModel):
             params = start_params.copy()
 
         converged = False
+        xxprod = 2*(self.wexog**2).sum(0)
 
         # Shooting algorithm
         for itr in range(maxiter):
@@ -316,8 +317,7 @@ class RegressionModel(base.LikelihoodModel):
                 params[k] = 0.
                 wendog_adj = self.wendog - np.dot(self.wexog, params)
                 xyprod = 2*np.dot(self.wexog[:,k], wendog_adj)
-                xxprod = 2*np.sum(self.wexog[:,k]**2)
-                den = xxprod + alpha[k] * (1 - L1_wt)
+                den = xxprod[k] + alpha[k] * (1 - L1_wt)
                 a = alpha[k] * L1_wt
                 if a >= np.abs(xyprod):
                     params[k] = 0.
