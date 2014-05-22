@@ -29,32 +29,37 @@ data.columns = ['x1','x2','x3']
 impdata = mice.ImputedData(data)
 
 #print(impdata.data.fillna(impdata.data.mean()))
-m1 = mice.Imputer(impdata,"x2 ~ x1 + x3",sm.OLS,scale = "perturb_chi2")
-
-m2 = mice.Imputer(impdata,"x3 ~ x1 + x2",sm.OLS,scale = "perturb_chi2")
-
-m3 = mice.Imputer(impdata,"x1 ~ x2 + x3",sm.Logit)
-
-
-impdata = mice.ImputedData(data)
-
-impfull = mice.AnalysisChain([m1,m2,m3], "x1 ~ x2 + x3", sm.Logit)
+#m1 = mice.Imputer("x2 ~ x1 + x3",sm.OLS, impdata, scale = "perturb_chi2")
 #
-p2 = impfull.run_chain(20,10)
+#m2 = mice.Imputer("x3 ~ x1 + x2",sm.OLS, impdata, scale = "perturb_chi2")
+#
+#m3 = mice.Imputer("x1 ~ x2 + x3",sm.Logit, impdata)
+
+m1 = impdata.new_imputer("x2")
+m2 = impdata.new_imputer("x3")
+m3 = impdata.new_imputer("x1", model_class=sm.Logit)
+
 
 impdata = mice.ImputedData(data)
 
-impchain = mice.ImputerChain([m1,m2,m3],20,10)
+#impchain = mice.ImputerChain([m1,m2,m3])
 
 #test = sm.Logit(data['x1'],data['x2'],'drop')
 
-impcomb = mice.MICE(impchain, "x1 ~ x2 + x3", sm.Logit)
+impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
 
-p1 = impcomb.combine()
+p1 = impcomb.combine(20,10)
 
+#impdata = mice.ImputedData(data)
+#
+#impfull = mice.AnalysisChain([m1,m2,m3], "x1 ~ x2 + x3", sm.Logit)
+##
+#p2 = impfull.run_chain(20,10)
+#
+#p1.summary()
+#p2.summary()
 
-p1.summary()
-p2.summary()
+#make some graphs of imputed pmm versus abayes
 
 #print p1
 #print p2
