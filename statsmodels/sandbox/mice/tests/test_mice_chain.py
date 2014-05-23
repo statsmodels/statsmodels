@@ -46,7 +46,7 @@ impdata = mice.ImputedData(data)
 
 #test = sm.Logit(data['x1'],data['x2'],'drop')
 
-impcomb = mice.MICE("x1 ~ x2 + x3", sm.Logit,[m1,m2,m3])
+impcomb = mice.MICE("x2 ~ x1 + x3", sm.OLS,[m1,m2,m3])
 
 p1 = impcomb.combine(20,10)
 
