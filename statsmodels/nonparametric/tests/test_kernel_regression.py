@@ -300,3 +300,35 @@ class TestKernelReg(MyTest):
         npt.assert_equal(sig_var1 == 'Not Significant', False)
         sig_var2 = model.sig_test([1], nboot=nboot)  # H0: b2 = 0
         npt.assert_equal(sig_var2 == 'Not Significant', True)
+
+    def test_efficient_user_specificed_bw(self):
+
+        bw_user=[0.23, 434697.22]
+        model = nparam.KernelReg(endog=[self.y], exog=[self.c1, self.c2],
+                                 reg_type='lc', var_type='cc', bw=bw_user, 
+                                 defaults=nparam.EstimatorSettings(efficient=True))
+        # Bandwidth
+        npt.assert_equal(model.bw, bw_user)
+
+    def test_censored_efficient_user_specificed_bw(self):
+        nobs = 200
+        np.random.seed(1234)
+        C1 = np.random.normal(size=(nobs, ))
+        C2 = np.random.normal(2, 1, size=(nobs, ))
+        noise = np.random.normal(size=(nobs, ))
+        Y = 0.3 +1.2 * C1 - 0.9 * C2 + noise
+        Y[Y>0] = 0  # censor the data
+
+        bw_user=[0.23, 434697.22]
+        model = nparam.KernelCensoredReg(endog=[Y], exog=[C1, C2],
+                                         reg_type='ll', var_type='cc',
+                                         bw=bw_user, censor_val=0, 
+                                 defaults=nparam.EstimatorSettings(efficient=True))
+        # Bandwidth
+        npt.assert_equal(model.bw, bw_user)
+
+
+if __name__ == "__main__":
+    import nose
+    nose.runmodule(argv=[__file__,'-vvs','-x','--pdb'],
+                       exit=False)
