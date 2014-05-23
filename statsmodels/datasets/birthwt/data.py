@@ -1,30 +1,23 @@
-"""Breast Cancer Data"""
+"""Birthweight Data"""
 
-__docformat__ = 'restructuredtext'
+__docformat__ = 'csv'
 
-COPYRIGHT   = """public domain"""
-TITLE       = """Breast Cancer Data"""
+COPYRIGHT   = """????"""
+TITLE       = __doc__
 SOURCE      = """
-This is the breast cancer data used in Owen's empirical likelihood.  It is taken from
-Rice, J.A. Mathematical Statistics and Data Analysis.
-http://www.cengage.com/statistics/discipline_content/dataLibrary.html
+Hosmer, D.W. and Lemeshow, S. (1989) Applied Logistic Regression. New York: Wiley
 """
 
-DESCRSHORT  = """Breast Cancer and county population"""
+DESCRSHORT  = """Birth weight data."""
 
-DESCRLONG   = """The number of breast cancer observances in various counties"""
+DESCRLONG   = """Data on risk factors associated with low birth rate."""
 
-#suggested notes
-NOTE        = """::
+NOTE        = """ """
 
-    Number of observations: 301
-    Number of variables: 2
-    Variable name definitions:
-
-        cancer - The number of breast cancer observances
-        population - The population of the county
-
-"""
+from numpy import recfromtxt, column_stack, array, log
+import numpy.lib.recfunctions as nprf
+from statsmodels.datasets import utils as du
+from os.path import dirname, abspath
 
 import numpy as np
 from statsmodels.datasets import utils as du
@@ -54,6 +47,6 @@ def load_pandas():
 def _get_data():
     filepath = dirname(abspath(__file__))
     ##### EDIT THE FOLLOWING TO POINT TO DatasetName.csv #####
-    data = np.recfromtxt(open(filepath + '/cancer.csv', 'rb'),
+    data = np.recfromtxt(open(filepath + '/birthwt.csv', 'rb'),
             delimiter=",", names = True, dtype=float)
     return data
