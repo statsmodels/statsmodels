@@ -99,7 +99,8 @@ from scipy.optimize import fmin_ncg, fmin_cg, fmin_bfgs, fmin
 from scipy.stats.distributions import norm
 import pandas as pd
 import patsy
-from statsmodels.compatnp.collections import OrderedDict
+from statsmodels.compat.collections import OrderedDict
+from statsmodels.compat import range
 import warnings
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 from statsmodels.base._penalties import Penalty

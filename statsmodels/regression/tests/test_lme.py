@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 from statsmodels.regression.lme import MixedLM
 from numpy.testing import assert_almost_equal
-import lme_r_results
+from . import lme_r_results
 from scipy.misc import derivative
-from statsmodels.base import penalties
+from statsmodels.base import _penalties as penalties
 import os
 import csv
 
@@ -48,7 +48,7 @@ class R_Results(object):
         fname = os.path.join(rdir, "lme%02d.csv" % ds_ix)
         fid = open(fname)
         rdr = csv.reader(fid)
-        header = rdr.next()
+        header = next(rdr)
         data = [[float(x) for x in line] for line in rdr]
         data = np.asarray(data)
 
@@ -223,7 +223,7 @@ class TestMixedLM(object):
         # Variance component MLE ~ 0 may require manual tweaking of
         # algorithm parameters, so exclude from tests for now.
         if np.min(np.diag(rslt.cov_re_r)) < 0.01:
-            print "Skipping %d since solution is on boundary." % ds_ix
+            print("Skipping %d since solution is on boundary." % ds_ix)
             return
 
         # Fit the model
@@ -268,7 +268,7 @@ class TestMixedLM(object):
             for reml in False,True:
                 for irf in False,True:
                     ds_ix = int(fname[3:5])
-                    print ds_ix, reml
+
                     yield self.do1, reml, irf, ds_ix
 
 
