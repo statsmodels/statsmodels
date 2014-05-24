@@ -618,9 +618,14 @@ class PHregResults(base.LikelihoodModelResults):
         smry.add_dict(info, align='l', float_format=float_format)
 
         param = summary2.summary_params(self, alpha=alpha)
+        param = param.rename(columns={"Coef.": "log HR", "Std.Err.": "log HR SE"})
+        param.insert(2, "HR", np.exp(param["log HR"]))
+        param.loc[:, "[0.025"] = np.exp(param.loc[:, "[0.025"])
+        param.loc[:, "0.975]"] = np.exp(param.loc[:, "0.975]"])
         if xname != None:
             param.index = xname
         smry.add_df(param, float_format=float_format)
         smry.add_title(title=title, results=self)
+        smry.add_text("Confidence intervals are for the hazard ratios")
 
         return smry
