@@ -25,6 +25,7 @@ from statsmodels.tools.decorators import (cache_readonly,
 from . import bandwidths
 from .kdetools import (forrt, revrt, silverman_transform, counts)
 from .linbin import fast_linbin, fast_linbin_weights
+from statsmodels.compat.scipy import _next_regular
 
 #### Kernels Switch for estimators ####
 
@@ -500,22 +501,23 @@ def kdensityfft(X, kernel="gau", bw="normal_reference", weights=None, gridsize=N
     # step 2 compute weights
     M = gridsize
     if kern.domain is None:
-        L = M - 1
+        L = M/2
+        tau = np.inf
     else:
         tau = kern.domain[1]  # assumes support is symmetric.
-        L = min(np.floor(tau * bw * (M - 1) / RANGE), M - 1)
+        L =  M/2
     l = np.arange(0, L + 1)
-    kappa = kern((b - a) * l / (bw * (M - 1)))
+    gridx = (delta * l) / bw
+    kappa = kern(gridx)
     kappa = 1.0 / (nobs * bw) * kappa
+    # throw away points evaluated outside support
+    kappa[np.abs(gridx) > tau] = 0
     
-    # step 3 create padded arrays for fourier transform
-    P = 2 ** np.ceil(np.log2(gridsize + L))
-    c = np.concatenate([binned, np.zeros(P - M)])
-    k = np.concatenate([kappa, np.zeros(P - 2 * L - 1), kappa[::-1][:-1]])
+    c = np.fft.rfft(binned)
+    k = np.fft.rfft(np.r_[kappa, np.zeros(M % 2), kappa[::-1][1:-1]])
 
     # step 4 convolve using fourier transform
-    z = np.fft.rfft(np.array(c)) * np.fft.rfft(np.array(k))
-    f = np.fft.irfft(z)[:M]
+    f = np.fft.irfft(c * k, len(binned))
 
     if retgrid:
         return f, grid, bw
