@@ -715,7 +715,7 @@ class GlobalOddsRatio(CovStruct):
         for v in model.endog_li:
 
             # Number of subjects in this group
-            m = len(v) / self.ncut
+            m = int(len(v) / self.ncut)
 
             cpp1 = {}
             # Loop over distinct subject pairs
