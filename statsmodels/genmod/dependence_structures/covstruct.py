@@ -1,6 +1,10 @@
 from statsmodels.compat.python import iterkeys, itervalues, zip, range
+from statsmodels.stats.correlation_tools import cov_nearest
 import numpy as np
 from scipy import linalg as spl
+from statsmodels.tools.sm_exceptions import (ConvergenceWarning,
+                                             IterationLimitWarning)
+import warnings
 
 
 class CovStruct(object):
@@ -23,6 +27,10 @@ class CovStruct(object):
 
         # Parameters describing the dependency structure
         self.dep_params = None
+
+        self.cov_adjust = 0
+
+
 
     def initialize(self, model):
         """
@@ -49,7 +57,8 @@ class CovStruct(object):
         raise NotImplementedError
 
     def covariance_matrix(self, endog_expval, index):
-        """Returns the working covariance or correlation matrix for a
+        """
+        Returns the working covariance or correlation matrix for a
         given cluster of data.
 
         Parameters
@@ -105,6 +114,10 @@ class CovStruct(object):
         (e.g. binomial) do not use the `stdev` parameter when forming
         the covariance matrix.
 
+        If the covariance matrix is singular or not SPD, it is
+        projected to the nearest such matrix.  These projection events
+        are recorded in the fit_history member of the GEE model.
+
         Systems of linear equations with the covariance matrix as the
         left hand side (LHS) are solved for different right hand sides
         (RHS); the LHS is only factorized once to save time.
@@ -119,9 +132,25 @@ class CovStruct(object):
         if is_cor:
             vmat *= np.outer(stdev, stdev)
 
-        try:
-            vco = spl.cho_factor(vmat)
-        except np.linalg.LinAlgError:
+        # Factor, the covariance matrix.  If the factorization fails,
+        # attempt to condition it into a factorizable matrix.
+        threshold = 1e-2
+        success = False
+        cov_adjust = 0
+        for itr in range(10):
+            try:
+                vco = spl.cho_factor(vmat)
+                success = True
+                break
+            except np.linalg.LinAlgError:
+                vmat = cov_nearest(vmat, method="nearest", threshold=threshold)
+                threshold *= 2
+                cov_adjust = 1
+
+        self.cov_adjust += cov_adjust
+        if success == False:
+            warnings.warn("Unable to condition covariance matrix to an SPD matrix",
+                          ConvergenceWarning)
             return None
 
         soln = [spl.cho_solve(vco, x) for x in rhs]
@@ -668,10 +697,6 @@ class GlobalOddsRatio(CovStruct):
 
     def initialize(self, model):
 
-        # Delay processing until model.setup_ordinal has been called.
-        if model.ordinal == False and model.nominal == False:
-            return
-
         super(GlobalOddsRatio, self).initialize(model)
 
         self.nlevel = len(model.endog_values)
@@ -685,19 +710,30 @@ class GlobalOddsRatio(CovStruct):
             ibd.append(ibd1)
         self.ibd = ibd
 
+        # Need to restrict to between-subject pairs
         cpp = []
         for v in model.endog_li:
+
+            # Number of subjects in this group
             m = len(v) / self.ncut
-            jj = np.kron(np.ones(m), np.arange(self.ncut))
-            j1 = np.outer(jj, np.ones(len(jj)))
-            j2 = np.outer(np.ones(len(jj)), jj)
+
             cpp1 = {}
-            for k1 in range(self.ncut):
-                for k2 in range(k1+1):
-                    v1, v2 = np.nonzero((j1 == k1) & (j2 == k2))
-                    cpp1[(k2, k1)] = \
-                        np.hstack((v2[:, None], v1[:, None]))
+            # Loop over distinct subject pairs
+            for i1 in range(m):
+                for i2 in range(i1):
+                    # Loop over cut point pairs
+                    for k1 in range(self.ncut):
+                        for k2 in range(k1+1):
+                            if (k2, k1) not in cpp1:
+                                cpp1[(k2, k1)] = []
+                            j1 = i1*self.ncut + k1
+                            j2 = i2*self.ncut + k2
+                            cpp1[(k2, k1)].append([j2, j1])
+
+            for k in cpp1.keys():
+                cpp1[k] = np.asarray(cpp1[k])
             cpp.append(cpp1)
+
         self.cpp = cpp
 
         # Initialize the dependence parameters
@@ -739,12 +775,13 @@ class GlobalOddsRatio(CovStruct):
         return vmat, False
 
     def observed_crude_oddsratio(self):
-        """The crude odds ratio is obtained by pooling all data
-        corresponding to a given pair of cut points (c,c'), then
-        forming the inverse variance weighted average of these odds
-        ratios to obtain a single OR.  Since the covariate effects are
-        ignored, this OR will generally be greater than the stratified
-        OR.
+        """
+        To obtain the crude (global) odds ratio, first pool all binary
+        indicators corresponding to a given pair of cut points (c,c'),
+        then calculate the odds ratio for this 2x2 table.  The crude
+        odds ratio is the inverse variance weighted average of these
+        odds ratios.  Since the covariate effects are ignored, this OR
+        will generally be greater than the stratified OR.
         """
 
         cpp = self.cpp
@@ -779,7 +816,7 @@ class GlobalOddsRatio(CovStruct):
         """
         Returns a matrix V such that V[i,j] is the joint probability
         that endog[i] = 1 and endog[j] = 1, based on the marginal
-        probabilities of endog and the odds ratio `current_or`.
+        probabilities of endog and the global odds ratio `current_or`.
         """
 
         current_or = self.dep_params
@@ -810,8 +847,10 @@ class GlobalOddsRatio(CovStruct):
         return vmat
 
     def update(self, params):
-        """Update the global odds ratio based on the current value of
-        params."""
+        """
+        Update the global odds ratio based on the current value of
+        params.
+        """
 
         endog = self.model.endog_li
         cpp = self.cpp
@@ -846,6 +885,11 @@ class GlobalOddsRatio(CovStruct):
         cor_expval = self.pooled_odds_ratio(list(itervalues(tables)))
 
         self.dep_params *= self.crude_or / cor_expval
+        if not np.isfinite(self.dep_params):
+            self.dep_params = 1.
+            warnings.warn("dep_params became inf, resetting to 1",
+                          ConvergenceWarning)
+
 
     update.__doc__ = CovStruct.update.__doc__
     covariance_matrix.__doc__ = CovStruct.covariance_matrix.__doc__
