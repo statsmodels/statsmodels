@@ -14,7 +14,7 @@ import numpy as np
 import os
 from numpy.testing import assert_almost_equal
 from statsmodels.genmod.generalized_estimating_equations import (GEE,
-    GEEMargins, Multinomial)
+     OrdinalGEE, NominalGEE, GEEMargins, Multinomial)
 from statsmodels.genmod.families import Gaussian, Binomial, Poisson
 from statsmodels.genmod.dependence_structures import (Exchangeable,
     Independence, GlobalOddsRatio, Autoregressive, Nested)
@@ -449,14 +449,14 @@ class TestGEE(object):
 
         v = GlobalOddsRatio("ordinal")
 
-        md = GEE(endog, exog, groups, None, family, v)
-        md.setup_ordinal()
+        md = OrdinalGEE(endog, exog, groups, None, family, v)
         mdf = md.fit()
 
-        cf = np.r_[1.09238131, 0.02148193, -0.39879146, -0.01855666,
-                   0.02983409, 1.18123172,  0.01845318, -1.10233886]
-        se = np.r_[0.10878752,  0.10326078,  0.11171241, 0.05488705,
-                   0.05995019, 0.0916574,  0.05951445,  0.08539281]
+        cf = np.r_[1.09250002, 0.0217443 , -0.39851092, -0.01812116,
+                   0.03023969, 1.18258516, 0.01803453, -1.10203381]
+
+        se = np.r_[0.10883461, 0.10330197, 0.11177088, 0.05486569,
+                   0.05997153, 0.09168148, 0.05953324, 0.0853862]
 
         assert_almost_equal(mdf.params, cf, decimal=5)
         assert_almost_equal(mdf.bse, se, decimal=5)
@@ -471,8 +471,7 @@ class TestGEE(object):
 
         # Test with independence correlation
         v = Independence()
-        md = GEE(endog, exog, groups, None, family, v)
-        md.setup_nominal()
+        md = NominalGEE(endog, exog, groups, None, family, v)
         mdf1 = md.fit()
 
         # From statsmodels.GEE (not an independent test)
@@ -483,13 +482,12 @@ class TestGEE(object):
 
         # Test with global odds ratio dependence
         v = GlobalOddsRatio("nominal")
-        md = GEE(endog, exog, groups, None, family, v)
-        md.setup_nominal()
+        md = NominalGEE(endog, exog, groups, None, family, v)
         mdf2 = md.fit(start_params=mdf1.params)
 
         # From statsmodels.GEE (not an independent test)
-        cf2 = np.r_[0.45397549,  0.42278345, -0.91997131, -0.50115943]
-        se2 = np.r_[0.09646057,  0.07405713,  0.1324629 ,  0.09025019]
+        cf2 = np.r_[0.45448248,  0.41945568, -0.92008924, -0.50485758]
+        se2 = np.r_[0.09632274,  0.07433944,  0.13264646,  0.0911768]
         assert_almost_equal(mdf2.params, cf2, decimal=5)
         assert_almost_equal(mdf2.standard_errors(), se2, decimal=5)
 
