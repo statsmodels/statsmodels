@@ -1,458 +1,458 @@
 import numpy as np
 
-coef_ml_drf_0 = np.array([-0.9816133])
+coef_ml_drf_0 = np.array([-0.9887517])
 
-vcov_ml_drf_0 = np.array([0.001210341]).reshape(1,1, order='F')
+vcov_ml_drf_0 = np.array([0.001317148]).reshape(1,1, order='F')
 
-cov_re_ml_drf_0 = np.array([0.1901884]).reshape(1,1, order='F')
+cov_re_ml_drf_0 = np.array([0.2522485]).reshape(1,1, order='F')
 
-sig2_ml_drf_0 = np.array([0.2237437])
+sig2_ml_drf_0 = np.array([0.2718486])
 
-loglike_ml_drf_0 = np.array([-222.8711])
+loglike_ml_drf_0 = np.array([-240.1254])
 
-ranef_mean_ml_drf_0 = np.array([0.705614])
+ranef_mean_ml_drf_0 = np.array([0.04977167])
 
-ranef_condvar_ml_drf_0 = np.array([0.04322354])
+ranef_condvar_ml_drf_0 = np.array([0.130841])
 
-coef_reml_drf_0 = np.array([-0.9815259])
+coef_reml_drf_0 = np.array([-0.9887533])
 
-vcov_reml_drf_0 = np.array([0.001216221]).reshape(1,1, order='F')
+vcov_reml_drf_0 = np.array([0.001323559]).reshape(1,1, order='F')
 
-cov_re_reml_drf_0 = np.array([0.1901588]).reshape(1,1, order='F')
+cov_re_reml_drf_0 = np.array([0.2524129]).reshape(1,1, order='F')
 
-sig2_reml_drf_0 = np.array([0.2249622])
+sig2_reml_drf_0 = np.array([0.2733467])
 
-loglike_reml_drf_0 = np.array([-225.3094])
+loglike_reml_drf_0 = np.array([-242.5214])
 
-ranef_mean_reml_drf_0 = np.array([0.7046898])
+ranef_mean_reml_drf_0 = np.array([0.04964696])
 
-ranef_condvar_reml_drf_0 = np.array([0.04340366])
+ranef_condvar_reml_drf_0 = np.array([0.1312315])
 
-coef_ml_drf_1 = np.array([-0.9737686])
+coef_ml_drf_1 = np.array([-0.9115929])
 
-vcov_ml_drf_1 = np.array([0.0191079]).reshape(1,1, order='F')
+vcov_ml_drf_1 = np.array([0.01340632]).reshape(1,1, order='F')
 
-cov_re_ml_drf_1 = np.array([0.4752005]).reshape(1,1, order='F')
+cov_re_ml_drf_1 = np.array([0]).reshape(1,1, order='F')
 
-sig2_ml_drf_1 = np.array([3.757546])
+sig2_ml_drf_1 = np.array([4.050921])
 
-loglike_ml_drf_1 = np.array([-518.7708])
+loglike_ml_drf_1 = np.array([-538.0763])
 
-ranef_mean_ml_drf_1 = np.array([0.09405191])
+ranef_mean_ml_drf_1 = np.array([0])
 
-ranef_condvar_ml_drf_1 = np.array([0.3444987])
+ranef_condvar_ml_drf_1 = np.array([0])
 
-coef_reml_drf_1 = np.array([-0.9738461])
+coef_reml_drf_1 = np.array([-0.9115929])
 
-vcov_reml_drf_1 = np.array([0.01918826]).reshape(1,1, order='F')
+vcov_reml_drf_1 = np.array([0.01345931]).reshape(1,1, order='F')
 
-cov_re_reml_drf_1 = np.array([0.4791205]).reshape(1,1, order='F')
+cov_re_reml_drf_1 = np.array([2.839777e-14]).reshape(1,1, order='F')
 
-sig2_reml_drf_1 = np.array([3.771482])
+sig2_reml_drf_1 = np.array([4.066932])
 
-loglike_reml_drf_1 = np.array([-519.8296])
+loglike_reml_drf_1 = np.array([-539.3124])
 
-ranef_mean_reml_drf_1 = np.array([0.09436517])
+ranef_mean_reml_drf_1 = np.array([2.424384e-14])
 
-ranef_condvar_reml_drf_1 = np.array([0.3469089])
+ranef_condvar_reml_drf_1 = np.array([2.839777e-14])
 
-coef_ml_drf_2 = np.array([-1.007761,0.9251582])
+coef_ml_drf_2 = np.array([-1.012044,0.9789052])
 
-vcov_ml_drf_2 = np.array([0.001473311,-5.942106e-05,-5.942106e-05,0.001223301]).reshape(2,2, order='F')
+vcov_ml_drf_2 = np.array([0.00117849,1.458744e-05,1.458744e-05,0.001054926]).reshape(2,2, order='F')
 
-cov_re_ml_drf_2 = np.array([0.1597084]).reshape(1,1, order='F')
+cov_re_ml_drf_2 = np.array([0.1596058]).reshape(1,1, order='F')
 
-sig2_ml_drf_2 = np.array([0.2546827])
+sig2_ml_drf_2 = np.array([0.2129146])
 
-loglike_ml_drf_2 = np.array([-230.6125])
+loglike_ml_drf_2 = np.array([-200.319])
 
-ranef_mean_ml_drf_2 = np.array([0.4673361])
+ranef_mean_ml_drf_2 = np.array([0.3197174])
 
-ranef_condvar_ml_drf_2 = np.array([0.05543])
+ranef_condvar_ml_drf_2 = np.array([0.09122291])
 
-coef_reml_drf_2 = np.array([-1.007837,0.9249918])
+coef_reml_drf_2 = np.array([-1.012137,0.9790792])
 
-vcov_reml_drf_2 = np.array([0.001486217,-5.975539e-05,-5.975539e-05,0.001234641]).reshape(2,2, order='F')
+vcov_reml_drf_2 = np.array([0.001190455,1.482666e-05,1.482666e-05,0.001066002]).reshape(2,2, order='F')
 
-cov_re_reml_drf_2 = np.array([0.1597772]).reshape(1,1, order='F')
+cov_re_reml_drf_2 = np.array([0.1595015]).reshape(1,1, order='F')
 
-sig2_reml_drf_2 = np.array([0.257298])
+sig2_reml_drf_2 = np.array([0.2154276])
 
-loglike_reml_drf_2 = np.array([-235.3843])
+loglike_reml_drf_2 = np.array([-205.275])
 
-ranef_mean_reml_drf_2 = np.array([0.4657592])
+ranef_mean_reml_drf_2 = np.array([0.3172978])
 
-ranef_condvar_reml_drf_2 = np.array([0.05580872])
+ranef_condvar_reml_drf_2 = np.array([0.09164674])
 
-coef_ml_drf_3 = np.array([-0.8610371,0.8800952])
+coef_ml_drf_3 = np.array([-1.028053,0.8602685])
 
-vcov_ml_drf_3 = np.array([0.01765055,-0.0005752509,-0.0005752509,0.01897227]).reshape(2,2, order='F')
+vcov_ml_drf_3 = np.array([0.01398831,0.001592619,0.001592619,0.01602274]).reshape(2,2, order='F')
 
-cov_re_ml_drf_3 = np.array([0]).reshape(1,1, order='F')
+cov_re_ml_drf_3 = np.array([0.8130996]).reshape(1,1, order='F')
 
-sig2_ml_drf_3 = np.array([4.232286])
+sig2_ml_drf_3 = np.array([3.100447])
 
-loglike_ml_drf_3 = np.array([-502.9728])
+loglike_ml_drf_3 = np.array([-477.1707])
 
-ranef_mean_ml_drf_3 = np.array([0])
+ranef_mean_ml_drf_3 = np.array([-0.2641747])
 
-ranef_condvar_ml_drf_3 = np.array([0])
+ranef_condvar_ml_drf_3 = np.array([0.6441656])
 
-coef_reml_drf_3 = np.array([-0.8610371,0.8800952])
+coef_reml_drf_3 = np.array([-1.027583,0.8605714])
 
-vcov_reml_drf_3 = np.array([0.01780206,-0.0005801887,-0.0005801887,0.01913512]).reshape(2,2, order='F')
+vcov_reml_drf_3 = np.array([0.01411922,0.001607343,0.001607343,0.01617574]).reshape(2,2, order='F')
 
-cov_re_reml_drf_3 = np.array([0]).reshape(1,1, order='F')
+cov_re_reml_drf_3 = np.array([0.8117898]).reshape(1,1, order='F')
 
-sig2_reml_drf_3 = np.array([4.268615])
+sig2_reml_drf_3 = np.array([3.13369])
 
-loglike_reml_drf_3 = np.array([-505.132])
+loglike_reml_drf_3 = np.array([-479.5354])
 
-ranef_mean_reml_drf_3 = np.array([0])
+ranef_mean_reml_drf_3 = np.array([-0.2614875])
 
-ranef_condvar_reml_drf_3 = np.array([0])
+ranef_condvar_reml_drf_3 = np.array([0.6447625])
 
-coef_ml_drf_4 = np.array([-1.007392,0.02811319,1.05658])
+coef_ml_drf_4 = np.array([-1.005151,-0.003657404,1.054786])
 
-vcov_ml_drf_4 = np.array([0.001046575,-9.456693e-05,9.445386e-05,-9.456693e-05,0.001533163,0.0001113348,9.445386e-05,0.0001113348,0.001467328]).reshape(3,3, order='F')
+vcov_ml_drf_4 = np.array([0.001190639,-5.327162e-05,5.992985e-05,-5.327162e-05,0.001460303,-2.662532e-05,5.992985e-05,-2.662532e-05,0.00148609]).reshape(3,3, order='F')
 
-cov_re_ml_drf_4 = np.array([0.2297492]).reshape(1,1, order='F')
+cov_re_ml_drf_4 = np.array([0.1703249]).reshape(1,1, order='F')
 
-sig2_ml_drf_4 = np.array([0.2430336])
+sig2_ml_drf_4 = np.array([0.251763])
 
-loglike_ml_drf_4 = np.array([-233.313])
+loglike_ml_drf_4 = np.array([-231.6389])
 
-ranef_mean_ml_drf_4 = np.array([0.06222784])
+ranef_mean_ml_drf_4 = np.array([-0.2063164])
 
-ranef_condvar_ml_drf_4 = np.array([0.05989263])
+ranef_condvar_ml_drf_4 = np.array([0.0459578])
 
-coef_reml_drf_4 = np.array([-1.007536,0.02812574,1.056566])
+coef_reml_drf_4 = np.array([-1.005067,-0.003496032,1.054666])
 
-vcov_reml_drf_4 = np.array([0.001061936,-9.609653e-05,9.563856e-05,-9.609653e-05,0.001556182,0.000113567,9.563856e-05,0.000113567,0.001489463]).reshape(3,3, order='F')
+vcov_reml_drf_4 = np.array([0.001206925,-5.4182e-05,6.073475e-05,-5.4182e-05,0.001479871,-2.723494e-05,6.073475e-05,-2.723494e-05,0.001506198]).reshape(3,3, order='F')
 
-cov_re_reml_drf_4 = np.array([0.22977]).reshape(1,1, order='F')
+cov_re_reml_drf_4 = np.array([0.1705659]).reshape(1,1, order='F')
 
-sig2_reml_drf_4 = np.array([0.2471246])
+sig2_reml_drf_4 = np.array([0.2556394])
 
-loglike_reml_drf_4 = np.array([-240.4875])
+loglike_reml_drf_4 = np.array([-238.761])
 
-ranef_mean_reml_drf_4 = np.array([0.06194142])
+ranef_mean_reml_drf_4 = np.array([-0.2055303])
 
-ranef_condvar_reml_drf_4 = np.array([0.06063618])
+ranef_condvar_reml_drf_4 = np.array([0.04649027])
 
-coef_ml_drf_5 = np.array([-0.9042863,0.3148459,1.168292])
+coef_ml_drf_5 = np.array([-0.8949725,0.08141558,1.052529])
 
-vcov_ml_drf_5 = np.array([0.01559375,-0.001565105,-0.0008388052,-0.001565105,0.01430903,0.001073169,-0.0008388052,0.001073169,0.01377826]).reshape(3,3, order='F')
+vcov_ml_drf_5 = np.array([0.01677563,0.0008077524,-0.001255011,0.0008077524,0.01719346,0.0009266736,-0.001255011,0.0009266736,0.01608435]).reshape(3,3, order='F')
 
-cov_re_ml_drf_5 = np.array([0]).reshape(1,1, order='F')
+cov_re_ml_drf_5 = np.array([0.3444677]).reshape(1,1, order='F')
 
-sig2_ml_drf_5 = np.array([3.544088])
+sig2_ml_drf_5 = np.array([4.103944])
 
-loglike_ml_drf_5 = np.array([-492.379])
+loglike_ml_drf_5 = np.array([-579.4568])
 
-ranef_mean_ml_drf_5 = np.array([0])
+ranef_mean_ml_drf_5 = np.array([0.08254713])
 
-ranef_condvar_ml_drf_5 = np.array([0])
+ranef_condvar_ml_drf_5 = np.array([0.3177935])
 
-coef_reml_drf_5 = np.array([-0.9042863,0.3148459,1.168292])
+coef_reml_drf_5 = np.array([-0.8946164,0.08134261,1.052486])
 
-vcov_reml_drf_5 = np.array([0.01579114,-0.001584917,-0.000849423,-0.001584917,0.01449016,0.001086754,-0.000849423,0.001086754,0.01395267]).reshape(3,3, order='F')
+vcov_reml_drf_5 = np.array([0.0169698,0.0008162714,-0.001268635,0.0008162714,0.01739219,0.0009345538,-0.001268635,0.0009345538,0.01627074]).reshape(3,3, order='F')
 
-cov_re_reml_drf_5 = np.array([0]).reshape(1,1, order='F')
+cov_re_reml_drf_5 = np.array([0.3420993]).reshape(1,1, order='F')
 
-sig2_reml_drf_5 = np.array([3.58895])
+sig2_reml_drf_5 = np.array([4.155737])
 
-loglike_reml_drf_5 = np.array([-495.9686])
+loglike_reml_drf_5 = np.array([-582.8377])
 
-ranef_mean_reml_drf_5 = np.array([0])
+ranef_mean_reml_drf_5 = np.array([0.08111449])
 
-ranef_condvar_reml_drf_5 = np.array([0])
+ranef_condvar_reml_drf_5 = np.array([0.3160797])
 
-coef_ml_drf_6 = np.array([-1.050962])
+coef_ml_drf_6 = np.array([-0.8885425])
 
-vcov_ml_drf_6 = np.array([0.002333278]).reshape(1,1, order='F')
+vcov_ml_drf_6 = np.array([0.002443738]).reshape(1,1, order='F')
 
-cov_re_ml_drf_6 = np.array([0.2944024,-0.1807084,-0.1807084,2.564855]).reshape(2,2, order='F')
+cov_re_ml_drf_6 = np.array([0.2595201,0.04591071,0.04591071,2.204612]).reshape(2,2, order='F')
 
-sig2_ml_drf_6 = np.array([0.2458377])
+sig2_ml_drf_6 = np.array([0.243133])
 
-loglike_ml_drf_6 = np.array([-384.207])
+loglike_ml_drf_6 = np.array([-382.551])
 
-ranef_mean_ml_drf_6 = np.array([0.2674507,-2.977126])
+ranef_mean_ml_drf_6 = np.array([-0.0597406,0.6037288])
 
-ranef_condvar_ml_drf_6 = np.array([0.08562837,-0.00250717,-0.00250717,0.1171289]).reshape(2,2, order='F')
+ranef_condvar_ml_drf_6 = np.array([0.2420741,0.2222169,0.2222169,0.4228908]).reshape(2,2, order='F')
 
-coef_reml_drf_6 = np.array([-1.051086])
+coef_reml_drf_6 = np.array([-0.8883881])
 
-vcov_reml_drf_6 = np.array([0.002353507]).reshape(1,1, order='F')
+vcov_reml_drf_6 = np.array([0.002461581]).reshape(1,1, order='F')
 
-cov_re_reml_drf_6 = np.array([0.29431,-0.1808526,-0.1808526,2.564468]).reshape(2,2, order='F')
+cov_re_reml_drf_6 = np.array([0.2595767,0.04590012,0.04590012,2.204822]).reshape(2,2, order='F')
 
-sig2_reml_drf_6 = np.array([0.2483587])
+sig2_reml_drf_6 = np.array([0.2453537])
 
-loglike_reml_drf_6 = np.array([-386.3161])
+loglike_reml_drf_6 = np.array([-384.6373])
 
-ranef_mean_reml_drf_6 = np.array([0.2672695,-2.975663])
+ranef_mean_reml_drf_6 = np.array([-0.05969892,0.6031793])
 
-ranef_condvar_reml_drf_6 = np.array([0.0862281,-0.002552801,-0.002552801,0.1182722]).reshape(2,2, order='F')
+ranef_condvar_reml_drf_6 = np.array([0.2421365,0.2221108,0.2221108,0.4244443]).reshape(2,2, order='F')
 
-coef_ml_irf_6 = np.array([-1.053815])
+coef_ml_irf_6 = np.array([-0.8874992])
 
-vcov_ml_irf_6 = np.array([0.002336575]).reshape(1,1, order='F')
+vcov_ml_irf_6 = np.array([0.002445505]).reshape(1,1, order='F')
 
-cov_re_ml_irf_6 = np.array([0.2920048,0,0,2.666741]).reshape(2,2, order='F')
+cov_re_ml_irf_6 = np.array([0.2587624,0,0,2.188653]).reshape(2,2, order='F')
 
-sig2_ml_irf_6 = np.array([0.2456764])
+sig2_ml_irf_6 = np.array([0.2432694])
 
-loglike_ml_irf_6 = np.array([-385.3649])
+loglike_ml_irf_6 = np.array([-382.6581])
 
-coef_reml_irf_6 = np.array([-1.05396])
+coef_reml_irf_6 = np.array([-0.8873394])
 
-vcov_reml_irf_6 = np.array([0.002356881]).reshape(1,1, order='F')
+vcov_reml_irf_6 = np.array([0.002463375]).reshape(1,1, order='F')
 
-cov_re_reml_irf_6 = np.array([0.291923,0,0,2.666342]).reshape(2,2, order='F')
+cov_re_reml_irf_6 = np.array([0.2588157,0,0,2.188876]).reshape(2,2, order='F')
 
-sig2_reml_irf_6 = np.array([0.248198])
+sig2_reml_irf_6 = np.array([0.2454935])
 
-loglike_reml_irf_6 = np.array([-387.4733])
+loglike_reml_irf_6 = np.array([-384.7441])
 
-coef_ml_drf_7 = np.array([-1.081455])
+coef_ml_drf_7 = np.array([-0.9645281])
 
-vcov_ml_drf_7 = np.array([0.02367118]).reshape(1,1, order='F')
+vcov_ml_drf_7 = np.array([0.01994]).reshape(1,1, order='F')
 
-cov_re_ml_drf_7 = np.array([0.3066485,0.2599878,0.2599878,1.387161]).reshape(2,2, order='F')
+cov_re_ml_drf_7 = np.array([0.2051329,0.0734377,0.0734377,3.285381]).reshape(2,2, order='F')
 
-sig2_ml_drf_7 = np.array([4.493964])
+sig2_ml_drf_7 = np.array([3.423247])
 
-loglike_ml_drf_7 = np.array([-546.44])
+loglike_ml_drf_7 = np.array([-587.7101])
 
-ranef_mean_ml_drf_7 = np.array([0.009999129,-0.2415468])
+ranef_mean_ml_drf_7 = np.array([0.07007965,-0.2920284])
 
-ranef_condvar_ml_drf_7 = np.array([0.3062644,0.2692673,0.2692673,1.162997]).reshape(2,2, order='F')
+ranef_condvar_ml_drf_7 = np.array([0.1823183,0.02247519,0.02247519,1.125011]).reshape(2,2, order='F')
 
-coef_reml_drf_7 = np.array([-1.081384])
+coef_reml_drf_7 = np.array([-0.9647862])
 
-vcov_reml_drf_7 = np.array([0.02377219]).reshape(1,1, order='F')
+vcov_reml_drf_7 = np.array([0.02002546]).reshape(1,1, order='F')
 
-cov_re_reml_drf_7 = np.array([0.3062498,0.2601813,0.2601813,1.393465]).reshape(2,2, order='F')
+cov_re_reml_drf_7 = np.array([0.2056226,0.0726139,0.0726139,3.2876]).reshape(2,2, order='F')
 
-sig2_reml_drf_7 = np.array([4.514002])
+sig2_reml_drf_7 = np.array([3.440244])
 
-loglike_reml_drf_7 = np.array([-547.3918])
+loglike_reml_drf_7 = np.array([-588.7476])
 
-ranef_mean_reml_drf_7 = np.array([0.00982738,-0.2417534])
+ranef_mean_reml_drf_7 = np.array([0.07000628,-0.2916737])
 
-ranef_condvar_reml_drf_7 = np.array([0.305877,0.2693514,0.2693514,1.16788]).reshape(2,2, order='F')
+ranef_condvar_reml_drf_7 = np.array([0.1828266,0.02229138,0.02229138,1.128947]).reshape(2,2, order='F')
 
-coef_ml_irf_7 = np.array([-1.074214])
+coef_ml_irf_7 = np.array([-0.9665524])
 
-vcov_ml_irf_7 = np.array([0.0238021]).reshape(1,1, order='F')
+vcov_ml_irf_7 = np.array([0.01998144]).reshape(1,1, order='F')
 
-cov_re_ml_irf_7 = np.array([0.295503,0,0,1.353477]).reshape(2,2, order='F')
+cov_re_ml_irf_7 = np.array([0.2021561,0,0,3.270735]).reshape(2,2, order='F')
 
-sig2_ml_irf_7 = np.array([4.478087])
+sig2_ml_irf_7 = np.array([3.423186])
 
-loglike_ml_irf_7 = np.array([-546.8645])
+loglike_ml_irf_7 = np.array([-587.7456])
 
-coef_reml_irf_7 = np.array([-1.074164])
+coef_reml_irf_7 = np.array([-0.9667854])
 
-vcov_reml_irf_7 = np.array([0.02390321]).reshape(1,1, order='F')
+vcov_reml_irf_7 = np.array([0.02006657]).reshape(1,1, order='F')
 
-cov_re_reml_irf_7 = np.array([0.2951556,0,0,1.359751]).reshape(2,2, order='F')
+cov_re_reml_irf_7 = np.array([0.2026938,0,0,3.273129]).reshape(2,2, order='F')
 
-sig2_reml_irf_7 = np.array([4.498187])
+sig2_reml_irf_7 = np.array([3.440197])
 
-loglike_reml_irf_7 = np.array([-547.8135])
+loglike_reml_irf_7 = np.array([-588.782])
 
-coef_ml_drf_8 = np.array([-1.073452,1.053419])
+coef_ml_drf_8 = np.array([-1.083882,0.8955623])
 
-vcov_ml_drf_8 = np.array([0.00256307,0.0002981876,0.0002981876,0.003084778]).reshape(2,2, order='F')
+vcov_ml_drf_8 = np.array([0.002491643,0.0001693531,0.0001693531,0.00253309]).reshape(2,2, order='F')
 
-cov_re_ml_drf_8 = np.array([0.21369,-0.03135767,-0.03135767,2.213063]).reshape(2,2, order='F')
+cov_re_ml_drf_8 = np.array([0.1506188,0.126091,0.126091,2.485462]).reshape(2,2, order='F')
 
-sig2_ml_drf_8 = np.array([0.3140142])
+sig2_ml_drf_8 = np.array([0.2586519])
 
-loglike_ml_drf_8 = np.array([-373.296])
+loglike_ml_drf_8 = np.array([-363.6234])
 
-ranef_mean_ml_drf_8 = np.array([0.3161156,-2.683644])
+ranef_mean_ml_drf_8 = np.array([0.2852326,-0.5047804])
 
-ranef_condvar_ml_drf_8 = np.array([0.07021246,-0.0006838739,-0.0006838739,0.1465925]).reshape(2,2, order='F')
+ranef_condvar_ml_drf_8 = np.array([0.05400391,0.002330104,0.002330104,0.122761]).reshape(2,2, order='F')
 
-coef_reml_drf_8 = np.array([-1.073793,1.053324])
+coef_reml_drf_8 = np.array([-1.083938,0.8956893])
 
-vcov_reml_drf_8 = np.array([0.002602719,0.0003011874,0.0003011874,0.003131357]).reshape(2,2, order='F')
+vcov_reml_drf_8 = np.array([0.002528969,0.0001712206,0.0001712206,0.002573335]).reshape(2,2, order='F')
 
-cov_re_reml_drf_8 = np.array([0.2137696,-0.03156671,-0.03156671,2.21279]).reshape(2,2, order='F')
+cov_re_reml_drf_8 = np.array([0.1505098,0.1256311,0.1256311,2.484219]).reshape(2,2, order='F')
 
-sig2_reml_drf_8 = np.array([0.3200637])
+sig2_reml_drf_8 = np.array([0.2635901])
 
-loglike_reml_drf_8 = np.array([-377.3301])
+loglike_reml_drf_8 = np.array([-367.7667])
 
-ranef_mean_reml_drf_8 = np.array([0.3143736,-2.67979])
+ranef_mean_reml_drf_8 = np.array([0.2829798,-0.5042857])
 
-ranef_condvar_reml_drf_8 = np.array([0.07112236,-0.0007097164,-0.0007097164,0.1492245]).reshape(2,2, order='F')
+ranef_condvar_reml_drf_8 = np.array([0.05463632,0.002393538,0.002393538,0.1249828]).reshape(2,2, order='F')
 
-coef_ml_irf_8 = np.array([-1.072293,1.05396])
+coef_ml_irf_8 = np.array([-1.079481,0.898216])
 
-vcov_ml_irf_8 = np.array([0.002560617,0.0002997095,0.0002997095,0.003086267]).reshape(2,2, order='F')
+vcov_ml_irf_8 = np.array([0.002511536,0.0001812511,0.0001812511,0.002573405]).reshape(2,2, order='F')
 
-cov_re_ml_irf_8 = np.array([0.2153952,0,0,2.223822]).reshape(2,2, order='F')
+cov_re_ml_irf_8 = np.array([0.1498568,0,0,2.403849]).reshape(2,2, order='F')
 
-sig2_ml_irf_8 = np.array([0.3135409])
+sig2_ml_irf_8 = np.array([0.2605245])
 
-loglike_ml_irf_8 = np.array([-373.3486])
+loglike_ml_irf_8 = np.array([-364.4824])
 
-coef_reml_irf_8 = np.array([-1.072621,1.053873])
+coef_reml_irf_8 = np.array([-1.07952,0.8983678])
 
-vcov_reml_irf_8 = np.array([0.002600204,0.0003027561,0.0003027561,0.003132898]).reshape(2,2, order='F')
+vcov_reml_irf_8 = np.array([0.002549354,0.0001833386,0.0001833386,0.002614672]).reshape(2,2, order='F')
 
-cov_re_reml_irf_8 = np.array([0.2154985,0,0,2.223617]).reshape(2,2, order='F')
+cov_re_reml_irf_8 = np.array([0.1497193,0,0,2.403076]).reshape(2,2, order='F')
 
-sig2_reml_irf_8 = np.array([0.3195753])
+sig2_reml_irf_8 = np.array([0.2655558])
 
-loglike_reml_irf_8 = np.array([-377.383])
+loglike_reml_irf_8 = np.array([-368.6141])
 
-coef_ml_drf_9 = np.array([-0.9818127,1.008156])
+coef_ml_drf_9 = np.array([-1.272698,0.8617471])
 
-vcov_ml_drf_9 = np.array([0.02401768,0.0007786041,0.0007786041,0.02056742]).reshape(2,2, order='F')
+vcov_ml_drf_9 = np.array([0.02208544,0.001527479,0.001527479,0.02597528]).reshape(2,2, order='F')
 
-cov_re_ml_drf_9 = np.array([0.8296706,0.1152866,0.1152866,1.445377]).reshape(2,2, order='F')
+cov_re_ml_drf_9 = np.array([0.510175,0.08826114,0.08826114,3.342888]).reshape(2,2, order='F')
 
-sig2_ml_drf_9 = np.array([3.154016])
+sig2_ml_drf_9 = np.array([3.722112])
 
-loglike_ml_drf_9 = np.array([-506.8125])
+loglike_ml_drf_9 = np.array([-589.8274])
 
-ranef_mean_ml_drf_9 = np.array([-0.5169848,1.268963])
+ranef_mean_ml_drf_9 = np.array([0.03253644,0.224043])
 
-ranef_condvar_ml_drf_9 = np.array([0.541761,0.03948874,0.03948874,0.7526567]).reshape(2,2, order='F')
+ranef_condvar_ml_drf_9 = np.array([0.3994872,0.02478884,0.02478884,1.195077]).reshape(2,2, order='F')
 
-coef_reml_drf_9 = np.array([-0.9817678,1.007722])
+coef_reml_drf_9 = np.array([-1.272483,0.861814])
 
-vcov_reml_drf_9 = np.array([0.02424508,0.0007820319,0.0007820319,0.02076305]).reshape(2,2, order='F')
+vcov_reml_drf_9 = np.array([0.02228589,0.001535598,0.001535598,0.0262125]).reshape(2,2, order='F')
 
-cov_re_reml_drf_9 = np.array([0.8308884,0.1155542,0.1155542,1.446194]).reshape(2,2, order='F')
+cov_re_reml_drf_9 = np.array([0.5123204,0.08897376,0.08897376,3.341722]).reshape(2,2, order='F')
 
-sig2_reml_drf_9 = np.array([3.194068])
+sig2_reml_drf_9 = np.array([3.764058])
 
-loglike_reml_drf_9 = np.array([-508.7771])
+loglike_reml_drf_9 = np.array([-591.7188])
 
-ranef_mean_reml_drf_9 = np.array([-0.5128046,1.260587])
+ranef_mean_reml_drf_9 = np.array([0.03239688,0.2230525])
 
-ranef_condvar_reml_drf_9 = np.array([0.5446383,0.03996045,0.03996045,0.7574207]).reshape(2,2, order='F')
+ranef_condvar_reml_drf_9 = np.array([0.401762,0.02521271,0.02521271,1.203536]).reshape(2,2, order='F')
 
-coef_ml_irf_9 = np.array([-0.993181,1.00596])
+coef_ml_irf_9 = np.array([-1.277018,0.86395])
 
-vcov_ml_irf_9 = np.array([0.02400509,0.0007729236,0.0007729236,0.0206165]).reshape(2,2, order='F')
+vcov_ml_irf_9 = np.array([0.02205706,0.001509887,0.001509887,0.02599941]).reshape(2,2, order='F')
 
-cov_re_ml_irf_9 = np.array([0.8216023,0,0,1.425127]).reshape(2,2, order='F')
+cov_re_ml_irf_9 = np.array([0.5086816,0,0,3.312757]).reshape(2,2, order='F')
 
-sig2_ml_irf_9 = np.array([3.148594])
+sig2_ml_irf_9 = np.array([3.72105])
 
-loglike_ml_irf_9 = np.array([-506.905])
+loglike_ml_irf_9 = np.array([-589.8628])
 
-coef_reml_irf_9 = np.array([-0.9931026,1.005526])
+coef_reml_irf_9 = np.array([-1.276822,0.8640243])
 
-vcov_reml_irf_9 = np.array([0.02423262,0.0007763221,0.0007763221,0.02081254]).reshape(2,2, order='F')
+vcov_reml_irf_9 = np.array([0.02225705,0.001517774,0.001517774,0.02623682]).reshape(2,2, order='F')
 
-cov_re_reml_irf_9 = np.array([0.8227847,0,0,1.425936]).reshape(2,2, order='F')
+cov_re_reml_irf_9 = np.array([0.5107725,0,0,3.31152]).reshape(2,2, order='F')
 
-sig2_reml_irf_9 = np.array([3.188662])
+sig2_reml_irf_9 = np.array([3.762967])
 
-loglike_reml_irf_9 = np.array([-508.8686])
+loglike_reml_irf_9 = np.array([-591.7543])
 
-coef_ml_drf_10 = np.array([-1.051734,0.03014705,0.9428539])
+coef_ml_drf_10 = np.array([-0.9419566,-0.02359824,1.085796])
 
-vcov_ml_drf_10 = np.array([0.001964315,-0.0001891043,0.0002697812,-0.0001891043,0.00246658,0.0002952686,0.0002697812,0.0002952686,0.002692546]).reshape(3,3, order='F')
+vcov_ml_drf_10 = np.array([0.001963536,-0.0003221793,0.0001950186,-0.0003221793,0.002534251,0.0004107718,0.0001950186,0.0004107718,0.002580736]).reshape(3,3, order='F')
 
-cov_re_ml_drf_10 = np.array([0.1953581,0.08280941,0.08280941,2.120038]).reshape(2,2, order='F')
+cov_re_ml_drf_10 = np.array([0.2040541,0.09038325,0.09038325,2.218903]).reshape(2,2, order='F')
 
-sig2_ml_drf_10 = np.array([0.2262265])
+sig2_ml_drf_10 = np.array([0.2558286])
 
-loglike_ml_drf_10 = np.array([-357.3961])
+loglike_ml_drf_10 = np.array([-379.6591])
 
-ranef_mean_ml_drf_10 = np.array([-0.9528114,-0.5060813])
+ranef_mean_ml_drf_10 = np.array([0.03876325,-0.725853])
 
-ranef_condvar_ml_drf_10 = np.array([0.05416651,0.001181558,0.001181558,0.1073181]).reshape(2,2, order='F')
+ranef_condvar_ml_drf_10 = np.array([0.1988816,0.1872403,0.1872403,0.4052274]).reshape(2,2, order='F')
 
-coef_reml_drf_10 = np.array([-1.051717,0.03019075,0.9431178])
+coef_reml_drf_10 = np.array([-0.9426367,-0.02336203,1.085733])
 
-vcov_reml_drf_10 = np.array([0.002010457,-0.0001927801,0.0002756895,-0.0001927801,0.002520988,0.0003005374,0.0002756895,0.0003005374,0.002752983]).reshape(3,3, order='F')
+vcov_reml_drf_10 = np.array([0.002011348,-0.0003300612,0.0002002948,-0.0003300612,0.002589149,0.000418987,0.0002002948,0.000418987,0.002637433]).reshape(3,3, order='F')
 
-cov_re_reml_drf_10 = np.array([0.1958845,0.08278899,0.08278899,2.119587]).reshape(2,2, order='F')
+cov_re_reml_drf_10 = np.array([0.2034827,0.09063836,0.09063836,2.219191]).reshape(2,2, order='F')
 
-sig2_reml_drf_10 = np.array([0.232731])
+sig2_reml_drf_10 = np.array([0.2630213])
 
-loglike_reml_drf_10 = np.array([-363.7185])
+loglike_reml_drf_10 = np.array([-386.0008])
 
-ranef_mean_reml_drf_10 = np.array([-0.9460145,-0.5053916])
+ranef_mean_reml_drf_10 = np.array([0.03838686,-0.7240812])
 
-ranef_condvar_reml_drf_10 = np.array([0.05532006,0.001236138,0.001236138,0.1102408]).reshape(2,2, order='F')
+ranef_condvar_reml_drf_10 = np.array([0.1983981,0.1865469,0.1865469,0.4100937]).reshape(2,2, order='F')
 
-coef_ml_irf_10 = np.array([-1.053628,0.02646613,0.9396239])
+coef_ml_irf_10 = np.array([-0.9441033,-0.01755913,1.088568])
 
-vcov_ml_irf_10 = np.array([0.001966515,-0.0001932086,0.0002712522,-0.0001932086,0.002478003,0.000297438,0.0002712522,0.000297438,0.002701965]).reshape(3,3, order='F')
+vcov_ml_irf_10 = np.array([0.001960114,-0.0003215658,0.0001944005,-0.0003215658,0.00253441,0.0004061179,0.0001944005,0.0004061179,0.002589158]).reshape(3,3, order='F')
 
-cov_re_ml_irf_10 = np.array([0.1962511,0,0,2.07529]).reshape(2,2, order='F')
+cov_re_ml_irf_10 = np.array([0.2032228,0,0,2.192893]).reshape(2,2, order='F')
 
-sig2_ml_irf_10 = np.array([0.2262359])
+sig2_ml_irf_10 = np.array([0.2553399])
 
-loglike_ml_irf_10 = np.array([-357.8052])
+loglike_ml_irf_10 = np.array([-380.162])
 
-coef_reml_irf_10 = np.array([-1.053634,0.02647082,0.9398647])
+coef_reml_irf_10 = np.array([-0.9448257,-0.01722993,1.088557])
 
-vcov_reml_irf_10 = np.array([0.002012789,-0.000197022,0.0002772167,-0.000197022,0.002532816,0.000302761,0.0002772167,0.000302761,0.002762764]).reshape(3,3, order='F')
+vcov_reml_irf_10 = np.array([0.00200783,-0.0003294349,0.0001996613,-0.0003294349,0.00258937,0.0004141667,0.0001996613,0.0004141667,0.002646242]).reshape(3,3, order='F')
 
-cov_re_reml_irf_10 = np.array([0.1967766,0,0,2.075002]).reshape(2,2, order='F')
+cov_re_reml_irf_10 = np.array([0.2026653,0,0,2.193124]).reshape(2,2, order='F')
 
-sig2_reml_irf_10 = np.array([0.2327574])
+sig2_reml_irf_10 = np.array([0.2625147])
 
-loglike_reml_irf_10 = np.array([-364.1232])
+loglike_reml_irf_10 = np.array([-386.5024])
 
-coef_ml_drf_11 = np.array([-0.8595046,-0.1011441,1.339522])
+coef_ml_drf_11 = np.array([-1.36971,0.1596278,0.8588724])
 
-vcov_ml_drf_11 = np.array([0.0263955,-0.004890966,0.0009644936,-0.004890966,0.02518308,-0.0001991135,0.0009644936,-0.0001991135,0.02531999]).reshape(3,3, order='F')
+vcov_ml_drf_11 = np.array([0.0232326,0.00172214,0.002275343,0.00172214,0.02318941,0.0004755663,0.002275343,0.0004755663,0.02123474]).reshape(3,3, order='F')
 
-cov_re_ml_drf_11 = np.array([0.2443751,0.1582495,0.1582495,2.665185]).reshape(2,2, order='F')
+cov_re_ml_drf_11 = np.array([0.3719096,0.332198,0.332198,1.120588]).reshape(2,2, order='F')
 
-sig2_ml_drf_11 = np.array([4.524382])
+sig2_ml_drf_11 = np.array([4.849781])
 
-loglike_ml_drf_11 = np.array([-593.7777])
+loglike_ml_drf_11 = np.array([-601.6432])
 
-ranef_mean_ml_drf_11 = np.array([0.01066248,-0.3103625])
+ranef_mean_ml_drf_11 = np.array([-0.4256917,-0.3907759])
 
-ranef_condvar_ml_drf_11 = np.array([0.2433329,0.188585,0.188585,1.782182]).reshape(2,2, order='F')
+ranef_condvar_ml_drf_11 = np.array([0.2987928,0.1992074,0.1992074,0.7477486]).reshape(2,2, order='F')
 
-coef_reml_drf_11 = np.array([-0.8601769,-0.1009249,1.339283])
+coef_reml_drf_11 = np.array([-1.370236,0.1597671,0.8585994])
 
-vcov_reml_drf_11 = np.array([0.02673242,-0.004945492,0.0009692465,-0.004945492,0.02552201,-0.0002051749,0.0009692465,-0.0002051749,0.02566014]).reshape(3,3, order='F')
+vcov_reml_drf_11 = np.array([0.02351795,0.001749756,0.002301599,0.001749756,0.02346869,0.0004785668,0.002301599,0.0004785668,0.02149093]).reshape(3,3, order='F')
 
-cov_re_reml_drf_11 = np.array([0.2428444,0.15702,0.15702,2.663627]).reshape(2,2, order='F')
+cov_re_reml_drf_11 = np.array([0.3680346,0.3324419,0.3324419,1.118623]).reshape(2,2, order='F')
 
-sig2_reml_drf_11 = np.array([4.597796])
+sig2_reml_drf_11 = np.array([4.922222])
 
-loglike_reml_drf_11 = np.array([-596.5262])
+loglike_reml_drf_11 = np.array([-604.5746])
 
-ranef_mean_reml_drf_11 = np.array([0.01051413,-0.3070781])
+ranef_mean_reml_drf_11 = np.array([-0.4168539,-0.3879533])
 
-ranef_condvar_reml_drf_11 = np.array([0.24182,0.1869395,0.1869395,1.789791]).reshape(2,2, order='F')
+ranef_condvar_reml_drf_11 = np.array([0.2965372,0.2010191,0.2010191,0.7503986]).reshape(2,2, order='F')
 
-coef_ml_irf_11 = np.array([-0.8736591,-0.0929756,1.337132])
+coef_ml_irf_11 = np.array([-1.370117,0.1414964,0.8466083])
 
-vcov_ml_irf_11 = np.array([0.02639684,-0.004942547,0.001054659,-0.004942547,0.02536614,-0.0001972928,0.001054659,-0.0001972928,0.02537421]).reshape(3,3, order='F')
+vcov_ml_irf_11 = np.array([0.02319951,0.001705996,0.002265252,0.001705996,0.02345623,0.000514879,0.002265252,0.000514879,0.02153162]).reshape(3,3, order='F')
 
-cov_re_ml_irf_11 = np.array([0.2424545,0,0,2.637631]).reshape(2,2, order='F')
+cov_re_ml_irf_11 = np.array([0.4004789,0,0,1.108087]).reshape(2,2, order='F')
 
-sig2_ml_irf_11 = np.array([4.515735])
+sig2_ml_irf_11 = np.array([4.78776])
 
-loglike_ml_irf_11 = np.array([-593.9001])
+loglike_ml_irf_11 = np.array([-602.308])
 
-coef_reml_irf_11 = np.array([-0.874125,-0.09288672,1.336918])
+coef_reml_irf_11 = np.array([-1.370663,0.1417561,0.8464232])
 
-vcov_reml_irf_11 = np.array([0.02673386,-0.004996858,0.001059174,-0.004996858,0.02570532,-0.0002033316,0.001059174,-0.0002033316,0.02571476]).reshape(3,3, order='F')
+vcov_reml_irf_11 = np.array([0.02348548,0.001734072,0.002291519,0.001734072,0.02373715,0.0005177618,0.002291519,0.0005177618,0.02178966]).reshape(3,3, order='F')
 
-cov_re_reml_irf_11 = np.array([0.2409473,0,0,2.636352]).reshape(2,2, order='F')
+cov_re_reml_irf_11 = np.array([0.3966454,0,0,1.106551]).reshape(2,2, order='F')
 
-sig2_reml_irf_11 = np.array([4.589368])
+sig2_reml_irf_11 = np.array([4.860342])
 
-loglike_reml_irf_11 = np.array([-596.6443])
+loglike_reml_irf_11 = np.array([-605.2274])
 

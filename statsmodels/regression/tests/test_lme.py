@@ -129,7 +129,6 @@ class TestMixedLM(object):
         mdf2 = MixedLM(endog, exog, groups, np.ones(300)).fit()
         assert_almost_equal(mdf1.params, mdf2.params, decimal=8)
 
-
     def test_EM(self):
 
         np.random.seed(323590805)
@@ -137,7 +136,18 @@ class TestMixedLM(object):
         groups = np.kron(np.arange(100), [1,1,1])
         g_errors = np.kron(np.random.normal(size=100), [1,1,1])
         endog = exog.sum(1) + g_errors + np.random.normal(size=300)
-        mdf1 = MixedLM(endog, exog, groups).fit()
+        mdf1 = MixedLM(endog, exog, groups).fit(niter_em=10)
+
+    def test_profile(self):
+
+        np.random.seed(323590805)
+        exog = np.random.normal(size=(300,4))
+        groups = np.kron(np.arange(100), [1,1,1])
+        g_errors = np.kron(np.random.normal(size=100), [1,1,1])
+        endog = exog.sum(1) + g_errors + np.random.normal(size=300)
+        mdf1 = MixedLM(endog, exog, groups).fit(niter_em=10)
+        mdf1.profile_re(0, dist_low=0.1, num_low=1, dist_high=0.1,
+                        num_high=1)
 
     def test_formulas(self):
 
@@ -219,12 +229,6 @@ class TestMixedLM(object):
         meth = "reml" if reml else "ml"
 
         rslt = R_Results(meth, irfs, ds_ix)
-
-        # Variance component MLE ~ 0 may require manual tweaking of
-        # algorithm parameters, so exclude from tests for now.
-        if np.min(np.diag(rslt.cov_re_r)) < 0.01:
-            print("Skipping %d since solution is on boundary." % ds_ix)
-            return
 
         # Fit the model
         md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
