@@ -179,8 +179,15 @@ class Imputer(object):
         params += np.dot(covmat_sqrt, np.random.normal(0, scale_per * mdf.scale, p))
         imiss = self.data.columns[self.endog_name].ix_miss
         #TODO: find a better way to determine if first column is intercept
-        exog_name = md.exog_names[1:]
+        exog_name = md.exog_names[:]
+        if 'Intercept' in exog_name:
+            inter = 1
+            exog_name.remove('Intercept')
+        else:
+            inter = 0
         exog = self.data.data[exog_name].iloc[imiss,:]
+        if inter:
+            exog.insert(0, 'Intercept', 1)
         endog_obj = md.get_distribution(params=params, exog=exog, scale=scale_per * mdf.scale)
         new_endog = endog_obj.rvs()
         self.data.store_changes(new_endog, self.endog_name)

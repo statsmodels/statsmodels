@@ -410,12 +410,7 @@ class BinaryModel(DiscreteModel):
         """
         if exog is None:
             exog = self.model.exog
-
-        # if scale is None:
-            # scale = self.scale
-        exog.insert(0, 'Intercept', 1)
         mean = self.predict(params=params, exog=exog)
-
         return stats.bernoulli(mean)
 
     def fit_regularized(self, start_params=None, method='l1',
