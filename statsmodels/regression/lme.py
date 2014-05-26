@@ -510,14 +510,32 @@ class MixedLM(base.LikelihoodModel):
 
     def hessian(self, params):
         """
-        Hessian of log-likelihood evaluated at `params`.  Note that
-        this uses either `cov_re` or its square root (L) depending on
-        the value of `use_sqrt`.  `hessian_full` is an analytic
-        implementation of the Hessian with respect to cov_re.
-        """
-        from statsmodels.tools.numdiff import approx_hess_cs
-        return approx_hess_cs(params, self.loglike)
+        Hessian of log-likelihood evaluated at `params`, calculated
+        numerically.
 
+        Parameters
+        ----------
+        params : array-like
+            The model parameters, packed into a 1d array.
+
+        Returns
+        -------
+        The Hessian matrix of the log likelihood function, evaluated
+        at params.
+
+        Notes
+        -----
+        The Hessian is calculated with respect to either the lower
+        triangle of `cov_re` or its lower triangular square root (L)
+        depending on the value of `use_sqrt`.
+
+        `hessian_full` is an analytic Hessian calculation, always
+        calculated with respect to cov_re
+        """
+
+        from statsmodels.tools.numdiff import approx_hess_cs
+        hmat = approx_hess_cs(params, self.loglike)
+        return hmat.real
 
     def _unpack(self, params, sym=True):
         """
@@ -546,7 +564,7 @@ class MixedLM(base.LikelihoodModel):
         re_params = params[self.k_fe:]
 
         # Unpack the covariance matrix of the random effects
-        cov_re = np.zeros((self.k_re, self.k_re), dtype=np.float64)
+        cov_re = np.zeros((self.k_re, self.k_re), dtype=params.dtype)
         ix = np.tril_indices(self.k_re)
         cov_re[ix] = re_params
 
@@ -1374,6 +1392,8 @@ class MixedLM(base.LikelihoodModel):
                 try:
                     fit_args = dict(kwargs)
                     fit_args["retall"] = hist is not None
+                    if "disp" not in fit_args:
+                        fit_args["disp"] = False
                     # Only bfgs seems to work for some reason.
                     fit_args["method"] = "bfgs"
                     rslt = super(MixedLM, self).fit(start_params=params_prof, **fit_args)
@@ -1717,7 +1737,7 @@ class MixedLMResults(base.LikelihoodModelResults):
         # Need to permute the variables so that the profiled variable
         # is first.
         exog_re_li_save = [x.copy() for x in model.exog_re_li]
-        ix = range(pr)
+        ix = list(range(pr))
         ix[0] = re_ix
         ix[re_ix] = 0
         for k in range(len(model.exog_re_li)):
