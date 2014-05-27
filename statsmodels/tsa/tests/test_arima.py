@@ -1883,7 +1883,7 @@ def test_small_data():
     import warnings
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = mod.fit(disp=0, start_params=[.1, .1, .1, .1])
+        res = mod.fit(disp=0, start_params=[np.mean(y), .1, .1, .1])
 
 
 class TestARMA00(TestCase):
