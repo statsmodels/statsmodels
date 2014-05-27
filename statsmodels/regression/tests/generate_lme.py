@@ -8,6 +8,8 @@ to update the output.
 import numpy as np
 import os
 
+np.random.seed(398429437)
+
 # Number of groups
 ngroup = 100
 
@@ -62,7 +64,7 @@ for pr in 1,2:
 
             header = ["groups,endog",] +\
                      ["exog_fe_%d" % k for k in range(pf)] +\
-                     ["exog_re_%d" % k for f in range(pr)]
+                     ["exog_re_%d" % k for k in range(pr)]
             header = ",".join(header)
 
             cur_dir = os.path.dirname(os.path.abspath(__file__))
