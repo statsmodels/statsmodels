@@ -36,6 +36,10 @@ linear mixed effects models for repeated measures data".  Journal of
 the American Statistical Association. Volume 83, Issue 404, pages
 1014-1022.
 
+See also this more recent document:
+
+http://econ.ucsb.edu/~doug/245a/Papers/Mixed%20Effects%20Implement.pdf
+
 All the likelihood, gradient, and Hessian calculations closely follow
 Lindstrom and Bates.
 
@@ -304,9 +308,9 @@ class MixedLM(base.LikelihoodModel):
 
         # Set the random effect parameter names
         if isinstance(self.exog_re, pd.DataFrame):
-            self.exog_re_names = self.exog_re.columns
+            self.exog_re_names = list(self.exog_re.columns)
         else:
-            self.exog_re_names = ["RE%d" % (k+1) for k in
+            self.exog_re_names = ["Z%d" % (k+1) for k in
                                   range(self.exog_re.shape[1])]
 
     def set_random(self, re_formula, data):
@@ -1679,10 +1683,10 @@ class MixedLMResults(base.LikelihoodModelResults):
         for i in range(self.k_re):
             for j in range(i + 1):
                 if i == j:
-                    names.append(self.model.exog_re_names[i])
+                    names.append(self.model.exog_re_names[i] + " RE")
                 else:
                     names.append(self.model.exog_re_names[j] + " x " +
-                                 self.model.exog_re_names[i])
+                                 self.model.exog_re_names[i] + " RE")
                 sdf[jj, 0] = self.cov_re[i, j]
                 sdf[jj, 1] = np.sqrt(self.sig2) * self.bse[jj]
                 jj += 1
