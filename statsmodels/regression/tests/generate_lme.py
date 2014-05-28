@@ -8,7 +8,7 @@ to update the output.
 import numpy as np
 import os
 
-np.random.seed(398429437)
+np.random.seed(348491)
 
 # Number of groups
 ngroup = 100
