@@ -9,9 +9,12 @@ from statsmodels.tools.decorators import (resettable_cache, cache_readonly,
                                           cache_writable)
 import statsmodels.tools.data as data_util
 from statsmodels.tools.sm_exceptions import MissingDataError
+
+
 def _asarray_2dcolumns(x):
     if np.asarray(x).ndim > 1 and np.asarray(x).squeeze().ndim == 1:
         return
+
 
 def _asarray_2d_null_rows(x):
     """
@@ -22,8 +25,8 @@ def _asarray_2d_null_rows(x):
     #input
     x = np.asarray(x)
     if x.ndim == 1:
-        x = x[:,None]
-    return np.any(isnull(x), axis=1)[:,None]
+        x = x[:, None]
+    return np.any(isnull(x), axis=1)[:, None]
 
 
 def _nan_rows(*arrs):
@@ -34,6 +37,7 @@ def _nan_rows(*arrs):
     """
     if len(arrs) == 1:
         arrs += ([[False]],)
+
     def _nan_row_maybe_two_inputs(x, y):
         # check for dtype bc dataframe has dtypes
         x_is_boolean_array = hasattr(x, 'dtype') and x.dtype == bool and x
@@ -41,24 +45,25 @@ def _nan_rows(*arrs):
                              (x_is_boolean_array | _asarray_2d_null_rows(y)))
     return reduce(_nan_row_maybe_two_inputs, arrs).squeeze()
 
+
 class ModelData(object):
     """
     Class responsible for handling input data and extracting metadata into the
     appropriate form
     """
     def __init__(self, endog, exog=None, missing='none', hasconst=None,
-                       **kwargs):
+                 **kwargs):
         if missing != 'none':
             arrays, nan_idx = self.handle_missing(endog, exog, missing,
-                                                       **kwargs)
+                                                  **kwargs)
             self.missing_row_idx = nan_idx
-            self.__dict__.update(arrays) # attach all the data arrays
+            self.__dict__.update(arrays)  # attach all the data arrays
             self.orig_endog = self.endog
             self.orig_exog = self.exog
             self.endog, self.exog = self._convert_endog_exog(self.endog,
-                    self.exog)
+                                                             self.exog)
         else:
-            self.__dict__.update(kwargs) # attach the extra arrays anyway
+            self.__dict__.update(kwargs)  # attach the extra arrays anyway
             self.orig_endog = endog
             self.orig_exog = exog
             self.endog, self.exog = self._convert_endog_exog(endog, exog)
@@ -77,14 +82,14 @@ class ModelData(object):
                 self.k_constant = 0
                 self.const_idx = None
         else:
-            try: # to detect where the constant is
-                const_idx = np.where(self.exog.var(axis = 0) == 0)[0].squeeze()
+            try:  # to detect where the constant is
+                const_idx = np.where(self.exog.var(axis=0) == 0)[0].squeeze()
                 self.k_constant = const_idx.size
                 if self.k_constant > 1:
                     raise ValueError("More than one constant detected.")
                 else:
                     self.const_idx = const_idx
-            except: # should be an index error but who knows, means no const
+            except:  # should be an index error but who knows, means no const
                 self.const_idx = None
                 self.k_constant = 0
 
@@ -134,7 +139,7 @@ class ModelData(object):
                     combined_2d_names += [key]
                 else:
                     raise ValueError("Arrays with more than 2 dimensions "
-                            "aren't yet handled")
+                                     "aren't yet handled")
 
         nan_mask = _nan_rows(*combined)
         if combined_2d:
@@ -150,10 +155,10 @@ class ModelData(object):
             combined = dict(zip(combined_names, lmap(drop_nans, combined)))
             if combined_2d:
                 combined.update(dict(zip(combined_2d_names,
-                                          lmap(drop_nans_2d, combined_2d))))
+                                         lmap(drop_nans_2d, combined_2d))))
             if none_array_names:
                 combined.update(dict(zip(none_array_names,
-                                          [None] * len(none_array_names))))
+                                         [None] * len(none_array_names))))
             return combined, np.where(~nan_mask)[0].tolist()
         else:
             raise ValueError("missing option %s not understood" % missing)
@@ -227,7 +232,7 @@ class ModelData(object):
         if data_util._is_structured_ndarray(endog):
             endog = data_util.struct_to_ndarray(endog)
         endog = np.asarray(endog)
-        if len(endog) == 1: # never squeeze to a scalar
+        if len(endog) == 1:  # never squeeze to a scalar
             if endog.ndim == 1:
                 return endog
             elif endog.ndim > 1:
@@ -279,9 +284,11 @@ class ModelData(object):
     def attach_dates(self, result):
         return result
 
+
 class PatsyData(ModelData):
     def _get_names(self, arr):
         return arr.design_info.column_names
+
 
 class PandasData(ModelData):
     """
@@ -292,7 +299,7 @@ class PandasData(ModelData):
     def _drop_nans(cls, x, nan_mask):
         if hasattr(x, 'ix'):
             return x.ix[nan_mask]
-        else: # extra arguments could be plain ndarrays
+        else:  # extra arguments could be plain ndarrays
             return super(PandasData, cls)._drop_nans(x, nan_mask)
 
     @classmethod
@@ -325,7 +332,7 @@ class PandasData(ModelData):
         # if it needs a squeeze, the bug is elsewhere
         if result.ndim <= 1:
             return Series(result, index=self.xnames)
-        else: # for e.g., confidence intervals
+        else:  # for e.g., confidence intervals
             return DataFrame(result, index=self.xnames)
 
     def attach_columns_eq(self, result):
@@ -342,20 +349,22 @@ class PandasData(ModelData):
         # at the front, for AR lags, for example
         if result.squeeze().ndim == 1:
             return Series(result, index=self.row_labels[-len(result):])
-        else: # this is for VAR results, may not be general enough
+        else:  # this is for VAR results, may not be general enough
             return DataFrame(result, index=self.row_labels[-len(result):],
-                                columns=self.ynames)
+                             columns=self.ynames)
 
     def attach_dates(self, result):
         return TimeSeries(result, index=self.predict_dates)
 
+
 def _make_endog_names(endog):
     if endog.ndim == 1 or endog.shape[1] == 1:
         ynames = ['y']
-    else: # for VAR
+    else:  # for VAR
         ynames = ['y%d' % (i+1) for i in range(endog.shape[1])]
 
     return ynames
+
 
 def _make_exog_names(exog):
     exog_var = exog.var(0)
@@ -363,10 +372,10 @@ def _make_exog_names(exog):
         # assumes one constant in first or last position
         # avoid exception if more than one constant
         const_idx = exog_var.argmin()
-        exog_names = ['x%d' % i for i in range(1,exog.shape[1])]
+        exog_names = ['x%d' % i for i in range(1, exog.shape[1])]
         exog_names.insert(const_idx, 'const')
     else:
-        exog_names = ['x%d' % i for i in range(1,exog.shape[1]+1)]
+        exog_names = ['x%d' % i for i in range(1, exog.shape[1]+1)]
 
     return exog_names
 
