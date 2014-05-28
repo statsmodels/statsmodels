@@ -230,12 +230,6 @@ class TestMixedLM(object):
 
         rslt = R_Results(meth, irfs, ds_ix)
 
-        # Variance component MLE ~ 0 may require manual tweaking of
-        # algorithm parameters, so exclude from tests for now.
-        if np.min(np.diag(rslt.cov_re_r)) < 0.01:
-            print("Skipping %d since solution is on boundary." % ds_ix)
-            return
-
         # Fit the model
         md = MixedLM(rslt.endog, rslt.exog_fe, rslt.groups,
                      rslt.exog_re)
