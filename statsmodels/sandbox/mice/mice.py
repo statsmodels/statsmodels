@@ -63,19 +63,19 @@ class ImputedData(object):
             self.columns[c] = MissingDataInfo(self.data[c])
         self.data = self.data.fillna(self.data.mean())
 
-    def new_imputer(self, endog, formula=None, model_class=None, init_args={}, fit_args={}, scale="fix", scale_value=None):
+    def new_imputer(self, endog_name, formula=None, model_class=None, init_args={}, fit_args={}, scale_method="fix", scale_value=None):
         """
         Create Imputer instance from our ImputedData instance
 
         Parameters
         ----------
-        endog : string
+        endog_name : string
             Name of the variable to be imputed.
         formula : string
-            Conditional formula for imputation.
+            Conditional formula for imputation. Defaults to model with main effects for all other variables in dataset.
         model_class : statsmodels model
-            Conditional model for imputation
-        scale : string
+            Conditional model for imputation. Defaults to OLS.
+        scale_method : string
             Governs the type of perturbation given to the scale parameter.
         scale_value : float
             Fixed value of scale parameter to use in simulation of data.
@@ -91,11 +91,10 @@ class ImputedData(object):
         if model_class is None:
             model_class = sm.OLS
         if formula is None:
-            default_formula = endog + " ~ " + " + ".join([x for x in self.data.columns if x != endog])
-            return Imputer(default_formula, model_class, self, init_args=init_args, fit_args=fit_args, scale=scale,scale_value=scale_value)
-        else:
-            formula = endog + " ~ " + formula
-            return Imputer(formula, model_class, self, init_args=init_args, fit_args=fit_args, scale=scale,scale_value=scale_value)
+            formula = endog_name + " ~ " + " + ".join([x for x in self.data.columns if x != endog_name])
+#        else:
+#            formula = endog_name + " ~ " + formula
+        return Imputer(formula, model_class, self, init_args=init_args, fit_args=fit_args, scale=scale_method,scale_value=scale_value)
 
     def store_changes(self, vals, col=None):
         """
@@ -154,7 +153,20 @@ class Imputer(object):
         self.num_missing = len(self.data.columns[self.endog_name].ix_miss)
         self.scale = scale
         self.scale_value = scale_value
-
+    
+    def get_scale(self, mdf):
+        if self.scale == "fix":
+            if self.scale_value is None:
+                scale = 1.
+            else:
+                scale = self.scale_value
+        elif self.scale == "perturb_chi2":
+            u = np.random.chisquare(mdf.df_resid)
+            scale = mdf.df_resid/u
+        elif self.scale == "perturb_boot":
+            pass     
+        return scale           
+    
     def impute_asymptotic_bayes(self):
         """
         Use Gaussian approximation to posterior distribution to simulate data.
@@ -165,16 +177,17 @@ class Imputer(object):
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
-        if self.scale == "fix":
-            if self.scale_value is None:
-                scale_per = 1.
-            else:
-                scale_per = self.scale_value
-        elif self.scale == "perturb_chi2":
-            u = np.random.chisquare(mdf.df_resid)
-            scale_per = mdf.df_resid/u
-        elif self.scale == "perturb_boot":
-            pass
+        scale_per = self.get_scale(mdf)
+#        if self.scale == "fix":
+#            if self.scale_value is None:
+#                scale_per = 1.
+#            else:
+#                scale_per = self.scale_value
+#        elif self.scale == "perturb_chi2":
+#            u = np.random.chisquare(mdf.df_resid)
+#            scale_per = mdf.df_resid/u
+#        elif self.scale == "perturb_boot":
+#            pass
         p = len(params)
         params += np.dot(covmat_sqrt, np.random.normal(0, scale_per * mdf.scale, p))
         imiss = self.data.columns[self.endog_name].ix_miss
@@ -195,6 +208,12 @@ class Imputer(object):
     def impute_pmm(self, k0=1):
         """
         Use predictive mean matching to simulate data.
+
+        Parameters
+        ----------
+
+        k0 : int
+            Number of neighbors in prediction space to select imputations from. Defaults to 1 (select closest neighbor).
         """
         io = self.data.columns[self.endog_name].ix_obs
         md = self.model_class.from_formula(self.formula, self.data.data.iloc[io,:], **self.init_args)
@@ -202,16 +221,17 @@ class Imputer(object):
         params = mdf.params.copy()
         covmat = mdf.cov_params()
         covmat_sqrt = np.linalg.cholesky(covmat)
-        if self.scale == "fix":
-            if self.scale_value is None:
-                scale_per = 1
-            else:
-                scale_per = self.scale_value
-        elif self.scale == "perturb_chi2":
-            u = np.random.chisquare(mdf.df_resid)
-            scale_per = scale_per = mdf.df_resid/u
-        elif self.scale == "perturb_boot":
-            pass
+        scale_per = self.get_scale(mdf)
+#        if self.scale == "fix":
+#            if self.scale_value is None:
+#                scale_per = 1
+#            else:
+#                scale_per = self.scale_value
+#        elif self.scale == "perturb_chi2":
+#            u = np.random.chisquare(mdf.df_resid)
+#            scale_per = scale_per = mdf.df_resid/u
+#        elif self.scale == "perturb_boot":
+#            pass
         p = len(params)
         params += np.dot(covmat_sqrt, np.random.normal(0, mdf.scale * scale_per, p))
         #find a better way to determine if first column is intercept
@@ -221,10 +241,12 @@ class Imputer(object):
         endog_all = md.predict(params,exog)
         endog_matched = []
         imiss = self.data.columns[self.endog_name].ix_miss
+        #look into memory-computation tradeoff
         for mval in endog_all[imiss]:
-            dist = abs(endog_all - mval)
-            dist = sorted(range(len(dist)), key=lambda k: dist[k])
-            endog_matched.append(random.choice(np.array(self.data.data[self.endog_name][dist[len(imiss):len(imiss) + k0]])))
+            dist = np.abs(endog_all[io] - mval)
+            dist_ind = np.argsort(dist)
+#            dist = sorted(range(len(dist)), key=lambda k: dist[k])
+            endog_matched.append(random.choice(np.array(self.data.data[self.endog_name][dist_ind[0:k0]])))
         new_endog = endog_matched
         self.data.store_changes(new_endog, self.endog_name)
 
@@ -275,7 +297,7 @@ class ImputerChain(object):
             object in imputer_list.
         """
         for im in self.imputer_list:
-            im.impute_asymptotic_bayes()
+            im.impute_pmm()
         return self.data
 
 class AnalysisChain(object):
