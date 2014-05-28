@@ -145,7 +145,17 @@ class ModelData(object):
         if combined_2d:
             nan_mask = _nan_rows(*(nan_mask[:, None],) + combined_2d)
 
-        if missing == 'raise' and np.any(nan_mask):
+        if not np.any(nan_mask):  # no missing don't do anything
+            combined = dict(zip(combined_names, combined))
+            if combined_2d:
+                combined.update(dict(zip(combined_2d_names, combined_2d)))
+            if none_array_names:
+                combined.update(dict(zip(none_array_names,
+                                         [None] * len(none_array_names))))
+
+            return combined, []
+
+        elif missing == 'raise':
             raise MissingDataError("NaNs were encountered in the data")
 
         elif missing == 'drop':
