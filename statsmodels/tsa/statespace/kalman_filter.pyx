@@ -510,7 +510,7 @@ cpdef ckalman_filter(
     work = np.zeros((ldwork,ldwork), np.complex64, order="F")
     ipiv = np.empty((ldwork,ldwork), np.int32, order="F")
     PHT = np.empty((k,n), np.complex64, order="F")
-    f_inv = np.empty((n,n), np.complex64, order="F")
+    f_inv = np.empty((n,n,T+1), np.complex64, order="F")
     Q = np.zeros((k,k), np.complex64, order="F")
 
     # Get Q = G Q^* G'
