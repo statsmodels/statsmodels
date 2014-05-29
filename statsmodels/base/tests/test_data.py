@@ -502,6 +502,11 @@ class TestMissingArray(object):
         X[14,2] = np.nan
         cls.y, cls.X = y, X
 
+    def test_raise_no_missing(self):
+        # smoke test for #1700
+        sm_data.handle_data(np.random.random(20), np.random.random((20, 2)),
+                            'raise')
+
     def test_raise(self):
         np.testing.assert_raises(Exception, sm_data.handle_data,
                                             (self.y, self.X, 'raise'))
@@ -562,6 +567,12 @@ class TestMissingPandas(object):
         X[2,3] = np.nan
         X[14,2] = np.nan
         cls.y, cls.X = pandas.Series(y), pandas.DataFrame(X)
+
+    def test_raise_no_missing(self):
+        # smoke test for #1700
+        sm_data.handle_data(pandas.Series(np.random.random(20)),
+                            pandas.DataFrame(np.random.random((20, 2))),
+                            'raise')
 
     def test_raise(self):
         np.testing.assert_raises(Exception, sm_data.handle_data,
