@@ -32,7 +32,7 @@ class R_Results(object):
         self.coef = getattr(lme_r_results, "coef" + bname)
         self.vcov_r = getattr(lme_r_results, "vcov" + bname)
         self.cov_re_r = getattr(lme_r_results, "cov_re" + bname)
-        self.sig2_r = getattr(lme_r_results, "sig2" + bname)
+        self.scale2_r = getattr(lme_r_results, "scale2" + bname)
         self.loglike = getattr(lme_r_results, "loglike" + bname)
 
         if hasattr(lme_r_results, "ranef_mean" + bname):
@@ -243,7 +243,7 @@ class TestMixedLM(object):
 
         assert_almost_equal(mdf.fe_params, rslt.coef, decimal=4)
         assert_almost_equal(mdf.cov_re, rslt.cov_re_r, decimal=4)
-        assert_almost_equal(mdf.sig2, rslt.sig2_r, decimal=4)
+        assert_almost_equal(mdf.scale2, rslt.scale2_r, decimal=4)
 
         pf = rslt.exog_fe.shape[1]
         assert_almost_equal(rslt.vcov_r, mdf.cov_params()[0:pf,0:pf],
