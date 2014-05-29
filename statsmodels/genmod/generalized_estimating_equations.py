@@ -1106,7 +1106,8 @@ class GEEResults(base.LikelihoodModelResults):
 
     def summary(self, yname=None, xname=None, title=None, alpha=.05,
                 covariance_type="robust"):
-        """Summarize the Regression Results
+        """
+        Summarize the GEE regression results
 
         Parameters
         -----------
@@ -1155,11 +1156,12 @@ class GEEResults(base.LikelihoodModelResults):
 
         top_right = [('No. Observations:', [sum(NY)]),
                      ('No. clusters:', [len(self.model.endog_li)]),
-                     ('Min. cluster size', [min(NY)]),
-                     ('Max. cluster size', [max(NY)]),
-                     ('Mean cluster size', ["%.1f" % np.mean(NY)]),
-                     ('No. iterations', ['%d' %
+                     ('Min. cluster size:', [min(NY)]),
+                     ('Max. cluster size:', [max(NY)]),
+                     ('Mean cluster size:', ["%.1f" % np.mean(NY)]),
+                     ('Num. iterations:', ['%d' %
                            len(self.model.fit_history['params'])]),
+                     ('Scale:', ["%.3f" % self.scale]),
                      ('Time:', None),
                  ]
 
